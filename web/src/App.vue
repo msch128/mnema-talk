@@ -30,22 +30,22 @@ authStore.$subscribe((mutation, state) => {
 </script>
 
 <template>
-  <div class="h-full flex overflow-hidden bg-discord-darkest">
+  <div class="h-full flex overflow-hidden bg-mnema-canvas text-mnema-text">
     <!-- Unauthenticated Modal -->
     <LoginModal v-if="!authStore.isAuthenticated" />
 
-    <!-- Main Discord App Layout -->
+    <!-- Main Mnema Talk Layout -->
     <template v-else>
-      <!-- Left Column: Channels & User Controls -->
-      <div class="flex flex-col h-full flex-shrink-0">
+      <!-- Left Column: Navigation, Channels & User Controls -->
+      <div class="flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline">
         <Sidebar @open-admin="showAdminModal = true" class="flex-1" />
         <UserBar />
       </div>
 
-      <!-- Center Column: Chat & Media -->
+      <!-- Center Column: Conversation & Media Timeline -->
       <ChatArea />
 
-      <!-- Admin Image & Pruning Dashboard Modal -->
+      <!-- Admin Storage & Retention Dashboard Modal -->
       <AdminDashboard v-if="showAdminModal" @close="showAdminModal = false" />
     </template>
   </div>

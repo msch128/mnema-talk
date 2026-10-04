@@ -1,1 +1,1 @@
-# Keeps dist directory tracked so go:embed succeeds before npm run build
+# Keeps dist tracked

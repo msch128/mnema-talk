@@ -2,21 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Discord-style scrollbar */
+/* Mnema Forest Identity Base */
+@layer base {
+  body {
+    background-color: #0F1110;
+    color: #E6EAE8;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: #1F3A2E;
+    color: #2DA771;
+  }
+}
+
+/* Mnema Subtle Hairline Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #2b2d31;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1a1b1e;
-  border-radius: 4px;
+  background: #242826;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #111214;
+  background: #3B413E;
 }
