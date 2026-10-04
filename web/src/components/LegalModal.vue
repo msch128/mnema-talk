@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { X, ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from 'lucide-vue-next'
+import { X, ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from '@lucide/vue'
 
 const emit = defineEmits(['close'])
 

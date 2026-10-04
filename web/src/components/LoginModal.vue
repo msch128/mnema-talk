@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { LogIn, UserPlus } from 'lucide-vue-next'
+import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import LegalModal from './LegalModal.vue'
 

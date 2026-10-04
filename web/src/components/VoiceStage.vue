@@ -4,7 +4,7 @@ import {
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
   Plus, Users, Activity, Sliders
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'

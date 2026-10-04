@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { X, Hash, Volume2, FolderPlus, Plus, AlertCircle } from 'lucide-vue-next'
+import { X, Hash, Volume2, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 
 const props = defineProps({

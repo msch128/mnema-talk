@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"net/textproto"
 	"net/url"
+	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -23,6 +24,9 @@ import (
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
+
+// TestMain removes the shared Postgres test container after the run.
+func TestMain(m *testing.M) { os.Exit(testutil.Main(m)) }
 
 type app struct {
 	t      *testing.T

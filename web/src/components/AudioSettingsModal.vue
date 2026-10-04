@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { X, Mic, Sparkles, Sliders, HelpCircle, Radio } from 'lucide-vue-next'
+import { X, Mic, Sparkles, Sliders, HelpCircle, Radio } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 

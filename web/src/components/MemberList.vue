@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Crown, Volume2 } from 'lucide-vue-next'
+import { Crown, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'

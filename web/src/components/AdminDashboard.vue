@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { X, Trash2, Link, Copy, Check, AlertCircle, RefreshCw } from 'lucide-vue-next'
+import { X, Trash2, Link, Copy, Check, AlertCircle, RefreshCw } from '@lucide/vue'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/auth'
 

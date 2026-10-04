@@ -1,5 +1,5 @@
 <script setup>
-import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut, Sliders } from 'lucide-vue-next'
+import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut, Sliders } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
