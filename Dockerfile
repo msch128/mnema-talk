@@ -28,6 +28,7 @@ COPY . .
 # Copy compiled frontend assets into web/dist for embed.FS
 COPY --from=frontend-builder /build/dist ./web/dist
 
+RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /mnema-talk ./cmd/server
 
 # --- Stage 3: Runtime ---
