@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { X, Trash2, HardDrive, RefreshCw, Link, Copy, Check, ShieldAlert } from 'lucide-vue-next'
+import { X, Trash2, HardDrive, RefreshCw, Link, Copy, Check } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 
 const emit = defineEmits(['close'])
@@ -126,81 +126,96 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-discord-dark w-full max-w-4xl max-h-[90vh] rounded-xl flex flex-col shadow-2xl border border-discord-darkest overflow-hidden">
+  <div class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-mnema-elevated w-full max-w-4xl max-h-[90vh] rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
       <!-- Modal Header -->
-      <header class="px-6 py-4 border-b border-discord-darkest flex items-center justify-between bg-discord-darker">
-        <div class="flex items-center gap-2">
-          <HardDrive class="w-5 h-5 text-discord-accent" />
-          <h2 class="text-lg font-bold text-white">Herzog Admin Dashboard</h2>
+      <header class="px-6 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">
+        <div class="flex items-center gap-2.5">
+          <div class="w-6 h-6 rounded-md bg-mnema-band text-mnema-mint flex items-center justify-center text-xs font-semibold">
+            M
+          </div>
+          <div>
+            <h2 class="text-xs font-semibold text-mnema-text">Mnema Storage & Administration</h2>
+            <p class="text-[10px] text-mnema-tertiary font-mono">Angemeldet als Herzog (Admin)</p>
+          </div>
         </div>
-        <button @click="emit('close')" class="text-discord-muted hover:text-white p-1 rounded transition">
-          <X class="w-5 h-5" />
+        <button 
+          @click="emit('close')" 
+          class="text-mnema-tertiary hover:text-mnema-text p-1 rounded-md hover:bg-mnema-surface transition"
+        >
+          <X class="w-4 h-4" />
         </button>
       </header>
 
       <!-- Modal Body -->
       <div class="flex-1 overflow-y-auto p-6 space-y-6">
-        <!-- 1. Storage Stats & 30-Day Prune -->
-        <section class="bg-discord-darker p-5 rounded-lg border border-discord-darkest flex flex-wrap items-center justify-between gap-4">
+        <!-- 1. S3 Storage Metrics & Retention Pruning -->
+        <section class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline flex flex-wrap items-center justify-between gap-4">
           <div class="space-y-1">
-            <span class="text-xs uppercase font-bold text-discord-muted tracking-wider">S3 Speicher-Status</span>
-            <div class="text-2xl font-black text-white flex items-baseline gap-2">
+            <span class="text-[10px] uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">
+              S3 Objektspeicher-Status
+            </span>
+            <div class="text-xl font-bold text-mnema-text flex items-baseline gap-2">
               <span>{{ formatBytes(stats.total_size_bytes) }}</span>
-              <span class="text-xs font-normal text-discord-muted">({{ stats.total_files }} Dateien, {{ stats.pruned_files }} bereinigt)</span>
+              <span class="text-xs font-normal text-mnema-muted">({{ stats.total_files }} Dateien, {{ stats.pruned_files }} bereinigt)</span>
             </div>
-            <p class="text-xs text-discord-muted">Aktive Retention-Policy: Dateien älter als 30 Tage können entfernt werden.</p>
+            <p class="text-xs text-mnema-muted">Aktive Retention-Policy: Dateien älter als 30 Tage werden auf Wunsch endgültig entfernt.</p>
           </div>
 
           <button
             @click="triggerPrune"
             :disabled="isPruning"
-            class="flex items-center gap-2 bg-discord-red hover:bg-discord-red/80 text-white font-semibold px-4 py-2 rounded-lg text-sm transition disabled:opacity-50"
+            class="flex items-center gap-2 border border-mnema-danger/40 bg-mnema-danger/10 text-mnema-danger hover:bg-mnema-danger hover:text-white font-medium px-3.5 py-2 rounded-md text-xs transition disabled:opacity-50"
           >
-            <RefreshCw :class="['w-4 h-4', isPruning ? 'animate-spin' : '']" />
+            <RefreshCw :class="['w-3.5 h-3.5', isPruning ? 'animate-spin' : '']" />
             <span>{{ isPruning ? 'Bereinigung läuft...' : 'Medien > 30 Tage bereinigen' }}</span>
           </button>
         </section>
 
         <!-- 2. Invite Codes Manager -->
         <section class="space-y-3">
-          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <Link class="w-4 h-4 text-discord-accent" />
-            <span>Einladungslinks für Freunde</span>
-          </h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-semibold text-mnema-text uppercase font-mono tracking-wider flex items-center gap-2">
+              <Link class="w-3.5 h-3.5 text-mnema-accent" />
+              <span>Einladungslinks</span>
+            </h3>
+            <span class="text-[10px] text-mnema-tertiary">Registrierung nur mit gültigem Einladungscode</span>
+          </div>
 
           <div class="flex gap-2">
             <input
               v-model="newInviteUses"
               type="number"
               placeholder="Max. Nutzungen (leer = unbegrenzt)"
-              class="bg-discord-darkest border border-discord-light rounded-lg px-3 py-1.5 text-sm text-white placeholder-discord-muted outline-none w-64"
+              class="bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-1.5 text-xs text-mnema-text placeholder-mnema-tertiary outline-none w-64 focus:border-mnema-accent transition"
             />
             <button
               @click="createInvite"
-              class="bg-discord-accent hover:bg-discord-accent/80 text-white font-medium px-4 py-1.5 rounded-lg text-sm transition"
+              class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-3.5 py-1.5 rounded-md text-xs transition shadow-sm"
             >
-              Neuen Einladungslink generieren
+              Neuen Einladungscode generieren
             </button>
           </div>
 
-          <div class="bg-discord-darker rounded-lg border border-discord-darkest overflow-hidden divide-y divide-discord-darkest">
-            <div v-if="!invites.length" class="p-3 text-xs text-discord-muted">Noch keine Einladungslinks erstellt.</div>
+          <div class="bg-mnema-surface rounded-lg border border-mnema-hairline overflow-hidden divide-y divide-mnema-hairline">
+            <div v-if="!invites.length" class="p-3 text-xs text-mnema-tertiary">Noch keine Einladungscodes hinterlegt.</div>
             <div
               v-for="inv in invites"
               :key="inv.id"
               class="px-4 py-2.5 flex items-center justify-between text-xs"
             >
               <div class="flex items-center gap-3">
-                <span class="font-mono bg-discord-darkest px-2 py-0.5 rounded text-white font-semibold">{{ inv.code }}</span>
-                <span class="text-discord-muted">Nutzungen: {{ inv.uses_count }} / {{ inv.max_uses ?? '∞' }}</span>
+                <span class="font-mono bg-mnema-elevated border border-mnema-border px-2 py-0.5 rounded text-mnema-text font-semibold text-xs">
+                  {{ inv.code }}
+                </span>
+                <span class="text-mnema-muted text-xs">Nutzungen: {{ inv.uses_count }} / {{ inv.max_uses ?? '∞' }}</span>
               </div>
 
               <button
                 @click="copyInviteLink(inv.code)"
-                class="flex items-center gap-1.5 text-discord-accent hover:text-white transition"
+                class="flex items-center gap-1.5 text-mnema-accent hover:text-mnema-accent-hover transition font-medium text-xs"
               >
-                <Check v-if="copiedCode === inv.code" class="w-3.5 h-3.5 text-discord-green" />
+                <Check v-if="copiedCode === inv.code" class="w-3.5 h-3.5 text-mnema-accent" />
                 <Copy v-else class="w-3.5 h-3.5" />
                 <span>{{ copiedCode === inv.code ? 'Kopiert!' : 'Link kopieren' }}</span>
               </button>
@@ -208,42 +223,46 @@ onMounted(() => {
           </div>
         </section>
 
-        <!-- 3. Image Gallery Raster -->
+        <!-- 3. Image Gallery Raster & Selective Delete -->
         <section class="space-y-3">
-          <h3 class="text-sm font-bold text-white uppercase tracking-wider">
+          <h3 class="text-xs font-semibold text-mnema-text uppercase font-mono tracking-wider">
             Hochgeladene Medien (Galerie & Selektives Löschen)
           </h3>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div v-if="!mediaItems.length" class="p-6 text-center text-xs text-mnema-tertiary bg-mnema-surface rounded-lg border border-mnema-hairline">
+            Keine Medien vorhanden.
+          </div>
+
+          <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             <div
               v-for="item in mediaItems"
               :key="item.id"
-              class="group relative bg-discord-darker rounded-lg border border-discord-darkest overflow-hidden aspect-square flex flex-col justify-between"
+              class="group relative bg-mnema-surface rounded-md border border-mnema-hairline overflow-hidden aspect-square flex flex-col justify-between"
             >
               <!-- Image Preview -->
-              <div class="w-full h-full absolute inset-0 bg-discord-darkest flex items-center justify-center overflow-hidden">
+              <div class="w-full h-full absolute inset-0 bg-mnema-canvas flex items-center justify-center overflow-hidden">
                 <img
                   v-if="item.mime_type.startsWith('image/')"
                   :src="item.url"
                   :alt="item.original_filename"
-                  class="w-full h-full object-cover group-hover:scale-105 transition"
+                  class="w-full h-full object-cover group-hover:scale-105 transition duration-200"
                   loading="lazy"
                 />
-                <div v-else class="text-xs text-discord-muted p-2 text-center break-all">
+                <div v-else class="text-xs text-mnema-tertiary p-2 text-center break-all font-mono">
                   {{ item.original_filename }}
                 </div>
               </div>
 
-              <!-- Overlay Bar -->
-              <div class="relative z-10 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-end justify-between mt-auto">
+              <!-- Overlay Info & Action -->
+              <div class="relative z-10 p-2 bg-gradient-to-t from-black/85 via-black/40 to-transparent flex items-end justify-between mt-auto">
                 <div class="text-[10px] text-white truncate max-w-[120px]">
-                  <p class="truncate font-semibold">{{ item.original_filename }}</p>
-                  <p class="text-discord-muted">{{ formatBytes(item.size_bytes) }} • {{ item.uploader_name }}</p>
+                  <p class="truncate font-medium">{{ item.original_filename }}</p>
+                  <p class="text-mnema-muted">{{ formatBytes(item.size_bytes) }} • {{ item.uploader_name }}</p>
                 </div>
 
                 <button
                   @click.stop="deleteSingleMedia(item.id)"
-                  class="p-1 rounded bg-discord-red/80 hover:bg-discord-red text-white transition flex-shrink-0"
+                  class="p-1 rounded bg-mnema-danger/80 hover:bg-mnema-danger text-white transition flex-shrink-0"
                   title="Datei endgültig löschen"
                 >
                   <Trash2 class="w-3.5 h-3.5" />

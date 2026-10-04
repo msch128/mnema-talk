@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Hash, Volume2, Plus, ChevronDown, ChevronRight, Crown } from 'lucide-vue-next'
+import { Hash, Volume2, ShieldCheck, Crown } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -17,56 +17,80 @@ function handleChannelClick(channel) {
   if (channel.type === 'text') {
     chatStore.selectChannel(channel)
   } else if (channel.type === 'voice') {
-    // Discord behavior: Clicking voice connects instantly!
+    // Instant voice connect
     joinVoiceChannel(channel.id)
   }
 }
 </script>
 
 <template>
-  <aside class="w-60 bg-discord-darker flex flex-col h-full select-none border-r border-discord-darkest/50">
-    <!-- Server Header -->
-    <header class="h-12 px-4 border-b border-discord-darkest flex items-center justify-between font-semibold shadow-sm hover:bg-discord-hover/50 cursor-pointer transition">
-      <div class="flex items-center gap-2">
-        <span class="truncate text-white">Mnema Talk</span>
-        <Crown v-if="authStore.isAdmin" class="w-4 h-4 text-yellow-500 flex-shrink-0" />
+  <aside class="w-64 bg-mnema-raised flex flex-col h-full select-none">
+    <!-- Server / Workspace Header -->
+    <header class="h-14 px-4 border-b border-mnema-hairline flex items-center justify-between">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <!-- Mnema Forest Mark -->
+        <div class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-xs shadow-sm flex-shrink-0">
+          M
+        </div>
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-semibold text-xs tracking-tight text-mnema-text truncate">Mnema Talk</span>
+            <Crown v-if="authStore.isAdmin" class="w-3.5 h-3.5 text-mnema-amber flex-shrink-0" />
+          </div>
+          <span class="text-[10px] text-mnema-tertiary font-mono">Private Server</span>
+        </div>
       </div>
+
+      <!-- Admin Dashboard Button -->
       <button 
         v-if="authStore.isAdmin" 
         @click.stop="emit('open-admin')"
-        title="Admin Dashboard"
-        class="text-xs bg-discord-accent hover:bg-discord-accent/80 text-white px-2 py-0.5 rounded font-medium transition"
+        title="Admin Konsole & S3 Speicher"
+        class="text-[11px] font-medium px-2 py-0.5 rounded border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent hover:bg-mnema-accent hover:text-mnema-accent-ink transition"
       >
         Admin
       </button>
     </header>
 
-    <!-- Channels Scroll Area -->
-    <div class="flex-1 overflow-y-auto px-2 py-3 space-y-4">
-      <!-- Categories with Channels -->
-      <div v-for="category in chatStore.categories" :key="category.id" class="space-y-0.5">
-        <div class="flex items-center justify-between px-1 text-xs font-bold text-discord-muted uppercase tracking-wider">
+    <!-- Channels Navigation List -->
+    <div class="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+      <!-- Categorized Channels -->
+      <div v-for="category in chatStore.categories" :key="category.id" class="space-y-1">
+        <!-- Category Title (Nano Upper Rule) -->
+        <div class="px-2 pt-1 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase text-mnema-tertiary font-mono">
           <span>{{ category.name }}</span>
         </div>
 
         <div class="space-y-0.5 mt-1">
           <div v-for="channel in category.channels" :key="channel.id">
-            <!-- Channel Item -->
+            <!-- Channel Row -->
             <button
               @click="handleChannelClick(channel)"
               :class="[
-                'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition group',
+                'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors group text-left',
                 chatStore.activeChannel?.id === channel.id
-                  ? 'bg-discord-light text-white font-medium'
-                  : 'text-discord-muted hover:bg-discord-hover hover:text-discord-text'
+                  ? 'bg-mnema-surface text-mnema-text font-semibold border-l-2 border-mnema-accent pl-2'
+                  : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
               ]"
             >
-              <Hash v-if="channel.type === 'text'" class="w-4 h-4 flex-shrink-0 text-discord-muted group-hover:text-white" />
-              <Volume2 v-else class="w-4 h-4 flex-shrink-0 text-discord-muted group-hover:text-white" />
+              <Hash 
+                v-if="channel.type === 'text'" 
+                :class="[
+                  'w-3.5 h-3.5 flex-shrink-0 transition-colors',
+                  chatStore.activeChannel?.id === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text'
+                ]" 
+              />
+              <Volume2 
+                v-else 
+                :class="[
+                  'w-3.5 h-3.5 flex-shrink-0 transition-colors',
+                  voiceStore.connectedChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text'
+                ]" 
+              />
               <span class="truncate">{{ channel.name }}</span>
             </button>
 
-            <!-- Nested Users inside Voice Channel (Discord Hangout) -->
+            <!-- Nested Connected Voice Users -->
             <div 
               v-if="channel.type === 'voice' && voiceStore.channelUsers[channel.id]"
               class="pl-6 py-1 space-y-1"
@@ -74,19 +98,21 @@ function handleChannelClick(channel) {
               <div
                 v-for="user in Object.values(voiceStore.channelUsers[channel.id])"
                 :key="user.id"
-                class="flex items-center gap-2 text-xs py-0.5 px-1.5 rounded hover:bg-discord-hover/40"
+                class="flex items-center gap-2 text-xs py-1 px-2 rounded-md hover:bg-mnema-hover/60 transition"
               >
-                <!-- Avatar with Speaking Indicator (Green Ring) -->
+                <!-- Avatar with Real-time Mnema Emerald Speaking Ring -->
                 <div 
                   :class="[
-                    'w-5 h-5 rounded-full bg-discord-accent flex items-center justify-center text-[10px] text-white font-bold transition-all',
-                    voiceStore.speakingUsers[user.id] ? 'ring-2 ring-discord-green ring-offset-1 ring-offset-discord-darker' : ''
+                    'w-5 h-5 rounded-full bg-mnema-accent-subtle border border-mnema-border flex items-center justify-center text-[10px] text-mnema-accent font-bold transition-all',
+                    voiceStore.speakingUsers[user.id] ? 'ring-2 ring-mnema-accent ring-offset-1 ring-offset-mnema-raised' : ''
                   ]"
                 >
                   {{ user.display_name?.charAt(0).toUpperCase() }}
                 </div>
-                <span class="truncate text-discord-text">{{ user.display_name }}</span>
-                <span v-if="user.role === 'admin'" class="text-[10px] text-yellow-500 font-bold ml-auto">👑</span>
+                <span class="truncate text-mnema-text text-xs">{{ user.display_name }}</span>
+                <span v-if="user.role === 'admin'" class="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-400 font-mono ml-auto">
+                  Admin
+                </span>
               </div>
             </div>
           </div>
@@ -100,14 +126,14 @@ function handleChannelClick(channel) {
           :key="channel.id"
           @click="handleChannelClick(channel)"
           :class="[
-            'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition group',
+            'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors group text-left',
             chatStore.activeChannel?.id === channel.id
-              ? 'bg-discord-light text-white font-medium'
-              : 'text-discord-muted hover:bg-discord-hover hover:text-discord-text'
+              ? 'bg-mnema-surface text-mnema-text font-semibold border-l-2 border-mnema-accent pl-2'
+              : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
           ]"
         >
-          <Hash v-if="channel.type === 'text'" class="w-4 h-4 flex-shrink-0" />
-          <Volume2 v-else class="w-4 h-4 flex-shrink-0" />
+          <Hash v-if="channel.type === 'text'" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary group-hover:text-mnema-text" />
+          <Volume2 v-else class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary group-hover:text-mnema-text" />
           <span class="truncate">{{ channel.name }}</span>
         </button>
       </div>
