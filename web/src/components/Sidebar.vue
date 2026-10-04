@@ -1,10 +1,11 @@
 <script setup>
-import { computed } from 'vue'
-import { Hash, Volume2, ShieldCheck, Crown, Radio, RadioTower } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { Hash, Volume2, ShieldCheck, Crown, Radio, RadioTower, Plus, Trash2 } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
+import CreateChannelModal from './CreateChannelModal.vue'
 
 const emit = defineEmits(['open-admin'])
 
@@ -12,6 +13,35 @@ const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const authStore = useAuthStore()
 const { joinVoiceChannel } = useWebRTC()
+
+const showCreateChannelModal = ref(false)
+const modalChannelType = ref('text')
+const modalCategoryId = ref('')
+
+function openCreateChannel(type = 'text', categoryId = '') {
+  modalChannelType.value = type
+  modalCategoryId.value = categoryId
+  showCreateChannelModal.value = true
+}
+
+async function handleDeleteChannel(channel) {
+  const icon = channel.type === 'voice' ? '🔊' : '#'
+  if (!confirm(`Möchtest du den Kanal "${icon} ${channel.name}" wirklich unwiderruflich löschen?`)) return
+  try {
+    await chatStore.deleteChannel(channel.id)
+  } catch (err) {
+    alert(err.message || 'Löschen fehlgeschlagen')
+  }
+}
+
+async function handleDeleteCategory(category) {
+  if (!confirm(`Möchtest du die Kategorie "${category.name}" löschen? (Enthaltene Kanäle bleiben erhalten)`)) return
+  try {
+    await chatStore.deleteCategory(category.id)
+  } catch (err) {
+    alert(err.message || 'Löschen fehlgeschlagen')
+  }
+}
 
 // Separate channels into Voice Hangouts and Text Channels
 const voiceChannels = computed(() => {
@@ -31,7 +61,7 @@ const textCategories = computed(() => {
   return chatStore.categories.map(cat => ({
     ...cat,
     channels: (cat.channels || []).filter(c => c.type === 'text')
-  })).filter(cat => cat.channels.length > 0)
+  }))
 })
 
 const uncategorizedText = computed(() => {
@@ -112,16 +142,26 @@ function handleTextClick(channel) {
             <Radio class="w-3 h-3 text-mnema-accent" />
             <span>Voice Hangouts</span>
           </span>
-          <span class="text-[9px] text-mnema-tertiary font-mono">{{ voiceChannels.length }}</span>
+          <div class="flex items-center gap-1">
+            <span class="text-[9px] text-mnema-tertiary font-mono mr-1">{{ voiceChannels.length }}</span>
+            <button
+              v-if="authStore.isAdmin"
+              @click.stop="openCreateChannel('voice')"
+              title="Voice-Hangout hinzufügen"
+              class="p-0.5 rounded text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition"
+            >
+              <Plus class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         <div class="space-y-0.5">
           <div v-for="channel in voiceChannels" :key="channel.id">
             <!-- Voice Channel Row -->
-            <button
+            <div
               @click="handleVoiceClick(channel)"
               :class="[
-                'w-full flex items-center justify-between px-2.5 py-2 rounded-md text-xs transition-colors group text-left',
+                'w-full flex items-center justify-between px-2.5 py-2 rounded-md text-xs transition-colors group cursor-pointer text-left',
                 voiceStore.currentChannelId === channel.id && voiceStore.activeView === 'voice'
                   ? 'bg-mnema-surface text-mnema-accent font-semibold border-l-2 border-mnema-accent pl-2'
                   : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
@@ -137,14 +177,26 @@ function handleTextClick(channel) {
                 <span class="truncate">{{ channel.name }}</span>
               </div>
 
-              <!-- Participant Count Indicator -->
-              <span 
-                v-if="voiceStore.channelUsers[channel.id] && Object.keys(voiceStore.channelUsers[channel.id]).length"
-                class="text-[9px] px-1.5 py-0.2 rounded-full bg-mnema-accent-subtle text-mnema-accent font-mono font-bold"
-              >
-                {{ Object.keys(voiceStore.channelUsers[channel.id]).length }}
-              </span>
-            </button>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <!-- Participant Count Indicator -->
+                <span 
+                  v-if="voiceStore.channelUsers[channel.id] && Object.keys(voiceStore.channelUsers[channel.id]).length"
+                  class="text-[9px] px-1.5 py-0.2 rounded-full bg-mnema-accent-subtle text-mnema-accent font-mono font-bold"
+                >
+                  {{ Object.keys(voiceStore.channelUsers[channel.id]).length }}
+                </span>
+
+                <!-- Delete Channel Button for Herzog (Admin) -->
+                <button
+                  v-if="authStore.isAdmin"
+                  @click.stop="handleDeleteChannel(channel)"
+                  title="Voice-Hangout löschen"
+                  class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition"
+                >
+                  <Trash2 class="w-3 h-3" />
+                </button>
+              </div>
+            </div>
 
             <!-- Nested Connected Voice Users -->
             <div 
@@ -171,6 +223,10 @@ function handleTextClick(channel) {
               </div>
             </div>
           </div>
+
+          <div v-if="!voiceChannels.length" class="px-2 py-2 text-[11px] text-mnema-tertiary italic">
+            Keine Voice-Hangouts vorhanden.
+          </div>
         </div>
       </div>
 
@@ -181,54 +237,125 @@ function handleTextClick(channel) {
             <Hash class="w-3 h-3 text-mnema-tertiary" />
             <span>Text Kanäle</span>
           </span>
+          <button
+            v-if="authStore.isAdmin"
+            @click.stop="openCreateChannel('text')"
+            title="Text-Kanal hinzufügen"
+            class="p-0.5 rounded text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition"
+          >
+            <Plus class="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        <div v-for="category in textCategories" :key="category.id" class="space-y-1">
-          <div class="px-2 text-[9px] font-medium uppercase tracking-wider text-mnema-tertiary font-mono">
-            {{ category.name }}
+        <!-- Render categories -->
+        <div v-for="category in textCategories" :key="category.id" class="space-y-1 group/cat">
+          <div class="px-2 flex items-center justify-between text-[9px] font-medium uppercase tracking-wider text-mnema-tertiary font-mono">
+            <span>{{ category.name }}</span>
+            <div v-if="authStore.isAdmin" class="flex items-center gap-1 opacity-0 group-hover/cat:opacity-100 transition">
+              <button
+                @click.stop="openCreateChannel('text', category.id)"
+                title="Kanal zu Kategorie hinzufügen"
+                class="p-0.5 rounded text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition"
+              >
+                <Plus class="w-3 h-3" />
+              </button>
+              <button
+                @click.stop="handleDeleteCategory(category)"
+                title="Kategorie löschen"
+                class="p-0.5 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition"
+              >
+                <Trash2 class="w-3 h-3" />
+              </button>
+            </div>
           </div>
 
           <div class="space-y-0.5">
-            <button
+            <div
               v-for="channel in category.channels"
               :key="channel.id"
               @click="handleTextClick(channel)"
               :class="[
-                'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors group text-left',
+                'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors group cursor-pointer text-left',
                 chatStore.activeChannel?.id === channel.id && voiceStore.activeView === 'chat'
                   ? 'bg-mnema-surface text-mnema-text font-semibold border-l-2 border-mnema-accent pl-2'
                   : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
               ]"
             >
-              <Hash 
-                :class="[
-                  'w-3.5 h-3.5 flex-shrink-0 transition-colors',
-                  chatStore.activeChannel?.id === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text'
-                ]" 
-              />
-              <span class="truncate">{{ channel.name }}</span>
-            </button>
+              <div class="flex items-center gap-2 min-w-0">
+                <Hash 
+                  :class="[
+                    'w-3.5 h-3.5 flex-shrink-0 transition-colors',
+                    chatStore.activeChannel?.id === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text'
+                  ]" 
+                />
+                <span class="truncate">{{ channel.name }}</span>
+              </div>
+
+              <!-- Delete Channel Button for Admin -->
+              <button
+                v-if="authStore.isAdmin"
+                @click.stop="handleDeleteChannel(channel)"
+                title="Kanal löschen"
+                class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition flex-shrink-0"
+              >
+                <Trash2 class="w-3 h-3" />
+              </button>
+            </div>
+
+            <!-- Empty category indicator with add button for admin -->
+            <div v-if="!category.channels.length" class="px-2.5 py-1 text-[10px] text-mnema-tertiary italic flex items-center justify-between">
+              <span>Keine Kanäle</span>
+              <button
+                v-if="authStore.isAdmin"
+                @click.stop="openCreateChannel('text', category.id)"
+                class="text-[10px] text-mnema-accent hover:underline font-mono"
+              >
+                + Kanal
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Uncategorized Text -->
+        <!-- Uncategorized Text Channels -->
         <div v-if="uncategorizedText.length" class="space-y-0.5">
-          <button
+          <div class="px-2 text-[9px] font-medium uppercase tracking-wider text-mnema-tertiary font-mono">
+            Unkategorisiert
+          </div>
+          <div
             v-for="channel in uncategorizedText"
             :key="channel.id"
             @click="handleTextClick(channel)"
             :class="[
-              'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-colors group text-left',
+              'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors group cursor-pointer text-left',
               chatStore.activeChannel?.id === channel.id && voiceStore.activeView === 'chat'
                 ? 'bg-mnema-surface text-mnema-text font-semibold border-l-2 border-mnema-accent pl-2'
                 : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
             ]"
           >
-            <Hash class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary group-hover:text-mnema-text" />
-            <span class="truncate">{{ channel.name }}</span>
-          </button>
+            <div class="flex items-center gap-2 min-w-0">
+              <Hash class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary group-hover:text-mnema-text" />
+              <span class="truncate">{{ channel.name }}</span>
+            </div>
+
+            <button
+              v-if="authStore.isAdmin"
+              @click.stop="handleDeleteChannel(channel)"
+              title="Kanal löschen"
+              class="opacity-0 group-hover:opacity-100 p-0.5 rounded text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-surface transition flex-shrink-0"
+            >
+              <Trash2 class="w-3 h-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Create Channel Modal Dialog -->
+    <CreateChannelModal
+      v-if="showCreateChannelModal"
+      :initial-type="modalChannelType"
+      :initial-category-id="modalCategoryId"
+      @close="showCreateChannelModal = false"
+    />
   </aside>
 </template>

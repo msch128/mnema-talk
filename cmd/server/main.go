@@ -59,6 +59,11 @@ func main() {
 		log.Printf("Warning: failed to verify admin user: %v\n", err)
 	}
 
+	// Ensure default channels and categories exist
+	if err := dbPool.EnsureDefaultChannels(ctx); err != nil {
+		log.Printf("Warning: failed to verify default channels: %v\n", err)
+	}
+
 	// 5. Initialize S3 Client (SeaweedFS / Cloud)
 	s3Cli, err := s3.New(ctx, cfg)
 	if err != nil {
@@ -357,6 +362,100 @@ func main() {
 					"id":   invID,
 					"code": req.Code,
 				})
+			})
+
+			// Manage Categories
+			r.Post("/categories", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					Name      string `json:"name"`
+					SortOrder int    `json:"sort_order"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+					http.Error(w, `{"error":"category name is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				cat, err := chat.CreateCategory(r.Context(), dbPool, req.Name, req.SortOrder)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(cat)
+			})
+
+			r.Delete("/categories/{id}", func(w http.ResponseWriter, r *http.Request) {
+				idStr := chi.URLParam(r, "id")
+				catID, err := uuid.Parse(idStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid category id"}`, http.StatusBadRequest)
+					return
+				}
+
+				if err := chat.DeleteCategory(r.Context(), dbPool, catID); err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+			})
+
+			// Manage Channels
+			r.Post("/channels", func(w http.ResponseWriter, r *http.Request) {
+				var req struct {
+					CategoryID *string `json:"category_id"`
+					Name       string  `json:"name"`
+					Type       string  `json:"type"` // "text" or "voice"
+					Topic      string  `json:"topic"`
+					SortOrder  int     `json:"sort_order"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" {
+					http.Error(w, `{"error":"channel name is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				var catUUID *uuid.UUID
+				if req.CategoryID != nil && *req.CategoryID != "" {
+					parsed, err := uuid.Parse(*req.CategoryID)
+					if err == nil {
+						catUUID = &parsed
+					}
+				}
+
+				chType := chat.ChannelTypeText
+				if req.Type == "voice" {
+					chType = chat.ChannelTypeVoice
+				}
+
+				ch, err := chat.CreateChannel(r.Context(), dbPool, catUUID, req.Name, chType, req.Topic, req.SortOrder)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(ch)
+			})
+
+			r.Delete("/channels/{id}", func(w http.ResponseWriter, r *http.Request) {
+				idStr := chi.URLParam(r, "id")
+				chID, err := uuid.Parse(idStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid channel id"}`, http.StatusBadRequest)
+					return
+				}
+
+				if err := chat.DeleteChannel(r.Context(), dbPool, chID); err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
 			})
 
 			// Media Storage Dashboard & Pruning

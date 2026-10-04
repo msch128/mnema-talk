@@ -111,3 +111,9 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) error {
 	_, err := p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
 	return err
 }
+
+// DeleteCategory removes a category and unlinks its channels (Admin only)
+func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
+	_, err := p.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID)
+	return err
+}
