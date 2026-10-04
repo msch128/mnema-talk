@@ -26,6 +26,8 @@ export function useWebRTC() {
         }
       })
 
+      voiceStore.localAudioStream = localAudioStream.value
+
       // 2. Setup Web Audio API volume analyzer for the green speaking ring
       setupSpeakingDetection(localAudioStream.value)
     } catch (err) {
@@ -92,6 +94,7 @@ export function useWebRTC() {
         videoTrack.contentHint = 'detail'
       }
 
+      voiceStore.localScreenStream = localScreenStream.value
       voiceStore.isScreenSharing = true
 
       videoTrack.onended = () => {
@@ -107,6 +110,7 @@ export function useWebRTC() {
       localScreenStream.value.getTracks().forEach(t => t.stop())
       localScreenStream.value = null
     }
+    voiceStore.localScreenStream = null
     voiceStore.isScreenSharing = false
   }
 
@@ -120,6 +124,7 @@ export function useWebRTC() {
       localAudioStream.value.getTracks().forEach(t => t.stop())
       localAudioStream.value = null
     }
+    voiceStore.localAudioStream = null
 
     if (audioContext.value) {
       audioContext.value.close().catch(() => {})
