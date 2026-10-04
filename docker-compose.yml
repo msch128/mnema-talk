@@ -1,0 +1,88 @@
+services:
+  # ==========================================================
+  # Mnema Talk Application (Go + Vue 3 Embedded + Pion SFU)
+  # ==========================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mnema-talk
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+      - "${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
+    environment:
+      - PORT=8080
+      - APP_ENV=${APP_ENV:-production}
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:8080}
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-mnema}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-mnema_talk}?sslmode=disable
+      - S3_ENDPOINT=http://seaweedfs:8333
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_BUCKET=${S3_BUCKET:-mnema-media}
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-mnema_admin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY}
+      - S3_FORCE_PATH_STYLE=true
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-Herzog}
+      - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD}
+      - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}
+      - WEBRTC_UDP_PORT_MAX=${WEBRTC_UDP_PORT_MAX:-50050}
+      - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    networks:
+      - mnema-network
+
+  # ==========================================================
+  # Database: PostgreSQL 17
+  # ==========================================================
+  postgres:
+    image: postgres:17-alpine
+    container_name: mnema-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mnema}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mnema_talk}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mnema} -d ${POSTGRES_DB:-mnema_talk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mnema-network
+
+  # ==========================================================
+  # Object Storage: SeaweedFS (Local S3 Engine, Cloud-Ready)
+  # ==========================================================
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: mnema-seaweedfs
+    restart: unless-stopped
+    command: "server -s3 -s3.port=8333 -dir=/data"
+    volumes:
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8333/ || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - mnema-network
+
+volumes:
+  postgres-data:
+    driver: local
+  seaweedfs-data:
+    driver: local
+
+networks:
+  mnema-network:
+    name: mnema-network
+    driver: bridge
