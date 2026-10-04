@@ -15,11 +15,13 @@ import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import IncomingCallModal from './components/IncomingCallModal.vue'
+import LegalModal from './components/LegalModal.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const showAdminModal = ref(false)
+const showLegalModal = ref(false)
 
 async function initializeApp() {
   await Promise.all([
@@ -54,7 +56,7 @@ watch(() => authStore.isAuthenticated, (isAuthed, wasAuthed) => {
     <template v-else>
       <!-- Left Column: Navigation, Channels & User Controls -->
       <div class="flex flex-col h-full flex-shrink-0 border-r border-mnema-hairline">
-        <Sidebar @open-admin="showAdminModal = true" class="flex-1" />
+        <Sidebar @open-admin="showAdminModal = true" @open-legal="showLegalModal = true" class="flex-1" />
         <UserBar />
       </div>
 
@@ -95,6 +97,9 @@ watch(() => authStore.isAuthenticated, (isAuthed, wasAuthed) => {
 
       <!-- Incoming DM Call Notification Modal / Ringtone -->
       <IncomingCallModal />
+
+      <!-- Legal & Privacy Policy Modal (DSGVO) -->
+      <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
     </template>
   </div>
 </template>
