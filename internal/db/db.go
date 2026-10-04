@@ -66,6 +66,20 @@ func (p *Pool) Migrate(ctx context.Context, migrationFilePath string) error {
 			UNIQUE(message_id, user_id, emoji)
 		);
 		CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
+
+		ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_type_check;
+		ALTER TABLE channels ADD CONSTRAINT channels_type_check CHECK (type IN ('text', 'voice', 'dm'));
+
+		CREATE TABLE IF NOT EXISTS dm_channels (
+			channel_id UUID PRIMARY KEY REFERENCES channels(id) ON DELETE CASCADE,
+			user1_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			user2_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE(user1_id, user2_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_dm_user1 ON dm_channels(user1_id);
+		CREATE INDEX IF NOT EXISTS idx_dm_user2 ON dm_channels(user2_id);
 	`
 	if _, err := p.Exec(ctx, incrementalMigrations); err != nil {
 		log.Printf("[DB] Note on incremental migration: %v\n", err)

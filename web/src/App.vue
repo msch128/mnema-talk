@@ -14,6 +14,7 @@ import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
+import IncomingCallModal from './components/IncomingCallModal.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -23,7 +24,8 @@ const showAdminModal = ref(false)
 async function initializeApp() {
   await Promise.all([
     chatStore.fetchChannels(),
-    chatStore.fetchMembers()
+    chatStore.fetchMembers(),
+    chatStore.fetchDMs()
   ])
   chatStore.initWebSocket()
 }
@@ -90,6 +92,9 @@ watch(() => authStore.isAuthenticated, (isAuthed, wasAuthed) => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- Incoming DM Call Notification Modal / Ringtone -->
+      <IncomingCallModal />
     </template>
   </div>
 </template>

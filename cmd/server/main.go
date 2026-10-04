@@ -408,12 +408,51 @@ func main() {
 				})
 			})
 
+			// Direct Messages (DMs)
+			r.Get("/dms", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				dms, err := chat.GetUserDMs(r.Context(), dbPool, user.ID)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(dms)
+			})
+
+			r.Post("/dms", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				var req struct {
+					RecipientID uuid.UUID `json:"recipient_id"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					http.Error(w, `{"error":"invalid recipient id"}`, http.StatusBadRequest)
+					return
+				}
+
+				dm, err := chat.GetOrCreateDMChannel(r.Context(), dbPool, user.ID, req.RecipientID)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(dm)
+			})
+
 			// Messages in Channel
 			r.Get("/channels/{channelID}/messages", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
 				chIDStr := chi.URLParam(r, "channelID")
 				chID, err := uuid.Parse(chIDStr)
 				if err != nil {
 					http.Error(w, `{"error":"invalid channel id"}`, http.StatusBadRequest)
+					return
+				}
+
+				canAccess, err := chat.CheckUserCanAccessChannel(r.Context(), dbPool, user.ID, chID)
+				if err != nil || !canAccess {
+					http.Error(w, `{"error":"forbidden: cannot access this channel"}`, http.StatusForbidden)
 					return
 				}
 
@@ -443,6 +482,12 @@ func main() {
 					return
 				}
 
+				canAccess, err := chat.CheckUserCanAccessChannel(r.Context(), dbPool, user.ID, chID)
+				if err != nil || !canAccess {
+					http.Error(w, `{"error":"forbidden: cannot access this channel"}`, http.StatusForbidden)
+					return
+				}
+
 				var req struct {
 					Content  string     `json:"content"`
 					ParentID *uuid.UUID `json:"parent_id,omitempty"`
@@ -458,8 +503,20 @@ func main() {
 					return
 				}
 
-				// Broadcast message to all WebSocket subscribers
-				hub.BroadcastEvent("message_create", msg)
+				// Check if channel is a DM
+				var chType string
+				_ = dbPool.QueryRow(r.Context(), `SELECT type FROM channels WHERE id = $1`, chID).Scan(&chType)
+				if chType == "dm" {
+					chat.TouchDMChannel(r.Context(), dbPool, chID)
+					var u1, u2 uuid.UUID
+					_ = dbPool.QueryRow(r.Context(), `SELECT user1_id, user2_id FROM dm_channels WHERE channel_id = $1`, chID).Scan(&u1, &u2)
+					hub.SendToUser(u1, "message_create", msg)
+					hub.SendToUser(u2, "message_create", msg)
+					hub.SendToUser(u1, "dm_update", map[string]interface{}{"channel_id": chID})
+					hub.SendToUser(u2, "dm_update", map[string]interface{}{"channel_id": chID})
+				} else {
+					hub.BroadcastEvent("message_create", msg)
+				}
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)

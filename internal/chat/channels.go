@@ -56,8 +56,8 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 		categories = append(categories, cat)
 	}
 
-	// 2. Fetch all channels
-	chanRows, err := p.Query(ctx, `SELECT id, category_id, name, type, topic, sort_order, created_at FROM channels ORDER BY sort_order ASC, created_at ASC`)
+	// 2. Fetch all channels (excluding direct messages)
+	chanRows, err := p.Query(ctx, `SELECT id, category_id, name, type, topic, sort_order, created_at FROM channels WHERE type != 'dm' ORDER BY sort_order ASC, created_at ASC`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to query channels: %w", err)
 	}

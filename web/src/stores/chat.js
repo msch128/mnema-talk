@@ -21,6 +21,32 @@ export const useChatStore = defineStore('chat', () => {
   const selectedUserProfile = ref(null)
   const pendingMention = ref('')
 
+  // Direct Messages & Server-Routed 1-on-1 Calls
+  const dms = ref([])
+  const incomingCall = ref(null) // { channel_id, caller }
+  const activeDmCall = ref(null) // { channel_id, recipient, isCaller, status: 'calling'|'connected', startTime }
+
+  function playRingtone() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(480, ctx.currentTime)
+      osc.frequency.setValueAtTime(440, ctx.currentTime + 0.15)
+      gain.gain.setValueAtTime(0.15, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start()
+      osc.stop(ctx.currentTime + 0.8)
+    } catch (e) {
+      // Audio autoplay policy
+    }
+  }
+
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
 
@@ -429,6 +455,39 @@ export const useChatStore = defineStore('chat', () => {
       case 'voice_speaking':
         voiceStore.handleSpeakingEvent(event.payload)
         break
+
+      case 'dm_update':
+        fetchDMs()
+        break
+
+      case 'dm_call_incoming':
+        incomingCall.value = event.payload
+        playRingtone()
+        break
+
+      case 'dm_call_accepted':
+        if (activeDmCall.value && activeDmCall.value.channel_id === event.payload?.channel_id) {
+          activeDmCall.value.status = 'connected'
+        }
+        break
+
+      case 'dm_call_rejected':
+        if (activeDmCall.value && activeDmCall.value.channel_id === event.payload?.channel_id) {
+          voiceStore.leaveChannel()
+          activeDmCall.value = null
+          alert('Der Anruf wurde abgelehnt.')
+        }
+        break
+
+      case 'dm_call_ended':
+        if (activeDmCall.value && activeDmCall.value.channel_id === event.payload?.channel_id) {
+          voiceStore.leaveChannel()
+          activeDmCall.value = null
+        }
+        if (incomingCall.value && incomingCall.value.channel_id === event.payload?.channel_id) {
+          incomingCall.value = null
+        }
+        break
     }
   }
 
@@ -620,6 +679,110 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  async function fetchDMs() {
+    try {
+      const res = await fetch('/api/dms', {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+      if (res.ok) {
+        dms.value = await res.json()
+      }
+    } catch (err) {
+      console.error('Failed to fetch DMs:', err)
+    }
+  }
+
+  async function openDM(recipientId) {
+    try {
+      const res = await fetch('/api/dms', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authStore.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipient_id: recipientId })
+      })
+      if (!res.ok) throw new Error('Failed to open DM')
+      const dm = await res.json()
+      if (!dms.value.some(d => d.id === dm.id)) {
+        dms.value.unshift(dm)
+      }
+      const channelObj = {
+        id: dm.id,
+        name: dm.recipient.display_name || dm.recipient.username,
+        type: 'dm',
+        topic: dm.recipient.bio || '',
+        recipient: dm.recipient
+      }
+      await selectChannel(channelObj)
+      return channelObj
+    } catch (err) {
+      console.error('Error opening DM:', err)
+      throw err
+    }
+  }
+
+  function startDMCall(channelId, recipient) {
+    activeDmCall.value = {
+      channel_id: channelId,
+      recipient,
+      isCaller: true,
+      status: 'calling',
+      startTime: Date.now()
+    }
+    sendWSEvent('dm_call_initiate', { channel_id: channelId, recipient_id: recipient.id })
+    voiceStore.joinChannel(channelId)
+  }
+
+  function acceptDMCall() {
+    if (!incomingCall.value) return
+    const call = incomingCall.value
+    sendWSEvent('dm_call_accept', { channel_id: call.channel_id, caller_id: call.caller.id })
+    activeDmCall.value = {
+      channel_id: call.channel_id,
+      recipient: call.caller,
+      isCaller: false,
+      status: 'connected',
+      startTime: Date.now()
+    }
+    incomingCall.value = null
+    voiceStore.joinChannel(call.channel_id)
+
+    const existingDm = dms.value.find(d => d.id === call.channel_id)
+    if (existingDm) {
+      selectChannel({
+        id: existingDm.id,
+        name: existingDm.recipient.display_name || existingDm.recipient.username,
+        type: 'dm',
+        topic: existingDm.recipient.bio || '',
+        recipient: existingDm.recipient
+      })
+    } else {
+      selectChannel({
+        id: call.channel_id,
+        name: call.caller.display_name || call.caller.username,
+        type: 'dm',
+        topic: call.caller.bio || '',
+        recipient: call.caller
+      })
+    }
+  }
+
+  function rejectDMCall() {
+    if (!incomingCall.value) return
+    sendWSEvent('dm_call_reject', { channel_id: incomingCall.value.channel_id, caller_id: incomingCall.value.caller.id })
+    incomingCall.value = null
+  }
+
+  function endDMCall() {
+    if (activeDmCall.value) {
+      const recipId = activeDmCall.value.recipient?.id
+      sendWSEvent('dm_call_end', { channel_id: activeDmCall.value.channel_id, recipient_id: recipId })
+      activeDmCall.value = null
+    }
+    voiceStore.leaveChannel()
+  }
+
   return {
     categories,
     uncategorized,
@@ -636,6 +799,15 @@ export const useChatStore = defineStore('chat', () => {
     closeUserProfile,
     pendingMention,
     insertMention,
+    dms,
+    incomingCall,
+    activeDmCall,
+    fetchDMs,
+    openDM,
+    startDMCall,
+    acceptDMCall,
+    rejectDMCall,
+    endDMCall,
     fetchChannels,
     fetchMembers,
     selectChannel,

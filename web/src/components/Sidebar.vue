@@ -1,11 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { Hash, Volume2, ShieldCheck, Crown, Radio, RadioTower, Plus, Trash2 } from 'lucide-vue-next'
+import { Hash, Volume2, ShieldCheck, Crown, Radio, RadioTower, Plus, Trash2, MessageCircle } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
+import UserAvatar from './UserAvatar.vue'
 
 const emit = defineEmits(['open-admin'])
 
@@ -80,6 +81,17 @@ function handleTextClick(channel) {
   chatStore.selectChannel(channel)
   voiceStore.activeView = 'chat'
 }
+
+function handleDMClick(dm) {
+  chatStore.selectChannel({
+    id: dm.id,
+    name: dm.recipient.display_name || dm.recipient.username,
+    type: 'dm',
+    topic: dm.recipient.bio || '',
+    recipient: dm.recipient
+  })
+  voiceStore.activeView = 'chat'
+}
 </script>
 
 <template>
@@ -133,6 +145,53 @@ function handleTextClick(channel) {
           </div>
           <Volume2 class="w-4 h-4 text-mnema-accent flex-shrink-0" />
         </button>
+      </div>
+
+      <!-- Direktnachrichten (DMs) Section -->
+      <div class="space-y-1.5">
+        <div class="px-2 flex items-center justify-between text-[10px] font-semibold tracking-wider uppercase text-mnema-tertiary font-mono">
+          <span class="flex items-center gap-1.5">
+            <MessageCircle class="w-3 h-3 text-mnema-accent" />
+            <span>Direktnachrichten</span>
+          </span>
+          <span class="text-[9px] text-mnema-tertiary font-mono">{{ chatStore.dms.length }}</span>
+        </div>
+
+        <div v-if="!chatStore.dms.length" class="px-2 py-1 text-[11px] text-mnema-tertiary italic">
+          Keine DMs vorhanden.
+        </div>
+
+        <div v-else class="space-y-0.5">
+          <div
+            v-for="dm in chatStore.dms"
+            :key="dm.id"
+            @click="handleDMClick(dm)"
+            :class="[
+              'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors group cursor-pointer text-left',
+              chatStore.activeChannel?.id === dm.id
+                ? 'bg-mnema-surface text-mnema-accent font-semibold border-l-2 border-mnema-accent pl-2'
+                : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
+            ]"
+          >
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="relative flex-shrink-0">
+                <UserAvatar :user="dm.recipient" size="sm" />
+                <span
+                  :class="[
+                    'absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-mnema-canvas',
+                    chatStore.onlineUserIds.has(dm.recipient.id) ? 'bg-mnema-accent' : 'bg-mnema-tertiary'
+                  ]"
+                ></span>
+              </div>
+              <div class="flex flex-col min-w-0">
+                <span class="truncate text-xs">{{ dm.recipient.display_name || dm.recipient.username }}</span>
+                <span v-if="dm.last_message" class="text-[10px] text-mnema-tertiary truncate max-w-[130px]">
+                  {{ dm.last_message.content }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 2. Voice Hangouts Section -->
