@@ -1,0 +1,11 @@
+# Development override: publishes postgres and SeaweedFS on loopback so the
+# server can run on the host (`make dev`). Never use this on a production host.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres seaweedfs
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+
+  seaweedfs:
+    ports:
+      - "127.0.0.1:${S3_HOST_PORT:-8333}:8333"

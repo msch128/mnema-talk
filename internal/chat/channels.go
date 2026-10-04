@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 type ChannelType string
@@ -14,6 +15,9 @@ type ChannelType string
 const (
 	ChannelTypeText  ChannelType = "text"
 	ChannelTypeVoice ChannelType = "voice"
+
+	MaxChannelNameLen = 64
+	MaxTopicLen       = 255
 )
 
 type Channel struct {
@@ -34,86 +38,123 @@ type Category struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// GetServerHierarchy returns all categories with their nested channels, plus uncategorized channels
+// GetServerHierarchy returns all categories with their nested channels, plus
+// uncategorized channels.
 func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel, error) {
-	// 1. Fetch all categories
-	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order ASC, created_at ASC`)
+	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to query categories: %w", err)
+		return nil, nil, fmt.Errorf("query categories: %w", err)
 	}
-	defer catRows.Close()
-
 	categories := make([]Category, 0)
-	categoryMap := make(map[uuid.UUID]int)
-
+	categoryIdx := make(map[uuid.UUID]int)
 	for catRows.Next() {
-		var cat Category
-		cat.Channels = make([]Channel, 0)
+		cat := Category{Channels: make([]Channel, 0)}
 		if err := catRows.Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt); err != nil {
+			catRows.Close()
 			return nil, nil, err
 		}
-		categoryMap[cat.ID] = len(categories)
+		categoryIdx[cat.ID] = len(categories)
 		categories = append(categories, cat)
 	}
+	catRows.Close()
+	if err := catRows.Err(); err != nil {
+		return nil, nil, err
+	}
 
-	// 2. Fetch all channels (excluding direct messages)
-	chanRows, err := p.Query(ctx, `SELECT id, category_id, name, type, topic, sort_order, created_at FROM channels WHERE type != 'dm' ORDER BY sort_order ASC, created_at ASC`)
+	chanRows, err := p.Query(ctx, `
+		SELECT id, category_id, name, type, topic, sort_order, created_at
+		FROM channels ORDER BY sort_order, created_at`)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to query channels: %w", err)
+		return nil, nil, fmt.Errorf("query channels: %w", err)
 	}
 	defer chanRows.Close()
 
 	uncategorized := make([]Channel, 0)
-
 	for chanRows.Next() {
 		var ch Channel
 		if err := chanRows.Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt); err != nil {
 			return nil, nil, err
 		}
-
 		if ch.CategoryID != nil {
-			if idx, ok := categoryMap[*ch.CategoryID]; ok {
+			if idx, ok := categoryIdx[*ch.CategoryID]; ok {
 				categories[idx].Channels = append(categories[idx].Channels, ch)
 				continue
 			}
 		}
 		uncategorized = append(uncategorized, ch)
 	}
-
-	return categories, uncategorized, nil
+	return categories, uncategorized, chanRows.Err()
 }
 
-// CreateCategory adds a new channel category (Admin only)
 func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*Category, error) {
-	var cat Category
-	cat.Channels = make([]Channel, 0)
-	query := `INSERT INTO categories (name, sort_order) VALUES ($1, $2) RETURNING id, name, sort_order, created_at`
-	err := p.QueryRow(ctx, query, name, sortOrder).Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt)
+	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create category: %w", err)
+		return nil, err
+	}
+	cat := Category{Channels: make([]Channel, 0)}
+	err = p.QueryRow(ctx, `
+		INSERT INTO categories (name, sort_order) VALUES ($1, $2)
+		RETURNING id, name, sort_order, created_at`, name, sortOrder).
+		Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create category: %w", err)
 	}
 	return &cat, nil
 }
 
-// CreateChannel adds a new text or voice channel (Admin only)
 func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
-	var ch Channel
-	query := `INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id, category_id, name, type, topic, sort_order, created_at`
-	err := p.QueryRow(ctx, query, categoryID, name, chType, topic, sortOrder).Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+	if chType != ChannelTypeText && chType != ChannelTypeVoice {
+		return nil, httpx.ErrInvalidInput("type must be 'text' or 'voice'")
+	}
+	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create channel: %w", err)
+		return nil, err
+	}
+	topic, err = httpx.CleanText("topic", topic, MaxTopicLen, false)
+	if err != nil {
+		return nil, err
+	}
+	if categoryID != nil {
+		var exists bool
+		if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, *categoryID).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, httpx.ErrInvalidInput("category not found")
+		}
+	}
+	var ch Channel
+	err = p.QueryRow(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
+		RETURNING id, category_id, name, type, topic, sort_order, created_at`,
+		categoryID, name, chType, topic, sortOrder).
+		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("create channel: %w", err)
 	}
 	return &ch, nil
 }
 
-// DeleteChannel removes a channel (Admin only)
+// DeleteChannel removes a channel and, by cascade, its messages.
 func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) error {
-	_, err := p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
-	return err
+	tag, err := p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
+	if err != nil {
+		return fmt.Errorf("delete channel: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errChannelNotFound
+	}
+	return nil
 }
 
-// DeleteCategory removes a category and unlinks its channels (Admin only)
+// DeleteCategory removes a category; its channels become uncategorized.
 func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
-	_, err := p.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID)
-	return err
+	tag, err := p.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID)
+	if err != nil {
+		return fmt.Errorf("delete category: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return httpx.ErrNotFound("category not found")
+	}
+	return nil
 }

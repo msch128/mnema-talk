@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Crown, Volume2, Shield, Circle } from 'lucide-vue-next'
+import { Crown, Volume2 } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
@@ -38,135 +38,119 @@ function getUserVoiceChannel(userId) {
 </script>
 
 <template>
-  <!-- Discord-Identical Right Edge Glued Member Sidebar -->
-  <aside 
-    v-if="chatStore.showMemberList" 
-    class="w-60 bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none flex-shrink-0 ml-auto transition-all z-10"
-  >
-    <!-- Top Padding Header Line (matching channel bar height for visual continuity) -->
-    <div class="h-14 px-4 border-b border-mnema-hairline flex items-center justify-between flex-shrink-0 bg-mnema-raised/60">
-      <span class="text-[11px] font-semibold uppercase tracking-wider text-mnema-tertiary font-mono">
+  <!-- Discord-style member column; width and visibility are controlled by App.vue -->
+  <aside class="w-full bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none">
+    <!-- 48px header, aligned with the channel header and sidebar header -->
+    <div class="h-12 px-4 border-b border-mnema-hairline flex items-center justify-between gap-2 flex-shrink-0">
+      <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
         Mitglieder
       </span>
-      <span class="text-[10px] text-mnema-tertiary font-mono">
+      <span class="text-xs text-mnema-tertiary tabular-nums flex-shrink-0">
         {{ chatStore.members.length }}
       </span>
     </div>
 
     <!-- Scrollable Member Categories -->
-    <div class="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-4">
       <!-- 1. Administrators / Herzog Group -->
-      <div v-if="admins.length" class="space-y-1">
-        <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-mnema-amber font-mono flex items-center gap-1.5">
-          <Crown class="w-3 h-3 text-mnema-amber" />
-          <span>Herzog / Admin — {{ admins.length }}</span>
-        </div>
+      <section v-if="admins.length">
+        <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-amber flex items-center gap-1.5 min-w-0">
+          <Crown class="w-3.5 h-3.5 flex-shrink-0" />
+          <span class="truncate">Herzog / Admin — {{ admins.length }}</span>
+        </h3>
 
-        <div class="space-y-0.5">
-          <div
-            v-for="member in admins"
-            :key="member.id"
-            @click="chatStore.openUserProfile(member)"
-            class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
-          >
-            <!-- Avatar with Speaking and Status Indicators -->
-            <UserAvatar 
-              :user="member" 
-              size="md" 
-              :show-status="true" 
-              :is-online="chatStore.onlineUserIds.has(member.id)" 
-              :is-speaking="!!voiceStore.speakingUsers[member.id]" 
-            />
+        <div
+          v-for="member in admins"
+          :key="member.id"
+          @click="chatStore.openUserProfile(member)"
+          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
+        >
+          <UserAvatar
+            :user="member"
+            size="sm"
+            :show-status="true"
+            :is-online="chatStore.onlineUserIds.has(member.id)"
+            :is-speaking="!!voiceStore.speakingUsers[member.id]"
+          />
 
-            <!-- Name and Activity -->
-            <div class="flex flex-col min-w-0 flex-1">
-              <div class="flex items-center gap-1 min-w-0">
-                <span class="text-xs font-semibold text-mnema-text group-hover:text-mnema-accent transition truncate">
-                  {{ member.display_name }}
-                </span>
-                <Crown class="w-3 h-3 text-mnema-amber flex-shrink-0" />
-              </div>
-
-              <!-- Voice Activity Status Badge if in Hangout -->
-              <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-[10px] text-mnema-mint font-medium truncate">
-                <Volume2 class="w-3 h-3 flex-shrink-0" />
-                <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
-              </div>
-              <span v-else class="text-[9px] text-mnema-tertiary font-mono">
-                {{ chatStore.onlineUserIds.has(member.id) ? 'Online' : 'Offline' }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. Online Members Group -->
-      <div v-if="onlineNonAdmins.length" class="space-y-1">
-        <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-mnema-tertiary font-mono">
-          Online — {{ onlineNonAdmins.length }}
-        </div>
-
-        <div class="space-y-0.5">
-          <div
-            v-for="member in onlineNonAdmins"
-            :key="member.id"
-            @click="chatStore.openUserProfile(member)"
-            class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
-          >
-            <!-- Avatar with Speaking and Status Indicators -->
-            <UserAvatar 
-              :user="member" 
-              size="md" 
-              :show-status="true" 
-              :is-online="true" 
-              :is-speaking="!!voiceStore.speakingUsers[member.id]" 
-            />
-
-            <!-- Name and Activity -->
-            <div class="flex flex-col min-w-0 flex-1">
-              <span class="text-xs font-medium text-mnema-text group-hover:text-mnema-accent transition truncate">
+          <div class="flex flex-col min-w-0 flex-1">
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="text-nav font-semibold text-mnema-text group-hover:text-mnema-accent transition-colors truncate">
                 {{ member.display_name }}
               </span>
+              <Crown class="w-3.5 h-3.5 text-mnema-amber flex-shrink-0" />
+            </div>
 
-              <!-- Voice Activity Status Badge if in Hangout -->
-              <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-[10px] text-mnema-mint font-medium truncate">
-                <Volume2 class="w-3 h-3 flex-shrink-0" />
-                <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
-              </div>
+            <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-xs text-mnema-mint font-medium min-w-0">
+              <Volume2 class="w-3.5 h-3.5 flex-shrink-0" />
+              <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
+            </div>
+            <span v-else class="text-xs text-mnema-tertiary truncate">
+              {{ chatStore.onlineUserIds.has(member.id) ? 'Online' : 'Offline' }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Online Members Group -->
+      <section v-if="onlineNonAdmins.length">
+        <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
+          Online — {{ onlineNonAdmins.length }}
+        </h3>
+
+        <div
+          v-for="member in onlineNonAdmins"
+          :key="member.id"
+          @click="chatStore.openUserProfile(member)"
+          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
+        >
+          <UserAvatar
+            :user="member"
+            size="sm"
+            :show-status="true"
+            :is-online="true"
+            :is-speaking="!!voiceStore.speakingUsers[member.id]"
+          />
+
+          <div class="flex flex-col min-w-0 flex-1">
+            <span class="text-nav font-medium text-mnema-text group-hover:text-mnema-accent transition-colors truncate">
+              {{ member.display_name }}
+            </span>
+
+            <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-xs text-mnema-mint font-medium min-w-0">
+              <Volume2 class="w-3.5 h-3.5 flex-shrink-0" />
+              <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- 3. Offline Members Group -->
-      <div v-if="offlineNonAdmins.length" class="space-y-1">
-        <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-mnema-tertiary font-mono">
+      <section v-if="offlineNonAdmins.length">
+        <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           Offline — {{ offlineNonAdmins.length }}
-        </div>
+        </h3>
 
-        <div class="space-y-0.5 opacity-60 hover:opacity-100 transition-opacity">
+        <div class="opacity-60 hover:opacity-100 transition-opacity">
           <div
             v-for="member in offlineNonAdmins"
             :key="member.id"
             @click="chatStore.openUserProfile(member)"
-            class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
+            class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
           >
-            <UserAvatar 
-              :user="member" 
-              size="md" 
-              :show-status="true" 
-              :is-online="false" 
+            <UserAvatar
+              :user="member"
+              size="sm"
+              :show-status="true"
+              :is-online="false"
             />
 
-            <div class="flex flex-col min-w-0 flex-1">
-              <span class="text-xs text-mnema-muted group-hover:text-mnema-accent transition truncate">
-                {{ member.display_name }}
-              </span>
-              <span class="text-[9px] text-mnema-tertiary font-mono">Offline</span>
-            </div>
+            <span class="text-nav text-mnema-muted group-hover:text-mnema-accent transition-colors truncate min-w-0 flex-1">
+              {{ member.display_name }}
+            </span>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   </aside>
 </template>

@@ -2,8 +2,8 @@
 import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
-  MessageSquare, Maximize2, Minimize2, Radio, Sparkles, Send, 
-  Plus, Users, Activity, FileText, LayoutList, ScreenShare, Sliders
+  MessageSquare, Maximize2, Sparkles, Send, 
+  Plus, Users, Activity, Sliders
 } from 'lucide-vue-next'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -21,6 +21,12 @@ const layoutMode = ref('split') // 'split' (talk + chat in center) | 'stage' (ta
 const isFullscreen = ref(false)
 const videoContainer = ref(null)
 const screenVideoEl = ref(null)
+// Actual resolution of the shared screen as decoded by the browser.
+const videoResolution = ref('')
+function onVideoResize() {
+  const el = screenVideoEl.value
+  videoResolution.value = el?.videoWidth ? `${el.videoWidth}×${el.videoHeight}` : ''
+}
 const chatInput = ref('')
 const chatContainer = ref(null)
 const fileInput = ref(null)
@@ -148,23 +154,23 @@ function formatTime(dateStr) {
 </script>
 
 <template>
-  <main class="flex-1 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
+  <main class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
     <!-- Top Stage Header -->
-    <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between flex-shrink-0 z-10">
+    <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-8 h-8 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-xs shadow-sm flex-shrink-0">
+        <div class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm flex-shrink-0">
           <Volume2 class="w-4 h-4" />
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <h2 class="font-semibold text-sm text-mnema-text truncate">
+            <h2 class="font-semibold text-base leading-5 text-mnema-text truncate">
               {{ activeVoiceChannel?.name || 'Sprachkanal' }}
             </h2>
-            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent">
+            <span class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0">
               {{ usersInVoice.length }} Teilnehmer
             </span>
           </div>
-          <div class="flex items-center gap-2 text-[10px] text-mnema-tertiary font-mono">
+          <div class="flex items-center gap-2 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap overflow-hidden">
             <span>Opus 48kHz</span>
             <span>•</span>
             <!-- Live Clickable Ping Indicator -->
@@ -173,8 +179,8 @@ function formatTime(dateStr) {
               class="flex items-center gap-1 text-mnema-accent hover:underline font-semibold"
               title="Detaillierte Verbindungsmetrik (RTC) öffnen"
             >
-              <Activity class="w-3 h-3 text-mnema-accent" />
-              <span>Ping: {{ voiceStore.ping }}ms</span>
+              <Activity class="w-3.5 h-3.5 text-mnema-accent" />
+              <span>Ping: {{ voiceStore.rtcStats?.rttMs ?? voiceStore.ping ?? '–' }} ms</span>
             </button>
             <span>•</span>
             <!-- Noise Cancelling Status -->
@@ -184,29 +190,29 @@ function formatTime(dateStr) {
                 'flex items-center gap-1 transition',
                 voiceStore.noiseCancelling ? 'text-mnema-mint' : 'text-mnema-tertiary hover:text-mnema-text'
               ]"
-              :title="voiceStore.noiseCancelling ? 'KI Rauschunterdrückung aktiv (RNNoise)' : 'KI Rauschunterdrückung aus'"
+              :title="voiceStore.noiseCancelling ? 'Rauschunterdrückung des Browsers aktiv' : 'Rauschunterdrückung aus'"
             >
-              <Sparkles class="w-3 h-3" />
-              <span>{{ voiceStore.noiseCancelling ? 'Krisp-Filter an' : 'Filter aus' }}</span>
+              <Sparkles class="w-3.5 h-3.5" />
+              <span>{{ voiceStore.noiseCancelling ? 'Rauschfilter an' : 'Filter aus' }}</span>
             </button>
           </div>
         </div>
       </div>
 
       <!-- Top Right Actions -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 flex-shrink-0">
         <!-- View Toggle (Split Talk+Chat vs Full Stage) -->
         <button
           @click="layoutMode = layoutMode === 'split' ? 'stage' : 'split'"
           :class="[
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition',
+            'h-8 flex items-center gap-1.5 px-3 rounded-md text-sm font-medium border transition whitespace-nowrap',
             layoutMode === 'split'
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
               : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:text-mnema-text'
           ]"
           :title="layoutMode === 'split' ? 'Vollbild Talk-Bühne aktivieren' : 'Chat in der Mitte anzeigen'"
         >
-          <MessageSquare class="w-3.5 h-3.5" />
+          <MessageSquare class="w-4 h-4" />
           <span>{{ layoutMode === 'split' ? 'Chat aktiv' : 'Chat einblenden' }}</span>
         </button>
 
@@ -214,7 +220,7 @@ function formatTime(dateStr) {
         <button
           @click="chatStore.showMemberList = !chatStore.showMemberList"
           :class="[
-            'p-1.5 rounded-md border transition',
+            'w-8 h-8 flex items-center justify-center rounded-md border transition',
             chatStore.showMemberList 
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent' 
               : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
@@ -250,12 +256,14 @@ function formatTime(dateStr) {
             playsinline 
             :muted="isSharingOwnScreen"
             class="w-full h-full object-contain"
+            @resize="onVideoResize"
+            @loadedmetadata="onVideoResize"
           ></video>
 
-          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-xs text-white">
+          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-sm text-white">
             <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
-            <span class="font-mono font-semibold text-[11px]">{{ isSharingOwnScreen ? 'Eigener Bildschirm (4K 60 FPS)' : 'Live Bildschirmübertragung (4K 60 FPS)' }}</span>
-            <span class="text-white/60 text-[10px]">Source Quality</span>
+            <span class="font-mono font-semibold text-xs">{{ isSharingOwnScreen ? 'Eigener Bildschirm' : 'Bildschirmübertragung' }}</span>
+            <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
           <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -283,7 +291,7 @@ function formatTime(dateStr) {
             :key="user.id"
             :class="[
               'rounded-xl border transition-all flex flex-col items-center justify-center relative shadow-sm',
-              layoutMode === 'split' ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface',
+              layoutMode === 'split' ? 'p-3 h-32 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface',
               voiceStore.speakingUsers[user.id]
                 ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10 bg-mnema-surface'
                 : 'border-mnema-hairline hover:border-mnema-border'
@@ -304,17 +312,17 @@ function formatTime(dateStr) {
             <div class="flex items-center gap-1.5 max-w-[90%]">
               <span 
                 @click="chatStore.openUserProfile(user)"
-                class="text-xs font-semibold text-mnema-text hover:text-mnema-accent transition cursor-pointer truncate"
+                class="text-base font-semibold text-mnema-text hover:text-mnema-accent transition cursor-pointer truncate"
               >
                 {{ user.display_name || user.username }}
               </span>
-              <span v-if="user.role === 'admin'" class="text-[8px] px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
+              <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
                 Admin
               </span>
             </div>
 
             <!-- Speaking State Text -->
-            <div class="text-[9px] font-mono mt-0.5">
+            <div class="text-xs font-mono mt-0.5">
               <span v-if="voiceStore.speakingUsers[user.id]" class="text-mnema-accent font-semibold flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
                 Sprachaktiv
@@ -361,7 +369,7 @@ function formatTime(dateStr) {
           <button
             @click="toggleScreenShare"
             :class="[
-              'flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-xs font-semibold transition',
+              'flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold transition',
               voiceStore.isScreenSharing 
                 ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
@@ -369,7 +377,7 @@ function formatTime(dateStr) {
             title="Bildschirm in 4K bei 60 FPS übertragen"
           >
             <Monitor class="w-4 h-4" />
-            <span class="text-[11px]">{{ voiceStore.isScreenSharing ? 'Stop' : '4K Screen' }}</span>
+            <span class="text-sm">{{ voiceStore.isScreenSharing ? 'Stop' : '4K Screen' }}</span>
           </button>
 
           <!-- AI Noise Cancelling Toggle -->
@@ -381,7 +389,7 @@ function formatTime(dateStr) {
                 ? 'bg-mnema-accent/20 text-mnema-accent border border-mnema-accent/30' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-tertiary'
             ]"
-            title="KI Rauschunterdrückung (Krisp-Alternative) umschalten"
+            title="Rauschunterdrückung des Browsers umschalten"
           >
             <Sparkles class="w-4 h-4" />
           </button>
@@ -400,11 +408,11 @@ function formatTime(dateStr) {
           <!-- Disconnect Button -->
           <button
             @click="leaveVoiceChannel"
-            class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-xs font-semibold bg-mnema-danger text-white hover:bg-mnema-danger/90 transition shadow-sm"
+            class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold bg-mnema-danger text-white hover:bg-mnema-danger/90 transition shadow-sm"
             title="Sprachverbindung trennen"
           >
             <PhoneOff class="w-4 h-4" />
-            <span class="text-[11px]">Trennen</span>
+            <span class="text-sm">Trennen</span>
           </button>
         </div>
       </div>
@@ -415,14 +423,14 @@ function formatTime(dateStr) {
         class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
       >
         <!-- Chat Message Timeline -->
-        <div ref="chatContainer" class="flex-1 overflow-y-auto px-6 py-4 space-y-3.5">
+        <div ref="chatContainer" class="flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6">
           <!-- Empty State -->
           <div v-if="!chatStore.messages.length" class="h-full flex flex-col items-center justify-center text-center p-6">
             <div class="w-10 h-10 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-2 text-mnema-accent bg-mnema-surface/50">
               <MessageSquare class="w-4 h-4 opacity-80" />
             </div>
-            <p class="font-semibold text-xs text-mnema-text">Chat in #{{ activeVoiceChannel?.name }}</p>
-            <p class="text-[10px] text-mnema-tertiary mt-0.5 max-w-xs">
+            <p class="font-semibold text-base text-mnema-text">Chat in #{{ activeVoiceChannel?.name }}</p>
+            <p class="text-sm text-mnema-tertiary mt-0.5 max-w-sm">
               Sende Nachrichten, Links und S3-Dateien direkt während des Voice-Talks.
             </p>
           </div>
@@ -431,29 +439,29 @@ function formatTime(dateStr) {
           <div
             v-for="msg in chatStore.messages"
             :key="msg.id"
-            class="flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors group"
+            class="relative flex items-start gap-4 px-4 py-0.5 mt-[17px] first:mt-2 hover:bg-mnema-surface/50 transition-colors group"
           >
             <!-- User Avatar -->
             <UserAvatar 
-              :user="msg" 
-              size="sm" 
+              :user="msg"
+              size="md"
               class="cursor-pointer hover:opacity-85 transition mt-0.5" 
               @click="chatStore.openUserProfile(msg)" 
             />
 
             <!-- Content Body -->
             <div class="flex-1 min-w-0">
-              <div class="flex items-baseline gap-2">
+              <div class="flex items-baseline gap-2 min-w-0">
                 <span 
                   @click="chatStore.openUserProfile(msg)"
-                  class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer"
+                  class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate"
                 >
                   {{ msg.display_name || msg.username }}
                 </span>
-                <span class="text-[9px] text-mnema-tertiary font-mono">{{ formatTime(msg.created_at) }}</span>
+                <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
               </div>
 
-              <MarkdownContent v-if="msg.content" :content="msg.content" class="mt-0.5" />
+              <MarkdownContent v-if="msg.content" :content="msg.content" />
 
               <!-- Attachments if any -->
               <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">
@@ -463,11 +471,11 @@ function formatTime(dateStr) {
                   class="max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-sm"
                 >
                   <template v-if="att.mime_type.startsWith('image/')">
-                    <img :src="att.url" :alt="att.original_filename" class="max-h-64 w-auto object-cover" loading="lazy" />
+                    <img :src="att.url" :alt="att.original_filename" class="max-h-64 w-auto max-w-full object-cover" loading="lazy" />
                   </template>
-                  <div class="p-2 flex items-center justify-between text-xs bg-mnema-raised border-t border-mnema-hairline">
+                  <div class="p-2 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline">
                     <span class="truncate text-mnema-text">{{ att.original_filename }}</span>
-                    <span class="text-[9px] font-mono text-mnema-tertiary pl-2">{{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB</span>
+                    <span class="text-xs font-mono text-mnema-tertiary pl-2">{{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB</span>
                   </div>
                 </div>
               </div>
@@ -476,8 +484,8 @@ function formatTime(dateStr) {
         </div>
 
         <!-- Chat Composer Bar -->
-        <div class="px-6 pb-4 flex-shrink-0">
-          <div class="bg-mnema-elevated border border-mnema-border rounded-lg p-2 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition">
+        <div class="px-4 pb-6 flex-shrink-0">
+          <div class="min-h-[52px] bg-mnema-elevated border border-mnema-border rounded-lg pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition">
             <input 
               ref="fileInput" 
               type="file" 
@@ -488,26 +496,26 @@ function formatTime(dateStr) {
             <button
               @click="fileInput?.click()"
               :disabled="isUploading"
-              class="p-1.5 rounded-md hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+              class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
               title="Datei oder Screenshot senden"
             >
-              <Plus class="w-4 h-4" />
+              <Plus class="w-5 h-5" />
             </button>
 
             <input
               v-model="chatInput"
               @keydown.enter="sendChatMessage"
               :placeholder="`Nachricht an #${activeVoiceChannel?.name || 'talk'}...`"
-              class="bg-transparent flex-1 outline-none text-xs text-mnema-text placeholder-mnema-tertiary"
+              class="bg-transparent flex-1 min-w-0 outline-none text-message text-mnema-text placeholder-mnema-tertiary"
             />
 
             <button
               @click="sendChatMessage"
               :disabled="!chatInput.trim() || isUploading"
-              class="p-1.5 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20"
+              class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20"
               title="Senden"
             >
-              <Send class="w-3.5 h-3.5" />
+              <Send class="w-4 h-4" />
             </button>
           </div>
         </div>

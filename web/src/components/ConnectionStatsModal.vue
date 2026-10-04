@@ -1,37 +1,50 @@
 <script setup>
 import { computed } from 'vue'
-import { 
-  X, Activity, Radio, Cpu, ShieldCheck, Zap, 
-  Volume2, Sliders, CheckCircle2, Sparkles, RefreshCw
-} from 'lucide-vue-next'
+import { X, Activity, Radio, Zap, ShieldCheck } from 'lucide-vue-next'
 import { useVoiceStore } from '../stores/voice'
+import { rateJitter } from '../lib/rtcStats'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
 
-// SVG Sparkline calculation for live ping history
+const stats = computed(() => voiceStore.rtcStats)
+const dash = value => (value == null || value === '' ? '–' : value)
+
+// Sparkline of the measured WebSocket round trips.
 const sparklinePoints = computed(() => {
   const history = voiceStore.pingHistory
   if (!history || history.length < 2) return ''
-
   const width = 280
   const height = 50
-  const min = Math.max(1, Math.min(...history) - 2)
+  const min = Math.max(0, Math.min(...history) - 2)
   const max = Math.max(...history, min + 5)
   const range = max - min || 1
+  return history
+    .map((val, idx) => {
+      const x = (idx / (history.length - 1)) * width
+      const y = height - ((val - min) / range) * (height - 8) - 4
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(' ')
+})
 
-  return history.map((val, idx) => {
-    const x = (idx / (history.length - 1)) * width
-    const y = height - ((val - min) / range) * (height - 8) - 4
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  }).join(' ')
+const rows = computed(() => {
+  const s = stats.value
+  return [
+    ['Audio-Codec', dash(s?.codec)],
+    ['Senden / Empfangen', s?.sendKbps != null ? `${s.sendKbps} / ${s.recvKbps} kbit/s` : '–'],
+    ['Pakete gesendet / empfangen', s ? `${s.packetsSent} / ${s.packetsReceived}` : '–'],
+    ['Lokaler Kandidat', dash(s?.localCandidate)],
+    ['Server-Kandidat', dash(s?.remoteCandidate)],
+    ['Transportverschlüsselung', s?.srtpCipher ? `DTLS-SRTP (${s.srtpCipher})` : 'DTLS-SRTP'],
+    ['Signal-Latenz (WebSocket)', voiceStore.ping != null ? `${voiceStore.ping} ms` : '–']
+  ]
 })
 </script>
 
 <template>
   <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none">
     <div class="bg-mnema-elevated w-full max-w-lg rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
-      <!-- Modal Header -->
       <header class="px-5 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-md bg-mnema-accent/15 border border-mnema-accent/30 flex items-center justify-center text-mnema-accent">
@@ -39,91 +52,79 @@ const sparklinePoints = computed(() => {
           </div>
           <div>
             <div class="flex items-center gap-2">
-              <h2 class="text-xs font-semibold text-mnema-text">RTC Sprach- & Verbindungsstatus</h2>
-              <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-mnema-accent/15 text-mnema-accent font-medium flex items-center gap-1 font-mono">
-                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-                Verbunden
+              <h2 class="text-lg font-semibold text-mnema-text">Verbindungsstatus</h2>
+              <span
+                :class="[
+                  'text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 font-mono',
+                  stats?.connected ? 'bg-mnema-accent/15 text-mnema-accent' : 'bg-mnema-surface text-mnema-tertiary'
+                ]"
+              >
+                <span :class="['w-1.5 h-1.5 rounded-full', stats?.connected ? 'bg-mnema-accent' : 'bg-mnema-tertiary']"></span>
+                {{ stats?.connected ? 'Verbunden' : 'Keine Sprachverbindung' }}
               </span>
             </div>
-            <p class="text-[10px] text-mnema-tertiary font-mono">Echtzeit WebRTC Pion SFU Telemetrie</p>
+            <p class="text-xs text-mnema-tertiary font-mono">Gemessen vom Browser (WebRTC getStats)</p>
           </div>
         </div>
-
-        <button 
-          @click="emit('close')"
+        <button
           class="p-1.5 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+          title="Schließen"
+          @click="emit('close')"
         >
           <X class="w-4 h-4" />
         </button>
       </header>
 
-      <!-- Modal Body -->
       <div class="p-5 space-y-5 overflow-y-auto max-h-[80vh]">
-        <!-- Primary KPI Grid -->
         <div class="grid grid-cols-3 gap-2.5">
-          <!-- Ping KPI Card -->
           <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline">
-            <div class="flex items-center justify-between text-mnema-tertiary text-[10px] uppercase font-mono">
+            <div class="flex items-center justify-between text-mnema-tertiary text-xs uppercase font-mono">
               <span>Latenz (RTT)</span>
-              <Activity class="w-3.5 h-3.5 text-mnema-accent" />
+              <Activity class="w-4 h-4 text-mnema-accent" />
             </div>
             <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
-              <span>{{ voiceStore.ping }}</span>
-              <span class="text-xs font-normal text-mnema-tertiary">ms</span>
+              <span>{{ dash(stats?.rttMs) }}</span>
+              <span class="text-sm font-normal text-mnema-tertiary">ms</span>
             </div>
-            <div class="text-[9px] text-mnema-tertiary font-mono mt-1">
-              Min: {{ voiceStore.minPing }}ms • Max: {{ voiceStore.maxPing }}ms
-            </div>
+            <div class="text-xs text-mnema-tertiary font-mono mt-1">Sprachverbindung zum Server</div>
           </div>
 
-          <!-- Jitter KPI Card -->
           <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline">
-            <div class="flex items-center justify-between text-mnema-tertiary text-[10px] uppercase font-mono">
+            <div class="flex items-center justify-between text-mnema-tertiary text-xs uppercase font-mono">
               <span>Jitter</span>
-              <Zap class="w-3.5 h-3.5 text-mnema-mint" />
+              <Zap class="w-4 h-4 text-mnema-mint" />
             </div>
             <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
-              <span>{{ voiceStore.jitter }}</span>
-              <span class="text-xs font-normal text-mnema-tertiary">ms</span>
+              <span>{{ dash(stats?.jitterMs) }}</span>
+              <span class="text-sm font-normal text-mnema-tertiary">ms</span>
             </div>
-            <div class="text-[9px] text-mnema-accent font-mono mt-1">
-              Hervorragend (&lt;5ms)
-            </div>
+            <div class="text-xs text-mnema-tertiary font-mono mt-1">{{ rateJitter(stats?.jitterMs) }}</div>
           </div>
 
-          <!-- Packet Loss KPI Card -->
           <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline">
-            <div class="flex items-center justify-between text-mnema-tertiary text-[10px] uppercase font-mono">
+            <div class="flex items-center justify-between text-mnema-tertiary text-xs uppercase font-mono">
               <span>Paketverlust</span>
-              <ShieldCheck class="w-3.5 h-3.5 text-mnema-accent" />
+              <ShieldCheck class="w-4 h-4 text-mnema-accent" />
             </div>
             <div class="text-xl font-bold font-mono text-mnema-text mt-1 flex items-baseline gap-1">
-              <span>{{ voiceStore.packetLossPercent }}</span>
-              <span class="text-xs font-normal text-mnema-tertiary">%</span>
+              <span>{{ stats ? stats.lossPercent : '–' }}</span>
+              <span class="text-sm font-normal text-mnema-tertiary">%</span>
             </div>
-            <div class="text-[9px] text-mnema-mint font-mono mt-1">
-              0 verworfen
+            <div class="text-xs text-mnema-tertiary font-mono mt-1">
+              {{ stats ? `${stats.packetsLost} verloren` : 'keine Daten' }}
             </div>
           </div>
         </div>
 
-        <!-- Live Ping Sparkline Graph -->
         <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2">
-          <div class="flex items-center justify-between text-xs">
-            <span class="text-[11px] font-medium text-mnema-text">Echtzeit-Latenzverlauf (letzte 30 Pings)</span>
-            <span class="text-[10px] text-mnema-tertiary font-mono">Avg: {{ voiceStore.avgPing }} ms</span>
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-xs font-medium text-mnema-text">Signal-Latenz (letzte 30 Messungen)</span>
+            <span class="text-xs text-mnema-tertiary font-mono">
+              Ø {{ dash(voiceStore.avgPing) }} ms · min {{ dash(voiceStore.minPing) }} · max {{ dash(voiceStore.maxPing) }}
+            </span>
           </div>
-
-          <!-- Waveform container -->
           <div class="h-16 w-full bg-mnema-canvas rounded border border-mnema-border p-2 relative overflow-hidden flex items-end">
-            <!-- Background grid lines -->
-            <div class="absolute inset-0 flex flex-col justify-between p-1 opacity-10 pointer-events-none">
-              <div class="border-b border-mnema-text w-full"></div>
-              <div class="border-b border-mnema-text w-full"></div>
-              <div class="border-b border-mnema-text w-full"></div>
-            </div>
-
-            <svg viewBox="0 0 280 50" preserveAspectRatio="none" class="w-full h-12 overflow-visible">
+            <svg v-if="sparklinePoints" viewBox="0 0 280 50" preserveAspectRatio="none" class="w-full h-12 overflow-visible">
               <polyline
                 fill="none"
                 stroke="#2DA771"
@@ -133,81 +134,30 @@ const sparklinePoints = computed(() => {
                 :points="sparklinePoints"
               />
             </svg>
+            <span v-else class="text-xs text-mnema-tertiary m-auto">Noch keine Messwerte</span>
           </div>
         </div>
 
-        <!-- AI Noise Cancelling (Krisp Equivalent) Setting Card -->
-        <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-mnema-accent/15 border border-mnema-accent/30 flex items-center justify-center text-mnema-accent flex-shrink-0">
-              <Sparkles class="w-4 h-4" />
-            </div>
-            <div>
-              <div class="text-xs font-semibold text-mnema-text flex items-center gap-1.5">
-                <span>KI Rauschunterdrückung</span>
-                <span class="text-[9px] px-1 rounded bg-mnema-mint/20 text-mnema-mint font-mono">RNNoise Neural AI</span>
-              </div>
-              <p class="text-[10px] text-mnema-tertiary">
-                Tastaturklappern, Hintergrundlärm und Echos werden in Echtzeit gefiltert (Krisp-Pendant).
-              </p>
-            </div>
-          </div>
-
-          <button
-            @click="voiceStore.toggleNoiseCancelling"
-            :class="[
-              'w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5',
-              voiceStore.noiseCancelling ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-            ]"
-          >
-            <div 
-              :class="[
-                'w-5 h-5 rounded-full bg-white transition-transform shadow-sm',
-                voiceStore.noiseCancelling ? 'translate-x-5' : 'translate-x-0'
-              ]"
-            ></div>
-          </button>
-        </div>
-
-        <!-- Technical Diagnostics (Discord-Style Details) -->
         <div class="space-y-1.5">
-          <h3 class="text-[10px] uppercase font-mono tracking-wider text-mnema-tertiary font-semibold">
-            Audio & RTC Parameter
-          </h3>
-          <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline text-xs">
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">Audio-Codec</span>
-              <span class="font-mono text-mnema-text">Opus 48.000 Hz, 2 Kanäle (128 kbps VBR)</span>
-            </div>
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">Transport-Protokoll</span>
-              <span class="font-mono text-mnema-text">WebRTC UDP (Pion SFU Media Engine)</span>
-            </div>
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">ICE Verbindungstyp</span>
-              <span class="font-mono text-mnema-text">Host / STUN Reflexive (srflx)</span>
-            </div>
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">Pakete Gesendet / Empfangen</span>
-              <span class="font-mono text-mnema-text">{{ voiceStore.packetsSent }} / {{ voiceStore.packetsReceived }}</span>
-            </div>
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">Verschlüsselung</span>
-              <span class="font-mono text-mnema-text">E2E DTLS-SRTP (AEAD AES-128-GCM)</span>
-            </div>
-            <div class="px-3 py-2 flex items-center justify-between">
-              <span class="text-mnema-tertiary">Server-Knoten</span>
-              <span class="font-mono text-mnema-text">Mnema Private Cloud Core</span>
+          <h3 class="text-xs uppercase font-mono tracking-wider text-mnema-tertiary font-semibold">Details</h3>
+          <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline text-sm">
+            <div v-for="[label, value] in rows" :key="label" class="px-3 py-2 flex items-center justify-between gap-4">
+              <span class="text-mnema-tertiary">{{ label }}</span>
+              <span class="font-mono text-mnema-text text-right">{{ value }}</span>
             </div>
           </div>
+          <p class="text-xs text-mnema-tertiary leading-relaxed">
+            Sprache und Bildschirm sind auf dem Weg zum Server verschlüsselt. Der Server (SFU) entschlüsselt die
+            Pakete zur Weiterleitung an die anderen Teilnehmer; es gibt keine Ende-zu-Ende-Verschlüsselung und
+            keine Aufzeichnung.
+          </p>
         </div>
       </div>
 
-      <!-- Footer -->
       <footer class="px-5 py-3 border-t border-mnema-hairline bg-mnema-raised flex items-center justify-end">
         <button
+          class="px-4 py-1.5 rounded-lg bg-mnema-surface border border-mnema-border hover:bg-mnema-hover text-mnema-text text-sm transition"
           @click="emit('close')"
-          class="px-4 py-1.5 rounded-lg bg-mnema-surface border border-mnema-border hover:bg-mnema-hover text-mnema-text text-xs transition"
         >
           Schließen
         </button>

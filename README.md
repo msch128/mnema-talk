@@ -1,76 +1,182 @@
-# Mnema Talk 🎙️⚡
+# Mnema Talk
 
-An ultra-lightweight, private, single-server Discord alternative written in **Go (Golang)** with real-time text chat, instant voice hangouts, and source-quality **4K 60 FPS screen sharing**.
+A lightweight, private, single-server Discord alternative: text channels, direct
+messages, instant-join voice hangouts and high-quality screen sharing. It is a
+single Go binary with the web app and a WebRTC SFU built in.
 
----
+## Features
 
-## 🌟 Why Mnema Talk?
+- **One community, no guilds**: categories with text and voice channels.
+- **Text chat**: real-time messages over WebSocket, replies/threads, reactions,
+  Markdown, file and image attachments, and live presence.
+- **Direct messages**: private 1:1 conversations, visible only to the participants.
+- **Voice hangouts**: click a voice channel and you are in, no ringing.
+- **Screen sharing** up to source quality (e.g. 1440p/4K at 60 FPS, hardware
+  encoding in the browser). The Pion-based SFU forwards RTP packets and never transcodes.
+- **Invite-only**: no public registration; the admin (default `Herzog`,
+  configurable) creates invite codes.
+- **Privacy-minded defaults**: no third-party STUN unless configured, no
+  automatic data deletion unless enabled, generic legal/privacy page driven by env vars.
 
-Existing self-hosted alternatives often fall into one of two extremes:
-1. **Bloated Monoliths**: Heavy multi-container stacks (like Stoat/Revolt with 10+ microservices, MongoDB, Redis, RabbitMQ, and MinIO) consuming gigabytes of RAM.
-2. **Chat-First Protocols**: Systems like Matrix/Element that lack native, instant-join voice channels and rely on clunky Jitsi iframe widgets or complex setups.
-
-**Mnema Talk** solves this with a **Single-Binary Architecture**:
-- 🚀 **Ultra-lightweight**: Target memory usage is **< 60 MB RAM** on idle.
-- 🔊 **Discord-Style Hangouts**: Click a voice channel to connect immediately with microphone and live presence. No phone-call ringing.
-- 🖥️ **4K 60 FPS Screen Share**: Powered by a pure Go WebRTC SFU (Pion) with zero server-side video transcoding overhead.
-- 🔒 **Invite-Only & Private**: Public registration is disabled; only the administrator (`Herzog`) can generate invite links.
-- 🗄️ **Zero External Services**: Embedded SQLite with WAL mode and local file storage. No external database or message broker required.
-
----
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                 Mnema Talk (Single Go Binary)               │
-│                                                             │
-│  [ Embedded Frontend (Vite/React via //go:embed)          ] │
-│  [ REST API (Auth, Channel Management, Media Uploads)      ] │
-│  [ WebSockets (Live Chat, Presence, Speaking Indicators)  ] │
-│  [ Pion WebRTC SFU (Voice Routing, 4K 60FPS Screenshare)  ] │
-│  [ Embedded SQLite (WAL Mode Engine)                      ] │
-│  [ Local File Storage (Media / Uploads)                   ] │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                    Caddy Reverse Proxy
-                 (e.g., https://chat.example.com)
+            Browser (Vue 3 SPA)
+     HTTPS / WSS │        │ UDP (DTLS-SRTP)
+                 ▼        ▼
+   ┌───────────────────────────────────────┐
+   │ mnema-talk  (single Go binary)        │
+   │  - embedded web app (go:embed)        │
+   │  - REST API + WebSocket hub           │
+   │  - Pion WebRTC SFU                    │
+   │  - embedded SQL migrations            │
+   └──────────┬─────────────────┬──────────┘
+              ▼                 ▼
+      PostgreSQL 17       SeaweedFS (S3 API)
+      (data)              (uploads, avatars)
 ```
 
----
+`docker compose` runs three containers: `app`, `postgres` and `seaweedfs`. Any
+S3-compatible store can replace SeaweedFS.
 
-## 🚀 Quickstart
+| Part      | Tech |
+|-----------|------|
+| Backend   | Go, chi, pgx, gorilla/websocket, Pion WebRTC v4, AWS SDK v2 (S3) |
+| Frontend  | Vue 3, Pinia, Vite, Tailwind CSS (`web/`) |
+| Storage   | PostgreSQL 17, S3 (SeaweedFS by default) |
 
-### Prerequisites
-- [Go 1.22+](https://golang.org)
-- [Node.js 20+](https://nodejs.org) (for building the frontend)
-- Docker (optional for containerized deployment)
+## Quickstart (Docker Compose)
 
-### 1. Configuration
-Copy `.env.example` to `.env` and adjust the settings:
-```bash
+```sh
 cp .env.example .env
+# edit .env: set PUBLIC_URL, JWT_SECRET (openssl rand -hex 32),
+# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY
+docker compose up -d --build      # or: make up
+docker compose logs app           # shows the generated admin password on first start
 ```
 
-### 2. Development Setup
-```bash
-# Build frontend
-cd web && npm install && npm run build && cd ..
+Open `PUBLIC_URL`, log in as the admin, and create invite codes for your users.
+If `ADMIN_INITIAL_PASSWORD` is empty, a random password is generated and logged
+**once**. Change it after the first login.
 
-# Run backend
-go run cmd/server/main.go
+## Development
+
+Requirements: Go (see `go.mod`), Node 22 + npm, Docker, GNU make (on Windows use
+Git Bash or WSL). Run `make help` for all targets.
+
+```sh
+make install-hooks   # pre-commit: gitleaks + gofmt
+make dev             # postgres + seaweedfs in Docker (docker-compose.dev.yml publishes
+                     # them on 127.0.0.1), server on :8080 via go run (reads .env)
+cd web && npm run dev   # Vite dev server on http://localhost:3000, proxies /api to :8080
 ```
 
----
+For the Vite dev server, allow its origin in `.env`:
 
-## 🔒 Security & AI Development Guidelines
+```sh
+CORS_ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000
+DATABASE_URL=postgres://mnema:<password>@localhost:5432/mnema_talk?sslmode=disable
+```
 
-For AI coding assistants and contributors:
-- Please read [AGENTS.md](AGENTS.md) before making changes.
-- **Strict Rule**: Never commit secrets, passwords, production tokens, or private IP addresses.
+`make build` produces `bin/mnema-talk` with the web app embedded (`make web`
+builds only `web/dist`).
 
----
+## Testing
 
-## 📄 License
+```sh
+make test              # Go unit tests (-race)
+make test-integration  # Go integration tests: starts postgres:17-alpine via Docker,
+                       # or uses TEST_DATABASE_URL if set
+make test-web          # vitest
+make lint              # gofmt, go vet, eslint
+make check             # everything CI runs: lint, tests, govulncheck, builds,
+                       # npm audit, docker build
+```
 
-GNU AGPL-3.0, Copyright (C) 2026 Marius Schröder (msch128). See `LICENSE` for details.
+CI (`.github/workflows/ci.yml`) runs gitleaks, the backend suite against a
+Postgres service container, govulncheck, the frontend lint/test/build/audit and
+a Docker image build on every push to `main` and every pull request.
+
+## Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please)
+(`.github/workflows/release.yml`) and driven by conventional commits
+(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major):
+
+1. After CI passes on a push to `main`, release-please opens or updates a
+   **release PR** that bumps `version.txt` and `CHANGELOG.md`.
+2. Merging that PR creates the GitHub Release and tag `vX.Y.Z` (first release: `1.0.0`).
+3. The same workflow then builds the image and pushes it to GHCR:
+   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest`, with OCI labels,
+   provenance and SBOM. The version is baked into the binary
+   (`-X main.version=X.Y.Z`).
+
+## Configuration
+
+All settings are environment variables; `.env.example` documents every one of
+them with safe placeholder values. Notable ones:
+
+- `PUBLIC_URL`: the URL browsers use; `https://` enables Secure/`__Host-` cookies.
+- `CORS_ALLOWED_ORIGINS`: extra allowed origins (defaults to `PUBLIC_URL`).
+- `TRUSTED_PROXY_CIDRS`: proxies whose `X-Forwarded-For` is trusted.
+- `MEDIA_RETENTION_DAYS`: `0` (default) = never delete media automatically.
+- `WEBRTC_UDP_PORT_MIN/MAX`, `WEBRTC_NAT_1TO1_IP`, `WEBRTC_STUN_URLS`: voice networking.
+- `LEGAL_*`: operator details shown in the privacy policy.
+
+## Deployment behind a reverse proxy
+
+Terminate TLS in a reverse proxy such as Caddy and forward HTTP and WebSocket
+traffic to the app:
+
+```caddy
+chat.example.com {
+    reverse_proxy app-host:8080
+}
+```
+
+- The proxy must pass the client IP in `X-Forwarded-For` (Caddy does this by
+  default), and its address must be within `TRUSTED_PROXY_CIDRS`. Otherwise
+  rate limiting and login lockout see only the proxy's IP.
+- Voice and video do **not** go through the proxy. Forward the UDP range
+  `WEBRTC_UDP_PORT_MIN`–`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) from
+  your router/firewall to the host, and set `WEBRTC_NAT_1TO1_IP` to the public
+  IP when the server is behind NAT.
+- Set `APP_ENV=production`, a strong `JWT_SECRET` and an `https://` `PUBLIC_URL`.
+- Do not use `docker-compose.dev.yml` in production; the base compose file
+  does not publish PostgreSQL or SeaweedFS.
+
+### Running a released image
+
+Instead of building on the server, use a published image. In
+`docker-compose.yml` on the server, replace the `build:` block of the `app`
+service with a pinned tag:
+
+```yaml
+  app:
+    image: ghcr.io/msch128/mnema-talk:1.0.0   # or :1.0 to follow patch releases
+```
+
+Then update with:
+
+```sh
+docker compose pull && docker compose up -d
+```
+
+Deployment to a LAN/self-hosted server stays **manual and pull-based**: GitHub's
+hosted runners cannot reach a server inside a private network, so nothing
+pushes to it. Bump the tag (or pull `:X.Y` / `:latest`) when you want to update.
+Database migrations run automatically at startup.
+
+If the GHCR package is private (the default for a newly published package),
+either make it public once under the package's settings on GitHub, or run
+`docker login ghcr.io` on the server with a token that has `read:packages`.
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for how to report vulnerabilities and a summary of
+the security model. Contributors and AI agents: read [AGENTS.md](AGENTS.md)
+first. This repository is public, so never commit secrets.
+
+## License
+
+See [LICENSE](LICENSE).

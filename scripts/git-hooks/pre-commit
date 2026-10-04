@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Pre-commit hook: fast checks only (secret scan + gofmt on staged Go files).
+# Tests run in CI and via `make check`.
+# Install with: make install-hooks
+# Bypass once with `git commit --no-verify` (this also skips the secret scan).
+
+set -euo pipefail
+
+YELLOW='\033[33m'
+GREEN='\033[32m'
+RED='\033[31m'
+RESET='\033[0m'
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [ -z "$staged" ]; then
+  exit 0
+fi
+
+# 1. Secret scan of the staged diff. Skips with a warning if gitleaks is not
+#    installed: CI scans every push and PR regardless.
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks protect --staged --redact --no-banner --config "$repo_root/.gitleaks.toml"; then
+    echo -e "${RED}pre-commit: gitleaks flagged a potential secret in the staged changes.${RESET}"
+    echo -e "${RED}            Remove it (and rotate it if it is real). Genuine false positives${RESET}"
+    echo -e "${RED}            can be allowlisted in .gitleaks.toml.${RESET}"
+    exit 1
+  fi
+else
+  echo -e "${YELLOW}pre-commit: gitleaks not installed - skipping local secret scan.${RESET}"
+  echo -e "${YELLOW}            Install it: https://github.com/gitleaks/gitleaks#installing${RESET}"
+fi
+
+# 2. gofmt on staged Go files.
+go_files="$(printf '%s\n' "$staged" | grep -E '\.go$' || true)"
+if [ -n "$go_files" ]; then
+  if command -v gofmt >/dev/null 2>&1; then
+    unformatted="$(printf '%s\n' "$go_files" | xargs gofmt -l)"
+    if [ -n "$unformatted" ]; then
+      echo -e "${RED}pre-commit: gofmt needed on:${RESET}"
+      echo "$unformatted"
+      echo -e "${RED}            Run \`make fmt\` and stage the result.${RESET}"
+      exit 1
+    fi
+  else
+    echo -e "${YELLOW}pre-commit: gofmt not found - skipping format check.${RESET}"
+  fi
+fi
+
+echo -e "${GREEN}pre-commit: ok${RESET}"

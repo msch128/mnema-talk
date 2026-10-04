@@ -1,0 +1,18 @@
+# Keep secrets, local data and host build artefacts out of the build context.
+.git
+.github
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+data/
+uploads/
+media/
+bin/
+tmp/
+**/node_modules
+web/dist
+*.md
+!README.md

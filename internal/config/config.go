@@ -1,10 +1,14 @@
+// Package config loads all runtime settings from environment variables (or a
+// local .env during development). Real values never live in the repository.
 package config
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"log"
+	"log/slog"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -17,6 +21,8 @@ type Config struct {
 	BindAddr             string
 	AppEnv               string
 	PublicURL            string
+	AllowedOrigins       []string
+	TrustedProxies       []string
 	JWTSecret            string
 	SessionExpiryHours   int
 	AdminUsername        string
@@ -29,6 +35,7 @@ type Config struct {
 	S3SecretKey          string
 	S3ForcePathStyle     bool
 	MediaRetentionDays   int
+	MaxUploadMB          int
 	WebRTCUDPPortMin     uint16
 	WebRTCUDPPortMax     uint16
 	WebRTCNAT1to1IP      string
@@ -46,73 +53,141 @@ var examplePlaceholders = map[string]bool{
 	"change_this_password_immediately":                  true,
 }
 
+// defaultTrustedProxies covers loopback and private networks, where a reverse
+// proxy (Caddy) or the Docker bridge sits in front of the app.
+var defaultTrustedProxies = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
+
 func Load() (*Config, error) {
-	// Attempt to load .env file if present (ignored in production if not present)
+	// A local .env is optional; in production the variables come from the environment.
 	_ = godotenv.Load()
+	return FromEnv(os.LookupEnv)
+}
 
-	expiryHours, _ := strconv.Atoi(getEnv("SESSION_EXPIRY_HOURS", "720"))
-	retentionDays, _ := strconv.Atoi(getEnv("MEDIA_RETENTION_DAYS", "30"))
+// FromEnv builds a Config from a lookup function, which keeps it testable.
+func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
+	get := func(key, def string) string {
+		if v, ok := lookup(key); ok && strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+		return def
+	}
+	getInt := func(key string, def int) (int, error) {
+		raw := get(key, strconv.Itoa(def))
+		v, err := strconv.Atoi(raw)
+		if err != nil {
+			return 0, fmt.Errorf("%s must be an integer, got %q", key, raw)
+		}
+		return v, nil
+	}
 
-	portMin, _ := strconv.ParseUint(getEnv("WEBRTC_UDP_PORT_MIN", "50000"), 10, 16)
-	portMax, _ := strconv.ParseUint(getEnv("WEBRTC_UDP_PORT_MAX", "50050"), 10, 16)
-
-	forcePathStyle := getEnv("S3_FORCE_PATH_STYLE", "true") == "true"
+	expiryHours, err := getInt("SESSION_EXPIRY_HOURS", 720)
+	if err != nil {
+		return nil, err
+	}
+	// 0 (default) disables automatic media pruning entirely.
+	retentionDays, err := getInt("MEDIA_RETENTION_DAYS", 0)
+	if err != nil {
+		return nil, err
+	}
+	maxUpload, err := getInt("MAX_UPLOAD_SIZE_MB", 50)
+	if err != nil {
+		return nil, err
+	}
+	portMin, err := getInt("WEBRTC_UDP_PORT_MIN", 50000)
+	if err != nil {
+		return nil, err
+	}
+	portMax, err := getInt("WEBRTC_UDP_PORT_MAX", 50050)
+	if err != nil {
+		return nil, err
+	}
 
 	cfg := &Config{
-		Port:                 getEnv("PORT", "8080"),
-		BindAddr:             getEnv("BIND_ADDR", "0.0.0.0"),
-		AppEnv:               getEnv("APP_ENV", "development"),
-		PublicURL:            getEnv("PUBLIC_URL", "http://localhost:8080"),
-		JWTSecret:            getEnv("JWT_SECRET", ""),
+		Port:                 get("PORT", "8080"),
+		BindAddr:             get("BIND_ADDR", "0.0.0.0"),
+		AppEnv:               get("APP_ENV", "development"),
+		PublicURL:            strings.TrimRight(get("PUBLIC_URL", "http://localhost:8080"), "/"),
+		TrustedProxies:       SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
+		JWTSecret:            get("JWT_SECRET", ""),
 		SessionExpiryHours:   expiryHours,
-		AdminUsername:        getEnv("ADMIN_USERNAME", "Herzog"),
-		AdminInitialPassword: getEnv("ADMIN_INITIAL_PASSWORD", ""),
-		DatabaseURL:          getEnv("DATABASE_URL", ""),
-		S3Endpoint:           getEnv("S3_ENDPOINT", "http://localhost:8333"),
-		S3Region:             getEnv("S3_REGION", "us-east-1"),
-		S3Bucket:             getEnv("S3_BUCKET", "mnema-media"),
-		S3AccessKey:          getEnv("S3_ACCESS_KEY", ""),
-		S3SecretKey:          getEnv("S3_SECRET_KEY", ""),
-		S3ForcePathStyle:     forcePathStyle,
+		AdminUsername:        get("ADMIN_USERNAME", "Herzog"),
+		AdminInitialPassword: get("ADMIN_INITIAL_PASSWORD", ""),
+		DatabaseURL:          get("DATABASE_URL", ""),
+		S3Endpoint:           get("S3_ENDPOINT", "http://localhost:8333"),
+		S3Region:             get("S3_REGION", "us-east-1"),
+		S3Bucket:             get("S3_BUCKET", "mnema-media"),
+		S3AccessKey:          get("S3_ACCESS_KEY", ""),
+		S3SecretKey:          get("S3_SECRET_KEY", ""),
+		S3ForcePathStyle:     get("S3_FORCE_PATH_STYLE", "true") == "true",
 		MediaRetentionDays:   retentionDays,
-		WebRTCUDPPortMin:     uint16(portMin),
-		WebRTCUDPPortMax:     uint16(portMax),
-		WebRTCNAT1to1IP:      getEnv("WEBRTC_NAT_1TO1_IP", ""),
-		WebRTCSTUNURLs:       splitList(getEnv("WEBRTC_STUN_URLS", "")),
-		LegalOperatorName:    getEnv("LEGAL_OPERATOR_NAME", "Community Operator"),
-		LegalOperatorEmail:   getEnv("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
-		LegalOperatorCountry: getEnv("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
-		LegalProjectNotice:   getEnv("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
+		MaxUploadMB:          maxUpload,
+		WebRTCNAT1to1IP:      get("WEBRTC_NAT_1TO1_IP", ""),
+		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
+		LegalOperatorName:    get("LEGAL_OPERATOR_NAME", "Community Operator"),
+		LegalOperatorEmail:   get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
+		LegalOperatorCountry: get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
+		LegalProjectNotice:   get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
 	}
+	cfg.AllowedOrigins = SplitList(get("CORS_ALLOWED_ORIGINS", cfg.PublicURL))
 
-	if cfg.Port == "" {
-		return nil, fmt.Errorf("PORT is required")
+	if err := cfg.validate(portMin, portMax); err != nil {
+		return nil, err
 	}
-	if cfg.DatabaseURL == "" {
-		return nil, fmt.Errorf("DATABASE_URL is required")
-	}
-	if examplePlaceholders[cfg.AdminInitialPassword] {
-		return nil, fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
-	}
-
-	if cfg.AppEnv == "production" {
-		if len(cfg.JWTSecret) < 32 || examplePlaceholders[cfg.JWTSecret] {
-			return nil, fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
-		}
-		if cfg.S3AccessKey == "" || cfg.S3SecretKey == "" {
-			return nil, fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
-		}
-	} else if cfg.JWTSecret == "" {
-		// Development only: a per-process random secret (sessions reset on restart)
-		cfg.JWTSecret = RandomString(32)
-		log.Println("Warning: JWT_SECRET not set, using a random secret for this process (development only)")
-	}
-
 	return cfg, nil
 }
 
-// RandomString returns a cryptographically random hex string of n bytes.
-func RandomString(n int) string {
+func (c *Config) validate(portMin, portMax int) error {
+	if c.DatabaseURL == "" {
+		return fmt.Errorf("DATABASE_URL is required")
+	}
+	if examplePlaceholders[c.AdminInitialPassword] {
+		return fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
+	}
+	u, err := url.Parse(c.PublicURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return fmt.Errorf("PUBLIC_URL must be an absolute http(s) URL, got %q", c.PublicURL)
+	}
+	if portMin < 1 || portMax > 65535 || portMin > portMax {
+		return fmt.Errorf("invalid WebRTC UDP port range %d-%d", portMin, portMax)
+	}
+	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = uint16(portMin), uint16(portMax)
+	if c.SessionExpiryHours < 1 {
+		return fmt.Errorf("SESSION_EXPIRY_HOURS must be at least 1")
+	}
+	if c.MediaRetentionDays < 0 {
+		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
+	}
+	if c.MaxUploadMB < 1 || c.MaxUploadMB > 2048 {
+		return fmt.Errorf("MAX_UPLOAD_SIZE_MB must be between 1 and 2048")
+	}
+	for _, p := range c.TrustedProxies {
+		if _, _, err := net.ParseCIDR(p); err != nil && net.ParseIP(p) == nil {
+			return fmt.Errorf("TRUSTED_PROXY_CIDRS contains an invalid entry %q", p)
+		}
+	}
+
+	if c.IsProduction() {
+		if len(c.JWTSecret) < 32 || examplePlaceholders[c.JWTSecret] {
+			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
+		}
+		if c.S3AccessKey == "" || c.S3SecretKey == "" {
+			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
+		}
+	} else if c.JWTSecret == "" {
+		// Development only: a per-process random secret (sessions reset on restart).
+		c.JWTSecret = RandomHex(32)
+		slog.Warn("JWT_SECRET not set, using a random secret for this process (development only)")
+	}
+	return nil
+}
+
+func (c *Config) IsProduction() bool { return c.AppEnv == "production" }
+
+// SecureCookies reports whether cookies must carry the Secure flag (HTTPS deployments).
+func (c *Config) SecureCookies() bool { return strings.HasPrefix(c.PublicURL, "https://") }
+
+// RandomHex returns a cryptographically random hex string of n bytes.
+func RandomHex(n int) string {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
 		panic(fmt.Sprintf("crypto/rand failed: %v", err))
@@ -120,7 +195,8 @@ func RandomString(n int) string {
 	return hex.EncodeToString(b)
 }
 
-func splitList(s string) []string {
+// SplitList splits a comma-separated list, dropping empty entries.
+func SplitList(s string) []string {
 	var out []string
 	for _, part := range strings.Split(s, ",") {
 		if p := strings.TrimSpace(part); p != "" {
@@ -128,11 +204,4 @@ func splitList(s string) []string {
 		}
 	}
 	return out
-}
-
-func getEnv(key, defaultVal string) string {
-	if val, ok := os.LookupEnv(key); ok && val != "" {
-		return val
-	}
-	return defaultVal
 }
