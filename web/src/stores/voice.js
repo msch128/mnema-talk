@@ -126,11 +126,18 @@ export const useVoiceStore = defineStore('voice', () => {
   }
 
   function handleSpeakingEvent(event) {
-    const { user_id, active } = event
+    const { user_id, active } = event || {}
+    if (!user_id) return
     if (active) {
-      speakingUsers.value[user_id] = true
+      if (!speakingUsers.value[user_id]) {
+        speakingUsers.value = { ...speakingUsers.value, [user_id]: true }
+      }
     } else {
-      delete speakingUsers.value[user_id]
+      if (speakingUsers.value[user_id]) {
+        const next = { ...speakingUsers.value }
+        delete next[user_id]
+        speakingUsers.value = next
+      }
     }
   }
 

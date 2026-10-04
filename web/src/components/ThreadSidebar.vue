@@ -87,7 +87,7 @@ function formatDate(dateStr) {
 <template>
   <aside class="w-80 md:w-96 bg-mnema-canvas border-l border-mnema-hairline flex flex-col h-full select-none z-20 flex-shrink-0">
     <!-- Thread Header -->
-    <header class="h-14 px-4 border-b border-mnema-hairline bg-mnema-canvas/90 backdrop-blur-sm flex items-center justify-between flex-shrink-0">
+    <header class="h-14 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between flex-shrink-0">
       <div class="flex items-center gap-2 min-w-0">
         <MessageSquare class="w-4 h-4 text-mnema-accent flex-shrink-0" />
         <div class="flex flex-col min-w-0">
@@ -296,7 +296,7 @@ function formatDate(dateStr) {
     <div 
       v-if="selectedImage" 
       @click="selectedImage = null"
-      class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+      class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
     >
       <img 
         :src="selectedImage" 

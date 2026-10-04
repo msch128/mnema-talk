@@ -142,7 +142,7 @@ function formatTime(dateStr) {
 <template>
   <main class="flex-1 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
     <!-- Top Stage Header -->
-    <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas/90 backdrop-blur-sm flex items-center justify-between flex-shrink-0 z-10">
+    <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-xs shadow-sm flex-shrink-0">
           <Volume2 class="w-4 h-4" />
@@ -244,8 +244,8 @@ function formatTime(dateStr) {
             class="w-full h-full object-contain"
           ></video>
 
-          <div class="absolute top-3 left-3 bg-black/70 backdrop-blur-md border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-xs text-white">
-            <span class="w-2 h-2 rounded-full bg-mnema-accent animate-pulse"></span>
+          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-xs text-white">
+            <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
             <span class="font-mono font-semibold text-[11px]">4K 60 FPS</span>
             <span class="text-white/60 text-[10px]">Source Quality</span>
           </div>
@@ -253,7 +253,7 @@ function formatTime(dateStr) {
           <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <button 
               @click="toggleFullscreen" 
-              class="p-2 rounded-lg bg-black/60 hover:bg-black/80 text-white transition backdrop-blur-sm"
+              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
               <Maximize2 class="w-4 h-4" />
             </button>
@@ -308,7 +308,7 @@ function formatTime(dateStr) {
             <!-- Speaking State Text -->
             <div class="text-[9px] font-mono mt-0.5">
               <span v-if="voiceStore.speakingUsers[user.id]" class="text-mnema-accent font-semibold flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
                 Sprachaktiv
               </span>
               <span v-else class="text-mnema-tertiary">
@@ -319,7 +319,7 @@ function formatTime(dateStr) {
         </div>
 
         <!-- Floating Glass Audio Dock -->
-        <div class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated/90 backdrop-blur-md border border-mnema-border shadow-xl z-20">
+        <div class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated border border-mnema-border shadow-xl z-20">
           <!-- Mute Toggle -->
           <button
             @click="voiceStore.toggleMute"

@@ -125,7 +125,7 @@ function handleTextClick(channel) {
           ]"
         >
           <div class="flex items-center gap-2 min-w-0">
-            <span class="w-2 h-2 rounded-full bg-mnema-accent animate-pulse flex-shrink-0"></span>
+            <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)] flex-shrink-0"></span>
             <div class="flex flex-col min-w-0">
               <span class="text-[11px] font-semibold truncate">Talk-Bühne öffnen</span>
               <span class="text-[9px] text-mnema-tertiary font-mono">Aktiver Hangout</span>

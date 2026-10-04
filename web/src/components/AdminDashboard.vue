@@ -126,7 +126,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
     <div class="bg-mnema-elevated w-full max-w-4xl max-h-[90vh] rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
       <!-- Modal Header -->
       <header class="px-6 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">

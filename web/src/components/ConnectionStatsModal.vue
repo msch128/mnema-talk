@@ -29,7 +29,7 @@ const sparklinePoints = computed(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none">
+  <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none">
     <div class="bg-mnema-elevated w-full max-w-lg rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
       <!-- Modal Header -->
       <header class="px-5 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">
@@ -41,7 +41,7 @@ const sparklinePoints = computed(() => {
             <div class="flex items-center gap-2">
               <h2 class="text-xs font-semibold text-mnema-text">RTC Sprach- & Verbindungsstatus</h2>
               <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-mnema-accent/15 text-mnema-accent font-medium flex items-center gap-1 font-mono">
-                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
+                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
                 Verbunden
               </span>
             </div>

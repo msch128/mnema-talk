@@ -64,7 +64,7 @@ async function toggleEcho() {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none">
+  <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none">
     <div class="bg-mnema-elevated w-full max-w-xl rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
       <!-- Header -->
       <header class="px-6 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">

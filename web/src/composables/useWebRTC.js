@@ -57,14 +57,15 @@ export function useWebRTC() {
 
   function getAudioConstraints() {
     const audioConstraints = {
+      channelCount: 1,
+      sampleRate: 48000,
       echoCancellation: voiceStore.echoCancellation,
       noiseSuppression: voiceStore.noiseCancelling,
       autoGainControl: voiceStore.autoGainControl, // Crucial: false prevents boosting background voice
       googEchoCancellation: voiceStore.echoCancellation,
       googAutoGainControl: voiceStore.autoGainControl,
       googNoiseSuppression: voiceStore.noiseCancelling,
-      googHighpassFilter: true,
-      googTypingNoiseDetection: true
+      googHighpassFilter: true
     }
     if (voiceStore.selectedInputDeviceId) {
       audioConstraints.deviceId = { exact: voiceStore.selectedInputDeviceId }
@@ -89,13 +90,13 @@ export function useWebRTC() {
       testAudioStream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
 
       const AudioCtx = window.AudioContext || window.webkitAudioContext
-      testAudioContext = new AudioCtx()
+      testAudioContext = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
       if (testAudioContext.state === 'suspended') {
         await testAudioContext.resume().catch(() => {})
       }
 
       testAnalyser = testAudioContext.createAnalyser()
-      testAnalyser.fftSize = 512
+      testAnalyser.fftSize = 256
       testAnalyser.smoothingTimeConstant = 0.2
 
       const source = testAudioContext.createMediaStreamSource(testAudioStream)
@@ -111,7 +112,7 @@ export function useWebRTC() {
       testSpeakingInterval = setInterval(() => {
         if (!testAnalyser) return
         voiceStore.currentInputLevel = calculateRMSLevel(testAnalyser, buffer)
-      }, 30)
+      }, 50)
 
       // Refresh devices after permission is granted so device labels are available
       await refreshAudioDevices()
@@ -142,9 +143,39 @@ export function useWebRTC() {
     }
   }
 
+  function cleanupVoiceAudio() {
+    if (speakingInterval) {
+      clearInterval(speakingInterval)
+      speakingInterval = null
+    }
+
+    removePttListeners()
+
+    if (localAudioStream.value) {
+      localAudioStream.value.getTracks().forEach(t => t.stop())
+      localAudioStream.value = null
+    }
+    voiceStore.localAudioStream = null
+
+    if (audioContext) {
+      audioContext.close().catch(() => {})
+      audioContext = null
+    }
+    analyser = null
+    voiceStore.currentInputLevel = 0
+  }
+
   async function joinVoiceChannel(channelId) {
+    // If already in this channel, don't re-create audio graphs
+    if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
+      return
+    }
+
     // Stop standalone mic test before joining voice
     stopMicTest()
+
+    // Clean up any previous voice session to prevent audio thread leak
+    cleanupVoiceAudio()
 
     voiceStore.setChannel(channelId)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
@@ -168,13 +199,13 @@ export function useWebRTC() {
   async function setupSpeakingDetection(stream) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
-      audioContext = new AudioCtx()
+      audioContext = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
       if (audioContext.state === 'suspended') {
         await audioContext.resume().catch(() => {})
       }
 
       analyser = audioContext.createAnalyser()
-      analyser.fftSize = 512
+      analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.2
 
       const source = audioContext.createMediaStreamSource(stream)
@@ -192,7 +223,11 @@ export function useWebRTC() {
         if (!analyser) return
 
         const level = calculateRMSLevel(analyser, buffer)
-        voiceStore.currentInputLevel = level
+
+        // PERFORMANCE FIX: Only update reactive Pinia store if settings modal is open
+        if (voiceStore.showAudioSettings) {
+          voiceStore.currentInputLevel = level
+        }
 
         if (voiceStore.isMuted) {
           if (wasSpeaking) {
@@ -206,7 +241,7 @@ export function useWebRTC() {
           return
         }
 
-        // Noise Gate & Sensitivity Evaluation
+        // Noise Gate & Sensitivity Evaluation with Hysteresis
         let shouldTransmit = false
 
         if (voiceStore.inputMode === 'ptt') {
@@ -239,7 +274,7 @@ export function useWebRTC() {
           wasSpeaking = shouldTransmit
           chatStore.sendWSEvent('voice_speaking', { active: shouldTransmit })
         }
-      }, 30)
+      }, 60)
     } catch (err) {
       console.warn('AudioContext speaking detector setup error:', err)
     }
@@ -310,29 +345,10 @@ export function useWebRTC() {
   }
 
   function leaveVoiceChannel() {
-    if (speakingInterval) {
-      clearInterval(speakingInterval)
-      speakingInterval = null
-    }
-
-    removePttListeners()
-
-    if (localAudioStream.value) {
-      localAudioStream.value.getTracks().forEach(t => t.stop())
-      localAudioStream.value = null
-    }
-    voiceStore.localAudioStream = null
-
-    if (audioContext) {
-      audioContext.close().catch(() => {})
-      audioContext = null
-    }
-    analyser = null
-
+    cleanupVoiceAudio()
     stopScreenShare()
     chatStore.sendWSEvent('voice_leave', {})
     voiceStore.disconnect()
-    voiceStore.currentInputLevel = 0
   }
 
   return {
