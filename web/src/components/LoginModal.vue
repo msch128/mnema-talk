@@ -47,7 +47,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+  <div class="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
     <div class="bg-mnema-elevated w-full max-w-sm p-7 rounded-xl shadow-2xl border border-mnema-border flex flex-col space-y-5">
       <!-- Brand & Title -->
       <div class="text-center space-y-2">

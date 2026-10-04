@@ -33,7 +33,7 @@ function toggleScreenShare() {
         title="Detaillierte Verbindungsmetrik (RTC) anzeigen"
       >
         <div class="flex items-center gap-1.5 text-mnema-mint font-medium text-[11px] group-hover/stat:text-mnema-accent transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
           <span>Sprachchat aktiv</span>
         </div>
         <div class="flex items-center gap-1 text-[10px] text-mnema-tertiary font-mono">

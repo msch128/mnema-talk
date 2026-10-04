@@ -135,7 +135,7 @@ onUnmounted(() => {
 
 <template>
   <div 
-    class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none"
+    class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none"
     @click.self="emit('close')"
   >
     <div 
@@ -287,7 +287,7 @@ onUnmounted(() => {
               v-if="voiceHangout" 
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-xs"
             >
-              <Volume2 class="w-4 h-4 animate-pulse flex-shrink-0" />
+              <Volume2 class="w-4 h-4 flex-shrink-0" />
               <div class="truncate">
                 <span class="font-medium">Im Sprachkanal:</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>

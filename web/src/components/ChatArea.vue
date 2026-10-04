@@ -118,7 +118,7 @@ const currentVoiceChannelName = computed(() => {
       class="bg-mnema-band/35 border-b border-mnema-hairline px-6 py-2 flex items-center justify-between text-xs flex-shrink-0 z-20"
     >
       <div class="flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-mnema-accent animate-pulse"></span>
+        <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
         <span class="font-medium text-mnema-mint text-xs">
           Aktiv im Voice: {{ currentVoiceChannelName }}
         </span>
@@ -148,7 +148,7 @@ const currentVoiceChannelName = computed(() => {
     </div>
 
     <!-- Channel Header -->
-    <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas/90 backdrop-blur-sm flex items-center justify-between flex-shrink-0 z-10">
+    <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between flex-shrink-0 z-10">
       <div class="flex items-center gap-2 min-w-0">
         <Hash class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
         <span class="font-semibold text-xs text-mnema-text truncate">
@@ -328,7 +328,7 @@ const currentVoiceChannelName = computed(() => {
     <div 
       v-if="selectedImage" 
       @click="selectedImage = null"
-      class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+      class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
     >
       <img 
         :src="selectedImage" 

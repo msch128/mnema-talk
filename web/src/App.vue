@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
@@ -36,8 +36,8 @@ onMounted(async () => {
 })
 
 // Watch for authentication changes
-authStore.$subscribe((mutation, state) => {
-  if (state.token && state.user) {
+watch(() => authStore.isAuthenticated, (isAuthed, wasAuthed) => {
+  if (isAuthed && !wasAuthed) {
     initializeApp()
   }
 })
