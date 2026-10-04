@@ -221,6 +221,17 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(auth.Middleware(cfg.JWTSecret))
 
+			// Community Members List
+			r.Get("/members", func(w http.ResponseWriter, r *http.Request) {
+				members, err := chat.GetAllMembers(r.Context(), dbPool)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(members)
+			})
+
 			// Channel Hierarchy (Categories & Channels)
 			r.Get("/channels", func(w http.ResponseWriter, r *http.Request) {
 				cats, uncat, err := chat.GetServerHierarchy(r.Context(), dbPool)

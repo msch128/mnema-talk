@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { Hash, Plus, ArrowUp, FileText, Image as ImageIcon } from 'lucide-vue-next'
+import { Hash, Plus, ArrowUp, FileText, Image as ImageIcon, Users } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
@@ -90,7 +90,13 @@ const currentVoiceChannelName = computed(() => {
         <span class="font-medium text-mnema-mint text-xs">
           Aktiv im Voice: {{ currentVoiceChannelName }}
         </span>
-        <span class="text-[10px] text-mnema-tertiary font-mono">({{ voiceStore.ping }}ms Ping)</span>
+        <button 
+          @click="voiceStore.showStatsModal = true"
+          class="text-[10px] text-mnema-accent hover:underline font-mono"
+          title="Detaillierte Verbindungsmetrik (RTC) öffnen"
+        >
+          ({{ voiceStore.ping }}ms Ping)
+        </button>
       </div>
 
       <div class="flex items-center gap-2">
@@ -125,6 +131,18 @@ const currentVoiceChannelName = computed(() => {
         <span class="text-[10px] font-mono text-mnema-tertiary px-2 py-0.5 rounded border border-mnema-hairline bg-mnema-surface">
           E2E WebRTC SFU
         </span>
+        <button
+          @click="chatStore.showMemberList = !chatStore.showMemberList"
+          :class="[
+            'p-1.5 rounded-md transition',
+            chatStore.showMemberList 
+              ? 'text-mnema-accent bg-mnema-surface' 
+              : 'text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface'
+          ]"
+          title="Mitgliederliste ein-/ausblenden"
+        >
+          <Users class="w-4 h-4" />
+        </button>
       </div>
     </header>
 
