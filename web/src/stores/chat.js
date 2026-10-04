@@ -18,6 +18,8 @@ export const useChatStore = defineStore('chat', () => {
   const members = ref([])
   const onlineUserIds = ref(new Set())
   const showMemberList = ref(true)
+  const selectedUserProfile = ref(null)
+  const pendingMention = ref('')
 
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
@@ -323,6 +325,39 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
 
+      case 'user_update': {
+        const updated = event.payload
+        if (!updated) break
+        // Update members list
+        const idx = members.value.findIndex(m => m.id === updated.id)
+        if (idx !== -1) {
+          members.value[idx] = { ...members.value[idx], ...updated }
+        }
+        // Update messages in current channel
+        messages.value.forEach(m => {
+          if (m.user_id === updated.id) {
+            if (updated.avatar_url !== undefined) m.avatar_url = updated.avatar_url
+            if (updated.display_name !== undefined) m.display_name = updated.display_name
+          }
+        })
+        // Update thread replies
+        threadReplies.value.forEach(m => {
+          if (m.user_id === updated.id) {
+            if (updated.avatar_url !== undefined) m.avatar_url = updated.avatar_url
+            if (updated.display_name !== undefined) m.display_name = updated.display_name
+          }
+        })
+        // If current auth user updated, update authStore.user as well
+        if (authStore.user?.id === updated.id) {
+          authStore.user = { ...authStore.user, ...updated }
+        }
+        // If selectedUserProfile is this user, update it
+        if (selectedUserProfile.value?.id === updated.id) {
+          selectedUserProfile.value = { ...selectedUserProfile.value, ...updated }
+        }
+        break
+      }
+
       case 'voice_snapshot':
         voiceStore.setVoiceSnapshot(event.payload)
         break
@@ -415,6 +450,45 @@ export const useChatStore = defineStore('chat', () => {
     await fetchChannels()
   }
 
+  async function openUserProfile(userOrMessage) {
+    if (!userOrMessage) return
+    const userId = userOrMessage.user_id || userOrMessage.id
+    if (!userId) return
+
+    const existingMember = members.value.find(m => m.id === userId)
+
+    const base = {
+      id: userId,
+      username: userOrMessage.username || existingMember?.username || '',
+      display_name: userOrMessage.display_name || existingMember?.display_name || userOrMessage.username || '',
+      avatar_url: userOrMessage.avatar_url || existingMember?.avatar_url || '',
+      role: userOrMessage.role || existingMember?.role || 'member',
+      created_at: userOrMessage.created_at || existingMember?.created_at || null
+    }
+    selectedUserProfile.value = base
+
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+      if (res.ok) {
+        const full = await res.json()
+        selectedUserProfile.value = { ...selectedUserProfile.value, ...full }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch full user profile:', e)
+    }
+  }
+
+  function closeUserProfile() {
+    selectedUserProfile.value = null
+  }
+
+  function insertMention(username) {
+    if (!username) return
+    pendingMention.value = username
+  }
+
   function sendWSEvent(type, payload) {
     if (ws.value && isConnected.value) {
       ws.value.send(JSON.stringify({ type, payload }))
@@ -432,6 +506,11 @@ export const useChatStore = defineStore('chat', () => {
     onlineMembers,
     offlineMembers,
     showMemberList,
+    selectedUserProfile,
+    openUserProfile,
+    closeUserProfile,
+    pendingMention,
+    insertMention,
     fetchChannels,
     fetchMembers,
     selectChannel,

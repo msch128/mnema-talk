@@ -13,6 +13,7 @@ import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
+import UserProfileModal from './components/UserProfileModal.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -80,6 +81,14 @@ authStore.$subscribe((mutation, state) => {
       <AudioSettingsModal 
         v-if="voiceStore.showAudioSettings" 
         @close="voiceStore.showAudioSettings = false" 
+      />
+
+      <!-- Discord-Style User Profile Popover / Modal -->
+      <UserProfileModal 
+        v-if="chatStore.selectedUserProfile"
+        :user="chatStore.selectedUserProfile"
+        @close="chatStore.closeUserProfile()"
+        @mention="(uname) => chatStore.insertMention(uname)"
       />
     </template>
   </div>
