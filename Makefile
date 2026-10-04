@@ -9,7 +9,7 @@ BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
 GO_PKGS    := ./...
 # Keep in sync with .github/workflows/ci.yml.
-GOVULNCHECK_VERSION ?= v1.1.4
+GOVULNCHECK_VERSION ?= v1.8.0
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
