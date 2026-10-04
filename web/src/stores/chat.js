@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 
@@ -11,8 +11,15 @@ export const useChatStore = defineStore('chat', () => {
   const ws = ref(null)
   const isConnected = ref(false)
 
+  // Community Members & Real-time Presence
+  const members = ref([])
+  const onlineUserIds = ref(new Set())
+  const showMemberList = ref(true)
+
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
+
+  let pingTimer = null
 
   async function fetchChannels() {
     try {
@@ -46,6 +53,27 @@ export const useChatStore = defineStore('chat', () => {
       console.error('Failed to fetch channels:', e)
     }
   }
+
+  async function fetchMembers() {
+    try {
+      const res = await fetch('/api/members', {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+      if (res.ok) {
+        members.value = await res.json()
+      }
+    } catch (e) {
+      console.error('Failed to fetch members:', e)
+    }
+  }
+
+  const onlineMembers = computed(() => {
+    return members.value.filter(m => onlineUserIds.value.has(m.id))
+  })
+
+  const offlineMembers = computed(() => {
+    return members.value.filter(m => !onlineUserIds.value.has(m.id))
+  })
 
   async function selectChannel(channel) {
     activeChannel.value = channel
@@ -105,6 +133,22 @@ export const useChatStore = defineStore('chat', () => {
     return await res.json()
   }
 
+  function startPingHeartbeat() {
+    stopPingHeartbeat()
+    pingTimer = setInterval(() => {
+      if (isConnected.value && ws.value) {
+        sendWSEvent('ping', { t: Date.now() })
+      }
+    }, 2000)
+  }
+
+  function stopPingHeartbeat() {
+    if (pingTimer) {
+      clearInterval(pingTimer)
+      pingTimer = null
+    }
+  }
+
   function initWebSocket() {
     if (ws.value || !authStore.token) return
 
@@ -114,6 +158,9 @@ export const useChatStore = defineStore('chat', () => {
 
     socket.onopen = () => {
       isConnected.value = true
+      startPingHeartbeat()
+      // Send immediate first ping
+      sendWSEvent('ping', { t: Date.now() })
     }
 
     socket.onmessage = (event) => {
@@ -127,6 +174,7 @@ export const useChatStore = defineStore('chat', () => {
 
     socket.onclose = () => {
       isConnected.value = false
+      stopPingHeartbeat()
       ws.value = null
       // Auto-reconnect after 3 seconds
       setTimeout(() => {
@@ -139,6 +187,28 @@ export const useChatStore = defineStore('chat', () => {
 
   function handleWSEvent(event) {
     switch (event.type) {
+      case 'pong':
+        if (event.payload?.t) {
+          const rtt = Date.now() - event.payload.t
+          voiceStore.recordPing(rtt)
+        }
+        break
+
+      case 'presence_snapshot':
+        onlineUserIds.value = new Set(event.payload || [])
+        break
+
+      case 'presence_update': {
+        const { user_id, status } = event.payload || {}
+        if (status === 'online') {
+          onlineUserIds.value.add(user_id)
+        } else if (status === 'offline') {
+          onlineUserIds.value.delete(user_id)
+        }
+        onlineUserIds.value = new Set(onlineUserIds.value)
+        break
+      }
+
       case 'message_create':
         if (activeChannel.value && event.payload.channel_id === activeChannel.value.id) {
           // Avoid duplicate messages if already present
@@ -252,7 +322,13 @@ export const useChatStore = defineStore('chat', () => {
     activeChannel,
     messages,
     isConnected,
+    members,
+    onlineUserIds,
+    onlineMembers,
+    offlineMembers,
+    showMemberList,
     fetchChannels,
+    fetchMembers,
     selectChannel,
     fetchMessages,
     sendMessage,
@@ -265,4 +341,3 @@ export const useChatStore = defineStore('chat', () => {
     sendWSEvent
   }
 })
-

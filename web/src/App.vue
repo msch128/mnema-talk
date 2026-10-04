@@ -7,27 +7,35 @@ import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
 import VoiceStage from './components/VoiceStage.vue'
+import MemberList from './components/MemberList.vue'
 import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
+import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const showAdminModal = ref(false)
 
+async function initializeApp() {
+  await Promise.all([
+    chatStore.fetchChannels(),
+    chatStore.fetchMembers()
+  ])
+  chatStore.initWebSocket()
+}
+
 onMounted(async () => {
   const isAuthed = await authStore.checkAuth()
   if (isAuthed) {
-    chatStore.fetchChannels()
-    chatStore.initWebSocket()
+    await initializeApp()
   }
 })
 
 // Watch for authentication changes
 authStore.$subscribe((mutation, state) => {
   if (state.token && state.user) {
-    chatStore.fetchChannels()
-    chatStore.initWebSocket()
+    initializeApp()
   }
 })
 </script>
@@ -51,8 +59,17 @@ authStore.$subscribe((mutation, state) => {
       />
       <ChatArea v-else />
 
+      <!-- Right Column: Discord-Style Member List -->
+      <MemberList />
+
       <!-- Admin Storage & Retention Dashboard Modal -->
       <AdminDashboard v-if="showAdminModal" @close="showAdminModal = false" />
+
+      <!-- Detailed RTC Connection Stats Modal (Discord-Style Debug & Metrics) -->
+      <ConnectionStatsModal 
+        v-if="voiceStore.showStatsModal" 
+        @close="voiceStore.showStatsModal = false" 
+      />
     </template>
   </div>
 </template>

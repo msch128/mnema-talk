@@ -43,6 +43,10 @@ type Hub struct {
 	// Voice presence: channel_id -> list of users in voice
 	voicePresence   map[uuid.UUID]map[uuid.UUID]auth.User
 	voicePresenceMu sync.RWMutex
+
+	// Online presence: user_id -> connection count
+	onlineUsers   map[uuid.UUID]int
+	onlineUsersMu sync.RWMutex
 }
 
 func NewHub() *Hub {
@@ -52,6 +56,7 @@ func NewHub() *Hub {
 		register:      make(chan *Client),
 		unregister:    make(chan *Client),
 		voicePresence: make(map[uuid.UUID]map[uuid.UUID]auth.User),
+		onlineUsers:   make(map[uuid.UUID]int),
 	}
 }
 
@@ -64,7 +69,21 @@ func (h *Hub) Run() {
 			h.clientsMu.Unlock()
 			log.Printf("[WS] User connected: %s (%s)\n", client.User.DisplayName, client.User.ID)
 
-			// Send current voice state snapshot to newly connected client
+			// 1. Update online presence
+			h.onlineUsersMu.Lock()
+			isFirst := h.onlineUsers[client.User.ID] == 0
+			h.onlineUsers[client.User.ID]++
+			h.onlineUsersMu.Unlock()
+
+			if isFirst {
+				h.BroadcastEvent("presence_update", map[string]interface{}{
+					"user_id": client.User.ID,
+					"status":  "online",
+				})
+			}
+
+			// 2. Send initial snapshots
+			h.sendPresenceSnapshot(client)
 			h.sendVoiceStateSnapshot(client)
 
 		case client := <-h.unregister:
@@ -75,7 +94,23 @@ func (h *Hub) Run() {
 			}
 			h.clientsMu.Unlock()
 
-			// If client was in a voice channel, remove them and notify everyone
+			// 1. Update online presence
+			h.onlineUsersMu.Lock()
+			h.onlineUsers[client.User.ID]--
+			isOffline := h.onlineUsers[client.User.ID] <= 0
+			if isOffline {
+				delete(h.onlineUsers, client.User.ID)
+			}
+			h.onlineUsersMu.Unlock()
+
+			if isOffline {
+				h.BroadcastEvent("presence_update", map[string]interface{}{
+					"user_id": client.User.ID,
+					"status":  "offline",
+				})
+			}
+
+			// 2. If client was in a voice channel, remove them and notify everyone
 			if client.CurrentVoiceCh != nil {
 				h.LeaveVoice(client, *client.CurrentVoiceCh)
 			}
@@ -143,6 +178,17 @@ func (h *Hub) sendVoiceStateSnapshot(client *Client) {
 	defer h.voicePresenceMu.RUnlock()
 
 	client.SendEvent("voice_snapshot", h.voicePresence)
+}
+
+func (h *Hub) sendPresenceSnapshot(client *Client) {
+	h.onlineUsersMu.RLock()
+	defer h.onlineUsersMu.RUnlock()
+
+	onlineList := make([]uuid.UUID, 0, len(h.onlineUsers))
+	for userID := range h.onlineUsers {
+		onlineList = append(onlineList, userID)
+	}
+	client.SendEvent("presence_snapshot", onlineList)
 }
 
 func (c *Client) SendEvent(eventType string, payload interface{}) {
@@ -255,6 +301,16 @@ func (c *Client) readPump() {
 					"channel_id": *c.CurrentVoiceCh,
 					"user_id":    c.User.ID,
 					"active":     payload.Active,
+				})
+			}
+
+		case "ping":
+			var payload struct {
+				T float64 `json:"t"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err == nil {
+				c.SendEvent("pong", map[string]interface{}{
+					"t": payload.T,
 				})
 			}
 		}

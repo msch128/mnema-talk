@@ -22,14 +22,21 @@ function toggleScreenShare() {
     <!-- Active Voice Hangout Status Banner -->
     <div 
       v-if="voiceStore.isConnected" 
-      class="px-3.5 py-2 bg-mnema-band/25 border-b border-mnema-hairline flex items-center justify-between text-xs"
+      class="px-3 py-2 bg-mnema-band/25 border-b border-mnema-hairline flex items-center justify-between text-xs"
     >
-      <div class="flex flex-col">
-        <div class="flex items-center gap-1.5 text-mnema-mint font-medium text-[11px]">
+      <div 
+        @click="voiceStore.showStatsModal = true"
+        class="flex flex-col cursor-pointer group/stat select-none"
+        title="Detaillierte Verbindungsmetrik (RTC) anzeigen"
+      >
+        <div class="flex items-center gap-1.5 text-mnema-mint font-medium text-[11px] group-hover/stat:text-mnema-accent transition">
           <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent animate-pulse"></span>
           <span>Sprachchat aktiv</span>
         </div>
-        <span class="text-mnema-tertiary text-[10px] font-mono">{{ voiceStore.ping }}ms</span>
+        <div class="flex items-center gap-1 text-[10px] text-mnema-tertiary font-mono">
+          <span class="text-mnema-accent font-semibold">{{ voiceStore.ping }}ms</span>
+          <span class="group-hover/stat:underline">• RTC Metrik</span>
+        </div>
       </div>
 
       <div class="flex items-center gap-1">
