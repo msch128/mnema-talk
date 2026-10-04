@@ -37,18 +37,23 @@ function getUserVoiceChannel(userId) {
 </script>
 
 <template>
+  <!-- Discord-Identical Right Edge Glued Member Sidebar -->
   <aside 
     v-if="chatStore.showMemberList" 
-    class="w-60 bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none flex-shrink-0 transition-all"
+    class="w-60 bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none flex-shrink-0 ml-auto transition-all z-10"
   >
-    <!-- Header -->
-    <div class="h-14 px-4 border-b border-mnema-hairline flex items-center justify-between flex-shrink-0">
-      <span class="text-xs font-semibold text-mnema-text">Mitglieder</span>
-      <span class="text-[10px] text-mnema-tertiary font-mono">{{ chatStore.members.length }} Gesamt</span>
+    <!-- Top Padding Header Line (matching channel bar height for visual continuity) -->
+    <div class="h-14 px-4 border-b border-mnema-hairline flex items-center justify-between flex-shrink-0 bg-mnema-raised/60">
+      <span class="text-[11px] font-semibold uppercase tracking-wider text-mnema-tertiary font-mono">
+        Mitglieder
+      </span>
+      <span class="text-[10px] text-mnema-tertiary font-mono">
+        {{ chatStore.members.length }}
+      </span>
     </div>
 
     <!-- Scrollable Member Categories -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-4">
+    <div class="flex-1 overflow-y-auto px-2.5 py-3 space-y-4">
       <!-- 1. Administrators / Herzog Group -->
       <div v-if="admins.length" class="space-y-1">
         <div class="px-2 text-[10px] font-semibold uppercase tracking-wider text-mnema-amber font-mono flex items-center gap-1.5">
@@ -72,7 +77,7 @@ function getUserVoiceChannel(userId) {
               >
                 {{ member.display_name?.charAt(0).toUpperCase() }}
               </div>
-              <!-- Online status dot -->
+              <!-- Online status dot anchored to bottom right -->
               <span 
                 :class="[
                   'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-mnema-raised',
