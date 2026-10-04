@@ -1,0 +1,68 @@
+# ==========================================================
+# Mnema Talk - .gitignore
+# STRICT SECURITY: Never expose secrets, credentials, or local data
+# ==========================================================
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.env
+*.key
+*.pem
+*.cert
+*.crt
+*.p12
+
+# Local data and runtime database
+data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# User uploads and media storage
+uploads/
+media/
+storage/
+
+# Build artifacts & binaries
+bin/
+dist/
+mnema-talk
+mnema-talk.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go build & cache
+vendor/
+
+# Node / Frontend artifacts
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp files
+logs/
+*.log
+tmp/
+temp/
