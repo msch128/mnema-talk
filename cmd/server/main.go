@@ -77,16 +77,15 @@ func main() {
 		chat.StartRetentionWorker(ctx, dbPool, s3Cli, cfg.MediaRetentionDays)
 	}
 
-	// 7. Initialize Real-Time WebSocket Hub
-	hub := ws.NewHub()
-	go hub.Run()
-
-	// 8. Initialize Pion WebRTC SFU (for Voice & 4K 60fps Screensharing)
+	// 7. Initialize Pion WebRTC SFU (for Voice & 4K 60fps Screensharing)
 	voiceSFU, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, cfg.WebRTCNAT1to1IP)
 	if err != nil {
 		log.Printf("Warning: WebRTC SFU initialization warning: %v\n", err)
 	}
-	_ = voiceSFU
+
+	// 8. Initialize Real-Time WebSocket Hub with SFU
+	hub := ws.NewHub(voiceSFU)
+	go hub.Run()
 
 	// 9. Setup Router & Middleware
 	r := chi.NewRouter()
@@ -218,9 +217,9 @@ func main() {
 					var fullUser auth.User
 					var avatarKey *string
 					err := dbPool.QueryRow(r.Context(), `
-						SELECT id, username, display_name, role, avatar_s3_key, created_at
+						SELECT id, username, display_name, COALESCE(bio, ''), role, avatar_s3_key, created_at
 						FROM users WHERE id = $1
-					`, user.ID).Scan(&fullUser.ID, &fullUser.Username, &fullUser.DisplayName, &fullUser.Role, &avatarKey, &fullUser.CreatedAt)
+					`, user.ID).Scan(&fullUser.ID, &fullUser.Username, &fullUser.DisplayName, &fullUser.Bio, &fullUser.Role, &avatarKey, &fullUser.CreatedAt)
 					if err == nil {
 						if avatarKey != nil && *avatarKey != "" {
 							fullUser.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
@@ -251,9 +250,9 @@ func main() {
 				var targetUser auth.User
 				var avatarKey *string
 				err = dbPool.QueryRow(r.Context(), `
-					SELECT id, username, display_name, role, avatar_s3_key, created_at
+					SELECT id, username, display_name, COALESCE(bio, ''), role, avatar_s3_key, created_at
 					FROM users WHERE id = $1
-				`, targetID).Scan(&targetUser.ID, &targetUser.Username, &targetUser.DisplayName, &targetUser.Role, &avatarKey, &targetUser.CreatedAt)
+				`, targetID).Scan(&targetUser.ID, &targetUser.Username, &targetUser.DisplayName, &targetUser.Bio, &targetUser.Role, &avatarKey, &targetUser.CreatedAt)
 				if err != nil {
 					http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
 					return
@@ -265,6 +264,46 @@ func main() {
 
 				w.Header().Set("Content-Type", "application/json")
 				_ = json.NewEncoder(w).Encode(targetUser)
+			})
+
+			r.Put("/users/me/profile", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				var req struct {
+					DisplayName string `json:"display_name"`
+					Bio         string `json:"bio"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+					http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+					return
+				}
+				if strings.TrimSpace(req.DisplayName) == "" {
+					req.DisplayName = user.Username
+				}
+
+				_, err := dbPool.Exec(r.Context(), `
+					UPDATE users 
+					SET display_name = $1, bio = $2, updated_at = NOW() 
+					WHERE id = $3
+				`, req.DisplayName, req.Bio, user.ID)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				var updatedUser auth.User
+				var avatarKey *string
+				err = dbPool.QueryRow(r.Context(), `
+					SELECT id, username, display_name, COALESCE(bio, ''), role, avatar_s3_key, created_at
+					FROM users WHERE id = $1
+				`, user.ID).Scan(&updatedUser.ID, &updatedUser.Username, &updatedUser.DisplayName, &updatedUser.Bio, &updatedUser.Role, &avatarKey, &updatedUser.CreatedAt)
+				if err == nil && avatarKey != nil && *avatarKey != "" {
+					updatedUser.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
+				}
+
+				hub.BroadcastEvent("user_update", updatedUser)
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(updatedUser)
 			})
 
 			if s3Cli != nil {
@@ -425,6 +464,99 @@ func main() {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
 				_ = json.NewEncoder(w).Encode(msg)
+			})
+
+			// Edit Message
+			r.Put("/channels/{channelID}/messages/{messageID}", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				msgIDStr := chi.URLParam(r, "messageID")
+				msgID, err := uuid.Parse(msgIDStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid message id"}`, http.StatusBadRequest)
+					return
+				}
+
+				var req struct {
+					Content string `json:"content"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Content) == "" {
+					http.Error(w, `{"error":"message content is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				updatedMsg, err := chat.EditMessage(r.Context(), dbPool, msgID, user.ID, req.Content)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusForbidden)
+					return
+				}
+
+				hub.BroadcastEvent("message_update", updatedMsg)
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(updatedMsg)
+			})
+
+			// Delete Message
+			r.Delete("/channels/{channelID}/messages/{messageID}", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				chIDStr := chi.URLParam(r, "channelID")
+				chID, _ := uuid.Parse(chIDStr)
+				msgIDStr := chi.URLParam(r, "messageID")
+				msgID, err := uuid.Parse(msgIDStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid message id"}`, http.StatusBadRequest)
+					return
+				}
+
+				isAdmin := user.Role == "admin"
+				if err := chat.DeleteMessage(r.Context(), dbPool, msgID, user.ID, isAdmin); err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusForbidden)
+					return
+				}
+
+				hub.BroadcastEvent("message_delete", map[string]interface{}{
+					"id":         msgID,
+					"channel_id": chID,
+				})
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{"status": "deleted", "id": msgID})
+			})
+
+			// Toggle Emoji Reaction
+			r.Post("/messages/{messageID}/reactions", func(w http.ResponseWriter, r *http.Request) {
+				user := r.Context().Value(auth.UserContextKey).(auth.User)
+				msgIDStr := chi.URLParam(r, "messageID")
+				msgID, err := uuid.Parse(msgIDStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid message id"}`, http.StatusBadRequest)
+					return
+				}
+
+				var req struct {
+					Emoji string `json:"emoji"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&req); err != nil || strings.TrimSpace(req.Emoji) == "" {
+					http.Error(w, `{"error":"emoji is required"}`, http.StatusBadRequest)
+					return
+				}
+
+				reactions, err := chat.ToggleReaction(r.Context(), dbPool, msgID, user.ID, req.Emoji)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				hub.BroadcastEvent("message_reaction", map[string]interface{}{
+					"message_id": msgID,
+					"reactions":  reactions,
+				})
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"message_id": msgID,
+					"reactions":  reactions,
+				})
 			})
 
 			// Thread API: Fetch root message and its replies

@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/pion/webrtc/v4"
 )
 
 var upgrader = websocket.Upgrader{
@@ -47,9 +49,11 @@ type Hub struct {
 	// Online presence: user_id -> connection count
 	onlineUsers   map[uuid.UUID]int
 	onlineUsersMu sync.RWMutex
+
+	SFU *sfu.SFU
 }
 
-func NewHub() *Hub {
+func NewHub(voiceSFU *sfu.SFU) *Hub {
 	return &Hub{
 		clients:       make(map[*Client]bool),
 		broadcast:     make(chan []byte, 256),
@@ -57,6 +61,7 @@ func NewHub() *Hub {
 		unregister:    make(chan *Client),
 		voicePresence: make(map[uuid.UUID]map[uuid.UUID]auth.User),
 		onlineUsers:   make(map[uuid.UUID]int),
+		SFU:           voiceSFU,
 	}
 }
 
@@ -148,6 +153,18 @@ func (h *Hub) JoinVoice(client *Client, channelID uuid.UUID) {
 	client.CurrentVoiceCh = &channelID
 	h.voicePresenceMu.Unlock()
 
+	if h.SFU != nil {
+		room := h.SFU.GetOrCreateRoom(channelID)
+		_, err := room.JoinPeer(client.User.ID, func(offer webrtc.SessionDescription) {
+			client.SendEvent("webrtc_offer", offer)
+		}, func(candidate *webrtc.ICECandidateInit) {
+			client.SendEvent("webrtc_candidate", candidate)
+		})
+		if err != nil {
+			log.Printf("[SFU] Error joining peer to SFU room: %v", err)
+		}
+	}
+
 	h.BroadcastEvent("voice_state_update", map[string]interface{}{
 		"action":     "join",
 		"channel_id": channelID,
@@ -156,6 +173,11 @@ func (h *Hub) JoinVoice(client *Client, channelID uuid.UUID) {
 }
 
 func (h *Hub) LeaveVoice(client *Client, channelID uuid.UUID) {
+	if h.SFU != nil {
+		room := h.SFU.GetOrCreateRoom(channelID)
+		room.RemovePeer(client.User.ID)
+	}
+
 	h.voicePresenceMu.Lock()
 	if chUsers, ok := h.voicePresence[channelID]; ok {
 		delete(chUsers, client.User.ID)
@@ -312,6 +334,36 @@ func (c *Client) readPump() {
 				c.SendEvent("pong", map[string]interface{}{
 					"t": payload.T,
 				})
+			}
+
+		case "webrtc_answer":
+			var answer webrtc.SessionDescription
+			if err := json.Unmarshal(event.Payload, &answer); err == nil && c.CurrentVoiceCh != nil && c.hub.SFU != nil {
+				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
+				peer := room.GetPeer(c.User.ID)
+				if peer != nil {
+					if err := peer.PC.SetRemoteDescription(answer); err != nil {
+						log.Printf("[SFU] Error setting remote description for %s: %v", c.User.ID, err)
+					}
+				}
+			}
+
+		case "webrtc_candidate":
+			var candidate webrtc.ICECandidateInit
+			if err := json.Unmarshal(event.Payload, &candidate); err == nil && c.CurrentVoiceCh != nil && c.hub.SFU != nil {
+				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
+				peer := room.GetPeer(c.User.ID)
+				if peer != nil {
+					if err := peer.PC.AddICECandidate(candidate); err != nil {
+						log.Printf("[SFU] Error adding ICE candidate for %s: %v", c.User.ID, err)
+					}
+				}
+			}
+
+		case "webrtc_request_keyframe":
+			if c.CurrentVoiceCh != nil && c.hub.SFU != nil {
+				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
+				room.DispatchKeyframe(c.User.ID)
 			}
 		}
 	}

@@ -49,8 +49,16 @@ const usersInVoice = computed(() => {
   return list
 })
 
-// Watch local screen stream and attach to video element
-watch(() => voiceStore.localScreenStream, (stream) => {
+// Active screen stream (local or remote SFU stream)
+const activeScreenStream = computed(() => {
+  return voiceStore.localScreenStream || voiceStore.remoteScreenStream || null
+})
+const isSharingOwnScreen = computed(() => {
+  return !!voiceStore.localScreenStream
+})
+
+// Watch active screen stream and attach to video element
+watch(activeScreenStream, (stream) => {
   nextTick(() => {
     if (screenVideoEl.value) {
       screenVideoEl.value.srcObject = stream
@@ -227,9 +235,9 @@ function formatTime(dateStr) {
           layoutMode === 'split' ? 'h-64 p-4 border-b border-mnema-hairline' : 'flex-1 p-6 overflow-y-auto'
         ]"
       >
-        <!-- 4K Screen Share Spotlight Mode (if sharing) -->
+        <!-- 4K Screen Share Spotlight Mode (if sharing or viewing) -->
         <div 
-          v-if="voiceStore.isScreenSharing && voiceStore.localScreenStream" 
+          v-if="activeScreenStream" 
           ref="videoContainer"
           :class="[
             'w-full max-w-5xl bg-black rounded-xl border border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
@@ -240,13 +248,13 @@ function formatTime(dateStr) {
             ref="screenVideoEl" 
             autoplay 
             playsinline 
-            muted 
+            :muted="isSharingOwnScreen"
             class="w-full h-full object-contain"
           ></video>
 
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-xs text-white">
             <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
-            <span class="font-mono font-semibold text-[11px]">4K 60 FPS</span>
+            <span class="font-mono font-semibold text-[11px]">{{ isSharingOwnScreen ? 'Eigener Bildschirm (4K 60 FPS)' : 'Live Bildschirmübertragung (4K 60 FPS)' }}</span>
             <span class="text-white/60 text-[10px]">Source Quality</span>
           </div>
 

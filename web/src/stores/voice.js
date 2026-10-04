@@ -101,6 +101,7 @@ export const useVoiceStore = defineStore('voice', () => {
   // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
   const localScreenStream = shallowRef(null)
   const localAudioStream = shallowRef(null)
+  const remoteScreenStream = shallowRef(null)
 
   // Map of channelId -> Map of userId -> User object
   const channelUsers = ref({})
@@ -179,6 +180,7 @@ export const useVoiceStore = defineStore('voice', () => {
     currentChannelId.value = null
     isConnected.value = false
     isScreenSharing.value = false
+    remoteScreenStream.value = null
     activeView.value = 'chat'
   }
 
@@ -222,6 +224,7 @@ export const useVoiceStore = defineStore('voice', () => {
     activeView,
     localScreenStream,
     localAudioStream,
+    remoteScreenStream,
     channelUsers,
     speakingUsers,
     setVoiceSnapshot,

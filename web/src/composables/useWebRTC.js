@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
@@ -9,6 +9,92 @@ let audioContext = null
 let analyser = null
 let speakingInterval = null
 let lastAboveThresholdTime = 0
+
+// WebRTC Peer Connection and Remote Audio
+let pc = null
+let remoteAudioElements = []
+
+function updateRemoteVolume(voiceStore) {
+  const vol = voiceStore.isDeafened ? 0 : (voiceStore.outputVolume / 100)
+  remoteAudioElements.forEach(el => {
+    el.volume = vol
+  })
+}
+
+function cleanupPeerConnection(voiceStore) {
+  if (pc) {
+    try { pc.close() } catch {}
+    pc = null
+  }
+  remoteAudioElements.forEach(el => {
+    try {
+      el.pause()
+      el.srcObject = null
+    } catch {}
+  })
+  remoteAudioElements = []
+  if (voiceStore) {
+    voiceStore.remoteScreenStream = null
+  }
+}
+
+function setupPeerConnection(voiceStore, chatStore) {
+  cleanupPeerConnection(voiceStore)
+
+  pc = new RTCPeerConnection({
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' }
+    ]
+  })
+
+  pc.onicecandidate = (event) => {
+    if (event.candidate) {
+      chatStore.sendWSEvent('webrtc_candidate', event.candidate.toJSON())
+    }
+  }
+
+  pc.ontrack = (event) => {
+    if (event.track.kind === 'audio') {
+      const audioEl = new Audio()
+      audioEl.srcObject = new MediaStream([event.track])
+      audioEl.autoplay = true
+      const vol = voiceStore.isDeafened ? 0 : (voiceStore.outputVolume / 100)
+      audioEl.volume = vol
+      audioEl.play().catch(e => console.warn('[WebRTC] Audio auto-play warning:', e))
+      remoteAudioElements.push(audioEl)
+
+      event.track.onended = () => {
+        audioEl.srcObject = null
+        remoteAudioElements = remoteAudioElements.filter(a => a !== audioEl)
+      }
+    } else if (event.track.kind === 'video') {
+      voiceStore.remoteScreenStream = new MediaStream([event.track])
+      chatStore.sendWSEvent('webrtc_request_keyframe', {})
+
+      event.track.onended = () => {
+        voiceStore.remoteScreenStream = null
+      }
+    }
+  }
+
+  // Attach local microphone if available
+  if (localAudioStream.value) {
+    const audioTrack = localAudioStream.value.getAudioTracks()[0]
+    if (audioTrack) {
+      pc.addTrack(audioTrack, localAudioStream.value)
+    }
+  }
+
+  // Attach local screenshare if active
+  if (localScreenStream.value) {
+    const videoTrack = localScreenStream.value.getVideoTracks()[0]
+    if (videoTrack) {
+      pc.addTrack(videoTrack, localScreenStream.value)
+    }
+  }
+
+  return pc
+}
 
 // Test stream for Settings Modal when not connected to a voice channel
 let testAudioStream = null
@@ -165,6 +251,43 @@ export function useWebRTC() {
     voiceStore.currentInputLevel = 0
   }
 
+  watch([() => voiceStore.outputVolume, () => voiceStore.isDeafened], () => {
+    updateRemoteVolume(voiceStore)
+  })
+
+  async function handleRemoteOffer(offer) {
+    if (!pc) {
+      setupPeerConnection(voiceStore, chatStore)
+    }
+
+    if (localAudioStream.value) {
+      const audioTrack = localAudioStream.value.getAudioTracks()[0]
+      const hasAudioSender = pc.getSenders().some(s => s.track && s.track.kind === 'audio')
+      if (audioTrack && !hasAudioSender) {
+        pc.addTrack(audioTrack, localAudioStream.value)
+      }
+    }
+
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer))
+      const answer = await pc.createAnswer()
+      await pc.setLocalDescription(answer)
+      chatStore.sendWSEvent('webrtc_answer', answer)
+    } catch (err) {
+      console.warn('[WebRTC] Offer/Answer negotiation error:', err)
+    }
+  }
+
+  async function handleRemoteCandidate(candidate) {
+    if (pc && candidate) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate))
+      } catch (err) {
+        console.warn('[WebRTC] ICE candidate error:', err)
+      }
+    }
+  }
+
   async function joinVoiceChannel(channelId) {
     // If already in this channel, don't re-create audio graphs
     if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
@@ -177,8 +300,12 @@ export function useWebRTC() {
     // Clean up any previous voice session to prevent audio thread leak
     cleanupVoiceAudio()
 
+    chatStore.setWebRTCHandlers({
+      onOffer: handleRemoteOffer,
+      onCandidate: handleRemoteCandidate
+    })
+
     voiceStore.setChannel(channelId)
-    chatStore.sendWSEvent('voice_join', { channel_id: channelId })
 
     try {
       await refreshAudioDevices()
@@ -189,10 +316,15 @@ export function useWebRTC() {
 
       voiceStore.localAudioStream = localAudioStream.value
 
+      setupPeerConnection(voiceStore, chatStore)
+      chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+
       await setupSpeakingDetection(localAudioStream.value)
       setupPttListeners()
     } catch (err) {
       console.warn('Microphone access denied or unavailable:', err)
+      setupPeerConnection(voiceStore, chatStore)
+      chatStore.sendWSEvent('voice_join', { channel_id: channelId })
     }
   }
 
@@ -327,6 +459,16 @@ export function useWebRTC() {
       voiceStore.localScreenStream = localScreenStream.value
       voiceStore.isScreenSharing = true
 
+      if (pc && videoTrack) {
+        const videoSender = pc.getSenders().find(s => (s.track && s.track.kind === 'video') || (!s.track && s.kind === 'video'))
+        if (videoSender) {
+          await videoSender.replaceTrack(videoTrack)
+        } else {
+          pc.addTrack(videoTrack, localScreenStream.value)
+        }
+        chatStore.sendWSEvent('webrtc_request_keyframe', {})
+      }
+
       videoTrack.onended = () => {
         stopScreenShare()
       }
@@ -336,6 +478,13 @@ export function useWebRTC() {
   }
 
   function stopScreenShare() {
+    if (pc) {
+      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video')
+      if (videoSender) {
+        videoSender.replaceTrack(null).catch(() => {})
+      }
+    }
+
     if (localScreenStream.value) {
       localScreenStream.value.getTracks().forEach(t => t.stop())
       localScreenStream.value = null
@@ -345,6 +494,7 @@ export function useWebRTC() {
   }
 
   function leaveVoiceChannel() {
+    cleanupPeerConnection(voiceStore)
     cleanupVoiceAudio()
     stopScreenShare()
     chatStore.sendWSEvent('voice_leave', {})
