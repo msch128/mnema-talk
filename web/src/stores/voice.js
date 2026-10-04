@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, shallowRef } from 'vue'
 
 export const useVoiceStore = defineStore('voice', () => {
   const currentChannelId = ref(null)
@@ -8,6 +8,11 @@ export const useVoiceStore = defineStore('voice', () => {
   const isScreenSharing = ref(false)
   const isConnected = ref(false)
   const ping = ref(14)
+  const activeView = ref('chat') // 'chat' | 'voice'
+
+  // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
+  const localScreenStream = shallowRef(null)
+  const localAudioStream = shallowRef(null)
 
   // Map of channelId -> Map of userId -> User object
   const channelUsers = ref({})
@@ -43,22 +48,38 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleMute() {
     isMuted.value = !isMuted.value
+    if (localAudioStream.value) {
+      localAudioStream.value.getAudioTracks().forEach(track => {
+        track.enabled = !isMuted.value
+      })
+    }
   }
 
   function toggleDeafen() {
     isDeafened.value = !isDeafened.value
-    if (isDeafened.value) isMuted.value = true
+    if (isDeafened.value) {
+      isMuted.value = true
+      if (localAudioStream.value) {
+        localAudioStream.value.getAudioTracks().forEach(track => {
+          track.enabled = false
+        })
+      }
+    }
   }
 
   function setChannel(channelId) {
     currentChannelId.value = channelId
     isConnected.value = !!channelId
+    if (channelId) {
+      activeView.value = 'voice'
+    }
   }
 
   function disconnect() {
     currentChannelId.value = null
     isConnected.value = false
     isScreenSharing.value = false
+    activeView.value = 'chat'
   }
 
   return {
@@ -68,6 +89,9 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenSharing,
     isConnected,
     ping,
+    activeView,
+    localScreenStream,
+    localAudioStream,
     channelUsers,
     speakingUsers,
     setVoiceSnapshot,

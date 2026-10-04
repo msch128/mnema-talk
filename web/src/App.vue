@@ -2,14 +2,17 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
+import { useVoiceStore } from './stores/voice'
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
+import VoiceStage from './components/VoiceStage.vue'
 import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
+const voiceStore = useVoiceStore()
 const showAdminModal = ref(false)
 
 onMounted(async () => {
@@ -42,8 +45,11 @@ authStore.$subscribe((mutation, state) => {
         <UserBar />
       </div>
 
-      <!-- Center Column: Conversation & Media Timeline -->
-      <ChatArea />
+      <!-- Center Space: Either Voice Talk Stage or Text Discussion Feed -->
+      <VoiceStage 
+        v-if="voiceStore.activeView === 'voice' && voiceStore.isConnected" 
+      />
+      <ChatArea v-else />
 
       <!-- Admin Storage & Retention Dashboard Modal -->
       <AdminDashboard v-if="showAdminModal" @close="showAdminModal = false" />

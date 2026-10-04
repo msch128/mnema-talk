@@ -3,9 +3,13 @@ import { ref, nextTick, watch, onMounted } from 'vue'
 import { Hash, Plus, ArrowUp, FileText, Image as ImageIcon } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { useVoiceStore } from '../stores/voice'
+import { useWebRTC } from '../composables/useWebRTC'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const voiceStore = useVoiceStore()
+const { leaveVoiceChannel } = useWebRTC()
 
 const inputMessage = ref('')
 const messageContainer = ref(null)
@@ -63,10 +67,48 @@ function formatTime(dateStr) {
   const d = new Date(dateStr)
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
+
+const currentVoiceChannelName = computed(() => {
+  if (!voiceStore.currentChannelId) return ''
+  for (const cat of chatStore.categories) {
+    const ch = cat.channels?.find(c => c.id === voiceStore.currentChannelId)
+    if (ch) return ch.name
+  }
+  return chatStore.uncategorized?.find(c => c.id === voiceStore.currentChannelId)?.name || 'Hangout'
+})
 </script>
 
 <template>
   <main class="flex-1 bg-mnema-canvas flex flex-col h-full overflow-hidden">
+    <!-- Active Voice Hangout Top Banner (if connected while browsing text) -->
+    <div 
+      v-if="voiceStore.isConnected" 
+      class="bg-mnema-band/35 border-b border-mnema-hairline px-6 py-2 flex items-center justify-between text-xs flex-shrink-0 z-20"
+    >
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-mnema-accent animate-pulse"></span>
+        <span class="font-medium text-mnema-mint text-xs">
+          Aktiv im Voice: {{ currentVoiceChannelName }}
+        </span>
+        <span class="text-[10px] text-mnema-tertiary font-mono">({{ voiceStore.ping }}ms Ping)</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          @click="voiceStore.activeView = 'voice'"
+          class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-[11px] transition shadow-sm"
+        >
+          Zur Talk-Bühne wechseln
+        </button>
+        <button
+          @click="leaveVoiceChannel"
+          class="px-2 py-1 rounded hover:bg-mnema-danger/20 text-mnema-muted hover:text-mnema-danger text-[11px] transition"
+        >
+          Trennen
+        </button>
+      </div>
+    </div>
+
     <!-- Channel Header -->
     <header class="h-14 px-6 border-b border-mnema-hairline bg-mnema-canvas/90 backdrop-blur-sm flex items-center justify-between flex-shrink-0 z-10">
       <div class="flex items-center gap-2 min-w-0">
