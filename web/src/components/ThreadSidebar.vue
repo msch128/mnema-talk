@@ -3,7 +3,7 @@ import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   X, MessageSquare, ArrowUp, Plus, FileText, Loader2,
   Pencil, Trash2, Smile, SmilePlus, Check, Reply
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import UserAvatar from './UserAvatar.vue'

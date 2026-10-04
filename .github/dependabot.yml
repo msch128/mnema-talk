@@ -13,6 +13,9 @@ updates:
     groups:
       go-modules:
         patterns: ["*"]
+    ignore:
+      # Replaced by dockertest/v4.
+      - dependency-name: github.com/ory/dockertest/v3
 
   - package-ecosystem: npm
     directory: /web
@@ -28,6 +31,12 @@ updates:
         dependency-type: production
       npm-dev:
         dependency-type: development
+    ignore:
+      # Tailwind 4 is a CSS-first rewrite; migrate deliberately, not via a bot PR.
+      - dependency-name: tailwindcss
+        update-types: ["version-update:semver-major"]
+      # Deprecated upstream; the app uses @lucide/vue.
+      - dependency-name: lucide-vue-next
 
   - package-ecosystem: github-actions
     directory: /
@@ -50,6 +59,10 @@ updates:
     groups:
       base-images:
         patterns: ["*"]
+    ignore:
+      # Stay on the active Node LTS; bump majors deliberately.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker-compose
     directory: /

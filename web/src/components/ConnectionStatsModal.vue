@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { X, Activity, Radio, Zap, ShieldCheck } from 'lucide-vue-next'
+import { X, Activity, Radio, Zap, ShieldCheck } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { rateJitter } from '../lib/rtcStats'
 

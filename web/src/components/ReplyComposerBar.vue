@@ -1,5 +1,5 @@
 <script setup>
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 
 // "Antwort an <Name>" strip that sits on top of a composer while replying.
 defineProps({

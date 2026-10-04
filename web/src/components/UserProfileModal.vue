@@ -4,7 +4,7 @@ import {
   X, Crown, Shield, User, Calendar, Volume2, 
   Camera, AtSign, Check, Loader2, AlertCircle,
   Edit3, Save
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'

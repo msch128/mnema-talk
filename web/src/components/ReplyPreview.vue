@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Reply, Image as ImageIcon } from 'lucide-vue-next'
+import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import { previewText } from '../lib/replies'
 
