@@ -61,3 +61,8 @@ updates:
     groups:
       compose-images:
         patterns: ["*"]
+    ignore:
+      # A Postgres major upgrade needs a dump/restore or pg_upgrade of the data
+      # volume; do it deliberately, never via an automatic PR.
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
