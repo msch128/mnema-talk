@@ -85,3 +85,60 @@ func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) e
 	log.Printf("[DB] Initial administrator '%s' initialized\n", username)
 	return nil
 }
+
+// EnsureDefaultChannels checks if any channels exist, and seeds defaults if empty
+func (p *Pool) EnsureDefaultChannels(ctx context.Context) error {
+	var count int
+	err := p.QueryRow(ctx, "SELECT COUNT(*) FROM channels").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil
+	}
+
+	// 1. Text Category & Channels
+	var textCatID, voiceCatID string
+	err = p.QueryRow(ctx, `
+		INSERT INTO categories (name, sort_order)
+		VALUES ('Text-Kanäle', 0)
+		RETURNING id
+	`).Scan(&textCatID)
+	if err != nil {
+		return fmt.Errorf("failed to create default text category: %w", err)
+	}
+
+	_, err = p.Exec(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order)
+		VALUES 
+			($1, 'general', 'text', 'Allgemeine Diskussionen & Chat', 0),
+			($1, 'medien', 'text', 'Bilder, Screenshots & Clips', 1)
+	`, textCatID)
+	if err != nil {
+		return fmt.Errorf("failed to create default text channels: %w", err)
+	}
+
+	// 2. Voice Category & Channels
+	err = p.QueryRow(ctx, `
+		INSERT INTO categories (name, sort_order)
+		VALUES ('Voice-Hangouts', 1)
+		RETURNING id
+	`).Scan(&voiceCatID)
+	if err != nil {
+		return fmt.Errorf("failed to create default voice category: %w", err)
+	}
+
+	_, err = p.Exec(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order)
+		VALUES 
+			($1, 'Lounge', 'voice', 'Offener Sprach-Hangout', 0),
+			($1, 'Gaming 4K', 'voice', 'Source-Quality Screen & Gaming Hangout', 1)
+	`, voiceCatID)
+	if err != nil {
+		return fmt.Errorf("failed to create default voice channels: %w", err)
+	}
+
+	log.Println("[DB] Initial text and voice channels seeded successfully")
+	return nil
+}

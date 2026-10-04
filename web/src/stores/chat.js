@@ -24,11 +24,22 @@ export const useChatStore = defineStore('chat', () => {
         categories.value = data.categories || []
         uncategorized.value = data.uncategorized || []
 
-        // Default to first text channel if none active
-        if (!activeChannel.value) {
-          const firstCh = categories.value[0]?.channels?.find(c => c.type === 'text') ||
-                          uncategorized.value.find(c => c.type === 'text')
-          if (firstCh) selectChannel(firstCh)
+        // Default to first available text channel if active is unset or removed
+        const allChannels = [
+          ...categories.value.flatMap(c => c.channels || []),
+          ...uncategorized.value
+        ]
+        const stillExists = activeChannel.value && allChannels.some(c => c.id === activeChannel.value.id)
+        if (!stillExists) {
+          const firstText = allChannels.find(c => c.type === 'text')
+          if (firstText) {
+            selectChannel(firstText)
+          } else if (allChannels.length > 0) {
+            selectChannel(allChannels[0])
+          } else {
+            activeChannel.value = null
+            messages.value = []
+          }
         }
       }
     } catch (e) {
@@ -151,6 +162,84 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  async function createChannel({ categoryId, name, type, topic, sortOrder = 0 }) {
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({
+        category_id: categoryId || null,
+        name,
+        type: type || 'text',
+        topic: topic || '',
+        sort_order: sortOrder
+      })
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Erstellen des Kanals')
+    }
+
+    const newChannel = await res.json()
+    await fetchChannels()
+    selectChannel(newChannel)
+    return newChannel
+  }
+
+  async function deleteChannel(channelId) {
+    const res = await fetch(`/api/admin/channels/${channelId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Löschen des Kanals')
+    }
+
+    if (activeChannel.value?.id === channelId) {
+      activeChannel.value = null
+    }
+    await fetchChannels()
+  }
+
+  async function createCategory(name, sortOrder = 0) {
+    const res = await fetch('/api/admin/categories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({ name, sort_order: sortOrder })
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Erstellen der Kategorie')
+    }
+
+    const cat = await res.json()
+    await fetchChannels()
+    return cat
+  }
+
+  async function deleteCategory(categoryId) {
+    const res = await fetch(`/api/admin/categories/${categoryId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Löschen der Kategorie')
+    }
+
+    await fetchChannels()
+  }
+
   function sendWSEvent(type, payload) {
     if (ws.value && isConnected.value) {
       ws.value.send(JSON.stringify({ type, payload }))
@@ -168,7 +257,12 @@ export const useChatStore = defineStore('chat', () => {
     fetchMessages,
     sendMessage,
     uploadMedia,
+    createChannel,
+    deleteChannel,
+    createCategory,
+    deleteCategory,
     initWebSocket,
     sendWSEvent
   }
 })
+

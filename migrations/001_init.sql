@@ -99,3 +99,31 @@ INSERT INTO server_settings (key, value) VALUES
     ('retention_days', '30'),
     ('max_upload_size_mb', '50')
 ON CONFLICT (key) DO NOTHING;
+
+-- Seed Default Categories and Channels if none exist
+DO $$
+DECLARE
+    text_cat_id UUID;
+    voice_cat_id UUID;
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM categories) THEN
+        INSERT INTO categories (id, name, sort_order)
+        VALUES (gen_random_uuid(), 'Text-Kanäle', 0)
+        RETURNING id INTO text_cat_id;
+
+        INSERT INTO channels (id, category_id, name, type, topic, sort_order)
+        VALUES 
+            (gen_random_uuid(), text_cat_id, 'general', 'text', 'Allgemeine Diskussionen & Chat', 0),
+            (gen_random_uuid(), text_cat_id, 'medien', 'text', 'Bilder, Screenshots & Clips', 1);
+
+        INSERT INTO categories (id, name, sort_order)
+        VALUES (gen_random_uuid(), 'Voice-Hangouts', 1)
+        RETURNING id INTO voice_cat_id;
+
+        INSERT INTO channels (id, category_id, name, type, topic, sort_order)
+        VALUES 
+            (gen_random_uuid(), voice_cat_id, 'Lounge', 'voice', 'Offener Sprach-Hangout', 0),
+            (gen_random_uuid(), voice_cat_id, 'Gaming 4K', 'voice', 'Source-Quality Screen & Gaming Hangout', 1);
+    END IF;
+END $$;
+
