@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed, nextTick, watch, onMounted } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { 
   Hash, Plus, ArrowUp, FileText, Image as ImageIcon, Users, 
-  MessageSquare, MessageSquareQuote, Pencil, Trash2, Smile, Check, X, Loader2 
+  MessageSquare, MessageSquareQuote, Pencil, Trash2, Smile, SmilePlus, Check, X, Loader2 
 } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -109,9 +109,24 @@ watch(() => chatStore.pendingMention, (newVal) => {
   }
 })
 
+function toggleReactionPicker(pickerId) {
+  activeReactionPickerMsgId.value = activeReactionPickerMsgId.value === pickerId ? null : pickerId
+}
+
+function handleGlobalClick(e) {
+  if (activeReactionPickerMsgId.value && !e.target.closest('.reaction-picker-anchor')) {
+    activeReactionPickerMsgId.value = null
+  }
+}
+
 onMounted(() => {
   scrollToBottom()
   textAreaEl.value?.focus()
+  window.addEventListener('click', handleGlobalClick)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleGlobalClick)
 })
 
 async function handleSend() {
@@ -257,12 +272,22 @@ const currentVoiceChannelName = computed(() => {
         class="relative flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-2 rounded-lg transition-colors group"
       >
         <!-- Hover Quick Actions Bar -->
-        <div class="absolute right-3 -top-3.5 hidden group-hover:flex items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20">
+        <div 
+          :class="[
+            'absolute right-3 -top-3.5 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
+            activeReactionPickerMsgId === msg.id ? 'flex' : 'hidden group-hover:flex'
+          ]"
+        >
           <!-- Emoji Reactions Trigger -->
-          <div class="relative">
+          <div class="relative reaction-picker-anchor">
             <button
-              @click.stop="activeReactionPickerMsgId = activeReactionPickerMsgId === msg.id ? null : msg.id"
-              class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400 transition"
+              @click.stop="toggleReactionPicker(msg.id)"
+              :class="[
+                'p-1.5 rounded transition',
+                activeReactionPickerMsgId === msg.id 
+                  ? 'bg-mnema-surface text-amber-400' 
+                  : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
+              ]"
               title="Reagieren"
             >
               <Smile class="w-3.5 h-3.5" />
@@ -271,13 +296,13 @@ const currentVoiceChannelName = computed(() => {
             <!-- Quick Emoji Palette Popup -->
             <div 
               v-if="activeReactionPickerMsgId === msg.id"
-              class="absolute right-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30"
+              class="absolute right-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
             >
               <button
                 v-for="emoji in quickEmojis"
                 :key="emoji"
                 @click.stop="handleToggleReaction(msg.id, emoji)"
-                class="hover:scale-125 transition p-1 text-sm rounded hover:bg-mnema-surface"
+                class="hover:scale-125 transition p-1 text-sm rounded hover:bg-mnema-surface active:scale-95"
               >
                 {{ emoji }}
               </button>
@@ -360,25 +385,6 @@ const currentVoiceChannelName = computed(() => {
           <!-- Markdown Message Content -->
           <MarkdownContent v-else-if="msg.content" :content="msg.content" class="mt-0.5" />
 
-          <!-- Reaction Badges -->
-          <div v-if="msg.reactions && msg.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
-            <button 
-              v-for="r in msg.reactions" 
-              :key="r.emoji"
-              @click.stop="handleToggleReaction(msg.id, r.emoji)"
-              :class="[
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition cursor-pointer active:scale-95',
-                hasUserReacted(r)
-                  ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
-                  : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
-              ]"
-              :title="`Reaktion ${r.emoji}`"
-            >
-              <span>{{ r.emoji }}</span>
-              <span class="text-[10px] font-mono">{{ r.count }}</span>
-            </button>
-          </div>
-
           <!-- Media Attachments (Images, Clips, Documents) -->
           <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">
             <div 
@@ -422,6 +428,51 @@ const currentVoiceChannelName = computed(() => {
               <span>{{ msg.reply_count }} {{ msg.reply_count === 1 ? 'Antwort' : 'Antworten' }}</span>
               <span class="text-[9px] opacity-75 font-mono ml-0.5">Thread öffnen &rarr;</span>
             </button>
+          </div>
+
+          <!-- Reaction Badges (Ganz unten an der Nachricht, wie in Discord) -->
+          <div v-if="msg.reactions && msg.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
+            <button 
+              v-for="r in msg.reactions" 
+              :key="r.emoji"
+              @click.stop="handleToggleReaction(msg.id, r.emoji)"
+              :class="[
+                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition cursor-pointer active:scale-95',
+                hasUserReacted(r)
+                  ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
+                  : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
+              ]"
+              :title="`Reaktion ${r.emoji}`"
+            >
+              <span>{{ r.emoji }}</span>
+              <span class="text-[10px] font-mono">{{ r.count }}</span>
+            </button>
+
+            <!-- Discord-style Add Reaction "+" button inline with reactions -->
+            <div class="relative reaction-picker-anchor inline-block">
+              <button
+                @click.stop="toggleReactionPicker(`bottom-${msg.id}`)"
+                class="inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-xs"
+                title="Reaktion hinzufügen"
+              >
+                <SmilePlus class="w-3.5 h-3.5" />
+              </button>
+
+              <!-- Quick Emoji Palette Popup from bottom -->
+              <div 
+                v-if="activeReactionPickerMsgId === `bottom-${msg.id}`"
+                class="absolute left-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
+              >
+                <button
+                  v-for="emoji in quickEmojis"
+                  :key="emoji"
+                  @click.stop="handleToggleReaction(msg.id, emoji)"
+                  class="hover:scale-125 transition p-1 text-sm rounded hover:bg-mnema-surface active:scale-95"
+                >
+                  {{ emoji }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
