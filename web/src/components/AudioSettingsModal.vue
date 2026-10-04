@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { 
   X, Mic, Volume2, Sparkles, Sliders, Shield, 
   HelpCircle, Radio, Settings, AlertCircle, Check
@@ -9,12 +9,17 @@ import { useWebRTC } from '../composables/useWebRTC'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
-const { refreshAudioDevices } = useWebRTC()
+const { refreshAudioDevices, startMicTest, stopMicTest } = useWebRTC()
 
 const isRecordingPttKey = ref(false)
 
 onMounted(async () => {
   await refreshAudioDevices()
+  await startMicTest()
+})
+
+onUnmounted(() => {
+  stopMicTest()
 })
 
 function handleSliderChange(e) {
@@ -35,8 +40,26 @@ function handleKeyRecord(e) {
   voiceStore.saveSettings()
 }
 
-function handleDeviceChange() {
+async function handleDeviceChange() {
   voiceStore.saveSettings()
+  await startMicTest()
+}
+
+async function toggleAgc() {
+  voiceStore.autoGainControl = !voiceStore.autoGainControl
+  voiceStore.saveSettings()
+  await startMicTest()
+}
+
+async function toggleNoise() {
+  voiceStore.toggleNoiseCancelling()
+  await startMicTest()
+}
+
+async function toggleEcho() {
+  voiceStore.echoCancellation = !voiceStore.echoCancellation
+  voiceStore.saveSettings()
+  await startMicTest()
 }
 </script>
 
@@ -223,7 +246,7 @@ function handleDeviceChange() {
                 </p>
               </div>
               <button
-                @click="voiceStore.autoGainControl = !voiceStore.autoGainControl; voiceStore.saveSettings()"
+                @click="toggleAgc"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.autoGainControl ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
@@ -246,7 +269,7 @@ function handleDeviceChange() {
                 </p>
               </div>
               <button
-                @click="voiceStore.toggleNoiseCancelling()"
+                @click="toggleNoise"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.noiseCancelling ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
@@ -265,7 +288,7 @@ function handleDeviceChange() {
                 </p>
               </div>
               <button
-                @click="voiceStore.echoCancellation = !voiceStore.echoCancellation; voiceStore.saveSettings()"
+                @click="toggleEcho"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.echoCancellation ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'

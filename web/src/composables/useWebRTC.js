@@ -2,16 +2,47 @@ import { ref } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
+// Module-level shared singletons across all components
+const localAudioStream = ref(null)
+const localScreenStream = ref(null)
+let audioContext = null
+let analyser = null
+let speakingInterval = null
+let lastAboveThresholdTime = 0
+
+// Test stream for Settings Modal when not connected to a voice channel
+let testAudioStream = null
+let testAudioContext = null
+let testAnalyser = null
+let testSpeakingInterval = null
+
+// Accurate RMS volume calculator (time domain PCM audio)
+function calculateRMSLevel(analyserNode, buffer) {
+  if (!analyserNode) return 0
+  analyserNode.getByteTimeDomainData(buffer)
+  let sum = 0
+  for (let i = 0; i < buffer.length; i++) {
+    const sample = (buffer[i] - 128) / 128
+    sum += sample * sample
+  }
+  const rms = Math.sqrt(sum / buffer.length)
+
+  // Map RMS to calibrated 0-100% volume
+  // Ambient room noise: rms < 0.005
+  // Quiet background speech: rms 0.01 - 0.04 (approx 25-45%)
+  // Normal speaking into mic: rms 0.05 - 0.20 (approx 50-80%)
+  // Loud speaking: rms > 0.25 (approx 90-100%)
+  if (rms < 0.002) return 0
+  const db = 20 * Math.log10(rms) // roughly -60dB to 0dB
+  const minDb = -60
+  const maxDb = -10
+  const pct = Math.round(((db - minDb) / (maxDb - minDb)) * 100)
+  return Math.max(0, Math.min(100, pct))
+}
+
 export function useWebRTC() {
   const voiceStore = useVoiceStore()
   const chatStore = useChatStore()
-
-  const localAudioStream = ref(null)
-  const localScreenStream = ref(null)
-  const audioContext = ref(null)
-  const analyser = ref(null)
-  let speakingInterval = null
-  let lastAboveThresholdTime = 0
 
   async function refreshAudioDevices() {
     try {
@@ -24,77 +55,143 @@ export function useWebRTC() {
     }
   }
 
+  function getAudioConstraints() {
+    const audioConstraints = {
+      echoCancellation: voiceStore.echoCancellation,
+      noiseSuppression: voiceStore.noiseCancelling,
+      autoGainControl: voiceStore.autoGainControl, // Crucial: false prevents boosting background voice
+      googEchoCancellation: voiceStore.echoCancellation,
+      googAutoGainControl: voiceStore.autoGainControl,
+      googNoiseSuppression: voiceStore.noiseCancelling,
+      googHighpassFilter: true,
+      googTypingNoiseDetection: true
+    }
+    if (voiceStore.selectedInputDeviceId) {
+      audioConstraints.deviceId = { exact: voiceStore.selectedInputDeviceId }
+    }
+    return audioConstraints
+  }
+
+  async function startMicTest() {
+    // If we're already connected to a voice channel, ensure audioContext is active
+    if (localAudioStream.value && audioContext) {
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume().catch(() => {})
+      }
+      return
+    }
+
+    // Stop any existing test first
+    stopMicTest()
+
+    try {
+      const constraints = getAudioConstraints()
+      testAudioStream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      testAudioContext = new AudioCtx()
+      if (testAudioContext.state === 'suspended') {
+        await testAudioContext.resume().catch(() => {})
+      }
+
+      testAnalyser = testAudioContext.createAnalyser()
+      testAnalyser.fftSize = 512
+      testAnalyser.smoothingTimeConstant = 0.2
+
+      const source = testAudioContext.createMediaStreamSource(testAudioStream)
+      const biquad = testAudioContext.createBiquadFilter()
+      biquad.type = 'highpass'
+      biquad.frequency.setValueAtTime(85, testAudioContext.currentTime)
+
+      source.connect(biquad)
+      biquad.connect(testAnalyser)
+
+      const buffer = new Uint8Array(testAnalyser.fftSize)
+
+      testSpeakingInterval = setInterval(() => {
+        if (!testAnalyser) return
+        voiceStore.currentInputLevel = calculateRMSLevel(testAnalyser, buffer)
+      }, 30)
+
+      // Refresh devices after permission is granted so device labels are available
+      await refreshAudioDevices()
+    } catch (err) {
+      console.warn('Mic test failed (permission denied or no device):', err)
+      voiceStore.currentInputLevel = 0
+    }
+  }
+
+  function stopMicTest() {
+    if (testSpeakingInterval) {
+      clearInterval(testSpeakingInterval)
+      testSpeakingInterval = null
+    }
+    if (testAudioStream) {
+      testAudioStream.getTracks().forEach(t => t.stop())
+      testAudioStream = null
+    }
+    if (testAudioContext) {
+      testAudioContext.close().catch(() => {})
+      testAudioContext = null
+    }
+    testAnalyser = null
+
+    // If not in voice, reset input level
+    if (!localAudioStream.value) {
+      voiceStore.currentInputLevel = 0
+    }
+  }
+
   async function joinVoiceChannel(channelId) {
+    // Stop standalone mic test before joining voice
+    stopMicTest()
+
     voiceStore.setChannel(channelId)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
 
     try {
       await refreshAudioDevices()
 
-      const audioConstraints = {
-        echoCancellation: voiceStore.echoCancellation,
-        noiseSuppression: voiceStore.noiseCancelling,
-        autoGainControl: voiceStore.autoGainControl, // Crucial: false prevents boosting background voice
-        googEchoCancellation: voiceStore.echoCancellation,
-        googAutoGainControl: voiceStore.autoGainControl,
-        googNoiseSuppression: voiceStore.noiseCancelling,
-        googHighpassFilter: true,
-        googTypingNoiseDetection: true
-      }
-
-      if (voiceStore.selectedInputDeviceId) {
-        audioConstraints.deviceId = { exact: voiceStore.selectedInputDeviceId }
-      }
-
-      // 1. Request microphone access with tuned acoustic constraints
       localAudioStream.value = await navigator.mediaDevices.getUserMedia({
-        audio: audioConstraints
+        audio: getAudioConstraints()
       })
 
       voiceStore.localAudioStream = localAudioStream.value
 
-      // 2. Setup Web Audio API volume analyzer & Sensitivity Noise Gate
-      setupSpeakingDetection(localAudioStream.value)
-
-      // 3. Setup Push-to-Talk listeners if needed
+      await setupSpeakingDetection(localAudioStream.value)
       setupPttListeners()
     } catch (err) {
       console.warn('Microphone access denied or unavailable:', err)
     }
   }
 
-  function setupSpeakingDetection(stream) {
+  async function setupSpeakingDetection(stream) {
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
-      audioContext.value = new AudioCtx()
-      analyser.value = audioContext.value.createAnalyser()
-      analyser.value.fftSize = 512
-      analyser.value.smoothingTimeConstant = 0.3
+      audioContext = new AudioCtx()
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume().catch(() => {})
+      }
 
-      const source = audioContext.value.createMediaStreamSource(stream)
+      analyser = audioContext.createAnalyser()
+      analyser.fftSize = 512
+      analyser.smoothingTimeConstant = 0.2
 
-      // Highpass filter at 85Hz to cut desk thuds and low frequency rumble
-      const biquad = audioContext.value.createBiquadFilter()
+      const source = audioContext.createMediaStreamSource(stream)
+      const biquad = audioContext.createBiquadFilter()
       biquad.type = 'highpass'
-      biquad.frequency.setValueAtTime(85, audioContext.value.currentTime)
+      biquad.frequency.setValueAtTime(85, audioContext.currentTime)
 
       source.connect(biquad)
-      biquad.connect(analyser.value)
+      biquad.connect(analyser)
 
-      const buffer = new Uint8Array(analyser.value.frequencyBinCount)
+      const buffer = new Uint8Array(analyser.fftSize)
       let wasSpeaking = false
 
       speakingInterval = setInterval(() => {
-        if (!analyser.value) return
+        if (!analyser) return
 
-        analyser.value.getByteFrequencyData(buffer)
-        let sum = 0
-        for (let i = 0; i < buffer.length; i++) {
-          sum += buffer[i]
-        }
-        const average = sum / buffer.length // 0 to 128
-        // Convert to calibrated 0-100 level
-        const level = Math.min(100, Math.round((average / 75) * 100))
+        const level = calculateRMSLevel(analyser, buffer)
         voiceStore.currentInputLevel = level
 
         if (voiceStore.isMuted) {
@@ -142,7 +239,7 @@ export function useWebRTC() {
           wasSpeaking = shouldTransmit
           chatStore.sendWSEvent('voice_speaking', { active: shouldTransmit })
         }
-      }, 35)
+      }, 30)
     } catch (err) {
       console.warn('AudioContext speaking detector setup error:', err)
     }
@@ -160,7 +257,6 @@ export function useWebRTC() {
 
   function handlePttKeyDown(e) {
     if (voiceStore.inputMode !== 'ptt') return
-    // Ignore key repeat if already holding down
     if (e.repeat) return
 
     const key = e.code || e.key
@@ -177,7 +273,6 @@ export function useWebRTC() {
     }
   }
 
-  // 4K 60 FPS Screen Sharing Pipeline
   async function startScreenShare() {
     try {
       localScreenStream.value = await navigator.mediaDevices.getDisplayMedia({
@@ -228,20 +323,24 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
-    if (audioContext.value) {
-      audioContext.value.close().catch(() => {})
-      audioContext.value = null
+    if (audioContext) {
+      audioContext.close().catch(() => {})
+      audioContext = null
     }
+    analyser = null
 
     stopScreenShare()
     chatStore.sendWSEvent('voice_leave', {})
     voiceStore.disconnect()
+    voiceStore.currentInputLevel = 0
   }
 
   return {
     localAudioStream,
     localScreenStream,
     refreshAudioDevices,
+    startMicTest,
+    stopMicTest,
     joinVoiceChannel,
     leaveVoiceChannel,
     startScreenShare,
