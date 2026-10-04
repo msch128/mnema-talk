@@ -9,7 +9,7 @@ export const useVoiceStore = defineStore('voice', () => {
   const isConnected = ref(false)
   const activeView = ref('chat') // 'chat' | 'voice'
   const showStatsModal = ref(false)
-  const noiseCancelling = ref(true) // AI Rauschunterdrückung (Krisp-Style / RNNoise)
+  const showAudioSettings = ref(false)
 
   // Real-time Connection Metrics
   const ping = ref(12)
@@ -17,6 +17,42 @@ export const useVoiceStore = defineStore('voice', () => {
   const packetsLost = ref(0)
   const packetsSent = ref(1280)
   const packetsReceived = ref(1276)
+
+  // --- Voice Activity & Sensitivity (Noise Gate) Settings ---
+  const inputMode = ref(localStorage.getItem('mnema_input_mode') || 'activity') // 'activity' | 'ptt'
+  const pttKey = ref(localStorage.getItem('mnema_ptt_key') || 'Space')
+  const isPttPressed = ref(false)
+  const autoSensitivity = ref(localStorage.getItem('mnema_auto_sens') === 'true')
+  const sensitivityThreshold = ref(parseInt(localStorage.getItem('mnema_sens_threshold') || '30', 10)) // 0 to 100
+  const currentInputLevel = ref(0) // live meter 0-100
+  const hangoverMs = ref(parseInt(localStorage.getItem('mnema_hangover_ms') || '250', 10))
+
+  // Hardware Audio Processing Settings
+  const noiseCancelling = ref(localStorage.getItem('mnema_noise') !== 'false') // AI Noise Cancelling
+  const autoGainControl = ref(localStorage.getItem('mnema_agc') === 'true') // Default false to avoid boosting background voices
+  const echoCancellation = ref(localStorage.getItem('mnema_echo') !== 'false')
+  const inputVolume = ref(parseInt(localStorage.getItem('mnema_input_volume') || '100', 10))
+  const outputVolume = ref(parseInt(localStorage.getItem('mnema_output_volume') || '100', 10))
+
+  const selectedInputDeviceId = ref(localStorage.getItem('mnema_input_dev') || '')
+  const selectedOutputDeviceId = ref(localStorage.getItem('mnema_output_dev') || '')
+  const availableInputDevices = ref([])
+  const availableOutputDevices = ref([])
+
+  function saveSettings() {
+    localStorage.setItem('mnema_input_mode', inputMode.value)
+    localStorage.setItem('mnema_ptt_key', pttKey.value)
+    localStorage.setItem('mnema_auto_sens', String(autoSensitivity.value))
+    localStorage.setItem('mnema_sens_threshold', String(sensitivityThreshold.value))
+    localStorage.setItem('mnema_hangover_ms', String(hangoverMs.value))
+    localStorage.setItem('mnema_noise', String(noiseCancelling.value))
+    localStorage.setItem('mnema_agc', String(autoGainControl.value))
+    localStorage.setItem('mnema_echo', String(echoCancellation.value))
+    localStorage.setItem('mnema_input_volume', String(inputVolume.value))
+    localStorage.setItem('mnema_output_volume', String(outputVolume.value))
+    localStorage.setItem('mnema_input_dev', selectedInputDeviceId.value)
+    localStorage.setItem('mnema_output_dev', selectedOutputDeviceId.value)
+  }
 
   const minPing = computed(() => {
     if (!pingHistory.value.length) return ping.value
@@ -121,6 +157,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleNoiseCancelling() {
     noiseCancelling.value = !noiseCancelling.value
+    saveSettings()
   }
 
   function setChannel(channelId) {
@@ -155,7 +192,25 @@ export const useVoiceStore = defineStore('voice', () => {
     packetsReceived,
     recordPing,
     showStatsModal,
+    showAudioSettings,
+    // Voice activity & Sensitivity settings
+    inputMode,
+    pttKey,
+    isPttPressed,
+    autoSensitivity,
+    sensitivityThreshold,
+    currentInputLevel,
+    hangoverMs,
     noiseCancelling,
+    autoGainControl,
+    echoCancellation,
+    inputVolume,
+    outputVolume,
+    selectedInputDeviceId,
+    selectedOutputDeviceId,
+    availableInputDevices,
+    availableOutputDevices,
+    saveSettings,
     toggleNoiseCancelling,
     activeView,
     localScreenStream,

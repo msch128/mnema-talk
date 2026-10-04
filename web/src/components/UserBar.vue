@@ -1,5 +1,5 @@
 <script setup>
-import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut } from 'lucide-vue-next'
+import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut, Sliders } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -114,6 +114,15 @@ function toggleScreenShare() {
           :title="voiceStore.isDeafened ? 'Audio deaktiviert' : 'Taub stellen'"
         >
           <Headphones class="w-3.5 h-3.5" />
+        </button>
+
+        <!-- Audio & Sensitivity Settings -->
+        <button
+          @click="voiceStore.showAudioSettings = true"
+          class="p-1.5 rounded-md text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text transition"
+          title="Sprach- & Empfindlichkeitseinstellungen (Discord-Style Noise Gate)"
+        >
+          <Sliders class="w-3.5 h-3.5" />
         </button>
 
         <button
