@@ -100,7 +100,7 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, li
 	}
 	defer rows.Close()
 
-	var messages []Message
+	messages := make([]Message, 0)
 	msgIDs := make([]uuid.UUID, 0)
 	msgMap := make(map[uuid.UUID]int)
 
@@ -141,7 +141,7 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID) ([]Me
 	}
 	defer rows.Close()
 
-	var replies []Message
+	replies := make([]Message, 0)
 	msgIDs := make([]uuid.UUID, 0)
 	msgMap := make(map[uuid.UUID]int)
 
