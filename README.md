@@ -1,7 +1,7 @@
 # Mnema Talk
 
-A lightweight, private, single-server Discord alternative: text channels, direct
-messages, instant-join voice hangouts and high-quality screen sharing. It is a
+A lightweight, private, single-server Discord alternative: text channels,
+instant-join voice hangouts and high-quality screen sharing. It is a
 single Go binary with the web app and a WebRTC SFU built in.
 
 ## Features
@@ -9,8 +9,9 @@ single Go binary with the web app and a WebRTC SFU built in.
 - **One community, no guilds**: categories with text and voice channels.
 - **Text chat**: real-time messages over WebSocket, replies/threads, reactions,
   Markdown, file and image attachments, and live presence.
-- **Direct messages**: private 1:1 conversations, visible only to the participants.
-- **Voice hangouts**: click a voice channel and you are in, no ringing.
+- **Replies**: Discord-style replies quote the original message and jump to it, even thousands of messages back.
+- **Voice hangouts**: click a voice channel and you are in, no ringing. A page
+  reload within 30 seconds puts you back into the call.
 - **Screen sharing** up to source quality (e.g. 1440p/4K at 60 FPS, hardware
   encoding in the browser). The Pion-based SFU forwards RTP packets and never transcodes.
 - **Invite-only**: no public registration; the admin (default `Herzog`,

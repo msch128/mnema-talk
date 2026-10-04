@@ -40,8 +40,6 @@ locally instead (`make up` or `make dev`).
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
   served only to authenticated users, through the app, not directly from S3.
-- **DM privacy.** Direct-message events and DM attachments are delivered only to
-  the participants of that conversation.
 - **Abuse protection.** Per-client rate limiting, plus an escalating per-username
   login lockout after repeated failures. Client IPs are taken from
   `X-Forwarded-For` only when the request comes from `TRUSTED_PROXY_CIDRS`.
