@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS messages (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES messages(id) ON DELETE CASCADE;
 CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_messages_parent_id ON messages(parent_id);
 
