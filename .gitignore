@@ -69,3 +69,6 @@ logs/
 *.log
 tmp/
 temp/
+
+# Project specifications (must remain strictly untracked)
+SPEC.md

@@ -144,6 +144,24 @@ func (h *Hub) BroadcastEvent(eventType string, payload interface{}) {
 	}
 }
 
+// SendToUser sends a typed event to all active sessions of a specific user
+func (h *Hub) SendToUser(userID uuid.UUID, eventType string, payload interface{}) {
+	data, err := json.Marshal(Event{Type: eventType, Payload: payload})
+	if err != nil {
+		return
+	}
+	h.clientsMu.RLock()
+	defer h.clientsMu.RUnlock()
+	for client := range h.clients {
+		if client.User.ID == userID {
+			select {
+			case client.send <- data:
+			default:
+			}
+		}
+	}
+}
+
 func (h *Hub) JoinVoice(client *Client, channelID uuid.UUID) {
 	h.voicePresenceMu.Lock()
 	if _, ok := h.voicePresence[channelID]; !ok {
@@ -364,6 +382,63 @@ func (c *Client) readPump() {
 			if c.CurrentVoiceCh != nil && c.hub.SFU != nil {
 				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
 				room.DispatchKeyframe(c.User.ID)
+			}
+
+		case "dm_call_initiate":
+			var payload struct {
+				ChannelID   uuid.UUID `json:"channel_id"`
+				RecipientID uuid.UUID `json:"recipient_id"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err == nil {
+				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh != payload.ChannelID {
+					c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
+				}
+				c.hub.JoinVoice(c, payload.ChannelID)
+				c.hub.SendToUser(payload.RecipientID, "dm_call_incoming", map[string]interface{}{
+					"channel_id": payload.ChannelID,
+					"caller":     c.User,
+				})
+			}
+
+		case "dm_call_accept":
+			var payload struct {
+				ChannelID uuid.UUID `json:"channel_id"`
+				CallerID  uuid.UUID `json:"caller_id"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err == nil {
+				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh != payload.ChannelID {
+					c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
+				}
+				c.hub.JoinVoice(c, payload.ChannelID)
+				c.hub.SendToUser(payload.CallerID, "dm_call_accepted", map[string]interface{}{
+					"channel_id": payload.ChannelID,
+					"user":       c.User,
+				})
+			}
+
+		case "dm_call_reject":
+			var payload struct {
+				ChannelID uuid.UUID `json:"channel_id"`
+				CallerID  uuid.UUID `json:"caller_id"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err == nil {
+				c.hub.SendToUser(payload.CallerID, "dm_call_rejected", map[string]interface{}{
+					"channel_id": payload.ChannelID,
+				})
+			}
+
+		case "dm_call_end":
+			var payload struct {
+				ChannelID   uuid.UUID `json:"channel_id"`
+				RecipientID uuid.UUID `json:"recipient_id"`
+			}
+			if err := json.Unmarshal(event.Payload, &payload); err == nil {
+				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh == payload.ChannelID {
+					c.hub.LeaveVoice(c, payload.ChannelID)
+				}
+				c.hub.SendToUser(payload.RecipientID, "dm_call_ended", map[string]interface{}{
+					"channel_id": payload.ChannelID,
+				})
 			}
 		}
 	}

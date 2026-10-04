@@ -63,6 +63,11 @@ func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSiz
 		var channelID *uuid.UUID
 		if chUUID, err := uuid.Parse(channelIDStr); err == nil {
 			channelID = &chUUID
+			canAccess, err := CheckUserCanAccessChannel(r.Context(), p, user.ID, chUUID)
+			if err != nil || !canAccess {
+				http.Error(w, `{"error":"forbidden: cannot access this channel"}`, http.StatusForbidden)
+				return
+			}
 		}
 
 		messageIDStr := r.FormValue("message_id")

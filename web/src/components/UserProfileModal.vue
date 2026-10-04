@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2, 
   Camera, AtSign, Check, Loader2, Sparkles, AlertCircle,
-  Edit3, Save
+  Edit3, Save, MessageCircle
 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -161,6 +161,17 @@ function handleKeydown(e) {
   }
 }
 
+async function handleStartDM() {
+  if (profileUser.value.id) {
+    try {
+      await chatStore.openDM(profileUser.value.id)
+      emit('close')
+    } catch (err) {
+      alert(err.message || 'Konnte DM nicht öffnen')
+    }
+  }
+}
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
 })
@@ -251,6 +262,16 @@ onUnmounted(() => {
 
           <!-- Action Buttons in Top Right -->
           <div class="flex items-center gap-2">
+            <button 
+              v-if="!isSelf"
+              @click="handleStartDM"
+              class="px-3 py-1.5 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+              title="Direktnachricht senden"
+            >
+              <MessageCircle class="w-3.5 h-3.5" />
+              <span>Nachricht</span>
+            </button>
+
             <button 
               v-if="!isSelf"
               @click="handleMention"
