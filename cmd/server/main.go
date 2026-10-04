@@ -24,6 +24,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/ws"
+	"github.com/msch128/mnema-talk/web"
 )
 
 func main() {
@@ -444,7 +445,10 @@ func main() {
 		})
 	})
 
-	// 13. Start HTTP Server
+	// 13. Web UI SPA Handler (Serves embedded Vue 3 frontend)
+	r.Handle("/*", web.Handler())
+
+	// 14. Start HTTP Server
 	serverAddr := fmt.Sprintf("%s:%s", cfg.BindAddr, cfg.Port)
 	server := &http.Server{
 		Addr:         serverAddr,
