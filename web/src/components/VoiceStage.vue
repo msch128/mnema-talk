@@ -9,6 +9,8 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
+import UserAvatar from './UserAvatar.vue'
+import MarkdownContent from './MarkdownContent.vue'
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
@@ -84,6 +86,13 @@ function scrollChatToBottom() {
 
 watch(() => chatStore.messages.length, () => {
   scrollChatToBottom()
+})
+
+watch(() => chatStore.pendingMention, (newVal) => {
+  if (newVal) {
+    chatInput.value = `${chatInput.value ? chatInput.value.trim() + ' ' : ''}@${newVal} `
+    chatStore.pendingMention = ''
+  }
 })
 
 onMounted(() => {
@@ -274,26 +283,21 @@ function formatTime(dateStr) {
           >
             <!-- Large Avatar -->
             <div class="relative mb-2">
-              <div
-                :class="[
-                  'rounded-full bg-mnema-raised border border-mnema-border flex items-center justify-center font-bold text-mnema-accent transition-all',
-                  layoutMode === 'split' ? 'w-12 h-12 text-base' : 'w-20 h-20 text-2xl',
-                  voiceStore.speakingUsers[user.id] ? 'scale-105 shadow-md shadow-mnema-accent/30' : ''
-                ]"
-              >
-                {{ user.display_name?.charAt(0).toUpperCase() || '?' }}
-              </div>
-
-              <!-- Animated Emerald Pulse Ring when talking -->
-              <span
-                v-if="voiceStore.speakingUsers[user.id]"
-                class="absolute -inset-1 rounded-full border-2 border-mnema-accent animate-ping pointer-events-none opacity-40"
-              ></span>
+              <UserAvatar 
+                :user="user" 
+                :size="layoutMode === 'split' ? 'lg' : 'xl'" 
+                :is-speaking="!!voiceStore.speakingUsers[user.id]"
+                class="cursor-pointer hover:opacity-90 transition"
+                @click="chatStore.openUserProfile(user)"
+              />
             </div>
 
             <!-- Participant Name -->
             <div class="flex items-center gap-1.5 max-w-[90%]">
-              <span class="text-xs font-semibold text-mnema-text truncate">
+              <span 
+                @click="chatStore.openUserProfile(user)"
+                class="text-xs font-semibold text-mnema-text hover:text-mnema-accent transition cursor-pointer truncate"
+              >
                 {{ user.display_name || user.username }}
               </span>
               <span v-if="user.role === 'admin'" class="text-[8px] px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
@@ -422,22 +426,26 @@ function formatTime(dateStr) {
             class="flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors group"
           >
             <!-- User Avatar -->
-            <div class="w-7 h-7 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-xs flex-shrink-0 mt-0.5">
-              {{ msg.display_name?.charAt(0).toUpperCase() || '?' }}
-            </div>
+            <UserAvatar 
+              :user="msg" 
+              size="sm" 
+              class="cursor-pointer hover:opacity-85 transition mt-0.5" 
+              @click="chatStore.openUserProfile(msg)" 
+            />
 
             <!-- Content Body -->
             <div class="flex-1 min-w-0">
               <div class="flex items-baseline gap-2">
-                <span class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer">
+                <span 
+                  @click="chatStore.openUserProfile(msg)"
+                  class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer"
+                >
                   {{ msg.display_name || msg.username }}
                 </span>
                 <span class="text-[9px] text-mnema-tertiary font-mono">{{ formatTime(msg.created_at) }}</span>
               </div>
 
-              <p class="text-xs text-mnema-body-ink break-words select-text mt-0.5 leading-relaxed">
-                {{ msg.content }}
-              </p>
+              <MarkdownContent v-if="msg.content" :content="msg.content" class="mt-0.5" />
 
               <!-- Attachments if any -->
               <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">

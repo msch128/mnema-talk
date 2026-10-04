@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -205,16 +207,137 @@ func main() {
 			// Protected User Profile
 			r.Group(func(r chi.Router) {
 				r.Use(auth.Middleware(cfg.JWTSecret))
+
 				r.Get("/me", func(w http.ResponseWriter, r *http.Request) {
 					user, ok := r.Context().Value(auth.UserContextKey).(auth.User)
 					if !ok {
 						http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 						return
 					}
+
+					var fullUser auth.User
+					var avatarKey *string
+					err := dbPool.QueryRow(r.Context(), `
+						SELECT id, username, display_name, role, avatar_s3_key, created_at
+						FROM users WHERE id = $1
+					`, user.ID).Scan(&fullUser.ID, &fullUser.Username, &fullUser.DisplayName, &fullUser.Role, &avatarKey, &fullUser.CreatedAt)
+					if err == nil {
+						if avatarKey != nil && *avatarKey != "" {
+							fullUser.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
+						}
+						w.Header().Set("Content-Type", "application/json")
+						_ = json.NewEncoder(w).Encode(fullUser)
+						return
+					}
+
 					w.Header().Set("Content-Type", "application/json")
 					_ = json.NewEncoder(w).Encode(user)
 				})
 			})
+		})
+
+		// User Profile & Avatar Endpoints
+		r.Group(func(r chi.Router) {
+			r.Use(auth.Middleware(cfg.JWTSecret))
+
+			r.Get("/users/{userID}", func(w http.ResponseWriter, r *http.Request) {
+				idStr := chi.URLParam(r, "userID")
+				targetID, err := uuid.Parse(idStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid user id"}`, http.StatusBadRequest)
+					return
+				}
+
+				var targetUser auth.User
+				var avatarKey *string
+				err = dbPool.QueryRow(r.Context(), `
+					SELECT id, username, display_name, role, avatar_s3_key, created_at
+					FROM users WHERE id = $1
+				`, targetID).Scan(&targetUser.ID, &targetUser.Username, &targetUser.DisplayName, &targetUser.Role, &avatarKey, &targetUser.CreatedAt)
+				if err != nil {
+					http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+					return
+				}
+
+				if avatarKey != nil && *avatarKey != "" {
+					targetUser.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(targetUser)
+			})
+
+			if s3Cli != nil {
+				r.Post("/users/me/avatar", func(w http.ResponseWriter, r *http.Request) {
+					user := r.Context().Value(auth.UserContextKey).(auth.User)
+
+					maxBytes := int64(10 * 1024 * 1024)
+					r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+
+					if err := r.ParseMultipartForm(maxBytes); err != nil {
+						http.Error(w, `{"error":"file exceeds limit (10MB)"}`, http.StatusBadRequest)
+						return
+					}
+
+					file, header, err := r.FormFile("avatar")
+					if err != nil {
+						http.Error(w, `{"error":"avatar file is required"}`, http.StatusBadRequest)
+						return
+					}
+					defer file.Close()
+
+					ext := strings.ToLower(filepath.Ext(header.Filename))
+					if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" && ext != ".gif" {
+						http.Error(w, `{"error":"only jpg, png, webp, and gif allowed"}`, http.StatusBadRequest)
+						return
+					}
+
+					mimeType := header.Header.Get("Content-Type")
+					if mimeType == "" || mimeType == "application/octet-stream" {
+						if ext == ".png" {
+							mimeType = "image/png"
+						} else if ext == ".gif" {
+							mimeType = "image/gif"
+						} else if ext == ".webp" {
+							mimeType = "image/webp"
+						} else {
+							mimeType = "image/jpeg"
+						}
+					}
+
+					mediaID := uuid.New()
+					s3Key := fmt.Sprintf("avatars/%s_%s%s", user.ID.String(), mediaID.String()[:8], ext)
+
+					if err := s3Cli.Upload(r.Context(), s3Key, file, mimeType, header.Size); err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"S3 upload failed: %s"}`, err.Error()), http.StatusInternalServerError)
+						return
+					}
+
+					// Track in media table
+					_, _ = dbPool.Exec(r.Context(), `
+						INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
+						VALUES ($1, $2, $3, $4, $5, $6, $7)
+					`, mediaID, user.ID, cfg.S3Bucket, s3Key, header.Filename, mimeType, header.Size)
+
+					// Update users table with mediaID as avatar_s3_key
+					_, err = dbPool.Exec(r.Context(), `
+						UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2
+					`, mediaID.String(), user.ID)
+					if err != nil {
+						http.Error(w, fmt.Sprintf(`{"error":"failed to update user avatar: %s"}`, err.Error()), http.StatusInternalServerError)
+						return
+					}
+
+					updatedUser := user
+					updatedUser.AvatarURL = fmt.Sprintf("/api/media/%s", mediaID.String())
+
+					// Broadcast user_update to all WebSocket subscribers
+					hub.BroadcastEvent("user_update", updatedUser)
+
+					w.Header().Set("Content-Type", "application/json")
+					_ = json.NewEncoder(w).Encode(updatedUser)
+				})
+			}
 		})
 
 		// Protected Chat & Channel Routes

@@ -84,10 +84,11 @@ func ValidateToken(tokenString, secret string) (*Claims, error) {
 func Login(ctx context.Context, p *db.Pool, username, password string) (*User, error) {
 	var user User
 	var passwordHash string
+	var avatarS3Key *string
 
-	query := `SELECT id, username, display_name, password_hash, role, created_at FROM users WHERE LOWER(username) = LOWER($1)`
+	query := `SELECT id, username, display_name, password_hash, role, avatar_s3_key, created_at FROM users WHERE LOWER(username) = LOWER($1)`
 	err := p.QueryRow(ctx, query, username).Scan(
-		&user.ID, &user.Username, &user.DisplayName, &passwordHash, &user.Role, &user.CreatedAt,
+		&user.ID, &user.Username, &user.DisplayName, &passwordHash, &user.Role, &avatarS3Key, &user.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -98,6 +99,10 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, e
 
 	if !CheckPassword(password, passwordHash) {
 		return nil, errors.New("invalid username or password")
+	}
+
+	if avatarS3Key != nil && *avatarS3Key != "" {
+		user.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarS3Key)
 	}
 
 	return &user, nil

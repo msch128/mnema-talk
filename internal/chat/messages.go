@@ -70,7 +70,7 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, li
 
 	if before != nil {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, m.content, m.is_pinned,
+			SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key, m.content, m.is_pinned,
 			       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id) AS reply_count,
 			       m.created_at, m.updated_at
 			FROM messages m
@@ -82,7 +82,7 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, li
 		args = []interface{}{channelID, before, limit}
 	} else {
 		query = `
-			SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, m.content, m.is_pinned,
+			SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key, m.content, m.is_pinned,
 			       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id) AS reply_count,
 			       m.created_at, m.updated_at
 			FROM messages m
@@ -106,9 +106,13 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, li
 
 	for rows.Next() {
 		var m Message
+		var avatarKey *string
 		m.Attachments = make([]MediaAttachment, 0)
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatarKey, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, err
+		}
+		if avatarKey != nil && *avatarKey != "" {
+			m.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
 		}
 		msgMap[m.ID] = len(messages)
 		msgIDs = append(msgIDs, m.ID)
@@ -128,7 +132,7 @@ func GetChannelMessages(ctx context.Context, p *db.Pool, channelID uuid.UUID, li
 // GetThreadReplies fetches all replies for a given root message in chronological order
 func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID) ([]Message, error) {
 	query := `
-		SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, m.content, m.is_pinned,
+		SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key, m.content, m.is_pinned,
 		       0 AS reply_count, m.created_at, m.updated_at
 		FROM messages m
 		JOIN users u ON m.user_id = u.id
@@ -147,9 +151,13 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID) ([]Me
 
 	for rows.Next() {
 		var m Message
+		var avatarKey *string
 		m.Attachments = make([]MediaAttachment, 0)
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatarKey, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt); err != nil {
 			return nil, err
+		}
+		if avatarKey != nil && *avatarKey != "" {
+			m.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
 		}
 		msgMap[m.ID] = len(replies)
 		msgIDs = append(msgIDs, m.ID)
@@ -164,7 +172,7 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID) ([]Me
 // GetMessageByID retrieves a single message by its ID (including reply_count and attachments)
 func GetMessageByID(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Message, error) {
 	query := `
-		SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, m.content, m.is_pinned,
+		SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key, m.content, m.is_pinned,
 		       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id) AS reply_count,
 		       m.created_at, m.updated_at
 		FROM messages m
@@ -172,12 +180,16 @@ func GetMessageByID(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Mess
 		WHERE m.id = $1
 	`
 	var m Message
+	var avatarKey *string
 	m.Attachments = make([]MediaAttachment, 0)
 	err := p.QueryRow(ctx, query, messageID).Scan(
-		&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
+		&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatarKey, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if avatarKey != nil && *avatarKey != "" {
+		m.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
 	}
 
 	// Fetch attachments for this message
@@ -204,6 +216,7 @@ func GetMessageByID(ctx context.Context, p *db.Pool, messageID uuid.UUID) (*Mess
 // CreateMessage inserts a new chat message (or thread reply if parentID != nil) into PostgreSQL
 func CreateMessage(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID, content string, parentID *uuid.UUID) (*Message, error) {
 	var m Message
+	var avatarKey *string
 	m.Attachments = make([]MediaAttachment, 0)
 
 	query := `
@@ -212,16 +225,19 @@ func CreateMessage(ctx context.Context, p *db.Pool, channelID, userID uuid.UUID,
 			VALUES ($1, $2, $3, $4)
 			RETURNING id, channel_id, user_id, parent_id, content, is_pinned, created_at, updated_at
 		)
-		SELECT i.id, i.channel_id, i.user_id, i.parent_id, u.username, u.display_name, i.content, i.is_pinned, 0, i.created_at, i.updated_at
+		SELECT i.id, i.channel_id, i.user_id, i.parent_id, u.username, u.display_name, u.avatar_s3_key, i.content, i.is_pinned, 0, i.created_at, i.updated_at
 		FROM inserted i
 		JOIN users u ON i.user_id = u.id
 	`
 
 	err := p.QueryRow(ctx, query, channelID, userID, content, parentID).Scan(
-		&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
+		&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatarKey, &m.Content, &m.IsPinned, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert message: %w", err)
+	}
+	if avatarKey != nil && *avatarKey != "" {
+		m.AvatarURL = fmt.Sprintf("/api/media/%s", *avatarKey)
 	}
 
 	return &m, nil

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Crown, Volume2, Shield, Circle } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import UserAvatar from './UserAvatar.vue'
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -65,26 +66,17 @@ function getUserVoiceChannel(userId) {
           <div
             v-for="member in admins"
             :key="member.id"
+            @click="chatStore.openUserProfile(member)"
             class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
           >
             <!-- Avatar with Speaking and Status Indicators -->
-            <div class="relative flex-shrink-0">
-              <div
-                :class="[
-                  'w-8 h-8 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-xs font-bold text-mnema-amber transition-all',
-                  voiceStore.speakingUsers[member.id] ? 'ring-2 ring-mnema-accent ring-offset-1 ring-offset-mnema-raised' : ''
-                ]"
-              >
-                {{ member.display_name?.charAt(0).toUpperCase() }}
-              </div>
-              <!-- Online status dot anchored to bottom right -->
-              <span 
-                :class="[
-                  'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-mnema-raised',
-                  chatStore.onlineUserIds.has(member.id) ? 'bg-mnema-accent' : 'bg-mnema-tertiary'
-                ]"
-              ></span>
-            </div>
+            <UserAvatar 
+              :user="member" 
+              size="md" 
+              :show-status="true" 
+              :is-online="chatStore.onlineUserIds.has(member.id)" 
+              :is-speaking="!!voiceStore.speakingUsers[member.id]" 
+            />
 
             <!-- Name and Activity -->
             <div class="flex flex-col min-w-0 flex-1">
@@ -118,20 +110,17 @@ function getUserVoiceChannel(userId) {
           <div
             v-for="member in onlineNonAdmins"
             :key="member.id"
+            @click="chatStore.openUserProfile(member)"
             class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
           >
             <!-- Avatar with Speaking and Status Indicators -->
-            <div class="relative flex-shrink-0">
-              <div
-                :class="[
-                  'w-8 h-8 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-xs font-bold text-mnema-text transition-all',
-                  voiceStore.speakingUsers[member.id] ? 'ring-2 ring-mnema-accent ring-offset-1 ring-offset-mnema-raised' : ''
-                ]"
-              >
-                {{ member.display_name?.charAt(0).toUpperCase() }}
-              </div>
-              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-mnema-raised bg-mnema-accent"></span>
-            </div>
+            <UserAvatar 
+              :user="member" 
+              size="md" 
+              :show-status="true" 
+              :is-online="true" 
+              :is-speaking="!!voiceStore.speakingUsers[member.id]" 
+            />
 
             <!-- Name and Activity -->
             <div class="flex flex-col min-w-0 flex-1">
@@ -159,17 +148,18 @@ function getUserVoiceChannel(userId) {
           <div
             v-for="member in offlineNonAdmins"
             :key="member.id"
+            @click="chatStore.openUserProfile(member)"
             class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-mnema-surface/70 transition group cursor-pointer"
           >
-            <div class="relative flex-shrink-0">
-              <div class="w-8 h-8 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-xs font-bold text-mnema-tertiary">
-                {{ member.display_name?.charAt(0).toUpperCase() }}
-              </div>
-              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-mnema-raised bg-mnema-tertiary"></span>
-            </div>
+            <UserAvatar 
+              :user="member" 
+              size="md" 
+              :show-status="true" 
+              :is-online="false" 
+            />
 
             <div class="flex flex-col min-w-0 flex-1">
-              <span class="text-xs text-mnema-muted truncate">
+              <span class="text-xs text-mnema-muted group-hover:text-mnema-accent transition truncate">
                 {{ member.display_name }}
               </span>
               <span class="text-[9px] text-mnema-tertiary font-mono">Offline</span>

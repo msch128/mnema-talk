@@ -5,6 +5,8 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
+import UserAvatar from './UserAvatar.vue'
+import MarkdownContent from './MarkdownContent.vue'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -36,6 +38,16 @@ watch(() => chatStore.activeChannel?.id, () => {
     textAreaEl.value?.focus()
     scrollToBottom()
   })
+})
+
+watch(() => chatStore.pendingMention, (newVal) => {
+  if (newVal) {
+    inputMessage.value = `${inputMessage.value ? inputMessage.value.trim() + ' ' : ''}@${newVal} `
+    chatStore.pendingMention = ''
+    nextTick(() => {
+      textAreaEl.value?.focus()
+    })
+  }
 })
 
 onMounted(() => {
@@ -198,22 +210,27 @@ const currentVoiceChannelName = computed(() => {
         </div>
 
         <!-- User Avatar -->
-        <div class="w-8 h-8 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-xs flex-shrink-0 mt-0.5">
-          {{ msg.display_name?.charAt(0).toUpperCase() || '?' }}
-        </div>
+        <UserAvatar 
+          :user="msg" 
+          size="md"
+          class="cursor-pointer hover:opacity-85 transition mt-0.5"
+          @click="chatStore.openUserProfile(msg)"
+        />
 
         <!-- Content Body -->
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2">
-            <span class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer">
+            <span 
+              @click="chatStore.openUserProfile(msg)"
+              class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer"
+            >
               {{ msg.display_name || msg.username }}
             </span>
             <span class="text-[10px] text-mnema-tertiary font-mono">{{ formatTime(msg.created_at) }}</span>
           </div>
 
-          <p v-if="msg.content" class="text-xs text-mnema-body-ink break-words select-text mt-0.5 leading-relaxed">
-            {{ msg.content }}
-          </p>
+          <!-- Markdown Message Content -->
+          <MarkdownContent v-if="msg.content" :content="msg.content" class="mt-0.5" />
 
           <!-- Media Attachments (Images, Clips, Documents) -->
           <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">

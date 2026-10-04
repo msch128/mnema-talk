@@ -3,6 +3,8 @@ import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { X, MessageSquare, ArrowUp, Plus, FileText, Loader2, Image as ImageIcon } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import UserAvatar from './UserAvatar.vue'
+import MarkdownContent from './MarkdownContent.vue'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -116,11 +118,17 @@ function formatDate(dateStr) {
         class="bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-sm space-y-2"
       >
         <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-xs flex-shrink-0">
-            {{ chatStore.activeThread.display_name?.charAt(0).toUpperCase() || '?' }}
-          </div>
+          <UserAvatar 
+            :user="chatStore.activeThread" 
+            size="md" 
+            class="cursor-pointer hover:opacity-85 transition" 
+            @click="chatStore.openUserProfile(chatStore.activeThread)" 
+          />
           <div class="min-w-0">
-            <span class="font-semibold text-xs text-mnema-text truncate block">
+            <span 
+              @click="chatStore.openUserProfile(chatStore.activeThread)"
+              class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate block"
+            >
               {{ chatStore.activeThread.display_name || chatStore.activeThread.username }}
             </span>
             <span class="text-[9px] text-mnema-tertiary font-mono">
@@ -129,9 +137,7 @@ function formatDate(dateStr) {
           </div>
         </div>
 
-        <p class="text-xs text-mnema-body-ink break-words select-text leading-relaxed">
-          {{ chatStore.activeThread.content }}
-        </p>
+        <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" />
 
         <!-- Root Message Attachments -->
         <div v-if="chatStore.activeThread.attachments?.length" class="space-y-1.5 pt-1">
@@ -193,21 +199,25 @@ function formatDate(dateStr) {
         :key="reply.id"
         class="flex items-start gap-2.5 hover:bg-mnema-surface/40 p-2 rounded-lg transition-colors group"
       >
-        <div class="w-6 h-6 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-[10px] flex-shrink-0 mt-0.5">
-          {{ reply.display_name?.charAt(0).toUpperCase() || '?' }}
-        </div>
+        <UserAvatar 
+          :user="reply" 
+          size="sm" 
+          class="cursor-pointer hover:opacity-85 transition mt-0.5" 
+          @click="chatStore.openUserProfile(reply)" 
+        />
 
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2">
-            <span class="font-semibold text-xs text-mnema-text">
+            <span 
+              @click="chatStore.openUserProfile(reply)"
+              class="font-semibold text-xs text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer"
+            >
               {{ reply.display_name || reply.username }}
             </span>
             <span class="text-[9px] text-mnema-tertiary font-mono">{{ formatTime(reply.created_at) }}</span>
           </div>
 
-          <p class="text-xs text-mnema-body-ink break-words select-text mt-0.5 leading-relaxed">
-            {{ reply.content }}
-          </p>
+          <MarkdownContent v-if="reply.content" :content="reply.content" class="mt-0.5" />
 
           <!-- Reply Attachments -->
           <div v-if="reply.attachments?.length" class="mt-1.5 space-y-1.5">

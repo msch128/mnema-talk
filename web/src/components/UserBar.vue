@@ -2,10 +2,13 @@
 import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut, Sliders } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
+import { useChatStore } from '../stores/chat'
 import { useWebRTC } from '../composables/useWebRTC'
+import UserAvatar from './UserAvatar.vue'
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
+const chatStore = useChatStore()
 const { leaveVoiceChannel, startScreenShare, stopScreenShare } = useWebRTC()
 
 function toggleScreenShare() {
@@ -68,17 +71,18 @@ function toggleScreenShare() {
     <!-- User Identity & Audio Controls -->
     <div class="h-14 px-3.5 flex items-center justify-between">
       <!-- User Info -->
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div 
-          :class="[
-            'w-7 h-7 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-xs flex-shrink-0 transition-all',
-            voiceStore.speakingUsers[authStore.user?.id] ? 'ring-2 ring-mnema-accent ring-offset-1 ring-offset-mnema-raised' : ''
-          ]"
-        >
-          {{ authStore.user?.display_name?.charAt(0).toUpperCase() || 'H' }}
-        </div>
+      <div 
+        @click="chatStore.openUserProfile(authStore.user)"
+        class="flex items-center gap-2.5 min-w-0 cursor-pointer hover:opacity-85 transition group p-1 -m-1 rounded-lg"
+        title="Eigenes Profil öffnen / Avatar ändern"
+      >
+        <UserAvatar 
+          :user="authStore.user" 
+          size="sm" 
+          :is-speaking="!!voiceStore.speakingUsers[authStore.user?.id]" 
+        />
         <div class="flex flex-col min-w-0">
-          <span class="text-xs font-medium truncate text-mnema-text">
+          <span class="text-xs font-medium truncate text-mnema-text group-hover:text-mnema-accent transition">
             {{ authStore.user?.display_name || 'Herzog' }}
           </span>
           <span class="text-[10px] text-mnema-tertiary truncate font-mono">

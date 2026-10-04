@@ -63,6 +63,26 @@ export const useAuthStore = defineStore('auth', () => {
     return data.user
   }
 
+  async function uploadAvatar(file) {
+    if (!token.value) throw new Error('Nicht authentifiziert')
+    const formData = new FormData()
+    formData.append('avatar', file)
+    const res = await fetch('/api/users/me/avatar', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: formData
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Hochladen des Avatars')
+    }
+    const updatedUser = await res.json()
+    user.value = updatedUser
+    return updatedUser
+  }
+
   function logout() {
     user.value = null
     token.value = ''
@@ -77,6 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
     checkAuth,
     login,
     register,
+    uploadAvatar,
     logout
   }
 })
