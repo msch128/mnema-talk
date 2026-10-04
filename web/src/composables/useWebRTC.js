@@ -11,25 +11,53 @@ export function useWebRTC() {
   const audioContext = ref(null)
   const analyser = ref(null)
   let speakingInterval = null
+  let lastAboveThresholdTime = 0
+
+  async function refreshAudioDevices() {
+    try {
+      if (!navigator.mediaDevices?.enumerateDevices) return
+      const devices = await navigator.mediaDevices.enumerateDevices()
+      voiceStore.availableInputDevices = devices.filter(d => d.kind === 'audioinput')
+      voiceStore.availableOutputDevices = devices.filter(d => d.kind === 'audiooutput')
+    } catch (err) {
+      console.warn('enumerateDevices error:', err)
+    }
+  }
 
   async function joinVoiceChannel(channelId) {
     voiceStore.setChannel(channelId)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
 
     try {
-      // 1. Request microphone access
+      await refreshAudioDevices()
+
+      const audioConstraints = {
+        echoCancellation: voiceStore.echoCancellation,
+        noiseSuppression: voiceStore.noiseCancelling,
+        autoGainControl: voiceStore.autoGainControl, // Crucial: false prevents boosting background voice
+        googEchoCancellation: voiceStore.echoCancellation,
+        googAutoGainControl: voiceStore.autoGainControl,
+        googNoiseSuppression: voiceStore.noiseCancelling,
+        googHighpassFilter: true,
+        googTypingNoiseDetection: true
+      }
+
+      if (voiceStore.selectedInputDeviceId) {
+        audioConstraints.deviceId = { exact: voiceStore.selectedInputDeviceId }
+      }
+
+      // 1. Request microphone access with tuned acoustic constraints
       localAudioStream.value = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
+        audio: audioConstraints
       })
 
       voiceStore.localAudioStream = localAudioStream.value
 
-      // 2. Setup Web Audio API volume analyzer for the green speaking ring
+      // 2. Setup Web Audio API volume analyzer & Sensitivity Noise Gate
       setupSpeakingDetection(localAudioStream.value)
+
+      // 3. Setup Push-to-Talk listeners if needed
+      setupPttListeners()
     } catch (err) {
       console.warn('Microphone access denied or unavailable:', err)
     }
@@ -41,38 +69,111 @@ export function useWebRTC() {
       audioContext.value = new AudioCtx()
       analyser.value = audioContext.value.createAnalyser()
       analyser.value.fftSize = 512
+      analyser.value.smoothingTimeConstant = 0.3
 
       const source = audioContext.value.createMediaStreamSource(stream)
-      source.connect(analyser.value)
+
+      // Highpass filter at 85Hz to cut desk thuds and low frequency rumble
+      const biquad = audioContext.value.createBiquadFilter()
+      biquad.type = 'highpass'
+      biquad.frequency.setValueAtTime(85, audioContext.value.currentTime)
+
+      source.connect(biquad)
+      biquad.connect(analyser.value)
 
       const buffer = new Uint8Array(analyser.value.frequencyBinCount)
       let wasSpeaking = false
 
       speakingInterval = setInterval(() => {
-        if (!analyser.value || voiceStore.isMuted) {
-          if (wasSpeaking) {
-            wasSpeaking = false
-            chatStore.sendWSEvent('voice_speaking', { active: false })
-          }
-          return
-        }
+        if (!analyser.value) return
 
         analyser.value.getByteFrequencyData(buffer)
         let sum = 0
         for (let i = 0; i < buffer.length; i++) {
           sum += buffer[i]
         }
-        const average = sum / buffer.length
+        const average = sum / buffer.length // 0 to 128
+        // Convert to calibrated 0-100 level
+        const level = Math.min(100, Math.round((average / 75) * 100))
+        voiceStore.currentInputLevel = level
 
-        // Volume threshold
-        const isSpeaking = average > 18
-        if (isSpeaking !== wasSpeaking) {
-          wasSpeaking = isSpeaking
-          chatStore.sendWSEvent('voice_speaking', { active: isSpeaking })
+        if (voiceStore.isMuted) {
+          if (wasSpeaking) {
+            wasSpeaking = false
+            chatStore.sendWSEvent('voice_speaking', { active: false })
+          }
+          if (localAudioStream.value) {
+            const track = localAudioStream.value.getAudioTracks()[0]
+            if (track && track.enabled) track.enabled = false
+          }
+          return
         }
-      }, 50)
+
+        // Noise Gate & Sensitivity Evaluation
+        let shouldTransmit = false
+
+        if (voiceStore.inputMode === 'ptt') {
+          shouldTransmit = voiceStore.isPttPressed
+        } else {
+          // Voice Activity with Sensitivity Threshold
+          const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
+
+          if (level >= threshold) {
+            shouldTransmit = true
+            lastAboveThresholdTime = Date.now()
+          } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
+            // Hangover hold time prevents cutting off trailing words
+            shouldTransmit = true
+          } else {
+            shouldTransmit = false
+          }
+        }
+
+        // Physical audio track gate (muting track when below threshold to eliminate background bleed)
+        if (localAudioStream.value) {
+          const track = localAudioStream.value.getAudioTracks()[0]
+          if (track && track.enabled !== shouldTransmit) {
+            track.enabled = shouldTransmit
+          }
+        }
+
+        // Animated speaking halo state
+        if (shouldTransmit !== wasSpeaking) {
+          wasSpeaking = shouldTransmit
+          chatStore.sendWSEvent('voice_speaking', { active: shouldTransmit })
+        }
+      }, 35)
     } catch (err) {
       console.warn('AudioContext speaking detector setup error:', err)
+    }
+  }
+
+  function setupPttListeners() {
+    window.addEventListener('keydown', handlePttKeyDown)
+    window.addEventListener('keyup', handlePttKeyUp)
+  }
+
+  function removePttListeners() {
+    window.removeEventListener('keydown', handlePttKeyDown)
+    window.removeEventListener('keyup', handlePttKeyUp)
+  }
+
+  function handlePttKeyDown(e) {
+    if (voiceStore.inputMode !== 'ptt') return
+    // Ignore key repeat if already holding down
+    if (e.repeat) return
+
+    const key = e.code || e.key
+    if (key === voiceStore.pttKey) {
+      voiceStore.isPttPressed = true
+    }
+  }
+
+  function handlePttKeyUp(e) {
+    if (voiceStore.inputMode !== 'ptt') return
+    const key = e.code || e.key
+    if (key === voiceStore.pttKey) {
+      voiceStore.isPttPressed = false
     }
   }
 
@@ -88,7 +189,6 @@ export function useWebRTC() {
         audio: true
       })
 
-      // Hint to browser encoder to prioritize detail & smoothness
       const videoTrack = localScreenStream.value.getVideoTracks()[0]
       if (videoTrack && 'contentHint' in videoTrack) {
         videoTrack.contentHint = 'detail'
@@ -120,6 +220,8 @@ export function useWebRTC() {
       speakingInterval = null
     }
 
+    removePttListeners()
+
     if (localAudioStream.value) {
       localAudioStream.value.getTracks().forEach(t => t.stop())
       localAudioStream.value = null
@@ -139,6 +241,7 @@ export function useWebRTC() {
   return {
     localAudioStream,
     localScreenStream,
+    refreshAudioDevices,
     joinVoiceChannel,
     leaveVoiceChannel,
     startScreenShare,

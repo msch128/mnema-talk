@@ -11,6 +11,7 @@ import MemberList from './components/MemberList.vue'
 import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
+import AudioSettingsModal from './components/AudioSettingsModal.vue'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -69,6 +70,12 @@ authStore.$subscribe((mutation, state) => {
       <ConnectionStatsModal 
         v-if="voiceStore.showStatsModal" 
         @close="voiceStore.showStatsModal = false" 
+      />
+
+      <!-- Discord-Identical Audio & Sensitivity Settings Modal -->
+      <AudioSettingsModal 
+        v-if="voiceStore.showAudioSettings" 
+        @close="voiceStore.showAudioSettings = false" 
       />
     </template>
   </div>

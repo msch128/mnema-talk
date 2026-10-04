@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
   MessageSquare, Maximize2, Minimize2, Radio, Sparkles, Send, 
-  Plus, Users, Activity, FileText, LayoutList, ScreenShare
+  Plus, Users, Activity, FileText, LayoutList, ScreenShare, Sliders
 } from 'lucide-vue-next'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -362,6 +362,15 @@ function formatTime(dateStr) {
             title="KI Rauschunterdrückung (Krisp-Alternative) umschalten"
           >
             <Sparkles class="w-4 h-4" />
+          </button>
+
+          <!-- Voice & Sensitivity (Noise Gate) Settings -->
+          <button
+            @click="voiceStore.showAudioSettings = true"
+            class="p-2.5 rounded-full transition-all bg-mnema-surface hover:bg-mnema-hover text-mnema-text"
+            title="Sprach- & Empfindlichkeitseinstellungen (Noise Gate für gemeinsame Räume)"
+          >
+            <Sliders class="w-4 h-4" />
           </button>
 
           <div class="w-px h-5 bg-mnema-hairline mx-0.5"></div>
