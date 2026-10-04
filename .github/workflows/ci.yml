@@ -17,7 +17,7 @@ env:
   # sha256 of gitleaks_8.30.1_linux_x64.tar.gz from the upstream checksums.txt
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
-  GOVULNCHECK_VERSION: v1.1.4
+  GOVULNCHECK_VERSION: v1.8.0
 
 jobs:
   # -- Secret scan: the whole tree plus the commits this push/PR adds --------
