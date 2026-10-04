@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -101,6 +103,15 @@ func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) e
 		return nil
 	}
 
+	generated := password == ""
+	if generated {
+		b := make([]byte, 18)
+		if _, err := rand.Read(b); err != nil {
+			return fmt.Errorf("failed to generate admin password: %w", err)
+		}
+		password = base64.RawURLEncoding.EncodeToString(b)
+	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("failed to hash admin password: %w", err)
@@ -117,6 +128,10 @@ func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) e
 	}
 
 	log.Printf("[DB] Initial administrator '%s' initialized\n", username)
+	if generated {
+		// Printed once on first start only; change it after the first login
+		log.Printf("[DB] ADMIN_INITIAL_PASSWORD was empty, generated password for '%s': %s\n", username, password)
+	}
 	return nil
 }
 

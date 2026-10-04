@@ -78,7 +78,7 @@ func main() {
 	}
 
 	// 7. Initialize Pion WebRTC SFU (for Voice & 4K 60fps Screensharing)
-	voiceSFU, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, cfg.WebRTCNAT1to1IP)
+	voiceSFU, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, cfg.WebRTCNAT1to1IP, cfg.WebRTCSTUNURLs)
 	if err != nil {
 		log.Printf("Warning: WebRTC SFU initialization warning: %v\n", err)
 	}
@@ -122,20 +122,45 @@ func main() {
 		})
 
 		// Public Legal & Privacy Policy Configuration (Art. 13 DSGVO)
+		stunServers := cfg.WebRTCSTUNURLs
+		if stunServers == nil {
+			stunServers = []string{}
+		}
+
 		r.Get("/legal", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]string{
-				"operator_name":    cfg.LegalOperatorName,
-				"operator_email":   cfg.LegalOperatorEmail,
-				"operator_country": cfg.LegalOperatorCountry,
-				"project_notice":   cfg.LegalProjectNotice,
-				"legal_version":    "1.1",
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"operator_name":        cfg.LegalOperatorName,
+				"operator_email":       cfg.LegalOperatorEmail,
+				"operator_country":     cfg.LegalOperatorCountry,
+				"project_notice":       cfg.LegalProjectNotice,
+				"media_retention_days": cfg.MediaRetentionDays,
+				"session_expiry_days":  (cfg.SessionExpiryHours + 23) / 24,
+				"stun_servers":         stunServers,
+				"legal_version":        "1.2",
 			})
 		})
 
+		// ICE configuration for the browser's RTCPeerConnection (empty unless WEBRTC_STUN_URLS is set)
+		r.Get("/webrtc/config", func(w http.ResponseWriter, r *http.Request) {
+			iceServers := []map[string]interface{}{}
+			if len(stunServers) > 0 {
+				iceServers = append(iceServers, map[string]interface{}{"urls": stunServers})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"ice_servers": iceServers})
+		})
+
+		// Brute-force protection: per client IP, plus failed logins per username
+		// (the latter still works if a client spoofs forwarding headers)
+		loginIPLimiter := auth.NewRateLimiter(20, 15*time.Minute)
+		loginFailLimiter := auth.NewRateLimiter(10, 15*time.Minute)
+		registerLimiter := auth.NewRateLimiter(10, time.Hour)
+		passwordFailLimiter := auth.NewRateLimiter(5, 15*time.Minute)
+
 		// Authentication Routes
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/login", func(w http.ResponseWriter, r *http.Request) {
+			r.With(loginIPLimiter.Middleware).Post("/login", func(w http.ResponseWriter, r *http.Request) {
 				var req struct {
 					Username string `json:"username"`
 					Password string `json:"password"`
@@ -145,8 +170,15 @@ func main() {
 					return
 				}
 
+				userKey := strings.ToLower(strings.TrimSpace(req.Username))
+				if blocked, retry := loginFailLimiter.Blocked(userKey); blocked {
+					auth.WriteTooManyRequests(w, retry)
+					return
+				}
+
 				user, err := auth.Login(r.Context(), dbPool, req.Username, req.Password)
 				if err != nil {
+					loginFailLimiter.Allow(userKey)
 					http.Error(w, `{"error":"invalid username or password"}`, http.StatusUnauthorized)
 					return
 				}
@@ -174,7 +206,7 @@ func main() {
 				})
 			})
 
-			r.Post("/register", func(w http.ResponseWriter, r *http.Request) {
+			r.With(registerLimiter.Middleware).Post("/register", func(w http.ResponseWriter, r *http.Request) {
 				var req struct {
 					Username    string `json:"username"`
 					DisplayName string `json:"display_name"`
@@ -191,6 +223,11 @@ func main() {
 					return
 				}
 
+				if len(req.Password) < auth.MinPasswordLength {
+					http.Error(w, fmt.Sprintf(`{"error":"password must be at least %d characters"}`, auth.MinPasswordLength), http.StatusBadRequest)
+					return
+				}
+
 				displayName := req.DisplayName
 				if displayName == "" {
 					displayName = req.Username
@@ -198,7 +235,14 @@ func main() {
 
 				user, err := auth.Register(r.Context(), dbPool, req.Username, displayName, req.Password, req.InviteCode)
 				if err != nil {
-					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusBadRequest)
+					// Only pass through validation messages; internal errors stay in the server log
+					switch msg := err.Error(); msg {
+					case "invalid invite code", "invite code has expired", "invite code usage limit reached", "username is already taken":
+						http.Error(w, fmt.Sprintf(`{"error":"%s"}`, msg), http.StatusBadRequest)
+					default:
+						log.Printf("[Auth] Registration failed: %v\n", err)
+						http.Error(w, `{"error":"registration failed"}`, http.StatusInternalServerError)
+					}
 					return
 				}
 
@@ -243,6 +287,47 @@ func main() {
 
 					w.Header().Set("Content-Type", "application/json")
 					_ = json.NewEncoder(w).Encode(user)
+				})
+
+				r.Put("/password", func(w http.ResponseWriter, r *http.Request) {
+					user, ok := r.Context().Value(auth.UserContextKey).(auth.User)
+					if !ok {
+						http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+						return
+					}
+
+					var req struct {
+						CurrentPassword string `json:"current_password"`
+						NewPassword     string `json:"new_password"`
+					}
+					if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+						http.Error(w, `{"error":"invalid json payload"}`, http.StatusBadRequest)
+						return
+					}
+					if len(req.NewPassword) < auth.MinPasswordLength {
+						http.Error(w, fmt.Sprintf(`{"error":"password must be at least %d characters"}`, auth.MinPasswordLength), http.StatusBadRequest)
+						return
+					}
+
+					userKey := user.ID.String()
+					if blocked, retry := passwordFailLimiter.Blocked(userKey); blocked {
+						auth.WriteTooManyRequests(w, retry)
+						return
+					}
+
+					if err := auth.ChangePassword(r.Context(), dbPool, user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+						if errors.Is(err, auth.ErrWrongPassword) {
+							passwordFailLimiter.Allow(userKey)
+							http.Error(w, `{"error":"current password is incorrect"}`, http.StatusForbidden)
+							return
+						}
+						log.Printf("[Auth] Password change failed: %v\n", err)
+						http.Error(w, `{"error":"failed to change password"}`, http.StatusInternalServerError)
+						return
+					}
+
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"status":"ok"}`))
 				})
 			})
 		})

@@ -31,15 +31,19 @@ type Room struct {
 	trackLocals map[string]*TrackInfo
 	mu          sync.RWMutex
 	api         *webrtc.API
+	iceServers  []webrtc.ICEServer
 }
 
 type SFU struct {
-	api     *webrtc.API
-	rooms   map[uuid.UUID]*Room
-	roomsMu sync.RWMutex
+	api        *webrtc.API
+	iceServers []webrtc.ICEServer
+	rooms      map[uuid.UUID]*Room
+	roomsMu    sync.RWMutex
 }
 
-func NewSFU(portMin, portMax uint16, nat1to1IP string) (*SFU, error) {
+// NewSFU creates the SFU. stunURLs is optional: with WEBRTC_NAT_1TO1_IP set the
+// server needs no STUN, and leaving it empty avoids contacting third parties.
+func NewSFU(portMin, portMax uint16, nat1to1IP string, stunURLs []string) (*SFU, error) {
 	settingEngine := webrtc.SettingEngine{}
 
 	if portMin > 0 && portMax > 0 {
@@ -62,9 +66,15 @@ func NewSFU(portMin, portMax uint16, nat1to1IP string) (*SFU, error) {
 		webrtc.WithMediaEngine(mediaEngine),
 	)
 
+	var iceServers []webrtc.ICEServer
+	if len(stunURLs) > 0 {
+		iceServers = []webrtc.ICEServer{{URLs: stunURLs}}
+	}
+
 	return &SFU{
-		api:   api,
-		rooms: make(map[uuid.UUID]*Room),
+		api:        api,
+		iceServers: iceServers,
+		rooms:      make(map[uuid.UUID]*Room),
 	}, nil
 }
 
@@ -81,6 +91,7 @@ func (s *SFU) GetOrCreateRoom(channelID uuid.UUID) *Room {
 		peers:       make(map[uuid.UUID]*Peer),
 		trackLocals: make(map[string]*TrackInfo),
 		api:         s.api,
+		iceServers:  s.iceServers,
 	}
 	s.rooms[channelID] = r
 	return r
@@ -97,9 +108,7 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	}
 
 	pc, err := r.api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: []webrtc.ICEServer{
-			{URLs: []string{"stun:stun.l.google.com:19302"}},
-		},
+		ICEServers: r.iceServers,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PeerConnection: %w", err)

@@ -109,6 +109,30 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, e
 	return &user, nil
 }
 
+// MinPasswordLength applies to registration and password changes
+const MinPasswordLength = 10
+
+// ErrWrongPassword is returned by ChangePassword when the current password does not match
+var ErrWrongPassword = errors.New("current password is incorrect")
+
+// ChangePassword verifies the current password and stores a new bcrypt hash
+func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, currentPassword, newPassword string) error {
+	var passwordHash string
+	if err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&passwordHash); err != nil {
+		return fmt.Errorf("user lookup error: %w", err)
+	}
+	if !CheckPassword(currentPassword, passwordHash) {
+		return ErrWrongPassword
+	}
+
+	hash, err := HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+	_, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, hash, userID)
+	return err
+}
+
 // Register creates a new user via invite code validation
 func Register(ctx context.Context, p *db.Pool, username, displayName, password, inviteCode string) (*User, error) {
 	tx, err := p.Begin(ctx)

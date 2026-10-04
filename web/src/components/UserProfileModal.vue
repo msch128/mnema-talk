@@ -69,6 +69,39 @@ async function saveProfile() {
   }
 }
 
+// Password change state (own profile only)
+const isChangingPassword = ref(false)
+const currentPassword = ref('')
+const newPassword = ref('')
+const newPasswordRepeat = ref('')
+const isSavingPassword = ref(false)
+const passwordError = ref('')
+const passwordSuccess = ref(false)
+
+async function savePassword() {
+  passwordError.value = ''
+  if (newPassword.value.length < 10) {
+    passwordError.value = 'Das neue Passwort muss mindestens 10 Zeichen haben'
+    return
+  }
+  if (newPassword.value !== newPasswordRepeat.value) {
+    passwordError.value = 'Die Passwörter stimmen nicht überein'
+    return
+  }
+  isSavingPassword.value = true
+  try {
+    await authStore.changePassword(currentPassword.value, newPassword.value)
+    currentPassword.value = newPassword.value = newPasswordRepeat.value = ''
+    isChangingPassword.value = false
+    passwordSuccess.value = true
+    setTimeout(() => { passwordSuccess.value = false }, 2500)
+  } catch (err) {
+    passwordError.value = err.message
+  } finally {
+    isSavingPassword.value = false
+  }
+}
+
 const isSelf = computed(() => {
   return authStore.user && profileUser.value.id === authStore.user.id
 })
@@ -412,6 +445,72 @@ onUnmounted(() => {
             <div v-if="profileSaveError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
               <AlertCircle class="w-3.5 h-3.5" />
               <span>{{ profileSaveError }}</span>
+            </div>
+          </div>
+
+          <!-- Password Section (Own Profile) -->
+          <div v-if="isSelf" class="mb-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary">Passwort</span>
+              <button
+                v-if="!isChangingPassword"
+                @click="isChangingPassword = true; passwordError = ''"
+                class="text-[11px] text-mnema-accent hover:underline flex items-center gap-1"
+              >
+                <Edit3 class="w-3 h-3" />
+                <span>Ändern</span>
+              </button>
+            </div>
+
+            <form v-if="isChangingPassword" class="space-y-2 mt-1" @submit.prevent="savePassword">
+              <input
+                v-model="currentPassword"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Aktuelles Passwort"
+                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+              />
+              <input
+                v-model="newPassword"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Neues Passwort (min. 10 Zeichen)"
+                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+              />
+              <input
+                v-model="newPasswordRepeat"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Neues Passwort wiederholen"
+                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+              />
+              <div class="flex justify-end items-center gap-1.5 text-[10px]">
+                <button
+                  type="button"
+                  @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
+                  class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSavingPassword"
+                  class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
+                >
+                  <Loader2 v-if="isSavingPassword" class="w-3 h-3 animate-spin" />
+                  <Save v-else class="w-3 h-3" />
+                  <span>Speichern</span>
+                </button>
+              </div>
+            </form>
+
+            <div v-if="passwordSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-1.5">
+              <Check class="w-3.5 h-3.5" />
+              <span>Passwort geändert!</span>
+            </div>
+            <div v-if="passwordError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
+              <AlertCircle class="w-3.5 h-3.5" />
+              <span>{{ passwordError }}</span>
             </div>
           </div>
 

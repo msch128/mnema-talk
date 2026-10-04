@@ -102,6 +102,26 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedUser
   }
 
+  async function changePassword(currentPassword, newPassword) {
+    if (!token.value) throw new Error('Nicht authentifiziert')
+    const res = await fetch('/api/auth/password', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      const messages = {
+        403: 'Aktuelles Passwort ist falsch',
+        429: 'Zu viele Versuche, bitte später erneut probieren'
+      }
+      throw new Error(messages[res.status] || err.error || 'Passwort konnte nicht geändert werden')
+    }
+  }
+
   function logout() {
     user.value = null
     token.value = ''
@@ -118,6 +138,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     uploadAvatar,
     updateProfile,
+    changePassword,
     logout
   }
 })
