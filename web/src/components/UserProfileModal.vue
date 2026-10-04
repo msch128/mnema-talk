@@ -2,13 +2,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2, 
-  Camera, AtSign, Check, Loader2, Sparkles, AlertCircle,
-  Edit3, Save, MessageCircle
+  Camera, AtSign, Check, Loader2, AlertCircle,
+  Edit3, Save
 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
   user: {
@@ -110,10 +109,6 @@ const isOnline = computed(() => {
   return chatStore.onlineUserIds.has(profileUser.value.id)
 })
 
-const isSpeaking = computed(() => {
-  return !!voiceStore.speakingUsers[profileUser.value.id]
-})
-
 // Current voice hangout channel of this user
 const voiceHangout = computed(() => {
   if (!profileUser.value.id) return null
@@ -194,17 +189,6 @@ function handleKeydown(e) {
   }
 }
 
-async function handleStartDM() {
-  if (profileUser.value.id) {
-    try {
-      await chatStore.openDM(profileUser.value.id)
-      emit('close')
-    } catch (err) {
-      alert(err.message || 'Konnte DM nicht öffnen')
-    }
-  }
-}
-
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
 })
@@ -261,7 +245,7 @@ onUnmounted(() => {
                 class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-150"
               >
                 <Camera class="w-5 h-5 mb-0.5" />
-                <span class="text-[9px] font-bold tracking-wider uppercase">Ändern</span>
+                <span class="text-xs font-bold tracking-wider uppercase">Ändern</span>
               </div>
 
               <!-- Uploading Spinner -->
@@ -297,21 +281,11 @@ onUnmounted(() => {
           <div class="flex items-center gap-2">
             <button 
               v-if="!isSelf"
-              @click="handleStartDM"
-              class="px-3 py-1.5 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-sm"
-              title="Direktnachricht senden"
-            >
-              <MessageCircle class="w-3.5 h-3.5" />
-              <span>Nachricht</span>
-            </button>
-
-            <button 
-              v-if="!isSelf"
               @click="handleMention"
-              class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-xs font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+              class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-sm font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-sm"
               title="Nutzer im Chat erwähnen"
             >
-              <AtSign class="w-3.5 h-3.5 text-mnema-accent" />
+              <AtSign class="w-4 h-4 text-mnema-accent" />
               <span>Erwähnen</span>
             </button>
 
@@ -319,9 +293,9 @@ onUnmounted(() => {
               v-if="isSelf"
               @click="triggerAvatarUpload"
               :disabled="isUploading"
-              class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-xs font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+              class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
             >
-              <Camera class="w-3.5 h-3.5" />
+              <Camera class="w-4 h-4" />
               <span>Avatar ändern</span>
             </button>
           </div>
@@ -331,7 +305,7 @@ onUnmounted(() => {
         <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-base font-bold text-mnema-text leading-tight flex items-center gap-1.5">
+              <h2 class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
                 {{ profileUser.display_name || profileUser.username }}
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
@@ -339,31 +313,31 @@ onUnmounted(() => {
                   title="Server-Inhaber / Administrator"
                 />
               </h2>
-              <p class="text-xs text-mnema-tertiary font-mono">@{{ profileUser.username }}</p>
+              <p class="text-sm text-mnema-tertiary font-mono">@{{ profileUser.username }}</p>
             </div>
 
             <!-- Role Badge -->
             <div 
               :class="[
-                'px-2 py-0.5 rounded-md text-[10px] font-semibold border flex items-center gap-1 uppercase tracking-wider',
+                'px-2 py-0.5 rounded-md text-xs font-semibold border flex items-center gap-1 uppercase tracking-wider',
                 profileUser.role === 'admin'
                   ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                   : 'bg-mnema-band text-mnema-muted border-mnema-border'
               ]"
             >
-              <Shield v-if="profileUser.role === 'admin'" class="w-3 h-3" />
-              <User v-else class="w-3 h-3" />
+              <Shield v-if="profileUser.role === 'admin'" class="w-3.5 h-3.5" />
+              <User v-else class="w-3.5 h-3.5" />
               <span>{{ profileUser.role === 'admin' ? 'Admin' : 'Mitglied' }}</span>
             </div>
           </div>
 
           <!-- Feedback Banners -->
-          <div v-if="uploadSuccess" class="mt-2.5 p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+          <div v-if="uploadSuccess" class="mt-2.5 p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
             <Check class="w-4 h-4 flex-shrink-0" />
             <span>Neuer Avatar wurde erfolgreich gespeichert!</span>
           </div>
 
-          <div v-if="uploadError" class="mt-2.5 p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+          <div v-if="uploadError" class="mt-2.5 p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
             <AlertCircle class="w-4 h-4 flex-shrink-0" />
             <span>{{ uploadError }}</span>
           </div>
@@ -374,23 +348,23 @@ onUnmounted(() => {
           <!-- Über mich (Bio) Section -->
           <div class="mb-3">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary">Über mich</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">Über mich</span>
               <button 
                 v-if="isSelf && !isEditingBio" 
                 @click="isEditingBio = true"
-                class="text-[11px] text-mnema-accent hover:underline flex items-center gap-1"
+                class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
               >
-                <Edit3 class="w-3 h-3" />
+                <Edit3 class="w-3.5 h-3.5" />
                 <span>Bearbeiten</span>
               </button>
             </div>
 
             <!-- View Mode -->
             <div v-if="!isEditingBio">
-              <p v-if="profileUser.bio" class="text-xs text-mnema-text leading-relaxed whitespace-pre-wrap bg-mnema-band/40 p-2.5 rounded-lg border border-mnema-hairline">
+              <p v-if="profileUser.bio" class="text-sm text-mnema-text leading-relaxed whitespace-pre-wrap bg-mnema-band/40 p-2.5 rounded-lg border border-mnema-hairline">
                 {{ profileUser.bio }}
               </p>
-              <p v-else class="text-xs text-mnema-tertiary italic bg-mnema-band/20 p-2.5 rounded-lg border border-mnema-hairline">
+              <p v-else class="text-sm text-mnema-tertiary italic bg-mnema-band/20 p-2.5 rounded-lg border border-mnema-hairline">
                 Keine Biografie hinterlegt.
               </p>
             </div>
@@ -398,24 +372,24 @@ onUnmounted(() => {
             <!-- Edit Mode (Own Profile) -->
             <div v-else class="space-y-2 mt-1">
               <div>
-                <label class="text-[10px] text-mnema-tertiary block mb-0.5">Anzeigename</label>
+                <label class="text-xs text-mnema-tertiary block mb-0.5">Anzeigename</label>
                 <input 
                   v-model="editDisplayName" 
                   type="text" 
                   maxlength="64"
-                  class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+                  class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
                 />
               </div>
               <div>
-                <label class="text-[10px] text-mnema-tertiary block mb-0.5">Biografie (max. 250 Zeichen)</label>
+                <label class="text-xs text-mnema-tertiary block mb-0.5">Biografie (max. 250 Zeichen)</label>
                 <textarea 
                   v-model="editBio" 
                   rows="3" 
                   maxlength="250"
-                  class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
+                  class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
                   placeholder="Erzähle etwas über dich..."
                 ></textarea>
-                <div class="flex justify-between items-center text-[10px] text-mnema-tertiary mt-0.5">
+                <div class="flex justify-between items-center text-xs text-mnema-tertiary mt-0.5">
                   <span>{{ editBio.length }} / 250</span>
                   <div class="flex items-center gap-1.5">
                     <button 
@@ -429,8 +403,8 @@ onUnmounted(() => {
                       :disabled="isSavingProfile"
                       class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
                     >
-                      <Loader2 v-if="isSavingProfile" class="w-3 h-3 animate-spin" />
-                      <Save v-else class="w-3 h-3" />
+                      <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
+                      <Save v-else class="w-3.5 h-3.5" />
                       <span>Speichern</span>
                     </button>
                   </div>
@@ -438,12 +412,12 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div v-if="profileSaveSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-1.5">
-              <Check class="w-3.5 h-3.5" />
+            <div v-if="profileSaveSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-1.5">
+              <Check class="w-4 h-4" />
               <span>Profil aktualisiert!</span>
             </div>
-            <div v-if="profileSaveError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
-              <AlertCircle class="w-3.5 h-3.5" />
+            <div v-if="profileSaveError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-1.5">
+              <AlertCircle class="w-4 h-4" />
               <span>{{ profileSaveError }}</span>
             </div>
           </div>
@@ -451,13 +425,13 @@ onUnmounted(() => {
           <!-- Password Section (Own Profile) -->
           <div v-if="isSelf" class="mb-3">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary">Passwort</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">Passwort</span>
               <button
                 v-if="!isChangingPassword"
                 @click="isChangingPassword = true; passwordError = ''"
-                class="text-[11px] text-mnema-accent hover:underline flex items-center gap-1"
+                class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
               >
-                <Edit3 class="w-3 h-3" />
+                <Edit3 class="w-3.5 h-3.5" />
                 <span>Ändern</span>
               </button>
             </div>
@@ -468,23 +442,23 @@ onUnmounted(() => {
                 type="password"
                 autocomplete="current-password"
                 placeholder="Aktuelles Passwort"
-                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+                class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <input
                 v-model="newPassword"
                 type="password"
                 autocomplete="new-password"
                 placeholder="Neues Passwort (min. 10 Zeichen)"
-                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+                class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <input
                 v-model="newPasswordRepeat"
                 type="password"
                 autocomplete="new-password"
                 placeholder="Neues Passwort wiederholen"
-                class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+                class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
-              <div class="flex justify-end items-center gap-1.5 text-[10px]">
+              <div class="flex justify-end items-center gap-1.5 text-xs">
                 <button
                   type="button"
                   @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
@@ -497,19 +471,19 @@ onUnmounted(() => {
                   :disabled="isSavingPassword"
                   class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
                 >
-                  <Loader2 v-if="isSavingPassword" class="w-3 h-3 animate-spin" />
-                  <Save v-else class="w-3 h-3" />
+                  <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
+                  <Save v-else class="w-3.5 h-3.5" />
                   <span>Speichern</span>
                 </button>
               </div>
             </form>
 
-            <div v-if="passwordSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-1.5">
-              <Check class="w-3.5 h-3.5" />
+            <div v-if="passwordSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-1.5">
+              <Check class="w-4 h-4" />
               <span>Passwort geändert!</span>
             </div>
-            <div v-if="passwordError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
-              <AlertCircle class="w-3.5 h-3.5" />
+            <div v-if="passwordError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-1.5">
+              <AlertCircle class="w-4 h-4" />
               <span>{{ passwordError }}</span>
             </div>
           </div>
@@ -519,10 +493,10 @@ onUnmounted(() => {
 
           <!-- Voice Activity Status -->
           <div class="mb-3">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Aktivität</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Aktivität</div>
             <div 
               v-if="voiceHangout" 
-              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-xs"
+              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
             >
               <Volume2 class="w-4 h-4 flex-shrink-0" />
               <div class="truncate">
@@ -532,7 +506,7 @@ onUnmounted(() => {
             </div>
             <div 
               v-else 
-              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-raised/60 border border-mnema-hairline text-mnema-muted text-xs"
+              class="flex items-center gap-2 p-2 rounded-lg bg-mnema-raised/60 border border-mnema-hairline text-mnema-muted text-sm"
             >
               <span class="w-2 h-2 rounded-full bg-mnema-tertiary"></span>
               <span>Aktuell in keinem Sprachkanal</span>
@@ -541,9 +515,9 @@ onUnmounted(() => {
 
           <!-- Details / Metadata Grid -->
           <div>
-            <div class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Mitgliedschaft</div>
-            <div class="flex items-center gap-2 text-xs text-mnema-muted">
-              <Calendar class="w-3.5 h-3.5 text-mnema-tertiary" />
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Mitgliedschaft</div>
+            <div class="flex items-center gap-2 text-sm text-mnema-muted">
+              <Calendar class="w-4 h-4 text-mnema-tertiary" />
               <span>Mnema-Talk Mitglied seit <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>
             </div>
           </div>
@@ -551,7 +525,7 @@ onUnmounted(() => {
 
         <!-- Hint Footer -->
         <div v-if="isSelf" class="mt-3 text-center">
-          <p class="text-[10px] text-mnema-tertiary">
+          <p class="text-xs text-mnema-tertiary">
             Tipp: Klicke auf dein Profilbild, um ein neues Avatar-Bild (PNG, JPG, WEBP, GIF) hochzuladen.
           </p>
         </div>

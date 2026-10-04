@@ -1,0 +1,25 @@
+# gitleaks configuration for Mnema Talk (public repository).
+#
+# Used by:
+#   - .github/workflows/ci.yml        (secret-scan job: tree + full history)
+#   - scripts/git-hooks/pre-commit    (`gitleaks protect --staged`)
+# Both pass --config explicitly, so this file must exist.
+#
+# Keeps gitleaks' maintained default rules and only allowlists this repo's
+# intentional, documented non-secrets. Prefer narrow regexes over paths so
+# the rest of a file stays scanned.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Mnema Talk intentional non-secrets (placeholders, throwaway test credentials)"
+regexTarget = "match"
+regexes = [
+  # .env.example placeholders.
+  '''replace_with_[a-z_]+''',
+  # Throwaway test database credentials (testutil container, CI service container).
+  '''postgres://mnema:mnema@''',
+  # Dummy JWT signing key in internal/auth/token_test.go.
+  '''secret = "0123456789abcdef0123456789abcdef"''',
+]

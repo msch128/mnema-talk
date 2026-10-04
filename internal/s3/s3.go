@@ -1,148 +1,110 @@
+// Package s3 is the object storage client (SeaweedFS locally; Cloudflare R2,
+// AWS S3 or Backblaze B2 by configuration only).
 package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	s3Service "github.com/aws/aws-sdk-go-v2/service/s3"
+	s3svc "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/msch128/mnema-talk/internal/config"
 )
 
 type Client struct {
-	client     *s3Service.Client
-	bucketName string
+	client *s3svc.Client
+	bucket string
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Client, error) {
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		if cfg.S3Endpoint != "" {
-			return aws.Endpoint{
-				PartitionID:       "aws",
-				URL:               cfg.S3Endpoint,
-				SigningRegion:     cfg.S3Region,
-				HostnameImmutable: cfg.S3ForcePathStyle,
-			}, nil
-		}
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
-	})
-
-	loadedConfig, err := awsConfig.LoadDefaultConfig(ctx,
-		awsConfig.WithRegion(cfg.S3Region),
-		awsConfig.WithEndpointResolverWithOptions(customResolver),
-		awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")),
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx,
+		awsconfig.WithRegion(cfg.S3Region),
+		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load S3 configuration: %w", err)
+		return nil, fmt.Errorf("load s3 config: %w", err)
 	}
-
-	s3Cli := s3Service.NewFromConfig(loadedConfig, func(o *s3Service.Options) {
-		o.UsePathStyle = cfg.S3ForcePathStyle
-	})
-
-	client := &Client{
-		client:     s3Cli,
-		bucketName: cfg.S3Bucket,
+	c := &Client{
+		client: s3svc.NewFromConfig(awsCfg, func(o *s3svc.Options) {
+			if cfg.S3Endpoint != "" {
+				o.BaseEndpoint = aws.String(cfg.S3Endpoint)
+			}
+			o.UsePathStyle = cfg.S3ForcePathStyle
+		}),
+		bucket: cfg.S3Bucket,
 	}
-
-	// Ensure target bucket exists
-	if err := client.EnsureBucket(ctx); err != nil {
-		log.Printf("[S3] Warning: could not verify bucket %s: %v\n", cfg.S3Bucket, err)
+	if err := c.ensureBucket(ctx); err != nil {
+		return nil, err
 	}
-
-	return client, nil
+	return c, nil
 }
 
-func (c *Client) EnsureBucket(ctx context.Context) error {
-	_, err := c.client.HeadBucket(ctx, &s3Service.HeadBucketInput{
-		Bucket: aws.String(c.bucketName),
-	})
-	if err != nil {
-		log.Printf("[S3] Bucket '%s' does not exist, creating...\n", c.bucketName)
-		_, createErr := c.client.CreateBucket(ctx, &s3Service.CreateBucketInput{
-			Bucket: aws.String(c.bucketName),
-		})
-		if createErr != nil {
-			return fmt.Errorf("failed to create S3 bucket %s: %w", c.bucketName, createErr)
-		}
-		log.Printf("[S3] Bucket '%s' created successfully\n", c.bucketName)
+func (c *Client) ensureBucket(ctx context.Context) error {
+	if _, err := c.client.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(c.bucket)}); err == nil {
+		return nil
 	}
+	_, err := c.client.CreateBucket(ctx, &s3svc.CreateBucketInput{Bucket: aws.String(c.bucket)})
+	var owned *types.BucketAlreadyOwnedByYou
+	if err != nil && !errors.As(err, &owned) {
+		return fmt.Errorf("create bucket %s: %w", c.bucket, err)
+	}
+	slog.Info("s3 bucket created", "bucket", c.bucket)
 	return nil
 }
 
 func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error {
-	_, err := c.client.PutObject(ctx, &s3Service.PutObjectInput{
-		Bucket:        aws.String(c.bucketName),
+	_, err := c.client.PutObject(ctx, &s3svc.PutObjectInput{
+		Bucket:        aws.String(c.bucket),
 		Key:           aws.String(key),
 		Body:          body,
 		ContentType:   aws.String(mimeType),
 		ContentLength: aws.Int64(size),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to upload S3 object %s: %w", key, err)
+		return fmt.Errorf("put object %s: %w", key, err)
 	}
 	return nil
 }
 
 func (c *Client) Delete(ctx context.Context, key string) error {
-	_, err := c.client.DeleteObject(ctx, &s3Service.DeleteObjectInput{
-		Bucket: aws.String(c.bucketName),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete S3 object %s: %w", key, err)
+	if _, err := c.client.DeleteObject(ctx, &s3svc.DeleteObjectInput{Bucket: aws.String(c.bucket), Key: aws.String(key)}); err != nil {
+		return fmt.Errorf("delete object %s: %w", key, err)
 	}
 	return nil
 }
 
-// DeleteBatch efficiently deletes multiple objects at once (crucial for 30-day pruning)
+// DeleteBatch deletes keys in chunks of 1000 (the S3 per-request maximum).
 func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
-	if len(keys) == 0 {
-		return nil
-	}
-
-	var objectIds []types.ObjectIdentifier
-	for _, k := range keys {
-		objectIds = append(objectIds, types.ObjectIdentifier{
-			Key: aws.String(k),
+	for start := 0; start < len(keys); start += 1000 {
+		end := min(start+1000, len(keys))
+		ids := make([]types.ObjectIdentifier, 0, end-start)
+		for _, k := range keys[start:end] {
+			ids = append(ids, types.ObjectIdentifier{Key: aws.String(k)})
+		}
+		out, err := c.client.DeleteObjects(ctx, &s3svc.DeleteObjectsInput{
+			Bucket: aws.String(c.bucket),
+			Delete: &types.Delete{Objects: ids, Quiet: aws.Bool(true)},
 		})
-	}
-
-	_, err := c.client.DeleteObjects(ctx, &s3Service.DeleteObjectsInput{
-		Bucket: aws.String(c.bucketName),
-		Delete: &types.Delete{
-			Objects: objectIds,
-			Quiet:   aws.Bool(true),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to batch delete S3 objects: %w", err)
+		if err != nil {
+			return fmt.Errorf("delete objects: %w", err)
+		}
+		if len(out.Errors) > 0 {
+			return fmt.Errorf("delete objects: %d of %d failed", len(out.Errors), len(ids))
+		}
 	}
 	return nil
 }
 
 func (c *Client) GetObject(ctx context.Context, key string) (io.ReadCloser, string, int64, error) {
-	out, err := c.client.GetObject(ctx, &s3Service.GetObjectInput{
-		Bucket: aws.String(c.bucketName),
-		Key:    aws.String(key),
-	})
+	out, err := c.client.GetObject(ctx, &s3svc.GetObjectInput{Bucket: aws.String(c.bucket), Key: aws.String(key)})
 	if err != nil {
-		return nil, "", 0, fmt.Errorf("failed to retrieve S3 object %s: %w", key, err)
+		return nil, "", 0, fmt.Errorf("get object %s: %w", key, err)
 	}
-
-	mime := "application/octet-stream"
-	if out.ContentType != nil {
-		mime = *out.ContentType
-	}
-	size := int64(0)
-	if out.ContentLength != nil {
-		size = *out.ContentLength
-	}
-
-	return out.Body, mime, size, nil
+	return out.Body, aws.ToString(out.ContentType), aws.ToInt64(out.ContentLength), nil
 }

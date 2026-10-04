@@ -15,7 +15,7 @@
 *.p12
 
 # Local data and runtime database
-data/
+/data/
 *.db
 *.db-journal
 *.db-shm
@@ -25,17 +25,17 @@ data/
 *.sqlite-wal
 
 # User uploads and media storage
-uploads/
-media/
-storage/
+/uploads/
+/media/
+/storage/
 
 # Build artifacts & binaries
-bin/
-dist/
+/bin/
+/dist/
 !web/dist/.gitkeep
 web/dist/*
 !web/dist/.gitkeep
-mnema-talk
+/mnema-talk
 mnema-talk.exe
 *.exe
 *.exe~
@@ -65,10 +65,10 @@ Thumbs.db
 desktop.ini
 
 # Logs & temp files
-logs/
+/logs/
 *.log
-tmp/
-temp/
+/tmp/
+/temp/
 
 # Project specifications (must remain strictly untracked)
 SPEC.md

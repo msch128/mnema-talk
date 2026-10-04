@@ -34,6 +34,16 @@ export default {
           amber: '#FCE4A8',
         }
       },
+      // Discord-like readable type scale. Nothing in the UI goes below 12px (text-xs).
+      //   text-xs  12px  meta: timestamps, category/section headers, badges
+      //   text-sm  14px  secondary UI copy, modal helper text
+      //   text-nav 15px  sidebar channels/DMs, member list names
+      //   text-message 16px / 1.375  chat message body and author names
+      //   text-base 16px inputs, modal body
+      fontSize: {
+        nav: ['0.9375rem', { lineHeight: '1.25rem' }],
+        message: ['1rem', { lineHeight: '1.375rem' }],
+      },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],

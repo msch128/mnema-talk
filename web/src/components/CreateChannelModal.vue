@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { X, Hash, Volume2, FolderPlus, Plus, AlertCircle } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 
@@ -82,12 +82,12 @@ async function handleSubmit() {
       <!-- Header -->
       <header class="px-5 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">
         <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-md bg-mnema-band text-mnema-mint flex items-center justify-center text-xs font-semibold">
+          <div class="w-6 h-6 rounded-md bg-mnema-band text-mnema-mint flex items-center justify-center text-sm font-semibold">
             M
           </div>
           <div>
-            <h2 class="text-xs font-semibold text-mnema-text">Neuen Kanal erstellen</h2>
-            <p class="text-[10px] text-mnema-tertiary font-mono">Mnema Talk Strukturverwaltung</p>
+            <h2 class="text-lg font-semibold text-mnema-text">Neuen Kanal erstellen</h2>
+            <p class="text-xs text-mnema-tertiary font-mono">Mnema Talk Strukturverwaltung</p>
           </div>
         </div>
         <button 
@@ -101,14 +101,14 @@ async function handleSubmit() {
       <!-- Form Body -->
       <form @submit.prevent="handleSubmit" class="p-5 space-y-4">
         <!-- Error Alert -->
-        <div v-if="error" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-xs flex items-center gap-2">
+        <div v-if="error" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-2">
           <AlertCircle class="w-4 h-4 flex-shrink-0" />
           <span>{{ error }}</span>
         </div>
 
         <!-- 1. Channel Type Segmented Pills -->
         <div class="space-y-1.5">
-          <label class="text-[11px] font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kanal-Typ</label>
+          <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kanal-Typ</label>
           <div class="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -124,8 +124,8 @@ async function handleSubmit() {
                 <Hash class="w-4 h-4" />
               </div>
               <div>
-                <div class="text-xs font-semibold">Text-Kanal</div>
-                <div class="text-[10px] text-mnema-tertiary">Chat & S3 Medien</div>
+                <div class="text-sm font-semibold">Text-Kanal</div>
+                <div class="text-xs text-mnema-tertiary">Chat & S3 Medien</div>
               </div>
             </button>
 
@@ -143,8 +143,8 @@ async function handleSubmit() {
                 <Volume2 class="w-4 h-4" />
               </div>
               <div>
-                <div class="text-xs font-semibold">Voice-Hangout</div>
-                <div class="text-[10px] text-mnema-tertiary">Talk & 4K Screen</div>
+                <div class="text-sm font-semibold">Voice-Hangout</div>
+                <div class="text-xs text-mnema-tertiary">Talk & 4K Screen</div>
               </div>
             </button>
           </div>
@@ -153,13 +153,13 @@ async function handleSubmit() {
         <!-- 2. Category Selection -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="text-[11px] font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kategorie</label>
+            <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kategorie</label>
             <button
               type="button"
               @click="isCreatingCategory = !isCreatingCategory"
-              class="text-[10px] text-mnema-accent hover:underline flex items-center gap-1 font-mono"
+              class="text-xs text-mnema-accent hover:underline flex items-center gap-1 font-mono"
             >
-              <FolderPlus class="w-3 h-3" />
+              <FolderPlus class="w-3.5 h-3.5" />
               <span>{{ isCreatingCategory ? 'Bestehende wählen' : '+ Neue Kategorie' }}</span>
             </button>
           </div>
@@ -168,7 +168,7 @@ async function handleSubmit() {
           <select
             v-if="!isCreatingCategory"
             v-model="selectedCategoryId"
-            class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-xs text-mnema-text focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
+            class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
           >
             <option value="">(Keine Kategorie / Unkategorisiert)</option>
             <option v-for="cat in chatStore.categories" :key="cat.id" :value="cat.id">
@@ -182,9 +182,9 @@ async function handleSubmit() {
               v-model="newCategoryName"
               type="text"
               placeholder="z.B. Projekte, Gaming, Archiv..."
-              class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-xs text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
+              class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
             />
-            <p class="text-[10px] text-mnema-tertiary">
+            <p class="text-xs text-mnema-tertiary">
               Diese neue Kategorie wird automatisch angelegt und der Kanal darin platziert.
             </p>
           </div>
@@ -192,11 +192,11 @@ async function handleSubmit() {
 
         <!-- 3. Channel Name Input -->
         <div class="space-y-1.5">
-          <label class="text-[11px] font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kanalname</label>
+          <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Kanalname</label>
           <div class="relative flex items-center">
             <span class="absolute left-3 text-mnema-tertiary select-none">
-              <Hash v-if="channelType === 'text'" class="w-3.5 h-3.5" />
-              <Volume2 v-else class="w-3.5 h-3.5" />
+              <Hash v-if="channelType === 'text'" class="w-4 h-4" />
+              <Volume2 v-else class="w-4 h-4" />
             </span>
             <input
               v-model="channelName"
@@ -204,22 +204,22 @@ async function handleSubmit() {
               type="text"
               :placeholder="channelType === 'text' ? 'z.B. off-topic' : 'z.B. Team Hangout'"
               required
-              class="w-full bg-mnema-canvas border border-mnema-border rounded-lg pl-9 pr-3 py-2 text-xs text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent font-mono"
+              class="w-full bg-mnema-canvas border border-mnema-border rounded-lg pl-9 pr-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent font-mono"
             />
           </div>
-          <p class="text-[10px] text-mnema-tertiary">
+          <p class="text-xs text-mnema-tertiary">
             {{ channelType === 'text' ? 'Kleinbuchstaben, Ziffern und Bindestriche empfohlen.' : 'Beliebiger Titel für den Sprachraum.' }}
           </p>
         </div>
 
         <!-- 4. Topic / Description Input (Optional) -->
         <div class="space-y-1.5">
-          <label class="text-[11px] font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Thema / Beschreibung (Optional)</label>
+          <label class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">Thema / Beschreibung (Optional)</label>
           <input
             v-model="channelTopic"
             type="text"
             placeholder="Worüber wird in diesem Raum gesprochen?"
-            class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-xs text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
+            class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
           />
         </div>
 
@@ -228,16 +228,16 @@ async function handleSubmit() {
           <button
             type="button"
             @click="emit('close')"
-            class="px-4 py-2 rounded-lg border border-mnema-border hover:bg-mnema-surface text-mnema-muted hover:text-mnema-text text-xs transition"
+            class="px-4 py-2 rounded-lg border border-mnema-border hover:bg-mnema-surface text-mnema-muted hover:text-mnema-text text-sm transition"
           >
             Abbrechen
           </button>
           <button
             type="submit"
             :disabled="isSubmitting || !channelName.trim()"
-            class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-xs transition disabled:opacity-30 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5"
+            class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition disabled:opacity-30 disabled:cursor-not-allowed shadow-sm flex items-center gap-1.5"
           >
-            <Plus class="w-3.5 h-3.5" />
+            <Plus class="w-4 h-4" />
             <span>{{ isSubmitting ? 'Erstelle...' : 'Kanal erstellen' }}</span>
           </button>
         </div>

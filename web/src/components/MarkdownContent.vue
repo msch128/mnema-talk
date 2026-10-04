@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { renderMarkdown } from '../lib/markdown'
 
 const props = defineProps({
   content: {
@@ -8,60 +9,73 @@ const props = defineProps({
   }
 })
 
-// Discord-like safe Markdown parser
-const parsedHtml = computed(() => {
-  if (!props.content) return ''
+const parsedHtml = computed(() => renderMarkdown(props.content))
 
-  // 1. Escape raw HTML for security
-  let text = props.content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+// Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
+function toggleSpoiler(event) {
+  const spoiler = event.target.closest?.('.discord-spoiler')
+  if (spoiler) spoiler.classList.toggle('revealed')
+}
 
-  // 2. Multiline Code Blocks: ```lang\ncode\n```
-  text = text.replace(/```(?:([a-zA-Z0-9_-]+)\n)?([\s\S]*?)```/g, (match, lang, code) => {
-    return `<div class="my-1.5 rounded-lg border border-mnema-border bg-mnema-canvas/90 p-2.5 font-mono text-[11px] overflow-x-auto select-text text-mnema-mint shadow-inner">${code.trim()}</div>`
-  })
-
-  // 3. Inline Code: `code`
-  text = text.replace(/`([^`\n]+)`/g, '<code class="px-1.5 py-0.5 rounded border border-mnema-hairline bg-mnema-surface font-mono text-[11px] text-mnema-mint select-text">$1</code>')
-
-  // 4. Spoilers: ||spoiler|| (Click to reveal like Discord)
-  text = text.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="discord-spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>')
-
-  // 5. Bold & Italic: ***text***
-  text = text.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong class="font-bold"><em class="italic">$1</em></strong>')
-
-  // 6. Bold: **text**
-  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-mnema-text">$1</strong>')
-
-  // 7. Italic: *text* or _text_
-  text = text.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em class="italic">$2</em>$3')
-  text = text.replace(/(^|[^_])_([^_]+)_([^_]|$)/g, '$1<em class="italic">$2</em>$3')
-
-  // 8. Strikethrough: ~~text~~
-  text = text.replace(/~~([^~]+)~~/g, '<del class="line-through opacity-70">$1</del>')
-
-  // 9. Blockquotes: > quote (handles single line or multiline quote)
-  text = text.replace(/^(&gt;|\>)\s?(.*)$/gm, '<blockquote class="border-l-2 border-mnema-accent/60 pl-2.5 my-0.5 text-mnema-muted italic">$2</blockquote>')
-
-  // 10. Auto-link safe URLs
-  text = text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-mnema-accent hover:underline break-all">$1</a>')
-
-  // 11. User Mentions: @Username
-  text = text.replace(/@([a-zA-Z0-9_\-]+)/g, '<span class="px-1 py-0.2 rounded bg-mnema-accent/15 text-mnema-accent font-semibold text-[11px] cursor-pointer hover:bg-mnema-accent hover:text-mnema-accent-ink transition">@$1</span>')
-
-  return text
-})
+function onKeydown(event) {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('discord-spoiler')) {
+    event.preventDefault()
+    event.target.classList.toggle('revealed')
+  }
+}
 </script>
 
 <template>
-  <div class="markdown-body leading-relaxed break-words whitespace-pre-wrap select-text text-xs" v-html="parsedHtml"></div>
+  <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
+  <!-- eslint-disable vue/no-v-html -->
+  <div
+    class="markdown-body break-words whitespace-pre-wrap select-text text-message"
+    @click="toggleSpoiler"
+    @keydown="onKeydown"
+    v-html="parsedHtml"
+  ></div>
+  <!-- eslint-enable vue/no-v-html -->
 </template>
 
 <style>
-/* Discord Spoiler: Blacked-out until clicked */
+.markdown-body strong { font-weight: 600; }
+.markdown-body em { font-style: italic; }
+.markdown-body del { text-decoration: line-through; opacity: 0.7; }
+.markdown-body .md-code {
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875em;
+  background: rgba(255, 255, 255, 0.06);
+}
+.markdown-body .md-codeblock {
+  margin: 0.375rem 0;
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  overflow-x: auto;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.35);
+}
+.markdown-body .md-quote {
+  border-left: 2px solid rgba(45, 167, 113, 0.6);
+  padding-left: 0.625rem;
+  margin: 0.125rem 0;
+  opacity: 0.85;
+}
+.markdown-body .md-link { color: #2da771; word-break: break-all; }
+.markdown-body .md-link:hover { text-decoration: underline; }
+.markdown-body .md-mention {
+  padding: 0 0.25rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  color: #2da771;
+  background: rgba(45, 167, 113, 0.15);
+}
+
+/* Discord spoiler: blacked out until clicked */
 .discord-spoiler {
   background-color: #2b2d31;
   color: transparent !important;
@@ -72,11 +86,7 @@ const parsedHtml = computed(() => {
   transition: all 0.15s ease;
   display: inline-block;
 }
-
-.discord-spoiler:hover {
-  background-color: #35373c;
-}
-
+.discord-spoiler:hover { background-color: #35373c; }
 .discord-spoiler.revealed {
   background-color: rgba(255, 255, 255, 0.08) !important;
   color: inherit !important;

@@ -2,7 +2,7 @@ package sfu
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/google/uuid"
@@ -97,6 +97,27 @@ func (s *SFU) GetOrCreateRoom(channelID uuid.UUID) *Room {
 	return r
 }
 
+// RemovePeer disconnects userID from the channel's room and drops the room
+// once it is empty, so rooms do not accumulate for the process lifetime.
+func (s *SFU) RemovePeer(channelID, userID uuid.UUID) {
+	s.roomsMu.Lock()
+	r, ok := s.rooms[channelID]
+	s.roomsMu.Unlock()
+	if !ok {
+		return
+	}
+	r.RemovePeer(userID)
+
+	s.roomsMu.Lock()
+	defer s.roomsMu.Unlock()
+	r.mu.RLock()
+	empty := len(r.peers) == 0
+	r.mu.RUnlock()
+	if empty && s.rooms[channelID] == r {
+		delete(s.rooms, channelID)
+	}
+}
+
 func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -138,12 +159,11 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	})
 
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		log.Printf("[SFU] Inbound track received: user=%s kind=%s id=%s codec=%s",
-			userID, remoteTrack.Kind(), remoteTrack.ID(), remoteTrack.Codec().MimeType)
+		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "codec", remoteTrack.Codec().MimeType)
 
 		trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, remoteTrack.ID(), remoteTrack.StreamID())
 		if err != nil {
-			log.Printf("[SFU] Failed to create TrackLocalStaticRTP: %v", err)
+			slog.Error("sfu create local track", "err", err)
 			return
 		}
 
@@ -172,7 +192,7 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		log.Printf("[SFU] Peer %s connection state: %s", userID, state)
+		slog.Debug("sfu peer state", "user", userID, "state", state.String())
 		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
 			r.RemovePeer(userID)
 		}
@@ -222,11 +242,11 @@ func (r *Room) SignalPeerConnections() {
 		if needRenegotiate || peer.PC.LocalDescription() == nil {
 			offer, err := peer.PC.CreateOffer(nil)
 			if err != nil {
-				log.Printf("[SFU] CreateOffer error: %v", err)
+				slog.Error("sfu create offer", "err", err)
 				continue
 			}
 			if err := peer.PC.SetLocalDescription(offer); err != nil {
-				log.Printf("[SFU] SetLocalDescription error: %v", err)
+				slog.Error("sfu set local description", "err", err)
 				continue
 			}
 			if peer.SendOffer != nil {

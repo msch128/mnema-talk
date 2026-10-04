@@ -1,5 +1,7 @@
 -- ==========================================================
 -- Mnema Talk - Initial Database Schema (PostgreSQL 17)
+-- Idempotent on purpose: it also runs once against databases created before
+-- versioned migrations existed.
 -- ==========================================================
 
 -- Enable pgcrypto for UUID generation if not already active
@@ -105,21 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_media_created_at ON media(created_at);
 CREATE INDEX IF NOT EXISTS idx_media_uploader ON media(uploader_id);
 CREATE INDEX IF NOT EXISTS idx_media_channel ON media(channel_id);
 
--- 7. Server Settings (Retention period, server name, etc.)
-CREATE TABLE IF NOT EXISTS server_settings (
-    key VARCHAR(64) PRIMARY KEY,
-    value TEXT NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Insert Default Settings
-INSERT INTO server_settings (key, value) VALUES
-    ('server_name', 'Mnema Talk'),
-    ('retention_days', '30'),
-    ('max_upload_size_mb', '50')
-ON CONFLICT (key) DO NOTHING;
-
--- Seed Default Categories and Channels if none exist
+-- 7. Seed Default Categories and Channels if none exist
 DO $$
 DECLARE
     text_cat_id UUID;

@@ -1,8 +1,11 @@
+// Package ws is the real-time hub: one WebSocket per browser session carrying
+// chat events, presence, voice state and WebRTC signaling for the SFU.
 package ws
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -10,469 +13,524 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow cross-origin WebSocket connections (handled by Reverse Proxy)
-	},
-}
+const (
+	sendBuffer      = 256
+	maxMessageBytes = 64 << 10 // SDP offers are a few KB; nothing legitimate is larger
+	pongWait        = 60 * time.Second
+	pingInterval    = 30 * time.Second
+	writeWait       = 10 * time.Second
+	revalidateEvery = 2 * time.Minute
+	maxEventsPerSec = 40
+)
 
 type Event struct {
-	Type    string      `json:"type"`
-	Payload interface{} `json:"payload"`
+	Type    string `json:"type"`
+	Payload any    `json:"payload"`
 }
 
-type Client struct {
-	hub            *Hub
-	conn           *websocket.Conn
-	send           chan []byte
-	User           auth.User
-	CurrentVoiceCh *uuid.UUID
-}
-
+// Hub tracks connected clients, online presence and voice rooms. It implements
+// events.Publisher.
 type Hub struct {
-	clients    map[*Client]bool
-	clientsMu  sync.RWMutex
-	broadcast  chan []byte
-	register   chan *Client
-	unregister chan *Client
+	DB       *db.Pool
+	Sessions *auth.Sessions
+	SFU      *sfu.SFU
+	Origins  []string
 
-	// Voice presence: channel_id -> list of users in voice
-	voicePresence   map[uuid.UUID]map[uuid.UUID]auth.User
-	voicePresenceMu sync.RWMutex
+	mu      sync.RWMutex
+	clients map[*Client]struct{}
+	online  map[uuid.UUID]int
+	// voice maps channel → user → user info for everyone currently in a voice room.
+	voice map[uuid.UUID]map[uuid.UUID]auth.User
+	// grace holds users whose connection dropped while in voice. They stay listed
+	// in the room for VoiceGrace so a page reload rejoins without a leave/join
+	// flicker for everyone else (like Discord).
+	grace map[uuid.UUID]*graceLeave
 
-	// Online presence: user_id -> connection count
-	onlineUsers   map[uuid.UUID]int
-	onlineUsersMu sync.RWMutex
+	// VoiceGrace is how long a dropped voice user stays in the room.
+	VoiceGrace time.Duration
 
-	SFU *sfu.SFU
+	upgrader websocket.Upgrader
 }
 
-func NewHub(voiceSFU *sfu.SFU) *Hub {
-	return &Hub{
-		clients:       make(map[*Client]bool),
-		broadcast:     make(chan []byte, 256),
-		register:      make(chan *Client),
-		unregister:    make(chan *Client),
-		voicePresence: make(map[uuid.UUID]map[uuid.UUID]auth.User),
-		onlineUsers:   make(map[uuid.UUID]int),
-		SFU:           voiceSFU,
+type graceLeave struct {
+	channelID uuid.UUID
+	timer     *time.Timer
+}
+
+// DefaultVoiceGrace matches the client, which auto-rejoins within 30 seconds.
+const DefaultVoiceGrace = 30 * time.Second
+
+func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []string) *Hub {
+	h := &Hub{
+		DB:       p,
+		Sessions: sessions,
+		SFU:      voiceSFU,
+		Origins:  origins,
+		clients:  map[*Client]struct{}{},
+		online:   map[uuid.UUID]int{},
+		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
+		grace:    map[uuid.UUID]*graceLeave{},
+
+		VoiceGrace: DefaultVoiceGrace,
 	}
-}
-
-func (h *Hub) Run() {
-	for {
-		select {
-		case client := <-h.register:
-			h.clientsMu.Lock()
-			h.clients[client] = true
-			h.clientsMu.Unlock()
-			log.Printf("[WS] User connected: %s (%s)\n", client.User.DisplayName, client.User.ID)
-
-			// 1. Update online presence
-			h.onlineUsersMu.Lock()
-			isFirst := h.onlineUsers[client.User.ID] == 0
-			h.onlineUsers[client.User.ID]++
-			h.onlineUsersMu.Unlock()
-
-			if isFirst {
-				h.BroadcastEvent("presence_update", map[string]interface{}{
-					"user_id": client.User.ID,
-					"status":  "online",
-				})
-			}
-
-			// 2. Send initial snapshots
-			h.sendPresenceSnapshot(client)
-			h.sendVoiceStateSnapshot(client)
-
-		case client := <-h.unregister:
-			h.clientsMu.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.send)
-			}
-			h.clientsMu.Unlock()
-
-			// 1. Update online presence
-			h.onlineUsersMu.Lock()
-			h.onlineUsers[client.User.ID]--
-			isOffline := h.onlineUsers[client.User.ID] <= 0
-			if isOffline {
-				delete(h.onlineUsers, client.User.ID)
-			}
-			h.onlineUsersMu.Unlock()
-
-			if isOffline {
-				h.BroadcastEvent("presence_update", map[string]interface{}{
-					"user_id": client.User.ID,
-					"status":  "offline",
-				})
-			}
-
-			// 2. If client was in a voice channel, remove them and notify everyone
-			if client.CurrentVoiceCh != nil {
-				h.LeaveVoice(client, *client.CurrentVoiceCh)
-			}
-			log.Printf("[WS] User disconnected: %s\n", client.User.DisplayName)
-
-		case message := <-h.broadcast:
-			h.clientsMu.RLock()
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
-			}
-			h.clientsMu.RUnlock()
-		}
+	h.upgrader = websocket.Upgrader{
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
+		// Cross-site WebSocket hijacking guard: only the app's own origin may connect.
+		CheckOrigin: func(r *http.Request) bool {
+			return r.Header.Get("Origin") != "" && httpx.CheckSameOrigin(r, h.Origins)
+		},
 	}
+	return h
 }
 
-// BroadcastEvent encodes and broadcasts a typed event to all connected clients
-func (h *Hub) BroadcastEvent(eventType string, payload interface{}) {
-	data, err := json.Marshal(Event{Type: eventType, Payload: payload})
-	if err == nil {
-		h.broadcast <- data
-	}
+// Client is one WebSocket connection.
+type Client struct {
+	hub  *Hub
+	conn *websocket.Conn
+	send chan []byte
+	User auth.User
+
+	tokenVersion int
+	closeOnce    sync.Once
+
+	mu      sync.Mutex
+	voiceCh *uuid.UUID
 }
 
-// SendToUser sends a typed event to all active sessions of a specific user
-func (h *Hub) SendToUser(userID uuid.UUID, eventType string, payload interface{}) {
+func (c *Client) currentVoice() *uuid.UUID {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.voiceCh
+}
+
+func (c *Client) setVoice(ch *uuid.UUID) {
+	c.mu.Lock()
+	c.voiceCh = ch
+	c.mu.Unlock()
+}
+
+// close tears the connection down once; readPump then unregisters the client.
+func (c *Client) close() {
+	c.closeOnce.Do(func() { _ = c.conn.Close() })
+}
+
+func encode(eventType string, payload any) []byte {
 	data, err := json.Marshal(Event{Type: eventType, Payload: payload})
 	if err != nil {
+		slog.Error("encode ws event", "type", eventType, "err", err)
+		return nil
+	}
+	return data
+}
+
+// deliver queues data for c; a client whose buffer is full is too slow to keep
+// up and gets disconnected rather than blocking everyone else.
+func (c *Client) deliver(data []byte) {
+	select {
+	case c.send <- data:
+	default:
+		go c.close()
+	}
+}
+
+func (c *Client) SendEvent(eventType string, payload any) {
+	if data := encode(eventType, payload); data != nil {
+		c.deliver(data)
+	}
+}
+
+// Broadcast sends an event to every connected client.
+func (h *Hub) Broadcast(eventType string, payload any) {
+	data := encode(eventType, payload)
+	if data == nil {
 		return
 	}
-	h.clientsMu.RLock()
-	defer h.clientsMu.RUnlock()
-	for client := range h.clients {
-		if client.User.ID == userID {
-			select {
-			case client.send <- data:
-			default:
-			}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		c.deliver(data)
+	}
+}
+
+// SendToUsers sends an event to all sessions of the given users.
+func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
+	data := encode(eventType, payload)
+	if data == nil {
+		return
+	}
+	want := make(map[uuid.UUID]bool, len(userIDs))
+	for _, id := range userIDs {
+		want[id] = true
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		if want[c.User.ID] {
+			c.deliver(data)
 		}
 	}
 }
 
-func (h *Hub) JoinVoice(client *Client, channelID uuid.UUID) {
-	h.voicePresenceMu.Lock()
-	if _, ok := h.voicePresence[channelID]; !ok {
-		h.voicePresence[channelID] = make(map[uuid.UUID]auth.User)
+// HandleWebSocket authenticates the session cookie, checks the origin and
+// upgrades the connection.
+func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	user, err := h.Sessions.Authenticate(r)
+	if err != nil {
+		if _, ok := httpx.AsAPIError(err); !ok {
+			err = httpx.ErrServer(err)
+		}
+		httpx.WriteError(w, err)
+		return
 	}
-	h.voicePresence[channelID][client.User.ID] = client.User
-	client.CurrentVoiceCh = &channelID
-	h.voicePresenceMu.Unlock()
+	tv, err := h.tokenVersion(r.Context(), user.ID)
+	if err != nil {
+		httpx.WriteError(w, httpx.ErrServer(err))
+		return
+	}
+	conn, err := h.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		// The upgrader already answered (e.g. 403 for a foreign origin).
+		slog.Warn("websocket upgrade failed", "err", err)
+		return
+	}
+	c := &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), User: *user, tokenVersion: tv}
+	h.register(c)
+	go c.writePump()
+	go c.readPump()
+}
+
+func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
+	var tv int
+	err := h.DB.QueryRow(ctx, `SELECT token_version FROM users WHERE id = $1`, userID).Scan(&tv)
+	return tv, err
+}
+
+func (h *Hub) register(c *Client) {
+	h.mu.Lock()
+	h.clients[c] = struct{}{}
+	h.online[c.User.ID]++
+	first := h.online[c.User.ID] == 1
+	h.mu.Unlock()
+
+	slog.Info("ws connected", "user", c.User.Username)
+	if first {
+		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "online"})
+	}
+	c.SendEvent("presence_snapshot", h.onlineUsers())
+	c.SendEvent("voice_snapshot", h.voiceSnapshot())
+}
+
+func (h *Hub) unregister(c *Client) {
+	if ch := c.currentVoice(); ch != nil {
+		// The media connection is gone, but presence lingers for the grace
+		// period so a quick reconnect resumes the call seamlessly.
+		if h.SFU != nil {
+			h.SFU.RemovePeer(*ch, c.User.ID)
+		}
+		c.setVoice(nil)
+		h.startGrace(c.User.ID, *ch)
+	}
+	h.mu.Lock()
+	if _, ok := h.clients[c]; !ok {
+		h.mu.Unlock()
+		return
+	}
+	delete(h.clients, c)
+	close(c.send)
+	h.online[c.User.ID]--
+	offline := h.online[c.User.ID] <= 0
+	if offline {
+		delete(h.online, c.User.ID)
+	}
+	h.mu.Unlock()
+
+	slog.Info("ws disconnected", "user", c.User.Username)
+	if offline {
+		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "offline"})
+	}
+}
+
+func (h *Hub) onlineUsers() []uuid.UUID {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	ids := make([]uuid.UUID, 0, len(h.online))
+	for id := range h.online {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// voiceSnapshot copies the current voice rooms (channel → users).
+func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]auth.User {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make(map[uuid.UUID]map[uuid.UUID]auth.User, len(h.voice))
+	for chID, users := range h.voice {
+		cp := make(map[uuid.UUID]auth.User, len(users))
+		for id, u := range users {
+			cp[id] = u
+		}
+		out[chID] = cp
+	}
+	return out
+}
+
+// voiceChannel returns chID if it exists and is a voice channel.
+func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*chat.ChannelInfo, bool) {
+	ch, err := chat.LoadChannel(ctx, h.DB, chID)
+	if err != nil || ch.Type != chat.ChannelTypeVoice {
+		return nil, false
+	}
+	return ch, true
+}
+
+// joinVoice puts c into ch's voice room. Re-joining the same room keeps the
+// presence entry but renegotiates the SFU peer, which is how a client attaches
+// its microphone once getUserMedia resolves.
+func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
+	// A user returning within the grace period resumes silently in the same
+	// room; joining a different room ends the lingering presence first.
+	rejoin := false
+	if pending := h.takeGrace(c.User.ID); pending != nil {
+		if pending.channelID == ch.ID {
+			rejoin = true
+		} else {
+			h.removePresence(c.User.ID, pending.channelID)
+		}
+	}
+	if cur := c.currentVoice(); cur != nil {
+		if *cur == ch.ID {
+			rejoin = true
+		} else {
+			h.leaveVoice(c, *cur)
+		}
+	}
+	h.mu.Lock()
+	if h.voice[ch.ID] == nil {
+		h.voice[ch.ID] = map[uuid.UUID]auth.User{}
+	}
+	h.voice[ch.ID][c.User.ID] = c.User
+	h.mu.Unlock()
+	id := ch.ID
+	c.setVoice(&id)
 
 	if h.SFU != nil {
-		room := h.SFU.GetOrCreateRoom(channelID)
-		_, err := room.JoinPeer(client.User.ID, func(offer webrtc.SessionDescription) {
-			client.SendEvent("webrtc_offer", offer)
-		}, func(candidate *webrtc.ICECandidateInit) {
-			client.SendEvent("webrtc_candidate", candidate)
-		})
+		room := h.SFU.GetOrCreateRoom(ch.ID)
+		_, err := room.JoinPeer(c.User.ID,
+			func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) },
+			func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) })
 		if err != nil {
-			log.Printf("[SFU] Error joining peer to SFU room: %v", err)
+			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
 	}
-
-	h.BroadcastEvent("voice_state_update", map[string]interface{}{
-		"action":     "join",
-		"channel_id": channelID,
-		"user":       client.User,
-	})
+	if !rejoin {
+		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": c.User})
+	}
 }
 
-func (h *Hub) LeaveVoice(client *Client, channelID uuid.UUID) {
+// leaveVoice is an explicit leave: presence ends immediately.
+func (h *Hub) leaveVoice(c *Client, chID uuid.UUID) {
 	if h.SFU != nil {
-		room := h.SFU.GetOrCreateRoom(channelID)
-		room.RemovePeer(client.User.ID)
+		h.SFU.RemovePeer(chID, c.User.ID)
 	}
+	h.takeGrace(c.User.ID)
+	c.setVoice(nil)
+	h.removePresence(c.User.ID, chID)
+}
 
-	h.voicePresenceMu.Lock()
-	if chUsers, ok := h.voicePresence[channelID]; ok {
-		delete(chUsers, client.User.ID)
-		if len(chUsers) == 0 {
-			delete(h.voicePresence, channelID)
+// removePresence drops userID from chID's room and announces it if they were there.
+func (h *Hub) removePresence(userID, chID uuid.UUID) {
+	h.mu.Lock()
+	_, wasIn := h.voice[chID][userID]
+	if users, ok := h.voice[chID]; ok {
+		delete(users, userID)
+		if len(users) == 0 {
+			delete(h.voice, chID)
 		}
 	}
-	client.CurrentVoiceCh = nil
-	h.voicePresenceMu.Unlock()
+	h.mu.Unlock()
+	if wasIn {
+		h.Broadcast("voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
+	}
+}
 
-	h.BroadcastEvent("voice_state_update", map[string]interface{}{
-		"action":     "leave",
-		"channel_id": channelID,
-		"user_id":    client.User.ID,
+// startGrace keeps userID listed in chID for VoiceGrace, then removes them
+// unless takeGrace claimed the slot first.
+func (h *Hub) startGrace(userID, chID uuid.UUID) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if old := h.grace[userID]; old != nil {
+		old.timer.Stop()
+	}
+	g := &graceLeave{channelID: chID}
+	g.timer = time.AfterFunc(h.VoiceGrace, func() {
+		h.mu.Lock()
+		current := h.grace[userID] == g
+		if current {
+			delete(h.grace, userID)
+		}
+		h.mu.Unlock()
+		if current {
+			h.removePresence(userID, chID)
+		}
 	})
+	h.grace[userID] = g
 }
 
-func (h *Hub) sendVoiceStateSnapshot(client *Client) {
-	h.voicePresenceMu.RLock()
-	defer h.voicePresenceMu.RUnlock()
-
-	client.SendEvent("voice_snapshot", h.voicePresence)
-}
-
-func (h *Hub) sendPresenceSnapshot(client *Client) {
-	h.onlineUsersMu.RLock()
-	defer h.onlineUsersMu.RUnlock()
-
-	onlineList := make([]uuid.UUID, 0, len(h.onlineUsers))
-	for userID := range h.onlineUsers {
-		onlineList = append(onlineList, userID)
+// takeGrace cancels and returns a pending grace leave for userID, if any.
+func (h *Hub) takeGrace(userID uuid.UUID) *graceLeave {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	g := h.grace[userID]
+	if g != nil {
+		g.timer.Stop()
+		delete(h.grace, userID)
 	}
-	client.SendEvent("presence_snapshot", onlineList)
+	return g
 }
-
-func (c *Client) SendEvent(eventType string, payload interface{}) {
-	data, err := json.Marshal(Event{Type: eventType, Payload: payload})
-	if err == nil {
-		select {
-		case c.send <- data:
-		default:
-		}
-	}
-}
-
-// HandleWebSocket upgrades HTTP connection and registers client
-func (h *Hub) HandleWebSocket(jwtSecret string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		tokenStr := r.URL.Query().Get("token")
-		if tokenStr == "" {
-			if cookie, err := r.Cookie("auth_token"); err == nil {
-				tokenStr = cookie.Value
-			}
-		}
-
-		if tokenStr == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := auth.ValidateToken(tokenStr, jwtSecret)
-		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			log.Printf("[WS] Upgrade failed: %v\n", err)
-			return
-		}
-
-		client := &Client{
-			hub:  h,
-			conn: conn,
-			send: make(chan []byte, 256),
-			User: auth.User{
-				ID:          claims.UserID,
-				Username:    claims.Username,
-				DisplayName: claims.Username,
-				Role:        claims.Role,
-			},
-		}
-
-		h.register <- client
-
-		go client.writePump()
-		go client.readPump()
-	}
-}
-
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
-		c.conn.Close()
+		c.hub.unregister(c)
+		c.close()
 	}()
 
-	c.conn.SetReadLimit(512 * 1024)
-	_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetReadLimit(maxMessageBytes)
+	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
-		_ = c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
+		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
+	windowStart, count := time.Now(), 0
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			break
+			return
 		}
-
-		var event struct {
+		// Per-connection flood guard: excess events are dropped.
+		if now := time.Now(); now.Sub(windowStart) >= time.Second {
+			windowStart, count = now, 0
+		}
+		if count++; count > maxEventsPerSec {
+			continue
+		}
+		var ev struct {
 			Type    string          `json:"type"`
 			Payload json.RawMessage `json:"payload"`
 		}
-
-		if err := json.Unmarshal(message, &event); err != nil {
+		if err := json.Unmarshal(message, &ev); err != nil {
 			continue
 		}
+		c.handle(ev.Type, ev.Payload)
+	}
+}
 
-		switch event.Type {
-		case "voice_join":
-			var payload struct {
-				ChannelID uuid.UUID `json:"channel_id"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh != payload.ChannelID {
-					c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
-				}
-				c.hub.JoinVoice(c, payload.ChannelID)
-			}
+func (c *Client) handle(eventType string, payload json.RawMessage) {
+	h := c.hub
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-		case "voice_leave":
-			if c.CurrentVoiceCh != nil {
-				c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
-			}
+	var p struct {
+		ChannelID uuid.UUID `json:"channel_id"`
+		Active    bool      `json:"active"`
+		T         float64   `json:"t"`
+	}
+	_ = json.Unmarshal(payload, &p)
 
-		case "voice_speaking":
-			var payload struct {
-				Active bool `json:"active"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil && c.CurrentVoiceCh != nil {
-				c.hub.BroadcastEvent("voice_speaking", map[string]interface{}{
-					"channel_id": *c.CurrentVoiceCh,
-					"user_id":    c.User.ID,
-					"active":     payload.Active,
-				})
-			}
+	switch eventType {
+	case "ping":
+		c.SendEvent("pong", map[string]any{"t": p.T})
 
-		case "ping":
-			var payload struct {
-				T float64 `json:"t"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				c.SendEvent("pong", map[string]interface{}{
-					"t": payload.T,
-				})
-			}
+	case "voice_join":
+		if ch, ok := h.voiceChannel(ctx, p.ChannelID); ok {
+			h.joinVoice(c, ch)
+		}
 
-		case "webrtc_answer":
-			var answer webrtc.SessionDescription
-			if err := json.Unmarshal(event.Payload, &answer); err == nil && c.CurrentVoiceCh != nil && c.hub.SFU != nil {
-				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
-				peer := room.GetPeer(c.User.ID)
-				if peer != nil {
-					if err := peer.PC.SetRemoteDescription(answer); err != nil {
-						log.Printf("[SFU] Error setting remote description for %s: %v", c.User.ID, err)
-					}
+	case "voice_leave":
+		if cur := c.currentVoice(); cur != nil {
+			h.leaveVoice(c, *cur)
+		}
+
+	case "voice_speaking":
+		if cur := c.currentVoice(); cur != nil {
+			h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": p.Active})
+		}
+
+	case "webrtc_answer":
+		var answer webrtc.SessionDescription
+		if err := json.Unmarshal(payload, &answer); err == nil {
+			if peer := c.peer(); peer != nil {
+				if err := peer.PC.SetRemoteDescription(answer); err != nil {
+					slog.Warn("sfu set remote description", "user", c.User.ID, "err", err)
 				}
 			}
+		}
 
-		case "webrtc_candidate":
-			var candidate webrtc.ICECandidateInit
-			if err := json.Unmarshal(event.Payload, &candidate); err == nil && c.CurrentVoiceCh != nil && c.hub.SFU != nil {
-				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
-				peer := room.GetPeer(c.User.ID)
-				if peer != nil {
-					if err := peer.PC.AddICECandidate(candidate); err != nil {
-						log.Printf("[SFU] Error adding ICE candidate for %s: %v", c.User.ID, err)
-					}
+	case "webrtc_candidate":
+		var cand webrtc.ICECandidateInit
+		if err := json.Unmarshal(payload, &cand); err == nil {
+			if peer := c.peer(); peer != nil {
+				if err := peer.PC.AddICECandidate(cand); err != nil {
+					slog.Debug("sfu add ice candidate", "user", c.User.ID, "err", err)
 				}
 			}
+		}
 
-		case "webrtc_request_keyframe":
-			if c.CurrentVoiceCh != nil && c.hub.SFU != nil {
-				room := c.hub.SFU.GetOrCreateRoom(*c.CurrentVoiceCh)
-				room.DispatchKeyframe(c.User.ID)
-			}
-
-		case "dm_call_initiate":
-			var payload struct {
-				ChannelID   uuid.UUID `json:"channel_id"`
-				RecipientID uuid.UUID `json:"recipient_id"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh != payload.ChannelID {
-					c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
-				}
-				c.hub.JoinVoice(c, payload.ChannelID)
-				c.hub.SendToUser(payload.RecipientID, "dm_call_incoming", map[string]interface{}{
-					"channel_id": payload.ChannelID,
-					"caller":     c.User,
-				})
-			}
-
-		case "dm_call_accept":
-			var payload struct {
-				ChannelID uuid.UUID `json:"channel_id"`
-				CallerID  uuid.UUID `json:"caller_id"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh != payload.ChannelID {
-					c.hub.LeaveVoice(c, *c.CurrentVoiceCh)
-				}
-				c.hub.JoinVoice(c, payload.ChannelID)
-				c.hub.SendToUser(payload.CallerID, "dm_call_accepted", map[string]interface{}{
-					"channel_id": payload.ChannelID,
-					"user":       c.User,
-				})
-			}
-
-		case "dm_call_reject":
-			var payload struct {
-				ChannelID uuid.UUID `json:"channel_id"`
-				CallerID  uuid.UUID `json:"caller_id"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				c.hub.SendToUser(payload.CallerID, "dm_call_rejected", map[string]interface{}{
-					"channel_id": payload.ChannelID,
-				})
-			}
-
-		case "dm_call_end":
-			var payload struct {
-				ChannelID   uuid.UUID `json:"channel_id"`
-				RecipientID uuid.UUID `json:"recipient_id"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err == nil {
-				if c.CurrentVoiceCh != nil && *c.CurrentVoiceCh == payload.ChannelID {
-					c.hub.LeaveVoice(c, payload.ChannelID)
-				}
-				c.hub.SendToUser(payload.RecipientID, "dm_call_ended", map[string]interface{}{
-					"channel_id": payload.ChannelID,
-				})
-			}
+	case "webrtc_request_keyframe":
+		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
+			h.SFU.GetOrCreateRoom(*cur).DispatchKeyframe(c.User.ID)
 		}
 	}
 }
 
+func (c *Client) peer() *sfu.Peer {
+	cur := c.currentVoice()
+	if cur == nil || c.hub.SFU == nil {
+		return nil
+	}
+	return c.hub.SFU.GetOrCreateRoom(*cur).GetPeer(c.User.ID)
+}
+
 func (c *Client) writePump() {
-	ticker := time.NewTicker(30 * time.Second)
+	ping := time.NewTicker(pingInterval)
+	revalidate := time.NewTicker(revalidateEvery)
 	defer func() {
-		ticker.Stop()
-		c.conn.Close()
+		ping.Stop()
+		revalidate.Stop()
+		c.close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		case msg, ok := <-c.send:
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
+			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
-			_, _ = w.Write(message)
-
-			if err := w.Close(); err != nil {
-				return
-			}
-
-		case <-ticker.C:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		case <-ping.C:
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		case <-revalidate.C:
+			// A password change or account deletion ends live connections too.
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			tv, err := c.hub.tokenVersion(ctx, c.User.ID)
+			cancel()
+			if err != nil || tv != c.tokenVersion {
+				_ = c.conn.WriteMessage(websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"))
 				return
 			}
 		}

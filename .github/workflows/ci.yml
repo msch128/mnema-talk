@@ -1,0 +1,159 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  # sha256 of gitleaks_8.30.1_linux_x64.tar.gz from the upstream checksums.txt
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
+  GOVULNCHECK_VERSION: v1.1.4
+
+jobs:
+  # -- Secret scan: the whole tree plus the commits this push/PR adds --------
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" \
+            --output "$RUNNER_TEMP/$archive"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" version
+
+      - name: gitleaks
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
+          "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
+
+  # -- Backend: vet, format, unit + integration tests, build -----------------
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mnema
+          POSTGRES_PASSWORD: mnema
+          POSTGRES_DB: mnema_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mnema -d mnema_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Throwaway CI-only database credentials for the service container above.
+      TEST_DATABASE_URL: postgres://mnema:mnema@localhost:5432/mnema_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: gofmt
+        run: |
+          out="$(gofmt -l cmd internal web/web.go)"
+          if [ -n "$out" ]; then
+            echo "::error::gofmt needed on:"; echo "$out"; exit 1
+          fi
+
+      - name: go vet
+        run: |
+          go vet ./...
+          go vet -tags=integration ./...
+
+      - name: Unit tests
+        run: go test -race -count=1 ./...
+
+      - name: Integration tests
+        run: go test -tags=integration -race -count=1 -timeout=300s ./...
+
+      - name: Build
+        run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/server
+
+  # -- Go vulnerability scan (reachable symbols only) ------------------------
+  govulncheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: govulncheck
+        run: go run "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}" ./...
+
+  # -- Frontend: lint, test, build, audit ------------------------------------
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      - name: npm audit (runtime deps)
+        run: npm audit --omit=dev --audit-level=high
+
+  # -- Container image (build only, never pushed) ----------------------------
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          tags: mnema-talk:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

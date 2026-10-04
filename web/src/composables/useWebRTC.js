@@ -1,6 +1,8 @@
 import { ref, watch } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { summarizeStats } from '../lib/rtcStats'
+import * as voiceSession from '../lib/voiceSession'
 
 // Module-level shared singletons across all components
 const localAudioStream = ref(null)
@@ -17,10 +19,46 @@ let remoteAudioElements = []
 // ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
 // third-party STUN server learns the user's IP
 let iceServers = []
-fetch('/api/webrtc/config')
-  .then(res => (res.ok ? res.json() : null))
-  .then(data => { if (data?.ice_servers) iceServers = data.ice_servers })
-  .catch(() => {})
+let iceConfigLoaded = null
+
+// Loaded once, on the first voice join rather than at import time.
+function loadIceServers() {
+  if (!iceConfigLoaded) {
+    iceConfigLoaded = fetch('/api/webrtc/config', { credentials: 'same-origin' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (data?.ice_servers) iceServers = data.ice_servers })
+      .catch(() => { iceConfigLoaded = null })
+  }
+  return iceConfigLoaded
+}
+
+// Connection statistics measured by the browser (RTCPeerConnection.getStats).
+let statsTimer = null
+let lastStatsSample = null
+
+function startStatsPolling(voiceStore) {
+  stopStatsPolling(voiceStore)
+  statsTimer = setInterval(async () => {
+    if (!pc) return
+    try {
+      const report = await pc.getStats()
+      const summary = summarizeStats(report.values(), lastStatsSample)
+      lastStatsSample = summary.sample
+      voiceStore.rtcStats = summary
+    } catch {
+      // The connection may be closing; the next tick retries.
+    }
+  }, 2000)
+}
+
+function stopStatsPolling(voiceStore) {
+  if (statsTimer) {
+    clearInterval(statsTimer)
+    statsTimer = null
+  }
+  lastStatsSample = null
+  if (voiceStore) voiceStore.rtcStats = null
+}
 
 function updateRemoteVolume(voiceStore) {
   const vol = voiceStore.isDeafened ? 0 : (voiceStore.outputVolume / 100)
@@ -30,15 +68,18 @@ function updateRemoteVolume(voiceStore) {
 }
 
 function cleanupPeerConnection(voiceStore) {
+  stopStatsPolling(voiceStore)
   if (pc) {
-    try { pc.close() } catch {}
+    try { pc.close() } catch { /* connection already closed */ }
     pc = null
   }
   remoteAudioElements.forEach(el => {
     try {
       el.pause()
       el.srcObject = null
-    } catch {}
+    } catch {
+      // element already detached / disposed
+    }
   })
   remoteAudioElements = []
   if (voiceStore) {
@@ -50,6 +91,7 @@ function setupPeerConnection(voiceStore, chatStore) {
   cleanupPeerConnection(voiceStore)
 
   pc = new RTCPeerConnection({ iceServers })
+  startStatsPolling(voiceStore)
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
@@ -64,7 +106,12 @@ function setupPeerConnection(voiceStore, chatStore) {
       audioEl.autoplay = true
       const vol = voiceStore.isDeafened ? 0 : (voiceStore.outputVolume / 100)
       audioEl.volume = vol
-      audioEl.play().catch(e => console.warn('[WebRTC] Audio auto-play warning:', e))
+      audioEl.play().catch(e => {
+        // After a reload without a user gesture the browser may refuse to play;
+        // the UI then offers a click to enable sound (resumeRemoteAudio).
+        if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
+        console.warn('[WebRTC] Audio auto-play warning:', e)
+      })
       remoteAudioElements.push(audioEl)
 
       event.track.onended = () => {
@@ -310,6 +357,8 @@ export function useWebRTC() {
     })
 
     voiceStore.setChannel(channelId)
+    voiceSession.track(channelId)
+    await loadIceServers()
 
     try {
       await refreshAudioDevices()
@@ -378,7 +427,8 @@ export function useWebRTC() {
         }
 
         // Noise Gate & Sensitivity Evaluation with Hysteresis
-        let shouldTransmit = false
+        // Every branch below assigns it, so no initial value is needed.
+        let shouldTransmit
 
         if (voiceStore.inputMode === 'ptt') {
           shouldTransmit = voiceStore.isPttPressed
@@ -497,12 +547,39 @@ export function useWebRTC() {
     voiceStore.isScreenSharing = false
   }
 
+  function toggleScreenShare() {
+    return voiceStore.isScreenSharing ? stopScreenShare() : startScreenShare()
+  }
+
   function leaveVoiceChannel() {
+    voiceSession.forget()
     cleanupPeerConnection(voiceStore)
     cleanupVoiceAudio()
     stopScreenShare()
     chatStore.sendWSEvent('voice_leave', {})
     voiceStore.disconnect()
+    voiceStore.audioBlocked = false
+  }
+
+  // Rejoins the channel of a call interrupted by a reload less than 30 s ago.
+  // Must run once the WebSocket is connected (voice_join goes over it).
+  async function resumeVoiceSession() {
+    const channelId = voiceSession.recent()
+    if (!channelId || voiceStore.currentChannelId) return false
+    const exists = chatStore.categories.some(c => (c.channels || []).some(ch => ch.id === channelId && ch.type === 'voice')) ||
+      chatStore.uncategorized.some(ch => ch.id === channelId && ch.type === 'voice')
+    if (!exists) {
+      voiceSession.forget()
+      return false
+    }
+    await joinVoiceChannel(channelId)
+    return true
+  }
+
+  // Called from a user click when autoplay was blocked after a reload.
+  function resumeRemoteAudio() {
+    voiceStore.audioBlocked = false
+    remoteAudioElements.forEach(el => el.play().catch(() => { voiceStore.audioBlocked = true }))
   }
 
   return {
@@ -514,6 +591,9 @@ export function useWebRTC() {
     joinVoiceChannel,
     leaveVoiceChannel,
     startScreenShare,
-    stopScreenShare
+    stopScreenShare,
+    toggleScreenShare,
+    resumeVoiceSession,
+    resumeRemoteAudio
   }
 }

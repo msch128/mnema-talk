@@ -4,7 +4,14 @@
 
 /* Mnema Forest Identity Base */
 @layer base {
+  /* 16px root so rem-based Tailwind sizes match Discord's reference scale */
+  html {
+    font-size: 16px;
+  }
+
   body {
+    font-size: 1rem;
+    line-height: 1.375;
     background-color: #0F1110;
     color: #E6EAE8;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -16,6 +23,21 @@
     background-color: #1F3A2E;
     color: #2DA771;
   }
+}
+
+/* Jump-to-message highlight: Discord-like warm flash that fades out */
+@keyframes mnema-msg-flash {
+  0%, 25% { background-color: rgba(252, 228, 168, 0.16); box-shadow: inset 2px 0 0 #FCE4A8; }
+  100% { background-color: transparent; box-shadow: inset 2px 0 0 transparent; }
+}
+
+.msg-flash {
+  animation: mnema-msg-flash 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The class is removed after ~2s, so a static tint is enough. */
+  .msg-flash { animation: none; background-color: rgba(252, 228, 168, 0.12); }
 }
 
 /* Mnema Subtle Hairline Scrollbar */
