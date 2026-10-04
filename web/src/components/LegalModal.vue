@@ -12,6 +12,10 @@ const operator = ref({
   country: 'Deutschland',
   status: 'Privates, nicht-kommerzielles Projekt'
 })
+const mediaRetentionDays = ref(30)
+const sessionExpiryDays = ref(30)
+const stunServers = ref([])
+const legalVersion = ref('1.2')
 
 onMounted(async () => {
   try {
@@ -24,6 +28,10 @@ onMounted(async () => {
         country: data.operator_country || 'Deutschland',
         status: data.project_notice || 'Privates, nicht-kommerzielles Projekt'
       }
+      if (data.media_retention_days) mediaRetentionDays.value = data.media_retention_days
+      if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
+      stunServers.value = data.stun_servers || []
+      if (data.legal_version) legalVersion.value = data.legal_version
     }
   } catch (e) {
     // Keep generic defaults
@@ -56,7 +64,7 @@ const OSS_LIBS = [
           <div>
             <h2 class="text-sm font-bold tracking-tight text-mnema-text flex items-center gap-2">
               <span>Rechtliches & Datenschutzerklärung</span>
-              <span class="text-[10px] font-mono font-normal text-mnema-tertiary bg-mnema-surface px-1.5 py-0.5 rounded border border-mnema-border">v1.1 (DSGVO)</span>
+              <span class="text-[10px] font-mono font-normal text-mnema-tertiary bg-mnema-surface px-1.5 py-0.5 rounded border border-mnema-border">v{{ legalVersion }} (DSGVO)</span>
             </h2>
             <p class="text-[11px] text-mnema-muted">
               Transparenz, Datenschutz (Art. 13 DSGVO) & Nutzungsbedingungen für Mnema Talk
@@ -166,6 +174,14 @@ const OSS_LIBS = [
               Im Gegensatz zu herkömmlichen Chat-Apps setzt Mnema Talk eine dedizierte <strong class="text-mnema-text">Pion WebRTC SFU</strong> auf dem eigenen Server ein. 
               <strong class="text-mnema-text">Es finden keinerlei Direkt-P2P-Verbindungen zwischen Teilnehmern statt.</strong> Dadurch wird Ihre IP-Adresse niemals an andere Gesprächsteilnehmer offengelegt. Audioströme und Screenshares werden in Echtzeit selektiv im Arbeitsspeicher weitergeleitet und <strong class="text-mnema-text">zu keinem Zeitpunkt aufgezeichnet oder dauerhaft gespeichert</strong>.
             </p>
+            <p v-if="stunServers.length" class="text-[11px]">
+              <strong class="text-mnema-text">STUN-Server:</strong> Zum Aufbau der Sprachverbindung fragt Ihr Browser folgende STUN-Server nach Ihrer öffentlichen Adresse:
+              <span class="font-mono text-mnema-text">{{ stunServers.join(', ') }}</span>.
+              Dabei wird Ihre IP-Adresse an den jeweiligen Betreiber dieser Server übermittelt; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.
+            </p>
+            <p v-else class="text-[11px]">
+              Es werden keine externen STUN- oder TURN-Server von Drittanbietern verwendet.
+            </p>
           </div>
 
           <!-- Datenkategorien & Speicherdauer -->
@@ -194,12 +210,12 @@ const OSS_LIBS = [
                   <tr>
                     <td class="p-2.5 font-medium text-mnema-text">Medien-Uploads</td>
                     <td class="p-2.5">Bilder, Dokumente, Avatare im lokalen S3-Speicher</td>
-                    <td class="p-2.5">Standardmäßig 30 Tage (Auto-Pruning zur NAS-Schonung)</td>
+                    <td class="p-2.5">{{ mediaRetentionDays }} Tage, danach automatisch gelöscht</td>
                   </tr>
                   <tr>
                     <td class="p-2.5 font-medium text-mnema-text">Sitzungstoken</td>
                     <td class="p-2.5">Signierte JWT-Tokens zur Authentifizierung</td>
-                    <td class="p-2.5">Max. 30 Tage oder bis zum Logout</td>
+                    <td class="p-2.5">Max. {{ sessionExpiryDays }} Tage oder bis zum Logout</td>
                   </tr>
                 </tbody>
               </table>
@@ -211,6 +227,10 @@ const OSS_LIBS = [
             <h4 class="font-semibold text-mnema-text text-xs">Ihre Rechte als betroffene Person</h4>
             <p class="text-[11px]">
               Sie haben nach Art. 15–22 DSGVO jederzeit das Recht auf unentgeltliche <strong class="text-mnema-text">Auskunft</strong> über Ihre gespeicherten Daten, <strong class="text-mnema-text">Berichtigung</strong> unrichtiger Daten, <strong class="text-mnema-text">Löschung</strong> Ihres Kontos, <strong class="text-mnema-text">Einschränkung</strong> der Verarbeitung sowie das Recht auf <strong class="text-mnema-text">Datenübertragbarkeit</strong>. Wenden Sie sich zur Ausübung formlos an <a :href="`mailto:${operator.email}`" class="text-mnema-accent hover:underline">{{ operator.email }}</a>.
+            </p>
+            <p class="text-[11px]">
+              Außerdem können Sie einer Verarbeitung auf Grundlage berechtigter Interessen widersprechen (Art. 21 DSGVO) und eine erteilte Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO).
+              Sie haben zudem das Recht, sich bei einer <strong class="text-mnema-text">Datenschutzaufsichtsbehörde zu beschweren</strong> (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.
             </p>
           </div>
         </section>

@@ -14,6 +14,14 @@ let lastAboveThresholdTime = 0
 let pc = null
 let remoteAudioElements = []
 
+// ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
+// third-party STUN server learns the user's IP
+let iceServers = []
+fetch('/api/webrtc/config')
+  .then(res => (res.ok ? res.json() : null))
+  .then(data => { if (data?.ice_servers) iceServers = data.ice_servers })
+  .catch(() => {})
+
 function updateRemoteVolume(voiceStore) {
   const vol = voiceStore.isDeafened ? 0 : (voiceStore.outputVolume / 100)
   remoteAudioElements.forEach(el => {
@@ -41,11 +49,7 @@ function cleanupPeerConnection(voiceStore) {
 function setupPeerConnection(voiceStore, chatStore) {
   cleanupPeerConnection(voiceStore)
 
-  pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' }
-    ]
-  })
+  pc = new RTCPeerConnection({ iceServers })
 
   pc.onicecandidate = (event) => {
     if (event.candidate) {
