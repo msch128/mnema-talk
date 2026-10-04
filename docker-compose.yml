@@ -28,6 +28,10 @@ services:
       - WEBRTC_UDP_PORT_MIN=${WEBRTC_UDP_PORT_MIN:-50000}
       - WEBRTC_UDP_PORT_MAX=${WEBRTC_UDP_PORT_MAX:-50050}
       - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+      - LEGAL_OPERATOR_NAME=${LEGAL_OPERATOR_NAME:-Community Operator}
+      - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
+      - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}
+      - LEGAL_PROJECT_NOTICE=${LEGAL_PROJECT_NOTICE:-Privates, nicht-kommerzielles Projekt}
     depends_on:
       postgres:
         condition: service_healthy

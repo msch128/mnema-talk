@@ -2,10 +2,12 @@
 import { ref, onMounted } from 'vue'
 import { LogIn, UserPlus } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
+import LegalModal from './LegalModal.vue'
 
 const authStore = useAuthStore()
 
 const isRegister = ref(false)
+const showLegalModal = ref(false)
 const username = ref('')
 const displayName = ref('')
 const password = ref('')
@@ -114,6 +116,17 @@ async function handleSubmit() {
           />
         </div>
 
+        <div v-if="isRegister" class="text-[11px] text-mnema-tertiary text-center leading-snug pt-1">
+          Mit der Registrierung akzeptierst du die
+          <button 
+            type="button" 
+            @click="showLegalModal = true" 
+            class="text-mnema-accent hover:underline font-medium cursor-pointer"
+          >
+            Datenschutzerklärung & Nutzungsbedingungen
+          </button>.
+        </div>
+
         <button
           type="submit"
           :disabled="isLoading"
@@ -125,15 +138,28 @@ async function handleSubmit() {
       </form>
 
       <!-- Toggle Mode Footer -->
-      <div class="text-center pt-2 border-t border-mnema-hairline">
+      <div class="text-center pt-2 border-t border-mnema-hairline space-y-2">
         <button
           @click="isRegister = !isRegister; errorMsg = ''"
           type="button"
-          class="text-xs text-mnema-muted hover:text-mnema-accent transition"
+          class="text-xs text-mnema-muted hover:text-mnema-accent transition cursor-pointer"
         >
           {{ isRegister ? 'Bereits registriert? Hier anmelden' : 'Hast du einen Einladungscode? Hier registrieren' }}
         </button>
+
+        <div>
+          <button
+            @click="showLegalModal = true"
+            type="button"
+            class="text-[11px] text-mnema-tertiary hover:text-mnema-text transition underline underline-offset-2 cursor-pointer"
+          >
+            Datenschutzerklärung & Rechtliches
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- Legal & Privacy Policy Modal -->
+    <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
   </div>
 </template>

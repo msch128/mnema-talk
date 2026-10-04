@@ -121,6 +121,18 @@ func main() {
 			_, _ = w.Write([]byte(`{"status":"ok","app":"mnema-talk","version":"1.0.0"}`))
 		})
 
+		// Public Legal & Privacy Policy Configuration (Art. 13 DSGVO)
+		r.Get("/legal", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]string{
+				"operator_name":    cfg.LegalOperatorName,
+				"operator_email":   cfg.LegalOperatorEmail,
+				"operator_country": cfg.LegalOperatorCountry,
+				"project_notice":   cfg.LegalProjectNotice,
+				"legal_version":    "1.1",
+			})
+		})
+
 		// Authentication Routes
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/login", func(w http.ResponseWriter, r *http.Request) {

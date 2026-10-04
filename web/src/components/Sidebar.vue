@@ -8,7 +8,7 @@ import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
 import UserAvatar from './UserAvatar.vue'
 
-const emit = defineEmits(['open-admin'])
+const emit = defineEmits(['open-admin', 'open-legal'])
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -112,15 +112,26 @@ function handleDMClick(dm) {
         </div>
       </div>
 
-      <!-- Admin Dashboard Button -->
-      <button 
-        v-if="authStore.isAdmin" 
-        @click.stop="emit('open-admin')"
-        title="Admin Konsole & S3 Speicher"
-        class="text-[11px] font-medium px-2 py-0.5 rounded border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent hover:bg-mnema-accent hover:text-mnema-accent-ink transition"
-      >
-        Admin
-      </button>
+      <!-- Header Action Buttons -->
+      <div class="flex items-center gap-1.5">
+        <button 
+          @click.stop="emit('open-legal')"
+          title="Rechtliches & Datenschutzerklärung (DSGVO)"
+          class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition cursor-pointer"
+        >
+          <ShieldCheck class="w-3.5 h-3.5" />
+        </button>
+
+        <!-- Admin Dashboard Button -->
+        <button 
+          v-if="authStore.isAdmin" 
+          @click.stop="emit('open-admin')"
+          title="Admin Konsole & S3 Speicher"
+          class="text-[11px] font-medium px-2 py-0.5 rounded border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent hover:bg-mnema-accent hover:text-mnema-accent-ink transition cursor-pointer"
+        >
+          Admin
+        </button>
+      </div>
     </header>
 
     <!-- Navigation Scroll Area -->

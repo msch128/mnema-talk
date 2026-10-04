@@ -28,6 +28,10 @@ type Config struct {
 	WebRTCUDPPortMin     uint16
 	WebRTCUDPPortMax     uint16
 	WebRTCNAT1to1IP      string
+	LegalOperatorName    string
+	LegalOperatorEmail   string
+	LegalOperatorCountry string
+	LegalProjectNotice   string
 }
 
 func Load() (*Config, error) {
@@ -69,6 +73,10 @@ func Load() (*Config, error) {
 		WebRTCUDPPortMin:     uint16(portMin),
 		WebRTCUDPPortMax:     uint16(portMax),
 		WebRTCNAT1to1IP:      getEnv("WEBRTC_NAT_1TO1_IP", ""),
+		LegalOperatorName:    getEnv("LEGAL_OPERATOR_NAME", "Community Operator"),
+		LegalOperatorEmail:   getEnv("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
+		LegalOperatorCountry: getEnv("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
+		LegalProjectNotice:   getEnv("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
 	}
 
 	if cfg.Port == "" {
