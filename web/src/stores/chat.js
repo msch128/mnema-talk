@@ -92,10 +92,14 @@ export const useChatStore = defineStore('chat', () => {
         headers: { 'Authorization': `Bearer ${authStore.token}` }
       })
       if (res.ok) {
-        messages.value = await res.json()
+        const data = await res.json()
+        messages.value = Array.isArray(data) ? data : []
+      } else {
+        messages.value = []
       }
     } catch (e) {
       console.error('Failed to fetch messages:', e)
+      messages.value = []
     }
   }
 
@@ -193,7 +197,7 @@ export const useChatStore = defineStore('chat', () => {
       if (res.ok) {
         const data = await res.json()
         activeThread.value = data.root || msg
-        threadReplies.value = data.replies || []
+        threadReplies.value = Array.isArray(data.replies) ? data.replies : []
       }
     } catch (e) {
       console.error('Failed to load thread:', e)

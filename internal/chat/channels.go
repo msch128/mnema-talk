@@ -43,7 +43,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	}
 	defer catRows.Close()
 
-	var categories []Category
+	categories := make([]Category, 0)
 	categoryMap := make(map[uuid.UUID]int)
 
 	for catRows.Next() {
@@ -63,7 +63,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	}
 	defer chanRows.Close()
 
-	var uncategorized []Channel
+	uncategorized := make([]Channel, 0)
 
 	for chanRows.Next() {
 		var ch Channel

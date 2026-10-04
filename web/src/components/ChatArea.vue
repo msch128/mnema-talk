@@ -27,7 +27,7 @@ function scrollToBottom() {
   })
 }
 
-watch(() => chatStore.messages.length, () => {
+watch(() => chatStore.messages?.length || 0, () => {
   scrollToBottom()
 })
 
@@ -169,7 +169,7 @@ const currentVoiceChannelName = computed(() => {
     <!-- Message Timeline -->
     <div ref="messageContainer" class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
       <!-- Empty State matching mnema.xyz -->
-      <div v-if="!chatStore.messages.length" class="h-full flex flex-col items-center justify-center text-center p-8">
+      <div v-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
           <Hash class="w-5 h-5 opacity-80" />
         </div>
@@ -181,7 +181,7 @@ const currentVoiceChannelName = computed(() => {
 
       <!-- Messages List -->
       <div
-        v-for="msg in chatStore.messages"
+        v-for="msg in (chatStore.messages || [])"
         :key="msg.id"
         class="relative flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-2 rounded-lg transition-colors group"
       >
