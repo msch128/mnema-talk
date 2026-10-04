@@ -90,11 +90,21 @@ onMounted(() => {
   scrollChatToBottom()
 })
 
-function sendChatMessage() {
-  if (!chatInput.value.trim() || isUploading.value) return
-  chatStore.sendMessage(chatInput.value)
-  chatInput.value = ''
-  scrollChatToBottom()
+const isSending = ref(false)
+
+async function sendChatMessage() {
+  const text = chatInput.value.trim()
+  if (!text || isUploading.value || isSending.value) return
+  isSending.value = true
+  try {
+    await chatStore.sendMessage(text)
+    chatInput.value = ''
+    scrollChatToBottom()
+  } catch (err) {
+    alert(err.message || 'Nachricht konnte nicht gesendet werden')
+  } finally {
+    isSending.value = false
+  }
 }
 
 async function handleFileUpload(e) {
@@ -103,9 +113,9 @@ async function handleFileUpload(e) {
 
   isUploading.value = true
   try {
-    const uploadRes = await chatStore.uploadMedia(file)
-    await chatStore.sendMessage(`[Datei: ${uploadRes.original_filename}]`)
+    await chatStore.uploadMedia(file)
     if (fileInput.value) fileInput.value.value = ''
+    scrollChatToBottom()
   } catch (err) {
     alert(err.message || 'Upload fehlgeschlagen')
   } finally {

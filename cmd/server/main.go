@@ -282,14 +282,15 @@ func main() {
 				}
 
 				var req struct {
-					Content string `json:"content"`
+					Content  string     `json:"content"`
+					ParentID *uuid.UUID `json:"parent_id,omitempty"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Content == "" {
 					http.Error(w, `{"error":"message content is required"}`, http.StatusBadRequest)
 					return
 				}
 
-				msg, err := chat.CreateMessage(r.Context(), dbPool, chID, user.ID, req.Content)
+				msg, err := chat.CreateMessage(r.Context(), dbPool, chID, user.ID, req.Content, req.ParentID)
 				if err != nil {
 					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
 					return
@@ -303,9 +304,37 @@ func main() {
 				_ = json.NewEncoder(w).Encode(msg)
 			})
 
+			// Thread API: Fetch root message and its replies
+			r.Get("/messages/{messageID}/thread", func(w http.ResponseWriter, r *http.Request) {
+				msgIDStr := chi.URLParam(r, "messageID")
+				msgID, err := uuid.Parse(msgIDStr)
+				if err != nil {
+					http.Error(w, `{"error":"invalid message id"}`, http.StatusBadRequest)
+					return
+				}
+
+				rootMsg, err := chat.GetMessageByID(r.Context(), dbPool, msgID)
+				if err != nil {
+					http.Error(w, `{"error":"root message not found"}`, http.StatusNotFound)
+					return
+				}
+
+				replies, err := chat.GetThreadReplies(r.Context(), dbPool, msgID)
+				if err != nil {
+					http.Error(w, fmt.Sprintf(`{"error":"%s"}`, err.Error()), http.StatusInternalServerError)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"root":    rootMsg,
+					"replies": replies,
+				})
+			})
+
 			// Media Upload Handler
 			if s3Cli != nil {
-				r.Post("/channels/{channelID}/upload", chat.UploadHandler(dbPool, s3Cli, cfg.S3Bucket, 50))
+				r.Post("/channels/{channelID}/upload", chat.UploadHandler(dbPool, s3Cli, cfg.S3Bucket, 50, hub.BroadcastEvent))
 			}
 		})
 

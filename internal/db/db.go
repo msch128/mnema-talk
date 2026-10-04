@@ -51,6 +51,15 @@ func (p *Pool) Migrate(ctx context.Context, migrationFilePath string) error {
 		return fmt.Errorf("failed to execute migration: %w", err)
 	}
 
+	// Apply incremental schema changes if table already existed
+	incrementalMigrations := `
+		ALTER TABLE messages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES messages(id) ON DELETE CASCADE;
+		CREATE INDEX IF NOT EXISTS idx_messages_parent_id ON messages(parent_id);
+	`
+	if _, err := p.Exec(ctx, incrementalMigrations); err != nil {
+		log.Printf("[DB] Note on incremental migration: %v\n", err)
+	}
+
 	log.Println("[DB] Schema migrations applied successfully")
 	return nil
 }

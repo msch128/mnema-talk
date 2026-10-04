@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES messages(id) ON DELETE CASCADE,
     content TEXT NOT NULL DEFAULT '',
     is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_parent_id ON messages(parent_id);
 
 -- 6. Media & Image Uploads (S3-tracked, managed via Admin Dashboard)
 CREATE TABLE IF NOT EXISTS media (

@@ -8,6 +8,9 @@ export const useChatStore = defineStore('chat', () => {
   const uncategorized = ref([])
   const activeChannel = ref(null)
   const messages = ref([])
+  const activeThread = ref(null)
+  const threadReplies = ref([])
+  const isThreadLoading = ref(false)
   const ws = ref(null)
   const isConnected = ref(false)
 
@@ -76,10 +79,11 @@ export const useChatStore = defineStore('chat', () => {
   })
 
   async function selectChannel(channel) {
+    if (!channel) return
     activeChannel.value = channel
-    if (channel.type === 'text') {
-      await fetchMessages(channel.id)
-    }
+    activeThread.value = null
+    threadReplies.value = []
+    await fetchMessages(channel.id)
   }
 
   async function fetchMessages(channelId) {
@@ -95,30 +99,57 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function sendMessage(content) {
-    if (!activeChannel.value || !content.trim()) return
+  async function sendMessage(content, parentId = null) {
+    if (!activeChannel.value || !content.trim()) return null
     try {
+      const payload = { content: content.trim() }
+      if (parentId) {
+        payload.parent_id = parentId
+      }
+
       const res = await fetch(`/api/channels/${activeChannel.value.id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authStore.token}`
         },
-        body: JSON.stringify({ content })
+        body: JSON.stringify(payload)
       })
-      if (res.ok) {
-        // Message will also arrive via WebSocket for instant update
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Nachricht konnte nicht gesendet werden')
       }
+
+      const newMsg = await res.json()
+
+      // Optimistic / direct insertion to ensure instant UI responsiveness
+      if (parentId) {
+        if (!threadReplies.value.some(m => m.id === newMsg.id)) {
+          threadReplies.value.push(newMsg)
+        }
+        const root = messages.value.find(m => m.id === parentId)
+        if (root) root.reply_count = (root.reply_count || 0) + 1
+      } else {
+        if (!messages.value.some(m => m.id === newMsg.id)) {
+          messages.value.push(newMsg)
+        }
+      }
+
+      return newMsg
     } catch (e) {
       console.error('Failed to send message:', e)
+      throw e
     }
   }
 
-  async function uploadMedia(file) {
-    if (!activeChannel.value || !file) return
+  async function uploadMedia(file, content = '', parentId = null) {
+    if (!activeChannel.value || !file) return null
     const formData = new FormData()
     formData.append('file', file)
     formData.append('channel_id', activeChannel.value.id)
+    if (content) formData.append('content', content)
+    if (parentId) formData.append('parent_id', parentId)
 
     const res = await fetch(`/api/channels/${activeChannel.value.id}/upload`, {
       method: 'POST',
@@ -127,10 +158,63 @@ export const useChatStore = defineStore('chat', () => {
     })
 
     if (!res.ok) {
-      throw new Error('Upload fehlgeschlagen')
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Upload fehlgeschlagen')
     }
 
-    return await res.json()
+    const newMsg = await res.json()
+    if (newMsg && newMsg.id) {
+      if (parentId) {
+        if (!threadReplies.value.some(m => m.id === newMsg.id)) {
+          threadReplies.value.push(newMsg)
+        }
+        const root = messages.value.find(m => m.id === parentId)
+        if (root) root.reply_count = (root.reply_count || 0) + 1
+      } else {
+        if (!messages.value.some(m => m.id === newMsg.id)) {
+          messages.value.push(newMsg)
+        }
+      }
+    }
+
+    return newMsg
+  }
+
+  async function openThread(msg) {
+    if (!msg) return
+    activeThread.value = msg
+    threadReplies.value = []
+    isThreadLoading.value = true
+
+    try {
+      const res = await fetch(`/api/messages/${msg.id}/thread`, {
+        headers: { 'Authorization': `Bearer ${authStore.token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        activeThread.value = data.root || msg
+        threadReplies.value = data.replies || []
+      }
+    } catch (e) {
+      console.error('Failed to load thread:', e)
+    } finally {
+      isThreadLoading.value = false
+    }
+  }
+
+  function closeThread() {
+    activeThread.value = null
+    threadReplies.value = []
+  }
+
+  async function sendThreadReply(content) {
+    if (!activeThread.value) return null
+    return await sendMessage(content, activeThread.value.id)
+  }
+
+  async function uploadThreadMedia(file, content = '') {
+    if (!activeThread.value) return null
+    return await uploadMedia(file, content, activeThread.value.id)
   }
 
   function startPingHeartbeat() {
@@ -209,14 +293,31 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
 
-      case 'message_create':
-        if (activeChannel.value && event.payload.channel_id === activeChannel.value.id) {
-          // Avoid duplicate messages if already present
-          if (!messages.value.some(m => m.id === event.payload.id)) {
-            messages.value.push(event.payload)
+      case 'message_create': {
+        const msg = event.payload
+        if (!msg) break
+
+        if (msg.parent_id) {
+          // Thread reply received
+          const root = messages.value.find(m => m.id === msg.parent_id)
+          if (root) {
+            root.reply_count = (root.reply_count || 0) + 1
+          }
+          if (activeThread.value && activeThread.value.id === msg.parent_id) {
+            if (!threadReplies.value.some(m => m.id === msg.id)) {
+              threadReplies.value.push(msg)
+            }
+          }
+        } else {
+          // Root channel message
+          if (activeChannel.value && msg.channel_id === activeChannel.value.id) {
+            if (!messages.value.some(m => m.id === msg.id)) {
+              messages.value.push(msg)
+            }
           }
         }
         break
+      }
 
       case 'voice_snapshot':
         voiceStore.setVoiceSnapshot(event.payload)
@@ -337,6 +438,13 @@ export const useChatStore = defineStore('chat', () => {
     deleteChannel,
     createCategory,
     deleteCategory,
+    activeThread,
+    threadReplies,
+    isThreadLoading,
+    openThread,
+    closeThread,
+    sendThreadReply,
+    uploadThreadMedia,
     initWebSocket,
     sendWSEvent
   }

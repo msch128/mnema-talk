@@ -8,6 +8,7 @@ import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
 import VoiceStage from './components/VoiceStage.vue'
 import MemberList from './components/MemberList.vue'
+import ThreadSidebar from './components/ThreadSidebar.vue'
 import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
@@ -59,6 +60,9 @@ authStore.$subscribe((mutation, state) => {
         v-if="voiceStore.activeView === 'voice' && voiceStore.isConnected" 
       />
       <ChatArea v-else />
+
+      <!-- Rocket.Chat-style Thread Sidebar -->
+      <ThreadSidebar v-if="chatStore.activeThread" />
 
       <!-- Right Column: Discord-Style Member List -->
       <MemberList />
