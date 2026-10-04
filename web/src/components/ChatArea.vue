@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { Hash, Plus, ArrowUp, FileText, Image as ImageIcon, Users } from 'lucide-vue-next'
+import { Hash, Plus, ArrowUp, FileText, Image as ImageIcon, Users, MessageSquare, MessageSquareQuote } from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
@@ -14,7 +14,10 @@ const { leaveVoiceChannel } = useWebRTC()
 const inputMessage = ref('')
 const messageContainer = ref(null)
 const fileInput = ref(null)
+const textAreaEl = ref(null)
 const isUploading = ref(false)
+const isSending = ref(false)
+const selectedImage = ref(null)
 
 function scrollToBottom() {
   nextTick(() => {
@@ -28,15 +31,32 @@ watch(() => chatStore.messages.length, () => {
   scrollToBottom()
 })
 
-onMounted(() => {
-  scrollToBottom()
+watch(() => chatStore.activeChannel?.id, () => {
+  nextTick(() => {
+    textAreaEl.value?.focus()
+    scrollToBottom()
+  })
 })
 
-function handleSend() {
-  if (!inputMessage.value.trim() || isUploading.value) return
-  chatStore.sendMessage(inputMessage.value)
-  inputMessage.value = ''
+onMounted(() => {
   scrollToBottom()
+  textAreaEl.value?.focus()
+})
+
+async function handleSend() {
+  const text = inputMessage.value.trim()
+  if (!text || isUploading.value || isSending.value) return
+
+  isSending.value = true
+  try {
+    await chatStore.sendMessage(text)
+    inputMessage.value = ''
+    scrollToBottom()
+  } catch (err) {
+    alert(err.message || 'Nachricht konnte nicht gesendet werden')
+  } finally {
+    isSending.value = false
+  }
 }
 
 function handleKeyDown(e) {
@@ -52,9 +72,9 @@ async function handleFileUpload(e) {
 
   isUploading.value = true
   try {
-    const uploadRes = await chatStore.uploadMedia(file)
-    await chatStore.sendMessage(`[Datei: ${uploadRes.original_filename}]`)
+    await chatStore.uploadMedia(file)
     if (fileInput.value) fileInput.value.value = ''
+    scrollToBottom()
   } catch (err) {
     alert(err.message || 'Upload fehlgeschlagen')
   } finally {
@@ -163,8 +183,20 @@ const currentVoiceChannelName = computed(() => {
       <div
         v-for="msg in chatStore.messages"
         :key="msg.id"
-        class="flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-1.5 rounded-lg transition-colors group"
+        class="relative flex items-start gap-3 hover:bg-mnema-surface/40 -mx-3 px-3 py-2 rounded-lg transition-colors group"
       >
+        <!-- Hover Quick Actions (Rocket.Chat style reply in thread) -->
+        <div class="absolute right-3 -top-2.5 hidden group-hover:flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-md px-1.5 py-0.5 shadow-md z-10">
+          <button
+            @click.stop="chatStore.openThread(msg)"
+            class="flex items-center gap-1 text-[11px] text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface px-2 py-0.5 rounded transition"
+            title="In Thread antworten (Rocket.Chat Style)"
+          >
+            <MessageSquare class="w-3.5 h-3.5 text-mnema-accent" />
+            <span class="font-medium">Antworten</span>
+          </button>
+        </div>
+
         <!-- User Avatar -->
         <div class="w-8 h-8 rounded-full bg-mnema-surface border border-mnema-border flex items-center justify-center text-mnema-accent font-semibold text-xs flex-shrink-0 mt-0.5">
           {{ msg.display_name?.charAt(0).toUpperCase() || '?' }}
@@ -179,7 +211,7 @@ const currentVoiceChannelName = computed(() => {
             <span class="text-[10px] text-mnema-tertiary font-mono">{{ formatTime(msg.created_at) }}</span>
           </div>
 
-          <p class="text-xs text-mnema-body-ink break-words select-text mt-0.5 leading-relaxed">
+          <p v-if="msg.content" class="text-xs text-mnema-body-ink break-words select-text mt-0.5 leading-relaxed">
             {{ msg.content }}
           </p>
 
@@ -194,6 +226,7 @@ const currentVoiceChannelName = computed(() => {
                 <img 
                   :src="att.url" 
                   :alt="att.original_filename" 
+                  @click="selectedImage = att.url"
                   class="max-h-80 w-auto rounded-t object-cover cursor-pointer hover:opacity-95 transition"
                   loading="lazy"
                 />
@@ -214,6 +247,18 @@ const currentVoiceChannelName = computed(() => {
               </div>
             </div>
           </div>
+
+          <!-- Rocket.Chat Style Thread Counter Badge -->
+          <div v-if="msg.reply_count > 0" class="mt-2">
+            <button
+              @click.stop="chatStore.openThread(msg)"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition shadow-xs"
+            >
+              <MessageSquare class="w-3.5 h-3.5 text-mnema-accent" />
+              <span>{{ msg.reply_count }} {{ msg.reply_count === 1 ? 'Antwort' : 'Antworten' }}</span>
+              <span class="text-[9px] opacity-75 font-mono ml-0.5">Thread öffnen &rarr;</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -226,14 +271,14 @@ const currentVoiceChannelName = computed(() => {
           ref="fileInput" 
           type="file" 
           class="hidden" 
-          @change="handleFileUpload"
+          @change="handleFileUpload" 
           accept="image/*,video/*"
         />
 
         <!-- Attachment Button -->
         <button
           @click="fileInput?.click()"
-          :disabled="isUploading"
+          :disabled="isUploading || isSending"
           class="p-1.5 rounded-md hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
           title="Datei oder Bild hochladen (S3)"
         >
@@ -242,6 +287,7 @@ const currentVoiceChannelName = computed(() => {
 
         <!-- Text Input -->
         <textarea
+          ref="textAreaEl"
           v-model="inputMessage"
           @keydown="handleKeyDown"
           :placeholder="`Nachricht an #${chatStore.activeChannel?.name || 'chat'}`"
@@ -252,13 +298,26 @@ const currentVoiceChannelName = computed(() => {
         <!-- Send Button -->
         <button
           @click="handleSend"
-          :disabled="!inputMessage.trim() || isUploading"
+          :disabled="!inputMessage.trim() || isUploading || isSending"
           class="p-1.5 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
           title="Senden"
         >
           <ArrowUp class="w-4 h-4" />
         </button>
       </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div 
+      v-if="selectedImage" 
+      @click="selectedImage = null"
+      class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer"
+    >
+      <img 
+        :src="selectedImage" 
+        alt="Vergrößertes Bild" 
+        class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-mnema-border"
+      />
     </div>
   </main>
 </template>

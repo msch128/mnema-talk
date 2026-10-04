@@ -32,8 +32,10 @@ type MediaRecord struct {
 	CreatedAt        time.Time  `json:"created_at"`
 }
 
-// UploadHandler handles multipart media uploads to S3 and registers them in PostgreSQL
-func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSizeMB int64) http.HandlerFunc {
+type Broadcaster func(eventType string, payload interface{})
+
+// UploadHandler handles multipart media uploads to S3, links to a Message, and registers in PostgreSQL
+func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSizeMB int64, broadcast Broadcaster) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user, ok := r.Context().Value(auth.UserContextKey).(auth.User)
 		if !ok {
@@ -68,6 +70,14 @@ func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSiz
 			messageID = &msgUUID
 		}
 
+		parentIDStr := r.FormValue("parent_id")
+		var parentID *uuid.UUID
+		if pUUID, err := uuid.Parse(parentIDStr); err == nil {
+			parentID = &pUUID
+		}
+
+		content := r.FormValue("content")
+
 		// Determine clean filename and extension
 		originalFilename := filepath.Base(header.Filename)
 		ext := strings.ToLower(filepath.Ext(originalFilename))
@@ -91,7 +101,20 @@ func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSiz
 			return
 		}
 
-		// 2. Insert record into PostgreSQL
+		var createdMsg *Message
+		// If no messageID was provided but channelID was given, create a new Message for this media
+		if messageID == nil && channelID != nil {
+			msg, err := CreateMessage(r.Context(), p, *channelID, user.ID, content, parentID)
+			if err != nil {
+				_ = s3Cli.Delete(context.Background(), s3Key)
+				http.Error(w, fmt.Sprintf(`{"error":"failed to create message for media: %s"}`, err.Error()), http.StatusInternalServerError)
+				return
+			}
+			createdMsg = msg
+			messageID = &msg.ID
+		}
+
+		// 2. Insert record into PostgreSQL media table
 		insertQuery := `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -104,8 +127,27 @@ func UploadHandler(p *db.Pool, s3Cli *s3.Client, bucketName string, maxUploadSiz
 			return
 		}
 
+		att := MediaAttachment{
+			ID:               mediaID,
+			OriginalFilename: originalFilename,
+			MimeType:         mimeType,
+			SizeBytes:        header.Size,
+			URL:              fmt.Sprintf("/api/media/%s", mediaID.String()),
+			IsDeleted:        false,
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
+
+		if createdMsg != nil {
+			createdMsg.Attachments = []MediaAttachment{att}
+			if broadcast != nil {
+				broadcast("message_create", createdMsg)
+			}
+			_ = json.NewEncoder(w).Encode(createdMsg)
+			return
+		}
+
 		fmt.Fprintf(w, `{"id":"%s","url":"/api/media/%s","original_filename":%q,"mime_type":%q,"size_bytes":%d}`,
 			mediaID.String(), mediaID.String(), originalFilename, mimeType, header.Size)
 	}
