@@ -32,6 +32,9 @@ storage/
 # Build artifacts & binaries
 bin/
 dist/
+!web/dist/.gitkeep
+web/dist/*
+!web/dist/.gitkeep
 mnema-talk
 mnema-talk.exe
 *.exe
