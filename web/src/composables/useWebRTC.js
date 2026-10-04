@@ -7,6 +7,10 @@ const localAudioStream = ref(null)
 const localScreenStream = ref(null)
 let audioContext = null
 let analyser = null
+// Clone of the mic track used only for level metering. The noise gate disables the
+// transmitted track, and a disabled track feeds silence into Web Audio, so metering
+// the original would lock the gate shut forever.
+let analysisTrack = null
 let speakingInterval = null
 let lastAboveThresholdTime = 0
 
@@ -247,6 +251,11 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
+    if (analysisTrack) {
+      analysisTrack.stop()
+      analysisTrack = null
+    }
+
     if (audioContext) {
       audioContext.close().catch(() => {})
       audioContext = null
@@ -344,7 +353,9 @@ export function useWebRTC() {
       analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.2
 
-      const source = audioContext.createMediaStreamSource(stream)
+      analysisTrack = stream.getAudioTracks()[0].clone()
+      analysisTrack.enabled = true
+      const source = audioContext.createMediaStreamSource(new MediaStream([analysisTrack]))
       const biquad = audioContext.createBiquadFilter()
       biquad.type = 'highpass'
       biquad.frequency.setValueAtTime(85, audioContext.currentTime)
