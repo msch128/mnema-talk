@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2, 
-  Camera, AtSign, Check, Loader2, Sparkles, AlertCircle 
+  Camera, AtSign, Check, Loader2, Sparkles, AlertCircle,
+  Edit3, Save
 } from 'lucide-vue-next'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -27,10 +28,46 @@ const isUploading = ref(false)
 const uploadError = ref('')
 const uploadSuccess = ref(false)
 
+// Bio editing state
+const isEditingBio = ref(false)
+const editDisplayName = ref('')
+const editBio = ref('')
+const isSavingProfile = ref(false)
+const profileSaveSuccess = ref(false)
+const profileSaveError = ref('')
+
 // Determine the active user object
 const profileUser = computed(() => {
   return props.user || chatStore.selectedUserProfile || authStore.user || {}
 })
+
+// Initialize edit fields
+editDisplayName.value = profileUser.value.display_name || ''
+editBio.value = profileUser.value.bio || ''
+
+async function saveProfile() {
+  isSavingProfile.value = true
+  profileSaveError.value = ''
+  profileSaveSuccess.value = false
+  try {
+    const updated = await authStore.updateProfile({
+      displayName: editDisplayName.value,
+      bio: editBio.value
+    })
+    if (chatStore.selectedUserProfile) {
+      chatStore.selectedUserProfile = { ...chatStore.selectedUserProfile, ...updated }
+    }
+    profileSaveSuccess.value = true
+    isEditingBio.value = false
+    setTimeout(() => {
+      profileSaveSuccess.value = false
+    }, 2500)
+  } catch (err) {
+    profileSaveError.value = err.message || 'Speichern fehlgeschlagen'
+  } finally {
+    isSavingProfile.value = false
+  }
+}
 
 const isSelf = computed(() => {
   return authStore.user && profileUser.value.id === authStore.user.id
@@ -275,6 +312,86 @@ onUnmounted(() => {
           <div v-if="uploadError" class="mt-2.5 p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
             <AlertCircle class="w-4 h-4 flex-shrink-0" />
             <span>{{ uploadError }}</span>
+          </div>
+
+          <!-- Divider -->
+          <div class="h-px bg-mnema-hairline my-3"></div>
+
+          <!-- Über mich (Bio) Section -->
+          <div class="mb-3">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-mnema-tertiary">Über mich</span>
+              <button 
+                v-if="isSelf && !isEditingBio" 
+                @click="isEditingBio = true"
+                class="text-[11px] text-mnema-accent hover:underline flex items-center gap-1"
+              >
+                <Edit3 class="w-3 h-3" />
+                <span>Bearbeiten</span>
+              </button>
+            </div>
+
+            <!-- View Mode -->
+            <div v-if="!isEditingBio">
+              <p v-if="profileUser.bio" class="text-xs text-mnema-text leading-relaxed whitespace-pre-wrap bg-mnema-band/40 p-2.5 rounded-lg border border-mnema-hairline">
+                {{ profileUser.bio }}
+              </p>
+              <p v-else class="text-xs text-mnema-tertiary italic bg-mnema-band/20 p-2.5 rounded-lg border border-mnema-hairline">
+                Keine Biografie hinterlegt.
+              </p>
+            </div>
+
+            <!-- Edit Mode (Own Profile) -->
+            <div v-else class="space-y-2 mt-1">
+              <div>
+                <label class="text-[10px] text-mnema-tertiary block mb-0.5">Anzeigename</label>
+                <input 
+                  v-model="editDisplayName" 
+                  type="text" 
+                  maxlength="64"
+                  class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
+                />
+              </div>
+              <div>
+                <label class="text-[10px] text-mnema-tertiary block mb-0.5">Biografie (max. 250 Zeichen)</label>
+                <textarea 
+                  v-model="editBio" 
+                  rows="3" 
+                  maxlength="250"
+                  class="w-full text-xs px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
+                  placeholder="Erzähle etwas über dich..."
+                ></textarea>
+                <div class="flex justify-between items-center text-[10px] text-mnema-tertiary mt-0.5">
+                  <span>{{ editBio.length }} / 250</span>
+                  <div class="flex items-center gap-1.5">
+                    <button 
+                      @click="isEditingBio = false" 
+                      class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
+                    >
+                      Abbrechen
+                    </button>
+                    <button 
+                      @click="saveProfile" 
+                      :disabled="isSavingProfile"
+                      class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50"
+                    >
+                      <Loader2 v-if="isSavingProfile" class="w-3 h-3 animate-spin" />
+                      <Save v-else class="w-3 h-3" />
+                      <span>Speichern</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="profileSaveSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-1.5">
+              <Check class="w-3.5 h-3.5" />
+              <span>Profil aktualisiert!</span>
+            </div>
+            <div v-if="profileSaveError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs flex items-center gap-1.5">
+              <AlertCircle class="w-3.5 h-3.5" />
+              <span>{{ profileSaveError }}</span>
+            </div>
           </div>
 
           <!-- Divider -->

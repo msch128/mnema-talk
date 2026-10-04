@@ -13,6 +13,7 @@ type Member struct {
 	ID          uuid.UUID  `json:"id"`
 	Username    string     `json:"username"`
 	DisplayName string     `json:"display_name"`
+	Bio         string     `json:"bio"`
 	Role        string     `json:"role"`
 	AvatarURL   *string    `json:"avatar_url,omitempty"`
 	CreatedAt   time.Time  `json:"created_at"`
@@ -21,7 +22,7 @@ type Member struct {
 // GetAllMembers retrieves all community members ordered by role and name
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]Member, error) {
 	rows, err := p.Query(ctx, `
-		SELECT id, username, display_name, role, avatar_s3_key, created_at 
+		SELECT id, username, display_name, COALESCE(bio, ''), role, avatar_s3_key, created_at 
 		FROM users 
 		ORDER BY 
 			CASE WHEN role = 'admin' THEN 0 ELSE 1 END,
@@ -36,7 +37,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]Member, error) {
 	for rows.Next() {
 		var m Member
 		var avatarKey *string
-		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Role, &avatarKey, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Bio, &m.Role, &avatarKey, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		if avatarKey != nil && *avatarKey != "" {

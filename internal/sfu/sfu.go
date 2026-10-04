@@ -1,30 +1,36 @@
 package sfu
 
 import (
-	"context"
 	"fmt"
-	"io"
 	"log"
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/pion/rtcp"
+	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
 
-type Room struct {
-	ID        uuid.UUID
-	peers     map[uuid.UUID]*Peer
-	peersMu   sync.RWMutex
-	api       *webrtc.API
-	onTrackCB func(senderID uuid.UUID, track *webrtc.TrackRemote)
+type TrackInfo struct {
+	Track    *webrtc.TrackLocalStaticRTP
+	SenderID uuid.UUID
+	Kind     webrtc.RTPCodecType
 }
 
 type Peer struct {
-	ID         uuid.UUID
-	PC         *webrtc.PeerConnection
-	AudioTrack *webrtc.TrackLocalStaticRTP
-	VideoTrack *webrtc.TrackLocalStaticRTP
-	room       *Room
+	ID        uuid.UUID
+	PC        *webrtc.PeerConnection
+	SendOffer func(offer webrtc.SessionDescription)
+	SendICE   func(candidate *webrtc.ICECandidateInit)
+	room      *Room
+}
+
+type Room struct {
+	ID          uuid.UUID
+	peers       map[uuid.UUID]*Peer
+	trackLocals map[string]*TrackInfo
+	mu          sync.RWMutex
+	api         *webrtc.API
 }
 
 type SFU struct {
@@ -71,17 +77,24 @@ func (s *SFU) GetOrCreateRoom(channelID uuid.UUID) *Room {
 	}
 
 	r := &Room{
-		ID:    channelID,
-		peers: make(map[uuid.UUID]*Peer),
-		api:   s.api,
+		ID:          channelID,
+		peers:       make(map[uuid.UUID]*Peer),
+		trackLocals: make(map[string]*TrackInfo),
+		api:         s.api,
 	}
 	s.rooms[channelID] = r
 	return r
 }
 
-func (r *Room) JoinPeer(ctx context.Context, userID uuid.UUID) (*Peer, error) {
-	r.peersMu.Lock()
-	defer r.peersMu.Unlock()
+func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if existing, ok := r.peers[userID]; ok {
+		_ = existing.PC.Close()
+		r.removePeerTracksLocked(userID)
+		delete(r.peers, userID)
+	}
 
 	pc, err := r.api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
@@ -92,97 +105,181 @@ func (r *Room) JoinPeer(ctx context.Context, userID uuid.UUID) (*Peer, error) {
 		return nil, fmt.Errorf("failed to create PeerConnection: %w", err)
 	}
 
-	// Create local outbound audio track for this peer
-	audioTrack, err := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus},
-		fmt.Sprintf("audio-%s", userID.String()),
-		"mnema-talk-audio",
-	)
-	if err != nil {
-		pc.Close()
-		return nil, err
-	}
-
-	if _, err := pc.AddTrack(audioTrack); err != nil {
-		pc.Close()
-		return nil, err
-	}
-
-	// Create local outbound video track for 4K 60fps screenshare
-	videoTrack, err := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP9},
-		fmt.Sprintf("video-%s", userID.String()),
-		"mnema-talk-screenshare",
-	)
-	if err != nil {
-		pc.Close()
-		return nil, err
-	}
-
-	if _, err := pc.AddTrack(videoTrack); err != nil {
-		pc.Close()
-		return nil, err
-	}
+	// Inbound transceivers to receive client's mic and screen share
+	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{
+		Direction: webrtc.RTPTransceiverDirectionRecvonly,
+	})
+	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{
+		Direction: webrtc.RTPTransceiverDirectionRecvonly,
+	})
 
 	peer := &Peer{
-		ID:         userID,
-		PC:         pc,
-		AudioTrack: audioTrack,
-		VideoTrack: videoTrack,
-		room:       r,
+		ID:        userID,
+		PC:        pc,
+		SendOffer: sendOffer,
+		SendICE:   sendICE,
+		room:      r,
 	}
 
-	// When this peer sends audio or video, forward RTP packets directly to all other peers in the room
+	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
+		if c != nil && peer.SendICE != nil {
+			cand := c.ToJSON()
+			peer.SendICE(&cand)
+		}
+	})
+
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		isAudio := remoteTrack.Kind() == webrtc.RTPCodecTypeAudio
-		log.Printf("[SFU] Inbound track received: user=%s, kind=%s, codec=%s\n", userID, remoteTrack.Kind(), remoteTrack.Codec().MimeType)
+		log.Printf("[SFU] Inbound track received: user=%s kind=%s id=%s codec=%s",
+			userID, remoteTrack.Kind(), remoteTrack.ID(), remoteTrack.Codec().MimeType)
+
+		trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, remoteTrack.ID(), remoteTrack.StreamID())
+		if err != nil {
+			log.Printf("[SFU] Failed to create TrackLocalStaticRTP: %v", err)
+			return
+		}
+
+		r.addTrack(remoteTrack.ID(), trackLocal, userID, remoteTrack.Kind())
 
 		go func() {
 			buf := make([]byte, 1500)
+			rtpPkt := &rtp.Packet{}
 			for {
 				n, _, err := remoteTrack.Read(buf)
 				if err != nil {
-					if err == io.EOF {
-						return
-					}
+					r.removeTrack(remoteTrack.ID())
 					return
 				}
-
-				// Forward to other peers in room (Zero-transcoding pure RTP forwarding)
-				r.peersMu.RLock()
-				for otherID, otherPeer := range r.peers {
-					if otherID == userID {
-						continue // Do not echo back to sender
-					}
-					if isAudio && otherPeer.AudioTrack != nil {
-						_, _ = otherPeer.AudioTrack.Write(buf[:n])
-					} else if !isAudio && otherPeer.VideoTrack != nil {
-						_, _ = otherPeer.VideoTrack.Write(buf[:n])
-					}
+				if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
+					continue
 				}
-				r.peersMu.RUnlock()
+				rtpPkt.Extension = false
+				rtpPkt.Extensions = nil
+				if err := trackLocal.WriteRTP(rtpPkt); err != nil {
+					r.removeTrack(remoteTrack.ID())
+					return
+				}
 			}
 		}()
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		log.Printf("[SFU] Peer %s connection state: %s\n", userID, state)
+		log.Printf("[SFU] Peer %s connection state: %s", userID, state)
 		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
 			r.RemovePeer(userID)
 		}
 	})
 
 	r.peers[userID] = peer
+
+	go r.SignalPeerConnections()
+
 	return peer, nil
 }
 
-func (r *Room) RemovePeer(userID uuid.UUID) {
-	r.peersMu.Lock()
-	defer r.peersMu.Unlock()
+func (r *Room) SignalPeerConnections() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
+	for _, peer := range r.peers {
+		if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+			continue
+		}
+
+		existingSenders := make(map[string]bool)
+		for _, sender := range peer.PC.GetSenders() {
+			if sender.Track() == nil {
+				continue
+			}
+			trackID := sender.Track().ID()
+			existingSenders[trackID] = true
+
+			if _, ok := r.trackLocals[trackID]; !ok {
+				_ = peer.PC.RemoveTrack(sender)
+			}
+		}
+
+		needRenegotiate := false
+		for trackID, tInfo := range r.trackLocals {
+			if tInfo.SenderID == peer.ID {
+				continue
+			}
+			if !existingSenders[trackID] {
+				if _, err := peer.PC.AddTrack(tInfo.Track); err == nil {
+					needRenegotiate = true
+				}
+			}
+		}
+
+		if needRenegotiate || peer.PC.LocalDescription() == nil {
+			offer, err := peer.PC.CreateOffer(nil)
+			if err != nil {
+				log.Printf("[SFU] CreateOffer error: %v", err)
+				continue
+			}
+			if err := peer.PC.SetLocalDescription(offer); err != nil {
+				log.Printf("[SFU] SetLocalDescription error: %v", err)
+				continue
+			}
+			if peer.SendOffer != nil {
+				peer.SendOffer(offer)
+			}
+		}
+	}
+}
+
+func (r *Room) DispatchKeyframe(targetUserID uuid.UUID) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if peer, ok := r.peers[targetUserID]; ok {
+		for _, receiver := range peer.PC.GetReceivers() {
+			if receiver.Track() != nil && receiver.Track().Kind() == webrtc.RTPCodecTypeVideo {
+				_ = peer.PC.WriteRTCP([]rtcp.Packet{
+					&rtcp.PictureLossIndication{MediaSSRC: uint32(receiver.Track().SSRC())},
+				})
+			}
+		}
+	}
+}
+
+func (r *Room) addTrack(id string, track *webrtc.TrackLocalStaticRTP, senderID uuid.UUID, kind webrtc.RTPCodecType) {
+	r.mu.Lock()
+	r.trackLocals[id] = &TrackInfo{
+		Track:    track,
+		SenderID: senderID,
+		Kind:     kind,
+	}
+	r.mu.Unlock()
+	go r.SignalPeerConnections()
+}
+
+func (r *Room) removeTrack(id string) {
+	r.mu.Lock()
+	delete(r.trackLocals, id)
+	r.mu.Unlock()
+	go r.SignalPeerConnections()
+}
+
+func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
+	for id, tInfo := range r.trackLocals {
+		if tInfo.SenderID == userID {
+			delete(r.trackLocals, id)
+		}
+	}
+}
+
+func (r *Room) RemovePeer(userID uuid.UUID) {
+	r.mu.Lock()
 	if peer, ok := r.peers[userID]; ok {
 		_ = peer.PC.Close()
 		delete(r.peers, userID)
-		log.Printf("[SFU] Peer %s removed from room %s\n", userID, r.ID)
+		r.removePeerTracksLocked(userID)
 	}
+	r.mu.Unlock()
+	go r.SignalPeerConnections()
+}
+
+func (r *Room) GetPeer(userID uuid.UUID) *Peer {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.peers[userID]
 }

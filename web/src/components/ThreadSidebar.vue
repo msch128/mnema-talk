@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import { X, MessageSquare, ArrowUp, Plus, FileText, Loader2, Image as ImageIcon } from 'lucide-vue-next'
+import { 
+  X, MessageSquare, ArrowUp, Plus, FileText, Loader2, Image as ImageIcon,
+  Pencil, Trash2, Smile, Check 
+} from 'lucide-vue-next'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import UserAvatar from './UserAvatar.vue'
@@ -15,6 +18,64 @@ const fileInput = ref(null)
 const isUploading = ref(false)
 const isSending = ref(false)
 const selectedImage = ref(null)
+
+// Reply Editing & Reactions
+const editingReplyId = ref(null)
+const editReplyText = ref('')
+const isSavingEdit = ref(false)
+const activeReactionPickerMsgId = ref(null)
+const quickEmojis = ['👍', '❤️', '😂', '🔥', '🎉', '🚀']
+
+function startEditReply(reply) {
+  editingReplyId.value = reply.id
+  editReplyText.value = reply.content
+  activeReactionPickerMsgId.value = null
+}
+
+function cancelEditReply() {
+  editingReplyId.value = null
+  editReplyText.value = ''
+}
+
+async function saveEditReply(reply) {
+  if (!editReplyText.value.trim() || isSavingEdit.value) return
+  isSavingEdit.value = true
+  try {
+    const chId = chatStore.activeChannel?.id || reply.channel_id
+    await chatStore.editMessage(chId, reply.id, editReplyText.value.trim())
+    editingReplyId.value = null
+    editReplyText.value = ''
+  } catch (err) {
+    alert(err.message || 'Fehler beim Bearbeiten')
+  } finally {
+    isSavingEdit.value = false
+  }
+}
+
+async function handleDeleteReply(reply) {
+  if (confirm('Möchtest du diese Antwort wirklich löschen?')) {
+    try {
+      const chId = chatStore.activeChannel?.id || reply.channel_id
+      await chatStore.deleteMessage(chId, reply.id)
+    } catch (err) {
+      alert(err.message || 'Fehler beim Löschen')
+    }
+  }
+}
+
+async function handleToggleReaction(msgId, emoji) {
+  try {
+    activeReactionPickerMsgId.value = null
+    await chatStore.toggleReaction(msgId, emoji)
+  } catch (err) {
+    console.warn('Reaction error:', err)
+  }
+}
+
+function hasUserReacted(reaction) {
+  if (!authStore.user?.id || !reaction?.users) return false
+  return reaction.users.includes(authStore.user.id)
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -168,6 +229,23 @@ function formatDate(dateStr) {
             </div>
           </div>
         </div>
+        <!-- Root Message Reactions -->
+        <div v-if="chatStore.activeThread.reactions && chatStore.activeThread.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
+          <button 
+            v-for="r in chatStore.activeThread.reactions" 
+            :key="r.emoji"
+            @click.stop="handleToggleReaction(chatStore.activeThread.id, r.emoji)"
+            :class="[
+              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition cursor-pointer active:scale-95',
+              hasUserReacted(r)
+                ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
+                : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
+            ]"
+          >
+            <span>{{ r.emoji }}</span>
+            <span class="text-[10px] font-mono">{{ r.count }}</span>
+          </button>
+        </div>
       </div>
 
       <!-- Thread Replies Divider -->
@@ -197,8 +275,52 @@ function formatDate(dateStr) {
       <div 
         v-for="reply in chatStore.threadReplies" 
         :key="reply.id"
-        class="flex items-start gap-2.5 hover:bg-mnema-surface/40 p-2 rounded-lg transition-colors group"
+        class="relative flex items-start gap-2.5 hover:bg-mnema-surface/40 p-2 rounded-lg transition-colors group"
       >
+        <!-- Hover Quick Actions Bar -->
+        <div class="absolute right-2 -top-2.5 hidden group-hover:flex items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-0.5 shadow-md z-20">
+          <div class="relative">
+            <button
+              @click.stop="activeReactionPickerMsgId = activeReactionPickerMsgId === reply.id ? null : reply.id"
+              class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400 transition"
+              title="Reagieren"
+            >
+              <Smile class="w-3 h-3" />
+            </button>
+            <div 
+              v-if="activeReactionPickerMsgId === reply.id"
+              class="absolute right-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-xl z-30"
+            >
+              <button
+                v-for="emoji in quickEmojis"
+                :key="emoji"
+                @click.stop="handleToggleReaction(reply.id, emoji)"
+                class="hover:scale-125 transition p-1 text-xs rounded hover:bg-mnema-surface"
+              >
+                {{ emoji }}
+              </button>
+            </div>
+          </div>
+
+          <button
+            v-if="reply.user_id === authStore.user?.id"
+            @click.stop="startEditReply(reply)"
+            class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
+            title="Antwort bearbeiten"
+          >
+            <Pencil class="w-3 h-3" />
+          </button>
+
+          <button
+            v-if="reply.user_id === authStore.user?.id || authStore.isAdmin"
+            @click.stop="handleDeleteReply(reply)"
+            class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
+            title="Antwort löschen"
+          >
+            <Trash2 class="w-3 h-3" />
+          </button>
+        </div>
+
         <UserAvatar 
           :user="reply" 
           size="sm" 
@@ -215,9 +337,50 @@ function formatDate(dateStr) {
               {{ reply.display_name || reply.username }}
             </span>
             <span class="text-[9px] text-mnema-tertiary font-mono">{{ formatTime(reply.created_at) }}</span>
+            <span v-if="reply.is_edited" class="text-[9px] text-mnema-tertiary italic">(bearbeitet)</span>
           </div>
 
-          <MarkdownContent v-if="reply.content" :content="reply.content" class="mt-0.5" />
+          <!-- Inline Reply Editor -->
+          <div v-if="editingReplyId === reply.id" class="mt-1 space-y-1">
+            <textarea
+              v-model="editReplyText"
+              rows="2"
+              @keydown.enter.exact.prevent="saveEditReply(reply)"
+              @keydown.esc.prevent="cancelEditReply"
+              class="w-full text-xs p-1.5 rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-none resize-none"
+            ></textarea>
+            <div class="flex items-center justify-between text-[9px] text-mnema-tertiary">
+              <span>Enter = Speichern, Esc = Abbrechen</span>
+              <div class="flex items-center gap-1">
+                <button @click="cancelEditReply" class="px-1.5 py-0.5 text-mnema-muted hover:text-mnema-text">Abbrechen</button>
+                <button @click="saveEditReply(reply)" :disabled="isSavingEdit" class="px-2 py-0.5 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50">
+                  <Check class="w-3 h-3" />
+                  <span>Speichern</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <MarkdownContent v-else-if="reply.content" :content="reply.content" class="mt-0.5" />
+
+          <!-- Reaction Badges -->
+          <div v-if="reply.reactions && reply.reactions.length" class="flex flex-wrap gap-1 mt-1.5 items-center">
+            <button 
+              v-for="r in reply.reactions" 
+              :key="r.emoji"
+              @click.stop="handleToggleReaction(reply.id, r.emoji)"
+              :class="[
+                'inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[11px] border transition cursor-pointer active:scale-95',
+                hasUserReacted(r)
+                  ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
+                  : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
+              ]"
+              :title="`Reaktion ${r.emoji}`"
+            >
+              <span>{{ r.emoji }}</span>
+              <span class="text-[9px] font-mono">{{ r.count }}</span>
+            </button>
+          </div>
 
           <!-- Reply Attachments -->
           <div v-if="reply.attachments?.length" class="mt-1.5 space-y-1.5">

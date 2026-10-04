@@ -83,6 +83,25 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedUser
   }
 
+  async function updateProfile({ displayName, bio }) {
+    if (!token.value) throw new Error('Nicht authentifiziert')
+    const res = await fetch('/api/users/me/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token.value}`
+      },
+      body: JSON.stringify({ display_name: displayName, bio })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Speichern des Profils')
+    }
+    const updatedUser = await res.json()
+    user.value = updatedUser
+    return updatedUser
+  }
+
   function logout() {
     user.value = null
     token.value = ''
@@ -98,6 +117,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     uploadAvatar,
+    updateProfile,
     logout
   }
 })

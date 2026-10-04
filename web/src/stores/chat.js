@@ -25,6 +25,13 @@ export const useChatStore = defineStore('chat', () => {
   const voiceStore = useVoiceStore()
 
   let pingTimer = null
+  let webrtcOfferHandler = null
+  let webrtcCandidateHandler = null
+
+  function setWebRTCHandlers({ onOffer, onCandidate }) {
+    webrtcOfferHandler = onOffer
+    webrtcCandidateHandler = onCandidate
+  }
 
   async function fetchChannels() {
     try {
@@ -358,6 +365,59 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
 
+      case 'message_update': {
+        const updated = event.payload
+        if (!updated) break
+        const mIdx = messages.value.findIndex(m => m.id === updated.id)
+        if (mIdx !== -1) {
+          messages.value[mIdx] = { ...messages.value[mIdx], ...updated }
+        }
+        const tIdx = threadReplies.value.findIndex(m => m.id === updated.id)
+        if (tIdx !== -1) {
+          threadReplies.value[tIdx] = { ...threadReplies.value[tIdx], ...updated }
+        }
+        if (activeThread.value && activeThread.value.id === updated.id) {
+          activeThread.value = { ...activeThread.value, ...updated }
+        }
+        break
+      }
+
+      case 'message_delete': {
+        const { id } = event.payload || {}
+        if (!id) break
+        messages.value = messages.value.filter(m => m.id !== id)
+        threadReplies.value = threadReplies.value.filter(m => m.id !== id)
+        if (activeThread.value && activeThread.value.id === id) {
+          closeThread()
+        }
+        break
+      }
+
+      case 'message_reaction': {
+        const { message_id, reactions } = event.payload || {}
+        if (!message_id) break
+        const m = messages.value.find(item => item.id === message_id)
+        if (m) m.reactions = reactions || []
+        const t = threadReplies.value.find(item => item.id === message_id)
+        if (t) t.reactions = reactions || []
+        if (activeThread.value && activeThread.value.id === message_id) {
+          activeThread.value.reactions = reactions || []
+        }
+        break
+      }
+
+      case 'webrtc_offer':
+        if (webrtcOfferHandler) {
+          webrtcOfferHandler(event.payload)
+        }
+        break
+
+      case 'webrtc_candidate':
+        if (webrtcCandidateHandler) {
+          webrtcCandidateHandler(event.payload)
+        }
+        break
+
       case 'voice_snapshot':
         voiceStore.setVoiceSnapshot(event.payload)
         break
@@ -489,6 +549,71 @@ export const useChatStore = defineStore('chat', () => {
     pendingMention.value = username
   }
 
+  async function editMessage(channelId, messageId, content) {
+    if (!content.trim()) return null
+    const res = await fetch(`/api/channels/${channelId}/messages/${messageId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({ content: content.trim() })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Bearbeiten der Nachricht')
+    }
+    const updated = await res.json()
+    const mIdx = messages.value.findIndex(m => m.id === messageId)
+    if (mIdx !== -1) messages.value[mIdx] = { ...messages.value[mIdx], ...updated }
+    const tIdx = threadReplies.value.findIndex(m => m.id === messageId)
+    if (tIdx !== -1) threadReplies.value[tIdx] = { ...threadReplies.value[tIdx], ...updated }
+    if (activeThread.value && activeThread.value.id === messageId) {
+      activeThread.value = { ...activeThread.value, ...updated }
+    }
+    return updated
+  }
+
+  async function deleteMessage(channelId, messageId) {
+    const res = await fetch(`/api/channels/${channelId}/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Löschen der Nachricht')
+    }
+    messages.value = messages.value.filter(m => m.id !== messageId)
+    threadReplies.value = threadReplies.value.filter(m => m.id !== messageId)
+    if (activeThread.value && activeThread.value.id === messageId) {
+      closeThread()
+    }
+  }
+
+  async function toggleReaction(messageId, emoji) {
+    const res = await fetch(`/api/messages/${messageId}/reactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authStore.token}`
+      },
+      body: JSON.stringify({ emoji })
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || 'Fehler beim Reagieren')
+    }
+    const data = await res.json()
+    const m = messages.value.find(item => item.id === messageId)
+    if (m) m.reactions = data.reactions || []
+    const t = threadReplies.value.find(item => item.id === messageId)
+    if (t) t.reactions = data.reactions || []
+    if (activeThread.value && activeThread.value.id === messageId) {
+      activeThread.value.reactions = data.reactions || []
+    }
+    return data.reactions
+  }
+
   function sendWSEvent(type, payload) {
     if (ws.value && isConnected.value) {
       ws.value.send(JSON.stringify({ type, payload }))
@@ -516,6 +641,9 @@ export const useChatStore = defineStore('chat', () => {
     selectChannel,
     fetchMessages,
     sendMessage,
+    editMessage,
+    deleteMessage,
+    toggleReaction,
     uploadMedia,
     createChannel,
     deleteChannel,
@@ -529,6 +657,7 @@ export const useChatStore = defineStore('chat', () => {
     sendThreadReply,
     uploadThreadMedia,
     initWebSocket,
-    sendWSEvent
+    sendWSEvent,
+    setWebRTCHandlers
   }
 })

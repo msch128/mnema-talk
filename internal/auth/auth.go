@@ -30,6 +30,7 @@ type User struct {
 	ID          uuid.UUID `json:"id"`
 	Username    string    `json:"username"`
 	DisplayName string    `json:"display_name"`
+	Bio         string    `json:"bio"`
 	Role        string    `json:"role"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -86,9 +87,9 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, e
 	var passwordHash string
 	var avatarS3Key *string
 
-	query := `SELECT id, username, display_name, password_hash, role, avatar_s3_key, created_at FROM users WHERE LOWER(username) = LOWER($1)`
+	query := `SELECT id, username, display_name, COALESCE(bio, ''), password_hash, role, avatar_s3_key, created_at FROM users WHERE LOWER(username) = LOWER($1)`
 	err := p.QueryRow(ctx, query, username).Scan(
-		&user.ID, &user.Username, &user.DisplayName, &passwordHash, &user.Role, &avatarS3Key, &user.CreatedAt,
+		&user.ID, &user.Username, &user.DisplayName, &user.Bio, &passwordHash, &user.Role, &avatarS3Key, &user.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

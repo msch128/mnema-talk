@@ -54,7 +54,18 @@ func (p *Pool) Migrate(ctx context.Context, migrationFilePath string) error {
 	// Apply incremental schema changes if table already existed
 	incrementalMigrations := `
 		ALTER TABLE messages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES messages(id) ON DELETE CASCADE;
+		ALTER TABLE messages ADD COLUMN IF NOT EXISTS is_edited BOOLEAN NOT NULL DEFAULT FALSE;
+		ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT NOT NULL DEFAULT '';
 		CREATE INDEX IF NOT EXISTS idx_messages_parent_id ON messages(parent_id);
+		CREATE TABLE IF NOT EXISTS message_reactions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			emoji VARCHAR(32) NOT NULL,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			UNIQUE(message_id, user_id, emoji)
+		);
+		CREATE INDEX IF NOT EXISTS idx_reactions_message ON message_reactions(message_id);
 	`
 	if _, err := p.Exec(ctx, incrementalMigrations); err != nil {
 		log.Printf("[DB] Note on incremental migration: %v\n", err)
