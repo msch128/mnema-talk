@@ -153,12 +153,16 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
 		c.setPeer(peer)
-		// A late joiner learns who shares a screen or runs a camera.
+		// A late joiner learns who shares a screen or runs a camera, and who
+		// watches each share.
 		if room := h.SFU.Room(ch.ID); room != nil {
 			for uid, st := range room.MediaStates() {
 				if uid != c.User.ID {
 					c.SendEvent("webrtc_media_state", mediaStatePayload(ch.ID, uid, st))
 				}
+			}
+			for sharer, viewers := range room.ScreenViewers() {
+				c.SendEvent("screen_viewers", screenViewersPayload(ch.ID, sharer, viewers))
 			}
 		}
 	}
