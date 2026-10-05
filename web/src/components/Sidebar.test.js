@@ -308,6 +308,28 @@ describe('Sidebar drag and drop (admin)', () => {
     expect(puts()[0].json.channels.find(c => c.id === 'random').category_id).toBe('empty')
   })
 
+  it('holding a channel in the empty tail does not open a collapsed last category; its header does', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    await mountSidebar({ collapsed: ['empty'] })
+    const expanded = () => wrapper.find('[data-category-toggle="empty"]').attributes('aria-expanded')
+    await dragTo(rowOf('random'), yIn(tailOf(), 0.5))
+    // Dropping there would append to it ...
+    expect(headerOf('empty').classes()).toContain('ring-mnema-accent')
+    vi.advanceTimersByTime(1000)
+    await nextTick()
+    // ... but it stays closed while the pointer is not on its header.
+    expect(expanded()).toBe('false')
+    layoutDom()
+    window.dispatchEvent(pointerEvent('pointermove', { y: yIn(headerOf('empty'), 0.6) }))
+    await nextTick()
+    vi.advanceTimersByTime(600)
+    await nextTick()
+    expect(expanded()).toBe('true')
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await nextTick()
+    expect(expanded()).toBe('false')
+  })
+
   it('dropping in the empty tail onto a collapsed last category appends there and keeps it collapsed', async () => {
     await mountSidebar({ collapsed: ['empty'] })
     await dragTo(rowOf('random'), yIn(tailOf(), 0.5))

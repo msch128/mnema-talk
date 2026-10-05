@@ -187,7 +187,11 @@ export function useSidebarReorder({ layout, commit, collapsed, expandCategory, e
     // Outside the channel list: dropping there cancels.
     if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null
     if (item.kind === 'category') return resolveCategoryDrop(layout.value, item.id, categoryHit(y))
-    return resolveChannelDrop(layout.value, item.id, channelHit(y), { isCollapsed })
+    const hit = channelHit(y)
+    const target = resolveChannelDrop(layout.value, item.id, hit, { isCollapsed })
+    // Only the header itself opens a collapsed category for a peek; the free
+    // space after the last one appends to it without opening it.
+    return target && { ...target, overHeader: hit.zone === 'header' }
   }
 
   function handleDrop(item, target) {
@@ -232,9 +236,9 @@ export function useSidebarReorder({ layout, commit, collapsed, expandCategory, e
     return target?.indicator?.key === key ? target.indicator.edge : ''
   }
 
-  // Holding a channel over a collapsed category opens it after a moment.
+  // Holding a channel over a collapsed category's header opens it after a moment.
   watch(() => drag.state.target, target => {
-    const id = target?.indicator?.edge === 'inside' ? target.categoryId : null
+    const id = target?.indicator?.edge === 'inside' && target.overHeader ? target.categoryId : null
     if (id === peekFor) return
     clearTimeout(peekTimer)
     peekFor = id
