@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -64,6 +65,7 @@ func NewRouter(d Deps) (*Router, error) {
 	}
 
 	authH := auth.NewHandler(sessions, pub)
+	authH.Live = hub
 	chatH := &chat.Handler{DB: d.DB, Events: pub}
 	if d.Store != nil {
 		chatH.Objects = d.Store
@@ -79,7 +81,20 @@ func NewRouter(d Deps) (*Router, error) {
 
 	var previewH *linkpreview.Handler
 	if cfg.LinkPreviews {
-		previewH = &linkpreview.Handler{Fetcher: linkpreview.New()}
+		fetcher := linkpreview.New()
+		// Our own public address leads back into the LAN through the
+		// router (hairpin NAT); never let a preview fetch go there.
+		if u, err := url.Parse(cfg.PublicURL); err == nil {
+			deny := func() { fetcher.Deny(context.Background(), u.Hostname(), cfg.WebRTCNAT1to1IP) }
+			deny()
+			// A home connection's public IP changes; keep the list current.
+			go func() {
+				for range time.Tick(10 * time.Minute) {
+					deny()
+				}
+			}()
+		}
+		previewH = &linkpreview.Handler{Fetcher: fetcher}
 	}
 
 	perUser := httpx.NewRateLimiter(600, time.Minute)
