@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -160,26 +159,19 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors := 0
-	for name, dst := range map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around} {
-		raw := r.URL.Query().Get(name)
-		if raw == "" {
-			continue
-		}
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput(name + " must be a message id")
-		}
-		*dst = &id
-		anchors++
-		// The anchor must be a root message of this channel.
-		ref, err := loadMessageRef(r.Context(), h.DB, id)
-		if err != nil || ref.ChannelID != chID || ref.ParentID != nil {
-			return errMessageNotFound
-		}
+	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around})
+	if err != nil {
+		return err
 	}
 	if anchors > 1 {
 		return httpx.ErrInvalidInput("use only one of before, after or around")
+	}
+	// The anchor must be a root message of this channel.
+	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil || ref.ChannelID != chID || ref.ParentID != nil {
+			return errMessageNotFound
+		}
 	}
 	msgs, err := GetChannelMessages(r.Context(), h.DB, chID, q)
 	if err != nil {
@@ -215,12 +207,8 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ch, err := LoadChannel(r.Context(), h.DB, chID)
-	if err != nil {
+	if _, err := TextChannel(r.Context(), h.DB, chID); err != nil {
 		return err
-	}
-	if ch.Type == ChannelTypeVoice {
-		return httpx.ErrInvalidInput("voice channels have no text chat")
 	}
 	var req CreateMessageRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
@@ -230,32 +218,16 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := ValidateParent(r.Context(), h.DB, chID, req.ParentID); err != nil {
+	if err := ValidateTarget(r.Context(), h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
-	if err := ValidateReplyTarget(r.Context(), h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
-		return err
-	}
-	var id uuid.UUID
-	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
-		var err error
-		if id, err = CreateMessage(r.Context(), tx, NewMessage{
-			ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
-		}); err != nil {
-			return err
-		}
-		return RecordMentions(r.Context(), tx, h.Online, id, user.ID, content)
-	})
+	id, err := InsertMessage(r.Context(), h.DB, h.Online, NewMessage{
+		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
+	}, nil)
 	if err != nil {
 		return err
 	}
-	msg, err := GetMessage(r.Context(), h.DB, id)
-	if err != nil {
-		return err
-	}
-	h.Events.Broadcast("message_create", msg)
-	httpx.WriteJSON(w, http.StatusCreated, msg)
-	return nil
+	return PublishMessage(w, r, h.DB, h.Events, id)
 }
 
 // messageInChannel loads messageID and checks it belongs to the channel named in
@@ -282,7 +254,7 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, err
 // editMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Edit own message
-// @Description Only the author may edit. Broadcasts message_update.
+// @Description Only the author may edit. The content may be empty when the message has an attachment. Broadcasts message_update.
 // @ID editMessage
 // @Tags Messages
 // @Accept json
@@ -309,15 +281,13 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	content, err := ValidateContent(req.Content, false)
+	// Empty is allowed for a message with an attachment; EditMessage checks.
+	content, err := ValidateContent(req.Content, true)
 	if err != nil {
 		return err
 	}
 	userID := auth.UserFrom(r.Context()).ID
-	if err := EditMessage(r.Context(), h.DB, msgID, userID, content); err != nil {
-		return err
-	}
-	if err := RecordMentions(r.Context(), h.DB, h.Online, msgID, userID, content); err != nil {
+	if err := EditMessage(r.Context(), h.DB, h.Online, msgID, userID, content); err != nil {
 		return err
 	}
 	msg, err := GetMessage(r.Context(), h.DB, msgID)
@@ -366,7 +336,7 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 // toggleReaction handles POST /api/messages/{messageID}/reactions.
 //
 // @Summary Toggle a reaction
-// @Description Adds the caller's reaction, or removes it if already present. Broadcasts message_reaction.
+// @Description Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.
 // @ID toggleReaction
 // @Tags Messages
 // @Accept json
@@ -379,6 +349,7 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: too many reactions on this message."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
@@ -387,9 +358,6 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
-		return err
-	}
-	if _, err := loadMessageRef(r.Context(), h.DB, msgID); err != nil {
 		return err
 	}
 	var req ReactionRequest
@@ -413,7 +381,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 // getThread handles GET /api/messages/{messageID}/thread.
 //
 // @Summary Get a thread
-// @Description The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs).
+// @Description The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs). The message must be a root message; a reply has no thread (404).
 // @ID getThread
 // @Tags Messages
 // @Produce json
@@ -435,34 +403,28 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := loadMessageRef(r.Context(), h.DB, msgID); err != nil {
-		return err
-	}
 	root, err := GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
+	// Only a root message has a thread; a reply is not one.
+	if root.ParentID != nil {
+		return errMessageNotFound
+	}
 
 	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors := 0
-	for name, dst := range map[string]**uuid.UUID{"before": &q.Before, "after": &q.After} {
-		raw := r.URL.Query().Get(name)
-		if raw == "" {
-			continue
-		}
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput(name + " must be a message id")
-		}
-		*dst = &id
-		anchors++
-		ref, err := loadMessageRef(r.Context(), h.DB, id)
-		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
-			return errMessageNotFound
-		}
+	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
+	if err != nil {
+		return err
 	}
 	if anchors > 1 {
 		return httpx.ErrInvalidInput("use only one of before or after")
+	}
+	if anchor := firstID(q.Before, q.After); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
+			return errMessageNotFound
+		}
 	}
 
 	replies, err := GetThreadReplies(r.Context(), h.DB, msgID, q)
@@ -797,16 +759,8 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 		Has:   v.Get("has"),
 		Limit: httpx.QueryLimit(r, "limit", 25, 50),
 	}
-	for name, dst := range map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before} {
-		raw := v.Get(name)
-		if raw == "" {
-			continue
-		}
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput(name + " must be an id")
-		}
-		*dst = &id
+	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before}); err != nil {
+		return err
 	}
 	msgs, more, err := Search(r.Context(), h.DB, q)
 	if err != nil {
