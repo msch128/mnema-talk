@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { playSound } from './soundEffects'
+import { playSoundEffect } from './soundEffects'
 import { useVoiceStore } from '../stores/voice'
 
 class MockAudioNode {
@@ -56,7 +56,7 @@ describe('soundEffects', () => {
   it('plays all supported sound effect names without errors', () => {
     const sounds = ['join', 'leave', 'mute', 'unmute', 'deafen', 'undeafen', 'user_join', 'user_leave', 'ptt_start', 'ptt_stop']
     for (const name of sounds) {
-      expect(() => playSound(name)).not.toThrow()
+      expect(() => playSoundEffect(name)).not.toThrow()
     }
   })
 
@@ -66,10 +66,10 @@ describe('soundEffects', () => {
     voice.soundEvents.mute = false
     const spy = vi.spyOn(MockAudioContext.prototype, 'createGain')
 
-    playSound('mute')
+    playSoundEffect('mute')
     expect(spy).not.toHaveBeenCalled()
 
-    playSound('unmute')
+    playSoundEffect('unmute')
     expect(spy).toHaveBeenCalled()
   })
 
@@ -78,7 +78,7 @@ describe('soundEffects', () => {
     voice.soundEffectsEnabled = false
     const spy = vi.spyOn(MockAudioContext.prototype, 'createGain')
 
-    playSound('join', null, true)
+    playSoundEffect('join', null, true)
     expect(spy).toHaveBeenCalled()
   })
 
@@ -89,7 +89,7 @@ describe('soundEffects', () => {
     const spy = vi.spyOn(ctx, 'createGain')
     vi.stubGlobal('AudioContext', function() { return ctx })
 
-    playSound('join')
+    playSoundEffect('join')
     expect(spy).not.toHaveBeenCalled()
   })
 
@@ -102,24 +102,24 @@ describe('soundEffects', () => {
     const spy = vi.spyOn(ctx, 'createGain')
     vi.stubGlobal('AudioContext', function() { return ctx })
 
-    playSound('join')
+    playSoundEffect('join')
     expect(spy).not.toHaveBeenCalled()
   })
 
   it('gracefully handles missing window/AudioContext', () => {
     vi.stubGlobal('AudioContext', undefined)
     vi.stubGlobal('webkitAudioContext', undefined)
-    expect(() => playSound('join')).not.toThrow()
+    expect(() => playSoundEffect('join')).not.toThrow()
   })
 
   it('plays on the output device chosen for voices', () => {
     const voice = useVoiceStore()
     voice.soundEffectsEnabled = true
     voice.selectedOutputDeviceId = 'headset'
-    playSound('join')
+    playSoundEffect('join')
     expect(MockAudioContext.sinkCalls.at(-1)).toBe('headset')
     const calls = MockAudioContext.sinkCalls.length
-    playSound('join')
+    playSoundEffect('join')
     // Already there: not switched again.
     expect(MockAudioContext.sinkCalls.length).toBe(calls)
   })

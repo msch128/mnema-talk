@@ -94,10 +94,6 @@ export function t(key, params) {
   return resolve(current, key, params) ?? resolve(DEFAULT_LOCALE, key, params) ?? key
 }
 
-export function useI18n() {
-  return { t, locale, setLocale }
-}
-
 /** Vue plugin: gives templates a global $t and $locale. */
 export const i18nPlugin = {
   install(app) {

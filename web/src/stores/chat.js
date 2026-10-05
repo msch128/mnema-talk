@@ -1026,8 +1026,6 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  const setChannelNotification = setNotificationLevel
-
   /** 'all' | 'mentions' | 'mute' for a channel (default 'all'). */
   function notificationLevel(channelId) {
     return readStates.value[channelId]?.notify_level || 'all'
@@ -1271,7 +1269,6 @@ export const useChatStore = defineStore('chat', () => {
     markChannelRead,
     markChannelUnread,
     setNotificationLevel,
-    setChannelNotification,
     notificationLevel,
     notificationPermission,
     goToMessage,
