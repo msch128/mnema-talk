@@ -5,9 +5,13 @@ import { ref, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
+import MuteMarks from './MuteMarks.vue'
 
 const props = defineProps({
   user: { type: Object, required: true },
+  // They muted their microphone / deafened themselves (shown to everyone).
+  muted: { type: Boolean, default: false },
+  deafened: { type: Boolean, default: false },
   // Camera stream of this participant, null while the camera is off.
   stream: { type: Object, default: null },
   isSelf: { type: Boolean, default: false },
@@ -24,7 +28,7 @@ const props = defineProps({
   isWatching: { type: Boolean, default: false },
   isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera', 'watch-stream', 'stop-watching'])
+const emit = defineEmits(['open-profile', 'toggle-camera', 'watch-stream', 'stop-watching', 'menu'])
 
 function handleTileClick() {
   if (props.isScreensharing && !props.isSelf) {
@@ -49,6 +53,10 @@ watch(() => props.stream, (stream) => {
     data-participant-tile
     :aria-label="$t('profile.open', { name: user.display_name || user.username })"
     @click="handleTileClick"
+    @contextmenu.prevent="emit('menu', $event)"
+    @keydown.f10.shift.self.prevent="emit('menu', $event)"
+    @keydown.context-menu.self.prevent="emit('menu', $event)"
+    aria-haspopup="menu"
     @keydown.enter.self.prevent="handleTileClick"
     @keydown.space.self.prevent="handleTileClick"
     :class="[
@@ -116,6 +124,12 @@ watch(() => props.stream, (stream) => {
           :is-speaking="speaking"
           class="hover:opacity-90 transition"
         />
+        <span
+          v-if="muted || deafened"
+          class="absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-mnema-surface p-1 shadow"
+        >
+          <MuteMarks :muted="muted" :deafened="deafened" :size="compact ? 12 : 14" />
+        </span>
       </div>
     </template>
 

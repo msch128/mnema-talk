@@ -10,6 +10,7 @@ import EditNameDialog from './EditNameDialog.vue'
 import ContextMenu from './ContextMenu.vue'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
+import MuteMarks from './MuteMarks.vue'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
@@ -494,22 +495,29 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 @keydown.f10.shift.self.prevent="openMemberMenu($event, user)"
                 @keydown.context-menu.self.prevent="openMemberMenu($event, user)"
               >
-                <UserAvatar :user="user" size="xs" :is-speaking="!!voiceStore.speakingUsers[user.id]" />
+                <UserAvatar :user="user" size="xs" :is-speaking="voiceStore.isSpeaking(user.id)" />
                 <span class="flex min-w-0 flex-col leading-4">
                   <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
                   <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
                 </span>
+                <span class="ml-auto flex flex-shrink-0 items-center gap-1.5">
+                <MuteMarks
+                  :muted="voiceStore.muteStateOf(user.id).muted"
+                  :deafened="voiceStore.muteStateOf(user.id).deafened"
+                  :size="14"
+                />
                 <span
                   v-if="voiceStore.mediaState[user.id]?.screen"
-                  class="ml-auto px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm flex-shrink-0"
+                  class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm flex-shrink-0"
                   data-testid="sidebar-live-badge"
                   v-tooltip="$t('talk.liveTooltip')"
                 >
                   <Monitor class="w-3 h-3" />
                   {{ $t('talk.live') }}
                 </span>
-                <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 ml-auto flex-shrink-0">
+                <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 flex-shrink-0">
                   {{ $t('role.admin') }}
+                </span>
                 </span>
               </div>
             </div>
