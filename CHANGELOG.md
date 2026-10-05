@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.12](https://github.com/msch128/mnema-talk/compare/v0.1.11...v0.1.12) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** late joiners are heard; stream diagnostics ([17c2665](https://github.com/msch128/mnema-talk/commit/17c2665d27abe86457d6d14ac92e6f1521404589))
+
 ## [0.1.11](https://github.com/msch128/mnema-talk/compare/v0.1.10...v0.1.11) (2026-10-05)
 
 
