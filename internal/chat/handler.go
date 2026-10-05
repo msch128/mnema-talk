@@ -48,6 +48,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
 	r.Get("/read-state", httpx.Handle(h.readState))
+	r.Get("/search", httpx.Handle(h.search))
 	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
 	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
@@ -435,5 +436,31 @@ func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.publishReadState(user.ID, chID, map[string]any{"notify_level": req.Level})
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
+	v := r.URL.Query()
+	q := SearchQuery{
+		Text:  v.Get("q"),
+		Has:   v.Get("has"),
+		Limit: httpx.QueryLimit(r, "limit", 25, 50),
+	}
+	for name, dst := range map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before} {
+		raw := v.Get(name)
+		if raw == "" {
+			continue
+		}
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return httpx.ErrInvalidInput(name + " must be an id")
+		}
+		*dst = &id
+	}
+	msgs, more, err := Search(r.Context(), h.DB, q)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"messages": msgs, "has_more": more})
 	return nil
 }
