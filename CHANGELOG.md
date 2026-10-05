@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.13](https://github.com/msch128/mnema-talk/compare/v0.1.12...v0.1.13) (2026-10-05)
+
+
+### Features
+
+* **voice:** screen share prefers H.264 and starts at a higher bitrate ([#30](https://github.com/msch128/mnema-talk/issues/30)) ([310fdf4](https://github.com/msch128/mnema-talk/commit/310fdf4e5cf9429733d9c12d38241d879740bb65))
+
 ## [0.1.12](https://github.com/msch128/mnema-talk/compare/v0.1.11...v0.1.12) (2026-10-05)
 
 
