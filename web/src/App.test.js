@@ -79,3 +79,46 @@ describe('App routing', () => {
     expect(chat.activeThread).toBeNull()
   })
 })
+
+describe('App start-up session check', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('keeps retrying instead of showing the login form while the server cannot answer', async () => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    const chat = useChatStore()
+    // Rate limited / unreachable twice (null), then the session is known.
+    const answers = [null, null, true]
+    auth.checkAuth = vi.fn(async () => {
+      const a = answers.shift()
+      if (a) auth.user = { id: 'me', username: 'max', role: 'user' }
+      return a
+    })
+    chat.fetchChannels = vi.fn(async () => {})
+    chat.fetchMembers = vi.fn(async () => {})
+    chat.fetchReadState = vi.fn(async () => {})
+    chat.initWebSocket = vi.fn()
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'LoginModal' }).exists()).toBe(false)
+    expect(wrapper.text()).toMatch(/trying again|neuer Versuch/)
+
+    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(2000)
+    await flushPromises()
+
+    expect(auth.checkAuth).toHaveBeenCalledTimes(3)
+    expect(wrapper.findComponent({ name: 'LoginModal' }).exists()).toBe(false)
+    expect(chat.initWebSocket).toHaveBeenCalled()
+  })
+
+  it('shows the login form when the session is really gone', async () => {
+    const auth = useAuthStore()
+    auth.checkAuth = vi.fn(async () => false)
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+    expect(auth.checkAuth).toHaveBeenCalledTimes(1)
+    expect(wrapper.findComponent({ name: 'LoginModal' }).exists()).toBe(true)
+  })
+})

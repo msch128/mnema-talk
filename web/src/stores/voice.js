@@ -12,6 +12,8 @@ const USER_MUTED_KEY = 'mnema_user_muted'
 // Cameras of others are on by default; what I opted out of is remembered.
 const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
 const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
+// "Hide participants without video" in the Talk view (per browser).
+const HIDE_NO_VIDEO_KEY = 'mnema_hide_no_video'
 export const USER_VOLUME_MIN = 0
 export const USER_VOLUME_MAX = 200
 export const USER_VOLUME_DEFAULT = 100
@@ -179,16 +181,24 @@ export const useVoiceStore = defineStore('voice', () => {
   // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
   const localScreenStream = shallowRef(null)
   const localAudioStream = shallowRef(null)
-  // The remote screen share on the stage and its publisher (user ID).
+  // The remote screen share in focus and its publisher (user ID). It is on the
+  // stage unless my own share is (see `stage`).
   const remoteScreenStream = shallowRef(null)
   const remoteScreenUserId = ref(null)
   // userId -> MediaStream of every screen share I watch (replaced, never mutated).
   const remoteScreenStreams = shallowRef({})
+  // My own share was chosen for the stage (see `stage`).
+  const ownScreenFocused = ref(false)
+  // userId of the camera put on the stage (mine too), null for none.
+  const focusedCamera = ref(null)
   // userId -> true for screen shares I opted into. Not persisted: it lasts
   // for one share and one call.
   const watchedScreens = ref({})
   // userId -> { screen, camera }: who publishes what, known without receiving it.
   const mediaState = ref({})
+  // sharer userId -> user IDs watching their screen share (the server's
+  // screen_viewers event; only for the room I am in).
+  const screenViewers = ref({})
   const localCameraStream = shallowRef(null)
   // userId -> MediaStream of that participant's camera (replaced, never mutated).
   const userVideoStreams = shallowRef({})
@@ -294,6 +304,18 @@ export const useVoiceStore = defineStore('voice', () => {
     emitSubscription({ kind: 'camera', all: true, on: !off })
   }
 
+  // Only tiles with a camera or a screen share in the Talk view.
+  const hideNoVideo = ref(readJson(HIDE_NO_VIDEO_KEY).on === true)
+
+  function setHideNoVideo(on) {
+    hideNoVideo.value = !!on
+    writeJson(HIDE_NO_VIDEO_KEY, { on: !!on })
+  }
+
+  function toggleHideNoVideo() {
+    setHideNoVideo(!hideNoVideo.value)
+  }
+
   // Sends every stored choice; right after joining and after a reconnect.
   function resendSubscriptions() {
     if (allCamerasOff.value) emitSubscription({ kind: 'camera', all: true, on: false })
@@ -319,6 +341,8 @@ export const useVoiceStore = defineStore('voice', () => {
   // Opt into someone's screen share; it goes on the stage.
   function watchScreen(userId) {
     if (!userId) return
+    ownScreenFocused.value = false
+    focusedCamera.value = null
     watchedScreens.value = { ...watchedScreens.value, [userId]: true }
     syncScreenFocus(userId)
     emitSubscription({ kind: 'screen', user_id: userId, on: true })
@@ -338,8 +362,71 @@ export const useVoiceStore = defineStore('voice', () => {
 
   // Which of the screen shares I watch is on the stage.
   function focusScreen(userId) {
-    if (watchedScreens.value[userId]) syncScreenFocus(userId)
+    if (!watchedScreens.value[userId]) return
+    ownScreenFocused.value = false
+    focusedCamera.value = null
+    syncScreenFocus(userId)
   }
+
+  // --- The stage: one screen share (mine or one I watch) or one camera ---
+  // Starting to share puts my own share on the stage unless I already watch
+  // someone; then theirs stays and mine is a card.
+  watch(localScreenStream, (stream, prev) => {
+    if (!stream) ownScreenFocused.value = false
+    else if (!prev) ownScreenFocused.value = !remoteScreenUserId.value
+  }, { flush: 'sync' })
+
+  function focusOwnScreen() {
+    if (!localScreenStream.value) return
+    ownScreenFocused.value = true
+    focusedCamera.value = null
+  }
+
+  // A camera on the stage: mine, or one I receive and have not hidden.
+  function cameraStreamOf(userId) {
+    if (!userId) return null
+    if (userId === myUserId()) return localCameraStream.value || null
+    return isCameraHidden(userId) ? null : userVideoStreams.value[userId] || null
+  }
+
+  function canFocusCamera(userId) {
+    return !!cameraStreamOf(userId)
+  }
+
+  function focusCamera(userId) {
+    if (canFocusCamera(userId)) focusedCamera.value = userId
+  }
+
+  // Back to the screen share it replaced, or to everyone (the grid).
+  function unfocusCamera() {
+    focusedCamera.value = null
+  }
+
+  function toggleCameraFocus(userId) {
+    if (focusedCamera.value === userId) unfocusCamera()
+    else focusCamera(userId)
+  }
+
+  // The camera on the stage was turned off, hidden or left: it leaves the stage.
+  watch(() => !!focusedCamera.value && !canFocusCamera(focusedCamera.value), gone => {
+    if (gone) focusedCamera.value = null
+  }, { flush: 'sync' })
+
+  // What the stage shows, null for nothing (the grid):
+  //   { kind: 'camera', own, userId, stream } a camera I chose, else
+  //   { kind: 'screen', own, userId, stream } a screen share.
+  // A chosen share that is not there (yet) falls back to the other one.
+  const stage = computed(() => {
+    const cameraId = focusedCamera.value
+    const camera = cameraStreamOf(cameraId)
+    if (camera) return { kind: 'camera', own: cameraId === myUserId(), userId: cameraId, stream: camera }
+    const own = localScreenStream.value
+    const remoteId = remoteScreenUserId.value
+    const remote = remoteId ? remoteScreenStream.value : null
+    if (own && (ownScreenFocused.value || !remote)) return { kind: 'screen', own: true, userId: myUserId(), stream: own }
+    if (remote) return { kind: 'screen', own: false, userId: remoteId, stream: remote }
+    return null
+  })
 
   function setRemoteScreen(userId, stream) {
     // A track that arrives after I stopped watching is not shown.
@@ -364,6 +451,11 @@ export const useVoiceStore = defineStore('voice', () => {
     if (screen || camera) next[user_id] = { channel_id, screen: !!screen, camera: !!camera }
     else delete next[user_id]
     mediaState.value = next
+    if (!screen && screenViewers.value[user_id]) {
+      const v = { ...screenViewers.value }
+      delete v[user_id]
+      screenViewers.value = v
+    }
     // The share ended: the opt-in ended with it.
     if (!screen && watchedScreens.value[user_id]) {
       const w = { ...watchedScreens.value }
@@ -372,6 +464,24 @@ export const useVoiceStore = defineStore('voice', () => {
       removeRemoteScreen(user_id)
       syncScreenFocus(null)
     }
+  }
+
+  /** screen_viewers: { channel_id, user_id (the sharer), viewers: [user IDs] }. */
+  function handleScreenViewers(event) {
+    const { channel_id, user_id, viewers } = event || {}
+    if (!user_id) return
+    // Late events of a room I left (or before I joined one) are not mine.
+    if (!currentChannelId.value || (channel_id && channel_id !== currentChannelId.value)) return
+    const ids = Array.isArray(viewers) ? [...new Set(viewers.filter(id => id && id !== user_id))] : []
+    const next = { ...screenViewers.value }
+    if (ids.length) next[user_id] = ids
+    else delete next[user_id]
+    screenViewers.value = next
+  }
+
+  /** Who watches userId's screen share (my own too): user IDs, [] for nobody. */
+  function viewersOf(userId) {
+    return screenViewers.value[userId] || []
   }
 
   // The media connection restarted (reconnect): streams are gone and the server
@@ -384,6 +494,8 @@ export const useVoiceStore = defineStore('voice', () => {
     watchedScreens.value = keep
     remoteScreenStreams.value = {}
     mediaState.value = {}
+    // The server sends who watches what again after the join.
+    screenViewers.value = {}
     userVideoStreams.value = {}
     syncScreenFocus(null)
   }
@@ -532,6 +644,8 @@ export const useVoiceStore = defineStore('voice', () => {
     const prev = currentChannelId.value
     currentChannelId.value = channelId
     isConnected.value = !!channelId
+    // Viewers belong to one room.
+    if (prev !== channelId) screenViewers.value = {}
     if (channelId) {
       if (prev !== channelId) {
         playSoundEffect('join')
@@ -564,7 +678,10 @@ export const useVoiceStore = defineStore('voice', () => {
     remoteScreenUserId.value = null
     remoteScreenStreams.value = {}
     watchedScreens.value = {}
+    ownScreenFocused.value = false
+    focusedCamera.value = null
     mediaState.value = {}
+    screenViewers.value = {}
     userVideoStreams.value = {}
     subscriptionSink = null
     activeView.value = 'chat'
@@ -593,13 +710,28 @@ export const useVoiceStore = defineStore('voice', () => {
     setCameraHidden,
     toggleCameraHidden,
     setAllCamerasOff,
+    hideNoVideo,
+    setHideNoVideo,
+    toggleHideNoVideo,
     resendSubscriptions,
     watchScreen,
     unwatchScreen,
     focusScreen,
+    focusOwnScreen,
+    ownScreenFocused,
+    focusedCamera,
+    cameraStreamOf,
+    canFocusCamera,
+    focusCamera,
+    unfocusCamera,
+    toggleCameraFocus,
+    stage,
     setRemoteScreen,
     removeRemoteScreen,
     handleMediaState,
+    screenViewers,
+    handleScreenViewers,
+    viewersOf,
     resetRemoteMedia,
     userVideoStreams,
     setUserVideoStream,

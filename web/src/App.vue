@@ -22,6 +22,7 @@ import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 
@@ -252,8 +253,26 @@ watch(() => chatStore.isConnected, connected => {
   resumeVoiceSession().catch(() => {})
 })
 
+// Session check at start-up. checkAuth() answers null when the server can't
+// tell (rate limited, down, no network): that is not "signed out", so keep
+// the loading screen and try again instead of showing the login form.
+const authRetrying = ref(false)
+const AUTH_RETRY_MAX_MS = 15000
+
+async function checkAuthUntilKnown(delay = 1000) {
+  let result = await authStore.checkAuth()
+  while (result === null) {
+    authRetrying.value = true
+    await new Promise(resolve => setTimeout(resolve, delay))
+    delay = Math.min(delay * 2, AUTH_RETRY_MAX_MS)
+    result = await authStore.checkAuth()
+  }
+  authRetrying.value = false
+  return result
+}
+
 onMounted(async () => {
-  const isAuthed = await authStore.checkAuth()
+  const isAuthed = await checkAuthUntilKnown()
   authChecked.value = true
   if (isAuthed) {
     await onAuthSuccess()
@@ -275,7 +294,7 @@ onMounted(async () => {
       <div class="w-10 h-10 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-base animate-pulse">
         M
       </div>
-      <span class="text-sm text-mnema-tertiary">{{ $t('app.checking') }}</span>
+      <span class="text-sm text-mnema-tertiary">{{ $t(authRetrying ? 'app.retrying' : 'app.checking') }}</span>
     </div>
 
     <!-- Unauthenticated: login / invite registration -->
@@ -351,6 +370,9 @@ onMounted(async () => {
 
       <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
+
+      <!-- The video of the Picture-in-Picture window (outlives the Talk view) -->
+      <PipHost />
 
       <!-- Browser blocked call audio after a reload: one click unblocks it -->
       <button

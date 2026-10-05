@@ -2,8 +2,8 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff,
-  MessageSquare, Maximize2, Sparkles, Send,
-  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X
+  MessageSquare, Maximize2, Minimize2, Sparkles, Send,
+  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX, PictureInPicture2
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -13,6 +13,7 @@ import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import TalkParticipants from './TalkParticipants.vue'
+import ScreenViewers from './ScreenViewers.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
@@ -21,6 +22,9 @@ import MentionSuggestions from './MentionSuggestions.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useTalkStage } from '../composables/useTalkStage'
+import { useVideoGrid } from '../composables/useVideoGrid'
+import { usePictureInPicture } from '../composables/usePictureInPicture'
 import { useMessageActions, formatTime } from '../composables/useMessageActions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
@@ -133,49 +137,49 @@ function cameraStreamOf(user) {
   return voiceStore.userVideoStreams[user.id] || null
 }
 
-// Someone else's screen share is only received after I opt in. Until then
-// (and for shares I watch but that are not on the stage) a card is shown.
-const screenCards = computed(() => {
-  if (!isConnectedHere.value) return []
-  const cards = []
-  for (const user of usersInVoice.value) {
-    if (user.id === authStore.user?.id || !voiceStore.mediaState[user.id]?.screen) continue
-    const watching = !!voiceStore.watchedScreens[user.id]
-    const onStage = voiceStore.remoteScreenUserId === user.id && !!voiceStore.remoteScreenStream
-    if (onStage) continue
-    const state = !watching ? 'idle' : voiceStore.remoteScreenUserId === user.id ? 'pending' : 'queued'
-    cards.push({ user, state })
-  }
-  return cards
+// The stage shows one screen share or camera. Every other screen share is a
+// card that puts it there (someone else's is only received after I opt in),
+// a click on a camera tile puts that camera there.
+const {
+  stage,
+  ownScreenOnStage: ownOnStage,
+  remoteScreenUserId: stageUserId,
+  cameraOnStage,
+  cards: screenCards,
+  selectCard: onScreenCard,
+  canFocusCamera,
+  isCameraFocused,
+  toggleCamera: toggleCameraFocus
+} = useTalkStage({
+  users: () => usersInVoice.value,
+  myId: () => authStore.user?.id,
+  active: () => isConnectedHere.value,
+  watch: userId => watchStream(userId)
 })
-
-function onScreenCard(card) {
-  if (card.state === 'idle') watchStream(card.user.id)
-  else if (card.state === 'queued') voiceStore.focusScreen(card.user.id)
-}
 
 async function watchStream(userId) {
   if (!isConnectedHere.value && !(await join())) return
   voiceStore.watchScreen(userId)
 }
 
+// Audio controls on the stage: only for someone else's screen share.
 const currentStreamVolume = computed(() => {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   return uid ? voiceStore.getUserVolume(uid) : 100
 })
 
 const isCurrentStreamMuted = computed(() => {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   return uid ? voiceStore.isUserLocalMuted(uid) : false
 })
 
 function toggleCurrentStreamMute() {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   if (uid) voiceStore.toggleLocalMute(uid)
 }
 
 function onStreamVolumeChange(e) {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   if (uid) {
     voiceStore.setUserVolume(uid, Number(e.target.value))
   }
@@ -185,23 +189,51 @@ function cameraAvailable(user) {
   return !voiceStore.allCamerasOff && !!voiceStore.mediaState[user.id]?.camera
 }
 
+// "Hide participants without video" (Discord's "only videos"): only tiles
+// with a camera I receive or a screen share, mine included.
+function hasVideo(user) {
+  if (user.id === authStore.user?.id) return !!voiceStore.localCameraStream || voiceStore.isScreenSharing
+  const media = voiceStore.mediaState[user.id]
+  return !!media?.screen || (!!media?.camera && !voiceStore.isCameraHidden(user.id))
+}
+const hidingNoVideo = computed(() => isConnectedHere.value && voiceStore.hideNoVideo)
+const tileUsers = computed(() => (hidingNoVideo.value ? usersInVoice.value.filter(hasVideo) : usersInVoice.value))
+
+// The grid fits every tile into the free area at 16:9, like Discord. Tiles
+// without any camera stay smaller: a huge avatar tile only looks empty.
+const gridArea = ref(null)
+const GRID_GAP = 12
+const gridHasVideo = computed(() => isConnectedHere.value && tileUsers.value.some(u => !!cameraStreamOf(u)))
+const { layout: gridLayout, gridStyle, tileStyle } = useVideoGrid(gridArea, {
+  count: () => tileUsers.value.length,
+  gap: GRID_GAP,
+  maxTileWidth: () => (gridHasVideo.value ? 1280 : 640),
+  minTileWidth: 160
+})
+const gridSized = computed(() => gridLayout.value.tileWidth > 0)
+
 // The chat under the stage belongs to the shown channel, also in the preview.
 watch([() => props.showChat, shownChannelId], ([show, id]) => {
   if (!show || !id || chatStore.activeChannel?.id === id) return
   if (activeVoiceChannel.value) chatStore.selectChannel(activeVoiceChannel.value)
 }, { immediate: true })
 
-// Active screen stream (local or remote)
-const activeScreenStream = computed(() => {
-  return voiceStore.localScreenStream || voiceStore.remoteScreenStream || null
+const activeScreenStream = computed(() => stage.value?.stream || null)
+// What the stage shows, as data-stage-source: 'own', a user ID (their screen)
+// or 'camera:<user ID>'.
+const stageSource = computed(() => {
+  const s = stage.value
+  if (!s) return null
+  if (s.kind === 'camera') return `camera:${s.userId}`
+  return s.own ? 'own' : s.userId
 })
-const isSharingOwnScreen = computed(() => {
-  return !!voiceStore.localScreenStream
-})
-const screenSharerName = computed(() => {
-  if (isSharingOwnScreen.value) return t('talk.ownScreen')
-  const sharer = usersInVoice.value.find(u => u.id === voiceStore.remoteScreenUserId)
-  return sharer ? (sharer.display_name || sharer.username) : t('talk.sharedScreen')
+const stageName = computed(() => {
+  const s = stage.value
+  if (s?.kind === 'camera' && s.own) return t('talk.ownCamera')
+  if (ownOnStage.value) return t('talk.ownScreen')
+  const sharer = usersInVoice.value.find(u => u.id === s?.userId)
+  if (sharer) return sharer.display_name || sharer.username
+  return cameraOnStage.value ? t('talk.camera') : t('talk.sharedScreen')
 })
 
 // My own share is only previewed while I look at this tab: decoding my own
@@ -224,13 +256,18 @@ onUnmounted(() => {
   window.removeEventListener('focus', updatePageActive)
   window.removeEventListener('blur', updatePageActive)
 })
-const ownPreviewPaused = computed(() => isSharingOwnScreen.value && !pageActive.value)
+const ownPreviewPaused = computed(() => ownOnStage.value && !pageActive.value)
+
+// Picture-in-Picture: the stage plays in the browser's floating window (and
+// on in a text channel). Meanwhile the stage itself decodes nothing.
+const pip = usePictureInPicture()
+const pipActive = computed(() => pip.active.value)
 
 // Watch active screen stream and attach to video element
-watch([activeScreenStream, isConnectedHere, ownPreviewPaused], ([stream, , paused]) => {
+watch([activeScreenStream, isConnectedHere, ownPreviewPaused, pipActive], ([stream, , paused, inPip]) => {
   nextTick(() => {
     if (screenVideoEl.value) {
-      screenVideoEl.value.srcObject = paused ? null : stream
+      screenVideoEl.value.srcObject = paused || inPip ? null : stream
     }
   })
 }, { immediate: true })
@@ -243,12 +280,118 @@ function toggleScreenShare() {
   }
 }
 
+// --- Full screen: the stage's button, a double-click and the F key ---
+const isFullscreen = ref(false)
+function updateFullscreen() {
+  isFullscreen.value = !!document.fullscreenElement && document.fullscreenElement === videoContainer.value
+}
+
+async function enterFullscreen() {
+  await nextTick() // the stage may only just have appeared
+  const el = videoContainer.value
+  if (!el || document.fullscreenElement === el || typeof el.requestFullscreen !== 'function') return
+  Promise.resolve(el.requestFullscreen()).catch(() => {})
+}
+
 function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    videoContainer.value?.requestFullscreen().catch(() => {})
-  } else {
-    document.exitFullscreen().catch(() => {})
+  if (document.fullscreenElement) Promise.resolve(document.exitFullscreen?.()).catch(() => {})
+  else enterFullscreen()
+}
+
+// A double-click on a camera puts it on the stage in full screen. Its first
+// click already put it on the stage (or took it off) without waiting, and
+// moved the tiles: the second click and the dblclick may land elsewhere, so
+// the camera clicked last decides.
+const DOUBLE_CLICK_MS = 600
+let lastCameraClick = null
+function onTileFocusCamera(user) {
+  lastCameraClick = { userId: user.id, at: Date.now() }
+  toggleCameraFocus(user)
+}
+function recentCameraClick() {
+  return lastCameraClick && Date.now() - lastCameraClick.at < DOUBLE_CLICK_MS ? lastCameraClick.userId : null
+}
+function fullscreenCamera(userId) {
+  const id = recentCameraClick() || userId
+  lastCameraClick = null
+  if (!isConnectedHere.value || !id) return
+  if (!(stage.value?.kind === 'camera' && stage.value.userId === id)) voiceStore.focusCamera(id)
+  if (stage.value?.kind === 'camera' && stage.value.userId === id) enterFullscreen()
+}
+
+// Double-clicks in the Talk area: on the stage they toggle full screen.
+function onAreaDblclick(e) {
+  if (e.target?.closest?.('button, input, a, [data-testid="screen-viewers"]')) return
+  const recent = recentCameraClick()
+  if (recent) {
+    fullscreenCamera(recent)
+    return
   }
+  if (videoContainer.value?.contains(e.target)) toggleFullscreen()
+}
+
+function isTypingTarget(el) {
+  return !!el && (el.isContentEditable || !!el.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
+}
+
+// F toggles the stage's full screen, like in a video player: while the
+// focus is in the Talk view (or nowhere), not while typing, with a dialog or
+// menu open, or when F is the push-to-talk key.
+const root = ref(null)
+function inTalkView(el) {
+  return !el || el === document.body || el === document.documentElement || !!root.value?.contains(el)
+}
+function onKeydown(e) {
+  if (e.key !== 'f' && e.key !== 'F') return
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing || e.defaultPrevented) return
+  if (!inTalkView(e.target) || isTypingTarget(e.target)) return
+  if (e.target?.closest?.('[role="dialog"], [role="menu"]') || document.querySelector('[aria-modal="true"]')) return
+  if (voiceStore.inputMode === 'ptt' && voiceStore.pttKey === e.code) return
+  if (!videoContainer.value) return
+  e.preventDefault()
+  toggleFullscreen()
+}
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', updateFullscreen)
+  document.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => {
+  document.removeEventListener('fullscreenchange', updateFullscreen)
+  document.removeEventListener('keydown', onKeydown)
+})
+
+// Right-click on the stage: its actions as a menu (outside full screen,
+// where the page's menus cannot show).
+function openStageMenu(e) {
+  if (document.fullscreenElement) return
+  e.preventDefault()
+  menu.show(e, () => {
+    const items = [{
+      id: 'fullscreen',
+      label: t('talk.fullscreen'),
+      icon: Maximize2,
+      shortcut: 'F',
+      action: () => enterFullscreen()
+    }]
+    if (pip.supported) {
+      items.push({
+        id: 'pip',
+        label: pipActive.value ? t('talk.pipExit') : t('talk.pip'),
+        icon: PictureInPicture2,
+        action: () => pip.toggle()
+      })
+    }
+    if (cameraOnStage.value) {
+      items.push({ id: 'unfocus', label: t('talk.unfocusCamera'), icon: X, action: () => voiceStore.unfocusCamera() })
+    } else if (ownOnStage.value) {
+      items.push({ id: 'stop-share', label: t('voice.stopShare'), icon: MonitorOff, danger: true, action: () => stopScreenShare() })
+    } else if (stageUserId.value) {
+      const uid = stageUserId.value
+      items.push({ id: 'unwatch', label: t('talk.stopWatching'), icon: X, action: () => voiceStore.unwatchScreen(uid) })
+    }
+    return items
+  })
 }
 
 function scrollChatToBottom() {
@@ -297,7 +440,7 @@ async function handleFileUpload(e) {
 </script>
 
 <template>
-  <main class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
+  <main ref="root" class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
     <!-- Talk header -->
     <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
@@ -339,6 +482,24 @@ async function handleFileUpload(e) {
           <span>{{ showChat ? $t('talk.chatShown') : $t('talk.chatHidden') }}</span>
         </button>
 
+        <!-- Only participants with video (per browser) -->
+        <button
+          v-if="isConnectedHere"
+          type="button"
+          data-testid="hide-no-video"
+          @click="voiceStore.toggleHideNoVideo()"
+          :class="[
+            'w-8 h-8 flex items-center justify-center rounded-md border transition',
+            voiceStore.hideNoVideo
+              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
+              : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
+          ]"
+          v-tooltip="$t('talk.hideNoVideo')"
+          :aria-pressed="voiceStore.hideNoVideo ? 'true' : 'false'"
+        >
+          <UserRoundX class="w-4 h-4" />
+        </button>
+
         <!-- Toggle Member List Sidebar -->
         <button
           @click="chatStore.showMemberList = !chatStore.showMemberList"
@@ -365,13 +526,19 @@ async function handleFileUpload(e) {
           showChat ? 'h-80 p-4 pb-16 border-b border-mnema-hairline' : 'flex-1 p-6 pb-20 overflow-y-auto',
           activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
         ]"
+        @dblclick="onAreaDblclick"
       >
-        <!-- Screen share spotlight (if sharing or viewing) -->
+        <!-- The stage: one screen share (mine or one I watch) or one camera -->
         <div
           v-if="activeScreenStream && isConnectedHere"
           ref="videoContainer"
+          data-testid="stage"
+          :data-stage-source="stageSource"
+          :data-fullscreen="isFullscreen ? 'true' : undefined"
+          @contextmenu="openStageMenu"
           :class="[
-            'w-full max-w-5xl bg-black rounded-xl border border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
+            'w-full max-w-5xl bg-black border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
+            isFullscreen ? '' : 'rounded-xl border',
             showChat ? 'h-44 mb-2 flex-shrink-0' : 'flex-1 min-h-0 mb-3'
           ]"
         >
@@ -379,8 +546,8 @@ async function handleFileUpload(e) {
             ref="screenVideoEl"
             autoplay
             playsinline
-            :muted="isSharingOwnScreen"
-            class="w-full h-full object-contain"
+            :muted="ownOnStage || cameraOnStage"
+            :class="['w-full h-full object-contain', stage?.kind === 'camera' && stage.own ? '-scale-x-100' : '']"
             @resize="onVideoResize"
             @loadedmetadata="onVideoResize"
           ></video>
@@ -395,19 +562,38 @@ async function handleFileUpload(e) {
             <span class="text-sm text-mnema-tertiary">{{ $t('talk.ownStreamRunningHint') }}</span>
           </div>
 
+          <!-- Playing in the Picture-in-Picture window -->
+          <div
+            v-else-if="pipActive"
+            data-testid="stage-in-pip"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-mnema-canvas/95 text-center px-6"
+          >
+            <PictureInPicture2 class="w-7 h-7 text-mnema-tertiary" aria-hidden="true" />
+            <span class="text-base font-semibold text-mnema-text">{{ $t('talk.pipPlaying') }}</span>
+            <button
+              type="button"
+              class="mt-1 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition"
+              @click="pip.exit()"
+            >
+              {{ $t('talk.pipBack') }}
+            </button>
+          </div>
+
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
-            <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+            <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80" />
+            <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               {{ $t('talk.live') }}
             </span>
-            <span class="font-mono font-semibold text-xs">{{ screenSharerName }}</span>
+            <ScreenViewers v-if="!cameraOnStage && stage" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1" />
+            <span class="font-mono font-semibold text-xs">{{ stageName }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
           <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
             <!-- Stream Audio Toggle for Streamer (Own Screen) -->
             <button
-              v-if="isSharingOwnScreen"
+              v-if="ownOnStage"
               type="button"
               data-testid="streamer-audio-toggle"
               :class="[
@@ -423,7 +609,7 @@ async function handleFileUpload(e) {
 
             <!-- Viewer Stream Audio Controls (Volume & Mute) -->
             <div
-              v-else-if="voiceStore.remoteScreenUserId"
+              v-else-if="stageUserId"
               class="flex items-center gap-1.5 bg-black/75 hover:bg-black/90 px-2 py-1.5 rounded-lg text-white group/vol"
             >
               <button
@@ -448,10 +634,21 @@ async function handleFileUpload(e) {
               />
             </div>
 
+            <!-- A camera leaves the stage (back to the screen share or the grid) -->
+            <button
+              v-if="cameraOnStage"
+              type="button"
+              data-testid="stage-unfocus-camera"
+              v-tooltip="$t('talk.unfocusCamera')"
+              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
+              @click="voiceStore.unfocusCamera()"
+            >
+              <X class="w-4 h-4" />
+            </button>
             <!-- Stop Watching (Viewer) -->
             <button
-              v-if="!isSharingOwnScreen"
-              @click="voiceStore.unwatchScreen(voiceStore.remoteScreenUserId)"
+              v-else-if="!ownOnStage"
+              @click="voiceStore.unwatchScreen(stageUserId)"
               :aria-label="$t('talk.unwatchScreen')"
               v-tooltip="$t('talk.stopWatching')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition hover:text-mnema-danger"
@@ -468,34 +665,61 @@ async function handleFileUpload(e) {
               <MonitorOff class="w-4 h-4" />
             </button>
 
-            <!-- Fullscreen -->
+            <!-- Picture-in-Picture (only where the browser has it) -->
             <button
+              v-if="pip.supported"
+              type="button"
+              data-testid="stage-pip"
+              @click="pip.toggle()"
+              v-tooltip="pipActive ? $t('talk.pipExit') : $t('talk.pip')"
+              :aria-pressed="pipActive ? 'true' : 'false'"
+              :class="[
+                'p-2 rounded-lg text-white transition',
+                pipActive ? 'bg-mnema-accent/80 hover:bg-mnema-accent' : 'bg-black/75 hover:bg-black/90'
+              ]"
+            >
+              <PictureInPicture2 class="w-4 h-4" />
+            </button>
+
+            <!-- Fullscreen (also a double-click on the stage or F) -->
+            <button
+              type="button"
+              data-testid="stage-fullscreen"
               @click="toggleFullscreen"
-              v-tooltip="$t('talk.fullscreen')"
+              v-tooltip="{ text: isFullscreen ? $t('talk.exitFullscreen') : $t('talk.fullscreen'), shortcut: 'F' }"
+              :aria-pressed="isFullscreen ? 'true' : 'false'"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
-              <Maximize2 class="w-4 h-4" />
+              <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
+              <Maximize2 v-else class="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <!-- Screen shares I can opt into -->
+        <!-- Screen shares not on the stage: mine, ones I watch, ones I can opt into -->
         <div
           v-if="screenCards.length"
           class="w-full max-w-5xl flex flex-wrap gap-2 flex-shrink-0 mb-3"
         >
           <div
             v-for="card in screenCards"
-            :key="card.user.id"
+            :key="card.key"
             data-testid="screen-card"
+            :data-screen-card="card.key"
             class="flex items-center gap-3 min-w-0 rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
           >
             <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
             <span class="text-sm text-mnema-text truncate">
-              {{ $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
+              {{ card.kind === 'own' ? $t('talk.ownScreen') : $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
             </span>
+            <ScreenViewers
+              :user-id="card.kind === 'own' ? (authStore.user?.id || '') : card.user.id"
+              :show-zero="card.kind === 'own'"
+              variant="card"
+            />
             <button
               type="button"
+              data-testid="screen-card-action"
               :disabled="card.state === 'pending'"
               class="h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition disabled:opacity-60 flex-shrink-0"
               @click="onScreenCard(card)"
@@ -503,7 +727,7 @@ async function handleFileUpload(e) {
               {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
             </button>
             <button
-              v-if="card.state !== 'idle'"
+              v-if="card.kind === 'remote' && card.state !== 'idle'"
               type="button"
               class="w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
               v-tooltip="$t('talk.unwatchScreen')"
@@ -517,10 +741,11 @@ async function handleFileUpload(e) {
         <!-- Participant tiles: a strip under the screen share, else the grid -->
         <div
           v-if="activeScreenStream && isConnectedHere"
-          class="w-full max-w-5xl flex gap-2 overflow-x-auto flex-shrink-0 pb-1"
+          data-testid="talk-strip"
+          :class="['w-full max-w-5xl flex gap-2 overflow-x-auto flex-shrink-0 pb-1', tileUsers.length ? '' : 'hidden']"
         >
           <ParticipantTile
-            v-for="user in usersInVoice"
+            v-for="user in tileUsers"
             :key="user.id"
             :user="user"
             :stream="cameraStreamOf(user)"
@@ -534,7 +759,11 @@ async function handleFileUpload(e) {
             :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
             :is-watching="!!voiceStore.watchedScreens[user.id]"
             :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+            :camera-focusable="canFocusCamera(user)"
+            :camera-focused="isCameraFocused(user)"
             @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+            @focus-camera="onTileFocusCamera(user)"
+            @fullscreen-camera="fullscreenCamera(user.id)"
             @watch-stream="watchStream(user.id)"
             @stop-watching="voiceStore.unwatchScreen(user.id)"
             compact
@@ -544,38 +773,70 @@ async function handleFileUpload(e) {
           />
         </div>
 
+        <!-- The grid: every participant as a 16:9 tile, as large as the area allows -->
         <div
-          v-else-if="usersInVoice.length"
+          v-else-if="tileUsers.length"
+          ref="gridArea"
+          data-testid="talk-grid"
+          :data-grid-cols="gridLayout.cols"
           :class="[
-            'w-full max-w-5xl grid gap-3 items-center justify-center',
-            showChat
-              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+            'w-full flex-1 min-h-0 flex justify-center',
+            gridLayout.overflow ? 'items-start overflow-y-auto' : 'items-center'
           ]"
         >
-          <ParticipantTile
-            v-for="user in usersInVoice"
-            :key="user.id"
-            :user="user"
-            :stream="isConnectedHere ? cameraStreamOf(user) : null"
-            :is-self="user.id === authStore.user?.id"
-            :speaking="voiceStore.isSpeaking(user.id)"
-            :muted="voiceStore.muteStateOf(user.id).muted"
-            :deafened="voiceStore.muteStateOf(user.id).deafened"
-            :local-muted="voiceStore.isUserLocalMuted(user.id)"
-            :camera-available="cameraAvailable(user)"
-            :camera-hidden="voiceStore.isCameraHidden(user.id)"
-            :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
-            :is-watching="!!voiceStore.watchedScreens[user.id]"
-            :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
-            @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
-            @watch-stream="watchStream(user.id)"
-            @stop-watching="voiceStore.unwatchScreen(user.id)"
-            :compact="showChat"
-            :show-status="isConnectedHere"
-            @open-profile="chatStore.openUserProfile"
-            @menu="openMemberMenu($event, user)"
-          />
+          <div
+            :class="['flex flex-wrap justify-center content-center', gridSized ? '' : 'w-full max-w-5xl gap-3']"
+            :style="gridStyle"
+          >
+            <ParticipantTile
+              v-for="user in tileUsers"
+              :key="user.id"
+              :user="user"
+              :stream="isConnectedHere ? cameraStreamOf(user) : null"
+              :is-self="user.id === authStore.user?.id"
+              :speaking="voiceStore.isSpeaking(user.id)"
+              :muted="voiceStore.muteStateOf(user.id).muted"
+              :deafened="voiceStore.muteStateOf(user.id).deafened"
+              :local-muted="voiceStore.isUserLocalMuted(user.id)"
+              :camera-available="cameraAvailable(user)"
+              :camera-hidden="voiceStore.isCameraHidden(user.id)"
+              :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
+              :is-watching="!!voiceStore.watchedScreens[user.id]"
+              :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+              :camera-focusable="canFocusCamera(user)"
+              :camera-focused="isCameraFocused(user)"
+              @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+              @focus-camera="onTileFocusCamera(user)"
+              @fullscreen-camera="fullscreenCamera(user.id)"
+              @watch-stream="watchStream(user.id)"
+              @stop-watching="voiceStore.unwatchScreen(user.id)"
+              fill
+              :compact="showChat || (gridSized && gridLayout.tileWidth < 300)"
+              :show-status="isConnectedHere"
+              :style="tileStyle"
+              :class="gridSized ? 'flex-shrink-0' : 'w-56'"
+              @open-profile="chatStore.openUserProfile"
+              @menu="openMemberMenu($event, user)"
+            />
+          </div>
+        </div>
+
+        <!-- Everyone is hidden: nobody has video on -->
+        <div
+          v-else-if="hidingNoVideo && usersInVoice.length"
+          data-testid="no-video-hint"
+          class="flex-1 flex flex-col items-center justify-center text-center max-w-sm gap-1"
+        >
+          <VideoOff class="w-6 h-6 text-mnema-tertiary mb-1" aria-hidden="true" />
+          <p class="font-semibold text-base text-mnema-text">{{ $t('talk.noVideoTitle') }}</p>
+          <p class="text-sm text-mnema-tertiary">{{ $t('talk.noVideoHint') }}</p>
+          <button
+            type="button"
+            class="mt-2 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition"
+            @click="voiceStore.setHideNoVideo(false)"
+          >
+            {{ $t('talk.showAllParticipants') }}
+          </button>
         </div>
 
         <!-- Nobody there yet (preview) -->
