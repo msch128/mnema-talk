@@ -35,8 +35,12 @@ func run() error {
 		return err
 	}
 	level := slog.LevelInfo
-	if !cfg.IsProduction() {
+	if cfg.LogLevel == "debug" || (cfg.LogLevel == "" && !cfg.IsProduction()) {
 		level = slog.LevelDebug
+	}
+	if cfg.LogLevel == "debug" && os.Getenv("PION_LOG_DEBUG") == "" {
+		// Pion's ICE agent then logs every candidate pair it checks.
+		_ = os.Setenv("PION_LOG_DEBUG", "ice")
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 	slog.Info("starting mnema-talk", "version", version, "env", cfg.AppEnv)
