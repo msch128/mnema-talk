@@ -48,15 +48,42 @@ func TestMessagesAreScopedAndValidated(t *testing.T) {
 	if reply.status != http.StatusCreated {
 		t.Fatalf("valid reply: %d %s", reply.status, reply.body)
 	}
+	reply2 := max.post("/api/channels/"+general.String()+"/messages", map[string]any{"content": "reply 2", "parent_id": root})
+	if reply2.status != http.StatusCreated {
+		t.Fatalf("valid reply2: %d %s", reply2.status, reply2.body)
+	}
+
 	var thread struct {
 		Root struct {
 			ReplyCount int `json:"reply_count"`
 		}
-		Replies []struct{ Content string }
+		Replies []struct {
+			ID      string `json:"id"`
+			Content string `json:"content"`
+		}
 	}
 	admin.get("/api/messages/"+root.String()+"/thread").decode(t, &thread)
-	if thread.Root.ReplyCount != 1 || len(thread.Replies) != 1 {
+	if thread.Root.ReplyCount != 2 || len(thread.Replies) != 2 {
 		t.Fatalf("thread %+v", thread)
+	}
+
+	// Paged: limit=1
+	var paged struct {
+		Replies []struct {
+			ID      string `json:"id"`
+			Content string `json:"content"`
+		}
+	}
+	admin.get("/api/messages/"+root.String()+"/thread?limit=1").decode(t, &paged)
+	if len(paged.Replies) != 1 || paged.Replies[0].Content != "reply" {
+		t.Fatalf("expected 1st page to have 1 reply 'reply', got: %+v", paged.Replies)
+	}
+	firstID := paged.Replies[0].ID
+
+	// Paged: after firstID
+	admin.get("/api/messages/"+root.String()+"/thread?limit=1&after="+firstID).decode(t, &paged)
+	if len(paged.Replies) != 1 || paged.Replies[0].Content != "reply 2" {
+		t.Fatalf("expected 2nd page to have 'reply 2', got: %+v", paged.Replies)
 	}
 
 	if res := admin.delete("/api/channels/" + general.String() + "/messages/" + root.String()); res.status != http.StatusNoContent {
