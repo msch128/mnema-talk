@@ -299,7 +299,7 @@
     "channelFallback": "Voice channel",
     "audioBlocked": "You're back in the Talk. Click to turn the sound on",
     "join": "Join",
-    "userVolume": "User volume",
+    "userVolume": "Volume (only for you)",
     "muteUser": "Mute locally",
     "unmuteUser": "Unmute locally",
     "noOneInVoice": "No one in the Talk",
