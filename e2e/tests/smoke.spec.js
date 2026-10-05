@@ -11,7 +11,7 @@ const USER = `friend_${suffix}`
 const USER_DISPLAY = `Friend ${suffix}`
 const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const TEXT_CHANNEL = 'allgemein'
-const VOICE_CHANNEL = 'Lounge'
+const VOICE_CHANNEL = 'Smoke Talk'
 
 // Same-origin fetch from inside the page, so cookies and the Origin header
 // behave exactly like the real app (CSRF origin check included).
