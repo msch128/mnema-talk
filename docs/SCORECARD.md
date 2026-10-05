@@ -32,11 +32,11 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] Markdown with escaping, spoilers, code
 - [x] Image/video/file uploads with inline preview
 - [x] Keyset history paging with a capped message window
-- [ ] Resync of channels, members and messages after a WebSocket reconnect
-- [ ] Network errors and 5xx never log the user out (only 401 does)
+- [x] Resync of channels, members and messages after a WebSocket reconnect
+- [x] Network errors and 5xx never log the user out (only 401 does)
 - [ ] Thread replies paged
 - [x] Deleting a message or channel removes its media from S3
-- [ ] Links containing `(@` render correctly
+- [x] Links containing `(@` render correctly
 
 ## Chat comfort (weight 12)
 
@@ -69,10 +69,10 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] New screenshare viewers get a keyframe from the publisher immediately
 - [x] Rejoin and late unregister never remove the new peer
 - [x] SFU track IDs scoped per peer; rooms cannot be deleted during a join
-- [ ] Client join/leave race-free (no ghost in call, no leaked mic)
-- [ ] Voice re-established or visibly ended after a WebSocket reconnect; voice ends on logout
-- [ ] Push-to-talk ignores typing, releases on blur, listeners never leak
-- [ ] Audio setting changes apply to a live call
+- [x] Client join/leave race-free (no ghost in call, no leaked mic)
+- [x] Voice re-established or visibly ended after a WebSocket reconnect; voice ends on logout
+- [x] Push-to-talk ignores typing, releases on blur, listeners never leak
+- [x] Audio setting changes apply to a live call
 - [ ] Screenshare start/stop without dropping audio (renegotiation without a full rebuild)
 - [ ] SFU and WebSocket hub unit tests
 
@@ -113,6 +113,6 @@ with no unchecked item in "Voice & screenshare" or "Security".
 
 - [x] CI: lint, unit and integration tests, race detector, Docker build
 - [x] Frontend unit tests for stores and libs
-- [ ] Tests for `useWebRTC` join/leave and reconnect behaviour
+- [x] Tests for `useWebRTC` join/leave and reconnect behaviour
 - [ ] End-to-end smoke test (login, send message, join talk) in CI
 - [ ] First release cut (0.x) with changelog

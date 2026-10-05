@@ -10,6 +10,7 @@ vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({
     refreshAudioDevices: vi.fn(),
     startMicTest: vi.fn(),
+    applyAudioSettings: vi.fn(),
     stopMicTest: vi.fn(),
   }),
 }))

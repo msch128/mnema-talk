@@ -21,13 +21,22 @@ export const useAuthStore = defineStore('auth', () => {
     // storage unavailable
   }
 
+  /**
+   * Asks the server who is logged in. Returns true (signed in), false (no or
+   * revoked session: the user is cleared) or null when the server could not
+   * answer (offline, restarting): the user is kept so a redeploy or a network
+   * blip never logs anyone out.
+   */
   async function checkAuth() {
     try {
       user.value = await api('/api/auth/me')
       return true
-    } catch {
-      user.value = null
-      return false
+    } catch (err) {
+      if (err?.status === 401) {
+        user.value = null
+        return false
+      }
+      return null
     }
   }
 

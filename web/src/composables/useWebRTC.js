@@ -18,6 +18,15 @@ let lastAboveThresholdTime = 0
 // WebRTC Peer Connection and Remote Audio
 let pc = null
 let remoteAudioElements = []
+// Offers are applied one after another; candidates that arrive before the
+// remote description is set wait in pendingCandidates.
+let signalingChain = Promise.resolve()
+let pendingCandidates = []
+// Bumped by every join and leave: an older join that is still awaiting the
+// microphone sees the change and backs out instead of finishing.
+let joinGeneration = 0
+// Push-to-talk listeners are module-level so any component can remove them.
+let pttStore = null
 
 // ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
 // third-party STUN server learns the user's IP
@@ -72,6 +81,8 @@ function updateRemoteVolume(voiceStore) {
 
 function cleanupPeerConnection(voiceStore) {
   stopStatsPolling(voiceStore)
+  signalingChain = Promise.resolve()
+  pendingCandidates = []
   if (pc) {
     try { pc.close() } catch { /* connection already closed */ }
     pc = null
@@ -148,6 +159,52 @@ function setupPeerConnection(voiceStore, chatStore) {
   }
 
   return pc
+}
+
+function isTypingTarget(el) {
+  return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
+}
+
+function handlePttKeyDown(e) {
+  const voiceStore = pttStore
+  if (!voiceStore || voiceStore.inputMode !== 'ptt' || e.repeat) return
+  // Holding the key while typing in the composer must not open the mic.
+  if (isTypingTarget(e.target)) return
+  if ((e.code || e.key) === voiceStore.pttKey) voiceStore.isPttPressed = true
+}
+
+function handlePttKeyUp(e) {
+  const voiceStore = pttStore
+  if (!voiceStore || voiceStore.inputMode !== 'ptt') return
+  if ((e.code || e.key) === voiceStore.pttKey) voiceStore.isPttPressed = false
+}
+
+// A keyup that happens while the window is in the background never arrives;
+// release the key so the mic does not stay open.
+function releasePtt() {
+  if (pttStore) pttStore.isPttPressed = false
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') releasePtt()
+}
+
+function setupPttListeners(voiceStore) {
+  removePttListeners()
+  pttStore = voiceStore
+  window.addEventListener('keydown', handlePttKeyDown)
+  window.addEventListener('keyup', handlePttKeyUp)
+  window.addEventListener('blur', releasePtt)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+}
+
+function removePttListeners() {
+  window.removeEventListener('keydown', handlePttKeyDown)
+  window.removeEventListener('keyup', handlePttKeyUp)
+  window.removeEventListener('blur', releasePtt)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+  releasePtt()
+  pttStore = null
 }
 
 // Test stream for Settings Modal when not connected to a voice channel
@@ -314,7 +371,15 @@ export function useWebRTC() {
     updateRemoteVolume(voiceStore)
   })
 
-  async function handleRemoteOffer(offer) {
+  // Offers are queued so overlapping renegotiations never interleave.
+  function handleRemoteOffer(offer) {
+    signalingChain = signalingChain.then(() => applyRemoteOffer(offer))
+    return signalingChain
+  }
+
+  async function applyRemoteOffer(offer) {
+    // A late offer after leaving must not resurrect a connection.
+    if (!voiceStore.currentChannelId) return
     if (!pc) {
       setupPeerConnection(voiceStore, chatStore)
     }
@@ -329,6 +394,9 @@ export function useWebRTC() {
 
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer))
+      const queued = pendingCandidates
+      pendingCandidates = []
+      for (const c of queued) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
       chatStore.sendWSEvent('webrtc_answer', answer)
@@ -338,7 +406,12 @@ export function useWebRTC() {
   }
 
   async function handleRemoteCandidate(candidate) {
-    if (pc && candidate) {
+    if (!candidate || !voiceStore.currentChannelId) return
+    if (!pc || !pc.remoteDescription) {
+      pendingCandidates.push(candidate)
+      return
+    }
+    {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate))
       } catch (err) {
@@ -364,32 +437,92 @@ export function useWebRTC() {
       onCandidate: handleRemoteCandidate
     })
 
+    const gen = ++joinGeneration
     voiceStore.setChannel(channelId)
     voiceSession.track(channelId)
     await loadIceServers()
+    if (gen !== joinGeneration) return
 
+    let stream = null
     try {
       await refreshAudioDevices()
-
-      localAudioStream.value = await navigator.mediaDevices.getUserMedia({
-        audio: getAudioConstraints()
-      })
-
-      voiceStore.localAudioStream = localAudioStream.value
-
-      setupPeerConnection(voiceStore, chatStore)
-      chatStore.sendWSEvent('voice_join', { channel_id: channelId })
-
-      await setupSpeakingDetection(localAudioStream.value)
-      setupPttListeners()
+      stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints() })
     } catch (err) {
       console.warn('Microphone access denied or unavailable:', err)
-      setupPeerConnection(voiceStore, chatStore)
-      chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+    }
+    // Left (or joined elsewhere) while the browser was asking for the mic.
+    if (gen !== joinGeneration) {
+      stream?.getTracks().forEach(t => t.stop())
+      return
+    }
+
+    localAudioStream.value = stream
+    voiceStore.localAudioStream = stream
+    setupPeerConnection(voiceStore, chatStore)
+    chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+
+    if (stream) {
+      await setupSpeakingDetection(stream)
+      if (gen !== joinGeneration) return
+      setupPttListeners(voiceStore)
     }
   }
 
+  // After the WebSocket reconnected the server may have dropped our media
+  // peer; start a fresh connection and announce the join again. The server
+  // treats it as a resume (no leave/join for the others) within its grace time.
+  function rejoinAfterReconnect() {
+    const channelId = voiceStore.currentChannelId
+    if (!channelId) return
+    setupPeerConnection(voiceStore, chatStore)
+    chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+  }
+
+  // Applies changed input settings (device, AGC, noise suppression, echo
+  // cancellation). In a call the mic is re-acquired and swapped into the
+  // running connection without renegotiation; otherwise the mic test restarts.
+  async function applyAudioSettings() {
+    if (!localAudioStream.value) return startMicTest()
+    const gen = joinGeneration
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints() })
+    } catch (err) {
+      console.warn('Could not switch microphone:', err)
+      return
+    }
+    if (gen !== joinGeneration || !localAudioStream.value) {
+      stream.getTracks().forEach(t => t.stop())
+      return
+    }
+    const track = stream.getAudioTracks()[0]
+    const sender = pc?.getSenders().find(s => s.track?.kind === 'audio')
+    if (sender && track) await sender.replaceTrack(track).catch(() => {})
+    const old = localAudioStream.value
+    if (speakingInterval) {
+      clearInterval(speakingInterval)
+      speakingInterval = null
+    }
+    if (meteringTrack) {
+      meteringTrack.stop()
+      meteringTrack = null
+    }
+    if (audioContext) {
+      audioContext.close().catch(() => {})
+      audioContext = null
+    }
+    old.getTracks().forEach(t => t.stop())
+    track.enabled = !voiceStore.isMuted
+    localAudioStream.value = stream
+    voiceStore.localAudioStream = stream
+    await setupSpeakingDetection(stream)
+  }
+
   async function setupSpeakingDetection(stream) {
+    if (speakingInterval) {
+      clearInterval(speakingInterval)
+      speakingInterval = null
+    }
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
       audioContext = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
@@ -477,34 +610,6 @@ export function useWebRTC() {
     }
   }
 
-  function setupPttListeners() {
-    window.addEventListener('keydown', handlePttKeyDown)
-    window.addEventListener('keyup', handlePttKeyUp)
-  }
-
-  function removePttListeners() {
-    window.removeEventListener('keydown', handlePttKeyDown)
-    window.removeEventListener('keyup', handlePttKeyUp)
-  }
-
-  function handlePttKeyDown(e) {
-    if (voiceStore.inputMode !== 'ptt') return
-    if (e.repeat) return
-
-    const key = e.code || e.key
-    if (key === voiceStore.pttKey) {
-      voiceStore.isPttPressed = true
-    }
-  }
-
-  function handlePttKeyUp(e) {
-    if (voiceStore.inputMode !== 'ptt') return
-    const key = e.code || e.key
-    if (key === voiceStore.pttKey) {
-      voiceStore.isPttPressed = false
-    }
-  }
-
   async function startScreenShare() {
     try {
       localScreenStream.value = await navigator.mediaDevices.getDisplayMedia({
@@ -563,6 +668,7 @@ export function useWebRTC() {
   }
 
   function leaveVoiceChannel() {
+    joinGeneration++
     voiceSession.forget()
     cleanupPeerConnection(voiceStore)
     cleanupVoiceAudio()
@@ -601,6 +707,8 @@ export function useWebRTC() {
     stopMicTest,
     joinVoiceChannel,
     leaveVoiceChannel,
+    rejoinAfterReconnect,
+    applyAudioSettings,
     startScreenShare,
     stopScreenShare,
     toggleScreenShare,
