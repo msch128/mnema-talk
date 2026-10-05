@@ -1,0 +1,24 @@
+scripts/backup.sh
+  s_50a8e6d0bfe84a::t_62715e2e9377d1 1-34,36,40-48
+  s_50a8e6d0bfe84a::t_d46f41791e182f 35,37-39
+scripts/restore.sh
+  s_50a8e6d0bfe84a::t_10b02873888386 1-57
+README.md
+  s_50a8e6d0bfe84a::t_e376488359e418 178-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "49cec9757c2e2d2382364149ccec0b17cdd8ec54",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

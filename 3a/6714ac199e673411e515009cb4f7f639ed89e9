@@ -1,0 +1,39 @@
+internal/chat/handler.go
+  s_50a8e6d0bfe84a::t_bfd94b93818c8c 4-5
+  s_50a8e6d0bfe84a::t_33ce58fa8a4b6c 20-37,215-216,219,332-333,336
+internal/media/store.go
+  s_50a8e6d0bfe84a::t_431078b087a5ff 16-17,59-69
+  s_50a8e6d0bfe84a::t_486df242c6e429 70-71
+internal/chat/channels.go
+  s_50a8e6d0bfe84a::t_bfd94b93818c8c 9
+  s_50a8e6d0bfe84a::t_2a60d355f06b2f 139-157,159,161
+internal/chat/messages.go
+  s_50a8e6d0bfe84a::t_753923cb7ecff5 362-382,387-397,399
+  s_50a8e6d0bfe84a::t_c0c667934a38e3 384,386
+internal/media/handler.go
+  s_50a8e6d0bfe84a::t_431078b087a5ff 278,281-282,293-294,307-309
+internal/media/objectreader.go
+  s_50a8e6d0bfe84a::t_431078b087a5ff 1-67
+internal/server/media_integration_test.go
+  s_50a8e6d0bfe84a::t_d4a3c7a26451c3 6,117-174
+internal/s3/s3.go
+  s_50a8e6d0bfe84a::t_431078b087a5ff 111-123
+internal/server/server.go
+  s_50a8e6d0bfe84a::t_8e79e78f91e225 67-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a6714ac199e673411e515009cb4f7f639ed89e9",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+web/public/mnema-talk-icon-maskable.svg
+  s_50a8e6d0bfe84a::t_048ca1cb7b1cb2 4
+  s_50a8e6d0bfe84a::t_767722fbd06df8 1-3,5-15
+web/public/mnema-talk-mark-mono.svg
+  s_50a8e6d0bfe84a::t_f4baeab445d944 1-12
+web/public/mnema-talk-wordmark-dark.svg
+  s_50a8e6d0bfe84a::t_061406f83df8e2 1-15
+web/index.html
+  s_50a8e6d0bfe84a::t_ab5f2626e6e9f5 8-9
+web/public/favicon.svg
+  s_50a8e6d0bfe84a::t_733db8bd9ac6b8 1-12
+web/public/mnema-talk-mark.svg
+  s_50a8e6d0bfe84a::t_739844653fb454 1-12
+web/public/mnema-talk-wordmark-light.svg
+  s_50a8e6d0bfe84a::t_caa33c855115c0 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a702ec63e513ab604b06222160969f9dd4aef4c6",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

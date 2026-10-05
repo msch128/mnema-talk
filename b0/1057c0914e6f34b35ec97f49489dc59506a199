@@ -1,0 +1,23 @@
+web/src/composables/useWebRTC.js
+  s_50a8e6d0bfe84a::t_8d2d5f221cec5e 6,13-14,300-304,404-407
+web/src/lib/micMetering.js
+  s_50a8e6d0bfe84a::t_071f1c906ac136 1-15
+web/src/lib/micMetering.test.js
+  s_50a8e6d0bfe84a::t_28aa629d5da5b3 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b01057c0914e6f34b35ec97f49489dc59506a199",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
