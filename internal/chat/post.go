@@ -13,16 +13,11 @@ import (
 
 // Posting a message is shared by plain messages and uploads (media package).
 
-// TextChannel loads chID and refuses voice channels, which have no text chat.
-func TextChannel(ctx context.Context, p *db.Pool, chID uuid.UUID) (*ChannelInfo, error) {
-	ch, err := LoadChannel(ctx, p, chID)
-	if err != nil {
-		return nil, err
-	}
-	if ch.Type == ChannelTypeVoice {
-		return nil, httpx.ErrInvalidInput("voice channels have no text chat")
-	}
-	return ch, nil
+// ChannelForMessages loads the channel a new message is posted to. Every
+// channel has a text chat, voice channels included (the chat next to the
+// Talk), so this only checks that it exists.
+func ChannelForMessages(ctx context.Context, p *db.Pool, chID uuid.UUID) (*ChannelInfo, error) {
+	return LoadChannel(ctx, p, chID)
 }
 
 // ValidateTarget checks a new message's thread parent and quoted reply target.
