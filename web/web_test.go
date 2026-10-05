@@ -67,3 +67,17 @@ func TestDoesNotServeAPIDocsPageStatically(t *testing.T) {
 		t.Fatalf("/api-docs.html served %q, want the app shell", body)
 	}
 }
+
+func TestMissingAssetIs404(t *testing.T) {
+	h := newHandler(fstest.MapFS{"index.html": {Data: []byte("<html>app")}})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/assets/main-old.css", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("missing asset: %d, want 404", rec.Code)
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/c/some-channel", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("client route: %d, want the app shell", rec.Code)
+	}
+}

@@ -61,7 +61,15 @@ func newHandler(sub fs.FS) http.Handler {
 			serveIndex(w)
 			return
 		}
-		if info, err := fs.Stat(sub, name); err == nil && !info.IsDir() {
+		info, err := fs.Stat(sub, name)
+		if err != nil && strings.HasPrefix(name, "assets/") {
+			// A tab from before a deploy asks for an old hashed file: answer
+			// 404 instead of the app shell, which the browser would reject
+			// with a MIME error.
+			http.NotFound(w, r)
+			return
+		}
+		if err == nil && !info.IsDir() {
 			if strings.HasPrefix(name, "assets/") {
 				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 				w.Header().Add("Vary", "Accept-Encoding")
