@@ -36,6 +36,8 @@ type Config struct {
 	S3ForcePathStyle     bool
 	MediaRetentionDays   int
 	MaxUploadMB          int
+	// LinkPreviews lets the server fetch public web pages for link cards.
+	LinkPreviews         bool
 	WebRTCUDPPortMin     uint16
 	WebRTCUDPPortMax     uint16
 	WebRTCNAT1to1IP      string
@@ -129,6 +131,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		S3ForcePathStyle:     get("S3_FORCE_PATH_STYLE", "true") == "true",
 		MediaRetentionDays:   retentionDays,
 		MaxUploadMB:          maxUpload,
+		LinkPreviews:         get("LINK_PREVIEWS_ENABLED", "true") == "true",
 		WebRTCNAT1to1IP:      get("WEBRTC_NAT_1TO1_IP", ""),
 		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
 		LegalOperatorName:    get("LEGAL_OPERATOR_NAME", "Community Operator"),
