@@ -1,0 +1,51 @@
+internal/ws/hub.go
+  s_5c9ee3c4dec5dd::t_731575ae657fec 62-64,93,511-518,522,533,598,698,846-854,1004-1033
+internal/ws/mute_test.go
+  s_5c9ee3c4dec5dd::t_8d079ded61aebc 1-64
+web/src/components/AudioSettingsModal.vue
+  s_5c9ee3c4dec5dd::t_f9d465c1d56de0 6,16-17,584-639
+web/src/components/MemberRow.vue
+  s_5c9ee3c4dec5dd::t_dd4be9f9501b46 50
+web/src/components/MuteMarks.vue
+  s_5c9ee3c4dec5dd::t_12e1e7244a1c36 1-18
+web/src/components/ParticipantTile.vue
+  s_5c9ee3c4dec5dd::t_b4cc7900ad307f 8,12-14,31,56-59,127-132
+web/src/components/Sidebar.vue
+  s_5c9ee3c4dec5dd::t_513e7af1dcda6e 13,498,503-508,511,518,521
+web/src/components/TalkParticipants.vue
+  s_5c9ee3c4dec5dd::t_6bb800051c8045 8,98,103
+web/src/components/UserBar.vue
+  s_5c9ee3c4dec5dd::t_d59ecd4bd43fde 74
+web/src/components/VoiceStage.vue
+  s_5c9ee3c4dec5dd::t_3b492a73a14098 2,16-17,27-32,203-224,226,229,404-413,544-546,559,578-580,593,884-890
+web/src/composables/useWebRTC.js
+  s_5c9ee3c4dec5dd::t_6203400b1c6f73 57-61,136,153-167,330,813-828,953-959,976,1071-1092,1126-1129
+web/src/i18n/de.json
+  s_5c9ee3c4dec5dd::t_70252bd4c63d32 316-318,388-393,606-608
+web/src/i18n/en.json
+  s_5c9ee3c4dec5dd::t_df534c1289be94 316-318,388-393,606-608
+web/src/lib/audioOutput.js
+  s_5c9ee3c4dec5dd::t_80a22310db9352 1-4
+web/src/stores/chat.js
+  s_5c9ee3c4dec5dd::t_ff52e586cfdcca 755-758
+web/src/stores/voice.js
+  s_5c9ee3c4dec5dd::t_f1bb9dd6cabfd9 2,159-161,440-472,656-658
+web/src/stores/voice.test.js
+  s_5c9ee3c4dec5dd::t_426380c3cc04a1 201-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "92dc0714703742bc76b218c0aba03cda576d4686",
+  "prompts": {},
+  "sessions": {
+    "s_5c9ee3c4dec5dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d4fdedf-c57c-4991-808e-5664d15cfea7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
