@@ -759,9 +759,13 @@ describe('publishMids', () => {
       'm=video 9 UDP 96', 'a=mid:2', 'a=recvonly',
       // a forwarded track of someone else: not ours to send on
       'm=audio 9 UDP 111', 'a=mid:3', 'a=sendonly',
+      'm=video 9 UDP 96', 'a=mid:4', 'a=sendonly',
       ''
     ].join('\r\n')
     expect(publishMids(offer)).toEqual({ audio: '0', video: ['1', '2'] })
+    // Someone was already talking: the SFU forwards their voice on our mic
+    // line, which then reads sendrecv. It is still our microphone line.
+    expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual({ audio: '0', video: ['1', '2'] })
     expect(publishMids('')).toEqual({ audio: null, video: [] })
   })
 })
