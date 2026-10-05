@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
 import { syncServerClock } from '../lib/clock'
+import { playSound } from '../lib/soundEffects'
+import { useAuthStore } from './auth'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 
@@ -31,11 +33,42 @@ function writeJson(key, value) {
   }
 }
 
+export const SOUND_EVENTS = [
+  'join',
+  'leave',
+  'user_join',
+  'user_leave',
+  'mute',
+  'unmute',
+  'deafen',
+  'undeafen',
+  'ptt_start',
+  'ptt_stop'
+]
+
+function defaultSoundEvents() {
+  return {
+    join: true,
+    leave: true,
+    user_join: true,
+    user_leave: true,
+    mute: true,
+    unmute: true,
+    deafen: true,
+    undeafen: true,
+    ptt_start: true,
+    ptt_stop: true
+  }
+}
+
 export const useVoiceStore = defineStore('voice', () => {
   const currentChannelId = ref(null)
   const isMuted = ref(false)
   const isDeafened = ref(false)
   const isScreenSharing = ref(false)
+  const isScreenAudioMuted = ref(false)
+  const screenAudioVolume = ref(100)
+  const hasScreenAudio = ref(false)
   const isCameraOn = ref(false)
   const isConnected = ref(false)
   const activeView = ref('chat') // 'chat' | 'voice'
@@ -60,6 +93,28 @@ export const useVoiceStore = defineStore('voice', () => {
   const sensitivityThreshold = ref(parseInt(localStorage.getItem('mnema_sens_threshold') || '30', 10)) // 0 to 100
   const currentInputLevel = ref(0) // live meter 0-100
   const hangoverMs = ref(parseInt(localStorage.getItem('mnema_hangover_ms') || '250', 10))
+
+  // Mic test loopback state
+  const isMicTesting = ref(false)
+
+  // Advanced audio & network settings (Discord parity)
+  const warnNoAudioDetected = ref(localStorage.getItem('mnema_warn_no_audio') !== 'false')
+  const warnSwitchChannel = ref(localStorage.getItem('mnema_warn_switch_channel') !== 'false')
+  const qosHighPriority = ref(localStorage.getItem('mnema_qos_priority') !== 'false')
+  const soundEffectsEnabled = ref(localStorage.getItem('mnema_sounds_enabled') !== 'false')
+  const soundEffectsVolume = ref(parseInt(localStorage.getItem('mnema_sounds_volume') || '80', 10))
+  const soundEvents = ref({
+    ...defaultSoundEvents(),
+    ...readJson('mnema_sound_events')
+  })
+
+  function toggleSoundEvent(eventName) {
+    soundEvents.value = {
+      ...soundEvents.value,
+      [eventName]: soundEvents.value[eventName] === false
+    }
+    saveSettings()
+  }
 
   // Hardware Audio Processing Settings
   // 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see lib/noiseSuppressor),
@@ -86,6 +141,12 @@ export const useVoiceStore = defineStore('voice', () => {
     localStorage.setItem('mnema_auto_sens', String(autoSensitivity.value))
     localStorage.setItem('mnema_sens_threshold', String(sensitivityThreshold.value))
     localStorage.setItem('mnema_hangover_ms', String(hangoverMs.value))
+    localStorage.setItem('mnema_warn_no_audio', String(warnNoAudioDetected.value))
+    localStorage.setItem('mnema_warn_switch_channel', String(warnSwitchChannel.value))
+    localStorage.setItem('mnema_qos_priority', String(qosHighPriority.value))
+    localStorage.setItem('mnema_sounds_enabled', String(soundEffectsEnabled.value))
+    localStorage.setItem('mnema_sounds_volume', String(soundEffectsVolume.value))
+    writeJson('mnema_sound_events', soundEvents.value)
     localStorage.setItem('mnema_noise', noiseMode.value)
     localStorage.setItem('mnema_agc', String(autoGainControl.value))
     localStorage.setItem('mnema_echo', String(echoCancellation.value))
@@ -294,10 +355,10 @@ export const useVoiceStore = defineStore('voice', () => {
   }
 
   function handleMediaState(update) {
-    const { user_id, screen, camera } = update || {}
+    const { user_id, channel_id, screen, camera } = update || {}
     if (!user_id) return
     const next = { ...mediaState.value }
-    if (screen || camera) next[user_id] = { screen: !!screen, camera: !!camera }
+    if (screen || camera) next[user_id] = { channel_id, screen: !!screen, camera: !!camera }
     else delete next[user_id]
     mediaState.value = next
     // The share ended: the opt-in ended with it.
@@ -344,9 +405,19 @@ export const useVoiceStore = defineStore('voice', () => {
       channelUsers.value[channel_id] = {}
     }
 
+    let myId = null
+    try {
+      myId = useAuthStore()?.user?.id
+    } catch {
+      // outside pinia/test context
+    }
+
     if (action === 'join' && user) {
       channelUsers.value[channel_id][user.id] = user
       if (update.started_at) roomStartedAt.value = { ...roomStartedAt.value, [channel_id]: update.started_at }
+      if (currentChannelId.value === channel_id && myId && user.id !== myId) {
+        playSound('user_join')
+      }
     } else if (action === 'leave' && user_id) {
       delete channelUsers.value[channel_id][user_id]
       if (!Object.keys(channelUsers.value[channel_id]).length) {
@@ -357,6 +428,9 @@ export const useVoiceStore = defineStore('voice', () => {
       delete speakingUsers.value[user_id]
       removeUserVideoStream(user_id)
       handleMediaState({ user_id })
+      if (currentChannelId.value === channel_id && myId && user_id !== myId) {
+        playSound('user_leave')
+      }
     }
   }
 
@@ -378,6 +452,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleMute() {
     isMuted.value = !isMuted.value
+    playSound(isMuted.value ? 'mute' : 'unmute')
     if (localAudioStream.value) {
       localAudioStream.value.getAudioTracks().forEach(track => {
         track.enabled = !isMuted.value
@@ -387,6 +462,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleDeafen() {
     isDeafened.value = !isDeafened.value
+    playSound(isDeafened.value ? 'deafen' : 'undeafen')
     if (isDeafened.value) {
       isMuted.value = true
       if (localAudioStream.value) {
@@ -408,17 +484,35 @@ export const useVoiceStore = defineStore('voice', () => {
   }
 
   function setChannel(channelId) {
+    const prev = currentChannelId.value
     currentChannelId.value = channelId
     isConnected.value = !!channelId
     if (channelId) {
+      if (prev !== channelId) {
+        playSound('join')
+      }
       activeView.value = 'voice'
     }
   }
 
+  function toggleScreenAudioMute() {
+    isScreenAudioMuted.value = !isScreenAudioMuted.value
+  }
+
+  function setScreenAudioVolume(vol) {
+    screenAudioVolume.value = Math.max(0, Math.min(200, vol))
+  }
+
   function disconnect() {
+    if (isConnected.value || currentChannelId.value) {
+      playSound('leave')
+    }
+    isMicTesting.value = false
     currentChannelId.value = null
     isConnected.value = false
     isScreenSharing.value = false
+    isScreenAudioMuted.value = false
+    hasScreenAudio.value = false
     isCameraOn.value = false
     localCameraStream.value = null
     remoteScreenStream.value = null
@@ -436,6 +530,11 @@ export const useVoiceStore = defineStore('voice', () => {
     isMuted,
     isDeafened,
     isScreenSharing,
+    isScreenAudioMuted,
+    screenAudioVolume,
+    hasScreenAudio,
+    toggleScreenAudioMute,
+    setScreenAudioVolume,
     isCameraOn,
     localCameraStream,
     remoteScreenUserId,
@@ -485,6 +584,14 @@ export const useVoiceStore = defineStore('voice', () => {
     sensitivityThreshold,
     currentInputLevel,
     hangoverMs,
+    isMicTesting,
+    warnNoAudioDetected,
+    warnSwitchChannel,
+    qosHighPriority,
+    soundEffectsEnabled,
+    soundEffectsVolume,
+    soundEvents,
+    toggleSoundEvent,
     noiseMode,
     noiseCancelling,
     setNoiseMode,

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
-  Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
+  Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
   Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X
 } from '@lucide/vue'
@@ -18,6 +18,7 @@ import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useToastStore } from '../stores/toast'
+import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
 
 const voiceStore = useVoiceStore()
@@ -38,9 +39,21 @@ const { joinVoiceChannel, leaveVoiceChannel, startScreenShare, stopScreenShare, 
 const shownChannelId = computed(() => props.channelId || voiceStore.currentChannelId || null)
 const isConnectedHere = computed(() => voiceStore.isConnected && !!shownChannelId.value && voiceStore.currentChannelId === shownChannelId.value)
 
-function join() {
+async function join() {
   const id = shownChannelId.value
   if (!id) return
+  if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== id) {
+    const ch = chatStore.allChannels.find(c => c.id === id)
+    const name = ch?.name || ''
+    const ok = await confirm({
+      title: t('audio.switchChannelTitle'),
+      body: t('audio.switchChannelPrompt', { channel: name }),
+      confirmLabel: t('audio.switchChannelConfirm'),
+      cancelLabel: t('common.cancel'),
+      danger: false
+    })
+    if (!ok) return
+  }
   emit('join', id)
   joinVoiceChannel(id)
 }
@@ -123,8 +136,37 @@ const screenCards = computed(() => {
 })
 
 function onScreenCard(card) {
-  if (card.state === 'idle') voiceStore.watchScreen(card.user.id)
+  if (card.state === 'idle') watchStream(card.user.id)
   else if (card.state === 'queued') voiceStore.focusScreen(card.user.id)
+}
+
+async function watchStream(userId) {
+  if (!isConnectedHere.value) {
+    await join()
+  }
+  voiceStore.watchScreen(userId)
+}
+
+const currentStreamVolume = computed(() => {
+  const uid = voiceStore.remoteScreenUserId
+  return uid ? voiceStore.getUserVolume(uid) : 100
+})
+
+const isCurrentStreamMuted = computed(() => {
+  const uid = voiceStore.remoteScreenUserId
+  return uid ? voiceStore.isUserLocalMuted(uid) : false
+})
+
+function toggleCurrentStreamMute() {
+  const uid = voiceStore.remoteScreenUserId
+  if (uid) voiceStore.toggleLocalMute(uid)
+}
+
+function onStreamVolumeChange(e) {
+  const uid = voiceStore.remoteScreenUserId
+  if (uid) {
+    voiceStore.setUserVolume(uid, Number(e.target.value))
+  }
 }
 
 function cameraAvailable(user) {
@@ -329,21 +371,80 @@ function formatTime(dateStr) {
             @loadedmetadata="onVideoResize"
           ></video>
 
-          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-sm text-white">
-            <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
+          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
+            <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+              <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+              {{ $t('talk.live') }}
+            </span>
             <span class="font-mono font-semibold text-xs">{{ screenSharerName }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
-          <div class="absolute top-3 right-3 flex items-center gap-2">
+          <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
+            <!-- Stream Audio Toggle for Streamer (Own Screen) -->
+            <button
+              v-if="isSharingOwnScreen"
+              type="button"
+              data-testid="streamer-audio-toggle"
+              :class="[
+                'p-2 rounded-lg transition text-white',
+                voiceStore.isScreenAudioMuted ? 'bg-mnema-danger/80 hover:bg-mnema-danger' : 'bg-black/75 hover:bg-black/90'
+              ]"
+              v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+              @click="voiceStore.toggleScreenAudioMute"
+            >
+              <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
+              <Volume2 v-else class="w-4 h-4" />
+            </button>
+
+            <!-- Viewer Stream Audio Controls (Volume & Mute) -->
+            <div
+              v-else-if="voiceStore.remoteScreenUserId"
+              class="flex items-center gap-1.5 bg-black/75 hover:bg-black/90 px-2 py-1.5 rounded-lg text-white group/vol"
+            >
+              <button
+                type="button"
+                data-testid="viewer-stream-audio-mute"
+                class="p-0.5 rounded text-white hover:text-mnema-accent transition"
+                v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+                @click="toggleCurrentStreamMute"
+              >
+                <VolumeX v-if="isCurrentStreamMuted" class="w-4 h-4 text-mnema-danger" />
+                <Volume2 v-else class="w-4 h-4" />
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="200"
+                data-testid="viewer-stream-volume-slider"
+                :value="currentStreamVolume"
+                class="w-16 h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition"
+                v-tooltip="`${currentStreamVolume}%`"
+                @input="onStreamVolumeChange"
+              />
+            </div>
+
+            <!-- Stop Watching (Viewer) -->
             <button
               v-if="!isSharingOwnScreen"
               @click="voiceStore.unwatchScreen(voiceStore.remoteScreenUserId)"
-              v-tooltip="$t('talk.unwatchScreen')"
-              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
+              :aria-label="$t('talk.unwatchScreen')"
+              v-tooltip="$t('talk.stopWatching')"
+              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition hover:text-mnema-danger"
             >
               <X class="w-4 h-4" />
             </button>
+            <!-- Stop Sharing (Streamer) -->
+            <button
+              v-else
+              @click="stopScreenShare"
+              v-tooltip="$t('voice.stopShare')"
+              class="p-2 rounded-lg bg-mnema-danger/80 hover:bg-mnema-danger text-white transition"
+            >
+              <MonitorOff class="w-4 h-4" />
+            </button>
+
+            <!-- Fullscreen -->
             <button
               @click="toggleFullscreen"
               v-tooltip="$t('talk.fullscreen')"
@@ -404,7 +505,12 @@ function formatTime(dateStr) {
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
             :camera-available="cameraAvailable(user)"
             :camera-hidden="voiceStore.isCameraHidden(user.id)"
+            :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
+            :is-watching="!!voiceStore.watchedScreens[user.id]"
+            :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
             @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+            @watch-stream="watchStream(user.id)"
+            @stop-watching="voiceStore.unwatchScreen(user.id)"
             compact
             class="!w-36 !h-24 !p-1 flex-shrink-0"
             @open-profile="chatStore.openUserProfile"
@@ -430,7 +536,12 @@ function formatTime(dateStr) {
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
             :camera-available="cameraAvailable(user)"
             :camera-hidden="voiceStore.isCameraHidden(user.id)"
+            :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
+            :is-watching="!!voiceStore.watchedScreens[user.id]"
+            :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
             @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+            @watch-stream="watchStream(user.id)"
+            @stop-watching="voiceStore.unwatchScreen(user.id)"
             :compact="showChat"
             :show-status="isConnectedHere"
             @open-profile="chatStore.openUserProfile"
@@ -539,6 +650,23 @@ function formatTime(dateStr) {
           >
             <Monitor class="w-4 h-4" />
             <span class="text-sm">{{ voiceStore.isScreenSharing ? $t('talk.stopShareShort') : $t('talk.shareShort') }}</span>
+          </button>
+
+          <!-- Stream audio mute toggle for streamer -->
+          <button
+            v-if="voiceStore.isScreenSharing"
+            @click="voiceStore.toggleScreenAudioMute"
+            :class="[
+              'p-2.5 rounded-full transition-all',
+              voiceStore.isScreenAudioMuted
+                ? 'bg-mnema-danger/20 text-mnema-danger border border-mnema-danger/30'
+                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
+            ]"
+            :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
+            v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+          >
+            <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
+            <Volume2 v-else class="w-4 h-4" />
           </button>
 
           <!-- Noise filter toggle -->

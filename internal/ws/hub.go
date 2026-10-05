@@ -106,16 +106,10 @@ func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []st
 	return h
 }
 
-// announceMediaState tells the room's members that userID started or stopped
-// a screen share or camera. Viewers learn this without receiving the media.
+// announceMediaState tells all clients that userID started or stopped
+// a screen share or camera so they can show the LIVE indicator and offer to watch.
 func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
-	h.mu.RLock()
-	members := make([]uuid.UUID, 0, len(h.voice[roomID]))
-	for id := range h.voice[roomID] {
-		members = append(members, id)
-	}
-	h.mu.RUnlock()
-	h.SendToUsers(members, "webrtc_media_state", mediaStatePayload(roomID, userID, st))
+	h.Broadcast("webrtc_media_state", mediaStatePayload(roomID, userID, st))
 }
 
 func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {
@@ -366,6 +360,13 @@ func (h *Hub) register(c *Client) {
 	c.SendEvent("presence_snapshot", h.presenceSnapshot())
 	c.SendEvent("voice_snapshot", h.voiceSnapshot())
 	c.SendEvent("voice_rooms", h.voiceRooms())
+	if h.SFU != nil {
+		for chID, states := range h.SFU.AllMediaStates() {
+			for uid, st := range states {
+				c.SendEvent("webrtc_media_state", mediaStatePayload(chID, uid, st))
+			}
+		}
+	}
 }
 
 func (h *Hub) unregister(c *Client) {
@@ -863,6 +864,13 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	case "webrtc_subscribe":
 		c.handleSubscribe(payload)
+
+	case "webrtc_screenshare_start":
+		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
+			if room := h.SFU.Room(*cur); room != nil {
+				room.DispatchKeyframe(c.User.ID)
+			}
+		}
 
 	case "webrtc_screenshare_stop":
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {

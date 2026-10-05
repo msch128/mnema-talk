@@ -199,6 +199,20 @@ func (s *SFU) Room(channelID uuid.UUID) *Room {
 	return s.rooms[channelID]
 }
 
+// AllMediaStates returns the active media states across all rooms: roomID -> (userID -> MediaState).
+func (s *SFU) AllMediaStates() map[uuid.UUID]map[uuid.UUID]MediaState {
+	s.roomsMu.Lock()
+	defer s.roomsMu.Unlock()
+	out := make(map[uuid.UUID]map[uuid.UUID]MediaState, len(s.rooms))
+	for id, r := range s.rooms {
+		st := r.MediaStates()
+		if len(st) > 0 {
+			out[id] = st
+		}
+	}
+	return out
+}
+
 // Join connects userID to the channel's room, replacing an existing
 // connection of the same user. Lookup and join happen under one lock, so a
 // concurrent RemovePeer cannot drop the room in between.

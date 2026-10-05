@@ -1,14 +1,15 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { Mic, Sparkles, HelpCircle, Radio } from '@lucide/vue'
-import { useVoiceStore, NOISE_MODES } from '../stores/voice'
+import { Mic, Sparkles, HelpCircle, Radio, Volume2, Square, Play } from '@lucide/vue'
+import { useVoiceStore, NOISE_MODES, SOUND_EVENTS } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
+import { playSoundEffect } from '../lib/soundEffects'
 import BaseDialog from './BaseDialog.vue'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
-const { refreshAudioDevices, startMicTest, stopMicTest, applyAudioSettings } = useWebRTC()
+const { refreshAudioDevices, startMicTest, stopMicTest, toggleMicTest, applyAudioSettings } = useWebRTC()
 
 const isRecordingPttKey = ref(false)
 
@@ -71,6 +72,39 @@ async function toggleEcho() {
   voiceStore.echoCancellation = !voiceStore.echoCancellation
   voiceStore.saveSettings()
   await applyAudioSettings()
+}
+
+async function toggleQos() {
+  voiceStore.qosHighPriority = !voiceStore.qosHighPriority
+  voiceStore.saveSettings()
+  await applyAudioSettings()
+}
+
+function toggleWarnNoAudio() {
+  voiceStore.warnNoAudioDetected = !voiceStore.warnNoAudioDetected
+  voiceStore.saveSettings()
+}
+
+function toggleWarnSwitchChannel() {
+  voiceStore.warnSwitchChannel = !voiceStore.warnSwitchChannel
+  voiceStore.saveSettings()
+}
+
+function toggleSoundEffects() {
+  voiceStore.soundEffectsEnabled = !voiceStore.soundEffectsEnabled
+  voiceStore.saveSettings()
+  if (voiceStore.soundEffectsEnabled) {
+    playSoundEffect('unmute')
+  }
+}
+
+function handleSoundsVolumeChange(e) {
+  voiceStore.soundEffectsVolume = parseInt(e.target.value, 10)
+  voiceStore.saveSettings()
+}
+
+function playPreviewSound(sound = 'join') {
+  playSoundEffect(sound, null, true)
 }
 </script>
 
@@ -147,7 +181,47 @@ async function toggleEcho() {
           </p>
         </div>
 
-        <!-- 2. Input sensitivity and live meter (voice activity mode) -->
+        <!-- 2. Mic Test (Discord-like level check and channel mute) -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
+            {{ $t('audio.micTest') }}
+          </label>
+          <div class="p-3.5 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2.5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-sm font-semibold text-mnema-text flex items-center gap-2">
+                  <Volume2 class="w-4 h-4 text-mnema-accent" />
+                  <span>{{ $t('audio.micTest') }}</span>
+                  <span
+                    v-if="voiceStore.isMicTesting"
+                    class="text-xs px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 font-mono font-medium animate-pulse"
+                  >
+                    {{ $t('audio.micTestActiveBadge') }}
+                  </span>
+                </div>
+                <p class="text-xs text-mnema-tertiary leading-relaxed">
+                  {{ $t('audio.micTestHint') }}
+                </p>
+              </div>
+              <button
+                type="button"
+                @click="toggleMicTest"
+                :class="[
+                  'px-3.5 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-1.5 flex-shrink-0 shadow-sm mt-0.5',
+                  voiceStore.isMicTesting
+                    ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                    : 'bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink'
+                ]"
+              >
+                <Square v-if="voiceStore.isMicTesting" class="w-3.5 h-3.5 fill-current" />
+                <Volume2 v-else class="w-3.5 h-3.5" />
+                <span>{{ voiceStore.isMicTesting ? $t('audio.micTestStop') : $t('audio.micTestStart') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Input sensitivity and live meter (voice activity mode) -->
         <div v-if="voiceStore.inputMode === 'activity'" class="space-y-3">
           <div class="flex items-center justify-between">
             <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
@@ -309,10 +383,178 @@ async function toggleEcho() {
                 <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.echoCancellation ? 'translate-x-5' : 'translate-x-0']"></div>
               </button>
             </div>
+
+            <!-- Quality of Service (High Packet Priority) -->
+            <div class="p-3.5 flex items-start justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.qosTitle') }}</div>
+                <p class="text-xs text-mnema-tertiary leading-relaxed">
+                  {{ $t('audio.qosHint') }}
+                </p>
+              </div>
+              <button
+                @click="toggleQos"
+                role="switch"
+                :aria-checked="voiceStore.qosHighPriority ? 'true' : 'false'"
+                :aria-label="$t('audio.qosTitle')"
+                :class="[
+                  'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+                  voiceStore.qosHighPriority ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
+                ]"
+              >
+                <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.qosHighPriority ? 'translate-x-5' : 'translate-x-0']"></div>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- 4. Devices -->
+        <!-- 5. Warnings & Prompts -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
+            {{ $t('audio.warnings') }}
+          </label>
+          <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline">
+            <!-- No audio detected warning -->
+            <div class="p-3.5 flex items-start justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.noAudioWarningTitle') }}</div>
+                <p class="text-xs text-mnema-tertiary leading-relaxed">
+                  {{ $t('audio.noAudioWarningHint') }}
+                </p>
+              </div>
+              <button
+                @click="toggleWarnNoAudio"
+                role="switch"
+                :aria-checked="voiceStore.warnNoAudioDetected ? 'true' : 'false'"
+                :aria-label="$t('audio.noAudioWarningTitle')"
+                :class="[
+                  'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+                  voiceStore.warnNoAudioDetected ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
+                ]"
+              >
+                <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnNoAudioDetected ? 'translate-x-5' : 'translate-x-0']"></div>
+              </button>
+            </div>
+
+            <!-- Switch voice channel warning -->
+            <div class="p-3.5 flex items-start justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.switchChannelWarningTitle') }}</div>
+                <p class="text-xs text-mnema-tertiary leading-relaxed">
+                  {{ $t('audio.switchChannelWarningHint') }}
+                </p>
+              </div>
+              <button
+                @click="toggleWarnSwitchChannel"
+                role="switch"
+                :aria-checked="voiceStore.warnSwitchChannel ? 'true' : 'false'"
+                :aria-label="$t('audio.switchChannelWarningTitle')"
+                :class="[
+                  'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+                  voiceStore.warnSwitchChannel ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
+                ]"
+              >
+                <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.warnSwitchChannel ? 'translate-x-5' : 'translate-x-0']"></div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Sound Effects -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
+            {{ $t('audio.soundsTitle') }}
+          </label>
+          <div class="rounded-lg bg-mnema-surface border border-mnema-hairline p-3.5 space-y-3">
+            <div class="flex items-start justify-between gap-4">
+              <div class="space-y-0.5">
+                <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.soundsTitle') }}</div>
+                <p class="text-xs text-mnema-tertiary leading-relaxed">
+                  {{ $t('audio.soundsHint') }}
+                </p>
+              </div>
+              <button
+                @click="toggleSoundEffects"
+                role="switch"
+                :aria-checked="voiceStore.soundEffectsEnabled ? 'true' : 'false'"
+                :aria-label="$t('audio.soundsTitle')"
+                :class="[
+                  'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
+                  voiceStore.soundEffectsEnabled ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
+                ]"
+              >
+                <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.soundEffectsEnabled ? 'translate-x-5' : 'translate-x-0']"></div>
+              </button>
+            </div>
+
+            <!-- Volume slider when enabled -->
+            <div v-if="voiceStore.soundEffectsEnabled" class="space-y-1 pt-2 border-t border-mnema-hairline">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-mnema-tertiary font-mono">{{ $t('audio.soundsVolume') }}</span>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    @click="playPreviewSound"
+                    class="text-xs text-mnema-accent hover:underline font-mono"
+                  >
+                    {{ $t('audio.soundsTest') }}
+                  </button>
+                  <span class="text-mnema-text font-mono font-semibold">{{ voiceStore.soundEffectsVolume }} %</span>
+                </div>
+              </div>
+              <input
+                type="range"
+                :aria-label="$t('audio.soundsVolume')"
+                min="0"
+                max="100"
+                v-model.number="voiceStore.soundEffectsVolume"
+                @input="handleSoundsVolumeChange"
+                class="w-full accent-mnema-accent cursor-pointer"
+              />
+            </div>
+
+            <!-- Granular sound effects toggles -->
+            <div v-if="voiceStore.soundEffectsEnabled" class="space-y-1.5 pt-3 border-t border-mnema-hairline">
+              <div class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono mb-1">
+                {{ $t('audio.soundsCustomTitle') }}
+              </div>
+              <div class="divide-y divide-mnema-hairline/60 rounded-md bg-mnema-canvas border border-mnema-hairline">
+                <div
+                  v-for="sound in SOUND_EVENTS"
+                  :key="sound"
+                  class="flex items-center justify-between p-2.5 text-xs"
+                >
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      @click="playPreviewSound(sound)"
+                      :aria-label="$t('audio.soundsTest') + ': ' + $t(`audio.sound_${sound}`)"
+                      class="w-6 h-6 rounded flex items-center justify-center bg-mnema-raised text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition flex-shrink-0"
+                    >
+                      <Play class="w-3 h-3 fill-current ml-0.5" />
+                    </button>
+                    <span class="text-mnema-text font-medium">{{ $t(`audio.sound_${sound}`) }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    @click="voiceStore.toggleSoundEvent(sound)"
+                    role="switch"
+                    :aria-checked="voiceStore.soundEvents[sound] !== false ? 'true' : 'false'"
+                    :aria-label="$t(`audio.sound_${sound}`)"
+                    :class="[
+                      'w-8 h-4 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0',
+                      voiceStore.soundEvents[sound] !== false ? 'bg-mnema-accent' : 'bg-mnema-surface border border-mnema-border'
+                    ]"
+                  >
+                    <div :class="['w-3 h-3 rounded-full bg-white transition-transform shadow-sm', voiceStore.soundEvents[sound] !== false ? 'translate-x-4' : 'translate-x-0']"></div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Devices -->
         <div class="space-y-3">
           <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
             {{ $t('audio.devices') }}

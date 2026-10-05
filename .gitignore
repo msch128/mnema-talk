@@ -57,6 +57,10 @@ node_modules/
 # IDE & Editor files
 .idea/
 .vscode/
+.claude/
+.codex/
+.repowise/
+.mcp.json
 *.swp
 *.swo
 *~

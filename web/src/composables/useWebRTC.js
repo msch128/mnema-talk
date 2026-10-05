@@ -6,6 +6,7 @@ import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 import { useToastStore } from '../stores/toast'
+import { playSound } from '../lib/soundEffects'
 import { t } from '../i18n'
 
 // The SFU publishes a camera under this prefix plus the user ID as stream ID
@@ -37,6 +38,10 @@ function aiModel(noiseMode) {
 let mix = null
 let speakingInterval = null
 let lastAboveThresholdTime = 0
+let loopbackGain = null
+let callBiquad = null
+let unmutedZeroAudioStartTime = 0
+let lastNoAudioWarningToastTime = 0
 
 // WebRTC Peer Connection and Remote Audio
 let pc = null
@@ -106,7 +111,7 @@ function stopStatsPolling(voiceStore) {
 
 // Linear gain for one remote audio element: master volume x that user's volume.
 function remoteGain(voiceStore, el) {
-  if (voiceStore.isDeafened) return 0
+  if (voiceStore.isDeafened || voiceStore.isMicTesting) return 0
   const master = voiceStore.outputVolume / 100
   const userId = el.dataset?.userId
   if (!userId) return master
@@ -202,12 +207,13 @@ function activeAudioStream() {
   return mix?.destination.stream || localAudioStream.value
 }
 
-function teardownScreenAudioMix() {
+function teardownScreenAudioMix(voiceStore) {
   if (!mix) return
   const m = mix
   mix = null
+  if (voiceStore) voiceStore.hasScreenAudio = false
   m.screenTrack.onended = null
-  for (const node of [m.screenSource, m.micSource]) {
+  for (const node of [m.screenSource, m.screenGain, m.micSource]) {
     try { node?.disconnect() } catch { /* already disconnected */ }
   }
   try { m.destination.disconnect?.() } catch { /* ignore */ }
@@ -217,8 +223,8 @@ function teardownScreenAudioMix() {
 
 // Mixes the screen's audio track with the microphone in the call's audio
 // context (or a private one when the call has no mic).
-function buildScreenAudioMix(screenTrack) {
-  teardownScreenAudioMix()
+function buildScreenAudioMix(screenTrack, voiceStore) {
+  teardownScreenAudioMix(voiceStore)
   const AudioCtx = window.AudioContext || window.webkitAudioContext
   let ctx = audioContext
   let ownsContext = false
@@ -230,16 +236,27 @@ function buildScreenAudioMix(screenTrack) {
     if (ctx.state === 'suspended') ctx.resume().catch(() => {})
     const destination = ctx.createMediaStreamDestination()
     const screenSource = ctx.createMediaStreamSource(new MediaStream([screenTrack]))
-    screenSource.connect(destination)
+    const screenGain = ctx.createGain()
+    const targetGain = voiceStore?.isScreenAudioMuted ? 0 : ((voiceStore?.screenAudioVolume ?? 100) / 100)
+    if (screenGain.gain?.setValueAtTime) {
+      screenGain.gain.setValueAtTime(targetGain, ctx.currentTime)
+    } else if (screenGain.gain) {
+      screenGain.gain.value = targetGain
+    }
+    screenSource.connect(screenGain)
+    screenGain.connect(destination)
+
     let micSource = null
     if (localAudioStream.value) {
       micSource = ctx.createMediaStreamSource(localAudioStream.value)
       micSource.connect(destination)
     }
-    mix = { ctx, ownsContext, screenTrack, screenSource, micSource, destination }
+    mix = { ctx, ownsContext, screenTrack, screenSource, screenGain, micSource, destination }
+    if (voiceStore) voiceStore.hasScreenAudio = true
     return mix
   } catch (err) {
     console.warn('[WebRTC] Screen audio mixing unavailable:', err)
+    if (voiceStore) voiceStore.hasScreenAudio = false
     return null
   }
 }
@@ -248,7 +265,11 @@ function buildScreenAudioMix(screenTrack) {
 function setupPeerConnection(voiceStore, chatStore) {
   cleanupPeerConnection(voiceStore)
 
-  pc = new RTCPeerConnection({ iceServers })
+  const rtcConfig = { iceServers }
+  if (voiceStore?.qosHighPriority) {
+    rtcConfig.dscp = true
+  }
+  pc = new RTCPeerConnection(rtcConfig)
   startStatsPolling(voiceStore)
 
   pc.onicecandidate = (event) => {
@@ -332,18 +353,27 @@ function setupPeerConnection(voiceStore, chatStore) {
 export const SCREEN_MAX_BITRATE = 12_000_000
 export const CAMERA_MAX_BITRATE = 2_500_000
 
-async function tuneSender(sender, { maxBitrate, degradationPreference }) {
+async function tuneSender(sender, { maxBitrate, degradationPreference, priority, networkPriority } = {}) {
   try {
     const params = sender.getParameters?.()
     if (!params) return
     if (!params.encodings?.length) params.encodings = [{}]
-    params.encodings[0].maxBitrate = maxBitrate
+    if (maxBitrate !== undefined) params.encodings[0].maxBitrate = maxBitrate
     if (degradationPreference) params.degradationPreference = degradationPreference
+    if (priority) params.encodings[0].priority = priority
+    if (networkPriority) params.encodings[0].networkPriority = networkPriority
     await sender.setParameters(params)
   } catch (err) {
     // Not every browser accepts every field; the defaults still work.
     console.debug('[WebRTC] Could not tune sender:', err)
   }
+}
+
+async function applyQosToSender(sender, voiceStore) {
+  if (!sender) return
+  const qos = voiceStore?.qosHighPriority
+  const prio = qos ? 'high' : 'medium'
+  await tuneSender(sender, { priority: prio, networkPriority: prio })
 }
 
 function addVideoSender(conn, stream) {
@@ -361,13 +391,27 @@ function handlePttKeyDown(e) {
   if (!voiceStore || voiceStore.inputMode !== 'ptt' || e.repeat) return
   // Holding the key while typing in the composer must not open the mic.
   if (isTypingTarget(e.target)) return
-  if ((e.code || e.key) === voiceStore.pttKey) voiceStore.isPttPressed = true
+  if ((e.code || e.key) === voiceStore.pttKey) {
+    if (!voiceStore.isPttPressed) {
+      voiceStore.isPttPressed = true
+      if (voiceStore.isConnected || voiceStore.isMicTesting) {
+        playSound('ptt_start')
+      }
+    }
+  }
 }
 
 function handlePttKeyUp(e) {
   const voiceStore = pttStore
   if (!voiceStore || voiceStore.inputMode !== 'ptt') return
-  if ((e.code || e.key) === voiceStore.pttKey) voiceStore.isPttPressed = false
+  if ((e.code || e.key) === voiceStore.pttKey) {
+    if (voiceStore.isPttPressed) {
+      voiceStore.isPttPressed = false
+      if (voiceStore.isConnected || voiceStore.isMicTesting) {
+        playSound('ptt_stop')
+      }
+    }
+  }
 }
 
 // A keyup that happens while the window is in the background never arrives;
@@ -414,6 +458,7 @@ let testAudioStream = null
 let testAudioContext = null
 let testAnalyser = null
 let testSpeakingInterval = null
+let testBiquad = null
 
 // Accurate RMS volume calculator (time domain PCM audio)
 function calculateRMSLevel(analyserNode, buffer) {
@@ -437,6 +482,15 @@ function calculateRMSLevel(analyserNode, buffer) {
   const maxDb = -10
   const pct = Math.round(((db - minDb) / (maxDb - minDb)) * 100)
   return Math.max(0, Math.min(100, pct))
+}
+
+function setNodeGain(gainNode, val, time = 0) {
+  if (!gainNode?.gain) return
+  if (typeof gainNode.gain.setValueAtTime === 'function') {
+    try { gainNode.gain.setValueAtTime(val, time) } catch { /* ignore */ }
+  } else {
+    gainNode.gain.value = val
+  }
 }
 
 export function useWebRTC() {
@@ -523,12 +577,45 @@ export function useWebRTC() {
 
       source.connect(biquad)
       biquad.connect(testAnalyser)
+      testBiquad = biquad
+
+      if (voiceStore.isMicTesting) {
+        try {
+          loopbackGain = testAudioContext.createGain()
+          setNodeGain(loopbackGain, 0, testAudioContext.currentTime)
+          testBiquad.connect(loopbackGain)
+          loopbackGain.connect(testAudioContext.destination)
+        } catch (err) {
+          console.warn('[WebRTC] Test loopback setup failed:', err)
+        }
+      }
 
       const buffer = new Uint8Array(testAnalyser.fftSize)
+      let testLastAboveThresholdTime = 0
 
       testSpeakingInterval = setInterval(() => {
         if (!testAnalyser) return
-        voiceStore.currentInputLevel = calculateRMSLevel(testAnalyser, buffer)
+        const level = calculateRMSLevel(testAnalyser, buffer)
+        voiceStore.currentInputLevel = level
+
+        if (loopbackGain && testAudioContext && voiceStore.isMicTesting) {
+          let shouldHear
+          if (voiceStore.inputMode === 'ptt') {
+            shouldHear = voiceStore.isPttPressed
+          } else {
+            const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
+            if (level >= threshold) {
+              shouldHear = true
+              testLastAboveThresholdTime = Date.now()
+            } else if (Date.now() - testLastAboveThresholdTime < voiceStore.hangoverMs) {
+              shouldHear = true
+            } else {
+              shouldHear = false
+            }
+          }
+          const targetGain = shouldHear ? (voiceStore.outputVolume / 100) : 0.0
+          setNodeGain(loopbackGain, targetGain, testAudioContext.currentTime)
+        }
       }, 50)
 
       // Refresh devices after permission is granted so device labels are available
@@ -539,7 +626,64 @@ export function useWebRTC() {
     }
   }
 
+  async function startMicLoopback() {
+    stopMicLoopback()
+    voiceStore.isMicTesting = true
+
+    // If in a voice call:
+    if (localAudioStream.value && audioContext && callBiquad) {
+      try {
+        loopbackGain = audioContext.createGain()
+        setNodeGain(loopbackGain, 0, audioContext.currentTime)
+        callBiquad.connect(loopbackGain)
+        loopbackGain.connect(audioContext.destination)
+      } catch (err) {
+        console.warn('[WebRTC] Call loopback setup failed:', err)
+      }
+      const track = localAudioStream.value.getAudioTracks()[0]
+      if (track) track.enabled = false
+      chatStore.sendWSEvent('voice_speaking', { active: false })
+      updateRemoteVolume(voiceStore)
+      return
+    }
+
+    // Not in a voice call:
+    if (!testAudioContext || !testBiquad) {
+      await startMicTest()
+    }
+    if (testAudioContext && testBiquad) {
+      try {
+        loopbackGain = testAudioContext.createGain()
+        setNodeGain(loopbackGain, 0, testAudioContext.currentTime)
+        testBiquad.connect(loopbackGain)
+        loopbackGain.connect(testAudioContext.destination)
+      } catch (err) {
+        console.warn('[WebRTC] Test loopback setup failed:', err)
+      }
+    }
+  }
+
+  function stopMicLoopback() {
+    voiceStore.isMicTesting = false
+    if (loopbackGain) {
+      try { loopbackGain.disconnect() } catch { /* ignore */ }
+      loopbackGain = null
+    }
+    if (localAudioStream.value) {
+      const track = localAudioStream.value.getAudioTracks()[0]
+      if (track) track.enabled = !voiceStore.isMuted
+      updateRemoteVolume(voiceStore)
+    }
+  }
+
+  function toggleMicTest() {
+    if (voiceStore.isMicTesting) stopMicLoopback()
+    else startMicLoopback()
+  }
+
   function stopMicTest() {
+    stopMicLoopback()
+    testBiquad = null
     if (testSpeakingInterval) {
       clearInterval(testSpeakingInterval)
       testSpeakingInterval = null
@@ -574,7 +718,7 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
-    teardownScreenAudioMix()
+    teardownScreenAudioMix(voiceStore)
     teardownMicPipeline()
     voiceStore.currentInputLevel = 0
   }
@@ -586,6 +730,20 @@ export function useWebRTC() {
     () => voiceStore.localMutedUsers
   ], () => {
     updateRemoteVolume(voiceStore)
+  })
+
+  watch([
+    () => voiceStore.isScreenAudioMuted,
+    () => voiceStore.screenAudioVolume
+  ], ([muted, vol]) => {
+    if (mix?.screenGain && mix.ctx) {
+      const target = muted ? 0 : ((vol ?? 100) / 100)
+      if (mix.screenGain.gain?.setValueAtTime) {
+        mix.screenGain.gain.setValueAtTime(target, mix.ctx.currentTime)
+      } else if (mix.screenGain.gain) {
+        mix.screenGain.gain.value = target
+      }
+    }
   })
 
   // Offers are queued so overlapping renegotiations never interleave.
@@ -709,6 +867,15 @@ export function useWebRTC() {
   // cancellation). In a call the mic is re-acquired and swapped into the
   // running connection without renegotiation; otherwise the mic test restarts.
   async function applyAudioSettings() {
+    if (audioSender) {
+      await applyQosToSender(audioSender, voiceStore)
+    }
+    if (screenSender) {
+      await applyQosToSender(screenSender, voiceStore)
+    }
+    if (cameraSender) {
+      await applyQosToSender(cameraSender, voiceStore)
+    }
     if (!localAudioStream.value) return startMicTest()
     const gen = joinGeneration
     let stream
@@ -725,7 +892,7 @@ export function useWebRTC() {
     const old = localAudioStream.value
     // The mix lives in the old audio context: rebuilt on the new one below.
     const screenAudio = mix?.screenTrack
-    teardownScreenAudioMix()
+    teardownScreenAudioMix(voiceStore)
     if (speakingInterval) {
       clearInterval(speakingInterval)
       speakingInterval = null
@@ -739,7 +906,7 @@ export function useWebRTC() {
     localAudioStream.value = sendStream
     voiceStore.localAudioStream = sendStream
     if (screenAudio && screenAudio.readyState !== 'ended') {
-      if (buildScreenAudioMix(screenAudio)) screenAudio.onended = detachScreenAudio
+      if (buildScreenAudioMix(screenAudio, voiceStore)) screenAudio.onended = detachScreenAudio
     }
     const outgoing = activeAudioTrack()
     if (audioSender && outgoing) await audioSender.replaceTrack(outgoing).catch(() => {})
@@ -801,6 +968,18 @@ export function useWebRTC() {
       biquad.frequency.setValueAtTime(85, ctx.currentTime)
       meterSource.connect(biquad)
       biquad.connect(analyser)
+      callBiquad = biquad
+
+      if (voiceStore.isMicTesting) {
+        try {
+          loopbackGain = ctx.createGain()
+          setNodeGain(loopbackGain, 0, ctx.currentTime)
+          callBiquad.connect(loopbackGain)
+          loopbackGain.connect(ctx.destination)
+        } catch (err) {
+          console.warn('[WebRTC] Call loopback setup failed:', err)
+        }
+      }
     } catch (err) {
       console.warn('AudioContext speaking detector setup error:', err)
     }
@@ -808,6 +987,11 @@ export function useWebRTC() {
   }
 
   function teardownMicPipeline() {
+    callBiquad = null
+    if (loopbackGain) {
+      try { loopbackGain.disconnect() } catch { /* ignore */ }
+      loopbackGain = null
+    }
     if (suppressorNode) {
       try {
         suppressorNode.disconnect()
@@ -848,6 +1032,54 @@ export function useWebRTC() {
       // PERFORMANCE FIX: Only update reactive Pinia store if settings modal is open
       if (voiceStore.showAudioSettings) {
         voiceStore.currentInputLevel = level
+      }
+
+      // No Audio Detected Warning check
+      if (voiceStore.warnNoAudioDetected && !voiceStore.isMuted && !voiceStore.isMicTesting) {
+        if (level < 1) {
+          if (!unmutedZeroAudioStartTime) unmutedZeroAudioStartTime = Date.now()
+          else if (Date.now() - unmutedZeroAudioStartTime > 15000) {
+            if (Date.now() - lastNoAudioWarningToastTime > 120000) {
+              useToastStore().info(t('audio.noAudioDetectedToast'))
+              lastNoAudioWarningToastTime = Date.now()
+            }
+          }
+        } else {
+          unmutedZeroAudioStartTime = 0
+        }
+      } else {
+        unmutedZeroAudioStartTime = 0
+      }
+
+      // If mic testing in a call: mute channel transmission and gate loopback
+      if (voiceStore.isMicTesting) {
+        if (wasSpeaking) {
+          wasSpeaking = false
+          chatStore.sendWSEvent('voice_speaking', { active: false })
+        }
+        if (localAudioStream.value) {
+          const track = localAudioStream.value.getAudioTracks()[0]
+          if (track && track.enabled) track.enabled = false
+        }
+        if (loopbackGain && audioContext) {
+          let shouldHear
+          if (voiceStore.inputMode === 'ptt') {
+            shouldHear = voiceStore.isPttPressed
+          } else {
+            const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
+            if (level >= threshold) {
+              shouldHear = true
+              lastAboveThresholdTime = Date.now()
+            } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
+              shouldHear = true
+            } else {
+              shouldHear = false
+            }
+          }
+          const targetGain = shouldHear ? (voiceStore.outputVolume / 100) : 0.0
+          setNodeGain(loopbackGain, targetGain, audioContext.currentTime)
+        }
+        return
       }
 
       if (voiceStore.isMuted) {
@@ -902,7 +1134,7 @@ export function useWebRTC() {
   // Screen audio ended (or sharing stopped): back to the plain microphone.
   async function detachScreenAudio() {
     if (!mix) return
-    teardownScreenAudioMix()
+    teardownScreenAudioMix(voiceStore)
     if (audioSender) await audioSender.replaceTrack(localAudioStream.value?.getAudioTracks()[0] ?? null).catch(() => {})
   }
 
@@ -915,7 +1147,11 @@ export function useWebRTC() {
           width: { ideal: 3840, max: 3840 },
           height: { ideal: 2160, max: 2160 }
         },
-        audio: true
+        audio: {
+          autoGainControl: false,
+          echoCancellation: false,
+          noiseSuppression: false
+        }
       })
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
@@ -933,16 +1169,28 @@ export function useWebRTC() {
 
     if (screenSender && videoTrack) {
       await screenSender.replaceTrack(videoTrack).catch(() => {})
-      await tuneSender(screenSender, { maxBitrate: SCREEN_MAX_BITRATE, degradationPreference: 'maintain-resolution' })
+      const qos = voiceStore?.qosHighPriority ? 'high' : 'medium'
+      await tuneSender(screenSender, {
+        maxBitrate: SCREEN_MAX_BITRATE,
+        degradationPreference: 'maintain-resolution',
+        priority: qos,
+        networkPriority: qos
+      })
+      chatStore.sendWSEvent('webrtc_screenshare_start', {})
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
     }
 
     // Share the screen's sound too: one mixed track replaces the mic track.
     const screenAudio = stream.getAudioTracks()[0]
-    if (screenAudio && buildScreenAudioMix(screenAudio)) {
-      screenAudio.onended = detachScreenAudio
-      const mixed = activeAudioTrack()
-      if (audioSender && mixed) await audioSender.replaceTrack(mixed).catch(() => {})
+    if (screenAudio) {
+      if (buildScreenAudioMix(screenAudio, voiceStore)) {
+        screenAudio.onended = detachScreenAudio
+        const mixed = activeAudioTrack()
+        if (audioSender && mixed) await audioSender.replaceTrack(mixed).catch(() => {})
+      }
+    } else {
+      voiceStore.hasScreenAudio = false
+      useToastStore().info(t('talk.noAudioInShareTip'))
     }
   }
 
@@ -957,6 +1205,8 @@ export function useWebRTC() {
     }
     voiceStore.localScreenStream = null
     voiceStore.isScreenSharing = false
+    voiceStore.hasScreenAudio = false
+    voiceStore.isScreenAudioMuted = false
     if (wasSharing) chatStore.sendWSEvent('webrtc_screenshare_stop', {})
   }
 
@@ -1013,7 +1263,13 @@ export function useWebRTC() {
       track.onended = () => stopCamera()
       if (cameraSender) {
         await cameraSender.replaceTrack(track).catch(() => {})
-        await tuneSender(cameraSender, { maxBitrate: CAMERA_MAX_BITRATE, degradationPreference: 'balanced' })
+        const qos = voiceStore?.qosHighPriority ? 'high' : 'medium'
+        await tuneSender(cameraSender, {
+          maxBitrate: CAMERA_MAX_BITRATE,
+          degradationPreference: 'balanced',
+          priority: qos,
+          networkPriority: qos
+        })
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       }
     }
@@ -1076,6 +1332,9 @@ export function useWebRTC() {
     refreshAudioDevices,
     startMicTest,
     stopMicTest,
+    startMicLoopback,
+    stopMicLoopback,
+    toggleMicTest,
     joinVoiceChannel,
     leaveVoiceChannel,
     rejoinAfterReconnect,
