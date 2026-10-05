@@ -1,0 +1,19 @@
+web/src/i18n/noHardcodedText.test.js
+  s_03fe7322174197::t_ec560911b55eb1 20-21,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebbdf7e23a15e65a73ca4fd3b95b3195d4e8086a",
+  "prompts": {},
+  "sessions": {
+    "s_03fe7322174197": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ecf7963b-188e-42bc-a0c9-7c921ecae1e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
