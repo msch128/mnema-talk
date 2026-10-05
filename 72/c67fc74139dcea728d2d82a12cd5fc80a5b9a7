@@ -1,0 +1,28 @@
+internal/linkpreview/linkpreview_test.go
+  s_50a8e6d0bfe84a::t_f56b51aaaf964f 14-15,27-31
+  s_50a8e6d0bfe84a::t_eddd5e2e42460d 32-34
+internal/server/server.go
+  s_50a8e6d0bfe84a::t_5f0fc05051f372 12
+  s_50a8e6d0bfe84a::t_f56b51aaaf964f 84-87,96-97
+  s_50a8e6d0bfe84a::t_69869e5034fe55 68,88-95
+internal/linkpreview/linkpreview.go
+  s_50a8e6d0bfe84a::t_f56b51aaaf964f 59-63,88-89,116-134,148-191
+.github/workflows/release.yml
+  s_50a8e6d0bfe84a::t_65f2894504f61e 71-72,75-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72c67fc74139dcea728d2d82a12cd5fc80a5b9a7",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
