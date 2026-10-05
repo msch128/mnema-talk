@@ -682,29 +682,9 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 // {kind: "screen"|"camera", user_id, on} for one publisher, or
 // {kind: "camera", all: true, on} for every camera.
 func (c *Client) handleSubscribe(payload json.RawMessage) {
-	var req struct {
-		Kind   string `json:"kind"`
-		UserID string `json:"user_id"`
-		All    bool   `json:"all"`
-		On     bool   `json:"on"`
-	}
-	if json.Unmarshal(payload, &req) != nil {
+	req, ok := parseSubscribe(payload, c.User.ID)
+	if !ok {
 		return
-	}
-	kind := sfu.Source(req.Kind)
-	if kind != sfu.SourceScreen && kind != sfu.SourceCamera {
-		return
-	}
-	if req.All && kind != sfu.SourceCamera {
-		return
-	}
-	var publisher uuid.UUID
-	if !req.All {
-		id, err := uuid.Parse(req.UserID)
-		if err != nil || id == uuid.Nil || id == c.User.ID {
-			return
-		}
-		publisher = id
 	}
 	cur := c.currentVoice()
 	if cur == nil || c.hub.SFU == nil {
@@ -714,9 +694,47 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if room == nil {
 		return
 	}
-	if err := room.Subscribe(c.User.ID, publisher, kind, req.All, req.On); err != nil {
+	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
+}
+
+// subscribeRequest is a validated webrtc_subscribe.
+type subscribeRequest struct {
+	kind      sfu.Source
+	publisher uuid.UUID // uuid.Nil with all
+	all       bool
+	on        bool
+}
+
+// parseSubscribe validates a webrtc_subscribe payload from viewer: a screen
+// or camera of one other user, or every camera at once.
+func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest, bool) {
+	var req struct {
+		Kind   string `json:"kind"`
+		UserID string `json:"user_id"`
+		All    bool   `json:"all"`
+		On     bool   `json:"on"`
+	}
+	if json.Unmarshal(payload, &req) != nil {
+		return subscribeRequest{}, false
+	}
+	kind := sfu.Source(req.Kind)
+	if kind != sfu.SourceScreen && kind != sfu.SourceCamera {
+		return subscribeRequest{}, false
+	}
+	if req.All && kind != sfu.SourceCamera {
+		return subscribeRequest{}, false
+	}
+	out := subscribeRequest{kind: kind, all: req.All, on: req.On}
+	if !req.All {
+		id, err := uuid.Parse(req.UserID)
+		if err != nil || id == uuid.Nil || id == viewer {
+			return subscribeRequest{}, false
+		}
+		out.publisher = id
+	}
+	return out, true
 }
 
 func (c *Client) writePump() {

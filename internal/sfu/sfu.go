@@ -637,12 +637,6 @@ func (r *Room) removePeer(peer *Peer) {
 	}
 }
 
-func (r *Room) GetPeer(userID uuid.UUID) *Peer {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.peers[userID]
-}
-
 // selectedPair is the ICE candidate pair media flows over, for the logs.
 func selectedPair(pc *webrtc.PeerConnection) (*webrtc.ICECandidatePair, error) {
 	for _, t := range pc.GetTransceivers() {

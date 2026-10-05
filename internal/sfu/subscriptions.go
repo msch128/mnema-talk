@@ -222,10 +222,3 @@ func (r *Room) notifyMedia() {
 		fn(r.ID, c.user, c.state)
 	}
 }
-
-// Receives reports whether viewer currently receives publisher's video of the given kind.
-func (r *Room) Receives(viewer, publisher uuid.UUID, kind Source) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return viewer != publisher && r.subs[viewer].Wants(publisher, webrtc.RTPCodecTypeVideo, kind)
-}
