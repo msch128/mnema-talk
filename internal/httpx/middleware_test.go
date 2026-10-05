@@ -133,6 +133,9 @@ func TestSecurityHeaders(t *testing.T) {
 	if strings.Contains(SPAContentSecurityPolicy, "'unsafe-eval'") || strings.Contains(SPAContentSecurityPolicy, "script-src 'self' 'unsafe-inline'") {
 		t.Error("SPA CSP must not allow inline or eval scripts")
 	}
+	if !strings.Contains(SPAContentSecurityPolicy, "script-src 'self' 'wasm-unsafe-eval';") {
+		t.Error("SPA CSP must allow WebAssembly compilation for the noise filter")
+	}
 
 	// A spoofed X-Forwarded-Proto from an untrusted peer must not earn HSTS.
 	r = httptest.NewRequest(http.MethodGet, "/", nil)

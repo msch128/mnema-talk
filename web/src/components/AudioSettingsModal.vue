@@ -61,8 +61,9 @@ async function toggleAgc() {
   await applyAudioSettings()
 }
 
-async function toggleNoise() {
-  voiceStore.toggleNoiseCancelling()
+async function setNoiseMode(mode) {
+  if (voiceStore.noiseMode === mode) return
+  voiceStore.setNoiseMode(mode)
   await applyAudioSettings()
 }
 
@@ -257,29 +258,34 @@ async function toggleEcho() {
             </div>
 
             <!-- Noise suppression -->
-            <div class="p-3.5 flex items-start justify-between gap-4">
+            <div class="p-3.5 space-y-2.5">
               <div class="space-y-0.5">
                 <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
                   <Sparkles class="w-4 h-4 text-mnema-mint" />
-                  <span>{{ $t('audio.noise') }}</span>
-                  <span class="text-xs px-1.5 py-0.2 rounded bg-mnema-accent/15 text-mnema-accent font-mono">{{ $t('audio.noiseBadge') }}</span>
+                  <span id="noise-mode-label">{{ $t('audio.noise') }}</span>
                 </div>
                 <p class="text-xs text-mnema-tertiary leading-relaxed">
-                  {{ $t('audio.noiseHint') }}
+                  {{ $t(`audio.noiseHint_${voiceStore.noiseMode}`) }}
                 </p>
               </div>
-              <button
-                @click="toggleNoise"
-                role="switch"
-                :aria-checked="voiceStore.noiseCancelling ? 'true' : 'false'"
-                :aria-label="$t('audio.noise')"
-                :class="[
-                  'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
-                  voiceStore.noiseCancelling ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
-                ]"
-              >
-                <div :class="['w-4 h-4 rounded-full bg-white transition-transform shadow-sm', voiceStore.noiseCancelling ? 'translate-x-5' : 'translate-x-0']"></div>
-              </button>
+              <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-3 gap-1 p-1 rounded-lg bg-mnema-canvas border border-mnema-hairline">
+                <button
+                  v-for="mode in ['ai', 'browser', 'off']"
+                  :key="mode"
+                  type="button"
+                  role="radio"
+                  :aria-checked="voiceStore.noiseMode === mode ? 'true' : 'false'"
+                  @click="setNoiseMode(mode)"
+                  :class="[
+                    'px-2 py-1.5 rounded-md text-xs font-semibold transition',
+                    voiceStore.noiseMode === mode
+                      ? 'bg-mnema-surface text-mnema-text ring-1 ring-mnema-accent/40'
+                      : 'text-mnema-muted hover:text-mnema-text'
+                  ]"
+                >
+                  {{ $t(`audio.noiseMode_${mode}`) }}
+                </button>
+              </div>
             </div>
 
             <!-- Echo cancellation -->

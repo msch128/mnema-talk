@@ -3,9 +3,12 @@ package web
 
 import (
 	"embed"
+	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -20,6 +23,10 @@ func Handler() http.Handler {
 	if err != nil {
 		panic(err)
 	}
+	return newHandler(sub)
+}
+
+func newHandler(sub fs.FS) http.Handler {
 	indexHTML, _ := fs.ReadFile(sub, "index.html")
 	fileServer := http.FileServer(http.FS(sub))
 
@@ -46,10 +53,69 @@ func Handler() http.Handler {
 		if info, err := fs.Stat(sub, name); err == nil && !info.IsDir() {
 			if strings.HasPrefix(name, "assets/") {
 				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				w.Header().Add("Vary", "Accept-Encoding")
+				if serveCompressed(w, r, sub, name) {
+					return
+				}
 			}
 			fileServer.ServeHTTP(w, r)
 			return
 		}
 		serveIndex(w)
 	})
+}
+
+// precompressed lists the variants the build writes next to assets
+// (precompress in vite.config.js), in order of preference.
+var precompressed = []struct{ encoding, ext string }{
+	{"br", ".br"},
+	{"gzip", ".gz"},
+}
+
+// serveCompressed answers with a precompressed variant of the asset if the
+// client accepts one. Reports whether it wrote a response.
+func serveCompressed(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) bool {
+	accepted := r.Header.Get("Accept-Encoding")
+	for _, p := range precompressed {
+		if !acceptsEncoding(accepted, p.encoding) {
+			continue
+		}
+		f, err := fsys.Open(name + p.ext)
+		if err != nil {
+			continue
+		}
+		defer func() { _ = f.Close() }()
+		info, err := f.Stat()
+		rs, ok := f.(io.ReadSeeker)
+		if err != nil || !ok {
+			return false
+		}
+		ctype := mime.TypeByExtension(path.Ext(name))
+		if ctype == "" {
+			ctype = "application/octet-stream"
+		}
+		w.Header().Set("Content-Type", ctype)
+		w.Header().Set("Content-Encoding", p.encoding)
+		http.ServeContent(w, r, name, info.ModTime(), rs)
+		return true
+	}
+	return false
+}
+
+// acceptsEncoding reports whether an Accept-Encoding header allows enc
+// (listed by name and not refused with q=0).
+func acceptsEncoding(header, enc string) bool {
+	for _, part := range strings.Split(header, ",") {
+		token, params, _ := strings.Cut(strings.TrimSpace(part), ";")
+		if !strings.EqualFold(strings.TrimSpace(token), enc) {
+			continue
+		}
+		q, ok := strings.CutPrefix(strings.ReplaceAll(params, " ", ""), "q=")
+		if !ok {
+			return true
+		}
+		weight, err := strconv.ParseFloat(q, 64)
+		return err == nil && weight > 0
+	}
+	return false
 }
