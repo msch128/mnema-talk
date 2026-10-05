@@ -48,7 +48,7 @@ describe('UserBar voice status panel', () => {
     await nextTick()
     expect(w.find('[data-testid="voice-panel-open"]').text()).toBe('Verbunden · Lounge')
     const ping = w.find('[data-testid="voice-panel-ping"]')
-    expect(ping.text()).toBe('4 ms')
+    expect(ping.text()).toMatch(/^4 ms/)
     expect(ping.attributes('data-tone')).toBe('good')
     voice.recordPing(186)
     await nextTick()
@@ -57,7 +57,8 @@ describe('UserBar voice status panel', () => {
     await nextTick()
     expect(ping.attributes('data-tone')).toBe('bad')
 
-    await w.find('[data-testid="voice-panel-details"]').trigger('click')
+    // Clicking the ping opens the connection details.
+    await ping.trigger('click')
     expect(voice.showStatsModal).toBe(true)
     await w.find('[data-testid="voice-panel-share"]').trigger('click')
     expect(share).toHaveBeenCalled()

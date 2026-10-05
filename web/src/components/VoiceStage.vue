@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
-  Plus, Users, Activity, Sliders, Video, VideoOff, Eye, EyeOff, X
+  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -241,31 +241,6 @@ function formatTime(dateStr) {
             <span class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0">
               {{ $t('tafelrunde.participants', { count: usersInVoice.length }) }}
             </span>
-          </div>
-          <div v-if="isConnectedHere" class="flex items-center gap-2 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap overflow-hidden">
-            <!-- Live Clickable Ping Indicator -->
-            <button
-              @click="voiceStore.showStatsModal = true"
-              class="flex items-center gap-1 text-mnema-accent hover:underline font-semibold"
-              v-tooltip="$t('voice.panel.details')"
-            >
-              <Activity class="w-3.5 h-3.5 text-mnema-accent" />
-              <span>{{ $t('tafelrunde.ping', { ms: voiceStore.rtcStats?.rttMs ?? voiceStore.ping ?? '–' }) }}</span>
-            </button>
-            <span>•</span>
-            <!-- Noise Cancelling Status -->
-            <button
-              @click="toggleNoiseCancelling"
-              :class="[
-                'flex items-center gap-1 transition',
-                voiceStore.noiseCancelling ? 'text-mnema-mint' : 'text-mnema-tertiary hover:text-mnema-text'
-              ]"
-              v-tooltip="voiceStore.noiseCancelling ? $t('tafelrunde.noiseOnTip') : $t('tafelrunde.noiseOffTip')"
-              :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
-            >
-              <Sparkles class="w-3.5 h-3.5" />
-              <span>{{ voiceStore.noiseCancelling ? $t('tafelrunde.noiseOn') : $t('tafelrunde.noiseOff') }}</span>
-            </button>
           </div>
         </div>
       </div>
