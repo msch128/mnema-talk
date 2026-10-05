@@ -306,9 +306,32 @@ func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, p
 	return nil
 }
 
-// GetThreadReplies returns all replies of a root message, oldest first.
-func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID) ([]Message, error) {
-	return queryMessages(ctx, p, messageSelect+` WHERE m.parent_id = $1 ORDER BY m.created_at`, parentID)
+// GetThreadReplies returns a page of replies of a root message, oldest first.
+func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q HistoryQuery) ([]Message, error) {
+	if q.Limit <= 0 {
+		q.Limit = 50
+	}
+	if q.Before != nil {
+		msgs, err := queryMessages(ctx, p, messageSelect+`
+			WHERE m.parent_id = $1 AND (m.created_at, m.id) < `+rootCursor+`
+			ORDER BY m.created_at DESC, m.id DESC
+			LIMIT $3`, parentID, *q.Before, q.Limit)
+		if err != nil {
+			return nil, err
+		}
+		reverse(msgs)
+		return msgs, nil
+	}
+	if q.After != nil {
+		return queryMessages(ctx, p, messageSelect+`
+			WHERE m.parent_id = $1 AND (m.created_at, m.id) > `+rootCursor+`
+			ORDER BY m.created_at ASC, m.id ASC
+			LIMIT $3`, parentID, *q.After, q.Limit)
+	}
+	return queryMessages(ctx, p, messageSelect+`
+		WHERE m.parent_id = $1
+		ORDER BY m.created_at ASC, m.id ASC
+		LIMIT $2`, parentID, q.Limit)
 }
 
 // GetMessage returns one fully populated message.

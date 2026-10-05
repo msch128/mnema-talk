@@ -271,7 +271,30 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	replies, err := GetThreadReplies(r.Context(), h.DB, msgID)
+
+	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	anchors := 0
+	for name, dst := range map[string]**uuid.UUID{"before": &q.Before, "after": &q.After} {
+		raw := r.URL.Query().Get(name)
+		if raw == "" {
+			continue
+		}
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return httpx.ErrInvalidInput(name + " must be a message id")
+		}
+		*dst = &id
+		anchors++
+		ref, err := loadMessageRef(r.Context(), h.DB, id)
+		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
+			return errMessageNotFound
+		}
+	}
+	if anchors > 1 {
+		return httpx.ErrInvalidInput("use only one of before or after")
+	}
+
+	replies, err := GetThreadReplies(r.Context(), h.DB, msgID, q)
 	if err != nil {
 		return err
 	}
