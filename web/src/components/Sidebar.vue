@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount, useId } from 'vue'
 import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, Hash, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -15,7 +15,8 @@ import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
 import {
-  locateChannel, locateCategory, moveChannel, moveCategory, resolveChannelDrop, resolveCategoryDrop
+  locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory,
+  resolveChannelDrop, resolveCategoryDrop
 } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
 import {
@@ -250,9 +251,10 @@ async function handleVoiceUserClick(channel, user) {
 // ---- Moving channels and categories (admins) ----
 //
 // A move shows at once and is saved right away (useChannelLayout); a toast
-// offers to undo it. The drop rules live in lib/channelLayout.
+// offers to undo it. The drop and keyboard rules live in lib/channelLayout.
 
 const navEl = ref(null)
+const hintId = useId()
 const flashKey = ref('')
 const announcement = ref('')
 let flashTimer = null
@@ -311,6 +313,30 @@ function applyMove(item, next) {
   }
   flash(`${item.kind}:${item.id}`)
   return true
+}
+
+// Alt+ArrowUp / Alt+ArrowDown on a focused row or category header. Channels
+// cross into the neighbouring category at either end; a collapsed category
+// they move into opens, so the row stays visible and keeps focus.
+function moveByKey(kind, entity, dir) {
+  if (!authStore.isAdmin || dragItem.value) return
+  const tree = layout.value
+  const next = kind === 'channel' ? stepChannel(tree, entity.id, dir) : stepCategory(tree, entity.id, dir)
+  if (next === tree) {
+    announce(t(dir < 0 ? 'sidebar.atTop' : 'sidebar.atBottom', { name: entity.name }))
+    return
+  }
+  if (kind === 'channel') {
+    const at = locateChannel(next, entity.id)
+    if (at.categoryId) expandCategory(at.categoryId)
+  }
+  applyMove(itemOf(kind, entity), next)
+  nextTick(() => {
+    const selector = kind === 'channel' ? `[data-drop="channel"][data-id="${entity.id}"]` : `[data-category-toggle="${entity.id}"]`
+    const el = navEl.value?.querySelector(selector)
+    el?.focus()
+    el?.scrollIntoView?.({ block: 'nearest' })
+  })
 }
 
 // What the pointer is over, measured on the rendered sidebar. Only the
@@ -614,11 +640,13 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
           :dragging="isDragged('category', category.id)"
           :indicator="indicatorFor(`header:${category.id}`)"
           :flash="flashKey === `category:${category.id}`"
+          :hint-id="hintId"
           @toggle="toggleCategory(category.id)"
           @menu="openCategoryMenu($event, category)"
           @create-channel="openCreateChannel(defaultTypeFor(category), category.id)"
           @delete="handleDeleteCategory(category)"
           @drag-start="startDrag($event, 'category', category)"
+          @move="moveByKey('category', category, $event)"
         />
 
         <div class="mt-0.5">
@@ -630,10 +658,12 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             :dragging="isDragged('channel', channel.id)"
             :indicator="indicatorFor(`channel:${channel.id}`)"
             :flash="flashKey === `channel:${channel.id}`"
+            :hint-id="hintId"
             @open="handleChannelClick(channel)"
             @menu="openChannelMenu($event, channel)"
             @delete="handleDeleteChannel(channel)"
             @drag-start="startDrag($event, 'channel', channel)"
+            @move="moveByKey('channel', channel, $event)"
             @voice-user-click="handleVoiceUserClick(channel, $event)"
             @member-menu="openMemberMenu"
           />
@@ -657,7 +687,8 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       </section>
     </nav>
 
-    <!-- Where a move ended up, for screen readers -->
+    <!-- How to move things, and where a move ended up, for screen readers -->
+    <p v-if="authStore.isAdmin" :id="hintId" class="sr-only">{{ $t('sidebar.reorderHint') }}</p>
     <div class="sr-only" role="status" aria-live="polite" data-testid="sidebar-announcer">{{ announcement }}</div>
 
     <!-- The dragged item follows the pointer -->

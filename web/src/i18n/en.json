@@ -166,7 +166,10 @@
     "channelDuplicated": "Duplicated “{name}”",
     "duplicateFailed": "Couldn't duplicate the channel.",
     "collapseAll": "Collapse all",
-    "expandAll": "Expand all"
+    "expandAll": "Expand all",
+    "atTop": "{name} is already at the top",
+    "atBottom": "{name} is already at the bottom",
+    "reorderHint": "Move with Alt + Arrow Up or Down, or drag."
   },
   "category": {
     "name": "Category name"

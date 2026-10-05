@@ -572,3 +572,110 @@ describe('Sidebar context menus', () => {
     expect(document.querySelector('#edit-name')).not.toBeNull()
   })
 })
+
+// ---- Keyboard ----
+
+async function altKey(el, key) {
+  const target = el.element ?? el
+  target.focus()
+  const e = new KeyboardEvent('keydown', { key, altKey: true, bubbles: true, cancelable: true })
+  target.dispatchEvent(e)
+  await flush()
+  return e
+}
+const toggleOf = id => wrapper.find(`[data-category-toggle="${id}"]`)
+const announced = () => wrapper.find('[data-testid="sidebar-announcer"]').text()
+
+describe('Sidebar keyboard moves (Alt+Arrow)', () => {
+  it('moves a channel within its category, keeps focus and announces the new place', async () => {
+    await mountSidebar()
+    const e = await altKey(rowOf('general'), 'ArrowDown')
+    expect(e.defaultPrevented).toBe(true)
+    expect(order()).toBe('welcome | text: random general | voice: lounge | empty: ')
+    expect(puts()).toHaveLength(1)
+    expect(document.activeElement).toBe(rowOf('general').element)
+    expect(announced()).toBe('general verschoben: Position 2 von 2 in Text')
+    await answer('/api/admin/layout')
+    expect(toasts.toasts.find(t => t.action).text).toBe('Kanal verschoben')
+  })
+
+  it('crosses into the next category at the bottom edge and the previous one at the top edge', async () => {
+    await mountSidebar()
+    await altKey(rowOf('random'), 'ArrowDown')
+    expect(order()).toBe('welcome | text: general | voice: random lounge | empty: ')
+    expect(announced()).toBe('random verschoben: Position 1 von 2 in Voice')
+    expect(document.activeElement).toBe(rowOf('random').element)
+
+    await altKey(rowOf('random'), 'ArrowUp')
+    expect(order()).toBe('welcome | text: general random | voice: lounge | empty: ')
+    await altKey(rowOf('general'), 'ArrowUp')
+    expect(order()).toBe('welcome general | text: random | voice: lounge | empty: ')
+    expect(announced()).toBe('general verschoben: Position 2 von 2 in Ohne Kategorie')
+    expect(document.activeElement).toBe(rowOf('general').element)
+  })
+
+  it('reaches empty categories and stops at the very bottom', async () => {
+    await mountSidebar()
+    await altKey(rowOf('lounge'), 'ArrowDown')
+    expect(order()).toBe('welcome | text: general random | voice:  | empty: lounge')
+    const saves = puts().length
+    await altKey(rowOf('lounge'), 'ArrowDown')
+    expect(puts()).toHaveLength(saves)
+    expect(announced()).toBe('lounge ist schon ganz unten')
+  })
+
+  it('stops at the very top', async () => {
+    await mountSidebar()
+    await altKey(rowOf('welcome'), 'ArrowUp')
+    expect(puts()).toHaveLength(0)
+    expect(announced()).toBe('welcome ist schon ganz oben')
+  })
+
+  it('opens a collapsed category a channel moves into', async () => {
+    await mountSidebar({ collapsed: ['voice'] })
+    await altKey(rowOf('random'), 'ArrowDown')
+    expect(channelIds('voice')).toEqual(['random', 'lounge'])
+    expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY))).toEqual([])
+    expect(document.activeElement).toBe(rowOf('random').element)
+  })
+
+  it('moves categories from their header and keeps focus there', async () => {
+    await mountSidebar()
+    await altKey(toggleOf('text'), 'ArrowDown')
+    expect(sectionIds()).toEqual(['__uncategorized', 'voice', 'text', 'empty'])
+    expect(puts()[0].json.categories.map(c => c.id)).toEqual(['voice', 'text', 'empty'])
+    expect(document.activeElement).toBe(toggleOf('text').element)
+    expect(announced()).toBe('Text verschoben: Position 2 von 3')
+    await altKey(toggleOf('voice'), 'ArrowUp')
+    expect(announced()).toBe('Voice ist schon ganz oben')
+  })
+
+  it('quick presses share the save queue', async () => {
+    await mountSidebar()
+    await altKey(rowOf('welcome'), 'ArrowDown')
+    await altKey(rowOf('welcome'), 'ArrowDown')
+    await altKey(rowOf('welcome'), 'ArrowDown')
+    expect(order()).toBe('text: general random welcome | voice: lounge | empty: ')
+    expect(puts()).toHaveLength(1)
+    await answer('/api/admin/layout')
+    expect(puts()).toHaveLength(2)
+    expect(puts()[1].json.channels.filter(c => c.category_id === 'text').map(c => c.id)).toEqual(['general', 'random', 'welcome'])
+    await answer('/api/admin/layout')
+    expect(toasts.toasts.filter(t => t.action)).toHaveLength(1)
+  })
+
+  it('describes the shortcut to admins only; members get no moves', async () => {
+    await mountSidebar()
+    const hint = rowOf('general').attributes('aria-describedby')
+    expect(document.getElementById(hint).textContent).toContain('Alt')
+    expect(rowOf('general').attributes('aria-keyshortcuts')).toBe('Alt+ArrowUp Alt+ArrowDown')
+    wrapper.unmount()
+    setActivePinia(createPinia())
+    await mountSidebar({ role: 'user' })
+    expect(rowOf('general').attributes('aria-describedby')).toBeUndefined()
+    const e = await altKey(rowOf('general'), 'ArrowDown')
+    expect(e.defaultPrevented).toBe(false)
+    expect(order()).toBe('welcome | text: general random | voice: lounge | empty: ')
+    expect(puts()).toHaveLength(0)
+  })
+})

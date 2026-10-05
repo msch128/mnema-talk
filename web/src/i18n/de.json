@@ -166,7 +166,10 @@
     "channelDuplicated": "„{name}“ dupliziert",
     "duplicateFailed": "Der Kanal konnte nicht dupliziert werden.",
     "collapseAll": "Alle einklappen",
-    "expandAll": "Alle ausklappen"
+    "expandAll": "Alle ausklappen",
+    "atTop": "{name} ist schon ganz oben",
+    "atBottom": "{name} ist schon ganz unten",
+    "reorderHint": "Mit Alt + Pfeil nach oben oder unten verschieben, oder ziehen."
   },
   "category": {
     "name": "Kategoriename"

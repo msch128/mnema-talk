@@ -1,6 +1,7 @@
 <script setup>
 // One channel in the sidebar: the row itself, plus the people connected to
-// it for a voice channel. Admins can drag the row (and its users with it).
+// it for a voice channel. Admins can drag the row (and its users with it) or
+// move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
 import { Hash, Volume2, Trash2, Monitor } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
@@ -17,10 +18,18 @@ const props = defineProps({
   // Drop indicator: 'top' | 'bottom' | ''.
   indicator: { type: String, default: '' },
   // Briefly highlighted (moved, duplicated).
-  flash: { type: Boolean, default: false }
+  flash: { type: Boolean, default: false },
+  // id of the hint that tells admins how to move rows.
+  hintId: { type: String, default: '' }
 })
 
-const emit = defineEmits(['open', 'menu', 'delete', 'drag-start', 'voice-user-click', 'member-menu'])
+const emit = defineEmits(['open', 'menu', 'delete', 'drag-start', 'move', 'voice-user-click', 'member-menu'])
+
+function moveKey(e, dir) {
+  if (!props.admin) return
+  e.preventDefault()
+  emit('move', dir)
+}
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -72,6 +81,8 @@ const rowClass = computed(() => [
       :data-id="channel.id"
       :data-channel-type="channel.type"
       aria-haspopup="menu"
+      :aria-describedby="admin && hintId ? hintId : undefined"
+      :aria-keyshortcuts="admin ? 'Alt+ArrowUp Alt+ArrowDown' : undefined"
       @click="emit('open')"
       @contextmenu="emit('menu', $event)"
       @pointerdown="emit('drag-start', $event)"
@@ -79,6 +90,8 @@ const rowClass = computed(() => [
       @keydown.space.self.prevent="emit('open')"
       @keydown.f10.shift.self.prevent="emit('menu', $event)"
       @keydown.context-menu.self.prevent="emit('menu', $event)"
+      @keydown.alt.up.self="moveKey($event, -1)"
+      @keydown.alt.down.self="moveKey($event, 1)"
     >
       <!-- Unread pip on left edge -->
       <span

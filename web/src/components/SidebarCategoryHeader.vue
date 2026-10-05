@@ -1,9 +1,10 @@
 <script setup>
 // Header of a sidebar category: collapse toggle, and for admins "+" / delete.
-// Admins can drag the header to move the whole category.
+// Admins can drag the header to move the whole category, or move it with
+// Alt+ArrowUp / Alt+ArrowDown on the toggle.
 import { Plus, Trash2, ChevronDown, ChevronRight } from '@lucide/vue'
 
-defineProps({
+const props = defineProps({
   category: { type: Object, required: true },
   collapsed: { type: Boolean, default: false },
   admin: { type: Boolean, default: false },
@@ -11,10 +12,17 @@ defineProps({
   dragging: { type: Boolean, default: false },
   // Drop indicator: 'top' | 'bottom' | 'inside' (a channel goes into it) | ''.
   indicator: { type: String, default: '' },
-  flash: { type: Boolean, default: false }
+  flash: { type: Boolean, default: false },
+  hintId: { type: String, default: '' }
 })
 
-const emit = defineEmits(['toggle', 'menu', 'create-channel', 'delete', 'drag-start'])
+const emit = defineEmits(['toggle', 'menu', 'create-channel', 'delete', 'drag-start', 'move'])
+
+function moveKey(e, dir) {
+  if (!props.admin) return
+  e.preventDefault()
+  emit('move', dir)
+}
 </script>
 
 <template>
@@ -43,9 +51,13 @@ const emit = defineEmits(['toggle', 'menu', 'create-channel', 'delete', 'drag-st
       :aria-expanded="collapsed ? 'false' : 'true'"
       aria-haspopup="menu"
       :data-category-toggle="category.id"
+      :aria-describedby="admin && hintId ? hintId : undefined"
+      :aria-keyshortcuts="admin ? 'Alt+ArrowUp Alt+ArrowDown' : undefined"
       @click="emit('toggle')"
       @keydown.f10.shift.prevent="emit('menu', $event)"
       @keydown.context-menu.prevent="emit('menu', $event)"
+      @keydown.alt.up="moveKey($event, -1)"
+      @keydown.alt.down="moveKey($event, 1)"
     >
       <ChevronRight v-if="collapsed" class="w-3 h-3 flex-shrink-0" />
       <ChevronDown v-else class="w-3 h-3 flex-shrink-0" />
