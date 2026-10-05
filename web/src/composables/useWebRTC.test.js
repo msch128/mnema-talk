@@ -682,6 +682,24 @@ describe('webcam', () => {
     expect(camera.setParameters.mock.calls[0][0].encodings[0].maxBitrate).toBe(CAMERA_MAX_BITRATE)
   })
 
+  it('tunes the senders again after a reconnect', async () => {
+    const { rtc, voice } = await joined()
+    voice.qosHighPriority = true
+    navigator.mediaDevices.getUserMedia.mockImplementationOnce(async () => fakeStream(['video']))
+    stubDisplayMedia(fakeStream(['video']))
+    await rtc.startScreenShare()
+    await rtc.startCamera()
+
+    rtc.rejoinAfterReconnect()
+    const [audio, screen, camera] = (await negotiate()).senders
+    await vi.waitFor(() => expect(camera.setParameters).toHaveBeenCalled())
+    const screenParams = screen.setParameters.mock.calls.at(-1)[0]
+    expect(screenParams.encodings[0].maxBitrate).toBe(SCREEN_MAX_BITRATE)
+    expect(screenParams.degradationPreference).toBe('maintain-resolution')
+    expect(camera.setParameters.mock.calls.at(-1)[0].encodings[0].maxBitrate).toBe(CAMERA_MAX_BITRATE)
+    expect(audio.setParameters.mock.calls.at(-1)[0].encodings[0].priority).toBe('high')
+  })
+
   it('still shares when the browser rejects the sender parameters', async () => {
     const { rtc, screen } = await joined()
     screen.setParameters.mockRejectedValue(new Error('unsupported'))
