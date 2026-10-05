@@ -9,6 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
+import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
 import ActivityStats from './ActivityStats.vue'
@@ -43,11 +44,36 @@ const profileUser = computed(() => {
   return props.user || chatStore.selectedUserProfile || authStore.user || {}
 })
 
-// Initialize edit fields
-editDisplayName.value = profileUser.value.display_name || ''
-editBio.value = profileUser.value.bio || ''
+// The profile opens with a stub (no bio) that fills in once /api/users/:id
+// answers, so the edit fields are copied when editing starts. Your own
+// account record is complete, so it wins; without a loaded bio there is
+// nothing safe to send (the PUT replaces both fields).
+const editSource = computed(() => {
+  const own = authStore.user
+  if (isSelf.value && own && 'bio' in own) return own
+  const p = profileUser.value
+  return 'bio' in p ? p : null
+})
+const canEditProfile = computed(() => isSelf.value && !!editSource.value)
+
+function startEditBio() {
+  const src = editSource.value
+  if (!src) return
+  editDisplayName.value = src.display_name || ''
+  editBio.value = src.bio || ''
+  profileSaveError.value = ''
+  isEditingBio.value = true
+}
+
+function cancelEditBio() {
+  isEditingBio.value = false
+  profileSaveError.value = ''
+  editDisplayName.value = ''
+  editBio.value = ''
+}
 
 async function saveProfile() {
+  if (!canEditProfile.value) return
   isSavingProfile.value = true
   profileSaveError.value = ''
   try {
@@ -77,8 +103,8 @@ const passwordError = ref('')
 
 async function savePassword() {
   passwordError.value = ''
-  if (newPassword.value.length < 10) {
-    passwordError.value = t('profile.passwordTooShort', { count: 10 })
+  if ([...newPassword.value].length < MIN_PASSWORD_LENGTH) {
+    passwordError.value = t('profile.passwordTooShort', { count: MIN_PASSWORD_LENGTH })
     return
   }
   if (newPassword.value !== newPasswordRepeat.value) {
@@ -403,8 +429,10 @@ function handleMention() {
             <div class="flex items-center justify-between mb-1">
               <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.about') }}</span>
               <button 
-                v-if="isSelf && !isEditingBio" 
-                @click="isEditingBio = true"
+                v-if="canEditProfile && !isEditingBio"
+                type="button"
+                data-testid="profile-bio-edit"
+                @click="startEditBio"
                 class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
               >
                 <Edit3 class="w-3.5 h-3.5" />
@@ -448,8 +476,9 @@ function handleMention() {
                 <div class="flex justify-between items-center text-xs text-mnema-tertiary mt-0.5">
                   <span>{{ editBio.length }} / 250</span>
                   <div class="flex items-center gap-1.5">
-                    <button 
-                      @click="isEditingBio = false" 
+                    <button
+                      type="button"
+                      @click="cancelEditBio"
                       class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
                     >
                       {{ $t('common.cancel') }}
@@ -499,7 +528,7 @@ function handleMention() {
                 v-model="newPassword"
                 type="password"
                 autocomplete="new-password"
-                :placeholder="$t('profile.newPassword', { count: 10 })" :aria-label="$t('profile.newPassword', { count: 10 })"
+                :placeholder="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })" :aria-label="$t('profile.newPassword', { count: MIN_PASSWORD_LENGTH })"
                 class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <input
