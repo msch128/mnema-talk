@@ -91,6 +91,39 @@ func TestMigrateRecordsAndVerifiesChecksums(t *testing.T) {
 	}
 }
 
+// Usernames differing only in case are rejected by the database (0011). Runs
+// in a rolled-back transaction, so the shared test database stays untouched.
+func TestUsernamesAreUniqueIgnoringCase(t *testing.T) {
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set")
+	}
+	ctx := context.Background()
+	p, err := Connect(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p.Close()
+	if err := p.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	b := make([]byte, 4)
+	_, _ = rand.Read(b)
+	name := "CaseTest" + hex.EncodeToString(b)
+	insert := `INSERT INTO users (username, display_name, password_hash) VALUES ($1, 'x', 'x')`
+	if _, err := tx.Exec(ctx, insert, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, insert, strings.ToLower(name)); err == nil {
+		t.Fatal("username differing only in case was accepted")
+	}
+}
+
 // A pre-checksum schema_migrations table (from older releases) gets the
 // column added and its rows backfilled.
 func TestMigrateUpgradesOldSchemaMigrationsTable(t *testing.T) {
