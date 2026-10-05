@@ -1,0 +1,21 @@
+e2e/tests/smoke.spec.js
+  s_03fe7322174197::t_9e4db9eba83a7a 1,12
+web/src/i18n/noHardcodedText.test.js
+  s_03fe7322174197::t_fafa5f120b3b8e 20-30,32,58,66,70,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "015cbc4b2f251eca8ceea7914537db5078e79e50",
+  "prompts": {},
+  "sessions": {
+    "s_03fe7322174197": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ecf7963b-188e-42bc-a0c9-7c921ecae1e4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
