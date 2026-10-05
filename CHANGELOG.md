@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/msch128/mnema-talk/compare/v0.1.6...v0.1.7) (2026-10-05)
+
+
+### Features
+
+* **voice:** Discord-parity screen sharing, mic test loopback, QoS and granular sound effects ([5ab4760](https://github.com/msch128/mnema-talk/commit/5ab4760bd144993d5900ca2ad2b9c2eb1174d13d))
+
 ## [0.1.6](https://github.com/msch128/mnema-talk/compare/v0.1.5...v0.1.6) (2026-10-05)
 
 
