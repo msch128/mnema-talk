@@ -1148,7 +1148,8 @@ export function useWebRTC() {
 
     chatStore.setWebRTCHandlers({
       onOffer: handleRemoteOffer,
-      onCandidate: handleRemoteCandidate
+      onCandidate: handleRemoteCandidate,
+      onKicked: handleKicked
     })
 
     const gen = ++joinGeneration
@@ -1634,16 +1635,31 @@ export function useWebRTC() {
     return voiceStore.isCameraOn ? stopCamera() : startCamera()
   }
 
-  function leaveVoiceChannel() {
+  // Ends the call locally. The stored session is cleared and the channel
+  // unset, so neither a reload nor a reconnect rejoins it.
+  function endCall({ notifyServer }) {
     joinGeneration++
     voiceSession.forget()
     cleanupPeerConnection(voiceStore)
     cleanupVoiceAudio()
     stopScreenShare()
     stopCamera()
-    chatStore.sendWSEvent('voice_leave', {})
+    if (notifyServer) chatStore.sendWSEvent('voice_leave', {})
     voiceStore.disconnect()
     voiceStore.audioBlocked = false
+  }
+
+  function leaveVoiceChannel() {
+    endCall({ notifyServer: true })
+  }
+
+  // An admin removed me from the call (voice_kicked): the server already
+  // dropped me, so no voice_leave goes out.
+  function handleKicked(payload) {
+    if (!voiceStore.currentChannelId) return
+    if (payload?.channel_id && payload.channel_id !== voiceStore.currentChannelId) return
+    endCall({ notifyServer: false })
+    useToastStore().info(t('voice.kicked'))
   }
 
   // Rejoins the channel of a call interrupted by a reload less than 30 s ago.

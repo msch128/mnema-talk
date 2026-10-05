@@ -315,7 +315,8 @@
     "cameraNotFound": "Keine Kamera gefunden.",
     "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt.",
     "memberMuted": "Stummgeschaltet",
-    "memberDeafened": "Taub geschaltet"
+    "memberDeafened": "Taub geschaltet",
+    "kicked": "Ein Admin hat dich aus dem Talk entfernt."
   },
   "audio": {
     "settings": "Audio-Einstellungen",
