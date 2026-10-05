@@ -1,14 +1,26 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { X, Mic, Sparkles, Sliders, HelpCircle, Radio } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
+import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
 const { refreshAudioDevices, startMicTest, stopMicTest } = useWebRTC()
 
 const isRecordingPttKey = ref(false)
+
+// The marker shows what the gate really uses (auto mode ignores the slider).
+const threshold = computed(() => effectiveThreshold(voiceStore))
+const isAboveThreshold = computed(() => voiceStore.currentInputLevel >= threshold.value)
+
+// Peak marker so the loudest recent level stays visible while calibrating.
+const peakHold = createPeakHold()
+const peakLevel = ref(0)
+watch(() => voiceStore.currentInputLevel, level => {
+  peakLevel.value = peakHold(level)
+})
 
 onMounted(async () => {
   await refreshAudioDevices()
@@ -172,22 +184,37 @@ async function toggleEcho() {
 
           <!-- Live Visual Volume Meter & Threshold Slider -->
           <div class="space-y-2">
-            <!-- Discord-Style Combined Bar: Left is Gray (Muted), Right is Green (Transmitted) -->
+            <!-- Level bar: amber below the threshold (not transmitted), green above it (transmitted) -->
             <div class="relative h-6 bg-mnema-canvas rounded-lg border border-mnema-border overflow-hidden p-0.5 flex items-center">
               <!-- Live Level Fill -->
               <div
                 class="h-full rounded transition-all duration-75"
-                :style="{
-                  width: `${voiceStore.currentInputLevel}%`,
-                  backgroundColor: voiceStore.currentInputLevel >= voiceStore.sensitivityThreshold ? '#2DA771' : '#454D49'
-                }"
+                :class="isAboveThreshold ? 'bg-mnema-accent' : 'bg-mnema-warning'"
+                :style="{ width: `${voiceStore.currentInputLevel}%` }"
+              ></div>
+
+              <!-- Peak Marker (loudest level of the last moments) -->
+              <div
+                v-if="peakLevel > 0"
+                class="absolute top-1 bottom-1 w-0.5 rounded pointer-events-none"
+                :class="peakLevel >= threshold ? 'bg-mnema-accent-hover' : 'bg-mnema-amber'"
+                :style="{ left: `${peakLevel}%` }"
               ></div>
 
               <!-- Threshold Marker Line -->
               <div
                 class="absolute top-0 bottom-0 w-1 bg-white shadow-lg pointer-events-none z-10 transition-all"
-                :style="{ left: `${voiceStore.sensitivityThreshold}%` }"
+                :style="{ left: `${threshold}%` }"
               ></div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs font-mono text-mnema-tertiary">
+              <span :class="isAboveThreshold ? 'text-mnema-accent font-bold' : 'text-mnema-warning'">
+                Aktueller Pegel: {{ voiceStore.currentInputLevel }}% · Spitze: {{ peakLevel }}%
+              </span>
+              <span class="text-mnema-text font-bold">
+                Schwellenwert: {{ threshold }}%
+              </span>
             </div>
 
             <!-- Manual Slider Control -->
@@ -200,15 +227,6 @@ async function toggleEcho() {
                 @input="handleSliderChange"
                 class="w-full accent-mnema-accent cursor-pointer"
               />
-
-              <div class="flex items-center justify-between text-xs font-mono text-mnema-tertiary">
-                <span :class="voiceStore.currentInputLevel >= voiceStore.sensitivityThreshold ? 'text-mnema-accent font-bold' : ''">
-                  Aktueller Pegel: {{ voiceStore.currentInputLevel }}%
-                </span>
-                <span class="text-mnema-text font-bold">
-                  Schwellenwert: {{ voiceStore.sensitivityThreshold }}%
-                </span>
-              </div>
             </div>
 
             <!-- Helpful Room Advice Note -->
@@ -218,7 +236,7 @@ async function toggleEcho() {
                 <span>Empfehlung für gemeinsame Räume / zwei Personen:</span>
               </div>
               <p class="text-xs leading-relaxed">
-                Lasse deine Freundin hinter dir normal sprechen und beobachte den Ausschlag oben: Stelle den Schieberegler so ein, dass ihre Hintergrundstimme <strong>unterhalb</strong> des weißen Strichs im grauen Bereich bleibt (ca. <strong>30% – 45%</strong>). Sobald du selbst sprichst, schlägt die Leiste grün über den Strich aus und überträgt nur deine Stimme.
+                Lasse deine Freundin hinter dir normal sprechen und beobachte den Ausschlag oben: Stelle den Schieberegler so ein, dass ihre Hintergrundstimme <strong>unterhalb</strong> des weißen Strichs im gelben Bereich bleibt (ca. <strong>30% – 45%</strong>). Sobald du selbst sprichst, schlägt die Leiste grün über den Strich aus und überträgt nur deine Stimme.
               </p>
             </div>
           </div>
