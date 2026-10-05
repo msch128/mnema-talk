@@ -8,15 +8,28 @@ import (
 	"time"
 )
 
+const (
+	// sweepInterval bounds how often a limiter scans its whole map for expired
+	// entries, so the O(n) sweep never runs on every request.
+	sweepInterval = time.Minute
+	// defaultMaxEntries is the hard cap on tracked keys per limiter. Beyond it a
+	// new key evicts the stalest entry of a small sample instead of growing the map.
+	defaultMaxEntries = 65536
+	// evictSample is how many entries are inspected to pick an eviction victim.
+	evictSample = 32
+)
+
 // RateLimiter is an in-memory fixed-window limiter keyed by an arbitrary string
 // (client IP, user ID). Mnema Talk runs as a single instance, so process-local
 // state is sufficient.
 type RateLimiter struct {
-	mu      sync.Mutex
-	limit   int
-	window  time.Duration
-	now     func() time.Time
-	entries map[string]*rateEntry
+	mu         sync.Mutex
+	limit      int
+	window     time.Duration
+	now        func() time.Time
+	entries    map[string]*rateEntry
+	maxEntries int
+	lastSweep  time.Time
 }
 
 type rateEntry struct {
@@ -25,7 +38,13 @@ type rateEntry struct {
 }
 
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
-	return &RateLimiter{limit: limit, window: window, now: time.Now, entries: make(map[string]*rateEntry)}
+	return &RateLimiter{
+		limit:      limit,
+		window:     window,
+		now:        time.Now,
+		entries:    make(map[string]*rateEntry),
+		maxEntries: defaultMaxEntries,
+	}
 }
 
 // Allow records one hit for key and reports whether it is within the limit,
@@ -37,6 +56,9 @@ func (rl *RateLimiter) Allow(key string) (bool, time.Duration) {
 	now := rl.now()
 	rl.sweepLocked(now)
 	e, ok := rl.entries[key]
+	if !ok {
+		rl.makeRoomLocked()
+	}
 	if !ok || !now.Before(e.reset) {
 		e = &rateEntry{reset: now.Add(rl.window)}
 		rl.entries[key] = e
@@ -45,12 +67,13 @@ func (rl *RateLimiter) Allow(key string) (bool, time.Duration) {
 	return e.count <= rl.limit, e.reset.Sub(now)
 }
 
-// sweepLocked drops expired entries once the map grows, bounding memory
-// without a background goroutine.
+// sweepLocked drops expired entries at most once per sweepInterval, bounding
+// memory without a background goroutine and without an O(n) scan per request.
 func (rl *RateLimiter) sweepLocked(now time.Time) {
-	if len(rl.entries) < 4096 {
+	if now.Sub(rl.lastSweep) < sweepInterval {
 		return
 	}
+	rl.lastSweep = now
 	for k, e := range rl.entries {
 		if !now.Before(e.reset) {
 			delete(rl.entries, k)
@@ -58,9 +81,30 @@ func (rl *RateLimiter) sweepLocked(now time.Time) {
 	}
 }
 
-// PerIP limits requests per resolved client IP.
+// makeRoomLocked enforces the hard cap before a new key is inserted: it evicts
+// the entry with the earliest window reset among a random sample.
+func (rl *RateLimiter) makeRoomLocked() {
+	if len(rl.entries) < rl.maxEntries {
+		return
+	}
+	var victim string
+	var earliest time.Time
+	n := 0
+	for k, e := range rl.entries {
+		if n == 0 || e.reset.Before(earliest) {
+			victim, earliest = k, e.reset
+		}
+		if n++; n >= evictSample {
+			break
+		}
+	}
+	delete(rl.entries, victim)
+}
+
+// PerIP limits requests per resolved client address (IPv6 per /64, see
+// ClientIPKey).
 func (rl *RateLimiter) PerIP(next http.Handler) http.Handler {
-	return rl.By(ClientIP)(next)
+	return rl.By(ClientIPKey)(next)
 }
 
 // By limits requests per key; an empty key bypasses the limiter.
@@ -84,16 +128,19 @@ func WriteRateLimited(w http.ResponseWriter, retry time.Duration) {
 	WriteError(w, ErrRateLimited())
 }
 
-// LoginFailureLimiter (adopted from mnema.xyz) locks an account key after
-// maxFailures consecutive failures, with an escalating lockout: each repeated
-// breach uses the next, longer tier of the schedule. It complements the per-IP
-// limit by stopping distributed guessing against a single account.
+// LoginFailureLimiter (adopted from mnema.xyz) locks a key after maxFailures
+// consecutive failures, with an escalating lockout: each repeated breach uses
+// the next, longer tier of the schedule. After a quiet period (decay) without
+// failures and outside a lockout, the key starts over at the first tier.
 type LoginFailureLimiter struct {
 	maxFailures int
 	schedule    []time.Duration
+	decay       time.Duration
 	now         func() time.Time
 	mu          sync.Mutex
 	entries     map[string]*loginFailureEntry
+	maxEntries  int
+	lastSweep   time.Time
 }
 
 type loginFailureEntry struct {
@@ -103,13 +150,16 @@ type loginFailureEntry struct {
 	lastSeen time.Time
 }
 
-// NewLoginFailureLimiter escalates base → 5×base → 30×base.
+// NewLoginFailureLimiter escalates base → 5×base → 30×base; the tier is
+// forgotten after 60×base without failures.
 func NewLoginFailureLimiter(maxFailures int, base time.Duration) *LoginFailureLimiter {
 	return &LoginFailureLimiter{
 		maxFailures: maxFailures,
 		schedule:    []time.Duration{base, 5 * base, 30 * base},
+		decay:       60 * base,
 		now:         time.Now,
 		entries:     make(map[string]*loginFailureEntry),
+		maxEntries:  defaultMaxEntries,
 	}
 }
 
@@ -124,27 +174,46 @@ func (l *LoginFailureLimiter) lockoutFor(n int) time.Duration {
 	return l.schedule[idx]
 }
 
-// IsLockedOut reports whether key is locked and for how long. An elapsed
-// lockout keeps its tier so a renewed attack escalates further.
+// refreshLocked ends an elapsed lockout (keeping its tier, so a renewed attack
+// escalates further) and forgets the tier once the key has been quiet for the
+// decay period. It reports whether e is locked at now, and for how long.
+func (l *LoginFailureLimiter) refreshLocked(e *loginFailureEntry, now time.Time) (bool, time.Duration) {
+	if !e.lockedAt.IsZero() {
+		remaining := l.lockoutFor(e.lockouts) - now.Sub(e.lockedAt)
+		if remaining > 0 {
+			return true, remaining
+		}
+		e.lockedAt = time.Time{}
+		e.count = 0
+	}
+	if now.Sub(e.lastSeen) >= l.decay {
+		e.count = 0
+		e.lockouts = 0
+	}
+	return false, 0
+}
+
+// IsLockedOut reports whether key is locked and for how long.
 func (l *LoginFailureLimiter) IsLockedOut(key string) (bool, time.Duration) {
 	key = strings.ToLower(key)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	e, ok := l.entries[key]
-	if !ok || e.lockedAt.IsZero() {
+	if !ok {
 		return false, 0
 	}
-	remaining := l.lockoutFor(e.lockouts) - l.now().Sub(e.lockedAt)
-	if remaining <= 0 {
-		e.lockedAt = time.Time{}
-		e.count = 0
-		return false, 0
-	}
-	return true, remaining
+	return l.refreshLocked(e, l.now())
 }
 
 // RecordFailure counts a failure; crossing the threshold starts a lockout.
+// Failures during an active lockout are not counted again.
 func (l *LoginFailureLimiter) RecordFailure(key string) {
+	l.RecordFailures(key, 1)
+}
+
+// RecordFailures counts n failures at once (a weighted failure), e.g. to
+// tighten a per-client limit while the whole account is under attack.
+func (l *LoginFailureLimiter) RecordFailures(key string, n int) {
 	key = strings.ToLower(key)
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -152,14 +221,16 @@ func (l *LoginFailureLimiter) RecordFailure(key string) {
 	l.sweepLocked(now)
 	e, ok := l.entries[key]
 	if !ok {
-		e = &loginFailureEntry{}
+		l.makeRoomLocked(now)
+		e = &loginFailureEntry{lastSeen: now}
 		l.entries[key] = e
 	}
+	locked, _ := l.refreshLocked(e, now)
 	e.lastSeen = now
-	if !e.lockedAt.IsZero() {
+	if locked {
 		return
 	}
-	e.count++
+	e.count += n
 	if e.count >= l.maxFailures {
 		e.lockouts++
 		e.lockedAt = now
@@ -173,15 +244,40 @@ func (l *LoginFailureLimiter) ResetFailures(key string) {
 	l.mu.Unlock()
 }
 
-// sweepLocked forgets entries idle for longer than the longest tier.
+// sweepLocked forgets, at most once per sweepInterval, entries that are not
+// locked and have been quiet for the decay period (they would start over
+// anyway).
 func (l *LoginFailureLimiter) sweepLocked(now time.Time) {
-	if len(l.entries) < 4096 {
+	if now.Sub(l.lastSweep) < sweepInterval {
 		return
 	}
-	maxTier := l.schedule[len(l.schedule)-1]
+	l.lastSweep = now
 	for k, e := range l.entries {
-		if now.Sub(e.lastSeen) > 2*maxTier {
+		if locked, _ := l.refreshLocked(e, now); !locked && now.Sub(e.lastSeen) >= l.decay {
 			delete(l.entries, k)
 		}
 	}
+}
+
+// makeRoomLocked enforces the hard cap before a new key is inserted. It evicts
+// the stalest entry of a random sample, preferring entries that are not
+// locked, so flooding the map with fresh keys does not cheaply lift a lockout.
+func (l *LoginFailureLimiter) makeRoomLocked(now time.Time) {
+	if len(l.entries) < l.maxEntries {
+		return
+	}
+	var victim string
+	var victimLocked bool
+	var victimSeen time.Time
+	n := 0
+	for k, e := range l.entries {
+		locked, _ := l.refreshLocked(e, now)
+		if n == 0 || (victimLocked && !locked) || (victimLocked == locked && e.lastSeen.Before(victimSeen)) {
+			victim, victimLocked, victimSeen = k, locked, e.lastSeen
+		}
+		if n++; n >= evictSample {
+			break
+		}
+	}
+	delete(l.entries, victim)
 }

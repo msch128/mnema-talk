@@ -228,7 +228,9 @@ func ClientIPMiddleware(trusted []*net.IPNet) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			client := peerHost(r)
 			if remoteTrusted(client, trusted) {
-				hops := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+				// A proxy may append its hop as a separate header line instead
+				// of extending the first one; all lines form one list (RFC 9110).
+				hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
 				for i := len(hops) - 1; i >= 0; i-- {
 					addr, err := netip.ParseAddr(strings.TrimSpace(hops[i]))
 					if err != nil {
@@ -251,6 +253,32 @@ func ClientIP(r *http.Request) string {
 		return ip
 	}
 	return peerHost(r)
+}
+
+// ClientIPKey is ClientIP reduced to the unit a single client controls, for
+// rate-limit and lockout keys: IPv4 addresses as they are, IPv6 addresses
+// masked to their /64 (one customer prefix hands out 2^64 addresses, so
+// per-/128 keys would let one client rotate around every limit).
+func ClientIPKey(r *http.Request) string {
+	return IPKey(ClientIP(r))
+}
+
+// IPKey normalizes ip for use as a limiter key (see ClientIPKey). Anything
+// that does not parse as an IP is returned unchanged.
+func IPKey(ip string) string {
+	addr, err := netip.ParseAddr(strings.Trim(ip, "[]"))
+	if err != nil {
+		return ip
+	}
+	addr = addr.Unmap()
+	if addr.Is4() {
+		return addr.String()
+	}
+	prefix, err := addr.WithZone("").Prefix(64)
+	if err != nil {
+		return ip
+	}
+	return prefix.String()
 }
 
 // normalizeOrigin reduces an Origin/Referer/allowlist URL to scheme://host.
