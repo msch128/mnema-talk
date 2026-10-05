@@ -238,6 +238,19 @@ describe('useWebRTC join and leave', () => {
     expect(voice.currentChannelId).toBeNull()
   })
 
+  it('does not hang on an audio context that waits for a user gesture', async () => {
+    class GestureLockedContext extends FakeAudioContext {
+      constructor() { super(); this.state = 'suspended' }
+      resume() { return new Promise(() => {}) }
+    }
+    vi.stubGlobal('AudioContext', GestureLockedContext)
+    const { rtc, sent } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    expect(sent.some(e => e.type === 'voice_join')).toBe(true)
+  })
+
   it('a second join supersedes a pending first one', async () => {
     const { rtc, sent } = setup()
     const first = rtc.joinVoiceChannel('ch-1')
@@ -474,6 +487,21 @@ describe('screen share with audio', () => {
     const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
     expect(inputs).toContain(display.getAudioTracks()[0])
     expect(inputs).toContain(mic.getAudioTracks()[0])
+  })
+
+  it('drops a share picked after leaving the call', async () => {
+    const { rtc, voice, sent } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    let pick
+    navigator.mediaDevices.getDisplayMedia = vi.fn(() => new Promise(r => { pick = () => r(display) }))
+    const share = rtc.startScreenShare()
+    await vi.waitFor(() => expect(pick).toBeTypeOf('function'))
+    rtc.leaveVoiceChannel()
+    pick()
+    await share
+    expect(display.getTracks().every(tr => tr.stop.mock.calls.length > 0)).toBe(true)
+    expect(voice.isScreenSharing).toBe(false)
+    expect(sent.some(e => e.type === 'webrtc_screenshare_start')).toBe(false)
   })
 
   it('asks the browser to leave out the voices this page plays', async () => {
