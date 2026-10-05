@@ -52,8 +52,10 @@ type Message struct {
 	ReplyTo     *ReplyPreview     `json:"reply_to,omitempty"`
 	Attachments []MediaAttachment `json:"attachments"`
 	Reactions   []ReactionSummary `json:"reactions"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
+	// Mentions are the users this message mentions (@username, @all, @here).
+	Mentions  []uuid.UUID `json:"mentions"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
 }
 
 // ReplyPreview is the quoted header of a reply. Deleted is true when the
@@ -112,7 +114,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 	defer rows.Close()
 	msgs := make([]Message, 0)
 	for rows.Next() {
-		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0)}
+		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0), Mentions: make([]uuid.UUID, 0)}
 		var avatar, rUsername, rDisplay, rAvatar, rContent *string
 		var rID, rUser *uuid.UUID
 		var rHasMedia bool
@@ -146,7 +148,7 @@ func deref(s *string) string {
 	return *s
 }
 
-// enrich loads attachments and reactions for msgs in two queries.
+// enrich loads attachments, reactions and mentions for msgs in three queries.
 func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 	if len(msgs) == 0 {
 		return nil
@@ -186,14 +188,31 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 	if err != nil {
 		return fmt.Errorf("load reactions: %w", err)
 	}
-	defer rows.Close()
 	for rows.Next() {
 		var r ReactionSummary
 		var msgID uuid.UUID
 		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Users); err != nil {
+			rows.Close()
 			return err
 		}
 		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, r)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	rows, err = p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
+	if err != nil {
+		return fmt.Errorf("load mentions: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var msgID, userID uuid.UUID
+		if err := rows.Scan(&msgID, &userID); err != nil {
+			return err
+		}
+		msgs[idx[msgID]].Mentions = append(msgs[idx[msgID]].Mentions, userID)
 	}
 	return rows.Err()
 }

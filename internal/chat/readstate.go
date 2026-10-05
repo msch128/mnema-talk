@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,21 +35,16 @@ type ReadState struct {
 	NotifyLevel  NotifyLevel `json:"notify_level"`
 }
 
-// mentionPattern matches "@username" as a whole word, case-insensitively
-// (usernames use [A-Za-z0-9_.-], see auth.ValidateUsername).
-func mentionPattern(username string) string {
-	return `(^|[^A-Za-z0-9_.-])@` + regexp.QuoteMeta(username) + `($|[^A-Za-z0-9_.-])`
-}
-
 // GetReadStates returns the unread summary of every text channel for user.
 // Unread counts top-level messages by others since the last read; mentions
-// count any message (also thread replies) that names the user or replies to
-// one of their messages. Before the first read, "last read" is the sign-up.
+// count any message (also thread replies) that mentions the user (@username,
+// @all, @here; see message_mentions) or replies to one of their messages. Before the first read, "last read" is the sign-up.
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
 	rows, err := p.Query(ctx, `
 		SELECT c.id,
 		       count(m.id) FILTER (WHERE m.parent_id IS NULL),
-		       count(m.id) FILTER (WHERE m.content ~* $2 OR orig.user_id = $1),
+		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
+		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1)),
 		       cr.last_read_at,
 		       COALESCE(cr.notify_level, 'all')
 		FROM channels c
@@ -61,7 +55,7 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
 		WHERE c.type = 'text'
 		GROUP BY c.id, cr.last_read_at, cr.notify_level
-		ORDER BY c.id`, user.ID, mentionPattern(user.Username))
+		ORDER BY c.id`, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}

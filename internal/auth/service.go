@@ -22,7 +22,8 @@ const (
 	MinPasswordLength = 10
 	// MaxPasswordBytes is bcrypt's input limit; longer inputs would be silently truncated.
 	MaxPasswordBytes   = 72
-	MaxDisplayNameLen  = 64
+	MaxDisplayNameLen  = 24
+	MaxStatusTextLen   = 32
 	MaxBioLen          = 250
 	RoleAdmin          = "admin"
 	RoleUser           = "user"
@@ -32,6 +33,23 @@ const (
 
 var usernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{3,32}$`)
 
+// reservedUsernames are mention keywords (@all, @here) no account may take.
+var reservedUsernames = map[string]bool{"all": true, "here": true}
+
+// Presences a user can choose. Offline is not one of them: it only follows
+// from having no open connection.
+const (
+	PresenceOnline = "online"
+	PresenceAway   = "away"
+	PresenceDND    = "dnd"
+	PresenceFocus  = "focus"
+)
+
+// ValidPresence reports whether p is a presence a user may choose.
+func ValidPresence(p string) bool {
+	return p == PresenceOnline || p == PresenceAway || p == PresenceDND || p == PresenceFocus
+}
+
 // User is the public view of an account.
 type User struct {
 	ID          uuid.UUID `json:"id"`
@@ -40,6 +58,9 @@ type User struct {
 	Bio         string    `json:"bio"`
 	Role        string    `json:"role"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
+	StatusText  string    `json:"status_text"`
+	// Presence is the chosen presence; others see the live one from the hub.
+	Presence string `json:"presence,omitempty"`
 	// Locale is the chosen UI language ("de", "en"); empty until chosen.
 	Locale    string    `json:"locale"`
 	CreatedAt time.Time `json:"created_at"`
@@ -63,6 +84,13 @@ func SetLocale(ctx context.Context, p *db.Pool, userID uuid.UUID, locale string)
 }
 
 func (u User) IsAdmin() bool { return u.Role == RoleAdmin }
+
+// Public is u as other members see it: the chosen presence stays private,
+// they get the live one from the hub.
+func (u User) Public() User {
+	u.Presence = ""
+	return u
+}
 
 // AvatarURL turns a stored avatar media ID into its API URL.
 func AvatarURL(mediaID *string) string {
@@ -112,15 +140,18 @@ func ValidateUsername(username string) error {
 	if !usernamePattern.MatchString(username) {
 		return httpx.ErrInvalidInput("username must be 3-32 characters: letters, digits, '_', '.', '-'")
 	}
+	if reservedUsernames[strings.ToLower(username)] {
+		return httpx.ErrInvalidInput("this username is reserved")
+	}
 	return nil
 }
 
-const userColumns = `id, username, display_name, bio, role, avatar_s3_key, locale, created_at`
+const userColumns = `id, username, display_name, bio, role, avatar_s3_key, status_text, presence, locale, created_at`
 
 func scanUser(row pgx.Row, extra ...any) (*User, error) {
 	var u User
 	var avatar *string
-	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.Locale, &u.CreatedAt}, extra...)
+	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.StatusText, &u.Presence, &u.Locale, &u.CreatedAt}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
 	}
@@ -181,7 +212,7 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, err
 	}
 	if displayName == "" {
-		displayName = username
+		displayName = defaultDisplayName(username)
 	}
 	inviteCode = strings.TrimSpace(inviteCode)
 	if inviteCode == "" || len(inviteCode) > maxInviteCodeChars {
@@ -296,7 +327,45 @@ func UpdateProfile(ctx context.Context, p *db.Pool, userID uuid.UUID, displayNam
 	}
 	return scanUser(p.QueryRow(ctx, `
 		UPDATE users
-		SET display_name = CASE WHEN $1 = '' THEN username ELSE $1 END, bio = $2, updated_at = NOW()
+		SET display_name = CASE WHEN $1 = '' THEN LEFT(username, 24) ELSE $1 END, bio = $2, updated_at = NOW()
 		WHERE id = $3
 		RETURNING `+userColumns, displayName, bio, userID))
+}
+
+// defaultDisplayName is the username, cut to the display name limit.
+func defaultDisplayName(username string) string {
+	r := []rune(username)
+	if len(r) > MaxDisplayNameLen {
+		r = r[:MaxDisplayNameLen]
+	}
+	return string(r)
+}
+
+// SetPresence stores the presence userID chose.
+func SetPresence(ctx context.Context, p *db.Pool, userID uuid.UUID, presence string) (*User, error) {
+	if !ValidPresence(presence) {
+		return nil, httpx.ErrInvalidInput("presence must be online, away, dnd or focus")
+	}
+	u, err := scanUser(p.QueryRow(ctx, `
+		UPDATE users SET presence = $1, updated_at = NOW() WHERE id = $2
+		RETURNING `+userColumns, presence, userID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
+}
+
+// SetStatusText stores userID's status line; an empty text clears it.
+func SetStatusText(ctx context.Context, p *db.Pool, userID uuid.UUID, text string) (*User, error) {
+	text, err := httpx.CleanText("status_text", text, MaxStatusTextLen, false)
+	if err != nil {
+		return nil, err
+	}
+	u, err := scanUser(p.QueryRow(ctx, `
+		UPDATE users SET status_text = $1, updated_at = NOW() WHERE id = $2
+		RETURNING `+userColumns, text, userID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
 }

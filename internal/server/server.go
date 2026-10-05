@@ -66,7 +66,7 @@ func NewRouter(d Deps) (*Router, error) {
 
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
-	chatH := &chat.Handler{DB: d.DB, Events: pub}
+	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub}
 	if d.Store != nil {
 		chatH.Objects = d.Store
 	}
@@ -77,6 +77,7 @@ func NewRouter(d Deps) (*Router, error) {
 		Events:         pub,
 		MaxUploadBytes: int64(cfg.MaxUploadMB) << 20,
 		RetentionDays:  cfg.MediaRetentionDays,
+		Online:         hub,
 	}
 
 	var previewH *linkpreview.Handler

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -55,6 +56,8 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Get("/users/{userID}", httpx.Handle(h.getUser))
 	r.Put("/users/me/profile", httpx.Handle(h.updateProfile))
 	r.Put("/users/me/locale", httpx.Handle(h.setLocale))
+	r.Put("/users/me/presence", httpx.Handle(h.setPresence))
+	r.Put("/users/me/status", httpx.Handle(h.setStatus))
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
@@ -111,7 +114,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, 0); err != nil {
 		return err
 	}
-	h.Events.Broadcast("member_joined", u)
+	h.Events.Broadcast("member_joined", u.Public())
 	httpx.WriteJSON(w, http.StatusCreated, map[string]any{"user": u})
 	return nil
 }
@@ -192,6 +195,10 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if u.ID != UserFrom(r.Context()).ID {
+		pub := u.Public()
+		u = &pub
+	}
 	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
@@ -208,7 +215,51 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", u)
+	h.Events.Broadcast("user_update", u.Public())
+	httpx.WriteJSON(w, http.StatusOK, u)
+	return nil
+}
+
+func (h *Handler) setPresence(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Presence string `json:"presence"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	u, err := SetPresence(r.Context(), h.Sessions.DB, UserFrom(r.Context()).ID, req.Presence)
+	if err != nil {
+		return err
+	}
+	if h.Live != nil {
+		h.Live.SetPresence(u.ID, u.Presence)
+	}
+	httpx.WriteJSON(w, http.StatusOK, u)
+	return nil
+}
+
+// setStatus changes the caller's own status line. Nobody else can, except an
+// admin (see setUserStatus).
+func (h *Handler) setStatus(w http.ResponseWriter, r *http.Request) error {
+	return h.writeStatus(w, r, UserFrom(r.Context()).ID)
+}
+
+func (h *Handler) writeStatus(w http.ResponseWriter, r *http.Request, userID uuid.UUID) error {
+	var req struct {
+		StatusText string `json:"status_text"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	u, err := SetStatusText(r.Context(), h.Sessions.DB, userID, req.StatusText)
+	if err != nil {
+		return err
+	}
+	pub := u.Public()
+	h.Events.Broadcast("user_update", pub)
+	if userID != UserFrom(r.Context()).ID {
+		u = &pub
+	}
 	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
