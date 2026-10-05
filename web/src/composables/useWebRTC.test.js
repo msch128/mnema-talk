@@ -554,6 +554,26 @@ describe('screen share with audio', () => {
     expect(inputs.at(-2)).toBe(display.getAudioTracks()[0])
   })
 
+  it('keeps the screen audio when two settings changes overlap', async () => {
+    const { rtc, audio, voice } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+
+    const first = rtc.applyAudioSettings()
+    const second = rtc.applyAudioSettings()
+    await grantMic()
+    const lastMic = await grantMic()
+    await Promise.all([first, second])
+
+    expect(voice.hasScreenAudio).toBe(true)
+    const newMix = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
+    expect(audio.track).toBe(newMix)
+    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
+    expect(inputs.at(-1)).toBe(lastMic.getAudioTracks()[0])
+    expect(inputs.at(-2)).toBe(display.getAudioTracks()[0])
+  })
+
   it('a reconnect sends the mix, not the bare mic', async () => {
     const { rtc, mic } = await joined()
     stubDisplayMedia(fakeStream(['video', 'audio']))
