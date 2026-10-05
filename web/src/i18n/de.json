@@ -644,7 +644,8 @@
     "pipExit": "Bild-im-Bild beenden",
     "pipPlaying": "Läuft im Bild-im-Bild-Fenster",
     "pipBack": "Zurück auf die Bühne",
-    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden"
+    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden",
+    "streamVolume": "Stream-Lautstärke"
   },
   "admin": {
     "title": "Speicher & Administration",

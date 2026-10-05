@@ -20,6 +20,29 @@ func TestSubscriptionsDefaults(t *testing.T) {
 		if s.Wants(pub, webrtc.RTPCodecTypeVideo, SourceScreen) {
 			t.Error("screen shares are opt-in")
 		}
+		if s.Wants(pub, webrtc.RTPCodecTypeAudio, SourceScreenAudio) {
+			t.Error("a screen share's sound comes with watching it")
+		}
+	}
+}
+
+func TestScreenAudioFollowsTheScreenSubscription(t *testing.T) {
+	a, b := uuid.New(), uuid.New()
+	s := &Subscriptions{}
+	_ = s.SetScreen(a, true)
+	if !s.Wants(a, webrtc.RTPCodecTypeAudio, SourceScreenAudio) || s.Wants(b, webrtc.RTPCodecTypeAudio, SourceScreenAudio) {
+		t.Error("only the sound of the watched share")
+	}
+	s.SetAllCameras(false)
+	if !s.Wants(a, webrtc.RTPCodecTypeAudio, SourceScreenAudio) {
+		t.Error("cameras off leaves the screen's sound alone")
+	}
+	_ = s.SetScreen(a, false)
+	if s.Wants(a, webrtc.RTPCodecTypeAudio, SourceScreenAudio) {
+		t.Error("unwatched: no sound either")
+	}
+	if !s.Wants(a, webrtc.RTPCodecTypeAudio, SourceAudio) {
+		t.Error("the voice is always forwarded")
 	}
 }
 
@@ -149,6 +172,48 @@ func TestRoomSubscribeAndFiltering(t *testing.T) {
 	room.RemoveUserSource(pub, SourceScreen)
 	if room.Receives(viewer, pub, SourceScreen) {
 		t.Fatal("opt-in must not survive the share")
+	}
+}
+
+func TestRoomScreenAudioGoesWithTheShare(t *testing.T) {
+	_, room, pub, viewer := joinTwo(t)
+	mic := fakeTrack(room, pub, webrtc.RTPCodecTypeAudio, SourceAudio)
+	sound := fakeTrack(room, pub, webrtc.RTPCodecTypeAudio, SourceScreenAudio)
+	fakeTrack(room, pub, webrtc.RTPCodecTypeVideo, SourceScreen)
+	want := func(info *TrackInfo) bool {
+		room.mu.RLock()
+		defer room.mu.RUnlock()
+		return room.wantsLocked(viewer, info)
+	}
+	if !want(mic) || want(sound) {
+		t.Fatal("before watching: the voice, not the screen's sound")
+	}
+	if err := room.Subscribe(viewer, pub, SourceScreen, false, true); err != nil {
+		t.Fatal(err)
+	}
+	if !want(mic) || !want(sound) {
+		t.Fatal("watching: the voice and the screen's sound")
+	}
+	if states := room.MediaStates(); states[pub] != (MediaState{Screen: true}) {
+		t.Fatalf("the screen's sound is no video of its own: %+v", states[pub])
+	}
+
+	// Stopping the share unpublishes its sound too; a camera stop does not.
+	room.RemoveUserSource(pub, SourceCamera)
+	if room.sourceCount(pub, SourceScreenAudio) != 1 {
+		t.Fatal("a camera stop must keep the screen's sound")
+	}
+	room.RemoveUserSource(pub, SourceScreen)
+	if room.sourceCount(pub, SourceScreenAudio) != 0 || room.sourceCount(pub, SourceAudio) != 1 {
+		t.Fatal("stopping the share must unpublish its sound and keep the voice")
+	}
+	if sound.stoppedAt.Load() == 0 {
+		t.Fatal("the sound is published again once its packets resume")
+	}
+	// Only screen or camera can be stopped this way.
+	room.RemoveUserSource(pub, SourceAudio)
+	if room.sourceCount(pub, SourceAudio) != 1 {
+		t.Fatal("the voice is never removed by a source stop")
 	}
 }
 
