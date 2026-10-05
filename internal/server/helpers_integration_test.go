@@ -59,6 +59,13 @@ func newAppWithConfig(t *testing.T, adjust func(*config.Config)) *app {
 
 func newAppWith(t *testing.T, withHub bool, adjust func(*config.Config)) *app {
 	t.Helper()
+	return newAppWithDeps(t, withHub, adjust, nil)
+}
+
+// newAppWithDeps also lets a test adjust the router's dependencies (version,
+// update checker) before the router is built.
+func newAppWithDeps(t *testing.T, withHub bool, adjust func(*config.Config), adjustDeps func(*Deps)) *app {
+	t.Helper()
 	pool := testutil.DB(t)
 	testutil.Reset(t, pool)
 
@@ -84,6 +91,9 @@ func newAppWith(t *testing.T, withHub bool, adjust func(*config.Config)) *app {
 	deps := Deps{Config: cfg, DB: pool, Store: a.store}
 	if !withHub {
 		deps.Events = a.events
+	}
+	if adjustDeps != nil {
+		adjustDeps(&deps)
 	}
 	a.router, err = NewRouter(deps)
 	if err != nil {
