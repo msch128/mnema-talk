@@ -1,11 +1,12 @@
 <script setup>
 // "N participants" in the Talk header; opens who is in the Talk and since when.
-import { ref, nextTick, onBeforeUnmount } from 'vue'
+import { ref, nextTick } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
+import { useDismissable } from '../composables/useDismissable'
 
 defineProps({
   users: { type: Array, required: true },
@@ -19,17 +20,15 @@ const open = ref(false)
 const root = ref(null)
 const button = ref(null)
 
-function onPointerDown(e) {
-  if (root.value && !root.value.contains(e.target)) close(false)
-}
+// A press elsewhere closes quietly; Escape hands focus back to the button.
+useDismissable(root, (e, reason) => close(reason === 'escape'), { active: open })
+
 function show() {
   open.value = true
-  document.addEventListener('pointerdown', onPointerDown)
   nextTick(() => root.value?.querySelector('[role="menuitem"]')?.focus())
 }
 function close(returnFocus = true) {
   open.value = false
-  document.removeEventListener('pointerdown', onPointerDown)
   if (returnFocus) button.value?.focus()
 }
 function toggle() {
@@ -43,11 +42,7 @@ function openProfile(user) {
 function onKeydown(e) {
   const items = [...(root.value?.querySelectorAll('[role="menuitem"]') || [])]
   const i = items.indexOf(document.activeElement)
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    e.stopPropagation()
-    close()
-  } else if (e.key === 'ArrowDown') {
+  if (e.key === 'ArrowDown') {
     e.preventDefault()
     items[(i + 1) % items.length]?.focus()
   } else if (e.key === 'ArrowUp') {
@@ -55,7 +50,6 @@ function onKeydown(e) {
     items[(i - 1 + items.length) % items.length]?.focus()
   }
 }
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown))
 </script>
 
 <template>

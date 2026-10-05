@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { Hash, Volume2, ShieldCheck, Crown, Plus, Trash2, ChevronDown, ChevronRight, X, Monitor } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -17,6 +17,7 @@ import { t } from '../i18n'
 import { buildChannelTree, loadCollapsed, saveCollapsed } from '../lib/channelTree'
 import { currentRoute, navigate } from '../lib/router'
 import { useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems } from '../composables/useNavMenus'
+import { useDismissable } from '../composables/useDismissable'
 
 const SERVER_NAME = 'Mnema Talk'
 
@@ -226,10 +227,7 @@ function onMenuButtonKeydown(e) {
 function onMenuKeydown(e) {
   const items = menuItems()
   const i = items.indexOf(document.activeElement)
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    closeMenu(true)
-  } else if (e.key === 'ArrowDown') {
+  if (e.key === 'ArrowDown') {
     e.preventDefault()
     items[(i + 1) % items.length]?.focus()
   } else if (e.key === 'ArrowUp') {
@@ -251,23 +249,8 @@ function runMenuAction(action) {
   action()
 }
 
-function onDocumentPointerDown(e) {
-  if (menuOpen.value && menuRoot.value && !menuRoot.value.contains(e.target)) closeMenu()
-}
-
-function onDocumentKeydown(e) {
-  if (e.key === 'Escape' && menuOpen.value) closeMenu(true)
-}
-
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocumentPointerDown)
-  document.addEventListener('keydown', onDocumentKeydown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('pointerdown', onDocumentPointerDown)
-  document.removeEventListener('keydown', onDocumentKeydown)
-})
+// A press elsewhere closes the menu; Escape also returns focus to its button.
+useDismissable(menuRoot, (e, reason) => closeMenu(reason === 'escape'), { active: menuOpen })
 
 watch(() => authStore.isAdmin, () => closeMenu())
 
