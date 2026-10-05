@@ -3,12 +3,15 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { summarizeStats } from '../lib/rtcStats'
 import * as voiceSession from '../lib/voiceSession'
+import { createMeteringTrack } from '../lib/micMetering'
 
 // Module-level shared singletons across all components
 const localAudioStream = ref(null)
 const localScreenStream = ref(null)
 let audioContext = null
 let analyser = null
+// Always-enabled clone of the mic track that only feeds the level meter (see lib/micMetering).
+let meteringTrack = null
 let speakingInterval = null
 let lastAboveThresholdTime = 0
 
@@ -294,6 +297,11 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
+    if (meteringTrack) {
+      meteringTrack.stop()
+      meteringTrack = null
+    }
+
     if (audioContext) {
       audioContext.close().catch(() => {})
       audioContext = null
@@ -393,7 +401,10 @@ export function useWebRTC() {
       analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.2
 
-      const source = audioContext.createMediaStreamSource(stream)
+      meteringTrack = createMeteringTrack(stream)
+      const source = audioContext.createMediaStreamSource(
+        meteringTrack ? new MediaStream([meteringTrack]) : stream
+      )
       const biquad = audioContext.createBiquadFilter()
       biquad.type = 'highpass'
       biquad.frequency.setValueAtTime(85, audioContext.currentTime)
