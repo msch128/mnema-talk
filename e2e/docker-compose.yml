@@ -1,0 +1,28 @@
+# Throwaway dependencies for the browser smoke test (e2e/run.sh).
+# Loopback-only ports, no volumes: everything is gone after `down`.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mnema
+      POSTGRES_PASSWORD: mnema
+      POSTGRES_DB: mnema_e2e
+    ports:
+      - "127.0.0.1:${E2E_PG_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mnema -d mnema_e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.48
+    command: "server -s3 -s3.port=8333 -dir=/data"
+    ports:
+      - "127.0.0.1:${E2E_S3_PORT:-58333}:8333"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null || exit 1"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
