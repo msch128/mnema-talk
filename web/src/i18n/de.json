@@ -504,11 +504,6 @@
       "one": "{count} Teilnehmer",
       "other": "{count} Teilnehmer"
     },
-    "ping": "Ping: {ms} ms",
-    "noiseOn": "Rauschfilter an",
-    "noiseOff": "Filter aus",
-    "noiseOnTip": "Rauschunterdrückung ist an",
-    "noiseOffTip": "Rauschunterdrückung ist aus",
     "noiseToggleTip": "Rauschunterdrückung umschalten",
     "chatShown": "Chat aktiv",
     "chatHidden": "Chat einblenden",

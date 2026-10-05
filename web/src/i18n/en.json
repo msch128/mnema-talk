@@ -504,11 +504,6 @@
       "one": "{count} participant",
       "other": "{count} participants"
     },
-    "ping": "Ping: {ms} ms",
-    "noiseOn": "Noise filter on",
-    "noiseOff": "Filter off",
-    "noiseOnTip": "Noise suppression is on",
-    "noiseOffTip": "Noise suppression is off",
     "noiseToggleTip": "Toggle noise suppression",
     "chatShown": "Chat on",
     "chatHidden": "Show chat",

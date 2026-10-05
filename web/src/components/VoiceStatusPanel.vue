@@ -41,18 +41,19 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
         <span class="h-2 w-2 flex-shrink-0 rounded-full bg-mnema-accent"></span>
         <span class="truncate">{{ $t('voice.panel.connected', { channel: channelName }) }}</span>
       </button>
-      <span class="flex items-center gap-1.5 pl-4 text-xs leading-4">
-        <span data-testid="voice-panel-ping" :data-tone="pingTone(ping)" :class="['font-mono font-medium tabular-nums', pingClass]">
-          {{ ping == null ? '–' : ping }} ms
-        </span>
+      <!-- The ping opens the connection details. -->
+      <button
+        type="button"
+        data-testid="voice-panel-ping"
+        :data-tone="pingTone(ping)"
+        v-tooltip="$t('voice.panel.details')"
+        class="flex items-center gap-1.5 self-start pl-4 text-xs leading-4 rounded-sm hover:underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
+        @click="voiceStore.showStatsModal = true"
+      >
+        <span :class="['font-mono font-medium tabular-nums', pingClass]">{{ ping == null ? '–' : ping }} ms</span>
         <span class="vp-narrow-hide text-mnema-border-strong">·</span>
-        <button
-          type="button"
-          data-testid="voice-panel-details"
-          class="vp-narrow-hide truncate text-mnema-tertiary underline underline-offset-2 hover:text-mnema-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
-          @click="voiceStore.showStatsModal = true"
-        >{{ $t('voice.panel.details') }}</button>
-      </span>
+        <span class="vp-narrow-hide truncate text-mnema-tertiary">{{ $t('voice.panel.details') }}</span>
+      </button>
     </div>
 
     <button
