@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import { setLocale } from '../i18n'
@@ -7,6 +7,8 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import VoiceStage from './VoiceStage.vue'
+import ParticipantTile from './ParticipantTile.vue'
+import { pendingConfirm } from '../lib/confirm'
 
 const rtc = vi.hoisted(() => ({
   joinVoiceChannel: vi.fn(),
@@ -278,5 +280,76 @@ describe('VoiceStage screen share opt-in', () => {
     expect(voice.isScreenAudioMuted).toBe(false)
     await toggle.trigger('click')
     expect(voice.isScreenAudioMuted).toBe(true)
+  })
+})
+
+describe('VoiceStage watch from the preview', () => {
+  it('does not watch a screen when the channel switch is cancelled', async () => {
+    const { voice } = seed()
+    voice.setChannel('v2')
+    voice.warnSwitchChannel = true
+    const watch = vi.spyOn(voice, 'watchScreen')
+    const w = mountStage({ channelId: 'v1' })
+    w.findComponent(ParticipantTile).vm.$emit('watch-stream')
+    await flushPromises()
+    expect(pendingConfirm.value).toBeTruthy()
+    pendingConfirm.value.resolve(false)
+    await flushPromises()
+    expect(rtc.joinVoiceChannel).not.toHaveBeenCalled()
+    expect(watch).not.toHaveBeenCalled()
+  })
+
+  it('joins and then watches when the switch is confirmed', async () => {
+    const { voice } = seed()
+    voice.setChannel('v2')
+    voice.warnSwitchChannel = true
+    const watch = vi.spyOn(voice, 'watchScreen')
+    const w = mountStage({ channelId: 'v1' })
+    w.findComponent(ParticipantTile).vm.$emit('watch-stream')
+    await flushPromises()
+    pendingConfirm.value.resolve(true)
+    await flushPromises()
+    expect(rtc.joinVoiceChannel).toHaveBeenCalledWith('v1')
+    expect(watch).toHaveBeenCalledWith('a')
+  })
+})
+
+describe('VoiceStage chat', () => {
+  function withChat() {
+    const { chat } = seed()
+    chat.selectChannel = vi.fn()
+    chat.activeChannel = { id: 'v1', name: 'Lounge', type: 'voice' }
+    chat.messages = [{
+      id: 'm1', channel_id: 'v1', user_id: 'a', username: 'alice', display_name: 'Alice',
+      content: 'hi', created_at: '2026-01-01T10:00:00Z', reactions: [],
+      attachments: [{ id: 'att', url: '/m/v', mime_type: 'video/mp4', original_filename: 'clip.mp4', size_bytes: 10 }]
+    }]
+    return chat
+  }
+
+  it('author name is a button and videos play inline', async () => {
+    const chat = withChat()
+    const open = vi.spyOn(chat, 'openUserProfile').mockImplementation(() => {})
+    const w = mountStage({ channelId: 'v1', showChat: true })
+    await nextTick()
+    const name = w.find('[data-testid="author-name"]')
+    expect(name.element.tagName).toBe('BUTTON')
+    await name.trigger('click')
+    expect(open).toHaveBeenCalled()
+    expect(w.find('[data-attachment="video"] video').exists()).toBe(true)
+  })
+
+  it('clears the file input after a failed upload', async () => {
+    const chat = withChat()
+    vi.spyOn(chat, 'uploadMedia').mockRejectedValue(new Error('nope'))
+    const w = mountStage({ channelId: 'v1', showChat: true })
+    const input = w.find('input[type="file"]').element
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
+    let value = 'C:\\fakepath\\a.png'
+    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
+    input.dispatchEvent(new Event('change'))
+    await flushPromises()
+    expect(chat.uploadMedia).toHaveBeenCalled()
+    expect(value).toBe('')
   })
 })

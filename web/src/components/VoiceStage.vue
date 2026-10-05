@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { 
-  Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff, 
-  MessageSquare, Maximize2, Sparkles, Send, 
+import {
+  Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff,
+  MessageSquare, Maximize2, Sparkles, Send,
   Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
@@ -18,10 +18,13 @@ import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import MessageAttachments from './MessageAttachments.vue'
+import ImageLightbox from './ImageLightbox.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useMessageActions, formatTime } from '../composables/useMessageActions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
-import { t, locale } from '../i18n'
+import { t } from '../i18n'
 
 const voiceStore = useVoiceStore()
 
@@ -47,9 +50,11 @@ const { joinVoiceChannel, leaveVoiceChannel, startScreenShare, stopScreenShare, 
 const shownChannelId = computed(() => props.channelId || voiceStore.currentChannelId || null)
 const isConnectedHere = computed(() => voiceStore.isConnected && !!shownChannelId.value && voiceStore.currentChannelId === shownChannelId.value)
 
+// Resolves to whether the join went ahead (false when the user kept their
+// current Talk in the switch confirmation).
 async function join() {
   const id = shownChannelId.value
-  if (!id) return
+  if (!id) return false
   if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== id) {
     const ch = chatStore.allChannels.find(c => c.id === id)
     const name = ch?.name || ''
@@ -60,10 +65,11 @@ async function join() {
       cancelLabel: t('common.cancel'),
       danger: false
     })
-    if (!ok) return
+    if (!ok) return false
   }
   emit('join', id)
   joinVoiceChannel(id)
+  return true
 }
 
 // The quick toggle must swap the running mic, not just flip the setting.
@@ -73,7 +79,6 @@ function toggleNoiseCancelling() {
   if (voiceStore.localAudioStream) applyAudioSettings()
 }
 
-const isFullscreen = ref(false)
 const videoContainer = ref(null)
 const screenVideoEl = ref(null)
 // Actual resolution of the shared screen as decoded by the browser.
@@ -95,7 +100,8 @@ function onChatKeydown(e) {
 }
 const chatContainer = ref(null)
 const fileInput = ref(null)
-const isUploading = ref(false)
+const { isUploading, upload } = useMessageActions({ container: chatContainer })
+const selectedImage = ref(null)
 
 // The shown channel object
 const activeVoiceChannel = computed(() => {
@@ -149,9 +155,7 @@ function onScreenCard(card) {
 }
 
 async function watchStream(userId) {
-  if (!isConnectedHere.value) {
-    await join()
-  }
+  if (!isConnectedHere.value && !(await join())) return
   voiceStore.watchScreen(userId)
 }
 
@@ -242,10 +246,8 @@ function toggleScreenShare() {
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     videoContainer.value?.requestFullscreen().catch(() => {})
-    isFullscreen.value = true
   } else {
     document.exitFullscreen().catch(() => {})
-    isFullscreen.value = false
   }
 }
 
@@ -290,25 +292,7 @@ async function sendChatMessage() {
 }
 
 async function handleFileUpload(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-
-  isUploading.value = true
-  try {
-    await chatStore.uploadMedia(file)
-    if (fileInput.value) fileInput.value.value = ''
-    scrollChatToBottom()
-  } catch (err) {
-    toasts.error(err.message || t('chat.uploadFailed'))
-  } finally {
-    isUploading.value = false
-  }
-}
-
-function formatTime(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  if (await upload(e.target, file => chatStore.uploadMedia(file))) scrollChatToBottom()
 }
 </script>
 
@@ -754,8 +738,8 @@ function formatTime(dateStr) {
       </div>
 
       <!-- 2. Talk chat -->
-      <div 
-        v-if="showChat" 
+      <div
+        v-if="showChat"
         class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
       >
         <!-- Chat Message Timeline -->
@@ -781,43 +765,31 @@ function formatTime(dateStr) {
             ]"
           >
             <!-- User Avatar -->
-            <UserAvatar 
+            <UserAvatar
               :user="msg"
               size="md"
-              class="cursor-pointer hover:opacity-85 transition mt-0.5" 
-              @click="chatStore.openUserProfile(msg)" 
+              class="cursor-pointer hover:opacity-85 transition mt-0.5"
+              @click="chatStore.openUserProfile(msg)"
             />
 
             <!-- Content Body -->
             <div class="flex-1 min-w-0">
               <div class="flex items-baseline gap-2 min-w-0">
-                <span 
+                <button
+                  type="button"
+                  data-testid="author-name"
                   @click="chatStore.openUserProfile(msg)"
-                  class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate"
+                  class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate text-left focus-visible:underline focus-visible:text-mnema-accent"
                 >
                   {{ msg.display_name || msg.username }}
-                </span>
+                </button>
                 <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
               </div>
 
               <MarkdownContent v-if="msg.content" :content="msg.content" />
 
               <!-- Attachments if any -->
-              <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">
-                <div 
-                  v-for="att in msg.attachments" 
-                  :key="att.id" 
-                  class="max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-sm"
-                >
-                  <template v-if="att.mime_type.startsWith('image/')">
-                    <img :src="att.url" :alt="att.original_filename" class="max-h-64 w-auto max-w-full object-cover" loading="lazy" />
-                  </template>
-                  <div class="p-2 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline">
-                    <span class="truncate text-mnema-text">{{ att.original_filename }}</span>
-                    <span class="text-xs font-mono text-mnema-tertiary pl-2">{{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}</span>
-                  </div>
-                </div>
-              </div>
+              <MessageAttachments :attachments="msg.attachments" @open-image="selectedImage = $event" />
             </div>
           </div>
         </div>
@@ -833,11 +805,11 @@ function formatTime(dateStr) {
               @pick="assist.pick"
               @hover="assist.active.value = $event"
             />
-            <input 
-              ref="fileInput" 
-              type="file" 
-              class="hidden" 
-              @change="handleFileUpload" 
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              @change="handleFileUpload"
               accept="image/*,video/*"
             />
             <button
@@ -881,6 +853,9 @@ function formatTime(dateStr) {
         </div>
       </div>
     </div>
+    <!-- Image lightbox -->
+    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
+
     <ContextMenu
       v-model="menu.state.open"
       :x="menu.state.x"
