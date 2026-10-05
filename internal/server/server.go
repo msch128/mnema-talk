@@ -126,6 +126,7 @@ func NewRouter(d Deps) (*Router, error) {
 			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(d.DB, hub, d.SFU)))
 		}
 		api.Get("/legal", legal(cfg))
+		api.Get("/openapi.json", openAPISpec)
 		api.Get("/ws", hub.HandleWebSocket)
 
 		api.Group(func(pub chi.Router) {

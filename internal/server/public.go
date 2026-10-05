@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/api"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -77,4 +78,11 @@ func webrtcConfig(cfg *config.Config) http.HandlerFunc {
 		w.Header().Set("Cache-Control", "no-store")
 		httpx.WriteJSON(w, http.StatusOK, map[string]any{"ice_servers": ice})
 	}
+}
+
+// openAPISpec serves the OpenAPI description of the REST API.
+func openAPISpec(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write(api.Spec)
 }

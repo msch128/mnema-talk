@@ -265,7 +265,7 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("user_update", updated)
+	h.Events.Broadcast("user_update", updated.Public())
 	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
