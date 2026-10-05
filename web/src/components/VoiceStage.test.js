@@ -281,6 +281,87 @@ describe('VoiceStage screen share opt-in', () => {
     await toggle.trigger('click')
     expect(voice.isScreenAudioMuted).toBe(true)
   })
+
+  it('while I share and watch someone, the cards switch the stage both ways', async () => {
+    const voice = connected()
+    const own = new MediaStream()
+    const alice = new MediaStream()
+    voice.localScreenStream = own
+    voice.isScreenSharing = true
+    voice.handleMediaState({ user_id: 'me', screen: true })
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const stageVideo = () => w.find('video').element
+    const cardKeys = () => w.findAll('[data-testid="screen-card"]').map(c => c.attributes('data-screen-card'))
+
+    // My own share is on the stage, Alice's is offered.
+    expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(true)
+    expect(cardKeys()).toEqual(['a'])
+
+    // Watching Alice puts her share on the stage once it arrives; mine is a card.
+    await w.find('[data-screen-card="a"] button').trigger('click')
+    voice.setRemoteScreen('a', alice)
+    await flushPromises()
+    expect(cardKeys()).toEqual(['own'])
+    expect(w.find('[data-screen-card="own"]').text()).toContain('Your screen')
+    expect(stageVideo().srcObject).toBe(alice)
+    expect(stageVideo().muted).toBe(false)
+    expect(w.text()).toContain('Alice')
+    expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(true)
+    expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(false)
+    expect(w.find('button[aria-label="Stop watching"]').exists()).toBe(true)
+
+    // Back to my own share: Alice's stays received, as a card.
+    await w.find('[data-screen-card="own"] button').trigger('click')
+    await flushPromises()
+    expect(stageVideo().srcObject).toBe(own)
+    expect(stageVideo().muted).toBe(true)
+    expect(cardKeys()).toEqual(['a'])
+    expect(w.find('[data-screen-card="a"] button').text()).toBe('Show on stage')
+    expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(true)
+    expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(false)
+    expect(voice.watchedScreens).toEqual({ a: true })
+
+    // And to Alice again.
+    await w.find('[data-screen-card="a"] button').trigger('click')
+    await flushPromises()
+    expect(stageVideo().srcObject).toBe(alice)
+    expect(cardKeys()).toEqual(['own'])
+  })
+
+  it('starting to share while watching someone keeps their share on the stage', async () => {
+    const voice = connected()
+    const alice = new MediaStream()
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', alice)
+    const w = mountStage({ channelId: 'v1' })
+    await flushPromises()
+    voice.localScreenStream = new MediaStream()
+    voice.isScreenSharing = true
+    await flushPromises()
+    expect(w.find('video').element.srcObject).toBe(alice)
+    expect(w.findAll('[data-testid="screen-card"]').map(c => c.attributes('data-screen-card'))).toEqual(['own'])
+  })
+
+  it('the paused own preview only shows while my own share is on the stage', async () => {
+    const voice = connected()
+    voice.localScreenStream = new MediaStream()
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', new MediaStream())
+    const hasFocus = vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    try {
+      const w = mountStage({ channelId: 'v1' })
+      await flushPromises()
+      expect(w.find('[data-testid="own-stream-paused"]').exists()).toBe(false)
+      await w.find('[data-screen-card="own"] button').trigger('click')
+      expect(w.find('[data-testid="own-stream-paused"]').exists()).toBe(true)
+    } finally {
+      hasFocus.mockRestore()
+    }
+  })
 })
 
 describe('VoiceStage watch from the preview', () => {

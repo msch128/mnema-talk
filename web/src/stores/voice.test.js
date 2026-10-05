@@ -215,3 +215,117 @@ describe('mute marks and the speaking ring', () => {
     expect(voice.isSpeaking('u2')).toBe(true)
   })
 })
+
+describe('the screen share stage', () => {
+  // A remote share that is published, watched and received.
+  function receive(voice, id, stream = { id }) {
+    voice.handleMediaState({ user_id: id, screen: true })
+    voice.watchScreen(id)
+    voice.setRemoteScreen(id, stream)
+    return stream
+  }
+
+  it('is empty without any share', () => {
+    expect(useVoiceStore().stage).toBeNull()
+  })
+
+  it('starting to share while watching nobody puts my own share on the stage', () => {
+    const voice = useVoiceStore()
+    const own = {}
+    voice.localScreenStream = own
+    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+    expect(voice.ownScreenFocused).toBe(true)
+  })
+
+  it('starting to share while watching someone keeps their share on the stage', () => {
+    const voice = useVoiceStore()
+    const a = receive(voice, 'a')
+    voice.localScreenStream = {}
+    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+    expect(voice.ownScreenFocused).toBe(false)
+  })
+
+  it('switches between my own share and a watched one both ways', () => {
+    const voice = useVoiceStore()
+    const own = {}
+    voice.localScreenStream = own
+    const a = receive(voice, 'a')
+    // Watching puts theirs on the stage.
+    expect(voice.stage.stream).toBe(a)
+    voice.focusOwnScreen()
+    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+    // Their share is still received and in focus for the way back.
+    expect(voice.watchedScreens).toEqual({ a: true })
+    voice.focusScreen('a')
+    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+  })
+
+  it('keeps my own share on the stage until a newly watched share arrives', () => {
+    const voice = useVoiceStore()
+    const own = {}
+    voice.localScreenStream = own
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.watchScreen('a')
+    expect(voice.stage.stream).toBe(own)
+    const a = {}
+    voice.setRemoteScreen('a', a)
+    expect(voice.stage.stream).toBe(a)
+  })
+
+  it('a share arriving after I chose my own does not replace it on the stage', () => {
+    const voice = useVoiceStore()
+    voice.localScreenStream = {}
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.watchScreen('a')
+    voice.focusOwnScreen()
+    voice.setRemoteScreen('a', {})
+    expect(voice.stage.kind).toBe('own')
+  })
+
+  it('falls back to my own share when the watched one on the stage ends', () => {
+    const voice = useVoiceStore()
+    receive(voice, 'a')
+    const own = {}
+    voice.localScreenStream = own
+    expect(voice.stage.kind).toBe('remote')
+    voice.handleMediaState({ user_id: 'a', screen: false })
+    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+  })
+
+  it('falls back to another watched share before my own', () => {
+    const voice = useVoiceStore()
+    receive(voice, 'a')
+    const b = receive(voice, 'b')
+    voice.localScreenStream = {}
+    voice.focusScreen('a')
+    voice.unwatchScreen('a')
+    expect(voice.stage).toEqual({ kind: 'remote', userId: 'b', stream: b })
+  })
+
+  it('falls back to a watched share when I stop sharing', () => {
+    const voice = useVoiceStore()
+    voice.localScreenStream = {}
+    const a = receive(voice, 'a')
+    voice.focusOwnScreen()
+    voice.localScreenStream = null
+    expect(voice.ownScreenFocused).toBe(false)
+    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+  })
+
+  it('focusing my own share needs one, a remote share needs an opt-in', () => {
+    const voice = useVoiceStore()
+    voice.focusOwnScreen()
+    expect(voice.ownScreenFocused).toBe(false)
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.focusScreen('a')
+    expect(voice.remoteScreenUserId).toBeNull()
+    expect(voice.watchedScreens).toEqual({})
+  })
+
+  it('leaving the call clears the choice', () => {
+    const voice = useVoiceStore()
+    voice.localScreenStream = {}
+    voice.disconnect()
+    expect(voice.ownScreenFocused).toBe(false)
+  })
+})

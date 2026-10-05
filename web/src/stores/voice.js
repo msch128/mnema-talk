@@ -179,11 +179,14 @@ export const useVoiceStore = defineStore('voice', () => {
   // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
   const localScreenStream = shallowRef(null)
   const localAudioStream = shallowRef(null)
-  // The remote screen share on the stage and its publisher (user ID).
+  // The remote screen share in focus and its publisher (user ID). It is on the
+  // stage unless my own share is (see `stage`).
   const remoteScreenStream = shallowRef(null)
   const remoteScreenUserId = ref(null)
   // userId -> MediaStream of every screen share I watch (replaced, never mutated).
   const remoteScreenStreams = shallowRef({})
+  // My own share was chosen for the stage (see `stage`).
+  const ownScreenFocused = ref(false)
   // userId -> true for screen shares I opted into. Not persisted: it lasts
   // for one share and one call.
   const watchedScreens = ref({})
@@ -319,6 +322,7 @@ export const useVoiceStore = defineStore('voice', () => {
   // Opt into someone's screen share; it goes on the stage.
   function watchScreen(userId) {
     if (!userId) return
+    ownScreenFocused.value = false
     watchedScreens.value = { ...watchedScreens.value, [userId]: true }
     syncScreenFocus(userId)
     emitSubscription({ kind: 'screen', user_id: userId, on: true })
@@ -338,8 +342,34 @@ export const useVoiceStore = defineStore('voice', () => {
 
   // Which of the screen shares I watch is on the stage.
   function focusScreen(userId) {
-    if (watchedScreens.value[userId]) syncScreenFocus(userId)
+    if (!watchedScreens.value[userId]) return
+    ownScreenFocused.value = false
+    syncScreenFocus(userId)
   }
+
+  // --- The stage: exactly one screen share, mine or one I watch ---
+  // Starting to share puts my own share on the stage unless I already watch
+  // someone; then theirs stays and mine is a card.
+  watch(localScreenStream, (stream, prev) => {
+    if (!stream) ownScreenFocused.value = false
+    else if (!prev) ownScreenFocused.value = !remoteScreenUserId.value
+  }, { flush: 'sync' })
+
+  function focusOwnScreen() {
+    if (localScreenStream.value) ownScreenFocused.value = true
+  }
+
+  // What the stage shows: { kind: 'own', stream } or
+  // { kind: 'remote', userId, stream }, null when nothing can be shown.
+  // A chosen share that is not there (yet) falls back to the other one.
+  const stage = computed(() => {
+    const own = localScreenStream.value
+    const remoteId = remoteScreenUserId.value
+    const remote = remoteId ? remoteScreenStream.value : null
+    if (own && (ownScreenFocused.value || !remote)) return { kind: 'own', userId: null, stream: own }
+    if (remote) return { kind: 'remote', userId: remoteId, stream: remote }
+    return null
+  })
 
   function setRemoteScreen(userId, stream) {
     // A track that arrives after I stopped watching is not shown.
@@ -564,6 +594,7 @@ export const useVoiceStore = defineStore('voice', () => {
     remoteScreenUserId.value = null
     remoteScreenStreams.value = {}
     watchedScreens.value = {}
+    ownScreenFocused.value = false
     mediaState.value = {}
     userVideoStreams.value = {}
     subscriptionSink = null
@@ -597,6 +628,9 @@ export const useVoiceStore = defineStore('voice', () => {
     watchScreen,
     unwatchScreen,
     focusScreen,
+    focusOwnScreen,
+    ownScreenFocused,
+    stage,
     setRemoteScreen,
     removeRemoteScreen,
     handleMediaState,

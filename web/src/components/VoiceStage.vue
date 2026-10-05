@@ -21,6 +21,7 @@ import MentionSuggestions from './MentionSuggestions.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useTalkStage } from '../composables/useTalkStage'
 import { useMessageActions, formatTime } from '../composables/useMessageActions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
@@ -133,49 +134,40 @@ function cameraStreamOf(user) {
   return voiceStore.userVideoStreams[user.id] || null
 }
 
-// Someone else's screen share is only received after I opt in. Until then
-// (and for shares I watch but that are not on the stage) a card is shown.
-const screenCards = computed(() => {
-  if (!isConnectedHere.value) return []
-  const cards = []
-  for (const user of usersInVoice.value) {
-    if (user.id === authStore.user?.id || !voiceStore.mediaState[user.id]?.screen) continue
-    const watching = !!voiceStore.watchedScreens[user.id]
-    const onStage = voiceStore.remoteScreenUserId === user.id && !!voiceStore.remoteScreenStream
-    if (onStage) continue
-    const state = !watching ? 'idle' : voiceStore.remoteScreenUserId === user.id ? 'pending' : 'queued'
-    cards.push({ user, state })
-  }
-  return cards
+// The stage shows one screen share; every other one is a card that puts it
+// there. Someone else's share is only received after I opt in (Watch).
+const { stage, ownOnStage, cards: screenCards, selectCard: onScreenCard } = useTalkStage({
+  users: () => usersInVoice.value,
+  myId: () => authStore.user?.id,
+  active: () => isConnectedHere.value,
+  watch: userId => watchStream(userId)
 })
-
-function onScreenCard(card) {
-  if (card.state === 'idle') watchStream(card.user.id)
-  else if (card.state === 'queued') voiceStore.focusScreen(card.user.id)
-}
 
 async function watchStream(userId) {
   if (!isConnectedHere.value && !(await join())) return
   voiceStore.watchScreen(userId)
 }
 
+// Audio of the share on the stage when it is someone else's.
+const stageUserId = computed(() => (stage.value?.kind === 'remote' ? stage.value.userId : null))
+
 const currentStreamVolume = computed(() => {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   return uid ? voiceStore.getUserVolume(uid) : 100
 })
 
 const isCurrentStreamMuted = computed(() => {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   return uid ? voiceStore.isUserLocalMuted(uid) : false
 })
 
 function toggleCurrentStreamMute() {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   if (uid) voiceStore.toggleLocalMute(uid)
 }
 
 function onStreamVolumeChange(e) {
-  const uid = voiceStore.remoteScreenUserId
+  const uid = stageUserId.value
   if (uid) {
     voiceStore.setUserVolume(uid, Number(e.target.value))
   }
@@ -191,16 +183,10 @@ watch([() => props.showChat, shownChannelId], ([show, id]) => {
   if (activeVoiceChannel.value) chatStore.selectChannel(activeVoiceChannel.value)
 }, { immediate: true })
 
-// Active screen stream (local or remote)
-const activeScreenStream = computed(() => {
-  return voiceStore.localScreenStream || voiceStore.remoteScreenStream || null
-})
-const isSharingOwnScreen = computed(() => {
-  return !!voiceStore.localScreenStream
-})
+const activeScreenStream = computed(() => stage.value?.stream || null)
 const screenSharerName = computed(() => {
-  if (isSharingOwnScreen.value) return t('talk.ownScreen')
-  const sharer = usersInVoice.value.find(u => u.id === voiceStore.remoteScreenUserId)
+  if (ownOnStage.value) return t('talk.ownScreen')
+  const sharer = usersInVoice.value.find(u => u.id === stageUserId.value)
   return sharer ? (sharer.display_name || sharer.username) : t('talk.sharedScreen')
 })
 
@@ -224,7 +210,7 @@ onUnmounted(() => {
   window.removeEventListener('focus', updatePageActive)
   window.removeEventListener('blur', updatePageActive)
 })
-const ownPreviewPaused = computed(() => isSharingOwnScreen.value && !pageActive.value)
+const ownPreviewPaused = computed(() => ownOnStage.value && !pageActive.value)
 
 // Watch active screen stream and attach to video element
 watch([activeScreenStream, isConnectedHere, ownPreviewPaused], ([stream, , paused]) => {
@@ -366,10 +352,12 @@ async function handleFileUpload(e) {
           activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
         ]"
       >
-        <!-- Screen share spotlight (if sharing or viewing) -->
+        <!-- The stage: one screen share, mine or one I watch -->
         <div
           v-if="activeScreenStream && isConnectedHere"
           ref="videoContainer"
+          data-testid="stage"
+          :data-stage-source="ownOnStage ? 'own' : stageUserId"
           :class="[
             'w-full max-w-5xl bg-black rounded-xl border border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
             showChat ? 'h-44 mb-2 flex-shrink-0' : 'flex-1 min-h-0 mb-3'
@@ -379,7 +367,7 @@ async function handleFileUpload(e) {
             ref="screenVideoEl"
             autoplay
             playsinline
-            :muted="isSharingOwnScreen"
+            :muted="ownOnStage"
             class="w-full h-full object-contain"
             @resize="onVideoResize"
             @loadedmetadata="onVideoResize"
@@ -407,7 +395,7 @@ async function handleFileUpload(e) {
           <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
             <!-- Stream Audio Toggle for Streamer (Own Screen) -->
             <button
-              v-if="isSharingOwnScreen"
+              v-if="ownOnStage"
               type="button"
               data-testid="streamer-audio-toggle"
               :class="[
@@ -423,7 +411,7 @@ async function handleFileUpload(e) {
 
             <!-- Viewer Stream Audio Controls (Volume & Mute) -->
             <div
-              v-else-if="voiceStore.remoteScreenUserId"
+              v-else-if="stageUserId"
               class="flex items-center gap-1.5 bg-black/75 hover:bg-black/90 px-2 py-1.5 rounded-lg text-white group/vol"
             >
               <button
@@ -450,8 +438,8 @@ async function handleFileUpload(e) {
 
             <!-- Stop Watching (Viewer) -->
             <button
-              v-if="!isSharingOwnScreen"
-              @click="voiceStore.unwatchScreen(voiceStore.remoteScreenUserId)"
+              v-if="!ownOnStage"
+              @click="voiceStore.unwatchScreen(stageUserId)"
               :aria-label="$t('talk.unwatchScreen')"
               v-tooltip="$t('talk.stopWatching')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition hover:text-mnema-danger"
@@ -479,20 +467,21 @@ async function handleFileUpload(e) {
           </div>
         </div>
 
-        <!-- Screen shares I can opt into -->
+        <!-- Screen shares not on the stage: mine, ones I watch, ones I can opt into -->
         <div
           v-if="screenCards.length"
           class="w-full max-w-5xl flex flex-wrap gap-2 flex-shrink-0 mb-3"
         >
           <div
             v-for="card in screenCards"
-            :key="card.user.id"
+            :key="card.key"
             data-testid="screen-card"
+            :data-screen-card="card.key"
             class="flex items-center gap-3 min-w-0 rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
           >
             <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
             <span class="text-sm text-mnema-text truncate">
-              {{ $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
+              {{ card.kind === 'own' ? $t('talk.ownScreen') : $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
             </span>
             <button
               type="button"
@@ -503,7 +492,7 @@ async function handleFileUpload(e) {
               {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
             </button>
             <button
-              v-if="card.state !== 'idle'"
+              v-if="card.kind === 'remote' && card.state !== 'idle'"
               type="button"
               class="w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
               v-tooltip="$t('talk.unwatchScreen')"
