@@ -112,7 +112,9 @@ services:
   # Optional TURN Relay: coturn (profile: turn)
   # ==========================================================
   # Enable with: docker compose --profile turn up -d
-  # Router port forward required: 3478 UDP/TCP, 49152-49200 UDP
+  # Router port forward required: 3478 UDP/TCP (TCP serves browsers that may
+  # not use UDP, e.g. Opera with its VPN or WebRTC protection); 49152-49200 UDP
+  # only for relaying to peers outside the LAN.
   coturn:
     image: coturn/coturn:4.6.2-alpine
     container_name: mnema-coturn
@@ -128,7 +130,10 @@ services:
     # anyone could mint credentials and use the relay.
     # Never relays into private, loopback, link-local or reserved ranges (incl.
     # their IPv4-mapped IPv6 form) nor to the server's own public IP, so the
-    # relay cannot reach the NAS LAN, Docker networks or host services.
+    # relay cannot reach the NAS LAN, Docker networks or host services. The
+    # one exception is the voice server itself: a private IP listed in
+    # WEBRTC_NAT_1TO1_IP (its LAN address) is allowed, otherwise relayed
+    # clients could never reach it.
     entrypoint:
       - sh
       - -c
@@ -138,9 +143,14 @@ services:
           exit 1
         fi
         self=""
-        if [ -n "$$WEBRTC_NAT_1TO1_IP" ]; then
-          self="--denied-peer-ip=$$WEBRTC_NAT_1TO1_IP"
-        fi
+        for entry in $$(echo "$$WEBRTC_NAT_1TO1_IP" | tr ',' ' '); do
+          case "$$entry" in
+            10.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|192.168.*)
+              self="$$self --allowed-peer-ip=$$entry" ;;
+            *[!0-9.]*) ;; # a host name, e.g. dynamic DNS: nothing to add
+            *) self="$$self --denied-peer-ip=$$entry" ;;
+          esac
+        done
         exec turnserver -n --use-auth-secret \
           --static-auth-secret="$$WEBRTC_TURN_SECRET" --realm="$$WEBRTC_TURN_REALM" \
           --listening-port=3478 --min-port=49152 --max-port=49200 \
