@@ -73,7 +73,8 @@ export const useChatStore = defineStore('chat', () => {
   // Typing state per channel: channel_id -> Array<{ user_id, username, display_name }>
   const typingByChannel = ref({})
   const typingTimers = new Map()
-  let lastTypingSentAt = 0
+  // channel_id -> when my last typing notice for it went out.
+  const lastTypingSentAt = new Map()
 
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
@@ -103,14 +104,22 @@ export const useChatStore = defineStore('chat', () => {
     ...uncategorized.value
   ])
 
+  /** Whether channelId is a known voice channel. */
+  function isVoiceChannel(channelId) {
+    return allChannels.value.some(c => c.id === channelId && c.type === 'voice')
+  }
+
   async function fetchChannels() {
     try {
       const data = await api('/api/channels')
       categories.value = data.categories || []
       uncategorized.value = data.uncategorized || []
 
-      const stillExists = activeChannel.value && allChannels.value.some(c => c.id === activeChannel.value.id)
-      if (!stillExists) {
+      const fresh = activeChannel.value && allChannels.value.find(c => c.id === activeChannel.value.id)
+      if (fresh) {
+        // Same channel, new object: a rename or topic change shows in the header.
+        activeChannel.value = fresh
+      } else {
         const routeCh = allChannels.value.find(c => c.id === currentRoute.value?.channelId)
         const next = routeCh || allChannels.value.find(c => c.type === 'text') || allChannels.value[0]
         if (next) {
@@ -154,8 +163,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!channel) return
     if (activeChannel.value?.id !== channel.id) suppressAutoReadFor = null
     activeChannel.value = channel
-    activeThread.value = null
-    threadReplies.value = []
+    closeThread()
     pendingLive = []
     resetWindow()
     setWindow(emptyWindow())
@@ -353,7 +361,8 @@ export const useChatStore = defineStore('chat', () => {
       if (!messages.value.some(m => m.id === msg.id) && !pendingLive.some(m => m.id === msg.id)) {
         pendingLive.push(msg)
         if (pendingLive.length > MAX_PENDING_LIVE) pendingLive.shift()
-        if (!isLoadingWindow.value) missedLiveCount.value++
+        // My own messages are not news to me.
+        if (!isLoadingWindow.value && !isOwnMessage(msg)) missedLiveCount.value++
       }
       return
     }
@@ -362,6 +371,11 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = win.messages
     hasMoreBefore.value = win.hasMoreBefore
     liveAppendSeq.value++
+  }
+
+  function isOwnMessage(msg) {
+    const me = authStore.user?.id
+    return !!me && msg?.user_id === me
   }
 
   function removeFromWindow(id) {
@@ -412,27 +426,35 @@ export const useChatStore = defineStore('chat', () => {
     return msg
   }
 
+  // Bumped by every thread open and close: a load that finishes after
+  // another thread was opened (or the thread was closed) is dropped.
+  let threadGen = 0
+
   async function openThread(msg) {
     if (!msg) return
     const id = typeof msg === 'string' ? msg : msg.id
     if (!id) return
+    const gen = ++threadGen
     activeThread.value = typeof msg === 'object' ? msg : { id }
     threadReplies.value = []
     isThreadLoading.value = true
     try {
       const data = await api(`/api/messages/${id}/thread`)
+      if (gen !== threadGen || activeThread.value?.id !== id) return
       activeThread.value = data.root || (typeof msg === 'object' ? msg : { id })
       threadReplies.value = Array.isArray(data.replies) ? data.replies : []
     } catch (e) {
-      console.error('Failed to load thread:', e)
+      if (gen === threadGen) console.error('Failed to load thread:', e)
     } finally {
-      isThreadLoading.value = false
+      if (gen === threadGen) isThreadLoading.value = false
     }
   }
 
   function closeThread() {
+    threadGen++
     activeThread.value = null
     threadReplies.value = []
+    isThreadLoading.value = false
   }
 
   async function sendThreadReply(content, replyToId = null) {
@@ -573,20 +595,24 @@ export const useChatStore = defineStore('chat', () => {
     isConnected.value = false
   }
 
+  // Author fields that messages and reply previews carry a copy of.
+  const AUTHOR_FIELDS = ['avatar_url', 'display_name']
+
   function updateUserEverywhere(updated) {
+    if (!updated?.id) return
     const idx = members.value.findIndex(m => m.id === updated.id)
     if (idx !== -1) members.value[idx] = { ...members.value[idx], ...updated }
-    for (const list of [messages.value, threadReplies.value]) {
-      list.forEach(m => {
-        if (m.user_id === updated.id) {
-          m.avatar_url = updated.avatar_url
-          m.display_name = updated.display_name
+    // Only fields the update carries: a partial one (e.g. {id, disabled})
+    // must not blank the names and avatars.
+    const fields = AUTHOR_FIELDS.filter(f => f in updated)
+    if (fields.length) {
+      const copy = target => { for (const f of fields) target[f] = updated[f] }
+      for (const list of loadedLists()) {
+        for (const m of list) {
+          if (m.user_id === updated.id) copy(m)
+          if (m.reply_to?.user_id === updated.id) copy(m.reply_to)
         }
-        if (m.reply_to?.user_id === updated.id) {
-          m.reply_to.avatar_url = updated.avatar_url
-          m.reply_to.display_name = updated.display_name
-        }
-      })
+      }
     }
     if (authStore.user?.id === updated.id) authStore.user = { ...authStore.user, ...updated }
     if (selectedUserProfile.value?.id === updated.id) {
@@ -912,9 +938,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function markChannelRead(channelId) {
-    if (!channelId) return
-    const ch = allChannels.value.find(c => c.id === channelId)
-    if (ch && ch.type === 'voice') return
+    if (!channelId || isVoiceChannel(channelId)) return
     if (suppressAutoReadFor === channelId) suppressAutoReadFor = null
 
     const prev = readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' }
@@ -959,9 +983,7 @@ export const useChatStore = defineStore('chat', () => {
   onReturnToTab = markActiveChannelReadIfReading
 
   async function markChannelUnread(channelId, messageId) {
-    if (!channelId || !messageId) return
-    const ch = allChannels.value.find(c => c.id === channelId)
-    if (ch && ch.type === 'voice') return
+    if (!channelId || !messageId || isVoiceChannel(channelId)) return
 
     // Keep the channel unread even though it is open: no auto-read until the
     // user marks it read (Esc) or switches channel.
@@ -984,9 +1006,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function setNotificationLevel(channelId, level) {
-    if (!channelId || !level) return
-    const ch = allChannels.value.find(c => c.id === channelId)
-    if (ch && ch.type === 'voice') return
+    if (!channelId || !level || isVoiceChannel(channelId)) return
 
     const prev = readStates.value[channelId] || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
     readStates.value = {
@@ -1017,13 +1037,13 @@ export const useChatStore = defineStore('chat', () => {
 
   function sendTyping(channelId) {
     const id = channelId || activeChannel.value?.id
-    if (!id) return
-    const ch = allChannels.value.find(c => c.id === id)
-    if (ch && ch.type === 'voice') return
+    if (!id || isVoiceChannel(id)) return
 
+    // Per channel: typing in a thread of another channel right after this one
+    // still announces itself there.
     const now = Date.now()
-    if (now - lastTypingSentAt < TYPING_THROTTLE_MS) return
-    lastTypingSentAt = now
+    if (now - (lastTypingSentAt.get(id) ?? -Infinity) < TYPING_THROTTLE_MS) return
+    lastTypingSentAt.set(id, now)
     sendWSEvent('typing', { channel_id: id })
   }
 
@@ -1145,6 +1165,8 @@ export const useChatStore = defineStore('chat', () => {
     }
     try {
       const full = await api(`/api/users/${userId}`)
+      // Closed, or another profile opened, while this one loaded.
+      if (selectedUserProfile.value?.id !== userId) return
       selectedUserProfile.value = { ...selectedUserProfile.value, ...full }
     } catch (e) {
       console.warn('Failed to fetch full user profile:', e)
@@ -1194,6 +1216,7 @@ export const useChatStore = defineStore('chat', () => {
     retryNow,
     categories,
     allChannels,
+    isVoiceChannel,
     uncategorized,
     activeChannel,
     messages,
