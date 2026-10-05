@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ExternalLink } from '@lucide/vue'
-import { api } from '../lib/api'
+import { fetchLinkPreview } from '../lib/linkPreview'
 
 const props = defineProps({
   url: {
@@ -27,14 +27,8 @@ function domainFrom(raw) {
 }
 
 onMounted(async () => {
-  try {
-    const data = await api(`/api/link-preview?url=${encodeURIComponent(props.url)}`)
-    if (data && (data.title || data.description)) {
-      preview.value = data
-    }
-  } catch {
-    // 204 or error - don't show preview card
-  }
+  // Cached per URL: remounting while scrolling doesn't hit the server again.
+  preview.value = await fetchLinkPreview(props.url)
 })
 </script>
 
