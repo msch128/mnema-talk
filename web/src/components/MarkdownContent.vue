@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
+import { extractPreviewUrls } from '../lib/chatLogic'
 import LinkPreviewCard from './LinkPreviewCard.vue'
 
 const props = defineProps({
@@ -12,13 +13,8 @@ const props = defineProps({
 
 const parsedHtml = computed(() => renderMarkdown(props.content))
 
-const links = computed(() => {
-  if (!props.content) return []
-  const urlRegex = /\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g
-  const matches = props.content.match(urlRegex)
-  if (!matches) return []
-  return [...new Set(matches)].slice(0, 3)
-})
+// Only links in plain text get a card, never ones inside code or spoilers.
+const links = computed(() => extractPreviewUrls(props.content, 3))
 
 // Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
 function toggleSpoiler(event) {
