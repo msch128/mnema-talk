@@ -108,6 +108,20 @@ func NewRouter(d Deps) (*Router, error) {
 		Online:         hub,
 	}
 
+	systemH := &systemHandler{
+		cfg:      cfg,
+		db:       d.DB,
+		hub:      hub,
+		sfu:      d.SFU,
+		storage:  d.StorageReady,
+		hasStore: d.Store != nil,
+		version:  d.Version,
+		started:  time.Now(),
+	}
+	if systemH.version == "" {
+		systemH.version = "dev"
+	}
+
 	var previewH *linkpreview.Handler
 	if cfg.LinkPreviews {
 		fetcher := linkpreview.New()
@@ -210,6 +224,7 @@ func NewRouter(d Deps) (*Router, error) {
 				authH.MountAdmin(adm)
 				chatH.MountAdmin(adm)
 				mediaH.MountAdmin(adm)
+				systemH.mountAdmin(adm)
 			})
 		})
 	})
