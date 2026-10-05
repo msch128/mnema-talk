@@ -112,8 +112,21 @@ func (c *client) answer(p *Peer, offer webrtc.SessionDescription, mu *sync.Mutex
 // publishVideo adds a VP8 track before joining and keeps sending packets.
 func (c *client) publishVideo(trackID string) *webrtc.TrackLocalStaticRTP {
 	c.t.Helper()
+	return c.publish(trackID, webrtc.MimeTypeVP8, 96, []byte{0x10, 0x00, 0x00, 0x9d, 0x01, 0x2a})
+}
+
+// publishAudio adds an Opus track before joining and keeps sending packets.
+// The client's audio tracks take the SFU's audio lines in order: the first
+// is the microphone, the second the screen share's sound.
+func (c *client) publishAudio(trackID string) *webrtc.TrackLocalStaticRTP {
+	c.t.Helper()
+	return c.publish(trackID, webrtc.MimeTypeOpus, 111, []byte{0xfc, 0xff, 0xfe})
+}
+
+func (c *client) publish(trackID, mime string, pt uint8, payload []byte) *webrtc.TrackLocalStaticRTP {
+	c.t.Helper()
 	track, err := webrtc.NewTrackLocalStaticRTP(
-		webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeVP8}, trackID, "stream-"+c.id.String())
+		webrtc.RTPCodecCapability{MimeType: mime}, trackID, "stream-"+c.id.String())
 	if err != nil {
 		c.t.Fatal(err)
 	}
@@ -150,8 +163,8 @@ func (c *client) publishVideo(trackID string) *webrtc.TrackLocalStaticRTP {
 			case <-tick.C:
 				seq++
 				_ = track.WriteRTP(&rtp.Packet{
-					Header:  rtp.Header{Version: 2, PayloadType: 96, SequenceNumber: seq, Timestamp: uint32(seq) * 3000},
-					Payload: []byte{0x10, 0x00, 0x00, 0x9d, 0x01, 0x2a},
+					Header:  rtp.Header{Version: 2, PayloadType: pt, SequenceNumber: seq, Timestamp: uint32(seq) * 3000},
+					Payload: payload,
 				})
 			}
 		}
@@ -341,4 +354,49 @@ func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
 	// The publisher keeps sending on the same transceiver (stop and start
 	// again): the camera is published again without a new OnTrack.
 	waitSources(t, r, pub.id, SourceCamera, 1)
+}
+
+func TestScreenAudioReachesOnlyTheViewersOfTheShare(t *testing.T) {
+	skipFlakyInCI(t)
+	s := newTestSFU(t)
+	room := uuid.New()
+
+	pub := newClient(t)
+	pub.publishAudio("mic")          // first audio m-line: the microphone
+	pub.publishAudio("screen-audio") // second audio m-line: the screen's sound
+	pub.join(s, room)
+
+	watcher := newClient(t)
+	watcher.join(s, room)
+	listener := newClient(t)
+	listener.join(s, room)
+
+	r := s.Room(room)
+	waitSources(t, r, pub.id, SourceAudio, 1)
+	waitSources(t, r, pub.id, SourceScreenAudio, 1)
+	_ = r.Subscribe(watcher.id, pub.id, SourceScreen, false, true)
+
+	streams := map[string]bool{}
+	for range 2 {
+		streams[waitTrack(t, watcher).StreamID()] = true
+	}
+	if !streams[pub.id.String()] || !streams[ScreenAudioStreamPrefix+pub.id.String()] {
+		t.Fatalf("watcher got streams %v, want the voice under the user ID and the screen's sound under %q", streams, ScreenAudioStreamPrefix)
+	}
+
+	// Someone who does not watch only hears the voice.
+	if got := waitTrack(t, listener).StreamID(); got != pub.id.String() {
+		t.Fatalf("listener got stream %q, want only the voice", got)
+	}
+	select {
+	case tr := <-listener.tracks:
+		t.Fatalf("listener also got stream %q", tr.StreamID())
+	case <-time.After(1500 * time.Millisecond):
+	}
+
+	// Stopping the share takes its sound along, the voice stays.
+	r.RemoveUserSource(pub.id, SourceScreen)
+	if r.sourceCount(pub.id, SourceScreenAudio) != 0 || r.sourceCount(pub.id, SourceAudio) != 1 {
+		t.Fatal("stopping the share must unpublish its sound and keep the voice")
+	}
 }

@@ -45,12 +45,14 @@ function fakeSender(track) {
   return s
 }
 
-// The SFU's offer: receive lines for microphone, screen and camera first.
+// The SFU's offer: receive lines for microphone, screen, camera and the
+// screen share's sound first.
 const SFU_OFFER = [
   'v=0',
   'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:0', 'a=recvonly',
   'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:1', 'a=recvonly',
   'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:2', 'a=recvonly',
+  'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:3', 'a=recvonly',
   ''
 ].join('\r\n')
 
@@ -193,7 +195,7 @@ function setup() {
 async function negotiate() {
   const pc = FakePC.instances.at(-1)
   useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
-  await vi.waitFor(() => expect(pc.transceivers.length).toBe(3))
+  await vi.waitFor(() => expect(pc.transceivers.length).toBe(4))
   await new Promise(r => setTimeout(r, 0))
   return pc
 }
@@ -220,9 +222,9 @@ describe('useWebRTC join and leave', () => {
     // the mic carries a track yet.
     const pc = await negotiate()
     expect(pc.unmatched).toHaveLength(0)
-    expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv'])
+    expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv', 'sendrecv'])
     const senders = pc.senders
-    expect(senders).toHaveLength(3)
+    expect(senders).toHaveLength(4)
     expect(senders.filter(sd => sd.track)).toHaveLength(1)
   })
 
@@ -498,8 +500,8 @@ async function joined() {
   const mic = await grantMic()
   await join
   const pc = await negotiate()
-  const [audio, screen, camera] = pc.senders
-  return { ...ctx, mic, pc, audio, screen, camera }
+  const [audio, screen, camera, screenAudio] = pc.senders
+  return { ...ctx, mic, pc, audio, screen, camera, screenAudio }
 }
 
 function stubDisplayMedia(stream) {
@@ -507,20 +509,19 @@ function stubDisplayMedia(stream) {
 }
 
 describe('screen share with audio', () => {
-  it('mixes screen audio with the mic into the one sent track', async () => {
-    const { rtc, audio, screen, mic } = await joined()
+  it('sends the screen audio on its own line, apart from the mic', async () => {
+    const { rtc, audio, screen, screenAudio, mic, voice } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
 
     await rtc.startScreenShare()
 
-    const mixTrack = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
     expect(screen.track).toBe(display.getVideoTracks()[0])
-    expect(audio.replaceTrack).toHaveBeenCalledWith(mixTrack)
-    expect(audio.track).toBe(mixTrack)
-    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
-    expect(inputs).toContain(display.getAudioTracks()[0])
-    expect(inputs).toContain(mic.getAudioTracks()[0])
+    expect(screenAudio.track).toBe(display.getAudioTracks()[0])
+    // The mic line keeps the bare microphone: nothing is mixed into the voice.
+    expect(audio.track).toBe(mic.getAudioTracks()[0])
+    expect(FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])).not.toContain(display.getAudioTracks()[0])
+    expect(voice.hasScreenAudio).toBe(true)
   })
 
   it('drops a share picked after leaving the call', async () => {
@@ -551,73 +552,69 @@ describe('screen share with audio', () => {
   })
 
   it('mute and the gate only silence the mic, never the screen audio', async () => {
-    const { rtc, voice, audio, mic } = await joined()
+    const { rtc, voice, screenAudio, mic } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
 
     voice.toggleMute()
     expect(mic.getAudioTracks()[0].enabled).toBe(false)
-    // The sent mix track and the screen track stay enabled: only the mic input is silent.
-    expect(audio.track.enabled).toBe(true)
-    expect(display.getAudioTracks()[0].enabled).toBe(true)
+    expect(screenAudio.track.enabled).toBe(true)
+  })
+
+  it("the streamer's stream mute silences only the screen audio line", async () => {
+    const { rtc, voice, audio, screenAudio, mic } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+
+    voice.toggleScreenAudioMute()
+    await vi.waitFor(() => expect(display.getAudioTracks()[0].enabled).toBe(false))
+    expect(screenAudio.track).toBe(display.getAudioTracks()[0])
+    expect(audio.track).toBe(mic.getAudioTracks()[0])
+    expect(mic.getAudioTracks()[0].enabled).toBe(true)
+    voice.toggleScreenAudioMute()
+    await vi.waitFor(() => expect(display.getAudioTracks()[0].enabled).toBe(true))
   })
 
   it('without screen audio the plain mic keeps being sent', async () => {
-    const { rtc, audio, mic } = await joined()
+    const { rtc, audio, screenAudio, mic, voice } = await joined()
     const calls = audio.replaceTrack.mock.calls.length
     stubDisplayMedia(fakeStream(['video']))
     await rtc.startScreenShare()
     expect(audio.replaceTrack.mock.calls.length).toBe(calls)
     expect(audio.track).toBe(mic.getAudioTracks()[0])
+    expect(screenAudio.track).toBeNull()
+    expect(voice.hasScreenAudio).toBe(false)
   })
 
-  it('restores the mic and tears the mix down when sharing stops', async () => {
-    const { rtc, audio, screen, mic, sent } = await joined()
+  it('empties the screen lines when sharing stops', async () => {
+    const { rtc, audio, screen, screenAudio, mic, sent, voice } = await joined()
     stubDisplayMedia(fakeStream(['video', 'audio']))
     await rtc.startScreenShare()
-    const dest = FakeAudioContext.destinations.at(-1)
 
     rtc.stopScreenShare()
-    await vi.waitFor(() => expect(audio.track).toBe(mic.getAudioTracks()[0]))
+    await vi.waitFor(() => expect(screenAudio.track).toBeNull())
     expect(screen.track).toBeNull()
-    expect(dest.disconnect).toHaveBeenCalled()
-    expect(dest.stream.getAudioTracks()[0].stop).toHaveBeenCalled()
+    expect(audio.track).toBe(mic.getAudioTracks()[0])
+    expect(voice.hasScreenAudio).toBe(false)
     expect(sent.some(e => e.type === 'webrtc_screenshare_stop')).toBe(true)
   })
 
-  it('falls back to the mic when only the screen audio track ends', async () => {
-    const { rtc, voice, audio, mic } = await joined()
+  it('silences the screen audio line when only the screen audio track ends', async () => {
+    const { rtc, voice, screenAudio } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
 
     display.getAudioTracks()[0].onended()
-    await vi.waitFor(() => expect(audio.track).toBe(mic.getAudioTracks()[0]))
+    await vi.waitFor(() => expect(screenAudio.track).toBeNull())
     expect(voice.isScreenSharing).toBe(true)
+    expect(voice.hasScreenAudio).toBe(false)
   })
 
-  it('rebuilds the mix when audio settings are applied mid-share', async () => {
-    const { rtc, audio } = await joined()
-    const display = fakeStream(['video', 'audio'])
-    stubDisplayMedia(display)
-    await rtc.startScreenShare()
-    const firstMix = audio.track
-
-    const apply = rtc.applyAudioSettings()
-    const newMic = await grantMic()
-    await apply
-
-    const newMix = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
-    expect(newMix).not.toBe(firstMix)
-    expect(audio.track).toBe(newMix)
-    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
-    expect(inputs.at(-1)).toBe(newMic.getAudioTracks()[0])
-    expect(inputs.at(-2)).toBe(display.getAudioTracks()[0])
-  })
-
-  it('keeps the screen audio when two settings changes overlap', async () => {
-    const { rtc, audio, voice } = await joined()
+  it('keeps the screen audio when audio settings are applied mid-share', async () => {
+    const { rtc, audio, screenAudio, voice } = await joined()
     const display = fakeStream(['video', 'audio'])
     stubDisplayMedia(display)
     await rtc.startScreenShare()
@@ -628,25 +625,22 @@ describe('screen share with audio', () => {
     const lastMic = await grantMic()
     await Promise.all([first, second])
 
+    expect(audio.track).toBe(lastMic.getAudioTracks()[0])
+    expect(screenAudio.track).toBe(display.getAudioTracks()[0])
     expect(voice.hasScreenAudio).toBe(true)
-    const newMix = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
-    expect(audio.track).toBe(newMix)
-    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
-    expect(inputs.at(-1)).toBe(lastMic.getAudioTracks()[0])
-    expect(inputs.at(-2)).toBe(display.getAudioTracks()[0])
   })
 
-  it('a reconnect sends the mix, not the bare mic', async () => {
+  it('a reconnect sends the screen audio on its line again', async () => {
     const { rtc, mic } = await joined()
-    stubDisplayMedia(fakeStream(['video', 'audio']))
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
     await rtc.startScreenShare()
-    const mixTrack = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
 
     rtc.rejoinAfterReconnect()
     const fresh = await negotiate()
-    expect(fresh.senders[0].track).toBe(mixTrack)
-    expect(fresh.senders[0].track).not.toBe(mic.getAudioTracks()[0])
-    expect(fresh.senders[1].track.kind).toBe('video')
+    expect(fresh.senders[0].track).toBe(mic.getAudioTracks()[0])
+    expect(fresh.senders[1].track).toBe(display.getVideoTracks()[0])
+    expect(fresh.senders[3].track).toBe(display.getAudioTracks()[0])
   })
 })
 
@@ -669,6 +663,36 @@ describe('per-user playback', () => {
     await vi.waitFor(() => expect(alice.volume).toBe(0))
     voice.toggleLocalMute('alice')
     await vi.waitFor(() => expect(alice.volume).toBe(0.5))
+  })
+
+  it("the stream volume sets only the gain of the screen share's sound, the voice volume only the voice", async () => {
+    const { voice, pc } = await joined()
+    const doraVoice = remoteAudio(pc, 'dora')
+    const doraStream = remoteAudio(pc, 'screen:dora')
+    expect(doraStream.dataset.userId).toBe('dora')
+    expect(doraStream.dataset.source).toBe('screen')
+    expect(doraVoice.dataset.source).toBeUndefined()
+    // Someone's stream starts at half volume.
+    expect(doraStream.volume).toBe(0.5)
+    expect(doraVoice.volume).toBe(1)
+
+    voice.setStreamVolume('dora', 20)
+    await vi.waitFor(() => expect(doraStream.volume).toBe(0.2))
+    expect(doraVoice.volume).toBe(1)
+
+    voice.toggleStreamMute('dora')
+    await vi.waitFor(() => expect(doraStream.volume).toBe(0))
+    expect(doraVoice.volume).toBe(1)
+    voice.toggleStreamMute('dora')
+    await vi.waitFor(() => expect(doraStream.volume).toBe(0.2))
+
+    // The member menu's volume and mute stay with the voice.
+    voice.setUserVolume('dora', 50)
+    await vi.waitFor(() => expect(doraVoice.volume).toBe(0.5))
+    expect(doraStream.volume).toBe(0.2)
+    voice.toggleLocalMute('dora')
+    await vi.waitFor(() => expect(doraVoice.volume).toBe(0))
+    expect(doraStream.volume).toBe(0.2)
   })
 
   it('multiplies with the master volume and deafen wins', async () => {
@@ -1008,22 +1032,24 @@ describe('standalone mic test', () => {
 
 
 describe('publishMids', () => {
-  it('finds the SFU receive lines for mic, screen and camera', () => {
+  it('finds the SFU receive lines for mic, screen, camera and screen audio', () => {
     const offer = [
       'v=0',
       'm=audio 9 UDP 111', 'a=mid:0', 'a=recvonly',
       'm=video 9 UDP 96', 'a=mid:1', 'a=recvonly',
       'm=video 9 UDP 96', 'a=mid:2', 'a=recvonly',
-      // a forwarded track of someone else: not ours to send on
-      'm=audio 9 UDP 111', 'a=mid:3', 'a=sendonly',
-      'm=video 9 UDP 96', 'a=mid:4', 'a=sendonly',
+      'm=audio 9 UDP 111', 'a=mid:3', 'a=recvonly',
+      // forwarded tracks of someone else: not ours to send on
+      'm=audio 9 UDP 111', 'a=mid:4', 'a=sendonly',
+      'm=video 9 UDP 96', 'a=mid:5', 'a=sendonly',
       ''
     ].join('\r\n')
-    expect(publishMids(offer)).toEqual({ audio: '0', video: ['1', '2'] })
+    const ours = { audio: '0', screenAudio: '3', video: ['1', '2'] }
+    expect(publishMids(offer)).toEqual(ours)
     // Someone was already talking: the SFU forwards their voice on our mic
     // line, which then reads sendrecv. It is still our microphone line.
-    expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual({ audio: '0', video: ['1', '2'] })
-    expect(publishMids('')).toEqual({ audio: null, video: [] })
+    expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual(ours)
+    expect(publishMids('')).toEqual({ audio: null, screenAudio: null, video: [] })
   })
 })
 

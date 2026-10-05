@@ -9,6 +9,9 @@ export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 // Per-user playback settings live in the browser only (what I hear of whom).
 const USER_VOLUMES_KEY = 'mnema_user_volumes'
 const USER_MUTED_KEY = 'mnema_user_muted'
+// The sound of someone's screen share has its own volume (0..100 %), apart
+// from their voice.
+const STREAM_VOLUMES_KEY = 'mnema_stream_volumes'
 // Cameras of others are on by default; what I opted out of is remembered.
 const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
 const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
@@ -17,6 +20,9 @@ const HIDE_NO_VIDEO_KEY = 'mnema_hide_no_video'
 export const USER_VOLUME_MIN = 0
 export const USER_VOLUME_MAX = 200
 export const USER_VOLUME_DEFAULT = 100
+export const STREAM_VOLUME_MAX = 100
+// Someone's stream starts at half volume; a changed volume is remembered.
+export const STREAM_VOLUME_DEFAULT = 50
 
 function readJson(key) {
   try {
@@ -68,8 +74,9 @@ export const useVoiceStore = defineStore('voice', () => {
   const isMuted = ref(false)
   const isDeafened = ref(false)
   const isScreenSharing = ref(false)
+  // My own share: its sound is not sent (the streamer's mute), and whether
+  // it has sound at all.
   const isScreenAudioMuted = ref(false)
-  const screenAudioVolume = ref(100)
   const hasScreenAudio = ref(false)
   const isCameraOn = ref(false)
   const isConnected = ref(false)
@@ -253,6 +260,60 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function isUserLocalMuted(userId) {
     return !!localMutedUsers.value[userId]
+  }
+
+  // --- The sound of someone's screen share (0..100 %), apart from their voice ---
+  const streamVolumes = ref(readJson(STREAM_VOLUMES_KEY))
+  // Muted streams, for this session; the volume is kept for unmuting.
+  const mutedStreams = ref({})
+
+  function getStreamVolume(userId) {
+    const v = streamVolumes.value[userId]
+    return typeof v === 'number' ? v : STREAM_VOLUME_DEFAULT
+  }
+
+  // Moving the slider also unmutes, like Discord.
+  function setStreamVolume(userId, volume) {
+    if (!userId) return
+    const n = Number(volume)
+    if (!Number.isFinite(n)) return
+    const clamped = Math.min(STREAM_VOLUME_MAX, Math.max(0, Math.round(n)))
+    const next = { ...streamVolumes.value, [userId]: clamped }
+    streamVolumes.value = next
+    writeJson(STREAM_VOLUMES_KEY, next)
+    if (mutedStreams.value[userId]) {
+      const m = { ...mutedStreams.value }
+      delete m[userId]
+      mutedStreams.value = m
+    }
+  }
+
+  /** Silent: muted, or the volume all the way down. */
+  function isStreamMuted(userId) {
+    return !!mutedStreams.value[userId] || getStreamVolume(userId) === 0
+  }
+
+  function toggleStreamMute(userId) {
+    if (!userId) return
+    if (isStreamMuted(userId)) {
+      // Unmuting a stream turned all the way down brings it back to the default.
+      if (getStreamVolume(userId) === 0) setStreamVolume(userId, STREAM_VOLUME_DEFAULT)
+      const m = { ...mutedStreams.value }
+      delete m[userId]
+      mutedStreams.value = m
+    } else {
+      mutedStreams.value = { ...mutedStreams.value, [userId]: true }
+    }
+  }
+
+  /** What the stage's slider shows: 0 while muted. */
+  function streamVolumeShown(userId) {
+    return mutedStreams.value[userId] ? 0 : getStreamVolume(userId)
+  }
+
+  /** Linear gain for the sound of userId's screen share (before the master volume). */
+  function streamGain(userId) {
+    return isStreamMuted(userId) ? 0 : getStreamVolume(userId) / 100
   }
 
   function toggleLocalMute(userId) {
@@ -658,10 +719,6 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenAudioMuted.value = !isScreenAudioMuted.value
   }
 
-  function setScreenAudioVolume(vol) {
-    screenAudioVolume.value = Math.max(0, Math.min(200, vol))
-  }
-
   function disconnect() {
     if (isConnected.value || currentChannelId.value) {
       playSoundEffect('leave')
@@ -693,10 +750,8 @@ export const useVoiceStore = defineStore('voice', () => {
     isDeafened,
     isScreenSharing,
     isScreenAudioMuted,
-    screenAudioVolume,
     hasScreenAudio,
     toggleScreenAudioMute,
-    setScreenAudioVolume,
     isCameraOn,
     localCameraStream,
     remoteScreenUserId,
@@ -742,6 +797,14 @@ export const useVoiceStore = defineStore('voice', () => {
     setUserVolume,
     isUserLocalMuted,
     toggleLocalMute,
+    streamVolumes,
+    mutedStreams,
+    getStreamVolume,
+    setStreamVolume,
+    isStreamMuted,
+    toggleStreamMute,
+    streamVolumeShown,
+    streamGain,
     isConnected,
     ping,
     pingHistory,

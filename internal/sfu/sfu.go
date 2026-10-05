@@ -23,17 +23,26 @@ const keyframeMinInterval = 300 * time.Millisecond
 
 // Source tells what a forwarded track carries. Audio and screen tracks are
 // published under the user's ID as stream ID; a camera under CameraStreamPrefix
-// plus the user's ID, so clients can tell them apart and map them to people.
+// and a screen share's sound under ScreenAudioStreamPrefix plus the user's ID,
+// so clients can tell them apart and map them to people.
 type Source string
 
 const (
 	SourceAudio  Source = "audio"
 	SourceScreen Source = "screen"
 	SourceCamera Source = "camera"
+	// SourceScreenAudio is the sound of a screen share. It travels apart from
+	// the voice, so viewers set its volume on its own, and like the shared
+	// screen it only goes to the viewers who watch.
+	SourceScreenAudio Source = "screen-audio"
 )
 
 // CameraStreamPrefix precedes the publisher's user ID in a camera's stream ID.
 const CameraStreamPrefix = "cam:"
+
+// ScreenAudioStreamPrefix precedes the publisher's user ID in the stream ID
+// of a screen share's sound.
+const ScreenAudioStreamPrefix = "screen:"
 
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
 const resumeHoldoff = 500 * time.Millisecond
@@ -332,13 +341,16 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		return nil, fmt.Errorf("failed to create PeerConnection: %w", err)
 	}
 
-	// Inbound transceivers to receive the client's mic, screen share and
-	// camera. The two video ones are told apart by their position: the first
-	// is the screen, the second the camera.
+	// Inbound transceivers to receive the client's mic, screen share, camera
+	// and the screen share's sound, in this order. Lines of one kind are told
+	// apart by their position: the first video line is the screen, the second
+	// the camera; the first audio line is the mic, the second the screen's
+	// sound.
 	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
 	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
 	screenTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
 	cameraTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	screenAudioTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
 	pinCodecOrder(screenTr, cameraTr)
 
 	peer := &Peer{
@@ -365,6 +377,9 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 				source = SourceCamera
 				streamID = CameraStreamPrefix + streamID
 			}
+		} else if screenAudioTr != nil && receiver == screenAudioTr.Receiver() {
+			source = SourceScreenAudio
+			streamID = ScreenAudioStreamPrefix + streamID
 		}
 		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "codec", remoteTrack.Codec().MimeType)
 
@@ -632,14 +647,18 @@ func (r *Room) dropScreenSubsLocked(userID uuid.UUID) {
 	}
 }
 
-// RemoveUserSource unpublishes the user's screen share or camera (the client
-// announces that it stopped sending it) and signals the other peers. The
-// track is published again when its packets resume.
+// RemoveUserSource unpublishes the user's screen share (with its sound) or
+// camera (the client announces that it stopped sending it) and signals the
+// other peers. The track is published again when its packets resume.
 func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
+	if source != SourceScreen && source != SourceCamera {
+		return
+	}
 	r.mu.Lock()
 	changed := false
 	for id, tInfo := range r.trackLocals {
-		if tInfo.SenderID == userID && tInfo.Kind == webrtc.RTPCodecTypeVideo && tInfo.Source == source {
+		ofSource := tInfo.Source == source || (source == SourceScreen && tInfo.Source == SourceScreenAudio)
+		if tInfo.SenderID == userID && ofSource {
 			tInfo.stoppedAt.Store(time.Now().UnixNano())
 			delete(r.trackLocals, id)
 			changed = true
