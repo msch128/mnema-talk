@@ -313,7 +313,9 @@
     "cameraFailed": "Camera unavailable. Check the permission in your browser.",
     "cameraDenied": "Camera access denied. Allow the camera for this site in your browser settings.",
     "cameraNotFound": "No camera found.",
-    "cameraBusy": "The camera is in use by another app."
+    "cameraBusy": "The camera is in use by another app.",
+    "memberMuted": "Muted",
+    "memberDeafened": "Deafened"
   },
   "audio": {
     "settings": "Audio settings",
@@ -383,7 +385,12 @@
     "sound_deafen": "Deafen",
     "sound_undeafen": "Undeafen",
     "sound_ptt_start": "Push-to-talk activate",
-    "sound_ptt_stop": "Push-to-talk deactivate"
+    "sound_ptt_stop": "Push-to-talk deactivate",
+    "inputVolume": "Input volume",
+    "outputDevice": "Output device",
+    "outputDeviceUnsupported": "This browser can't pick an output device; the system default is used.",
+    "outputVolume": "Output volume",
+    "perUserVolumeHint": "Make single people louder or quieter with a right-click on their name or tile."
   },
   "stats": {
     "title": "Connection status",
@@ -596,7 +603,9 @@
     "unmuteStreamAudio": "Unmute stream audio",
     "streamVolume": "Stream volume",
     "noAudioInShare": "Screen shared without audio",
-    "noAudioInShareTip": "Note: Screen is being shared without sound. Select a browser tab or enable \"Share audio\" in the browser prompt to transmit sound."
+    "noAudioInShareTip": "Note: Screen is being shared without sound. Select a browser tab or enable \"Share audio\" in the browser prompt to transmit sound.",
+    "ownStreamRunning": "Don't worry, your stream is still running",
+    "ownStreamRunningHint": "The preview pauses while you are in another window to save resources."
   },
   "admin": {
     "title": "Storage & administration",

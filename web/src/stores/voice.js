@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed } from 'vue'
+import { ref, shallowRef, computed, watch } from 'vue'
 import { syncServerClock } from '../lib/clock'
 import { playSound } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
@@ -155,6 +155,9 @@ export const useVoiceStore = defineStore('voice', () => {
     localStorage.setItem('mnema_input_dev', selectedInputDeviceId.value)
     localStorage.setItem('mnema_output_dev', selectedOutputDeviceId.value)
   }
+
+  // Volumes and the output device are remembered as soon as they change.
+  watch([inputVolume, outputVolume, selectedOutputDeviceId], () => saveSettings())
 
   const minPing = computed(() => (pingHistory.value.length ? Math.min(...pingHistory.value) : null))
   const maxPing = computed(() => (pingHistory.value.length ? Math.max(...pingHistory.value) : null))
@@ -434,6 +437,39 @@ export const useVoiceStore = defineStore('voice', () => {
     }
   }
 
+  function myUserId() {
+    try {
+      return useAuthStore()?.user?.id || null
+    } catch {
+      return null // outside pinia (tests)
+    }
+  }
+
+  /** voice_mute_state: someone in a Talk muted or deafened (or stopped). */
+  function handleMuteState(event) {
+    const { channel_id, user_id, muted, deafened } = event || {}
+    const user = channelUsers.value[channel_id]?.[user_id]
+    if (!user) return
+    channelUsers.value[channel_id][user_id] = { ...user, muted: !!muted, deafened: !!deafened }
+  }
+
+  /** Mute/deafen state of a user in a Talk; mine comes from my own controls. */
+  function muteStateOf(userId) {
+    if (userId && userId === myUserId()) return { muted: isMuted.value, deafened: isDeafened.value }
+    for (const users of Object.values(channelUsers.value)) {
+      const u = users?.[userId]
+      if (u) return { muted: !!u.muted, deafened: !!u.deafened }
+    }
+    return { muted: false, deafened: false }
+  }
+
+  /** The speaking ring: never while muted or deafened. */
+  function isSpeaking(userId) {
+    if (!speakingUsers.value[userId]) return false
+    const st = muteStateOf(userId)
+    return !st.muted && !st.deafened
+  }
+
   function handleSpeakingEvent(event) {
     const { user_id, active } = event || {}
     if (!user_id) return
@@ -617,6 +653,9 @@ export const useVoiceStore = defineStore('voice', () => {
     setVoiceSnapshot,
     handleVoiceStateUpdate,
     handleSpeakingEvent,
+    handleMuteState,
+    muteStateOf,
+    isSpeaking,
     toggleMute,
     toggleDeafen,
     setChannel,

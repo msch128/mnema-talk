@@ -313,7 +313,9 @@
     "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser.",
     "cameraDenied": "Kamerazugriff verweigert. Erlaube die Kamera für diese Seite in den Browser-Einstellungen.",
     "cameraNotFound": "Keine Kamera gefunden.",
-    "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt."
+    "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt.",
+    "memberMuted": "Stummgeschaltet",
+    "memberDeafened": "Taub geschaltet"
   },
   "audio": {
     "settings": "Audio-Einstellungen",
@@ -383,7 +385,12 @@
     "sound_deafen": "Taubschalten",
     "sound_undeafen": "Taubschaltung aufheben",
     "sound_ptt_start": "Push-to-Talk aktivieren",
-    "sound_ptt_stop": "Push-to-Talk deaktivieren"
+    "sound_ptt_stop": "Push-to-Talk deaktivieren",
+    "inputVolume": "Eingabelautstärke",
+    "outputDevice": "Ausgabegerät",
+    "outputDeviceUnsupported": "Dieser Browser kann das Ausgabegerät nicht wählen; es wird das Standardgerät des Systems verwendet.",
+    "outputVolume": "Ausgabelautstärke",
+    "perUserVolumeHint": "Einzelne Personen stellst du per Rechtsklick auf ihren Namen oder ihre Kachel lauter oder leiser."
   },
   "stats": {
     "title": "Verbindungsstatus",
@@ -596,7 +603,9 @@
     "unmuteStreamAudio": "Stream-Audio aktivieren",
     "streamVolume": "Stream-Lautstärke",
     "noAudioInShare": "Bildschirm ohne Audio geteilt",
-    "noAudioInShareTip": "Hinweis: Bildschirm wird ohne Ton übertragen. Wähle einen Browser-Tab oder aktiviere „Audio teilen“ im Browser-Dialog, um Sound zu übertragen."
+    "noAudioInShareTip": "Hinweis: Bildschirm wird ohne Ton übertragen. Wähle einen Browser-Tab oder aktiviere „Audio teilen“ im Browser-Dialog, um Sound zu übertragen.",
+    "ownStreamRunning": "Keine Sorge, dein Stream läuft weiter",
+    "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung."
   },
   "admin": {
     "title": "Speicher & Administration",

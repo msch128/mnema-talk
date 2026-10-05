@@ -54,6 +54,11 @@ let screenSender = null
 let cameraSender = null
 // Playback above 100 % needs a gain stage: element.volume tops out at 1.
 let playbackContext = null
+// Input volume: a gain stage in the mic pipeline, only built when the input
+// volume is not 100 % (so the default path stays the plain microphone).
+let inputGainNode = null
+// The voice store, for the output device of a lazily created playback context.
+let outputDeviceStore = null
 const boosts = new WeakMap()
 // Offers are applied one after another; candidates that arrive before the
 // remote description is set wait in pendingCandidates.
@@ -128,6 +133,7 @@ function createBoost(el) {
   try {
     if (!playbackContext || playbackContext.state === 'closed') {
       playbackContext = new AudioCtx()
+      if (outputDeviceStore) applyOutputDevice(outputDeviceStore, playbackContext)
     }
     if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {})
     const source = playbackContext.createMediaStreamSource(el.srcObject)
@@ -142,6 +148,21 @@ function createBoost(el) {
     console.warn('[WebRTC] Volume boost unavailable:', err)
     return null
   }
+}
+
+// Plays remote audio on the chosen output device. setSinkId exists in
+// Chromium browsers and Firefox; elsewhere the system default is used.
+function applyOutputDevice(voiceStore, el) {
+  const id = voiceStore.selectedOutputDeviceId || ''
+  if (typeof el?.setSinkId === 'function' && el.sinkId !== id) {
+    el.setSinkId(id).catch(err => console.warn('[WebRTC] Output device unavailable:', err))
+  }
+}
+
+function applyOutputDeviceAll(voiceStore) {
+  remoteAudioElements.forEach(el => applyOutputDevice(voiceStore, el))
+  // Boosted voices (over 100 %) play through the playback context.
+  applyOutputDevice(voiceStore, playbackContext)
 }
 
 function applyRemoteGain(voiceStore, el) {
@@ -306,6 +327,7 @@ function setupPeerConnection(voiceStore, chatStore) {
       audioEl.srcObject = new MediaStream([event.track])
       audioEl.autoplay = true
       if (streamId) audioEl.dataset.userId = streamId
+      applyOutputDevice(voiceStore, audioEl)
       applyRemoteGain(voiceStore, audioEl)
       audioEl.play().catch(e => {
         // After a reload without a user gesture the browser may refuse to play;
@@ -788,6 +810,22 @@ export function useWebRTC() {
     voiceStore.currentInputLevel = 0
   }
 
+  outputDeviceStore = voiceStore
+  watch(() => voiceStore.selectedOutputDeviceId, () => applyOutputDeviceAll(voiceStore))
+
+  // Input volume: adjust the gain live; the first change away from 100 %
+  // rebuilds the pipeline once to put the gain stage in.
+  let inputVolumeTimer = null
+  watch(() => voiceStore.inputVolume, (v) => {
+    if (inputGainNode) {
+      setNodeGain(inputGainNode, v / 100, audioContext?.currentTime ?? 0)
+      return
+    }
+    if (v === 100 || !localAudioStream.value) return
+    clearTimeout(inputVolumeTimer)
+    inputVolumeTimer = setTimeout(() => applyAudioSettings(), 250)
+  })
+
   watch([
     () => voiceStore.outputVolume,
     () => voiceStore.isDeafened,
@@ -912,6 +950,13 @@ export function useWebRTC() {
     }
   }
 
+  // Everyone sees whether I am muted or deafened (marks on my avatar).
+  function sendMuteState() {
+    if (!voiceStore.currentChannelId) return
+    chatStore.sendWSEvent('voice_mute_state', { muted: !!voiceStore.isMuted, deafened: !!voiceStore.isDeafened })
+  }
+  watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
+
   // After the WebSocket reconnected the server may have dropped our media
   // peer; start a fresh connection and announce the join again. The server
   // treats it as a resume (no leave/join for the others) within its grace time.
@@ -928,6 +973,7 @@ export function useWebRTC() {
   function attachSubscriptions() {
     voiceStore.setSubscriptionSink(msg => chatStore.sendWSEvent('webrtc_subscribe', msg))
     voiceStore.resendSubscriptions()
+    sendMuteState()
   }
 
   // Applies changed input settings (device, AGC, noise suppression, echo
@@ -1022,6 +1068,28 @@ export function useWebRTC() {
       }
     }
 
+    // Input volume other than 100 %: microphone (or AI filter) -> gain -> sent stream.
+    const inputVolume = Number(voiceStore.inputVolume ?? 100)
+    if (inputVolume !== 100) {
+      try {
+        const gain = ctx.createGain()
+        setNodeGain(gain, inputVolume / 100, ctx.currentTime)
+        const destination = ctx.createMediaStreamDestination()
+        if (suppressorNode) {
+          suppressorNode.disconnect()
+          suppressorNode.connect(gain)
+        } else {
+          ctx.createMediaStreamSource(stream).connect(gain)
+          rawMicStream = stream
+        }
+        gain.connect(destination)
+        inputGainNode = gain
+        sendStream = destination.stream
+      } catch (err) {
+        console.warn('[WebRTC] Input volume stage unavailable:', err)
+      }
+    }
+
     try {
       analyser = ctx.createAnalyser()
       analyser.fftSize = 256
@@ -1055,6 +1123,10 @@ export function useWebRTC() {
 
   function teardownMicPipeline() {
     callBiquad = null
+    if (inputGainNode) {
+      try { inputGainNode.disconnect() } catch { /* ignore */ }
+      inputGainNode = null
+    }
     if (loopbackGain) {
       try { loopbackGain.disconnect() } catch { /* ignore */ }
       loopbackGain = null

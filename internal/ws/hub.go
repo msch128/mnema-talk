@@ -59,7 +59,9 @@ type Hub struct {
 	// voiceSince is when each user in a voice room joined it; roomSince is
 	// when each room got its first member. Both survive the grace period.
 	voiceSince map[uuid.UUID]time.Time
-	roomSince  map[uuid.UUID]time.Time
+	// voiceMute is the mute/deafen state of each user in a voice room.
+	voiceMute map[uuid.UUID]MuteState
+	roomSince map[uuid.UUID]time.Time
 
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
@@ -88,6 +90,7 @@ func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []st
 		grace:    map[uuid.UUID]*graceLeave{},
 
 		voiceSince: map[uuid.UUID]time.Time{},
+		voiceMute:  map[uuid.UUID]MuteState{},
 		roomSince:  map[uuid.UUID]time.Time{},
 
 		VoiceGrace: DefaultVoiceGrace,
@@ -505,10 +508,18 @@ func (h *Hub) onlineUsers() []uuid.UUID {
 	return ids
 }
 
-// VoiceUser is a member of a voice room and since when they are in it.
+// MuteState is whether a voice member muted their microphone or deafened.
+type MuteState struct {
+	Muted    bool `json:"muted"`
+	Deafened bool `json:"deafened"`
+}
+
+// VoiceUser is a member of a voice room, since when they are in it and
+// whether they are muted or deafened.
 type VoiceUser struct {
 	auth.User
 	JoinedAt time.Time `json:"joined_at"`
+	MuteState
 }
 
 // voiceSnapshot copies the current voice rooms (channel → users).
@@ -519,7 +530,7 @@ func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 	for chID, users := range h.voice {
 		cp := make(map[uuid.UUID]VoiceUser, len(users))
 		for id, u := range users {
-			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[id]}
+			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[id], MuteState: h.voiceMute[id]}
 		}
 		out[chID] = cp
 	}
@@ -584,7 +595,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 		h.voiceSince[c.User.ID] = now
 	}
 	h.voice[ch.ID][c.User.ID] = c.User
-	joined := VoiceUser{User: c.User.Public(), JoinedAt: h.voiceSince[c.User.ID]}
+	joined := VoiceUser{User: c.User.Public(), JoinedAt: h.voiceSince[c.User.ID], MuteState: h.voiceMute[c.User.ID]}
 	roomStarted := h.roomSince[ch.ID]
 	h.mu.Unlock()
 	id := ch.ID
@@ -684,6 +695,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	since, hadSince := h.voiceSince[userID]
 	if wasIn {
 		delete(h.voiceSince, userID)
+		delete(h.voiceMute, userID)
 	}
 	if users, ok := h.voice[chID]; ok {
 		delete(users, userID)
@@ -831,7 +843,15 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	case "voice_speaking":
 		if cur := c.currentVoice(); cur != nil {
-			h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": p.Active})
+			// A muted or deafened member is never shown as speaking.
+			active := p.Active && !h.isMuted(c.User.ID)
+			h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active})
+		}
+
+	case "voice_mute_state":
+		var st MuteState
+		if json.Unmarshal(payload, &st) == nil {
+			h.setMuteState(c, st)
 		}
 
 	case "webrtc_answer":
@@ -979,5 +999,35 @@ func (c *Client) writePump() {
 				slog.Warn("revalidate token version failed", "user", c.User.ID, "err", err)
 			}
 		}
+	}
+}
+
+func (h *Hub) isMuted(userID uuid.UUID) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	st := h.voiceMute[userID]
+	return st.Muted || st.Deafened
+}
+
+// setMuteState records c's mute/deafen state and tells everyone, so the
+// microphone and headphone marks show on their avatar. Deafened implies muted.
+func (h *Hub) setMuteState(c *Client, st MuteState) {
+	cur := c.currentVoice()
+	if cur == nil {
+		return
+	}
+	if st.Deafened {
+		st.Muted = true
+	}
+	h.mu.Lock()
+	changed := h.voiceMute[c.User.ID] != st
+	h.voiceMute[c.User.ID] = st
+	h.mu.Unlock()
+	if !changed {
+		return
+	}
+	h.Broadcast("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened})
+	if st.Muted {
+		h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false})
 	}
 }

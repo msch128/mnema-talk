@@ -5,6 +5,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
+import MuteMarks from './MuteMarks.vue'
 
 defineProps({
   users: { type: Array, required: true },
@@ -94,11 +95,12 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', onPointerDown)
         class="flex h-10 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm transition-colors hover:bg-mnema-hover focus:outline-none focus-visible:bg-mnema-hover"
         @click="openProfile(u)"
       >
-        <UserAvatar :user="u" size="sm" :is-speaking="!!voiceStore.speakingUsers[u.id]" />
+        <UserAvatar :user="u" size="sm" :is-speaking="voiceStore.isSpeaking(u.id)" />
         <span class="flex min-w-0 flex-1 flex-col leading-[18px]">
           <span class="truncate font-medium text-mnema-text">{{ u.display_name || u.username }}</span>
           <span class="truncate font-mono text-xs text-mnema-tertiary">@{{ u.username }}</span>
         </span>
+        <MuteMarks :muted="voiceStore.muteStateOf(u.id).muted" :deafened="voiceStore.muteStateOf(u.id).deafened" />
         <VoiceTimer :since="u.joined_at" class="text-xs text-mnema-tertiary" />
       </button>
     </div>

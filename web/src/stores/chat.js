@@ -752,6 +752,10 @@ export const useChatStore = defineStore('chat', () => {
       case 'voice_speaking':
         voiceStore.handleSpeakingEvent(p)
         break
+
+      case 'voice_mute_state':
+        voiceStore.handleMuteState(p)
+        break
     }
   }
 

@@ -47,7 +47,7 @@ const subline = computed(() => {
       show-status
       :status="status"
       ring-class="bg-mnema-raised"
-      :is-speaking="!!voiceStore.speakingUsers[member.id]"
+      :is-speaking="voiceStore.isSpeaking(member.id)"
     />
 
     <div class="flex min-w-0 flex-1 flex-col">

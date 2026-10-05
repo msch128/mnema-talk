@@ -198,3 +198,20 @@ describe('Talk timers', () => {
     expect(voice.joinedAtOf('u1')).toBe('')
   })
 })
+
+describe('mute marks and the speaking ring', () => {
+  it('never shows a muted or deafened member as speaking', () => {
+    setActivePinia(createPinia())
+    const voice = useVoiceStore()
+    voice.handleVoiceStateUpdate({ action: 'join', channel_id: 'v1', user: { id: 'u2' } })
+    voice.handleSpeakingEvent({ user_id: 'u2', active: true })
+    expect(voice.isSpeaking('u2')).toBe(true)
+
+    voice.handleMuteState({ channel_id: 'v1', user_id: 'u2', muted: true, deafened: false })
+    expect(voice.muteStateOf('u2')).toEqual({ muted: true, deafened: false })
+    expect(voice.isSpeaking('u2')).toBe(false)
+
+    voice.handleMuteState({ channel_id: 'v1', user_id: 'u2', muted: false, deafened: false })
+    expect(voice.isSpeaking('u2')).toBe(true)
+  })
+})
