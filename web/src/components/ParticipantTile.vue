@@ -162,35 +162,43 @@ watch(() => props.stream, (stream) => {
       <EyeOff v-else class="w-4 h-4" />
     </button>
 
-    <!-- Name -->
+    <!-- Name, centered under the avatar. On camera: a pill centered at the
+         bottom with the time next to it. Long names are cut with an ellipsis. -->
     <div
+      data-tile-name
       :class="[
-        'flex items-center gap-1.5 max-w-[90%]',
-        stream ? 'absolute left-2 bottom-2 bg-black/70 rounded-md px-2 py-0.5 text-white' : ''
+        'flex items-center justify-center gap-1 min-w-0',
+        stream ? 'absolute inset-x-2 bottom-2' : 'w-full'
       ]"
     >
-      <span
-        class="text-sm font-semibold hover:text-mnema-accent transition truncate"
-        :class="stream ? 'text-white' : 'text-mnema-text'"
+      <div
+        :class="[
+          'flex items-center justify-center gap-1.5 min-w-0',
+          stream ? 'bg-black/70 rounded-md px-2 py-0.5 text-white' : 'max-w-[90%]'
+        ]"
       >
-        {{ user.display_name || user.username }}
-      </span>
-      <span v-if="user.role === 'admin' && !stream" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
-        {{ $t('role.admin') }}
-      </span>
-      <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
+        <span
+          class="text-sm font-semibold hover:text-mnema-accent transition truncate"
+          :class="stream ? 'text-white' : 'text-mnema-text'"
+        >
+          {{ user.display_name || user.username }}
+        </span>
+        <span v-if="user.role === 'admin' && !stream" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
+          {{ $t('role.admin') }}
+        </span>
+        <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
+      </div>
+      <VoiceTimer
+        v-if="stream && user.joined_at"
+        :since="user.joined_at"
+        class="flex-shrink-0 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white"
+      />
     </div>
 
     <!-- Status: how long they have been in the Talk (speaking shows as the green ring) -->
-    <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5" data-tile-status>
+    <div v-if="showStatus && !stream" class="w-full text-center text-xs font-mono mt-0.5" data-tile-status>
       <VoiceTimer v-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
       <span v-else class="text-mnema-tertiary">{{ $t('talk.ready') }}</span>
     </div>
-    <!-- On camera the time sits next to the name -->
-    <VoiceTimer
-      v-if="stream && user.joined_at"
-      :since="user.joined_at"
-      class="absolute right-2 bottom-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white"
-    />
   </div>
 </template>
