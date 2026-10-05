@@ -17,6 +17,9 @@ import (
 )
 
 type Config struct {
+	// LogLevel overrides the log level: "debug" or "info" (default: info in
+	// production, debug otherwise).
+	LogLevel             string
 	Port                 string
 	BindAddr             string
 	AppEnv               string
@@ -128,6 +131,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		Port:                 get("PORT", "8080"),
 		BindAddr:             get("BIND_ADDR", "0.0.0.0"),
 		AppEnv:               strings.ToLower(get("APP_ENV", "development")),
+		LogLevel:             strings.ToLower(get("LOG_LEVEL", "")),
 		PublicURL:            strings.TrimRight(get("PUBLIC_URL", "http://localhost:8080"), "/"),
 		TrustedProxies:       SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:            get("JWT_SECRET", ""),

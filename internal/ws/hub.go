@@ -846,6 +846,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "webrtc_candidate":
 		var cand webrtc.ICECandidateInit
 		if err := json.Unmarshal(payload, &cand); err == nil {
+			slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 			if peer := c.peer(); peer != nil {
 				if err := peer.PC.AddICECandidate(cand); err != nil {
 					slog.Debug("sfu add ice candidate", "user", c.User.ID, "err", err)
