@@ -102,11 +102,14 @@ a Docker image build on every push to `main` and every pull request.
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please)
 (`.github/workflows/release.yml`) and driven by conventional commits
-(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major):
+(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). Until
+1.0.0 the project stays on `0.x`: `feat:` and `fix:` bump the patch version and
+breaking changes bump the minor version. 1.0.0 is released deliberately with a
+`Release-As: 1.0.0` commit footer.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`.
-2. Merging that PR creates the GitHub Release and tag `vX.Y.Z` (first release: `1.0.0`).
+2. Merging that PR creates the GitHub Release and tag `vX.Y.Z` (first release: `0.1.0`).
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest`, with OCI labels,
    provenance and SBOM. The version is baked into the binary
@@ -154,7 +157,7 @@ service with a pinned tag:
 
 ```yaml
   app:
-    image: ghcr.io/msch128/mnema-talk:1.0.0   # or :1.0 to follow patch releases
+    image: ghcr.io/msch128/mnema-talk:0.1.0   # or :0.1 to follow patch releases
 ```
 
 Then update with:

@@ -4,7 +4,9 @@
     ".": {
       "release-type": "simple",
       "package-name": "mnema-talk",
-      "initial-version": "1.0.0",
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
       "include-v-in-tag": true,
       "include-component-in-tag": false,
       "changelog-path": "CHANGELOG.md",
