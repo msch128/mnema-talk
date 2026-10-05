@@ -4,8 +4,7 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save",
-    "delete": "Delete",
-    "send": "Send"
+    "delete": "Delete"
   },
   "language": {
     "de": "Deutsch",
@@ -44,7 +43,6 @@
   },
   "user": {
     "avatar": "Profile picture",
-    "online": "Online",
     "openProfile": "Open your profile"
   },
   "media": {
@@ -168,8 +166,7 @@
     "notNow": "Not now",
     "granted": "Notifications are enabled.",
     "denied": "Notifications are blocked in the browser.",
-    "channelSettings": "Notifications for this channel",
-    "updated": "Notification settings updated"
+    "channelSettings": "Notifications for this channel"
   },
   "channel": {
     "create": "Create channel",
@@ -201,11 +198,7 @@
     "toggle": "Show or hide the member list",
     "admins": "Admin — {count}",
     "online": "Online — {count}",
-    "offline": "Offline — {count}",
-    "kickedFromVoice": "Kicked from voice channel",
-    "userDisabled": "User account disabled",
-    "disableUserTitle": "Disable user account “{name}”?",
-    "disableUserBody": "The user will no longer be able to log in and active sessions will end."
+    "offline": "Offline — {count}"
   },
   "chat": {
     "selectChannel": "Choose a channel",
@@ -215,6 +208,7 @@
     "placeholder": "Message #{channel}",
     "send": "Send",
     "upload": "Upload a file or image",
+    "uploadFailed": "Upload failed.",
     "reply": "Reply",
     "cancelReply": "Cancel reply",
     "replyingTo": "Replying to",
@@ -249,13 +243,11 @@
     "search": "Search",
     "searchPlaceholder": "Search messages …",
     "filter": "Filter",
-    "currentChannel": "Current channel",
     "hasAttachment": "Has attachment",
     "searchHint": "Type a search term",
     "noResults": "No messages found",
     "isTyping": "{name} is typing …",
     "severalTyping": "Several people are typing …",
-    "newMessagesSince": "New since",
     "markUnread": "Mark unread",
     "markedUnread": "Marked as unread",
     "markUnreadFailed": "Could not mark as unread.",
@@ -574,14 +566,9 @@
     "camera": "Camera",
     "startCamera": "Turn on camera",
     "stopCamera": "Turn off camera",
-    "cameraShort": "Camera",
-    "stopCameraShort": "Stop camera",
     "previewHint": "Nobody hears you yet. Join to talk, turn on your camera or share your screen.",
-    "previewChatHint": "You can read and write in the chat without joining.",
-    "inTalk": "In the Talk",
     "cameraOf": "Camera of {name}",
     "localMuted": "Muted for you",
-    "joining": "Joining…",
     "screenShareCard": "{name} is sharing their screen",
     "watchScreen": "Watch",
     "unwatchScreen": "Stop watching",
@@ -589,7 +576,6 @@
     "screenConnecting": "Connecting…",
     "hideCamera": "Hide camera",
     "showCamera": "Show camera",
-    "cameraHidden": "Camera hidden",
     "allCamerasOff": "Hide all other cameras",
     "allCamerasOn": "Show other cameras",
     "participantsDetails": "Who's in the Talk?",
@@ -599,10 +585,8 @@
     "liveTooltip": "Sharing screen (LIVE)",
     "watchStream": "Watch Stream",
     "stopWatching": "Stop watching",
-    "streamAudio": "Stream audio",
     "muteStreamAudio": "Mute stream audio",
     "unmuteStreamAudio": "Unmute stream audio",
-    "streamVolume": "Stream volume",
     "noAudioInShare": "Screen shared without audio",
     "noAudioInShareTip": "Note: Screen is being shared without sound. Select a browser tab or enable \"Share audio\" in the browser prompt to transmit sound.",
     "ownStreamRunning": "Don't worry, your stream is still running",
@@ -631,7 +615,6 @@
     "userActive": "Active",
     "userDisabled": "Disabled",
     "never": "Never",
-    "onlineNow": "Online",
     "inVoice": "In a Talk",
     "disableUser": "Disable user",
     "enableUser": "Enable user",
@@ -683,7 +666,6 @@
     "channelDeleted": "Channel deleted",
     "categoryDeleted": "Category deleted",
     "uncategorized": "Uncategorized",
-    "newCategory": "New category",
     "addCategory": "Create category",
     "save": "Save",
     "storage": "Storage",
