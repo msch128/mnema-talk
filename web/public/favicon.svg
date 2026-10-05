@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Favicon / small app icon: simplified mark (one voice arc, heavier strokes) so it reads at 16px -->
+  <rect width="64" height="64" rx="14" fill="#143D2E"/>
+  <line x1="30" y1="32" x2="16" y2="18" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="30" y1="32" x2="44" y2="18" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <line x1="30" y1="32" x2="30" y2="49" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M43.5 29 A14 14 0 0 1 37 44.1" stroke="#8CCBAA" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="16" cy="18" r="5.5" fill="#FFFFFF"/>
+  <circle cx="44" cy="18" r="5.5" fill="#FFFFFF"/>
+  <circle cx="30" cy="49" r="5.5" fill="#FFFFFF"/>
+  <circle cx="30" cy="32" r="7" fill="#FFFFFF"/>
+</svg>
