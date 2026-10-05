@@ -148,7 +148,7 @@ function startStatsPolling(voiceStore) {
       if (++statsTicks % 5 === 0 && diagSink && (voiceStore.isScreenSharing || voiceStore.remoteScreenStream)) {
         const video = streamDiag([...report.values()], lastVideoBytes, 10)
         if (video.length) {
-          diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, sharing: !!voiceStore.isScreenSharing })
+          diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, own_audio: voiceStore.isScreenSharing ? screenAudioGuard : undefined, sharing: !!voiceStore.isScreenSharing })
         }
       }
     } catch {
@@ -586,6 +586,29 @@ function bindPublishSenders(conn, sdp) {
 // frames instead (text stays readable); a camera may trade either.
 export const SCREEN_MAX_BITRATE = 12_000_000
 export const CAMERA_MAX_BITRATE = 2_500_000
+
+/**
+ * Shared system audio would also carry the voices this page plays: the others
+ * hear themselves, and with two people sharing it loops. Browsers that can
+ * leave this page's own sound out of the capture (restrictOwnAudio, Chrome and
+ * Edge 141+) do that and keep the sound untouched; elsewhere echo
+ * cancellation removes what the page plays (at some cost to music).
+ */
+export function screenAudioConstraints(supported = navigator.mediaDevices?.getSupportedConstraints?.() || {}) {
+  const base = { autoGainControl: false, noiseSuppression: false }
+  if (supported.restrictOwnAudio) return { ...base, echoCancellation: false, restrictOwnAudio: true }
+  return { ...base, echoCancellation: true }
+}
+
+// What keeps the page's own sound out of a shared screen's audio, for the
+// stream diagnostics: restricted, echo-cancel or none.
+function ownAudioGuard(track) {
+  const s = track?.getSettings?.() || {}
+  if (s.restrictOwnAudio) return 'restricted'
+  if (s.echoCancellation) return 'echo-cancel'
+  return 'none'
+}
+let screenAudioGuard = null
 
 async function tuneSender(sender, { maxBitrate, degradationPreference, priority, networkPriority } = {}) {
   try {
@@ -1428,15 +1451,7 @@ export function useWebRTC() {
           width: { ideal: 3840, max: 3840 },
           height: { ideal: 2160, max: 2160 }
         },
-        audio: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-          // Shared system audio would also carry the voices this page plays,
-          // so the others would hear themselves; leave this page's own sound
-          // out (Chrome/Edge 141+, ignored elsewhere).
-          restrictOwnAudio: true
-        }
+        audio: screenAudioConstraints()
       })
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
@@ -1467,6 +1482,7 @@ export function useWebRTC() {
 
     // Share the screen's sound too: one mixed track replaces the mic track.
     const screenAudio = stream.getAudioTracks()[0]
+    screenAudioGuard = screenAudio ? ownAudioGuard(screenAudio) : null
     if (screenAudio) {
       if (buildScreenAudioMix(screenAudio, voiceStore)) {
         screenAudio.onended = detachScreenAudio
