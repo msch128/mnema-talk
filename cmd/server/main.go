@@ -59,12 +59,12 @@ func run() error {
 		return err
 	}
 
-	var store media.Store
-	if s3Client, err := s3.New(ctx, cfg); err != nil {
-		slog.Warn("object storage unavailable, uploads disabled", "err", err)
-	} else {
-		store = s3Client
-	}
+	// Object storage may come up after the app (or be down for a while):
+	// keep retrying in the background; until then uploads answer 503 and
+	// /api/health reports the outage.
+	store := startLazyStore(ctx, func(ctx context.Context) (media.Store, error) {
+		return s3.New(ctx, cfg)
+	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 
 	// Addresses browsers send media to: typically the public IP (or a
@@ -82,7 +82,7 @@ func run() error {
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 
-	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, SFU: voice, Version: version})
+	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version, Context: ctx})
 	if err != nil {
 		return err
 	}
