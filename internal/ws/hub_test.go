@@ -27,7 +27,7 @@ func TestHubClientRegistrationAndPresence(t *testing.T) {
 		DisplayName: "Alice",
 	}
 
-	if isUserInSlice(h.onlineUsers(), user.ID) {
+	if isUserInSlice(h.OnlineUserIDs(), user.ID) {
 		t.Fatalf("expected user to be offline initially")
 	}
 
@@ -38,7 +38,7 @@ func TestHubClientRegistrationAndPresence(t *testing.T) {
 	}
 
 	h.register(c)
-	if !isUserInSlice(h.onlineUsers(), user.ID) {
+	if !isUserInSlice(h.OnlineUserIDs(), user.ID) {
 		t.Fatalf("expected user to be online after register")
 	}
 
@@ -49,17 +49,17 @@ func TestHubClientRegistrationAndPresence(t *testing.T) {
 		send: make(chan []byte, 16),
 	}
 	h.register(c2)
-	if !isUserInSlice(h.onlineUsers(), user.ID) {
+	if !isUserInSlice(h.OnlineUserIDs(), user.ID) {
 		t.Fatalf("expected user to remain online")
 	}
 
 	h.unregister(c)
-	if !isUserInSlice(h.onlineUsers(), user.ID) {
+	if !isUserInSlice(h.OnlineUserIDs(), user.ID) {
 		t.Fatalf("expected user to still be online with second client")
 	}
 
 	h.unregister(c2)
-	if isUserInSlice(h.onlineUsers(), user.ID) {
+	if isUserInSlice(h.OnlineUserIDs(), user.ID) {
 		t.Fatalf("expected user to be offline after all clients unregister")
 	}
 }
