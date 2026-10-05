@@ -90,10 +90,12 @@ export const useChatStore = defineStore('chat', () => {
   let reconnectDelay = 1000
   let webrtcOfferHandler = null
   let webrtcCandidateHandler = null
+  let voiceKickedHandler = null
 
-  function setWebRTCHandlers({ onOffer, onCandidate }) {
+  function setWebRTCHandlers({ onOffer, onCandidate, onKicked }) {
     webrtcOfferHandler = onOffer
     webrtcCandidateHandler = onCandidate
+    voiceKickedHandler = onKicked || null
   }
 
   const allChannels = computed(() => [
@@ -755,6 +757,12 @@ export const useChatStore = defineStore('chat', () => {
 
       case 'voice_mute_state':
         voiceStore.handleMuteState(p)
+        break
+
+      case 'voice_kicked':
+        // An admin removed me from voice; the call ends locally.
+        if (voiceKickedHandler) voiceKickedHandler(p)
+        else if (voiceStore.currentChannelId) voiceStore.disconnect()
         break
     }
   }

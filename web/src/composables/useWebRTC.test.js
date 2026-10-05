@@ -282,6 +282,40 @@ describe('shared watchers', () => {
   })
 })
 
+describe('kicked from voice', () => {
+  it('ends the call locally without a leave and does not rejoin', async () => {
+    const { rtc, chat, voice, sent } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const { t } = await import('../i18n')
+    const { recent } = await import('../lib/voiceSession')
+    const join = rtc.joinVoiceChannel('ch-1')
+    const mic = await grantMic()
+    await join
+    const pc = FakePC.instances.at(-1)
+
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
+    expect(voice.currentChannelId).toBeNull()
+    expect(pc.closed).toBe(true)
+    expect(mic.getTracks()[0].stop).toHaveBeenCalled()
+    expect(sent.some(e => e.type === 'voice_leave')).toBe(false)
+    expect(recent()).toBeNull()
+    expect(useToastStore().toasts.map(x => x.text)).toContain(t('voice.kicked'))
+
+    const joins = sent.filter(e => e.type === 'voice_join').length
+    rtc.rejoinAfterReconnect()
+    expect(sent.filter(e => e.type === 'voice_join').length).toBe(joins)
+  })
+
+  it('ignores a kick from a channel I already left', async () => {
+    const { rtc, chat, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-2')
+    await grantMic()
+    await join
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1' } })
+    expect(voice.currentChannelId).toBe('ch-2')
+  })
+})
+
 describe('useWebRTC signaling', () => {
   it('ignores offers that arrive after leaving', async () => {
     const { rtc, chat } = setup()
