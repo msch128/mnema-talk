@@ -1,0 +1,45 @@
+web/src/i18n/en.json
+  s_b14660589987ff::t_299cc52ba486c5 533-543
+web/src/composables/useWebRTC.test.js
+  s_b14660589987ff::t_da4423d8bcd605 583-586,595-658
+  s_b14660589987ff::t_1daed7ac578c29 659
+web/src/i18n/de.json
+  s_b14660589987ff::t_299cc52ba486c5 533-543
+web/src/composables/useWebRTC.js
+  s_b14660589987ff::t_a26aa041a7ce7b 192,302-303,682,698-705
+web/src/stores/voice.js
+  s_b14660589987ff::t_a26aa041a7ce7b 9-11,117,120-126,175-308,310,335,402-404,406,418-435
+web/src/stores/chat.js
+  s_b14660589987ff::t_81f3f7357448c3 719-722
+web/src/components/VoiceStage.vue
+  s_b14660589987ff::t_acf948267babd5 6,94-118,343-351,362-396,410-412,436-438,517-530
+  s_b14660589987ff::t_0db36912fde1ca 531-532
+web/src/composables/useNavMenus.test.js
+  s_b14660589987ff::t_da4423d8bcd605 78,87-95
+  s_b14660589987ff::t_62ed0e4489063b 96-97
+web/src/composables/useNavMenus.js
+  s_b14660589987ff::t_acf948267babd5 6,216-225
+web/src/components/VoiceStage.test.js
+  s_b14660589987ff::t_da4423d8bcd605 142-241
+web/src/stores/voice.test.js
+  s_b14660589987ff::t_da4423d8bcd605 87-183
+web/src/components/ParticipantTile.vue
+  s_b14660589987ff::t_acf948267babd5 4,16-19,21,65-78
+  s_b14660589987ff::t_61b797f87e425f 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d0d674db5258920e89daa7fdaa17f357a68698f1",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
