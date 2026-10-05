@@ -135,3 +135,30 @@ func TestAdminKicksFromVoiceAndLastSeen(t *testing.T) {
 		t.Fatal("last_seen_at not recorded on disconnect")
 	}
 }
+
+func TestAdminSetsChosenPassword(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	max := a.register(admin, "max")
+	path := "/api/admin/users/" + max.user.ID.String() + "/password"
+
+	if res := admin.post(path, map[string]string{"password": "short"}); res.status != http.StatusBadRequest {
+		t.Fatalf("weak password accepted: %d", res.status)
+	}
+	if res := max.post(path, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusForbidden {
+		t.Fatalf("member set a password: %d", res.status)
+	}
+	if res := admin.post(path, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusNoContent {
+		t.Fatalf("set password: %d %s", res.status, res.body)
+	}
+	if res := max.get("/api/auth/me"); res.status != http.StatusUnauthorized {
+		t.Fatalf("session survived password change: %d", res.status)
+	}
+	if c := a.login("max", "chosen-by-admin-123"); c.get("/api/auth/me").status != http.StatusOK {
+		t.Fatal("chosen password does not work")
+	}
+	self := "/api/admin/users/" + listUsers(t, admin)["Herzog"].ID.String() + "/password"
+	if res := admin.post(self, map[string]string{"password": "chosen-by-admin-123"}); res.status != http.StatusBadRequest {
+		t.Fatalf("admin changed own password via member route: %d", res.status)
+	}
+}

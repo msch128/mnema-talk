@@ -105,12 +105,27 @@ func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error
 	return password, nil
 }
 
+// SetPassword sets a password chosen by the admin and ends all sessions.
+func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string) error {
+	if err := ValidatePassword(password); err != nil {
+		return err
+	}
+	if _, err := targetUser(ctx, p, id); err != nil {
+		return err
+	}
+	hash, err := HashPassword(password)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+	_, err = p.Exec(ctx, `UPDATE users SET password_hash = $1, token_version = token_version + 1,
+		updated_at = NOW() WHERE id = $2`, hash, id)
+	return err
+}
+
 func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.Get("/users", httpx.Handle(h.listUsers))
-	r.Patch("/users/{id}", httpx.Handle(h.updateUser))
 	r.Post("/users/{id}/disable", httpx.Handle(h.disableUser))
 	r.Post("/users/{id}/enable", httpx.Handle(h.enableUser))
-	r.Post("/users/{id}/sessions", httpx.Handle(h.revokeUserSessions))
 	r.Post("/users/{id}/sessions/revoke", httpx.Handle(h.revokeUserSessions))
 	r.Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
 	r.Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
@@ -156,36 +171,6 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (h *Handler) updateUser(w http.ResponseWriter, r *http.Request) error {
-	id, err := httpx.PathUUID(r, "id")
-	if err != nil {
-		return err
-	}
-	var req struct {
-		IsDisabled *bool `json:"is_disabled"`
-		Disabled   *bool `json:"disabled"`
-	}
-	if err := httpx.DecodeJSON(r, &req); err != nil {
-		return err
-	}
-	dis := req.IsDisabled
-	if dis == nil {
-		dis = req.Disabled
-	}
-	if dis != nil {
-		if err := SetDisabled(r.Context(), h.Sessions.DB, id, *dis); err != nil {
-			return err
-		}
-		if *dis && h.Live != nil {
-			h.Live.KickFromVoice(id)
-			h.Live.DisconnectUser(id)
-		}
-		h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": *dis})
-	}
-	w.WriteHeader(http.StatusNoContent)
-	return nil
-}
-
 func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -227,44 +212,19 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 		return err
 	}
 	var req struct {
-		NewPassword string `json:"new_password"`
-		Password    string `json:"password"`
+		Password string `json:"password"`
 	}
-	if r.ContentLength > 0 {
-		if err := httpx.DecodeJSON(r, &req); err != nil {
-			return err
-		}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
 	}
-	newPw := req.NewPassword
-	if newPw == "" {
-		newPw = req.Password
+	if err := SetPassword(r.Context(), h.Sessions.DB, id, req.Password); err != nil {
+		return err
 	}
-	if newPw != "" {
-		if err := ValidatePassword(newPw); err != nil {
-			return err
-		}
-		if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {
-			return err
-		}
-		hash, err := HashPassword(newPw)
-		if err != nil {
-			return fmt.Errorf("hash password: %w", err)
-		}
-		tag, err := h.Sessions.DB.Exec(r.Context(), `UPDATE users SET password_hash = $1, token_version = token_version + 1,
-			updated_at = NOW() WHERE id = $2`, hash, id)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return httpx.ErrNotFound("user not found")
-		}
-		if h.Live != nil {
-			h.Live.DisconnectUser(id)
-		}
-		w.WriteHeader(http.StatusNoContent)
-		return nil
+	if h.Live != nil {
+		h.Live.DisconnectUser(id)
 	}
-	return h.resetUserPassword(w, r)
+	w.WriteHeader(http.StatusNoContent)
+	return nil
 }
 
 func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
