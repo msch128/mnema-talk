@@ -101,8 +101,21 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
-      - name: Integration tests
-        run: go test -tags=integration -race -count=1 -timeout=300s ./...
+      # Runs unit and integration tests together and records which code they
+      # reach: the coverage report (job summary + artifact) counts both.
+      - name: Integration tests (with coverage)
+        run: make coverage-go
+
+      - name: Coverage summary
+        run: node scripts/coverage-summary.mjs go coverage.out >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-go
+          path: coverage.out
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Build
         run: CGO_ENABLED=0 go build -trimpath -o /dev/null ./cmd/server
@@ -143,7 +156,21 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
       - run: npm run lint
-      - run: npm run test
+      - run: npm run test:coverage
+
+      - name: Coverage summary
+        run: node ../scripts/coverage-summary.mjs web coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-web
+          path: |
+            web/coverage/lcov.info
+            web/coverage/coverage-summary.json
+          if-no-files-found: error
+          retention-days: 30
+
       - run: npm run build
       - name: npm audit (runtime deps)
         run: npm audit --omit=dev --audit-level=high
