@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/msch128/mnema-talk/compare/v0.1.5...v0.1.6) (2026-10-05)
+
+
+### Features
+
+* **ops:** LOG_LEVEL=debug for voice connection troubleshooting ([f1c6ef9](https://github.com/msch128/mnema-talk/commit/f1c6ef98358d1f8ce4ef7172520f9f90c71bd5be))
+
 ## [0.1.5](https://github.com/msch128/mnema-talk/compare/v0.1.4...v0.1.5) (2026-10-05)
 
 
