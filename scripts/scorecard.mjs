@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 // Prints the weighted 1.0 score from docs/SCORECARD.md.
 // Areas are "## Name (weight N)" headings, items are "- [x]" / "- [ ]" lines.
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 
 const file = new URL('../docs/SCORECARD.md', import.meta.url)
+if (!existsSync(file)) {
+  console.log('docs/SCORECARD.md not found (docs/ is local-only and git-ignored); nothing to score')
+  process.exit(0)
+}
 const areas = []
 for (const line of readFileSync(file, 'utf8').split('\n')) {
   const head = line.match(/^## (.+) \(weight (\d+)\)$/)
