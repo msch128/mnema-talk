@@ -24,6 +24,8 @@ env:
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
   GOVULNCHECK_VERSION: v1.8.0
+  # Keep in sync with SWAG_VERSION in the Makefile (make openapi-check reads it).
+  SWAG_VERSION: v2.0.0-rc6
 
 jobs:
   # -- Secret scan: the whole tree plus the commits this push/PR adds --------
@@ -94,6 +96,9 @@ jobs:
         run: |
           go vet ./...
           go vet -tags=integration ./...
+
+      - name: OpenAPI description is up to date
+        run: make openapi-check
 
       - name: Unit tests
         run: go test -race -count=1 ./...

@@ -19,6 +19,7 @@
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "pinia": "^4.0.3",
+    "swagger-ui-dist": "^5.33.1",
     "vue": "^3.5.12"
   },
   "devDependencies": {

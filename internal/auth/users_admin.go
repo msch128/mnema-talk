@@ -30,7 +30,7 @@ type LiveControl interface {
 type AdminUser struct {
 	User
 	Disabled   bool       `json:"disabled"`
-	LastSeenAt *time.Time `json:"last_seen_at"`
+	LastSeenAt *time.Time `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
 }
 
 // ListUsersForAdmin returns every account, admins first, then by name.
@@ -135,6 +135,21 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.Put("/users/{id}/status", httpx.Handle(h.setUserStatus))
 }
 
+// listUsers handles GET /api/admin/users.
+//
+// @Summary List all accounts
+// @Description Admins first, then by username. Requires role admin (403 otherwise).
+// @ID listUsersAdmin
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {array} AdminUser "Accounts."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users [get]
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 	users, err := ListUsersForAdmin(r.Context(), h.Sessions.DB)
 	if err != nil {
@@ -144,6 +159,24 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// disableUser handles POST /api/admin/users/{id}/disable.
+//
+// @Summary Disable an account
+// @Description Signs the user out, drops their live connections and removes them from voice. The administrator account cannot be targeted (400). Requires role admin (403 otherwise).
+// @ID disableUser
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/disable [post]
 func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -161,6 +194,24 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// enableUser handles POST /api/admin/users/{id}/enable.
+//
+// @Summary Re-enable an account
+// @Description Requires role admin (403 otherwise).
+// @ID enableUser
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/enable [post]
 func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -174,6 +225,24 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// revokeUserSessions handles POST /api/admin/users/{id}/sessions/revoke.
+//
+// @Summary Revoke all sessions of a user
+// @Description Requires role admin (403 otherwise).
+// @ID revokeUserSessions
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/sessions/revoke [post]
 func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -192,6 +261,25 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 
+// resetUserPassword handles POST /api/admin/users/{id}/password-reset.
+//
+// @Summary Generate a temporary password
+// @Description Ends all sessions; the password is returned once. Requires role admin (403 otherwise).
+// @ID resetUserPassword
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 200 {object} TemporaryPassword "Temporary password."
+// @Header 200 {string} Cache-Control "no-store"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/password-reset [post]
 func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -205,18 +293,36 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 		h.Live.DisconnectUser(id)
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	httpx.WriteJSON(w, http.StatusOK, map[string]string{"password": password})
+	httpx.WriteJSON(w, http.StatusOK, TemporaryPassword{Password: password})
 	return nil
 }
 
+// setUserPassword handles POST /api/admin/users/{id}/password.
+//
+// @Summary Set a user's password
+// @Description Ends all of the user's sessions. Requires role admin (403 otherwise).
+// @ID setUserPassword
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Param request body SetPasswordRequest true "Request body."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/password [post]
 func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Password string `json:"password"`
-	}
+	var req SetPasswordRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -230,6 +336,24 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 	return nil
 }
 
+// kickUser handles POST /api/admin/users/{id}/kick.
+//
+// @Summary Remove a user from voice
+// @Description 400 when the user is not in a voice room. Requires role admin (403 otherwise).
+// @ID kickUserFromVoice
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/kick [post]
 func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -249,10 +373,40 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // setUserStatus lets an admin edit or clear any member's status line.
+//
+// @Summary Edit or clear a member's status line
+// @Description Broadcasts user_update. Requires role admin (403 otherwise).
+// @ID setUserStatus
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Param request body SetStatusRequest true "Request body."
+// @Success 200 {object} User "Updated user (public view unless it is the caller)."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/status [put]
 func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
 	return h.writeStatus(w, r, id)
+}
+
+// SetPasswordRequest is the body of POST /api/admin/users/{id}/password.
+type SetPasswordRequest struct {
+	Password string `json:"password" format:"password" minLength:"10"`
+}
+
+// TemporaryPassword is the response of POST /api/admin/users/{id}/password-reset.
+type TemporaryPassword struct {
+	// Password is shown once; it is never stored in plain text.
+	Password string `json:"password"`
 }

@@ -126,7 +126,10 @@ func NewRouter(d Deps) (*Router, error) {
 			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(d.DB, hub, d.SFU)))
 		}
 		api.Get("/legal", legal(cfg))
-		api.Get("/openapi.json", openAPISpec)
+		if cfg.APIDocs {
+			// A page, not JSON: without a session it sends the browser to sign in.
+			api.Get("/docs", apiDocs(sessions))
+		}
 		api.Get("/ws", hub.HandleWebSocket)
 
 		api.Group(func(pub chi.Router) {
@@ -141,6 +144,9 @@ func NewRouter(d Deps) (*Router, error) {
 				j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 				authH.MountAuthenticated(j)
 				j.Get("/webrtc/config", webrtcConfig(cfg))
+				if cfg.APIDocs {
+					j.Get("/openapi.json", openAPISpec)
+				}
 				chatH.Mount(j)
 				mediaH.Mount(j)
 			})
@@ -172,6 +178,23 @@ func NewRouter(d Deps) (*Router, error) {
 	return &Router{Handler: r, Hub: hub}, nil
 }
 
+// Health is the response of GET /api/health.
+type Health struct {
+	Status  string `json:"status" enums:"ok"`
+	Version string `json:"version"`
+}
+
+// health handles GET /api/health.
+//
+// @Summary Health check
+// @Description Pings the database.
+// @ID getHealth
+// @Tags System
+// @Produce json
+// @Success 200 {object} Health "Healthy."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/health [get]
 func health(p *db.Pool, version string) http.HandlerFunc {
 	if version == "" {
 		version = "dev"
@@ -183,7 +206,7 @@ func health(p *db.Pool, version string) http.HandlerFunc {
 			httpx.WriteError(w, httpx.ErrUnavailable("database unavailable"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok", "version": version})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version})
 	}
 }
 

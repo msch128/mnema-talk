@@ -20,17 +20,17 @@ type Stats struct {
 }
 
 type DashboardItem struct {
-	ID               uuid.UUID  `json:"id"`
-	UploaderID       uuid.UUID  `json:"uploader_id"`
+	ID               uuid.UUID  `json:"id" format:"uuid"`
+	UploaderID       uuid.UUID  `json:"uploader_id" format:"uuid"`
 	UploaderName     string     `json:"uploader_name"`
-	ChannelID        *uuid.UUID `json:"channel_id"`
-	ChannelName      string     `json:"channel_name,omitempty"`
+	ChannelID        *uuid.UUID `json:"channel_id" format:"uuid" extensions:"x-nullable"`
+	ChannelName      string     `json:"channel_name,omitempty" binding:"optional"`
 	OriginalFilename string     `json:"original_filename"`
 	MimeType         string     `json:"mime_type"`
 	SizeBytes        int64      `json:"size_bytes"`
 	URL              string     `json:"url"`
 	IsDeleted        bool       `json:"is_deleted"`
-	CreatedAt        time.Time  `json:"created_at"`
+	CreatedAt        time.Time  `json:"created_at" format:"date-time"`
 }
 
 // GetStats returns storage totals for the admin dashboard.

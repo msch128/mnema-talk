@@ -126,6 +126,32 @@ func storageKey(prefix string, id uuid.UUID, mimeType string) string {
 	return fmt.Sprintf("%s/%04d/%02d/%s%s", prefix, now.Year(), now.Month(), id, extensionFor(mimeType))
 }
 
+// upload handles POST /api/channels/{channelID}/upload.
+//
+// @Summary Post a message with an attachment
+// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Not allowed in voice channels. Stricter rate limit (30 per minute).
+// @ID uploadFile
+// @Tags Media
+// @Accept mpfd
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param file formData file true "At most MAX_UPLOAD_MB (config); type is sniffed and checked against an allowlist."
+// @Param content formData string false "Optional caption." maxlength(4000)
+// @Param parent_id formData string false "Thread root message ID (reply in a thread)." Format(uuid)
+// @Param reply_to_id formData string false "Quoted message ID." Format(uuid)
+// @Success 201 {object} chat.Message "Created message."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+// @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/channels/{channelID}/upload [post]
 func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
@@ -216,6 +242,27 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// uploadAvatar handles POST /api/users/me/avatar.
+//
+// @Summary Upload avatar
+// @Description multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces and deletes the previous avatar. Broadcasts user_update.
+// @ID uploadAvatar
+// @Tags Users
+// @Accept mpfd
+// @Produce json
+// @Security cookieAuth
+// @Param avatar formData file true "Image file, at most 5 MB."
+// @Success 200 {object} auth.User "Updated user."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: body or file exceeds the limit (1 MiB for JSON)."
+// @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/users/me/avatar [post]
 func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
@@ -271,6 +318,26 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 }
 
 // serve streams a media object to an authenticated member.
+//
+// @Summary Download a media object
+// @Description Streams an attachment or avatar. Supports Range and conditional requests. Inline for safe types, attachment otherwise.
+// @ID getMedia
+// @Tags Media
+// @Produce octet-stream,json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 200 {string} string "File content; Content-Type is the stored MIME type."
+// @Success 206 {string} string "Partial content for a Range request."
+// @Success 304 "Not modified (If-None-Match)."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 410 {object} httpx.ErrorResponse "Media expired or was deleted. The error code is NOT_FOUND."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/media/{id} [get]
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
@@ -315,6 +382,21 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// stats handles GET /api/admin/media/stats.
+//
+// @Summary Storage totals
+// @Description Requires role admin (403 otherwise).
+// @ID getMediaStats
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} Stats "Totals."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/media/stats [get]
 func (h *Handler) stats(w http.ResponseWriter, r *http.Request) error {
 	stats, err := GetStats(r.Context(), h.DB)
 	if err != nil {
@@ -324,6 +406,23 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// list handles GET /api/admin/media.
+//
+// @Summary List all media, newest first
+// @Description Requires role admin (403 otherwise).
+// @ID listMedia
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
+// @Param offset query int false "Number of items to skip." minimum(0) default(0)
+// @Success 200 {array} DashboardItem "Media page."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/media [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	if offset < 0 {
@@ -337,6 +436,24 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// prune handles POST /api/admin/media/prune.
+//
+// @Summary Delete old chat attachments
+// @Description Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Requires role admin (403 otherwise).
+// @ID pruneMedia
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param days query int false "Delete attachments older than this many days; defaults to MEDIA_RETENTION_DAYS." minimum(1) maximum(3650)
+// @Success 200 {object} PruneResult "Prune result."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/prune [post]
 func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
@@ -356,10 +473,29 @@ func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"pruned_count": n, "cutoff_days": days})
+	httpx.WriteJSON(w, http.StatusOK, PruneResult{PrunedCount: n, CutoffDays: days})
 	return nil
 }
 
+// delete handles DELETE /api/admin/media/{id}.
+//
+// @Summary Delete a media object
+// @Description Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Requires role admin (403 otherwise).
+// @ID deleteMedia
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/{id} [delete]
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
@@ -373,4 +509,10 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// PruneResult is the response of POST /api/admin/media/prune.
+type PruneResult struct {
+	PrunedCount int `json:"pruned_count"`
+	CutoffDays  int `json:"cutoff_days"`
 }

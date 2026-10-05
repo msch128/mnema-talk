@@ -126,6 +126,7 @@ them with safe placeholder values. Notable ones:
 - `CORS_ALLOWED_ORIGINS`: extra allowed origins (defaults to `PUBLIC_URL`).
 - `TRUSTED_PROXY_CIDRS`: proxies whose `X-Forwarded-For` is trusted.
 - `MEDIA_RETENTION_DAYS`: `0` (default) = never delete media automatically.
+- `API_DOCS_ENABLED`: `true` serves the API reference (Swagger UI) at `/api/docs` and the OpenAPI document at `/api/openapi.json` to signed-in members; off by default.
 - `WEBRTC_UDP_PORT_MIN/MAX`, `WEBRTC_NAT_1TO1_IP`, `WEBRTC_STUN_URLS`: voice networking.
 - `LEGAL_*`: operator details shown in the privacy policy.
 

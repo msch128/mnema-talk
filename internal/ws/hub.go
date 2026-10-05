@@ -263,6 +263,58 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 
 // HandleWebSocket authenticates the session cookie, checks the origin and
 // upgrades the connection.
+//
+// @Summary WebSocket event stream
+// @Description Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.
+// @Description
+// @Description Every frame in both directions is a JSON text message `{"type": string, "payload": any}`. At most a few events per second per connection are processed; excess client events are dropped.
+// @Description
+// @Description Server to client, on connect (to this connection only):
+// @Description - `presence_snapshot`: map of user id to live status for every online user.
+// @Description - `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.
+// @Description - `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.
+// @Description
+// @Description Server to client, broadcast to all connections:
+// @Description - `message_create`, `message_update`: Message.
+// @Description - `message_delete`: `{id, channel_id, parent_id}`.
+// @Description - `message_reaction`: `{message_id, reactions}`.
+// @Description - `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).
+// @Description - `member_joined`: public User of a newly registered member.
+// @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
+// @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
+// @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.
+// @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
+// @Description - `voice_speaking`: `{channel_id, user_id, active}`.
+// @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
+// @Description
+// @Description Server to client, targeted:
+// @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.
+// @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
+// @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
+// @Description - `voice_kicked`: `{channel_id}` when an admin removes the user from voice.
+// @Description - `pong`: `{t}` echoing a `ping`.
+// @Description
+// @Description Client to server:
+// @Description - `ping` `{t}`; `presence_idle` `{idle: bool}`.
+// @Description - `typing` `{channel_id}` (text channels only, rate-limited).
+// @Description - `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.
+// @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
+// @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`.
+// @Description - `webrtc_screenshare_stop`, `webrtc_camera_stop`.
+// @Description
+// @Description Unknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.
+// @ID connectWebSocket
+// @Tags Realtime
+// @Produce json
+// @Security cookieAuth
+// @Param Upgrade header string true "Must be websocket." Enums(websocket)
+// @Success 101 "Switching Protocols; the connection is now a WebSocket."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/ws [get]
 func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	user, err := h.Sessions.Authenticate(r)
 	if err != nil {

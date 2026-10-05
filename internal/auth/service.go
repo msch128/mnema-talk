@@ -52,22 +52,25 @@ func ValidPresence(p string) bool {
 
 // User is the public view of an account.
 type User struct {
-	ID          uuid.UUID `json:"id"`
+	ID          uuid.UUID `json:"id" format:"uuid"`
 	Username    string    `json:"username"`
-	DisplayName string    `json:"display_name"`
-	Bio         string    `json:"bio"`
-	Role        string    `json:"role"`
-	AvatarURL   string    `json:"avatar_url,omitempty"`
-	StatusText  string    `json:"status_text"`
-	// Presence is the chosen presence; others see the live one from the hub.
-	Presence string `json:"presence,omitempty"`
+	DisplayName string    `json:"display_name" maxLength:"24"`
+	Bio         string    `json:"bio" maxLength:"250"`
+	Role        string    `json:"role" enums:"admin,user"`
+	// AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.
+	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
+	// StatusText is a free-text status line; empty when unset.
+	StatusText string `json:"status_text" maxLength:"32"`
+	// Presence is the chosen presence, only present in responses about the
+	// caller's own account; others see the live one from the hub.
+	Presence string `json:"presence,omitempty" binding:"optional" enums:"online,away,dnd,focus"`
 	// Activity totals, filled where they are shown (members, profiles):
 	// time spent in voice rooms (finished stays) and messages sent.
-	VoiceSeconds int64 `json:"voice_seconds,omitempty"`
-	MessageCount int64 `json:"message_count,omitempty"`
+	VoiceSeconds int64 `json:"voice_seconds,omitempty" binding:"optional"`
+	MessageCount int64 `json:"message_count,omitempty" binding:"optional"`
 	// Locale is the chosen UI language ("de", "en"); empty until chosen.
 	Locale    string    `json:"locale"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
 // SupportedLocales are the UI languages the web app ships.

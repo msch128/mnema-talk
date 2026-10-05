@@ -21,8 +21,27 @@ fails when a web dependency is missing from the in-app list.
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
 | [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
-| [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords from Unicode CLDR and Emojibase) | 1.8.0 | Apache-2.0 |
+| [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
+| [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.1 | Apache-2.0 |
 | [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
+
+### Bundled inside Swagger UI
+
+The Swagger UI build ships these components; their license texts are in
+`swagger-ui-dist/swagger-ui-es-bundle.js.LICENSE.txt`, which the web build
+copies to `/licenses/swagger-ui/bundled-components.txt` (with Swagger UI's
+`LICENSE` and `NOTICE` next to it).
+
+| Component | License |
+|---|---|
+| React, react-dom, scheduler, use-sync-external-store (Meta Platforms) | MIT |
+| [Immutable.js](https://github.com/immutable-js/immutable-js) | MIT |
+| [DOMPurify](https://github.com/cure53/DOMPurify) | Apache-2.0 OR MPL-2.0 |
+| [classnames](https://github.com/JedWatson/classnames), [deep-extend](https://github.com/unclechu/node-deep-extend), [buffer](https://github.com/feross/buffer), [safe-buffer](https://github.com/feross/safe-buffer), [fast-json-patch](https://github.com/Starcounter-Jack/JSON-Patch), [repeat-string](https://github.com/jonschlinkert/repeat-string) | MIT |
+| [ieee754](https://github.com/feross/ieee754) | BSD-3-Clause |
+
+The license texts of emoji-picker-element and emoji-picker-element-data are
+shipped under `/licenses/` as well.
 
 ## AI noise suppression (shipped, runs in the browser)
 
@@ -107,7 +126,7 @@ binary.
 
 ## Build and development tools (not shipped)
 
-Vite, `@vitejs/plugin-vue`, Tailwind CSS tooling, Vitest, ESLint, happy-dom,
+Vite, `@vitejs/plugin-vue`, Tailwind CSS tooling, [swag](https://github.com/swaggo/swag) (MIT, generates `api/openapi.json`), Vitest, ESLint, happy-dom,
 `@vue/test-utils`, dockertest, gitleaks, govulncheck and release-please are
 used to build and test Mnema Talk. They are not part of the binary or the web
 app; see `web/package.json` (`devDependencies`) and `go.mod`.

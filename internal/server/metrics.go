@@ -13,6 +13,18 @@ import (
 )
 
 // metricsHandler serves Prometheus-compatible text metrics.
+//
+// @Summary Prometheus metrics
+// @Description Only registered when METRICS_TOKEN is configured. Failures answer 401 with a plain-text body, not the JSON error shape.
+// @ID getMetrics
+// @Tags System
+// @Produce plain
+// @Security bearerAuth
+// @Success 200 {string} string "Prometheus text exposition format."
+// @Failure 401 {string} string "Missing or wrong bearer token (plain text 'unauthorized', WWW-Authenticate: Bearer)."
+// @Header 401 {string} WWW-Authenticate "Bearer challenge for the metrics endpoint."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/metrics [get]
 func metricsHandler(p *db.Pool, hub *ws.Hub, voiceSFU *sfu.SFU) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var b strings.Builder
