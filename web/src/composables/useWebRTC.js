@@ -1173,7 +1173,11 @@ export function useWebRTC() {
     }
 
     const sendStream = stream ? await setupMicPipeline(stream) : null
-    if (gen !== joinGeneration) return
+    if (gen !== joinGeneration) {
+      sendStream?.getTracks().forEach(t => t.stop())
+      stream?.getTracks().forEach(t => t.stop())
+      return
+    }
 
     localAudioStream.value = sendStream
     voiceStore.localAudioStream = sendStream
@@ -1293,9 +1297,9 @@ export function useWebRTC() {
       return stream
     }
     audioContext = ctx
-    if (ctx.state === 'suspended') {
-      await ctx.resume().catch(() => {})
-    }
+    // Not awaited: after a reload (voice resume) there is no user gesture yet
+    // and resume() may stay pending until there is one; the graph starts then.
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
 
     let sendStream = stream
     let meterSource = null
@@ -1485,6 +1489,9 @@ export function useWebRTC() {
   }
 
   async function startScreenShare() {
+    if (localScreenStream.value) return
+    const gen = joinGeneration
+    const channelId = voiceStore.currentChannelId
     let stream
     try {
       stream = await navigator.mediaDevices.getDisplayMedia({
@@ -1497,6 +1504,11 @@ export function useWebRTC() {
       })
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
+      return
+    }
+    // Left or switched the call (or started twice) while the picker was open.
+    if (gen !== joinGeneration || voiceStore.currentChannelId !== channelId || localScreenStream.value) {
+      stream.getTracks().forEach(tr => tr.stop())
       return
     }
     localScreenStream.value = stream
