@@ -1,0 +1,13 @@
+{
+  "name": "mnema-talk-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Browser smoke test against the real Mnema Talk binary",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}
