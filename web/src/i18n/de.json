@@ -299,7 +299,7 @@
     "channelFallback": "Sprachkanal",
     "audioBlocked": "Du bist wieder im Talk. Klick, um den Ton zu aktivieren",
     "join": "Beitreten",
-    "userVolume": "Lautstärke",
+    "userVolume": "Lautstärke (nur für dich)",
     "muteUser": "Lokal stummschalten",
     "unmuteUser": "Lokale Stummschaltung aufheben",
     "noOneInVoice": "Niemand im Talk",

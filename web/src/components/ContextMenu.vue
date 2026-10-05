@@ -231,7 +231,7 @@ onUnmounted(() => {
             :step="item.step ?? 1"
             :value="item.value"
             @input="item.onInput?.(Number($event.target.value))"
-            class="w-full h-1.5 bg-mnema-surface rounded-lg appearance-none cursor-pointer accent-mnema-accent"
+            class="w-full cursor-pointer accent-mnema-accent"
           />
         </div>
 
