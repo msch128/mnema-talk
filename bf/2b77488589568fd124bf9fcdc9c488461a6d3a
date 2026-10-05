@@ -1,0 +1,24 @@
+internal/ws/hub.go
+  s_b14660589987ff::t_cdfd2c1594872b 629-636
+internal/sfu/sfu_test.go
+  s_b14660589987ff::t_a8bece3b3eb2e2 280-338
+internal/sfu/sfu.go
+  s_b14660589987ff::t_cdfd2c1594872b 24-40,47,51-53,217-221,223,240-250,254,264,286-292,459-462,466-467
+  s_b14660589987ff::t_7d488f7d8fdb46 222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf2b77488589568fd124bf9fcdc9c488461a6d3a",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
