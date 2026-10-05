@@ -3,7 +3,7 @@
 // menus are testable per role.
 import { reactive, ref, computed, nextTick } from 'vue'
 import {
-  CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, UserX, Ban, LogOut
+  CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -213,6 +213,16 @@ export function buildMemberItems(member, ctx = {}) {
       icon: muted ? Volume2 : VolumeX,
       action: () => voiceStore.toggleLocalMute?.(member.id)
     })
+    // Cameras are on by default; with "all cameras off" there is nothing to pick.
+    if (!voiceStore.allCamerasOff) {
+      const hidden = !!voiceStore.hiddenCameras?.[member.id]
+      items.push({
+        id: 'camera-hide',
+        label: t(hidden ? 'tafelrunde.showCamera' : 'tafelrunde.hideCamera'),
+        icon: hidden ? Eye : EyeOff,
+        action: () => voiceStore.toggleCameraHidden?.(member.id)
+      })
+    }
   }
 
   if (authStore.isAdmin && !isSelf) {

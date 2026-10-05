@@ -1,7 +1,7 @@
 <script setup>
 // One participant of the roundtable: their camera when it is on, else their avatar.
 import { ref, watch, nextTick } from 'vue'
-import { MicOff } from '@lucide/vue'
+import { MicOff, Eye, EyeOff } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 
 const props = defineProps({
@@ -13,9 +13,12 @@ const props = defineProps({
   compact: { type: Boolean, default: false },
   localMuted: { type: Boolean, default: false },
   // Preview: nobody to hear yet, so no speaking/ready status line.
-  showStatus: { type: Boolean, default: true }
+  showStatus: { type: Boolean, default: true },
+  // Their camera is running (known without receiving it) and I may hide it.
+  cameraAvailable: { type: Boolean, default: false },
+  cameraHidden: { type: Boolean, default: false }
 })
-defineEmits(['open-profile'])
+defineEmits(['open-profile', 'toggle-camera'])
 
 const videoEl = ref(null)
 watch(() => props.stream, (stream) => {
@@ -58,6 +61,21 @@ watch(() => props.stream, (stream) => {
         />
       </div>
     </template>
+
+    <!-- Hide or show their camera (only for me) -->
+    <button
+      v-if="cameraAvailable && !isSelf"
+      type="button"
+      :class="[
+        'absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-md bg-black/60 text-white hover:bg-black/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+        cameraHidden ? '' : 'opacity-0 hover:opacity-100 focus-visible:opacity-100'
+      ]"
+      v-tooltip="cameraHidden ? $t('tafelrunde.showCamera') : $t('tafelrunde.hideCamera')"
+      @click="$emit('toggle-camera')"
+    >
+      <Eye v-if="cameraHidden" class="w-4 h-4" />
+      <EyeOff v-else class="w-4 h-4" />
+    </button>
 
     <!-- Name -->
     <div

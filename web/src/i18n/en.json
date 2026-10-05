@@ -530,7 +530,17 @@
     "inRoundtable": "In the roundtable",
     "cameraOf": "Camera of {name}",
     "localMuted": "Muted for you",
-    "joining": "Joining…"
+    "joining": "Joining…",
+    "screenShareCard": "{name} is sharing their screen",
+    "watchScreen": "Watch",
+    "unwatchScreen": "Stop watching",
+    "toStage": "Show on stage",
+    "screenConnecting": "Connecting…",
+    "hideCamera": "Hide camera",
+    "showCamera": "Show camera",
+    "cameraHidden": "Camera hidden",
+    "allCamerasOff": "Hide all other cameras",
+    "allCamerasOn": "Show other cameras"
   },
   "admin": {
     "title": "Storage & administration",

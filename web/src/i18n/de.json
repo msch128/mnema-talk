@@ -530,7 +530,17 @@
     "inRoundtable": "In der Tafelrunde",
     "cameraOf": "Kamera von {name}",
     "localMuted": "Für dich stumm",
-    "joining": "Trete bei…"
+    "joining": "Trete bei…",
+    "screenShareCard": "{name} teilt den Bildschirm",
+    "watchScreen": "Ansehen",
+    "unwatchScreen": "Nicht mehr ansehen",
+    "toStage": "Auf die Bühne",
+    "screenConnecting": "Verbinde …",
+    "hideCamera": "Kamera ausblenden",
+    "showCamera": "Kamera einblenden",
+    "cameraHidden": "Kamera ausgeblendet",
+    "allCamerasOff": "Alle fremden Kameras ausblenden",
+    "allCamerasOn": "Fremde Kameras einblenden"
   },
   "admin": {
     "title": "Speicher & Administration",
