@@ -1,0 +1,19 @@
+README.md
+  s_ed4a044667278a::t_8ef021f5db3fb8 154-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20b5cf609eda968eb8676f756abcf42966d0e1be",
+  "prompts": {},
+  "sessions": {
+    "s_ed4a044667278a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b355918-f239-4da3-9be2-aaed7bc1c4f6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
