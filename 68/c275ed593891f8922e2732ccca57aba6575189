@@ -1,0 +1,18 @@
+internal/ws/hub.go
+  h_0ff4f4713441f4 8,16,655,659-660
+web/src/composables/useWebRTC.js
+  h_0ff4f4713441f4 129-138,143,200-211
+web/src/stores/chat.js
+  h_0ff4f4713441f4 421-432
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "68c275ed593891f8922e2732ccca57aba6575189",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
