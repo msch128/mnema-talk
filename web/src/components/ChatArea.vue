@@ -6,18 +6,20 @@ import {
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { useVoiceStore } from '../stores/voice'
-import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
+import ImageLightbox from './ImageLightbox.vue'
 import { continuationIds } from '../lib/messageGrouping'
+import { previewText } from '../lib/replies'
+import { useToastStore } from '../stores/toast'
+import { confirm } from '../lib/confirm'
+import { t, locale } from '../i18n'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
-const voiceStore = useVoiceStore()
-const { leaveVoiceChannel } = useWebRTC()
+const toasts = useToastStore()
 
 const inputMessage = ref('')
 const messageContainer = ref(null)
@@ -26,7 +28,7 @@ const textAreaEl = ref(null)
 const isUploading = ref(false)
 const isSending = ref(false)
 const selectedImage = ref(null)
-// Message the composer is currently replying to (Discord-style reply).
+// Message the composer is currently replying to.
 const replyingTo = ref(null)
 
 // Message Editing & Reactions
@@ -55,19 +57,25 @@ async function saveEditMessage(msg) {
     editingMessageId.value = null
     editMessageText.value = ''
   } catch (err) {
-    alert(err.message || 'Fehler beim Bearbeiten')
+    toasts.error(err.message || t('chat.editFailed'))
   } finally {
     isSavingEdit.value = false
   }
 }
 
 async function handleDeleteMessage(msg) {
-  if (confirm('Möchtest du diese Nachricht wirklich löschen?')) {
-    try {
-      await chatStore.deleteMessage(chatStore.activeChannel.id, msg.id)
-    } catch (err) {
-      alert(err.message || 'Fehler beim Löschen')
-    }
+  const ok = await confirm({
+    title: t('chat.deleteTitle'),
+    body: t('chat.deleteBody'),
+    excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+  if (!ok) return
+  try {
+    await chatStore.deleteMessage(chatStore.activeChannel.id, msg.id)
+  } catch (err) {
+    toasts.error(err.message || t('chat.deleteFailed'))
   }
 }
 
@@ -278,7 +286,7 @@ function cancelReply() {
 
 function jumpToReplied(msg) {
   if (msg.reply_to?.deleted) {
-    chatStore.showToast('Nachricht nicht gefunden')
+    chatStore.showToast(t('chat.messageNotFound'))
     return
   }
   chatStore.jumpToMessage(msg.reply_to_id)
@@ -321,7 +329,7 @@ onUnmounted(() => {
   if (scrollFrame) cancelAnimationFrame(scrollFrame)
 })
 
-// After sending while viewing older history, jump to the present (like Discord).
+// After sending while viewing older history, jump to the present.
 async function revealOwnMessage() {
   if (chatStore.hasMoreAfter) await chatStore.jumpToLatest()
   else scrollToBottom()
@@ -338,7 +346,7 @@ async function handleSend() {
     replyingTo.value = null
     await revealOwnMessage()
   } catch (err) {
-    alert(err.message || 'Nachricht konnte nicht gesendet werden')
+    toasts.error(err.message || t('chat.sendFailed'))
   } finally {
     isSending.value = false
   }
@@ -367,7 +375,7 @@ async function handleFileUpload(e) {
     replyingTo.value = null
     await revealOwnMessage()
   } catch (err) {
-    alert(err.message || 'Upload fehlgeschlagen')
+    toasts.error(err.message || t('chat.uploadFailed'))
   } finally {
     isUploading.value = false
   }
@@ -376,20 +384,11 @@ async function handleFileUpload(e) {
 function formatTime(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
 }
 
 // Consecutive messages by the same author (< 7 min apart) render compactly.
 const groupedIds = computed(() => continuationIds(chatStore.messages))
-
-const currentVoiceChannelName = computed(() => {
-  if (!voiceStore.currentChannelId) return ''
-  for (const cat of chatStore.categories) {
-    const ch = cat.channels?.find(c => c.id === voiceStore.currentChannelId)
-    if (ch) return ch.name
-  }
-  return chatStore.uncategorized?.find(c => c.id === voiceStore.currentChannelId)?.name || 'Hangout'
-})
 </script>
 
 <template>
@@ -400,7 +399,7 @@ const currentVoiceChannelName = computed(() => {
       <div class="flex items-center gap-2 min-w-0">
         <Hash class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
         <span class="font-semibold text-base text-mnema-text truncate flex-shrink-0 max-w-[60%]">
-          {{ chatStore.activeChannel?.name || 'Kanal auswählen' }}
+          {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>
         <span v-if="chatStore.activeChannel?.topic" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
           {{ chatStore.activeChannel.topic }}
@@ -409,10 +408,6 @@ const currentVoiceChannelName = computed(() => {
 
       <!-- Right: Badges & member list toggle -->
       <div class="flex items-center gap-2 flex-shrink-0">
-        <span class="hidden xl:inline-flex text-xs font-mono text-mnema-tertiary px-2 py-0.5 rounded border border-mnema-hairline bg-mnema-surface">
-          Server-SFU
-        </span>
-
         <button
           @click="chatStore.showMemberList = !chatStore.showMemberList"
           :class="[
@@ -421,49 +416,15 @@ const currentVoiceChannelName = computed(() => {
               ? 'text-mnema-accent bg-mnema-surface'
               : 'text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface'
           ]"
-          title="Mitgliederliste ein-/ausblenden"
+          v-tooltip="$t('members.toggle')"
+          :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
         >
           <Users class="w-5 h-5" />
         </button>
       </div>
     </header>
 
-    <!-- Active Voice Hangout Banner (below the header so column borders stay aligned) -->
-    <div
-      v-if="voiceStore.isConnected"
-      class="bg-mnema-band/35 border-b border-mnema-hairline px-4 py-1.5 flex items-center justify-between gap-3 text-sm flex-shrink-0 z-10"
-    >
-      <div class="flex items-center gap-2 min-w-0">
-        <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)] flex-shrink-0"></span>
-        <span class="font-medium text-mnema-mint text-sm truncate">
-          Aktiv im Voice: {{ currentVoiceChannelName }}
-        </span>
-        <button
-          @click="voiceStore.showStatsModal = true"
-          class="text-xs text-mnema-accent hover:underline font-mono flex-shrink-0 whitespace-nowrap"
-          title="Detaillierte Verbindungsmetrik (RTC) öffnen"
-        >
-          ({{ voiceStore.ping ?? '–' }} ms Ping)
-        </button>
-      </div>
-
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <button
-          @click="voiceStore.activeView = 'voice'"
-          class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-xs transition shadow-sm whitespace-nowrap"
-        >
-          Zur Talk-Bühne
-        </button>
-        <button
-          @click="leaveVoiceChannel"
-          class="px-2 py-1 rounded hover:bg-mnema-danger/20 text-mnema-muted hover:text-mnema-danger text-xs transition"
-        >
-          Trennen
-        </button>
-      </div>
-    </div>
-
-    <!-- Message Timeline (Discord "cozy" layout: 72px gutter, 40px avatars) -->
+    <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">
     <div ref="messageContainer" class="flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6" @scroll.passive="handleScroll">
       <!-- Initial / jump loading -->
@@ -476,9 +437,9 @@ const currentVoiceChannelName = computed(() => {
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
           <Hash class="w-5 h-5 opacity-80" />
         </div>
-        <p class="font-semibold text-lg text-mnema-text">Willkommen in #{{ chatStore.activeChannel?.name || 'chat' }}</p>
+        <p class="font-semibold text-lg text-mnema-text">{{ $t('chat.welcome', { channel: chatStore.activeChannel?.name || '' }) }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">
-          Beginn des Gesprächsverlaufs. Medien werden automatisch über den S3-Storage synchronisiert.
+          {{ $t('chat.emptyBody') }}
         </p>
       </div>
 
@@ -491,8 +452,8 @@ const currentVoiceChannelName = computed(() => {
           <div class="w-16 h-16 rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text">
             <Hash class="w-9 h-9" />
           </div>
-          <p class="font-bold text-3xl text-mnema-text">Willkommen in #{{ chatStore.activeChannel?.name || 'chat' }}!</p>
-          <p class="text-base text-mnema-muted mt-1">Das ist der Anfang von #{{ chatStore.activeChannel?.name || 'chat' }}.</p>
+          <p class="font-bold text-3xl text-mnema-text">{{ $t('chat.welcome', { channel: chatStore.activeChannel?.name || '' }) }}</p>
+          <p class="text-base text-mnema-muted mt-1">{{ $t('chat.beginning', { channel: chatStore.activeChannel?.name || '' }) }}</p>
         </div>
       </template>
 
@@ -524,7 +485,7 @@ const currentVoiceChannelName = computed(() => {
                   ? 'bg-mnema-surface text-amber-400' 
                   : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
               ]"
-              title="Reagieren"
+              v-tooltip="$t('chat.addReaction')"
             >
               <Smile class="w-4 h-4" />
             </button>
@@ -545,11 +506,11 @@ const currentVoiceChannelName = computed(() => {
             </div>
           </div>
 
-          <!-- Antworten (Discord-style reply) -->
+          <!-- Reply -->
           <button
             @click.stop="startReply(msg)"
             class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-            title="Antworten"
+            v-tooltip="$t('chat.reply')"
           >
             <Reply class="w-4 h-4" />
           </button>
@@ -558,7 +519,7 @@ const currentVoiceChannelName = computed(() => {
           <button
             @click.stop="chatStore.openThread(msg)"
             class="flex items-center gap-1 text-xs text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface px-1.5 py-1 rounded transition"
-            title="In Thread antworten"
+            v-tooltip="$t('chat.openThread')"
           >
             <MessageSquare class="w-4 h-4" />
           </button>
@@ -568,7 +529,7 @@ const currentVoiceChannelName = computed(() => {
             v-if="msg.user_id === authStore.user?.id"
             @click.stop="startEditMessage(msg)"
             class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
-            title="Nachricht bearbeiten"
+            v-tooltip="$t('chat.edit')"
           >
             <Pencil class="w-4 h-4" />
           </button>
@@ -578,7 +539,7 @@ const currentVoiceChannelName = computed(() => {
             v-if="msg.user_id === authStore.user?.id || authStore.isAdmin"
             @click.stop="handleDeleteMessage(msg)"
             class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
-            title="Nachricht löschen"
+            v-tooltip="$t('chat.delete')"
           >
             <Trash2 class="w-4 h-4" />
           </button>
@@ -614,7 +575,7 @@ const currentVoiceChannelName = computed(() => {
               {{ msg.display_name || msg.username }}
             </span>
             <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
-            <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">(bearbeitet)</span>
+            <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
           </div>
 
           <!-- Inline Message Editor -->
@@ -627,13 +588,13 @@ const currentVoiceChannelName = computed(() => {
               class="w-full text-message p-2 rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-none resize-none"
             ></textarea>
             <div class="flex items-center justify-between text-xs text-mnema-tertiary">
-              <span>Drücke <kbd class="px-1 py-0.5 rounded bg-mnema-surface border border-mnema-border">Enter</kbd> zum Speichern, <kbd class="px-1 py-0.5 rounded bg-mnema-surface border border-mnema-border">Esc</kbd> zum Abbrechen</span>
+              <span class="font-mono">{{ $t('chat.editHint') }}</span>
               <div class="flex items-center gap-1.5">
-                <button @click="cancelEditMessage" class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text">Abbrechen</button>
+                <button @click="cancelEditMessage" class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text">{{ $t('common.cancel') }}</button>
                 <button @click="saveEditMessage(msg)" :disabled="isSavingEdit" class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50">
                   <Loader2 v-if="isSavingEdit" class="w-3.5 h-3.5 animate-spin" />
                   <Check v-else class="w-3.5 h-3.5" />
-                  <span>Speichern</span>
+                  <span>{{ $t('common.save') }}</span>
                 </button>
               </div>
             </div>
@@ -646,7 +607,7 @@ const currentVoiceChannelName = computed(() => {
           <span
             v-if="groupedIds.has(msg.id) && msg.is_edited && editingMessageId !== msg.id"
             class="block text-xs text-mnema-tertiary italic"
-          >(bearbeitet)</span>
+          >{{ $t('chat.edited') }}</span>
 
           <!-- Media Attachments (Images, Clips, Documents) -->
           <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">
@@ -675,25 +636,25 @@ const currentVoiceChannelName = computed(() => {
                   </a>
                 </div>
                 <span class="text-xs font-mono text-mnema-tertiary pl-2 flex-shrink-0">
-                  {{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB
+                  {{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Rocket.Chat Style Thread Counter Badge -->
+          <!-- Thread counter -->
           <div v-if="msg.reply_count > 0" class="mt-2">
             <button
               @click.stop="chatStore.openThread(msg)"
               class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition shadow-xs"
             >
               <MessageSquare class="w-4 h-4 text-mnema-accent" />
-              <span>{{ msg.reply_count }} {{ msg.reply_count === 1 ? 'Antwort' : 'Antworten' }}</span>
-              <span class="text-xs opacity-75 font-mono ml-0.5">Thread öffnen &rarr;</span>
+              <span>{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
+              <span class="text-xs opacity-75 font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
             </button>
           </div>
 
-          <!-- Reaction Badges (Ganz unten an der Nachricht, wie in Discord) -->
+          <!-- Reaction badges -->
           <div v-if="msg.reactions && msg.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
             <button 
               v-for="r in msg.reactions" 
@@ -705,18 +666,18 @@ const currentVoiceChannelName = computed(() => {
                   ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
                   : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
               ]"
-              :title="`Reaktion ${r.emoji}`"
+              v-tooltip="$t('chat.reaction', { emoji: r.emoji })"
             >
               <span>{{ r.emoji }}</span>
               <span class="text-xs font-mono">{{ r.count }}</span>
             </button>
 
-            <!-- Discord-style Add Reaction "+" button inline with reactions -->
+            <!-- Add-reaction button inline with reactions -->
             <div class="relative reaction-picker-anchor inline-block">
               <button
                 @click.stop="toggleReactionPicker(`bottom-${msg.id}`)"
                 class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-sm"
-                title="Reaktion hinzufügen"
+                v-tooltip="$t('chat.addReaction')"
               >
                 <SmilePlus class="w-4 h-4" />
               </button>
@@ -749,10 +710,10 @@ const currentVoiceChannelName = computed(() => {
       @click="handleJumpToPresent"
     >
       <span class="truncate">
-        {{ chatStore.missedLiveCount > 0 ? 'Neue Nachrichten' : 'Du siehst ältere Nachrichten' }}
+        {{ chatStore.missedLiveCount > 0 ? $t('chat.newMessages') : $t('chat.viewingOlder') }}
       </span>
       <span class="flex items-center gap-1 flex-shrink-0 font-semibold">
-        Zum Ende springen
+        {{ $t('chat.jumpToEnd') }}
         <ArrowDown class="w-4 h-4" />
       </span>
     </button>
@@ -764,22 +725,13 @@ const currentVoiceChannelName = computed(() => {
       class="absolute left-1/2 -translate-x-1/2 bottom-2 h-8 px-4 flex items-center gap-1.5 rounded-full bg-mnema-accent text-mnema-accent-ink text-sm font-semibold shadow-lg hover:bg-mnema-accent-hover transition z-20"
       @click="scrollToBottomNow"
     >
-      Neue Nachrichten
+      {{ $t('chat.newMessages') }}
       <ArrowDown class="w-4 h-4" />
     </button>
 
-    <!-- Non-blocking toast (e.g. jump target not found) -->
-    <div
-      v-if="chatStore.toast"
-      :key="chatStore.toast.id"
-      role="status"
-      class="absolute top-3 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-mnema-elevated border border-mnema-border text-sm text-mnema-text shadow-xl z-30 pointer-events-none"
-    >
-      {{ chatStore.toast.text }}
-    </div>
     </div>
 
-    <!-- Message Input Bar (Keeper's Desk Elevated Card) -->
+    <!-- Composer -->
     <div class="px-4 pb-6 flex-shrink-0">
       <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
       <div
@@ -802,7 +754,7 @@ const currentVoiceChannelName = computed(() => {
           @click="fileInput?.click()"
           :disabled="isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-          title="Datei oder Bild hochladen (S3)"
+          v-tooltip="$t('chat.upload')"
         >
           <Plus class="w-5 h-5" />
         </button>
@@ -812,7 +764,8 @@ const currentVoiceChannelName = computed(() => {
           ref="textAreaEl"
           v-model="inputMessage"
           @keydown="handleKeyDown"
-          :placeholder="`Nachricht an #${chatStore.activeChannel?.name || 'chat'}`"
+          :placeholder="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
+          :aria-label="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
@@ -822,24 +775,14 @@ const currentVoiceChannelName = computed(() => {
           @click="handleSend"
           :disabled="!inputMessage.trim() || isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
-          title="Senden"
+          v-tooltip="$t('chat.send')"
         >
           <ArrowUp class="w-4 h-4" />
         </button>
       </div>
     </div>
 
-    <!-- Image Lightbox Modal -->
-    <div 
-      v-if="selectedImage" 
-      @click="selectedImage = null"
-      class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
-    >
-      <img 
-        :src="selectedImage" 
-        alt="Vergrößertes Bild" 
-        class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-mnema-border"
-      />
-    </div>
+    <!-- Image lightbox -->
+    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </main>
 </template>

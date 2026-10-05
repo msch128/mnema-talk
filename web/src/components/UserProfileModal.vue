@@ -1,13 +1,15 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
 import { 
-  X, Crown, Shield, User, Calendar, Volume2, 
-  Camera, AtSign, Check, Loader2, AlertCircle,
-  Edit3, Save
+  X, Crown, Shield, User, Calendar, Volume2,
+  Camera, AtSign, Loader2, Edit3, Save
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { useToastStore } from '../stores/toast'
+import { t, locale } from '../i18n'
+import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
   user: {
@@ -21,18 +23,16 @@ const emit = defineEmits(['close', 'mention'])
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const toasts = useToastStore()
 
 const fileInput = ref(null)
 const isUploading = ref(false)
-const uploadError = ref('')
-const uploadSuccess = ref(false)
 
 // Bio editing state
 const isEditingBio = ref(false)
 const editDisplayName = ref('')
 const editBio = ref('')
 const isSavingProfile = ref(false)
-const profileSaveSuccess = ref(false)
 const profileSaveError = ref('')
 
 // Determine the active user object
@@ -47,7 +47,6 @@ editBio.value = profileUser.value.bio || ''
 async function saveProfile() {
   isSavingProfile.value = true
   profileSaveError.value = ''
-  profileSaveSuccess.value = false
   try {
     const updated = await authStore.updateProfile({
       displayName: editDisplayName.value,
@@ -56,13 +55,10 @@ async function saveProfile() {
     if (chatStore.selectedUserProfile) {
       chatStore.selectedUserProfile = { ...chatStore.selectedUserProfile, ...updated }
     }
-    profileSaveSuccess.value = true
     isEditingBio.value = false
-    setTimeout(() => {
-      profileSaveSuccess.value = false
-    }, 2500)
+    toasts.success(t('profile.profileSaved'))
   } catch (err) {
-    profileSaveError.value = err.message || 'Speichern fehlgeschlagen'
+    profileSaveError.value = err.message || t('profile.saveFailed')
   } finally {
     isSavingProfile.value = false
   }
@@ -75,16 +71,15 @@ const newPassword = ref('')
 const newPasswordRepeat = ref('')
 const isSavingPassword = ref(false)
 const passwordError = ref('')
-const passwordSuccess = ref(false)
 
 async function savePassword() {
   passwordError.value = ''
   if (newPassword.value.length < 10) {
-    passwordError.value = 'Das neue Passwort muss mindestens 10 Zeichen haben'
+    passwordError.value = t('profile.passwordTooShort', { count: 10 })
     return
   }
   if (newPassword.value !== newPasswordRepeat.value) {
-    passwordError.value = 'Die Passwörter stimmen nicht überein'
+    passwordError.value = t('profile.passwordMismatch')
     return
   }
   isSavingPassword.value = true
@@ -92,8 +87,7 @@ async function savePassword() {
     await authStore.changePassword(currentPassword.value, newPassword.value)
     currentPassword.value = newPassword.value = newPasswordRepeat.value = ''
     isChangingPassword.value = false
-    passwordSuccess.value = true
-    setTimeout(() => { passwordSuccess.value = false }, 2500)
+    toasts.success(t('profile.passwordChanged'))
   } catch (err) {
     passwordError.value = err.message
   } finally {
@@ -118,7 +112,7 @@ const voiceHangout = computed(() => {
         ...chatStore.categories.flatMap(c => c.channels || []),
         ...chatStore.uncategorized
       ]
-      return allChannels.find(c => c.id === chId) || { id: chId, name: 'Talk' }
+      return allChannels.find(c => c.id === chId) || { id: chId, name: t('profile.roundtable') }
     }
   }
   return null
@@ -127,10 +121,10 @@ const voiceHangout = computed(() => {
 // Formatted join date
 const memberSinceFormatted = computed(() => {
   const dateStr = profileUser.value.created_at
-  if (!dateStr) return 'Unbekannt'
+  if (!dateStr) return t('profile.unknown')
   try {
     const d = new Date(dateStr)
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(locale.value, {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
@@ -152,13 +146,11 @@ async function onAvatarSelected(e) {
 
   // Validate size (max 10MB)
   if (file.size > 10 * 1024 * 1024) {
-    uploadError.value = 'Bild darf maximal 10 MB groß sein.'
+    toasts.error(t('profile.avatarTooBig', { size: 10 }))
     return
   }
 
   isUploading.value = true
-  uploadError.value = ''
-  uploadSuccess.value = false
 
   try {
     const updated = await authStore.uploadAvatar(file)
@@ -166,12 +158,9 @@ async function onAvatarSelected(e) {
     if (chatStore.selectedUserProfile) {
       chatStore.selectedUserProfile = { ...chatStore.selectedUserProfile, ...updated }
     }
-    uploadSuccess.value = true
-    setTimeout(() => {
-      uploadSuccess.value = false
-    }, 2500)
+    toasts.success(t('profile.avatarSaved'))
   } catch (err) {
-    uploadError.value = err.message || 'Avatar-Upload fehlgeschlagen.'
+    toasts.error(err.message || t('profile.avatarFailed'))
   } finally {
     isUploading.value = false
     if (fileInput.value) fileInput.value.value = ''
@@ -182,39 +171,22 @@ function handleMention() {
   emit('mention', profileUser.value.username)
   emit('close')
 }
-
-function handleKeydown(e) {
-  if (e.key === 'Escape') {
-    emit('close')
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeydown)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
 </script>
 
 <template>
-  <div 
-    class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none"
-    @click.self="emit('close')"
-  >
-    <div 
-      class="bg-mnema-surface w-full max-w-sm rounded-2xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden transform transition-all animate-in fade-in zoom-in-95 duration-150"
-    >
-      <!-- Top Decorative Banner -->
+  <BaseDialog panel-class="max-w-sm select-none bg-mnema-surface" @close="emit('close')">
+    <template #default="{ titleId }">
+    <div class="flex min-h-0 flex-col overflow-y-auto">
+      <!-- Top banner -->
       <div class="h-28 bg-gradient-to-br from-emerald-950 via-mnema-raised to-emerald-900 border-b border-mnema-hairline relative flex items-start justify-end p-3 overflow-hidden">
-        <!-- Subtle background pattern/mesh -->
+        <!-- Background pattern -->
         <div class="absolute inset-0 opacity-20 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:12px_12px] pointer-events-none"></div>
 
         <button 
           @click="emit('close')"
+          data-dialog-close
           class="relative z-10 w-7 h-7 rounded-full bg-black/50 hover:bg-black/80 text-mnema-muted hover:text-mnema-text flex items-center justify-center transition border border-white/10"
-          title="Schließen (Esc)"
+          v-tooltip="{ text: $t('common.close'), shortcut: 'Esc' }"
         >
           <X class="w-4 h-4" />
         </button>
@@ -232,7 +204,7 @@ onUnmounted(() => {
               <img 
                 v-if="profileUser.avatar_url" 
                 :src="profileUser.avatar_url" 
-                :alt="profileUser.display_name"
+                :alt="profileUser.display_name || $t('user.avatar')"
                 class="w-full h-full object-cover"
               />
               <span v-else class="text-2xl font-bold text-mnema-mint">
@@ -245,7 +217,7 @@ onUnmounted(() => {
                 class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity duration-150"
               >
                 <Camera class="w-5 h-5 mb-0.5" />
-                <span class="text-xs font-bold tracking-wider uppercase">Ändern</span>
+                <span class="text-xs font-bold tracking-wider uppercase">{{ $t('profile.change') }}</span>
               </div>
 
               <!-- Uploading Spinner -->
@@ -263,7 +235,9 @@ onUnmounted(() => {
                 'absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-mnema-surface shadow-sm',
                 isOnline ? 'bg-mnema-accent' : 'bg-mnema-muted/60'
               ]"
-              :title="isOnline ? 'Online' : 'Offline'"
+              v-tooltip.visual="isOnline ? $t('presence.online') : $t('presence.offline')"
+              role="img"
+              :aria-label="isOnline ? $t('presence.online') : $t('presence.offline')"
             ></span>
 
             <!-- Hidden File Input for Avatar Upload -->
@@ -283,10 +257,10 @@ onUnmounted(() => {
               v-if="!isSelf"
               @click="handleMention"
               class="px-3 py-1.5 rounded-lg bg-mnema-band hover:bg-mnema-raised text-mnema-text text-sm font-medium border border-mnema-border flex items-center gap-1.5 transition active:scale-95 shadow-sm"
-              title="Nutzer im Chat erwähnen"
+              v-tooltip.visual="$t('profile.mentionHint')"
             >
               <AtSign class="w-4 h-4 text-mnema-accent" />
-              <span>Erwähnen</span>
+              <span>{{ $t('profile.mention') }}</span>
             </button>
 
             <button 
@@ -296,7 +270,7 @@ onUnmounted(() => {
               class="px-3 py-1.5 rounded-lg bg-mnema-accent/15 hover:bg-mnema-accent/25 text-mnema-accent text-sm font-medium border border-mnema-accent/30 flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
             >
               <Camera class="w-4 h-4" />
-              <span>Avatar ändern</span>
+              <span>{{ $t('profile.changeAvatar') }}</span>
             </button>
           </div>
         </div>
@@ -305,12 +279,14 @@ onUnmounted(() => {
         <div class="bg-mnema-canvas/70 border border-mnema-hairline rounded-xl p-3.5 shadow-inner">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
+              <h2 :id="titleId" class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
                 {{ profileUser.display_name || profileUser.username }}
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
                   class="w-4 h-4 text-amber-400 inline-block drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
-                  title="Server-Inhaber / Administrator"
+                  v-tooltip.visual="$t('profile.adminHint')"
+                  role="img"
+                  :aria-label="$t('profile.adminHint')"
                 />
               </h2>
               <p class="text-sm text-mnema-tertiary font-mono">@{{ profileUser.username }}</p>
@@ -327,35 +303,24 @@ onUnmounted(() => {
             >
               <Shield v-if="profileUser.role === 'admin'" class="w-3.5 h-3.5" />
               <User v-else class="w-3.5 h-3.5" />
-              <span>{{ profileUser.role === 'admin' ? 'Admin' : 'Mitglied' }}</span>
+              <span>{{ profileUser.role === 'admin' ? $t('role.admin') : $t('role.member') }}</span>
             </div>
-          </div>
-
-          <!-- Feedback Banners -->
-          <div v-if="uploadSuccess" class="mt-2.5 p-2 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
-            <Check class="w-4 h-4 flex-shrink-0" />
-            <span>Neuer Avatar wurde erfolgreich gespeichert!</span>
-          </div>
-
-          <div v-if="uploadError" class="mt-2.5 p-2 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-2">
-            <AlertCircle class="w-4 h-4 flex-shrink-0" />
-            <span>{{ uploadError }}</span>
           </div>
 
           <!-- Divider -->
           <div class="h-px bg-mnema-hairline my-3"></div>
 
-          <!-- Über mich (Bio) Section -->
+          <!-- About me (bio) -->
           <div class="mb-3">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">Über mich</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.about') }}</span>
               <button 
                 v-if="isSelf && !isEditingBio" 
                 @click="isEditingBio = true"
                 class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
               >
                 <Edit3 class="w-3.5 h-3.5" />
-                <span>Bearbeiten</span>
+                <span>{{ $t('profile.edit') }}</span>
               </button>
             </div>
 
@@ -365,15 +330,16 @@ onUnmounted(() => {
                 {{ profileUser.bio }}
               </p>
               <p v-else class="text-sm text-mnema-tertiary italic bg-mnema-band/20 p-2.5 rounded-lg border border-mnema-hairline">
-                Keine Biografie hinterlegt.
+                {{ $t('profile.noBio') }}
               </p>
             </div>
 
             <!-- Edit Mode (Own Profile) -->
             <div v-else class="space-y-2 mt-1">
               <div>
-                <label class="text-xs text-mnema-tertiary block mb-0.5">Anzeigename</label>
+                <label for="profile-displayname" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.displayName') }}</label>
                 <input 
+                  id="profile-displayname"
                   v-model="editDisplayName" 
                   type="text" 
                   maxlength="64"
@@ -381,13 +347,14 @@ onUnmounted(() => {
                 />
               </div>
               <div>
-                <label class="text-xs text-mnema-tertiary block mb-0.5">Biografie (max. 250 Zeichen)</label>
+                <label for="profile-bio" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.bioLabel', { count: 250 }) }}</label>
                 <textarea 
+                  id="profile-bio"
                   v-model="editBio" 
                   rows="3" 
                   maxlength="250"
                   class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent resize-none"
-                  placeholder="Erzähle etwas über dich..."
+                  :placeholder="$t('profile.bioPlaceholder')"
                 ></textarea>
                 <div class="flex justify-between items-center text-xs text-mnema-tertiary mt-0.5">
                   <span>{{ editBio.length }} / 250</span>
@@ -396,7 +363,7 @@ onUnmounted(() => {
                       @click="isEditingBio = false" 
                       class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
                     >
-                      Abbrechen
+                      {{ $t('common.cancel') }}
                     </button>
                     <button 
                       @click="saveProfile" 
@@ -405,34 +372,29 @@ onUnmounted(() => {
                     >
                       <Loader2 v-if="isSavingProfile" class="w-3.5 h-3.5 animate-spin" />
                       <Save v-else class="w-3.5 h-3.5" />
-                      <span>Speichern</span>
+                      <span>{{ $t('common.save') }}</span>
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div v-if="profileSaveSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-1.5">
-              <Check class="w-4 h-4" />
-              <span>Profil aktualisiert!</span>
-            </div>
-            <div v-if="profileSaveError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-1.5">
-              <AlertCircle class="w-4 h-4" />
+            <div v-if="profileSaveError" role="alert" class="mt-2 p-1.5 rounded bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
               <span>{{ profileSaveError }}</span>
             </div>
           </div>
 
-          <!-- Password Section (Own Profile) -->
+          <!-- Password (own profile) -->
           <div v-if="isSelf" class="mb-3">
             <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">Passwort</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.password') }}</span>
               <button
                 v-if="!isChangingPassword"
                 @click="isChangingPassword = true; passwordError = ''"
                 class="text-xs text-mnema-accent hover:underline flex items-center gap-1"
               >
                 <Edit3 class="w-3.5 h-3.5" />
-                <span>Ändern</span>
+                <span>{{ $t('profile.changePassword') }}</span>
               </button>
             </div>
 
@@ -441,21 +403,21 @@ onUnmounted(() => {
                 v-model="currentPassword"
                 type="password"
                 autocomplete="current-password"
-                placeholder="Aktuelles Passwort"
+                :placeholder="$t('profile.currentPassword')" :aria-label="$t('profile.currentPassword')"
                 class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <input
                 v-model="newPassword"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Neues Passwort (min. 10 Zeichen)"
+                :placeholder="$t('profile.newPassword', { count: 10 })" :aria-label="$t('profile.newPassword', { count: 10 })"
                 class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <input
                 v-model="newPasswordRepeat"
                 type="password"
                 autocomplete="new-password"
-                placeholder="Neues Passwort wiederholen"
+                :placeholder="$t('profile.repeatPassword')" :aria-label="$t('profile.repeatPassword')"
                 class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
               />
               <div class="flex justify-end items-center gap-1.5 text-xs">
@@ -464,7 +426,7 @@ onUnmounted(() => {
                   @click="isChangingPassword = false; currentPassword = newPassword = newPasswordRepeat = ''"
                   class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text"
                 >
-                  Abbrechen
+                  {{ $t('common.cancel') }}
                 </button>
                 <button
                   type="submit"
@@ -473,17 +435,12 @@ onUnmounted(() => {
                 >
                   <Loader2 v-if="isSavingPassword" class="w-3.5 h-3.5 animate-spin" />
                   <Save v-else class="w-3.5 h-3.5" />
-                  <span>Speichern</span>
+                  <span>{{ $t('common.save') }}</span>
                 </button>
               </div>
             </form>
 
-            <div v-if="passwordSuccess" class="mt-2 p-1.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-1.5">
-              <Check class="w-4 h-4" />
-              <span>Passwort geändert!</span>
-            </div>
-            <div v-if="passwordError" class="mt-2 p-1.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-sm flex items-center gap-1.5">
-              <AlertCircle class="w-4 h-4" />
+            <div v-if="passwordError" role="alert" class="mt-2 p-1.5 rounded bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm flex items-center gap-1.5">
               <span>{{ passwordError }}</span>
             </div>
           </div>
@@ -491,16 +448,16 @@ onUnmounted(() => {
           <!-- Divider -->
           <div class="h-px bg-mnema-hairline my-3"></div>
 
-          <!-- Voice Activity Status -->
+          <!-- Voice activity -->
           <div class="mb-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Aktivität</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.activity') }}</div>
             <div 
               v-if="voiceHangout" 
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-accent/10 border border-mnema-accent/25 text-mnema-accent text-sm"
             >
               <Volume2 class="w-4 h-4 flex-shrink-0" />
               <div class="truncate">
-                <span class="font-medium">Im Sprachkanal:</span>
+                <span class="font-medium">{{ $t('profile.inVoice') }}</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>
               </div>
             </div>
@@ -509,27 +466,28 @@ onUnmounted(() => {
               class="flex items-center gap-2 p-2 rounded-lg bg-mnema-raised/60 border border-mnema-hairline text-mnema-muted text-sm"
             >
               <span class="w-2 h-2 rounded-full bg-mnema-tertiary"></span>
-              <span>Aktuell in keinem Sprachkanal</span>
+              <span>{{ $t('profile.notInVoice') }}</span>
             </div>
           </div>
 
-          <!-- Details / Metadata Grid -->
+          <!-- Membership -->
           <div>
-            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">Mitgliedschaft</div>
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('profile.membership') }}</div>
             <div class="flex items-center gap-2 text-sm text-mnema-muted">
               <Calendar class="w-4 h-4 text-mnema-tertiary" />
-              <span>Mnema-Talk Mitglied seit <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>
+              <span>{{ $t('profile.memberSince') }} <strong class="text-mnema-text font-medium">{{ memberSinceFormatted }}</strong></span>
             </div>
           </div>
         </div>
 
-        <!-- Hint Footer -->
+        <!-- Hint -->
         <div v-if="isSelf" class="mt-3 text-center">
           <p class="text-xs text-mnema-tertiary">
-            Tipp: Klicke auf dein Profilbild, um ein neues Avatar-Bild (PNG, JPG, WEBP, GIF) hochzuladen.
+            {{ $t('profile.avatarHint') }}
           </p>
         </div>
       </div>
     </div>
-  </div>
+    </template>
+  </BaseDialog>
 </template>

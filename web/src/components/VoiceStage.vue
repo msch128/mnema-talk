@@ -11,13 +11,16 @@ import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
+import { useToastStore } from '../stores/toast'
+import { t, locale } from '../i18n'
 
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const toasts = useToastStore()
 const { leaveVoiceChannel, startScreenShare, stopScreenShare } = useWebRTC()
 
-const layoutMode = ref('split') // 'split' (talk + chat in center) | 'stage' (talk only)
+const layoutMode = ref('split') // 'split' (Tafelrunde + chat) | 'focus' (Tafelrunde only)
 const isFullscreen = ref(false)
 const videoContainer = ref(null)
 const screenVideoEl = ref(null)
@@ -55,7 +58,7 @@ const usersInVoice = computed(() => {
   return list
 })
 
-// Active screen stream (local or remote SFU stream)
+// Active screen stream (local or remote)
 const activeScreenStream = computed(() => {
   return voiceStore.localScreenStream || voiceStore.remoteScreenStream || null
 })
@@ -124,7 +127,7 @@ async function sendChatMessage() {
     chatInput.value = ''
     scrollChatToBottom()
   } catch (err) {
-    alert(err.message || 'Nachricht konnte nicht gesendet werden')
+    toasts.error(err.message || t('chat.sendFailed'))
   } finally {
     isSending.value = false
   }
@@ -140,7 +143,7 @@ async function handleFileUpload(e) {
     if (fileInput.value) fileInput.value.value = ''
     scrollChatToBottom()
   } catch (err) {
-    alert(err.message || 'Upload fehlgeschlagen')
+    toasts.error(err.message || t('chat.uploadFailed'))
   } finally {
     isUploading.value = false
   }
@@ -149,13 +152,13 @@ async function handleFileUpload(e) {
 function formatTime(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
 <template>
   <main class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
-    <!-- Top Stage Header -->
+    <!-- Tafelrunde header -->
     <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm flex-shrink-0">
@@ -164,23 +167,21 @@ function formatTime(dateStr) {
         <div class="min-w-0">
           <div class="flex items-center gap-2">
             <h2 class="font-semibold text-base leading-5 text-mnema-text truncate">
-              {{ activeVoiceChannel?.name || 'Sprachkanal' }}
+              {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
             </h2>
             <span class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0">
-              {{ usersInVoice.length }} Teilnehmer
+              {{ $t('tafelrunde.participants', { count: usersInVoice.length }) }}
             </span>
           </div>
           <div class="flex items-center gap-2 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap overflow-hidden">
-            <span>Opus 48kHz</span>
-            <span>•</span>
             <!-- Live Clickable Ping Indicator -->
             <button
               @click="voiceStore.showStatsModal = true"
               class="flex items-center gap-1 text-mnema-accent hover:underline font-semibold"
-              title="Detaillierte Verbindungsmetrik (RTC) öffnen"
+              v-tooltip="$t('voice.panel.details')"
             >
               <Activity class="w-3.5 h-3.5 text-mnema-accent" />
-              <span>Ping: {{ voiceStore.rtcStats?.rttMs ?? voiceStore.ping ?? '–' }} ms</span>
+              <span>{{ $t('tafelrunde.ping', { ms: voiceStore.rtcStats?.rttMs ?? voiceStore.ping ?? '–' }) }}</span>
             </button>
             <span>•</span>
             <!-- Noise Cancelling Status -->
@@ -190,10 +191,11 @@ function formatTime(dateStr) {
                 'flex items-center gap-1 transition',
                 voiceStore.noiseCancelling ? 'text-mnema-mint' : 'text-mnema-tertiary hover:text-mnema-text'
               ]"
-              :title="voiceStore.noiseCancelling ? 'Rauschunterdrückung des Browsers aktiv' : 'Rauschunterdrückung aus'"
+              v-tooltip="voiceStore.noiseCancelling ? $t('tafelrunde.noiseOnTip') : $t('tafelrunde.noiseOffTip')"
+              :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
             >
               <Sparkles class="w-3.5 h-3.5" />
-              <span>{{ voiceStore.noiseCancelling ? 'Rauschfilter an' : 'Filter aus' }}</span>
+              <span>{{ voiceStore.noiseCancelling ? $t('tafelrunde.noiseOn') : $t('tafelrunde.noiseOff') }}</span>
             </button>
           </div>
         </div>
@@ -201,19 +203,20 @@ function formatTime(dateStr) {
 
       <!-- Top Right Actions -->
       <div class="flex items-center gap-2 flex-shrink-0">
-        <!-- View Toggle (Split Talk+Chat vs Full Stage) -->
+        <!-- View toggle (Tafelrunde + chat vs Tafelrunde only) -->
         <button
-          @click="layoutMode = layoutMode === 'split' ? 'stage' : 'split'"
+          @click="layoutMode = layoutMode === 'split' ? 'focus' : 'split'"
           :class="[
             'h-8 flex items-center gap-1.5 px-3 rounded-md text-sm font-medium border transition whitespace-nowrap',
             layoutMode === 'split'
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
               : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:text-mnema-text'
           ]"
-          :title="layoutMode === 'split' ? 'Vollbild Talk-Bühne aktivieren' : 'Chat in der Mitte anzeigen'"
+          v-tooltip.visual="layoutMode === 'split' ? $t('tafelrunde.hideChatTip') : $t('tafelrunde.showChatTip')"
+          :aria-pressed="layoutMode === 'split' ? 'true' : 'false'"
         >
           <MessageSquare class="w-4 h-4" />
-          <span>{{ layoutMode === 'split' ? 'Chat aktiv' : 'Chat einblenden' }}</span>
+          <span>{{ layoutMode === 'split' ? $t('tafelrunde.chatShown') : $t('tafelrunde.chatHidden') }}</span>
         </button>
 
         <!-- Toggle Member List Sidebar -->
@@ -225,23 +228,24 @@ function formatTime(dateStr) {
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent' 
               : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
           ]"
-          title="Mitgliederliste ein-/ausblenden"
+          v-tooltip="$t('members.toggle')"
+          :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
         >
           <Users class="w-4 h-4" />
         </button>
       </div>
     </header>
 
-    <!-- Center Stage Container -->
+    <!-- Center container -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
-      <!-- 1. Voice Participant Stage & 4K Screen Share -->
+      <!-- 1. Participants and shared screen -->
       <div 
         :class="[
           'transition-all flex flex-col justify-center items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-shrink-0',
           layoutMode === 'split' ? 'h-64 p-4 border-b border-mnema-hairline' : 'flex-1 p-6 overflow-y-auto'
         ]"
       >
-        <!-- 4K Screen Share Spotlight Mode (if sharing or viewing) -->
+        <!-- Screen share spotlight (if sharing or viewing) -->
         <div 
           v-if="activeScreenStream" 
           ref="videoContainer"
@@ -262,13 +266,14 @@ function formatTime(dateStr) {
 
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-sm text-white">
             <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
-            <span class="font-mono font-semibold text-xs">{{ isSharingOwnScreen ? 'Eigener Bildschirm' : 'Bildschirmübertragung' }}</span>
+            <span class="font-mono font-semibold text-xs">{{ isSharingOwnScreen ? $t('tafelrunde.ownScreen') : $t('tafelrunde.sharedScreen') }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
           <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
             <button 
               @click="toggleFullscreen" 
+              v-tooltip="$t('tafelrunde.fullscreen')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
               <Maximize2 class="w-4 h-4" />
@@ -317,7 +322,7 @@ function formatTime(dateStr) {
                 {{ user.display_name || user.username }}
               </span>
               <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
-                Admin
+                {{ $t('role.admin') }}
               </span>
             </div>
 
@@ -325,16 +330,16 @@ function formatTime(dateStr) {
             <div class="text-xs font-mono mt-0.5">
               <span v-if="voiceStore.speakingUsers[user.id]" class="text-mnema-accent font-semibold flex items-center gap-1">
                 <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-                Sprachaktiv
+                {{ $t('tafelrunde.speaking') }}
               </span>
               <span v-else class="text-mnema-tertiary">
-                Bereit
+                {{ $t('tafelrunde.ready') }}
               </span>
             </div>
           </div>
         </div>
 
-        <!-- Floating Glass Audio Dock -->
+        <!-- Control dock -->
         <div class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated border border-mnema-border shadow-xl z-20">
           <!-- Mute Toggle -->
           <button
@@ -345,7 +350,8 @@ function formatTime(dateStr) {
                 ? 'bg-mnema-danger text-white' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
-            :title="voiceStore.isMuted ? 'Mikrofon aktivieren' : 'Stummschalten'"
+            :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
+            v-tooltip="voiceStore.isMuted ? $t('voice.unmute') : $t('voice.mute')"
           >
             <MicOff v-if="voiceStore.isMuted" class="w-4 h-4" />
             <Mic v-else class="w-4 h-4" />
@@ -360,12 +366,13 @@ function formatTime(dateStr) {
                 ? 'bg-mnema-danger text-white' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
-            :title="voiceStore.isDeafened ? 'Audio aktivieren' : 'Taub stellen'"
+            :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
+            v-tooltip="voiceStore.isDeafened ? $t('voice.undeafen') : $t('voice.deafen')"
           >
             <Headphones class="w-4 h-4" />
           </button>
 
-          <!-- 4K 60FPS Screen Share -->
+          <!-- Screen share -->
           <button
             @click="toggleScreenShare"
             :class="[
@@ -374,13 +381,14 @@ function formatTime(dateStr) {
                 ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
-            title="Bildschirm in 4K bei 60 FPS übertragen"
+            :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
+            v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
           >
             <Monitor class="w-4 h-4" />
-            <span class="text-sm">{{ voiceStore.isScreenSharing ? 'Stop' : '4K Screen' }}</span>
+            <span class="text-sm">{{ voiceStore.isScreenSharing ? $t('tafelrunde.stopShareShort') : $t('tafelrunde.shareShort') }}</span>
           </button>
 
-          <!-- AI Noise Cancelling Toggle -->
+          <!-- Noise filter toggle -->
           <button
             @click="voiceStore.toggleNoiseCancelling"
             :class="[
@@ -389,35 +397,36 @@ function formatTime(dateStr) {
                 ? 'bg-mnema-accent/20 text-mnema-accent border border-mnema-accent/30' 
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-tertiary'
             ]"
-            title="Rauschunterdrückung des Browsers umschalten"
+            :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
+            v-tooltip="$t('tafelrunde.noiseToggleTip')"
           >
             <Sparkles class="w-4 h-4" />
           </button>
 
-          <!-- Voice & Sensitivity (Noise Gate) Settings -->
+          <!-- Audio settings -->
           <button
             @click="voiceStore.showAudioSettings = true"
             class="p-2.5 rounded-full transition-all bg-mnema-surface hover:bg-mnema-hover text-mnema-text"
-            title="Sprach- & Empfindlichkeitseinstellungen (Noise Gate für gemeinsame Räume)"
+            v-tooltip="$t('audio.settings')"
           >
             <Sliders class="w-4 h-4" />
           </button>
 
           <div class="w-px h-5 bg-mnema-hairline mx-0.5"></div>
 
-          <!-- Disconnect Button -->
+          <!-- Leave -->
           <button
             @click="leaveVoiceChannel"
             class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold bg-mnema-danger text-white hover:bg-mnema-danger/90 transition shadow-sm"
-            title="Sprachverbindung trennen"
+            v-tooltip="$t('voice.leave')"
           >
             <PhoneOff class="w-4 h-4" />
-            <span class="text-sm">Trennen</span>
+            <span class="text-sm">{{ $t('voice.leave') }}</span>
           </button>
         </div>
       </div>
 
-      <!-- 2. Integrated Text Chat in the Center (Discord-Style in-talk chat) -->
+      <!-- 2. Tafelrunde chat -->
       <div 
         v-if="layoutMode === 'split'" 
         class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
@@ -429,9 +438,9 @@ function formatTime(dateStr) {
             <div class="w-10 h-10 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-2 text-mnema-accent bg-mnema-surface/50">
               <MessageSquare class="w-4 h-4 opacity-80" />
             </div>
-            <p class="font-semibold text-base text-mnema-text">Chat in #{{ activeVoiceChannel?.name }}</p>
+            <p class="font-semibold text-base text-mnema-text">{{ $t('tafelrunde.chatTitle', { channel: activeVoiceChannel?.name || '' }) }}</p>
             <p class="text-sm text-mnema-tertiary mt-0.5 max-w-sm">
-              Sende Nachrichten, Links und S3-Dateien direkt während des Voice-Talks.
+              {{ $t('tafelrunde.chatEmpty') }}
             </p>
           </div>
 
@@ -475,7 +484,7 @@ function formatTime(dateStr) {
                   </template>
                   <div class="p-2 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline">
                     <span class="truncate text-mnema-text">{{ att.original_filename }}</span>
-                    <span class="text-xs font-mono text-mnema-tertiary pl-2">{{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB</span>
+                    <span class="text-xs font-mono text-mnema-tertiary pl-2">{{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}</span>
                   </div>
                 </div>
               </div>
@@ -497,7 +506,7 @@ function formatTime(dateStr) {
               @click="fileInput?.click()"
               :disabled="isUploading"
               class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-              title="Datei oder Screenshot senden"
+              v-tooltip="$t('chat.upload')"
             >
               <Plus class="w-5 h-5" />
             </button>
@@ -505,7 +514,8 @@ function formatTime(dateStr) {
             <input
               v-model="chatInput"
               @keydown.enter="sendChatMessage"
-              :placeholder="`Nachricht an #${activeVoiceChannel?.name || 'talk'}...`"
+              :placeholder="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
+              :aria-label="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
               class="bg-transparent flex-1 min-w-0 outline-none text-message text-mnema-text placeholder-mnema-tertiary"
             />
 
@@ -513,7 +523,7 @@ function formatTime(dateStr) {
               @click="sendChatMessage"
               :disabled="!chatInput.trim() || isUploading"
               class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20"
-              title="Senden"
+              v-tooltip="$t('chat.send')"
             >
               <Send class="w-4 h-4" />
             </button>

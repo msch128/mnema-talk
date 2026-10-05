@@ -16,6 +16,9 @@ import AudioSettingsModal from './components/AudioSettingsModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
+import ToastHost from './components/ToastHost.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
+import ConnectionBanner from './components/ConnectionBanner.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 
@@ -24,7 +27,7 @@ const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
-// Discord-like column widths. Order = shrink priority on narrow windows
+// Column widths. Order = shrink priority on narrow windows
 // (thread first, then member list, then the left sidebar).
 const panels = useResizable([
   { name: 'left', side: 'left', defaultWidth: 240, min: 200, max: 360 },
@@ -88,7 +91,7 @@ onMounted(async () => {
       <div class="w-10 h-10 rounded-lg bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-base animate-pulse">
         M
       </div>
-      <span class="text-sm text-mnema-tertiary">Verbindung wird geprüft…</span>
+      <span class="text-sm text-mnema-tertiary">{{ $t('app.checking') }}</span>
     </div>
 
     <!-- Unauthenticated: login / invite registration -->
@@ -102,52 +105,56 @@ onMounted(async () => {
         :style="{ width: `${panels.left.width}px` }"
       >
         <Sidebar @open-admin="showAdminModal = true" @open-legal="showLegalModal = true" class="flex-1 min-h-0" />
-        <UserBar />
-        <ResizeHandle :panel="panels.left" label="Breite der Kanalliste anpassen" />
+        <UserBar @open-admin="showAdminModal = true" @open-legal="showLegalModal = true" />
+        <ResizeHandle :panel="panels.left" :label="$t('resize.sidebar')" />
       </div>
 
-      <!-- Center Space: Either Voice Talk Stage or Text Discussion Feed -->
-      <VoiceStage
-        v-if="voiceStore.activeView === 'voice' && voiceStore.isConnected"
-      />
-      <ChatArea v-else />
+      <!-- Center: connection banner, then the Tafelrunde or a text channel -->
+      <div class="flex-1 min-w-0 h-full flex flex-col">
+        <ConnectionBanner />
+        <VoiceStage
+          v-if="voiceStore.activeView === 'voice' && voiceStore.isConnected"
+          class="min-h-0"
+        />
+        <ChatArea v-else class="min-h-0" />
+      </div>
 
-      <!-- Rocket.Chat-style Thread Sidebar -->
+      <!-- Thread panel -->
       <div
         v-if="chatStore.activeThread"
         class="relative h-full flex-shrink-0"
         :style="{ width: `${panels.thread.width}px` }"
       >
         <ThreadSidebar />
-        <ResizeHandle :panel="panels.thread" label="Breite des Threads anpassen" />
+        <ResizeHandle :panel="panels.thread" :label="$t('resize.thread')" />
       </div>
 
-      <!-- Right Column: Discord-Style Member List -->
+      <!-- Right column: member list -->
       <div
         v-if="chatStore.showMemberList"
         class="relative h-full flex-shrink-0"
         :style="{ width: `${panels.members.width}px` }"
       >
         <MemberList />
-        <ResizeHandle :panel="panels.members" label="Breite der Mitgliederliste anpassen" />
+        <ResizeHandle :panel="panels.members" :label="$t('resize.members')" />
       </div>
 
-      <!-- Admin Storage & Retention Dashboard Modal -->
+      <!-- Admin console dialog -->
       <AdminDashboard v-if="showAdminModal" @close="showAdminModal = false" />
 
-      <!-- Detailed RTC Connection Stats Modal (Discord-Style Debug & Metrics) -->
+      <!-- Connection statistics dialog -->
       <ConnectionStatsModal 
         v-if="voiceStore.showStatsModal" 
         @close="voiceStore.showStatsModal = false" 
       />
 
-      <!-- Discord-Identical Audio & Sensitivity Settings Modal -->
+      <!-- Audio settings dialog -->
       <AudioSettingsModal 
         v-if="voiceStore.showAudioSettings" 
         @close="voiceStore.showAudioSettings = false" 
       />
 
-      <!-- Discord-Style User Profile Popover / Modal -->
+      <!-- User profile dialog -->
       <UserProfileModal 
         v-if="chatStore.selectedUserProfile"
         :user="chatStore.selectedUserProfile"
@@ -155,7 +162,7 @@ onMounted(async () => {
         @mention="(uname) => chatStore.insertMention(uname)"
       />
 
-      <!-- Legal & Privacy Policy Modal (DSGVO) -->
+      <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
 
       <!-- Browser blocked call audio after a reload: one click unblocks it -->
@@ -165,8 +172,11 @@ onMounted(async () => {
         class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-md bg-mnema-mint text-mnema-canvas text-sm font-semibold shadow-lg hover:brightness-110"
         @click="resumeRemoteAudio"
       >
-        Du bist wieder im Sprachkanal. Klicken, um Ton zu aktivieren
+        {{ $t('voice.audioBlocked') }}
       </button>
     </template>
+
+    <ToastHost />
+    <ConfirmDialog />
   </div>
 </template>

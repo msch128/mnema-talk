@@ -1,5 +1,6 @@
 // Turns an RTCStatsReport into the numbers the connection panel shows. Every
 // value is measured by the browser; nothing here is estimated or invented.
+import { t } from '../i18n'
 
 /**
  * @param {Iterable<object>} stats  values of an RTCStatsReport
@@ -79,7 +80,7 @@ export function summarizeStats(stats, prev = null) {
     sendKbps,
     recvKbps,
     codec: codecStat
-      ? `${codecStat.mimeType?.replace(/^audio\//, '') || '?'} ${codecStat.clockRate ? codecStat.clockRate / 1000 + ' kHz' : ''}${codecStat.channels ? ', ' + codecStat.channels + (codecStat.channels > 1 ? ' Kanäle' : ' Kanal') : ''}`.trim()
+      ? `${codecStat.mimeType?.replace(/^audio\//, '') || '?'} ${codecStat.clockRate ? codecStat.clockRate / 1000 + ' kHz' : ''}${codecStat.channels ? ', ' + t('stats.channels', { count: codecStat.channels }) : ''}`.trim()
       : null,
     localCandidate: local ? `${local.candidateType} / ${local.protocol}` : null,
     remoteCandidate: remote ? `${remote.candidateType} / ${remote.protocol}` : null,
@@ -91,9 +92,9 @@ export function summarizeStats(stats, prev = null) {
 
 /** Human rating for a measured jitter in milliseconds. */
 export function rateJitter(ms) {
-  if (ms == null) return 'keine Daten'
-  if (ms < 10) return 'sehr gut'
-  if (ms < 30) return 'gut'
-  if (ms < 60) return 'spürbar'
-  return 'schlecht'
+  if (ms == null) return t('stats.jitter.none')
+  if (ms < 10) return t('stats.jitter.veryGood')
+  if (ms < 30) return t('stats.jitter.good')
+  if (ms < 60) return t('stats.jitter.noticeable')
+  return t('stats.jitter.bad')
 }

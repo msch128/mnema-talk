@@ -1,161 +1,109 @@
 <script setup>
-import { Mic, MicOff, Headphones, Monitor, PhoneOff, LogOut, Sliders } from '@lucide/vue'
+import { Mic, MicOff, Headphones, HeadphoneOff, Sliders, MoreHorizontal } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
-import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
+import VoiceStatusPanel from './VoiceStatusPanel.vue'
+import AccountMenu from './AccountMenu.vue'
+import { ref } from 'vue'
+
+const emit = defineEmits(['open-admin', 'open-legal'])
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
-const { leaveVoiceChannel, startScreenShare, stopScreenShare } = useWebRTC()
 
-// Bottom-row toggles: 32x32 hit areas that overlap by 10px (-mx-[5px]) so the
-// four buttons take 88px of row width, leaving room for ~12-char names at the
-// default 240px. The visible hover pill is 24px wide so neighbouring icons stay clear.
-const toggleBtn = 'group/btn relative w-8 h-8 -mx-[5px] flex items-center justify-center rounded-md focus:outline-none'
-function togglePill(tone = 'default', active = false) {
-  const base = 'w-6 h-8 flex items-center justify-center rounded-md transition group-focus-visible/btn:ring-2 group-focus-visible/btn:ring-mnema-accent'
-  if (active) return [base, 'text-mnema-danger group-hover/btn:bg-mnema-danger/15']
-  return [
-    base,
-    tone === 'danger'
-      ? 'text-mnema-muted group-hover/btn:bg-mnema-danger/15 group-hover/btn:text-mnema-danger'
-      : 'text-mnema-muted group-hover/btn:bg-mnema-hover group-hover/btn:text-mnema-text'
-  ]
-}
+const menuOpen = ref(false)
+const menuButton = ref(null)
 
-function toggleScreenShare() {
-  if (voiceStore.isScreenSharing) {
-    stopScreenShare()
-  } else {
-    startScreenShare()
-  }
+const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
+function ibTone(active) {
+  return active
+    ? 'bg-mnema-danger/[0.12] text-mnema-danger'
+    : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
 }
 </script>
 
 <template>
-  <div class="bg-mnema-raised flex flex-col border-t border-mnema-hairline">
-    <!-- Active Voice Hangout Status Banner -->
-    <div 
-      v-if="voiceStore.isConnected" 
-      class="px-2 py-2 bg-mnema-band/25 border-b border-mnema-hairline flex items-center justify-between gap-2 text-sm"
-    >
-      <div 
-        @click="voiceStore.showStatsModal = true"
-        class="flex flex-col min-w-0 pl-1 cursor-pointer group/stat select-none"
-        title="Detaillierte Verbindungsmetrik (RTC) anzeigen"
-      >
-        <div class="flex items-center gap-1.5 text-mnema-mint font-medium text-xs group-hover/stat:text-mnema-accent transition">
-          <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-          <span class="truncate">Sprachchat aktiv</span>
-        </div>
-        <div class="flex items-center gap-1 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap">
-          <span class="text-mnema-accent font-semibold">{{ voiceStore.ping ?? '–' }} ms</span>
-          <span class="group-hover/stat:underline">• RTC Metrik</span>
-        </div>
-      </div>
+  <div class="relative flex flex-col bg-mnema-raised">
+    <!-- Only while connected: connection status, share, leave -->
+    <VoiceStatusPanel v-if="voiceStore.isConnected" />
 
-      <div class="flex items-center flex-shrink-0">
-        <!-- 4K 60FPS Screen Share Button -->
-        <button
-          @click="toggleScreenShare"
-          :class="[
-            'w-8 h-8 flex items-center justify-center rounded-md transition',
-            voiceStore.isScreenSharing 
-              ? 'bg-mnema-accent text-mnema-accent-ink font-semibold' 
-              : 'hover:bg-mnema-hover text-mnema-muted hover:text-mnema-text'
-          ]"
-          title="Bildschirm übertragen (bis zu 4K 60 FPS)"
-        >
-          <Monitor class="w-5 h-5" />
-        </button>
-
-        <!-- Disconnect Button -->
-        <button
-          @click="leaveVoiceChannel"
-          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-mnema-danger/15 text-mnema-muted hover:text-mnema-danger transition"
-          title="Verbindung trennen"
-        >
-          <PhoneOff class="w-5 h-5" />
-        </button>
-      </div>
-    </div>
-
-    <!-- User Identity & Audio Controls -->
-    <div class="h-[52px] pl-1 pr-2 flex items-center justify-between gap-1.5">
-      <!-- User Info -->
-      <div
+    <div class="flex h-[60px] items-center gap-0.5 border-t border-mnema-hairline pl-3 pr-1">
+      <button
+        type="button"
+        v-tooltip.visual="$t('user.openProfile')"
+        class="mr-1.5 flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 text-left transition-colors hover:bg-mnema-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
         @click="chatStore.openUserProfile(authStore.user)"
-        class="flex items-center gap-1.5 min-w-0 flex-1 cursor-pointer hover:bg-mnema-hover transition-colors group py-1 pl-0.5 pr-0.5 rounded-md"
-        title="Eigenes Profil öffnen / Avatar ändern"
       >
         <UserAvatar
           :user="authStore.user"
-          size="sm"
+          size="md"
+          show-status
+          is-online
           :is-speaking="!!voiceStore.speakingUsers[authStore.user?.id]"
         />
-        <div class="flex flex-col min-w-0 leading-tight">
-          <span class="text-sm font-semibold truncate text-mnema-text group-hover:text-mnema-accent transition-colors">
-            {{ authStore.user?.display_name || 'Herzog' }}
-          </span>
-          <span class="text-xs text-mnema-tertiary truncate">
-            {{ authStore.isAdmin ? 'Admin' : 'Mitglied' }}
-          </span>
-        </div>
-      </div>
+        <span class="flex min-w-0 flex-col leading-[18px]">
+          <span class="truncate text-sm font-semibold text-mnema-text">{{ authStore.user?.display_name || authStore.user?.username }}</span>
+          <span class="truncate text-xs text-mnema-tertiary">{{ $t('user.online') }}</span>
+        </span>
+      </button>
 
-      <!-- Action Toggles (32px hit areas, overlapping by 10px) -->
-      <div class="flex items-center flex-shrink-0">
+      <template v-if="voiceStore.isConnected">
         <button
           type="button"
-          @click="voiceStore.toggleMute"
-          :class="toggleBtn"
-          :title="voiceStore.isMuted ? 'Mikrofon stumm' : 'Stummschalten'"
+          data-testid="toggle-mute"
+          v-tooltip="voiceStore.isMuted ? $t('voice.unmute') : $t('voice.mute')"
           :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
+          :class="[ib, ibTone(voiceStore.isMuted)]"
+          @click="voiceStore.toggleMute"
         >
-          <span :class="togglePill('default', voiceStore.isMuted)">
-            <MicOff v-if="voiceStore.isMuted" class="w-[18px] h-[18px]" />
-            <Mic v-else class="w-[18px] h-[18px]" />
-          </span>
+          <MicOff v-if="voiceStore.isMuted" class="h-[18px] w-[18px]" />
+          <Mic v-else class="h-[18px] w-[18px]" />
         </button>
-
         <button
           type="button"
-          @click="voiceStore.toggleDeafen"
-          :class="toggleBtn"
-          :title="voiceStore.isDeafened ? 'Audio deaktiviert' : 'Taub stellen'"
+          data-testid="toggle-deafen"
+          v-tooltip="voiceStore.isDeafened ? $t('voice.undeafen') : $t('voice.deafen')"
           :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
+          :class="[ib, ibTone(voiceStore.isDeafened)]"
+          @click="voiceStore.toggleDeafen"
         >
-          <span :class="togglePill('default', voiceStore.isDeafened)">
-            <Headphones class="w-[18px] h-[18px]" />
-          </span>
+          <HeadphoneOff v-if="voiceStore.isDeafened" class="h-[18px] w-[18px]" />
+          <Headphones v-else class="h-[18px] w-[18px]" />
         </button>
+      </template>
 
-        <!-- Audio & Sensitivity Settings -->
-        <button
-          type="button"
-          @click="voiceStore.showAudioSettings = true"
-          :class="toggleBtn"
-          title="Sprach- & Empfindlichkeitseinstellungen (Discord-Style Noise Gate)"
-        >
-          <span :class="togglePill()">
-            <Sliders class="w-[18px] h-[18px]" />
-          </span>
-        </button>
+      <button
+        type="button"
+        v-tooltip="$t('audio.settings')"
+        :class="[ib, ibTone(false)]"
+        @click="voiceStore.showAudioSettings = true"
+      >
+        <Sliders class="h-[18px] w-[18px]" />
+      </button>
 
-        <button
-          type="button"
-          @click="authStore.logout"
-          :class="toggleBtn"
-          title="Abmelden"
-        >
-          <span :class="togglePill('danger')">
-            <LogOut class="w-[18px] h-[18px]" />
-          </span>
-        </button>
-      </div>
+      <button
+        ref="menuButton"
+        type="button"
+        data-testid="account-menu-button"
+        v-tooltip="$t('account.menu')"
+        aria-haspopup="menu"
+        :aria-expanded="menuOpen ? 'true' : 'false'"
+        :class="[ib, menuOpen ? 'bg-mnema-hover text-mnema-text' : ibTone(false)]"
+        @click="menuOpen = !menuOpen"
+      >
+        <MoreHorizontal class="h-[18px] w-[18px]" />
+      </button>
     </div>
+
+    <AccountMenu
+      v-if="menuOpen"
+      :trigger="menuButton"
+      @close="menuOpen = false"
+      @open-admin="emit('open-admin')"
+      @open-legal="emit('open-legal')"
+    />
   </div>
 </template>

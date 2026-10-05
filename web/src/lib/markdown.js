@@ -31,7 +31,7 @@ export function renderMarkdown(content) {
   text = text.replace(/\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g, url =>
     stash(`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow" class="md-link">${url}</a>`))
 
-  text = text.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="discord-spoiler" role="button" tabindex="0">$1</span>')
+  text = text.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="md-spoiler" role="button" tabindex="0">$1</span>')
   text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>')
   text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
   text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')

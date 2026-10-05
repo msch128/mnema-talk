@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { api, onUnauthorized } from '../lib/api'
+import { setLocale, browserLocale, explicitLocale, SUPPORTED } from '../i18n'
 
 // The session is an HttpOnly cookie set by the server; this store only keeps
 // the current user. Nothing secret is ever stored in localStorage.
@@ -30,6 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function checkAuth() {
     try {
       user.value = await api('/api/auth/me')
+      applyAccountLocale()
       return true
     } catch (err) {
       if (err?.status === 401) {
@@ -43,6 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username, password) {
     const data = await api('/api/auth/login', { method: 'POST', json: { username, password } })
     user.value = data.user
+    applyAccountLocale()
     return data.user
   }
 
@@ -52,7 +55,46 @@ export const useAuthStore = defineStore('auth', () => {
       json: { username, display_name: displayName, password, invite_code: inviteCode }
     })
     user.value = data.user
+    applyAccountLocale()
     return data.user
+  }
+
+  /**
+   * The UI language belongs to the account. A stored language wins; otherwise
+   * the browser decides (English for en-*, else German) and the choice is
+   * saved so it follows the account to other devices.
+   */
+  function applyAccountLocale() {
+    const stored = user.value?.locale
+    // A language picked on the login screen beats the stored one and the browser.
+    const chosen = explicitLocale()
+    if (SUPPORTED.includes(stored) && (!chosen || chosen === stored)) {
+      setLocale(stored)
+      return
+    }
+    const picked = chosen || browserLocale()
+    setLocale(picked)
+    saveLocale(picked).catch(() => {
+      // Not saved this time; the next session picks again.
+    })
+  }
+
+  async function saveLocale(l) {
+    user.value = await api('/api/users/me/locale', { method: 'PUT', json: { locale: l } })
+    return user.value
+  }
+
+  /** Language switcher in the account menu. */
+  async function changeLocale(l) {
+    if (!SUPPORTED.includes(l)) return
+    const previous = user.value?.locale
+    setLocale(l)
+    try {
+      await saveLocale(l)
+    } catch (err) {
+      if (SUPPORTED.includes(previous)) setLocale(previous)
+      throw err
+    }
   }
 
   async function uploadAvatar(file) {
@@ -90,6 +132,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     checkAuth,
+    changeLocale,
     login,
     register,
     uploadAvatar,

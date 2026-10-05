@@ -13,12 +13,12 @@ const parsedHtml = computed(() => renderMarkdown(props.content))
 
 // Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
 function toggleSpoiler(event) {
-  const spoiler = event.target.closest?.('.discord-spoiler')
+  const spoiler = event.target.closest?.('.md-spoiler')
   if (spoiler) spoiler.classList.toggle('revealed')
 }
 
 function onKeydown(event) {
-  if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('discord-spoiler')) {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('md-spoiler')) {
     event.preventDefault()
     event.target.classList.toggle('revealed')
   }
@@ -75,8 +75,8 @@ function onKeydown(event) {
   background: rgba(45, 167, 113, 0.15);
 }
 
-/* Discord spoiler: blacked out until clicked */
-.discord-spoiler {
+/* Spoiler: blacked out until clicked */
+.md-spoiler {
   background-color: #2b2d31;
   color: transparent !important;
   border-radius: 4px;
@@ -86,8 +86,8 @@ function onKeydown(event) {
   transition: all 0.15s ease;
   display: inline-block;
 }
-.discord-spoiler:hover { background-color: #35373c; }
-.discord-spoiler.revealed {
+.md-spoiler:hover { background-color: #35373c; }
+.md-spoiler.revealed {
   background-color: rgba(255, 255, 255, 0.08) !important;
   color: inherit !important;
   user-select: text !important;

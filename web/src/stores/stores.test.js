@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from './chat'
+import { useToastStore } from './toast'
 import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
+import { setLocale } from '../i18n'
 
 beforeEach(() => {
+  setLocale('de')
   setActivePinia(createPinia())
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 200, ok: true, json: () => Promise.resolve([]) }))
 })
@@ -173,7 +176,7 @@ describe('chat store history paging', () => {
     expect(chat.messages[chat.messages.length - 1].n).toBe(174)
 
     expect(await chat.jumpToMessage('gone')).toBe(false)
-    expect(chat.toast.text).toBe('Nachricht nicht gefunden')
+    expect(useToastStore().toasts.at(-1).text).toBe('Nachricht nicht gefunden')
   })
 
   it('ignores responses for a channel the user already left', async () => {

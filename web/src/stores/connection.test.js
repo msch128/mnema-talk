@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore } from './chat'
 import { useAuthStore } from './auth'
+import { setLocale } from '../i18n'
 
 // Minimal WebSocket stand-in the tests open and close by hand.
 class FakeSocket {
@@ -22,6 +23,7 @@ function jsonResponse(body, status = 200) {
 }
 
 beforeEach(() => {
+  setLocale('de')
   setActivePinia(createPinia())
   FakeSocket.instances = []
   vi.stubGlobal('WebSocket', Object.assign(FakeSocket, { OPEN: 1 }))

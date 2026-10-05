@@ -1,4 +1,4 @@
-// Remembers the voice channel across page reloads, like Discord: while in a
+// Remembers the voice channel across page reloads: while in a
 // call a heartbeat refreshes a timestamp; after a reload the client rejoins if
 // that heartbeat is younger than RESUME_WINDOW_MS. Leaving on purpose clears it.
 // The server keeps the user listed for the same window (ws.DefaultVoiceGrace).

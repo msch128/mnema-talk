@@ -3,7 +3,7 @@
 // by useResizable(); all sizing logic lives there.
 defineProps({
   panel: { type: Object, required: true },
-  label: { type: String, default: 'Breite anpassen' }
+  label: { type: String, default: '' }
 })
 </script>
 
@@ -11,7 +11,7 @@ defineProps({
   <div
     role="separator"
     aria-orientation="vertical"
-    :aria-label="label"
+    :aria-label="label || $t('resize.default')"
     :aria-valuenow="panel.width"
     :aria-valuemin="panel.min"
     :aria-valuemax="panel.maxNow"

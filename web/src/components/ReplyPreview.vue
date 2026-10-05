@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import { previewText } from '../lib/replies'
+import { t } from '../i18n'
 
-// Discord's "replied to" line above a message: curved connector into the
+// The "replied to" line above a message: curved connector into the
 // author's avatar, 16px avatar, name and a one-line snippet of the original.
 const props = defineProps({
   reply: { type: Object, required: true },
@@ -16,7 +17,7 @@ const props = defineProps({
 defineEmits(['jump'])
 
 const text = computed(() => previewText(props.reply?.content))
-const name = computed(() => props.reply?.display_name || props.reply?.username || 'Unbekannt')
+const name = computed(() => props.reply?.display_name || props.reply?.username || t('chat.unknownUser'))
 </script>
 
 <template>
@@ -35,7 +36,7 @@ const name = computed(() => props.reply?.display_name || props.reply?.username |
         class="italic text-mnema-tertiary truncate min-w-0 text-left hover:text-mnema-muted transition-colors"
         @click.stop="$emit('jump')"
       >
-        Ursprüngliche Nachricht wurde gelöscht
+        {{ $t('chat.originalDeleted') }}
       </button>
     </template>
 
@@ -45,15 +46,15 @@ const name = computed(() => props.reply?.display_name || props.reply?.username |
       <button
         type="button"
         class="reply-preview-jump flex items-center gap-1 min-w-0 text-left text-mnema-tertiary hover:text-mnema-text transition-colors cursor-pointer"
-        :title="text || undefined"
+        v-tooltip.visual="text"
         @click.stop="$emit('jump')"
       >
         <span v-if="text" class="truncate">{{ text }}</span>
         <template v-else-if="reply.has_attachments">
-          <span class="italic truncate">Klicke, um den Anhang zu sehen</span>
+          <span class="italic truncate">{{ $t('chat.seeAttachment') }}</span>
           <ImageIcon class="w-4 h-4 flex-shrink-0" />
         </template>
-        <span v-else class="italic truncate">Nachricht</span>
+        <span v-else class="italic truncate">{{ $t('chat.message') }}</span>
       </button>
     </template>
   </div>

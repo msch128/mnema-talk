@@ -10,5 +10,14 @@ import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
 import './style.css'
+import { i18nPlugin, setLocale, browserLocale } from './i18n'
+import { tooltip } from './directives/tooltip'
 
-createApp(App).use(createPinia()).mount('#app')
+// Before login the browser decides; the account's language takes over after login.
+setLocale(browserLocale())
+
+createApp(App)
+  .use(createPinia())
+  .use(i18nPlugin)
+  .directive('tooltip', tooltip)
+  .mount('#app')
