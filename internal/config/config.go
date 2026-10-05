@@ -79,6 +79,14 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		}
 		return v, nil
 	}
+	getPort := func(key string, def uint16) (uint16, error) {
+		raw := get(key, strconv.Itoa(int(def)))
+		v, err := strconv.ParseUint(raw, 10, 16)
+		if err != nil {
+			return 0, fmt.Errorf("%s must be a port number (1-65535), got %q", key, raw)
+		}
+		return uint16(v), nil
+	}
 
 	expiryHours, err := getInt("SESSION_EXPIRY_HOURS", 720)
 	if err != nil {
@@ -93,11 +101,11 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	portMin, err := getInt("WEBRTC_UDP_PORT_MIN", 50000)
+	portMin, err := getPort("WEBRTC_UDP_PORT_MIN", 50000)
 	if err != nil {
 		return nil, err
 	}
-	portMax, err := getInt("WEBRTC_UDP_PORT_MAX", 50050)
+	portMax, err := getPort("WEBRTC_UDP_PORT_MAX", 50050)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +144,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) validate(portMin, portMax int) error {
+func (c *Config) validate(portMin, portMax uint16) error {
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
@@ -147,10 +155,10 @@ func (c *Config) validate(portMin, portMax int) error {
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
 		return fmt.Errorf("PUBLIC_URL must be an absolute http(s) URL, got %q", c.PublicURL)
 	}
-	if portMin < 1 || portMax > 65535 || portMin > portMax {
+	if portMin < 1 || portMin > portMax {
 		return fmt.Errorf("invalid WebRTC UDP port range %d-%d", portMin, portMax)
 	}
-	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = uint16(portMin), uint16(portMax)
+	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = portMin, portMax
 	if c.SessionExpiryHours < 1 {
 		return fmt.Errorf("SESSION_EXPIRY_HOURS must be at least 1")
 	}
