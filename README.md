@@ -96,9 +96,28 @@ make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
 ```
 
-CI (`.github/workflows/ci.yml`) runs gitleaks, the backend suite against a
-Postgres service container, govulncheck, the frontend lint/test/build/audit and
-a Docker image build on every push to `main` and every pull request.
+### CI pipeline
+
+On every pull request and every push to `main`, `.github/workflows/ci.yml` runs
+these jobs in parallel (rough wall times with warm caches):
+
+| Job | What | Time |
+|-----|------|------|
+| `secret-scan` | gitleaks (pinned, checksum verified) over the tree and the history | < 1 min |
+| `backend` | gofmt, go vet, OpenAPI check, unit tests, unit + integration tests with coverage (Postgres service), build | 4–6 min |
+| `govulncheck` | Go vulnerability scan | 1–2 min |
+| `frontend` | eslint, vitest with coverage, build, `npm audit` | 2–3 min |
+| `docker` | image build, not pushed | 1–3 min |
+| `e2e` | Playwright smoke test against the real binary | 4–6 min |
+
+`codeql.yml` (actions, Go incl. tests and the integration tag, JS) runs on the
+same events plus weekly. Caches: Go modules and build cache per job (keyed on
+`go.sum` and the Go version), npm (`setup-node`), Playwright browsers (keyed on
+the Playwright version) and Docker layers (GitHub Actions cache, scope `image`,
+shared with the release build). A new push to a pull request cancels its
+running CI; runs for pushes to `main` always finish, because the release
+workflow starts from their result. Every job has a `timeout-minutes`; tests are
+never retried.
 
 ## Releases
 
@@ -110,7 +129,9 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
 `Release-As: 1.0.0` commit footer.
 
 1. After CI passes on a push to `main`, release-please opens or updates a
-   **release PR** that bumps `version.txt` and `CHANGELOG.md`.
+   **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run
+   for the commit that is still `main`'s tip releases; if `main` moved on, the
+   run for the newer commit decides.
 2. The release workflow merges that PR right away and publishes the GitHub
    Release and tag `vX.Y.Z` (first release: `0.1.0`), so every green push to
    `main` that contains a `feat:` or `fix:` becomes a release.
