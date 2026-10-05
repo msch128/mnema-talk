@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs'
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { brotliCompressSync, gzipSync, constants as zlib } from 'node:zlib'
 
@@ -16,6 +16,7 @@ function precompress() {
     apply: 'build',
     closeBundle() {
       const dir = fileURLToPath(new URL('./dist/assets', import.meta.url))
+      if (!existsSync(dir)) return
       for (const name of readdirSync(dir)) {
         if (!compressible.test(name)) continue
         const file = join(dir, name)

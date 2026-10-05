@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { Hash, Volume2, ShieldCheck, Crown, Plus, Trash2, ChevronDown, ChevronRight, X } from '@lucide/vue'
+import { Hash, Volume2, ShieldCheck, Crown, Plus, Trash2, ChevronDown, ChevronRight, X, Monitor } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -139,7 +139,17 @@ function voiceUsers(channel) {
   return users ? Object.values(users) : []
 }
 
-function handleVoiceClick(channel) {
+async function handleVoiceClick(channel) {
+  if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== channel.id) {
+    const ok = await confirm({
+      title: t('audio.switchChannelTitle'),
+      body: t('audio.switchChannelPrompt', { channel: channel.name }),
+      confirmLabel: t('audio.switchChannelConfirm'),
+      cancelLabel: t('common.cancel'),
+      danger: false
+    })
+    if (!ok) return
+  }
   // Select channel messages for side-chat
   chatStore.selectChannel(channel)
   // Join voice and switch to the Talk
@@ -157,6 +167,19 @@ function handleTextClick(channel) {
 function handleChannelClick(channel) {
   if (channel.type === 'voice') handleVoiceClick(channel)
   else handleTextClick(channel)
+}
+
+async function handleVoiceUserClick(channel, user) {
+  if (voiceStore.mediaState[user.id]?.screen) {
+    if (voiceStore.currentChannelId !== channel.id) {
+      await handleVoiceClick(channel)
+    } else {
+      voiceStore.activeView = 'voice'
+    }
+    voiceStore.watchScreen(user.id)
+    return
+  }
+  chatStore.openUserProfile(user)
 }
 
 // ---- Server header dropdown ----
@@ -465,8 +488,8 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 tabindex="0"
                 aria-haspopup="menu"
                 data-voice-user
-                @click="chatStore.openUserProfile(user)"
-                @keydown.enter.self.prevent="chatStore.openUserProfile(user)"
+                @click="handleVoiceUserClick(channel, user)"
+                @keydown.enter.self.prevent="handleVoiceUserClick(channel, user)"
                 @contextmenu="openMemberMenu($event, user)"
                 @keydown.f10.shift.self.prevent="openMemberMenu($event, user)"
                 @keydown.context-menu.self.prevent="openMemberMenu($event, user)"
@@ -476,7 +499,16 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                   <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
                   <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
                 </span>
-                <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 ml-auto flex-shrink-0">
+                <span
+                  v-if="voiceStore.mediaState[user.id]?.screen"
+                  class="ml-auto px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm flex-shrink-0"
+                  data-testid="sidebar-live-badge"
+                  v-tooltip="$t('talk.liveTooltip')"
+                >
+                  <Monitor class="w-3 h-3" />
+                  {{ $t('talk.live') }}
+                </span>
+                <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 ml-auto flex-shrink-0">
                   {{ $t('role.admin') }}
                 </span>
               </div>

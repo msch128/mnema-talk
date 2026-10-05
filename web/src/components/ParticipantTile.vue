@@ -2,7 +2,7 @@
 // One participant of the Talk: their camera when it is on, else their avatar.
 // A click anywhere on the tile opens their profile.
 import { ref, watch, nextTick } from 'vue'
-import { MicOff, Eye, EyeOff } from '@lucide/vue'
+import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
 
@@ -18,11 +18,19 @@ const props = defineProps({
   showStatus: { type: Boolean, default: true },
   // Their camera is running (known without receiving it) and I may hide it.
   cameraAvailable: { type: Boolean, default: false },
-  cameraHidden: { type: Boolean, default: false }
+  cameraHidden: { type: Boolean, default: false },
+  // Screen sharing state
+  isScreensharing: { type: Boolean, default: false },
+  isWatching: { type: Boolean, default: false },
+  isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera'])
+const emit = defineEmits(['open-profile', 'toggle-camera', 'watch-stream', 'stop-watching'])
 
-function openProfile() {
+function handleTileClick() {
+  if (props.isScreensharing && !props.isSelf) {
+    emit('watch-stream', props.user.id)
+    return
+  }
   emit('open-profile', props.user)
 }
 
@@ -40,17 +48,54 @@ watch(() => props.stream, (stream) => {
     tabindex="0"
     data-participant-tile
     :aria-label="$t('profile.open', { name: user.display_name || user.username })"
-    @click="openProfile"
-    @keydown.enter.self.prevent="openProfile"
-    @keydown.space.self.prevent="openProfile"
+    @click="handleTileClick"
+    @keydown.enter.self.prevent="handleTileClick"
+    @keydown.space.self.prevent="handleTileClick"
     :class="[
-      'relative cursor-pointer rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
+      'relative cursor-pointer rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent group',
       stream ? 'bg-black aspect-video' : (compact ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface'),
       speaking
         ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10'
         : 'border-mnema-hairline hover:border-mnema-border'
     ]"
   >
+    <!-- LIVE Badge -->
+    <div
+      v-if="isScreensharing"
+      data-testid="tile-live-badge"
+      class="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md shadow-red-900/40"
+    >
+      <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+      <span>{{ $t('talk.live') }}</span>
+    </div>
+
+    <!-- Watch Stream / Stop Watching Overlay on Hover -->
+    <div
+      v-if="isScreensharing && !isSelf"
+      class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2 z-20 pointer-events-none"
+    >
+      <button
+        v-if="!isWatching"
+        type="button"
+        data-testid="tile-watch-button"
+        class="pointer-events-auto px-3 py-1.5 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-xs flex items-center gap-1.5 shadow-lg transition transform active:scale-95 disabled:opacity-60"
+        :disabled="isConnecting"
+        @click.stop="$emit('watch-stream', user.id)"
+      >
+        <Monitor class="w-3.5 h-3.5" />
+        <span>{{ isConnecting ? $t('talk.screenConnecting') : $t('talk.watchStream') }}</span>
+      </button>
+      <button
+        v-else
+        type="button"
+        data-testid="tile-stop-watching-button"
+        class="pointer-events-auto px-3 py-1.5 rounded-md bg-mnema-surface border border-mnema-border text-white hover:bg-mnema-hover font-semibold text-xs flex items-center gap-1.5 shadow-lg transition"
+        @click.stop="$emit('stop-watching', user.id)"
+      >
+        <X class="w-3.5 h-3.5" />
+        <span>{{ $t('talk.stopWatching') }}</span>
+      </button>
+    </div>
     <!-- Camera -->
     <video
       v-if="stream"
