@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
+import { syncServerClock } from '../lib/clock'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 
@@ -133,8 +134,25 @@ export const useVoiceStore = defineStore('voice', () => {
   // Map of userId -> boolean (true if speaking)
   const speakingUsers = ref({})
 
+  // channelId -> ISO time the room got its first member (for the Talk timer).
+  const roomStartedAt = ref({})
+
   function setVoiceSnapshot(snapshot) {
     channelUsers.value = snapshot || {}
+  }
+
+  /** When userId joined the room they are in now ('' if in none). */
+  function joinedAtOf(userId) {
+    for (const users of Object.values(channelUsers.value)) {
+      if (users?.[userId]) return users[userId].joined_at || ''
+    }
+    return ''
+  }
+
+  /** voice_rooms: { started: { channelId: iso }, now: iso (server clock) }. */
+  function setVoiceRooms(payload) {
+    if (payload?.now) syncServerClock(payload.now)
+    roomStartedAt.value = { ...(payload?.started || {}) }
   }
 
   // --- Per-user playback (volume 0..200 %, local mute) ---
@@ -328,8 +346,14 @@ export const useVoiceStore = defineStore('voice', () => {
 
     if (action === 'join' && user) {
       channelUsers.value[channel_id][user.id] = user
+      if (update.started_at) roomStartedAt.value = { ...roomStartedAt.value, [channel_id]: update.started_at }
     } else if (action === 'leave' && user_id) {
       delete channelUsers.value[channel_id][user_id]
+      if (!Object.keys(channelUsers.value[channel_id]).length) {
+        const next = { ...roomStartedAt.value }
+        delete next[channel_id]
+        roomStartedAt.value = next
+      }
       delete speakingUsers.value[user_id]
       removeUserVideoStream(user_id)
       handleMediaState({ user_id })
@@ -479,6 +503,9 @@ export const useVoiceStore = defineStore('voice', () => {
     localAudioStream,
     remoteScreenStream,
     channelUsers,
+    roomStartedAt,
+    setVoiceRooms,
+    joinedAtOf,
     speakingUsers,
     setVoiceSnapshot,
     handleVoiceStateUpdate,

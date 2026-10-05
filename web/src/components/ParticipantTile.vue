@@ -4,6 +4,7 @@
 import { ref, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import VoiceTimer from './VoiceTimer.vue'
 
 const props = defineProps({
   user: { type: Object, required: true },
@@ -107,13 +108,20 @@ watch(() => props.stream, (stream) => {
       <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
     </div>
 
-    <!-- Status -->
-    <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5">
+    <!-- Status: speaking, and how long they have been in the Talk -->
+    <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5" data-tile-status>
       <span v-if="speaking" class="text-mnema-accent font-semibold flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-        {{ $t('talk.speaking') }}
+        {{ $t('talk.speaking') }}<template v-if="user.joined_at"> · <VoiceTimer :since="user.joined_at" /></template>
       </span>
+      <VoiceTimer v-else-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
       <span v-else class="text-mnema-tertiary">{{ $t('talk.ready') }}</span>
     </div>
+    <!-- On camera the time sits next to the name -->
+    <VoiceTimer
+      v-if="stream && user.joined_at"
+      :since="user.joined_at"
+      class="absolute right-2 bottom-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white"
+    />
   </div>
 </template>

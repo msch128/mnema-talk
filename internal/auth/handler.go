@@ -195,6 +195,9 @@ func (h *Handler) getUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := LoadStats(r.Context(), h.Sessions.DB, u); err != nil {
+		return err
+	}
 	if u.ID != UserFrom(r.Context()).ID {
 		pub := u.Public()
 		u = &pub

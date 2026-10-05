@@ -30,7 +30,7 @@ vi.mock('../composables/useWebRTC', () => ({
   })
 }))
 
-const RAW_KEY = /\b(common|chat|admin|profile|legal|talk|mention|emoji|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
+const RAW_KEY = /\b(common|chat|admin|profile|legal|talk|mention|emoji|activity|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
 
 const msg = (id, extra = {}) => ({
   id, channel_id: 'c1', user_id: 'u1', display_name: 'Herzog', username: 'herzog', content: 'Hallo **Welt**',

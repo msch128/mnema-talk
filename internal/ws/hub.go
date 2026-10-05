@@ -56,6 +56,10 @@ type Hub struct {
 	// in the room for VoiceGrace so a page reload rejoins without a leave/join
 	// flicker for everyone else (like Discord).
 	grace map[uuid.UUID]*graceLeave
+	// voiceSince is when each user in a voice room joined it; roomSince is
+	// when each room got its first member. Both survive the grace period.
+	voiceSince map[uuid.UUID]time.Time
+	roomSince  map[uuid.UUID]time.Time
 
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
@@ -82,6 +86,9 @@ func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []st
 		chosen:   map[uuid.UUID]string{},
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
 		grace:    map[uuid.UUID]*graceLeave{},
+
+		voiceSince: map[uuid.UUID]time.Time{},
+		roomSince:  map[uuid.UUID]time.Time{},
 
 		VoiceGrace: DefaultVoiceGrace,
 	}
@@ -306,6 +313,7 @@ func (h *Hub) register(c *Client) {
 	h.announcePresence(c.User.ID, before, after)
 	c.SendEvent("presence_snapshot", h.presenceSnapshot())
 	c.SendEvent("voice_snapshot", h.voiceSnapshot())
+	c.SendEvent("voice_rooms", h.voiceRooms())
 }
 
 func (h *Hub) unregister(c *Client) {
@@ -444,19 +452,37 @@ func (h *Hub) onlineUsers() []uuid.UUID {
 	return ids
 }
 
+// VoiceUser is a member of a voice room and since when they are in it.
+type VoiceUser struct {
+	auth.User
+	JoinedAt time.Time `json:"joined_at"`
+}
+
 // voiceSnapshot copies the current voice rooms (channel → users).
-func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]auth.User {
+func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	out := make(map[uuid.UUID]map[uuid.UUID]auth.User, len(h.voice))
+	out := make(map[uuid.UUID]map[uuid.UUID]VoiceUser, len(h.voice))
 	for chID, users := range h.voice {
-		cp := make(map[uuid.UUID]auth.User, len(users))
+		cp := make(map[uuid.UUID]VoiceUser, len(users))
 		for id, u := range users {
-			cp[id] = u
+			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[id]}
 		}
 		out[chID] = cp
 	}
 	return out
+}
+
+// voiceRooms says since when each voice room is occupied, plus the server's
+// clock so clients can count up without trusting their own.
+func (h *Hub) voiceRooms() map[string]any {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	started := make(map[uuid.UUID]time.Time, len(h.roomSince))
+	for id, t := range h.roomSince {
+		started[id] = t
+	}
+	return map[string]any{"started": started, "now": time.Now()}
 }
 
 // voiceChannel returns chID if it exists and is a voice channel.
@@ -490,14 +516,23 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 		}
 	}
 	h.mu.Lock()
+	now := time.Now()
 	if h.voice[ch.ID] == nil {
 		h.voice[ch.ID] = map[uuid.UUID]auth.User{}
+	}
+	if _, ok := h.roomSince[ch.ID]; !ok {
+		h.roomSince[ch.ID] = now
 	}
 	// Already present through another connection (reconnect, second tab).
 	if _, present := h.voice[ch.ID][c.User.ID]; present {
 		rejoin = true
 	}
+	if _, ok := h.voiceSince[c.User.ID]; !ok || !rejoin {
+		h.voiceSince[c.User.ID] = now
+	}
 	h.voice[ch.ID][c.User.ID] = c.User
+	joined := VoiceUser{User: c.User.Public(), JoinedAt: h.voiceSince[c.User.ID]}
+	roomStarted := h.roomSince[ch.ID]
 	h.mu.Unlock()
 	id := ch.ID
 	c.setVoice(&id)
@@ -520,7 +555,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 		}
 	}
 	if !rejoin {
-		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": c.User})
+		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted})
 	}
 }
 
@@ -592,16 +627,43 @@ func (h *Hub) leaveVoice(c *Client, chID uuid.UUID) {
 func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	h.mu.Lock()
 	_, wasIn := h.voice[chID][userID]
+	since, hadSince := h.voiceSince[userID]
+	if wasIn {
+		delete(h.voiceSince, userID)
+	}
 	if users, ok := h.voice[chID]; ok {
 		delete(users, userID)
 		if len(users) == 0 {
 			delete(h.voice, chID)
+			delete(h.roomSince, chID)
 		}
 	}
 	h.mu.Unlock()
 	if wasIn {
 		h.Broadcast("voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
+		if hadSince {
+			h.addVoiceTime(userID, time.Since(since))
+		}
 	}
+}
+
+// addVoiceTime adds one finished stay in a voice room to the user's total and
+// tells everyone the new total.
+func (h *Hub) addVoiceTime(userID uuid.UUID, d time.Duration) {
+	secs := int64(d / time.Second)
+	if h.DB == nil || secs <= 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var total int64
+	err := h.DB.QueryRow(ctx, `UPDATE users SET voice_seconds = voice_seconds + $1 WHERE id = $2 RETURNING voice_seconds`,
+		secs, userID).Scan(&total)
+	if err != nil {
+		slog.Warn("record voice time", "user", userID, "err", err)
+		return
+	}
+	h.Broadcast("user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
 }
 
 // startGrace keeps userID listed in chID for VoiceGrace, then removes them

@@ -11,6 +11,8 @@ import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
+import ActivityStats from './ActivityStats.vue'
+import VoiceTimer from './VoiceTimer.vue'
 
 const props = defineProps({
   user: {
@@ -547,6 +549,7 @@ function handleMention() {
                 <span class="font-medium">{{ $t('profile.inVoice') }}</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>
               </div>
+              <VoiceTimer :since="voiceStore.joinedAtOf(profileUser.id)" class="ml-auto text-xs" />
             </div>
             <div 
               v-else 
@@ -555,6 +558,12 @@ function handleMention() {
               <span class="w-2 h-2 rounded-full bg-mnema-tertiary"></span>
               <span>{{ $t('profile.notInVoice') }}</span>
             </div>
+          </div>
+
+          <!-- Totals: time in Talks and messages sent -->
+          <div class="mb-3">
+            <div class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary mb-1">{{ $t('activity.title') }}</div>
+            <ActivityStats :user="profileUser" variant="full" />
           </div>
 
           <!-- Membership -->

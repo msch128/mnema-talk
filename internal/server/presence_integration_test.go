@@ -215,3 +215,65 @@ func TestPresenceOverWebSocket(t *testing.T) {
 	conn.send("presence_idle", map[string]bool{"idle": false})
 	waitStatus("online")
 }
+
+func TestVoiceTimeAndMessageCounts(t *testing.T) {
+	a := newApp(t, true)
+	admin := a.seedAdmin()
+	max := a.register(admin, "max")
+	text := a.createChannel(admin, "allgemein", "text")
+	voice := a.createChannel(admin, "Spieleabend", "voice")
+	a.send(max, text, "eins")
+	a.send(max, text, "zwei")
+
+	watcher, _, err := admin.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	joiner, _, err := max.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	joiner.send("voice_join", map[string]any{"channel_id": voice})
+	raw, ok := watcher.expect("voice_state_update", 2*time.Second)
+	if !ok {
+		t.Fatal("join not announced")
+	}
+	var join struct {
+		User struct {
+			ID       uuid.UUID `json:"id"`
+			JoinedAt time.Time `json:"joined_at"`
+		} `json:"user"`
+		StartedAt time.Time `json:"started_at"`
+	}
+	_ = json.Unmarshal(raw, &join)
+	if join.User.ID != max.user.ID || join.User.JoinedAt.IsZero() || join.StartedAt.IsZero() {
+		t.Fatalf("join without times: %s", raw)
+	}
+
+	time.Sleep(1100 * time.Millisecond)
+	joiner.send("voice_leave", nil)
+	raw, ok = watcher.expect("user_stats", 3*time.Second)
+	if !ok || !strings.Contains(string(raw), max.user.ID.String()) {
+		t.Fatalf("no user_stats after leaving: %s", raw)
+	}
+
+	var members []struct {
+		Username     string `json:"username"`
+		VoiceSeconds int64  `json:"voice_seconds"`
+		MessageCount int64  `json:"message_count"`
+	}
+	admin.get("/api/members").decode(t, &members)
+	for _, m := range members {
+		if m.Username == "max" && (m.VoiceSeconds < 1 || m.MessageCount != 2) {
+			t.Fatalf("max stats: %+v", m)
+		}
+	}
+	var prof struct {
+		VoiceSeconds int64 `json:"voice_seconds"`
+		MessageCount int64 `json:"message_count"`
+	}
+	admin.get("/api/users/"+max.user.ID.String()).decode(t, &prof)
+	if prof.VoiceSeconds < 1 || prof.MessageCount != 2 {
+		t.Fatalf("profile stats: %+v", prof)
+	}
+}

@@ -12,6 +12,8 @@ import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
+import TalkParticipants from './TalkParticipants.vue'
+import VoiceTimer from './VoiceTimer.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
@@ -251,9 +253,14 @@ function formatTime(dateStr) {
             <h2 class="font-semibold text-base leading-5 text-mnema-text truncate">
               {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
             </h2>
-            <span class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0">
-              {{ $t('talk.participants', { count: usersInVoice.length }) }}
-            </span>
+            <TalkParticipants :users="usersInVoice" :started-at="voiceStore.roomStartedAt[shownChannelId] || ''" />
+            <VoiceTimer
+              v-if="voiceStore.roomStartedAt[shownChannelId]"
+              :since="voiceStore.roomStartedAt[shownChannelId]"
+              data-testid="talk-timer"
+              v-tooltip="$t('talk.runningForTip')"
+              class="text-xs text-mnema-tertiary"
+            />
           </div>
         </div>
       </div>
