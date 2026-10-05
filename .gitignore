@@ -70,5 +70,7 @@ desktop.ini
 /tmp/
 /temp/
 
-# Project specifications (must remain strictly untracked)
+# Project specifications, handoffs, scorecards and internal docs (must remain strictly untracked)
 SPEC.md
+*.spec.md
+docs/
