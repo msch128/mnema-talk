@@ -2,7 +2,7 @@
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
 import { ref, watch } from 'vue'
-import { Users, FolderTree, Link, HardDrive } from '@lucide/vue'
+import { Users, FolderTree, Link, HardDrive, Server } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { useAuthStore } from '../stores/auth'
 import BaseDialog from './BaseDialog.vue'
@@ -10,6 +10,7 @@ import AdminUsersTab from './AdminUsersTab.vue'
 import AdminLayoutTab from './AdminLayoutTab.vue'
 import AdminInvitesTab from './AdminInvitesTab.vue'
 import AdminMediaTab from './AdminMediaTab.vue'
+import AdminSystemTab from './AdminSystemTab.vue'
 
 const props = defineProps({
   initialTab: {
@@ -21,12 +22,13 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 const authStore = useAuthStore()
 
-const TABS = ['users', 'channels', 'invites', 'media']
+const TABS = ['users', 'channels', 'invites', 'media', 'system']
 const TAB_COMPONENTS = {
   users: AdminUsersTab,
   channels: AdminLayoutTab,
   invites: AdminInvitesTab,
-  media: AdminMediaTab
+  media: AdminMediaTab,
+  system: AdminSystemTab
 }
 const activeTab = ref(TABS.includes(props.initialTab) ? props.initialTab : 'users')
 
@@ -66,6 +68,7 @@ watch(activeTab, (tab) => {
         <FolderTree v-else-if="tab === 'channels'" class="w-4 h-4" />
         <Link v-else-if="tab === 'invites'" class="w-4 h-4" />
         <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />
+        <Server v-else-if="tab === 'system'" class="w-4 h-4" />
         <span>{{ $t(`admin.tabs.${tab}`) }}</span>
       </button>
     </div>
