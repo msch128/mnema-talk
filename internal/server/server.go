@@ -122,7 +122,6 @@ func NewRouter(d Deps) (*Router, error) {
 
 		api.Get("/health", health(d.DB, d.Version))
 		api.Get("/legal", legal(cfg))
-		api.Get("/webrtc/config", webrtcConfig(cfg))
 		api.Get("/ws", hub.HandleWebSocket)
 
 		api.Group(func(pub chi.Router) {
@@ -136,6 +135,7 @@ func NewRouter(d Deps) (*Router, error) {
 			authed.Group(func(j chi.Router) {
 				j.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 				authH.MountAuthenticated(j)
+				j.Get("/webrtc/config", webrtcConfig(cfg))
 				chatH.Mount(j)
 				mediaH.Mount(j)
 			})

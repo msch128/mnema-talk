@@ -4,6 +4,8 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"github.com/msch128/mnema-talk/internal/config"
 	"net/http"
 	"strings"
 	"testing"
@@ -243,5 +245,30 @@ func TestUserLocale(t *testing.T) {
 	}
 	if res := admin.put("/api/users/me/locale", map[string]string{"locale": "fr"}); res.status != http.StatusBadRequest {
 		t.Fatalf("unsupported locale accepted: %d", res.status)
+	}
+}
+
+func TestWebRTCConfigNeedsSessionAndCarriesTURN(t *testing.T) {
+	a := newAppWithConfig(t, func(c *config.Config) {
+		c.WebRTCTURNURLs = []string{"turn:turn.example.com:3478?transport=udp", "turns:turn.example.com:5349"}
+		c.WebRTCTURNSecret = "test-only-turn-secret-0123456789"
+	})
+	admin := a.seedAdmin()
+	if res := a.anon().get("/api/webrtc/config"); res.status != http.StatusUnauthorized {
+		t.Fatalf("anonymous webrtc config: %d", res.status)
+	}
+	var cfg struct {
+		IceServers []struct {
+			URLs       []string `json:"urls"`
+			Username   string   `json:"username"`
+			Credential string   `json:"credential"`
+		} `json:"ice_servers"`
+	}
+	admin.get("/api/webrtc/config").decode(t, &cfg)
+	if len(cfg.IceServers) != 1 || len(cfg.IceServers[0].URLs) != 2 || cfg.IceServers[0].Username == "" || cfg.IceServers[0].Credential == "" {
+		t.Fatalf("turn server missing: %+v", cfg)
+	}
+	if strings.Contains(fmt.Sprint(cfg), "test-only-turn-secret") {
+		t.Fatal("the TURN secret leaked to the client")
 	}
 }

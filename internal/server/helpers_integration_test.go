@@ -42,6 +42,17 @@ type app struct {
 // otherwise events are recorded.
 func newApp(t *testing.T, withHub bool) *app {
 	t.Helper()
+	return newAppWith(t, withHub, nil)
+}
+
+// newAppWithConfig is newApp (no hub) with a hook to adjust the config.
+func newAppWithConfig(t *testing.T, adjust func(*config.Config)) *app {
+	t.Helper()
+	return newAppWith(t, false, adjust)
+}
+
+func newAppWith(t *testing.T, withHub bool, adjust func(*config.Config)) *app {
+	t.Helper()
 	pool := testutil.DB(t)
 	testutil.Reset(t, pool)
 
@@ -60,6 +71,9 @@ func newApp(t *testing.T, withHub bool) *app {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if adjust != nil {
+		adjust(cfg)
 	}
 	deps := Deps{Config: cfg, DB: pool, Store: a.store}
 	if !withHub {
