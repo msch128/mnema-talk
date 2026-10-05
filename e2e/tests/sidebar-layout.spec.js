@@ -125,6 +125,7 @@ const header = (page, key) => page.locator(`[data-drop="header"][data-id="${ids[
 const toggle = (page, key) => page.locator(`[data-category-toggle="${ids[key]}"]`)
 const ghost = (page) => page.getByTestId('drag-ghost')
 const indicator = (page) => page.locator('[data-drop-indicator]')
+const tail = (page) => nav(page).locator('[data-drop-tail]')
 
 // ---- Real mouse drags ----
 
@@ -270,6 +271,45 @@ test('admin reorders with the mouse; saved, persisted and live for others', asyn
   await expectLayout(admin, step4)
 })
 
+test('the empty tail of the list appends to the last group without opening it', async () => {
+  // A strip of free space below the last channel, also in a long list.
+  expect((await tail(admin).boundingBox()).height).toBeGreaterThanOrEqual(48)
+  const { json } = await apiFetch(admin, 'GET', '/api/channels')
+  expect(json.categories.at(-1).id).toBe(ids.G)
+
+  // Open: the channel goes to the end of the last category.
+  await dropOn(admin, row(admin, 'a1'), tail(admin), 0.5)
+  await expectLayout(admin, { ...SEED, A: ['a2', 'a3'], G: ['g1', 'a1'] })
+
+  // Collapsed: holding in the tail marks the category but doesn't open it ...
+  await toggle(admin, 'G').click()
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
+  await dragTo(admin, row(admin, 'a2'), tail(admin), 0.5)
+  await expect(header(admin, 'G')).toHaveClass(/ring-mnema-accent/)
+  // (longer than the 600 ms peek delay; checking that nothing happens needs the wait)
+  await admin.waitForTimeout(1000)
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
+  // ... while holding over its header does; Escape closes it again.
+  const g = await header(admin, 'G').boundingBox()
+  await admin.mouse.move(g.x + 40, g.y + g.height * 0.6, { steps: 4 })
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'true')
+  await admin.keyboard.press('Escape')
+  await admin.mouse.up()
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
+
+  // Dropped in the tail, it goes in at the end and the category stays collapsed.
+  await dragTo(admin, row(admin, 'a2'), tail(admin), 0.5)
+  await expect(header(admin, 'G')).toHaveClass(/ring-mnema-accent/)
+  const saved = admin.waitForResponse((res) => isLayoutSave(res.request()))
+  await admin.mouse.up()
+  expect((await saved).status()).toBe(204)
+  await expect(row(admin, 'a2')).toHaveCount(0)
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'false')
+  await toggle(admin, 'G').click()
+  await expect(toggle(admin, 'G')).toHaveAttribute('aria-expanded', 'true')
+  await expectLayout(admin, { ...SEED, A: ['a3'], G: ['g1', 'a1', 'a2'] })
+})
+
 test('drag feedback: indicator, Escape cancels, a click still opens', async () => {
   const savesBefore = layoutSaves
 
@@ -330,11 +370,11 @@ test('undo from the toast restores the previous order', async () => {
 test('context menus: create, collapse and duplicate', async () => {
   const menu = admin.getByRole('menu')
 
-  // Empty part of the list → "Kategorie erstellen" → dialog → new category at
-  // the end. With a long list that is the padding below the last channel.
-  await nav(admin).evaluate((el) => { el.scrollTop = el.scrollHeight })
-  const box = await nav(admin).boundingBox()
-  await admin.mouse.click(box.x + box.width / 2, box.y + box.height - 6, { button: 'right' })
+  // Empty part of the list (the free space below the last channel, there
+  // even when the list scrolls) → "Kategorie erstellen" → dialog → new
+  // category at the end.
+  await tail(admin).scrollIntoViewIfNeeded()
+  await tail(admin).click({ button: 'right' })
   await expect(menu.getByRole('menuitem', { name: 'Kanal erstellen' })).toBeVisible()
   await menu.getByRole('menuitem', { name: 'Kategorie erstellen' }).click()
   const dialog = admin.getByRole('dialog')
@@ -546,9 +586,8 @@ test('members cannot move anything', async () => {
   await expect(menu.getByRole('menuitem', { name: 'Alle einklappen' })).toBeVisible()
   await expect(menu.getByRole('menuitem', { name: 'Kanal erstellen' })).toHaveCount(0)
   await member.keyboard.press('Escape')
-  await nav(member).evaluate((el) => { el.scrollTop = el.scrollHeight })
-  const box = await nav(member).boundingBox()
-  await member.mouse.click(box.x + box.width / 2, box.y + box.height - 6, { button: 'right' })
+  await tail(member).scrollIntoViewIfNeeded()
+  await tail(member).click({ button: 'right' })
   await expect(menu).toHaveCount(0)
 
   await expectLayout(member, SEED)
