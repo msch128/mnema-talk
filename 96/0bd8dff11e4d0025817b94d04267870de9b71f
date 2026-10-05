@@ -1,0 +1,26 @@
+web/src/lib/levelMeter.test.js
+  s_50a8e6d0bfe84a::t_168a080cd86f65 28,31-33
+  s_50a8e6d0bfe84a::t_33b6b6062843e6 1-27,29-30,34-35
+web/src/components/AudioSettingsModal.vue
+  s_50a8e6d0bfe84a::t_4a559cf2631a76 2,6,14-24,187,192-201,207,211-219,239
+web/src/components/AudioSettingsModal.test.js
+  s_50a8e6d0bfe84a::t_8e0d31d454be30 1-67
+web/src/lib/levelMeter.js
+  s_50a8e6d0bfe84a::t_aac46420943dc8 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "960bd8dff11e4d0025817b94d04267870de9b71f",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

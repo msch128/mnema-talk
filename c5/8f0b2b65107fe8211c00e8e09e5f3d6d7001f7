@@ -1,0 +1,21 @@
+release-please-config.json
+  s_50a8e6d0bfe84a::t_5a58125262dbaa 7-9
+README.md
+  s_50a8e6d0bfe84a::t_69a2f4a77515e7 105-108,112,160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c58f0b2b65107fe8211c00e8e09e5f3d6d7001f7",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

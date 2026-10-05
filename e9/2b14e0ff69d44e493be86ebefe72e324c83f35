@@ -1,0 +1,44 @@
+internal/config/config.go
+  s_50a8e6d0bfe84a::t_0ad0bd578a66a9 116,177-186,202-204
+internal/auth/service.go
+  s_50a8e6d0bfe84a::t_315f4e83c8047a 166-175,256-259
+  s_50a8e6d0bfe84a::t_f7fe816b1498bb 260-261
+internal/server/auth_integration_test.go
+  s_50a8e6d0bfe84a::t_31ea54efaa5e47 83-102
+  s_50a8e6d0bfe84a::t_315f4e83c8047a 155-173
+.env.example
+  s_50a8e6d0bfe84a::t_bcc52f608646b7 13-15
+internal/auth/handler.go
+  s_50a8e6d0bfe84a::t_3b9b8337f04b66 20-24,31-32,34-37,65-74,80
+  s_50a8e6d0bfe84a::t_615ac138e59fe8 29-30
+  s_50a8e6d0bfe84a::t_315f4e83c8047a 51,122-126
+  s_50a8e6d0bfe84a::t_c36acfcb0087c3 127-131
+internal/server/server.go
+  s_50a8e6d0bfe84a::t_0ad0bd578a66a9 84-85
+internal/httpx/middleware.go
+  s_50a8e6d0bfe84a::t_0ad0bd578a66a9 56,58,140
+docs/SCORECARD.md
+  s_50a8e6d0bfe84a::t_24c910c0c7bd5d 20-25
+internal/httpx/middleware_test.go
+  s_50a8e6d0bfe84a::t_0ad0bd578a66a9 108,157,220
+internal/config/config_test.go
+  s_50a8e6d0bfe84a::t_f79dc95294ddf3 111-128
+SECURITY.md
+  s_50a8e6d0bfe84a::t_2cb4b4551b250f 32-34,44-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e92b14e0ff69d44e493be86ebefe72e324c83f35",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

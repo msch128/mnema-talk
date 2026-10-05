@@ -1,0 +1,26 @@
+internal/auth/handler.go
+  s_50a8e6d0bfe84a::t_9a83f2b980159a 55,133-144
+  s_50a8e6d0bfe84a::t_9fb3ef0d760e24 145-147
+internal/server/auth_integration_test.go
+  s_50a8e6d0bfe84a::t_9a83f2b980159a 228-247
+internal/db/migrations/0006_user_locale.sql
+  s_50a8e6d0bfe84a::t_9a83f2b980159a 1-3
+internal/auth/service.go
+  s_50a8e6d0bfe84a::t_9a83f2b980159a 43-62,116,121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b1cdc7ed8301cd1e96d2c33b4e6ce3a260cd908e",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

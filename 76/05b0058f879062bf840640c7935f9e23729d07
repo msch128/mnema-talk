@@ -1,0 +1,25 @@
+internal/db/migrations/0007_search.sql
+  s_50a8e6d0bfe84a::t_c02e3b170751be 1-3
+internal/chat/search.go
+  s_50a8e6d0bfe84a::t_c02e3b170751be 1-103
+internal/chat/handler.go
+  s_50a8e6d0bfe84a::t_ad9caf80ede467 51,441-466
+internal/server/search_integration_test.go
+  s_50a8e6d0bfe84a::t_d19507b3fe3e9c 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7605b0058f879062bf840640c7935f9e23729d07",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

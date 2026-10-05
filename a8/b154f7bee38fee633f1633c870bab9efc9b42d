@@ -1,0 +1,26 @@
+internal/chat/readstate.go
+  s_50a8e6d0bfe84a::t_08cde531eb9826 122
+  s_50a8e6d0bfe84a::t_1168d0ba95f023 1-121,123-129
+internal/db/migrations/0005_read_state.sql
+  s_50a8e6d0bfe84a::t_1168d0ba95f023 1-13
+internal/server/readstate_integration_test.go
+  s_50a8e6d0bfe84a::t_7ff4c889ff7e10 1-104
+internal/chat/handler.go
+  s_50a8e6d0bfe84a::t_08cde531eb9826 50-53,345-439
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8b154f7bee38fee633f1633c870bab9efc9b42d",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

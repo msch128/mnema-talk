@@ -1,0 +1,23 @@
+Makefile
+  s_50a8e6d0bfe84a::t_87770b595f6d8a 6,79-81
+docs/SCORECARD.md
+  s_50a8e6d0bfe84a::t_83deb4b7b801bd 1-115
+scripts/scorecard.mjs
+  s_50a8e6d0bfe84a::t_3b9d867297977f 1-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ad864fdc5810b3ca4798a99948e5390df196f156",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
