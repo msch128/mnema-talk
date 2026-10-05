@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import VoiceStage from './VoiceStage.vue'
 import ParticipantTile from './ParticipantTile.vue'
+import PipHost from './PipHost.vue'
 import { pendingConfirm } from '../lib/confirm'
 
 const rtc = vi.hoisted(() => ({
@@ -860,6 +861,105 @@ describe('VoiceStage hide participants without video', () => {
     } finally {
       setItem.mockRestore()
     }
+  })
+})
+
+describe('VoiceStage picture-in-picture', () => {
+  let pipElement
+  let requestPip
+  beforeEach(() => {
+    pipElement = null
+    Object.defineProperty(document, 'pictureInPictureEnabled', { configurable: true, get: () => true })
+    Object.defineProperty(document, 'pictureInPictureElement', { configurable: true, get: () => pipElement })
+    requestPip = vi.fn(function () {
+      pipElement = this
+      return Promise.resolve({})
+    })
+    HTMLVideoElement.prototype.requestPictureInPicture = requestPip
+    document.exitPictureInPicture = vi.fn(() => {
+      const el = pipElement
+      pipElement = null
+      el?.dispatchEvent(new Event('leavepictureinpicture'))
+      return Promise.resolve()
+    })
+    Object.defineProperty(HTMLVideoElement.prototype, 'readyState', { configurable: true, get() { return this.srcObject ? 1 : 0 } })
+  })
+  afterEach(() => {
+    delete HTMLVideoElement.prototype.requestPictureInPicture
+    delete HTMLVideoElement.prototype.readyState
+    delete document.exitPictureInPicture
+    delete document.pictureInPictureEnabled
+    delete document.pictureInPictureElement
+  })
+
+  function cameraOnStage() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    const stream = new MediaStream()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', camera: true })
+    voice.setUserVideoStream('a', stream)
+    voice.focusCamera('a')
+    return { voice, stream }
+  }
+
+  it('is offered only where the browser has it', async () => {
+    cameraOnStage()
+    delete document.pictureInPictureEnabled
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(w.find('[data-testid="stage-pip"]').exists()).toBe(false)
+  })
+
+  it('moves the stage into the window, which keeps playing when the Talk view goes', async () => {
+    const { stream } = cameraOnStage()
+    const host = mount(PipHost, { attachTo: document.body })
+    mounted.push(host)
+    const pipVideo = host.get('video').element
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const button = w.get('[data-testid="stage-pip"]')
+    expect(button.attributes('aria-label')).toBe('Picture-in-picture')
+    await button.trigger('click')
+    await flushPromises()
+    expect(requestPip.mock.contexts[0]).toBe(pipVideo)
+    expect(pipVideo.srcObject).toBe(stream)
+    expect(button.attributes('aria-pressed')).toBe('true')
+    // The stage says where the video went and decodes nothing meanwhile.
+    expect(w.find('[data-testid="stage-in-pip"]').text()).toContain('Playing in the picture-in-picture window')
+    expect(w.get('[data-testid="stage"] video').element.srcObject).toBe(null)
+
+    // To a text channel: the stage unmounts, the window plays on.
+    w.unmount()
+    await flushPromises()
+    expect(pipVideo.srcObject).toBe(stream)
+    expect(pipElement).toBe(pipVideo)
+  })
+
+  it('"Back to the stage" closes the window and the stage plays again', async () => {
+    const { stream } = cameraOnStage()
+    mounted.push(mount(PipHost, { attachTo: document.body }))
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await w.get('[data-testid="stage-pip"]').trigger('click')
+    await flushPromises()
+    await w.get('[data-testid="stage-in-pip"] button').trigger('click')
+    await flushPromises()
+    expect(pipElement).toBe(null)
+    expect(w.find('[data-testid="stage-in-pip"]').exists()).toBe(false)
+    expect(w.get('[data-testid="stage"] video').element.srcObject).toBe(stream)
+  })
+
+  it('the stage menu has it too', async () => {
+    cameraOnStage()
+    mounted.push(mount(PipHost, { attachTo: document.body }))
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await w.get('[data-testid="stage"]').trigger('contextmenu')
+    await flushPromises()
+    const item = [...document.querySelectorAll('[role="menuitem"]')].find(i => i.textContent.includes('Picture-in-picture'))
+    item.click()
+    await flushPromises()
+    expect(requestPip).toHaveBeenCalledTimes(1)
   })
 })
 

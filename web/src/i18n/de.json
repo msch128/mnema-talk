@@ -626,7 +626,12 @@
     "hideNoVideo": "Teilnehmer ohne Video ausblenden",
     "noVideoTitle": "Gerade hat niemand Video an",
     "noVideoHint": "Teilnehmer ohne Kamera oder Bildschirmübertragung sind ausgeblendet.",
-    "showAllParticipants": "Alle Teilnehmer zeigen"
+    "showAllParticipants": "Alle Teilnehmer zeigen",
+    "pip": "Bild-im-Bild",
+    "pipExit": "Bild-im-Bild beenden",
+    "pipPlaying": "Läuft im Bild-im-Bild-Fenster",
+    "pipBack": "Zurück auf die Bühne",
+    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden"
   },
   "admin": {
     "title": "Speicher & Administration",

@@ -626,7 +626,12 @@
     "hideNoVideo": "Hide participants without video",
     "noVideoTitle": "Nobody has video on right now",
     "noVideoHint": "Participants without a camera or screen share are hidden.",
-    "showAllParticipants": "Show all participants"
+    "showAllParticipants": "Show all participants",
+    "pip": "Picture-in-picture",
+    "pipExit": "Exit picture-in-picture",
+    "pipPlaying": "Playing in the picture-in-picture window",
+    "pipBack": "Back to the stage",
+    "pipFailed": "Could not open picture-in-picture"
   },
   "admin": {
     "title": "Storage & administration",

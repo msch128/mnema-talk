@@ -22,6 +22,7 @@ import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 
@@ -369,6 +370,9 @@ onMounted(async () => {
 
       <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
+
+      <!-- The video of the Picture-in-Picture window (outlives the Talk view) -->
+      <PipHost />
 
       <!-- Browser blocked call audio after a reload: one click unblocks it -->
       <button

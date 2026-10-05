@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff,
   MessageSquare, Maximize2, Minimize2, Sparkles, Send,
-  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX
+  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX, PictureInPicture2
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -24,6 +24,7 @@ import ImageLightbox from './ImageLightbox.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useTalkStage } from '../composables/useTalkStage'
 import { useVideoGrid } from '../composables/useVideoGrid'
+import { usePictureInPicture } from '../composables/usePictureInPicture'
 import { useMessageActions, formatTime } from '../composables/useMessageActions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
@@ -257,11 +258,16 @@ onUnmounted(() => {
 })
 const ownPreviewPaused = computed(() => ownOnStage.value && !pageActive.value)
 
+// Picture-in-Picture: the stage plays in the browser's floating window (and
+// on in a text channel). Meanwhile the stage itself decodes nothing.
+const pip = usePictureInPicture()
+const pipActive = computed(() => pip.active.value)
+
 // Watch active screen stream and attach to video element
-watch([activeScreenStream, isConnectedHere, ownPreviewPaused], ([stream, , paused]) => {
+watch([activeScreenStream, isConnectedHere, ownPreviewPaused, pipActive], ([stream, , paused, inPip]) => {
   nextTick(() => {
     if (screenVideoEl.value) {
-      screenVideoEl.value.srcObject = paused ? null : stream
+      screenVideoEl.value.srcObject = paused || inPip ? null : stream
     }
   })
 }, { immediate: true })
@@ -368,6 +374,14 @@ function openStageMenu(e) {
       shortcut: 'F',
       action: () => enterFullscreen()
     }]
+    if (pip.supported) {
+      items.push({
+        id: 'pip',
+        label: pipActive.value ? t('talk.pipExit') : t('talk.pip'),
+        icon: PictureInPicture2,
+        action: () => pip.toggle()
+      })
+    }
     if (cameraOnStage.value) {
       items.push({ id: 'unfocus', label: t('talk.unfocusCamera'), icon: X, action: () => voiceStore.unfocusCamera() })
     } else if (ownOnStage.value) {
@@ -548,6 +562,23 @@ async function handleFileUpload(e) {
             <span class="text-sm text-mnema-tertiary">{{ $t('talk.ownStreamRunningHint') }}</span>
           </div>
 
+          <!-- Playing in the Picture-in-Picture window -->
+          <div
+            v-else-if="pipActive"
+            data-testid="stage-in-pip"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-mnema-canvas/95 text-center px-6"
+          >
+            <PictureInPicture2 class="w-7 h-7 text-mnema-tertiary" aria-hidden="true" />
+            <span class="text-base font-semibold text-mnema-text">{{ $t('talk.pipPlaying') }}</span>
+            <button
+              type="button"
+              class="mt-1 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition"
+              @click="pip.exit()"
+            >
+              {{ $t('talk.pipBack') }}
+            </button>
+          </div>
+
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
             <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80" />
             <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
@@ -632,6 +663,22 @@ async function handleFileUpload(e) {
               class="p-2 rounded-lg bg-mnema-danger/80 hover:bg-mnema-danger text-white transition"
             >
               <MonitorOff class="w-4 h-4" />
+            </button>
+
+            <!-- Picture-in-Picture (only where the browser has it) -->
+            <button
+              v-if="pip.supported"
+              type="button"
+              data-testid="stage-pip"
+              @click="pip.toggle()"
+              v-tooltip="pipActive ? $t('talk.pipExit') : $t('talk.pip')"
+              :aria-pressed="pipActive ? 'true' : 'false'"
+              :class="[
+                'p-2 rounded-lg text-white transition',
+                pipActive ? 'bg-mnema-accent/80 hover:bg-mnema-accent' : 'bg-black/75 hover:bg-black/90'
+              ]"
+            >
+              <PictureInPicture2 class="w-4 h-4" />
             </button>
 
             <!-- Fullscreen (also a double-click on the stage or F) -->
