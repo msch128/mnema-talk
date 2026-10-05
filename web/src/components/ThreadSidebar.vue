@@ -10,9 +10,15 @@ import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
+import ImageLightbox from './ImageLightbox.vue'
+import { previewText } from '../lib/replies'
+import { useToastStore } from '../stores/toast'
+import { confirm } from '../lib/confirm'
+import { t, locale } from '../i18n'
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const toasts = useToastStore()
 
 const replyInput = ref('')
 const repliesContainer = ref(null)
@@ -48,20 +54,26 @@ async function saveEditReply(reply) {
     editingReplyId.value = null
     editReplyText.value = ''
   } catch (err) {
-    alert(err.message || 'Fehler beim Bearbeiten')
+    toasts.error(err.message || t('chat.editFailed'))
   } finally {
     isSavingEdit.value = false
   }
 }
 
 async function handleDeleteReply(reply) {
-  if (confirm('Möchtest du diese Antwort wirklich löschen?')) {
-    try {
-      const chId = chatStore.activeChannel?.id || reply.channel_id
-      await chatStore.deleteMessage(chId, reply.id)
-    } catch (err) {
-      alert(err.message || 'Fehler beim Löschen')
-    }
+  const ok = await confirm({
+    title: t('thread.deleteTitle'),
+    body: t('chat.deleteBody'),
+    excerpt: previewText(reply.content).slice(0, 160) || (reply.attachments?.length ? t('chat.attachment') : ''),
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+  if (!ok) return
+  try {
+    const chId = chatStore.activeChannel?.id || reply.channel_id
+    await chatStore.deleteMessage(chId, reply.id)
+  } catch (err) {
+    toasts.error(err.message || t('chat.deleteFailed'))
   }
 }
 
@@ -127,12 +139,12 @@ function jumpToReplied(msg) {
   const id = msg.reply_to_id
   const container = repliesContainer.value
   if (!id || !container || msg.reply_to?.deleted) {
-    chatStore.showToast('Nachricht nicht gefunden')
+    chatStore.showToast(t('chat.messageNotFound'))
     return
   }
   const row = container.querySelector(`[data-reply-id="${id}"]`)
   if (!row) {
-    chatStore.showToast('Nachricht nicht gefunden')
+    chatStore.showToast(t('chat.messageNotFound'))
     return
   }
   row.scrollIntoView({ block: 'center' })
@@ -170,7 +182,7 @@ async function handleSendReply() {
     replyingTo.value = null
     scrollToBottom()
   } catch (err) {
-    alert(err.message || 'Antwort konnte nicht gesendet werden')
+    toasts.error(err.message || t('thread.sendFailed'))
   } finally {
     isSending.value = false
   }
@@ -199,7 +211,7 @@ async function handleFileUpload(e) {
     replyingTo.value = null
     scrollToBottom()
   } catch (err) {
-    alert(err.message || 'Upload in Thread fehlgeschlagen')
+    toasts.error(err.message || t('chat.uploadFailed'))
   } finally {
     isUploading.value = false
   }
@@ -208,13 +220,13 @@ async function handleFileUpload(e) {
 function formatTime(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
@@ -226,19 +238,18 @@ function formatDate(dateStr) {
         <MessageSquare class="w-5 h-5 text-mnema-accent flex-shrink-0" />
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="font-semibold text-base text-mnema-text flex-shrink-0">Thread</span>
+            <span class="font-semibold text-base text-mnema-text flex-shrink-0">{{ $t('thread.title') }}</span>
             <span class="text-sm text-mnema-tertiary truncate">
-              #{{ chatStore.activeChannel?.name || 'chat' }}
+              #{{ chatStore.activeChannel?.name || '' }}
             </span>
           </div>
-          <span class="text-xs text-mnema-tertiary truncate">Rocket.Chat Diskussion</span>
         </div>
       </div>
 
       <button
         @click="chatStore.closeThread"
         class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
-        title="Thread schließen"
+        v-tooltip="$t('thread.close')"
       >
         <X class="w-5 h-5" />
       </button>
@@ -260,7 +271,7 @@ function formatDate(dateStr) {
           type="button"
           @click.stop="startReply(chatStore.activeThread)"
           class="absolute right-2 top-2 hidden group-hover:flex p-1 rounded bg-mnema-elevated border border-mnema-border text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
-          title="Antworten"
+          v-tooltip="$t('chat.reply')"
         >
           <Reply class="w-3.5 h-3.5" />
         </button>
@@ -311,12 +322,12 @@ function formatDate(dateStr) {
                 </a>
               </div>
               <span class="text-xs font-mono text-mnema-tertiary">
-                {{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB
+                {{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}
               </span>
             </div>
           </div>
         </div>
-        <!-- Root Message Reactions -->
+        <!-- Root message reactions -->
         <div v-if="chatStore.activeThread.reactions && chatStore.activeThread.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
           <button 
             v-for="r in chatStore.activeThread.reactions" 
@@ -328,18 +339,18 @@ function formatDate(dateStr) {
                 ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
                 : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
             ]"
-            :title="`Reaktion ${r.emoji}`"
+            v-tooltip="$t('chat.reaction', { emoji: r.emoji })"
           >
             <span>{{ r.emoji }}</span>
             <span class="text-xs font-mono">{{ r.count }}</span>
           </button>
 
-          <!-- Discord-style Add Reaction "+" button inline with reactions -->
+          <!-- Add-reaction button inline with reactions -->
           <div class="relative reaction-picker-anchor inline-block">
             <button
               @click.stop="toggleReactionPicker(`bottom-${chatStore.activeThread.id}`)"
               class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-sm"
-              title="Reaktion hinzufügen"
+              v-tooltip="$t('chat.addReaction')"
             >
               <SmilePlus class="w-3.5 h-3.5" />
             </button>
@@ -366,7 +377,7 @@ function formatDate(dateStr) {
       <div class="flex items-center gap-2 py-1">
         <div class="flex-1 h-px bg-mnema-hairline"></div>
         <span class="text-xs text-mnema-tertiary font-mono tracking-wider uppercase">
-          {{ chatStore.threadReplies.length }} {{ chatStore.threadReplies.length === 1 ? 'Antwort' : 'Antworten' }}
+          {{ $t('chat.replies', { count: chatStore.threadReplies.length }) }}
         </span>
         <div class="flex-1 h-px bg-mnema-hairline"></div>
       </div>
@@ -374,7 +385,7 @@ function formatDate(dateStr) {
       <!-- Loading State -->
       <div v-if="chatStore.isThreadLoading" class="py-8 flex flex-col items-center justify-center text-mnema-tertiary gap-2">
         <Loader2 class="w-5 h-5 animate-spin text-mnema-accent" />
-        <span class="text-xs">Thread wird geladen...</span>
+        <span class="text-xs">{{ $t('thread.loading') }}</span>
       </div>
 
       <!-- Empty State -->
@@ -382,7 +393,7 @@ function formatDate(dateStr) {
         v-else-if="!chatStore.threadReplies.length" 
         class="py-8 text-center text-mnema-tertiary text-sm italic"
       >
-        Noch keine Antworten. Schreibe die erste Nachricht im Thread!
+        {{ $t('thread.empty') }}
       </div>
 
       <!-- Replies List -->
@@ -411,7 +422,7 @@ function formatDate(dateStr) {
                   ? 'bg-mnema-surface text-amber-400'
                   : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
               ]"
-              title="Reagieren"
+              v-tooltip="$t('chat.addReaction')"
             >
               <Smile class="w-3.5 h-3.5" />
             </button>
@@ -433,7 +444,7 @@ function formatDate(dateStr) {
           <button
             @click.stop="startReply(reply)"
             class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-            title="Antworten"
+            v-tooltip="$t('chat.reply')"
           >
             <Reply class="w-3.5 h-3.5" />
           </button>
@@ -442,7 +453,7 @@ function formatDate(dateStr) {
             v-if="reply.user_id === authStore.user?.id"
             @click.stop="startEditReply(reply)"
             class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
-            title="Antwort bearbeiten"
+            v-tooltip="$t('thread.edit')"
           >
             <Pencil class="w-3.5 h-3.5" />
           </button>
@@ -451,7 +462,7 @@ function formatDate(dateStr) {
             v-if="reply.user_id === authStore.user?.id || authStore.isAdmin"
             @click.stop="handleDeleteReply(reply)"
             class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
-            title="Antwort löschen"
+            v-tooltip="$t('thread.delete')"
           >
             <Trash2 class="w-3.5 h-3.5" />
           </button>
@@ -479,7 +490,7 @@ function formatDate(dateStr) {
               {{ reply.display_name || reply.username }}
             </span>
             <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
-            <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">(bearbeitet)</span>
+            <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
           </div>
 
           <!-- Inline Reply Editor -->
@@ -492,12 +503,12 @@ function formatDate(dateStr) {
               class="w-full text-message p-1.5 rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-none resize-none"
             ></textarea>
             <div class="flex items-center justify-between text-xs text-mnema-tertiary">
-              <span>Enter = Speichern, Esc = Abbrechen</span>
+              <span class="font-mono">{{ $t('chat.editHint') }}</span>
               <div class="flex items-center gap-1">
-                <button @click="cancelEditReply" class="px-1.5 py-0.5 text-mnema-muted hover:text-mnema-text">Abbrechen</button>
+                <button @click="cancelEditReply" class="px-1.5 py-0.5 text-mnema-muted hover:text-mnema-text">{{ $t('common.cancel') }}</button>
                 <button @click="saveEditReply(reply)" :disabled="isSavingEdit" class="px-2 py-0.5 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50">
                   <Check class="w-3.5 h-3.5" />
-                  <span>Speichern</span>
+                  <span>{{ $t('common.save') }}</span>
                 </button>
               </div>
             </div>
@@ -529,13 +540,13 @@ function formatDate(dateStr) {
                   </a>
                 </div>
                 <span class="text-xs font-mono text-mnema-tertiary">
-                  {{ (att.size_bytes / 1024 / 1024).toFixed(2) }} MB
+                  {{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- Reaction Badges (Ganz unten an der Antwort, wie in Discord) -->
+          <!-- Reaction badges -->
           <div v-if="reply.reactions && reply.reactions.length" class="flex flex-wrap gap-1 mt-1.5 items-center">
             <button 
               v-for="r in reply.reactions" 
@@ -547,18 +558,18 @@ function formatDate(dateStr) {
                   ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
                   : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
               ]"
-              :title="`Reaktion ${r.emoji}`"
+              v-tooltip="$t('chat.reaction', { emoji: r.emoji })"
             >
               <span>{{ r.emoji }}</span>
               <span class="text-xs font-mono">{{ r.count }}</span>
             </button>
 
-            <!-- Discord-style Add Reaction "+" button inline with reactions -->
+            <!-- Add-reaction button inline with reactions -->
             <div class="relative reaction-picker-anchor inline-block">
               <button
                 @click.stop="toggleReactionPicker(`bottom-${reply.id}`)"
                 class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-sm"
-                title="Reaktion hinzufügen"
+                v-tooltip="$t('chat.addReaction')"
               >
                 <SmilePlus class="w-3.5 h-3.5" />
               </button>
@@ -606,7 +617,7 @@ function formatDate(dateStr) {
           @click="fileInput?.click()"
           :disabled="isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
-          title="Bild oder Datei im Thread teilen"
+          v-tooltip="$t('thread.upload')"
         >
           <Plus class="w-5 h-5" />
         </button>
@@ -615,7 +626,8 @@ function formatDate(dateStr) {
           ref="replyTextArea"
           v-model="replyInput"
           @keydown="handleKeyDown"
-          placeholder="Im Thread antworten..."
+          :placeholder="$t('thread.placeholder')"
+          :aria-label="$t('thread.placeholder')"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
@@ -624,24 +636,14 @@ function formatDate(dateStr) {
           @click="handleSendReply"
           :disabled="!replyInput.trim() || isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
-          title="Antwort senden"
+          v-tooltip="$t('chat.send')"
         >
           <ArrowUp class="w-4 h-4" />
         </button>
       </div>
     </div>
 
-    <!-- Image Lightbox Modal -->
-    <div 
-      v-if="selectedImage" 
-      @click="selectedImage = null"
-      class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-pointer"
-    >
-      <img 
-        :src="selectedImage" 
-        alt="Vergrößertes Bild" 
-        class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl border border-mnema-border"
-      />
-    </div>
+    <!-- Image lightbox -->
+    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
   </aside>
 </template>

@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import { api } from '../lib/api'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
+import { useToastStore } from './toast'
+import { t } from '../i18n'
 import {
   PAGE_SIZE, WINDOW_CAP, emptyWindow, fromLatest, fromAround,
   prependOlder, appendNewer, appendLive, removeMessage
@@ -28,7 +30,6 @@ export const useChatStore = defineStore('chat', () => {
   const liveAppendSeq = ref(0)
   const latestLoadSeq = ref(0)
   const jumpTarget = ref(null)
-  const toast = ref(null)
   const activeThread = ref(null)
   const threadReplies = ref([])
   const isThreadLoading = ref(false)
@@ -112,7 +113,6 @@ export const useChatStore = defineStore('chat', () => {
   let windowGen = 0
   let pendingLive = []
   let jumpSeq = 0
-  let toastTimer = null
 
   function getWindow() {
     return { messages: messages.value, hasMoreBefore: hasMoreBefore.value, hasMoreAfter: hasMoreAfter.value }
@@ -155,12 +155,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function showToast(text) {
-    const id = Date.now() + Math.random()
-    toast.value = { id, text }
-    clearTimeout(toastTimer)
-    toastTimer = setTimeout(() => {
-      if (toast.value?.id === id) toast.value = null
-    }, 3000)
+    useToastStore().info(text)
   }
 
   /** Loads the newest page of a channel and replaces the window. */
@@ -253,7 +248,7 @@ export const useChatStore = defineStore('chat', () => {
       return true
     } catch (e) {
       if (gen === windowGen) {
-        showToast(e?.status === 404 ? 'Nachricht nicht gefunden' : 'Nachricht konnte nicht geladen werden')
+        showToast(e?.status === 404 ? t('chat.messageNotFound') : t('chat.messageLoadFailed'))
       }
       return false
     } finally {
@@ -382,6 +377,11 @@ export const useChatStore = defineStore('chat', () => {
   // restore their server-side state.
   const reconnectCount = ref(0)
   let hadConnection = false
+  // For the connection banner: true once the socket has been up at least once
+  // in this session, how many reconnects were tried, and when the next one runs.
+  const wasConnected = ref(false)
+  const reconnectAttempt = ref(0)
+  const nextRetryAt = ref(0)
 
   // After a reconnect, everything that changed while the socket was down is
   // fetched again: channels, members and the newest page of the open channel
@@ -395,15 +395,27 @@ export const useChatStore = defineStore('chat', () => {
     if (activeThread.value) openThread(activeThread.value)
   }
 
+  async function attemptReconnect() {
+    const signedIn = await authStore.checkAuth()
+    if (signedIn === true) initWebSocket()
+    else if (signedIn === null) scheduleReconnect() // server unreachable: keep trying
+    // false: the session is gone; the login screen takes over.
+  }
+
   function scheduleReconnect() {
     clearTimeout(reconnectTimer)
-    reconnectTimer = setTimeout(async () => {
-      const signedIn = await authStore.checkAuth()
-      if (signedIn === true) initWebSocket()
-      else if (signedIn === null) scheduleReconnect() // server unreachable: keep trying
-      // false: the session is gone; the login screen takes over.
-    }, reconnectDelay)
+    reconnectAttempt.value++
+    nextRetryAt.value = Date.now() + reconnectDelay
+    reconnectTimer = setTimeout(attemptReconnect, reconnectDelay)
     reconnectDelay = Math.min(reconnectDelay * 2, 30000)
+  }
+
+  /** "Jetzt versuchen": skip the wait and reconnect immediately. */
+  function retryNow() {
+    if (isConnected.value || ws.value) return
+    clearTimeout(reconnectTimer)
+    nextRetryAt.value = Date.now()
+    attemptReconnect()
   }
 
   function initWebSocket() {
@@ -415,6 +427,9 @@ export const useChatStore = defineStore('chat', () => {
 
     socket.onopen = () => {
       isConnected.value = true
+      wasConnected.value = true
+      reconnectAttempt.value = 0
+      nextRetryAt.value = 0
       reconnectDelay = 1000
       startPingHeartbeat()
       sendWSEvent('ping', { t: Date.now() })
@@ -444,6 +459,8 @@ export const useChatStore = defineStore('chat', () => {
 
   function closeWebSocket() {
     hadConnection = false
+    wasConnected.value = false
+    reconnectAttempt.value = 0
     clearTimeout(reconnectTimer)
     stopPingHeartbeat()
     if (ws.value) {
@@ -668,7 +685,12 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     reconnectCount,
+    wasConnected,
+    reconnectAttempt,
+    nextRetryAt,
+    retryNow,
     categories,
+    allChannels,
     uncategorized,
     activeChannel,
     messages,
@@ -681,7 +703,6 @@ export const useChatStore = defineStore('chat', () => {
     liveAppendSeq,
     latestLoadSeq,
     jumpTarget,
-    toast,
     showToast,
     loadOlder,
     loadNewer,

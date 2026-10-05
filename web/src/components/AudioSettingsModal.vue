@@ -1,9 +1,10 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { X, Mic, Sparkles, Sliders, HelpCircle, Radio } from '@lucide/vue'
+import { Mic, Sparkles, HelpCircle, Radio } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
+import BaseDialog from './BaseDialog.vue'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
@@ -73,34 +74,14 @@ async function toggleEcho() {
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 select-none">
-    <div class="bg-mnema-elevated w-full max-w-xl rounded-xl flex flex-col shadow-2xl border border-mnema-border overflow-hidden">
-      <!-- Header -->
-      <header class="px-6 py-4 border-b border-mnema-hairline flex items-center justify-between bg-mnema-raised">
-        <div class="flex items-center gap-2.5">
-          <div class="w-7 h-7 rounded-md bg-mnema-band text-mnema-mint flex items-center justify-center text-sm font-semibold">
-            <Sliders class="w-4 h-4" />
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-mnema-text">Sprach- & Audio-Einstellungen</h2>
-            <p class="text-xs text-mnema-tertiary font-mono">Eingabeempfindlichkeit & Raumakustik</p>
-          </div>
-        </div>
-
-        <button 
-          @click="emit('close')"
-          class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
-        >
-          <X class="w-4 h-4" />
-        </button>
-      </header>
-
+  <BaseDialog :title="$t('audio.settings')" :subtitle="$t('audio.subtitle')" panel-class="max-w-xl select-none" @close="emit('close')">
+    <div class="contents">
       <!-- Settings Body -->
       <div class="p-6 space-y-6 overflow-y-auto max-h-[80vh]">
-        <!-- 1. Input Mode Selection (Voice Activity vs PTT) -->
+        <!-- 1. Input mode (voice activity or push-to-talk) -->
         <div class="space-y-2">
           <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-            Eingabemodus
+            {{ $t('audio.inputMode') }}
           </label>
           <div class="grid grid-cols-2 gap-3">
             <button
@@ -117,8 +98,8 @@ async function toggleEcho() {
                 <Mic class="w-4 h-4" />
               </div>
               <div>
-                <div class="text-sm font-semibold">Sprachaktivierung</div>
-                <div class="text-xs text-mnema-tertiary">Mikrofon öffnet per Pegel</div>
+                <div class="text-sm font-semibold">{{ $t('audio.activity') }}</div>
+                <div class="text-xs text-mnema-tertiary">{{ $t('audio.activityHint') }}</div>
               </div>
             </button>
 
@@ -136,17 +117,17 @@ async function toggleEcho() {
                 <Radio class="w-4 h-4" />
               </div>
               <div>
-                <div class="text-sm font-semibold">Push-to-Talk</div>
-                <div class="text-xs text-mnema-tertiary">Taste gedrückt halten</div>
+                <div class="text-sm font-semibold">{{ $t('audio.ptt') }}</div>
+                <div class="text-xs text-mnema-tertiary">{{ $t('audio.pttHint') }}</div>
               </div>
             </button>
           </div>
         </div>
 
-        <!-- Push-to-Talk Keybind Selector (if PTT active) -->
+        <!-- Push-to-talk key (if active) -->
         <div v-if="voiceStore.inputMode === 'ptt'" class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline space-y-2">
           <div class="flex items-center justify-between text-sm">
-            <span class="text-mnema-tertiary font-medium">Push-to-Talk Taste</span>
+            <span class="text-mnema-tertiary font-medium">{{ $t('audio.pttKey') }}</span>
             <button
               @click="isRecordingPttKey = true"
               @keydown="handleKeyRecord"
@@ -157,19 +138,19 @@ async function toggleEcho() {
                   : 'bg-mnema-canvas border-mnema-border text-mnema-text hover:border-mnema-accent'
               ]"
             >
-              {{ isRecordingPttKey ? 'Taste drücken...' : voiceStore.pttKey }}
+              {{ isRecordingPttKey ? $t('audio.pressKey') : voiceStore.pttKey }}
             </button>
           </div>
           <p class="text-xs text-mnema-tertiary">
-            Klicke auf die Taste und drücke deine gewünschte Taste (z.B. Leertaste, Strg, Mausbutton).
+            {{ $t('audio.pttKeyHint') }}
           </p>
         </div>
 
-        <!-- 2. Discord-Identical Input Sensitivity & Live Meter (Voice Activity Mode) -->
+        <!-- 2. Input sensitivity and live meter (voice activity mode) -->
         <div v-if="voiceStore.inputMode === 'activity'" class="space-y-3">
           <div class="flex items-center justify-between">
             <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-              Eingabeempfindlichkeit (Noise Gate)
+              {{ $t('audio.sensitivity') }}
             </label>
             <label class="flex items-center gap-2 cursor-pointer text-sm text-mnema-tertiary hover:text-mnema-text">
               <input
@@ -178,15 +159,15 @@ async function toggleEcho() {
                 @change="voiceStore.saveSettings"
                 class="rounded border-mnema-border bg-mnema-canvas text-mnema-accent focus:ring-0"
               />
-              <span>Automatisch ermitteln</span>
+              <span>{{ $t('audio.auto') }}</span>
             </label>
           </div>
 
-          <!-- Live Visual Volume Meter & Threshold Slider -->
+          <!-- Live level meter and threshold slider -->
           <div class="space-y-2">
             <!-- Level bar: amber below the threshold (not transmitted), green above it (transmitted) -->
             <div class="relative h-6 bg-mnema-canvas rounded-lg border border-mnema-border overflow-hidden p-0.5 flex items-center">
-              <!-- Live Level Fill -->
+              <!-- Live level fill -->
               <div
                 class="h-full rounded transition-all duration-75"
                 :class="isAboveThreshold ? 'bg-mnema-accent' : 'bg-mnema-warning'"
@@ -201,7 +182,7 @@ async function toggleEcho() {
                 :style="{ left: `${peakLevel}%` }"
               ></div>
 
-              <!-- Threshold Marker Line -->
+              <!-- Threshold marker -->
               <div
                 class="absolute top-0 bottom-0 w-1 bg-white shadow-lg pointer-events-none z-10 transition-all"
                 :style="{ left: `${threshold}%` }"
@@ -210,17 +191,18 @@ async function toggleEcho() {
 
             <div class="flex items-center justify-between text-xs font-mono text-mnema-tertiary">
               <span :class="isAboveThreshold ? 'text-mnema-accent font-bold' : 'text-mnema-warning'">
-                Aktueller Pegel: {{ voiceStore.currentInputLevel }}% · Spitze: {{ peakLevel }}%
+                {{ $t('audio.level', { level: voiceStore.currentInputLevel, peak: peakLevel }) }}
               </span>
               <span class="text-mnema-text font-bold">
-                Schwellenwert: {{ threshold }}%
+                {{ $t('audio.threshold', { value: threshold }) }}
               </span>
             </div>
 
-            <!-- Manual Slider Control -->
+            <!-- Manual slider -->
             <div v-if="!voiceStore.autoSensitivity" class="space-y-1">
               <input
                 type="range"
+                :aria-label="$t('audio.sensitivity')"
                 min="0"
                 max="100"
                 v-model="voiceStore.sensitivityThreshold"
@@ -229,39 +211,42 @@ async function toggleEcho() {
               />
             </div>
 
-            <!-- Helpful Room Advice Note -->
+            <!-- Advice for shared rooms -->
             <div class="p-3 rounded-lg bg-mnema-surface border border-mnema-hairline text-sm text-mnema-tertiary space-y-1">
               <div class="flex items-center gap-1.5 text-mnema-text font-semibold text-xs">
                 <HelpCircle class="w-4 h-4 text-mnema-mint" />
-                <span>Empfehlung für gemeinsame Räume / zwei Personen:</span>
+                <span>{{ $t('audio.adviceTitle') }}</span>
               </div>
               <p class="text-xs leading-relaxed">
-                Lasse deine Freundin hinter dir normal sprechen und beobachte den Ausschlag oben: Stelle den Schieberegler so ein, dass ihre Hintergrundstimme <strong>unterhalb</strong> des weißen Strichs im gelben Bereich bleibt (ca. <strong>30% – 45%</strong>). Sobald du selbst sprichst, schlägt die Leiste grün über den Strich aus und überträgt nur deine Stimme.
+                {{ $t('audio.advice') }}
               </p>
             </div>
           </div>
         </div>
 
-        <!-- 3. Audio Processing Settings (Crucial AGC Toggle for Shared Rooms) -->
+        <!-- 3. Audio processing -->
         <div class="space-y-2">
           <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-            Erweiterte Sprachverarbeitung
+            {{ $t('audio.processing') }}
           </label>
 
           <div class="rounded-lg bg-mnema-surface border border-mnema-hairline divide-y divide-mnema-hairline">
-            <!-- Automatic Gain Control (AGC) Toggle -->
+            <!-- Automatic gain control -->
             <div class="p-3.5 flex items-start justify-between gap-4">
               <div class="space-y-0.5">
                 <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
-                  <span>Automatische Lautstärkeregelung (AGC)</span>
-                  <span class="text-xs px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 font-mono">Wichtig bei 2 Personen</span>
+                  <span>{{ $t('audio.agc') }}</span>
+                  <span class="text-xs px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-400 font-mono">{{ $t('audio.agcBadge') }}</span>
                 </div>
                 <p class="text-xs text-mnema-tertiary leading-relaxed">
-                  <strong>Empfohlen: DEAKTIVIERT.</strong> Wenn AGC aktiv ist, pegelt das Mikrofon in Sprechpausen leise Geräusche künstlich hoch – wodurch die Stimme im Hintergrund laut übertragen wird.
+                  {{ $t('audio.agcHint') }}
                 </p>
               </div>
               <button
                 @click="toggleAgc"
+                role="switch"
+                :aria-checked="voiceStore.autoGainControl ? 'true' : 'false'"
+                :aria-label="$t('audio.agc')"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.autoGainControl ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
@@ -271,20 +256,23 @@ async function toggleEcho() {
               </button>
             </div>
 
-            <!-- Browser noise suppression (getUserMedia noiseSuppression) -->
+            <!-- Noise suppression -->
             <div class="p-3.5 flex items-start justify-between gap-4">
               <div class="space-y-0.5">
                 <div class="text-sm font-semibold text-mnema-text flex items-center gap-1.5">
                   <Sparkles class="w-4 h-4 text-mnema-mint" />
-                  <span>Rauschunterdrückung</span>
-                  <span class="text-xs px-1.5 py-0.2 rounded bg-mnema-accent/15 text-mnema-accent font-mono">Browser</span>
+                  <span>{{ $t('audio.noise') }}</span>
+                  <span class="text-xs px-1.5 py-0.2 rounded bg-mnema-accent/15 text-mnema-accent font-mono">{{ $t('audio.noiseBadge') }}</span>
                 </div>
                 <p class="text-xs text-mnema-tertiary leading-relaxed">
-                  Die eingebaute Rauschunterdrückung deines Browsers dämpft gleichmäßige Hintergrundgeräusche wie Lüfter oder Brummen.
+                  {{ $t('audio.noiseHint') }}
                 </p>
               </div>
               <button
                 @click="toggleNoise"
+                role="switch"
+                :aria-checked="voiceStore.noiseCancelling ? 'true' : 'false'"
+                :aria-label="$t('audio.noise')"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.noiseCancelling ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
@@ -294,16 +282,19 @@ async function toggleEcho() {
               </button>
             </div>
 
-            <!-- Echo Cancellation -->
+            <!-- Echo cancellation -->
             <div class="p-3.5 flex items-start justify-between gap-4">
               <div class="space-y-0.5">
-                <div class="text-sm font-semibold text-mnema-text">Echounterdrückung (AEC)</div>
+                <div class="text-sm font-semibold text-mnema-text">{{ $t('audio.echo') }}</div>
                 <p class="text-xs text-mnema-tertiary leading-relaxed">
-                  Verhindert Rückkopplungen und Echos, falls Ton aus Lautsprechern wieder ins Mikrofon gelangt.
+                  {{ $t('audio.echoHint') }}
                 </p>
               </div>
               <button
                 @click="toggleEcho"
+                role="switch"
+                :aria-checked="voiceStore.echoCancellation ? 'true' : 'false'"
+                :aria-label="$t('audio.echo')"
                 :class="[
                   'w-10 h-5 rounded-full transition-colors relative flex items-center px-0.5 flex-shrink-0 mt-1',
                   voiceStore.echoCancellation ? 'bg-mnema-accent' : 'bg-mnema-canvas border border-mnema-border'
@@ -315,27 +306,27 @@ async function toggleEcho() {
           </div>
         </div>
 
-        <!-- 4. Device Selection -->
+        <!-- 4. Devices -->
         <div class="space-y-3">
           <label class="text-xs font-semibold text-mnema-tertiary uppercase tracking-wider font-mono">
-            Geräteauswahl
+            {{ $t('audio.devices') }}
           </label>
 
           <div class="space-y-2">
             <div>
-              <label class="text-xs text-mnema-tertiary font-mono block mb-1">Eingabegerät (Mikrofon)</label>
+              <label class="text-xs text-mnema-tertiary font-mono block mb-1">{{ $t('audio.inputDevice') }}</label>
               <select
                 v-model="voiceStore.selectedInputDeviceId"
                 @change="handleDeviceChange"
                 class="w-full bg-mnema-canvas border border-mnema-border rounded-lg px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent focus:ring-1 focus:ring-mnema-accent"
               >
-                <option value="">(Standard Mikrofon des Systems)</option>
+                <option value="">{{ $t('audio.defaultDevice') }}</option>
                 <option 
                   v-for="dev in voiceStore.availableInputDevices" 
                   :key="dev.deviceId" 
                   :value="dev.deviceId"
                 >
-                  {{ dev.label || `Mikrofon ${dev.deviceId.slice(0, 5)}...` }}
+                  {{ dev.label || $t('audio.deviceFallback', { id: dev.deviceId.slice(0, 5) }) }}
                 </option>
               </select>
             </div>
@@ -346,15 +337,15 @@ async function toggleEcho() {
       <!-- Footer -->
       <footer class="px-6 py-3.5 border-t border-mnema-hairline bg-mnema-raised flex items-center justify-between">
         <span class="text-xs text-mnema-tertiary font-mono">
-          Änderungen werden sofort aktiv
+          {{ $t('audio.liveNote') }}
         </span>
         <button
           @click="emit('close')"
           class="px-5 py-2 rounded-lg bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition shadow-sm"
         >
-          Fertig
+          {{ $t('audio.done') }}
         </button>
       </footer>
     </div>
-  </div>
+  </BaseDialog>
 </template>

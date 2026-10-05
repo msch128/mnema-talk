@@ -1,6 +1,6 @@
 import { reactive, ref, computed, onScopeDispose } from 'vue'
 
-// Discord-like resizable side panels.
+// Resizable side panels.
 //
 // Each panel keeps a *preferred* width (what the user dragged to, persisted in
 // localStorage) and an *effective* width (preferred width squeezed so the

@@ -1,4 +1,4 @@
-// Discord-style sidebar structure: uncategorized channels first, then every
+// Sidebar structure: uncategorized channels first, then every
 // category in sort order with all of its channels (text and voice mixed).
 
 const bySortOrder = list =>

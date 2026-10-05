@@ -1,4 +1,5 @@
-// Helpers for Discord-style reply previews (message.reply_to).
+// Helpers for reply previews (message.reply_to).
+import { t } from '../i18n'
 
 export const REPLY_PREVIEW_LEN = 200
 
@@ -9,7 +10,7 @@ export function replySnippet(content, max = REPLY_PREVIEW_LEN) {
 }
 
 /**
- * Strips Discord-style markdown markers so a reply preview reads as plain
+ * Strips markdown markers so a reply preview reads as plain
  * text: **bold**, *em*, _em_, ~~del~~, `code` and code blocks keep their text,
  * ||spoilers|| become "Spoiler", "> " quote markers are dropped. Links stay.
  */
@@ -21,7 +22,7 @@ export function stripMarkdown(content) {
   text = text.replace(/```(?:[a-zA-Z0-9_-]+\n)?([\s\S]*?)```/g, (_, body) => stash(body.trim()))
   text = text.replace(/`([^`\n]+)`/g, (_, body) => stash(body))
 
-  text = text.replace(/\|\|([\s\S]+?)\|\|/g, 'Spoiler')
+  text = text.replace(/\|\|([\s\S]+?)\|\|/g, () => t('chat.spoiler'))
   text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, '$1')
   text = text.replace(/\*\*([^*\n]+)\*\*/g, '$1')
   text = text.replace(/__([^_\n]+)__/g, '$1')

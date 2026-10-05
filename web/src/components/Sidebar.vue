@@ -7,6 +7,9 @@ import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
 import UserAvatar from './UserAvatar.vue'
+import { useToastStore } from '../stores/toast'
+import { confirm } from '../lib/confirm'
+import { t } from '../i18n'
 import { buildChannelTree, loadCollapsed, saveCollapsed } from '../lib/channelTree'
 
 const SERVER_NAME = 'Mnema Talk'
@@ -16,6 +19,7 @@ const emit = defineEmits(['open-admin', 'open-legal'])
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const authStore = useAuthStore()
+const toasts = useToastStore()
 const { joinVoiceChannel } = useWebRTC()
 
 const showCreateChannelModal = ref(false)
@@ -29,21 +33,35 @@ function openCreateChannel(type = 'text', categoryId = '') {
 }
 
 async function handleDeleteChannel(channel) {
-  const icon = channel.type === 'voice' ? '🔊' : '#'
-  if (!confirm(`Möchtest du den Kanal "${icon} ${channel.name}" wirklich unwiderruflich löschen?`)) return
+  const isVoice = channel.type === 'voice'
+  const ok = await confirm({
+    title: t(isVoice ? 'sidebar.deleteVoiceChannelTitle' : 'sidebar.deleteChannelTitle', { name: channel.name }),
+    body: t(isVoice ? 'sidebar.deleteVoiceChannelBody' : 'sidebar.deleteChannelBody'),
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+  if (!ok) return
   try {
     await chatStore.deleteChannel(channel.id)
+    toasts.success(t('sidebar.channelDeleted'))
   } catch (err) {
-    alert(err.message || 'Löschen fehlgeschlagen')
+    toasts.error(err.message || t('sidebar.deleteFailed'))
   }
 }
 
 async function handleDeleteCategory(category) {
-  if (!confirm(`Möchtest du die Kategorie "${category.name}" löschen? (Enthaltene Kanäle bleiben erhalten)`)) return
+  const ok = await confirm({
+    title: t('sidebar.deleteCategoryTitle', { name: category.name }),
+    body: t('sidebar.deleteCategoryBody'),
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+  if (!ok) return
   try {
     await chatStore.deleteCategory(category.id)
+    toasts.success(t('sidebar.categoryDeleted'))
   } catch (err) {
-    alert(err.message || 'Löschen fehlgeschlagen')
+    toasts.error(err.message || t('sidebar.deleteFailed'))
   }
 }
 
@@ -75,7 +93,7 @@ function isVoiceActive(channel) {
   return voiceStore.currentChannelId === channel.id && voiceStore.activeView === 'voice'
 }
 
-// Like Discord, a collapsed category still shows the selected text channel
+// A collapsed category still shows the selected text channel
 // and the voice channel you're connected to.
 function visibleChannels(category) {
   if (category.headless || !collapsed.value.has(category.id)) return category.channels
@@ -98,7 +116,7 @@ function voiceUsers(channel) {
 function handleVoiceClick(channel) {
   // Select channel messages for side-chat
   chatStore.selectChannel(channel)
-  // Join voice and switch to voice stage
+  // Join voice and switch to the Tafelrunde
   joinVoiceChannel(channel.id)
   voiceStore.activeView = 'voice'
 }
@@ -201,7 +219,7 @@ onUnmounted(() => {
 
 watch(() => authStore.isAdmin, () => closeMenu())
 
-// Shared Discord-like row styling (34px channel rows, rounded hover/selected states).
+// Shared row styling (34px channel rows, rounded hover/selected states).
 const rowBase = 'relative w-full h-[34px] flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors group cursor-pointer text-left min-w-0'
 function rowClass(active) {
   return [
@@ -228,7 +246,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
           'w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
           menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
         ]"
-        :title="SERVER_NAME"
+        v-tooltip.visual="SERVER_NAME"
         @click="toggleMenu"
         @keydown="onMenuButtonKeydown"
       >
@@ -238,7 +256,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         </span>
         <span class="flex flex-col min-w-0 flex-1">
           <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
-          <span class="text-xs text-mnema-tertiary truncate">Private Community</span>
+          <span class="text-xs text-mnema-tertiary truncate">{{ $t('sidebar.subtitle') }}</span>
         </span>
         <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
         <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />
@@ -249,52 +267,30 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         id="server-menu"
         ref="menuEl"
         role="menu"
-        aria-label="Server-Menü"
+        :aria-label="$t('sidebar.menu')"
         class="absolute left-2 top-[52px] z-40 w-max min-w-[calc(100%-16px)] max-w-[calc(100vw-16px)] p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-xl"
         @keydown="onMenuKeydown"
       >
         <template v-if="authStore.isAdmin">
           <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
-            <span class="truncate">Admin-Konsole</span>
+            <span class="truncate">{{ $t('menu.adminConsole') }}</span>
             <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
           </button>
           <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateChannel('text'))">
-            <span class="truncate">Kanal erstellen</span>
+            <span class="truncate">{{ $t('channel.create') }}</span>
             <Plus class="w-4 h-4 flex-shrink-0" />
           </button>
           <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
         </template>
         <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
-          <span class="truncate">Rechtliches &amp; Datenschutz</span>
+          <span class="truncate">{{ $t('menu.legal') }}</span>
           <ShieldCheck class="w-4 h-4 flex-shrink-0" />
         </button>
       </div>
     </div>
 
     <!-- Navigation Scroll Area -->
-    <nav class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4" aria-label="Kanäle">
-      <!-- Active Voice Room Jump Button (if connected) -->
-      <div v-if="voiceStore.isConnected" class="mb-3">
-        <button
-          @click="voiceStore.activeView = 'voice'"
-          :class="[
-            'w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md border transition text-left min-w-0',
-            voiceStore.activeView === 'voice'
-              ? 'bg-mnema-accent-subtle border-mnema-accent text-mnema-accent'
-              : 'bg-mnema-surface border-mnema-hairline text-mnema-text hover:border-mnema-border-strong'
-          ]"
-        >
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)] flex-shrink-0"></span>
-            <div class="flex flex-col min-w-0">
-              <span class="text-sm font-semibold truncate">Talk-Bühne öffnen</span>
-              <span class="text-xs text-mnema-tertiary truncate">Aktiver Hangout</span>
-            </div>
-          </div>
-          <Volume2 class="w-5 h-5 text-mnema-accent flex-shrink-0" />
-        </button>
-      </div>
-
+    <nav class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4" :aria-label="$t('sidebar.channels')">
       <!-- Uncategorized channels first (headless section), then the categories -->
       <section
         v-for="category in sections"
@@ -319,14 +315,14 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
           >
             <button
               @click.stop="openCreateChannel(defaultTypeFor(category), category.id)"
-              title="Kanal erstellen"
+              v-tooltip="$t('channel.create')"
               class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-text transition"
             >
               <Plus class="w-4 h-4" />
             </button>
             <button
               @click.stop="handleDeleteCategory(category)"
-              title="Kategorie löschen"
+              v-tooltip="$t('sidebar.deleteCategory')"
               class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition"
             >
               <Trash2 class="w-3.5 h-3.5" />
@@ -360,7 +356,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               <button
                 v-if="authStore.isAdmin"
                 @click.stop="handleDeleteChannel(channel)"
-                :title="channel.type === 'voice' ? 'Voice-Hangout löschen' : 'Kanal löschen'"
+                v-tooltip="channel.type === 'voice' ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
                 class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
               >
                 <Trash2 class="w-4 h-4" />
@@ -377,7 +373,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 <UserAvatar :user="user" size="xs" :is-speaking="!!voiceStore.speakingUsers[user.id]" />
                 <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
                 <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 ml-auto flex-shrink-0">
-                  Admin
+                  {{ $t('role.admin') }}
                 </span>
               </div>
             </div>
@@ -387,7 +383,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             v-if="!category.headless && !category.channels.length && !collapsed.has(category.id)"
             class="px-2 py-1 text-sm text-mnema-tertiary italic truncate"
           >
-            Keine Kanäle
+            {{ $t('sidebar.noChannels') }}
           </div>
         </div>
       </section>

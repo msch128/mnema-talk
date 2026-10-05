@@ -5,6 +5,10 @@ import { nextTick } from 'vue'
 import AudioSettingsModal from './AudioSettingsModal.vue'
 import { useVoiceStore } from '../stores/voice'
 import { AUTO_THRESHOLD } from '../lib/levelMeter'
+import { i18nPlugin } from '../i18n'
+import { tooltip } from '../directives/tooltip'
+
+const mountOpts = { global: { plugins: [i18nPlugin], directives: { tooltip } } }
 
 vi.mock('../composables/useWebRTC', () => ({
   useWebRTC: () => ({
@@ -34,19 +38,19 @@ describe('AudioSettingsModal level meter', () => {
 
   it('shows the level visibly when it is below a high threshold', async () => {
     voice.sensitivityThreshold = 80
-    const wrapper = mount(AudioSettingsModal)
+    const wrapper = mount(AudioSettingsModal, mountOpts)
     voice.currentInputLevel = 40
     await nextTick()
 
     const { fill } = meter(wrapper)
     expect(fill.attributes('style')).toContain('width: 40%')
     expect(fill.classes()).toContain('bg-mnema-warning')
-    expect(wrapper.text()).toContain('Aktueller Pegel: 40%')
+    expect(wrapper.text()).toContain('Pegel 40 %')
   })
 
   it('turns green once the level reaches the threshold', async () => {
     voice.sensitivityThreshold = 30
-    const wrapper = mount(AudioSettingsModal)
+    const wrapper = mount(AudioSettingsModal, mountOpts)
     voice.currentInputLevel = 45
     await nextTick()
 
@@ -56,13 +60,13 @@ describe('AudioSettingsModal level meter', () => {
   it('places the marker at the threshold the gate uses in auto mode', async () => {
     voice.sensitivityThreshold = 80
     voice.autoSensitivity = true
-    const wrapper = mount(AudioSettingsModal)
+    const wrapper = mount(AudioSettingsModal, mountOpts)
     voice.currentInputLevel = 40
     await nextTick()
 
     const { fill, threshold } = meter(wrapper)
     expect(threshold.attributes('style')).toContain(`left: ${AUTO_THRESHOLD}%`)
     expect(fill.classes()).toContain('bg-mnema-accent')
-    expect(wrapper.text()).toContain('Aktueller Pegel: 40%')
+    expect(wrapper.text()).toContain('Pegel 40 %')
   })
 })

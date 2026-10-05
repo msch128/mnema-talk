@@ -1,4 +1,4 @@
-// Discord "cozy" grouping: consecutive messages by the same author within a
+// Compact grouping: consecutive messages by the same author within a
 // short window render without repeating avatar and name.
 export const GROUP_WINDOW_MS = 7 * 60 * 1000
 

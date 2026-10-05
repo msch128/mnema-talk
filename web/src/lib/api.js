@@ -2,26 +2,21 @@
 // HttpOnly cookie, so no token is ever handled in JavaScript; same-origin
 // requests carry the cookie automatically.
 
-const MESSAGES = {
-  INVALID_CREDENTIALS: 'Benutzername oder Passwort ist falsch',
-  UNAUTHORIZED: 'Bitte melde dich erneut an',
-  FORBIDDEN: 'Dafür fehlt dir die Berechtigung',
-  NOT_FOUND: 'Nicht gefunden',
-  CONFLICT: 'Das gibt es bereits',
-  PAYLOAD_TOO_LARGE: 'Die Datei ist zu groß',
-  UNSUPPORTED_MEDIA_TYPE: 'Dieser Dateityp wird nicht unterstützt',
-  RATE_LIMITED: 'Zu viele Versuche – bitte warte einen Moment',
-  UNAVAILABLE: 'Der Dienst ist gerade nicht verfügbar',
-  INTERNAL_ERROR: 'Interner Serverfehler'
-}
+import { t } from '../i18n'
 
-// Specific validation messages from the server, translated for the UI.
+// Server error codes → keys in the locale files (errors.code.*).
+const CODES = [
+  'INVALID_CREDENTIALS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE',
+  'UNSUPPORTED_MEDIA_TYPE', 'RATE_LIMITED', 'UNAVAILABLE', 'INTERNAL_ERROR'
+]
+
+// Specific validation messages from the server → keys (errors.detail.*).
 const DETAILS = {
-  'invalid invite code': 'Ungültiger Einladungscode',
-  'invite code has expired': 'Der Einladungscode ist abgelaufen',
-  'invite code usage limit reached': 'Der Einladungscode wurde bereits zu oft verwendet',
-  'username is already taken': 'Dieser Benutzername ist bereits vergeben',
-  'current password is incorrect': 'Das aktuelle Passwort ist falsch'
+  'invalid invite code': 'invalidInvite',
+  'invite code has expired': 'inviteExpired',
+  'invite code usage limit reached': 'inviteUsedUp',
+  'username is already taken': 'usernameTaken',
+  'current password is incorrect': 'wrongPassword'
 }
 
 export class ApiError extends Error {
@@ -34,23 +29,24 @@ export class ApiError extends Error {
 }
 
 const PATTERNS = [
-  [/^password must be at least (\d+) characters$/, n => `Das Passwort muss mindestens ${n} Zeichen haben`],
-  [/^password must be at most/, () => 'Das Passwort ist zu lang'],
-  [/^username must be/, () => 'Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, _ . oder -'],
-  [/^(\w+) must be at most (\d+) characters$/, (field, n) => `${FIELDS[field] || field}: höchstens ${n} Zeichen`],
-  [/^file exceeds the (\d+) MB limit$/, n => `Die Datei ist größer als ${n} MB`]
+  [/^password must be at least (\d+) characters$/, n => t('errors.detail.passwordMin', { count: n })],
+  [/^password must be at most/, () => t('errors.detail.passwordMax')],
+  [/^username must be/, () => t('errors.detail.usernameFormat')],
+  [/^(\w+) must be at most (\d+) characters$/, (field, n) => t('errors.detail.fieldMax', { field: FIELDS[field] ? t(`errors.field.${field}`) : field, count: n })],
+  [/^file exceeds the (\d+) MB limit$/, n => t('errors.detail.fileTooBig', { size: n })]
 ]
 
-const FIELDS = { content: 'Nachricht', bio: 'Biografie', display_name: 'Anzeigename', name: 'Name', topic: 'Thema' }
+const FIELDS = { content: 1, bio: 1, display_name: 1, name: 1, topic: 1 }
 
 export function errorMessage(code, serverMessage) {
-  if (serverMessage && DETAILS[serverMessage]) return DETAILS[serverMessage]
+  if (serverMessage && DETAILS[serverMessage]) return t(`errors.detail.${DETAILS[serverMessage]}`)
   for (const [re, fmt] of PATTERNS) {
     const m = serverMessage?.match(re)
     if (m) return fmt(...m.slice(1))
   }
   if (code === 'INVALID_INPUT' && serverMessage) return serverMessage
-  return MESSAGES[code] || serverMessage || 'Unbekannter Fehler'
+  if (CODES.includes(code)) return t(`errors.code.${code}`)
+  return serverMessage || t('errors.unknown')
 }
 
 const unauthorizedHandlers = new Set()
@@ -79,7 +75,7 @@ export async function api(path, { method = 'GET', json, form, signal } = {}) {
     res = await fetch(path, init)
   } catch (err) {
     if (err?.name === 'AbortError') throw err
-    throw new ApiError(0, 'NETWORK', 'Keine Verbindung zum Server')
+    throw new ApiError(0, 'NETWORK', t('errors.network'))
   }
 
   if (res.status === 204) return null

@@ -59,7 +59,7 @@ const avatarUrl = computed(() => {
       <img 
         v-if="avatarUrl" 
         :src="avatarUrl" 
-        :alt="user?.display_name || 'Avatar'"
+        :alt="user?.display_name || $t('user.avatar')"
         class="w-full h-full object-cover"
         loading="lazy"
       />

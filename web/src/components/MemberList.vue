@@ -4,11 +4,12 @@ import { Crown, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
+import { t } from '../i18n'
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 
-// Group members into Herzog/Admin, Online Members, and Offline Members
+// Group members into admins, online members and offline members
 const admins = computed(() => {
   return chatStore.members.filter(m => m.role === 'admin')
 })
@@ -30,7 +31,7 @@ function getUserVoiceChannel(userId) {
       }
       const uncat = chatStore.uncategorized?.find(c => c.id === chId)
       if (uncat) return uncat.name
-      return 'Voice'
+      return t('voice.channelFallback')
     }
   }
   return null
@@ -38,12 +39,12 @@ function getUserVoiceChannel(userId) {
 </script>
 
 <template>
-  <!-- Discord-style member column; width and visibility are controlled by App.vue -->
+  <!-- Member column; width and visibility are controlled by App.vue -->
   <aside class="w-full bg-mnema-raised border-l border-mnema-hairline flex flex-col h-full select-none">
     <!-- 48px header, aligned with the channel header and sidebar header -->
     <div class="h-12 px-4 border-b border-mnema-hairline flex items-center justify-between gap-2 flex-shrink-0">
       <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
-        Mitglieder
+        {{ $t('members.title') }}
       </span>
       <span class="text-xs text-mnema-tertiary tabular-nums flex-shrink-0">
         {{ chatStore.members.length }}
@@ -52,11 +53,11 @@ function getUserVoiceChannel(userId) {
 
     <!-- Scrollable Member Categories -->
     <div class="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-4">
-      <!-- 1. Administrators / Herzog Group -->
+      <!-- 1. Administrators -->
       <section v-if="admins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-amber flex items-center gap-1.5 min-w-0">
           <Crown class="w-3.5 h-3.5 flex-shrink-0" />
-          <span class="truncate">Herzog / Admin — {{ admins.length }}</span>
+          <span class="truncate">{{ $t('members.admins', { count: admins.length }) }}</span>
         </h3>
 
         <div
@@ -86,7 +87,7 @@ function getUserVoiceChannel(userId) {
               <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
             </div>
             <span v-else class="text-xs text-mnema-tertiary truncate">
-              {{ chatStore.onlineUserIds.has(member.id) ? 'Online' : 'Offline' }}
+              {{ chatStore.onlineUserIds.has(member.id) ? $t('presence.online') : $t('presence.offline') }}
             </span>
           </div>
         </div>
@@ -95,7 +96,7 @@ function getUserVoiceChannel(userId) {
       <!-- 2. Online Members Group -->
       <section v-if="onlineNonAdmins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
-          Online — {{ onlineNonAdmins.length }}
+          {{ $t('members.online', { count: onlineNonAdmins.length }) }}
         </h3>
 
         <div
@@ -128,7 +129,7 @@ function getUserVoiceChannel(userId) {
       <!-- 3. Offline Members Group -->
       <section v-if="offlineNonAdmins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
-          Offline — {{ offlineNonAdmins.length }}
+          {{ $t('members.offline', { count: offlineNonAdmins.length }) }}
         </h3>
 
         <div class="opacity-60 hover:opacity-100 transition-opacity">

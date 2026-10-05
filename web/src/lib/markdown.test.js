@@ -49,7 +49,7 @@ describe('renderMarkdown – formatting', () => {
     expect(root.querySelector('strong').textContent).toBe('fett')
     expect(root.querySelector('em').textContent).toBe('kursiv')
     expect(root.querySelector('del').textContent).toBe('weg')
-    expect(root.querySelector('.discord-spoiler').textContent).toBe('geheim')
+    expect(root.querySelector('.md-spoiler').textContent).toBe('geheim')
   })
 
   it('does not format inside code', () => {
