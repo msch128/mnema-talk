@@ -12,9 +12,10 @@ import (
 
 type searchResult struct {
 	Messages []struct {
-		ID        uuid.UUID `json:"id"`
-		ChannelID uuid.UUID `json:"channel_id"`
-		Content   string    `json:"content"`
+		ID        uuid.UUID  `json:"id"`
+		ChannelID uuid.UUID  `json:"channel_id"`
+		Content   string     `json:"content"`
+		ParentID  *uuid.UUID `json:"parent_id"`
 	} `json:"messages"`
 	HasMore bool `json:"has_more"`
 }
@@ -92,5 +93,32 @@ func TestSearchFindsMessagesWithFilters(t *testing.T) {
 	}
 	if res := a.anon().get("/api/search?q=park"); res.status != http.StatusUnauthorized {
 		t.Fatalf("anonymous search: %d", res.status)
+	}
+}
+
+// A thread reply is found by search and carries its root's id, so the client
+// can jump to the root (the only valid ?around= anchor) and open the thread.
+func TestSearchThreadReplyCarriesParentForJump(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	max := a.register(admin, "max")
+	ch := a.createChannel(admin, "allgemein", "text")
+
+	root := postMessage(t, admin, ch, map[string]any{"content": "Wurzel der Diskussion"})
+	reply := postMessage(t, max, ch, map[string]any{"content": "Zebrastreifen in der Antwort", "parent_id": root})
+
+	got, _ := max.search(t, map[string]string{"q": "zebrastreifen"})
+	if len(got.Messages) != 1 || got.Messages[0].ID != reply {
+		t.Fatalf("reply not found: %+v", got.Messages)
+	}
+	if got.Messages[0].ParentID == nil || *got.Messages[0].ParentID != root {
+		t.Fatalf("parent_id missing: %+v", got.Messages[0])
+	}
+
+	if res := max.get("/api/channels/" + ch.String() + "/messages?around=" + reply.String()); res.status != http.StatusNotFound {
+		t.Fatalf("around a reply must be rejected, got %d", res.status)
+	}
+	if res := max.get("/api/channels/" + ch.String() + "/messages?around=" + root.String()); res.status != http.StatusOK {
+		t.Fatalf("around the root: %d", res.status)
 	}
 }
