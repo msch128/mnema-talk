@@ -4,7 +4,8 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "save": "Speichern",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "undo": "Rückgängig"
   },
   "language": {
     "de": "Deutsch",
@@ -150,7 +151,13 @@
     "editCategory": "Kategorie bearbeiten",
     "channelUpdated": "Kanal aktualisiert",
     "categoryUpdated": "Kategorie aktualisiert",
-    "updateFailed": "Aktualisierung fehlgeschlagen."
+    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "channelMoved": "Kanal verschoben",
+    "categoryMoved": "Kategorie verschoben",
+    "layoutSaveFailed": "Die neue Reihenfolge konnte nicht gespeichert werden.",
+    "layoutRestored": "Reihenfolge wiederhergestellt",
+    "movedChannel": "{name} verschoben: Position {position} von {total} in {category}",
+    "movedCategory": "{name} verschoben: Position {position} von {total}"
   },
   "category": {
     "name": "Kategoriename"

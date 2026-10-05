@@ -40,6 +40,51 @@
   .msg-flash { animation: none; background-color: rgba(252, 228, 168, 0.12); }
 }
 
+/* Sidebar drag and drop: where the item lands, and the item that just moved */
+.drop-line {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: #2DA771;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.drop-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  border: 2px solid #2DA771;
+  background-color: #171918;
+}
+
+@keyframes mnema-nav-flash {
+  0%, 30% { background-color: rgba(45, 167, 113, 0.22); }
+  100% { background-color: transparent; }
+}
+
+.nav-flash {
+  animation: mnema-nav-flash 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-flash { animation: none; background-color: rgba(45, 167, 113, 0.14); }
+}
+
+/* While something is dragged: a grabbing hand everywhere, no text selection */
+.mnema-dragging,
+.mnema-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
 /* Mnema Subtle Hairline Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

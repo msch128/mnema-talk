@@ -109,9 +109,15 @@ export const useChatStore = defineStore('chat', () => {
     return allChannels.value.some(c => c.id === channelId && c.type === 'voice')
   }
 
+  // Overlapping fetches (a channels_changed broadcast while a refetch runs)
+  // may answer out of order; only the latest one counts.
+  let channelsFetchSeq = 0
+
   async function fetchChannels() {
+    const seq = ++channelsFetchSeq
     try {
       const data = await api('/api/channels')
+      if (seq !== channelsFetchSeq) return
       categories.value = data.categories || []
       uncategorized.value = data.uncategorized || []
 
@@ -874,6 +880,13 @@ export const useChatStore = defineStore('chat', () => {
     return channel
   }
 
+  /** Copy of a channel, placed right below it by the server. */
+  async function duplicateChannel(channelId) {
+    const channel = await api(`/api/admin/channels/${channelId}/duplicate`, { method: 'POST' })
+    await fetchChannels()
+    return channel
+  }
+
   async function deleteChannel(channelId) {
     await api(`/api/admin/channels/${channelId}`, { method: 'DELETE' })
     if (activeChannel.value?.id === channelId) activeChannel.value = null
@@ -1259,6 +1272,7 @@ export const useChatStore = defineStore('chat', () => {
     toggleReaction,
     uploadMedia,
     createChannel,
+    duplicateChannel,
     deleteChannel,
     updateChannel,
     createCategory,

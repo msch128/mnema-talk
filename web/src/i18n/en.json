@@ -4,7 +4,8 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save",
-    "delete": "Delete"
+    "delete": "Delete",
+    "undo": "Undo"
   },
   "language": {
     "de": "Deutsch",
@@ -150,7 +151,13 @@
     "editCategory": "Edit category",
     "channelUpdated": "Channel updated",
     "categoryUpdated": "Category updated",
-    "updateFailed": "Update failed."
+    "updateFailed": "Update failed.",
+    "channelMoved": "Channel moved",
+    "categoryMoved": "Category moved",
+    "layoutSaveFailed": "Couldn't save the new order.",
+    "layoutRestored": "Order restored",
+    "movedChannel": "{name} moved: position {position} of {total} in {category}",
+    "movedCategory": "{name} moved: position {position} of {total}"
   },
   "category": {
     "name": "Category name"
