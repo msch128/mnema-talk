@@ -1,3 +1,63 @@
 # Changelog
 
+## 0.1.0 (2026-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* direct messages are removed. Auth moved from bearer tokens to session cookies. Migrations moved to internal/db/migrations and new env variables are required in production (see .env.example).
+
+### Features
+
+* add direct messaging (DMs) and server-routed 1-on-1 calls ([a1beba3](https://github.com/msch128/mnema-talk/commit/a1beba3fa1fe7e67ee25c7fc9c2d872b6a96f06f))
+* add env-configurable privacy policy, legal disclosures, and terms ([28c4ede](https://github.com/msch128/mnema-talk/commit/28c4ede36ec3df0783d6cd11044fb091f0a28557))
+* add real-time ping telemetry, RTC connection stats modal, right member list and voice center chat ([b0423e8](https://github.com/msch128/mnema-talk/commit/b0423e83f37c60555476cd79d6f75067a72a8f25))
+* add Rocket.Chat threads, fix channel messaging and inline image uploads ([437b6bb](https://github.com/msch128/mnema-talk/commit/437b6bbd675ef1c0a6d16dea56edf3671433dd53))
+* **admin:** user management, voice kick and last seen ([582b9d5](https://github.com/msch128/mnema-talk/commit/582b9d5b63f47fa4dcc0fbcc2ff12d2764f96440))
+* **audio:** add Discord-identical input sensitivity, live visual noise gate and acoustic settings ([02bd618](https://github.com/msch128/mnema-talk/commit/02bd61850ebe5b0e18d5104920262cb11026d8c9))
+* **auth:** per-account UI language ([b1cdc7e](https://github.com/msch128/mnema-talk/commit/b1cdc7ed8301cd1e96d2c33b4e6ce3a260cd908e))
+* **channels:** add channel & category management, default channel seeding and creation modal ([6cfe8e6](https://github.com/msch128/mnema-talk/commit/6cfe8e687909c69cedcbf3163021c4e322f58d42))
+* **chat:** message search with filters ([7605b00](https://github.com/msch128/mnema-talk/commit/7605b0058f879062bf840640c7935f9e23729d07))
+* **chat:** server-side read state, mentions and notification levels ([a8b154f](https://github.com/msch128/mnema-talk/commit/a8b154f7bee38fee633f1633c870bab9efc9b42d))
+* **frontend:** Vue 3 Discord UI, WebRTC voice/screen, Docker multi-stage build ([9ffbfdc](https://github.com/msch128/mnema-talk/commit/9ffbfdc15b5296b4c979995d8a47fc073de4fd9e))
+* harden, restructure and test the whole app ([379635c](https://github.com/msch128/mnema-talk/commit/379635c6baab2c99ec25bc232dd0ef18fe40b735))
+* implement backend channels, chat, s3 upload, websockets, sfu and admin retention engine ([8bf7982](https://github.com/msch128/mnema-talk/commit/8bf79825600d26c21a10958d8c02e606efbacb53))
+* implement phase 1 foundation (postgres 17, seaweedfs s3, go core & auth) ([a83a15f](https://github.com/msch128/mnema-talk/commit/a83a15feeb6c65b3f07a2e7a3468c808cbf784c6))
+* implement SFU audio & screensharing, message edit/delete, emoji reactions, user bio, and resolve dependabot security vulnerabilities ([4ee831a](https://github.com/msch128/mnema-talk/commit/4ee831a5cc9c25ac5a5b675fb8c22170713ec881))
+* live mic meter and noise gate test in audio settings ([5c0953f](https://github.com/msch128/mnema-talk/commit/5c0953f33ce2f5925b084beb39ae9a9423771361))
+* **ops:** backup and restore scripts with a verify mode ([01d1a12](https://github.com/msch128/mnema-talk/commit/01d1a12ff52c0f2e85ec1190ecb291bdc86e01c6))
+* SSRF-safe link previews with an image proxy ([ae264c1](https://github.com/msch128/mnema-talk/commit/ae264c14edb64e55b33e1ca8a178c1911b05c8e5))
+* **talk:** implement dedicated VoiceStage hangout view, 4K screen showcase & Mnema layout ([151725f](https://github.com/msch128/mnema-talk/commit/151725f704156dc9a7c7d0ce897e393e29e865ae))
+* **ws:** relay typing notices to the others, throttled ([30d4032](https://github.com/msch128/mnema-talk/commit/30d403262ea2ffd0e820b6c526d00890e089d918))
+
+
+### Bug Fixes
+
+* **audio:** keep the input level visible below the noise gate threshold ([960bd8d](https://github.com/msch128/mnema-talk/commit/960bd8dff11e4d0025817b94d04267870de9b71f))
+* **auth:** per-address login lockouts, log out everywhere, one APP_ENV ([e92b14e](https://github.com/msch128/mnema-talk/commit/e92b14e0ff69d44e493be86ebefe72e324c83f35))
+* build with go1.27 toolchain and x/text v0.39 to close stdlib vulnerabilities ([5717cfb](https://github.com/msch128/mnema-talk/commit/5717cfb5f23a6a74019c959139ad2c5aee8e322e))
+* **config:** parse WebRTC UDP ports as uint16 ([e3e2e6b](https://github.com/msch128/mnema-talk/commit/e3e2e6bfca61e2f964a1b5372f6ac91d225f8dfb))
+* **deps:** bump chi, x/net, x/crypto and govulncheck v1.8.0 ([2afe5f7](https://github.com/msch128/mnema-talk/commit/2afe5f78838a192032c1c4f7f261b57391cc6758))
+* ensure channels and messages serialize as empty arrays rather than null ([a29c134](https://github.com/msch128/mnema-talk/commit/a29c1343c1eb298664ef29fec89a52a900febc0b))
+* ensure parent_id column exists before creating index ([764d156](https://github.com/msch128/mnema-talk/commit/764d156493c24a4c8b0355cd770e5d6c113e4571))
+* harden link preview SSRF guard and release auto-merge ([72c67fc](https://github.com/msch128/mnema-talk/commit/72c67fc74139dcea728d2d82a12cd5fc80a5b9a7))
+* import encoding/json in upload.go ([087622f](https://github.com/msch128/mnema-talk/commit/087622f217bbde520a3b98121df23d10248ce8fe))
+* **media:** range requests for media and delete objects with their messages ([38bafd0](https://github.com/msch128/mnema-talk/commit/38bafd00174f5a3bf03acf9153a2ddd4351a4b34))
+* **member-list:** dock member list to right window edge like discord ([3cbe5fa](https://github.com/msch128/mnema-talk/commit/3cbe5fa1ee2bdb0960f46d472bbf0b71eceb9604))
+* meter mic level on a cloned track so the noise gate can reopen ([557f453](https://github.com/msch128/mnema-talk/commit/557f453c6d9ffe0abf5d708ec6fbfd6ef1974a1c))
+* place reactions at message bottom and improve hover tolerance with safe hitbox ([a2d75dc](https://github.com/msch128/mnema-talk/commit/a2d75dcf0f6c845d53a614b18167996a6a5f2e5a))
+* remove hardcoded secret defaults, add auth rate limiting and password change ([ca406a6](https://github.com/msch128/mnema-talk/commit/ca406a6ad4eca7f9ee3c22e13f4b2ad7e3216778))
+* **s3:** remove unused time import ([3538646](https://github.com/msch128/mnema-talk/commit/3538646ef48bb366e74ea957d4c20366609b21b7))
+* **sfu:** forward keyframe requests to publishers and keep peers on rejoin ([81283b3](https://github.com/msch128/mnema-talk/commit/81283b307104d4ef9672db0b877c9991a1db7d95))
+* update Dockerfile to golang:alpine and sync go.sum for go 1.25 ([a699ac4](https://github.com/msch128/mnema-talk/commit/a699ac4fd80ab807028573acf391fa0dc1f784d1))
+* **voice:** meter the live mic level independently of the noise gate ([7f57772](https://github.com/msch128/mnema-talk/commit/7f57772f2948cbc37496b6e4b43697cac74dd3cb))
+* **web:** survive reconnects and fix voice races in the client ([04c7137](https://github.com/msch128/mnema-talk/commit/04c7137cc6a67c077c545eb1346f063f76595620))
+
+
+### Miscellaneous Chores
+
+* keep releases on 0.x until 1.0.0 is cut deliberately ([c58f0b2](https://github.com/msch128/mnema-talk/commit/c58f0b2b65107fe8211c00e8e09e5f3d6d7001f7))
+
+## Changelog
+
 All notable changes are recorded here by release-please from conventional commits.
