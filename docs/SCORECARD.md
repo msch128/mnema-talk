@@ -17,11 +17,12 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] Strict CSP and security headers, no `v-html` without escaping
 - [x] Uploads typed by sniffing, risky types download-only
 - [x] Secret scan, govulncheck, npm audit and CodeQL clean in CI
-- [ ] Rate limits keyed per IP + username; correct client IP behind the reverse proxy
-- [ ] Admin cannot be locked out by failed logins from other clients
-- [ ] Logout revokes the session server-side; "log out everywhere"
-- [ ] One `APP_ENV` definition for production checks
-- [ ] Invite check before password hashing on registration
+- [x] Login lockouts keyed per client IP + username, with a separate per-account cap
+- [ ] Real client IP reaches the app behind the reverse proxy (no hairpin NAT address)
+- [x] Admin cannot be locked out by failed logins from other clients
+- [x] "Log out everywhere" revokes all sessions server-side
+- [x] One `APP_ENV` definition for production checks
+- [x] Invite check before password hashing on registration
 
 ## Text chat (weight 14)
 

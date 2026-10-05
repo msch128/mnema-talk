@@ -108,3 +108,21 @@ func TestHTTPSPublicURLForcesSecureCookies(t *testing.T) {
 		t.Fatalf("secure=%v public=%q", cfg.SecureCookies(), cfg.PublicURL)
 	}
 }
+
+func TestAppEnvAliasesUseProductionChecks(t *testing.T) {
+	for _, alias := range []string{"prod", "Production", "staging"} {
+		env := base()
+		env["APP_ENV"] = alias
+		if _, err := FromEnv(lookup(env)); err == nil || !strings.Contains(err.Error(), "JWT_SECRET") {
+			t.Fatalf("APP_ENV=%s skipped the production checks: %v", alias, err)
+		}
+	}
+}
+
+func TestUnknownAppEnvRejected(t *testing.T) {
+	env := base()
+	env["APP_ENV"] = "prdocution"
+	if _, err := FromEnv(lookup(env)); err == nil || !strings.Contains(err.Error(), "APP_ENV") {
+		t.Fatalf("typo in APP_ENV accepted: %v", err)
+	}
+}

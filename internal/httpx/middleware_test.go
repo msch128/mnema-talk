@@ -105,7 +105,7 @@ func TestCORS(t *testing.T) {
 
 func TestSecurityHeaders(t *testing.T) {
 	trusted, _ := ParseCIDRs([]string{"10.0.0.0/8"})
-	h := SecurityHeaders(trusted, "development")(okHandler)
+	h := SecurityHeaders(trusted, false)(okHandler)
 
 	r := httptest.NewRequest(http.MethodGet, "/api/channels", nil)
 	rec := httptest.NewRecorder()
@@ -154,7 +154,7 @@ func TestSecurityHeaders(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	SecurityHeaders(nil, "production")(okHandler).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	SecurityHeaders(nil, true)(okHandler).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Header().Get("Strict-Transport-Security") == "" {
 		t.Error("HSTS expected in production")
 	}
@@ -217,7 +217,7 @@ func TestRequestIDRejectsUnsafeInput(t *testing.T) {
 }
 
 func TestRecoverReturnsJSON500(t *testing.T) {
-	h := Recover("production")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") }))
+	h := Recover(true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { panic("boom") }))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 	if rec.Code != http.StatusInternalServerError || !strings.Contains(rec.Body.String(), CodeInternalError) {

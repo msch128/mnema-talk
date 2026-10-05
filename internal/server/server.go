@@ -81,8 +81,8 @@ func NewRouter(d Deps) (*Router, error) {
 		httpx.RequestID,
 		httpx.ClientIPMiddleware(trusted),
 		httpx.Logger,
-		httpx.Recover(cfg.AppEnv),
-		httpx.SecurityHeaders(trusted, cfg.AppEnv),
+		httpx.Recover(cfg.IsProduction()),
+		httpx.SecurityHeaders(trusted, cfg.IsProduction()),
 		httpx.CORS(cfg.AllowedOrigins),
 	)
 
