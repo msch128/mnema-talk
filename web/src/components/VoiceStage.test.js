@@ -39,6 +39,8 @@ function mountStage(props = {}) {
 }
 
 beforeEach(() => {
+  // Camera choices are remembered in localStorage; each test starts clean.
+  localStorage.clear()
   setLocale('en')
   setActivePinia(createPinia())
   Object.values(rtc).forEach(fn => fn.mockReset())
@@ -343,6 +345,80 @@ describe('VoiceStage screen share opt-in', () => {
     await flushPromises()
     expect(w.find('video').element.srcObject).toBe(alice)
     expect(w.findAll('[data-testid="screen-card"]').map(c => c.attributes('data-screen-card'))).toEqual(['own'])
+  })
+
+  it('a click on a camera tile puts it on the stage; switching to a screen and back to the grid', async () => {
+    const voice = connected()
+    const cam = new MediaStream()
+    const screen = new MediaStream()
+    voice.handleMediaState({ user_id: 'a', camera: true })
+    voice.handleMediaState({ user_id: 'b', screen: true })
+    voice.setUserVideoStream('a', cam)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(w.find('[data-testid="stage"]').exists()).toBe(false)
+
+    const aliceTile = () => w.find('[data-participant-tile][aria-label="Enlarge camera of Alice"]')
+    await aliceTile().trigger('click')
+    await flushPromises()
+    const stageEl = w.find('[data-testid="stage"]')
+    expect(stageEl.attributes('data-stage-source')).toBe('camera:a')
+    expect(w.find('[data-testid="stage"] video').element.srcObject).toBe(cam)
+    expect(w.find('[data-testid="stage"] video').element.muted).toBe(true)
+    expect(stageEl.text()).toContain('Alice')
+    // No stream audio, LIVE badge or Stop watching for a camera.
+    expect(stageEl.text()).not.toContain('LIVE')
+    expect(w.find('[data-testid="viewer-stream-volume-slider"]').exists()).toBe(false)
+    expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(false)
+    expect(w.find('button[aria-label="Stop watching"]').exists()).toBe(false)
+    // The tile shows that its camera is on the stage.
+    expect(w.find('[data-participant-tile][aria-pressed="true"]').attributes('aria-label')).toBe('Back to everyone')
+
+    // Bob's screen goes on the stage.
+    await w.find('[data-screen-card="b"] button').trigger('click')
+    voice.setRemoteScreen('b', screen)
+    await flushPromises()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('b')
+    expect(w.find('[data-testid="viewer-stream-volume-slider"]').exists()).toBe(true)
+
+    // Back to Alice's camera, then off the stage: Bob's screen returns.
+    await aliceTile().trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('camera:a')
+    expect(w.find('[data-screen-card="b"] button').text()).toBe('Show on stage')
+    await w.find('[data-testid="stage-unfocus-camera"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('b')
+
+    // Without a screen share, unfocusing (a second click) returns to the grid.
+    voice.unwatchScreen('b')
+    await aliceTile().trigger('click')
+    await flushPromises()
+    await w.find('[data-participant-tile][aria-pressed="true"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="stage"]').exists()).toBe(false)
+  })
+
+  it('an avatar tile still opens the profile', async () => {
+    const voice = connected()
+    const open = vi.spyOn(useChatStore(), 'openUserProfile').mockImplementation(() => {})
+    voice.setUserVideoStream('a', new MediaStream())
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await w.find(`[data-participant-tile][aria-label="Open Bob's profile"]`).trigger('click')
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'b' }))
+    expect(voice.focusedCamera).toBeNull()
+  })
+
+  it('my own camera on the stage is mirrored', async () => {
+    const voice = connected()
+    voice.localCameraStream = new MediaStream()
+    voice.focusCamera('me')
+    const w = mountStage({ channelId: 'v1' })
+    await flushPromises()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('camera:me')
+    expect(w.find('[data-testid="stage"] video').classes()).toContain('-scale-x-100')
+    expect(w.find('[data-testid="stage"]').text()).toContain('Your camera')
   })
 
   it('the paused own preview only shows while my own share is on the stage', async () => {

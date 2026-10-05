@@ -1,7 +1,8 @@
 <script setup>
 // One participant of the Talk: their camera when it is on, else their avatar.
-// A click anywhere on the tile opens their profile.
-import { ref, watch, nextTick } from 'vue'
+// A click on a camera puts it on the stage (again: takes it off), a click on
+// an avatar opens the profile; the context menu has the profile for both.
+import { ref, computed, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
@@ -23,14 +24,24 @@ const props = defineProps({
   // Their camera is running (known without receiving it) and I may hide it.
   cameraAvailable: { type: Boolean, default: false },
   cameraHidden: { type: Boolean, default: false },
+  // Their camera can go on the stage / is on the stage.
+  cameraFocusable: { type: Boolean, default: false },
+  cameraFocused: { type: Boolean, default: false },
   // Screen sharing state
   isScreensharing: { type: Boolean, default: false },
   isWatching: { type: Boolean, default: false },
   isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera', 'watch-stream', 'stop-watching', 'menu'])
+const emit = defineEmits(['open-profile', 'toggle-camera', 'focus-camera', 'watch-stream', 'stop-watching', 'menu'])
+
+const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
+const name = computed(() => props.user.display_name || props.user.username)
 
 function handleTileClick() {
+  if (focusable.value) {
+    emit('focus-camera', props.user.id)
+    return
+  }
   if (props.isScreensharing && !props.isSelf) {
     emit('watch-stream', props.user.id)
     return
@@ -51,7 +62,8 @@ watch(() => props.stream, (stream) => {
     role="button"
     tabindex="0"
     data-participant-tile
-    :aria-label="$t('profile.open', { name: user.display_name || user.username })"
+    :aria-label="focusable ? (cameraFocused ? $t('talk.unfocusCamera') : $t('talk.focusCamera', { name })) : $t('profile.open', { name })"
+    :aria-pressed="focusable ? (cameraFocused ? 'true' : 'false') : undefined"
     @click="handleTileClick"
     @contextmenu.prevent="emit('menu', $event)"
     @keydown.f10.shift.self.prevent="emit('menu', $event)"
@@ -64,7 +76,9 @@ watch(() => props.stream, (stream) => {
       stream ? 'bg-black aspect-video' : (compact ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface'),
       speaking
         ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10'
-        : 'border-mnema-hairline hover:border-mnema-border'
+        : cameraFocused
+          ? 'border-mnema-accent'
+          : 'border-mnema-hairline hover:border-mnema-border'
     ]"
   >
     <!-- LIVE Badge -->

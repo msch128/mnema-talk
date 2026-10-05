@@ -134,9 +134,20 @@ function cameraStreamOf(user) {
   return voiceStore.userVideoStreams[user.id] || null
 }
 
-// The stage shows one screen share; every other one is a card that puts it
-// there. Someone else's share is only received after I opt in (Watch).
-const { stage, ownOnStage, cards: screenCards, selectCard: onScreenCard } = useTalkStage({
+// The stage shows one screen share or camera. Every other screen share is a
+// card that puts it there (someone else's is only received after I opt in),
+// a click on a camera tile puts that camera there.
+const {
+  stage,
+  ownScreenOnStage: ownOnStage,
+  remoteScreenUserId: stageUserId,
+  cameraOnStage,
+  cards: screenCards,
+  selectCard: onScreenCard,
+  canFocusCamera,
+  isCameraFocused,
+  toggleCamera: toggleCameraFocus
+} = useTalkStage({
   users: () => usersInVoice.value,
   myId: () => authStore.user?.id,
   active: () => isConnectedHere.value,
@@ -148,9 +159,7 @@ async function watchStream(userId) {
   voiceStore.watchScreen(userId)
 }
 
-// Audio of the share on the stage when it is someone else's.
-const stageUserId = computed(() => (stage.value?.kind === 'remote' ? stage.value.userId : null))
-
+// Audio controls on the stage: only for someone else's screen share.
 const currentStreamVolume = computed(() => {
   const uid = stageUserId.value
   return uid ? voiceStore.getUserVolume(uid) : 100
@@ -184,10 +193,21 @@ watch([() => props.showChat, shownChannelId], ([show, id]) => {
 }, { immediate: true })
 
 const activeScreenStream = computed(() => stage.value?.stream || null)
-const screenSharerName = computed(() => {
+// What the stage shows, as data-stage-source: 'own', a user ID (their screen)
+// or 'camera:<user ID>'.
+const stageSource = computed(() => {
+  const s = stage.value
+  if (!s) return null
+  if (s.kind === 'camera') return `camera:${s.userId}`
+  return s.own ? 'own' : s.userId
+})
+const stageName = computed(() => {
+  const s = stage.value
+  if (s?.kind === 'camera' && s.own) return t('talk.ownCamera')
   if (ownOnStage.value) return t('talk.ownScreen')
-  const sharer = usersInVoice.value.find(u => u.id === stageUserId.value)
-  return sharer ? (sharer.display_name || sharer.username) : t('talk.sharedScreen')
+  const sharer = usersInVoice.value.find(u => u.id === s?.userId)
+  if (sharer) return sharer.display_name || sharer.username
+  return cameraOnStage.value ? t('talk.camera') : t('talk.sharedScreen')
 })
 
 // My own share is only previewed while I look at this tab: decoding my own
@@ -352,12 +372,12 @@ async function handleFileUpload(e) {
           activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
         ]"
       >
-        <!-- The stage: one screen share, mine or one I watch -->
+        <!-- The stage: one screen share (mine or one I watch) or one camera -->
         <div
           v-if="activeScreenStream && isConnectedHere"
           ref="videoContainer"
           data-testid="stage"
-          :data-stage-source="ownOnStage ? 'own' : stageUserId"
+          :data-stage-source="stageSource"
           :class="[
             'w-full max-w-5xl bg-black rounded-xl border border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
             showChat ? 'h-44 mb-2 flex-shrink-0' : 'flex-1 min-h-0 mb-3'
@@ -367,8 +387,8 @@ async function handleFileUpload(e) {
             ref="screenVideoEl"
             autoplay
             playsinline
-            :muted="ownOnStage"
-            class="w-full h-full object-contain"
+            :muted="ownOnStage || cameraOnStage"
+            :class="['w-full h-full object-contain', stage?.kind === 'camera' && stage.own ? '-scale-x-100' : '']"
             @resize="onVideoResize"
             @loadedmetadata="onVideoResize"
           ></video>
@@ -384,11 +404,12 @@ async function handleFileUpload(e) {
           </div>
 
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
-            <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+            <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80" />
+            <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               {{ $t('talk.live') }}
             </span>
-            <span class="font-mono font-semibold text-xs">{{ screenSharerName }}</span>
+            <span class="font-mono font-semibold text-xs">{{ stageName }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
@@ -436,9 +457,20 @@ async function handleFileUpload(e) {
               />
             </div>
 
+            <!-- A camera leaves the stage (back to the screen share or the grid) -->
+            <button
+              v-if="cameraOnStage"
+              type="button"
+              data-testid="stage-unfocus-camera"
+              v-tooltip="$t('talk.unfocusCamera')"
+              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
+              @click="voiceStore.unfocusCamera()"
+            >
+              <X class="w-4 h-4" />
+            </button>
             <!-- Stop Watching (Viewer) -->
             <button
-              v-if="!ownOnStage"
+              v-else-if="!ownOnStage"
               @click="voiceStore.unwatchScreen(stageUserId)"
               :aria-label="$t('talk.unwatchScreen')"
               v-tooltip="$t('talk.stopWatching')"
@@ -523,7 +555,10 @@ async function handleFileUpload(e) {
             :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
             :is-watching="!!voiceStore.watchedScreens[user.id]"
             :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+            :camera-focusable="canFocusCamera(user)"
+            :camera-focused="isCameraFocused(user)"
             @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+            @focus-camera="toggleCameraFocus(user)"
             @watch-stream="watchStream(user.id)"
             @stop-watching="voiceStore.unwatchScreen(user.id)"
             compact
@@ -557,7 +592,10 @@ async function handleFileUpload(e) {
             :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
             :is-watching="!!voiceStore.watchedScreens[user.id]"
             :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+            :camera-focusable="canFocusCamera(user)"
+            :camera-focused="isCameraFocused(user)"
             @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+            @focus-camera="toggleCameraFocus(user)"
             @watch-stream="watchStream(user.id)"
             @stop-watching="voiceStore.unwatchScreen(user.id)"
             :compact="showChat"

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useVoiceStore } from './voice'
+import { useAuthStore } from './auth'
 
 beforeEach(() => {
   localStorage.clear()
@@ -233,7 +234,7 @@ describe('the screen share stage', () => {
     const voice = useVoiceStore()
     const own = {}
     voice.localScreenStream = own
-    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+    expect(voice.stage).toEqual({ kind: 'screen', own: true, userId: null, stream: own })
     expect(voice.ownScreenFocused).toBe(true)
   })
 
@@ -241,7 +242,7 @@ describe('the screen share stage', () => {
     const voice = useVoiceStore()
     const a = receive(voice, 'a')
     voice.localScreenStream = {}
-    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'a', stream: a })
     expect(voice.ownScreenFocused).toBe(false)
   })
 
@@ -253,11 +254,11 @@ describe('the screen share stage', () => {
     // Watching puts theirs on the stage.
     expect(voice.stage.stream).toBe(a)
     voice.focusOwnScreen()
-    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+    expect(voice.stage).toEqual({ kind: 'screen', own: true, userId: null, stream: own })
     // Their share is still received and in focus for the way back.
     expect(voice.watchedScreens).toEqual({ a: true })
     voice.focusScreen('a')
-    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'a', stream: a })
   })
 
   it('keeps my own share on the stage until a newly watched share arrives', () => {
@@ -279,7 +280,7 @@ describe('the screen share stage', () => {
     voice.watchScreen('a')
     voice.focusOwnScreen()
     voice.setRemoteScreen('a', {})
-    expect(voice.stage.kind).toBe('own')
+    expect(voice.stage.own).toBe(true)
   })
 
   it('falls back to my own share when the watched one on the stage ends', () => {
@@ -287,9 +288,9 @@ describe('the screen share stage', () => {
     receive(voice, 'a')
     const own = {}
     voice.localScreenStream = own
-    expect(voice.stage.kind).toBe('remote')
+    expect(voice.stage.own).toBe(false)
     voice.handleMediaState({ user_id: 'a', screen: false })
-    expect(voice.stage).toEqual({ kind: 'own', userId: null, stream: own })
+    expect(voice.stage).toEqual({ kind: 'screen', own: true, userId: null, stream: own })
   })
 
   it('falls back to another watched share before my own', () => {
@@ -299,7 +300,7 @@ describe('the screen share stage', () => {
     voice.localScreenStream = {}
     voice.focusScreen('a')
     voice.unwatchScreen('a')
-    expect(voice.stage).toEqual({ kind: 'remote', userId: 'b', stream: b })
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'b', stream: b })
   })
 
   it('falls back to a watched share when I stop sharing', () => {
@@ -309,7 +310,7 @@ describe('the screen share stage', () => {
     voice.focusOwnScreen()
     voice.localScreenStream = null
     expect(voice.ownScreenFocused).toBe(false)
-    expect(voice.stage).toEqual({ kind: 'remote', userId: 'a', stream: a })
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'a', stream: a })
   })
 
   it('focusing my own share needs one, a remote share needs an opt-in', () => {
@@ -325,7 +326,124 @@ describe('the screen share stage', () => {
   it('leaving the call clears the choice', () => {
     const voice = useVoiceStore()
     voice.localScreenStream = {}
+    voice.focusCamera('u1')
     voice.disconnect()
     expect(voice.ownScreenFocused).toBe(false)
+    expect(voice.focusedCamera).toBeNull()
+  })
+})
+
+describe('a camera on the stage', () => {
+  function withScreen(voice, id, stream = { screen: id }) {
+    voice.handleMediaState({ user_id: id, screen: true })
+    voice.watchScreen(id)
+    voice.setRemoteScreen(id, stream)
+    return stream
+  }
+
+  it('a remote camera goes on the stage and back off', () => {
+    const voice = useVoiceStore()
+    const cam = {}
+    voice.setUserVideoStream('a', cam)
+    voice.focusCamera('a')
+    expect(voice.stage).toEqual({ kind: 'camera', own: false, userId: 'a', stream: cam })
+    voice.toggleCameraFocus('a')
+    expect(voice.stage).toBeNull()
+  })
+
+  it('my own camera can go on the stage', () => {
+    useAuthStore().user = { id: 'me', username: 'me' }
+    const voice = useVoiceStore()
+    const cam = {}
+    voice.localCameraStream = cam
+    voice.focusCamera('me')
+    expect(voice.stage).toEqual({ kind: 'camera', own: true, userId: 'me', stream: cam })
+    // Turning it off takes it off the stage.
+    voice.localCameraStream = null
+    expect(voice.focusedCamera).toBeNull()
+    expect(voice.stage).toBeNull()
+  })
+
+  it('a camera that is off or hidden cannot be focused', () => {
+    const voice = useVoiceStore()
+    voice.focusCamera('a')
+    expect(voice.focusedCamera).toBeNull()
+    voice.setUserVideoStream('b', {})
+    voice.hiddenCameras = { b: true }
+    expect(voice.canFocusCamera('b')).toBe(false)
+    voice.focusCamera('b')
+    expect(voice.focusedCamera).toBeNull()
+  })
+
+  it('switches between a camera and screen shares both ways', () => {
+    const voice = useVoiceStore()
+    const screen = withScreen(voice, 'a')
+    const own = {}
+    voice.localScreenStream = own
+    const cam = {}
+    voice.setUserVideoStream('b', cam)
+
+    voice.focusCamera('b')
+    expect(voice.stage.stream).toBe(cam)
+    // Unfocusing returns to the share it replaced.
+    voice.unfocusCamera()
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'a', stream: screen })
+
+    voice.focusCamera('b')
+    voice.focusOwnScreen()
+    expect(voice.stage.stream).toBe(own)
+    voice.focusCamera('b')
+    voice.focusScreen('a')
+    expect(voice.stage.stream).toBe(screen)
+  })
+
+  it('watching a new share replaces the camera; a share arriving on its own does not', () => {
+    const voice = useVoiceStore()
+    voice.setUserVideoStream('b', {})
+    voice.focusCamera('b')
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.localScreenStream = {}
+    expect(voice.stage.kind).toBe('camera')
+    voice.watchScreen('a')
+    expect(voice.focusedCamera).toBeNull()
+    const screen = {}
+    voice.setRemoteScreen('a', screen)
+    expect(voice.stage.stream).toBe(screen)
+  })
+
+  it('falls back to a screen share, else the grid, when the camera goes', () => {
+    const voice = useVoiceStore()
+    const screen = withScreen(voice, 'a')
+    const cam = {}
+    voice.setUserVideoStream('b', cam)
+    voice.setUserVideoStream('c', {})
+
+    voice.focusCamera('b')
+    voice.removeUserVideoStream('b', cam)
+    expect(voice.focusedCamera).toBeNull()
+    expect(voice.stage).toEqual({ kind: 'screen', own: false, userId: 'a', stream: screen })
+
+    voice.unwatchScreen('a')
+    voice.focusCamera('c')
+    // Hiding it locally (or all cameras) takes it off the stage too.
+    voice.setCameraHidden('c', true)
+    expect(voice.stage).toBeNull()
+  })
+
+  it('a member leaving takes their camera off the stage', () => {
+    const voice = useVoiceStore()
+    voice.channelUsers = { v1: { b: { id: 'b' } } }
+    voice.setUserVideoStream('b', {})
+    voice.focusCamera('b')
+    voice.handleVoiceStateUpdate({ action: 'leave', channel_id: 'v1', user_id: 'b' })
+    expect(voice.stage).toBeNull()
+  })
+
+  it('hiding all cameras takes a focused one off the stage', () => {
+    const voice = useVoiceStore()
+    voice.setUserVideoStream('b', {})
+    voice.focusCamera('b')
+    voice.setAllCamerasOff(true)
+    expect(voice.focusedCamera).toBeNull()
   })
 })

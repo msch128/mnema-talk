@@ -54,9 +54,9 @@ const stageSize = (page) => page.evaluate(() => {
   return v && v.videoWidth && !v.paused ? `${v.videoWidth}x${v.videoHeight}` : ''
 })
 
-// Regression: while sharing my own screen, a share I watched never reached the
-// stage and had no card, so there was nothing to switch to.
-test('two members share their screens and switch the stage both ways', async ({ browser }) => {
+// Two members (A: the admin, B: a new member) in a new Talk. Their shared
+// "screens" are 640x360 (A) and 800x450 (B).
+async function twoMembers(browser, tag) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   await aCtx.addInitScript(fakeDisplayMedia, [640, 360])
@@ -68,22 +68,31 @@ test('two members share their screens and switch the stage both ways', async ({ 
     page.on('pageerror', (e) => console.log(`[${name}] pageerror ${e.message}`))
   }
 
+  const channel = `${VOICE_CHANNEL} ${tag}`
+  const bName = `${USER}_${tag}`
   await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
-  expect((await apiFetch(a, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })).status).toBe(201)
+  expect((await apiFetch(a, 'POST', '/api/admin/channels', { name: channel, type: 'voice' })).status).toBe(201)
   const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
   await b.goto('/')
-  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: USER, password: USER_PASSWORD, invite_code: invite.json.code })).status).toBe(201)
+  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: USER_PASSWORD, invite_code: invite.json.code })).status).toBe(201)
   await b.reload()
   const me = await apiFetch(b, 'GET', '/api/auth/me')
   const bId = me.json?.user?.id || me.json?.id
   expect(bId).toBeTruthy()
 
-  const sidebarVoice = (page) => page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL })
+  const sidebarVoice = (page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
   await sidebarVoice(a).click()
   await sidebarVoice(b).click()
   for (const page of [a, b]) {
     await expect(page.getByRole('button', { name: 'Verlassen' }).first()).toBeVisible()
   }
+  return { a, b, bId, bName, close: async () => { await aCtx.close(); await bCtx.close() } }
+}
+
+// Regression: while sharing my own screen, a share I watched never reached the
+// stage and had no card, so there was nothing to switch to.
+test('two members share their screens and switch the stage both ways', async ({ browser }) => {
+  const { a, b, bId, close } = await twoMembers(browser, 'screens')
 
   // A shares: their own share is on the stage.
   await a.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
@@ -124,6 +133,58 @@ test('two members share their screens and switch the stage both ways', async ({ 
   await expect.poll(() => stageSize(a)).toBe('640x360')
   await expect(a.getByTestId('screen-card')).toHaveCount(0)
 
-  await aCtx.close()
-  await bCtx.close()
+  await close()
+})
+
+test('a camera goes on the stage, switches with a screen share and back to the grid', async ({ browser }) => {
+  const { a, b, bId, bName, close } = await twoMembers(browser, 'camera')
+  const aStage = a.getByTestId('stage')
+  const bTile = a.locator('[data-participant-tile]', { hasText: bName })
+  // A corner of the tile: its middle holds the Watch button while B shares.
+  const clickTile = () => bTile.click({ position: { x: 6, y: 6 } })
+
+  // B turns on their (fake) camera; A receives it on B's tile.
+  await b.getByRole('button', { name: 'Kamera einschalten' }).first().click()
+  await expect(bTile.locator('video')).toBeVisible({ timeout: 20_000 })
+  await expect(bTile).toHaveAttribute('aria-label', `Kamera von ${bName} vergrößern`)
+
+  // A click puts it on the stage, a second click takes it off: the grid again.
+  await clickTile()
+  await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
+  await expect.poll(() => stageSize(a)).not.toBe('')
+  await expect(aStage.getByTestId('viewer-stream-volume-slider')).toHaveCount(0)
+  await expect(bTile).toHaveAttribute('aria-pressed', 'true')
+  await shot(a, 'stage-camera')
+  await clickTile()
+  await expect(aStage).toHaveCount(0)
+
+  // B shares: A watches it, then puts B's camera on the stage over it.
+  await b.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
+  const bCard = a.locator(`[data-screen-card="${bId}"]`)
+  await bCard.getByRole('button', { name: 'Ansehen' }).click()
+  await expect(aStage).toHaveAttribute('data-stage-source', bId, { timeout: 20_000 })
+  await expect.poll(() => stageSize(a), { timeout: 20_000 }).toBe('800x450')
+  await clickTile()
+  await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
+  await expect.poll(() => stageSize(a)).not.toBe('800x450')
+
+  // The card switches back to the screen, the tile to the camera again.
+  await bCard.getByRole('button', { name: 'Auf die Bühne' }).click()
+  await expect(aStage).toHaveAttribute('data-stage-source', bId)
+  await expect.poll(() => stageSize(a)).toBe('800x450')
+  await clickTile()
+  await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
+
+  // X takes the camera off the stage: B's screen share is back.
+  await aStage.getByTestId('stage-unfocus-camera').click()
+  await expect(aStage).toHaveAttribute('data-stage-source', bId)
+  await expect.poll(() => stageSize(a)).toBe('800x450')
+
+  // B's camera stops while on the stage: the stage falls back to the screen.
+  await clickTile()
+  await expect(aStage).toHaveAttribute('data-stage-source', `camera:${bId}`)
+  await b.getByRole('button', { name: 'Kamera ausschalten' }).first().click()
+  await expect(aStage).toHaveAttribute('data-stage-source', bId, { timeout: 20_000 })
+
+  await close()
 })
