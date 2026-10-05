@@ -118,30 +118,47 @@ services:
     profiles:
       - turn
     network_mode: host
-    command:
-      - turnserver
-      - -n
-      - --use-auth-secret
-      - --static-auth-secret=${WEBRTC_TURN_SECRET:-}
-      - --realm=${WEBRTC_TURN_REALM:-turn.example.com}
-      - --listening-port=3478
-      - --min-port=49152
-      - --max-port=49200
-      - --fingerprint
-      - --no-cli
-      - --no-multicast-peers
-      - --no-tcp-relay
-      # Never relay into private networks (protects the NAS LAN and Docker networks).
-      - --denied-peer-ip=0.0.0.0-0.255.255.255
-      - --denied-peer-ip=10.0.0.0-10.255.255.255
-      - --denied-peer-ip=100.64.0.0-100.127.255.255
-      - --denied-peer-ip=127.0.0.0-127.255.255.255
-      - --denied-peer-ip=169.254.0.0-169.254.255.255
-      - --denied-peer-ip=172.16.0.0-172.31.255.255
-      - --denied-peer-ip=192.168.0.0-192.168.255.255
-      - --denied-peer-ip=::1
-      - --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
-      - --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+    environment:
+      - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
+      - WEBRTC_TURN_REALM=${WEBRTC_TURN_REALM:-turn.example.com}
+      - WEBRTC_NAT_1TO1_IP=${WEBRTC_NAT_1TO1_IP:-}
+    # Refuses to start without a real secret: with an empty static-auth-secret
+    # anyone could mint credentials and use the relay.
+    # Never relays into private, loopback, link-local or reserved ranges (incl.
+    # their IPv4-mapped IPv6 form) nor to the server's own public IP, so the
+    # relay cannot reach the NAS LAN, Docker networks or host services.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ "$${#WEBRTC_TURN_SECRET}" -lt 16 ]; then
+          echo "WEBRTC_TURN_SECRET must be at least 16 characters" >&2
+          exit 1
+        fi
+        self=""
+        if [ -n "$$WEBRTC_NAT_1TO1_IP" ]; then
+          self="--denied-peer-ip=$$WEBRTC_NAT_1TO1_IP"
+        fi
+        exec turnserver -n --use-auth-secret \
+          --static-auth-secret="$$WEBRTC_TURN_SECRET" --realm="$$WEBRTC_TURN_REALM" \
+          --listening-port=3478 --min-port=49152 --max-port=49200 \
+          --fingerprint --no-cli --no-multicast-peers --no-tcp-relay \
+          --denied-peer-ip=0.0.0.0-0.255.255.255 \
+          --denied-peer-ip=10.0.0.0-10.255.255.255 \
+          --denied-peer-ip=100.64.0.0-100.127.255.255 \
+          --denied-peer-ip=127.0.0.0-127.255.255.255 \
+          --denied-peer-ip=169.254.0.0-169.254.255.255 \
+          --denied-peer-ip=172.16.0.0-172.31.255.255 \
+          --denied-peer-ip=192.0.0.0-192.0.0.255 \
+          --denied-peer-ip=192.168.0.0-192.168.255.255 \
+          --denied-peer-ip=198.18.0.0-198.19.255.255 \
+          --denied-peer-ip=240.0.0.0-255.255.255.255 \
+          --denied-peer-ip=::-::1 \
+          --denied-peer-ip=::ffff:0.0.0.0-::ffff:255.255.255.255 \
+          --denied-peer-ip=64:ff9b::-64:ff9b::ffff:ffff \
+          --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff \
+          --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff \
+          $$self
 
 volumes:
   postgres-data:
