@@ -13,6 +13,10 @@ import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
+import ReactionPalette from './ReactionPalette.vue'
+import EmojiButton from './EmojiButton.vue'
+import MentionSuggestions from './MentionSuggestions.vue'
+import { useComposerAssist } from '../composables/useComposerAssist'
 import { continuationIds } from '../lib/messageGrouping'
 import { previewText } from '../lib/replies'
 import { firstUnreadId, typingLine } from '../lib/chatLogic'
@@ -28,6 +32,7 @@ const inputMessage = ref('')
 const messageContainer = ref(null)
 const fileInput = ref(null)
 const textAreaEl = ref(null)
+const assist = useComposerAssist(textAreaEl, inputMessage)
 const isUploading = ref(false)
 const isSending = ref(false)
 const selectedImage = ref(null)
@@ -39,7 +44,6 @@ const editingMessageId = ref(null)
 const editMessageText = ref('')
 const isSavingEdit = ref(false)
 const activeReactionPickerMsgId = ref(null)
-const quickEmojis = ['👍', '❤️', '😂', '🔥', '🎉', '🚀']
 
 function startEditMessage(msg) {
   editingMessageId.value = msg.id
@@ -644,6 +648,7 @@ async function handleSend() {
 }
 
 function handleKeyDown(e) {
+  if (assist.onKeydown(e)) return
   if (e.key === 'Escape' && replyingTo.value) {
     e.preventDefault()
     cancelReply()
@@ -815,7 +820,8 @@ const groupedIds = computed(() => {
         :class="[
           'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
           groupedIds.has(msg.id) ? '' : 'mt-[17px] first:mt-2',
-          highlightedId === msg.id ? 'msg-flash' : ''
+          highlightedId === msg.id ? 'msg-flash' : '',
+          msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg) ? 'msg-mentions-me' : ''
         ]"
       >
         <!-- Hover Quick Actions Bar -->
@@ -840,20 +846,12 @@ const groupedIds = computed(() => {
               <Smile class="w-4 h-4" />
             </button>
 
-            <!-- Quick Emoji Palette Popup -->
-            <div 
+            <ReactionPalette
               v-if="activeReactionPickerMsgId === msg.id"
-              class="absolute right-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
-            >
-              <button
-                v-for="emoji in quickEmojis"
-                :key="emoji"
-                @click.stop="handleToggleReaction(msg.id, emoji)"
-                class="hover:scale-125 transition p-1 text-base rounded hover:bg-mnema-surface active:scale-95"
-              >
-                {{ emoji }}
-              </button>
-            </div>
+              align="right"
+              @pick="handleToggleReaction(msg.id, $event)"
+              @close="activeReactionPickerMsgId = null"
+            />
           </div>
 
           <!-- Reply -->
@@ -1022,20 +1020,12 @@ const groupedIds = computed(() => {
                 <SmilePlus class="w-4 h-4" />
               </button>
 
-              <!-- Quick Emoji Palette Popup from bottom -->
-              <div 
+              <ReactionPalette
                 v-if="activeReactionPickerMsgId === `bottom-${msg.id}`"
-                class="absolute left-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
-              >
-                <button
-                  v-for="emoji in quickEmojis"
-                  :key="emoji"
-                  @click.stop="handleToggleReaction(msg.id, emoji)"
-                  class="hover:scale-125 transition p-1 text-base rounded hover:bg-mnema-surface active:scale-95"
-                >
-                  {{ emoji }}
-                </button>
-              </div>
+                align="left"
+                @pick="handleToggleReaction(msg.id, $event)"
+                @close="activeReactionPickerMsgId = null"
+              />
             </div>
           </div>
         </div>
@@ -1077,10 +1067,19 @@ const groupedIds = computed(() => {
       <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
       <div
         :class="[
-          'min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+          'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
           replyingTo ? 'rounded-b-lg' : 'rounded-lg'
         ]"
       >
+        <MentionSuggestions
+          v-if="assist.open.value"
+          id="chat-mentions"
+          :items="assist.suggestions.value"
+          :active="assist.active.value"
+          @pick="assist.pick"
+          @hover="assist.active.value = $event"
+        />
+
         <!-- Hidden File Input -->
         <input 
           ref="fileInput" 
@@ -1105,12 +1104,22 @@ const groupedIds = computed(() => {
           ref="textAreaEl"
           v-model="inputMessage"
           @keydown="handleKeyDown"
-          @input="handleComposerInput"
+          @input="handleComposerInput(); assist.onInput()"
+          @click="assist.onInput"
+          @keyup.left="assist.onInput"
+          @keyup.right="assist.onInput"
+          @blur="assist.close"
+          aria-autocomplete="list"
+          :aria-expanded="assist.open.value ? 'true' : 'false'"
+          :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
+          :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
           :placeholder="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
           :aria-label="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
+
+        <EmojiButton :disabled="isSending" @pick="assist.insertText" />
 
         <!-- Send Button -->
         <button

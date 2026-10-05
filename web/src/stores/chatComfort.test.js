@@ -236,6 +236,51 @@ describe('desktop notifications', () => {
   it('defaults the level to all', () => {
     expect(setup().notificationLevel('whatever')).toBe('all')
   })
+
+  it('stays silent while the user is on do not disturb or focus', () => {
+    stubNotification('granted')
+    const chat = setup()
+    const auth = useAuthStore()
+    for (const presence of ['dnd', 'focus']) {
+      auth.user = { ...auth.user, presence }
+      chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', mentions: ['me'] }) })
+    }
+    expect(made).toHaveLength(0)
+    auth.user = { ...auth.user, presence: 'away' }
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2' }) })
+    expect(made).toHaveLength(1)
+  })
+
+  it('counts @all/@here mentions from the server list', () => {
+    const chat = setup()
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: '@here', mentions: ['me', 'u3'] }) })
+    chat.handleWSEvent({ type: 'message_create', payload: msg({ channel_id: 'ch2', content: '@max', mentions: [] }) })
+    expect(chat.readStates.ch2.mention_count).toBe(1)
+    expect(chat.readStates.ch2.unread_count).toBe(2)
+  })
+})
+
+describe('presence', () => {
+  it('tracks live statuses from snapshot and updates', () => {
+    const chat = setup()
+    chat.handleWSEvent({ type: 'presence_snapshot', payload: { u2: 'dnd', u3: 'online' } })
+    expect(chat.presenceOf('u2')).toBe('dnd')
+    expect(chat.onlineUserIds.has('u3')).toBe(true)
+    chat.handleWSEvent({ type: 'presence_update', payload: { user_id: 'u3', status: 'away' } })
+    expect(chat.presenceOf('u3')).toBe('away')
+    chat.handleWSEvent({ type: 'presence_update', payload: { user_id: 'u3', status: 'offline' } })
+    expect(chat.presenceOf('u3')).toBe('offline')
+    expect(chat.onlineUserIds.has('u3')).toBe(false)
+  })
+
+  it('a status update from someone else never touches my chosen presence', () => {
+    const chat = setup()
+    const auth = useAuthStore()
+    auth.user = { ...auth.user, presence: 'focus' }
+    chat.handleWSEvent({ type: 'user_update', payload: { id: 'me', status_text: 'cleared by admin' } })
+    expect(auth.user.presence).toBe('focus')
+    expect(auth.user.status_text).toBe('cleared by admin')
+  })
 })
 
 describe('goToMessage', () => {

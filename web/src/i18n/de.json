@@ -26,7 +26,21 @@
   },
   "presence": {
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "away": "Abwesend",
+    "dnd": "Nicht stören",
+    "focus": "Konzentriert",
+    "choose": "Status wählen",
+    "current": "Dein Status: {status}",
+    "saveFailed": "Status konnte nicht gespeichert werden",
+    "setStatus": "Statustext festlegen",
+    "editStatus": "Statustext bearbeiten",
+    "hint": {
+      "online": "Für alle erreichbar",
+      "away": "Gerade nicht am Platz",
+      "dnd": "Keine Benachrichtigungen",
+      "focus": "Keine Benachrichtigungen, konzentriert bei der Sache"
+    }
   },
   "user": {
     "avatar": "Profilbild",
@@ -122,7 +136,7 @@
     "deleteChannelTitle": "#{name} löschen?",
     "deleteChannelBody": "Alle Nachrichten und Dateien in diesem Kanal gehen verloren. Das lässt sich nicht rückgängig machen.",
     "deleteVoiceChannelTitle": "Sprachkanal „{name}“ löschen?",
-    "deleteVoiceChannelBody": "Die Tafelrunde und ihr Chat gehen verloren. Das lässt sich nicht rückgängig machen.",
+    "deleteVoiceChannelBody": "Der Talk und sein Chat gehen verloren. Das lässt sich nicht rückgängig machen.",
     "deleteCategoryTitle": "Kategorie „{name}“ löschen?",
     "deleteCategoryBody": "Die Kanäle darin bleiben erhalten.",
     "channelDeleted": "Kanal gelöscht",
@@ -176,7 +190,7 @@
     "namePlaceholderText": "z. B. off-topic",
     "namePlaceholderVoice": "z. B. Lounge",
     "nameHintText": "Kleinbuchstaben, Ziffern und Bindestriche.",
-    "nameHintVoice": "Ein beliebiger Titel für die Tafelrunde.",
+    "nameHintVoice": "Ein beliebiger Titel für den Talk.",
     "topic": "Thema (optional)",
     "topicPlaceholder": "Worum geht es hier?",
     "nameRequired": "Bitte gib einen Namen an.",
@@ -283,17 +297,17 @@
     "stopShare": "Teilen beenden",
     "leave": "Verlassen",
     "channelFallback": "Sprachkanal",
-    "audioBlocked": "Du bist wieder in der Tafelrunde. Klick, um den Ton zu aktivieren",
+    "audioBlocked": "Du bist wieder im Talk. Klick, um den Ton zu aktivieren",
     "join": "Beitreten",
     "userVolume": "Lautstärke",
     "muteUser": "Lokal stummschalten",
     "unmuteUser": "Lokale Stummschaltung aufheben",
-    "noOneInVoice": "Niemand in der Tafelrunde",
+    "noOneInVoice": "Niemand im Talk",
     "joinToTalk": "Klick auf Beitreten, um das Gespräch zu beginnen.",
     "panel": {
       "label": "Sprachverbindung",
       "connected": "Verbunden · {channel}",
-      "open": "Tafelrunde öffnen",
+      "open": "Talk öffnen",
       "details": "Verbindungsdetails"
     },
     "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser.",
@@ -499,7 +513,7 @@
     },
     "footer": "© {year} {name} · Alle Rechte vorbehalten"
   },
-  "tafelrunde": {
+  "talk": {
     "participants": {
       "one": "{count} Teilnehmer",
       "other": "{count} Teilnehmer"
@@ -507,8 +521,8 @@
     "noiseToggleTip": "Rauschunterdrückung umschalten",
     "chatShown": "Chat aktiv",
     "chatHidden": "Chat einblenden",
-    "hideChatTip": "Tafelrunden-Chat ausblenden",
-    "showChatTip": "Tafelrunden-Chat einblenden",
+    "hideChatTip": "Talk-Chat ausblenden",
+    "showChatTip": "Talk-Chat einblenden",
     "ownScreen": "Eigener Bildschirm",
     "sharedScreen": "Geteilter Bildschirm",
     "fullscreen": "Vollbild",
@@ -516,7 +530,7 @@
     "ready": "Bereit",
     "shareShort": "Bildschirm",
     "stopShareShort": "Beenden",
-    "chatTitle": "Tafelrunden-Chat in #{channel}",
+    "chatTitle": "Talk-Chat in #{channel}",
     "chatEmpty": "Noch keine Nachrichten. Schreib die erste – Links und Dateien gehen auch.",
     "camera": "Kamera",
     "startCamera": "Kamera einschalten",
@@ -525,7 +539,7 @@
     "stopCameraShort": "Kamera aus",
     "previewHint": "Noch hört dich niemand. Tritt bei, um zu sprechen, die Kamera einzuschalten oder den Bildschirm zu teilen.",
     "previewChatHint": "Du kannst im Chat mitlesen und schreiben, ohne beizutreten.",
-    "inRoundtable": "In der Tafelrunde",
+    "inTalk": "Im Talk",
     "cameraOf": "Kamera von {name}",
     "localMuted": "Für dich stumm",
     "joining": "Trete bei…",
@@ -564,7 +578,7 @@
     "userDisabled": "Gesperrt",
     "never": "Nie",
     "onlineNow": "Online",
-    "inVoice": "In Tafelrunde",
+    "inVoice": "Im Talk",
     "disableUser": "Nutzer sperren",
     "enableUser": "Nutzer entsperren",
     "disableUserTitle": "„{name}“ sperren?",
@@ -587,7 +601,7 @@
     "sessionsRevoked": "Alle Sitzungen beendet",
     "kickFromVoice": "Aus Talk werfen",
     "kickFromVoiceTitle": "„{name}“ aus dem Talk werfen?",
-    "kickFromVoiceBody": "Der Nutzer wird sofort aus der Tafelrunde getrennt.",
+    "kickFromVoiceBody": "Der Nutzer wird sofort aus dem Talk getrennt.",
     "kickConfirm": "Aus Talk werfen",
     "userKicked": "Aus Talk geworfen",
     "channelsLayout": "Kanäle & Layout",
@@ -664,7 +678,7 @@
   "profile": {
     "viewProfile": "Profil ansehen",
     "unknown": "Unbekannt",
-    "roundtable": "Tafelrunde",
+    "talk": "Talk",
     "change": "Ändern",
     "mention": "Erwähnen",
     "mentionHint": "Im Chat erwähnen",
@@ -687,20 +701,40 @@
     "passwordMismatch": "Die beiden Passwörter stimmen nicht überein.",
     "passwordChanged": "Passwort geändert",
     "activity": "Aktivität",
-    "inVoice": "In der Tafelrunde:",
-    "notInVoice": "Gerade in keiner Tafelrunde",
+    "inVoice": "Im Talk:",
+    "notInVoice": "Gerade in keinem Talk",
     "membership": "Mitgliedschaft",
     "memberSince": "Mitglied seit",
     "avatarHint": "Tipp: Klick auf dein Profilbild, um ein neues Bild (PNG, JPG, WEBP, GIF) hochzuladen.",
     "avatarSaved": "Avatar gespeichert",
     "avatarTooBig": "Das Bild ist zu groß (max. {size} MB).",
-    "avatarFailed": "Avatar konnte nicht hochgeladen werden."
+    "avatarFailed": "Avatar konnte nicht hochgeladen werden.",
+    "status": "Status",
+    "statusPlaceholder": "Was machst du gerade?",
+    "noStatus": "Kein Status gesetzt",
+    "clearStatus": "Leeren",
+    "moderateStatus": "Bearbeiten (Admin)",
+    "statusSaved": "Status gespeichert",
+    "statusCleared": "Status geleert",
+    "displayNameHint": "So sehen dich andere. Dein Username @{username} bleibt gleich. Höchstens {count} Zeichen.",
+    "open": "Profil von {name} öffnen"
   },
   "nav": {
     "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
-    "voiceNotFound": "Diese Tafelrunde gibt es nicht mehr.",
+    "voiceNotFound": "Diesen Talk gibt es nicht mehr.",
     "noAccess": "Dafür fehlt dir die Berechtigung.",
     "mentionCopied": "@Name in die Zwischenablage kopiert",
     "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
+  },
+  "mention": {
+    "title": "Erwähnen",
+    "listLabel": "Vorschläge für Erwähnungen",
+    "allHint": "Alle Mitglieder",
+    "hereHint": "Alle, die gerade online sind"
+  },
+  "emoji": {
+    "open": "Emoji einfügen",
+    "more": "Weitere Emojis",
+    "loading": "Emojis werden geladen …"
   }
 }

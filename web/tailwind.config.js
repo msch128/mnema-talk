@@ -31,6 +31,9 @@ export default {
           mint: '#8CCBAA',
           danger: '#F35549',
           warning: '#D97706',
+          // Presence colours: away, focus (online is accent, do not disturb is danger).
+          away: '#E0A23A',
+          focus: '#8E97F2',
           amber: '#FCE4A8',
         }
       },

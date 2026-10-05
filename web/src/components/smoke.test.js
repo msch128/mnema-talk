@@ -30,7 +30,7 @@ vi.mock('../composables/useWebRTC', () => ({
   })
 }))
 
-const RAW_KEY = /\b(common|chat|admin|profile|legal|tafelrunde|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
+const RAW_KEY = /\b(common|chat|admin|profile|legal|talk|mention|emoji|audio|voice|stats|login|channel|sidebar|thread|members|account|connection|errors|menu|role|presence|user|media|resize|app)\.[A-Za-z][A-Za-z.]*\b/
 
 const msg = (id, extra = {}) => ({
   id, channel_id: 'c1', user_id: 'u1', display_name: 'Herzog', username: 'herzog', content: 'Hallo **Welt**',
@@ -44,7 +44,7 @@ function seed() {
   chat.categories = [{ id: 'cat', name: 'Allgemein', channels: [{ id: 'c1', name: 'allgemein', type: 'text', topic: 'Hi' }, { id: 'v1', name: 'Lounge', type: 'voice' }] }]
   chat.activeChannel = chat.categories[0].channels[0]
   chat.members = [{ id: 'u1', username: 'herzog', display_name: 'Herzog', role: 'admin' }, { id: 'u2', username: 'zoe', display_name: 'Zoe', role: 'user' }]
-  chat.onlineUserIds = new Set(['u1'])
+  chat.presenceById = { u1: 'online' }
   chat.messages = [msg('m1', { reply_count: 2, is_edited: true }), msg('m2', { reply_to_id: 'm1', reply_to: { id: 'm1', content: 'x', display_name: 'Herzog' } })]
   chat.activeThread = msg('m1')
   chat.threadReplies = [msg('r1')]

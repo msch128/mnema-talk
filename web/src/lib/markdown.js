@@ -12,7 +12,13 @@ export function escapeHtml(text) {
     .replace(/'/g, '&#39;')
 }
 
-export function renderMarkdown(content) {
+/**
+ * Renders chat Markdown. Options:
+ * - known: Set of lower-cased usernames; when given, only those (and @all,
+ *   @here) are highlighted as mentions.
+ * - me: the reader's username; mentions of them get .md-mention-me.
+ */
+export function renderMarkdown(content, { known = null, me = '' } = {}) {
   if (!content) return ''
   let text = escapeHtml(content)
 
@@ -40,7 +46,20 @@ export function renderMarkdown(content) {
   text = text.replace(/^&gt;\s?(.*)$/gm, '<blockquote class="md-quote">$1</blockquote>')
 
   // Mentions (links are already stashed, so URLs are never touched).
-  text = text.replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, '$1<span class="md-mention">@$2</span>')
+  const self = me.toLowerCase()
+  text = text.replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all, pre, raw) => {
+    // A sentence may end right after a name: "@max." mentions max.
+    const name = raw.replace(/[.-]+$/, '')
+    const tail = raw.slice(name.length)
+    const lower = name.toLowerCase()
+    const group = lower === 'all' || lower === 'here'
+    if (name.length < 3 || (known && !group && !known.has(lower))) return all
+    const cls = ['md-mention']
+    if (group) cls.push('md-mention-group')
+    if (lower === self) cls.push('md-mention-me')
+    const attrs = known ? ` data-mention="${lower}" role="button" tabindex="0"` : ''
+    return `${pre}<span class="${cls.join(' ')}"${attrs}>@${name}</span>${tail}`
+  })
 
   // \u0000 is the intentional code-span placeholder delimiter used for code spans above, so matching it is deliberate.
   // eslint-disable-next-line no-control-regex

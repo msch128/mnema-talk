@@ -153,7 +153,7 @@ function displayName(m) {
   return m.display_name || m.username || ''
 }
 
-/** Mention in the composer (chat or Tafelrunde chat); copy "@name" if none is open. */
+/** Mention in the composer (chat or Talk chat); copy "@name" if none is open. */
 export async function mentionMember(member) {
   const chatStore = useChatStore()
   if (!member?.username) return
@@ -218,7 +218,7 @@ export function buildMemberItems(member, ctx = {}) {
       const hidden = !!voiceStore.hiddenCameras?.[member.id]
       items.push({
         id: 'camera-hide',
-        label: t(hidden ? 'tafelrunde.showCamera' : 'tafelrunde.hideCamera'),
+        label: t(hidden ? 'talk.showCamera' : 'talk.hideCamera'),
         icon: hidden ? Eye : EyeOff,
         action: () => voiceStore.toggleCameraHidden?.(member.id)
       })

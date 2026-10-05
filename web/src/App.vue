@@ -42,9 +42,9 @@ const showAdminModal = ref(false)
 const showLegalModal = ref(false)
 const adminTab = ref('users')
 const previewVoiceChannelId = ref(null)
-// /v/:id is the Tafelrunde on its own, /v/:id/chat adds the side chat.
+// /v/:id is the Talk on its own, /v/:id/chat adds the side chat.
 const voiceShowChat = ref(false)
-// The channel the Tafelrunde view shows: a previewed one (not joined) or the joined one.
+// The channel the Talk view shows: a previewed one (not joined) or the joined one.
 const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
 let isSyncingFromRoute = false
 
@@ -281,7 +281,7 @@ onMounted(async () => {
         <ResizeHandle :panel="panels.left" :label="$t('resize.sidebar')" />
       </div>
 
-      <!-- Center: connection banner, then the Tafelrunde or a text channel -->
+      <!-- Center: connection banner, then the Talk or a text channel -->
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
         <VoiceStage
