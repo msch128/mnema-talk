@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useChatStore, TYPING_EXPIRY_MS, MARK_READ_INTERVAL_MS } from './chat'
+import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
 import { currentRoute } from '../lib/router'
 
@@ -280,6 +281,20 @@ describe('presence', () => {
     chat.handleWSEvent({ type: 'user_update', payload: { id: 'me', status_text: 'cleared by admin' } })
     expect(auth.user.presence).toBe('focus')
     expect(auth.user.status_text).toBe('cleared by admin')
+  })
+})
+
+describe('profile changes', () => {
+  it('a new avatar shows on messages, the open thread and in Talk', () => {
+    const chat = setup()
+    const voice = useVoiceStore()
+    chat.messages = [{ id: 'm1', user_id: 'u2', avatar_url: '/api/media/old', display_name: 'Old' }]
+    chat.activeThread = { id: 't1', user_id: 'u2', avatar_url: '/api/media/old', display_name: 'Old' }
+    voice.handleVoiceStateUpdate({ action: 'join', channel_id: 'v1', user: { id: 'u2', avatar_url: '/api/media/old', display_name: 'Old', muted: true } })
+    chat.handleWSEvent({ type: 'user_update', payload: { id: 'u2', avatar_url: '/api/media/new', display_name: 'New' } })
+    expect(chat.messages[0]).toMatchObject({ avatar_url: '/api/media/new', display_name: 'New' })
+    expect(chat.activeThread).toMatchObject({ avatar_url: '/api/media/new', display_name: 'New' })
+    expect(voice.channelUsers.v1.u2).toMatchObject({ avatar_url: '/api/media/new', display_name: 'New', muted: true })
   })
 })
 
