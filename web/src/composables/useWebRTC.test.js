@@ -251,6 +251,23 @@ describe('useWebRTC join and leave', () => {
   })
 })
 
+describe('shared watchers', () => {
+  it('reacts once to a setting however many components use it', async () => {
+    const { rtc, sent, voice } = setup()
+    useWebRTC()
+    useWebRTC()
+    useWebRTC()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const before = sent.filter(e => e.type === 'voice_mute_state').length
+    voice.isMuted = true
+    await vi.waitFor(() => expect(sent.filter(e => e.type === 'voice_mute_state').length).toBe(before + 1))
+    await new Promise(r => setTimeout(r, 0))
+    expect(sent.filter(e => e.type === 'voice_mute_state').length).toBe(before + 1)
+  })
+})
+
 describe('useWebRTC signaling', () => {
   it('ignores offers that arrive after leaving', async () => {
     const { rtc, chat } = setup()
