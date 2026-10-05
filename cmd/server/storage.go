@@ -89,14 +89,6 @@ func (l *lazyStore) Upload(ctx context.Context, key string, body io.Reader, mime
 	return s.Upload(ctx, key, body, mimeType, size)
 }
 
-func (l *lazyStore) GetObject(ctx context.Context, key string) (io.ReadCloser, string, int64, error) {
-	s, err := l.get()
-	if err != nil {
-		return nil, "", 0, err
-	}
-	return s.GetObject(ctx, key)
-}
-
 func (l *lazyStore) GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error) {
 	s, err := l.get()
 	if err != nil {

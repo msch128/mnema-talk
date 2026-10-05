@@ -83,6 +83,7 @@ func newAppWith(t *testing.T, withHub bool, adjust func(*config.Config)) *app {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(a.router.Close)
 	a.srv.Config.Handler = a.router
 	a.srv.Start()
 	t.Cleanup(a.srv.Close)
