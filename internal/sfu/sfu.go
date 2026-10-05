@@ -335,8 +335,9 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	// is the screen, the second the camera.
 	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
 	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
-	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	screenTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
 	cameraTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	pinCodecOrder(screenTr, cameraTr)
 
 	peer := &Peer{
 		ID:        userID,
@@ -411,6 +412,26 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	go r.SignalPeerConnections()
 
 	return peer, nil
+}
+
+// pinCodecOrder keeps the codec order of the first offer on a publisher's
+// video lines for the whole connection. Without it Pion re-offers every video
+// line in the order of the client's first answered video line, and the web
+// client puts H.264 first on its screen line. A browser that can send H.264
+// then switches its running camera from VP8 to H.264 at the next
+// renegotiation (e.g. someone joins), while the forwarded track keeps the
+// codec of the camera's first packets: viewers get H.264 labelled as VP8 and
+// never decode a frame. The client still reorders the screen line itself.
+func pinCodecOrder(transceivers ...*webrtc.RTPTransceiver) {
+	for _, tr := range transceivers {
+		if tr == nil {
+			continue
+		}
+		// Before negotiation these are the registered codecs in their order.
+		if err := tr.SetCodecPreferences(tr.Receiver().GetParameters().Codecs); err != nil {
+			slog.Warn("sfu pin codec order", "err", err)
+		}
+	}
 }
 
 // rtpReader is the publisher side of a forwarded track (*webrtc.TrackRemote).
