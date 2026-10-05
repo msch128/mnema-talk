@@ -293,3 +293,49 @@ func TestHubSubscribeValidation(t *testing.T) {
 	c := &Client{hub: h, User: auth.User{ID: viewer}, send: make(chan []byte, 16)}
 	c.handle("webrtc_subscribe", []byte(valid[0].body))
 }
+
+func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	chID := uuid.New()
+	user := auth.User{ID: uuid.New(), Username: "painter", DisplayName: "Old"}
+	other := auth.User{ID: uuid.New(), Username: "bystander", DisplayName: "Bystander"}
+
+	c := &Client{hub: h, User: user, send: make(chan []byte, 16)}
+	o := &Client{hub: h, User: other, send: make(chan []byte, 16)}
+	h.register(c)
+	defer h.unregister(c)
+	h.register(o)
+	defer h.unregister(o)
+
+	h.mu.Lock()
+	h.voice[chID] = map[uuid.UUID]auth.User{user.ID: user, other.ID: other}
+	h.mu.Unlock()
+
+	changed := user
+	changed.DisplayName = "New"
+	changed.AvatarURL = "/api/media/" + uuid.NewString()
+	changed.StatusText = "painting"
+	h.Broadcast("user_update", changed.Public())
+
+	snap := h.voiceSnapshot()
+	got := snap[chID][user.ID]
+	if got.DisplayName != "New" || got.AvatarURL != changed.AvatarURL || got.StatusText != "painting" {
+		t.Fatalf("voice snapshot kept the old profile: %+v", got.User)
+	}
+	if snap[chID][other.ID].DisplayName != "Bystander" {
+		t.Fatalf("other users must stay untouched: %+v", snap[chID][other.ID].User)
+	}
+
+	h.mu.RLock()
+	connUser := h.profileLocked(c)
+	h.mu.RUnlock()
+	if connUser.AvatarURL != changed.AvatarURL || connUser.Username != "painter" {
+		t.Fatalf("connection keeps a stale profile for later voice joins: %+v", connUser)
+	}
+
+	// An admin's disable notice is not a profile and changes nothing.
+	h.Broadcast("user_update", map[string]any{"id": user.ID, "disabled": true})
+	if h.voiceSnapshot()[chID][user.ID].DisplayName != "New" {
+		t.Fatal("disable notice must not reset the profile")
+	}
+}

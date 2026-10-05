@@ -437,6 +437,15 @@ export const useVoiceStore = defineStore('voice', () => {
     }
   }
 
+  /** user_update: a new name or avatar also shows in the Talk lists and tiles. */
+  function updateUser(updated) {
+    if (!updated?.id) return
+    for (const users of Object.values(channelUsers.value)) {
+      const user = users?.[updated.id]
+      if (user) users[updated.id] = { ...user, ...updated }
+    }
+  }
+
   function myUserId() {
     try {
       return useAuthStore()?.user?.id || null
@@ -646,6 +655,7 @@ export const useVoiceStore = defineStore('voice', () => {
     localAudioStream,
     remoteScreenStream,
     channelUsers,
+    updateUser,
     roomStartedAt,
     setVoiceRooms,
     joinedAtOf,

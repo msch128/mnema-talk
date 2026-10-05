@@ -614,6 +614,7 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
     }
+    voiceStore.updateUser(updated)
     if (authStore.user?.id === updated.id) authStore.user = { ...authStore.user, ...updated }
     if (selectedUserProfile.value?.id === updated.id) {
       selectedUserProfile.value = { ...selectedUserProfile.value, ...updated }
