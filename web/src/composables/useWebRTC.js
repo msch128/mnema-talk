@@ -1431,7 +1431,11 @@ export function useWebRTC() {
         audio: {
           autoGainControl: false,
           echoCancellation: false,
-          noiseSuppression: false
+          noiseSuppression: false,
+          // Shared system audio would also carry the voices this page plays,
+          // so the others would hear themselves; leave this page's own sound
+          // out (Chrome/Edge 141+, ignored elsewhere).
+          restrictOwnAudio: true
         }
       })
     } catch (err) {
