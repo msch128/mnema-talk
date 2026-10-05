@@ -213,6 +213,9 @@ func (c *Client) SendEvent(eventType string, payload any) {
 
 // Broadcast sends an event to every connected client.
 func (h *Hub) Broadcast(eventType string, payload any) {
+	if u, ok := payload.(auth.User); ok && eventType == "user_update" {
+		h.refreshUser(u)
+	}
 	data := encode(eventType, payload)
 	if data == nil {
 		return
@@ -221,6 +224,34 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 	defer h.mu.RUnlock()
 	for c := range h.clients {
 		c.deliver(data)
+	}
+}
+
+// refreshUser copies a changed profile (name, avatar, status …) into the
+// user info the hub keeps per connection and per voice room. Otherwise the
+// voice snapshot and later voice joins would keep showing what the user
+// looked like when they connected.
+func (h *Hub) refreshUser(u auth.User) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	apply := func(dst *auth.User) {
+		dst.DisplayName = u.DisplayName
+		dst.Bio = u.Bio
+		dst.Role = u.Role
+		dst.AvatarURL = u.AvatarURL
+		dst.StatusText = u.StatusText
+		dst.Locale = u.Locale
+	}
+	for c := range h.clients {
+		if c.User.ID == u.ID {
+			apply(&c.User)
+		}
+	}
+	for _, users := range h.voice {
+		if cur, ok := users[u.ID]; ok {
+			apply(&cur)
+			users[u.ID] = cur
+		}
 	}
 }
 

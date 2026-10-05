@@ -574,7 +574,7 @@ export const useChatStore = defineStore('chat', () => {
   function updateUserEverywhere(updated) {
     const idx = members.value.findIndex(m => m.id === updated.id)
     if (idx !== -1) members.value[idx] = { ...members.value[idx], ...updated }
-    for (const list of [messages.value, threadReplies.value]) {
+    for (const list of loadedLists()) {
       list.forEach(m => {
         if (m.user_id === updated.id) {
           m.avatar_url = updated.avatar_url
@@ -586,6 +586,7 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
     }
+    voiceStore.updateUser(updated)
     if (authStore.user?.id === updated.id) authStore.user = { ...authStore.user, ...updated }
     if (selectedUserProfile.value?.id === updated.id) {
       selectedUserProfile.value = { ...selectedUserProfile.value, ...updated }
