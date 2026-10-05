@@ -40,7 +40,26 @@ type User struct {
 	Bio         string    `json:"bio"`
 	Role        string    `json:"role"`
 	AvatarURL   string    `json:"avatar_url,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	// Locale is the chosen UI language ("de", "en"); empty until chosen.
+	Locale    string    `json:"locale"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// SupportedLocales are the UI languages the web app ships.
+var SupportedLocales = map[string]bool{"de": true, "en": true}
+
+// SetLocale stores the user's UI language.
+func SetLocale(ctx context.Context, p *db.Pool, userID uuid.UUID, locale string) (*User, error) {
+	if !SupportedLocales[locale] {
+		return nil, httpx.ErrInvalidInput("locale must be de or en")
+	}
+	u, err := scanUser(p.QueryRow(ctx, `
+		UPDATE users SET locale = $1, updated_at = NOW() WHERE id = $2
+		RETURNING `+userColumns, locale, userID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound("user not found")
+	}
+	return u, err
 }
 
 func (u User) IsAdmin() bool { return u.Role == RoleAdmin }
@@ -94,12 +113,12 @@ func ValidateUsername(username string) error {
 	return nil
 }
 
-const userColumns = `id, username, display_name, bio, role, avatar_s3_key, created_at`
+const userColumns = `id, username, display_name, bio, role, avatar_s3_key, locale, created_at`
 
 func scanUser(row pgx.Row, extra ...any) (*User, error) {
 	var u User
 	var avatar *string
-	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.CreatedAt}, extra...)
+	dest := append([]any{&u.ID, &u.Username, &u.DisplayName, &u.Bio, &u.Role, &avatar, &u.Locale, &u.CreatedAt}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return nil, err
 	}

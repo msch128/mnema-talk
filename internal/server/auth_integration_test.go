@@ -225,3 +225,23 @@ func TestUnknownJSONFieldsAreRejected(t *testing.T) {
 		t.Fatalf("got %d %s", res.status, res.body)
 	}
 }
+
+func TestUserLocale(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	var me struct{ Locale string }
+	admin.get("/api/auth/me").decode(t, &me)
+	if me.Locale != "" {
+		t.Fatalf("new users start without a chosen locale, got %q", me.Locale)
+	}
+	if res := admin.put("/api/users/me/locale", map[string]string{"locale": "en"}); res.status != http.StatusOK {
+		t.Fatalf("set locale: %d %s", res.status, res.body)
+	}
+	admin.get("/api/auth/me").decode(t, &me)
+	if me.Locale != "en" {
+		t.Fatalf("locale %q, want en", me.Locale)
+	}
+	if res := admin.put("/api/users/me/locale", map[string]string{"locale": "fr"}); res.status != http.StatusBadRequest {
+		t.Fatalf("unsupported locale accepted: %d", res.status)
+	}
+}
