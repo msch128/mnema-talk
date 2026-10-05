@@ -1,0 +1,73 @@
+web/src/i18n/de.json
+  s_b14660589987ff::t_2917298e994dad 248-258
+  s_b14660589987ff::t_5b045a58bd5ad6 151-157
+web/src/stores/chatComfort.test.js
+  s_b14660589987ff::t_62cf3e1c92126e 1-153,160-162,164,166,169-175,177-249
+  s_b14660589987ff::t_a2aa7af363bd10 154-159
+  s_b14660589987ff::t_a6450a6a1dbe6d 163,165,167-168
+  s_b14660589987ff::t_11bb6a730c3d92 176
+web/src/stores/chat.js
+  s_b14660589987ff::t_35eaef961a5431 13-14,18-22
+  s_b14660589987ff::t_de1fab437fa7ec 539
+  s_b14660589987ff::t_1681bef5e44110 274-294
+  s_b14660589987ff::t_759ddb5016fa84 798-799
+  s_b14660589987ff::t_e3936d10d79078 1006-1011
+  s_b14660589987ff::t_e93f1eeb09bfde 991,996
+  s_b14660589987ff::t_96d33d1568db8a 74-79
+  s_b14660589987ff::t_f89a73acf49ffa 24-30
+  s_b14660589987ff::t_ba2bb62e7633de 974-981
+  s_b14660589987ff::t_40fd2843ddcf22 811
+  s_b14660589987ff::t_6e80de15093c56 259
+  s_b14660589987ff::t_dbd034bad49ff4 675
+  s_b14660589987ff::t_b3e567f90b6814 859-862,869-875
+  s_b14660589987ff::t_8845e1435064b3 223-225
+  s_b14660589987ff::t_d1dc33d38cdc1a 651,654-657
+  s_b14660589987ff::t_053f9134859d22 904-908
+  s_b14660589987ff::t_2daab37f694f4e 832-839,841-851,853
+  s_b14660589987ff::t_653279480b21e6 15
+  s_b14660589987ff::t_6ce483f110b322 133
+  s_b14660589987ff::t_a475a0a21da795 953
+  s_b14660589987ff::t_af7be52a5d3e42 500
+  s_b14660589987ff::t_43febd1ce47b64 840
+  s_b14660589987ff::t_79e3cdcba51042 852
+  s_b14660589987ff::t_b530f1adb48872 1129-1131
+  s_b14660589987ff::t_24d55c3db5d6a3 830-831
+  s_ed4a044667278a::t_c72a7960ef5cba 23,80
+web/src/components/GlobalSearch.vue
+  s_b14660589987ff::t_6140808242ab23 1-8
+web/src/lib/globalSearch.js
+  s_b14660589987ff::t_cf7d9f43beb216 1-12,14,24-43
+  s_b14660589987ff::t_be1aa538211e33 13,15-23
+web/src/lib/chatLogic.test.js
+  s_b14660589987ff::t_e6826761d7d956 1-134
+web/src/i18n/en.json
+  s_b14660589987ff::t_abaa01243a2112 248-258
+  s_b14660589987ff::t_2b7907dff5ab55 151-157
+web/src/lib/chatLogic.js
+  s_b14660589987ff::t_7ed03cc8293134 1-34,57-83
+  s_b14660589987ff::t_cb8ff6daee6944 35-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d8ae24a0e6f582fc83c73848dd881395ecd49b8f",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_ed4a044667278a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b355918-f239-4da3-9be2-aaed7bc1c4f6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
