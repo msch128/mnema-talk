@@ -22,6 +22,7 @@ import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
+import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
@@ -315,6 +316,7 @@ onMounted(async () => {
       <!-- Center: connection banner, then the Talk or a text channel -->
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
+        <UpdateBanner />
         <VoiceStage
           v-if="voiceStore.activeView === 'voice'"
           :channel-id="voiceChannelId"

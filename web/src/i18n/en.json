@@ -105,6 +105,11 @@
     "retryNow": "Retry now",
     "restored": "Reconnected"
   },
+  "update": {
+    "reloadBanner": "A new version is available – click here to reload",
+    "reloadInCall": "Your call drops for a moment and reconnects automatically.",
+    "dismiss": "Later"
+  },
   "login": {
     "subtitleLogin": "Sign in to Mnema Talk",
     "subtitleRegister": "Join the community",
