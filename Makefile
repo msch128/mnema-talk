@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web lint fmt vuln check docker up down logs install-hooks
+.PHONY: help dev web build run test test-integration test-web lint fmt vuln check docker up down logs install-hooks scorecard
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -76,3 +76,6 @@ install-hooks: ## Use scripts/git-hooks as this clone's git hooks
 	git config core.hooksPath scripts/git-hooks
 	@chmod +x scripts/git-hooks/* 2>/dev/null || true
 	@echo "git hooks installed (core.hooksPath=scripts/git-hooks)"
+
+scorecard: ## Print the weighted 1.0 score from docs/SCORECARD.md
+	@node scripts/scorecard.mjs
