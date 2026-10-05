@@ -152,3 +152,43 @@ describe('useResizable', () => {
     scope.stop()
   })
 })
+
+describe('vertical panels (axis y)', () => {
+  it('grows a bottom panel upwards and a top panel downwards', () => {
+    expect(dragWidth(300, 500, 450, 'bottom')).toBe(350)
+    expect(dragWidth(300, 500, 450, 'top')).toBe(250)
+  })
+
+  it('uses Up/Down for top and bottom panels and ignores Left/Right', () => {
+    expect(keyboardDelta('ArrowUp', false, 'bottom')).toBe(8)
+    expect(keyboardDelta('ArrowDown', true, 'bottom')).toBe(-32)
+    expect(keyboardDelta('ArrowDown', false, 'top')).toBe(8)
+    expect(keyboardDelta('ArrowLeft', false, 'bottom')).toBe(0)
+    // Side panels keep ignoring Up/Down.
+    expect(keyboardDelta('ArrowUp', false, 'left')).toBe(0)
+  })
+
+  it('shares the window height, persists the height and drags on the y axis', () => {
+    window.innerHeight = 900
+    const storage = memoryStorage({ [storageKey('chat', 'height')]: '400' })
+    const scope = effectScope()
+    const { chat } = scope.run(() => useResizable([
+      { name: 'chat', side: 'bottom', defaultWidth: 300, min: 160, max: 1200 }
+    ], { axis: 'y', centerMin: 300, storage }))
+    expect(chat.axis).toBe('y')
+    expect(chat.width).toBe(400)
+    expect(chat.maxNow).toBe(600)
+
+    const handle = document.createElement('div')
+    handle.setPointerCapture = () => {}
+    handle.releasePointerCapture = () => {}
+    chat.startDrag({ button: 0, currentTarget: handle, pointerId: 1, clientX: 10, clientY: 500, preventDefault: () => {} })
+    expect(document.body.style.cursor).toBe('row-resize')
+    handle.dispatchEvent(Object.assign(new Event('pointerup'), { pointerId: 1, clientX: 10, clientY: 400 }))
+    expect(chat.width).toBe(500)
+    expect(storage.data[storageKey('chat', 'height')]).toBe('500')
+    expect(storage.data[storageKey('chat')]).toBeUndefined()
+    expect(document.body.style.cursor).toBe('')
+    scope.stop()
+  })
+})

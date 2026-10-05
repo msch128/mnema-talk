@@ -65,43 +65,37 @@ export function buildChannelItems(channel, handlers = {}) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
   const toasts = useToastStore()
-  const isText = channel.type !== 'voice'
-  const items = []
-
-  if (isText) {
-    const rs = chatStore.readStates?.[channel.id]
-    const hasUnread = (rs?.unread_count || 0) > 0 || (rs?.mention_count || 0) > 0
-    items.push({
-      id: 'mark-read',
-      label: t('sidebar.markRead'),
-      icon: CheckCheck,
-      disabled: !hasUnread,
-      action: async () => {
-        await chatStore.markChannelRead?.(channel.id)
-        toasts.success(t('sidebar.markedRead'))
-      }
-    })
-  }
-  items.push({
+  // Every channel has a chat (a voice channel's sits next to its Talk), so
+  // every channel has a read state and a notification level.
+  const rs = chatStore.readStates?.[channel.id]
+  const hasUnread = (rs?.unread_count || 0) > 0 || (rs?.mention_count || 0) > 0
+  const items = [{
+    id: 'mark-read',
+    label: t('sidebar.markRead'),
+    icon: CheckCheck,
+    disabled: !hasUnread,
+    action: async () => {
+      await chatStore.markChannelRead?.(channel.id)
+      toasts.success(t('sidebar.markedRead'))
+    }
+  }, {
     id: 'copy-link',
     label: t('sidebar.copyLink'),
     icon: Link,
     action: () => copyText(channelLink(channel), t('sidebar.copiedLink'))
-  })
+  }]
 
-  if (isText) {
-    const current = notifyLevelOf(chatStore, channel.id)
-    items.push({ type: 'separator' })
-    items.push({ type: 'label', label: t('notifications.title') })
-    for (const level of NOTIFY_LEVELS) {
-      items.push({
-        id: `notify-${level}`,
-        type: 'radio',
-        label: t(`notifications.${level}`),
-        checked: current === level,
-        action: () => chatStore.setNotificationLevel?.(channel.id, level)
-      })
-    }
+  const current = notifyLevelOf(chatStore, channel.id)
+  items.push({ type: 'separator' })
+  items.push({ type: 'label', label: t('notifications.title') })
+  for (const level of NOTIFY_LEVELS) {
+    items.push({
+      id: `notify-${level}`,
+      type: 'radio',
+      label: t(`notifications.${level}`),
+      checked: current === level,
+      action: () => chatStore.setNotificationLevel?.(channel.id, level)
+    })
   }
 
   if (authStore.isAdmin) {
@@ -138,8 +132,9 @@ export function buildCategoryItems(category, handlers = {}) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
   const toasts = useToastStore()
-  const textChannels = (category.channels || []).filter(c => c.type !== 'voice')
-  const hasUnread = textChannels.some(c => {
+  // Text and voice channels alike: both have a chat.
+  const channels = category.channels || []
+  const hasUnread = channels.some(c => {
     const rs = chatStore.readStates?.[c.id]
     return (rs?.unread_count || 0) > 0 || (rs?.mention_count || 0) > 0
   })
@@ -149,7 +144,7 @@ export function buildCategoryItems(category, handlers = {}) {
     icon: CheckCheck,
     disabled: !hasUnread,
     action: async () => {
-      await Promise.all(textChannels.map(c => chatStore.markChannelRead?.(c.id)))
+      await Promise.all(channels.map(c => chatStore.markChannelRead?.(c.id)))
       toasts.success(t('sidebar.allMarkedRead'))
     }
   }]

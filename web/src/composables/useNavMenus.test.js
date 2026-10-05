@@ -36,8 +36,14 @@ describe('channel menu', () => {
     expect(ids(buildChannelItems(voiceCh)).slice(-3)).toEqual(['edit', 'duplicate', 'delete'])
   })
 
-  it('voice channels have no read state or notifications', () => {
-    expect(ids(buildChannelItems(voiceCh))).toEqual(['copy-link'])
+  it('voice channels have a chat, so read state and notifications too', () => {
+    expect(ids(buildChannelItems(voiceCh))).toEqual(['mark-read', 'copy-link', 'notify-all', 'notify-mentions', 'notify-mute'])
+    chat.readStates = { [voiceCh.id]: { channel_id: voiceCh.id, unread_count: 1, mention_count: 0 } }
+    chat.setNotificationLevel = vi.fn()
+    const list = buildChannelItems(voiceCh)
+    expect(list.find(i => i.id === 'mark-read').disabled).toBe(false)
+    list.find(i => i.id === 'notify-mute').action()
+    expect(chat.setNotificationLevel).toHaveBeenCalledWith(voiceCh.id, 'mute')
   })
 
   it('marks the current notification level and sets a new one', () => {
@@ -80,6 +86,14 @@ describe('category menu', () => {
     expect(list.find(i => i.id === 'expand-all').disabled).toBe(true)
     list.find(i => i.id === 'collapse-all').action()
     expect(onCollapseAll).toHaveBeenCalled()
+  })
+  it('mark all read covers the chats of voice channels too', async () => {
+    chat.readStates = { v1: { channel_id: 'v1', unread_count: 2, mention_count: 0 } }
+    chat.markChannelRead = vi.fn(async () => {})
+    const item = buildCategoryItems({ id: 'c2', name: 'Talks', channels: [textCh, voiceCh] }).find(i => i.id === 'mark-all-read')
+    expect(item.disabled).toBe(false)
+    await item.action()
+    expect(chat.markChannelRead.mock.calls.map(c => c[0])).toEqual(['t1', 'v1'])
   })
   it('passes the category to the create handlers', () => {
     auth.user = { id: 'me', role: 'admin' }

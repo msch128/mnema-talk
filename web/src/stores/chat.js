@@ -11,7 +11,7 @@ import {
   prependOlder, appendNewer, appendLive, removeMessage
 } from '../lib/messageWindow'
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
-import { currentRoute, navigate } from '../lib/router'
+import { currentRoute, navigate, voiceMessagePath } from '../lib/router'
 import { mentionsUser, shouldNotify, createKeyedThrottle } from '../lib/chatLogic'
 import { snapshotToMap, applyPresenceUpdate, isQuiet, IDLE_AFTER_MS } from '../lib/presence'
 import { installGlobalSearch, uninstallGlobalSearch } from '../lib/globalSearch'
@@ -70,6 +70,9 @@ export const useChatStore = defineStore('chat', () => {
   // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
   const readStates = ref({})
   const activeChannelLastReadAt = ref(null)
+  // A voice channel's chat is only read while its panel next to the Talk is
+  // open (VoiceChatPanel sets this); with the panel closed it collects unreads.
+  const voiceChatReading = ref(false)
 
   // Typing state per channel: channel_id -> Array<{ user_id, username, display_name }>
   const typingByChannel = ref({})
@@ -184,7 +187,7 @@ export const useChatStore = defineStore('chat', () => {
     setWindow(emptyWindow())
     activeChannelLastReadAt.value = readStates.value[channel.id]?.last_read_at || null
     await fetchMessages(channel.id)
-    if (channel.type !== 'voice') {
+    if (channel.type !== 'voice' || voiceChatReading.value) {
       await markChannelRead(channel.id)
     }
   }
@@ -333,7 +336,8 @@ export const useChatStore = defineStore('chat', () => {
     if (!msg?.id || !msg.channel_id) return
     const rootId = msg.parent_id || msg.id
     pendingThreadOpen = msg.parent_id ? { channelId: msg.channel_id, rootId } : null
-    navigate(`/c/${msg.channel_id}/m/${rootId}`)
+    // A voice channel's messages live in the chat next to its Talk.
+    navigate(isVoiceChannel(msg.channel_id) ? voiceMessagePath(msg.channel_id, rootId) : `/c/${msg.channel_id}/m/${rootId}`)
   }
 
   async function jumpToRootMessage(id) {
@@ -977,7 +981,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function markChannelRead(channelId) {
-    if (!channelId || isVoiceChannel(channelId)) return
+    if (!channelId) return
     if (suppressAutoReadFor === channelId) suppressAutoReadFor = null
 
     const prev = readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' }
@@ -1004,10 +1008,11 @@ export const useChatStore = defineStore('chat', () => {
     return typeof document === 'undefined' || !document.hidden
   }
 
-  // The user can see the newest messages of the open text channel.
+  // The user can see the newest messages of the open text channel, or of the
+  // voice channel whose chat panel is open.
   function isReadingActiveChannel() {
     const ch = activeChannel.value
-    return !!ch && ch.type !== 'voice' && ch.id !== suppressAutoReadFor && isTabVisible() && !hasMoreAfter.value && !isLoadingWindow.value
+    return !!ch && (ch.type !== 'voice' || voiceChatReading.value) && ch.id !== suppressAutoReadFor && isTabVisible() && !hasMoreAfter.value && !isLoadingWindow.value
   }
 
   // Catch up after the tab becomes visible again, a jump to the present or a
@@ -1021,8 +1026,14 @@ export const useChatStore = defineStore('chat', () => {
 
   onReturnToTab = markActiveChannelReadIfReading
 
+  /** The voice chat panel opened (true) or closed (false). */
+  function setVoiceChatReading(on) {
+    voiceChatReading.value = !!on
+    if (on) markActiveChannelReadIfReading()
+  }
+
   async function markChannelUnread(channelId, messageId) {
-    if (!channelId || !messageId || isVoiceChannel(channelId)) return
+    if (!channelId || !messageId) return
 
     // Keep the channel unread even though it is open: no auto-read until the
     // user marks it read (Esc) or switches channel.
@@ -1045,7 +1056,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function setNotificationLevel(channelId, level) {
-    if (!channelId || !level || isVoiceChannel(channelId)) return
+    if (!channelId || !level) return
 
     const prev = readStates.value[channelId] || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
     readStates.value = {
@@ -1074,7 +1085,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function sendTyping(channelId) {
     const id = channelId || activeChannel.value?.id
-    if (!id || isVoiceChannel(id)) return
+    if (!id) return
 
     // Per channel: typing in a thread of another channel right after this one
     // still announces itself there.
@@ -1305,6 +1316,8 @@ export const useChatStore = defineStore('chat', () => {
     updateCategory,
     readStates,
     activeChannelLastReadAt,
+    voiceChatReading,
+    setVoiceChatReading,
     fetchReadState,
     markChannelRead,
     markChannelUnread,
