@@ -14,10 +14,6 @@ const sources = import.meta.glob(['../**/*.vue', '../**/*.js', '!../**/*.test.js
 // t('a.b'), $t("a.b.c"), i18n.t('a.b') ... with a literal dotted key.
 const CALL = /(?<![\w$])\$?t\(\s*(['"`])([A-Za-z][\w-]*(?:\.[\w-]+)+)\1/g
 
-// Keys a component still uses while a change elsewhere moves it to another
-// key. Remove an entry once nothing uses it.
-const PENDING = new Set(['sidebar.nameRequired'])
-
 function lookup(tree, key) {
   let node = tree
   for (const part of key.split('.')) {
@@ -54,7 +50,6 @@ describe('i18n keys used in the code', () => {
   it('exist in German and English', () => {
     const missing = []
     for (const [key, file] of used) {
-      if (PENDING.has(key)) continue
       for (const [name, tree] of [['de', de], ['en', en]]) {
         if (!exists(tree, key)) missing.push(`${name}: ${key} (${file})`)
       }
