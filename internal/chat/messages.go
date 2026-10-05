@@ -359,15 +359,44 @@ func EditMessage(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, c
 	return nil
 }
 
-// DeleteMessage removes a message if userID is its author or an admin.
-func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User) error {
-	tag, err := p.Exec(ctx, `DELETE FROM messages WHERE id = $1 AND (user_id = $2 OR $3)`, messageID, user.ID, user.IsAdmin())
+// DeleteMessage removes a message (and its thread replies) if user is its
+// author or an admin. It returns the storage keys of the media that went with
+// it; their rows are removed by cascade, the caller deletes the objects.
+func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User) ([]string, error) {
+	var keys []string
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// Collected before the delete, inside the same transaction.
+		if err := collectKeys(ctx, tx, &keys, `
+			SELECT s3_key FROM media WHERE message_id IN
+				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1 AND (user_id = $2 OR $3)`, messageID, user.ID, user.IsAdmin())
+		if err != nil {
+			return fmt.Errorf("delete message: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return httpx.ErrForbidden("only the author or an admin can delete this message")
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("delete message: %w", err)
+		return nil, err
 	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrForbidden("only the author or an admin can delete this message")
+	return keys, nil
+}
+
+// collectKeys appends the first column of query's rows to keys.
+func collectKeys(ctx context.Context, q db.Querier, keys *[]string, query string, args ...any) error {
+	rows, err := q.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("collect media keys: %w", err)
 	}
+	k, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return fmt.Errorf("collect media keys: %w", err)
+	}
+	*keys = append(*keys, k...)
 	return nil
 }
 

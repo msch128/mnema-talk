@@ -275,10 +275,11 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var key, mimeType, filename string
+	var size int64
 	var deleted bool
 	err = h.DB.QueryRow(r.Context(), `
-		SELECT s3_key, mime_type, original_filename, is_deleted FROM media WHERE id = $1`, id).
-		Scan(&key, &mimeType, &filename, &deleted)
+		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted FROM media WHERE id = $1`, id).
+		Scan(&key, &mimeType, &filename, &size, &deleted)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound("media not found")
 	}
@@ -289,11 +290,8 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 		return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media has expired or was deleted")
 	}
 
-	body, _, size, err := h.Store.GetObject(r.Context(), key)
-	if err != nil {
-		return fmt.Errorf("fetch media %s: %w", id, err)
-	}
-	defer body.Close()
+	obj := &objectReader{ctx: r.Context(), store: h.Store, key: key, size: size}
+	defer obj.Close()
 
 	disposition := "attachment"
 	if inlineMIME[mimeType] {
@@ -301,14 +299,14 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	}
 	hdr := w.Header()
 	hdr.Set("Content-Type", mimeType)
-	hdr.Set("Content-Length", strconv.FormatInt(size, 10))
 	hdr.Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": filename}))
 	hdr.Set("X-Content-Type-Options", "nosniff")
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	// Content behind an ID never changes; private keeps shared caches out.
 	hdr.Set("Cache-Control", "private, max-age=86400, immutable")
-	w.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(w, body)
+	hdr.Set("ETag", `"`+id.String()+`"`)
+	// ServeContent answers Range (206, video seeking), If-None-Match and HEAD.
+	http.ServeContent(w, r, "", time.Time{}, obj)
 	return nil
 }
 

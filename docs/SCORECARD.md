@@ -35,7 +35,7 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [ ] Resync of channels, members and messages after a WebSocket reconnect
 - [ ] Network errors and 5xx never log the user out (only 401 does)
 - [ ] Thread replies paged
-- [ ] Deleting a message or channel removes its media from S3
+- [x] Deleting a message or channel removes its media from S3
 - [ ] Links containing `(@` render correctly
 
 ## Chat comfort (weight 12)
@@ -107,7 +107,7 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] Documented and tested restore
 - [ ] TURN server support for users behind restrictive NATs
 - [ ] Metrics or monitoring (at least an uptime check and error-rate alert)
-- [ ] Range requests for media (video seeking, Safari)
+- [x] Range requests for media (video seeking, Safari)
 
 ## Quality (weight 7)
 
