@@ -98,48 +98,78 @@ func DeleteMedia(ctx context.Context, p *db.Pool, store Store, id uuid.UUID) err
 	return err
 }
 
+// pruneBatch is how many attachments one prune step removes: the S3
+// per-request maximum for DeleteObjects.
+const pruneBatch = 1000
+
 // PruneOlderThan deletes chat attachments older than days. Avatars are never
-// pruned: they are still in use however old they are.
+// pruned: they are still in use however old they are. It works in batches:
+// each batch's rows are marked deleted right after its objects are gone, so a
+// failure part-way leaves no row pointing at a deleted object, and the
+// candidates are paged instead of loaded all at once.
 func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int, error) {
 	if days < 1 {
 		return 0, httpx.ErrInvalidInput("days must be at least 1")
 	}
+	total := 0
+	for {
+		ids, keys, err := prunable(ctx, p, days)
+		if err != nil {
+			return total, err
+		}
+		if len(keys) == 0 {
+			break
+		}
+		if err := store.DeleteBatch(ctx, keys); err != nil {
+			return total, fmt.Errorf("delete objects: %w", err)
+		}
+		if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
+			return total, fmt.Errorf("mark pruned media: %w", err)
+		}
+		total += len(keys)
+		if len(keys) < pruneBatch {
+			break
+		}
+	}
+	if total > 0 {
+		slog.Info("media pruned", "count", total, "older_than_days", days)
+	}
+	return total, nil
+}
+
+// prunable returns the next batch of attachments older than days.
+func prunable(ctx context.Context, p *db.Pool, days int) ([]uuid.UUID, []string, error) {
 	rows, err := p.Query(ctx, `
 		SELECT id, s3_key FROM media
 		WHERE created_at < NOW() - make_interval(days => $1)
 		  AND NOT is_deleted
-		  AND message_id IS NOT NULL`, days)
+		  AND message_id IS NOT NULL
+		ORDER BY created_at
+		LIMIT $2`, days, pruneBatch)
 	if err != nil {
-		return 0, fmt.Errorf("query prunable media: %w", err)
+		return nil, nil, fmt.Errorf("query prunable media: %w", err)
 	}
+	defer rows.Close()
 	var ids []uuid.UUID
 	var keys []string
 	for rows.Next() {
 		var id uuid.UUID
 		var key string
 		if err := rows.Scan(&id, &key); err != nil {
-			rows.Close()
-			return 0, err
+			return nil, nil, err
 		}
 		ids = append(ids, id)
 		keys = append(keys, key)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return 0, err
-	}
-	if len(keys) == 0 {
-		return 0, nil
-	}
-	if err := store.DeleteBatch(ctx, keys); err != nil {
-		return 0, fmt.Errorf("delete objects: %w", err)
-	}
-	if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
-		return 0, fmt.Errorf("mark pruned media: %w", err)
-	}
-	slog.Info("media pruned", "count", len(keys), "older_than_days", days)
-	return len(keys), nil
+	return ids, keys, rows.Err()
 }
+
+// Retention runs once shortly after startup (so a restart never postpones
+// it by a day) and then every retentionInterval.
+const (
+	retentionFirstRun = time.Minute
+	retentionInterval = 24 * time.Hour
+)
 
 // StartRetentionWorker prunes daily when retentionDays > 0. With the default
 // of 0 it does nothing at all.
@@ -149,18 +179,24 @@ func StartRetentionWorker(ctx context.Context, p *db.Pool, store Store, retentio
 		return
 	}
 	slog.Info("automatic media pruning enabled", "older_than_days", retentionDays)
-	go func() {
-		ticker := time.NewTicker(24 * time.Hour)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if _, err := PruneOlderThan(ctx, p, store, retentionDays); err != nil {
-					slog.Error("media pruning failed", "err", err)
-				}
-			}
+	go runPeriodically(ctx, retentionFirstRun, retentionInterval, func(ctx context.Context) {
+		if _, err := PruneOlderThan(ctx, p, store, retentionDays); err != nil {
+			slog.Error("media pruning failed", "err", err)
 		}
-	}()
+	})
+}
+
+// runPeriodically calls fn after first and then every interval until ctx ends.
+func runPeriodically(ctx context.Context, first, interval time.Duration, fn func(context.Context)) {
+	timer := time.NewTimer(first)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+			fn(ctx)
+			timer.Reset(interval)
+		}
+	}
 }
