@@ -4,7 +4,7 @@ import { setLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import { buildChannelItems, buildCategoryItems, buildMemberItems } from './useNavMenus'
+import { buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems } from './useNavMenus'
 
 const textCh = { id: 't1', type: 'text', name: 'general' }
 const voiceCh = { id: 'v1', type: 'voice', name: 'Runde' }
@@ -25,9 +25,15 @@ describe('channel menu', () => {
     expect(ids(buildChannelItems(textCh))).toEqual(['mark-read', 'copy-link', 'notify-all', 'notify-mentions', 'notify-mute'])
   })
 
-  it('adds edit and delete for admins', () => {
+  it('adds edit, duplicate and delete for admins', () => {
     auth.user = { id: 'me', role: 'admin' }
-    expect(ids(buildChannelItems(textCh)).slice(-2)).toEqual(['edit', 'delete'])
+    const onDuplicate = vi.fn()
+    const list = buildChannelItems(textCh, { onDuplicate })
+    expect(ids(list).slice(-3)).toEqual(['edit', 'duplicate', 'delete'])
+    expect(list.find(i => i.id === 'duplicate').label).toBe('Duplicate channel')
+    list.find(i => i.id === 'duplicate').action()
+    expect(onDuplicate).toHaveBeenCalledWith(textCh)
+    expect(ids(buildChannelItems(voiceCh)).slice(-3)).toEqual(['edit', 'duplicate', 'delete'])
   })
 
   it('voice channels have no read state or notifications', () => {
@@ -52,12 +58,56 @@ describe('channel menu', () => {
 
 describe('category menu', () => {
   const cat = { id: 'c1', name: 'Text', channels: [textCh] }
-  it('members only get mark all read', () => {
-    expect(ids(buildCategoryItems(cat))).toEqual(['mark-all-read'])
+  it('members get mark all read and collapse / expand all', () => {
+    expect(ids(buildCategoryItems(cat))).toEqual(['mark-all-read', 'collapse-all', 'expand-all'])
   })
-  it('admins can edit and delete', () => {
+  it('admins can also create, edit and delete', () => {
     auth.user = { id: 'me', role: 'admin' }
-    expect(ids(buildCategoryItems(cat))).toEqual(['mark-all-read', 'edit', 'delete'])
+    expect(ids(buildCategoryItems(cat))).toEqual([
+      'mark-all-read', 'collapse-all', 'expand-all', 'create-channel', 'create-category', 'edit', 'delete'
+    ])
+  })
+  it('collapse and expand all are disabled when there is nothing to do', () => {
+    const onCollapseAll = vi.fn()
+    const onExpandAll = vi.fn()
+    let list = buildCategoryItems(cat, { onCollapseAll, onExpandAll, allCollapsed: true, noneCollapsed: false })
+    expect(list.find(i => i.id === 'collapse-all').disabled).toBe(true)
+    expect(list.find(i => i.id === 'expand-all').disabled).toBe(false)
+    list.find(i => i.id === 'expand-all').action()
+    expect(onExpandAll).toHaveBeenCalled()
+    list = buildCategoryItems(cat, { onCollapseAll, onExpandAll, allCollapsed: false, noneCollapsed: true })
+    expect(list.find(i => i.id === 'collapse-all').disabled).toBe(false)
+    expect(list.find(i => i.id === 'expand-all').disabled).toBe(true)
+    list.find(i => i.id === 'collapse-all').action()
+    expect(onCollapseAll).toHaveBeenCalled()
+  })
+  it('passes the category to the create handlers', () => {
+    auth.user = { id: 'me', role: 'admin' }
+    const onCreateChannel = vi.fn()
+    const onCreateCategory = vi.fn()
+    const list = buildCategoryItems(cat, { onCreateChannel, onCreateCategory })
+    list.find(i => i.id === 'create-channel').action()
+    list.find(i => i.id === 'create-category').action()
+    expect(onCreateChannel).toHaveBeenCalledWith(cat)
+    expect(onCreateCategory).toHaveBeenCalledWith(cat)
+  })
+})
+
+describe('channel list background menu', () => {
+  it('is empty for members, so the browser menu stays', () => {
+    expect(buildSidebarItems()).toEqual([])
+  })
+  it('lets admins create a channel or a category', () => {
+    auth.user = { id: 'me', role: 'admin' }
+    const onCreateChannel = vi.fn()
+    const onCreateCategory = vi.fn()
+    const list = buildSidebarItems({ onCreateChannel, onCreateCategory })
+    expect(ids(list)).toEqual(['create-channel', 'create-category'])
+    expect(list.map(i => i.label)).toEqual(['Create channel', 'Create category'])
+    list[0].action()
+    list[1].action()
+    expect(onCreateChannel).toHaveBeenCalled()
+    expect(onCreateCategory).toHaveBeenCalled()
   })
 })
 

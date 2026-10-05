@@ -3,7 +3,8 @@
 // menus are testable per role.
 import { reactive, ref, computed, nextTick } from 'vue'
 import {
-  CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut
+  CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -59,7 +60,7 @@ export function notifyLevelOf(chatStore, channelId) {
     ?? 'all'
 }
 
-/** handlers: { onEdit(channel), onDelete(channel) } (admin only). */
+/** handlers: { onEdit(channel), onDuplicate(channel), onDelete(channel) } (admin only). */
 export function buildChannelItems(channel, handlers = {}) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
@@ -112,6 +113,12 @@ export function buildChannelItems(channel, handlers = {}) {
       action: () => handlers.onEdit?.(channel)
     })
     items.push({
+      id: 'duplicate',
+      label: t('sidebar.duplicateChannel'),
+      icon: CopyPlus,
+      action: () => handlers.onDuplicate?.(channel)
+    })
+    items.push({
       id: 'delete',
       label: t(channel.type === 'voice' ? 'sidebar.deleteVoiceChannel' : 'sidebar.deleteChannel'),
       icon: Trash2,
@@ -122,6 +129,11 @@ export function buildChannelItems(channel, handlers = {}) {
   return items
 }
 
+/**
+ * handlers: { onCollapseAll, onExpandAll, allCollapsed, noneCollapsed } for
+ * everyone; { onCreateChannel(category), onCreateCategory(category), onEdit,
+ * onDelete } for admins.
+ */
 export function buildCategoryItems(category, handlers = {}) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
@@ -141,12 +153,43 @@ export function buildCategoryItems(category, handlers = {}) {
       toasts.success(t('sidebar.allMarkedRead'))
     }
   }]
+  items.push({ type: 'separator' })
+  items.push({
+    id: 'collapse-all',
+    label: t('sidebar.collapseAll'),
+    icon: ChevronsDownUp,
+    disabled: !!handlers.allCollapsed,
+    action: () => handlers.onCollapseAll?.()
+  })
+  items.push({
+    id: 'expand-all',
+    label: t('sidebar.expandAll'),
+    icon: ChevronsUpDown,
+    disabled: !!handlers.noneCollapsed,
+    action: () => handlers.onExpandAll?.()
+  })
   if (authStore.isAdmin) {
+    items.push({ type: 'separator' })
+    items.push({ id: 'create-channel', label: t('channel.create'), icon: Plus, action: () => handlers.onCreateChannel?.(category) })
+    items.push({ id: 'create-category', label: t('sidebar.createCategory'), icon: FolderPlus, action: () => handlers.onCreateCategory?.(category) })
     items.push({ type: 'separator' })
     items.push({ id: 'edit', label: t('sidebar.editCategory'), icon: Pencil, action: () => handlers.onEdit?.(category) })
     items.push({ id: 'delete', label: t('sidebar.deleteCategory'), icon: Trash2, danger: true, action: () => handlers.onDelete?.(category) })
   }
   return items
+}
+
+/**
+ * Right-click on the empty part of the channel list. Only admins get a menu
+ * (members keep the browser's own); handlers: { onCreateChannel, onCreateCategory }.
+ */
+export function buildSidebarItems(handlers = {}) {
+  const authStore = useAuthStore()
+  if (!authStore.isAdmin) return []
+  return [
+    { id: 'create-channel', label: t('channel.create'), icon: Plus, action: () => handlers.onCreateChannel?.() },
+    { id: 'create-category', label: t('sidebar.createCategory'), icon: FolderPlus, action: () => handlers.onCreateCategory?.() }
+  ]
 }
 
 function displayName(m) {

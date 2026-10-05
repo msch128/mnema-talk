@@ -5,7 +5,8 @@
     "confirm": "Confirm",
     "save": "Save",
     "delete": "Delete",
-    "undo": "Undo"
+    "undo": "Undo",
+    "create": "Create"
   },
   "language": {
     "de": "Deutsch",
@@ -157,7 +158,15 @@
     "layoutSaveFailed": "Couldn't save the new order.",
     "layoutRestored": "Order restored",
     "movedChannel": "{name} moved: position {position} of {total} in {category}",
-    "movedCategory": "{name} moved: position {position} of {total}"
+    "movedCategory": "{name} moved: position {position} of {total}",
+    "createCategory": "Create category",
+    "categoryCreated": "Category created",
+    "createCategoryFailed": "Couldn't create the category.",
+    "duplicateChannel": "Duplicate channel",
+    "channelDuplicated": "Duplicated “{name}”",
+    "duplicateFailed": "Couldn't duplicate the channel.",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all"
   },
   "category": {
     "name": "Category name"

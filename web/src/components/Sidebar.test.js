@@ -419,3 +419,156 @@ describe('Sidebar drag and drop (admin)', () => {
     expect(puts()).toHaveLength(0)
   })
 })
+
+// ---- Context menus ----
+
+async function contextMenu(el) {
+  const target = el.element ?? el
+  const e = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 })
+  target.dispatchEvent(e)
+  await flush()
+  return e
+}
+const menuItems = () => [...document.querySelectorAll('[role="menu"] [role^="menuitem"]')]
+const menuLabels = () => menuItems().map(b => b.textContent.trim())
+async function choose(label) {
+  const item = menuItems().find(b => b.textContent.trim() === label)
+  if (!item) throw new Error(`no menu item ${label}: ${menuLabels().join(', ')}`)
+  item.click()
+  await flush()
+}
+async function submitName(value) {
+  const input = document.querySelector('#edit-name')
+  input.value = value
+  input.dispatchEvent(new Event('input'))
+  input.form.dispatchEvent(new Event('submit', { cancelable: true }))
+  await flush()
+}
+
+describe('Sidebar context menus', () => {
+  it('admins can create a channel or a category from the empty part of the list', async () => {
+    await mountSidebar()
+    const e = await contextMenu(nav())
+    expect(e.defaultPrevented).toBe(true)
+    expect(menuLabels()).toEqual(['Kanal erstellen', 'Kategorie erstellen'])
+    await choose('Kanal erstellen')
+    expect(document.body.textContent).toContain('Neuen Kanal erstellen')
+    expect(document.querySelector('#channel-category').value).toBe('')
+  })
+
+  it('members keep the browser menu on the empty part of the list', async () => {
+    await mountSidebar({ role: 'user' })
+    const e = await contextMenu(nav())
+    expect(e.defaultPrevented).toBe(false)
+    expect(document.querySelector('[role="menu"]')).toBeNull()
+  })
+
+  it('category menu: everyone can collapse and expand all', async () => {
+    await mountSidebar({ role: 'user' })
+    await contextMenu(headerOf('voice'))
+    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Alle einklappen', 'Alle ausklappen'])
+    expect(menuItems().find(b => b.textContent.includes('Alle ausklappen')).disabled).toBe(true)
+    await choose('Alle einklappen')
+    expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY))).toEqual(['text', 'voice', 'empty'])
+    // The open channel stays visible in its collapsed category.
+    expect(channelIds('text')).toEqual(['general'])
+    expect(channelIds('voice')).toEqual([])
+
+    await contextMenu(headerOf('voice'))
+    expect(menuItems().find(b => b.textContent.includes('Alle einklappen')).disabled).toBe(true)
+    await choose('Alle ausklappen')
+    expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY))).toEqual([])
+    expect(channelIds('voice')).toEqual(['lounge'])
+  })
+
+  it('category menu: admins also create channels and categories there, besides edit and delete', async () => {
+    await mountSidebar()
+    await contextMenu(headerOf('voice'))
+    expect(menuLabels()).toEqual([
+      'Alle als gelesen markieren', 'Alle einklappen', 'Alle ausklappen',
+      'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
+    ])
+    await choose('Kanal erstellen')
+    // The category is preselected; a voice-only category suggests a voice channel.
+    expect(document.querySelector('#channel-category').value).toBe('voice')
+    expect(document.querySelector('[aria-pressed="true"]').textContent).toContain('Sprachkanal')
+  })
+
+  it('creates a category right below the one whose menu was used', async () => {
+    await mountSidebar()
+    await contextMenu(headerOf('text'))
+    await choose('Kategorie erstellen')
+    expect(document.querySelector('[role="dialog"]').textContent).toContain('Kategorie erstellen')
+    await submitName('Projekte')
+    const post = h.waiting.find(w => w.url === '/api/admin/categories')
+    expect(post.json).toEqual({ name: 'Projekte', sort_order: 3 })
+    h.server.categories.push({ id: 'new', name: 'Projekte', sort_order: 3, channels: [] })
+    await answer('/api/admin/categories', { body: { id: 'new', name: 'Projekte', sort_order: 3 } })
+
+    expect(toasts.toasts.map(t => t.text)).toContain('Kategorie erstellt')
+    expect(sectionIds()).toEqual(['__uncategorized', 'text', 'new', 'voice', 'empty'])
+    expect(puts()[0].json.categories.map(c => c.id)).toEqual(['text', 'new', 'voice', 'empty'])
+    await answer('/api/admin/layout')
+    expect(sectionIds()).toEqual(['__uncategorized', 'text', 'new', 'voice', 'empty'])
+    // A silent save: no "moved" toast with undo.
+    expect(toasts.toasts.some(t => t.action)).toBe(false)
+    expect(headerOf('new').classes()).toContain('nav-flash')
+  })
+
+  it('creating a category from the list background appends it without a layout save', async () => {
+    await mountSidebar()
+    await contextMenu(nav())
+    await choose('Kategorie erstellen')
+    await submitName('Archiv')
+    h.server.categories.push({ id: 'archiv', name: 'Archiv', sort_order: 3, channels: [] })
+    await answer('/api/admin/categories', { body: { id: 'archiv', name: 'Archiv', sort_order: 3 } })
+    expect(sectionIds().at(-1)).toBe('archiv')
+    expect(puts()).toHaveLength(0)
+  })
+
+  it('channel menu: admins duplicate a channel; the copy is highlighted, not opened', async () => {
+    await mountSidebar({ collapsed: ['text'] })
+    const select = vi.spyOn(chat, 'selectChannel').mockImplementation(() => {})
+    await contextMenu(rowOf('general'))
+    expect(menuLabels().slice(-3)).toEqual(['Kanal bearbeiten', 'Kanal duplizieren', 'Kanal löschen'])
+    await choose('Kanal duplizieren')
+    const post = h.calls.find(c => c.url === '/api/admin/channels/general/duplicate')
+    expect(post).toMatchObject({ method: 'POST' })
+    expect(post.json).toBeUndefined()
+
+    h.server.categories[0].channels.splice(1, 0, ch('general-2', 'text', 1))
+    h.server.categories[0].channels[2].sort_order = 2
+    await answer('/duplicate', { body: ch('general-2', 'text', 1) })
+    expect(toasts.toasts.map(t => t.text)).toContain('„general“ dupliziert')
+    // Its collapsed category opens so the copy can be seen.
+    expect(channelIds('text')).toEqual(['general', 'general-2', 'random'])
+    expect(rowOf('general-2').classes()).toContain('nav-flash')
+    expect(select).not.toHaveBeenCalled()
+  })
+
+  it('reports a failed duplicate', async () => {
+    await mountSidebar()
+    await contextMenu(rowOf('lounge'))
+    await choose('Kanal duplizieren')
+    await answer('/duplicate', { ok: false })
+    expect(toasts.toasts.find(t => t.type === 'error').text).toBe('Nicht gefunden')
+  })
+
+  it('members see no duplicate, create or edit items', async () => {
+    await mountSidebar({ role: 'user' })
+    await contextMenu(rowOf('general'))
+    expect(menuLabels()).not.toContain('Kanal duplizieren')
+    expect(menuLabels()).not.toContain('Kanal bearbeiten')
+  })
+
+  it('the server menu offers to create a category too', async () => {
+    await mountSidebar()
+    await wrapper.find('[aria-controls="server-menu"]').trigger('click')
+    await nextTick()
+    const items = wrapper.findAll('#server-menu [role="menuitem"]')
+    expect(items.map(b => b.text())).toEqual(['Admin-Konsole', 'Kanal erstellen', 'Kategorie erstellen', 'Rechtliches & Datenschutz'])
+    await items[2].trigger('click')
+    await flush()
+    expect(document.querySelector('#edit-name')).not.toBeNull()
+  })
+})

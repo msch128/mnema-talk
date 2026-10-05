@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
-import { ShieldCheck, Crown, Plus, ChevronDown, X, Hash, Volume2 } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, Hash, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -18,7 +18,9 @@ import {
   locateChannel, locateCategory, moveChannel, moveCategory, resolveChannelDrop, resolveCategoryDrop
 } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
-import { useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems } from '../composables/useNavMenus'
+import {
+  useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
+} from '../composables/useNavMenus'
 import { useDismissable } from '../composables/useDismissable'
 import { useChannelLayout } from '../composables/useChannelLayout'
 import { useSortableDrag } from '../composables/useSortableDrag'
@@ -82,13 +84,51 @@ async function handleDeleteCategory(category) {
   }
 }
 
-// ---- Context menus (channels, categories, voice participants) ----
+async function handleDuplicateChannel(channel) {
+  try {
+    const created = await chatStore.duplicateChannel(channel.id)
+    toasts.success(t('sidebar.channelDuplicated', { name: channel.name }))
+    // The copy sits right below the original; show it without navigating.
+    if (created?.id) reveal('channel', created.id)
+  } catch (err) {
+    toasts.error(err?.message || t('sidebar.duplicateFailed'))
+  }
+}
+
+// New categories go to the end; one created from a category's menu then
+// moves right below that category (a silent layout save).
+function openCreateCategory(afterCategoryId = null) {
+  editing.value = { kind: 'category', entity: null, after: afterCategoryId }
+}
+
+function handleCategoryCreated(category) {
+  const after = editing.value?.after
+  if (!category?.id) return
+  const anchor = after && locateCategory(layout.value, after)
+  if (anchor) commit(moveCategory(layout.value, category.id, anchor.index + 1))
+  reveal('category', category.id)
+}
+
+// ---- Context menus (channels, categories, voice participants, the list) ----
 
 const menu = useMenuState()
-const editing = ref(null) // { kind: 'channel' | 'category', entity }
+const editing = ref(null) // { kind: 'channel' | 'category', entity (null: create), after }
 const menuHandlers = {
   onEdit: entity => { editing.value = { kind: entity.channels ? 'category' : 'channel', entity } },
-  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity))
+  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
+  onDuplicate: channel => handleDuplicateChannel(channel),
+  onCreateChannel: category => openCreateChannel(category ? defaultTypeFor(category) : 'text', category?.id || ''),
+  onCreateCategory: category => openCreateCategory(category?.id ?? null),
+  onCollapseAll: () => setCollapsed(layout.value.categories.map(c => c.id)),
+  onExpandAll: () => setCollapsed([])
+}
+
+function collapseState() {
+  const ids = layout.value.categories.map(c => c.id)
+  return {
+    allCollapsed: ids.every(id => collapsed.value.has(id)),
+    noneCollapsed: !ids.some(id => collapsed.value.has(id))
+  }
 }
 
 function openChannelMenu(e, channel) {
@@ -96,7 +136,14 @@ function openChannelMenu(e, channel) {
 }
 
 function openCategoryMenu(e, category) {
-  menu.show(e, () => buildCategoryItems(category, menuHandlers))
+  menu.show(e, () => buildCategoryItems(category, { ...menuHandlers, ...collapseState() }))
+}
+
+// The empty part of the channel list: admins can create things there,
+// everyone else keeps the browser's menu.
+function openListMenu(e) {
+  if (!buildSidebarItems(menuHandlers).length) return
+  menu.show(e, () => buildSidebarItems(menuHandlers))
 }
 
 function openMemberMenu(e, user) {
@@ -231,6 +278,24 @@ function flash(key) {
   nextTick(() => {
     flashKey.value = key
     flashTimer = setTimeout(() => { flashKey.value = '' }, FLASH_MS)
+  })
+}
+
+function prefersReducedMotion() {
+  return !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+}
+
+// Scrolls a channel or category into view and highlights it, opening its
+// category if needed.
+function reveal(kind, id) {
+  if (kind === 'channel') {
+    const at = locateChannel(layout.value, id)
+    if (at?.categoryId) expandCategory(at.categoryId)
+  }
+  flash(`${kind}:${id}`)
+  nextTick(() => {
+    const selector = kind === 'channel' ? `[data-channel-item="${id}"]` : `[data-drop="header"][data-id="${id}"]`
+    navEl.value?.querySelector(selector)?.scrollIntoView?.({ block: 'nearest', behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   })
 }
 
@@ -512,6 +577,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             <span class="truncate">{{ $t('channel.create') }}</span>
             <Plus class="w-4 h-4 flex-shrink-0" />
           </button>
+          <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateCategory())">
+            <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
+            <FolderPlus class="w-4 h-4 flex-shrink-0" />
+          </button>
           <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
         </template>
         <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
@@ -527,6 +596,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       :class="['flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4', authStore.isAdmin && '[-webkit-touch-callout:none]']"
       :aria-label="$t('sidebar.channels')"
       v-on="navListeners"
+      @contextmenu="openListMenu"
     >
       <!-- Uncategorized channels first (headless section), then the categories -->
       <section
@@ -618,6 +688,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       v-if="editing"
       :kind="editing.kind"
       :entity="editing.entity"
+      @created="handleCategoryCreated"
       @close="editing = null"
     />
 

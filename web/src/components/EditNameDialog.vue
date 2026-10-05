@@ -1,24 +1,32 @@
 <script setup>
 // Rename a channel (name + topic) or a category (name) from the sidebar menu.
+// Without an entity it creates a new category instead (appended at the end).
 import { ref, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { nextSortOrder } from '../lib/channelLayout'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
   kind: { type: String, default: 'channel' }, // 'channel' | 'category'
-  entity: { type: Object, required: true }
+  entity: { type: Object, default: null } // null: create a category
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits(['close', 'created'])
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
-const isChannel = computed(() => props.kind === 'channel')
-const name = ref(props.entity.name || '')
-const topic = ref(props.entity.topic || '')
+const isCreate = computed(() => !props.entity)
+const isChannel = computed(() => !isCreate.value && props.kind === 'channel')
+const name = ref(props.entity?.name || '')
+const topic = ref(props.entity?.topic || '')
 const error = ref('')
 const saving = ref(false)
+
+const title = computed(() => {
+  if (isCreate.value) return t('sidebar.createCategory')
+  return t(isChannel.value ? 'admin.editChannelTitle' : 'admin.editCategoryTitle', { name: props.entity.name })
+})
 
 async function submit() {
   error.value = ''
@@ -29,7 +37,11 @@ async function submit() {
   }
   saving.value = true
   try {
-    if (isChannel.value) {
+    if (isCreate.value) {
+      const created = await chatStore.createCategory(trimmed, nextSortOrder(chatStore.categories))
+      toasts.success(t('sidebar.categoryCreated'))
+      emit('created', created)
+    } else if (isChannel.value) {
       await chatStore.updateChannel(props.entity.id, { name: trimmed, topic: topic.value.trim() })
       toasts.success(t('sidebar.channelUpdated'))
     } else {
@@ -38,7 +50,7 @@ async function submit() {
     }
     emit('close')
   } catch (e) {
-    error.value = e?.message || t('sidebar.updateFailed')
+    error.value = e?.message || t(isCreate.value ? 'sidebar.createCategoryFailed' : 'sidebar.updateFailed')
   } finally {
     saving.value = false
   }
@@ -46,10 +58,7 @@ async function submit() {
 </script>
 
 <template>
-  <BaseDialog
-    :title="$t(isChannel ? 'admin.editChannelTitle' : 'admin.editCategoryTitle', { name: entity.name })"
-    @close="emit('close')"
-  >
+  <BaseDialog :title="title" @close="emit('close')">
     <form class="p-5 space-y-4 overflow-y-auto" @submit.prevent="submit">
       <div v-if="error" role="alert" class="p-2.5 rounded-lg bg-mnema-danger/10 border border-mnema-danger/30 text-mnema-danger text-sm">
         {{ error }}
@@ -64,7 +73,8 @@ async function submit() {
           v-model="name"
           type="text"
           maxlength="64"
-          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent"
+          :placeholder="isCreate ? $t('admin.categoryNamePlaceholder') : undefined"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
         />
       </div>
 
@@ -95,7 +105,7 @@ async function submit() {
           :disabled="saving || !name.trim()"
           class="h-8 px-3 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold text-sm transition disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          {{ $t('common.save') }}
+          {{ isCreate ? $t('common.create') : $t('common.save') }}
         </button>
       </div>
     </form>

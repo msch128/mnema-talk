@@ -5,7 +5,8 @@
     "confirm": "Bestätigen",
     "save": "Speichern",
     "delete": "Löschen",
-    "undo": "Rückgängig"
+    "undo": "Rückgängig",
+    "create": "Erstellen"
   },
   "language": {
     "de": "Deutsch",
@@ -157,7 +158,15 @@
     "layoutSaveFailed": "Die neue Reihenfolge konnte nicht gespeichert werden.",
     "layoutRestored": "Reihenfolge wiederhergestellt",
     "movedChannel": "{name} verschoben: Position {position} von {total} in {category}",
-    "movedCategory": "{name} verschoben: Position {position} von {total}"
+    "movedCategory": "{name} verschoben: Position {position} von {total}",
+    "createCategory": "Kategorie erstellen",
+    "categoryCreated": "Kategorie erstellt",
+    "createCategoryFailed": "Die Kategorie konnte nicht erstellt werden.",
+    "duplicateChannel": "Kanal duplizieren",
+    "channelDuplicated": "„{name}“ dupliziert",
+    "duplicateFailed": "Der Kanal konnte nicht dupliziert werden.",
+    "collapseAll": "Alle einklappen",
+    "expandAll": "Alle ausklappen"
   },
   "category": {
     "name": "Kategoriename"
