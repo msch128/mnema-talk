@@ -47,6 +47,7 @@ const voiceShowChat = ref(false)
 // The channel the Talk view shows: a previewed one (not joined) or the joined one.
 const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
 let isSyncingFromRoute = false
+let routesApplying = 0
 
 // Avoids flashing the login dialog while the session cookie is being checked.
 const authChecked = ref(false)
@@ -76,8 +77,14 @@ function currentStatePath() {
   return '/'
 }
 
+// Bumped by every applyRoute: a route that is still loading when the next one
+// arrives stops after its current await instead of acting on stale state.
+let routeGen = 0
+
 async function applyRoute(route) {
   if (!authStore.isAuthenticated) return
+  const gen = ++routeGen
+  const superseded = () => gen !== routeGen
 
   // Admin console is checked before anything renders, so non-admins never see it.
   if (route.view === 'admin' && !authStore.isAdmin) {
@@ -96,6 +103,7 @@ async function applyRoute(route) {
   }
 
   isSyncingFromRoute = true
+  routesApplying++
   try {
     if (route.view === 'chat' && route.channelId) {
       showAdminModal.value = false
@@ -104,14 +112,17 @@ async function applyRoute(route) {
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
       if (chatStore.activeChannel?.id !== targetChannel.id) {
         await chatStore.selectChannel(targetChannel)
+        if (superseded()) return
       }
       if (route.messageId) {
         const found = await chatStore.jumpToMessage(route.messageId)
+        if (superseded()) return
         // jumpToMessage already toasted; leave the dead /m/:id address.
         if (found === false) navigate(`/c/${targetChannel.id}`, { replace: true })
       } else if (route.threadId) {
         if (chatStore.activeThread?.id !== route.threadId) {
           await chatStore.openThread(route.threadId)
+          if (superseded()) return
           // A thread that failed to load only has its id.
           const th = chatStore.activeThread
           if (th && th.id === route.threadId && !th.user_id && !th.content) {
@@ -147,8 +158,9 @@ async function applyRoute(route) {
       }
     }
   } finally {
+    // Overlapping routes each hold the flag; the last one out clears it.
     nextTick(() => {
-      isSyncingFromRoute = false
+      if (--routesApplying === 0) isSyncingFromRoute = false
     })
   }
 }
