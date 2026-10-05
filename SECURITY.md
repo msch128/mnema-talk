@@ -34,7 +34,9 @@ locally instead (`make up` or `make dev`).
   session of that user immediately, including copied cookies.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
-- **Security headers.** Strict Content-Security-Policy (no inline scripts),
+- **Security headers.** Strict Content-Security-Policy (no inline scripts or
+  JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
+  its WebAssembly),
   `frame-ancestors 'none'`, `nosniff`, a restrictive referrer policy and related
   headers on every response.
 - **Uploads.** File types are detected by content sniffing, not by the

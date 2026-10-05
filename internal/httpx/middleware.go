@@ -117,11 +117,13 @@ func MaxBody(limit int64) func(http.Handler) http.Handler {
 	}
 }
 
-// SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts;
-// inline styles are needed for Vue :style bindings. connect-src 'self' also
+// SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts and
+// no JS eval; 'wasm-unsafe-eval' only allows compiling WebAssembly, which the
+// bundled AI noise filter (web/src/lib/noiseSuppressor.js) needs. Inline
+// styles are needed for Vue :style bindings. connect-src 'self' also
 // covers same-origin WebSockets in current browsers.
 const SPAContentSecurityPolicy = "default-src 'self'; " +
-	"script-src 'self'; " +
+	"script-src 'self' 'wasm-unsafe-eval'; " +
 	"style-src 'self' 'unsafe-inline'; " +
 	"img-src 'self' data: blob:; " +
 	"media-src 'self' blob:; " +
