@@ -193,10 +193,10 @@ describe('typing notices', () => {
     expect(sent.filter(e => e.type === 'typing').map(e => e.payload.channel_id)).toEqual(['ch1', 'ch2'])
   })
 
-  it('are never sent for voice channels', () => {
+  it('are sent for a voice channel\'s chat too', () => {
     const { chat, sent } = setup()
     chat.sendTyping('v1')
-    expect(sent.filter(e => e.type === 'typing')).toHaveLength(0)
+    expect(sent.filter(e => e.type === 'typing').map(e => e.payload.channel_id)).toEqual(['v1'])
   })
 })
 

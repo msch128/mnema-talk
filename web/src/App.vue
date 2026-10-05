@@ -10,6 +10,7 @@ import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
 import VoiceStage from './components/VoiceStage.vue'
+import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
 import LoginModal from './components/LoginModal.vue'
@@ -26,6 +27,9 @@ import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
+import {
+  loadVoiceChatOpen, saveVoiceChatOpen, voiceChatOpenFor, VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT
+} from './lib/voiceChatPanel'
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -40,12 +44,20 @@ const panels = useResizable([
   { name: 'members', side: 'right', defaultWidth: 240, min: 200, max: 360, visible: () => chatStore.showMemberList },
   { name: 'thread', side: 'right', defaultWidth: 400, min: 320, max: 640, visible: () => !!chatStore.activeThread }
 ], { centerMin: 400 })
+// Height of the Talk's chat under the stage; the stage (and its 48px header)
+// keeps the rest, at least STAGE_MIN_HEIGHT.
+const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showAdminModal = ref(false)
 const showLegalModal = ref(false)
 const adminTab = ref('users')
 const previewVoiceChannelId = ref(null)
-// /v/:id is the Talk on its own, /v/:id/chat adds the side chat.
-const voiceShowChat = ref(false)
+// /v/:id is the Talk on its own, /v/:id/chat adds its chat under the stage.
+// Open or closed is remembered per browser (closed by default).
+const voiceShowChat = ref(loadVoiceChatOpen())
+watch(voiceShowChat, open => saveVoiceChatOpen(open))
+// The voice channel of the last applied route (null after any other route):
+// /v/:id within that Talk closes its chat, entering a Talk keeps it as it was.
+let lastVoiceRouteChannel = null
 // The channel the Talk view shows: a previewed one (not joined) or the joined one.
 const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
 let isSyncingFromRoute = false
@@ -104,6 +116,9 @@ async function applyRoute(route) {
     return
   }
 
+  const previousVoiceChannel = lastVoiceRouteChannel
+  lastVoiceRouteChannel = route.view === 'voice' ? route.channelId : null
+
   isSyncingFromRoute = true
   routesApplying++
   try {
@@ -141,10 +156,28 @@ async function applyRoute(route) {
       // Opening the channel you're connected to is not a preview.
       previewVoiceChannelId.value = route.channelId === voiceStore.currentChannelId ? null : route.channelId
       voiceStore.activeView = 'voice'
-      voiceShowChat.value = !!route.showChat
+      voiceShowChat.value = voiceChatOpenFor({
+        routeShowChat: !!route.showChat,
+        sameTalk: previousVoiceChannel === route.channelId,
+        remembered: voiceShowChat.value
+      })
+      // Entering a Talk with its chat remembered open: say so in the address
+      // (that route then does the rest).
+      if (voiceShowChat.value && !route.showChat) {
+        navigate(`/v/${route.channelId}/chat`, { replace: true })
+        return
+      }
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
       if (chatStore.activeChannel?.id !== targetChannel.id) {
         await chatStore.selectChannel(targetChannel)
+        if (superseded()) return
+      }
+      if (route.messageId) {
+        // The chat (and its scroll handling) renders before the jump.
+        await nextTick()
+        const found = await chatStore.jumpToMessage(route.messageId)
+        if (superseded()) return
+        if (found === false) navigate(`/v/${targetChannel.id}/chat`, { replace: true })
       }
     } else if (route.view === 'admin') {
       adminTab.value = route.tab || 'users'
@@ -191,6 +224,10 @@ watch(() => voiceStore.currentChannelId, id => {
 })
 watch(previewVoiceChannelId, () => syncCurrentStateToRoute())
 watch(voiceShowChat, () => syncCurrentStateToRoute())
+// "Mention" (profile, member menu) in a Talk opens its chat to write it there.
+watch(() => chatStore.pendingMention, name => {
+  if (name && voiceStore.activeView === 'voice' && !voiceShowChat.value) voiceShowChat.value = true
+})
 watch(showAdminModal, () => syncCurrentStateToRoute())
 watch(adminTab, () => syncCurrentStateToRoute())
 
@@ -317,13 +354,21 @@ onMounted(async () => {
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
         <UpdateBanner />
-        <VoiceStage
-          v-if="voiceStore.activeView === 'voice'"
-          :channel-id="voiceChannelId"
-          v-model:show-chat="voiceShowChat"
-          @join="onVoiceJoin"
-          class="min-h-0"
-        />
+        <template v-if="voiceStore.activeView === 'voice'">
+          <VoiceStage
+            :channel-id="voiceChannelId"
+            v-model:show-chat="voiceShowChat"
+            @join="onVoiceJoin"
+            class="min-h-0"
+          />
+          <!-- The Talk's own text chat, under the stage -->
+          <VoiceChatPanel
+            v-if="voiceShowChat && voiceChannelId"
+            :channel-id="voiceChannelId"
+            :panel="voiceChatHeight"
+            @close="voiceShowChat = false"
+          />
+        </template>
         <ChatArea v-else class="min-h-0" />
       </div>
 
