@@ -22,7 +22,3 @@ export function confirm(options) {
     pendingConfirm.value = entry
   })
 }
-
-export function useConfirm() {
-  return { confirm }
-}

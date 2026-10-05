@@ -69,7 +69,7 @@ function playTone(ctx, dest, { freq, endFreq, startTime, duration, type = 'sine'
  * Play a synthesized sound effect by name.
  * Supported names: 'join', 'leave', 'mute', 'unmute', 'deafen', 'undeafen', 'user_join', 'user_leave'
  */
-export function playSound(name, overrideVolume = null, force = false) {
+export function playSoundEffect(name, overrideVolume = null, force = false) {
   let voiceStore = null
   try {
     voiceStore = useVoiceStore()
@@ -184,5 +184,3 @@ export function playSound(name, overrideVolume = null, force = false) {
       break
   }
 }
-
-export const playSoundEffect = playSound

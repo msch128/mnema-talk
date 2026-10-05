@@ -6,7 +6,7 @@ import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 import { useToastStore } from '../stores/toast'
-import { playSound } from '../lib/soundEffects'
+import { playSoundEffect } from '../lib/soundEffects'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
 import { t } from '../i18n'
@@ -718,7 +718,7 @@ function handlePttKeyDown(e) {
     if (!voiceStore.isPttPressed) {
       voiceStore.isPttPressed = true
       if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSound('ptt_start')
+        playSoundEffect('ptt_start')
       }
     }
   }
@@ -731,7 +731,7 @@ function handlePttKeyUp(e) {
     if (voiceStore.isPttPressed) {
       voiceStore.isPttPressed = false
       if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSound('ptt_stop')
+        playSoundEffect('ptt_stop')
       }
     }
   }
@@ -1742,8 +1742,6 @@ export function useWebRTC() {
     refreshAudioDevices,
     startMicTest,
     stopMicTest,
-    startMicLoopback,
-    stopMicLoopback,
     toggleMicTest,
     joinVoiceChannel,
     leaveVoiceChannel,
