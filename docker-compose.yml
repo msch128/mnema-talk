@@ -105,6 +105,28 @@ services:
     networks:
       - mnema-network
 
+  # ==========================================================
+  # Optional TURN Relay: coturn (profile: turn)
+  # ==========================================================
+  # Enable with: docker compose --profile turn up -d
+  # Router port forward required: 3478 UDP/TCP, 49152-49200 UDP
+  coturn:
+    image: coturn/coturn:4.6.2-alpine
+    container_name: mnema-coturn
+    restart: unless-stopped
+    profiles:
+      - turn
+    network_mode: host
+    command:
+      - turnserver
+      - -n
+      - --use-auth-secret
+      - --static-auth-secret=${WEBRTC_TURN_SECRET:-}
+      - --realm=${WEBRTC_TURN_REALM:-turn.example.com}
+      - --listening-port=3478
+      - --min-port=49152
+      - --max-port=49200
+
 volumes:
   postgres-data:
     driver: local
