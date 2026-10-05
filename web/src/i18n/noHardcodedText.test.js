@@ -17,9 +17,14 @@ function templateOf(src) {
   return m ? m[1] : ''
 }
 
+// Replaces HTML comments with a space rather than deleting them, so the text
+// around a removed comment cannot join into a new `<!--`.
+function stripComments(src) {
+  return src.replace(/<!--[\s\S]*?-->/g, ' ')
+}
+
 function staticText(template) {
-  const t = template
-    .replace(/<!--[\s\S]*?-->/g, '')
+  const t = stripComments(template)
     .replace(/\{\{[\s\S]*?\}\}/g, ' ')
   const out = []
   // text between tags
@@ -45,7 +50,7 @@ describe('scanner self-check', () => {
 
 describe('no hard-coded UI text', () => {
   for (const [path, src] of Object.entries(vueFiles)) {
-    const name = path.replace('../', '')
+    const name = path.replace(/^\.\.\//, '')
     it(`${name} template has no static text`, () => {
       const tpl = templateOf(src)
       expect(staticText(tpl), 'static text nodes').toEqual([])
@@ -53,17 +58,17 @@ describe('no hard-coded UI text', () => {
     })
 
     it(`${name} has no German string literals`, () => {
-      const script = (src.match(/<script[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? '')
+      const script = (src.match(/<script\b[^>]*>([\s\S]*?)<\/script\b[^>]*>/i)?.[1] ?? '')
       const code = script.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
       const literals = [...code.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map(m => m[1] ?? m[2] ?? m[3])
       expect(literals.filter(l => UMLAUT.test(l) || GERMAN_WORDS.test(l))).toEqual([])
-      const tpl = templateOf(src).replace(/<!--[\s\S]*?-->/g, '')
+      const tpl = stripComments(templateOf(src))
       expect(tpl.match(UMLAUT) ? tpl.split('\n').filter(l => UMLAUT.test(l)) : []).toEqual([])
     })
   }
 
   for (const [path, src] of Object.entries(jsFiles)) {
-    const name = path.replace('../', '')
+    const name = path.replace(/^\.\.\//, '')
     it(`${name} has no German string literals`, () => {
       const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
       const literals = [...code.matchAll(/'([^'\n]*)'|"([^"\n]*)"|`([^`]*)`/g)].map(m => m[1] ?? m[2] ?? m[3])
