@@ -919,11 +919,11 @@ describe('mic test and loopback', () => {
     const track = voice.localAudioStream.getAudioTracks()[0]
     expect(track.enabled).toBe(true)
 
-    await rtc.startMicLoopback()
+    await rtc.toggleMicTest()
     expect(voice.isMicTesting).toBe(true)
     expect(track.enabled).toBe(false)
 
-    rtc.stopMicLoopback()
+    rtc.toggleMicTest()
     expect(voice.isMicTesting).toBe(false)
     expect(track.enabled).toBe(true)
   })

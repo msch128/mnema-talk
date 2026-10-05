@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { parseRoute, buildRoute, savePendingRoute, consumePendingRoute, navigate, popRedirectRoute, currentRoute, guardRoute, resolveRoute, canGoBackInApp } from './router'
+import { parseRoute, savePendingRoute, consumePendingRoute, navigate, popRedirectRoute, currentRoute, guardRoute, resolveRoute, canGoBackInApp } from './router'
 
 describe('router', () => {
   beforeEach(() => {
@@ -57,14 +57,6 @@ describe('router', () => {
       view: 'admin',
       tab: 'media'
     })
-  })
-
-  it('builds URL from route object', () => {
-    expect(buildRoute({ view: 'chat', channelId: 'c1' })).toBe('/c/c1')
-    expect(buildRoute({ view: 'chat', channelId: 'c1', messageId: 'm1' })).toBe('/c/c1/m/m1')
-    expect(buildRoute({ view: 'voice', channelId: 'v1' })).toBe('/v/v1')
-    expect(buildRoute({ view: 'voice', channelId: 'v1', showChat: true })).toBe('/v/v1/chat')
-    expect(buildRoute({ view: 'admin', tab: 'users' })).toBe('/admin/users')
   })
 
   it('preserves and consumes pending route across login', () => {

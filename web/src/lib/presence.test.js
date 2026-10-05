@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isQuiet, snapshotToMap, applyPresenceUpdate, normalizeStatus, isChoosable } from './presence'
+import { isQuiet, snapshotToMap, applyPresenceUpdate, normalizeStatus, CHOOSABLE } from './presence'
 
 describe('presence', () => {
   it('silences notifications only for dnd and focus', () => {
@@ -10,8 +10,8 @@ describe('presence', () => {
   })
 
   it('never offers offline as a choice', () => {
-    expect(isChoosable('offline')).toBe(false)
-    expect(isChoosable('focus')).toBe(true)
+    expect(CHOOSABLE).not.toContain('offline')
+    expect(CHOOSABLE).toContain('focus')
   })
 
   it('reads both snapshot shapes', () => {

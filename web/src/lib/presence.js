@@ -11,10 +11,6 @@ export const STATUSES = [...CHOOSABLE, 'offline']
 /** Idle time after which an "online" user shows as away. */
 export const IDLE_AFTER_MS = 10 * 60 * 1000
 
-export function isChoosable(p) {
-  return CHOOSABLE.includes(p)
-}
-
 export function normalizeStatus(s) {
   return STATUSES.includes(s) ? s : 'offline'
 }

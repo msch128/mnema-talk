@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed, watch } from 'vue'
 import { syncServerClock } from '../lib/clock'
-import { playSound } from '../lib/soundEffects'
+import { playSoundEffect } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
@@ -419,7 +419,7 @@ export const useVoiceStore = defineStore('voice', () => {
       channelUsers.value[channel_id][user.id] = user
       if (update.started_at) roomStartedAt.value = { ...roomStartedAt.value, [channel_id]: update.started_at }
       if (currentChannelId.value === channel_id && myId && user.id !== myId) {
-        playSound('user_join')
+        playSoundEffect('user_join')
       }
     } else if (action === 'leave' && user_id) {
       delete channelUsers.value[channel_id][user_id]
@@ -432,7 +432,7 @@ export const useVoiceStore = defineStore('voice', () => {
       removeUserVideoStream(user_id)
       handleMediaState({ user_id })
       if (currentChannelId.value === channel_id && myId && user_id !== myId) {
-        playSound('user_leave')
+        playSoundEffect('user_leave')
       }
     }
   }
@@ -488,7 +488,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleMute() {
     isMuted.value = !isMuted.value
-    playSound(isMuted.value ? 'mute' : 'unmute')
+    playSoundEffect(isMuted.value ? 'mute' : 'unmute')
     if (localAudioStream.value) {
       localAudioStream.value.getAudioTracks().forEach(track => {
         track.enabled = !isMuted.value
@@ -498,7 +498,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function toggleDeafen() {
     isDeafened.value = !isDeafened.value
-    playSound(isDeafened.value ? 'deafen' : 'undeafen')
+    playSoundEffect(isDeafened.value ? 'deafen' : 'undeafen')
     if (isDeafened.value) {
       isMuted.value = true
       if (localAudioStream.value) {
@@ -525,7 +525,7 @@ export const useVoiceStore = defineStore('voice', () => {
     isConnected.value = !!channelId
     if (channelId) {
       if (prev !== channelId) {
-        playSound('join')
+        playSoundEffect('join')
       }
       activeView.value = 'voice'
     }
@@ -541,7 +541,7 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function disconnect() {
     if (isConnected.value || currentChannelId.value) {
-      playSound('leave')
+      playSoundEffect('leave')
     }
     isMicTesting.value = false
     currentChannelId.value = null

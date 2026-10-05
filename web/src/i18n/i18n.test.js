@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { t, setLocale, locale, detectLocale, registerMessages, flattenKeys, useI18n } from './index'
+import { t, setLocale, locale, detectLocale, registerMessages, flattenKeys } from './index'
 import de from './de.json'
 import en from './en.json'
 
@@ -51,12 +51,6 @@ describe('i18n', () => {
     expect(detectLocale('de-AT')).toBe('de')
     expect(detectLocale('fr-FR')).toBe('de')
     expect(detectLocale(undefined)).toBe('de')
-  })
-
-  it('exposes t and locale through useI18n', () => {
-    const i = useI18n()
-    expect(i.t('__t.hello', { name: 'A' })).toBe('Hallo A')
-    expect(i.locale.value).toBe('de')
   })
 })
 
