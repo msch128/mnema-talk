@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { toRaw } from 'vue'
-import { useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE } from './useWebRTC'
+import { publishMids, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
@@ -44,24 +44,44 @@ function fakeSender(track) {
   return s
 }
 
+// The SFU's offer: receive lines for microphone, screen and camera first.
+const SFU_OFFER = [
+  'v=0',
+  'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:0', 'a=recvonly',
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:1', 'a=recvonly',
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:2', 'a=recvonly',
+  ''
+].join('\r\n')
+
 class FakePC {
   static instances = []
   constructor() {
-    this.senders = []
+    this.transceivers = []
+    // Lines added locally: like in a browser, never matched to a remote offer.
+    this.unmatched = []
     this.remoteDescription = null
     this.candidates = []
     this.closed = false
     FakePC.instances.push(this)
   }
-  addTrack(track) { const s = fakeSender(track); this.senders.push(s); return s }
-  // Like a browser, a transceiver's sender shows up in getSenders even without a track.
+  addTrack(track) { const s = fakeSender(track); this.unmatched.push(s); return s }
   addTransceiver(trackOrKind) {
     const s = fakeSender(typeof trackOrKind === 'string' ? null : trackOrKind)
-    this.senders.push(s)
+    this.unmatched.push(s)
     return { sender: s }
   }
+  // Senders on the negotiated lines, in m-line order (mic, screen, camera).
+  get senders() { return this.transceivers.map(t => t.sender) }
   getSenders() { return this.senders }
-  async setRemoteDescription(d) { this.remoteDescription = d }
+  getTransceivers() { return this.transceivers }
+  async setRemoteDescription(d) {
+    this.remoteDescription = d
+    for (const m of String(d.sdp).matchAll(/a=mid:(\S+)/g)) {
+      if (!this.transceivers.some(t => t.mid === m[1])) {
+        this.transceivers.push({ mid: m[1], direction: 'recvonly', sender: fakeSender(null) })
+      }
+    }
+  }
   async createAnswer() { return { type: 'answer', sdp: 'a' } }
   async setLocalDescription() {}
   async addIceCandidate(c) { this.candidates.push(c) }
@@ -157,6 +177,15 @@ function setup() {
   return { chat, voice: useVoiceStore(), rtc: useWebRTC(), sent }
 }
 
+// The SFU sends its offer once the join is in; the answer binds our senders.
+async function negotiate() {
+  const pc = FakePC.instances.at(-1)
+  useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
+  await vi.waitFor(() => expect(pc.transceivers.length).toBe(3))
+  await new Promise(r => setTimeout(r, 0))
+  return pc
+}
+
 async function grantMic() {
   await vi.waitFor(() => expect(micRequests.length).toBeGreaterThan(0))
   const req = micRequests.shift()
@@ -174,8 +203,13 @@ describe('useWebRTC join and leave', () => {
     await join
     expect(sent.filter(e => e.type === 'voice_join')).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1' } }])
     expect(voice.currentChannelId).toBe('ch-1')
-    // Mic, screen and camera lines exist from the start; only the mic carries a track.
-    const senders = FakePC.instances.at(-1).senders
+    // We send on the SFU's own mic, screen and camera lines (never on lines
+    // added locally, which a browser would not match to the offer); only
+    // the mic carries a track yet.
+    const pc = await negotiate()
+    expect(pc.unmatched).toHaveLength(0)
+    expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv'])
+    const senders = pc.senders
     expect(senders).toHaveLength(3)
     expect(senders.filter(sd => sd.track)).toHaveLength(1)
   })
@@ -214,7 +248,7 @@ describe('useWebRTC signaling', () => {
     await join
     rtc.leaveVoiceChannel()
     const before = FakePC.instances.length
-    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: 'o' } })
+    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
     await new Promise(r => setTimeout(r, 10))
     expect(FakePC.instances.length).toBe(before)
   })
@@ -229,7 +263,7 @@ describe('useWebRTC signaling', () => {
     await new Promise(r => setTimeout(r, 10))
     const pc = FakePC.instances.at(-1)
     expect(pc.candidates).toEqual([])
-    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: 'o' } })
+    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
     await vi.waitFor(() => expect(sent.some(e => e.type === 'webrtc_answer')).toBe(true))
     expect(pc.candidates).toEqual([{ candidate: 'c1' }])
   })
@@ -287,7 +321,7 @@ describe('audio settings in a call', () => {
     const join = rtc.joinVoiceChannel('ch-1')
     const oldStream = await grantMic()
     await join
-    const sender = FakePC.instances.at(-1).senders[0]
+    const sender = (await negotiate()).senders[0]
 
     const apply = rtc.applyAudioSettings()
     const newStream = await grantMic()
@@ -310,6 +344,7 @@ describe('AI noise suppression', () => {
     const join = rtc.joinVoiceChannel('ch-1')
     const raw = await grantMic()
     await join
+    await negotiate()
     return { rtc, voice, raw }
   }
 
@@ -368,7 +403,7 @@ async function joined() {
   const join = ctx.rtc.joinVoiceChannel('ch-1')
   const mic = await grantMic()
   await join
-  const pc = FakePC.instances.at(-1)
+  const pc = await negotiate()
   const [audio, screen, camera] = pc.senders
   return { ...ctx, mic, pc, audio, screen, camera }
 }
@@ -409,9 +444,10 @@ describe('screen share with audio', () => {
 
   it('without screen audio the plain mic keeps being sent', async () => {
     const { rtc, audio, mic } = await joined()
+    const calls = audio.replaceTrack.mock.calls.length
     stubDisplayMedia(fakeStream(['video']))
     await rtc.startScreenShare()
-    expect(audio.replaceTrack).not.toHaveBeenCalled()
+    expect(audio.replaceTrack.mock.calls.length).toBe(calls)
     expect(audio.track).toBe(mic.getAudioTracks()[0])
   })
 
@@ -466,7 +502,7 @@ describe('screen share with audio', () => {
     const mixTrack = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
 
     rtc.rejoinAfterReconnect()
-    const fresh = FakePC.instances.at(-1)
+    const fresh = await negotiate()
     expect(fresh.senders[0].track).toBe(mixTrack)
     expect(fresh.senders[0].track).not.toBe(mic.getAudioTracks()[0])
     expect(fresh.senders[1].track.kind).toBe('video')
@@ -713,3 +749,19 @@ describe('mic test and loopback', () => {
   })
 })
 
+
+describe('publishMids', () => {
+  it('finds the SFU receive lines for mic, screen and camera', () => {
+    const offer = [
+      'v=0',
+      'm=audio 9 UDP 111', 'a=mid:0', 'a=recvonly',
+      'm=video 9 UDP 96', 'a=mid:1', 'a=recvonly',
+      'm=video 9 UDP 96', 'a=mid:2', 'a=recvonly',
+      // a forwarded track of someone else: not ours to send on
+      'm=audio 9 UDP 111', 'a=mid:3', 'a=sendonly',
+      ''
+    ].join('\r\n')
+    expect(publishMids(offer)).toEqual({ audio: '0', video: ['1', '2'] })
+    expect(publishMids('')).toEqual({ audio: null, video: [] })
+  })
+})

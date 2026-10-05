@@ -68,7 +68,7 @@ env -i PATH="$PATH" HOME="$HOME" \
   DATABASE_URL="postgres://mnema:mnema@127.0.0.1:$PG_PORT/mnema_e2e?sslmode=disable" \
   S3_ENDPOINT="http://127.0.0.1:$S3_PORT" S3_BUCKET=mnema-e2e \
   S3_ACCESS_KEY="$S3_KEY" S3_SECRET_KEY="$S3_SECRET" S3_FORCE_PATH_STYLE=true \
-  LINK_PREVIEWS_ENABLED=false \
+  LINK_PREVIEWS_ENABLED=false LOG_LEVEL="${E2E_LOG_LEVEL:-}" \
   WEBRTC_UDP_PORT_MIN=50100 WEBRTC_UDP_PORT_MAX=50150 \
   WEBRTC_NAT_1TO1_IP=127.0.0.1 \
   "$BIN" >"$LOG" 2>&1 &
@@ -84,4 +84,4 @@ curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null
 echo "==> running playwright"
 cd e2e
 E2E_BASE_URL="http://127.0.0.1:$APP_PORT" E2E_ADMIN_USER=Herzog E2E_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-  npx playwright test
+  npx playwright test ${E2E_ONLY:-}

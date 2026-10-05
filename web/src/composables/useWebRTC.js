@@ -203,10 +203,6 @@ function activeAudioTrack() {
   return mix?.destination.stream.getAudioTracks()[0] || localAudioStream.value?.getAudioTracks()[0] || null
 }
 
-function activeAudioStream() {
-  return mix?.destination.stream || localAudioStream.value
-}
-
 function teardownScreenAudioMix(voiceStore) {
   if (!mix) return
   const m = mix
@@ -358,16 +354,67 @@ function setupPeerConnection(voiceStore, chatStore) {
     }
   }
 
-  // The three outgoing lines. They exist from the start (even without a
-  // track) so that screen share and camera begin with replaceTrack only.
-  const audioTrack = activeAudioTrack()
-  audioSender = audioTrack
-    ? pc.addTrack(audioTrack, activeAudioStream())
-    : pc.addTransceiver('audio', { direction: 'sendrecv' }).sender
-  screenSender = addVideoSender(pc, localScreenStream.value)
-  cameraSender = addVideoSender(pc, localCameraStream.value)
-
+  // The outgoing lines (microphone, screen, camera) are the SFU's own receive
+  // lines from its offer; see bindPublishSenders.
   return pc
+}
+
+/**
+ * The SFU's offer starts with three receive-only lines in a fixed order:
+ * microphone, screen, camera. Returns their mids from the offer SDP.
+ */
+export function publishMids(sdp) {
+  const out = { audio: null, video: [] }
+  let kind = null
+  let mid = null
+  let recvOnly = false
+  const flush = () => {
+    if (!kind || mid === null || !recvOnly) return
+    if (kind === 'audio' && out.audio === null) out.audio = mid
+    else if (kind === 'video') out.video.push(mid)
+  }
+  for (const line of String(sdp || '').split(/\r?\n/)) {
+    if (line.startsWith('m=')) {
+      flush()
+      kind = line.slice(2).split(' ')[0]
+      mid = null
+      recvOnly = false
+    } else if (line.startsWith('a=mid:')) {
+      mid = line.slice(6).trim()
+    } else if (line.trim() === 'a=recvonly') {
+      recvOnly = true
+    }
+  }
+  flush()
+  return out
+}
+
+/**
+ * Sends on the SFU's receive lines. Transceivers created locally with
+ * addTransceiver are never matched to a remote offer's m-lines, so media put
+ * on them would never reach the server; the offer's own transceivers are
+ * switched to send instead, once, right after the offer is applied.
+ */
+function bindPublishSenders(conn, sdp) {
+  const mids = publishMids(sdp)
+  const bind = (mid, track) => {
+    const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
+    if (!tr) return null
+    tr.direction = 'sendrecv'
+    if (track) tr.sender.replaceTrack(track).catch(() => {})
+    return tr.sender
+  }
+  const bound = { screen: false, camera: false }
+  if (!audioSender) audioSender = bind(mids.audio, activeAudioTrack())
+  if (!screenSender) {
+    screenSender = bind(mids.video[0], localScreenStream.value?.getVideoTracks()[0])
+    bound.screen = !!screenSender && !!localScreenStream.value
+  }
+  if (!cameraSender) {
+    cameraSender = bind(mids.video[1], localCameraStream.value?.getVideoTracks()[0])
+    bound.camera = !!cameraSender && !!localCameraStream.value
+  }
+  return bound
 }
 
 // Sender limits (bits per second). The browser's own congestion control still
@@ -398,12 +445,6 @@ async function applyQosToSender(sender, voiceStore) {
   const qos = voiceStore?.qosHighPriority
   const prio = qos ? 'high' : 'medium'
   await tuneSender(sender, { priority: prio, networkPriority: prio })
-}
-
-function addVideoSender(conn, stream) {
-  const track = stream?.getVideoTracks()[0]
-  if (track) return conn.addTransceiver(track, { direction: 'sendrecv', streams: [stream] }).sender
-  return conn.addTransceiver('video', { direction: 'sendrecv' }).sender
 }
 
 function isTypingTarget(el) {
@@ -783,13 +824,14 @@ export function useWebRTC() {
       setupPeerConnection(voiceStore, chatStore)
     }
 
-    const audioTrack = activeAudioTrack()
-    if (audioTrack && !audioSender) {
-      audioSender = pc.addTrack(audioTrack, activeAudioStream())
-    }
-
     try {
       await pc.setRemoteDescription(new RTCSessionDescription(offer))
+      const bound = bindPublishSenders(pc, offer.sdp)
+      // A share started before the connection was up goes out now.
+      if (bound.screen) {
+        chatStore.sendWSEvent('webrtc_screenshare_start', {})
+        chatStore.sendWSEvent('webrtc_request_keyframe', {})
+      }
       const queued = pendingCandidates
       pendingCandidates = []
       for (const c of queued) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
