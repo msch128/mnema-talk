@@ -1,0 +1,27 @@
+web/src/lib/router.js
+  s_b14660589987ff::t_225f833baed050 84-98
+  s_b14660589987ff::t_4e23e1e3e2b00a 52-63,68,70,75-82,99
+  s_b14660589987ff::t_07a3d18da86c6e 83,100
+web/src/App.vue
+  s_b14660589987ff::t_225f833baed050 2,6-8,31,45-48,65-78,81-88,91-97,105-120,123-124,128-129,133,140-144,146,160,173-177,184,191-193,196-202,289-291,318
+web/src/lib/router.test.js
+  s_b14660589987ff::t_719b7f1b17bebe 2,92-134
+web/src/components/AdminDashboard.vue
+  s_b14660589987ff::t_4e23e1e3e2b00a 62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1dbc7e0226903c7e8cfa35ffc2a25d641a8f180e",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

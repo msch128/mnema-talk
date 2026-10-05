@@ -1,0 +1,33 @@
+web/src/components/Sidebar.vue
+  s_b14660589987ff::t_e376decebcf4c3 9-10,16-17,72-92,147-148,340-344,349,351-352,365,373,391,393,396-397,427,444,456-462,483-496
+  s_b14660589987ff::t_da314f4617d95d 497
+web/src/composables/useNavMenus.test.js
+  s_b14660589987ff::t_aa47cf9bd476d3 1-100
+web/src/i18n/de.json
+  s_b14660589987ff::t_c69d8e38515c36 665-671
+web/src/composables/useNavMenus.js
+  s_b14660589987ff::t_d26364ed0ed5bd 1-155,157-159,161-174,176-252
+  s_b14660589987ff::t_c69d8e38515c36 156,160,175
+web/src/components/EditNameDialog.vue
+  s_b14660589987ff::t_30d3e25dc0fa5d 1-103
+web/src/i18n/en.json
+  s_b14660589987ff::t_c69d8e38515c36 665-671
+web/src/components/MemberList.vue
+  s_b14660589987ff::t_3419cfffc6ef74 7-8,27-32,74-76,78-82,120-122,124-128,161-169,185-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4f8c2040a41745a7afa98eddc46fca2e2a7cf8d1",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
