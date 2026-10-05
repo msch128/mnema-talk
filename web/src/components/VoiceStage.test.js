@@ -182,7 +182,7 @@ describe('VoiceStage screen share opt-in', () => {
     voice.handleMediaState({ user_id: 'a', screen: true })
     const w = mountStage({ channelId: 'v1' })
     await nextTick()
-    await w.find('[data-testid="screen-card"] button').trigger('click')
+    await w.find('[data-testid="screen-card"] [data-testid="screen-card-action"]').trigger('click')
     expect(sink).toHaveBeenCalledWith({ kind: 'screen', user_id: 'a', on: true })
     expect(voice.watchedScreens).toEqual({ a: true })
     // Waiting for the media to arrive.
@@ -302,7 +302,7 @@ describe('VoiceStage screen share opt-in', () => {
     expect(cardKeys()).toEqual(['a'])
 
     // Watching Alice puts her share on the stage once it arrives; mine is a card.
-    await w.find('[data-screen-card="a"] button').trigger('click')
+    await w.find('[data-screen-card="a"] [data-testid="screen-card-action"]').trigger('click')
     voice.setRemoteScreen('a', alice)
     await flushPromises()
     expect(cardKeys()).toEqual(['own'])
@@ -315,18 +315,18 @@ describe('VoiceStage screen share opt-in', () => {
     expect(w.find('button[aria-label="Stop watching"]').exists()).toBe(true)
 
     // Back to my own share: Alice's stays received, as a card.
-    await w.find('[data-screen-card="own"] button').trigger('click')
+    await w.find('[data-screen-card="own"] [data-testid="screen-card-action"]').trigger('click')
     await flushPromises()
     expect(stageVideo().srcObject).toBe(own)
     expect(stageVideo().muted).toBe(true)
     expect(cardKeys()).toEqual(['a'])
-    expect(w.find('[data-screen-card="a"] button').text()).toBe('Show on stage')
+    expect(w.find('[data-screen-card="a"] [data-testid="screen-card-action"]').text()).toBe('Show on stage')
     expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(true)
     expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(false)
     expect(voice.watchedScreens).toEqual({ a: true })
 
     // And to Alice again.
-    await w.find('[data-screen-card="a"] button').trigger('click')
+    await w.find('[data-screen-card="a"] [data-testid="screen-card-action"]').trigger('click')
     await flushPromises()
     expect(stageVideo().srcObject).toBe(alice)
     expect(cardKeys()).toEqual(['own'])
@@ -375,7 +375,7 @@ describe('VoiceStage screen share opt-in', () => {
     expect(w.find('[data-participant-tile][aria-pressed="true"]').attributes('aria-label')).toBe('Back to everyone')
 
     // Bob's screen goes on the stage.
-    await w.find('[data-screen-card="b"] button').trigger('click')
+    await w.find('[data-screen-card="b"] [data-testid="screen-card-action"]').trigger('click')
     voice.setRemoteScreen('b', screen)
     await flushPromises()
     expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('b')
@@ -385,7 +385,7 @@ describe('VoiceStage screen share opt-in', () => {
     await aliceTile().trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('camera:a')
-    expect(w.find('[data-screen-card="b"] button').text()).toBe('Show on stage')
+    expect(w.find('[data-screen-card="b"] [data-testid="screen-card-action"]').text()).toBe('Show on stage')
     await w.find('[data-testid="stage-unfocus-camera"]').trigger('click')
     await flushPromises()
     expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('b')
@@ -432,11 +432,73 @@ describe('VoiceStage screen share opt-in', () => {
       const w = mountStage({ channelId: 'v1' })
       await flushPromises()
       expect(w.find('[data-testid="own-stream-paused"]').exists()).toBe(false)
-      await w.find('[data-screen-card="own"] button').trigger('click')
+      await w.find('[data-screen-card="own"] [data-testid="screen-card-action"]').trigger('click')
       expect(w.find('[data-testid="own-stream-paused"]').exists()).toBe(true)
     } finally {
       hasFocus.mockRestore()
     }
+  })
+})
+
+describe('VoiceStage screen viewers', () => {
+  function sharing() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.channelUsers = { v1: {
+      a: { id: 'a', username: 'alice', display_name: 'Alice' },
+      b: { id: 'b', username: 'bob', display_name: 'Bob' }
+    } }
+    voice.localScreenStream = new MediaStream()
+    voice.isScreenSharing = true
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'me', screen: true })
+    return voice
+  }
+  const stageViewers = w => w.find('[data-testid="stage"] [data-testid="screen-viewers-button"]')
+
+  it('my own share on the stage shows who watches it, 0 before anyone does', async () => {
+    const voice = sharing()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(stageViewers(w).text()).toBe('0')
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'me', viewers: ['a', 'b'] })
+    await nextTick()
+    expect(stageViewers(w).text()).toBe('2')
+    expect(stageViewers(w).attributes('aria-label')).toBe('2 viewers: Alice, Bob')
+    await stageViewers(w).trigger('click')
+    expect(w.find('[data-testid="stage"] [data-testid="screen-viewers-list"]').text()).toContain('Alice')
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'me', viewers: ['b'] })
+    await nextTick()
+    expect(stageViewers(w).text()).toBe('1')
+  })
+
+  it("someone else's share on the stage and on a card shows its viewers", async () => {
+    const voice = sharing()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', screen: true })
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'a', viewers: ['b'] })
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    // Alice's share is a card (mine is on the stage) and shows its viewer.
+    expect(w.find('[data-screen-card="a"] [data-testid="screen-viewers-button"]').text()).toBe('1')
+
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', new MediaStream())
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'a', viewers: ['b', 'me'] })
+    await nextTick()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('a')
+    expect(stageViewers(w).text()).toBe('2')
+    expect(stageViewers(w).attributes('aria-label')).toBe('2 viewers: Bob, Me')
+    // My own share is the card now, still with its count.
+    expect(w.find('[data-screen-card="own"] [data-testid="screen-viewers-button"]').text()).toBe('0')
+  })
+
+  it('a camera on the stage has no viewer count', async () => {
+    const voice = sharing()
+    voice.localCameraStream = new MediaStream()
+    voice.focusCamera('me')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(w.find('[data-testid="stage"]').attributes('data-stage-source')).toBe('camera:me')
+    expect(stageViewers(w).exists()).toBe(false)
   })
 })
 

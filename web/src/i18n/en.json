@@ -612,7 +612,16 @@
     "noAudioInShare": "Screen shared without audio",
     "noAudioInShareTip": "Note: Screen is being shared without sound. Select a browser tab or enable \"Share audio\" in the browser prompt to transmit sound.",
     "ownStreamRunning": "Don't worry, your stream is still running",
-    "ownStreamRunningHint": "The preview pauses while you are in another window to save resources."
+    "ownStreamRunningHint": "The preview pauses while you are in another window to save resources.",
+    "viewers": {
+      "one": "{count} viewer: {names}",
+      "other": "{count} viewers: {names}"
+    },
+    "viewersTitle": {
+      "one": "{count} viewer",
+      "other": "{count} viewers"
+    },
+    "viewersNone": "Nobody is watching yet"
   },
   "admin": {
     "title": "Storage & administration",

@@ -447,3 +447,78 @@ describe('a camera on the stage', () => {
     expect(voice.focusedCamera).toBeNull()
   })
 })
+
+describe('who watches a screen share', () => {
+  function inRoom(channel = 'v1') {
+    const voice = useVoiceStore()
+    voice.setChannel(channel)
+    return voice
+  }
+
+  it('keeps the viewers per sharer for the room I am in', () => {
+    const voice = inRoom()
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: ['ben', 'carl'] })
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'me', viewers: ['anna'] })
+    expect(voice.viewersOf('anna')).toEqual(['ben', 'carl'])
+    expect(voice.viewersOf('me')).toEqual(['anna'])
+    expect(voice.viewersOf('nobody')).toEqual([])
+  })
+
+  it('replaces the list on change and drops it at zero viewers', () => {
+    const voice = inRoom()
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: ['ben', 'carl'] })
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: ['carl'] })
+    expect(voice.viewersOf('anna')).toEqual(['carl'])
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: [] })
+    expect(voice.viewersOf('anna')).toEqual([])
+    expect(voice.screenViewers).toEqual({})
+  })
+
+  it('ignores other rooms, broken payloads, duplicates and the sharer itself', () => {
+    const voice = inRoom()
+    voice.handleScreenViewers({ channel_id: 'v2', user_id: 'anna', viewers: ['ben'] })
+    voice.handleScreenViewers({ channel_id: 'v1', viewers: ['ben'] })
+    voice.handleScreenViewers(null)
+    expect(voice.screenViewers).toEqual({})
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: ['ben', 'ben', 'anna', ''] })
+    expect(voice.viewersOf('anna')).toEqual(['ben'])
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: null })
+    expect(voice.viewersOf('anna')).toEqual([])
+  })
+
+  it('needs a room: an event before joining is dropped', () => {
+    const voice = useVoiceStore()
+    voice.handleScreenViewers({ channel_id: 'v1', user_id: 'anna', viewers: ['ben'] })
+    expect(voice.screenViewers).toEqual({})
+  })
+
+  it('is cleared when the share ends, on a room switch, a reconnect and on leaving', () => {
+    const voice = inRoom()
+    const seedViewers = () => voice.handleScreenViewers({ channel_id: voice.currentChannelId, user_id: 'anna', viewers: ['ben'] })
+
+    seedViewers()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'anna', screen: false, camera: true })
+    expect(voice.viewersOf('anna')).toEqual([])
+
+    seedViewers()
+    voice.setChannel('v1') // same room: kept
+    expect(voice.viewersOf('anna')).toEqual(['ben'])
+    voice.setChannel('v2')
+    expect(voice.viewersOf('anna')).toEqual([])
+
+    seedViewers()
+    voice.resetRemoteMedia()
+    expect(voice.viewersOf('anna')).toEqual([])
+
+    seedViewers()
+    voice.disconnect()
+    expect(voice.screenViewers).toEqual({})
+  })
+
+  it('arrives through the chat store WebSocket switch', async () => {
+    const { useChatStore } = await import('./chat')
+    const voice = inRoom()
+    useChatStore().handleWSEvent({ type: 'screen_viewers', payload: { channel_id: 'v1', user_id: 'anna', viewers: ['ben'] } })
+    expect(voice.viewersOf('anna')).toEqual(['ben'])
+  })
+})

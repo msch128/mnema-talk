@@ -13,6 +13,7 @@ import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import TalkParticipants from './TalkParticipants.vue'
+import ScreenViewers from './ScreenViewers.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
@@ -409,6 +410,7 @@ async function handleFileUpload(e) {
               <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
               {{ $t('talk.live') }}
             </span>
+            <ScreenViewers v-if="!cameraOnStage && stage" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1" />
             <span class="font-mono font-semibold text-xs">{{ stageName }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
@@ -515,8 +517,14 @@ async function handleFileUpload(e) {
             <span class="text-sm text-mnema-text truncate">
               {{ card.kind === 'own' ? $t('talk.ownScreen') : $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
             </span>
+            <ScreenViewers
+              :user-id="card.kind === 'own' ? (authStore.user?.id || '') : card.user.id"
+              :show-zero="card.kind === 'own'"
+              variant="card"
+            />
             <button
               type="button"
+              data-testid="screen-card-action"
               :disabled="card.state === 'pending'"
               class="h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition disabled:opacity-60 flex-shrink-0"
               @click="onScreenCard(card)"

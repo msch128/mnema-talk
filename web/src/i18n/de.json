@@ -612,7 +612,16 @@
     "noAudioInShare": "Bildschirm ohne Audio geteilt",
     "noAudioInShareTip": "Hinweis: Bildschirm wird ohne Ton übertragen. Wähle einen Browser-Tab oder aktiviere „Audio teilen“ im Browser-Dialog, um Sound zu übertragen.",
     "ownStreamRunning": "Keine Sorge, dein Stream läuft weiter",
-    "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung."
+    "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung.",
+    "viewers": {
+      "one": "{count} Zuschauer: {names}",
+      "other": "{count} Zuschauer: {names}"
+    },
+    "viewersTitle": {
+      "one": "{count} Zuschauer",
+      "other": "{count} Zuschauer"
+    },
+    "viewersNone": "Noch schaut niemand zu"
   },
   "admin": {
     "title": "Speicher & Administration",

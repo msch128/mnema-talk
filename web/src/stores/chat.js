@@ -792,6 +792,10 @@ export const useChatStore = defineStore('chat', () => {
         voiceStore.handleMediaState(p)
         break
 
+      case 'screen_viewers':
+        voiceStore.handleScreenViewers(p)
+        break
+
       case 'voice_speaking':
         voiceStore.handleSpeakingEvent(p)
         break

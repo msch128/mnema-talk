@@ -194,6 +194,9 @@ export const useVoiceStore = defineStore('voice', () => {
   const watchedScreens = ref({})
   // userId -> { screen, camera }: who publishes what, known without receiving it.
   const mediaState = ref({})
+  // sharer userId -> user IDs watching their screen share (the server's
+  // screen_viewers event; only for the room I am in).
+  const screenViewers = ref({})
   const localCameraStream = shallowRef(null)
   // userId -> MediaStream of that participant's camera (replaced, never mutated).
   const userVideoStreams = shallowRef({})
@@ -434,6 +437,11 @@ export const useVoiceStore = defineStore('voice', () => {
     if (screen || camera) next[user_id] = { channel_id, screen: !!screen, camera: !!camera }
     else delete next[user_id]
     mediaState.value = next
+    if (!screen && screenViewers.value[user_id]) {
+      const v = { ...screenViewers.value }
+      delete v[user_id]
+      screenViewers.value = v
+    }
     // The share ended: the opt-in ended with it.
     if (!screen && watchedScreens.value[user_id]) {
       const w = { ...watchedScreens.value }
@@ -442,6 +450,24 @@ export const useVoiceStore = defineStore('voice', () => {
       removeRemoteScreen(user_id)
       syncScreenFocus(null)
     }
+  }
+
+  /** screen_viewers: { channel_id, user_id (the sharer), viewers: [user IDs] }. */
+  function handleScreenViewers(event) {
+    const { channel_id, user_id, viewers } = event || {}
+    if (!user_id) return
+    // Late events of a room I left (or before I joined one) are not mine.
+    if (!currentChannelId.value || (channel_id && channel_id !== currentChannelId.value)) return
+    const ids = Array.isArray(viewers) ? [...new Set(viewers.filter(id => id && id !== user_id))] : []
+    const next = { ...screenViewers.value }
+    if (ids.length) next[user_id] = ids
+    else delete next[user_id]
+    screenViewers.value = next
+  }
+
+  /** Who watches userId's screen share (my own too): user IDs, [] for nobody. */
+  function viewersOf(userId) {
+    return screenViewers.value[userId] || []
   }
 
   // The media connection restarted (reconnect): streams are gone and the server
@@ -454,6 +480,8 @@ export const useVoiceStore = defineStore('voice', () => {
     watchedScreens.value = keep
     remoteScreenStreams.value = {}
     mediaState.value = {}
+    // The server sends who watches what again after the join.
+    screenViewers.value = {}
     userVideoStreams.value = {}
     syncScreenFocus(null)
   }
@@ -602,6 +630,8 @@ export const useVoiceStore = defineStore('voice', () => {
     const prev = currentChannelId.value
     currentChannelId.value = channelId
     isConnected.value = !!channelId
+    // Viewers belong to one room.
+    if (prev !== channelId) screenViewers.value = {}
     if (channelId) {
       if (prev !== channelId) {
         playSoundEffect('join')
@@ -637,6 +667,7 @@ export const useVoiceStore = defineStore('voice', () => {
     ownScreenFocused.value = false
     focusedCamera.value = null
     mediaState.value = {}
+    screenViewers.value = {}
     userVideoStreams.value = {}
     subscriptionSink = null
     activeView.value = 'chat'
@@ -681,6 +712,9 @@ export const useVoiceStore = defineStore('voice', () => {
     setRemoteScreen,
     removeRemoteScreen,
     handleMediaState,
+    screenViewers,
+    handleScreenViewers,
+    viewersOf,
     resetRemoteMedia,
     userVideoStreams,
     setUserVideoStream,
