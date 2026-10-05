@@ -208,6 +208,9 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   # -- Container image (build only, never pushed) ----------------------------
+  # Same platforms as the release image, so a Dockerfile change that breaks
+  # one of them fails here and not in the release. The Go binary is
+  # cross-compiled on the runner (no QEMU), so arm64 adds about one compile.
   docker:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -221,6 +224,7 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           push: false
           tags: mnema-talk:ci
           # Same scope as the release image build (release.yml), which then
