@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -8,7 +9,7 @@ if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2
 const suffix = Date.now().toString(36)
 const USER = `friend_${suffix}`
 const USER_DISPLAY = `Friend ${suffix}`
-const USER_PASSWORD = `pw-${suffix}-${Math.random().toString(36).slice(2, 10)}`
+const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const TEXT_CHANNEL = 'allgemein'
 const VOICE_CHANNEL = 'Tafelrunde'
 
