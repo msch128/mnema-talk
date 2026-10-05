@@ -606,6 +606,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			}
 		}
 	}
+	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", rejoin)
 	if !rejoin {
 		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted})
 	}
@@ -692,6 +693,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	}
 	h.mu.Unlock()
 	if wasIn {
+		slog.Info("voice leave", "user", userID, "channel", chID)
 		h.Broadcast("voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
 			h.addVoiceTime(userID, time.Since(since))

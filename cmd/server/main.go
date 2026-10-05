@@ -4,10 +4,12 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -63,10 +65,19 @@ func run() error {
 	}
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 
-	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, cfg.WebRTCNAT1to1IP, cfg.WebRTCSTUNURLs)
+	// Addresses browsers send media to: typically the public IP (or a
+	// dynamic-DNS name for it) plus the LAN IP.
+	announce, err := sfu.ResolveAnnounce(ctx, cfg.WebRTCAnnounce)
+	if err != nil {
+		return err
+	}
+	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs)
 	if err != nil {
 		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
 		voice = nil
+	} else {
+		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax))
+		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 
 	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, SFU: voice, Version: version})

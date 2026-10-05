@@ -35,7 +35,7 @@ func skipFlakyInCI(t *testing.T) {
 
 func newTestSFU(t *testing.T) *SFU {
 	t.Helper()
-	s, err := NewSFU(0, 0, "", nil)
+	s, err := NewSFU(0, 0, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

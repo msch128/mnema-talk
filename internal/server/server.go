@@ -86,7 +86,9 @@ func NewRouter(d Deps) (*Router, error) {
 		// Our own public address leads back into the LAN through the
 		// router (hairpin NAT); never let a preview fetch go there.
 		if u, err := url.Parse(cfg.PublicURL); err == nil {
-			deny := func() { fetcher.Deny(context.Background(), u.Hostname(), cfg.WebRTCNAT1to1IP) }
+			deny := func() {
+				fetcher.Deny(context.Background(), append([]string{u.Hostname()}, cfg.WebRTCAnnounce...)...)
+			}
 			deny()
 			// A home connection's public IP changes; keep the list current.
 			go func() {
