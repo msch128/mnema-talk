@@ -3,13 +3,14 @@ import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
-  Plus, Users, Activity, Sliders
+  Plus, Users, Activity, Sliders, Video, VideoOff
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
+import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
@@ -18,7 +19,26 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
-const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings } = useWebRTC()
+// Which roundtable is shown. Without a prop it is the one the user is in.
+// Not connected to it, the stage is a preview: who is there, the chat and a
+// Join button. No microphone is requested before the user joins.
+const props = defineProps({
+  channelId: { type: String, default: null },
+  showChat: { type: Boolean, default: false }
+})
+const emit = defineEmits(['join', 'update:showChat'])
+
+const { joinVoiceChannel, leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
+
+const shownChannelId = computed(() => props.channelId || voiceStore.currentChannelId || null)
+const isConnectedHere = computed(() => voiceStore.isConnected && !!shownChannelId.value && voiceStore.currentChannelId === shownChannelId.value)
+
+function join() {
+  const id = shownChannelId.value
+  if (!id) return
+  emit('join', id)
+  joinVoiceChannel(id)
+}
 
 // The quick toggle must swap the running mic, not just flip the setting.
 function toggleNoiseCancelling() {
@@ -27,7 +47,6 @@ function toggleNoiseCancelling() {
   if (voiceStore.localAudioStream) applyAudioSettings()
 }
 
-const layoutMode = ref('split') // 'split' (Tafelrunde + chat) | 'focus' (Tafelrunde only)
 const isFullscreen = ref(false)
 const videoContainer = ref(null)
 const screenVideoEl = ref(null)
@@ -42,28 +61,41 @@ const chatContainer = ref(null)
 const fileInput = ref(null)
 const isUploading = ref(false)
 
-// Current connected channel object
+// The shown channel object
 const activeVoiceChannel = computed(() => {
-  if (!voiceStore.currentChannelId) return null
+  const id = shownChannelId.value
+  if (!id) return null
   for (const cat of chatStore.categories) {
-    const ch = cat.channels?.find(c => c.id === voiceStore.currentChannelId)
+    const ch = cat.channels?.find(c => c.id === id)
     if (ch) return ch
   }
-  return chatStore.uncategorized?.find(c => c.id === voiceStore.currentChannelId) || null
+  return chatStore.uncategorized?.find(c => c.id === id) || null
 })
 
-// Current users in this voice channel
+// Participants of the shown channel (from the server's voice state)
 const usersInVoice = computed(() => {
-  if (!voiceStore.currentChannelId) return []
-  const userMap = voiceStore.channelUsers[voiceStore.currentChannelId] || {}
-  const list = Object.values(userMap)
+  const id = shownChannelId.value
+  if (!id) return []
+  const list = Object.values(voiceStore.channelUsers[id] || {})
 
-  // Ensure current user is always included visually if connected
-  if (authStore.user && !list.some(u => u.id === authStore.user.id)) {
+  // Ensure the current user is always included visually while connected
+  if (isConnectedHere.value && authStore.user && !list.some(u => u.id === authStore.user.id)) {
     list.unshift(authStore.user)
   }
   return list
 })
+
+// Camera stream of a participant: my own, or the one the SFU forwards.
+function cameraStreamOf(user) {
+  if (user.id === authStore.user?.id) return voiceStore.localCameraStream
+  return voiceStore.userVideoStreams[user.id] || null
+}
+
+// The chat under the stage belongs to the shown channel, also in the preview.
+watch([() => props.showChat, shownChannelId], ([show, id]) => {
+  if (!show || !id || chatStore.activeChannel?.id === id) return
+  if (activeVoiceChannel.value) chatStore.selectChannel(activeVoiceChannel.value)
+}, { immediate: true })
 
 // Active screen stream (local or remote)
 const activeScreenStream = computed(() => {
@@ -72,9 +104,14 @@ const activeScreenStream = computed(() => {
 const isSharingOwnScreen = computed(() => {
   return !!voiceStore.localScreenStream
 })
+const screenSharerName = computed(() => {
+  if (isSharingOwnScreen.value) return t('tafelrunde.ownScreen')
+  const sharer = usersInVoice.value.find(u => u.id === voiceStore.remoteScreenUserId)
+  return sharer ? (sharer.display_name || sharer.username) : t('tafelrunde.sharedScreen')
+})
 
 // Watch active screen stream and attach to video element
-watch(activeScreenStream, (stream) => {
+watch([activeScreenStream, isConnectedHere], ([stream]) => {
   nextTick(() => {
     if (screenVideoEl.value) {
       screenVideoEl.value.srcObject = stream
@@ -180,7 +217,7 @@ function formatTime(dateStr) {
               {{ $t('tafelrunde.participants', { count: usersInVoice.length }) }}
             </span>
           </div>
-          <div class="flex items-center gap-2 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap overflow-hidden">
+          <div v-if="isConnectedHere" class="flex items-center gap-2 text-xs text-mnema-tertiary font-mono min-w-0 whitespace-nowrap overflow-hidden">
             <!-- Live Clickable Ping Indicator -->
             <button
               @click="voiceStore.showStatsModal = true"
@@ -212,18 +249,18 @@ function formatTime(dateStr) {
       <div class="flex items-center gap-2 flex-shrink-0">
         <!-- View toggle (Tafelrunde + chat vs Tafelrunde only) -->
         <button
-          @click="layoutMode = layoutMode === 'split' ? 'focus' : 'split'"
+          @click="emit('update:showChat', !showChat)"
           :class="[
             'h-8 flex items-center gap-1.5 px-3 rounded-md text-sm font-medium border transition whitespace-nowrap',
-            layoutMode === 'split'
+            showChat
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
               : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:text-mnema-text'
           ]"
-          v-tooltip.visual="layoutMode === 'split' ? $t('tafelrunde.hideChatTip') : $t('tafelrunde.showChatTip')"
-          :aria-pressed="layoutMode === 'split' ? 'true' : 'false'"
+          v-tooltip.visual="showChat ? $t('tafelrunde.hideChatTip') : $t('tafelrunde.showChatTip')"
+          :aria-pressed="showChat ? 'true' : 'false'"
         >
           <MessageSquare class="w-4 h-4" />
-          <span>{{ layoutMode === 'split' ? $t('tafelrunde.chatShown') : $t('tafelrunde.chatHidden') }}</span>
+          <span>{{ showChat ? $t('tafelrunde.chatShown') : $t('tafelrunde.chatHidden') }}</span>
         </button>
 
         <!-- Toggle Member List Sidebar -->
@@ -231,8 +268,8 @@ function formatTime(dateStr) {
           @click="chatStore.showMemberList = !chatStore.showMemberList"
           :class="[
             'w-8 h-8 flex items-center justify-center rounded-md border transition',
-            chatStore.showMemberList 
-              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent' 
+            chatStore.showMemberList
+              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
               : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
           ]"
           v-tooltip="$t('members.toggle')"
@@ -246,25 +283,26 @@ function formatTime(dateStr) {
     <!-- Center container -->
     <div class="flex-1 flex flex-col overflow-hidden relative">
       <!-- 1. Participants and shared screen -->
-      <div 
+      <div
         :class="[
-          'transition-all flex flex-col justify-center items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-shrink-0',
-          layoutMode === 'split' ? 'h-64 p-4 border-b border-mnema-hairline' : 'flex-1 p-6 overflow-y-auto'
+          'transition-all flex flex-col items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-shrink-0',
+          showChat ? 'h-80 p-4 pb-16 border-b border-mnema-hairline' : 'flex-1 p-6 pb-20 overflow-y-auto',
+          activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
         ]"
       >
         <!-- Screen share spotlight (if sharing or viewing) -->
-        <div 
-          v-if="activeScreenStream" 
+        <div
+          v-if="activeScreenStream && isConnectedHere"
           ref="videoContainer"
           :class="[
             'w-full max-w-5xl bg-black rounded-xl border border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
-            layoutMode === 'split' ? 'h-52 mb-2' : 'h-[65vh] mb-4'
+            showChat ? 'h-44 mb-2 flex-shrink-0' : 'flex-1 min-h-0 mb-3'
           ]"
         >
-          <video 
-            ref="screenVideoEl" 
-            autoplay 
-            playsinline 
+          <video
+            ref="screenVideoEl"
+            autoplay
+            playsinline
             :muted="isSharingOwnScreen"
             class="w-full h-full object-contain"
             @resize="onVideoResize"
@@ -273,13 +311,13 @@ function formatTime(dateStr) {
 
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-3 py-1 rounded-md flex items-center gap-2 text-sm text-white">
             <span class="w-2 h-2 rounded-full bg-mnema-accent shadow-[0_0_6px_rgba(45,167,113,0.8)]"></span>
-            <span class="font-mono font-semibold text-xs">{{ isSharingOwnScreen ? $t('tafelrunde.ownScreen') : $t('tafelrunde.sharedScreen') }}</span>
+            <span class="font-mono font-semibold text-xs">{{ screenSharerName }}</span>
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
           <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-              @click="toggleFullscreen" 
+            <button
+              @click="toggleFullscreen"
               v-tooltip="$t('tafelrunde.fullscreen')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
@@ -288,73 +326,79 @@ function formatTime(dateStr) {
           </div>
         </div>
 
-        <!-- Participant Cards Grid -->
-        <div 
-          v-else 
-          :class="[
-            'w-full max-w-5xl grid gap-3 items-center justify-center',
-            layoutMode === 'split' 
-              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' 
-              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 max-h-[70vh]'
-          ]"
+        <!-- Participant tiles: a strip under the screen share, else the grid -->
+        <div
+          v-if="activeScreenStream && isConnectedHere"
+          class="w-full max-w-5xl flex gap-2 overflow-x-auto flex-shrink-0 pb-1"
         >
-          <div
+          <ParticipantTile
             v-for="user in usersInVoice"
             :key="user.id"
-            :class="[
-              'rounded-xl border transition-all flex flex-col items-center justify-center relative shadow-sm',
-              layoutMode === 'split' ? 'p-3 h-32 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface',
-              voiceStore.speakingUsers[user.id]
-                ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10 bg-mnema-surface'
-                : 'border-mnema-hairline hover:border-mnema-border'
-            ]"
+            :user="user"
+            :stream="cameraStreamOf(user)"
+            :is-self="user.id === authStore.user?.id"
+            :speaking="!!voiceStore.speakingUsers[user.id]"
+            :local-muted="voiceStore.isUserLocalMuted(user.id)"
+            compact
+            class="!w-36 !h-24 !p-1 flex-shrink-0"
+            @open-profile="chatStore.openUserProfile"
+          />
+        </div>
+
+        <div
+          v-else-if="usersInVoice.length"
+          :class="[
+            'w-full max-w-5xl grid gap-3 items-center justify-center',
+            showChat
+              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+          ]"
+        >
+          <ParticipantTile
+            v-for="user in usersInVoice"
+            :key="user.id"
+            :user="user"
+            :stream="isConnectedHere ? cameraStreamOf(user) : null"
+            :is-self="user.id === authStore.user?.id"
+            :speaking="!!voiceStore.speakingUsers[user.id]"
+            :local-muted="voiceStore.isUserLocalMuted(user.id)"
+            :compact="showChat"
+            :show-status="isConnectedHere"
+            @open-profile="chatStore.openUserProfile"
+          />
+        </div>
+
+        <!-- Nobody there yet (preview) -->
+        <div v-else class="text-center max-w-sm">
+          <p class="font-semibold text-base text-mnema-text">{{ $t('voice.noOneInVoice') }}</p>
+          <p class="text-sm text-mnema-tertiary mt-0.5">{{ $t('voice.joinToTalk') }}</p>
+        </div>
+
+        <!-- Preview: not connected to this roundtable -->
+        <div
+          v-if="!isConnectedHere"
+          class="absolute bottom-3 flex flex-col items-center gap-2 z-20"
+        >
+          <p class="text-xs text-mnema-tertiary text-center max-w-md px-4">{{ $t('tafelrunde.previewHint') }}</p>
+          <button
+            @click="join"
+            :disabled="!shownChannelId"
+            class="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition shadow-xl disabled:opacity-40"
           >
-            <!-- Large Avatar -->
-            <div class="relative mb-2">
-              <UserAvatar 
-                :user="user" 
-                :size="layoutMode === 'split' ? 'lg' : 'xl'" 
-                :is-speaking="!!voiceStore.speakingUsers[user.id]"
-                class="cursor-pointer hover:opacity-90 transition"
-                @click="chatStore.openUserProfile(user)"
-              />
-            </div>
-
-            <!-- Participant Name -->
-            <div class="flex items-center gap-1.5 max-w-[90%]">
-              <span 
-                @click="chatStore.openUserProfile(user)"
-                class="text-base font-semibold text-mnema-text hover:text-mnema-accent transition cursor-pointer truncate"
-              >
-                {{ user.display_name || user.username }}
-              </span>
-              <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
-                {{ $t('role.admin') }}
-              </span>
-            </div>
-
-            <!-- Speaking State Text -->
-            <div class="text-xs font-mono mt-0.5">
-              <span v-if="voiceStore.speakingUsers[user.id]" class="text-mnema-accent font-semibold flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-                {{ $t('tafelrunde.speaking') }}
-              </span>
-              <span v-else class="text-mnema-tertiary">
-                {{ $t('tafelrunde.ready') }}
-              </span>
-            </div>
-          </div>
+            <Volume2 class="w-4 h-4" />
+            <span>{{ $t('voice.join') }}</span>
+          </button>
         </div>
 
         <!-- Control dock -->
-        <div class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated border border-mnema-border shadow-xl z-20">
+        <div v-else class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated border border-mnema-border shadow-xl z-20">
           <!-- Mute Toggle -->
           <button
             @click="voiceStore.toggleMute"
             :class="[
               'p-2.5 rounded-full transition-all',
-              voiceStore.isMuted 
-                ? 'bg-mnema-danger text-white' 
+              voiceStore.isMuted
+                ? 'bg-mnema-danger text-white'
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
             :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
@@ -369,8 +413,8 @@ function formatTime(dateStr) {
             @click="voiceStore.toggleDeafen"
             :class="[
               'p-2.5 rounded-full transition-all',
-              voiceStore.isDeafened 
-                ? 'bg-mnema-danger text-white' 
+              voiceStore.isDeafened
+                ? 'bg-mnema-danger text-white'
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
             :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
@@ -379,13 +423,30 @@ function formatTime(dateStr) {
             <Headphones class="w-4 h-4" />
           </button>
 
+          <!-- Camera -->
+          <button
+            @click="toggleCamera"
+            :class="[
+              'p-2.5 rounded-full transition-all',
+              voiceStore.isCameraOn
+                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
+                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
+            ]"
+            :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
+            v-tooltip="voiceStore.isCameraOn ? $t('tafelrunde.stopCamera') : $t('tafelrunde.startCamera')"
+            :aria-label="voiceStore.isCameraOn ? $t('tafelrunde.stopCamera') : $t('tafelrunde.startCamera')"
+          >
+            <VideoOff v-if="!voiceStore.isCameraOn" class="w-4 h-4" />
+            <Video v-else class="w-4 h-4" />
+          </button>
+
           <!-- Screen share -->
           <button
             @click="toggleScreenShare"
             :class="[
               'flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold transition',
-              voiceStore.isScreenSharing 
-                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover' 
+              voiceStore.isScreenSharing
+                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
             :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
@@ -400,8 +461,8 @@ function formatTime(dateStr) {
             @click="toggleNoiseCancelling"
             :class="[
               'p-2.5 rounded-full transition-all',
-              voiceStore.noiseCancelling 
-                ? 'bg-mnema-accent/20 text-mnema-accent border border-mnema-accent/30' 
+              voiceStore.noiseCancelling
+                ? 'bg-mnema-accent/20 text-mnema-accent border border-mnema-accent/30'
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-tertiary'
             ]"
             :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
@@ -435,7 +496,7 @@ function formatTime(dateStr) {
 
       <!-- 2. Tafelrunde chat -->
       <div 
-        v-if="layoutMode === 'split'" 
+        v-if="showChat" 
         class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
       >
         <!-- Chat Message Timeline -->
