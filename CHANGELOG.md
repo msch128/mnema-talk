@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.10](https://github.com/msch128/mnema-talk/compare/v0.1.9...v0.1.10) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** screen share and camera reach the server ([ff19bde](https://github.com/msch128/mnema-talk/commit/ff19bde3fb2e16d0c2812c8f14c54d1a8d31b096))
+
 ## [0.1.9](https://github.com/msch128/mnema-talk/compare/v0.1.8...v0.1.9) (2026-10-05)
 
 
