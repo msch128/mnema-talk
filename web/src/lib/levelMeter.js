@@ -29,3 +29,21 @@ export function createPeakHold(holdMs = PEAK_HOLD_MS) {
     return peak
   }
 }
+
+/**
+ * The voice gate shared by the call and the mic test: open while push-to-talk
+ * is held, or (voice activity) while the level reaches the threshold and for
+ * the hangover time after it, so trailing words are not cut off. Each gate
+ * keeps its own hangover clock.
+ */
+export function createVoiceGate(settings, now = () => Date.now()) {
+  let lastAbove = -Infinity
+  return function gateOpen(level) {
+    if (settings.inputMode === 'ptt') return !!settings.isPttPressed
+    if (level >= effectiveThreshold(settings)) {
+      lastAbove = now()
+      return true
+    }
+    return now() - lastAbove < settings.hangoverMs
+  }
+}

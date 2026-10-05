@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { effectiveThreshold, createPeakHold, AUTO_THRESHOLD, PEAK_HOLD_MS } from './levelMeter'
+import { effectiveThreshold, createPeakHold, createVoiceGate, AUTO_THRESHOLD, PEAK_HOLD_MS } from './levelMeter'
 
 describe('effectiveThreshold', () => {
   it('uses the fixed auto value when auto sensitivity is on', () => {
@@ -31,5 +31,32 @@ describe('createPeakHold', () => {
     expect(peak(75, PEAK_HOLD_MS - 10)).toBe(75)
     expect(peak(30, PEAK_HOLD_MS + 10)).toBe(75)
     expect(peak(30, PEAK_HOLD_MS * 2)).toBe(30)
+  })
+})
+
+describe('createVoiceGate', () => {
+  it('opens above the threshold and holds for the hangover time', () => {
+    let clock = 1000
+    const s = { inputMode: 'voice', autoSensitivity: false, sensitivityThreshold: 40, hangoverMs: 300 }
+    const open = createVoiceGate(s, () => clock)
+    expect(open(10)).toBe(false)
+    expect(open(50)).toBe(true)
+    clock += 200
+    expect(open(10)).toBe(true)
+    clock += 200
+    expect(open(10)).toBe(false)
+  })
+
+  it('uses the automatic threshold', () => {
+    const open = createVoiceGate({ inputMode: 'voice', autoSensitivity: true, sensitivityThreshold: 90, hangoverMs: 0 })
+    expect(open(AUTO_THRESHOLD)).toBe(true)
+  })
+
+  it('follows the push-to-talk key in ptt mode', () => {
+    const s = { inputMode: 'ptt', isPttPressed: false, hangoverMs: 300 }
+    const open = createVoiceGate(s)
+    expect(open(100)).toBe(false)
+    s.isPttPressed = true
+    expect(open(0)).toBe(true)
   })
 })
