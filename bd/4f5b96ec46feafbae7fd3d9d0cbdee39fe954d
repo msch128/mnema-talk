@@ -1,0 +1,72 @@
+web/src/lib/clock.test.js
+  s_5c9ee3c4dec5dd::t_5301d984b7ed95 1-16,20-21
+  s_5c9ee3c4dec5dd::t_fea87c73f94702 17-19
+web/src/components/MemberRow.vue
+  s_5c9ee3c4dec5dd::t_8297a7e03de773 10,71-72
+web/src/components/Sidebar.vue
+  s_5c9ee3c4dec5dd::t_8297a7e03de773 12,425,427-432,463,475-478
+web/src/lib/clock.js
+  s_5c9ee3c4dec5dd::t_5301d984b7ed95 1-12,14-43,47
+  s_5c9ee3c4dec5dd::t_fea87c73f94702 44-46
+  s_5c9ee3c4dec5dd::t_0550b3d2f4a2ce 13
+internal/auth/service.go
+  s_5c9ee3c4dec5dd::t_80af2b34b7f197 64-67,376-381
+  s_5c9ee3c4dec5dd::t_e8e41d5cdc1a3c 382
+web/src/stores/voice.js
+  s_5c9ee3c4dec5dd::t_04322a884a7ee9 137-139,152-157,349,352-356
+  s_5c9ee3c4dec5dd::t_befd107325333c 144-151,508
+  s_5c9ee3c4dec5dd::t_966199b1eab432 3,506-507
+web/src/components/smoke.test.js
+  s_5c9ee3c4dec5dd::t_0550b3d2f4a2ce 33
+web/src/stores/voice.test.js
+  s_5c9ee3c4dec5dd::t_09e957af713c84 184-200
+web/src/i18n/de.json
+  s_5c9ee3c4dec5dd::t_0550b3d2f4a2ce 555-558,742-750
+web/src/components/TalkParticipants.vue
+  s_5c9ee3c4dec5dd::t_30b1c703d54fdf 1-8,10-106
+  s_5c9ee3c4dec5dd::t_0550b3d2f4a2ce 9
+web/src/i18n/en.json
+  s_5c9ee3c4dec5dd::t_0550b3d2f4a2ce 555-558,742-750
+web/src/components/VoiceStage.vue
+  s_5c9ee3c4dec5dd::t_30b1c703d54fdf 15-16,256-263
+web/src/components/VoiceTimer.vue
+  s_5c9ee3c4dec5dd::t_5301d984b7ed95 1-12
+internal/auth/handler.go
+  s_5c9ee3c4dec5dd::t_80af2b34b7f197 198-200
+internal/ws/hub.go
+  s_5c9ee3c4dec5dd::t_f825cac31028d5 59-62,90-92,316,455-460,462,465,467,469,476-487,519,523-525,530-532,534-535,558,630-633,638,644-664,666
+web/src/components/ActivityStats.vue
+  s_5c9ee3c4dec5dd::t_befd107325333c 1-33,36-41,43-45,47-50
+  s_5c9ee3c4dec5dd::t_fea87c73f94702 34-35,42,46
+web/src/components/UserProfileModal.vue
+  s_5c9ee3c4dec5dd::t_8297a7e03de773 14-15,552,563-564,566
+  s_5c9ee3c4dec5dd::t_fea87c73f94702 565
+  s_5c9ee3c4dec5dd::t_279d6a3e560a5b 567-568
+web/src/components/ParticipantTile.vue
+  s_5c9ee3c4dec5dd::t_61081e0fe16f7e 7,111-112,115,117,120-125
+internal/server/presence_integration_test.go
+  s_5c9ee3c4dec5dd::t_f44cf23b4b97a7 218-279
+internal/db/migrations/0010_voice_time.sql
+  s_5c9ee3c4dec5dd::t_80af2b34b7f197 1-2
+web/src/stores/chat.js
+  s_5c9ee3c4dec5dd::t_966199b1eab432 135-147,663,710,737-746
+  s_5c9ee3c4dec5dd::t_80cde3cf064fb0 747
+internal/chat/members.go
+  s_5c9ee3c4dec5dd::t_80af2b34b7f197 14-15,17,28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd4f5b96ec46feafbae7fd3d9d0cbdee39fe954d",
+  "prompts": {},
+  "sessions": {
+    "s_5c9ee3c4dec5dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d4fdedf-c57c-4991-808e-5664d15cfea7",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
