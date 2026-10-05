@@ -80,8 +80,11 @@ type Room struct {
 	subs map[uuid.UUID]*Subscriptions
 	// lastMedia is the announced screen/camera state per publisher; guarded by mu.
 	lastMedia map[uuid.UUID]MediaState
-	notifyMu  sync.Mutex
-	notifier  *mediaNotifier
+	// lastViewers is the announced non-empty audience of each screen share
+	// (see notifyMedia); guarded by mu.
+	lastViewers map[uuid.UUID][]uuid.UUID
+	notifyMu    sync.Mutex
+	notifier    *mediaNotifier
 }
 
 type SFU struct {
@@ -102,6 +105,14 @@ type SFU struct {
 // starts or stops publishing a screen share or camera.
 func (s *SFU) SetMediaStateHandler(fn func(roomID, userID uuid.UUID, state MediaState)) {
 	s.notifier.set(fn)
+}
+
+// SetScreenViewersHandler registers the callback that announces who watches
+// a screen share: the sorted, distinct users in the room subscribed to
+// sharer's live share. It runs only when that set changes, with an empty
+// list once a watched share ends or loses its last viewer.
+func (s *SFU) SetScreenViewersHandler(fn func(roomID, sharer uuid.UUID, viewers []uuid.UUID)) {
+	s.notifier.setViewers(fn)
 }
 
 // NewSFU creates the SFU. announceIPs are the addresses browsers are told to

@@ -139,6 +139,49 @@ describe('channel list refresh', () => {
     expect(chat.activeChannel.name).toBe('neu')
     expect(chat.activeChannel.topic).toBe('T')
   })
+
+  it('keeps the newest list when overlapping refetches answer out of order', async () => {
+    const { chat } = setup()
+    const older = chat.fetchChannels()
+    const newer = chat.fetchChannels()
+    const list = name => ({ categories: [{ id: 'c', channels: [{ id: 'ch1', name, type: 'text' }] }], uncategorized: [] })
+    // Requests are answered first-in-first-out by answer(); swap them.
+    const [first, second] = pending.splice(0, 2)
+    second.resolve(list('neu'))
+    await newer
+    first.resolve(list('alt'))
+    await older
+    expect(chat.categories[0].channels[0].name).toBe('neu')
+  })
+
+  it('a superseded refetch resolves only once the newest list is in', async () => {
+    // The sidebar awaits its own refetch after saving a new order and then
+    // drops the order it kept on screen; a channels_changed refetch started
+    // meanwhile must not leave the older list showing in between.
+    const { chat } = setup()
+    const list = name => ({ categories: [{ id: 'c', channels: [{ id: 'ch1', name, type: 'text' }] }], uncategorized: [] })
+    let ownDone = false
+    const own = chat.fetchChannels().then(() => { ownDone = true })
+    chat.fetchChannels()
+    const [first, second] = pending.splice(0, 2)
+    first.resolve(list('alt'))
+    await flush()
+    expect(ownDone).toBe(false)
+    second.resolve(list('neu'))
+    await own
+    expect(chat.categories[0].channels[0].name).toBe('neu')
+  })
+
+  it('duplicates a channel and refetches the list', async () => {
+    const { chat } = setup()
+    const dup = chat.duplicateChannel('ch2')
+    expect(pending[0]).toMatchObject({ url: '/api/admin/channels/ch2/duplicate', method: 'POST' })
+    answer('/duplicate', { id: 'ch3', name: 'musik', type: 'text' })
+    await flush()
+    answer('/api/channels', { categories: [{ id: 'c', channels: [{ id: 'ch3', name: 'musik', type: 'text' }] }], uncategorized: [] })
+    await expect(dup).resolves.toEqual({ id: 'ch3', name: 'musik', type: 'text' })
+    expect(chat.allChannels.map(c => c.id)).toEqual(['ch3'])
+  })
 })
 
 describe('typing notices', () => {

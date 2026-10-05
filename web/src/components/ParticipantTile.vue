@@ -1,7 +1,8 @@
 <script setup>
 // One participant of the Talk: their camera when it is on, else their avatar.
-// A click anywhere on the tile opens their profile.
-import { ref, watch, nextTick } from 'vue'
+// A click on a camera puts it on the stage (again: takes it off), a click on
+// an avatar opens the profile; the context menu has the profile for both.
+import { ref, computed, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff, Monitor, X } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import VoiceTimer from './VoiceTimer.vue'
@@ -17,25 +18,48 @@ const props = defineProps({
   isSelf: { type: Boolean, default: false },
   speaking: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
+  // A tile of the grid: always 16:9, sized by the grid (style) rather than
+  // by its content.
+  fill: { type: Boolean, default: false },
   localMuted: { type: Boolean, default: false },
   // Preview: nobody to hear yet, so no speaking/ready status line.
   showStatus: { type: Boolean, default: true },
   // Their camera is running (known without receiving it) and I may hide it.
   cameraAvailable: { type: Boolean, default: false },
   cameraHidden: { type: Boolean, default: false },
+  // Their camera can go on the stage / is on the stage.
+  cameraFocusable: { type: Boolean, default: false },
+  cameraFocused: { type: Boolean, default: false },
   // Screen sharing state
   isScreensharing: { type: Boolean, default: false },
   isWatching: { type: Boolean, default: false },
   isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera', 'watch-stream', 'stop-watching', 'menu'])
+const emit = defineEmits(['open-profile', 'toggle-camera', 'focus-camera', 'fullscreen-camera', 'watch-stream', 'stop-watching', 'menu'])
 
-function handleTileClick() {
+const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
+const name = computed(() => props.user.display_name || props.user.username)
+
+function handleTileClick(e) {
+  if (focusable.value) {
+    // The second click of a double-click: the dblclick (fullscreen) decides.
+    // The first one already acted, without waiting to tell them apart.
+    if (e?.detail >= 2) return
+    emit('focus-camera', props.user.id)
+    return
+  }
   if (props.isScreensharing && !props.isSelf) {
     emit('watch-stream', props.user.id)
     return
   }
   emit('open-profile', props.user)
+}
+
+// A double-click on a camera: on the stage and full screen.
+function onDblclick(e) {
+  if (!props.stream || !focusable.value || e.target?.closest?.('button')) return
+  e.stopPropagation()
+  emit('fullscreen-camera', props.user.id)
 }
 
 const videoEl = ref(null)
@@ -51,8 +75,11 @@ watch(() => props.stream, (stream) => {
     role="button"
     tabindex="0"
     data-participant-tile
-    :aria-label="$t('profile.open', { name: user.display_name || user.username })"
+    :data-user-id="user.id"
+    :aria-label="focusable ? (cameraFocused ? $t('talk.unfocusCamera') : $t('talk.focusCamera', { name })) : $t('profile.open', { name })"
+    :aria-pressed="focusable ? (cameraFocused ? 'true' : 'false') : undefined"
     @click="handleTileClick"
+    @dblclick="onDblclick"
     @contextmenu.prevent="emit('menu', $event)"
     @keydown.f10.shift.self.prevent="emit('menu', $event)"
     @keydown.context-menu.self.prevent="emit('menu', $event)"
@@ -61,10 +88,13 @@ watch(() => props.stream, (stream) => {
     @keydown.space.self.prevent="handleTileClick"
     :class="[
       'relative cursor-pointer rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent group',
-      stream ? 'bg-black aspect-video' : (compact ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface'),
+      stream ? 'bg-black aspect-video' : (compact ? 'p-3 bg-mnema-surface/90' : 'p-6 bg-mnema-surface'),
+      stream ? '' : (fill ? 'aspect-video' : compact ? 'h-28' : 'h-52'),
       speaking
         ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10'
-        : 'border-mnema-hairline hover:border-mnema-border'
+        : cameraFocused
+          ? 'border-mnema-accent'
+          : 'border-mnema-hairline hover:border-mnema-border'
     ]"
   >
     <!-- LIVE Badge -->
@@ -148,39 +178,43 @@ watch(() => props.stream, (stream) => {
       <EyeOff v-else class="w-4 h-4" />
     </button>
 
-    <!-- Name -->
+    <!-- Name, centered under the avatar. On camera: a pill centered at the
+         bottom with the time next to it. Long names are cut with an ellipsis. -->
     <div
+      data-tile-name
       :class="[
-        'flex items-center gap-1.5 max-w-[90%]',
-        stream ? 'absolute left-2 bottom-2 bg-black/70 rounded-md px-2 py-0.5 text-white' : ''
+        'flex items-center justify-center gap-1 min-w-0',
+        stream ? 'absolute inset-x-2 bottom-2' : 'w-full'
       ]"
     >
-      <span
-        class="text-sm font-semibold hover:text-mnema-accent transition truncate"
-        :class="stream ? 'text-white' : 'text-mnema-text'"
+      <div
+        :class="[
+          'flex items-center justify-center gap-1.5 min-w-0',
+          stream ? 'bg-black/70 rounded-md px-2 py-0.5 text-white' : 'max-w-[90%]'
+        ]"
       >
-        {{ user.display_name || user.username }}
-      </span>
-      <span v-if="user.role === 'admin' && !stream" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
-        {{ $t('role.admin') }}
-      </span>
-      <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
+        <span
+          class="text-sm font-semibold hover:text-mnema-accent transition truncate"
+          :class="stream ? 'text-white' : 'text-mnema-text'"
+        >
+          {{ user.display_name || user.username }}
+        </span>
+        <span v-if="user.role === 'admin' && !stream" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
+          {{ $t('role.admin') }}
+        </span>
+        <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
+      </div>
+      <VoiceTimer
+        v-if="stream && user.joined_at"
+        :since="user.joined_at"
+        class="flex-shrink-0 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white"
+      />
     </div>
 
-    <!-- Status: speaking, and how long they have been in the Talk -->
-    <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5" data-tile-status>
-      <span v-if="speaking" class="text-mnema-accent font-semibold flex items-center gap-1">
-        <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-        {{ $t('talk.speaking') }}<template v-if="user.joined_at"> · <VoiceTimer :since="user.joined_at" /></template>
-      </span>
-      <VoiceTimer v-else-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
+    <!-- Status: how long they have been in the Talk (speaking shows as the green ring) -->
+    <div v-if="showStatus && !stream" class="w-full text-center text-xs font-mono mt-0.5" data-tile-status>
+      <VoiceTimer v-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
       <span v-else class="text-mnema-tertiary">{{ $t('talk.ready') }}</span>
     </div>
-    <!-- On camera the time sits next to the name -->
-    <VoiceTimer
-      v-if="stream && user.joined_at"
-      :since="user.joined_at"
-      class="absolute right-2 bottom-2 rounded-md bg-black/70 px-1.5 py-0.5 text-xs text-white"
-    />
   </div>
 </template>

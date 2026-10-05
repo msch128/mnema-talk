@@ -117,6 +117,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 	}
 	if voiceSFU != nil {
 		voiceSFU.SetMediaStateHandler(h.announceMediaState)
+		voiceSFU.SetScreenViewersHandler(h.announceScreenViewers)
 	}
 	return h
 }
@@ -129,6 +130,19 @@ func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
 
 func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {
 	return map[string]any{"channel_id": roomID, "user_id": userID, "screen": st.Screen, "camera": st.Camera}
+}
+
+// announceScreenViewers tells the members of a voice room who watches
+// sharer's screen share. Like in Discord, only the room sees it.
+func (h *Hub) announceScreenViewers(roomID, sharer uuid.UUID, viewers []uuid.UUID) {
+	h.sendToVoiceRoom(roomID, "screen_viewers", screenViewersPayload(roomID, sharer, viewers))
+}
+
+func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) map[string]any {
+	if viewers == nil {
+		viewers = []uuid.UUID{} // [] rather than null on the wire
+	}
+	return map[string]any{"channel_id": roomID, "user_id": sharer, "viewers": viewers}
 }
 
 // Client is one WebSocket connection.
@@ -309,6 +323,7 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
+// @Description - `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.
 // @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
 // @Description - `voice_kicked`: `{channel_id}` when an admin removes the user from voice.
 // @Description - `pong`: `{t}` echoing a `ping`.
