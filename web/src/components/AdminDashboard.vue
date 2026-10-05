@@ -59,7 +59,7 @@ watch(() => props.initialTab, (newTab) => {
 
 watch(activeTab, (tab) => {
   if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {
-    navigate(`/admin/${tab}`, { replace: false })
+    navigate(`/admin/${tab}`, { replace: true })
   }
 })
 
