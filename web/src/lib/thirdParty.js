@@ -17,6 +17,7 @@ export const THIRD_PARTY = [
       { name: 'JetBrains Mono', pkg: '@fontsource/jetbrains-mono', license: 'OFL-1.1', url: 'https://www.jetbrains.com/lp/mono/' },
       { name: 'emoji-picker-element', pkg: 'emoji-picker-element', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element' },
       { name: 'emoji-picker-element-data (CLDR, Emojibase)', pkg: 'emoji-picker-element-data', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element-data' },
+      { name: 'Swagger UI (API reference)', pkg: 'swagger-ui-dist', license: 'Apache-2.0', url: 'https://github.com/swagger-api/swagger-ui' },
       { name: 'Tailwind CSS', license: 'MIT', url: 'https://tailwindcss.com', note: 'generated' }
     ]
   },

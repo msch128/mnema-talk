@@ -31,6 +31,7 @@ services:
       - S3_FORCE_PATH_STYLE=true
       - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-50}
       - LINK_PREVIEWS_ENABLED=${LINK_PREVIEWS_ENABLED:-true}
+      - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
       # 0 = automatic media deletion OFF. Keep it off unless you really want pruning.
       - MEDIA_RETENTION_DAYS=${MEDIA_RETENTION_DAYS:-0}
       - ADMIN_USERNAME=${ADMIN_USERNAME:-Herzog}

@@ -1,0 +1,1 @@
+replace github.com/google/uuid.UUID string

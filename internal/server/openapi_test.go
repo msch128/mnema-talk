@@ -52,6 +52,21 @@ func TestOpenAPICoversRoutes(t *testing.T) {
 
 func registeredRoutes(t *testing.T) map[string]bool {
 	t.Helper()
+	return routesOf(t, true)
+}
+
+// The API reference is off unless API_DOCS_ENABLED is set.
+func TestAPIDocsAreOffByDefault(t *testing.T) {
+	routes := routesOf(t, false)
+	for _, r := range []string{"GET /api/docs", "GET /api/openapi.json"} {
+		if routes[r] {
+			t.Errorf("%s is mounted although API docs are disabled", r)
+		}
+	}
+}
+
+func routesOf(t *testing.T, apiDocs bool) map[string]bool {
+	t.Helper()
 	cfg := &config.Config{
 		AppEnv:             "development",
 		PublicURL:          "http://127.0.0.1:8080", // an IP literal keeps link-preview setup off DNS
@@ -60,6 +75,7 @@ func registeredRoutes(t *testing.T) map[string]bool {
 		SessionExpiryHours: 1,
 		MetricsToken:       "x", // registers /api/metrics
 		LinkPreviews:       true,
+		APIDocs:            apiDocs, // registers /api/docs and /api/openapi.json
 		MaxUploadMB:        1,
 	}
 	router, err := NewRouter(Deps{Config: cfg})
@@ -96,8 +112,8 @@ func documentedRoutes(t *testing.T) map[string]bool {
 	if err := json.Unmarshal(raw, &spec); err != nil {
 		t.Fatalf("parse spec: %v", err)
 	}
-	if !strings.HasPrefix(spec.OpenAPI, "3.2.") {
-		t.Fatalf("openapi = %q, want 3.2.x", spec.OpenAPI)
+	if !strings.HasPrefix(spec.OpenAPI, "3.1.") {
+		t.Fatalf("openapi = %q, want 3.1.x", spec.OpenAPI)
 	}
 	routes := map[string]bool{}
 	for path, item := range spec.Paths {

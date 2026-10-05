@@ -39,9 +39,16 @@ const (
 //
 //	{"error": {"code": "FORBIDDEN", "message": "..."}}
 type APIError struct {
-	Status  int    `json:"-"`
-	Code    string `json:"code"`
+	Status int `json:"-"`
+	// Code is one of the stable Code* constants; clients branch on it.
+	Code string `json:"code" enums:"INVALID_INPUT,UNAUTHORIZED,INVALID_CREDENTIALS,FORBIDDEN,ACCOUNT_DISABLED,NOT_FOUND,CONFLICT,PAYLOAD_TOO_LARGE,UNSUPPORTED_MEDIA_TYPE,RATE_LIMITED,UNAVAILABLE,INTERNAL_ERROR"`
+	// Message is a human-readable English message.
 	Message string `json:"message"`
+}
+
+// ErrorResponse is the JSON envelope every error response carries.
+type ErrorResponse struct {
+	Error *APIError `json:"error"`
 }
 
 func (e *APIError) Error() string { return e.Message }
@@ -121,7 +128,7 @@ func WriteError(w http.ResponseWriter, err error) {
 	if !ok {
 		ae = ErrServer(err)
 	}
-	WriteJSON(w, ae.Status, map[string]*APIError{"error": ae})
+	WriteJSON(w, ae.Status, ErrorResponse{Error: ae})
 }
 
 // HandlerFunc is an http.HandlerFunc that returns an error; Handle adapts it so

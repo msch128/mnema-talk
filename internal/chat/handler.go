@@ -68,6 +68,20 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Put("/layout", httpx.Handle(h.applyLayout))
 }
 
+// listMembers handles GET /api/members.
+//
+// @Summary List members
+// @Description Every account, admins first, then by display name, with voice_seconds and message_count. Presence and locale are not filled.
+// @ID listMembers
+// @Tags Users
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {array} auth.User "Members."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/members [get]
 func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	members, err := GetAllMembers(r.Context(), h.DB)
 	if err != nil {
@@ -77,15 +91,49 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// listChannels handles GET /api/channels.
+//
+// @Summary List categories and channels
+// @ID listChannels
+// @Tags Channels
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} ChannelHierarchy "Channel hierarchy."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels [get]
 func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
 	cats, uncat, err := GetServerHierarchy(r.Context(), h.DB)
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"categories": cats, "uncategorized": uncat})
+	httpx.WriteJSON(w, http.StatusOK, ChannelHierarchy{Categories: cats, Uncategorized: uncat})
 	return nil
 }
 
+// listMessages handles GET /api/channels/{channelID}/messages.
+//
+// @Summary List channel messages
+// @Description Top-level messages only, oldest first within the page. Without an anchor returns the newest page. Use at most one of before, after, around; the anchor must be a root message of this channel.
+// @ID listMessages
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
+// @Param before query string false "Messages older than this message." Format(uuid)
+// @Param after query string false "Messages newer than this message." Format(uuid)
+// @Param around query string false "Messages around (and including) this message." Format(uuid)
+// @Success 200 {array} Message "A page of messages."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/messages [get]
 func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
@@ -124,6 +172,26 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// createMessage handles POST /api/channels/{channelID}/messages.
+//
+// @Summary Post a message
+// @Description Not allowed in voice channels. Resolves mentions and broadcasts message_create.
+// @ID createMessage
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param request body CreateMessageRequest true "Request body."
+// @Success 201 {object} Message "Created message."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/messages [post]
 func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	chID, err := httpx.PathUUID(r, "channelID")
@@ -137,11 +205,7 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if ch.Type == ChannelTypeVoice {
 		return httpx.ErrInvalidInput("voice channels have no text chat")
 	}
-	var req struct {
-		Content   string     `json:"content"`
-		ParentID  *uuid.UUID `json:"parent_id"`
-		ReplyToID *uuid.UUID `json:"reply_to_id"`
-	}
+	var req CreateMessageRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -198,14 +262,33 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, err
 	return msgID, ref, nil
 }
 
+// editMessage handles PUT /api/channels/{channelID}/messages/{messageID}.
+//
+// @Summary Edit own message
+// @Description Only the author may edit. Broadcasts message_update.
+// @ID editMessage
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Param request body EditMessageRequest true "Request body."
+// @Success 200 {object} Message "Updated message."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/messages/{messageID} [put]
 func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 	msgID, _, err := h.messageInChannel(r)
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Content string `json:"content"`
-	}
+	var req EditMessageRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -229,6 +312,25 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
+//
+// @Summary Delete a message
+// @Description Author or admin. Also deletes the message's thread replies and attachments. Broadcasts message_delete.
+// @ID deleteMessage
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/messages/{messageID} [delete]
 func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	msgID, ref, err := h.messageInChannel(r)
 	if err != nil {
@@ -244,6 +346,26 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// toggleReaction handles POST /api/messages/{messageID}/reactions.
+//
+// @Summary Toggle a reaction
+// @Description Adds the caller's reaction, or removes it if already present. Broadcasts message_reaction.
+// @ID toggleReaction
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Param request body ReactionRequest true "Request body."
+// @Success 200 {object} ReactionResult "Resulting reactions."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/{messageID}/reactions [post]
 func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
 	msgID, err := httpx.PathUUID(r, "messageID")
@@ -253,9 +375,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if _, err := loadMessageRef(r.Context(), h.DB, msgID); err != nil {
 		return err
 	}
-	var req struct {
-		Emoji string `json:"emoji"`
-	}
+	var req ReactionRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -267,12 +387,32 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	payload := map[string]any{"message_id": msgID, "reactions": reactions}
+	payload := ReactionResult{MessageID: msgID, Reactions: reactions}
 	h.Events.Broadcast("message_reaction", payload)
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }
 
+// getThread handles GET /api/messages/{messageID}/thread.
+//
+// @Summary Get a thread
+// @Description The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs).
+// @ID getThread
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
+// @Param before query string false "Replies older than this reply." Format(uuid)
+// @Param after query string false "Replies newer than this reply." Format(uuid)
+// @Success 200 {object} Thread "Thread."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/{messageID}/thread [get]
 func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	msgID, err := httpx.PathUUID(r, "messageID")
 	if err != nil {
@@ -312,15 +452,30 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"root": root, "replies": replies})
+	httpx.WriteJSON(w, http.StatusOK, Thread{Root: root, Replies: replies})
 	return nil
 }
 
+// createCategory handles POST /api/admin/categories.
+//
+// @Summary Create a category
+// @Description Requires role admin (403 otherwise).
+// @ID createCategory
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param request body CreateCategoryRequest true "Request body."
+// @Success 201 {object} Category "Created category."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/categories [post]
 func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Name      string `json:"name"`
-		SortOrder int    `json:"sort_order"`
-	}
+	var req CreateCategoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -333,6 +488,24 @@ func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deleteCategory handles DELETE /api/admin/categories/{id}.
+//
+// @Summary Delete a category
+// @Description Its channels become uncategorized. Requires role admin (403 otherwise).
+// @ID deleteCategory
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/categories/{id} [delete]
 func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -346,14 +519,26 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// createChannel handles POST /api/admin/channels.
+//
+// @Summary Create a channel
+// @Description Requires role admin (403 otherwise).
+// @ID createChannel
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param request body CreateChannelRequest true "Request body."
+// @Success 201 {object} Channel "Created channel."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/channels [post]
 func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		CategoryID *uuid.UUID  `json:"category_id"`
-		Name       string      `json:"name"`
-		Type       ChannelType `json:"type"`
-		Topic      string      `json:"topic"`
-		SortOrder  int         `json:"sort_order"`
-	}
+	var req CreateChannelRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -369,6 +554,24 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deleteChannel handles DELETE /api/admin/channels/{id}.
+//
+// @Summary Delete a channel
+// @Description Cascades to its messages and attachments. Requires role admin (403 otherwise).
+// @ID deleteChannel
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/channels/{id} [delete]
 func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -384,6 +587,19 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// readState handles GET /api/read-state.
+//
+// @Summary Unread summary of all text channels
+// @ID getReadState
+// @Tags Channels
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {array} ReadState "One entry per text channel."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/read-state [get]
 func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 	states, err := GetReadStates(r.Context(), h.DB, auth.UserFrom(r.Context()))
 	if err != nil {
@@ -415,14 +631,32 @@ func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[stri
 	h.Events.SendToUsers([]uuid.UUID{userID}, "read_state", payload)
 }
 
+// markRead handles POST /api/channels/{channelID}/read.
+//
+// @Summary Mark a channel read
+// @Description Moves the read marker forward to the given message, or to now when the body is omitted. Never moves backwards. Text channels only. Notifies the user's other sessions.
+// @ID markChannelRead
+// @Tags Channels
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param request body MarkReadRequest false "Optional; omit the body to mark everything read."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/read [post]
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 	chID, err := h.textChannelParam(r)
 	if err != nil {
 		return err
 	}
-	var req struct {
-		MessageID *uuid.UUID `json:"message_id"`
-	}
+	var req MarkReadRequest
 	if r.ContentLength > 0 {
 		if err := httpx.DecodeJSON(r, &req); err != nil {
 			return err
@@ -438,14 +672,32 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// markUnread handles POST /api/channels/{channelID}/unread.
+//
+// @Summary Mark unread from a message
+// @Description Sets the marker just before the message so it and everything after it counts as unread.
+// @ID markChannelUnread
+// @Tags Channels
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param request body MarkUnreadRequest true "Request body."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/unread [post]
 func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 	chID, err := h.textChannelParam(r)
 	if err != nil {
 		return err
 	}
-	var req struct {
-		MessageID uuid.UUID `json:"message_id"`
-	}
+	var req MarkUnreadRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -459,14 +711,31 @@ func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// setNotifyLevel handles PUT /api/channels/{channelID}/notifications.
+//
+// @Summary Set channel notification level
+// @ID setChannelNotifications
+// @Tags Channels
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param channelID path string true "Channel ID." Format(uuid)
+// @Param request body SetNotifyLevelRequest true "Request body."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/channels/{channelID}/notifications [put]
 func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 	chID, err := h.textChannelParam(r)
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Level NotifyLevel `json:"level"`
-	}
+	var req SetNotifyLevelRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -479,6 +748,27 @@ func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// search handles GET /api/search.
+//
+// @Summary Search messages
+// @Description Text channels only, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.
+// @ID searchMessages
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param q query string false "Search terms, whitespace separated." maxlength(200)
+// @Param channel_id query string false "Only messages of this channel." Format(uuid)
+// @Param author_id query string false "Only messages of this author." Format(uuid)
+// @Param has query string false "Only messages with a file, an image or a link." Enums(file,image,link)
+// @Param before query string false "Page back: only messages older than this message." Format(uuid)
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50." minimum(1) maximum(50) default(25)
+// @Success 200 {object} SearchResult "One page of results."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/search [get]
 func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	v := r.URL.Query()
 	q := SearchQuery{
@@ -501,19 +791,36 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"messages": msgs, "has_more": more})
+	httpx.WriteJSON(w, http.StatusOK, SearchResult{Messages: msgs, HasMore: more})
 	return nil
 }
 
+// updateChannel handles PATCH /api/admin/channels/{id}.
+//
+// @Summary Rename a channel or change its topic
+// @Description Requires role admin (403 otherwise).
+// @ID updateChannel
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Param request body UpdateChannelRequest true "Request body."
+// @Success 200 {object} Channel "Updated channel."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/channels/{id} [patch]
 func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Name  *string `json:"name"`
-		Topic *string `json:"topic"`
-	}
+	var req UpdateChannelRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -526,14 +833,32 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// renameCategory handles PATCH /api/admin/categories/{id}.
+//
+// @Summary Rename a category
+// @Description Requires role admin (403 otherwise).
+// @ID renameCategory
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Param request body RenameCategoryRequest true "Request body."
+// @Success 200 {object} RenamedCategory "Renamed category."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/categories/{id} [patch]
 func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Name string `json:"name"`
-	}
+	var req RenameCategoryRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -541,15 +866,31 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.Events.Broadcast("channels_changed", nil)
-	httpx.WriteJSON(w, http.StatusOK, map[string]any{"id": id, "name": req.Name})
+	httpx.WriteJSON(w, http.StatusOK, RenamedCategory{ID: id, Name: req.Name})
 	return nil
 }
 
+// applyLayout handles PUT /api/admin/layout.
+//
+// @Summary Apply category order and channel placement
+// @Description Applied in one transaction. Requires role admin (403 otherwise).
+// @ID applyLayout
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param request body LayoutRequest true "Request body."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/layout [put]
 func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Categories []CategoryOrder    `json:"categories"`
-		Channels   []ChannelPlacement `json:"channels"`
-	}
+	var req LayoutRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -562,4 +903,104 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 	h.Events.Broadcast("channels_changed", nil)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// CreateMessageRequest is the body of POST /api/channels/{channelID}/messages.
+type CreateMessageRequest struct {
+	Content string `json:"content" minLength:"1" maxLength:"4000"`
+	// ParentID must be a root message of the same channel (thread reply).
+	ParentID *uuid.UUID `json:"parent_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	// ReplyToID must be a message of the same conversation (quoted reply).
+	ReplyToID *uuid.UUID `json:"reply_to_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+}
+
+// EditMessageRequest is the body of PUT /api/channels/{channelID}/messages/{messageID}.
+type EditMessageRequest struct {
+	Content string `json:"content" minLength:"1" maxLength:"4000"`
+}
+
+// ReactionRequest is the body of POST /api/messages/{messageID}/reactions.
+type ReactionRequest struct {
+	// Emoji has no whitespace, control characters, '<' or '>'.
+	Emoji string `json:"emoji" maxLength:"32"`
+}
+
+// ReactionResult is the reaction summary after a toggle.
+type ReactionResult struct {
+	MessageID uuid.UUID         `json:"message_id" format:"uuid"`
+	Reactions []ReactionSummary `json:"reactions"`
+}
+
+// Thread is a root message with a page of its replies.
+type Thread struct {
+	Root    *Message  `json:"root"`
+	Replies []Message `json:"replies"`
+}
+
+// SearchResult is one page of search hits.
+type SearchResult struct {
+	Messages []Message `json:"messages"`
+	HasMore  bool      `json:"has_more"`
+}
+
+// ChannelHierarchy is the response of GET /api/channels.
+type ChannelHierarchy struct {
+	Categories    []Category `json:"categories"`
+	Uncategorized []Channel  `json:"uncategorized"`
+}
+
+// MarkReadRequest is the optional body of POST /api/channels/{channelID}/read.
+type MarkReadRequest struct {
+	// MessageID is the message to mark read up to; null or omitted means now.
+	MessageID *uuid.UUID `json:"message_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+}
+
+// MarkUnreadRequest is the body of POST /api/channels/{channelID}/unread.
+type MarkUnreadRequest struct {
+	MessageID uuid.UUID `json:"message_id" format:"uuid"`
+}
+
+// SetNotifyLevelRequest is the body of PUT /api/channels/{channelID}/notifications.
+type SetNotifyLevelRequest struct {
+	Level NotifyLevel `json:"level"`
+}
+
+// CreateCategoryRequest is the body of POST /api/admin/categories.
+type CreateCategoryRequest struct {
+	Name      string `json:"name" minLength:"1" maxLength:"64"`
+	SortOrder int    `json:"sort_order" binding:"optional"`
+}
+
+// RenameCategoryRequest is the body of PATCH /api/admin/categories/{id}.
+type RenameCategoryRequest struct {
+	Name string `json:"name" minLength:"1" maxLength:"64"`
+}
+
+// RenamedCategory is the response of PATCH /api/admin/categories/{id}.
+type RenamedCategory struct {
+	ID   uuid.UUID `json:"id" format:"uuid"`
+	Name string    `json:"name"`
+}
+
+// CreateChannelRequest is the body of POST /api/admin/channels.
+type CreateChannelRequest struct {
+	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" binding:"optional" extensions:"x-nullable"`
+	Name       string      `json:"name" minLength:"1" maxLength:"64"`
+	Type       ChannelType `json:"type" default:"text" binding:"optional"`
+	Topic      string      `json:"topic" maxLength:"255" binding:"optional"`
+	SortOrder  int         `json:"sort_order" binding:"optional"`
+}
+
+// UpdateChannelRequest is the body of PATCH /api/admin/channels/{id}; omitted
+// fields are kept.
+type UpdateChannelRequest struct {
+	Name  *string `json:"name" minLength:"1" maxLength:"64" binding:"optional"`
+	Topic *string `json:"topic" maxLength:"255" binding:"optional"`
+}
+
+// LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in
+// total; an unknown ID rejects the whole change.
+type LayoutRequest struct {
+	Categories []CategoryOrder    `json:"categories" binding:"optional"`
+	Channels   []ChannelPlacement `json:"channels" binding:"optional"`
 }

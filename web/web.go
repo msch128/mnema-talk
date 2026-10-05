@@ -26,6 +26,17 @@ func Handler() http.Handler {
 	return newHandler(sub)
 }
 
+// apiDocsPage is the API reference page. It is only served through
+// APIDocsPage (behind the session check), never as a plain static file.
+const apiDocsPage = "api-docs.html"
+
+// APIDocsPage returns the built API reference page (Swagger UI), or nil when
+// the web app was built without it.
+func APIDocsPage() []byte {
+	b, _ := distFS.ReadFile("dist/" + apiDocsPage)
+	return b
+}
+
 func newHandler(sub fs.FS) http.Handler {
 	indexHTML, _ := fs.ReadFile(sub, "index.html")
 	fileServer := http.FileServer(http.FS(sub))
@@ -46,7 +57,7 @@ func newHandler(sub fs.FS) http.Handler {
 			return
 		}
 		name := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
-		if name == "" || name == "index.html" {
+		if name == "" || name == "index.html" || name == apiDocsPage {
 			serveIndex(w)
 			return
 		}
