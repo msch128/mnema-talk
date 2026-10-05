@@ -75,6 +75,13 @@ type Room struct {
 	mu          sync.RWMutex
 	api         *webrtc.API
 	iceServers  []webrtc.ICEServer
+
+	// subs is what each viewer receives (see Subscriptions); guarded by mu.
+	subs map[uuid.UUID]*Subscriptions
+	// lastMedia is the announced screen/camera state per publisher; guarded by mu.
+	lastMedia map[uuid.UUID]MediaState
+	notifyMu  sync.Mutex
+	notifier  *mediaNotifier
 }
 
 type SFU struct {
@@ -82,6 +89,13 @@ type SFU struct {
 	iceServers []webrtc.ICEServer
 	rooms      map[uuid.UUID]*Room
 	roomsMu    sync.Mutex
+	notifier   *mediaNotifier
+}
+
+// SetMediaStateHandler registers the callback that announces when a user
+// starts or stops publishing a screen share or camera.
+func (s *SFU) SetMediaStateHandler(fn func(roomID, userID uuid.UUID, state MediaState)) {
+	s.notifier.set(fn)
 }
 
 // NewSFU creates the SFU. stunURLs is optional: with WEBRTC_NAT_1TO1_IP set the
@@ -126,6 +140,7 @@ func NewSFU(portMin, portMax uint16, nat1to1IP string, stunURLs []string) (*SFU,
 		api:        api,
 		iceServers: iceServers,
 		rooms:      make(map[uuid.UUID]*Room),
+		notifier:   &mediaNotifier{},
 	}, nil
 }
 
@@ -149,6 +164,9 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 			ID:          channelID,
 			peers:       make(map[uuid.UUID]*Peer),
 			trackLocals: make(map[string]*TrackInfo),
+			subs:        make(map[uuid.UUID]*Subscriptions),
+			lastMedia:   make(map[uuid.UUID]MediaState),
+			notifier:    s.notifier,
 			api:         s.api,
 			iceServers:  s.iceServers,
 		}
@@ -324,6 +342,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 }
 
 func (r *Room) SignalPeerConnections() {
+	r.notifyMedia()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -346,7 +365,7 @@ func (r *Room) SignalPeerConnections() {
 			trackID := sender.Track().ID()
 			existingSenders[trackID] = true
 
-			if _, ok := r.trackLocals[trackID]; !ok {
+			if info, ok := r.trackLocals[trackID]; !ok || !r.wantsLocked(peer.ID, info) {
 				if err := peer.PC.RemoveTrack(sender); err == nil {
 					needRenegotiate = true
 				}
@@ -354,7 +373,7 @@ func (r *Room) SignalPeerConnections() {
 		}
 
 		for trackID, info := range r.trackLocals {
-			if info.SenderID == peer.ID || existingSenders[trackID] {
+			if existingSenders[trackID] || !r.wantsLocked(peer.ID, info) {
 				continue
 			}
 			sender, err := peer.PC.AddTrack(info.Track)
@@ -419,7 +438,7 @@ func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	for _, info := range r.trackLocals {
-		if info.Kind == webrtc.RTPCodecTypeVideo && info.SenderID != viewerID {
+		if info.Kind == webrtc.RTPCodecTypeVideo && r.wantsLocked(viewerID, info) {
 			info.requestKeyframe()
 		}
 	}
@@ -454,6 +473,15 @@ func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 			delete(r.trackLocals, id)
 		}
 	}
+	r.dropScreenSubsLocked(userID)
+}
+
+// dropScreenSubsLocked ends every viewer's opt-in to userID's screen share:
+// the opt-in belongs to that one share.
+func (r *Room) dropScreenSubsLocked(userID uuid.UUID) {
+	for _, s := range r.subs {
+		s.dropScreen(userID)
+	}
 }
 
 // RemoveUserSource unpublishes the user's screen share or camera (the client
@@ -469,6 +497,9 @@ func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 			changed = true
 		}
 	}
+	if source == SourceScreen {
+		r.dropScreenSubsLocked(userID)
+	}
 	r.mu.Unlock()
 	if changed {
 		go r.SignalPeerConnections()
@@ -482,6 +513,7 @@ func (r *Room) removePeer(peer *Peer) {
 	current := r.peers[peer.ID] == peer
 	if current {
 		delete(r.peers, peer.ID)
+		delete(r.subs, peer.ID)
 		r.removePeerTracksLocked(peer.ID)
 	}
 	r.mu.Unlock()

@@ -90,7 +90,26 @@ func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []st
 			return r.Header.Get("Origin") != "" && httpx.CheckSameOrigin(r, h.Origins)
 		},
 	}
+	if voiceSFU != nil {
+		voiceSFU.SetMediaStateHandler(h.announceMediaState)
+	}
 	return h
+}
+
+// announceMediaState tells the room's members that userID started or stopped
+// a screen share or camera. Viewers learn this without receiving the media.
+func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
+	h.mu.RLock()
+	members := make([]uuid.UUID, 0, len(h.voice[roomID]))
+	for id := range h.voice[roomID] {
+		members = append(members, id)
+	}
+	h.mu.RUnlock()
+	h.SendToUsers(members, "webrtc_media_state", mediaStatePayload(roomID, userID, st))
+}
+
+func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {
+	return map[string]any{"channel_id": roomID, "user_id": userID, "screen": st.Screen, "camera": st.Camera}
 }
 
 // Client is one WebSocket connection.
@@ -401,6 +420,14 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
 		c.setPeer(peer)
+		// A late joiner learns who shares a screen or runs a camera.
+		if room := h.SFU.Room(ch.ID); room != nil {
+			for uid, st := range room.MediaStates() {
+				if uid != c.User.ID {
+					c.SendEvent("webrtc_media_state", mediaStatePayload(ch.ID, uid, st))
+				}
+			}
+		}
 	}
 	if !rejoin {
 		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": c.User})
@@ -623,6 +650,9 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 			}
 		}
 
+	case "webrtc_subscribe":
+		c.handleSubscribe(payload)
+
 	case "webrtc_screenshare_stop":
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
@@ -636,6 +666,47 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 				room.RemoveUserSource(c.User.ID, sfu.SourceCamera)
 			}
 		}
+	}
+}
+
+// handleSubscribe applies a viewer's choice of which video to receive:
+// {kind: "screen"|"camera", user_id, on} for one publisher, or
+// {kind: "camera", all: true, on} for every camera.
+func (c *Client) handleSubscribe(payload json.RawMessage) {
+	var req struct {
+		Kind   string `json:"kind"`
+		UserID string `json:"user_id"`
+		All    bool   `json:"all"`
+		On     bool   `json:"on"`
+	}
+	if json.Unmarshal(payload, &req) != nil {
+		return
+	}
+	kind := sfu.Source(req.Kind)
+	if kind != sfu.SourceScreen && kind != sfu.SourceCamera {
+		return
+	}
+	if req.All && kind != sfu.SourceCamera {
+		return
+	}
+	var publisher uuid.UUID
+	if !req.All {
+		id, err := uuid.Parse(req.UserID)
+		if err != nil || id == uuid.Nil || id == c.User.ID {
+			return
+		}
+		publisher = id
+	}
+	cur := c.currentVoice()
+	if cur == nil || c.hub.SFU == nil {
+		return
+	}
+	room := c.hub.SFU.Room(*cur)
+	if room == nil {
+		return
+	}
+	if err := room.Subscribe(c.User.ID, publisher, kind, req.All, req.On); err != nil {
+		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
 }
 

@@ -200,6 +200,8 @@ func TestForwardsVideoAndRequestsKeyframeFromPublisher(t *testing.T) {
 
 	sub := newClient(t)
 	sub.join(s, room)
+	// Screen shares are opt-in.
+	_ = s.Room(room).Subscribe(sub.id, pub.id, SourceScreen, false, true)
 
 	waitTrack(t, sub)
 	// A new viewer must get a keyframe from the publisher without waiting
@@ -265,6 +267,8 @@ func TestSameTrackIDFromTwoUsersIsForwardedSeparately(t *testing.T) {
 
 	viewer := newClient(t)
 	viewer.join(s, room)
+	_ = s.Room(room).Subscribe(viewer.id, a.id, SourceScreen, false, true)
+	_ = s.Room(room).Subscribe(viewer.id, b.id, SourceScreen, false, true)
 
 	first := waitTrack(t, viewer)
 	second := waitTrack(t, viewer)
@@ -314,6 +318,7 @@ func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
 
 	viewer := newClient(t)
 	viewer.join(s, room)
+	_ = s.Room(room).Subscribe(viewer.id, pub.id, SourceScreen, false, true)
 
 	streams := map[string]bool{}
 	for range 2 {

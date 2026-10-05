@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
 func isUserInSlice(users []uuid.UUID, id uuid.UUID) bool {
@@ -249,5 +250,66 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 	h.mu.RUnlock()
 	if inRoomAfterGrace {
 		t.Fatalf("user should be removed from room after grace period expires")
+	}
+}
+
+func TestHubSubscribeValidation(t *testing.T) {
+	voiceSFU, err := sfu.NewSFU(0, 0, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHub(nil, nil, voiceSFU, nil)
+	ch := uuid.New()
+	viewer := &Client{hub: h, User: auth.User{ID: uuid.New()}, send: make(chan []byte, 16)}
+	pub := uuid.New()
+	if _, _, err := voiceSFU.Join(ch, viewer.User.ID, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	room := voiceSFU.Room(ch)
+
+	sub := func(body string) { viewer.handle("webrtc_subscribe", []byte(body)) }
+	id := pub.String()
+
+	// Not in a voice room: ignored.
+	sub(`{"kind":"screen","user_id":"` + id + `","on":true}`)
+	if room.Receives(viewer.User.ID, pub, sfu.SourceScreen) {
+		t.Fatal("subscription from outside a room must be ignored")
+	}
+
+	viewer.setVoice(&ch)
+	sub(`{"kind":"screen","user_id":"` + id + `","on":true}`)
+	if !room.Receives(viewer.User.ID, pub, sfu.SourceScreen) {
+		t.Fatal("valid screen subscription not applied")
+	}
+	sub(`{"kind":"screen","user_id":"` + id + `","on":false}`)
+	if room.Receives(viewer.User.ID, pub, sfu.SourceScreen) {
+		t.Fatal("unsubscribe not applied")
+	}
+	sub(`{"kind":"camera","user_id":"` + id + `","on":false}`)
+	if room.Receives(viewer.User.ID, pub, sfu.SourceCamera) {
+		t.Fatal("camera opt-out not applied")
+	}
+	sub(`{"kind":"camera","user_id":"` + id + `","on":true}`)
+	if !room.Receives(viewer.User.ID, pub, sfu.SourceCamera) {
+		t.Fatal("camera opt-in not applied")
+	}
+	sub(`{"kind":"camera","all":true,"on":false}`)
+	if room.Receives(viewer.User.ID, pub, sfu.SourceCamera) {
+		t.Fatal("all cameras off not applied")
+	}
+
+	// Invalid input changes nothing.
+	for _, bad := range []string{
+		`{"kind":"audio","user_id":"` + id + `","on":false}`,
+		`{"kind":"screen","user_id":"not-a-uuid","on":true}`,
+		`{"kind":"screen","all":true,"on":true}`,
+		`{"kind":"screen","user_id":"` + viewer.User.ID.String() + `","on":true}`,
+		`{"kind":"screen","user_id":"` + uuid.Nil.String() + `","on":true}`,
+		`not json`,
+	} {
+		sub(bad)
+	}
+	if room.Receives(viewer.User.ID, pub, sfu.SourceScreen) {
+		t.Fatal("invalid subscribe must be ignored")
 	}
 }
