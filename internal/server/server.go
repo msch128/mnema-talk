@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -76,7 +77,13 @@ func NewRouter(d Deps) (*Router, error) {
 		RetentionDays:  cfg.MediaRetentionDays,
 	}
 
+	var previewH *linkpreview.Handler
+	if cfg.LinkPreviews {
+		previewH = &linkpreview.Handler{Fetcher: linkpreview.New()}
+	}
+
 	perUser := httpx.NewRateLimiter(600, time.Minute)
+	previewsPerUser := httpx.NewRateLimiter(120, time.Minute)
 	uploadsPerUser := httpx.NewRateLimiter(30, time.Minute)
 
 	r := chi.NewRouter()
@@ -117,6 +124,14 @@ func NewRouter(d Deps) (*Router, error) {
 				chatH.Mount(j)
 				mediaH.Mount(j)
 			})
+
+			// Link cards make outbound requests; they get their own budget.
+			if previewH != nil {
+				authed.Group(func(lp chi.Router) {
+					lp.Use(previewsPerUser.By(auth.UserKey))
+					previewH.Mount(lp)
+				})
+			}
 
 			// Uploads need a larger body ceiling than the JSON default.
 			authed.Group(func(u chi.Router) {
