@@ -89,10 +89,8 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [ ] Admin deletes other users' messages
 - [ ] Rename and reorder channels and categories
 
-## Mobile, accessibility & language (weight 8)
+## Accessibility & language (weight 8)
 
-- [ ] Responsive layout down to 390 px (drawer for channels and members)
-- [ ] Voice usable on mobile
 - [ ] Dialogs have `role="dialog"`, focus trap and Escape
 - [ ] All message actions reachable by keyboard
 - [ ] UI in German (default) and English, switchable per user; no hard-coded UI strings
@@ -116,3 +114,11 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] Tests for `useWebRTC` join/leave and reconnect behaviour
 - [ ] End-to-end smoke test (login, send message, join talk) in CI
 - [ ] First release cut (0.x) with changelog
+
+## Deferred (not scored)
+
+Postponed by decision on 2026-10-05; ask again once everything above is done.
+Items here carry no weight until they are moved back into an area.
+
+- Responsive layout down to 390 px (drawer for channels and members)
+- Voice usable on mobile
