@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref, watch, effectScope } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { summarizeStats } from '../lib/rtcStats'
@@ -63,6 +63,10 @@ let playbackContext = null
 let inputGainNode = null
 // The voice store, for the output device of a lazily created playback context.
 let outputDeviceStore = null
+// The settings watchers of useWebRTC, registered once per voice store.
+let watcherScope = null
+let watchedStore = null
+let inputVolumeTimer = null
 const boosts = new WeakMap()
 // Offers are applied one after another; candidates that arrive before the
 // remote description is set wait in pendingCandidates.
@@ -1012,45 +1016,6 @@ export function useWebRTC() {
     voiceStore.currentInputLevel = 0
   }
 
-  outputDeviceStore = voiceStore
-  watch(() => voiceStore.selectedOutputDeviceId, () => applyOutputDeviceAll(voiceStore))
-
-  // Input volume: adjust the gain live; the first change away from 100 %
-  // rebuilds the pipeline once to put the gain stage in.
-  let inputVolumeTimer = null
-  watch(() => voiceStore.inputVolume, (v) => {
-    if (inputGainNode) {
-      setNodeGain(inputGainNode, v / 100, audioContext?.currentTime ?? 0)
-      return
-    }
-    if (v === 100 || !localAudioStream.value) return
-    clearTimeout(inputVolumeTimer)
-    inputVolumeTimer = setTimeout(() => applyAudioSettings(), 250)
-  })
-
-  watch([
-    () => voiceStore.outputVolume,
-    () => voiceStore.isDeafened,
-    () => voiceStore.userVolumes,
-    () => voiceStore.localMutedUsers
-  ], () => {
-    updateRemoteVolume(voiceStore)
-  })
-
-  watch([
-    () => voiceStore.isScreenAudioMuted,
-    () => voiceStore.screenAudioVolume
-  ], ([muted, vol]) => {
-    if (mix?.screenGain && mix.ctx) {
-      const target = muted ? 0 : ((vol ?? 100) / 100)
-      if (mix.screenGain.gain?.setValueAtTime) {
-        mix.screenGain.gain.setValueAtTime(target, mix.ctx.currentTime)
-      } else if (mix.screenGain.gain) {
-        mix.screenGain.gain.value = target
-      }
-    }
-  })
-
   // Offers are queued so overlapping renegotiations never interleave.
   function handleRemoteOffer(offer) {
     signalingChain = signalingChain.then(() => applyRemoteOffer(offer))
@@ -1158,7 +1123,6 @@ export function useWebRTC() {
     if (!voiceStore.currentChannelId) return
     chatStore.sendWSEvent('voice_mute_state', { muted: !!voiceStore.isMuted, deafened: !!voiceStore.isDeafened })
   }
-  watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
 
   // After the WebSocket reconnected the server may have dropped our media
   // peer; start a fresh connection and announce the join again. The server
@@ -1619,6 +1583,59 @@ export function useWebRTC() {
     voiceStore.audioBlocked = false
     playbackContext?.resume?.().catch(() => {})
     remoteAudioElements.forEach(el => el.play().catch(() => { voiceStore.audioBlocked = true }))
+  }
+
+  // These watchers exist once per voice store, however many components call
+  // useWebRTC(): one per caller would send the mute state and rebuild the
+  // microphone several times over. They live in a detached scope, so they
+  // keep running after the first caller unmounts; a new store (a new Pinia,
+  // as in tests) replaces them.
+  if (watchedStore !== voiceStore) {
+    watcherScope?.stop()
+    watchedStore = voiceStore
+    outputDeviceStore = voiceStore
+    watcherScope = effectScope(true)
+    watcherScope.run(() => {
+      watch(() => voiceStore.selectedOutputDeviceId, () => applyOutputDeviceAll(voiceStore))
+
+      // Input volume: adjust the gain live; the first change away from 100 %
+      // rebuilds the pipeline once to put the gain stage in.
+      watch(() => voiceStore.inputVolume, (v) => {
+        if (inputGainNode) {
+          setNodeGain(inputGainNode, v / 100, audioContext?.currentTime ?? 0)
+          return
+        }
+        if (v === 100 || !localAudioStream.value) return
+        clearTimeout(inputVolumeTimer)
+        inputVolumeTimer = setTimeout(() => applyAudioSettings(), 250)
+      })
+
+      watch([
+        () => voiceStore.outputVolume,
+        () => voiceStore.isDeafened,
+        () => voiceStore.userVolumes,
+        () => voiceStore.localMutedUsers
+      ], () => {
+        updateRemoteVolume(voiceStore)
+      })
+
+      watch([
+        () => voiceStore.isScreenAudioMuted,
+        () => voiceStore.screenAudioVolume
+      ], ([muted, vol]) => {
+        if (mix?.screenGain && mix.ctx) {
+          const target = muted ? 0 : ((vol ?? 100) / 100)
+          if (mix.screenGain.gain?.setValueAtTime) {
+            mix.screenGain.gain.setValueAtTime(target, mix.ctx.currentTime)
+          } else if (mix.screenGain.gain) {
+            mix.screenGain.gain.value = target
+          }
+        }
+      })
+
+      // Everyone sees whether I am muted or deafened.
+      watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
+    })
   }
 
   return {
