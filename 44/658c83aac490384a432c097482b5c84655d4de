@@ -1,0 +1,35 @@
+SECURITY.md
+  s_ed4a044667278a::t_ac6e1343106293 37-39
+internal/httpx/middleware.go
+  s_ed4a044667278a::t_d544dc950066eb 120-123,126
+internal/httpx/middleware_test.go
+  s_ed4a044667278a::t_d9c1c9d8b0534f 136-138
+web/package-lock.json
+  s_ed4a044667278a::t_0cc12305c7c6b3 14,734-743
+web/package.json
+  s_ed4a044667278a::t_2ba85e9f1fa205 18
+web/src/components/AudioSettingsModal.vue
+  s_ed4a044667278a::t_7d0782893bceb6 64-66,261,265,268,271-288
+web/vite.config.js
+  s_ed4a044667278a::t_5ef6d1d3f52686 4-29,32
+web/web.go
+  s_ed4a044667278a::t_154ccb8a0ed02a 6,8,11,26-29,56-59,67-121
+web/web_test.go
+  s_ed4a044667278a::t_f5ef5caf71611d 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44658c83aac490384a432c097482b5c84655d4de",
+  "prompts": {},
+  "sessions": {
+    "s_ed4a044667278a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b355918-f239-4da3-9be2-aaed7bc1c4f6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
