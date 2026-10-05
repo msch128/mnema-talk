@@ -116,7 +116,7 @@ services:
   # not use UDP, e.g. Opera with its VPN or WebRTC protection); 49152-49200 UDP
   # only for relaying to peers outside the LAN.
   coturn:
-    image: coturn/coturn:4.6.2-alpine
+    image: coturn/coturn:4.18.0-alpine
     container_name: mnema-coturn
     restart: unless-stopped
     profiles:
