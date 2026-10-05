@@ -318,6 +318,13 @@ func (h *Hub) unregister(c *Client) {
 	}
 }
 
+// OnlineCount returns the number of distinct online users.
+func (h *Hub) OnlineCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return len(h.online)
+}
+
 func (h *Hub) onlineUsers() []uuid.UUID {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
