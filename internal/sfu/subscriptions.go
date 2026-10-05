@@ -1,7 +1,9 @@
 package sfu
 
 import (
+	"bytes"
 	"errors"
+	"slices"
 	"sync"
 
 	"github.com/google/uuid"
@@ -92,8 +94,9 @@ type MediaState struct {
 
 // mediaNotifier is shared by all rooms of an SFU.
 type mediaNotifier struct {
-	mu sync.RWMutex
-	fn func(roomID, userID uuid.UUID, state MediaState)
+	mu      sync.RWMutex
+	fn      func(roomID, userID uuid.UUID, state MediaState)
+	viewers func(roomID, sharer uuid.UUID, viewers []uuid.UUID)
 }
 
 func (n *mediaNotifier) set(fn func(roomID, userID uuid.UUID, state MediaState)) {
@@ -102,10 +105,16 @@ func (n *mediaNotifier) set(fn func(roomID, userID uuid.UUID, state MediaState))
 	n.mu.Unlock()
 }
 
-func (n *mediaNotifier) get() func(roomID, userID uuid.UUID, state MediaState) {
+func (n *mediaNotifier) setViewers(fn func(roomID, sharer uuid.UUID, viewers []uuid.UUID)) {
+	n.mu.Lock()
+	n.viewers = fn
+	n.mu.Unlock()
+}
+
+func (n *mediaNotifier) get() (func(roomID, userID uuid.UUID, state MediaState), func(roomID, sharer uuid.UUID, viewers []uuid.UUID)) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	return n.fn
+	return n.fn, n.viewers
 }
 
 // subsLocked returns the viewer's subscriptions, creating them. r.mu must be held for writing.
@@ -188,11 +197,48 @@ func (r *Room) mediaStatesLocked() map[uuid.UUID]MediaState {
 	return out
 }
 
-// notifyMedia announces changed screen/camera availability. It runs at the
-// start of every signaling round, which every track change triggers anyway.
+// ScreenViewers returns every live screen share in the room with the users
+// watching it (see screenViewersLocked). A share nobody watches maps to an
+// empty list.
+func (r *Room) ScreenViewers() map[uuid.UUID][]uuid.UUID {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.screenViewersLocked(r.mediaStatesLocked())
+}
+
+// screenViewersLocked maps each user with a live screen share (per states) to
+// the users in the room subscribed to it: distinct users with a peer here,
+// never the sharer, sorted. r.mu must be held.
+func (r *Room) screenViewersLocked(states map[uuid.UUID]MediaState) map[uuid.UUID][]uuid.UUID {
+	out := map[uuid.UUID][]uuid.UUID{}
+	for sharer, st := range states {
+		if !st.Screen {
+			continue
+		}
+		viewers := []uuid.UUID{}
+		for viewer, s := range r.subs {
+			// A subscription without a peer (failed join) receives nothing.
+			if viewer == sharer || r.peers[viewer] == nil || !s.screens[sharer] {
+				continue
+			}
+			viewers = append(viewers, viewer)
+		}
+		slices.SortFunc(viewers, compareIDs)
+		out[sharer] = viewers
+	}
+	return out
+}
+
+// compareIDs orders user IDs like their canonical string form.
+func compareIDs(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) }
+
+// notifyMedia announces changed screen/camera availability and changed
+// screen-share audiences. It runs at the start of every signaling round,
+// which every track, peer and subscription change triggers anyway. notifyMu
+// keeps the announcements in the order the states were computed.
 func (r *Room) notifyMedia() {
-	fn := r.notifier.get()
-	if fn == nil {
+	mediaFn, viewersFn := r.notifier.get()
+	if mediaFn == nil && viewersFn == nil {
 		return
 	}
 	r.notifyMu.Lock()
@@ -205,20 +251,51 @@ func (r *Room) notifyMedia() {
 		state MediaState
 	}
 	var changes []change
-	for u, st := range now {
-		if r.lastMedia[u] != st {
-			changes = append(changes, change{u, st})
+	if mediaFn != nil {
+		for u, st := range now {
+			if r.lastMedia[u] != st {
+				changes = append(changes, change{u, st})
+			}
 		}
-	}
-	for u := range r.lastMedia {
-		if _, ok := now[u]; !ok {
-			changes = append(changes, change{u, MediaState{}})
+		for u := range r.lastMedia {
+			if _, ok := now[u]; !ok {
+				changes = append(changes, change{u, MediaState{}})
+			}
 		}
+		r.lastMedia = now
 	}
-	r.lastMedia = now
+	type audience struct {
+		sharer  uuid.UUID
+		viewers []uuid.UUID
+	}
+	var audiences []audience
+	if viewersFn != nil {
+		// lastViewers keeps only non-empty audiences: an absent sharer was
+		// last announced (or implied) as watched by nobody.
+		next := map[uuid.UUID][]uuid.UUID{}
+		for sharer, viewers := range r.screenViewersLocked(now) {
+			if len(viewers) == 0 {
+				continue
+			}
+			next[sharer] = viewers
+			if !slices.Equal(r.lastViewers[sharer], viewers) {
+				audiences = append(audiences, audience{sharer, slices.Clone(viewers)})
+			}
+		}
+		for sharer := range r.lastViewers {
+			if _, ok := next[sharer]; !ok {
+				audiences = append(audiences, audience{sharer, []uuid.UUID{}})
+			}
+		}
+		r.lastViewers = next
+	}
 	r.mu.Unlock()
 
 	for _, c := range changes {
-		fn(r.ID, c.user, c.state)
+		mediaFn(r.ID, c.user, c.state)
+	}
+	slices.SortFunc(audiences, func(a, b audience) int { return compareIDs(a.sharer, b.sharer) })
+	for _, a := range audiences {
+		viewersFn(r.ID, a.sharer, a.viewers)
 	}
 }

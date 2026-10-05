@@ -109,9 +109,23 @@ export const useChatStore = defineStore('chat', () => {
     return allChannels.value.some(c => c.id === channelId && c.type === 'voice')
   }
 
-  async function fetchChannels() {
+  // Overlapping fetches (a channels_changed broadcast while a refetch runs)
+  // may answer out of order; only the latest one counts. A superseded fetch
+  // resolves once the latest one is applied, so whoever awaits it (e.g. the
+  // sidebar before it drops its pending order) never sees the older list.
+  let channelsFetchSeq = 0
+  let latestChannelsFetch = null
+
+  function fetchChannels() {
+    const fetching = loadChannels(++channelsFetchSeq)
+    latestChannelsFetch = fetching
+    return fetching
+  }
+
+  async function loadChannels(seq) {
     try {
       const data = await api('/api/channels')
+      if (seq !== channelsFetchSeq) return latestChannelsFetch
       categories.value = data.categories || []
       uncategorized.value = data.uncategorized || []
 
@@ -778,6 +792,10 @@ export const useChatStore = defineStore('chat', () => {
         voiceStore.handleMediaState(p)
         break
 
+      case 'screen_viewers':
+        voiceStore.handleScreenViewers(p)
+        break
+
       case 'voice_speaking':
         voiceStore.handleSpeakingEvent(p)
         break
@@ -871,6 +889,13 @@ export const useChatStore = defineStore('chat', () => {
     })
     await fetchChannels()
     selectChannel(channel)
+    return channel
+  }
+
+  /** Copy of a channel, placed right below it by the server. */
+  async function duplicateChannel(channelId) {
+    const channel = await api(`/api/admin/channels/${channelId}/duplicate`, { method: 'POST' })
+    await fetchChannels()
     return channel
   }
 
@@ -1259,6 +1284,7 @@ export const useChatStore = defineStore('chat', () => {
     toggleReaction,
     uploadMedia,
     createChannel,
+    duplicateChannel,
     deleteChannel,
     updateChannel,
     createCategory,

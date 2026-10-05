@@ -4,14 +4,17 @@
     "cancel": "Abbrechen",
     "confirm": "Bestätigen",
     "save": "Speichern",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "undo": "Rückgängig",
+    "create": "Erstellen"
   },
   "language": {
     "de": "Deutsch",
     "en": "English"
   },
   "app": {
-    "checking": "Verbindung wird geprüft …"
+    "checking": "Verbindung wird geprüft …",
+    "retrying": "Server gerade nicht erreichbar – neuer Versuch …"
   },
   "resize": {
     "default": "Breite anpassen",
@@ -150,7 +153,24 @@
     "editCategory": "Kategorie bearbeiten",
     "channelUpdated": "Kanal aktualisiert",
     "categoryUpdated": "Kategorie aktualisiert",
-    "updateFailed": "Aktualisierung fehlgeschlagen."
+    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "channelMoved": "Kanal verschoben",
+    "categoryMoved": "Kategorie verschoben",
+    "layoutSaveFailed": "Die neue Reihenfolge konnte nicht gespeichert werden.",
+    "layoutRestored": "Reihenfolge wiederhergestellt",
+    "movedChannel": "{name} verschoben: Position {position} von {total} in {category}",
+    "movedCategory": "{name} verschoben: Position {position} von {total}",
+    "createCategory": "Kategorie erstellen",
+    "categoryCreated": "Kategorie erstellt",
+    "createCategoryFailed": "Die Kategorie konnte nicht erstellt werden.",
+    "duplicateChannel": "Kanal duplizieren",
+    "channelDuplicated": "„{name}“ dupliziert",
+    "duplicateFailed": "Der Kanal konnte nicht dupliziert werden.",
+    "collapseAll": "Alle einklappen",
+    "expandAll": "Alle ausklappen",
+    "atTop": "{name} ist schon ganz oben",
+    "atBottom": "{name} ist schon ganz unten",
+    "reorderHint": "Mit Alt + Pfeil nach oben oder unten verschieben, oder ziehen."
   },
   "category": {
     "name": "Kategoriename"
@@ -557,7 +577,6 @@
     "ownScreen": "Eigener Bildschirm",
     "sharedScreen": "Geteilter Bildschirm",
     "fullscreen": "Vollbild",
-    "speaking": "Spricht",
     "ready": "Bereit",
     "shareShort": "Bildschirm",
     "stopShareShort": "Beenden",
@@ -568,6 +587,9 @@
     "stopCamera": "Kamera ausschalten",
     "previewHint": "Noch hört dich niemand. Tritt bei, um zu sprechen, die Kamera einzuschalten oder den Bildschirm zu teilen.",
     "cameraOf": "Kamera von {name}",
+    "ownCamera": "Eigene Kamera",
+    "focusCamera": "Kamera von {name} vergrößern",
+    "unfocusCamera": "Zurück zur Übersicht",
     "localMuted": "Für dich stumm",
     "screenShareCard": "{name} teilt den Bildschirm",
     "watchScreen": "Ansehen",
@@ -590,7 +612,26 @@
     "noAudioInShare": "Bildschirm ohne Audio geteilt",
     "noAudioInShareTip": "Hinweis: Bildschirm wird ohne Ton übertragen. Wähle einen Browser-Tab oder aktiviere „Audio teilen“ im Browser-Dialog, um Sound zu übertragen.",
     "ownStreamRunning": "Keine Sorge, dein Stream läuft weiter",
-    "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung."
+    "ownStreamRunningHint": "Die Vorschau pausiert, solange du in einem anderen Fenster bist, und spart so Leistung.",
+    "viewers": {
+      "one": "{count} Zuschauer: {names}",
+      "other": "{count} Zuschauer: {names}"
+    },
+    "viewersTitle": {
+      "one": "{count} Zuschauer",
+      "other": "{count} Zuschauer"
+    },
+    "viewersNone": "Noch schaut niemand zu",
+    "exitFullscreen": "Vollbild beenden",
+    "hideNoVideo": "Teilnehmer ohne Video ausblenden",
+    "noVideoTitle": "Gerade hat niemand Video an",
+    "noVideoHint": "Teilnehmer ohne Kamera oder Bildschirmübertragung sind ausgeblendet.",
+    "showAllParticipants": "Alle Teilnehmer zeigen",
+    "pip": "Bild-im-Bild",
+    "pipExit": "Bild-im-Bild beenden",
+    "pipPlaying": "Läuft im Bild-im-Bild-Fenster",
+    "pipBack": "Zurück auf die Bühne",
+    "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden"
   },
   "admin": {
     "title": "Speicher & Administration",

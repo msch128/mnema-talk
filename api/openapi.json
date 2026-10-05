@@ -1927,6 +1927,113 @@
         ]
       }
     },
+    "/api/admin/channels/{id}/duplicate": {
+      "post": {
+        "description": "Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires role admin (403 otherwise).",
+        "operationId": "duplicateChannel",
+        "parameters": [
+          {
+            "description": "Resource ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Channel"
+                }
+              }
+            },
+            "description": "Created channel."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Duplicate a channel",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/invites": {
       "get": {
         "description": "Requires role admin (403 otherwise).",
@@ -6810,7 +6917,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `voice_kicked`: `{channel_id}` when an admin removes the user from voice.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text channels only, rate-limited).\n- `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `voice_kicked`: `{channel_id}` when an admin removes the user from voice.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text channels only, rate-limited).\n- `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
         "operationId": "connectWebSocket",
         "parameters": [
           {

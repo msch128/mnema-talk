@@ -80,6 +80,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Post("/channels", httpx.Handle(h.createChannel))
 	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
 	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
+	r.Post("/channels/{id}/duplicate", httpx.Handle(h.duplicateChannel))
 	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
 	r.Put("/layout", httpx.Handle(h.applyLayout))
 }
@@ -525,6 +526,38 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 		req.Type = ChannelTypeText
 	}
 	ch, err := CreateChannel(r.Context(), h.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder)
+	if err != nil {
+		return err
+	}
+	h.Events.Broadcast("channels_changed", nil)
+	httpx.WriteJSON(w, http.StatusCreated, ch)
+	return nil
+}
+
+// duplicateChannel handles POST /api/admin/channels/{id}/duplicate.
+//
+// @Summary Duplicate a channel
+// @Description Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires role admin (403 otherwise).
+// @ID duplicateChannel
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 201 {object} Channel "Created channel."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/channels/{id}/duplicate [post]
+func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	ch, err := DuplicateChannel(r.Context(), h.DB, id)
 	if err != nil {
 		return err
 	}

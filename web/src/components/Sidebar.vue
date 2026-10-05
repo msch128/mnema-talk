@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { Hash, Volume2, ShieldCheck, Crown, Plus, Trash2, ChevronDown, ChevronRight, X, Monitor } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
@@ -8,16 +8,21 @@ import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
 import EditNameDialog from './EditNameDialog.vue'
 import ContextMenu from './ContextMenu.vue'
-import UserAvatar from './UserAvatar.vue'
-import VoiceTimer from './VoiceTimer.vue'
-import MuteMarks from './MuteMarks.vue'
+import SidebarChannelRow from './SidebarChannelRow.vue'
+import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
+import SidebarDragGhost from './SidebarDragGhost.vue'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
-import { buildChannelTree, loadCollapsed, saveCollapsed } from '../lib/channelTree'
+import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
+import { locateCategory, moveCategory } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
-import { useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems } from '../composables/useNavMenus'
+import {
+  useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
+} from '../composables/useNavMenus'
 import { useDismissable } from '../composables/useDismissable'
+import { useChannelLayout } from '../composables/useChannelLayout'
+import { useSidebarReorder, UNCATEGORIZED_SECTION } from '../composables/useSidebarReorder'
 
 const SERVER_NAME = 'Mnema Talk'
 
@@ -28,6 +33,8 @@ const voiceStore = useVoiceStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
 const { joinVoiceChannel } = useWebRTC()
+// The order on screen: the server's, or a move that is still being saved.
+const { layout, commit } = useChannelLayout()
 
 const showCreateChannelModal = ref(false)
 const modalChannelType = ref('text')
@@ -72,13 +79,51 @@ async function handleDeleteCategory(category) {
   }
 }
 
-// ---- Context menus (channels, categories, voice participants) ----
+async function handleDuplicateChannel(channel) {
+  try {
+    const created = await chatStore.duplicateChannel(channel.id)
+    toasts.success(t('sidebar.channelDuplicated', { name: channel.name }))
+    // The copy sits right below the original; show it without navigating.
+    if (created?.id) reveal('channel', created.id)
+  } catch (err) {
+    toasts.error(err?.message || t('sidebar.duplicateFailed'))
+  }
+}
+
+// New categories go to the end; one created from a category's menu then
+// moves right below that category (a silent layout save).
+function openCreateCategory(afterCategoryId = null) {
+  editing.value = { kind: 'category', entity: null, after: afterCategoryId }
+}
+
+function handleCategoryCreated(category) {
+  const after = editing.value?.after
+  if (!category?.id) return
+  const anchor = after && locateCategory(layout.value, after)
+  if (anchor) commit(moveCategory(layout.value, category.id, anchor.index + 1))
+  reveal('category', category.id)
+}
+
+// ---- Context menus (channels, categories, voice participants, the list) ----
 
 const menu = useMenuState()
-const editing = ref(null) // { kind: 'channel' | 'category', entity }
+const editing = ref(null) // { kind: 'channel' | 'category', entity (null: create), after }
 const menuHandlers = {
   onEdit: entity => { editing.value = { kind: entity.channels ? 'category' : 'channel', entity } },
-  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity))
+  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
+  onDuplicate: channel => handleDuplicateChannel(channel),
+  onCreateChannel: category => openCreateChannel(category ? defaultTypeFor(category) : 'text', category?.id || ''),
+  onCreateCategory: category => openCreateCategory(category?.id ?? null),
+  onCollapseAll: () => setCollapsed(layout.value.categories.map(c => c.id)),
+  onExpandAll: () => setCollapsed([])
+}
+
+function collapseState() {
+  const ids = layout.value.categories.map(c => c.id)
+  return {
+    allCollapsed: ids.every(id => collapsed.value.has(id)),
+    noneCollapsed: !ids.some(id => collapsed.value.has(id))
+  }
 }
 
 function openChannelMenu(e, channel) {
@@ -86,7 +131,14 @@ function openChannelMenu(e, channel) {
 }
 
 function openCategoryMenu(e, category) {
-  menu.show(e, () => buildCategoryItems(category, menuHandlers))
+  menu.show(e, () => buildCategoryItems(category, { ...menuHandlers, ...collapseState() }))
+}
+
+// The empty part of the channel list: admins can create things there,
+// everyone else keeps the browser's menu.
+function openListMenu(e) {
+  if (!buildSidebarItems(menuHandlers).length) return
+  menu.show(e, () => buildSidebarItems(menuHandlers))
 }
 
 function openMemberMenu(e, user) {
@@ -96,35 +148,39 @@ function openMemberMenu(e, user) {
 // ---- Channel tree (uncategorized first, then categories in sort order) ----
 
 const sections = computed(() => {
-  const tree = buildChannelTree(chatStore.categories, chatStore.uncategorized)
-  const list = tree.categories
+  const tree = layout.value
   return tree.uncategorized.length
-    ? [{ id: '__uncategorized', headless: true, channels: tree.uncategorized }, ...list]
-    : list
+    ? [{ id: UNCATEGORIZED_SECTION, headless: true, channels: tree.uncategorized }, ...tree.categories]
+    : tree.categories
 })
 
 const collapsed = ref(new Set(loadCollapsed()))
+
+function setCollapsed(ids) {
+  collapsed.value = new Set(ids)
+  saveCollapsed([...collapsed.value])
+}
 
 function toggleCategory(id) {
   const next = new Set(collapsed.value)
   if (next.has(id)) next.delete(id)
   else next.add(id)
-  collapsed.value = next
-  saveCollapsed([...next])
+  setCollapsed(next)
 }
 
-function isTextActive(channel) {
-  return chatStore.activeChannel?.id === channel.id && voiceStore.activeView === 'chat'
-}
-
-function isVoiceActive(channel) {
-  return voiceStore.currentChannelId === channel.id && voiceStore.activeView === 'voice'
+function expandCategory(id) {
+  if (!collapsed.value.has(id)) return
+  const next = new Set(collapsed.value)
+  next.delete(id)
+  setCollapsed(next)
 }
 
 // A collapsed category still shows the selected text channel
-// and the voice channel you're connected to.
+// and the voice channel you're connected to. A dragged category shows none.
 function visibleChannels(category) {
-  if (category.headless || !collapsed.value.has(category.id)) return category.channels
+  if (category.headless) return category.channels
+  if (isDragged('category', category.id)) return []
+  if (!isCollapsed(category.id)) return category.channels
   return category.channels.filter(ch =>
     ch.type === 'voice' ? voiceStore.currentChannelId === ch.id : chatStore.activeChannel?.id === ch.id
   )
@@ -134,11 +190,6 @@ function visibleChannels(category) {
 function defaultTypeFor(category) {
   const chs = category.channels || []
   return chs.length && chs.every(c => c.type === 'voice') ? 'voice' : 'text'
-}
-
-function voiceUsers(channel) {
-  const users = voiceStore.channelUsers[channel.id]
-  return users ? Object.values(users) : []
 }
 
 async function handleVoiceClick(channel) {
@@ -183,6 +234,24 @@ async function handleVoiceUserClick(channel, user) {
   }
   chatStore.openUserProfile(user)
 }
+
+// ---- Moving channels and categories (admins) ----
+//
+// Drag and drop and Alt+Arrow (useSidebarReorder); every move shows at once,
+// is saved right away and can be undone from a toast (useChannelLayout).
+
+const {
+  navEl, hintId, flashKey, announcement, isCollapsed, reveal, moveByKey,
+  drag, dragItem, startDrag, isDragged, indicatorFor, navListeners
+} = useSidebarReorder({
+  layout,
+  commit,
+  collapsed,
+  expandCategory,
+  enabled: () => authStore.isAdmin,
+  // Touch: holding an item and letting go without moving opens its menu.
+  onLongPress: (kind, entity, e) => (kind === 'channel' ? openChannelMenu(e, entity) : openCategoryMenu(e, entity))
+})
 
 // ---- Server header dropdown ----
 
@@ -254,28 +323,6 @@ useDismissable(menuRoot, (e, reason) => closeMenu(reason === 'escape'), { active
 
 watch(() => authStore.isAdmin, () => closeMenu())
 
-function unreadCount(channel) {
-  if (channel.type === 'voice') return 0
-  return chatStore.readStates[channel.id]?.unread_count || 0
-}
-
-function mentionCount(channel) {
-  if (channel.type === 'voice') return 0
-  return chatStore.readStates[channel.id]?.mention_count || 0
-}
-
-// Shared row styling (34px channel rows, rounded hover/selected states).
-const rowBase = 'relative w-full h-[34px] flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors group cursor-pointer text-left min-w-0'
-function rowClass(active, unread = false) {
-  return [
-    rowBase,
-    active
-      ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
-      : unread
-        ? 'text-mnema-text font-semibold hover:bg-mnema-hover/70'
-        : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text'
-  ]
-}
 const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
 </script>
 
@@ -327,6 +374,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             <span class="truncate">{{ $t('channel.create') }}</span>
             <Plus class="w-4 h-4 flex-shrink-0" />
           </button>
+          <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateCategory())">
+            <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
+            <FolderPlus class="w-4 h-4 flex-shrink-0" />
+          </button>
           <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
         </template>
         <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
@@ -337,184 +388,95 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
     </div>
 
     <!-- Navigation Scroll Area -->
-    <nav class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4" :aria-label="$t('sidebar.channels')">
-      <!-- Uncategorized channels first (headless section), then the categories -->
-      <section
-        v-for="category in sections"
-        :key="category.id"
-        :class="[category.headless ? 'mb-1' : 'mt-3 first:mt-0', 'group/cat']"
-        :data-category-id="category.headless ? undefined : category.id"
-      >
-        <div
-          v-if="!category.headless"
-          class="h-6 flex items-center gap-1 pr-1"
-          @contextmenu="openCategoryMenu($event, category)"
+    <nav
+      ref="navEl"
+      :class="['flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden px-2 pt-3', authStore.isAdmin && '[-webkit-touch-callout:none]']"
+      :aria-label="$t('sidebar.channels')"
+      v-on="navListeners"
+      @contextmenu="openListMenu"
+    >
+      <div class="flex-shrink-0">
+        <!-- Uncategorized channels first (headless section), then the categories -->
+        <section
+          v-for="category in sections"
+          :key="category.id"
+          :class="[category.headless ? 'mb-1' : 'mt-3 first:mt-0', 'relative group/cat']"
+          :data-category-id="category.headless ? undefined : category.id"
+          :data-drop-section="category.id"
         >
-          <button
-            type="button"
-            class="flex-1 min-w-0 h-6 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-none focus-visible:text-mnema-text"
-            :aria-expanded="collapsed.has(category.id) ? 'false' : 'true'"
-            aria-haspopup="menu"
-            @click="toggleCategory(category.id)"
-            @keydown.f10.shift.prevent="openCategoryMenu($event, category)"
-            @keydown.context-menu.prevent="openCategoryMenu($event, category)"
-          >
-            <ChevronRight v-if="collapsed.has(category.id)" class="w-3 h-3 flex-shrink-0" />
-            <ChevronDown v-else class="w-3 h-3 flex-shrink-0" />
-            <span class="truncate">{{ category.name }}</span>
-          </button>
-          <div
-            v-if="authStore.isAdmin"
-            class="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover/cat:opacity-100 focus-within:opacity-100 transition"
-          >
-            <button
-              @click.stop="openCreateChannel(defaultTypeFor(category), category.id)"
-              v-tooltip="$t('channel.create')"
-              :aria-label="$t('channel.create')"
-              class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-text transition"
-            >
-              <Plus class="w-4 h-4" />
-            </button>
-            <button
-              @click.stop="handleDeleteCategory(category)"
-              v-tooltip="$t('sidebar.deleteCategory')"
-              :aria-label="$t('sidebar.deleteCategory')"
-              class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition"
-            >
-              <Trash2 class="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
+          <SidebarCategoryHeader
+            v-if="!category.headless"
+            :category="category"
+            :collapsed="isCollapsed(category.id)"
+            :admin="authStore.isAdmin"
+            :dragging="isDragged('category', category.id)"
+            :indicator="indicatorFor(`header:${category.id}`)"
+            :flash="flashKey === `category:${category.id}`"
+            :hint-id="hintId"
+            @toggle="toggleCategory(category.id)"
+            @menu="openCategoryMenu($event, category)"
+            @create-channel="openCreateChannel(defaultTypeFor(category), category.id)"
+            @delete="handleDeleteCategory(category)"
+            @drag-start="startDrag($event, 'category', category)"
+            @move="moveByKey('category', category, $event)"
+          />
 
-        <div class="mt-0.5">
-          <template v-for="channel in visibleChannels(category)" :key="channel.id">
+          <div class="mt-0.5">
+            <SidebarChannelRow
+              v-for="channel in visibleChannels(category)"
+              :key="channel.id"
+              :channel="channel"
+              :admin="authStore.isAdmin"
+              :dragging="isDragged('channel', channel.id)"
+              :indicator="indicatorFor(`channel:${channel.id}`)"
+              :flash="flashKey === `channel:${channel.id}`"
+              :hint-id="hintId"
+              @open="handleChannelClick(channel)"
+              @menu="openChannelMenu($event, channel)"
+              @delete="handleDeleteChannel(channel)"
+              @drag-start="startDrag($event, 'channel', channel)"
+              @move="moveByKey('channel', channel, $event)"
+              @voice-user-click="handleVoiceUserClick(channel, $event)"
+              @member-menu="openMemberMenu"
+            />
+
             <div
-              :class="rowClass(
-                channel.type === 'voice' ? isVoiceActive(channel) : isTextActive(channel),
-                unreadCount(channel) > 0
-              )"
-              role="button"
-              tabindex="0"
-              :data-channel-type="channel.type"
-              aria-haspopup="menu"
-              @click="handleChannelClick(channel)"
-              @contextmenu="openChannelMenu($event, channel)"
-              @keydown.enter.self.prevent="handleChannelClick(channel)"
-              @keydown.space.self.prevent="handleChannelClick(channel)"
-              @keydown.f10.shift.self.prevent="openChannelMenu($event, channel)"
-              @keydown.context-menu.self.prevent="openChannelMenu($event, channel)"
+              v-if="!category.headless && !category.channels.length && !isCollapsed(category.id) && !isDragged('category', category.id)"
+              class="px-2 py-1 text-sm text-mnema-tertiary italic truncate"
+              data-drop="empty"
+              :data-id="category.id"
             >
-              <!-- Unread pip on left edge -->
-              <span
-                v-if="unreadCount(channel) > 0 && !isTextActive(channel)"
-                class="absolute -left-1.5 w-1 h-2 rounded-r bg-mnema-text"
-              ></span>
-
-              <div class="flex items-center gap-1.5 min-w-0">
-                <Volume2
-                  v-if="channel.type === 'voice'"
-                  :class="['w-5 h-5 flex-shrink-0 transition-colors', voiceStore.currentChannelId === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
-                />
-                <Hash
-                  v-else
-                  :class="[
-                    'w-5 h-5 flex-shrink-0 transition-colors',
-                    chatStore.activeChannel?.id === channel.id
-                      ? 'text-mnema-accent'
-                      : unreadCount(channel) > 0
-                        ? 'text-mnema-text'
-                        : 'text-mnema-tertiary group-hover:text-mnema-text'
-                  ]"
-                />
-                <span class="truncate">{{ channel.name }}</span>
-              </div>
-
-              <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
-              <div class="flex items-center gap-1 ml-auto flex-shrink-0">
-                <VoiceTimer
-                  v-if="channel.type === 'voice' && voiceStore.roomStartedAt[channel.id]"
-                  :since="voiceStore.roomStartedAt[channel.id]"
-                  data-testid="sidebar-talk-timer"
-                  class="text-xs text-mnema-tertiary"
-                />
-                <span
-                  v-if="mentionCount(channel) > 0 && !isTextActive(channel)"
-                  class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
-                >
-                  {{ mentionCount(channel) }}
-                </span>
-                <span
-                  v-else-if="unreadCount(channel) > 0 && !isTextActive(channel)"
-                  class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
-                >
-                  {{ unreadCount(channel) }}
-                </span>
-              </div>
-
-              <button
-                v-if="authStore.isAdmin"
-                @click.stop="handleDeleteChannel(channel)"
-                v-tooltip="channel.type === 'voice' ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-                :aria-label="channel.type === 'voice' ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
-                class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
-              >
-                <Trash2 class="w-4 h-4" />
-              </button>
+              {{ $t('sidebar.noChannels') }}
             </div>
-
-            <!-- Connected voice users (indented, 24px avatars, speaking ring) -->
-            <div v-if="channel.type === 'voice' && voiceUsers(channel).length" class="pl-7 pb-1">
-              <div
-                v-for="user in voiceUsers(channel)"
-                :key="user.id"
-                class="min-h-8 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
-                role="button"
-                tabindex="0"
-                aria-haspopup="menu"
-                data-voice-user
-                @click="handleVoiceUserClick(channel, user)"
-                @keydown.enter.self.prevent="handleVoiceUserClick(channel, user)"
-                @contextmenu="openMemberMenu($event, user)"
-                @keydown.f10.shift.self.prevent="openMemberMenu($event, user)"
-                @keydown.context-menu.self.prevent="openMemberMenu($event, user)"
-              >
-                <UserAvatar :user="user" size="xs" :is-speaking="voiceStore.isSpeaking(user.id)" />
-                <span class="flex min-w-0 flex-col leading-4">
-                  <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
-                  <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
-                </span>
-                <span class="ml-auto flex flex-shrink-0 items-center gap-1.5">
-                <MuteMarks
-                  :muted="voiceStore.muteStateOf(user.id).muted"
-                  :deafened="voiceStore.muteStateOf(user.id).deafened"
-                  :size="14"
-                />
-                <span
-                  v-if="voiceStore.mediaState[user.id]?.screen"
-                  class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm flex-shrink-0"
-                  data-testid="sidebar-live-badge"
-                  v-tooltip="$t('talk.liveTooltip')"
-                >
-                  <Monitor class="w-3 h-3" />
-                  {{ $t('talk.live') }}
-                </span>
-                <span v-else-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 flex-shrink-0">
-                  {{ $t('role.admin') }}
-                </span>
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <div
-            v-if="!category.headless && !category.channels.length && !collapsed.has(category.id)"
-            class="px-2 py-1 text-sm text-mnema-tertiary italic truncate"
-          >
-            {{ $t('sidebar.noChannels') }}
           </div>
-        </div>
-      </section>
+
+          <span
+            v-if="indicatorFor(`section:${category.id}`) === 'bottom'"
+            class="drop-line -bottom-1.5"
+            data-drop-indicator
+            aria-hidden="true"
+          ></span>
+        </section>
+      </div>
+
+      <!-- The empty rest of the list (at least a little, even when it
+           scrolls): right-click here to create something, drop here to
+           append to the last group. -->
+      <div class="flex-1 min-h-12" data-drop-tail aria-hidden="true"></div>
     </nav>
+
+    <!-- How to move things, and where a move ended up, for screen readers -->
+    <p v-if="authStore.isAdmin" :id="hintId" class="sr-only">{{ $t('sidebar.reorderHint') }}</p>
+    <div class="sr-only" role="status" aria-live="polite" data-testid="sidebar-announcer">{{ announcement }}</div>
+
+    <!-- The dragged item follows the pointer -->
+    <SidebarDragGhost
+      v-if="dragItem"
+      :item="dragItem"
+      :x="drag.state.x"
+      :y="drag.state.y"
+      :touch="drag.state.pointerType === 'touch'"
+    />
 
     <ContextMenu
       v-model="menu.state.open"
@@ -528,6 +490,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       v-if="editing"
       :kind="editing.kind"
       :entity="editing.entity"
+      @created="handleCategoryCreated"
       @close="editing = null"
     />
 

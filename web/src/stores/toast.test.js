@@ -30,6 +30,16 @@ describe('toast store', () => {
     expect(toasts.toasts).toHaveLength(1)
   })
 
+  it('lets a toast with an action dismiss itself after an explicit duration (undo)', () => {
+    const toasts = useToastStore()
+    toasts.success('Kanal verschoben', { duration: 6000, action: { label: 'Rückgängig', onClick() {} } })
+    vi.advanceTimersByTime(5999)
+    expect(toasts.toasts).toHaveLength(1)
+    expect(toasts.toasts[0].action.label).toBe('Rückgängig')
+    vi.advanceTimersByTime(1)
+    expect(toasts.toasts).toHaveLength(0)
+  })
+
   it('stacks at most four toasts and ignores empty text', () => {
     const toasts = useToastStore()
     for (let i = 0; i < 6; i++) toasts.info(`t${i}`)

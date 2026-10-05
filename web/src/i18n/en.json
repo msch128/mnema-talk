@@ -4,14 +4,17 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "save": "Save",
-    "delete": "Delete"
+    "delete": "Delete",
+    "undo": "Undo",
+    "create": "Create"
   },
   "language": {
     "de": "Deutsch",
     "en": "English"
   },
   "app": {
-    "checking": "Checking your session …"
+    "checking": "Checking your session …",
+    "retrying": "Server not reachable right now – trying again …"
   },
   "resize": {
     "default": "Resize",
@@ -150,7 +153,24 @@
     "editCategory": "Edit category",
     "channelUpdated": "Channel updated",
     "categoryUpdated": "Category updated",
-    "updateFailed": "Update failed."
+    "updateFailed": "Update failed.",
+    "channelMoved": "Channel moved",
+    "categoryMoved": "Category moved",
+    "layoutSaveFailed": "Couldn't save the new order.",
+    "layoutRestored": "Order restored",
+    "movedChannel": "{name} moved: position {position} of {total} in {category}",
+    "movedCategory": "{name} moved: position {position} of {total}",
+    "createCategory": "Create category",
+    "categoryCreated": "Category created",
+    "createCategoryFailed": "Couldn't create the category.",
+    "duplicateChannel": "Duplicate channel",
+    "channelDuplicated": "Duplicated “{name}”",
+    "duplicateFailed": "Couldn't duplicate the channel.",
+    "collapseAll": "Collapse all",
+    "expandAll": "Expand all",
+    "atTop": "{name} is already at the top",
+    "atBottom": "{name} is already at the bottom",
+    "reorderHint": "Move with Alt + Arrow Up or Down, or drag."
   },
   "category": {
     "name": "Category name"
@@ -557,7 +577,6 @@
     "ownScreen": "Your screen",
     "sharedScreen": "Shared screen",
     "fullscreen": "Full screen",
-    "speaking": "Speaking",
     "ready": "Ready",
     "shareShort": "Screen",
     "stopShareShort": "Stop",
@@ -568,6 +587,9 @@
     "stopCamera": "Turn off camera",
     "previewHint": "Nobody hears you yet. Join to talk, turn on your camera or share your screen.",
     "cameraOf": "Camera of {name}",
+    "ownCamera": "Your camera",
+    "focusCamera": "Enlarge camera of {name}",
+    "unfocusCamera": "Back to everyone",
     "localMuted": "Muted for you",
     "screenShareCard": "{name} is sharing their screen",
     "watchScreen": "Watch",
@@ -590,7 +612,26 @@
     "noAudioInShare": "Screen shared without audio",
     "noAudioInShareTip": "Note: Screen is being shared without sound. Select a browser tab or enable \"Share audio\" in the browser prompt to transmit sound.",
     "ownStreamRunning": "Don't worry, your stream is still running",
-    "ownStreamRunningHint": "The preview pauses while you are in another window to save resources."
+    "ownStreamRunningHint": "The preview pauses while you are in another window to save resources.",
+    "viewers": {
+      "one": "{count} viewer: {names}",
+      "other": "{count} viewers: {names}"
+    },
+    "viewersTitle": {
+      "one": "{count} viewer",
+      "other": "{count} viewers"
+    },
+    "viewersNone": "Nobody is watching yet",
+    "exitFullscreen": "Exit full screen",
+    "hideNoVideo": "Hide participants without video",
+    "noVideoTitle": "Nobody has video on right now",
+    "noVideoHint": "Participants without a camera or screen share are hidden.",
+    "showAllParticipants": "Show all participants",
+    "pip": "Picture-in-picture",
+    "pipExit": "Exit picture-in-picture",
+    "pipPlaying": "Playing in the picture-in-picture window",
+    "pipBack": "Back to the stage",
+    "pipFailed": "Could not open picture-in-picture"
   },
   "admin": {
     "title": "Storage & administration",
