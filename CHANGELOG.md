@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/msch128/mnema-talk/compare/v0.1.16...v0.3.0) (2026-10-05)
+
+
+### Features
+
+* Discord-style sidebar management and Talk stage (0.3.0) ([#42](https://github.com/msch128/mnema-talk/issues/42)) ([296e4f4](https://github.com/msch128/mnema-talk/commit/296e4f4fd6e27fa5c4eacf3fc2e8008c121c69de))
+
+
+### Bug Fixes
+
+* **talk:** keep a camera decodable when the SFU renegotiates ([f40924f](https://github.com/msch128/mnema-talk/commit/f40924f13b659090a62d70109483ce18d916cbe4))
+
 ## [0.1.16](https://github.com/msch128/mnema-talk/compare/v0.1.15...v0.1.16) (2026-10-05)
 
 
