@@ -167,13 +167,9 @@ watch(() => props.stream, (stream) => {
       <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
     </div>
 
-    <!-- Status: speaking, and how long they have been in the Talk -->
+    <!-- Status: how long they have been in the Talk (speaking shows as the green ring) -->
     <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5" data-tile-status>
-      <span v-if="speaking" class="text-mnema-accent font-semibold flex items-center gap-1">
-        <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-        {{ $t('talk.speaking') }}<template v-if="user.joined_at"> · <VoiceTimer :since="user.joined_at" /></template>
-      </span>
-      <VoiceTimer v-else-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
+      <VoiceTimer v-if="user.joined_at" :since="user.joined_at" class="text-mnema-tertiary" />
       <span v-else class="text-mnema-tertiary">{{ $t('talk.ready') }}</span>
     </div>
     <!-- On camera the time sits next to the name -->
