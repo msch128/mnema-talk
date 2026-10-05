@@ -72,9 +72,6 @@ type ReplyPreview struct {
 	HasAttachments bool      `json:"has_attachments,omitempty" binding:"optional"`
 }
 
-// replyPreviewLen bounds the quoted snippet sent with every reply.
-const replyPreviewLen = 200
-
 // ValidateContent trims and length-checks message text. Empty content is only
 // allowed when the message carries an attachment.
 func ValidateContent(content string, allowEmpty bool) (string, error) {
@@ -96,14 +93,15 @@ func ValidateEmoji(emoji string) (string, error) {
 }
 
 // messageSelect loads messages with author, reply count and the quoted reply
-// preview in one round trip. rm/ru are the replied-to message and its author.
+// preview in one round trip. rm/ru are the replied-to message and its author;
+// the quoted snippet sent with every reply is bounded to 200 characters.
 const messageSelect = `
 	SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
 	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
-	       LEFT(rm.content, ` + "200" + `),
+	       LEFT(rm.content, 200),
 	       CASE WHEN rm.id IS NULL THEN FALSE
 	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END
 	FROM messages m
