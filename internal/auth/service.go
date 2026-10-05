@@ -122,6 +122,18 @@ var (
 // times do not reveal which accounts exist.
 var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), bcryptCost)
 
+// burnPasswordCheck spends the same bcrypt work as checking a real password.
+func burnPasswordCheck(password string) {
+	_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+}
+
+// isUniqueViolation reports a unique-constraint violation (SQLSTATE 23505),
+// e.g. on the username or its case-insensitive index.
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
 func HashPassword(password string) (string, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	return string(b), err
@@ -191,7 +203,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1)`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
-		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
+		burnPasswordCheck(password)
 		return nil, 0, ErrInvalidCredentials
 	}
 	if err != nil {
@@ -276,8 +288,9 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 			VALUES ($1, $2, $3, 'user')
 			RETURNING `+userColumns, username, displayName, hash))
 		if err != nil {
-			var pgErr *pgconn.PgError
-			if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			// Also covers a concurrent sign-up racing past the check above,
+			// whichever unique index on the username catches it.
+			if isUniqueViolation(err) {
 				return ErrUsernameTaken
 			}
 			return fmt.Errorf("insert user: %w", err)
