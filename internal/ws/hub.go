@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -129,6 +130,14 @@ type Client struct {
 	tokenVersion int
 	closeOnce    sync.Once
 
+	// send is never closed: SendEvent runs from goroutines other than the
+	// read loop (SFU callbacks, admin kicks), and a send on a closed channel
+	// panics. done is closed instead once the client is unregistered; the
+	// write loop exits on it and deliver drops further events.
+	done     chan struct{}
+	doneOnce sync.Once
+	closed   atomic.Bool
+
 	// idle is set by the client after a while without input; it turns an
 	// "online" user into "away" while all of their connections are idle.
 	idle bool // guarded by hub.mu
@@ -181,9 +190,29 @@ func (c *Client) setPeer(p *sfu.Peer) {
 	c.mu.Unlock()
 }
 
+func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
+	return &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
+		User: user, tokenVersion: tokenVersion}
+}
+
 // close tears the connection down once; readPump then unregisters the client.
 func (c *Client) close() {
-	c.closeOnce.Do(func() { _ = c.conn.Close() })
+	c.closeOnce.Do(func() {
+		if c.conn != nil {
+			_ = c.conn.Close()
+		}
+	})
+}
+
+// shutdown marks the client as gone: later events are dropped and the write
+// loop stops. Safe to call more than once and concurrently with deliver.
+func (c *Client) shutdown() {
+	c.doneOnce.Do(func() {
+		c.closed.Store(true)
+		if c.done != nil {
+			close(c.done)
+		}
+	})
 }
 
 func encode(eventType string, payload any) []byte {
@@ -198,6 +227,9 @@ func encode(eventType string, payload any) []byte {
 // deliver queues data for c; a client whose buffer is full is too slow to keep
 // up and gets disconnected rather than blocking everyone else.
 func (c *Client) deliver(data []byte) {
+	if c.closed.Load() {
+		return
+	}
 	select {
 	case c.send <- data:
 	default:
@@ -332,7 +364,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("websocket upgrade failed", "err", err)
 		return
 	}
-	c := &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), User: *user, tokenVersion: tv}
+	c := newClient(h, conn, *user, tv)
 	h.register(c)
 	go c.writePump()
 	go c.readPump()
@@ -393,7 +425,7 @@ func (h *Hub) unregister(c *Client) {
 	}
 	before := h.statusLocked(c.User.ID)
 	delete(h.clients, c)
-	close(c.send)
+	c.shutdown()
 	h.online[c.User.ID]--
 	offline := h.online[c.User.ID] <= 0
 	if offline {
@@ -972,12 +1004,12 @@ func (c *Client) writePump() {
 
 	for {
 		select {
-		case msg, ok := <-c.send:
+		case <-c.done:
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
+			_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		case msg := <-c.send:
+			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
