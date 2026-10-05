@@ -101,11 +101,45 @@ services:
     image: chrislusf/seaweedfs:4.48
     container_name: mnema-seaweedfs
     restart: unless-stopped
-    command: "server -s3 -s3.port=8333 -dir=/data"
+    environment:
+      # The S3 gateway only accepts these credentials (the same ones the app
+      # uses). Without an identity config SeaweedFS would allow anonymous
+      # access to every bucket from anywhere on the Docker network.
+      - S3_ACCESS_KEY=${S3_ACCESS_KEY:-mnema_admin}
+      - S3_SECRET_KEY=${S3_SECRET_KEY:-}
+    # Writes the S3 identity config from the environment, then starts the
+    # all-in-one server (master, volume, filer, S3 gateway) with it.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        case "$$S3_ACCESS_KEY$$S3_SECRET_KEY" in
+          *[!A-Za-z0-9._~+/=-]*)
+            echo "S3_ACCESS_KEY and S3_SECRET_KEY may only contain letters, digits and . _ ~ + / = -" >&2
+            exit 1 ;;
+        esac
+        if [ -z "$$S3_ACCESS_KEY" ] || [ "$${#S3_SECRET_KEY}" -lt 8 ]; then
+          echo "S3_ACCESS_KEY and S3_SECRET_KEY (at least 8 characters) must be set" >&2
+          exit 1
+        fi
+        umask 077
+        cat > /tmp/s3.json <<EOF
+        {
+          "identities": [
+            {
+              "name": "mnema",
+              "credentials": [{"accessKey": "$$S3_ACCESS_KEY", "secretKey": "$$S3_SECRET_KEY"}],
+              "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+            }
+          ]
+        }
+        EOF
+        exec weed server -s3 -s3.port=8333 -s3.config=/tmp/s3.json -dir=/data
     volumes:
       - seaweedfs-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null || exit 1"]
+      # Master and S3 gateway (the port the app talks to) must both answer.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null && wget -qO- http://127.0.0.1:8333/healthz >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 6
