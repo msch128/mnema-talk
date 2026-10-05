@@ -22,6 +22,23 @@ type Handler struct {
 	Objects ObjectDeleter
 	// Online resolves @here; nil means nobody is online.
 	Online OnlineSource
+	// Voice empties the voice room of a deleted channel. When nil, Online is
+	// used if it implements VoiceRooms (the WebSocket hub does).
+	Voice VoiceRooms
+}
+
+// VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
+type VoiceRooms interface {
+	// CloseVoiceChannel disconnects everyone from the channel's voice room.
+	CloseVoiceChannel(channelID uuid.UUID)
+}
+
+func (h *Handler) voiceRooms() VoiceRooms {
+	if h.Voice != nil {
+		return h.Voice
+	}
+	v, _ := h.Online.(VoiceRooms)
+	return v
 }
 
 // ObjectDeleter removes stored media objects (implemented by media.Store).
@@ -557,7 +574,7 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 // deleteChannel handles DELETE /api/admin/channels/{id}.
 //
 // @Summary Delete a channel
-// @Description Cascades to its messages and attachments. Requires role admin (403 otherwise).
+// @Description Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires role admin (403 otherwise).
 // @ID deleteChannel
 // @Tags Admin
 // @Produce json
@@ -580,6 +597,10 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	keys, err := DeleteChannel(r.Context(), h.DB, id)
 	if err != nil {
 		return err
+	}
+	// Nobody may stay connected to the voice room of a channel that is gone.
+	if v := h.voiceRooms(); v != nil {
+		v.CloseVoiceChannel(id)
 	}
 	h.deleteObjects(r.Context(), keys)
 	h.Events.Broadcast("channels_changed", nil)
