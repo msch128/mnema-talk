@@ -1,5 +1,6 @@
 // Helpers for reply previews (message.reply_to).
 import { t } from '../i18n'
+import { CODE_BLOCK_RE, INLINE_CODE_RE, SPOILER_RE, INLINE_FORMATS } from './markdown'
 
 export const REPLY_PREVIEW_LEN = 200
 
@@ -10,25 +11,21 @@ export function replySnippet(content, max = REPLY_PREVIEW_LEN) {
 }
 
 /**
- * Strips markdown markers so a reply preview reads as plain
- * text: **bold**, *em*, _em_, ~~del~~, `code` and code blocks keep their text,
- * ||spoilers|| become "Spoiler", "> " quote markers are dropped. Links stay.
+ * Strips the markdown that renderMarkdown renders so a reply preview reads as
+ * plain text: **bold**, *em*, _em_, ~~del~~, `code` and code blocks keep their
+ * text, ||spoilers|| become "Spoiler", "> " quote markers are dropped. Links
+ * stay. Anything renderMarkdown leaves alone (like __x__) stays as typed.
  */
 export function stripMarkdown(content) {
   let text = content || ''
   // Code first so markers inside code are kept verbatim.
   const code = []
   const stash = body => `\u0000${code.push(body) - 1}\u0000`
-  text = text.replace(/```(?:[a-zA-Z0-9_-]+\n)?([\s\S]*?)```/g, (_, body) => stash(body.trim()))
-  text = text.replace(/`([^`\n]+)`/g, (_, body) => stash(body))
+  text = text.replace(CODE_BLOCK_RE, (_, body) => stash(body.trim()))
+  text = text.replace(INLINE_CODE_RE, (_, body) => stash(body))
 
-  text = text.replace(/\|\|([\s\S]+?)\|\|/g, () => t('chat.spoiler'))
-  text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, '$1')
-  text = text.replace(/\*\*([^*\n]+)\*\*/g, '$1')
-  text = text.replace(/__([^_\n]+)__/g, '$1')
-  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1$2')
-  text = text.replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?])/g, '$1$2')
-  text = text.replace(/~~([^~\n]+)~~/g, '$1')
+  text = text.replace(SPOILER_RE, () => t('chat.spoiler'))
+  for (const [re, , plain] of INLINE_FORMATS) text = text.replace(re, plain)
   text = text.replace(/^>\s?/gm, '')
 
   // eslint-disable-next-line no-control-regex

@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { replySnippet, previewText, markPreviewEdited, markPreviewDeleted, REPLY_PREVIEW_LEN } from './replies'
+import { replySnippet, previewText, stripMarkdown, markPreviewEdited, markPreviewDeleted, REPLY_PREVIEW_LEN } from './replies'
+import { renderMarkdown } from './markdown'
+import { extractPreviewUrls } from './chatLogic'
 
 describe('reply previews', () => {
   it('truncates by code points like the server', () => {
@@ -41,5 +43,33 @@ describe('reply previews', () => {
     expect(roots[1].reply_to).toMatchObject({ deleted: true, content: '' })
     expect(thread[0].reply_to.deleted).toBe(true)
     expect(other.reply_to.deleted).toBeUndefined()
+  })
+})
+
+describe('plain text matches what is rendered', () => {
+  // The text a reader sees in the rendered message.
+  function renderedText(md) {
+    const el = document.createElement('div')
+    el.innerHTML = renderMarkdown(md)
+    return el.textContent
+  }
+
+  it.each([
+    '**bold** and *em* and _em_ and ~~gone~~',
+    '***both*** stays',
+    '__not markup__ stays as typed',
+    'snake_case_name and 2*3*4',
+    '`**code**` keeps its stars',
+    '```js\nconst a = 1\n```',
+    '> quoted',
+    'see https://example.com/a_b_c*'
+  ])('%s', md => {
+    expect(stripMarkdown(md)).toBe(renderedText(md))
+  })
+
+  it('previews only links that are rendered outside code and spoilers', () => {
+    expect(extractPreviewUrls('`https://a.example` and ||https://b.example|| and https://c.example')).toEqual(['https://c.example'])
+    expect(extractPreviewUrls('```\nhttps://a.example\n```')).toEqual([])
+    expect(renderMarkdown('https://c.example')).toContain('href="https://c.example"')
   })
 })
