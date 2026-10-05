@@ -64,10 +64,10 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [x] Join/leave, mute, deafen, push-to-talk, per-user volume
 - [x] Voice resume after a reload within 30 s
 - [x] Noise gate with a live meter that always shows the raw input level
-- [ ] SFU registers interceptors (NACK, RTCP reports, TWCC) and forwards PLI/FIR to the publisher
-- [ ] New screenshare viewers get a keyframe from the publisher immediately
-- [ ] Rejoin and late unregister never remove the new peer
-- [ ] SFU track IDs scoped per peer; rooms cannot be deleted during a join
+- [x] SFU registers interceptors (NACK, RTCP reports, TWCC) and forwards PLI/FIR to the publisher
+- [x] New screenshare viewers get a keyframe from the publisher immediately
+- [x] Rejoin and late unregister never remove the new peer
+- [x] SFU track IDs scoped per peer; rooms cannot be deleted during a join
 - [ ] Client join/leave race-free (no ghost in call, no leaked mic)
 - [ ] Voice re-established or visibly ended after a WebSocket reconnect; voice ends on logout
 - [ ] Push-to-talk ignores typing, releases on blur, listeners never leak

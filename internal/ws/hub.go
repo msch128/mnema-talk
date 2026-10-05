@@ -103,6 +103,10 @@ type Client struct {
 
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
+	// sfuPeer is this connection's own media peer. Another connection of the
+	// same user (reconnect, second tab) gets its own, and tearing this one
+	// down never touches the other.
+	sfuPeer *sfu.Peer
 }
 
 func (c *Client) currentVoice() *uuid.UUID {
@@ -114,6 +118,15 @@ func (c *Client) currentVoice() *uuid.UUID {
 func (c *Client) setVoice(ch *uuid.UUID) {
 	c.mu.Lock()
 	c.voiceCh = ch
+	if ch == nil {
+		c.sfuPeer = nil
+	}
+	c.mu.Unlock()
+}
+
+func (c *Client) setPeer(p *sfu.Peer) {
+	c.mu.Lock()
+	c.sfuPeer = p
 	c.mu.Unlock()
 }
 
@@ -233,10 +246,14 @@ func (h *Hub) unregister(c *Client) {
 		// The media connection is gone, but presence lingers for the grace
 		// period so a quick reconnect resumes the call seamlessly.
 		if h.SFU != nil {
-			h.SFU.RemovePeer(*ch, c.User.ID)
+			h.SFU.RemovePeer(*ch, c.peer())
 		}
 		c.setVoice(nil)
-		h.startGrace(c.User.ID, *ch)
+		// A reconnect may already be back in the room before the old socket
+		// unregisters; then the user never left and no grace timer runs.
+		if !h.userInVoice(c.User.ID, *ch, c) {
+			h.startGrace(c.User.ID, *ch)
+		}
 	}
 	h.mu.Lock()
 	if _, ok := h.clients[c]; !ok {
@@ -317,29 +334,48 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	if h.voice[ch.ID] == nil {
 		h.voice[ch.ID] = map[uuid.UUID]auth.User{}
 	}
+	// Already present through another connection (reconnect, second tab).
+	if _, present := h.voice[ch.ID][c.User.ID]; present {
+		rejoin = true
+	}
 	h.voice[ch.ID][c.User.ID] = c.User
 	h.mu.Unlock()
 	id := ch.ID
 	c.setVoice(&id)
 
 	if h.SFU != nil {
-		room := h.SFU.GetOrCreateRoom(ch.ID)
-		_, err := room.JoinPeer(c.User.ID,
+		_, peer, err := h.SFU.Join(ch.ID, c.User.ID,
 			func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) },
 			func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) })
 		if err != nil {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
+		c.setPeer(peer)
 	}
 	if !rejoin {
 		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": c.User})
 	}
 }
 
+// userInVoice reports whether another connection than except of userID is in chID's voice room.
+func (h *Hub) userInVoice(userID, chID uuid.UUID, except *Client) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for other := range h.clients {
+		if other == except || other.User.ID != userID {
+			continue
+		}
+		if cur := other.currentVoice(); cur != nil && *cur == chID {
+			return true
+		}
+	}
+	return false
+}
+
 // leaveVoice is an explicit leave: presence ends immediately.
 func (h *Hub) leaveVoice(c *Client, chID uuid.UUID) {
 	if h.SFU != nil {
-		h.SFU.RemovePeer(chID, c.User.ID)
+		h.SFU.RemovePeer(chID, c.peer())
 	}
 	h.takeGrace(c.User.ID)
 	c.setVoice(nil)
@@ -467,7 +503,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		var answer webrtc.SessionDescription
 		if err := json.Unmarshal(payload, &answer); err == nil {
 			if peer := c.peer(); peer != nil {
-				if err := peer.PC.SetRemoteDescription(answer); err != nil {
+				if err := peer.SetAnswer(answer); err != nil {
 					slog.Warn("sfu set remote description", "user", c.User.ID, "err", err)
 				}
 			}
@@ -485,17 +521,17 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	case "webrtc_request_keyframe":
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
-			h.SFU.GetOrCreateRoom(*cur).DispatchKeyframe(c.User.ID)
+			if room := h.SFU.Room(*cur); room != nil {
+				room.DispatchKeyframe(c.User.ID)
+			}
 		}
 	}
 }
 
 func (c *Client) peer() *sfu.Peer {
-	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil {
-		return nil
-	}
-	return c.hub.SFU.GetOrCreateRoom(*cur).GetPeer(c.User.ID)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.sfuPeer
 }
 
 func (c *Client) writePump() {
