@@ -82,6 +82,7 @@ mnema-talk/
 ├── .env.example             # Every config variable, placeholder values only
 ├── .gitleaks.toml           # Secret-scan allowlist (placeholders, test-only values)
 ├── SECURITY.md              # Vulnerability reporting + security model
+├── THIRD_PARTY_NOTICES.md   # Open-source software we use and ship, with licenses
 ├── AGENTS.md                # This file
 └── README.md                # Overview, quickstart, deployment
 ```
@@ -97,6 +98,7 @@ mnema-talk/
 5. **Configuration**: every new env variable is read in `internal/config`, documented in `.env.example` with a placeholder, and passed through in `docker-compose.yml` when needed.
 6. **Pure Go preferred**: keep CGO out of the build (`CGO_ENABLED=0`) so cross-compilation for Linux (Unraid/Docker) stays trivial.
 7. **Dependencies**: pin GitHub Actions to full commit SHAs; commit `go.sum` / `package-lock.json`; don't run `go mod tidy` in the Docker build.
+   New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.js`.
 8. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major). Use descriptive conventional commits:
    - `feat: add webrtc sfu audio track routing`
    - `fix: resolve websocket presence disconnect leak`

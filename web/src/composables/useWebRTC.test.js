@@ -5,6 +5,17 @@ import { useWebRTC } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
+// The AI filter worklets can't run in jsdom; tests hand in a fake node instead.
+const suppressor = vi.hoisted(() => ({ node: null, models: [] }))
+vi.mock('../lib/noiseSuppressor', () => ({
+  isNoiseSuppressionSupported: () => suppressor.node !== null,
+  preloadNoiseSuppressor: () => {},
+  createNoiseSuppressorNode: async (ctx, model) => {
+    suppressor.models.push(model)
+    return suppressor.node
+  }
+}))
+
 // --- Browser API stand-ins -------------------------------------------------
 
 function fakeTrack(kind = 'audio') {
@@ -36,7 +47,13 @@ class FakePC {
 }
 
 class FakeAudioContext {
+  static destinations = []
   constructor() { this.state = 'running'; this.currentTime = 0 }
+  createMediaStreamDestination() {
+    const node = { stream: fakeStream(), connect() {}, disconnect() {} }
+    FakeAudioContext.destinations.push(node)
+    return node
+  }
   createAnalyser() { return { fftSize: 256, connect() {}, getByteTimeDomainData() {} } }
   createMediaStreamSource() { return { connect() {} } }
   createBiquadFilter() { return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
@@ -47,6 +64,9 @@ class FakeAudioContext {
 let micRequests
 beforeEach(() => {
   setActivePinia(createPinia())
+  suppressor.node = null
+  suppressor.models = []
+  FakeAudioContext.destinations = []
   FakePC.instances = []
   micRequests = []
   vi.stubGlobal('RTCPeerConnection', FakePC)
@@ -217,5 +237,68 @@ describe('audio settings in a call', () => {
     expect(sender.replaceTrack).toHaveBeenCalledWith(newStream.getAudioTracks()[0])
     expect(oldStream.getTracks()[0].stop).toHaveBeenCalled()
     expect(toRaw(rtc.localAudioStream.value)).toBe(newStream)
+  })
+})
+
+describe('AI noise suppression', () => {
+  function fakeSuppressor() {
+    return { connect: vi.fn(), disconnect: vi.fn(), destroy: vi.fn() }
+  }
+  const lastConstraints = () => navigator.mediaDevices.getUserMedia.mock.calls.at(-1)[0].audio
+
+  async function joinWith(mode) {
+    const { rtc, voice } = setup()
+    voice.setNoiseMode(mode)
+    const join = rtc.joinVoiceChannel('ch-1')
+    const raw = await grantMic()
+    await join
+    return { rtc, voice, raw }
+  }
+
+  it('sends the filtered track and asks the browser for the unprocessed mic', async () => {
+    suppressor.node = fakeSuppressor()
+    const { voice, raw } = await joinWith('ai')
+
+    expect(suppressor.models).toEqual(['dfn3'])
+    expect(lastConstraints().noiseSuppression).toBe(false)
+    const processed = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
+    expect(FakePC.instances.at(-1).senders[0].track).toBe(processed)
+    expect(suppressor.node.connect).toHaveBeenCalled()
+
+    // Mute switches the sent track; the raw capture keeps feeding the model and meter.
+    voice.toggleMute()
+    expect(processed.enabled).toBe(false)
+    expect(raw.getAudioTracks()[0].enabled).toBe(true)
+  })
+
+  it('uses the light model in ai-lite mode', async () => {
+    suppressor.node = fakeSuppressor()
+    await joinWith('ai-lite')
+    expect(suppressor.models).toEqual(['gtcrn'])
+  })
+
+  it('stops the raw mic and destroys the filter on leave', async () => {
+    const node = suppressor.node = fakeSuppressor()
+    const { rtc, raw } = await joinWith('ai')
+
+    rtc.leaveVoiceChannel()
+    expect(raw.getAudioTracks()[0].stop).toHaveBeenCalled()
+    expect(node.destroy).toHaveBeenCalled()
+  })
+
+  it('falls back to the browser filter when the worklet is unavailable', async () => {
+    const { raw } = await joinWith('ai')
+
+    expect(lastConstraints().noiseSuppression).toBe(true)
+    expect(FakePC.instances.at(-1).senders[0].track).toBe(raw.getAudioTracks()[0])
+  })
+
+  it('off disables every filter', async () => {
+    suppressor.node = fakeSuppressor()
+    const { raw } = await joinWith('off')
+
+    expect(suppressor.models).toEqual([])
+    expect(lastConstraints().noiseSuppression).toBe(false)
+    expect(FakePC.instances.at(-1).senders[0].track).toBe(raw.getAudioTracks()[0])
   })
 })

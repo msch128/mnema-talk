@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Mic, Sparkles, HelpCircle, Radio } from '@lucide/vue'
-import { useVoiceStore } from '../stores/voice'
+import { useVoiceStore, NOISE_MODES } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
 import BaseDialog from './BaseDialog.vue'
@@ -268,9 +268,9 @@ async function toggleEcho() {
                   {{ $t(`audio.noiseHint_${voiceStore.noiseMode}`) }}
                 </p>
               </div>
-              <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-3 gap-1 p-1 rounded-lg bg-mnema-canvas border border-mnema-hairline">
+              <div role="radiogroup" aria-labelledby="noise-mode-label" class="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-lg bg-mnema-canvas border border-mnema-hairline">
                 <button
-                  v-for="mode in ['ai', 'browser', 'off']"
+                  v-for="mode in NOISE_MODES"
                   :key="mode"
                   type="button"
                   role="radio"

@@ -4,6 +4,7 @@ import { useChatStore } from '../stores/chat'
 import { summarizeStats } from '../lib/rtcStats'
 import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
+import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 
 // Module-level shared singletons across all components
 const localAudioStream = ref(null)
@@ -12,6 +13,15 @@ let audioContext = null
 let analyser = null
 // Always-enabled clone of the mic track that only feeds the level meter (see lib/micMetering).
 let meteringTrack = null
+// With AI noise suppression the captured mic stream only feeds the model;
+// localAudioStream is then the processed stream that is sent, gated and muted.
+let rawMicStream = null
+let suppressorNode = null
+
+// Noise mode -> model in lib/noiseSuppressor (null: no AI filter).
+function aiModel(noiseMode) {
+  return { ai: 'dfn3', 'ai-lite': 'gtcrn' }[noiseMode] ?? null
+}
 let speakingInterval = null
 let lastAboveThresholdTime = 0
 
@@ -274,16 +284,23 @@ export function useWebRTC() {
     }
   }
 
+  // The AI filter wants the unprocessed signal; without worklet support the
+  // browser's own suppression stands in for it.
+  function useBrowserNoiseSuppression() {
+    const mode = voiceStore.noiseMode
+    return mode === 'browser' || (aiModel(mode) !== null && !isNoiseSuppressionSupported())
+  }
+
   function getAudioConstraints() {
     const audioConstraints = {
       channelCount: 1,
       sampleRate: 48000,
       echoCancellation: voiceStore.echoCancellation,
-      noiseSuppression: voiceStore.noiseCancelling,
+      noiseSuppression: useBrowserNoiseSuppression(),
       autoGainControl: voiceStore.autoGainControl, // Crucial: false prevents boosting background voice
       googEchoCancellation: voiceStore.echoCancellation,
       googAutoGainControl: voiceStore.autoGainControl,
-      googNoiseSuppression: voiceStore.noiseCancelling,
+      googNoiseSuppression: useBrowserNoiseSuppression(),
       googHighpassFilter: true
     }
     if (voiceStore.selectedInputDeviceId) {
@@ -318,10 +335,21 @@ export function useWebRTC() {
       testAnalyser.fftSize = 256
       testAnalyser.smoothingTimeConstant = 0.2
 
-      const source = testAudioContext.createMediaStreamSource(testAudioStream)
-      const biquad = testAudioContext.createBiquadFilter()
+      const ctx = testAudioContext
+      let source = ctx.createMediaStreamSource(testAudioStream)
+      // Meter the filtered signal so the gate threshold calibrates like in a call.
+      const model = aiModel(voiceStore.noiseMode)
+      if (model) {
+        const node = await createNoiseSuppressorNode(ctx, model)
+        if (testAudioContext !== ctx) return
+        if (node) {
+          source.connect(node)
+          source = node
+        }
+      }
+      const biquad = ctx.createBiquadFilter()
       biquad.type = 'highpass'
-      biquad.frequency.setValueAtTime(85, testAudioContext.currentTime)
+      biquad.frequency.setValueAtTime(85, ctx.currentTime)
 
       source.connect(biquad)
       biquad.connect(testAnalyser)
@@ -376,16 +404,7 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
-    if (meteringTrack) {
-      meteringTrack.stop()
-      meteringTrack = null
-    }
-
-    if (audioContext) {
-      audioContext.close().catch(() => {})
-      audioContext = null
-    }
-    analyser = null
+    teardownMicPipeline()
     voiceStore.currentInputLevel = 0
   }
 
@@ -465,6 +484,8 @@ export function useWebRTC() {
     await loadIceServers()
     if (gen !== joinGeneration) return
 
+    const model = aiModel(voiceStore.noiseMode)
+    if (model) preloadNoiseSuppressor(model)
     let stream = null
     try {
       await refreshAudioDevices()
@@ -478,14 +499,16 @@ export function useWebRTC() {
       return
     }
 
-    localAudioStream.value = stream
-    voiceStore.localAudioStream = stream
+    const sendStream = stream ? await setupMicPipeline(stream) : null
+    if (gen !== joinGeneration) return
+
+    localAudioStream.value = sendStream
+    voiceStore.localAudioStream = sendStream
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
 
-    if (stream) {
-      await setupSpeakingDetection(stream)
-      if (gen !== joinGeneration) return
+    if (sendStream) {
+      startSpeakingDetection()
       setupPttListeners(voiceStore)
     }
   }
@@ -517,13 +540,96 @@ export function useWebRTC() {
       stream.getTracks().forEach(t => t.stop())
       return
     }
-    const track = stream.getAudioTracks()[0]
     const sender = pc?.getSenders().find(s => s.track?.kind === 'audio')
-    if (sender && track) await sender.replaceTrack(track).catch(() => {})
     const old = localAudioStream.value
     if (speakingInterval) {
       clearInterval(speakingInterval)
       speakingInterval = null
+    }
+    teardownMicPipeline()
+    old.getTracks().forEach(t => t.stop())
+    const sendStream = await setupMicPipeline(stream)
+    if (gen !== joinGeneration || !sendStream) return
+    const track = sendStream.getAudioTracks()[0]
+    track.enabled = !voiceStore.isMuted
+    localAudioStream.value = sendStream
+    voiceStore.localAudioStream = sendStream
+    if (sender && track) await sender.replaceTrack(track).catch(() => {})
+    startSpeakingDetection()
+  }
+
+  // Creates the audio context for a freshly captured mic stream and returns
+  // the stream to send. With an AI filter that is the model's output: the raw
+  // capture stays enabled and only feeds the model, so the meter (tapping the
+  // model output) keeps working while the gate or mute disables the sent
+  // track, and typing or clicks don't count as speaking. Otherwise the raw
+  // stream is sent and metered through an always-enabled clone (see
+  // lib/micMetering).
+  async function setupMicPipeline(stream) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext
+    let ctx
+    try {
+      ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
+    } catch (err) {
+      console.warn('AudioContext setup error:', err)
+      return stream
+    }
+    audioContext = ctx
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {})
+    }
+
+    let sendStream = stream
+    let meterSource = null
+    const model = aiModel(voiceStore.noiseMode)
+    if (model) {
+      const node = await createNoiseSuppressorNode(ctx, model)
+      // Torn down (left or settings changed again) while the model loaded.
+      if (audioContext !== ctx) {
+        stream.getTracks().forEach(t => t.stop())
+        return null
+      }
+      if (node) {
+        const destination = ctx.createMediaStreamDestination()
+        ctx.createMediaStreamSource(stream).connect(node)
+        node.connect(destination)
+        suppressorNode = node
+        rawMicStream = stream
+        sendStream = destination.stream
+        meterSource = node
+      }
+    }
+
+    try {
+      analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      analyser.smoothingTimeConstant = 0.2
+      if (!meterSource) {
+        meteringTrack = createMeteringTrack(stream)
+        meterSource = ctx.createMediaStreamSource(meteringTrack ? new MediaStream([meteringTrack]) : stream)
+      }
+      const biquad = ctx.createBiquadFilter()
+      biquad.type = 'highpass'
+      biquad.frequency.setValueAtTime(85, ctx.currentTime)
+      meterSource.connect(biquad)
+      biquad.connect(analyser)
+    } catch (err) {
+      console.warn('AudioContext speaking detector setup error:', err)
+    }
+    return sendStream
+  }
+
+  function teardownMicPipeline() {
+    if (suppressorNode) {
+      try {
+        suppressorNode.disconnect()
+        suppressorNode.destroy?.()
+      } catch { /* ignore */ }
+      suppressorNode = null
+    }
+    if (rawMicStream) {
+      rawMicStream.getTracks().forEach(t => t.stop())
+      rawMicStream = null
     }
     if (meteringTrack) {
       meteringTrack.stop()
@@ -533,103 +639,76 @@ export function useWebRTC() {
       audioContext.close().catch(() => {})
       audioContext = null
     }
-    old.getTracks().forEach(t => t.stop())
-    track.enabled = !voiceStore.isMuted
-    localAudioStream.value = stream
-    voiceStore.localAudioStream = stream
-    await setupSpeakingDetection(stream)
+    analyser = null
   }
 
-  async function setupSpeakingDetection(stream) {
+  function startSpeakingDetection() {
     if (speakingInterval) {
       clearInterval(speakingInterval)
       speakingInterval = null
     }
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext
-      audioContext = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume().catch(() => {})
+    if (!analyser) return
+
+    const buffer = new Uint8Array(analyser.fftSize)
+    let wasSpeaking = false
+
+    speakingInterval = setInterval(() => {
+      if (!analyser) return
+
+      const level = calculateRMSLevel(analyser, buffer)
+
+      // PERFORMANCE FIX: Only update reactive Pinia store if settings modal is open
+      if (voiceStore.showAudioSettings) {
+        voiceStore.currentInputLevel = level
       }
 
-      analyser = audioContext.createAnalyser()
-      analyser.fftSize = 256
-      analyser.smoothingTimeConstant = 0.2
-
-      meteringTrack = createMeteringTrack(stream)
-      const source = audioContext.createMediaStreamSource(
-        meteringTrack ? new MediaStream([meteringTrack]) : stream
-      )
-      const biquad = audioContext.createBiquadFilter()
-      biquad.type = 'highpass'
-      biquad.frequency.setValueAtTime(85, audioContext.currentTime)
-
-      source.connect(biquad)
-      biquad.connect(analyser)
-
-      const buffer = new Uint8Array(analyser.fftSize)
-      let wasSpeaking = false
-
-      speakingInterval = setInterval(() => {
-        if (!analyser) return
-
-        const level = calculateRMSLevel(analyser, buffer)
-
-        // PERFORMANCE FIX: Only update reactive Pinia store if settings modal is open
-        if (voiceStore.showAudioSettings) {
-          voiceStore.currentInputLevel = level
+      if (voiceStore.isMuted) {
+        if (wasSpeaking) {
+          wasSpeaking = false
+          chatStore.sendWSEvent('voice_speaking', { active: false })
         }
-
-        if (voiceStore.isMuted) {
-          if (wasSpeaking) {
-            wasSpeaking = false
-            chatStore.sendWSEvent('voice_speaking', { active: false })
-          }
-          if (localAudioStream.value) {
-            const track = localAudioStream.value.getAudioTracks()[0]
-            if (track && track.enabled) track.enabled = false
-          }
-          return
-        }
-
-        // Noise Gate & Sensitivity Evaluation with Hysteresis
-        // Every branch below assigns it, so no initial value is needed.
-        let shouldTransmit
-
-        if (voiceStore.inputMode === 'ptt') {
-          shouldTransmit = voiceStore.isPttPressed
-        } else {
-          // Voice Activity with Sensitivity Threshold
-          const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
-
-          if (level >= threshold) {
-            shouldTransmit = true
-            lastAboveThresholdTime = Date.now()
-          } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
-            // Hangover hold time prevents cutting off trailing words
-            shouldTransmit = true
-          } else {
-            shouldTransmit = false
-          }
-        }
-
-        // Physical audio track gate (muting track when below threshold to eliminate background bleed)
         if (localAudioStream.value) {
           const track = localAudioStream.value.getAudioTracks()[0]
-          if (track && track.enabled !== shouldTransmit) {
-            track.enabled = shouldTransmit
-          }
+          if (track && track.enabled) track.enabled = false
         }
+        return
+      }
 
-        // Animated speaking halo state
-        if (shouldTransmit !== wasSpeaking) {
-          wasSpeaking = shouldTransmit
-          chatStore.sendWSEvent('voice_speaking', { active: shouldTransmit })
+      // Noise Gate & Sensitivity Evaluation with Hysteresis
+      // Every branch below assigns it, so no initial value is needed.
+      let shouldTransmit
+
+      if (voiceStore.inputMode === 'ptt') {
+        shouldTransmit = voiceStore.isPttPressed
+      } else {
+        // Voice Activity with Sensitivity Threshold
+        const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
+
+        if (level >= threshold) {
+          shouldTransmit = true
+          lastAboveThresholdTime = Date.now()
+        } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
+          // Hangover hold time prevents cutting off trailing words
+          shouldTransmit = true
+        } else {
+          shouldTransmit = false
         }
-      }, 60)
-    } catch (err) {
-      console.warn('AudioContext speaking detector setup error:', err)
-    }
+      }
+
+      // Physical audio track gate (muting track when below threshold to eliminate background bleed)
+      if (localAudioStream.value) {
+        const track = localAudioStream.value.getAudioTracks()[0]
+        if (track && track.enabled !== shouldTransmit) {
+          track.enabled = shouldTransmit
+        }
+      }
+
+      // Animated speaking halo state
+      if (shouldTransmit !== wasSpeaking) {
+        wasSpeaking = shouldTransmit
+        chatStore.sendWSEvent('voice_speaking', { active: shouldTransmit })
+      }
+    }, 60)
   }
 
   async function startScreenShare() {

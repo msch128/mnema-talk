@@ -253,8 +253,6 @@
     "agcBadge": "Wichtig bei zwei Personen",
     "agcHint": "Empfohlen: aus. Ist sie an, hebt das Mikrofon leise Geräusche in Sprechpausen an, und eine Stimme im Hintergrund wird laut gesendet.",
     "noise": "Rauschunterdrückung",
-    "noiseBadge": "Browser",
-    "noiseHint": "Die Rauschunterdrückung deines Browsers dämpft gleichmäßige Geräusche wie Lüfter oder Brummen.",
     "echo": "Echounterdrückung",
     "echoHint": "Verhindert Rückkopplung und Echo, wenn Ton aus den Lautsprechern wieder ins Mikrofon gelangt.",
     "devices": "Geräte",
@@ -262,7 +260,15 @@
     "defaultDevice": "Standardmikrofon des Systems",
     "deviceFallback": "Mikrofon {id} …",
     "liveNote": "Änderungen gelten sofort",
-    "done": "Fertig"
+    "done": "Fertig",
+    "noiseMode_ai": "KI-Filter",
+    "noiseMode_ai-lite": "KI sparsam",
+    "noiseMode_browser": "Browser",
+    "noiseMode_off": "Aus",
+    "noiseHint_ai": "DeepFilterNet3 filtert Tastatur, Klicks, Lüfter und Hintergrundlärm in voller Klangqualität heraus. Läuft komplett in deinem Browser, dein Ton verlässt dein Gerät dafür nicht. Einmaliger Download von etwa 10 MB.",
+    "noiseHint_ai-lite": "Ein kleines KI-Modell (GTCRN) für schwächere Rechner. Filtert ähnlich gut, die Stimme klingt aber etwas dumpfer.",
+    "noiseHint_browser": "Die Rauschunterdrückung deines Browsers dämpft gleichmäßige Geräusche wie Lüfter oder Brummen. Spart Rechenleistung.",
+    "noiseHint_off": "Kein Filter. Für Studiomikrofone oder wenn du Musik überträgst."
   },
   "stats": {
     "title": "Verbindungsstatus",
@@ -310,7 +316,8 @@
       "all": "Gesamtübersicht",
       "operator": "Betreiber / Verantwortlicher",
       "privacy": "Datenschutz (DSGVO)",
-      "terms": "Nutzungsbedingungen"
+      "terms": "Nutzungsbedingungen",
+      "oss": "Open Source"
     },
     "operator": {
       "heading": "1. Betreiber & Verantwortlicher",
@@ -381,7 +388,8 @@
       "rights1After": ".",
       "rights2Before": "Außerdem können Sie einer Verarbeitung auf Grundlage berechtigter Interessen widersprechen (Art. 21 DSGVO) und eine erteilte Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen (Art. 7 Abs. 3 DSGVO). Sie haben zudem das Recht, sich bei einer ",
       "rightsComplain": "Datenschutzaufsichtsbehörde zu beschweren",
-      "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers."
+      "rights2After": " (Art. 77 DSGVO), insbesondere in dem Land Ihres Wohnorts oder des Wohnsitzes des Betreibers.",
+      "noiseFilter": "Die KI-Rauschunterdrückung (DeepFilterNet3 bzw. GTCRN) läuft vollständig in Ihrem Browser. Ihr Mikrofonsignal wird dafür an keinen Drittanbieter übertragen; Modell und Programmcode kommen von diesem Server."
     },
     "cookies": {
       "heading": "3. Cookies & lokaler Speicher",
@@ -400,8 +408,24 @@
     },
     "oss": {
       "heading": "5. Open-Source-Hinweise",
-      "intro": "Mnema Talk baut auf bewährter freier Software auf.",
-      "openSite": "{name} öffnen"
+      "intro": "Mnema Talk ist selbst freie Software (GNU AGPL-3.0) und baut auf freier Software auf. Hier steht alles, was wir verwenden und an dich ausliefern, mit Lizenz.",
+      "openSite": "{name} öffnen",
+      "groups": {
+        "browser": "In der Web-App (läuft in deinem Browser)",
+        "noise": "KI-Rauschunterdrückung (läuft in deinem Browser)",
+        "server": "Im Server-Programm",
+        "services": "Mitgelieferte Dienste (Docker)"
+      },
+      "notes": {
+        "generated": "Nur das daraus erzeugte CSS wird ausgeliefert.",
+        "dfn": "Modell und Signalverarbeitung (libDF) von Hendrik Schröter.",
+        "dfnBuild": "WebAssembly-Build und AudioWorklet für DeepFilterNet3.",
+        "crates": "Rust-Bibliotheken im DeepFilterNet-WASM, u. a. tract, ndarray, rustfft.",
+        "image": "Basis der Docker-Images von App und Datenbank.",
+        "turn": "Optional, als TURN-Server für Verbindungen hinter strikten Firewalls."
+      },
+      "fullListBefore": "Die vollständige Liste mit allen Bibliotheken, Versionen und Lizenztexten steht in ",
+      "fullListAfter": " im Quellcode."
     },
     "footer": "© {year} {name} · Alle Rechte vorbehalten"
   },
@@ -413,7 +437,7 @@
     "ping": "Ping: {ms} ms",
     "noiseOn": "Rauschfilter an",
     "noiseOff": "Filter aus",
-    "noiseOnTip": "Rauschunterdrückung des Browsers ist an",
+    "noiseOnTip": "Rauschunterdrückung ist an",
     "noiseOffTip": "Rauschunterdrückung ist aus",
     "noiseToggleTip": "Rauschunterdrückung umschalten",
     "chatShown": "Chat aktiv",

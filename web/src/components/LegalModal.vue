@@ -3,10 +3,11 @@ import { ref, computed, onMounted } from 'vue'
 import { ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { t } from '../i18n'
+import { THIRD_PARTY, NOTICES_FILE, NOTICES_URL } from '../lib/thirdParty'
 
 const emit = defineEmits(['close'])
 
-const activeTab = ref('all') // 'all', 'privacy', 'terms', 'operator'
+const activeTab = ref('all') // 'all', 'operator', 'privacy', 'terms', 'oss'
 
 // Raw values from the server; fallbacks are translated at render time.
 const operatorRaw = ref({ name: '', email: '', country: '', status: '' })
@@ -21,7 +22,7 @@ const sessionExpiryDays = ref(30)
 const stunServers = ref([])
 const legalVersion = ref('1.3')
 
-const TABS = ['all', 'operator', 'privacy', 'terms']
+const TABS = ['all', 'operator', 'privacy', 'terms', 'oss']
 
 onMounted(async () => {
   try {
@@ -44,15 +45,6 @@ onMounted(async () => {
   }
 })
 
-const OSS_LIBS = [
-  { name: 'Go (Golang)', license: 'BSD-3-Clause', url: 'https://go.dev' },
-  { name: 'Pion WebRTC', license: 'MIT', url: 'https://pion.ly' },
-  { name: 'Vue 3', license: 'MIT', url: 'https://vuejs.org' },
-  { name: 'Tailwind CSS', license: 'MIT', url: 'https://tailwindcss.com' },
-  { name: 'Lucide Icons', license: 'ISC', url: 'https://lucide.dev' },
-  { name: 'SeaweedFS', license: 'Apache-2.0', url: 'https://github.com/seaweedfs/seaweedfs' },
-  { name: 'PostgreSQL 17', license: 'PostgreSQL License', url: 'https://www.postgresql.org' }
-]
 </script>
 
 <template>
@@ -141,6 +133,7 @@ const OSS_LIBS = [
           <p class="text-xs">
             {{ $t('legal.privacy.voiceBefore') }}<strong class="text-mnema-text">{{ $t('legal.privacy.voiceSfu') }}</strong>{{ $t('legal.privacy.voiceMid') }}<strong class="text-mnema-text">{{ $t('legal.privacy.voiceNoP2p') }}</strong>{{ $t('legal.privacy.voiceAfter1') }}<strong class="text-mnema-text">{{ $t('legal.privacy.voiceNoRecord') }}</strong>{{ $t('legal.privacy.voiceAfter2') }}
           </p>
+          <p class="text-xs">{{ $t('legal.privacy.noiseFilter') }}</p>
           <p v-if="stunServers.length" class="text-xs">
             <strong class="text-mnema-text">{{ $t('legal.privacy.stunTitle') }}</strong>{{ $t('legal.privacy.stunBefore') }}<span class="font-mono text-mnema-text">{{ stunServers.join(', ') }}</span>{{ $t('legal.privacy.stunAfter') }}
           </p>
@@ -222,33 +215,43 @@ const OSS_LIBS = [
       </section>
 
       <!-- 5. Open-source credits -->
-      <section v-if="activeTab === 'all'" class="space-y-3 border-t border-mnema-hairline pt-4">
+      <section v-if="activeTab === 'all' || activeTab === 'oss'" class="space-y-4 border-t border-mnema-hairline pt-4">
         <div class="flex items-center gap-2 text-mnema-text font-semibold text-base">
           <Code class="w-4 h-4 text-mnema-accent" />
           <h3>{{ $t('legal.oss.heading') }}</h3>
         </div>
         <p class="text-xs">{{ $t('legal.oss.intro') }}</p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div
-            v-for="lib in OSS_LIBS"
-            :key="lib.name"
-            class="flex items-center justify-between p-2 rounded-lg bg-mnema-surface border border-mnema-hairline"
-          >
-            <div class="flex items-center gap-1.5 min-w-0">
-              <span class="font-medium text-mnema-text truncate">{{ lib.name }}</span>
-              <span class="text-xs text-mnema-tertiary font-mono">({{ lib.license }})</span>
-            </div>
-            <a
-              :href="lib.url"
-              target="_blank"
-              rel="noopener"
-              v-tooltip="$t('legal.oss.openSite', { name: lib.name })"
-              class="text-mnema-tertiary hover:text-mnema-accent transition flex-shrink-0"
+        <div v-for="group in THIRD_PARTY" :key="group.group" class="space-y-2">
+          <h4 class="font-semibold text-mnema-text text-sm">{{ $t(`legal.oss.groups.${group.group}`) }}</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div
+              v-for="lib in group.items"
+              :key="lib.name"
+              class="flex items-start justify-between gap-2 p-2 rounded-lg bg-mnema-surface border border-mnema-hairline"
             >
-              <ExternalLink class="w-4 h-4" />
-            </a>
+              <div class="min-w-0">
+                <div class="flex items-baseline gap-1.5 min-w-0">
+                  <span class="font-medium text-mnema-text truncate">{{ lib.name }}</span>
+                  <span class="text-xs text-mnema-tertiary font-mono truncate">({{ lib.license }})</span>
+                </div>
+                <p v-if="lib.note" class="text-mnema-tertiary">{{ $t(`legal.oss.notes.${lib.note}`) }}</p>
+              </div>
+              <a
+                :href="lib.url"
+                target="_blank"
+                rel="noopener"
+                v-tooltip="$t('legal.oss.openSite', { name: lib.name })"
+                :aria-label="$t('legal.oss.openSite', { name: lib.name })"
+                class="text-mnema-tertiary hover:text-mnema-accent transition flex-shrink-0"
+              >
+                <ExternalLink class="w-4 h-4" />
+              </a>
+            </div>
           </div>
         </div>
+        <p class="text-xs">
+          {{ $t('legal.oss.fullListBefore') }}<a :href="NOTICES_URL" target="_blank" rel="noopener" class="text-mnema-accent hover:underline">{{ NOTICES_FILE }}</a>{{ $t('legal.oss.fullListAfter') }}
+        </p>
       </section>
     </div>
 
