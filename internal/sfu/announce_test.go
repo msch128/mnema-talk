@@ -2,6 +2,7 @@ package sfu
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -46,9 +47,101 @@ func TestOffersEveryAnnouncedAddress(t *testing.T) {
 	}
 }
 
+// The rules must be what Pion built from the deprecated
+// SetNAT1To1IPs(ips, ICECandidateTypeHost): host candidates that replace the
+// local address, one catch-all rule over all external addresses, plus a
+// pinned rule per "external/local" entry.
+func TestAnnounceRewriteRules(t *testing.T) {
+	host := func(external []string, local string) webrtc.ICEAddressRewriteRule {
+		return webrtc.ICEAddressRewriteRule{
+			External:        external,
+			Local:           local,
+			AsCandidateType: webrtc.ICECandidateTypeHost,
+			Mode:            webrtc.ICEAddressRewriteReplace,
+		}
+	}
+	cases := map[string]struct {
+		ips  []string
+		want []webrtc.ICEAddressRewriteRule
+	}{
+		"none":   {nil, []webrtc.ICEAddressRewriteRule{}},
+		"single": {[]string{"203.0.113.7"}, []webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7"}, "")}},
+		"public and LAN": {
+			[]string{"203.0.113.7", "192.168.0.212"},
+			[]webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7", "192.168.0.212"}, "")},
+		},
+		"pinned to a local address": {
+			[]string{"203.0.113.7/10.0.0.2", "192.168.0.212"},
+			[]webrtc.ICEAddressRewriteRule{
+				host([]string{"203.0.113.7"}, "10.0.0.2"),
+				host([]string{"203.0.113.7", "192.168.0.212"}, ""),
+			},
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			got := announceRewriteRules(tc.ips)
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("got  %+v\nwant %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+// The rewrite rules must offer exactly the candidates the deprecated
+// SetNAT1To1IPs(ips, ICECandidateTypeHost) offered: the announced addresses
+// as host candidates and none of the container's own addresses.
+func TestAnnounceRulesMatchLegacyNAT1To1(t *testing.T) {
+	ips := []string{"203.0.113.7", "192.168.0.212"}
+
+	var legacy webrtc.SettingEngine
+	//lint:ignore SA1019 the deprecated call is the reference behaviour under test.
+	legacy.SetNAT1To1IPs(ips, webrtc.ICECandidateTypeHost)
+	var rewrite webrtc.SettingEngine
+	if err := rewrite.SetICEAddressRewriteRules(announceRewriteRules(ips)...); err != nil {
+		t.Fatal(err)
+	}
+
+	want := offerCandidates(t, gatherSDP(t, webrtc.NewAPI(webrtc.WithSettingEngine(legacy))))
+	got := offerCandidates(t, gatherSDP(t, webrtc.NewAPI(webrtc.WithSettingEngine(rewrite))))
+	if !slices.Equal(got, want) {
+		t.Fatalf("candidates differ from SetNAT1To1IPs:\ngot  %v\nwant %v", got, want)
+	}
+	if len(got) == 0 {
+		t.Fatal("no candidates gathered")
+	}
+	for _, c := range got {
+		if !strings.HasSuffix(c, " typ host") || !slices.ContainsFunc(ips, func(ip string) bool { return strings.Contains(c, " "+ip+" ") }) {
+			t.Errorf("candidate is not an announced host address: %s", c)
+		}
+	}
+}
+
+// offerCandidates lists the SDP's candidates as sorted "protocol address typ
+// type" strings, leaving out foundation, priority and the random port.
+func offerCandidates(t *testing.T, sdp string) []string {
+	t.Helper()
+	var out []string
+	for line := range strings.Lines(sdp) {
+		f := strings.Fields(strings.TrimPrefix(strings.TrimSpace(line), "a=candidate:"))
+		if !strings.HasPrefix(line, "a=candidate:") || len(f) < 8 {
+			continue
+		}
+		// foundation component protocol priority address port "typ" type ...
+		out = append(out, strings.Join([]string{f[1], strings.ToLower(f[2]), f[4], f[6], f[7]}, " "))
+	}
+	slices.Sort(out)
+	return out
+}
+
 func gatherOffer(t *testing.T, s *SFU) string {
 	t.Helper()
-	pc, err := s.currentAPI().NewPeerConnection(webrtc.Configuration{})
+	return gatherSDP(t, s.currentAPI())
+}
+
+func gatherSDP(t *testing.T, api *webrtc.API) string {
+	t.Helper()
+	pc, err := api.NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		t.Fatal(err)
 	}
