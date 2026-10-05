@@ -522,3 +522,25 @@ describe('who watches a screen share', () => {
     expect(voice.viewersOf('anna')).toEqual(['ben'])
   })
 })
+
+describe('hide participants without video', () => {
+  it('is off by default, toggles and is remembered per browser', () => {
+    const voice = useVoiceStore()
+    expect(voice.hideNoVideo).toBe(false)
+    voice.toggleHideNoVideo()
+    expect(voice.hideNoVideo).toBe(true)
+    setActivePinia(createPinia())
+    expect(useVoiceStore().hideNoVideo).toBe(true)
+    useVoiceStore().setHideNoVideo(false)
+    setActivePinia(createPinia())
+    expect(useVoiceStore().hideNoVideo).toBe(false)
+  })
+
+  it('treats a broken stored value as off', () => {
+    localStorage.setItem('mnema_hide_no_video', '{oops')
+    expect(useVoiceStore().hideNoVideo).toBe(false)
+    setActivePinia(createPinia())
+    localStorage.setItem('mnema_hide_no_video', '"yes"')
+    expect(useVoiceStore().hideNoVideo).toBe(false)
+  })
+})

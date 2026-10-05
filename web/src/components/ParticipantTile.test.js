@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { setLocale } from '../i18n'
@@ -76,5 +76,51 @@ describe('ParticipantTile status line', () => {
 
   it('shows the same status line when silent', () => {
     expect(tile({ speaking: false }).find('[data-tile-status]').text()).toMatch(/\d/)
+  })
+})
+
+describe('ParticipantTile double-click', () => {
+  it('a camera: the first click focuses at once, the second leaves it to the dblclick (full screen)', async () => {
+    const cam = tile({ stream: new MediaStream(), cameraFocusable: true })
+    await cam.trigger('click', { detail: 1 })
+    await cam.trigger('click', { detail: 2 })
+    await cam.trigger('dblclick')
+    expect(cam.emitted('focus-camera')).toEqual([['a']])
+    expect(cam.emitted('fullscreen-camera')).toEqual([['a']])
+  })
+
+  it('keyboard activation (no click count) still focuses', async () => {
+    const cam = tile({ stream: new MediaStream(), cameraFocusable: true })
+    await cam.trigger('keydown', { key: 'Enter' })
+    expect(cam.emitted('focus-camera')).toEqual([['a']])
+  })
+
+  it('stops the dblclick so the Talk area does not handle it again', async () => {
+    const outer = vi.fn()
+    const w = mount({
+      components: { ParticipantTile },
+      template: '<div @dblclick="outer"><ParticipantTile :user="user" :stream="stream" camera-focusable /></div>',
+      data: () => ({ user, stream: new MediaStream() }),
+      methods: { outer }
+    })
+    await w.get('[data-participant-tile]').trigger('dblclick')
+    expect(outer).not.toHaveBeenCalled()
+  })
+
+  it('an avatar or a button on the tile does not go full screen', async () => {
+    const avatar = tile({ cameraFocusable: true })
+    await avatar.trigger('dblclick')
+    expect(avatar.emitted('fullscreen-camera')).toBeUndefined()
+
+    const cam = tile({ stream: new MediaStream(), cameraFocusable: true, cameraAvailable: true })
+    await cam.get('button').trigger('dblclick')
+    expect(cam.emitted('fullscreen-camera')).toBeUndefined()
+  })
+
+  it('a fill tile is 16:9 without a fixed height', () => {
+    const w = tile({ fill: true })
+    expect(w.classes()).toContain('aspect-video')
+    expect(w.classes()).not.toContain('h-52')
+    expect(w.attributes('data-user-id')).toBe('a')
   })
 })

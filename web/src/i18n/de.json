@@ -621,7 +621,12 @@
       "one": "{count} Zuschauer",
       "other": "{count} Zuschauer"
     },
-    "viewersNone": "Noch schaut niemand zu"
+    "viewersNone": "Noch schaut niemand zu",
+    "exitFullscreen": "Vollbild beenden",
+    "hideNoVideo": "Teilnehmer ohne Video ausblenden",
+    "noVideoTitle": "Gerade hat niemand Video an",
+    "noVideoHint": "Teilnehmer ohne Kamera oder Bildschirmübertragung sind ausgeblendet.",
+    "showAllParticipants": "Alle Teilnehmer zeigen"
   },
   "admin": {
     "title": "Speicher & Administration",

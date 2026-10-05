@@ -35,13 +35,16 @@ const props = defineProps({
   isWatching: { type: Boolean, default: false },
   isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera', 'focus-camera', 'watch-stream', 'stop-watching', 'menu'])
+const emit = defineEmits(['open-profile', 'toggle-camera', 'focus-camera', 'fullscreen-camera', 'watch-stream', 'stop-watching', 'menu'])
 
 const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
 const name = computed(() => props.user.display_name || props.user.username)
 
-function handleTileClick() {
+function handleTileClick(e) {
   if (focusable.value) {
+    // The second click of a double-click: the dblclick (fullscreen) decides.
+    // The first one already acted, without waiting to tell them apart.
+    if (e?.detail >= 2) return
     emit('focus-camera', props.user.id)
     return
   }
@@ -50,6 +53,13 @@ function handleTileClick() {
     return
   }
   emit('open-profile', props.user)
+}
+
+// A double-click on a camera: on the stage and full screen.
+function onDblclick(e) {
+  if (!props.stream || !focusable.value || e.target?.closest?.('button')) return
+  e.stopPropagation()
+  emit('fullscreen-camera', props.user.id)
 }
 
 const videoEl = ref(null)
@@ -65,9 +75,11 @@ watch(() => props.stream, (stream) => {
     role="button"
     tabindex="0"
     data-participant-tile
+    :data-user-id="user.id"
     :aria-label="focusable ? (cameraFocused ? $t('talk.unfocusCamera') : $t('talk.focusCamera', { name })) : $t('profile.open', { name })"
     :aria-pressed="focusable ? (cameraFocused ? 'true' : 'false') : undefined"
     @click="handleTileClick"
+    @dblclick="onDblclick"
     @contextmenu.prevent="emit('menu', $event)"
     @keydown.f10.shift.self.prevent="emit('menu', $event)"
     @keydown.context-menu.self.prevent="emit('menu', $event)"

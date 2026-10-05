@@ -621,7 +621,12 @@
       "one": "{count} viewer",
       "other": "{count} viewers"
     },
-    "viewersNone": "Nobody is watching yet"
+    "viewersNone": "Nobody is watching yet",
+    "exitFullscreen": "Exit full screen",
+    "hideNoVideo": "Hide participants without video",
+    "noVideoTitle": "Nobody has video on right now",
+    "noVideoHint": "Participants without a camera or screen share are hidden.",
+    "showAllParticipants": "Show all participants"
   },
   "admin": {
     "title": "Storage & administration",

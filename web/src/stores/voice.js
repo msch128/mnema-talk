@@ -12,6 +12,8 @@ const USER_MUTED_KEY = 'mnema_user_muted'
 // Cameras of others are on by default; what I opted out of is remembered.
 const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
 const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
+// "Hide participants without video" in the Talk view (per browser).
+const HIDE_NO_VIDEO_KEY = 'mnema_hide_no_video'
 export const USER_VOLUME_MIN = 0
 export const USER_VOLUME_MAX = 200
 export const USER_VOLUME_DEFAULT = 100
@@ -300,6 +302,18 @@ export const useVoiceStore = defineStore('voice', () => {
     writeJson(ALL_CAMERAS_OFF_KEY, { off: !!off })
     if (off) userVideoStreams.value = {}
     emitSubscription({ kind: 'camera', all: true, on: !off })
+  }
+
+  // Only tiles with a camera or a screen share in the Talk view.
+  const hideNoVideo = ref(readJson(HIDE_NO_VIDEO_KEY).on === true)
+
+  function setHideNoVideo(on) {
+    hideNoVideo.value = !!on
+    writeJson(HIDE_NO_VIDEO_KEY, { on: !!on })
+  }
+
+  function toggleHideNoVideo() {
+    setHideNoVideo(!hideNoVideo.value)
   }
 
   // Sends every stored choice; right after joining and after a reconnect.
@@ -696,6 +710,9 @@ export const useVoiceStore = defineStore('voice', () => {
     setCameraHidden,
     toggleCameraHidden,
     setAllCamerasOff,
+    hideNoVideo,
+    setHideNoVideo,
+    toggleHideNoVideo,
     resendSubscriptions,
     watchScreen,
     unwatchScreen,

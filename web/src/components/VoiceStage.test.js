@@ -34,8 +34,12 @@ function seed() {
   return { chat, voice }
 }
 
+// Unmounted after each test: a mounted stage listens on the document (F key).
+let mounted = []
 function mountStage(props = {}) {
-  return mount(VoiceStage, { props, attachTo: document.body })
+  const w = mount(VoiceStage, { props, attachTo: document.body })
+  mounted.push(w)
+  return w
 }
 
 beforeEach(() => {
@@ -49,6 +53,10 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ status: 200, ok: true, json: () => Promise.resolve([]) })))
 })
 afterEach(() => {
+  for (const w of mounted) {
+    try { w.unmount() } catch { /* already unmounted */ }
+  }
+  mounted = []
   vi.unstubAllGlobals()
   document.body.innerHTML = ''
 })
@@ -565,6 +573,293 @@ describe('VoiceStage grid', () => {
     expect(tile.element.style.width).toBe('')
     expect(tile.classes()).toContain('w-56')
     expect(tile.classes()).toContain('aspect-video')
+  })
+})
+
+describe('VoiceStage full screen', () => {
+  let fsEl
+  let requestFullscreen
+  let exitFullscreen
+  beforeEach(() => {
+    fsEl = null
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => fsEl })
+    requestFullscreen = vi.fn(function () {
+      fsEl = this
+      document.dispatchEvent(new Event('fullscreenchange'))
+      return Promise.resolve()
+    })
+    exitFullscreen = vi.fn(() => {
+      fsEl = null
+      document.dispatchEvent(new Event('fullscreenchange'))
+      return Promise.resolve()
+    })
+    HTMLElement.prototype.requestFullscreen = requestFullscreen
+    document.exitFullscreen = exitFullscreen
+  })
+  afterEach(() => {
+    delete HTMLElement.prototype.requestFullscreen
+    delete document.exitFullscreen
+    delete document.fullscreenElement
+  })
+
+  function withCameras() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.channelUsers = { v1: {
+      a: { id: 'a', username: 'alice', display_name: 'Alice' },
+      b: { id: 'b', username: 'bob', display_name: 'Bob' }
+    } }
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', camera: true })
+    voice.setUserVideoStream('a', new MediaStream())
+    return voice
+  }
+  const stageEl = w => w.find('[data-testid="stage"]')
+  const tileOf = (w, id) => w.find(`[data-participant-tile][data-user-id="${id}"]`)
+  const press = (key, init = {}, target = document.body) => {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))
+    return flushPromises()
+  }
+
+  it('the button and a double-click on the stage toggle full screen', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const button = w.get('[data-testid="stage-fullscreen"]')
+    expect(button.attributes('aria-pressed')).toBe('false')
+    await button.trigger('click')
+    await flushPromises()
+    expect(fsEl).toBe(stageEl(w).element)
+    expect(button.attributes('aria-pressed')).toBe('true')
+    expect(button.attributes('aria-label')).toBe('Exit full screen')
+
+    await stageEl(w).find('video').trigger('dblclick')
+    await flushPromises()
+    expect(fsEl).toBe(null)
+    await stageEl(w).find('video').trigger('dblclick')
+    await flushPromises()
+    expect(fsEl).toBe(stageEl(w).element)
+  })
+
+  it('a double-click on a stage button does not toggle full screen', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await w.get('[data-testid="stage-unfocus-camera"]').trigger('dblclick')
+    await flushPromises()
+    expect(requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('a double-click on a camera tile puts it on the stage in full screen', async () => {
+    withCameras()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    // The browser's order: click, click (detail 2), dblclick.
+    await tileOf(w, 'a').trigger('click', { detail: 1 })
+    expect(stageEl(w).attributes('data-stage-source')).toBe('camera:a')
+    // The tiles moved under the stage: the rest lands on the stage.
+    await stageEl(w).find('video').trigger('click', { detail: 2 })
+    await stageEl(w).find('video').trigger('dblclick')
+    await flushPromises()
+    expect(stageEl(w).attributes('data-stage-source')).toBe('camera:a')
+    expect(fsEl).toBe(stageEl(w).element)
+  })
+
+  it('a double-click on a camera already on the stage keeps it there in full screen', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    // The first click takes it off the stage, the dblclick brings it back.
+    await tileOf(w, 'a').trigger('click', { detail: 1 })
+    expect(stageEl(w).exists()).toBe(false)
+    await tileOf(w, 'a').trigger('click', { detail: 2 })
+    await tileOf(w, 'a').trigger('dblclick')
+    await flushPromises()
+    expect(stageEl(w).attributes('data-stage-source')).toBe('camera:a')
+    expect(fsEl).toBe(stageEl(w).element)
+  })
+
+  it('a dblclick on a camera tile long after a click just goes full screen with it', async () => {
+    const voice = withCameras()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await tileOf(w, 'a').trigger('dblclick')
+    await flushPromises()
+    expect(voice.focusedCamera).toBe('a')
+    expect(fsEl).toBe(stageEl(w).element)
+  })
+
+  it('F toggles full screen, but not while typing, with modifiers or as push-to-talk key', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1', showChat: true })
+    await nextTick()
+
+    await press('f')
+    expect(fsEl).toBe(stageEl(w).element)
+    await press('F')
+    expect(fsEl).toBe(null)
+
+    const input = w.find('input[aria-autocomplete="list"]').element
+    await press('f', {}, input)
+    await press('f', { ctrlKey: true })
+    await press('f', { repeat: true })
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+
+    const editable = document.createElement('div')
+    editable.setAttribute('contenteditable', 'true')
+    document.body.appendChild(editable)
+    await press('f', {}, editable)
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+
+    voice.inputMode = 'ptt'
+    voice.pttKey = 'KeyF'
+    await press('f', { code: 'KeyF' })
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('F only counts while the focus is in the Talk view and no dialog is open', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    // Focus in the sidebar (outside the Talk view).
+    const sidebarButton = document.createElement('button')
+    document.body.appendChild(sidebarButton)
+    await press('f', {}, sidebarButton)
+    expect(requestFullscreen).not.toHaveBeenCalled()
+
+    const dialog = document.createElement('div')
+    dialog.setAttribute('aria-modal', 'true')
+    document.body.appendChild(dialog)
+    await press('f')
+    expect(requestFullscreen).not.toHaveBeenCalled()
+    dialog.remove()
+
+    // A button of the Talk view is fine.
+    await press('f', {}, w.get('[data-testid="stage-fullscreen"]').element)
+    expect(requestFullscreen).toHaveBeenCalledTimes(1)
+  })
+
+  it('F does nothing without a stage and stops listening when the Talk view goes', async () => {
+    withCameras()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await press('f')
+    expect(requestFullscreen).not.toHaveBeenCalled()
+    w.unmount()
+    await press('f')
+    expect(requestFullscreen).not.toHaveBeenCalled()
+  })
+
+  it('a right-click on the stage offers full screen and taking the camera off', async () => {
+    const voice = withCameras()
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await stageEl(w).trigger('contextmenu')
+    await flushPromises()
+    const items = [...document.querySelectorAll('[role="menuitem"]')]
+    expect(items.map(i => i.textContent.trim())).toEqual(['Full screenF', 'Back to everyone'])
+    items[0].click()
+    await flushPromises()
+    expect(fsEl).toBe(stageEl(w).element)
+  })
+})
+
+describe('VoiceStage hide participants without video', () => {
+  function room() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.channelUsers = { v1: {
+      a: { id: 'a', username: 'alice', display_name: 'Alice' },
+      b: { id: 'b', username: 'bob', display_name: 'Bob' },
+      c: { id: 'c', username: 'carl', display_name: 'Carl' }
+    } }
+    return voice
+  }
+  const tileIds = w => w.findAll('[data-participant-tile]').map(t => t.attributes('data-user-id'))
+  const toggle = w => w.get('[data-testid="hide-no-video"]')
+
+  it('hides tiles without camera or screen share, me included, and remembers it', async () => {
+    const voice = room()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', camera: true })
+    voice.setUserVideoStream('a', new MediaStream())
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'b', screen: true })
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(tileIds(w)).toEqual(['me', 'a', 'b', 'c'])
+    expect(toggle(w).attributes('aria-pressed')).toBe('false')
+    expect(toggle(w).attributes('aria-label')).toBe('Hide participants without video')
+
+    await toggle(w).trigger('click')
+    expect(toggle(w).attributes('aria-pressed')).toBe('true')
+    expect(tileIds(w)).toEqual(['a', 'b'])
+    expect(JSON.parse(localStorage.getItem('mnema_hide_no_video'))).toEqual({ on: true })
+
+    // My camera counts as video too.
+    voice.localCameraStream = new MediaStream()
+    await nextTick()
+    expect(tileIds(w)).toEqual(['me', 'a', 'b'])
+
+    // A camera I hid is no video for me.
+    voice.setCameraHidden('a', true)
+    await nextTick()
+    expect(tileIds(w)).toEqual(['me', 'b'])
+
+    setActivePinia(createPinia())
+    expect(useVoiceStore().hideNoVideo).toBe(true)
+  })
+
+  it('shows a hint instead of an empty area when nobody has video', async () => {
+    const voice = room()
+    voice.setHideNoVideo(true)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(tileIds(w)).toEqual([])
+    const hint = w.get('[data-testid="no-video-hint"]')
+    expect(hint.text()).toContain('Nobody has video on right now')
+    await hint.get('button').trigger('click')
+    expect(voice.hideNoVideo).toBe(false)
+    expect(tileIds(w)).toEqual(['me', 'a', 'b', 'c'])
+  })
+
+  it('under a stage only the tiles with video stay in the strip', async () => {
+    const voice = room()
+    voice.setHideNoVideo(true)
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', camera: true })
+    voice.setUserVideoStream('a', new MediaStream())
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(w.get('[data-testid="talk-strip"]').classes()).not.toContain('hidden')
+    expect(tileIds(w)).toEqual(['a'])
+    voice.setCameraHidden('a', true)
+    await nextTick()
+    // The camera left the stage and nobody has video: the hint.
+    expect(w.find('[data-testid="no-video-hint"]').exists()).toBe(true)
+  })
+
+  it('does not apply to the preview of a Talk I am not in', async () => {
+    const { voice } = seed()
+    voice.setHideNoVideo(true)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(w.find('[data-testid="hide-no-video"]').exists()).toBe(false)
+    expect(tileIds(w)).toEqual(['a'])
+  })
+
+  it('works when the browser blocks storage', async () => {
+    const voice = room()
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+    try {
+      voice.setHideNoVideo(true)
+      expect(voice.hideNoVideo).toBe(true)
+    } finally {
+      setItem.mockRestore()
+    }
   })
 })
 
