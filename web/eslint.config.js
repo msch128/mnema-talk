@@ -11,7 +11,7 @@ export default [
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      globals: { ...globals.browser }
+      globals: { ...globals.browser, __APP_VERSION__: 'readonly' }
     },
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
@@ -34,7 +34,7 @@ export default [
     }
   },
   {
-    files: ['**/*.test.js', 'vite.config.js', 'eslint.config.js', 'tailwind.config.js', 'postcss.config.js'],
+    files: ['**/*.test.js', 'vite.config.js', 'version.config.js', 'eslint.config.js', 'tailwind.config.js', 'postcss.config.js'],
     languageOptions: { globals: { ...globals.node } }
   }
 ]
