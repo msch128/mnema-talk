@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/msch128/mnema-talk/compare/v0.1.7...v0.1.8) (2026-10-05)
+
+
+### Features
+
+* **voice:** browsers report their connection diagnostics ([836e738](https://github.com/msch128/mnema-talk/commit/836e738d32c0fb35e542f7c8c9f8b9ca2c2ffba3))
+
 ## [0.1.7](https://github.com/msch128/mnema-talk/compare/v0.1.6...v0.1.7) (2026-10-05)
 
 
