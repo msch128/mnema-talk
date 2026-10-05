@@ -107,6 +107,25 @@ type Client struct {
 	// same user (reconnect, second tab) gets its own, and tearing this one
 	// down never touches the other.
 	sfuPeer *sfu.Peer
+
+	// Typing notices are relayed at most once per typingThrottle per channel.
+	lastTypingCh uuid.UUID
+	lastTypingAt time.Time
+}
+
+// typingThrottle is how often one connection's typing notice is relayed;
+// clients show "… schreibt" for a few seconds after the last notice.
+const typingThrottle = 3 * time.Second
+
+// allowTyping reports whether a typing notice for chID may be relayed now.
+func (c *Client) allowTyping(chID uuid.UUID, now time.Time) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if chID == c.lastTypingCh && now.Sub(c.lastTypingAt) < typingThrottle {
+		return false
+	}
+	c.lastTypingCh, c.lastTypingAt = chID, now
+	return true
 }
 
 func (c *Client) currentVoice() *uuid.UUID {
@@ -170,6 +189,21 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 	defer h.mu.RUnlock()
 	for c := range h.clients {
 		c.deliver(data)
+	}
+}
+
+// broadcastExcept sends an event to every connected user except userID.
+func (h *Hub) broadcastExcept(userID uuid.UUID, eventType string, payload any) {
+	data := encode(eventType, payload)
+	if data == nil {
+		return
+	}
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		if c.User.ID != userID {
+			c.deliver(data)
+		}
 	}
 }
 
@@ -492,6 +526,14 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "voice_leave":
 		if cur := c.currentVoice(); cur != nil {
 			h.leaveVoice(c, *cur)
+		}
+
+	case "typing":
+		if !c.allowTyping(p.ChannelID, time.Now()) {
+			return
+		}
+		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil && ch.Type == chat.ChannelTypeText {
+			h.broadcastExcept(c.User.ID, "typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID})
 		}
 
 	case "voice_speaking":
