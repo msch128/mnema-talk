@@ -172,3 +172,20 @@ func TestMediaSupportsRangeRequests(t *testing.T) {
 		t.Fatalf("full response should advertise ranges and an ETag: %v", full.header)
 	}
 }
+
+func TestLinkPreviewRoutesAreGuarded(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	if res := a.anon().get("/api/link-preview?url=https://example.com/"); res.status != http.StatusUnauthorized {
+		t.Fatalf("anonymous preview: %d", res.status)
+	}
+	// Internal targets never produce a card (the server refuses to fetch them).
+	for _, u := range []string{"http://127.0.0.1:8080/api/health", "http://169.254.169.254/latest/meta-data/", "file:///etc/passwd"} {
+		if res := admin.get("/api/link-preview?url=" + u); res.status != http.StatusNoContent {
+			t.Fatalf("%s: %d %s", u, res.status, res.body)
+		}
+	}
+	if res := admin.get("/api/link-preview/image?url=http://10.0.0.1/x.png"); res.status != http.StatusBadRequest {
+		t.Fatalf("private image: %d", res.status)
+	}
+}
