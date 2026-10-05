@@ -18,8 +18,9 @@ vi.mock('../lib/noiseSuppressor', () => ({
 
 // --- Browser API stand-ins -------------------------------------------------
 
+let trackSeq = 0
 function fakeTrack(kind = 'audio') {
-  return { kind, enabled: true, readyState: 'live', stop: vi.fn(), clone() { return fakeTrack(kind) } }
+  return { id: `track-${++trackSeq}`, kind, enabled: true, readyState: 'live', stop: vi.fn(), clone() { return fakeTrack(kind) } }
 }
 
 function streamOf(tracks) {
@@ -596,6 +597,38 @@ describe('per-user playback', () => {
     await vi.waitFor(() => expect(alice.volume).toBe(0.25))
     voice.isDeafened = true
     await vi.waitFor(() => expect(alice.volume).toBe(0))
+  })
+
+  function remoteStream(id) {
+    const listeners = []
+    return {
+      id,
+      addEventListener: (type, fn) => { if (type === 'removetrack') listeners.push(fn) },
+      removeTrack: track => listeners.forEach(fn => fn({ track }))
+    }
+  }
+
+  it('reuses the element when the SFU hands a track to another speaker', async () => {
+    const { voice, pc } = await joined()
+    const track = { ...fakeTrack('audio'), id: 't1' }
+    const alice = remoteStream('alice')
+    const bob = remoteStream('bob')
+    pc.ontrack({ track, streams: [alice] })
+    pc.ontrack({ track, streams: [bob] })
+    expect(audioElements).toHaveLength(1)
+    const el = audioElements[0]
+    expect(el.dataset.userId).toBe('bob')
+
+    // Bob's volume applies to it now, not Alice's.
+    voice.setUserVolume('alice', 0)
+    voice.setUserVolume('bob', 50)
+    await vi.waitFor(() => expect(el.volume).toBe(0.5))
+
+    // The old stream letting go of the track must not silence Bob.
+    alice.removeTrack(track)
+    expect(el.srcObject).not.toBeNull()
+    bob.removeTrack(track)
+    expect(el.srcObject).toBeNull()
   })
 
   it('amplifies above 100 % through a gain node', async () => {
