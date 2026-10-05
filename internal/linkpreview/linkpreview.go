@@ -33,6 +33,9 @@ const (
 	cacheMax      = 2000
 	maxTitleRunes = 200
 	maxDescRunes  = 400
+	// Proxied images are kept in memory up to this many bytes in total.
+	imageCacheBytes = 32 << 20
+	imageCacheTTL   = time.Hour
 )
 
 // Preview is what a link card shows.
@@ -58,11 +61,19 @@ type Fetcher struct {
 
 	// denied are extra addresses to refuse, e.g. this server's own public
 	// IP: behind a router with hairpin NAT it leads back into the LAN.
-	deniedMu sync.RWMutex
-	denied   map[netip.Addr]bool
+	// deniedHosts keeps the last addresses each host resolved to, so a
+	// failed lookup keeps them instead of dropping them.
+	deniedMu    sync.RWMutex
+	denied      map[netip.Addr]bool
+	deniedHosts map[string][]netip.Addr
+	lookup      func(ctx context.Context, host string) ([]netip.Addr, error)
 
 	mu    sync.Mutex
 	cache map[string]cacheEntry
+
+	previews flightGroup[*Preview]
+	images   flightGroup[cachedImage]
+	imgCache *imageCache
 }
 
 type cacheEntry struct {
@@ -72,7 +83,13 @@ type cacheEntry struct {
 }
 
 func New() *Fetcher {
-	f := &Fetcher{cache: map[string]cacheEntry{}}
+	f := &Fetcher{
+		cache:    map[string]cacheEntry{},
+		imgCache: newImageCache(imageCacheBytes, imageCacheTTL),
+		lookup: func(ctx context.Context, host string) ([]netip.Addr, error) {
+			return net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+		},
+	}
 	dialer := &net.Dialer{
 		Timeout: fetchTimeout,
 		// Runs for the resolved address of every connection attempt, so
@@ -156,9 +173,17 @@ func publicIP(ip net.IP) bool {
 	return true
 }
 
-// Deny refuses the addresses of these hosts or IPs (resolved now and on
-// every later call to Deny). Used for the server's own public address.
+// Deny refuses the addresses of these hosts or IPs; each call replaces the
+// list. Host names are resolved now (call Deny again to refresh them). When a
+// lookup fails, the addresses that host resolved to last time stay denied,
+// so a DNS hiccup never opens the server's own public address. Used for the
+// server's own public address.
 func (f *Fetcher) Deny(ctx context.Context, hostsOrIPs ...string) {
+	f.deniedMu.RLock()
+	previous := f.deniedHosts
+	f.deniedMu.RUnlock()
+
+	hosts := map[string][]netip.Addr{}
 	set := map[netip.Addr]bool{}
 	for _, h := range hostsOrIPs {
 		if h == "" {
@@ -168,16 +193,17 @@ func (f *Fetcher) Deny(ctx context.Context, hostsOrIPs ...string) {
 			set[a.Unmap()] = true
 			continue
 		}
-		addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", h)
-		if err != nil {
-			continue
+		addrs, err := f.lookup(ctx, h)
+		if err != nil || len(addrs) == 0 {
+			addrs = previous[h]
 		}
+		hosts[h] = addrs
 		for _, a := range addrs {
 			set[a.Unmap()] = true
 		}
 	}
 	f.deniedMu.Lock()
-	f.denied = set
+	f.denied, f.deniedHosts = set, hosts
 	f.deniedMu.Unlock()
 }
 
@@ -255,9 +281,16 @@ func (f *Fetcher) Preview(ctx context.Context, raw string) (*Preview, error) {
 	if p, err, ok := f.cached(key); ok {
 		return p, err
 	}
-	p, err := f.fetchPreview(ctx, u)
-	f.store(key, p, err)
-	return p, err
+	// Many members open the same link at once: fetch it once. The fetch is
+	// shared, so one caller going away must not cancel it for the others.
+	return f.previews.do(key, func() (*Preview, error) {
+		if p, err, ok := f.cached(key); ok {
+			return p, err
+		}
+		p, err := f.fetchPreview(context.WithoutCancel(ctx), u)
+		f.store(key, p, err)
+		return p, err
+	})
 }
 
 func (f *Fetcher) fetchPreview(ctx context.Context, u *url.URL) (*Preview, error) {
@@ -364,12 +397,35 @@ func clip(s string, max int) string {
 // imageTypes are the formats the proxy passes through, detected by sniffing.
 var imageTypes = map[string]bool{"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true}
 
-// Image fetches a preview image. Only real raster images (by content) pass.
+// Image fetches a preview image, from a small in-memory cache when possible.
+// Only real raster images (by content) pass.
 func (f *Fetcher) Image(ctx context.Context, raw string) ([]byte, string, error) {
 	u, err := f.parse(raw)
 	if err != nil {
 		return nil, "", err
 	}
+	key := u.String()
+	if body, mime, ok := f.imgCache.get(key); ok {
+		return body, mime, nil
+	}
+	img, err := f.images.do(key, func() (cachedImage, error) {
+		if body, mime, ok := f.imgCache.get(key); ok {
+			return cachedImage{body: body, mime: mime}, nil
+		}
+		body, mime, err := f.fetchImage(context.WithoutCancel(ctx), u)
+		if err != nil {
+			return cachedImage{}, err
+		}
+		f.imgCache.put(key, body, mime)
+		return cachedImage{body: body, mime: mime}, nil
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	return img.body, img.mime, nil
+}
+
+func (f *Fetcher) fetchImage(ctx context.Context, u *url.URL) ([]byte, string, error) {
 	body, _, _, err := f.get(ctx, u, "image/*", maxImageBytes+1)
 	if err != nil {
 		return nil, "", err
