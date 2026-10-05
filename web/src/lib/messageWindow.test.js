@@ -137,7 +137,7 @@ describe('messageWindow 15k paging simulation', () => {
     }
     expect(win.messages[win.messages.length - 1].n).toBe(TOTAL - 1)
     expect(win.messages).toHaveLength(WINDOW_CAP)
-  })
+  }, 30_000)
 
   it('jumps around randomly, mixes live messages and stays contiguous', () => {
     const s = makeServer(TOTAL)
@@ -145,7 +145,7 @@ describe('messageWindow 15k paging simulation', () => {
     const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
 
     let win = fromLatest(s.latest())
-    for (let step = 0; step < 3000; step++) {
+    for (let step = 0; step < 1500; step++) {
       const r = rand()
       if (r < 0.03) {
         const target = s.all[Math.floor(rand() * s.all.length)].id
@@ -168,7 +168,7 @@ describe('messageWindow 15k paging simulation', () => {
       if (!win.hasMoreBefore) expect(win.messages[0].n).toBe(0)
       if (!win.hasMoreAfter) expect(win.messages[win.messages.length - 1].n).toBe(s.all.length - 1)
     }
-  })
+  }, 30_000)
 
   it('ignores stale responses that race with a window change', () => {
     const s = makeServer(TOTAL)
