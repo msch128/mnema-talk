@@ -1,0 +1,23 @@
+.github/workflows/ci.yml
+  s_ed4a044667278a::t_f8c5e30880d094 7-12
+.github/workflows/release.yml
+  s_ed4a044667278a::t_ec1726980bdae0 76,88-106
+AGENTS.md
+  s_ed4a044667278a::t_e23968e15c4252 102-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b892bcd917a8dfa27103e2c4e56ebb41a39f1e36",
+  "prompts": {},
+  "sessions": {
+    "s_ed4a044667278a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b355918-f239-4da3-9be2-aaed7bc1c4f6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
