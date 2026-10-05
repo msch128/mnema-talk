@@ -303,12 +303,12 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 // @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
 // @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.
 // @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
-// @Description - `voice_speaking`: `{channel_id, user_id, active}`.
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
 // @Description
 // @Description Server to client, targeted:
 // @Description - `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.
 // @Description - `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.
+// @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
 // @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
 // @Description - `voice_kicked`: `{channel_id}` when an admin removes the user from voice.
 // @Description - `pong`: `{t}` echoing a `ping`.
