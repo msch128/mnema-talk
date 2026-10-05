@@ -151,6 +151,30 @@ chat.example.com {
 - Do not use `docker-compose.dev.yml` in production; the base compose file
   does not publish PostgreSQL or SeaweedFS.
 
+### Ports
+
+What to open, assuming the default settings and a reverse proxy on the same
+network:
+
+| Port | Protocol | Service | Forward from the internet? |
+|---|---|---|---|
+| 443 (and 80 for certificates) | TCP | Reverse proxy (HTTPS, WebSocket) | Yes |
+| 50000–50050 | UDP | App: voice, video and screen share (`WEBRTC_UDP_PORT_MIN/MAX`) | Yes |
+| 3478 | UDP + TCP | coturn, only with the `turn` profile | Yes, if you run it |
+| 49152–49200 | UDP | coturn relay ports, only with the `turn` profile | Yes, if you run it |
+| 8080 | TCP | App HTTP (`PORT`), reached by the proxy | No, proxy only |
+| 5432 | TCP | PostgreSQL | No, Docker network only |
+| 8333 | TCP | SeaweedFS S3 API | No, Docker network only |
+
+- The compose file publishes `8080/tcp` on all host interfaces. Don't forward
+  it from the router; if the host is reachable from outside, restrict it with
+  the host firewall or change the mapping to `127.0.0.1:8080:8080` when the
+  proxy runs on the same host.
+- If you change `WEBRTC_UDP_PORT_MIN/MAX`, forward the new range; Docker
+  publishes the same range.
+- Users behind strict firewalls that block UDP can only join voice through
+  TURN (`WEBRTC_TURN_URLS`, see `.env.example`).
+
 ### Running a released image
 
 Instead of building on the server, use a published image. In
