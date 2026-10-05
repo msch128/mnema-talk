@@ -388,18 +388,36 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	return id, nil
 }
 
-// EditMessage changes the text of a message authored by userID.
-func EditMessage(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, content string) error {
-	tag, err := p.Exec(ctx, `
-		UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
-		WHERE id = $2 AND user_id = $3`, content, messageID, userID)
-	if err != nil {
-		return fmt.Errorf("update message: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrForbidden("only the author can edit this message")
-	}
-	return nil
+// EditMessage changes the text of a message authored by userID and records
+// its mentions again, in one transaction. Empty content is only allowed when
+// the message carries an attachment (like an upload without a caption).
+func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID, userID uuid.UUID, content string) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		var author uuid.UUID
+		var hasMedia bool
+		err := tx.QueryRow(ctx, `
+			SELECT user_id, EXISTS (SELECT 1 FROM media WHERE message_id = messages.id)
+			FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author, &hasMedia)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errMessageNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("load message: %w", err)
+		}
+		if author != userID {
+			return httpx.ErrForbidden("only the author can edit this message")
+		}
+		if content == "" && !hasMedia {
+			_, err := ValidateContent(content, false)
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			UPDATE messages SET content = $1, is_edited = TRUE, updated_at = NOW()
+			WHERE id = $2`, content, messageID); err != nil {
+			return fmt.Errorf("update message: %w", err)
+		}
+		return RecordMentions(ctx, tx, online, messageID, userID, content)
+	})
 }
 
 // DeleteMessage removes a message (and its thread replies) if user is its
@@ -408,18 +426,27 @@ func EditMessage(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, c
 func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User) ([]string, error) {
 	var keys []string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		// Collected before the delete, inside the same transaction.
+		// Locking the message first blocks a concurrent thread reply or
+		// upload (their foreign keys need a share lock on it) until we are
+		// done, so every attachment the cascade removes is in keys.
+		var author uuid.UUID
+		err := tx.QueryRow(ctx, `SELECT user_id FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errMessageNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock message: %w", err)
+		}
+		if author != user.ID && !user.IsAdmin() {
+			return httpx.ErrForbidden("only the author or an admin can delete this message")
+		}
 		if err := collectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
 				(SELECT id FROM messages WHERE id = $1 OR parent_id = $1)`, messageID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1 AND (user_id = $2 OR $3)`, messageID, user.ID, user.IsAdmin())
-		if err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = $1`, messageID); err != nil {
 			return fmt.Errorf("delete message: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return httpx.ErrForbidden("only the author or an admin can delete this message")
 		}
 		return nil
 	})
@@ -443,25 +470,76 @@ func collectKeys(ctx context.Context, q db.Querier, keys *[]string, query string
 	return nil
 }
 
+// Reaction limits: how many different emoji one user may put on a message,
+// and how many different emoji a message may carry in total.
+const (
+	MaxReactionsPerUser    = 20
+	MaxEmojiPerMessage     = 50
+	errTooManyReactionsMsg = "too many reactions on this message"
+)
+
 // ToggleReaction adds or removes userID's reaction and returns the new summary.
+// Adding is refused with 409 CONFLICT beyond MaxReactionsPerUser per user or
+// MaxEmojiPerMessage distinct emoji per message.
 func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string) ([]ReactionSummary, error) {
-	tag, err := p.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji)
-	if err != nil {
-		return nil, fmt.Errorf("remove reaction: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		if _, err := p.Exec(ctx, `
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// The row lock serializes toggles on one message, so concurrent
+		// adds cannot overshoot the limits.
+		var one int
+		err := tx.QueryRow(ctx, `SELECT 1 FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errMessageNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock message: %w", err)
+		}
+		tag, err := tx.Exec(ctx, `DELETE FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`, messageID, userID, emoji)
+		if err != nil {
+			return fmt.Errorf("remove reaction: %w", err)
+		}
+		if tag.RowsAffected() > 0 {
+			return nil
+		}
+		var mine, distinct int
+		var emojiPresent bool
+		if err := tx.QueryRow(ctx, `
+			SELECT COUNT(*) FILTER (WHERE user_id = $2), COUNT(DISTINCT emoji), COALESCE(BOOL_OR(emoji = $3), FALSE)
+			FROM message_reactions WHERE message_id = $1`, messageID, userID, emoji).Scan(&mine, &distinct, &emojiPresent); err != nil {
+			return fmt.Errorf("count reactions: %w", err)
+		}
+		if mine >= MaxReactionsPerUser || (!emojiPresent && distinct >= MaxEmojiPerMessage) {
+			return httpx.ErrConflict(errTooManyReactionsMsg)
+		}
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)
 			ON CONFLICT (message_id, user_id, emoji) DO NOTHING`, messageID, userID, emoji); err != nil {
-			return nil, fmt.Errorf("add reaction: %w", err)
+			return fmt.Errorf("add reaction: %w", err)
 		}
-	}
-	msg, err := GetMessage(ctx, p, messageID)
-	if errors.Is(err, errMessageNotFound) {
-		return []ReactionSummary{}, nil
-	}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return msg.Reactions, nil
+	return reactionSummary(ctx, p, messageID)
+}
+
+// reactionSummary loads one message's reactions, in the order they were first given.
+func reactionSummary(ctx context.Context, p *db.Pool, messageID uuid.UUID) ([]ReactionSummary, error) {
+	rows, err := p.Query(ctx, `
+		SELECT emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
+		FROM message_reactions WHERE message_id = $1
+		GROUP BY emoji ORDER BY MIN(created_at)`, messageID)
+	if err != nil {
+		return nil, fmt.Errorf("load reactions: %w", err)
+	}
+	defer rows.Close()
+	out := make([]ReactionSummary, 0)
+	for rows.Next() {
+		var r ReactionSummary
+		if err := rows.Scan(&r.Emoji, &r.Count, &r.Users); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }

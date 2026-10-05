@@ -9,12 +9,13 @@ import (
 )
 
 // GetAllMembers lists every account, admins first, then by display name.
+// message_count is maintained by triggers (migration 0012), so this does not
+// scan the messages table.
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 	rows, err := p.Query(ctx, `
 		SELECT id, username, display_name, bio, role, avatar_s3_key, status_text, created_at,
-		       voice_seconds, COALESCE(mc.n, 0)
+		       voice_seconds, message_count
 		FROM users
-		LEFT JOIN (SELECT user_id, COUNT(*) AS n FROM messages GROUP BY user_id) mc ON mc.user_id = users.id
 		ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`)
 	if err != nil {
 		return nil, fmt.Errorf("query members: %w", err)
