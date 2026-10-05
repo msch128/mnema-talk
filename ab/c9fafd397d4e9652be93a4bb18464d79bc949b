@@ -1,0 +1,59 @@
+web/src/components/LegalModal.vue
+  s_ed4a044667278a::t_8b83d7467dc343 6,10,25,136,218,224-230,232-249,252-254
+THIRD_PARTY_NOTICES.md
+  s_ed4a044667278a::t_9596caf6a31921 1-110
+web/src/i18n/de.json
+  s_ed4a044667278a::t_6cdde0d0723267 263-271,319-320,391-392,411-427,439
+web/src/components/VoiceStage.vue
+  s_ed4a044667278a::t_ea330ae847e157 21-28,196,400
+web/src/composables/useWebRTC.js
+  s_ed4a044667278a::t_9183efc276d36a 7,16-24,287-293,299,303,338-350,352,407,487-488,502-506,510-511,549-633,642,645,650,652-653,655-656,658,660-663,665-668,670-672,674-675,677-692,694,696,698-702,704,706-711
+web/src/third_party/deepfilternet3/LICENSE-MIT
+  s_ed4a044667278a::t_ef97a6a4312420 1-21
+AGENTS.md
+  s_ed4a044667278a::t_d6da22bc1f69ca 85,101
+web/eslint.config.js
+  s_ed4a044667278a::t_6e3c9aa18a9ac9 6-7
+web/src/lib/noiseSuppressor.js
+  s_ed4a044667278a::t_dd3490b31a558e 1-92
+web/src/third_party/deepfilternet3/worklet.js
+  s_ed4a044667278a::t_8623a9c3bad44b 1-379
+web/src/lib/thirdParty.test.js
+  s_ed4a044667278a::t_f2f3a5f8e4a006 1-17
+web/src/third_party/deepfilternet3/LICENSE-APACHE
+  s_ed4a044667278a::t_6e775d5459dbdd 1-202
+web/src/lib/noiseSuppressor.test.js
+  s_ed4a044667278a::t_e398a6a8ca68cc 6-8
+  s_ed4a044667278a::t_db5b34a8c65670 1-5
+  s_ed4a044667278a::t_35cf004e4cc9cd 9-68,74-75
+  s_ed4a044667278a::t_3e1f641373b17a 69-73
+web/src/composables/useWebRTC.test.js
+  s_ed4a044667278a::t_22b65c25083237 8-18,50,52-56,67-69,242-304
+web/src/third_party/deepfilternet3/README.md
+  s_ed4a044667278a::t_490b845f03841f 1-34
+web/src/i18n/en.json
+  s_ed4a044667278a::t_8c0a8ab86bf83d 263-271,319-320,391-392,411-427,439
+web/src/components/AudioSettingsModal.vue
+  s_ed4a044667278a::t_1df20fa1be7be4 4,271,273
+web/src/lib/thirdParty.js
+  s_ed4a044667278a::t_0e5c8f9b74046e 55
+  s_ed4a044667278a::t_5a0c57fa172cea 1-54
+web/src/stores/voice.js
+  s_ed4a044667278a::t_319e10a46ba404 4-5,36-43,60,151-152,156-160,201,203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "abc9fafd397d4e9652be93a4bb18464d79bc949b",
+  "prompts": {},
+  "sessions": {
+    "s_ed4a044667278a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b355918-f239-4da3-9be2-aaed7bc1c4f6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
