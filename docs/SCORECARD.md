@@ -89,20 +89,22 @@ with no unchecked item in "Voice & screenshare" or "Security".
 - [ ] Admin deletes other users' messages
 - [ ] Rename and reorder channels and categories
 
-## Mobile & accessibility (weight 8)
+## Mobile, accessibility & language (weight 8)
 
 - [ ] Responsive layout down to 390 px (drawer for channels and members)
 - [ ] Voice usable on mobile
 - [ ] Dialogs have `role="dialog"`, focus trap and Escape
 - [ ] All message actions reachable by keyboard
+- [ ] UI in German (default) and English, switchable per user; no hard-coded UI strings
+- [ ] Voice view named "Tafelrunde" / "Roundtable" consistently
 
 ## Operations (weight 10)
 
 - [x] Health checks for app, Postgres and SeaweedFS
 - [x] Versioned, locked migrations; image release pipeline
 - [x] Media retention off by default
-- [ ] Automatic nightly backup of Postgres and S3 data with retention
-- [ ] Documented and tested restore
+- [x] Automatic nightly backup of Postgres and S3 data with retention
+- [x] Documented and tested restore
 - [ ] TURN server support for users behind restrictive NATs
 - [ ] Metrics or monitoring (at least an uptime check and error-rate alert)
 - [ ] Range requests for media (video seeking, Safari)

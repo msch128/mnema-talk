@@ -175,6 +175,32 @@ If the GHCR package is private (the default for a newly published package),
 either make it public once under the package's settings on GitHub, or run
 `docker login ghcr.io` on the server with a token that has `read:packages`.
 
+## Backups
+
+Everything stateful lives in two Docker volumes (PostgreSQL and SeaweedFS) plus
+your `.env`. `scripts/backup.sh` saves all three into one timestamped folder
+and removes folders older than `KEEP_DAYS` (default 14). Run it from the
+deployment directory, for example nightly via cron:
+
+```sh
+30 3 * * *  cd /path/to/mnema-talk && BACKUP_DIR=./backups/nightly ./scripts/backup.sh >> ./backups/nightly/backup.log 2>&1
+```
+
+Copy the backup folder off the machine as well (another disk, NAS share or
+cloud storage); a backup on the same disk does not survive a disk failure.
+
+Prove that a backup restores, without touching the live data:
+
+```sh
+./scripts/restore.sh backups/nightly/20261005-033000 --verify
+```
+
+Restore for real (stops the app, replaces database and media, starts again):
+
+```sh
+./scripts/restore.sh backups/nightly/20261005-033000
+```
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for how to report vulnerabilities and a summary of

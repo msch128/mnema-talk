@@ -200,7 +200,7 @@ section labels, ping in ms).
 
 | Step | Size / line | Weight | Use |
 |---|---|---|---|
-| Title | 20/28 | 600 | Modal titles, voice stage heading |
+| Title | 20/28 | 600 | Modal titles, Tafelrunde heading |
 | Subtitle | 18/24 | 600 | Card and section headings |
 | Message (`text-message`) | 16/22 | 400 | Message body and author names (600) |
 | Base (`text-base`) | 16/24 | 400 | Inputs, modal body |
@@ -227,7 +227,7 @@ server rail):
    and community name on top, categories with channels, the user bar pinned
    to the bottom.
 2. **Main** (`canvas`, min 400px): channel header (name, topic, actions),
-   message list, composer. A voice channel shows the **voice stage** here; its
+   message list, composer. A voice channel shows the **Tafelrunde** (EN: Roundtable) here; its
    **talk chat** opens as a right panel without joining.
 3. **Thread panel** (`raised`, 400px, resizable 320–640), optional.
 4. **Member list** (`raised`, 240px, resizable 200–360), toggleable.
@@ -240,7 +240,7 @@ author within 5 minutes collapse under one header. Messages sit directly on
 
 **One brand moment per screen.** As in Mnema, each main view may carry one
 band (`band` ground, mint mono micro-label over a `text` title): the voice
-stage header and the login card. Text channels use a plain header on
+Tafelrunde header and the login card. Text channels use a plain header on
 `canvas` with a hairline below.
 
 Routes (every view has a shareable URL; opening it after login lands there):
@@ -250,15 +250,15 @@ Routes (every view has a shareable URL; opening it after login lands there):
 | `/c/:channelId` | Text channel |
 | `/c/:channelId/m/:messageId` | Text channel, scrolled to and highlighting one message |
 | `/c/:channelId/t/:messageId` | Text channel with that thread open |
-| `/v/:channelId` | Voice stage, *watching* — not joined until "Beitreten" |
-| `/v/:channelId/chat` | Voice stage with the talk chat panel open |
+| `/v/:channelId` | Tafelrunde, *watching* — not joined until "Beitreten" |
+| `/v/:channelId/chat` | Tafelrunde with its chat panel open |
 | `/admin/:tab` | Admin panel tab |
 
 Mobile (below 768px, reference 390×844):
 
 - One column. The sidebar becomes a left drawer, the member list a right
   drawer, both over a `scrim`; swipe or the header buttons open them.
-- Voice stage tiles stack two per row; the control bar is fixed to the bottom
+- Tafelrunde tiles stack two per row; the control bar is fixed to the bottom
   with 48px buttons.
 - Every target is at least 44×44px on touch or coarse pointers.
 
@@ -394,9 +394,9 @@ ground and the name below it as a `text-nav` label — not a dark box with a
 corner chip. With video (camera `cover`, screen `contain`) the name and status
 sit in a mono micro-label strip along the bottom on a `canvas` ground at 80%.
 Speaking: 2px Forest ring on the tile edge. A screenshare can be focused to
-fill the stage; the other tiles become a row of 120px cards below it.
+fill the Tafelrunde; the other tiles become a row of 120px cards below it.
 
-Control bar: a `raised` strip under the stage with a hairline top edge (not a
+Control bar: a `raised` strip under the tiles with a hairline top edge (not a
 floating pill), ghost icon buttons Mikrofon · Kopfhörer · Kamera · Bildschirm
 teilen, then a danger-outlined "Verlassen" button with label. Each has a
 tooltip and `aria-pressed`.
@@ -515,13 +515,30 @@ effects, no gradients.
 
 ## Copy & tone
 
-German, informal *du*, short, calm. The app is a friend's living room, not a
-product launch.
+German by default, English as the second language (switchable per user). All
+UI copy lives in the locale files (`web/src/i18n/de.json`, `en.json`); no
+string is hard-coded in a component. German uses informal *du*; English uses
+plain, friendly second person. Short, calm. The app is a friend's living room,
+not a product launch. Layouts must hold both languages (German runs ~30 %
+longer): no fixed-width buttons, truncate with a tooltip instead of wrapping
+chrome.
+
+**Glossary** (use these words, in both languages, everywhere):
+
+| Concept | Deutsch | English |
+|---|---|---|
+| The view of a voice channel (tiles, screenshare, its chat) | Tafelrunde | Roundtable |
+| Its text chat | Tafelrunden-Chat | Roundtable chat |
+| Text channel | Kanal | Channel |
+| Voice channel | Sprachkanal | Voice channel |
+| Join / leave voice | Beitreten / Verlassen | Join / Leave |
+| Reply | Antworten | Reply |
+| Thread | Thread | Thread |
 
 - **Sentence case** everywhere; no exclamation marks in UI copy.
 - **Verbs on buttons:** "Beitreten", "Senden", "Kanal erstellen" — never "OK".
 - **Empty states** say what will appear and how: "Noch keine Nachrichten.
-  Schreib die erste." / "Niemand im Talk. Klick auf Beitreten."
+  Schreib die erste." / "Niemand in der Tafelrunde. Klick auf Beitreten."
 - **Loading:** skeleton rows; if text is needed: "Lädt …".
 - **Errors** are specific and offer the next step: "Datei ist zu groß (max.
   50 MB)." / "Server nicht erreichbar. Erneut versuchen" — never "Ein Fehler
