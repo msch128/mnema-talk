@@ -15,6 +15,8 @@ const props = defineProps({
   // Tailwind classes for the panel (width etc.)
   panelClass: { type: String, default: 'max-w-md' },
   closeOnScrim: { type: Boolean, default: true },
+  // 'center' (default) or 'top' for palette-style dialogs such as search
+  align: { type: String, default: 'center' },
   initialFocus: { type: [String, Function], default: undefined }
 })
 const emit = defineEmits(['close'])
@@ -37,7 +39,7 @@ function onScrimUp(e) {
 
 <template>
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+    :class="['fixed inset-0 z-50 flex justify-center bg-black/60 p-4', align === 'top' ? 'items-start pt-20' : 'items-center']"
     @pointerdown="onScrimDown"
     @pointerup="onScrimUp"
   >
