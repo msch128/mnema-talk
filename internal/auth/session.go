@@ -2,11 +2,9 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -65,25 +63,8 @@ func (s *Sessions) cookie(value string, maxAge int) *http.Cookie {
 // Authenticate resolves the request's session to the current user. Expired,
 // revoked (token_version mismatch) or deleted sessions fail with 401.
 func (s *Sessions) Authenticate(r *http.Request) (*User, error) {
-	c, err := r.Cookie(s.CookieName())
-	if err != nil || c.Value == "" {
-		return nil, errNoSession
-	}
-	claims, err := ParseToken(c.Value, s.Secret)
-	if err != nil {
-		return nil, errNoSession
-	}
-	u, tv, err := sessionUser(r.Context(), s.DB, claims.UserID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, errNoSession
-	}
-	if err != nil {
-		return nil, err
-	}
-	if tv != claims.TokenVersion {
-		return nil, errNoSession
-	}
-	return u, nil
+	u, _, err := s.AuthenticateRequest(r)
+	return u, err
 }
 
 // RequireUser rejects unauthenticated requests and stores the user in the context.
