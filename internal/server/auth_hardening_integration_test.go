@@ -120,8 +120,8 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 	if err := a.db.QueryRow(ctx, `SELECT password_hash, display_name FROM users WHERE username = 'Herzog'`).Scan(&hash, &display); err != nil {
 		t.Fatal(err)
 	}
-	if cost, _ := bcrypt.Cost([]byte(hash)); cost != 12 {
-		t.Errorf("admin hash cost %d, want auth's 12", cost)
+	if cost, _ := bcrypt.Cost([]byte(hash)); cost != auth.PasswordCost() {
+		t.Errorf("admin hash cost %d, want auth's %d", cost, auth.PasswordCost())
 	}
 	if display != "Herzog" {
 		t.Errorf("display name %q", display)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const secret = "0123456789abcdef0123456789abcdef"
@@ -97,5 +98,16 @@ func TestGenerateInviteCode(t *testing.T) {
 			t.Fatalf("bad or duplicate code %q", c)
 		}
 		seen[c] = true
+	}
+}
+
+// The production bcrypt cost must stay 12; only integration test binaries may
+// lower it (SetPasswordCostForTests), and this package never does.
+func TestProductionPasswordCost(t *testing.T) {
+	if passwordCost != 12 || bcryptCost != 12 {
+		t.Fatalf("password cost %d (const %d), want 12", passwordCost, bcryptCost)
+	}
+	if c, err := bcrypt.Cost(dummyHash); err != nil || c != 12 {
+		t.Fatalf("timing-equaliser hash cost %d (%v), want 12", c, err)
 	}
 }
