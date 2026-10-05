@@ -32,7 +32,14 @@ class MockBiquadFilter extends MockAudioNode {
 }
 
 class MockAudioContext {
+  static sinkCalls = []
   currentTime = 10
+  sinkId = ''
+  setSinkId(id) {
+    MockAudioContext.sinkCalls.push(id)
+    this.sinkId = id
+    return Promise.resolve()
+  }
   destination = new MockAudioNode()
   createOscillator() { return new MockOscillator() }
   createGain() { return new MockGain() }
@@ -103,5 +110,17 @@ describe('soundEffects', () => {
     vi.stubGlobal('AudioContext', undefined)
     vi.stubGlobal('webkitAudioContext', undefined)
     expect(() => playSound('join')).not.toThrow()
+  })
+
+  it('plays on the output device chosen for voices', () => {
+    const voice = useVoiceStore()
+    voice.soundEffectsEnabled = true
+    voice.selectedOutputDeviceId = 'headset'
+    playSound('join')
+    expect(MockAudioContext.sinkCalls.at(-1)).toBe('headset')
+    const calls = MockAudioContext.sinkCalls.length
+    playSound('join')
+    // Already there: not switched again.
+    expect(MockAudioContext.sinkCalls.length).toBe(calls)
   })
 })

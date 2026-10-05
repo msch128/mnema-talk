@@ -1,10 +1,11 @@
 // Synthesized Discord-like sound effects using Web Audio API.
 // Pure Web Audio: zero external assets, instant playback, zero network latency.
 import { useVoiceStore } from '../stores/voice'
+import { applyOutputDevice } from './audioOutput'
 
 let sharedAudioContext = null
 
-function getAudioContext() {
+function getAudioContext(outputDeviceId = '') {
   if (typeof window === 'undefined') return null
   const AudioCtx = window.AudioContext || window.webkitAudioContext
   if (!AudioCtx) return null
@@ -12,6 +13,8 @@ function getAudioContext() {
     if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
       sharedAudioContext = new AudioCtx()
     }
+    // Same speakers or headset as the voices in a call.
+    applyOutputDevice(sharedAudioContext, outputDeviceId)
     if (sharedAudioContext.state === 'suspended') {
       sharedAudioContext.resume().catch(() => {})
     }
@@ -85,7 +88,7 @@ export function playSound(name, overrideVolume = null, force = false) {
 
   if (masterVol <= 0) return
 
-  const ctx = getAudioContext()
+  const ctx = getAudioContext(voiceStore?.selectedOutputDeviceId)
   if (!ctx) return
 
   const now = ctx.currentTime || 0
