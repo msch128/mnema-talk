@@ -1667,9 +1667,7 @@ export function useWebRTC() {
   async function resumeVoiceSession() {
     const channelId = voiceSession.recent()
     if (!channelId || voiceStore.currentChannelId) return false
-    const exists = chatStore.categories.some(c => (c.channels || []).some(ch => ch.id === channelId && ch.type === 'voice')) ||
-      chatStore.uncategorized.some(ch => ch.id === channelId && ch.type === 'voice')
-    if (!exists) {
+    if (!chatStore.isVoiceChannel(channelId)) {
       voiceSession.forget()
       return false
     }
