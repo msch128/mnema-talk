@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e
+.PHONY: help dev web build run test test-integration test-web coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -55,6 +55,19 @@ test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
 test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
 
+# Packages counted in the Go coverage total: everything but test helpers and
+# build-time tools.
+COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
+
+coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
+
+coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
+	go test -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
+	@node scripts/coverage-summary.mjs go coverage.out
+
+coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)
+	cd web && npm run test:coverage
+
 fmt: ## Format Go code in place
 	gofmt -w cmd internal web/web.go
 
@@ -76,7 +89,7 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint openapi-check test test-integration vuln test-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
+check: lint openapi-check test coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build -t mnema-talk:ci .

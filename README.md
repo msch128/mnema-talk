@@ -89,6 +89,8 @@ make test              # Go unit tests (-race)
 make test-integration  # Go integration tests: starts postgres:17-alpine via Docker,
                        # or uses TEST_DATABASE_URL if set
 make test-web          # vitest
+make coverage          # Go (unit + integration) and web coverage: coverage.out,
+                       # web/coverage/lcov.info; CI shows the totals in the job summary
 make lint              # gofmt, go vet, eslint
 make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
