@@ -107,7 +107,7 @@ these jobs in parallel (rough wall times with warm caches):
 | `backend` | gofmt, go vet, OpenAPI check, unit tests, unit + integration tests with coverage (Postgres service), build | 4–6 min |
 | `govulncheck` | Go vulnerability scan | 1–2 min |
 | `frontend` | eslint, vitest with coverage, build, `npm audit` | 2–3 min |
-| `docker` | image build, not pushed | 1–3 min |
+| `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
 | `e2e` | Playwright smoke test against the real binary | 4–6 min |
 
 `codeql.yml` (actions, Go incl. tests and the integration tag, JS) runs on the
@@ -136,7 +136,8 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    Release and tag `vX.Y.Z` (first release: `0.1.0`), so every green push to
    `main` that contains a `feat:` or `fix:` becomes a release.
 3. The same workflow then builds the image and pushes it to GHCR:
-   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest`, with OCI labels,
+   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
+   linux/arm64), with OCI labels,
    provenance and SBOM. The version is baked into the binary
    (`-X main.version=X.Y.Z`).
 
@@ -227,6 +228,15 @@ Then update with:
 ```sh
 docker compose pull && docker compose up -d
 ```
+
+Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
+4/5 with a 64-bit OS); Docker picks the right one. The rest of the stack
+(`postgres:17-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
+both as well. **linux/arm/v7** (32-bit ARM) is not built: those images exist
+for it too, but the server doesn't compile for 32-bit targets yet (a 64-bit
+constant in `internal/db` overflows `int`). Builders cross-compile the Go
+binary on the build machine, so a multi-arch build needs no QEMU:
+`docker buildx build --platform linux/amd64,linux/arm64 .`
 
 Deployment to a LAN/self-hosted server stays **manual and pull-based**: GitHub's
 hosted runners cannot reach a server inside a private network, so nothing
