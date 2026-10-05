@@ -1,0 +1,36 @@
+internal/server/turn_test.go
+  s_50a8e6d0bfe84a::t_b3d09e9f21a086 1-33
+internal/server/public.go
+  s_50a8e6d0bfe84a::t_8f5e8ce3eda943 4-6,8-9,11-12,17-19,39,47-49,51-67,69-78
+internal/server/server.go
+  s_50a8e6d0bfe84a::t_8f5e8ce3eda943 138
+internal/config/config.go
+  s_50a8e6d0bfe84a::t_8f5e8ce3eda943 39-42,139-140,196-197
+  s_50a8e6d0bfe84a::t_75b1d768a08b8e 198-199
+internal/server/auth_integration_test.go
+  s_50a8e6d0bfe84a::t_f736020c319f08 7-8
+  s_50a8e6d0bfe84a::t_b3d09e9f21a086 250-274
+.env.example
+  s_50a8e6d0bfe84a::t_9712bacb4b207c 95-101
+internal/server/helpers_integration_test.go
+  s_50a8e6d0bfe84a::t_8f5e8ce3eda943 44-54,75-76
+  s_50a8e6d0bfe84a::t_8db823dfd9d599 77
+docker-compose.yml
+  s_50a8e6d0bfe84a::t_9712bacb4b207c 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "28881216526c3d97287c4d3d01bba68c7342b1f7",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
