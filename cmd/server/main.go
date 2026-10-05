@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -57,7 +58,7 @@ func run() error {
 	if err := pool.Migrate(ctx); err != nil {
 		return err
 	}
-	if err := pool.EnsureAdminUser(ctx, cfg.AdminUsername, cfg.AdminInitialPassword); err != nil {
+	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword); err != nil {
 		return err
 	}
 
