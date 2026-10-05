@@ -47,6 +47,8 @@ mnema-talk.exe
 *.dylib
 *.test
 *.out
+# Coverage reports (make coverage, CI artifacts)
+web/coverage/
 
 # Go build & cache
 vendor/

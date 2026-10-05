@@ -88,6 +88,15 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     include: ['src/**/*.test.js'],
-    setupFiles: ['./src/test-setup.js']
+    setupFiles: ['./src/test-setup.js'],
+    // `npm run test:coverage` (CI): every source file counts, tested or not,
+    // so the totals show untested code instead of hiding it.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{js,vue}'],
+      exclude: ['src/**/*.test.js', 'src/test-setup.js', 'src/third_party/**'],
+      reporter: ['text-summary', 'json-summary', 'lcov'],
+      reportsDirectory: './coverage'
+    }
   }
 })
