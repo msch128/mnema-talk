@@ -1,0 +1,18 @@
+internal/chat/handler.go
+  h_0ff4f4713441f4 274-297
+internal/chat/messages.go
+  h_0ff4f4713441f4 309-334
+internal/server/chat_integration_test.go
+  h_0ff4f4713441f4 51-55,60-63,66,70-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f017de79d23611850ca3166cd60c06b5eda6590b",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
