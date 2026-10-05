@@ -662,5 +662,12 @@
     "avatarSaved": "Avatar saved",
     "avatarTooBig": "That image is too large (max. {size} MB).",
     "avatarFailed": "Couldn't upload your avatar."
+  },
+  "nav": {
+    "channelNotFound": "That channel doesn't exist anymore.",
+    "voiceNotFound": "That roundtable doesn't exist anymore.",
+    "noAccess": "You don't have access to that page.",
+    "mentionCopied": "Copied @name to the clipboard",
+    "actionFailed": "That didn't work. Please try again."
   }
 }

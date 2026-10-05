@@ -6,11 +6,15 @@ import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
+import EditNameDialog from './EditNameDialog.vue'
+import ContextMenu from './ContextMenu.vue'
 import UserAvatar from './UserAvatar.vue'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { buildChannelTree, loadCollapsed, saveCollapsed } from '../lib/channelTree'
+import { currentRoute, navigate } from '../lib/router'
+import { useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems } from '../composables/useNavMenus'
 
 const SERVER_NAME = 'Mnema Talk'
 
@@ -63,6 +67,27 @@ async function handleDeleteCategory(category) {
   } catch (err) {
     toasts.error(err.message || t('sidebar.deleteFailed'))
   }
+}
+
+// ---- Context menus (channels, categories, voice participants) ----
+
+const menu = useMenuState()
+const editing = ref(null) // { kind: 'channel' | 'category', entity }
+const menuHandlers = {
+  onEdit: entity => { editing.value = { kind: entity.channels ? 'category' : 'channel', entity } },
+  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity))
+}
+
+function openChannelMenu(e, channel) {
+  menu.show(e, () => buildChannelItems(channel, menuHandlers))
+}
+
+function openCategoryMenu(e, category) {
+  menu.show(e, () => buildCategoryItems(category, menuHandlers))
+}
+
+function openMemberMenu(e, user) {
+  menu.show(e, refresh => buildMemberItems(user, { refresh }))
 }
 
 // ---- Channel tree (uncategorized first, then categories in sort order) ----
@@ -119,6 +144,8 @@ function handleVoiceClick(channel) {
   // Join voice and switch to the Tafelrunde
   joinVoiceChannel(channel.id)
   voiceStore.activeView = 'voice'
+  // /v/:id keeps the Tafelrunde's chat toggle as it is.
+  navigate(`/v/${channel.id}${currentRoute.value.showChat ? '/chat' : ''}`)
 }
 
 function handleTextClick(channel) {
@@ -310,12 +337,19 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         :class="[category.headless ? 'mb-1' : 'mt-3 first:mt-0', 'group/cat']"
         :data-category-id="category.headless ? undefined : category.id"
       >
-        <div v-if="!category.headless" class="h-6 flex items-center gap-1 pr-1">
+        <div
+          v-if="!category.headless"
+          class="h-6 flex items-center gap-1 pr-1"
+          @contextmenu="openCategoryMenu($event, category)"
+        >
           <button
             type="button"
             class="flex-1 min-w-0 h-6 pl-0.5 flex items-center gap-0.5 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary hover:text-mnema-muted transition-colors focus:outline-none focus-visible:text-mnema-text"
             :aria-expanded="collapsed.has(category.id) ? 'false' : 'true'"
+            aria-haspopup="menu"
             @click="toggleCategory(category.id)"
+            @keydown.f10.shift.prevent="openCategoryMenu($event, category)"
+            @keydown.context-menu.prevent="openCategoryMenu($event, category)"
           >
             <ChevronRight v-if="collapsed.has(category.id)" class="w-3 h-3 flex-shrink-0" />
             <ChevronDown v-else class="w-3 h-3 flex-shrink-0" />
@@ -328,6 +362,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             <button
               @click.stop="openCreateChannel(defaultTypeFor(category), category.id)"
               v-tooltip="$t('channel.create')"
+              :aria-label="$t('channel.create')"
               class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-text transition"
             >
               <Plus class="w-4 h-4" />
@@ -335,6 +370,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             <button
               @click.stop="handleDeleteCategory(category)"
               v-tooltip="$t('sidebar.deleteCategory')"
+              :aria-label="$t('sidebar.deleteCategory')"
               class="w-5 h-5 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition"
             >
               <Trash2 class="w-3.5 h-3.5" />
@@ -352,9 +388,13 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               role="button"
               tabindex="0"
               :data-channel-type="channel.type"
+              aria-haspopup="menu"
               @click="handleChannelClick(channel)"
+              @contextmenu="openChannelMenu($event, channel)"
               @keydown.enter.self.prevent="handleChannelClick(channel)"
               @keydown.space.self.prevent="handleChannelClick(channel)"
+              @keydown.f10.shift.self.prevent="openChannelMenu($event, channel)"
+              @keydown.context-menu.self.prevent="openChannelMenu($event, channel)"
             >
               <!-- Unread pip on left edge -->
               <span
@@ -384,7 +424,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               <!-- Unread & Mention Badges -->
               <div class="flex items-center gap-1 ml-auto flex-shrink-0">
                 <span
-                  v-if="mentionCount(channel) > 0"
+                  v-if="mentionCount(channel) > 0 && !isTextActive(channel)"
                   class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
                 >
                   {{ mentionCount(channel) }}
@@ -401,6 +441,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 v-if="authStore.isAdmin"
                 @click.stop="handleDeleteChannel(channel)"
                 v-tooltip="channel.type === 'voice' ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
+                :aria-label="channel.type === 'voice' ? $t('sidebar.deleteVoiceChannel') : $t('sidebar.deleteChannel')"
                 class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 w-6 h-6 flex items-center justify-center rounded text-mnema-tertiary hover:text-mnema-danger transition flex-shrink-0"
               >
                 <Trash2 class="w-4 h-4" />
@@ -412,7 +453,13 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               <div
                 v-for="user in voiceUsers(channel)"
                 :key="user.id"
-                class="h-8 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0"
+                class="h-8 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+                tabindex="0"
+                aria-haspopup="menu"
+                data-voice-user
+                @contextmenu="openMemberMenu($event, user)"
+                @keydown.f10.shift.self.prevent="openMemberMenu($event, user)"
+                @keydown.context-menu.self.prevent="openMemberMenu($event, user)"
               >
                 <UserAvatar :user="user" size="xs" :is-speaking="!!voiceStore.speakingUsers[user.id]" />
                 <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
@@ -432,6 +479,21 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         </div>
       </section>
     </nav>
+
+    <ContextMenu
+      v-model="menu.state.open"
+      :x="menu.state.x"
+      :y="menu.state.y"
+      :anchor="menu.state.anchor"
+      :items="menu.items.value"
+    />
+
+    <EditNameDialog
+      v-if="editing"
+      :kind="editing.kind"
+      :entity="editing.entity"
+      @close="editing = null"
+    />
 
     <!-- Create Channel Modal Dialog -->
     <CreateChannelModal
