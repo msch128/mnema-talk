@@ -1,7 +1,7 @@
 <script setup>
 // Shown above the user bar only while connected to a Talk.
 import { computed } from 'vue'
-import { Monitor, MonitorOff, PhoneOff } from '@lucide/vue'
+import { Monitor, MonitorOff, PhoneOff, Volume2, VolumeX } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -66,6 +66,18 @@ const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md tr
     >
       <MonitorOff v-if="voiceStore.isScreenSharing" class="h-[18px] w-[18px]" />
       <Monitor v-else class="h-[18px] w-[18px]" />
+    </button>
+    <button
+      v-if="voiceStore.isScreenSharing"
+      type="button"
+      data-testid="voice-panel-stream-audio"
+      v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+      :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
+      :class="[ib, 'vp-narrow-hide', voiceStore.isScreenAudioMuted ? 'text-mnema-danger hover:bg-mnema-danger/[0.12]' : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text']"
+      @click="voiceStore.toggleScreenAudioMute"
+    >
+      <VolumeX v-if="voiceStore.isScreenAudioMuted" class="h-[18px] w-[18px]" />
+      <Volume2 v-else class="h-[18px] w-[18px]" />
     </button>
     <button
       type="button"

@@ -80,7 +80,14 @@ class FakeAudioContext {
     return node
   }
   createGain() {
-    const node = { gain: { value: 1 }, connect() {}, disconnect() {} }
+    const node = {
+      gain: {
+        value: 1,
+        setValueAtTime: vi.fn(function (v) { this.value = v })
+      },
+      connect: vi.fn(),
+      disconnect: vi.fn()
+    }
     FakeAudioContext.gains.push(node)
     return node
   }
@@ -678,3 +685,31 @@ describe('video subscriptions', () => {
     expect(voice.mediaState.bob).toEqual({ screen: true, camera: false })
   })
 })
+
+describe('mic test and loopback', () => {
+  it('mutes outgoing mic in channel during mic test and restores on stop', async () => {
+    const { rtc, voice } = await joined()
+    const track = voice.localAudioStream.getAudioTracks()[0]
+    expect(track.enabled).toBe(true)
+
+    await rtc.startMicLoopback()
+    expect(voice.isMicTesting).toBe(true)
+    expect(track.enabled).toBe(false)
+
+    rtc.stopMicLoopback()
+    expect(voice.isMicTesting).toBe(false)
+    expect(track.enabled).toBe(true)
+  })
+
+  it('toggles mic test loopback state', async () => {
+    const { rtc, voice } = await joined()
+    expect(voice.isMicTesting).toBe(false)
+
+    await rtc.toggleMicTest()
+    expect(voice.isMicTesting).toBe(true)
+
+    rtc.toggleMicTest()
+    expect(voice.isMicTesting).toBe(false)
+  })
+})
+

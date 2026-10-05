@@ -238,4 +238,45 @@ describe('VoiceStage screen share opt-in', () => {
     expect(sink).toHaveBeenLastCalledWith({ kind: 'camera', all: true, on: false })
     expect(voice.allCamerasOff).toBe(true)
   })
+
+  it('renders LIVE badge on participant tile and provides stream audio controls', async () => {
+    const voice = connected()
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+
+    // ParticipantTile shows LIVE badge
+    expect(w.find('[data-testid="tile-live-badge"]').exists()).toBe(true)
+
+    // Watch stream
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', new MediaStream())
+    await nextTick()
+
+    // Viewer audio controls exist on the stage
+    expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(true)
+    expect(w.find('[data-testid="viewer-stream-volume-slider"]').exists()).toBe(true)
+
+    // Slider updates user volume
+    await w.find('[data-testid="viewer-stream-volume-slider"]').setValue('150')
+    expect(voice.getUserVolume('a')).toBe(150)
+
+    // Mute button toggles local mute for stream
+    await w.find('[data-testid="viewer-stream-audio-mute"]').trigger('click')
+    expect(voice.isUserLocalMuted('a')).toBe(true)
+  })
+
+  it('provides streamer audio toggle when sharing own screen', async () => {
+    const voice = connected()
+    voice.localScreenStream = new MediaStream()
+    voice.isScreenSharing = true
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+
+    const toggle = w.find('[data-testid="streamer-audio-toggle"]')
+    expect(toggle.exists()).toBe(true)
+    expect(voice.isScreenAudioMuted).toBe(false)
+    await toggle.trigger('click')
+    expect(voice.isScreenAudioMuted).toBe(true)
+  })
 })
