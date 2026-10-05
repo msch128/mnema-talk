@@ -157,6 +157,9 @@ func (c *client) get(path string) response            { return c.do(http.MethodG
 func (c *client) post(path string, body any) response { return c.do(http.MethodPost, path, body, nil) }
 func (c *client) put(path string, body any) response  { return c.do(http.MethodPut, path, body, nil) }
 func (c *client) delete(path string) response         { return c.do(http.MethodDelete, path, nil, nil) }
+func (c *client) patch(path string, body any) response {
+	return c.do(http.MethodPatch, path, body, nil)
+}
 
 // upload posts a multipart file with an explicit part Content-Type.
 func (c *client) upload(path, field, filename, contentType string, data []byte, fields map[string]string) response {
