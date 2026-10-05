@@ -17,8 +17,8 @@ import (
 )
 
 type Config struct {
-	// LogLevel overrides the log level: "debug" or "info" (default: info in
-	// production, debug otherwise).
+	// LogLevel overrides the log level: "debug", "info", "warn" or "error"
+	// (empty: info in production, debug otherwise).
 	LogLevel             string
 	Port                 string
 	BindAddr             string
@@ -63,16 +63,33 @@ type Config struct {
 	LegalProjectNotice   string
 }
 
-// Placeholder values shipped in .env.example. They are public, so they must
-// never be accepted as real secrets.
+// Placeholder values shipped in .env.example (and older versions of it). They
+// are public, so they must never be accepted as real secrets. Any value
+// starting with "replace_with_" counts as a placeholder as well.
 var examplePlaceholders = map[string]bool{
 	"replace_with_a_secure_random_string_in_production": true,
 	"change_this_password_immediately":                  true,
+	"replace_with_access_key":                           true,
+	"replace_with_secret_key":                           true,
+	"replace_with_a_random_database_password":           true,
 }
 
-// defaultTrustedProxies covers loopback and private networks, where a reverse
-// proxy (Caddy) or the Docker bridge sits in front of the app.
-var defaultTrustedProxies = "127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
+// isPlaceholder reports whether v is one of the public example values.
+func isPlaceholder(v string) bool {
+	return examplePlaceholders[v] || strings.HasPrefix(strings.ToLower(v), "replace_with_")
+}
+
+// defaultTrustedProxies is loopback only: a reverse proxy on the same host.
+// A proxy in a Docker network or elsewhere in the LAN must be listed
+// explicitly in TRUSTED_PROXY_CIDRS, otherwise any host in those private
+// ranges could spoof X-Forwarded-For.
+var defaultTrustedProxies = "127.0.0.0/8,::1/128"
+
+// maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.
+const maxSessionExpiryHours = 8760
+
+// validLogLevels are the accepted LOG_LEVEL values ("" = by environment).
+var validLogLevels = map[string]bool{"": true, "debug": true, "info": true, "warn": true, "error": true}
 
 func Load() (*Config, error) {
 	// A local .env is optional; in production the variables come from the environment.
@@ -93,6 +110,14 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		v, err := strconv.Atoi(raw)
 		if err != nil {
 			return 0, fmt.Errorf("%s must be an integer, got %q", key, raw)
+		}
+		return v, nil
+	}
+	getBool := func(key string, def bool) (bool, error) {
+		raw := get(key, strconv.FormatBool(def))
+		v, err := strconv.ParseBool(raw)
+		if err != nil {
+			return false, fmt.Errorf("%s must be true or false, got %q", key, raw)
 		}
 		return v, nil
 	}
@@ -126,13 +151,29 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	httpPort, err := getPort("PORT", 8080)
+	if err != nil {
+		return nil, err
+	}
+	forcePathStyle, err := getBool("S3_FORCE_PATH_STYLE", true)
+	if err != nil {
+		return nil, err
+	}
+	linkPreviews, err := getBool("LINK_PREVIEWS_ENABLED", true)
+	if err != nil {
+		return nil, err
+	}
+	apiDocs, err := getBool("API_DOCS_ENABLED", false)
+	if err != nil {
+		return nil, err
+	}
 
 	cfg := &Config{
-		Port:                 get("PORT", "8080"),
+		Port:                 strconv.Itoa(int(httpPort)),
 		BindAddr:             get("BIND_ADDR", "0.0.0.0"),
 		AppEnv:               strings.ToLower(get("APP_ENV", "development")),
 		LogLevel:             strings.ToLower(get("LOG_LEVEL", "")),
-		PublicURL:            strings.TrimRight(get("PUBLIC_URL", "http://localhost:8080"), "/"),
+		PublicURL:            normalizeURL(get("PUBLIC_URL", "http://localhost:8080")),
 		TrustedProxies:       SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:            get("JWT_SECRET", ""),
 		SessionExpiryHours:   expiryHours,
@@ -144,11 +185,11 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		S3Bucket:             get("S3_BUCKET", "mnema-media"),
 		S3AccessKey:          get("S3_ACCESS_KEY", ""),
 		S3SecretKey:          get("S3_SECRET_KEY", ""),
-		S3ForcePathStyle:     get("S3_FORCE_PATH_STYLE", "true") == "true",
+		S3ForcePathStyle:     forcePathStyle,
 		MediaRetentionDays:   retentionDays,
 		MaxUploadMB:          maxUpload,
-		LinkPreviews:         get("LINK_PREVIEWS_ENABLED", "true") == "true",
-		APIDocs:              get("API_DOCS_ENABLED", "false") == "true",
+		LinkPreviews:         linkPreviews,
+		APIDocs:              apiDocs,
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		MetricsToken:         get("METRICS_TOKEN", ""),
@@ -159,7 +200,9 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		LegalOperatorCountry: get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
 		LegalProjectNotice:   get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
 	}
-	cfg.AllowedOrigins = SplitList(get("CORS_ALLOWED_ORIGINS", cfg.PublicURL))
+	for _, o := range SplitList(get("CORS_ALLOWED_ORIGINS", cfg.PublicURL)) {
+		cfg.AllowedOrigins = append(cfg.AllowedOrigins, normalizeURL(o))
+	}
 
 	if err := cfg.validate(portMin, portMax); err != nil {
 		return nil, err
@@ -171,7 +214,7 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
-	if examplePlaceholders[c.AdminInitialPassword] {
+	if isPlaceholder(c.AdminInitialPassword) {
 		return fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
 	}
 	u, err := url.Parse(c.PublicURL)
@@ -182,8 +225,14 @@ func (c *Config) validate(portMin, portMax uint16) error {
 		return fmt.Errorf("invalid WebRTC UDP port range %d-%d", portMin, portMax)
 	}
 	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = portMin, portMax
-	if c.SessionExpiryHours < 1 {
-		return fmt.Errorf("SESSION_EXPIRY_HOURS must be at least 1")
+	if c.Port == "0" {
+		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
+	}
+	if c.SessionExpiryHours < 1 || c.SessionExpiryHours > maxSessionExpiryHours {
+		return fmt.Errorf("SESSION_EXPIRY_HOURS must be between 1 and %d", maxSessionExpiryHours)
+	}
+	if !validLogLevels[c.LogLevel] {
+		return fmt.Errorf("LOG_LEVEL must be debug, info, warn or error (or empty), got %q", c.LogLevel)
 	}
 	if c.MediaRetentionDays < 0 {
 		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
@@ -216,11 +265,22 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	}
 
 	if c.IsProduction() {
-		if len(c.JWTSecret) < 32 || examplePlaceholders[c.JWTSecret] {
+		if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
 			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
 		}
 		if c.S3AccessKey == "" || c.S3SecretKey == "" {
 			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
+		}
+		if isPlaceholder(c.S3AccessKey) || isPlaceholder(c.S3SecretKey) {
+			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY still use the public example values; set your own")
+		}
+		if u, err := url.Parse(c.DatabaseURL); err == nil && u.User != nil {
+			if pw, ok := u.User.Password(); ok && isPlaceholder(pw) {
+				return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
+			}
+		}
+		if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
+			return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
 		}
 	} else if c.JWTSecret == "" {
 		// Development only: a per-process random secret (sessions reset on restart).
@@ -244,6 +304,24 @@ func RandomHex(n int) string {
 		panic(fmt.Sprintf("crypto/rand failed: %v", err))
 	}
 	return hex.EncodeToString(b)
+}
+
+// normalizeURL trims the URL and a trailing slash, lower-cases scheme and host
+// and drops the default port (:443 for https, :80 for http), so it compares
+// equal to the Origin header browsers send. Unparsable input is returned
+// trimmed; validation reports it.
+func normalizeURL(raw string) string {
+	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return raw
+	}
+	u.Scheme = strings.ToLower(u.Scheme)
+	u.Host = strings.ToLower(u.Host)
+	if p := u.Port(); (u.Scheme == "https" && p == "443") || (u.Scheme == "http" && p == "80") {
+		u.Host = strings.TrimSuffix(u.Host, ":"+p)
+	}
+	return strings.TrimRight(u.String(), "/")
 }
 
 // SplitList splits a comma-separated list, dropping empty entries.

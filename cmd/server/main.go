@@ -35,10 +35,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	level := slog.LevelInfo
-	if cfg.LogLevel == "debug" || (cfg.LogLevel == "" && !cfg.IsProduction()) {
-		level = slog.LevelDebug
-	}
+	level := logLevel(cfg)
 	if cfg.LogLevel == "debug" && os.Getenv("PION_LOG_DEBUG") == "" {
 		// Pion's ICE agent then logs every candidate pair it checks.
 		_ = os.Setenv("PION_LOG_DEBUG", "ice")
@@ -90,4 +87,23 @@ func run() error {
 		return err
 	}
 	return server.Run(ctx, cfg, router)
+}
+
+// logLevel maps LOG_LEVEL (validated by config) to a slog level; empty means
+// info in production and debug otherwise.
+func logLevel(cfg *config.Config) slog.Level {
+	switch cfg.LogLevel {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	}
+	if cfg.IsProduction() {
+		return slog.LevelInfo
+	}
+	return slog.LevelDebug
 }
