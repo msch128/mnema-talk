@@ -13,6 +13,13 @@ GOVULNCHECK_VERSION ?= v1.8.0
 
 OPENAPI_FILE := api/openapi.json
 
+# Version and revision baked into the binary and the web app (they must
+# match: the browser offers a reload when the server's version differs).
+VERSION  ?= $(shell cat version.txt 2>/dev/null || echo dev)
+REVISION ?= $(shell git rev-parse HEAD 2>/dev/null)
+VERSION_PKG := github.com/msch128/mnema-talk/internal/version
+LDFLAGS  := -w -s -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Revision=$(REVISION)
+
 # openapi_gen,<target file>: swag v2 writes an OpenAPI 3.1 document from the
 # handler annotations (internal/server/doc.go holds the general info); then
 # internal/tools/openapifix applies the fixes swag cannot express itself.
@@ -37,11 +44,11 @@ $(WEB_DEPS): web/package-lock.json
 	cd web && npm ci --no-audit --no-fund
 
 web: $(WEB_DEPS) ## Install frontend deps (npm ci) and build web/dist
-	cd web && npm run build
+	cd web && MNEMA_VERSION=$(VERSION) npm run build
 
 build: web ## Build the web app, then the Go binary to bin/mnema-talk
 	@mkdir -p $(dir $(BIN))
-	CGO_ENABLED=0 go build -trimpath -ldflags="-w -s" -o $(BIN) ./cmd/server
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(BIN) ./cmd/server
 
 run: build ## Build and run the binary (reads .env)
 	./$(BIN)
@@ -92,13 +99,13 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 check: lint openapi-check test coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
-	docker build -t mnema-talk:ci .
+	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
 
 e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; needs Docker
 	e2e/run.sh
 
 docker: ## Build the app image via compose
-	docker compose build app
+	docker compose build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) app
 
 up: ## Start the full stack (docker compose up -d)
 	docker compose up -d

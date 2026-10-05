@@ -18,10 +18,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/version"
 )
-
-// version is set at build time via -ldflags "-X main.version=vX.Y.Z".
-var version = "dev"
 
 func main() {
 	if err := run(); err != nil {
@@ -41,7 +39,7 @@ func run() error {
 		_ = os.Setenv("PION_LOG_DEBUG", "ice")
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
-	slog.Info("starting mnema-talk", "version", version, "env", cfg.AppEnv)
+	slog.Info("starting mnema-talk", "version", version.Current(), "revision", version.Commit(), "env", cfg.AppEnv)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -82,7 +80,7 @@ func run() error {
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 
-	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version, Context: ctx})
+	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Context: ctx})
 	if err != nil {
 		return err
 	}

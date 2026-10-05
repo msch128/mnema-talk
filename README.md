@@ -138,8 +138,10 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,
-   provenance and SBOM. The version is baked into the binary
-   (`-X main.version=X.Y.Z`).
+   provenance and SBOM. The version and commit are baked into the binary
+   (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
+   version into the web app, so the app can tell browsers when a newer
+   version is running.
 
 ## Configuration
 
