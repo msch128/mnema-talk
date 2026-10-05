@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.1.1](https://github.com/msch128/mnema-talk/compare/v0.1.0...v0.1.1) (2026-10-05)
+
+
+### Features
+
+* **admin:** add user moderation and channel layout management ([5a24c9a](https://github.com/msch128/mnema-talk/commit/5a24c9a3a077828288746a5d622b7436f89959fe))
+* **admin:** rename channels and categories, reorder by drag and drop ([a1d710f](https://github.com/msch128/mnema-talk/commit/a1d710fdc25009fa1bb3bc90733eb06bdab6023f))
+* **chat:** mark the open channel read, notification levels and typing expiry in the store ([fe6f05b](https://github.com/msch128/mnema-talk/commit/fe6f05b3dc4166ccc4a01adde82f649261b4d73f))
+* **chat:** page thread replies with limit and cursor ([13617e8](https://github.com/msch128/mnema-talk/commit/13617e8e1fb88b4fe302dd5f6a7197adaaa1b888))
+* **chat:** search filters for channel, author and attachments with jump to result ([e1783a5](https://github.com/msch128/mnema-talk/commit/e1783a5755d9949a0e67f0c1ec76c839790b36cf))
+* **chat:** unread divider, typing line, notification controls and message keyboard navigation ([4de94aa](https://github.com/msch128/mnema-talk/commit/4de94aaaf9389502b9d3fa05f11cfe8f4ea5ed01))
+* **nav:** add context menus for channels, categories and members ([4f8c204](https://github.com/msch128/mnema-talk/commit/4f8c2040a41745a7afa98eddc46fca2e2a7cf8d1))
+* **ops:** add Prometheus metrics, health check script and coturn compose profile ([d5e9d58](https://github.com/msch128/mnema-talk/commit/d5e9d583b3b4ba50f9bb9e1cffbb8e48b27a93de))
+* **sfu:** forward the camera as its own video source next to the screen share ([bf2b774](https://github.com/msch128/mnema-talk/commit/bf2b77488589568fd124bf9fcdc9c488461a6d3a))
+* **sfu:** forward video only to viewers who subscribed ([802e451](https://github.com/msch128/mnema-talk/commit/802e451c9c1414c9de94ad48fb3218708c7e2838))
+* **ui:** make context menu keyboard accessible with anchor positioning ([13dee3c](https://github.com/msch128/mnema-talk/commit/13dee3cbe10adbcfcba118914b330c1409564c0b))
+* **voice:** AI noise suppression with DeepFilterNet3 ([45d82a5](https://github.com/msch128/mnema-talk/commit/45d82a5bcfb91a9af664b02635ed3be69a64f4e1))
+* **voice:** cap screen and camera bitrate and keep screen resolution under congestion ([b22b944](https://github.com/msch128/mnema-talk/commit/b22b9449087bd78a0eb7da102d76ffe66a5d10c6))
+* **voice:** opt in to screen shares, opt out of cameras ([d4c3f4c](https://github.com/msch128/mnema-talk/commit/d4c3f4c2c464e9f6433ac56cfa317606681ab87b))
+* **voice:** preview a roundtable without joining and show camera tiles ([5127093](https://github.com/msch128/mnema-talk/commit/5127093868ab7bde8be50e72ab7c1f6284cd3e77))
+* **voice:** seamless screenshare start and stop using video transceiver ([22570c5](https://github.com/msch128/mnema-talk/commit/22570c578d9fc236fa0951cdb6447e8c7ed5f5ec))
+* **voice:** share screen audio, per-user volume and webcam in the client ([56a7dd2](https://github.com/msch128/mnema-talk/commit/56a7dd2b0f01f5dc382a14f66bf7d6e59495b89a))
+* **voice:** TURN relay support with time-limited credentials ([1335d47](https://github.com/msch128/mnema-talk/commit/1335d476d6d6eb298eb96ee2f82b80f8f6de5194))
+* **web:** i18n (de/en), toasts, confirm dialogs, accessible dialogs, voice status panel ([385880c](https://github.com/msch128/mnema-talk/commit/385880c74703c7a8fd1a995ac48557df03603d04))
+* **web:** serve precompressed static assets ([4892081](https://github.com/msch128/mnema-talk/commit/48920816b9c55c6533752236039ad66fd9daef66))
+* **web:** URL routes, context menus, read state and link preview groundwork ([7c00a60](https://github.com/msch128/mnema-talk/commit/7c00a6041b9c7747e06e9f16fd51aeffaaa28df1))
+
+
+### Bug Fixes
+
+* **admin:** drop duplicate user admin routes, validate admin-set passwords ([bc80806](https://github.com/msch128/mnema-talk/commit/bc808060780eab26f938f85bba74e72a8ca65dbe))
+* **chat:** cache link previews and skip links in code and spoilers ([d5837bf](https://github.com/msch128/mnema-talk/commit/d5837bf8b0d08efe65a6ab6556aefbdd969648a4))
+* **ops:** refuse to start coturn without a secret, close relay bypasses ([169012d](https://github.com/msch128/mnema-talk/commit/169012da2c458d5d94f219f4f7cb9b2fd864c1f4))
+* **ops:** require METRICS_TOKEN for /api/metrics, harden coturn relay ([205a383](https://github.com/msch128/mnema-talk/commit/205a3833fa0e2c65a8b5e9849942503c1cbc2969))
+* **release:** stop re-releasing 0.1.0 after main was rewritten ([b892bcd](https://github.com/msch128/mnema-talk/commit/b892bcd917a8dfa27103e2c4e56ebb41a39f1e36))
+* **routes:** guard admin routes, follow joined voice channel and fix admin history ([1dbc7e0](https://github.com/msch128/mnema-talk/commit/1dbc7e0226903c7e8cfa35ffc2a25d641a8f180e))
+* **voice:** allow the webcam in the Permissions-Policy ([644df19](https://github.com/msch128/mnema-talk/commit/644df19236abb1946afad4aed48a9217c7cd5c6a))
+* **voice:** keep voice active and prevent disconnect in background tabs ([9d7ac2e](https://github.com/msch128/mnema-talk/commit/9d7ac2ee08124aa06795ca6660c6f47abdc7521c))
+* **voice:** open connection details from the ping in the voice panel ([0890904](https://github.com/msch128/mnema-talk/commit/089090462deb1497b72d9493b92ccf2441f7bfd5))
+* **web:** tooltip on the search dialog close button ([2e45c02](https://github.com/msch128/mnema-talk/commit/2e45c0286ba731c4b779823c0c9765cdab3faa70))
+
 ## 0.1.0 (2026-10-05)
 
 
