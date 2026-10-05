@@ -964,6 +964,23 @@ export function useWebRTC() {
     return voiceStore.isScreenSharing ? stopScreenShare() : startScreenShare()
   }
 
+  // Tells the user why the camera failed instead of always blaming permissions.
+  function cameraErrorKey(err) {
+    switch (err?.name) {
+      case 'NotAllowedError':
+      case 'SecurityError':
+        return 'voice.cameraDenied'
+      case 'NotFoundError':
+      case 'OverconstrainedError':
+        return 'voice.cameraNotFound'
+      case 'NotReadableError':
+      case 'AbortError':
+        return 'voice.cameraBusy'
+      default:
+        return 'voice.cameraFailed'
+    }
+  }
+
   async function startCamera() {
     if (!voiceStore.currentChannelId || localCameraStream.value) return
     const gen = joinGeneration
@@ -978,7 +995,7 @@ export function useWebRTC() {
       })
     } catch (err) {
       console.warn('Camera unavailable:', err)
-      useToastStore().error(t('voice.cameraFailed'))
+      useToastStore().error(t(cameraErrorKey(err)))
       return
     }
     // Left the call (or toggled twice) while the browser was asking.

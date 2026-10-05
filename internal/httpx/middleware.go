@@ -149,7 +149,7 @@ func SecurityHeaders(trusted []*net.IPNet, prod bool) func(http.Handler) http.Ha
 			h.Set("Cross-Origin-Opener-Policy", "same-origin")
 			h.Set("Cross-Origin-Resource-Policy", "same-origin")
 			// Voice chat and screen sharing need the microphone and display capture.
-			h.Set("Permissions-Policy", "camera=(), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=(self)")
+			h.Set("Permissions-Policy", "camera=(self), geolocation=(), payment=(), usb=(), microphone=(self), display-capture=(self)")
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				h.Set("Cache-Control", "no-store")
 				h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")

@@ -296,7 +296,10 @@
       "open": "Tafelrunde öffnen",
       "details": "Verbindungsdetails"
     },
-    "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser."
+    "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser.",
+    "cameraDenied": "Kamerazugriff verweigert. Erlaube die Kamera für diese Seite in den Browser-Einstellungen.",
+    "cameraNotFound": "Keine Kamera gefunden.",
+    "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt."
   },
   "audio": {
     "settings": "Audio-Einstellungen",
