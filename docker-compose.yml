@@ -146,7 +146,9 @@ services:
         for entry in $$(echo "$$WEBRTC_NAT_1TO1_IP" | tr ',' ' '); do
           case "$$entry" in
             10.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|192.168.*)
-              self="$$self --allowed-peer-ip=$$entry" ;;
+              # Relay from (and allow) only the voice server's LAN address, never
+              # a Docker or VPN interface the voice server cannot reach.
+              self="$$self --allowed-peer-ip=$$entry --relay-ip=$$entry" ;;
             *[!0-9.]*) ;; # a host name, e.g. dynamic DNS: nothing to add
             *) self="$$self --denied-peer-ip=$$entry" ;;
           esac
