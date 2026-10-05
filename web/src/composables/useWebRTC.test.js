@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { toRaw } from 'vue'
-import { publishMids, tuneScreenOffer, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, tuneScreenOffer, screenAudioConstraints, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
@@ -451,7 +451,12 @@ describe('screen share with audio', () => {
     const { rtc } = await joined()
     stubDisplayMedia(fakeStream(['video', 'audio']))
     await rtc.startScreenShare()
-    expect(navigator.mediaDevices.getDisplayMedia.mock.calls[0][0].audio.restrictOwnAudio).toBe(true)
+    expect(navigator.mediaDevices.getDisplayMedia.mock.calls[0][0].audio).toMatchObject({ echoCancellation: true })
+  })
+
+  it('leaves the page out of the capture where supported, else cancels its echo', () => {
+    expect(screenAudioConstraints({ restrictOwnAudio: true })).toEqual({ autoGainControl: false, noiseSuppression: false, echoCancellation: false, restrictOwnAudio: true })
+    expect(screenAudioConstraints({})).toEqual({ autoGainControl: false, noiseSuppression: false, echoCancellation: true })
   })
 
   it('mute and the gate only silence the mic, never the screen audio', async () => {
