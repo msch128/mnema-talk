@@ -31,22 +31,6 @@ export function parseRoute(pathname = (typeof window !== 'undefined' ? window.lo
   return { view: 'root' }
 }
 
-export function buildRoute(route) {
-  if (route.view === 'chat' && route.channelId) {
-    if (route.messageId) return `/c/${route.channelId}/m/${route.messageId}`
-    if (route.threadId) return `/c/${route.channelId}/t/${route.threadId}`
-    return `/c/${route.channelId}`
-  }
-  if (route.view === 'voice' && route.channelId) {
-    if (route.showChat) return `/v/${route.channelId}/chat`
-    return `/v/${route.channelId}`
-  }
-  if (route.view === 'admin') {
-    return `/admin/${route.tab || 'users'}`
-  }
-  return '/'
-}
-
 export const currentRoute = ref(parseRoute())
 
 // Each entry we push carries its depth in history.state, so "is there an
