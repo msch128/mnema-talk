@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.15](https://github.com/msch128/mnema-talk/compare/v0.1.14...v0.1.15) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** stop the audio loop when two people share system audio ([#34](https://github.com/msch128/mnema-talk/issues/34)) ([29dfd67](https://github.com/msch128/mnema-talk/commit/29dfd67622046e88e48f45461b09efea204b31d9))
+
 ## [0.1.14](https://github.com/msch128/mnema-talk/compare/v0.1.13...v0.1.14) (2026-10-05)
 
 
