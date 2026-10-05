@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.11](https://github.com/msch128/mnema-talk/compare/v0.1.10...v0.1.11) (2026-10-05)
+
+
+### Features
+
+* **voice:** volumes, output device, mute marks and a quiet own preview ([92dc071](https://github.com/msch128/mnema-talk/commit/92dc0714703742bc76b218c0aba03cda576d4686))
+
 ## [0.1.10](https://github.com/msch128/mnema-talk/compare/v0.1.9...v0.1.10) (2026-10-05)
 
 
