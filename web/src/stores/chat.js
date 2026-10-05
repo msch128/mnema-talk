@@ -418,6 +418,18 @@ export const useChatStore = defineStore('chat', () => {
     attemptReconnect()
   }
 
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (authStore.isAuthenticated && (!ws.value || !isConnected.value)) {
+          retryNow()
+        } else if (isConnected.value) {
+          sendWSEvent('ping', { t: Date.now() })
+        }
+      }
+    })
+  }
+
   function initWebSocket() {
     if (ws.value || !authStore.isAuthenticated) return
 

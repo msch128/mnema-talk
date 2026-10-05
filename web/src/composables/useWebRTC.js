@@ -126,10 +126,21 @@ function setupPeerConnection(voiceStore, chatStore) {
         if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
         console.warn('[WebRTC] Audio auto-play warning:', e)
       })
+      if (typeof document !== 'undefined' && document.body) {
+        let sink = document.getElementById('mnema-audio-sink')
+        if (!sink) {
+          sink = document.createElement('div')
+          sink.id = 'mnema-audio-sink'
+          sink.style.display = 'none'
+          document.body.appendChild(sink)
+        }
+        sink.appendChild(audioEl)
+      }
       remoteAudioElements.push(audioEl)
 
       event.track.onended = () => {
         audioEl.srcObject = null
+        try { audioEl.remove() } catch { /* detached */ }
         remoteAudioElements = remoteAudioElements.filter(a => a !== audioEl)
       }
     } else if (event.track.kind === 'video') {
@@ -186,7 +197,18 @@ function releasePtt() {
 }
 
 function onVisibilityChange() {
-  if (document.visibilityState === 'hidden') releasePtt()
+  if (document.visibilityState === 'hidden') {
+    releasePtt()
+  } else if (document.visibilityState === 'visible') {
+    if (audioContext && audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {})
+    }
+    if (pttStore?.isConnected && pttStore?.currentChannelId) {
+      remoteAudioElements.forEach(el => {
+        if (el.paused) el.play().catch(() => {})
+      })
+    }
+  }
 }
 
 function setupPttListeners(voiceStore) {

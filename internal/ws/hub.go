@@ -5,6 +5,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -650,10 +652,12 @@ func (c *Client) writePump() {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			tv, err := c.hub.tokenVersion(ctx, c.User.ID)
 			cancel()
-			if err != nil || tv != c.tokenVersion {
+			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tv != c.tokenVersion) {
 				_ = c.conn.WriteMessage(websocket.CloseMessage,
 					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"))
 				return
+			} else if err != nil {
+				slog.Warn("revalidate token version failed", "user", c.User.ID, "err", err)
 			}
 		}
 	}
