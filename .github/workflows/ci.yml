@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+    # release-please's PRs only bump these files and are merged right away by
+    # release.yml; CI runs on the resulting push to main instead.
+    paths-ignore:
+      - CHANGELOG.md
+      - version.txt
+      - .release-please-manifest.json
 
 permissions:
   contents: read
