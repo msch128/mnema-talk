@@ -335,7 +335,7 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 // @Description
 // @Description Client to server:
 // @Description - `ping` `{t}`; `presence_idle` `{idle: bool}`.
-// @Description - `typing` `{channel_id}` (text channels only, rate-limited).
+// @Description - `typing` `{channel_id}` (text and voice channels, rate-limited).
 // @Description - `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.
 // @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
 // @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`.
@@ -620,7 +620,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if !c.allowTyping(p.ChannelID, time.Now()) {
 			return
 		}
-		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil && ch.Type == chat.ChannelTypeText {
+		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil {
 			h.broadcastExcept(c.User.ID, "typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID})
 		}
 

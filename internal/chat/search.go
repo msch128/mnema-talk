@@ -16,7 +16,7 @@ const (
 	maxSearchTerms    = 8
 )
 
-// SearchQuery filters messages in text channels. Every term of Text must
+// SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
 // occur in the message (case-insensitive substring); Has is "", "file",
 // "image" or "link". Results are newest first; Before pages further back.
 type SearchQuery struct {
@@ -48,7 +48,9 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 		return nil, false, httpx.ErrInvalidInput("enter a search term or choose a filter")
 	}
 
-	where := []string{"c.type = 'text'"}
+	// Every channel's chat is searched, voice channels included. The check
+	// above guarantees at least one condition.
+	where := []string{}
 	args := []any{}
 	arg := func(v any) string {
 		args = append(args, v)

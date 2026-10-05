@@ -185,7 +185,7 @@ func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 // createMessage handles POST /api/channels/{channelID}/messages.
 //
 // @Summary Post a message
-// @Description Not allowed in voice channels. Resolves mentions and broadcasts message_create.
+// @Description Works in text and voice channels (a voice channel's chat). Resolves mentions and broadcasts message_create.
 // @ID createMessage
 // @Tags Messages
 // @Accept json
@@ -208,7 +208,7 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := TextChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := ChannelForMessages(r.Context(), h.DB, chID); err != nil {
 		return err
 	}
 	var req CreateMessageRequest
@@ -605,12 +605,12 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 
 // readState handles GET /api/read-state.
 //
-// @Summary Unread summary of all text channels
+// @Summary Unread summary of all channels
 // @ID getReadState
 // @Tags Channels
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} ReadState "One entry per text channel."
+// @Success 200 {array} ReadState "One entry per channel (text channels and voice channels' chats)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -625,18 +625,15 @@ func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// textChannelParam returns the {channelID} of an existing text channel.
-func (h *Handler) textChannelParam(r *http.Request) (uuid.UUID, error) {
+// channelParam returns the {channelID} of an existing channel (text or
+// voice: both have a chat and so a read state).
+func (h *Handler) channelParam(r *http.Request) (uuid.UUID, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
 		return chID, err
 	}
-	ch, err := LoadChannel(r.Context(), h.DB, chID)
-	if err != nil {
+	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
 		return chID, err
-	}
-	if ch.Type != ChannelTypeText {
-		return chID, httpx.ErrInvalidInput("only text channels have a read state")
 	}
 	return chID, nil
 }
@@ -650,7 +647,7 @@ func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[stri
 // markRead handles POST /api/channels/{channelID}/read.
 //
 // @Summary Mark a channel read
-// @Description Moves the read marker forward to the given message, or to now when the body is omitted. Never moves backwards. Text channels only. Notifies the user's other sessions.
+// @Description Moves the read marker forward to the given message, or to now when the body is omitted. Never moves backwards. Text and voice channels. Notifies the user's other sessions.
 // @ID markChannelRead
 // @Tags Channels
 // @Accept json
@@ -668,7 +665,7 @@ func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[stri
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/read [post]
 func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.textChannelParam(r)
+	chID, err := h.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -709,7 +706,7 @@ func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/unread [post]
 func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.textChannelParam(r)
+	chID, err := h.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -747,7 +744,7 @@ func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/notifications [put]
 func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
-	chID, err := h.textChannelParam(r)
+	chID, err := h.channelParam(r)
 	if err != nil {
 		return err
 	}
@@ -767,7 +764,7 @@ func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
 // search handles GET /api/search.
 //
 // @Summary Search messages
-// @Description Text channels only, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.
+// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.
 // @ID searchMessages
 // @Tags Messages
 // @Produce json

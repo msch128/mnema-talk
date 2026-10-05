@@ -30,8 +30,12 @@ func TestMessagesAreScopedAndValidated(t *testing.T) {
 	if cross.status != http.StatusBadRequest {
 		t.Errorf("thread reply across channels: %d", cross.status)
 	}
-	if res := max.post("/api/channels/"+voice.String()+"/messages", map[string]string{"content": "hi"}); res.status != http.StatusBadRequest {
-		t.Errorf("text in voice channel: %d", res.status)
+	// A voice channel has its own chat; a thread root of another channel is still refused there.
+	if res := max.post("/api/channels/"+voice.String()+"/messages", map[string]string{"content": "hi"}); res.status != http.StatusCreated {
+		t.Errorf("text in voice channel: %d %s", res.status, res.body)
+	}
+	if res := max.post("/api/channels/"+voice.String()+"/messages", map[string]any{"content": "reply", "parent_id": root}); res.status != http.StatusBadRequest {
+		t.Errorf("thread reply from a voice channel into a text channel's thread: %d", res.status)
 	}
 	// The channel in the URL must match the message's channel.
 	if res := admin.delete("/api/channels/" + other.String() + "/messages/" + root.String()); res.status != http.StatusNotFound {
