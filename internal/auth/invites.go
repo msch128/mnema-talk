@@ -116,6 +116,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Get("/invites", httpx.Handle(h.listInvites))
 	r.Post("/invites", httpx.Handle(h.createInvite))
 	r.Delete("/invites/{id}", httpx.Handle(h.deleteInvite))
+	h.mountUserAdmin(r)
 }
 
 func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) error {

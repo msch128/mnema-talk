@@ -305,6 +305,11 @@ func (h *Hub) unregister(c *Client) {
 
 	slog.Info("ws disconnected", "user", c.User.Username)
 	if offline {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if _, err := h.DB.Exec(ctx, `UPDATE users SET last_seen_at = NOW() WHERE id = $1`, c.User.ID); err != nil {
+			slog.Warn("record last seen", "user", c.User.ID, "err", err)
+		}
+		cancel()
 		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "offline"})
 	}
 }
@@ -388,6 +393,45 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	if !rejoin {
 		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": c.User})
+	}
+}
+
+// KickFromVoice ends userID's voice presence on every connection and in a
+// pending grace period. It reports whether the user was in a voice room.
+func (h *Hub) KickFromVoice(userID uuid.UUID) bool {
+	h.mu.RLock()
+	var mine []*Client
+	for c := range h.clients {
+		if c.User.ID == userID {
+			mine = append(mine, c)
+		}
+	}
+	h.mu.RUnlock()
+
+	kicked := false
+	for _, c := range mine {
+		if cur := c.currentVoice(); cur != nil {
+			ch := *cur
+			h.leaveVoice(c, ch)
+			c.SendEvent("voice_kicked", map[string]any{"channel_id": ch})
+			kicked = true
+		}
+	}
+	if g := h.takeGrace(userID); g != nil {
+		h.removePresence(userID, g.channelID)
+		kicked = true
+	}
+	return kicked
+}
+
+// DisconnectUser closes every live connection of userID.
+func (h *Hub) DisconnectUser(userID uuid.UUID) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	for c := range h.clients {
+		if c.User.ID == userID {
+			c.close()
+		}
 	}
 }
 
