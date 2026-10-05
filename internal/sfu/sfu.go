@@ -418,6 +418,22 @@ func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 	}
 }
 
+// RemoveUserVideoTrack removes video tracks published by userID and signals other peers.
+func (r *Room) RemoveUserVideoTrack(userID uuid.UUID) {
+	r.mu.Lock()
+	changed := false
+	for id, tInfo := range r.trackLocals {
+		if tInfo.SenderID == userID && tInfo.Kind == webrtc.RTPCodecTypeVideo {
+			delete(r.trackLocals, id)
+			changed = true
+		}
+	}
+	r.mu.Unlock()
+	if changed {
+		go r.SignalPeerConnections()
+	}
+}
+
 // removePeer closes peer and, if it is still the user's current connection,
 // removes it and its tracks from the room.
 func (r *Room) removePeer(peer *Peer) {

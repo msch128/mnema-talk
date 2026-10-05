@@ -307,11 +307,13 @@ func (h *Hub) unregister(c *Client) {
 
 	slog.Info("ws disconnected", "user", c.User.Username)
 	if offline {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		if _, err := h.DB.Exec(ctx, `UPDATE users SET last_seen_at = NOW() WHERE id = $1`, c.User.ID); err != nil {
-			slog.Warn("record last seen", "user", c.User.ID, "err", err)
+		if h.DB != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			if _, err := h.DB.Exec(ctx, `UPDATE users SET last_seen_at = NOW() WHERE id = $1`, c.User.ID); err != nil {
+				slog.Warn("record last seen", "user", c.User.ID, "err", err)
+			}
+			cancel()
 		}
-		cancel()
 		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "offline"})
 	}
 }
@@ -611,6 +613,13 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
 				room.DispatchKeyframe(c.User.ID)
+			}
+		}
+
+	case "webrtc_screenshare_stop":
+		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
+			if room := h.SFU.Room(*cur); room != nil {
+				room.RemoveUserVideoTrack(c.User.ID)
 			}
 		}
 	}

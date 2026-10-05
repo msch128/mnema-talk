@@ -1,0 +1,253 @@
+package ws
+
+import (
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
+)
+
+func isUserInSlice(users []uuid.UUID, id uuid.UUID) bool {
+	for _, u := range users {
+		if u == id {
+			return true
+		}
+	}
+	return false
+}
+
+func TestHubClientRegistrationAndPresence(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	user := auth.User{
+		ID:          uuid.New(),
+		Username:    "alice",
+		DisplayName: "Alice",
+	}
+
+	if isUserInSlice(h.onlineUsers(), user.ID) {
+		t.Fatalf("expected user to be offline initially")
+	}
+
+	c := &Client{
+		hub:  h,
+		User: user,
+		send: make(chan []byte, 16),
+	}
+
+	h.register(c)
+	if !isUserInSlice(h.onlineUsers(), user.ID) {
+		t.Fatalf("expected user to be online after register")
+	}
+
+	// Another connection for the same user
+	c2 := &Client{
+		hub:  h,
+		User: user,
+		send: make(chan []byte, 16),
+	}
+	h.register(c2)
+	if !isUserInSlice(h.onlineUsers(), user.ID) {
+		t.Fatalf("expected user to remain online")
+	}
+
+	h.unregister(c)
+	if !isUserInSlice(h.onlineUsers(), user.ID) {
+		t.Fatalf("expected user to still be online with second client")
+	}
+
+	h.unregister(c2)
+	if isUserInSlice(h.onlineUsers(), user.ID) {
+		t.Fatalf("expected user to be offline after all clients unregister")
+	}
+}
+
+func TestHubBroadcastAndSendToUsers(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	u1 := auth.User{ID: uuid.New(), Username: "u1"}
+	u2 := auth.User{ID: uuid.New(), Username: "u2"}
+
+	c1 := &Client{hub: h, User: u1, send: make(chan []byte, 16)}
+	c2 := &Client{hub: h, User: u2, send: make(chan []byte, 16)}
+
+	h.register(c1)
+	h.register(c2)
+	defer h.unregister(c1)
+	defer h.unregister(c2)
+
+	// Drain initial presence events
+drain:
+	for {
+		select {
+		case <-c1.send:
+		case <-c2.send:
+		default:
+			break drain
+		}
+	}
+
+	// Broadcast
+	h.Broadcast("test_event", map[string]string{"greeting": "hello"})
+
+	select {
+	case msg := <-c1.send:
+		var ev Event
+		if err := json.Unmarshal(msg, &ev); err != nil || ev.Type != "test_event" {
+			t.Fatalf("unexpected message on c1: %s", string(msg))
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("timeout waiting for broadcast on c1")
+	}
+
+	select {
+	case msg := <-c2.send:
+		var ev Event
+		if err := json.Unmarshal(msg, &ev); err != nil || ev.Type != "test_event" {
+			t.Fatalf("unexpected message on c2: %s", string(msg))
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("timeout waiting for broadcast on c2")
+	}
+
+	// Send to specific user
+	h.SendToUsers([]uuid.UUID{u1.ID}, "direct_event", "secret")
+	select {
+	case msg := <-c1.send:
+		var ev Event
+		if err := json.Unmarshal(msg, &ev); err != nil || ev.Type != "direct_event" {
+			t.Fatalf("unexpected direct message on c1: %s", string(msg))
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("timeout waiting for direct message on c1")
+	}
+
+	// c2 should not have received direct_event
+	select {
+	case msg := <-c2.send:
+		t.Fatalf("c2 unexpectedly received message: %s", string(msg))
+	default:
+	}
+}
+
+func TestHubTypingThrottling(t *testing.T) {
+	c := &Client{
+		User: auth.User{ID: uuid.New(), Username: "u"},
+		send: make(chan []byte, 16),
+	}
+
+	chID := uuid.New()
+	now := time.Now()
+
+	// First typing is allowed
+	if !c.allowTyping(chID, now) {
+		t.Fatalf("first typing should be allowed")
+	}
+
+	// Immediate next typing within 3s is throttled
+	if c.allowTyping(chID, now.Add(1*time.Second)) {
+		t.Fatalf("typing within 3s should be throttled")
+	}
+
+	// Typing after 3.1s is allowed
+	if !c.allowTyping(chID, now.Add(3100*time.Millisecond)) {
+		t.Fatalf("typing after 3.1s should be allowed")
+	}
+}
+
+func TestHubVoiceSnapshotAndSpeaking(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	chID := uuid.New()
+	user := auth.User{ID: uuid.New(), Username: "speaker"}
+
+	c := &Client{
+		hub:  h,
+		User: user,
+		send: make(chan []byte, 16),
+	}
+
+	h.register(c)
+	defer h.unregister(c)
+
+	// Simulate voice join directly in state
+	h.mu.Lock()
+	if h.voice[chID] == nil {
+		h.voice[chID] = make(map[uuid.UUID]auth.User)
+	}
+	h.voice[chID][user.ID] = user
+	c.voiceCh = &chID
+	h.mu.Unlock()
+
+	snap := h.voiceSnapshot()
+	if len(snap[chID]) != 1 || snap[chID][user.ID].ID != user.ID {
+		t.Fatalf("expected voice snapshot to include user in room, got: %+v", snap)
+	}
+
+	// Drain
+drain:
+	for {
+		select {
+		case <-c.send:
+		default:
+			break drain
+		}
+	}
+
+	// Speaking event dispatch
+	c.handle("voice_speaking", []byte(`{"active":true}`))
+
+	select {
+	case msg := <-c.send:
+		var ev Event
+		if err := json.Unmarshal(msg, &ev); err != nil || ev.Type != "voice_speaking" {
+			t.Fatalf("expected voice_speaking event, got: %s", string(msg))
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatalf("timeout waiting for voice_speaking event")
+	}
+}
+
+func TestHubVoiceGracePeriod(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	h.VoiceGrace = 50 * time.Millisecond
+	chID := uuid.New()
+	user := auth.User{ID: uuid.New(), Username: "reloader"}
+
+	c := &Client{
+		hub:  h,
+		User: user,
+		send: make(chan []byte, 16),
+	}
+
+	h.register(c)
+	h.mu.Lock()
+	if h.voice[chID] == nil {
+		h.voice[chID] = make(map[uuid.UUID]auth.User)
+	}
+	h.voice[chID][user.ID] = user
+	c.voiceCh = &chID
+	h.mu.Unlock()
+
+	// When client unregisters, it starts grace period instead of immediately leaving
+	h.unregister(c)
+
+	h.mu.RLock()
+	inRoomDuringGrace := h.voice[chID][user.ID].ID == user.ID
+	h.mu.RUnlock()
+	if !inRoomDuringGrace {
+		t.Fatalf("user should remain in room during grace period")
+	}
+
+	// Wait for grace period to expire
+	time.Sleep(70 * time.Millisecond)
+
+	h.mu.RLock()
+	inRoomAfterGrace := false
+	if m, ok := h.voice[chID]; ok {
+		_, inRoomAfterGrace = m[user.ID]
+	}
+	h.mu.RUnlock()
+	if inRoomAfterGrace {
+		t.Fatalf("user should be removed from room after grace period expires")
+	}
+}
