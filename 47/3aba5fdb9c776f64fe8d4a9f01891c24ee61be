@@ -1,0 +1,37 @@
+.github/workflows/ci.yml
+  s_b14660589987ff::t_16c67234cbef09 160-196
+e2e/docker-compose.yml
+  s_b14660589987ff::t_e8d8e5c6cc5d50 1-28
+e2e/package-lock.json
+  s_b14660589987ff::t_ea9e7044d009fd 1-60
+e2e/run.sh
+  s_b14660589987ff::t_bb04153be0d8e8 1-87
+e2e/package.json
+  s_b14660589987ff::t_f118ccae487971 1-13
+e2e/.gitignore
+  s_b14660589987ff::t_802e1369cce3e8 1-4
+e2e/playwright.config.js
+  s_b14660589987ff::t_4d779cd0da6090 1-24
+Makefile
+  s_b14660589987ff::t_16c67234cbef09 6,15,63-64
+  s_b14660589987ff::t_5b5fe63eae1d22 65
+e2e/tests/smoke.spec.js
+  s_b14660589987ff::t_7bd00b21780f9f 1-31,46-58,61-110,117-131
+  s_b14660589987ff::t_9f5885b150cadf 32-45,59-60,111-116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "473aba5fdb9c776f64fe8d4a9f01891c24ee61be",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
