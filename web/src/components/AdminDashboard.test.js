@@ -5,6 +5,8 @@ import { nextTick } from 'vue'
 import AdminDashboard from './AdminDashboard.vue'
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
+import { useToastStore } from '../stores/toast'
+import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import { setLocale } from '../i18n'
 
 const mockUsers = [
@@ -389,5 +391,165 @@ describe('AdminDashboard - Channels & Layout Tab', () => {
     expect(apiMock).toHaveBeenCalledWith('/api/admin/categories/cat-1', {
       method: 'DELETE'
     })
+  })
+})
+
+async function openChannelsTab() {
+  const w = await createWrapper()
+  await w.find('[data-testid="tab-channels"]').trigger('click')
+  await flushPromises()
+  return w
+}
+
+const channelIds = (w, catId) =>
+  w.find(`[data-testid="category-item-${catId}"]`).findAll('[data-testid^="channel-item-"]').map(el => el.attributes('data-testid').replace('channel-item-', ''))
+const categoryIds = w =>
+  w.findAll('[data-testid^="category-item-"]').map(el => el.attributes('data-testid').replace('category-item-', ''))
+const unsavedBanner = w => w.text().includes('Unsaved changes to channel order.')
+
+describe('AdminDashboard - password policy', () => {
+  it('requires the server minimum length before a reset can be sent', async () => {
+    const w = await createWrapper()
+    await w.findAll('[data-testid="user-row"]')[1].find('[data-testid="action-reset-password"]').trigger('click')
+    const input = w.find('[data-testid="new-password-input"]')
+    const submit = () => w.find('[data-testid="save-password-button"]')
+
+    await input.setValue('x'.repeat(MIN_PASSWORD_LENGTH - 1))
+    expect(submit().attributes('disabled')).toBeDefined()
+    await w.find('form').trigger('submit')
+    expect(apiMock).not.toHaveBeenCalledWith('/api/admin/users/user-member-2/password', expect.anything())
+
+    await input.setValue('x'.repeat(MIN_PASSWORD_LENGTH))
+    expect(submit().attributes('disabled')).toBeUndefined()
+  })
+})
+
+describe('AdminDashboard - unsaved layout', () => {
+  it('keeps an unsaved reorder when a channel is renamed', async () => {
+    const w = await openChannelsTab()
+    await w.find('[data-testid="category-item-cat-1"]').find('[data-testid="move-down-channel"]').trigger('click')
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-2', 'ch-1'])
+
+    await w.find('[data-testid="channel-item-ch-1"]').find('[data-testid="rename-channel"]').trigger('click')
+    await w.find('input[placeholder="e.g. general"]').setValue('general-chat')
+    await w.findAll('button').find(b => b.text() === 'Save').trigger('click')
+    await flushPromises()
+
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-2', 'ch-1'])
+    expect(w.find('[data-testid="channel-item-ch-1"]').text()).toContain('general-chat')
+    expect(unsavedBanner(w)).toBe(true)
+
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    const [, layout] = apiMock.mock.calls.find(([url]) => url === '/api/admin/layout')
+    expect(layout.json.channels.filter(c => c.category_id === 'cat-1')).toEqual([
+      { id: 'ch-2', category_id: 'cat-1', sort_order: 0 },
+      { id: 'ch-1', category_id: 'cat-1', sort_order: 1 }
+    ])
+  })
+
+  it('keeps an unsaved reorder when a category is deleted and moves its channels to uncategorized', async () => {
+    const w = await openChannelsTab()
+    await w.find('[data-testid="category-item-cat-1"]').find('[data-testid="move-down-channel"]').trigger('click')
+
+    await w.find('[data-testid="category-item-cat-2"]').find('[data-testid="delete-category"]').trigger('click')
+    await flushPromises()
+
+    expect(categoryIds(w)).toEqual(['cat-1'])
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-2', 'ch-1'])
+    expect(w.find('[data-testid="channel-item-ch-voice-1"]').exists()).toBe(true)
+    expect(unsavedBanner(w)).toBe(true)
+  })
+
+  it('reloads from the server after an edit when nothing is pending', async () => {
+    const w = await openChannelsTab()
+    apiMock.mockClear()
+    await w.find('[data-testid="channel-item-ch-1"]').find('[data-testid="delete-channel"]').trigger('click')
+    await flushPromises()
+    expect(apiMock.mock.calls.filter(([url]) => url === '/api/channels').length).toBeGreaterThanOrEqual(2)
+    expect(unsavedBanner(w)).toBe(false)
+  })
+
+  it('keeps an unsaved reorder across a tab switch', async () => {
+    const w = await openChannelsTab()
+    await w.find('[data-testid="move-down-category"]').trigger('click')
+    expect(categoryIds(w)).toEqual(['cat-2', 'cat-1'])
+
+    await w.find('[data-testid="tab-users"]').trigger('click')
+    await w.find('[data-testid="tab-channels"]').trigger('click')
+    expect(categoryIds(w)).toEqual(['cat-2', 'cat-1'])
+    expect(unsavedBanner(w)).toBe(true)
+  })
+})
+
+describe('AdminDashboard - drag and drop', () => {
+  it('forgets a cancelled category drag', async () => {
+    const w = await openChannelsTab()
+    const cat1 = w.find('[data-testid="category-item-cat-1"]')
+    const cat2 = w.find('[data-testid="category-item-cat-2"]')
+
+    await cat1.trigger('dragstart')
+    await cat1.trigger('dragend')
+    await cat2.trigger('drop')
+
+    expect(categoryIds(w)).toEqual(['cat-1', 'cat-2'])
+    expect(unsavedBanner(w)).toBe(false)
+  })
+
+  it('forgets a cancelled channel drag', async () => {
+    const w = await openChannelsTab()
+    const ch1 = w.find('[data-testid="channel-item-ch-1"]')
+
+    await ch1.trigger('dragstart')
+    await ch1.trigger('dragend')
+    await w.find('[data-testid="channel-item-ch-voice-1"]').trigger('drop')
+
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-1', 'ch-2'])
+    expect(unsavedBanner(w)).toBe(false)
+  })
+
+  it('drops a category drag when a channel drag starts', async () => {
+    const w = await openChannelsTab()
+    const cat1 = w.find('[data-testid="category-item-cat-1"]')
+    await cat1.trigger('dragstart')
+    await w.find('[data-testid="channel-item-ch-1"]').trigger('dragstart')
+    await w.find('[data-testid="category-item-cat-2"]').trigger('drop')
+
+    expect(categoryIds(w)).toEqual(['cat-1', 'cat-2'])
+  })
+
+  it('still moves a category by drag and drop', async () => {
+    const w = await openChannelsTab()
+    await w.find('[data-testid="category-item-cat-1"]').trigger('dragstart')
+    await w.find('[data-testid="category-item-cat-2"]').trigger('drop')
+    expect(categoryIds(w)).toEqual(['cat-2', 'cat-1'])
+    expect(unsavedBanner(w)).toBe(true)
+  })
+})
+
+describe('AdminDashboard - load errors', () => {
+  it('reports each failed request and keeps the data already shown', async () => {
+    const w = await createWrapper()
+    await w.find('[data-testid="tab-media"]').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('pic.png')
+    expect(w.text()).toContain('1 MB')
+
+    const toasts = useToastStore()
+    apiMock.mockImplementationOnce(() => Promise.reject(new Error('stats down')))
+    apiMock.mockImplementationOnce(() => Promise.reject(new Error('media down')))
+    await w.find('button[aria-label="Refresh"]').trigger('click')
+    await flushPromises()
+
+    expect(toasts.toasts.filter(t => t.type === 'error').map(t => t.text)).toEqual(['stats down', 'media down'])
+    expect(w.text()).toContain('pic.png')
+    expect(w.text()).toContain('1 MB')
+  })
+
+  it('shows a toast when the user list cannot be loaded', async () => {
+    apiMock.mockImplementationOnce(() => Promise.reject(new Error('users down')))
+    const w = await createWrapper()
+    const toasts = useToastStore()
+    expect(toasts.toasts.map(t => t.text)).toContain('users down')
+    expect(w.findAll('[data-testid="user-row"]')).toHaveLength(0)
   })
 })
