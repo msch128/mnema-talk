@@ -42,7 +42,7 @@ type Event struct {
 // events.Publisher.
 type Hub struct {
 	DB       *db.Pool
-	Sessions *auth.Sessions
+	Sessions Authenticator
 	SFU      *sfu.SFU
 	Origins  []string
 
@@ -78,7 +78,13 @@ type graceLeave struct {
 // DefaultVoiceGrace matches the client, which auto-rejoins within 30 seconds.
 const DefaultVoiceGrace = 30 * time.Second
 
-func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []string) *Hub {
+// Authenticator resolves a request's session cookie (implemented by
+// *auth.Sessions). The token version is the one in the verified cookie.
+type Authenticator interface {
+	AuthenticateRequest(r *http.Request) (*auth.User, int, error)
+}
+
+func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []string) *Hub {
 	h := &Hub{
 		DB:       p,
 		Sessions: sessions,
@@ -345,17 +351,15 @@ func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/ws [get]
 func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
-	user, err := h.Sessions.Authenticate(r)
+	// The version is the cookie's own: re-reading it from the database here
+	// would let a revocation between the two reads slip through, and the
+	// connection would then outlive it.
+	user, tv, err := h.Sessions.AuthenticateRequest(r)
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); !ok {
 			err = httpx.ErrServer(err)
 		}
 		httpx.WriteError(w, err)
-		return
-	}
-	tv, err := h.tokenVersion(r.Context(), user.ID)
-	if err != nil {
-		httpx.WriteError(w, httpx.ErrServer(err))
 		return
 	}
 	conn, err := h.upgrader.Upgrade(w, r, nil)
