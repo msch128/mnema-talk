@@ -23,6 +23,7 @@ import MessageAttachments from './MessageAttachments.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useTalkStage } from '../composables/useTalkStage'
+import { useVideoGrid } from '../composables/useVideoGrid'
 import { useMessageActions, formatTime } from '../composables/useMessageActions'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
@@ -186,6 +187,19 @@ function onStreamVolumeChange(e) {
 function cameraAvailable(user) {
   return !voiceStore.allCamerasOff && !!voiceStore.mediaState[user.id]?.camera
 }
+
+// The grid fits every tile into the free area at 16:9, like Discord. Tiles
+// without any camera stay smaller: a huge avatar tile only looks empty.
+const gridArea = ref(null)
+const GRID_GAP = 12
+const gridHasVideo = computed(() => isConnectedHere.value && usersInVoice.value.some(u => !!cameraStreamOf(u)))
+const { layout: gridLayout, gridStyle, tileStyle } = useVideoGrid(gridArea, {
+  count: () => usersInVoice.value.length,
+  gap: GRID_GAP,
+  maxTileWidth: () => (gridHasVideo.value ? 1280 : 640),
+  minTileWidth: 160
+})
+const gridSized = computed(() => gridLayout.value.tileWidth > 0)
 
 // The chat under the stage belongs to the shown channel, also in the preview.
 watch([() => props.showChat, shownChannelId], ([show, id]) => {
@@ -576,41 +590,51 @@ async function handleFileUpload(e) {
           />
         </div>
 
+        <!-- The grid: every participant as a 16:9 tile, as large as the area allows -->
         <div
           v-else-if="usersInVoice.length"
+          ref="gridArea"
+          data-testid="talk-grid"
+          :data-grid-cols="gridLayout.cols"
           :class="[
-            'w-full max-w-5xl grid gap-3 items-center justify-center',
-            showChat
-              ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+            'w-full flex-1 min-h-0 flex justify-center',
+            gridLayout.overflow ? 'items-start overflow-y-auto' : 'items-center'
           ]"
         >
-          <ParticipantTile
-            v-for="user in usersInVoice"
-            :key="user.id"
-            :user="user"
-            :stream="isConnectedHere ? cameraStreamOf(user) : null"
-            :is-self="user.id === authStore.user?.id"
-            :speaking="voiceStore.isSpeaking(user.id)"
-            :muted="voiceStore.muteStateOf(user.id).muted"
-            :deafened="voiceStore.muteStateOf(user.id).deafened"
-            :local-muted="voiceStore.isUserLocalMuted(user.id)"
-            :camera-available="cameraAvailable(user)"
-            :camera-hidden="voiceStore.isCameraHidden(user.id)"
-            :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
-            :is-watching="!!voiceStore.watchedScreens[user.id]"
-            :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
-            :camera-focusable="canFocusCamera(user)"
-            :camera-focused="isCameraFocused(user)"
-            @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
-            @focus-camera="toggleCameraFocus(user)"
-            @watch-stream="watchStream(user.id)"
-            @stop-watching="voiceStore.unwatchScreen(user.id)"
-            :compact="showChat"
-            :show-status="isConnectedHere"
-            @open-profile="chatStore.openUserProfile"
-            @menu="openMemberMenu($event, user)"
-          />
+          <div
+            :class="['flex flex-wrap justify-center content-center', gridSized ? '' : 'w-full max-w-5xl gap-3']"
+            :style="gridStyle"
+          >
+            <ParticipantTile
+              v-for="user in usersInVoice"
+              :key="user.id"
+              :user="user"
+              :stream="isConnectedHere ? cameraStreamOf(user) : null"
+              :is-self="user.id === authStore.user?.id"
+              :speaking="voiceStore.isSpeaking(user.id)"
+              :muted="voiceStore.muteStateOf(user.id).muted"
+              :deafened="voiceStore.muteStateOf(user.id).deafened"
+              :local-muted="voiceStore.isUserLocalMuted(user.id)"
+              :camera-available="cameraAvailable(user)"
+              :camera-hidden="voiceStore.isCameraHidden(user.id)"
+              :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
+              :is-watching="!!voiceStore.watchedScreens[user.id]"
+              :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+              :camera-focusable="canFocusCamera(user)"
+              :camera-focused="isCameraFocused(user)"
+              @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+              @focus-camera="toggleCameraFocus(user)"
+              @watch-stream="watchStream(user.id)"
+              @stop-watching="voiceStore.unwatchScreen(user.id)"
+              fill
+              :compact="showChat || (gridSized && gridLayout.tileWidth < 300)"
+              :show-status="isConnectedHere"
+              :style="tileStyle"
+              :class="gridSized ? 'flex-shrink-0' : 'w-56'"
+              @open-profile="chatStore.openUserProfile"
+              @menu="openMemberMenu($event, user)"
+            />
+          </div>
         </div>
 
         <!-- Nobody there yet (preview) -->

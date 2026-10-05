@@ -502,6 +502,72 @@ describe('VoiceStage screen viewers', () => {
   })
 })
 
+describe('VoiceStage grid', () => {
+  let observers
+  beforeEach(() => {
+    observers = []
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(cb) { this.cb = cb; observers.push(this) }
+      observe(el) { this.el = el }
+      disconnect() { this.el = null }
+    })
+  })
+  const resizeGrid = (width, height) => {
+    for (const o of observers) if (o.el) o.cb([{ target: o.el, contentRect: { width, height } }])
+    return nextTick()
+  }
+  function people(n) {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    // I am one of the n tiles.
+    const users = {}
+    for (let i = 1; i < n; i++) users[`u${i}`] = { id: `u${i}`, username: `user${i}`, display_name: `User ${i}` }
+    voice.channelUsers = { v1: users }
+    return voice
+  }
+  const tileWidths = w => w.findAll('[data-testid="talk-grid"] [data-participant-tile]').map(t => t.element.style.width)
+
+  it('fits the tiles into the area at 16:9 and follows its size', async () => {
+    people(4)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const grid = w.get('[data-testid="talk-grid"]')
+    await resizeGrid(1612, 912)
+    // 2x2 with a 12 px gap would be 800 wide: avatar tiles stop at 640.
+    expect(grid.attributes('data-grid-cols')).toBe('2')
+    expect(tileWidths(w)).toEqual(['640px', '640px', '640px', '640px'])
+    expect(grid.find('[data-participant-tile]').element.style.height).toBe('360px')
+
+    // A wide, low area: one row.
+    await resizeGrid(1600, 220)
+    expect(grid.attributes('data-grid-cols')).toBe('4')
+    expect(tileWidths(w)[0]).toBe('391px')
+    // The row is exactly as wide as its tiles, so it wraps and centers.
+    expect(grid.find('.flex-wrap').element.style.width).toBe(`${4 * 391 + 3 * 12}px`)
+  })
+
+  it('tiles with a camera may grow larger than avatar-only tiles', async () => {
+    const voice = people(1)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await resizeGrid(1920, 1080)
+    expect(tileWidths(w)).toEqual(['640px'])
+    voice.localCameraStream = new MediaStream()
+    await nextTick()
+    expect(tileWidths(w)).toEqual(['1280px'])
+  })
+
+  it('keeps a CSS fallback until the area has a size', async () => {
+    people(2)
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const tile = w.find('[data-testid="talk-grid"] [data-participant-tile]')
+    expect(tile.element.style.width).toBe('')
+    expect(tile.classes()).toContain('w-56')
+    expect(tile.classes()).toContain('aspect-video')
+  })
+})
+
 describe('VoiceStage watch from the preview', () => {
   it('does not watch a screen when the channel switch is cancelled', async () => {
     const { voice } = seed()

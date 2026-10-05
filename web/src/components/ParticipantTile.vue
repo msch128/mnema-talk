@@ -18,6 +18,9 @@ const props = defineProps({
   isSelf: { type: Boolean, default: false },
   speaking: { type: Boolean, default: false },
   compact: { type: Boolean, default: false },
+  // A tile of the grid: always 16:9, sized by the grid (style) rather than
+  // by its content.
+  fill: { type: Boolean, default: false },
   localMuted: { type: Boolean, default: false },
   // Preview: nobody to hear yet, so no speaking/ready status line.
   showStatus: { type: Boolean, default: true },
@@ -73,7 +76,8 @@ watch(() => props.stream, (stream) => {
     @keydown.space.self.prevent="handleTileClick"
     :class="[
       'relative cursor-pointer rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent group',
-      stream ? 'bg-black aspect-video' : (compact ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface'),
+      stream ? 'bg-black aspect-video' : (compact ? 'p-3 bg-mnema-surface/90' : 'p-6 bg-mnema-surface'),
+      stream ? '' : (fill ? 'aspect-video' : compact ? 'h-28' : 'h-52'),
       speaking
         ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10'
         : cameraFocused
