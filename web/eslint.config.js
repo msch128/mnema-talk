@@ -3,7 +3,8 @@ import vue from 'eslint-plugin-vue'
 import globals from 'globals'
 
 export default [
-  { ignores: ['dist/**', 'node_modules/**'] },
+  // third_party holds vendored upstream code (see its README).
+  { ignores: ['dist/**', 'node_modules/**', 'src/third_party/**'] },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   {

@@ -18,7 +18,14 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
-const { leaveVoiceChannel, startScreenShare, stopScreenShare } = useWebRTC()
+const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings } = useWebRTC()
+
+// The quick toggle must swap the running mic, not just flip the setting.
+function toggleNoiseCancelling() {
+  voiceStore.toggleNoiseCancelling()
+  // Without a mic in the call, applyAudioSettings would start a mic test instead.
+  if (voiceStore.localAudioStream) applyAudioSettings()
+}
 
 const layoutMode = ref('split') // 'split' (Tafelrunde + chat) | 'focus' (Tafelrunde only)
 const isFullscreen = ref(false)
@@ -186,7 +193,7 @@ function formatTime(dateStr) {
             <span>•</span>
             <!-- Noise Cancelling Status -->
             <button
-              @click="voiceStore.toggleNoiseCancelling"
+              @click="toggleNoiseCancelling"
               :class="[
                 'flex items-center gap-1 transition',
                 voiceStore.noiseCancelling ? 'text-mnema-mint' : 'text-mnema-tertiary hover:text-mnema-text'
@@ -390,7 +397,7 @@ function formatTime(dateStr) {
 
           <!-- Noise filter toggle -->
           <button
-            @click="voiceStore.toggleNoiseCancelling"
+            @click="toggleNoiseCancelling"
             :class="[
               'p-2.5 rounded-full transition-all',
               voiceStore.noiseCancelling 

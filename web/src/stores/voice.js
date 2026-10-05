@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
 
+export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
+
 export const useVoiceStore = defineStore('voice', () => {
   const currentChannelId = ref(null)
   const isMuted = ref(false)
@@ -31,7 +33,14 @@ export const useVoiceStore = defineStore('voice', () => {
   const hangoverMs = ref(parseInt(localStorage.getItem('mnema_hangover_ms') || '250', 10))
 
   // Hardware Audio Processing Settings
-  const noiseCancelling = ref(localStorage.getItem('mnema_noise') !== 'false') // AI Noise Cancelling
+  // 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see lib/noiseSuppressor),
+  // 'browser' (getUserMedia noiseSuppression) or 'off'. Older clients stored
+  // only 'true'/'false'.
+  const storedNoise = localStorage.getItem('mnema_noise')
+  const noiseMode = ref(
+    NOISE_MODES.includes(storedNoise) ? storedNoise : storedNoise === 'false' ? 'off' : 'ai'
+  )
+  const noiseCancelling = computed(() => noiseMode.value !== 'off')
   const autoGainControl = ref(localStorage.getItem('mnema_agc') === 'true') // Default false to avoid boosting background voices
   const echoCancellation = ref(localStorage.getItem('mnema_echo') !== 'false')
   const inputVolume = ref(parseInt(localStorage.getItem('mnema_input_volume') || '100', 10))
@@ -48,7 +57,7 @@ export const useVoiceStore = defineStore('voice', () => {
     localStorage.setItem('mnema_auto_sens', String(autoSensitivity.value))
     localStorage.setItem('mnema_sens_threshold', String(sensitivityThreshold.value))
     localStorage.setItem('mnema_hangover_ms', String(hangoverMs.value))
-    localStorage.setItem('mnema_noise', String(noiseCancelling.value))
+    localStorage.setItem('mnema_noise', noiseMode.value)
     localStorage.setItem('mnema_agc', String(autoGainControl.value))
     localStorage.setItem('mnema_echo', String(echoCancellation.value))
     localStorage.setItem('mnema_input_volume', String(inputVolume.value))
@@ -139,9 +148,14 @@ export const useVoiceStore = defineStore('voice', () => {
     }
   }
 
-  function toggleNoiseCancelling() {
-    noiseCancelling.value = !noiseCancelling.value
+  function setNoiseMode(mode) {
+    noiseMode.value = mode
     saveSettings()
+  }
+
+  // Quick toggle in the call bar: off <-> AI filter.
+  function toggleNoiseCancelling() {
+    setNoiseMode(noiseMode.value === 'off' ? 'ai' : 'off')
   }
 
   function setChannel(channelId) {
@@ -184,7 +198,9 @@ export const useVoiceStore = defineStore('voice', () => {
     sensitivityThreshold,
     currentInputLevel,
     hangoverMs,
+    noiseMode,
     noiseCancelling,
+    setNoiseMode,
     autoGainControl,
     echoCancellation,
     inputVolume,

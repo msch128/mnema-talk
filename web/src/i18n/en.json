@@ -253,8 +253,6 @@
     "agcBadge": "Matters with two people",
     "agcHint": "Recommended: off. When on, the mic boosts quiet sounds between words, so a voice in the background is sent loudly.",
     "noise": "Noise suppression",
-    "noiseBadge": "Browser",
-    "noiseHint": "Your browser's noise suppression dampens steady sounds such as fans or hum.",
     "echo": "Echo cancellation",
     "echoHint": "Prevents feedback and echo when sound from the speakers gets back into the mic.",
     "devices": "Devices",
@@ -262,7 +260,15 @@
     "defaultDevice": "System default microphone",
     "deviceFallback": "Microphone {id} …",
     "liveNote": "Changes apply right away",
-    "done": "Done"
+    "done": "Done",
+    "noiseMode_ai": "AI filter",
+    "noiseMode_ai-lite": "AI light",
+    "noiseMode_browser": "Browser",
+    "noiseMode_off": "Off",
+    "noiseHint_ai": "DeepFilterNet3 removes typing, clicks, fans and background noise at full audio quality. It runs entirely in your browser; your audio never leaves your device for it. One-time download of about 10 MB.",
+    "noiseHint_ai-lite": "A small AI model (GTCRN) for slower computers. Filters about as well, but voices sound a little duller.",
+    "noiseHint_browser": "Your browser's noise suppression dampens steady sounds such as fans or hum. Uses less CPU.",
+    "noiseHint_off": "No filter. For studio microphones or when you share music."
   },
   "stats": {
     "title": "Connection status",
@@ -310,7 +316,8 @@
       "all": "Overview",
       "operator": "Operator / controller",
       "privacy": "Privacy (GDPR)",
-      "terms": "Terms of use"
+      "terms": "Terms of use",
+      "oss": "Open source"
     },
     "operator": {
       "heading": "1. Operator & controller",
@@ -381,7 +388,8 @@
       "rights1After": ".",
       "rights2Before": "You may also object to processing based on legitimate interests (Art. 21 GDPR) and withdraw any consent you gave at any time with effect for the future (Art. 7(3) GDPR). You also have the right to ",
       "rightsComplain": "lodge a complaint with a data protection supervisory authority",
-      "rights2After": " (Art. 77 GDPR), in particular in the country where you live or where the operator is based."
+      "rights2After": " (Art. 77 GDPR), in particular in the country where you live or where the operator is based.",
+      "noiseFilter": "AI noise suppression (DeepFilterNet3 or GTCRN) runs entirely in your browser. Your microphone signal is not sent to any third party for it; the model and code come from this server."
     },
     "cookies": {
       "heading": "3. Cookies & local storage",
@@ -400,8 +408,24 @@
     },
     "oss": {
       "heading": "5. Open-source credits",
-      "intro": "Mnema Talk is built on proven free software.",
-      "openSite": "Open {name}"
+      "intro": "Mnema Talk is free software itself (MIT license) and is built on free software. Here is everything we use and ship to you, with its license.",
+      "openSite": "Open {name}",
+      "groups": {
+        "browser": "In the web app (runs in your browser)",
+        "noise": "AI noise suppression (runs in your browser)",
+        "server": "In the server program",
+        "services": "Bundled services (Docker)"
+      },
+      "notes": {
+        "generated": "Only the CSS generated from it is shipped.",
+        "dfn": "Model and signal processing (libDF) by Hendrik Schröter.",
+        "dfnBuild": "WebAssembly build and AudioWorklet for DeepFilterNet3.",
+        "crates": "Rust libraries inside the DeepFilterNet wasm, including tract, ndarray and rustfft.",
+        "image": "Base of the app and database Docker images.",
+        "turn": "Optional, as a TURN server for connections behind strict firewalls."
+      },
+      "fullListBefore": "The complete list with every library, version and license text is in ",
+      "fullListAfter": " in the source code."
     },
     "footer": "© {year} {name} · All rights reserved"
   },
@@ -413,7 +437,7 @@
     "ping": "Ping: {ms} ms",
     "noiseOn": "Noise filter on",
     "noiseOff": "Filter off",
-    "noiseOnTip": "Browser noise suppression is on",
+    "noiseOnTip": "Noise suppression is on",
     "noiseOffTip": "Noise suppression is off",
     "noiseToggleTip": "Toggle noise suppression",
     "chatShown": "Chat on",
