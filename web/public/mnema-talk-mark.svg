@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Mnema Talk">
+  <!-- Mnema node mark (dark surfaces) with two voice arcs radiating from the centre node -->
+  <line x1="32" y1="32" x2="14" y2="14" stroke="#2DA771" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="32" x2="50" y2="14" stroke="#2DA771" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="32" y1="32" x2="32" y2="54" stroke="#2DA771" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M43.59 28.89 A12 12 0 0 1 38 42.39" stroke="#2DA771" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M49.39 27.34 A18 18 0 0 1 41 47.59" stroke="#8CCBAA" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="14" cy="14" r="5" fill="#0F1110" stroke="#2DA771" stroke-width="2.5"/>
+  <circle cx="50" cy="14" r="5" fill="#0F1110" stroke="#2DA771" stroke-width="2.5"/>
+  <circle cx="32" cy="54" r="5" fill="#0F1110" stroke="#2DA771" stroke-width="2.5"/>
+  <circle cx="32" cy="32" r="6" fill="#2DA771"/>
+</svg>

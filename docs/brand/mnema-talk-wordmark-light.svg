@@ -1,0 +1,15 @@
+<svg width="200" height="48" viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg" fill="none" role="img" aria-label="Mnema Talk">
+  <!-- Lockup for light surfaces (docs, README, printed material) -->
+  <g transform="translate(0 8) scale(0.5)">
+    <line x1="32" y1="32" x2="14" y2="14" stroke="#0F4C36" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="32" y1="32" x2="50" y2="14" stroke="#0F4C36" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="32" y1="32" x2="32" y2="54" stroke="#0F4C36" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M43.59 28.89 A12 12 0 0 1 38 42.39" stroke="#0F4C36" stroke-width="3.2" stroke-linecap="round"/>
+    <path d="M49.39 27.34 A18 18 0 0 1 41 47.59" stroke="#1A6B4A" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="14" cy="14" r="5" fill="#FFFFFF" stroke="#0F4C36" stroke-width="3.2"/>
+    <circle cx="50" cy="14" r="5" fill="#FFFFFF" stroke="#0F4C36" stroke-width="3.2"/>
+    <circle cx="32" cy="54" r="5" fill="#FFFFFF" stroke="#0F4C36" stroke-width="3.2"/>
+    <circle cx="32" cy="32" r="6" fill="#0F4C36"/>
+  </g>
+  <text x="44" y="32" font-family="Inter, system-ui, sans-serif" font-size="22" letter-spacing="-0.4"><tspan font-weight="600" fill="#1F2328">Mnema</tspan><tspan font-weight="400" fill="#1A6B4A" dx="6">Talk</tspan></text>
+</svg>
