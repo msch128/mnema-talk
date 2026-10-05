@@ -7,6 +7,8 @@ import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 import { useToastStore } from '../stores/toast'
 import { playSound } from '../lib/soundEffects'
+import { applyOutputDevice } from '../lib/audioOutput'
+import { createVoiceGate } from '../lib/levelMeter'
 import { t } from '../i18n'
 
 // The SFU publishes a camera under this prefix plus the user ID as stream ID
@@ -37,8 +39,10 @@ function aiModel(noiseMode) {
 // goes quiet while the screen audio keeps playing for the viewers.
 let mix = null
 let speakingInterval = null
-let lastAboveThresholdTime = 0
+// The mic-test monitor: a gain stage to the speakers on the context it was
+// built on (the call's or the standalone test's).
 let loopbackGain = null
+let loopbackCtx = null
 let callBiquad = null
 let unmutedZeroAudioStartTime = 0
 let lastNoAudioWarningToastTime = 0
@@ -185,7 +189,7 @@ function createBoost(el) {
   try {
     if (!playbackContext || playbackContext.state === 'closed') {
       playbackContext = new AudioCtx()
-      if (outputDeviceStore) applyOutputDevice(outputDeviceStore, playbackContext)
+      if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
     }
     if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {})
     const source = playbackContext.createMediaStreamSource(el.srcObject)
@@ -202,19 +206,17 @@ function createBoost(el) {
   }
 }
 
-// Plays remote audio on the chosen output device. setSinkId exists in
-// Chromium browsers and Firefox; elsewhere the system default is used.
-function applyOutputDevice(voiceStore, el) {
-  const id = voiceStore.selectedOutputDeviceId || ''
-  if (typeof el?.setSinkId === 'function' && el.sinkId !== id) {
-    el.setSinkId(id).catch(err => console.warn('[WebRTC] Output device unavailable:', err))
-  }
+// Plays remote audio (an element or an AudioContext) on the chosen output device.
+function applyOutput(voiceStore, target) {
+  applyOutputDevice(target, voiceStore.selectedOutputDeviceId)
 }
 
 function applyOutputDeviceAll(voiceStore) {
-  remoteAudioElements.forEach(el => applyOutputDevice(voiceStore, el))
+  remoteAudioElements.forEach(el => applyOutput(voiceStore, el))
   // Boosted voices (over 100 %) play through the playback context.
-  applyOutputDevice(voiceStore, playbackContext)
+  applyOutput(voiceStore, playbackContext)
+  // The mic-test monitor.
+  applyOutput(voiceStore, loopbackCtx)
 }
 
 function applyRemoteGain(voiceStore, el) {
@@ -380,7 +382,7 @@ function setupPeerConnection(voiceStore, chatStore) {
       audioEl.srcObject = new MediaStream([event.track])
       audioEl.autoplay = true
       if (streamId) audioEl.dataset.userId = streamId
-      applyOutputDevice(voiceStore, audioEl)
+      applyOutput(voiceStore, audioEl)
       applyRemoteGain(voiceStore, audioEl)
       audioEl.play().catch(e => {
         // After a reload without a user gesture the browser may refuse to play;
@@ -710,6 +712,11 @@ let testAudioContext = null
 let testAnalyser = null
 let testSpeakingInterval = null
 let testBiquad = null
+let testSuppressor = null
+// Bumped whenever the standalone test is stopped or restarted (see startMicTest).
+let micTestGen = 0
+// The test installed the push-to-talk listeners (no call had them).
+let testOwnsPtt = false
 
 // Accurate RMS volume calculator (time domain PCM audio)
 function calculateRMSLevel(analyserNode, buffer) {
@@ -784,6 +791,36 @@ export function useWebRTC() {
     return audioConstraints
   }
 
+  // Builds the mic-test monitor (what I hear of myself) once, on the given
+  // context after the high-pass filter. Starts silent; the meter interval
+  // opens it with the gate.
+  function connectLoopback(ctx, source) {
+    if (loopbackGain || !ctx || !source) return
+    try {
+      const gain = ctx.createGain()
+      setNodeGain(gain, 0, ctx.currentTime)
+      source.connect(gain)
+      gain.connect(ctx.destination)
+      loopbackGain = gain
+      loopbackCtx = ctx
+      // The monitor plays on the same device as the voices in a call.
+      applyOutput(voiceStore, ctx)
+    } catch (err) {
+      console.warn('[WebRTC] Mic test loopback setup failed:', err)
+    }
+  }
+
+  function disconnectLoopback() {
+    if (!loopbackGain) return
+    try { loopbackGain.disconnect() } catch { /* ignore */ }
+    loopbackGain = null
+    loopbackCtx = null
+  }
+
+  // The standalone test (outside a call). Every await is followed by a check
+  // of micTestGen: stopMicTest (or a newer start) bumps it, and a superseded
+  // start cleans up what it acquired instead of finishing, so closing the
+  // settings while the browser still asks for the mic leaves nothing open.
   async function startMicTest() {
     // If we're already connected to a voice channel, ensure audioContext is active
     if (localAudioStream.value && audioContext) {
@@ -793,104 +830,97 @@ export function useWebRTC() {
       return
     }
 
-    // Stop any existing test first
-    stopMicTest()
+    teardownTestPipeline()
+    const gen = micTestGen
+    const stale = () => gen !== micTestGen
+
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints() })
+    } catch (err) {
+      console.warn('Mic test failed (permission denied or no device):', err)
+      if (!stale()) voiceStore.currentInputLevel = 0
+      return
+    }
+    if (stale()) {
+      stream.getTracks().forEach(tr => tr.stop())
+      return
+    }
+    testAudioStream = stream
 
     try {
-      const constraints = getAudioConstraints()
-      testAudioStream = await navigator.mediaDevices.getUserMedia({ audio: constraints })
-
       const AudioCtx = window.AudioContext || window.webkitAudioContext
-      testAudioContext = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
-      if (testAudioContext.state === 'suspended') {
-        await testAudioContext.resume().catch(() => {})
-      }
+      const ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
+      testAudioContext = ctx
+      // Not awaited: without a user gesture resume() may never settle.
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {})
 
-      testAnalyser = testAudioContext.createAnalyser()
-      testAnalyser.fftSize = 256
-      testAnalyser.smoothingTimeConstant = 0.2
+      const analyserNode = ctx.createAnalyser()
+      analyserNode.fftSize = 256
+      analyserNode.smoothingTimeConstant = 0.2
 
-      const ctx = testAudioContext
-      let source = ctx.createMediaStreamSource(testAudioStream)
+      let source = ctx.createMediaStreamSource(stream)
       // Meter the filtered signal so the gate threshold calibrates like in a call.
       const model = aiModel(voiceStore.noiseMode)
       if (model) {
         const node = await createNoiseSuppressorNode(ctx, model)
-        if (testAudioContext !== ctx) return
+        if (stale()) {
+          // stopMicTest already closed the context and stopped the stream.
+          try { node?.destroy?.() } catch { /* ignore */ }
+          return
+        }
         if (node) {
           source.connect(node)
           source = node
+          testSuppressor = node
         }
       }
       const biquad = ctx.createBiquadFilter()
       biquad.type = 'highpass'
       biquad.frequency.setValueAtTime(85, ctx.currentTime)
-
       source.connect(biquad)
-      biquad.connect(testAnalyser)
+      biquad.connect(analyserNode)
+      testAnalyser = analyserNode
       testBiquad = biquad
 
-      if (voiceStore.isMicTesting) {
-        try {
-          loopbackGain = testAudioContext.createGain()
-          setNodeGain(loopbackGain, 0, testAudioContext.currentTime)
-          testBiquad.connect(loopbackGain)
-          loopbackGain.connect(testAudioContext.destination)
-        } catch (err) {
-          console.warn('[WebRTC] Test loopback setup failed:', err)
-        }
+      if (voiceStore.isMicTesting) connectLoopback(ctx, biquad)
+
+      // Push-to-talk works in the test too, also outside a call.
+      if (!pttStore) {
+        setupPttListeners(voiceStore)
+        testOwnsPtt = true
       }
 
-      const buffer = new Uint8Array(testAnalyser.fftSize)
-      let testLastAboveThresholdTime = 0
-
+      const buffer = new Uint8Array(analyserNode.fftSize)
+      const gateOpen = createVoiceGate(voiceStore)
       testSpeakingInterval = setInterval(() => {
         if (!testAnalyser) return
         const level = calculateRMSLevel(testAnalyser, buffer)
         voiceStore.currentInputLevel = level
-
-        if (loopbackGain && testAudioContext && voiceStore.isMicTesting) {
-          let shouldHear
-          if (voiceStore.inputMode === 'ptt') {
-            shouldHear = voiceStore.isPttPressed
-          } else {
-            const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
-            if (level >= threshold) {
-              shouldHear = true
-              testLastAboveThresholdTime = Date.now()
-            } else if (Date.now() - testLastAboveThresholdTime < voiceStore.hangoverMs) {
-              shouldHear = true
-            } else {
-              shouldHear = false
-            }
-          }
-          const targetGain = shouldHear ? (voiceStore.outputVolume / 100) : 0.0
-          setNodeGain(loopbackGain, targetGain, testAudioContext.currentTime)
+        const open = gateOpen(level)
+        if (loopbackGain && loopbackCtx === ctx && voiceStore.isMicTesting) {
+          setNodeGain(loopbackGain, open ? (voiceStore.outputVolume / 100) : 0, ctx.currentTime)
         }
       }, 50)
 
       // Refresh devices after permission is granted so device labels are available
       await refreshAudioDevices()
     } catch (err) {
-      console.warn('Mic test failed (permission denied or no device):', err)
-      voiceStore.currentInputLevel = 0
+      console.warn('Mic test setup failed:', err)
+      if (!stale()) {
+        teardownTestPipeline()
+        voiceStore.currentInputLevel = 0
+      }
     }
   }
 
   async function startMicLoopback() {
-    stopMicLoopback()
+    disconnectLoopback()
     voiceStore.isMicTesting = true
 
     // If in a voice call:
     if (localAudioStream.value && audioContext && callBiquad) {
-      try {
-        loopbackGain = audioContext.createGain()
-        setNodeGain(loopbackGain, 0, audioContext.currentTime)
-        callBiquad.connect(loopbackGain)
-        loopbackGain.connect(audioContext.destination)
-      } catch (err) {
-        console.warn('[WebRTC] Call loopback setup failed:', err)
-      }
+      connectLoopback(audioContext, callBiquad)
       const track = localAudioStream.value.getAudioTracks()[0]
       if (track) track.enabled = false
       chatStore.sendWSEvent('voice_speaking', { active: false })
@@ -898,28 +928,17 @@ export function useWebRTC() {
       return
     }
 
-    // Not in a voice call:
-    if (!testAudioContext || !testBiquad) {
-      await startMicTest()
-    }
+    // Not in a voice call: the test builds the loopback itself once it runs.
     if (testAudioContext && testBiquad) {
-      try {
-        loopbackGain = testAudioContext.createGain()
-        setNodeGain(loopbackGain, 0, testAudioContext.currentTime)
-        testBiquad.connect(loopbackGain)
-        loopbackGain.connect(testAudioContext.destination)
-      } catch (err) {
-        console.warn('[WebRTC] Test loopback setup failed:', err)
-      }
+      connectLoopback(testAudioContext, testBiquad)
+    } else {
+      await startMicTest()
     }
   }
 
   function stopMicLoopback() {
     voiceStore.isMicTesting = false
-    if (loopbackGain) {
-      try { loopbackGain.disconnect() } catch { /* ignore */ }
-      loopbackGain = null
-    }
+    disconnectLoopback()
     if (localAudioStream.value) {
       const track = localAudioStream.value.getAudioTracks()[0]
       if (track) track.enabled = !voiceStore.isMuted
@@ -932,22 +951,41 @@ export function useWebRTC() {
     else startMicLoopback()
   }
 
-  function stopMicTest() {
-    stopMicLoopback()
-    testBiquad = null
+  // Ends the standalone test pipeline (and any start still awaiting the mic).
+  function teardownTestPipeline() {
+    micTestGen++
     if (testSpeakingInterval) {
       clearInterval(testSpeakingInterval)
       testSpeakingInterval = null
     }
+    if (loopbackCtx && loopbackCtx === testAudioContext) disconnectLoopback()
+    if (testSuppressor) {
+      try {
+        testSuppressor.disconnect?.()
+        testSuppressor.destroy?.()
+      } catch { /* ignore */ }
+      testSuppressor = null
+    }
+    testBiquad = null
+    testAnalyser = null
     if (testAudioStream) {
-      testAudioStream.getTracks().forEach(t => t.stop())
+      testAudioStream.getTracks().forEach(tr => tr.stop())
       testAudioStream = null
     }
     if (testAudioContext) {
       testAudioContext.close().catch(() => {})
       testAudioContext = null
     }
-    testAnalyser = null
+    if (testOwnsPtt) {
+      testOwnsPtt = false
+      // A call that started meanwhile keeps its own listeners.
+      if (!localAudioStream.value) removePttListeners()
+    }
+  }
+
+  function stopMicTest() {
+    stopMicLoopback()
+    teardownTestPipeline()
 
     // If not in voice, reset input level
     if (!localAudioStream.value) {
@@ -1270,16 +1308,7 @@ export function useWebRTC() {
       biquad.connect(analyser)
       callBiquad = biquad
 
-      if (voiceStore.isMicTesting) {
-        try {
-          loopbackGain = ctx.createGain()
-          setNodeGain(loopbackGain, 0, ctx.currentTime)
-          callBiquad.connect(loopbackGain)
-          loopbackGain.connect(ctx.destination)
-        } catch (err) {
-          console.warn('[WebRTC] Call loopback setup failed:', err)
-        }
-      }
+      if (voiceStore.isMicTesting) connectLoopback(ctx, biquad)
     } catch (err) {
       console.warn('AudioContext speaking detector setup error:', err)
     }
@@ -1292,10 +1321,7 @@ export function useWebRTC() {
       try { inputGainNode.disconnect() } catch { /* ignore */ }
       inputGainNode = null
     }
-    if (loopbackGain) {
-      try { loopbackGain.disconnect() } catch { /* ignore */ }
-      loopbackGain = null
-    }
+    if (loopbackCtx && loopbackCtx === audioContext) disconnectLoopback()
     if (suppressorNode) {
       try {
         suppressorNode.disconnect()
@@ -1327,6 +1353,7 @@ export function useWebRTC() {
 
     const buffer = new Uint8Array(analyser.fftSize)
     let wasSpeaking = false
+    const gateOpen = createVoiceGate(voiceStore)
 
     speakingInterval = setInterval(() => {
       if (!analyser) return
@@ -1365,23 +1392,9 @@ export function useWebRTC() {
           const track = localAudioStream.value.getAudioTracks()[0]
           if (track && track.enabled) track.enabled = false
         }
-        if (loopbackGain && audioContext) {
-          let shouldHear
-          if (voiceStore.inputMode === 'ptt') {
-            shouldHear = voiceStore.isPttPressed
-          } else {
-            const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
-            if (level >= threshold) {
-              shouldHear = true
-              lastAboveThresholdTime = Date.now()
-            } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
-              shouldHear = true
-            } else {
-              shouldHear = false
-            }
-          }
-          const targetGain = shouldHear ? (voiceStore.outputVolume / 100) : 0.0
-          setNodeGain(loopbackGain, targetGain, audioContext.currentTime)
+        const open = gateOpen(level)
+        if (loopbackGain && audioContext && loopbackCtx === audioContext) {
+          setNodeGain(loopbackGain, open ? (voiceStore.outputVolume / 100) : 0, audioContext.currentTime)
         }
         return
       }
@@ -1398,26 +1411,8 @@ export function useWebRTC() {
         return
       }
 
-      // Noise Gate & Sensitivity Evaluation with Hysteresis
-      // Every branch below assigns it, so no initial value is needed.
-      let shouldTransmit
-
-      if (voiceStore.inputMode === 'ptt') {
-        shouldTransmit = voiceStore.isPttPressed
-      } else {
-        // Voice Activity with Sensitivity Threshold
-        const threshold = voiceStore.autoSensitivity ? 25 : voiceStore.sensitivityThreshold
-
-        if (level >= threshold) {
-          shouldTransmit = true
-          lastAboveThresholdTime = Date.now()
-        } else if (Date.now() - lastAboveThresholdTime < voiceStore.hangoverMs) {
-          // Hangover hold time prevents cutting off trailing words
-          shouldTransmit = true
-        } else {
-          shouldTransmit = false
-        }
-      }
+      // Noise gate: push-to-talk, or voice activity with hangover.
+      const shouldTransmit = gateOpen(level)
 
       // Physical audio track gate (muting track when below threshold to eliminate background bleed)
       if (localAudioStream.value) {

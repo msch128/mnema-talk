@@ -93,7 +93,16 @@ class FakeAudioContext {
   static destinations = []
   static sources = []
   static gains = []
-  constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} }
+  static instances = []
+  constructor() {
+    this.state = 'running'
+    this.currentTime = 0
+    this.destination = {}
+    this.sinkId = ''
+    this.closed = false
+    FakeAudioContext.instances.push(this)
+  }
+  setSinkId(id) { this.sinkId = id; return Promise.resolve() }
   createMediaStreamDestination() {
     const node = { stream: fakeStream(), connect() {}, disconnect: vi.fn() }
     FakeAudioContext.destinations.push(node)
@@ -119,7 +128,7 @@ class FakeAudioContext {
   }
   createBiquadFilter() { return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
   resume() { return Promise.resolve() }
-  close() { return Promise.resolve() }
+  close() { this.closed = true; return Promise.resolve() }
 }
 
 let micRequests
@@ -132,6 +141,7 @@ beforeEach(() => {
   FakeAudioContext.destinations = []
   FakeAudioContext.sources = []
   FakeAudioContext.gains = []
+  FakeAudioContext.instances = []
   FakePC.instances = []
   micRequests = []
   vi.stubGlobal('RTCPeerConnection', FakePC)
@@ -165,7 +175,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  const { leaveVoiceChannel } = useWebRTC()
+  const { leaveVoiceChannel, stopMicTest } = useWebRTC()
+  stopMicTest()
   leaveVoiceChannel()
   vi.unstubAllGlobals()
 })
@@ -776,6 +787,72 @@ describe('mic test and loopback', () => {
 
     rtc.toggleMicTest()
     expect(voice.isMicTesting).toBe(false)
+  })
+})
+
+describe('standalone mic test', () => {
+  it('closing the settings while the mic prompt is open releases the mic', async () => {
+    const { rtc, voice } = setup()
+    const start = rtc.startMicTest()
+    await vi.waitFor(() => expect(micRequests.length).toBe(1))
+    rtc.stopMicTest()
+    const stream = await grantMic()
+    await start
+    expect(stream.getTracks()[0].stop).toHaveBeenCalled()
+    expect(FakeAudioContext.instances).toHaveLength(0)
+    expect(voice.currentInputLevel).toBe(0)
+  })
+
+  it('a second start supersedes a pending first one', async () => {
+    const { rtc } = setup()
+    const first = rtc.startMicTest()
+    const second = rtc.startMicTest()
+    const firstStream = await grantMic()
+    const secondStream = await grantMic()
+    await Promise.all([first, second])
+    expect(firstStream.getTracks()[0].stop).toHaveBeenCalled()
+    expect(secondStream.getTracks()[0].stop).not.toHaveBeenCalled()
+    expect(FakeAudioContext.instances).toHaveLength(1)
+
+    rtc.stopMicTest()
+    expect(secondStream.getTracks()[0].stop).toHaveBeenCalled()
+    expect(FakeAudioContext.instances[0].closed).toBe(true)
+  })
+
+  it('builds the loopback once, also when it starts the test itself', async () => {
+    const { rtc, voice } = setup()
+    const toggle = rtc.toggleMicTest()
+    await grantMic()
+    await toggle
+    expect(voice.isMicTesting).toBe(true)
+    expect(FakeAudioContext.gains).toHaveLength(1)
+  })
+
+  it('plays the loopback on the chosen output device', async () => {
+    const { rtc, voice } = setup()
+    voice.selectedOutputDeviceId = 'headset'
+    const start = rtc.startMicTest()
+    await grantMic()
+    await start
+    await rtc.toggleMicTest()
+    expect(FakeAudioContext.gains).toHaveLength(1)
+    expect(FakeAudioContext.instances[0].sinkId).toBe('headset')
+  })
+
+  it('push-to-talk works in the test outside a call, and stops with it', async () => {
+    const { rtc, voice } = setup()
+    voice.inputMode = 'ptt'
+    voice.pttKey = 'Space'
+    const start = rtc.startMicTest()
+    await grantMic()
+    await start
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    expect(voice.isPttPressed).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' }))
+
+    rtc.stopMicTest()
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }))
+    expect(voice.isPttPressed).toBe(false)
   })
 })
 
