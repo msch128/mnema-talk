@@ -4,7 +4,7 @@ import globals from 'globals'
 
 export default [
   // third_party holds vendored upstream code (see its README).
-  { ignores: ['dist/**', 'node_modules/**', 'src/third_party/**'] },
+  { ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'src/third_party/**'] },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
   {
