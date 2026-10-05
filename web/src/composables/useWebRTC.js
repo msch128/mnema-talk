@@ -272,10 +272,34 @@ function setupPeerConnection(voiceStore, chatStore) {
   pc = new RTCPeerConnection(rtcConfig)
   startStatsPolling(voiceStore)
 
+  // Connection diagnostics for the server log: what this browser gathers and
+  // how the connection develops (candidate types only, never addresses).
+  const diag = { candidates: {}, errors: [] }
+  const reportDiag = (event) => chatStore.sendWSEvent('webrtc_diag', {
+    event,
+    gathering: pc?.iceGatheringState,
+    ice: pc?.iceConnectionState,
+    connection: pc?.connectionState,
+    signaling: pc?.signalingState,
+    candidates: diag.candidates,
+    errors: diag.errors.slice(-5),
+    ice_servers: (iceServers || []).length,
+    ua: typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  })
+
   pc.onicecandidate = (event) => {
     if (event.candidate) {
+      const key = `${event.candidate.protocol || '?'}/${event.candidate.type || '?'}`
+      diag.candidates[key] = (diag.candidates[key] || 0) + 1
       chatStore.sendWSEvent('webrtc_candidate', event.candidate.toJSON())
     }
+  }
+  pc.onicecandidateerror = (event) => {
+    diag.errors.push(`${event.errorCode} ${event.errorText || ''} ${event.url || ''}`.trim())
+  }
+  pc.onicegatheringstatechange = () => reportDiag('gathering')
+  pc.oniceconnectionstatechange = () => {
+    if (['connected', 'failed', 'disconnected'].includes(pc?.iceConnectionState)) reportDiag('ice')
   }
 
   pc.ontrack = (event) => {
@@ -774,6 +798,7 @@ export function useWebRTC() {
       chatStore.sendWSEvent('webrtc_answer', answer)
     } catch (err) {
       console.warn('[WebRTC] Offer/Answer negotiation error:', err)
+      chatStore.sendWSEvent('webrtc_diag', { event: 'negotiation_error', error: String(err?.message || err) })
     }
   }
 
