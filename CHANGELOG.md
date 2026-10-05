@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.14](https://github.com/msch128/mnema-talk/compare/v0.1.13...v0.1.14) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** no self-echo through shared system audio; visible per-user volume slider ([#32](https://github.com/msch128/mnema-talk/issues/32)) ([5deb7f4](https://github.com/msch128/mnema-talk/commit/5deb7f4c66df8beb3c62f3c3ceda01cb7bf78fbd))
+
 ## [0.1.13](https://github.com/msch128/mnema-talk/compare/v0.1.12...v0.1.13) (2026-10-05)
 
 
