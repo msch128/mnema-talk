@@ -3,7 +3,7 @@
 // gutter time, header, inline editor or body, attachments, thread counter
 // and reactions. Keyboard and context-menu handling stay with the list
 // (bound on this component, they land on the row element).
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
@@ -14,7 +14,7 @@ import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
 
-const props = defineProps({
+defineProps({
   msg: { type: Object, required: true },
   // Follow-up of the previous message by the same author: no header.
   grouped: { type: Boolean, default: false },
@@ -34,16 +34,6 @@ const emit = defineEmits([
 ])
 
 const row = ref(null)
-
-// Leaving the editor with focus inside it: give focus back to the row so
-// keyboard users stay on the message.
-watch(() => props.editing, (now, was) => {
-  if (!was || now) return
-  const active = document.activeElement
-  if (!active || active === document.body || !active.isConnected || row.value?.contains(active)) {
-    row.value?.focus()
-  }
-}, { flush: 'post' })
 
 defineExpose({ el: row })
 </script>
