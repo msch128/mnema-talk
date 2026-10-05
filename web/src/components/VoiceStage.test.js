@@ -110,20 +110,58 @@ describe('VoiceStage preview', () => {
     expect(w.text()).toContain('Leave')
   })
 
-  it('the chat toggle emits update:showChat and the chat follows the prop', async () => {
-    const { chat } = seed()
-    chat.selectChannel = vi.fn()
+  it('the chat button in the header opens and closes the chat (it lives under the stage, not in it)', async () => {
+    seed()
     const w = mountStage({ channelId: 'v1', showChat: false })
-    expect(w.find('input[type="file"]').exists()).toBe(false)
-    const toggle = w.findAll('button').find(b => b.text().includes('Show chat'))
+    const toggle = w.get('[data-testid="voice-chat-toggle"]')
+    expect(toggle.attributes('aria-pressed')).toBe('false')
+    expect(toggle.attributes('aria-label')).toBe('Open chat')
     await toggle.trigger('click')
     expect(w.emitted('update:showChat')).toEqual([[true]])
 
     await w.setProps({ showChat: true })
-    expect(w.find('input[type="file"]').exists()).toBe(true)
-    // The previewed talk's chat is loaded without joining.
-    expect(chat.selectChannel).toHaveBeenCalledWith(expect.objectContaining({ id: 'v1' }))
+    expect(toggle.attributes('aria-pressed')).toBe('true')
+    expect(toggle.attributes('aria-label')).toBe('Close chat')
+    await toggle.trigger('click')
+    expect(w.emitted('update:showChat')[1]).toEqual([false])
+    // VoiceChatPanel renders the chat; the stage has no composer of its own.
+    expect(w.find('textarea').exists()).toBe(false)
+    expect(w.find('input[type="file"]').exists()).toBe(false)
     expect(rtc.joinVoiceChannel).not.toHaveBeenCalled()
+  })
+
+  it('shows the unread count of the closed chat on the chat button', async () => {
+    const { chat } = seed()
+    const w = mountStage({ channelId: 'v1', showChat: false })
+    expect(w.find('[data-testid="voice-chat-unread"]').exists()).toBe(false)
+
+    chat.readStates = { v1: { channel_id: 'v1', unread_count: 3, mention_count: 0 } }
+    await nextTick()
+    expect(w.get('[data-testid="voice-chat-unread"]').text()).toBe('3')
+    expect(w.get('[data-testid="voice-chat-toggle"]').attributes('aria-label')).toBe('Open chat, 3 unread')
+
+    chat.readStates = { v1: { channel_id: 'v1', unread_count: 120, mention_count: 0 } }
+    await nextTick()
+    expect(w.get('[data-testid="voice-chat-unread"]').text()).toBe('99+')
+
+    // Other channels' unreads don't count; an open chat shows no badge.
+    chat.readStates = { v2: { channel_id: 'v2', unread_count: 5, mention_count: 0 } }
+    await nextTick()
+    expect(w.find('[data-testid="voice-chat-unread"]').exists()).toBe(false)
+    chat.readStates = { v1: { channel_id: 'v1', unread_count: 2, mention_count: 0 } }
+    await w.setProps({ showChat: true })
+    expect(w.find('[data-testid="voice-chat-unread"]').exists()).toBe(false)
+  })
+
+  it('the stage keeps its full height with the chat open', async () => {
+    const { voice } = seed()
+    voice.isConnected = true
+    voice.currentChannelId = 'v1'
+    const w = mountStage({ channelId: 'v1', showChat: true })
+    await nextTick()
+    const html = w.html()
+    expect(html).not.toContain('h-80')
+    expect(html).not.toContain('h-44')
   })
 })
 
@@ -695,7 +733,7 @@ describe('VoiceStage full screen', () => {
   it('F toggles full screen, but not while typing, with modifiers or as push-to-talk key', async () => {
     const voice = withCameras()
     voice.focusCamera('a')
-    const w = mountStage({ channelId: 'v1', showChat: true })
+    const w = mountStage({ channelId: 'v1' })
     await nextTick()
 
     await press('f')
@@ -703,7 +741,9 @@ describe('VoiceStage full screen', () => {
     await press('F')
     expect(fsEl).toBe(null)
 
-    const input = w.find('input[aria-autocomplete="list"]').element
+    // Typing in a field of the Talk view (e.g. the stream volume) is not F.
+    const input = document.createElement('input')
+    w.element.appendChild(input)
     await press('f', {}, input)
     await press('f', { ctrlKey: true })
     await press('f', { repeat: true })
@@ -991,45 +1031,5 @@ describe('VoiceStage watch from the preview', () => {
     await flushPromises()
     expect(rtc.joinVoiceChannel).toHaveBeenCalledWith('v1')
     expect(watch).toHaveBeenCalledWith('a')
-  })
-})
-
-describe('VoiceStage chat', () => {
-  function withChat() {
-    const { chat } = seed()
-    chat.selectChannel = vi.fn()
-    chat.activeChannel = { id: 'v1', name: 'Lounge', type: 'voice' }
-    chat.messages = [{
-      id: 'm1', channel_id: 'v1', user_id: 'a', username: 'alice', display_name: 'Alice',
-      content: 'hi', created_at: '2026-01-01T10:00:00Z', reactions: [],
-      attachments: [{ id: 'att', url: '/m/v', mime_type: 'video/mp4', original_filename: 'clip.mp4', size_bytes: 10 }]
-    }]
-    return chat
-  }
-
-  it('author name is a button and videos play inline', async () => {
-    const chat = withChat()
-    const open = vi.spyOn(chat, 'openUserProfile').mockImplementation(() => {})
-    const w = mountStage({ channelId: 'v1', showChat: true })
-    await nextTick()
-    const name = w.find('[data-testid="author-name"]')
-    expect(name.element.tagName).toBe('BUTTON')
-    await name.trigger('click')
-    expect(open).toHaveBeenCalled()
-    expect(w.find('[data-attachment="video"] video').exists()).toBe(true)
-  })
-
-  it('clears the file input after a failed upload', async () => {
-    const chat = withChat()
-    vi.spyOn(chat, 'uploadMedia').mockRejectedValue(new Error('nope'))
-    const w = mountStage({ channelId: 'v1', showChat: true })
-    const input = w.find('input[type="file"]').element
-    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
-    let value = 'C:\\fakepath\\a.png'
-    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
-    input.dispatchEvent(new Event('change'))
-    await flushPromises()
-    expect(chat.uploadMedia).toHaveBeenCalled()
-    expect(value).toBe('')
   })
 })

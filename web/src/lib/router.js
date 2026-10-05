@@ -19,6 +19,10 @@ export function parseRoute(pathname = (typeof window !== 'undefined' ? window.lo
   if (parts[0] === 'v' && parts[1]) {
     const channelId = parts[1]
     if (parts[2] === 'chat') {
+      // /v/:id/chat/m/:msgId: a message in the Talk's chat (search, notification).
+      if (parts[3] === 'm' && parts[4]) {
+        return { view: 'voice', channelId, showChat: true, messageId: parts[4], watching: true }
+      }
       return { view: 'voice', channelId, showChat: true, watching: true }
     }
     return { view: 'voice', channelId, watching: true }
@@ -56,6 +60,11 @@ export function navigateTo(path, opts = false) {
   currentRoute.value = parseRoute(path)
 }
 
+/** Address of a message in a voice channel's chat. */
+export function voiceMessagePath(channelId, messageId) {
+  return `/v/${channelId}/chat/m/${messageId}`
+}
+
 /**
  * Routes a user may not open. Returns the path to redirect to, or null.
  * Non-admins never get the admin console, not even for a frame.
@@ -77,7 +86,10 @@ export function resolveRoute(route, { isAdmin = false, channels = [] } = {}) {
     const ch = channels.find(c => c.id === route.channelId)
     if (!ch) return { redirect: '/', reason: route.view === 'voice' ? 'voiceNotFound' : 'channelNotFound' }
     if (route.view === 'voice' && ch.type !== 'voice') return { redirect: `/c/${ch.id}`, reason: null }
-    if (route.view === 'chat' && ch.type === 'voice') return { redirect: `/v/${ch.id}`, reason: null }
+    if (route.view === 'chat' && ch.type === 'voice') {
+      // A message link into a voice channel opens it in the Talk's chat.
+      return { redirect: route.messageId ? voiceMessagePath(ch.id, route.messageId) : `/v/${ch.id}`, reason: null }
+    }
   }
   return null
 }

@@ -40,9 +40,16 @@ const active = computed(() =>
     ? voiceStore.currentChannelId === props.channel.id && voiceStore.activeView === 'voice'
     : chatStore.activeChannel?.id === props.channel.id && voiceStore.activeView === 'chat'
 )
-const textActive = computed(() => !isVoice.value && active.value)
-const unread = computed(() => (isVoice.value ? 0 : chatStore.readStates[props.channel.id]?.unread_count || 0))
-const mentions = computed(() => (isVoice.value ? 0 : chatStore.readStates[props.channel.id]?.mention_count || 0))
+// The channel's messages are on screen: the open text channel, or a voice
+// channel whose chat panel is open next to its Talk. Then no badges.
+const reading = computed(() =>
+  isVoice.value
+    ? chatStore.voiceChatReading && chatStore.activeChannel?.id === props.channel.id && voiceStore.activeView === 'voice'
+    : active.value
+)
+// Voice channels have their own text chat, so unreads and mentions too.
+const unread = computed(() => chatStore.readStates[props.channel.id]?.unread_count || 0)
+const mentions = computed(() => chatStore.readStates[props.channel.id]?.mention_count || 0)
 const voiceUsers = computed(() => {
   if (!isVoice.value) return []
   const users = voiceStore.channelUsers[props.channel.id]
@@ -95,7 +102,7 @@ const rowClass = computed(() => [
     >
       <!-- Unread pip on left edge -->
       <span
-        v-if="unread > 0 && !textActive"
+        v-if="unread > 0 && !reading"
         class="absolute -left-1.5 w-1 h-2 rounded-r bg-mnema-text"
       ></span>
 
@@ -127,13 +134,13 @@ const rowClass = computed(() => [
           class="text-xs text-mnema-tertiary"
         />
         <span
-          v-if="mentions > 0 && !textActive"
+          v-if="mentions > 0 && !reading"
           class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
         >
           {{ mentions }}
         </span>
         <span
-          v-else-if="unread > 0 && !textActive"
+          v-else-if="unread > 0 && !reading"
           class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
         >
           {{ unread }}

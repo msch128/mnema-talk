@@ -2,31 +2,23 @@
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff,
-  MessageSquare, Maximize2, Minimize2, Sparkles, Send,
-  Plus, Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX, PictureInPicture2
+  MessageSquare, Maximize2, Minimize2, Sparkles,
+  Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX, PictureInPicture2
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
-import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
-import MarkdownContent from './MarkdownContent.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import ScreenViewers from './ScreenViewers.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
-import EmojiButton from './EmojiButton.vue'
-import MentionSuggestions from './MentionSuggestions.vue'
-import MessageAttachments from './MessageAttachments.vue'
-import ImageLightbox from './ImageLightbox.vue'
-import { useComposerAssist } from '../composables/useComposerAssist'
 import { useTalkStage } from '../composables/useTalkStage'
 import { useVideoGrid } from '../composables/useVideoGrid'
 import { usePictureInPicture } from '../composables/usePictureInPicture'
-import { useMessageActions, formatTime } from '../composables/useMessageActions'
-import { useToastStore } from '../stores/toast'
+import { unreadBadge } from '../lib/voiceChatPanel'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 
@@ -39,10 +31,11 @@ function openMemberMenu(e, user) {
 }
 const chatStore = useChatStore()
 const authStore = useAuthStore()
-const toasts = useToastStore()
 // Which Talk is shown. Without a prop it is the one the user is in.
-// Not connected to it, the stage is a preview: who is there, the chat and a
-// Join button. No microphone is requested before the user joins.
+// Not connected to it, the stage is a preview: who is there and a Join
+// button. No microphone is requested before the user joins.
+// showChat: the Talk's chat (VoiceChatPanel, under the stage) is open; the
+// header's chat button toggles it.
 const props = defineProps({
   channelId: { type: String, default: null },
   showChat: { type: Boolean, default: false }
@@ -91,21 +84,13 @@ function onVideoResize() {
   const el = screenVideoEl.value
   videoResolution.value = el?.videoWidth ? `${el.videoWidth}×${el.videoHeight}` : ''
 }
-const chatInput = ref('')
-const chatInputEl = ref(null)
-const assist = useComposerAssist(chatInputEl, chatInput)
 
-function onChatKeydown(e) {
-  if (assist.onKeydown(e)) return
-  if (e.key === 'Enter' && !e.isComposing) {
-    e.preventDefault()
-    sendChatMessage()
-  }
-}
-const chatContainer = ref(null)
-const fileInput = ref(null)
-const { isUploading, upload } = useMessageActions({ container: chatContainer })
-const selectedImage = ref(null)
+// Unread messages in this Talk's chat while it is closed (like Discord's
+// badge on the chat button). The open chat marks them read.
+const chatUnread = computed(() => {
+  const id = shownChannelId.value
+  return props.showChat || !id ? '' : unreadBadge(chatStore.readStates[id]?.unread_count)
+})
 
 // The shown channel object
 const activeVoiceChannel = computed(() => {
@@ -211,12 +196,6 @@ const { layout: gridLayout, gridStyle, tileStyle } = useVideoGrid(gridArea, {
   minTileWidth: 160
 })
 const gridSized = computed(() => gridLayout.value.tileWidth > 0)
-
-// The chat under the stage belongs to the shown channel, also in the preview.
-watch([() => props.showChat, shownChannelId], ([show, id]) => {
-  if (!show || !id || chatStore.activeChannel?.id === id) return
-  if (activeVoiceChannel.value) chatStore.selectChannel(activeVoiceChannel.value)
-}, { immediate: true })
 
 const activeScreenStream = computed(() => stage.value?.stream || null)
 // What the stage shows, as data-stage-source: 'own', a user ID (their screen)
@@ -394,49 +373,6 @@ function openStageMenu(e) {
   })
 }
 
-function scrollChatToBottom() {
-  nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-    }
-  })
-}
-
-watch(() => chatStore.messages.length, () => {
-  scrollChatToBottom()
-})
-
-watch(() => chatStore.pendingMention, (newVal) => {
-  if (newVal) {
-    chatInput.value = `${chatInput.value ? chatInput.value.trim() + ' ' : ''}@${newVal} `
-    chatStore.pendingMention = ''
-  }
-})
-
-onMounted(() => {
-  scrollChatToBottom()
-})
-
-const isSending = ref(false)
-
-async function sendChatMessage() {
-  const text = chatInput.value.trim()
-  if (!text || isUploading.value || isSending.value) return
-  isSending.value = true
-  try {
-    await chatStore.sendMessage(text)
-    chatInput.value = ''
-    scrollChatToBottom()
-  } catch (err) {
-    toasts.error(err.message || t('chat.sendFailed'))
-  } finally {
-    isSending.value = false
-  }
-}
-
-async function handleFileUpload(e) {
-  if (await upload(e.target, file => chatStore.uploadMedia(file))) scrollChatToBottom()
-}
 </script>
 
 <template>
@@ -466,20 +402,28 @@ async function handleFileUpload(e) {
 
       <!-- Top Right Actions -->
       <div class="flex items-center gap-2 flex-shrink-0">
-        <!-- View toggle (Talk + chat vs Talk only) -->
+        <!-- The Talk's chat (under the stage), with its unread count while closed -->
         <button
+          type="button"
+          data-testid="voice-chat-toggle"
           @click="emit('update:showChat', !showChat)"
           :class="[
-            'h-8 flex items-center gap-1.5 px-3 rounded-md text-sm font-medium border transition whitespace-nowrap',
+            'relative w-8 h-8 flex items-center justify-center rounded-md border transition',
             showChat
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
-              : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:text-mnema-text'
+              : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
           ]"
-          v-tooltip.visual="showChat ? $t('talk.hideChatTip') : $t('talk.showChatTip')"
+          v-tooltip.visual="showChat ? $t('talk.closeChat') : $t('talk.openChat')"
+          :aria-label="chatUnread ? $t('talk.openChatUnread', { count: chatUnread }) : showChat ? $t('talk.closeChat') : $t('talk.openChat')"
           :aria-pressed="showChat ? 'true' : 'false'"
         >
           <MessageSquare class="w-4 h-4" />
-          <span>{{ showChat ? $t('talk.chatShown') : $t('talk.chatHidden') }}</span>
+          <span
+            v-if="chatUnread"
+            data-testid="voice-chat-unread"
+            class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-mnema-danger text-white text-[11px] font-bold leading-[18px] text-center ring-2 ring-mnema-canvas"
+            aria-hidden="true"
+          >{{ chatUnread }}</span>
         </button>
 
         <!-- Only participants with video (per browser) -->
@@ -522,8 +466,7 @@ async function handleFileUpload(e) {
       <!-- 1. Participants and shared screen -->
       <div
         :class="[
-          'transition-all flex flex-col items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-shrink-0',
-          showChat ? 'h-80 p-4 pb-16 border-b border-mnema-hairline' : 'flex-1 p-6 pb-20 overflow-y-auto',
+          'transition-all flex flex-col items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-1 min-h-0 p-6 pb-20 overflow-y-auto',
           activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
         ]"
         @dblclick="onAreaDblclick"
@@ -539,7 +482,7 @@ async function handleFileUpload(e) {
           :class="[
             'w-full max-w-5xl bg-black border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
             isFullscreen ? '' : 'rounded-xl border',
-            showChat ? 'h-44 mb-2 flex-shrink-0' : 'flex-1 min-h-0 mb-3'
+            'flex-1 min-h-0 mb-3'
           ]"
         >
           <video
@@ -811,7 +754,7 @@ async function handleFileUpload(e) {
               @watch-stream="watchStream(user.id)"
               @stop-watching="voiceStore.unwatchScreen(user.id)"
               fill
-              :compact="showChat || (gridSized && gridLayout.tileWidth < 300)"
+              :compact="gridSized && gridLayout.tileWidth < 300"
               :show-status="isConnectedHere"
               :style="tileStyle"
               :class="gridSized ? 'flex-shrink-0' : 'w-56'"
@@ -997,125 +940,7 @@ async function handleFileUpload(e) {
           </button>
         </div>
       </div>
-
-      <!-- 2. Talk chat -->
-      <div
-        v-if="showChat"
-        class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
-      >
-        <!-- Chat Message Timeline -->
-        <div ref="chatContainer" class="flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-6">
-          <!-- Empty State -->
-          <div v-if="!chatStore.messages.length" class="h-full flex flex-col items-center justify-center text-center p-6">
-            <div class="w-10 h-10 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-2 text-mnema-accent bg-mnema-surface/50">
-              <MessageSquare class="w-4 h-4 opacity-80" />
-            </div>
-            <p class="font-semibold text-base text-mnema-text">{{ $t('talk.chatTitle', { channel: activeVoiceChannel?.name || '' }) }}</p>
-            <p class="text-sm text-mnema-tertiary mt-0.5 max-w-sm">
-              {{ $t('talk.chatEmpty') }}
-            </p>
-          </div>
-
-          <!-- Message Rows -->
-          <div
-            v-for="msg in chatStore.messages"
-            :key="msg.id"
-            :class="[
-              'relative flex items-start gap-4 px-4 py-0.5 mt-[17px] first:mt-2 hover:bg-mnema-surface/50 transition-colors group',
-              msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg) ? 'msg-mentions-me' : ''
-            ]"
-          >
-            <!-- User Avatar -->
-            <UserAvatar
-              :user="msg"
-              size="md"
-              class="cursor-pointer hover:opacity-85 transition mt-0.5"
-              @click="chatStore.openUserProfile(msg)"
-            />
-
-            <!-- Content Body -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-baseline gap-2 min-w-0">
-                <button
-                  type="button"
-                  data-testid="author-name"
-                  @click="chatStore.openUserProfile(msg)"
-                  class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate text-left focus-visible:underline focus-visible:text-mnema-accent"
-                >
-                  {{ msg.display_name || msg.username }}
-                </button>
-                <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
-              </div>
-
-              <MarkdownContent v-if="msg.content" :content="msg.content" />
-
-              <!-- Attachments if any -->
-              <MessageAttachments :attachments="msg.attachments" @open-image="selectedImage = $event" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Chat Composer Bar -->
-        <div class="px-4 pb-6 flex-shrink-0">
-          <div class="relative min-h-[52px] bg-mnema-elevated border border-mnema-border rounded-lg pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition">
-            <MentionSuggestions
-              v-if="assist.open.value"
-              id="talk-mentions"
-              :items="assist.suggestions.value"
-              :active="assist.active.value"
-              @pick="assist.pick"
-              @hover="assist.active.value = $event"
-            />
-            <input
-              ref="fileInput"
-              type="file"
-              class="hidden"
-              @change="handleFileUpload"
-              accept="image/*,video/*"
-            />
-            <button
-              @click="fileInput?.click()"
-              :disabled="isUploading"
-              class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-              v-tooltip="$t('chat.upload')"
-            >
-              <Plus class="w-5 h-5" />
-            </button>
-
-            <input
-              ref="chatInputEl"
-              v-model="chatInput"
-              @keydown="onChatKeydown"
-              @input="assist.onInput"
-              @click="assist.onInput"
-              @keyup.left="assist.onInput"
-              @keyup.right="assist.onInput"
-              @blur="assist.close"
-              aria-autocomplete="list"
-              :aria-expanded="assist.open.value ? 'true' : 'false'"
-              :aria-controls="assist.open.value ? 'talk-mentions' : undefined"
-              :aria-activedescendant="assist.open.value ? `talk-mentions-${assist.active.value}` : undefined"
-              :placeholder="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
-              :aria-label="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
-              class="bg-transparent flex-1 min-w-0 outline-none text-message text-mnema-text placeholder-mnema-tertiary"
-            />
-
-            <EmojiButton @pick="assist.insertText" />
-
-            <button
-              @click="sendChatMessage"
-              :disabled="!chatInput.trim() || isUploading"
-              class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20"
-              v-tooltip="$t('chat.send')"
-            >
-              <Send class="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
-    <!-- Image lightbox -->
-    <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
 
     <ContextMenu
       v-model="menu.state.open"

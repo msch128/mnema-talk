@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
-  Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X
+  Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X, Volume2
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -20,9 +20,22 @@ import { firstUnreadId, typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
+// panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
+// header with a close button, Discord's welcome texts, no member toggle.
+const props = defineProps({
+  panel: { type: Boolean, default: false }
+})
+const emit = defineEmits(['close'])
+
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
+
+const channelName = computed(() => chatStore.activeChannel?.name || '')
+const channelIcon = computed(() => (props.panel ? Volume2 : Hash))
+const welcomeText = computed(() => t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value }))
+const beginningText = computed(() => t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value }))
+const placeholder = computed(() => t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }))
 
 const inputMessage = ref('')
 const messageContainer = ref(null)
@@ -230,7 +243,7 @@ function dividerLabel() {
 // Esc in the channel: mark everything read and drop the divider.
 function markAllRead() {
   const id = chatStore.activeChannel?.id
-  if (!id || chatStore.activeChannel.type === 'voice') return false
+  if (!id) return false
   const st = chatStore.readStates[id]
   if (!dividerBeforeId.value && !(st?.unread_count > 0) && !(st?.mention_count > 0)) return false
   dividerSince.value = null
@@ -257,7 +270,7 @@ function readHintDismissed() {
 }
 const notifHintDismissed = ref(readHintDismissed())
 const showNotifHint = computed(() =>
-  chatStore.notificationPermission === 'default' && !notifHintDismissed.value
+  !props.panel && chatStore.notificationPermission === 'default' && !notifHintDismissed.value
 )
 
 function dismissNotifHint() {
@@ -330,7 +343,8 @@ watch(() => chatStore.pendingMention, (newVal) => {
       textAreaEl.value?.focus()
     })
   }
-})
+// Immediate: a mention that opened the Talk's chat lands in its composer.
+}, { immediate: true })
 
 function messageRows() {
   return messageContainer.value ? messageContainer.value.querySelectorAll('[data-msg-id]') : []
@@ -438,16 +452,25 @@ const groupedIds = computed(() => {
 </script>
 
 <template>
-  <main class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden">
-    <!-- Channel Header (48px, aligned with the side columns) -->
-    <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
+  <component
+    :is="panel ? 'section' : 'main'"
+    :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden"
+  >
+    <!-- Channel Header (48px, aligned with the side columns; 40px in the Talk's chat) -->
+    <header
+      :class="[
+        'px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10',
+        panel ? 'h-10' : 'h-12'
+      ]"
+    >
       <!-- Left: Channel name & topic -->
       <div class="flex items-center gap-2 min-w-0">
-        <Hash class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
-        <span class="font-semibold text-base text-mnema-text truncate flex-shrink-0 max-w-[60%]">
+        <component :is="channelIcon" class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
+        <span data-testid="chat-channel-name" class="font-semibold text-base text-mnema-text truncate flex-shrink-0 max-w-[60%]">
           {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>
-        <span v-if="chatStore.activeChannel?.topic" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
+        <span v-if="chatStore.activeChannel?.topic && !panel" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
           {{ chatStore.activeChannel.topic }}
         </span>
       </div>
@@ -465,7 +488,20 @@ const groupedIds = computed(() => {
           <AtSign v-else-if="chatStore.notificationLevel(chatStore.activeChannel.id) === 'mentions'" class="w-5 h-5" />
           <Bell v-else class="w-5 h-5" />
         </button>
+        <!-- The Talk's chat closes; the member list has its toggle in the Talk header -->
         <button
+          v-if="panel"
+          type="button"
+          data-testid="voice-chat-close"
+          @click="emit('close')"
+          class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+          v-tooltip="$t('talk.closeChat')"
+          :aria-label="$t('talk.closeChat')"
+        >
+          <X class="w-5 h-5" />
+        </button>
+        <button
+          v-else
           @click="chatStore.showMemberList = !chatStore.showMemberList"
           :class="[
             'w-8 h-8 flex items-center justify-center rounded-md transition',
@@ -519,12 +555,25 @@ const groupedIds = computed(() => {
         <Loader2 class="w-6 h-6 animate-spin text-mnema-accent" />
       </div>
 
+      <!-- Empty Talk chat: the channel's beginning, at the bottom like in Discord -->
+      <div
+        v-else-if="!chatStore.messages?.length && panel"
+        data-testid="voice-chat-empty"
+        class="h-full flex flex-col justify-end px-4 pb-2"
+      >
+        <div class="w-14 h-14 rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text">
+          <Volume2 class="w-7 h-7" />
+        </div>
+        <p class="font-bold text-2xl text-mnema-text">{{ welcomeText }}</p>
+        <p class="text-sm text-mnema-muted mt-1">{{ beginningText }}</p>
+      </div>
+
       <!-- Empty State -->
       <div v-else-if="!chatStore.messages?.length" class="h-full flex flex-col items-center justify-center text-center p-8">
         <div class="w-12 h-12 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-3 text-mnema-accent bg-mnema-surface/50">
           <Hash class="w-5 h-5 opacity-80" />
         </div>
-        <p class="font-semibold text-lg text-mnema-text">{{ $t('chat.welcome', { channel: chatStore.activeChannel?.name || '' }) }}</p>
+        <p class="font-semibold text-lg text-mnema-text">{{ welcomeText }}</p>
         <p class="text-sm text-mnema-tertiary mt-1 max-w-sm">
           {{ $t('chat.emptyBody') }}
         </p>
@@ -535,12 +584,12 @@ const groupedIds = computed(() => {
         <div v-if="chatStore.hasMoreBefore" class="h-12 flex items-center justify-center text-mnema-tertiary" aria-live="polite">
           <Loader2 v-if="chatStore.isLoadingBefore" class="w-5 h-5 animate-spin text-mnema-accent" />
         </div>
-        <div v-else class="px-4 pt-8 pb-2">
-          <div class="w-16 h-16 rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text">
-            <Hash class="w-9 h-9" />
+        <div v-else :class="['px-4 pb-2', panel ? 'pt-4' : 'pt-8']">
+          <div :class="['rounded-full bg-mnema-surface flex items-center justify-center mb-2 text-mnema-text', panel ? 'w-14 h-14' : 'w-16 h-16']">
+            <component :is="channelIcon" :class="panel ? 'w-7 h-7' : 'w-9 h-9'" />
           </div>
-          <p class="font-bold text-3xl text-mnema-text">{{ $t('chat.welcome', { channel: chatStore.activeChannel?.name || '' }) }}</p>
-          <p class="text-base text-mnema-muted mt-1">{{ $t('chat.beginning', { channel: chatStore.activeChannel?.name || '' }) }}</p>
+          <p :class="['font-bold text-mnema-text', panel ? 'text-2xl' : 'text-3xl']">{{ welcomeText }}</p>
+          <p :class="['text-mnema-muted mt-1', panel ? 'text-sm' : 'text-base']">{{ beginningText }}</p>
         </div>
       </template>
 
@@ -664,8 +713,8 @@ const groupedIds = computed(() => {
           :aria-expanded="assist.open.value ? 'true' : 'false'"
           :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
           :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
-          :placeholder="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
-          :aria-label="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
+          :placeholder="placeholder"
+          :aria-label="placeholder"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
@@ -699,5 +748,5 @@ const groupedIds = computed(() => {
       :y="contextMenu.y"
       :items="contextMenu.items"
     />
-  </main>
+  </component>
 </template>

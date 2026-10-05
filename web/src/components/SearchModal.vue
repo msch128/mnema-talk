@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
-import { Search, Hash, Paperclip, Image as ImageIcon, Link as LinkIcon, X, Loader2, ArrowRight, CornerDownRight } from '@lucide/vue'
+import { Search, Hash, Volume2, Paperclip, Image as ImageIcon, Link as LinkIcon, X, Loader2, ArrowRight, CornerDownRight } from '@lucide/vue'
 import { api } from '../lib/api'
 import { useChatStore } from '../stores/chat'
 import { locale } from '../i18n'
@@ -38,7 +38,10 @@ const hasHas = [
   { value: 'link', label: 'chat.hasLink', icon: LinkIcon }
 ]
 
+// Every channel has a chat: text channels, then voice channels (their Talk's chat).
 const textChannels = computed(() => chatStore.allChannels.filter(c => c.type !== 'voice'))
+const voiceChannels = computed(() => chatStore.allChannels.filter(c => c.type === 'voice'))
+const channelTypes = computed(() => new Map(chatStore.allChannels.map(c => [c.id, c.type])))
 const channelNames = computed(() => new Map(chatStore.allChannels.map(c => [c.id, c.name])))
 const hasCriteria = computed(() => !!(query.value.trim() || channelId.value || authorId.value || has.value))
 
@@ -220,6 +223,9 @@ onUnmounted(() => {
             >
               <option value="">{{ $t('chat.searchAllChannels') }}</option>
               <option v-for="ch in textChannels" :key="ch.id" :value="ch.id">#{{ ch.name }}</option>
+              <optgroup v-if="voiceChannels.length" :label="$t('channel.typeVoice')">
+                <option v-for="ch in voiceChannels" :key="ch.id" :value="ch.id">{{ ch.name }}</option>
+              </optgroup>
             </select>
 
             <select
@@ -287,7 +293,8 @@ onUnmounted(() => {
                     {{ msg.display_name || msg.username }}
                   </span>
                   <span v-if="channelNames.get(msg.channel_id)" class="px-1.5 py-0.5 rounded bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
-                    <Hash class="w-2.5 h-2.5 text-mnema-tertiary" />
+                    <Volume2 v-if="channelTypes.get(msg.channel_id) === 'voice'" class="w-2.5 h-2.5 text-mnema-tertiary" />
+                    <Hash v-else class="w-2.5 h-2.5 text-mnema-tertiary" />
                     {{ channelNames.get(msg.channel_id) }}
                   </span>
                   <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
