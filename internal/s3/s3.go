@@ -152,14 +152,6 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
 	return nil
 }
 
-func (c *Client) GetObject(ctx context.Context, key string) (io.ReadCloser, string, int64, error) {
-	out, err := c.client.GetObject(ctx, &s3svc.GetObjectInput{Bucket: aws.String(c.bucket), Key: aws.String(key)})
-	if err != nil {
-		return nil, "", 0, fmt.Errorf("get object %s: %w", key, err)
-	}
-	return out.Body, aws.ToString(out.ContentType), aws.ToInt64(out.ContentLength), nil
-}
-
 // GetObjectFrom streams the object from byte offset to its end.
 func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error) {
 	out, err := c.client.GetObject(ctx, &s3svc.GetObjectInput{
