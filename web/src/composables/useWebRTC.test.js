@@ -556,6 +556,27 @@ describe('webcam', () => {
     expect(screen.track).not.toBeNull()
   })
 
+  it('names the actual reason when the camera fails', async () => {
+    const { useToastStore } = await import('../stores/toast')
+    const { t } = await import('../i18n')
+    const { rtc, voice } = await joined()
+    const toasts = useToastStore()
+    const spy = vi.spyOn(toasts, 'error')
+    for (const [name, key] of [
+      ['NotAllowedError', 'voice.cameraDenied'],
+      ['NotFoundError', 'voice.cameraNotFound'],
+      ['NotReadableError', 'voice.cameraBusy'],
+      ['TypeError', 'voice.cameraFailed']
+    ]) {
+      navigator.mediaDevices.getUserMedia.mockImplementationOnce(async () => {
+        throw Object.assign(new Error(name), { name })
+      })
+      await rtc.startCamera()
+      expect(spy).toHaveBeenLastCalledWith(t(key))
+      expect(voice.isCameraOn).toBe(false)
+    }
+  })
+
   it('does not start a camera outside a call', async () => {
     const { rtc, voice } = setup()
     await rtc.startCamera()

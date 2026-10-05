@@ -123,6 +123,14 @@ func TestSecurityHeaders(t *testing.T) {
 	if rec.Header().Get("Strict-Transport-Security") != "" {
 		t.Error("no HSTS expected for plain http in development")
 	}
+	// The talk needs mic, camera and screen capture from our own origin;
+	// "camera=()" made the browser refuse the webcam without asking.
+	pp := rec.Header().Get("Permissions-Policy")
+	for _, want := range []string{"microphone=(self)", "camera=(self)", "display-capture=(self)", "geolocation=()"} {
+		if !strings.Contains(pp, want) {
+			t.Errorf("Permissions-Policy %q lacks %s", pp, want)
+		}
+	}
 
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
 	rec = httptest.NewRecorder()

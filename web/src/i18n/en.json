@@ -296,7 +296,10 @@
       "open": "Open the roundtable",
       "details": "Connection details"
     },
-    "cameraFailed": "Camera unavailable. Check the permission in your browser."
+    "cameraFailed": "Camera unavailable. Check the permission in your browser.",
+    "cameraDenied": "Camera access denied. Allow the camera for this site in your browser settings.",
+    "cameraNotFound": "No camera found.",
+    "cameraBusy": "The camera is in use by another app."
   },
   "audio": {
     "settings": "Audio settings",
