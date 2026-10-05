@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -135,16 +136,29 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 	return &ch, nil
 }
 
-// DeleteChannel removes a channel and, by cascade, its messages.
-func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) error {
-	tag, err := p.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
+// DeleteChannel removes a channel and, by cascade, its messages. It returns
+// the storage keys of the media attached to those messages.
+func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]string, error) {
+	var keys []string
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if err := collectKeys(ctx, tx, &keys, `
+			SELECT s3_key FROM media WHERE message_id IN
+				(SELECT id FROM messages WHERE channel_id = $1)`, channelID); err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
+		if err != nil {
+			return fmt.Errorf("delete channel: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return errChannelNotFound
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("delete channel: %w", err)
+		return nil, err
 	}
-	if tag.RowsAffected() == 0 {
-		return errChannelNotFound
-	}
-	return nil
+	return keys, nil
 }
 
 // DeleteCategory removes a category; its channels become uncategorized.

@@ -13,6 +13,8 @@ import (
 type Store interface {
 	Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error
 	GetObject(ctx context.Context, key string) (io.ReadCloser, string, int64, error)
+	// GetObjectFrom streams the object starting at byte offset (for Range requests).
+	GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error)
 	Delete(ctx context.Context, key string) error
 	DeleteBatch(ctx context.Context, keys []string) error
 }
@@ -52,6 +54,19 @@ func (m *MemoryStore) GetObject(_ context.Context, key string) (io.ReadCloser, s
 		return nil, "", 0, ErrObjectNotFound
 	}
 	return io.NopCloser(bytes.NewReader(o.data)), o.mime, int64(len(o.data)), nil
+}
+
+func (m *MemoryStore) GetObjectFrom(_ context.Context, key string, offset int64) (io.ReadCloser, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	o, ok := m.objects[key]
+	if !ok {
+		return nil, ErrObjectNotFound
+	}
+	if offset > int64(len(o.data)) {
+		offset = int64(len(o.data))
+	}
+	return io.NopCloser(bytes.NewReader(o.data[offset:])), nil
 }
 
 func (m *MemoryStore) Delete(_ context.Context, key string) error {
