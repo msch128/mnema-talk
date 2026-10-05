@@ -59,13 +59,16 @@ func EnsureAdminUser(ctx context.Context, p *db.Pool, username, password string)
 		return fmt.Errorf("look up admin username: %w", err)
 	}
 
-	generated := password == ""
-	if generated {
+	// generated holds a random initial password when none was configured; it
+	// is shown once in the log below, the configured one never is.
+	var generated string
+	if password == "" {
 		b := make([]byte, 18)
 		if _, err := rand.Read(b); err != nil {
 			return fmt.Errorf("generate admin password: %w", err)
 		}
-		password = base64.RawURLEncoding.EncodeToString(b)
+		generated = base64.RawURLEncoding.EncodeToString(b)
+		password = generated
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -84,9 +87,9 @@ func EnsureAdminUser(ctx context.Context, p *db.Pool, username, password string)
 	}
 
 	slog.Info("initial administrator created", "username", username)
-	if generated {
+	if generated != "" {
 		// Printed once on first start only; change it after the first login.
-		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", password)
+		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", generated)
 	}
 	return nil
 }
