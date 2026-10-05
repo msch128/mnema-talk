@@ -38,6 +38,8 @@ type Handler struct {
 	// RetentionDays > 0 enables automatic pruning. Default 0: nothing is ever
 	// deleted automatically.
 	RetentionDays int
+	// Online resolves @here in an upload's caption; nil means nobody is online.
+	Online chat.OnlineSource
 }
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap
@@ -186,6 +188,9 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		if msgID, err = chat.CreateMessage(r.Context(), tx, chat.NewMessage{
 			ChannelID: chID, UserID: user.ID, Content: content, ParentID: parentID, ReplyToID: replyToID,
 		}); err != nil {
+			return err
+		}
+		if err := chat.RecordMentions(r.Context(), tx, h.Online, msgID, user.ID, content); err != nil {
 			return err
 		}
 		_, err = tx.Exec(r.Context(), `

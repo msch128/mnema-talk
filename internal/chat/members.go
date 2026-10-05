@@ -11,7 +11,7 @@ import (
 // GetAllMembers lists every account, admins first, then by display name.
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 	rows, err := p.Query(ctx, `
-		SELECT id, username, display_name, bio, role, avatar_s3_key, created_at
+		SELECT id, username, display_name, bio, role, avatar_s3_key, status_text, created_at
 		FROM users
 		ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`)
 	if err != nil {
@@ -23,7 +23,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 	for rows.Next() {
 		var m auth.User
 		var avatar *string
-		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Bio, &m.Role, &avatar, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.Username, &m.DisplayName, &m.Bio, &m.Role, &avatar, &m.StatusText, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)

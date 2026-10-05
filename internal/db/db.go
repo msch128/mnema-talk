@@ -174,9 +174,9 @@ func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) e
 
 	tag, err := p.Exec(ctx, `
 		INSERT INTO users (username, display_name, password_hash, role)
-		VALUES ($1, $1, $2, 'admin')
+		VALUES ($1, $3, $2, 'admin')
 		ON CONFLICT (username) DO NOTHING
-	`, username, string(hash))
+	`, username, string(hash), displayNameFor(username))
 	if err != nil {
 		return fmt.Errorf("insert admin user: %w", err)
 	}
@@ -190,4 +190,14 @@ func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) e
 		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", password)
 	}
 	return nil
+}
+
+// displayNameFor is the initial display name of an account: its username,
+// cut to the 24 characters a display name may have.
+func displayNameFor(username string) string {
+	r := []rune(username)
+	if len(r) > 24 {
+		r = r[:24]
+	}
+	return string(r)
 }

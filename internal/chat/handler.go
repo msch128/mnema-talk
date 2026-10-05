@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -19,6 +20,8 @@ type Handler struct {
 	Events events.Publisher
 	// Objects deletes the media of removed messages and channels; nil skips it.
 	Objects ObjectDeleter
+	// Online resolves @here; nil means nobody is online.
+	Online OnlineSource
 }
 
 // ObjectDeleter removes stored media objects (implemented by media.Store).
@@ -152,8 +155,15 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err := ValidateReplyTarget(r.Context(), h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
-	id, err := CreateMessage(r.Context(), h.DB, NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
+	var id uuid.UUID
+	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
+		var err error
+		if id, err = CreateMessage(r.Context(), tx, NewMessage{
+			ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
+		}); err != nil {
+			return err
+		}
+		return RecordMentions(r.Context(), tx, h.Online, id, user.ID, content)
 	})
 	if err != nil {
 		return err
@@ -203,7 +213,11 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := EditMessage(r.Context(), h.DB, msgID, auth.UserFrom(r.Context()).ID, content); err != nil {
+	userID := auth.UserFrom(r.Context()).ID
+	if err := EditMessage(r.Context(), h.DB, msgID, userID, content); err != nil {
+		return err
+	}
+	if err := RecordMentions(r.Context(), h.DB, h.Online, msgID, userID, content); err != nil {
 		return err
 	}
 	msg, err := GetMessage(r.Context(), h.DB, msgID)

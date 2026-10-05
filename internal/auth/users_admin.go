@@ -22,6 +22,8 @@ type LiveControl interface {
 	KickFromVoice(userID uuid.UUID) bool
 	// DisconnectUser closes all of the user's live connections.
 	DisconnectUser(userID uuid.UUID)
+	// SetPresence applies a newly chosen presence to the user's live status.
+	SetPresence(userID uuid.UUID, presence string)
 }
 
 // AdminUser is a user as the admin panel lists it.
@@ -130,6 +132,7 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
 	r.Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
 	r.Post("/users/{id}/kick", httpx.Handle(h.kickUser))
+	r.Put("/users/{id}/status", httpx.Handle(h.setUserStatus))
 }
 
 func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
@@ -239,8 +242,17 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if h.Live == nil || !h.Live.KickFromVoice(id) {
-		return httpx.ErrInvalidInput("user is not in a Tafelrunde")
+		return httpx.ErrInvalidInput("user is not in a Talk")
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// setUserStatus lets an admin edit or clear any member's status line.
+func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	return h.writeStatus(w, r, id)
 }

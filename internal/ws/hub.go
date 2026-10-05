@@ -48,6 +48,8 @@ type Hub struct {
 	mu      sync.RWMutex
 	clients map[*Client]struct{}
 	online  map[uuid.UUID]int
+	// chosen is the presence each connected user picked (online, away, dnd, focus).
+	chosen map[uuid.UUID]string
 	// voice maps channel → user → user info for everyone currently in a voice room.
 	voice map[uuid.UUID]map[uuid.UUID]auth.User
 	// grace holds users whose connection dropped while in voice. They stay listed
@@ -77,6 +79,7 @@ func NewHub(p *db.Pool, sessions *auth.Sessions, voiceSFU *sfu.SFU, origins []st
 		Origins:  origins,
 		clients:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
+		chosen:   map[uuid.UUID]string{},
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
 		grace:    map[uuid.UUID]*graceLeave{},
 
@@ -121,6 +124,10 @@ type Client struct {
 
 	tokenVersion int
 	closeOnce    sync.Once
+
+	// idle is set by the client after a while without input; it turns an
+	// "online" user into "away" while all of their connections are idle.
+	idle bool // guarded by hub.mu
 
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
@@ -283,16 +290,21 @@ func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
 
 func (h *Hub) register(c *Client) {
 	h.mu.Lock()
+	before := h.statusLocked(c.User.ID)
 	h.clients[c] = struct{}{}
 	h.online[c.User.ID]++
-	first := h.online[c.User.ID] == 1
+	// The session was just loaded, so its presence is the latest choice.
+	if auth.ValidPresence(c.User.Presence) {
+		h.chosen[c.User.ID] = c.User.Presence
+	} else if h.chosen[c.User.ID] == "" {
+		h.chosen[c.User.ID] = auth.PresenceOnline
+	}
+	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
 
 	slog.Info("ws connected", "user", c.User.Username)
-	if first {
-		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "online"})
-	}
-	c.SendEvent("presence_snapshot", h.onlineUsers())
+	h.announcePresence(c.User.ID, before, after)
+	c.SendEvent("presence_snapshot", h.presenceSnapshot())
 	c.SendEvent("voice_snapshot", h.voiceSnapshot())
 }
 
@@ -315,13 +327,16 @@ func (h *Hub) unregister(c *Client) {
 		h.mu.Unlock()
 		return
 	}
+	before := h.statusLocked(c.User.ID)
 	delete(h.clients, c)
 	close(c.send)
 	h.online[c.User.ID]--
 	offline := h.online[c.User.ID] <= 0
 	if offline {
 		delete(h.online, c.User.ID)
+		delete(h.chosen, c.User.ID)
 	}
+	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
 
 	slog.Info("ws disconnected", "user", c.User.Username)
@@ -333,8 +348,69 @@ func (h *Hub) unregister(c *Client) {
 			}
 			cancel()
 		}
-		h.Broadcast("presence_update", map[string]any{"user_id": c.User.ID, "status": "offline"})
 	}
+	h.announcePresence(c.User.ID, before, after)
+}
+
+// StatusOffline is the live status of a user without an open connection.
+const StatusOffline = "offline"
+
+// statusLocked is userID's live status: offline without a connection, else
+// the chosen presence, where "online" reads as "away" while every connection
+// of the user is idle. Callers hold h.mu.
+func (h *Hub) statusLocked(userID uuid.UUID) string {
+	if h.online[userID] <= 0 {
+		return StatusOffline
+	}
+	chosen := h.chosen[userID]
+	if chosen == "" {
+		chosen = auth.PresenceOnline
+	}
+	if chosen != auth.PresenceOnline {
+		return chosen
+	}
+	for c := range h.clients {
+		if c.User.ID == userID && !c.idle {
+			return auth.PresenceOnline
+		}
+	}
+	return auth.PresenceAway
+}
+
+// announcePresence tells everyone about a changed live status.
+func (h *Hub) announcePresence(userID uuid.UUID, before, after string) {
+	if before != after {
+		h.Broadcast("presence_update", map[string]any{"user_id": userID, "status": after})
+	}
+}
+
+// SetPresence applies a newly chosen presence to userID's live status.
+func (h *Hub) SetPresence(userID uuid.UUID, presence string) {
+	if !auth.ValidPresence(presence) {
+		return
+	}
+	h.mu.Lock()
+	before := h.statusLocked(userID)
+	if h.online[userID] > 0 {
+		h.chosen[userID] = presence
+	}
+	after := h.statusLocked(userID)
+	h.mu.Unlock()
+	h.announcePresence(userID, before, after)
+}
+
+// setIdle records whether c has gone idle and announces a resulting change.
+func (h *Hub) setIdle(c *Client, idle bool) {
+	h.mu.Lock()
+	if _, ok := h.clients[c]; !ok {
+		h.mu.Unlock()
+		return
+	}
+	before := h.statusLocked(c.User.ID)
+	c.idle = idle
+	after := h.statusLocked(c.User.ID)
+	h.mu.Unlock()
+	h.announcePresence(c.User.ID, before, after)
 }
 
 // OnlineCount returns the number of distinct online users.
@@ -343,6 +419,20 @@ func (h *Hub) OnlineCount() int {
 	defer h.mu.RUnlock()
 	return len(h.online)
 }
+
+// presenceSnapshot maps every connected user to their live status.
+func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	out := make(map[uuid.UUID]string, len(h.online))
+	for id := range h.online {
+		out[id] = h.statusLocked(id)
+	}
+	return out
+}
+
+// OnlineUserIDs lists every user with an open connection (for @here).
+func (h *Hub) OnlineUserIDs() []uuid.UUID { return h.onlineUsers() }
 
 func (h *Hub) onlineUsers() []uuid.UUID {
 	h.mu.RLock()
@@ -592,6 +682,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	var p struct {
 		ChannelID uuid.UUID `json:"channel_id"`
 		Active    bool      `json:"active"`
+		Idle      bool      `json:"idle"`
 		T         float64   `json:"t"`
 	}
 	_ = json.Unmarshal(payload, &p)
@@ -599,6 +690,9 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	switch eventType {
 	case "ping":
 		c.SendEvent("pong", map[string]any{"t": p.T})
+
+	case "presence_idle":
+		h.setIdle(c, p.Idle)
 
 	case "voice_join":
 		if ch, ok := h.voiceChannel(ctx, p.ChannelID); ok {
