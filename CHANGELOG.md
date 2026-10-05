@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.9](https://github.com/msch128/mnema-talk/compare/v0.1.8...v0.1.9) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** pin the TURN relay address to the voice server's LAN IP ([1e64a29](https://github.com/msch128/mnema-talk/commit/1e64a29dfd387365b30d8d8f58fe41c2a0e7bea3))
+* **voice:** TURN relay can reach the voice server; 404 for stale assets ([00b491f](https://github.com/msch128/mnema-talk/commit/00b491f681926279592491e7548d53463b1ec848))
+
 ## [0.1.8](https://github.com/msch128/mnema-talk/compare/v0.1.7...v0.1.8) (2026-10-05)
 
 
