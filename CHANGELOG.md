@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.4](https://github.com/msch128/mnema-talk/compare/v0.1.3...v0.1.4) (2026-10-05)
+
+
+### Features
+
+* **api:** generated OpenAPI 3.1 docs and Swagger UI at /api/docs ([00b8ce0](https://github.com/msch128/mnema-talk/commit/00b8ce0a6d22514b5a4bbe68f541d47d67dd4a50))
+* Talk timers and activity totals ([26a976f](https://github.com/msch128/mnema-talk/commit/26a976f8e4096054ab588bbcc074b3def708b608))
+
 ## [0.1.3](https://github.com/msch128/mnema-talk/compare/v0.1.2...v0.1.3) (2026-10-05)
 
 
