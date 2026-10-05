@@ -3,7 +3,7 @@ import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   Hash, Plus, ArrowUp, ArrowDown, FileText, Users,
   MessageSquare, Pencil, Trash2, Smile, SmilePlus, Check, Loader2, Reply,
-  MoreHorizontal, Link as LinkIcon, Copy, Bookmark
+  MoreHorizontal, Link as LinkIcon, Copy, Bookmark, Bell, BellOff, AtSign, X
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -15,6 +15,7 @@ import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import { continuationIds } from '../lib/messageGrouping'
 import { previewText } from '../lib/replies'
+import { firstUnreadId, typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
@@ -263,6 +264,98 @@ watch(
   { flush: 'pre' }
 )
 
+// ---- "New since" divider ----
+
+// Last-read time captured when the channel was opened: the divider stays put
+// while the channel is open, even though the server marks it read meanwhile.
+const dividerSince = ref(null)
+watch(
+  () => [chatStore.activeChannel?.id, chatStore.activeChannelLastReadAt],
+  () => { dividerSince.value = chatStore.activeChannelLastReadAt },
+  { immediate: true }
+)
+const dividerBeforeId = computed(() =>
+  firstUnreadId(chatStore.messages, dividerSince.value, authStore.user?.id, chatStore.hasMoreBefore)
+)
+
+function dividerLabel() {
+  const d = new Date(dividerSince.value)
+  const sameDay = d.toDateString() === new Date().toDateString()
+  const time = sameDay
+    ? d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleString([locale.value], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  return t('chat.newSinceDivider', { time })
+}
+
+// Esc in the channel: mark everything read and drop the divider.
+function markAllRead() {
+  const id = chatStore.activeChannel?.id
+  if (!id || chatStore.activeChannel.type === 'voice') return false
+  const st = chatStore.readStates[id]
+  if (!dividerBeforeId.value && !(st?.unread_count > 0) && !(st?.mention_count > 0)) return false
+  dividerSince.value = null
+  chatStore.markChannelRead(id)
+  return true
+}
+
+// ---- Typing indicator ----
+
+const typingText = computed(() => {
+  const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id])
+  return line ? t(line.key, line.params) : ''
+})
+
+function handleComposerInput() {
+  if (inputMessage.value.trim()) chatStore.sendTyping(chatStore.activeChannel?.id)
+}
+
+// ---- Desktop notifications ----
+
+const NOTIF_HINT_KEY = 'mnema_notif_hint_dismissed'
+function readHintDismissed() {
+  try { return localStorage.getItem(NOTIF_HINT_KEY) === '1' } catch { return false }
+}
+const notifHintDismissed = ref(readHintDismissed())
+const showNotifHint = computed(() =>
+  chatStore.notificationPermission === 'default' && !notifHintDismissed.value
+)
+
+function dismissNotifHint() {
+  notifHintDismissed.value = true
+  try { localStorage.setItem(NOTIF_HINT_KEY, '1') } catch { /* private mode: dismissed for this session only */ }
+}
+
+// Asked on a click, never on page load.
+async function enableNotifications() {
+  const result = await chatStore.requestNotificationPermission()
+  if (result === 'granted') toasts.success(t('notifications.granted'))
+  else if (result === 'denied') toasts.error(t('notifications.denied'))
+  if (result !== 'default') dismissNotifHint()
+}
+
+function openNotificationMenu(e) {
+  const channel = chatStore.activeChannel
+  if (!channel) return
+  const rect = e.currentTarget.getBoundingClientRect()
+  const current = chatStore.notificationLevel(channel.id)
+  const levels = [
+    { level: 'all', icon: Bell },
+    { level: 'mentions', icon: AtSign },
+    { level: 'mute', icon: BellOff }
+  ]
+  contextMenu.value = {
+    open: true,
+    x: Math.max(8, rect.right - 200),
+    y: rect.bottom + 4,
+    items: levels.map(({ level, icon }) => ({
+      label: t(`notifications.${level}`),
+      icon,
+      shortcut: current === level ? '✓' : '',
+      action: () => chatStore.setNotificationLevel(channel.id, level)
+    }))
+  }
+}
+
 watch(() => chatStore.activeChannel?.id, () => {
   showUnreadPill.value = false
   replyingTo.value = null
@@ -337,7 +430,9 @@ function openMessageContextMenu(e, msg) {
       label: t('chat.addReaction'),
       icon: SmilePlus,
       action: () => {
-        activeReactionPickerMsgId.value = msg.id
+        // After the menu's own click has finished bubbling: the window click
+        // handler would otherwise close the picker straight away.
+        setTimeout(() => { activeReactionPickerMsgId.value = msg.id }, 0)
       }
     },
     {
@@ -425,8 +520,49 @@ function openContextMenuFromButton(e, msg) {
   }, msg)
 }
 
+// Right-click opens at the pointer; the keyboard (no pointer position) opens
+// at the message's own position.
+function onMessageContextMenu(e, msg) {
+  if (!e.clientX && !e.clientY && e.currentTarget) {
+    openMenuAtElement(e.currentTarget, msg)
+    return
+  }
+  openMessageContextMenu(e, msg)
+}
+
+function openMenuAtElement(el, msg) {
+  const rect = el.getBoundingClientRect()
+  openMessageContextMenu({
+    preventDefault: () => {},
+    clientX: rect.left + 80,
+    clientY: Math.min(Math.max(rect.top, 0) + 24, window.innerHeight - 24)
+  }, msg)
+}
+
+// Moves focus to the previous/next message row.
+function focusSiblingMessage(row, dir) {
+  const rows = [...messageRows()]
+  const next = rows[rows.indexOf(row) + dir]
+  if (!next) return false
+  next.focus()
+  return true
+}
+
 function handleMessageKeydown(e, msg) {
   if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
+
+  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+    e.preventDefault()
+    openMenuAtElement(e.currentTarget, msg)
+    return
+  }
+  if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.target === e.currentTarget && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+    e.preventDefault()
+    focusSiblingMessage(e.currentTarget, e.key === 'ArrowUp' ? -1 : 1)
+    return
+  }
+  // Ctrl/Cmd/Alt combos belong to the browser or OS (reload, find, ...).
+  if (e.ctrlKey || e.metaKey || e.altKey) return
 
   if (e.key === 'r' || e.key === 'R') {
     e.preventDefault()
@@ -454,10 +590,15 @@ function handleMessageKeydown(e, msg) {
 }
 
 function onGlobalKeydown(e) {
-  if (e.key === 'Escape') {
-    if (contextMenu.value.open) contextMenu.value.open = false
-    if (activeReactionPickerMsgId.value) activeReactionPickerMsgId.value = null
-  }
+  if (e.key !== 'Escape') return
+  if (contextMenu.value.open) { contextMenu.value.open = false; return }
+  if (activeReactionPickerMsgId.value) { activeReactionPickerMsgId.value = null; return }
+  // Something else (dialog, lightbox, composer reply, editor) already used the key.
+  if (e.defaultPrevented || selectedImage.value || editingMessageId.value || replyingTo.value) return
+  if (inputMessage.value.trim() || document.querySelector('[role="dialog"]')) return
+  const tag = e.target?.tagName
+  if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.target !== textAreaEl.value) return
+  if (markAllRead()) e.preventDefault()
 }
 
 onMounted(() => {
@@ -538,7 +679,12 @@ function formatTime(dateStr) {
 }
 
 // Consecutive messages by the same author (< 7 min apart) render compactly.
-const groupedIds = computed(() => continuationIds(chatStore.messages))
+// The "new since" divider always starts a fresh group.
+const groupedIds = computed(() => {
+  const ids = continuationIds(chatStore.messages)
+  if (dividerBeforeId.value) ids.delete(dividerBeforeId.value)
+  return ids
+})
 </script>
 
 <template>
@@ -559,6 +705,17 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
       <!-- Right: Badges & member list toggle -->
       <div class="flex items-center gap-2 flex-shrink-0">
         <button
+          v-if="chatStore.activeChannel"
+          @click="openNotificationMenu"
+          class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+          v-tooltip="$t('notifications.channelSettings')"
+          aria-haspopup="menu"
+        >
+          <BellOff v-if="chatStore.notificationLevel(chatStore.activeChannel.id) === 'mute'" class="w-5 h-5" />
+          <AtSign v-else-if="chatStore.notificationLevel(chatStore.activeChannel.id) === 'mentions'" class="w-5 h-5" />
+          <Bell v-else class="w-5 h-5" />
+        </button>
+        <button
           @click="chatStore.showMemberList = !chatStore.showMemberList"
           :class="[
             'w-8 h-8 flex items-center justify-center rounded-md transition',
@@ -573,6 +730,36 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
         </button>
       </div>
     </header>
+
+    <!-- Desktop notification opt-in: shown until answered or dismissed -->
+    <div
+      v-if="showNotifHint"
+      class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm flex-shrink-0"
+      role="region"
+      :aria-label="$t('notifications.hintTitle')"
+    >
+      <Bell class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+      <p class="min-w-0 flex-1 text-mnema-muted">
+        <span class="font-medium text-mnema-text">{{ $t('notifications.hintTitle') }}</span>
+        <span class="ml-2">{{ $t('notifications.hintBody') }}</span>
+      </p>
+      <button
+        type="button"
+        class="px-2.5 py-1 rounded-md bg-mnema-accent text-mnema-accent-ink font-semibold hover:bg-mnema-accent-hover transition flex-shrink-0"
+        @click="enableNotifications"
+      >
+        {{ $t('notifications.enable') }}
+      </button>
+      <button
+        type="button"
+        class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
+        :aria-label="$t('notifications.notNow')"
+        v-tooltip="$t('notifications.notNow')"
+        @click="dismissNotifHint"
+      >
+        <X class="w-4 h-4" />
+      </button>
+    </div>
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">
@@ -608,13 +795,22 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
       </template>
 
       <!-- Messages List -->
+      <template v-for="msg in (chatStore.messages || [])" :key="msg.id">
+      <!-- "New since" divider -->
       <div
-        v-for="msg in (chatStore.messages || [])"
-        :key="msg.id"
+        v-if="dividerBeforeId === msg.id"
+        role="separator"
+        class="flex items-center gap-3 px-4 mt-4 mb-1 select-none"
+      >
+        <span class="flex-1 h-px bg-mnema-accent/40"></span>
+        <span class="text-xs font-semibold text-mnema-accent uppercase tracking-wide">{{ dividerLabel() }}</span>
+        <span class="flex-1 h-px bg-mnema-accent/40"></span>
+      </div>
+      <div
         :data-msg-id="msg.id"
         tabindex="0"
         role="article"
-        @contextmenu.prevent="openMessageContextMenu($event, msg)"
+        @contextmenu.prevent="onMessageContextMenu($event, msg)"
         @keydown="handleMessageKeydown($event, msg)"
         :class="[
           'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
@@ -626,7 +822,7 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
         <div
           :class="[
             'absolute right-4 -top-4 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
-            activeReactionPickerMsgId === msg.id ? 'flex' : 'hidden group-hover:flex'
+            activeReactionPickerMsgId === msg.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
           ]"
         >
           <!-- Emoji Reactions Trigger -->
@@ -844,6 +1040,7 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
           </div>
         </div>
       </div>
+      </template>
     </div>
 
     <!-- Viewing older history: the window doesn't reach the newest messages -->
@@ -876,7 +1073,7 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
     </div>
 
     <!-- Composer -->
-    <div class="px-4 pb-6 flex-shrink-0">
+    <div class="px-4 pb-1 flex-shrink-0">
       <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
       <div
         :class="[
@@ -908,6 +1105,7 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
           ref="textAreaEl"
           v-model="inputMessage"
           @keydown="handleKeyDown"
+          @input="handleComposerInput"
           :placeholder="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
           :aria-label="$t('chat.placeholder', { channel: chatStore.activeChannel?.name || '' })"
           rows="1"
@@ -923,6 +1121,11 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
         >
           <ArrowUp class="w-4 h-4" />
         </button>
+      </div>
+
+      <!-- Who is typing (keeps its height so the layout doesn't jump) -->
+      <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite">
+        {{ typingText }}
       </div>
     </div>
 
