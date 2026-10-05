@@ -351,35 +351,7 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		}
 		r.addTrack(key, info)
 
-		go func() {
-			buf := make([]byte, 1500)
-			rtpPkt := &rtp.Packet{}
-			for {
-				n, _, err := remoteTrack.Read(buf)
-				if err != nil {
-					r.removeTrack(key, info)
-					return
-				}
-				if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
-					continue
-				}
-				// Header extension IDs are negotiated per connection; the
-				// subscriber side adds its own (e.g. transport-cc).
-				rtpPkt.Extension = false
-				rtpPkt.Extensions = nil
-				// The publisher stopped and started the same transceiver again:
-				// the browser keeps the SSRC, so no new OnTrack fires.
-				if at := info.stoppedAt.Load(); at != 0 && time.Since(time.Unix(0, at)) > resumeHoldoff {
-					if info.stoppedAt.CompareAndSwap(at, 0) {
-						r.addTrack(key, info)
-					}
-				}
-				if err := trackLocal.WriteRTP(rtpPkt); err != nil {
-					r.removeTrack(key, info)
-					return
-				}
-			}
-		}()
+		go r.forward(remoteTrack, trackLocal, key, info)
 	})
 
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
@@ -407,6 +379,48 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	go r.SignalPeerConnections()
 
 	return peer, nil
+}
+
+// rtpReader is the publisher side of a forwarded track (*webrtc.TrackRemote).
+type rtpReader interface {
+	Read(b []byte) (int, interceptor.Attributes, error)
+}
+
+// rtpWriter is the subscriber side (*webrtc.TrackLocalStaticRTP).
+type rtpWriter interface {
+	WriteRTP(p *rtp.Packet) error
+}
+
+// forward copies a publisher's packets to the local track every subscriber
+// is bound to, until the publisher's track ends. A write error only concerns
+// single bindings (a subscriber whose sender just stopped reports
+// io.ErrClosedPipe); the others still got the packet, so it never ends the
+// track for the whole room.
+func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *TrackInfo) {
+	buf := make([]byte, 1500)
+	rtpPkt := &rtp.Packet{}
+	for {
+		n, _, err := remote.Read(buf)
+		if err != nil {
+			r.removeTrack(key, info)
+			return
+		}
+		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
+			continue
+		}
+		// Header extension IDs are negotiated per connection; the
+		// subscriber side adds its own (e.g. transport-cc).
+		rtpPkt.Extension = false
+		rtpPkt.Extensions = nil
+		// The publisher stopped and started the same transceiver again:
+		// the browser keeps the SSRC, so no new OnTrack fires.
+		if at := info.stoppedAt.Load(); at != 0 && time.Since(time.Unix(0, at)) > resumeHoldoff {
+			if info.stoppedAt.CompareAndSwap(at, 0) {
+				r.addTrack(key, info)
+			}
+		}
+		_ = local.WriteRTP(rtpPkt)
+	}
 }
 
 // SetAnswer applies the client's answer and runs a pending renegotiation.
