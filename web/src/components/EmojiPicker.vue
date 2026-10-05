@@ -3,6 +3,7 @@
 // and reads its emoji data from our own server, never from a CDN.
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { locale } from '../i18n'
+import { useDismissable } from '../composables/useDismissable'
 
 const emit = defineEmits(['pick', 'close'])
 const props = defineProps({
@@ -38,30 +39,16 @@ async function create() {
   requestAnimationFrame(() => picker?.shadowRoot?.querySelector('input')?.focus())
 }
 
-function onPointerDown(e) {
-  if (!host.value) return
-  const path = e.composedPath?.() || []
-  if (path.includes(host.value) || (props.trigger && path.includes(props.trigger))) return
-  emit('close')
-}
-
-function onKeydown(e) {
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    e.stopPropagation()
-    emit('close')
-  }
-}
+// Presses on the picker or on its trigger don't close it; Escape does.
+useDismissable(() => [host.value, props.trigger], () => emit('close'))
 
 onMounted(() => {
-  document.addEventListener('pointerdown', onPointerDown, true)
   create().catch(err => {
     console.warn('Emoji picker failed to load:', err)
     emit('close')
   })
 })
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onPointerDown, true)
   picker?.remove()
   picker = null
 })
@@ -72,7 +59,6 @@ onBeforeUnmount(() => {
     ref="host"
     data-testid="emoji-picker"
     class="z-40 overflow-hidden rounded-[10px] bg-mnema-elevated shadow-[inset_0_0_0_1px_#2B2F2D,0_12px_32px_rgba(0,0,0,0.5)]"
-    @keydown="onKeydown"
   >
     <div v-if="loading" class="flex h-[360px] w-[340px] max-w-[calc(100vw-16px)] items-center justify-center text-sm text-mnema-tertiary">
       {{ $t('emoji.loading') }}
