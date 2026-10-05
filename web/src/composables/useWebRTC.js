@@ -652,7 +652,8 @@ export function useWebRTC() {
       voiceStore.isScreenSharing = true
 
       if (pc && videoTrack) {
-        const videoSender = pc.getSenders().find(s => (s.track && s.track.kind === 'video') || (!s.track && s.kind === 'video'))
+        const videoTransceiver = pc.getTransceivers().find(t => t.receiver?.track?.kind === 'video')
+        const videoSender = videoTransceiver?.sender || pc.getSenders().find(s => s.track && s.track.kind === 'video')
         if (videoSender) {
           await videoSender.replaceTrack(videoTrack)
         } else {
@@ -671,7 +672,8 @@ export function useWebRTC() {
 
   function stopScreenShare() {
     if (pc) {
-      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video')
+      const videoTransceiver = pc.getTransceivers().find(t => t.receiver?.track?.kind === 'video')
+      const videoSender = videoTransceiver?.sender || pc.getSenders().find(s => s.track && s.track.kind === 'video')
       if (videoSender) {
         videoSender.replaceTrack(null).catch(() => {})
       }
@@ -683,6 +685,7 @@ export function useWebRTC() {
     }
     voiceStore.localScreenStream = null
     voiceStore.isScreenSharing = false
+    chatStore.sendWSEvent('webrtc_screenshare_stop', {})
   }
 
   function toggleScreenShare() {
