@@ -210,3 +210,42 @@ func TestVoiceSurvivesLateUnregisterOfOldSocket(t *testing.T) {
 		t.Fatalf("closing the old socket ended the new connection's voice: %s", payload)
 	}
 }
+
+func TestTypingIsRelayedToOthersAndThrottled(t *testing.T) {
+	a := newApp(t, true)
+	admin := a.seedAdmin()
+	max := a.register(admin, "max")
+	text := a.createChannel(admin, "allgemein", "text")
+	voice := a.createChannel(admin, "Lounge", "voice")
+
+	watcher, _, err := admin.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	typer, _, err := max.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	typer.send("typing", map[string]any{"channel_id": voice})
+	typer.send("typing", map[string]any{"channel_id": uuid.New()})
+	if payload, got := watcher.expect("typing", 400*time.Millisecond); got {
+		t.Fatalf("typing in a voice or unknown channel relayed: %s", payload)
+	}
+
+	typer.send("typing", map[string]any{"channel_id": text})
+	payload, got := watcher.expect("typing", 2*time.Second)
+	if !got || !strings.Contains(string(payload), text.String()) || !strings.Contains(string(payload), max.user.ID.String()) {
+		t.Fatalf("typing not relayed: %s", payload)
+	}
+	if _, echoed := typer.expect("typing", 300*time.Millisecond); echoed {
+		t.Fatal("typing echoed back to the typer")
+	}
+
+	// A burst within the throttle window is relayed once.
+	typer.send("typing", map[string]any{"channel_id": text})
+	typer.send("typing", map[string]any{"channel_id": text})
+	if payload, again := watcher.expect("typing", 500*time.Millisecond); again {
+		t.Fatalf("typing burst not throttled: %s", payload)
+	}
+}
