@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -340,8 +341,21 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 		return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media has expired or was deleted")
 	}
 
+	etag := `"` + id.String() + `"`
 	obj := &objectReader{ctx: r.Context(), store: h.Store, key: key, size: size}
 	defer obj.Close()
+	// Fetch before any header is written: once ServeContent has sent 200, a
+	// missing object could only end in a truncated body. A revalidation that
+	// ServeContent answers with 304 needs no fetch.
+	if inm := r.Header.Get("If-None-Match"); !strings.Contains(inm, etag) && strings.TrimSpace(inm) != "*" {
+		if err := obj.open(rangeStart(r.Header.Get("Range"), size)); err != nil {
+			if isMissingObject(err) {
+				slog.Warn("media object missing from storage", "media_id", id, "key", key)
+				return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media file is missing from storage")
+			}
+			return fmt.Errorf("fetch media object: %w", err)
+		}
+	}
 
 	disposition := "attachment"
 	if inlineMIME[mimeType] {
@@ -354,7 +368,7 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	// Content behind an ID never changes; private keeps shared caches out.
 	hdr.Set("Cache-Control", "private, max-age=86400, immutable")
-	hdr.Set("ETag", `"`+id.String()+`"`)
+	hdr.Set("ETag", etag)
 	// ServeContent answers Range (206, video seeking), If-None-Match and HEAD.
 	http.ServeContent(w, r, "", time.Time{}, obj)
 	return nil
