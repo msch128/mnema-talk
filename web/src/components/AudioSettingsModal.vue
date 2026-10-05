@@ -7,7 +7,7 @@ import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
-const { refreshAudioDevices, startMicTest, stopMicTest } = useWebRTC()
+const { refreshAudioDevices, startMicTest, stopMicTest, applyAudioSettings } = useWebRTC()
 
 const isRecordingPttKey = ref(false)
 
@@ -51,24 +51,24 @@ function handleKeyRecord(e) {
 
 async function handleDeviceChange() {
   voiceStore.saveSettings()
-  await startMicTest()
+  await applyAudioSettings()
 }
 
 async function toggleAgc() {
   voiceStore.autoGainControl = !voiceStore.autoGainControl
   voiceStore.saveSettings()
-  await startMicTest()
+  await applyAudioSettings()
 }
 
 async function toggleNoise() {
   voiceStore.toggleNoiseCancelling()
-  await startMicTest()
+  await applyAudioSettings()
 }
 
 async function toggleEcho() {
   voiceStore.echoCancellation = !voiceStore.echoCancellation
   voiceStore.saveSettings()
-  await startMicTest()
+  await applyAudioSettings()
 }
 </script>
 

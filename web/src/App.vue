@@ -22,7 +22,7 @@ import { useWebRTC } from './composables/useWebRTC'
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
-const { resumeVoiceSession, resumeRemoteAudio } = useWebRTC()
+const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
 // Discord-like column widths. Order = shrink priority on narrow windows
 // (thread first, then member list, then the left sidebar).
@@ -52,9 +52,14 @@ watch(() => authStore.isAuthenticated, isAuthed => {
     resumeAttempted = false
     initializeApp()
   } else {
+    // Logout or expired session: end the call so mic and connection stop.
+    if (voiceStore.currentChannelId) leaveVoiceChannel()
     chatStore.closeWebSocket()
   }
 })
+
+// The server may have dropped our media connection while the socket was down.
+watch(() => chatStore.reconnectCount, () => rejoinAfterReconnect())
 
 // Rejoin the voice channel after a page reload (within the 30 s window), once
 // the WebSocket is up and the channel list is known. Only once per login, so a
