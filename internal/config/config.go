@@ -40,6 +40,9 @@ type Config struct {
 	// use-auth-secret / static-auth-secret = WebRTCTURNSecret).
 	WebRTCTURNURLs   []string
 	WebRTCTURNSecret string
+	// MetricsToken enables GET /api/metrics for Prometheus (Bearer token);
+	// empty keeps the endpoint off.
+	MetricsToken string
 	// LinkPreviews lets the server fetch public web pages for link cards.
 	LinkPreviews         bool
 	WebRTCUDPPortMin     uint16
@@ -138,6 +141,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		LinkPreviews:         get("LINK_PREVIEWS_ENABLED", "true") == "true",
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
+		MetricsToken:         get("METRICS_TOKEN", ""),
 		WebRTCNAT1to1IP:      get("WEBRTC_NAT_1TO1_IP", ""),
 		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
 		LegalOperatorName:    get("LEGAL_OPERATOR_NAME", "Community Operator"),
@@ -195,6 +199,10 @@ func (c *Config) validate(portMin, portMax uint16) error {
 
 	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
 		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
+	}
+
+	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
+		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
 	}
 
 	if c.IsProduction() {
