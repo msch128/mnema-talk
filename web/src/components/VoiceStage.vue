@@ -767,7 +767,7 @@ async function handleFileUpload(e) {
             @watch-stream="watchStream(user.id)"
             @stop-watching="voiceStore.unwatchScreen(user.id)"
             compact
-            class="!w-36 !h-24 !p-1 flex-shrink-0"
+            class="flex-shrink-0"
             @open-profile="chatStore.openUserProfile"
             @menu="openMemberMenu($event, user)"
           />
