@@ -277,3 +277,62 @@ func TestSameTrackIDFromTwoUsersIsForwardedSeparately(t *testing.T) {
 		}
 	}
 }
+
+func (r *Room) sourceCount(userID uuid.UUID, source Source) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	n := 0
+	for _, t := range r.trackLocals {
+		if t.SenderID == userID && t.Source == source {
+			n++
+		}
+	}
+	return n
+}
+
+func waitSources(t *testing.T, r *Room, user uuid.UUID, source Source, want int) {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		if r.sourceCount(user, source) == want {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("%s tracks of %s = %d, want %d", source, user, r.sourceCount(user, source), want)
+}
+
+func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
+	s := newTestSFU(t)
+	room := uuid.New()
+
+	pub := newClient(t)
+	pub.publishVideo("screen") // first video m-line: the screen
+	pub.publishVideo("camera") // second video m-line: the camera
+	pub.join(s, room)
+
+	viewer := newClient(t)
+	viewer.join(s, room)
+
+	streams := map[string]bool{}
+	for range 2 {
+		streams[waitTrack(t, viewer).StreamID()] = true
+	}
+	if !streams[pub.id.String()] || !streams[CameraStreamPrefix+pub.id.String()] {
+		t.Fatalf("viewer got streams %v, want the screen under the user ID and the camera under %q", streams, CameraStreamPrefix)
+	}
+
+	r := s.Room(room)
+	waitSources(t, r, pub.id, SourceScreen, 1)
+	waitSources(t, r, pub.id, SourceCamera, 1)
+
+	// Stopping the camera keeps the screen share.
+	r.RemoveUserSource(pub.id, SourceCamera)
+	if r.sourceCount(pub.id, SourceCamera) != 0 || r.sourceCount(pub.id, SourceScreen) != 1 {
+		t.Fatal("stopping the camera must leave the screen share published")
+	}
+
+	// The publisher keeps sending on the same transceiver (stop and start
+	// again): the camera is published again without a new OnTrack.
+	waitSources(t, r, pub.id, SourceCamera, 1)
+}
