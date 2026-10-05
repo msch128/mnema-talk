@@ -174,3 +174,39 @@ func TestVoiceSurvivesReconnectWithinGrace(t *testing.T) {
 		t.Fatalf("leave after grace not announced: %s", payload)
 	}
 }
+
+// TestVoiceSurvivesLateUnregisterOfOldSocket models a reconnect whose new
+// socket is back in the call before the old one unregisters: the old socket
+// must not end the new connection's voice presence.
+func TestVoiceSurvivesLateUnregisterOfOldSocket(t *testing.T) {
+	a := newApp(t, true)
+	a.router.Hub.VoiceGrace = 300 * time.Millisecond
+	admin := a.seedAdmin()
+	max := a.register(admin, "max")
+	voice := a.createChannel(admin, "Lounge", "voice")
+
+	watcher, _, err := admin.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	old, _, err := max.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.send("voice_join", map[string]any{"channel_id": voice})
+	if _, ok := watcher.expect("voice_state_update", 2*time.Second); !ok {
+		t.Fatal("initial join not announced")
+	}
+
+	fresh, _, err := max.dialWS(a.origin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh.send("voice_join", map[string]any{"channel_id": voice})
+	time.Sleep(200 * time.Millisecond)
+	old.conn.Close()
+
+	if payload, left := watcher.expect("voice_state_update", 900*time.Millisecond); left {
+		t.Fatalf("closing the old socket ended the new connection's voice: %s", payload)
+	}
+}
