@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { parseRoute, buildRoute, savePendingRoute, consumePendingRoute, navigate, popRedirectRoute, currentRoute } from './router'
+import { parseRoute, buildRoute, savePendingRoute, consumePendingRoute, navigate, popRedirectRoute, currentRoute, guardRoute, resolveRoute, canGoBackInApp } from './router'
 
 describe('router', () => {
   beforeEach(() => {
@@ -88,5 +88,48 @@ describe('router', () => {
     navigate('/v/ch-2/chat', { replace: true })
     expect(currentRoute.value).toEqual({ view: 'voice', channelId: 'ch-2', showChat: true, watching: true })
     expect(window.location.pathname).toBe('/v/ch-2/chat')
+  })
+
+  it('keeps the shared link across login (pending route round trip)', () => {
+    window.history.replaceState(null, '', '/c/c-id/m/m-id')
+    savePendingRoute()
+    window.history.replaceState(null, '', '/')
+    expect(popRedirectRoute()).toBe('/c/c-id/m/m-id')
+  })
+})
+
+describe('route guards', () => {
+  const channels = [{ id: 't1', type: 'text' }, { id: 'v1', type: 'voice' }]
+
+  it('redirects non-admins away from /admin/* and lets admins in', () => {
+    const route = parseRoute('/admin/media')
+    expect(guardRoute(route, { isAdmin: false })).toBe('/')
+    expect(guardRoute(route, { isAdmin: true })).toBeNull()
+    expect(resolveRoute(route, { isAdmin: false, channels })).toEqual({ redirect: '/', reason: 'noAccess' })
+    expect(resolveRoute(route, { isAdmin: true, channels })).toBeNull()
+  })
+
+  it('falls back with a reason for unknown channels', () => {
+    expect(resolveRoute(parseRoute('/c/nope'), { channels })).toEqual({ redirect: '/', reason: 'channelNotFound' })
+    expect(resolveRoute(parseRoute('/v/nope/chat'), { channels })).toEqual({ redirect: '/', reason: 'voiceNotFound' })
+    expect(resolveRoute(parseRoute('/c/t1/m/x'), { channels })).toBeNull()
+  })
+
+  it('corrects mismatched channel types silently', () => {
+    expect(resolveRoute(parseRoute('/v/t1'), { channels })).toEqual({ redirect: '/c/t1', reason: null })
+    expect(resolveRoute(parseRoute('/c/v1'), { channels })).toEqual({ redirect: '/v/v1', reason: null })
+  })
+})
+
+describe('in-app history', () => {
+  it('tracks pushed entries and keeps the depth on replace', () => {
+    window.history.replaceState(null, '', '/c/a')
+    expect(canGoBackInApp()).toBe(false)
+    navigate('/admin/users')
+    expect(canGoBackInApp()).toBe(true)
+    // admin tab switches replace the entry: still one step back
+    navigate('/admin/media', { replace: true })
+    expect(canGoBackInApp()).toBe(true)
+    expect(window.history.state.idx).toBe(1)
   })
 })

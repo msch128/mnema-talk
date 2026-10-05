@@ -49,15 +49,53 @@ export function buildRoute(route) {
 
 export const currentRoute = ref(parseRoute())
 
+// Each entry we push carries its depth in history.state, so "is there an
+// in-app entry to go back to" is answerable without guessing from document.referrer.
+function historyIndex() {
+  const idx = window.history.state?.idx
+  return Number.isInteger(idx) ? idx : 0
+}
+
+/** True when the previous history entry was created by this app. */
+export function canGoBackInApp() {
+  return typeof window !== 'undefined' && historyIndex() > 0
+}
+
 export function navigateTo(path, opts = false) {
   if (typeof window === 'undefined') return
   const replace = typeof opts === 'boolean' ? opts : !!opts?.replace
   if (replace) {
-    window.history.replaceState(null, '', path)
+    window.history.replaceState({ idx: historyIndex() }, '', path)
   } else if (window.location.pathname !== path) {
-    window.history.pushState(null, '', path)
+    window.history.pushState({ idx: historyIndex() + 1 }, '', path)
   }
   currentRoute.value = parseRoute(path)
+}
+
+/**
+ * Routes a user may not open. Returns the path to redirect to, or null.
+ * Non-admins never get the admin console, not even for a frame.
+ */
+export function guardRoute(route, { isAdmin = false } = {}) {
+  if (route?.view === 'admin' && !isAdmin) return '/'
+  return null
+}
+
+/**
+ * Decides whether a route can be shown as-is. Returns null when it can, else
+ * { redirect, reason } where reason is a nav.* i18n key suffix (or null when
+ * the redirect is only a correction, e.g. a text channel opened as /v/:id).
+ */
+export function resolveRoute(route, { isAdmin = false, channels = [] } = {}) {
+  const denied = guardRoute(route, { isAdmin })
+  if (denied) return { redirect: denied, reason: 'noAccess' }
+  if ((route.view === 'chat' || route.view === 'voice') && route.channelId) {
+    const ch = channels.find(c => c.id === route.channelId)
+    if (!ch) return { redirect: '/', reason: route.view === 'voice' ? 'voiceNotFound' : 'channelNotFound' }
+    if (route.view === 'voice' && ch.type !== 'voice') return { redirect: `/c/${ch.id}`, reason: null }
+    if (route.view === 'chat' && ch.type === 'voice') return { redirect: `/v/${ch.id}`, reason: null }
+  }
+  return null
 }
 
 export const navigate = navigateTo

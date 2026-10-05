@@ -1,9 +1,11 @@
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
-import { currentRoute, navigate, popRedirectRoute, savePendingRoute } from './lib/router'
+import { currentRoute, navigate, popRedirectRoute, savePendingRoute, resolveRoute, canGoBackInApp } from './lib/router'
+import { useToastStore } from './stores/toast'
+import { t } from './i18n'
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
@@ -26,6 +28,7 @@ import { useWebRTC } from './composables/useWebRTC'
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const toasts = useToastStore()
 const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
 // Column widths. Order = shrink priority on narrow windows
@@ -39,7 +42,10 @@ const showAdminModal = ref(false)
 const showLegalModal = ref(false)
 const adminTab = ref('users')
 const previewVoiceChannelId = ref(null)
-const voiceShowChat = ref(true)
+// /v/:id is the Tafelrunde on its own, /v/:id/chat adds the side chat.
+const voiceShowChat = ref(false)
+// The channel the Tafelrunde view shows: a previewed one (not joined) or the joined one.
+const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
 let isSyncingFromRoute = false
 
 // Avoids flashing the login dialog while the session cookie is being checked.
@@ -56,9 +62,38 @@ async function initializeApp() {
   chatStore.initWebSocket()
 }
 
+// Path of whatever the UI currently shows (used to leave the admin console and
+// to give "/" a concrete address).
+function currentStatePath() {
+  if (voiceStore.activeView === 'voice') {
+    const chId = voiceChannelId.value
+    if (chId) return voiceShowChat.value ? `/v/${chId}/chat` : `/v/${chId}`
+  }
+  if (chatStore.activeChannel) {
+    if (chatStore.activeThread) return `/c/${chatStore.activeChannel.id}/t/${chatStore.activeThread.id}`
+    return `/c/${chatStore.activeChannel.id}`
+  }
+  return '/'
+}
+
 async function applyRoute(route) {
   if (!authStore.isAuthenticated) return
+
+  // Admin console is checked before anything renders, so non-admins never see it.
+  if (route.view === 'admin' && !authStore.isAdmin) {
+    showAdminModal.value = false
+    toasts.error(t('nav.noAccess'))
+    navigate('/', { replace: true })
+    return
+  }
   if (!chatStore.allChannels.length) return
+
+  const fix = resolveRoute(route, { isAdmin: authStore.isAdmin, channels: chatStore.allChannels })
+  if (fix) {
+    if (fix.reason) toasts.error(t(`nav.${fix.reason}`))
+    navigate(fix.redirect, { replace: true })
+    return
+  }
 
   isSyncingFromRoute = true
   try {
@@ -67,42 +102,48 @@ async function applyRoute(route) {
       previewVoiceChannelId.value = null
       voiceStore.activeView = 'chat'
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
-      if (targetChannel) {
-        if (chatStore.activeChannel?.id !== targetChannel.id) {
-          await chatStore.selectChannel(targetChannel)
-        }
-        if (route.messageId) {
-          await chatStore.jumpToMessage(route.messageId)
-        } else if (route.threadId) {
-          if (chatStore.activeThread?.id !== route.threadId) {
-            await chatStore.openThread(route.threadId)
+      if (chatStore.activeChannel?.id !== targetChannel.id) {
+        await chatStore.selectChannel(targetChannel)
+      }
+      if (route.messageId) {
+        const found = await chatStore.jumpToMessage(route.messageId)
+        // jumpToMessage already toasted; leave the dead /m/:id address.
+        if (found === false) navigate(`/c/${targetChannel.id}`, { replace: true })
+      } else if (route.threadId) {
+        if (chatStore.activeThread?.id !== route.threadId) {
+          await chatStore.openThread(route.threadId)
+          // A thread that failed to load only has its id.
+          const th = chatStore.activeThread
+          if (th && th.id === route.threadId && !th.user_id && !th.content) {
+            chatStore.closeThread()
+            toasts.error(t('chat.messageNotFound'))
+            navigate(`/c/${targetChannel.id}`, { replace: true })
           }
-        } else if (chatStore.activeThread) {
-          chatStore.closeThread()
         }
+      } else if (chatStore.activeThread) {
+        chatStore.closeThread()
       }
     } else if (route.view === 'voice' && route.channelId) {
       showAdminModal.value = false
-      previewVoiceChannelId.value = route.channelId
+      // Opening the channel you're connected to is not a preview.
+      previewVoiceChannelId.value = route.channelId === voiceStore.currentChannelId ? null : route.channelId
       voiceStore.activeView = 'voice'
       voiceShowChat.value = !!route.showChat
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
-      if (targetChannel && chatStore.activeChannel?.id !== targetChannel.id) {
+      if (chatStore.activeChannel?.id !== targetChannel.id) {
         await chatStore.selectChannel(targetChannel)
       }
     } else if (route.view === 'admin') {
       adminTab.value = route.tab || 'users'
       showAdminModal.value = true
     } else if (route.view === 'root') {
-      if (!chatStore.activeChannel && chatStore.allChannels.length) {
+      showAdminModal.value = false
+      const own = currentStatePath()
+      if (own !== '/') {
+        navigate(own, { replace: true })
+      } else {
         const first = chatStore.allChannels.find(c => c.type === 'text') || chatStore.allChannels[0]
-        if (first) {
-          if (first.type === 'voice') {
-            navigate(`/v/${first.id}`, { replace: true })
-          } else {
-            navigate(`/c/${first.id}`, { replace: true })
-          }
-        }
+        if (first) navigate(`/${first.type === 'voice' ? 'v' : 'c'}/${first.id}`, { replace: true })
       }
     }
   } finally {
@@ -116,22 +157,7 @@ function syncCurrentStateToRoute() {
   if (isSyncingFromRoute) return
   if (!authStore.isAuthenticated) return
 
-  let targetPath = '/'
-  if (showAdminModal.value) {
-    targetPath = `/admin/${adminTab.value || 'users'}`
-  } else if (voiceStore.activeView === 'voice') {
-    const chId = previewVoiceChannelId.value || voiceStore.currentChannelId
-    if (chId) {
-      targetPath = voiceShowChat.value ? `/v/${chId}/chat` : `/v/${chId}`
-    }
-  } else if (chatStore.activeChannel) {
-    if (chatStore.activeThread) {
-      targetPath = `/c/${chatStore.activeChannel.id}/t/${chatStore.activeThread.id}`
-    } else {
-      targetPath = `/c/${chatStore.activeChannel.id}`
-    }
-  }
-
+  const targetPath = showAdminModal.value ? `/admin/${adminTab.value || 'users'}` : currentStatePath()
   if (targetPath !== '/' && window.location.pathname !== targetPath) {
     navigate(targetPath, { replace: false })
   }
@@ -144,36 +170,36 @@ watch(currentRoute, (newRoute) => {
 watch(() => chatStore.activeChannel, () => syncCurrentStateToRoute())
 watch(() => chatStore.activeThread, () => syncCurrentStateToRoute())
 watch(() => voiceStore.activeView, () => syncCurrentStateToRoute())
-watch(() => voiceStore.currentChannelId, () => syncCurrentStateToRoute())
+// Joining a call (from anywhere) makes the joined channel the one on screen.
+watch(() => voiceStore.currentChannelId, id => {
+  if (id) previewVoiceChannelId.value = null
+  syncCurrentStateToRoute()
+})
 watch(previewVoiceChannelId, () => syncCurrentStateToRoute())
 watch(voiceShowChat, () => syncCurrentStateToRoute())
 watch(showAdminModal, () => syncCurrentStateToRoute())
 watch(adminTab, () => syncCurrentStateToRoute())
 
 function openAdmin(tab = 'users') {
+  if (!authStore.isAdmin) return
   adminTab.value = tab
   showAdminModal.value = true
   navigate(`/admin/${tab}`, { replace: false })
 }
 
 function closeAdmin() {
-  showAdminModal.value = false
-  if (voiceStore.activeView === 'voice') {
-    const chId = previewVoiceChannelId.value || voiceStore.currentChannelId
-    if (chId) {
-      navigate(voiceShowChat.value ? `/v/${chId}/chat` : `/v/${chId}`, { replace: false })
-      return
-    }
-  }
-  if (chatStore.activeChannel) {
-    if (chatStore.activeThread) {
-      navigate(`/c/${chatStore.activeChannel.id}/t/${chatStore.activeThread.id}`, { replace: false })
-    } else {
-      navigate(`/c/${chatStore.activeChannel.id}`, { replace: false })
-    }
+  // Opened from inside the app: step back (popstate then closes the console).
+  if (canGoBackInApp()) {
+    window.history.back()
     return
   }
-  navigate('/', { replace: false })
+  // Deep-linked or reloaded: there's nothing in-app to go back to.
+  showAdminModal.value = false
+  navigate(currentStatePath(), { replace: true })
+}
+
+function onVoiceJoin(channelId) {
+  previewVoiceChannelId.value = channelId === voiceStore.currentChannelId ? null : channelId
 }
 
 async function onAuthSuccess() {
@@ -260,10 +286,9 @@ onMounted(async () => {
         <ConnectionBanner />
         <VoiceStage
           v-if="voiceStore.activeView === 'voice'"
-          :channel-id="previewVoiceChannelId || voiceStore.currentChannelId"
-          :initial-show-chat="voiceShowChat"
-          @update:show-chat="voiceShowChat = $event"
-          @join="previewVoiceChannelId = null"
+          :channel-id="voiceChannelId"
+          v-model:show-chat="voiceShowChat"
+          @join="onVoiceJoin"
           class="min-h-0"
         />
         <ChatArea v-else class="min-h-0" />
@@ -290,7 +315,7 @@ onMounted(async () => {
       </div>
 
       <!-- Admin console dialog -->
-      <AdminDashboard v-if="showAdminModal" :initial-tab="adminTab" @close="closeAdmin" />
+      <AdminDashboard v-if="showAdminModal && authStore.isAdmin" :initial-tab="adminTab" @close="closeAdmin" />
 
       <!-- Connection statistics dialog -->
       <ConnectionStatsModal 
