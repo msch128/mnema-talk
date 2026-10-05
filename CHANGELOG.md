@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/msch128/mnema-talk/compare/v0.1.1...v0.1.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* resolve CodeQL findings in test code ([#17](https://github.com/msch128/mnema-talk/issues/17)) ([3e72e9c](https://github.com/msch128/mnema-talk/commit/3e72e9c5457d6754cf9560406f20802da6b1bf56))
+
 ## [0.1.1](https://github.com/msch128/mnema-talk/compare/v0.1.0...v0.1.1) (2026-10-05)
 
 
