@@ -127,7 +127,28 @@
     "deleteCategoryBody": "The channels inside it stay.",
     "channelDeleted": "Channel deleted",
     "categoryDeleted": "Category deleted",
-    "deleteFailed": "Couldn't delete it. Please try again."
+    "deleteFailed": "Couldn't delete it. Please try again.",
+    "markRead": "Mark as read",
+    "markedRead": "Marked as read",
+    "markAllRead": "Mark all as read",
+    "allMarkedRead": "All marked as read",
+    "copyLink": "Copy link",
+    "copiedLink": "Link copied",
+    "editChannel": "Edit channel",
+    "editCategory": "Edit category",
+    "channelUpdated": "Channel updated",
+    "categoryUpdated": "Category updated",
+    "updateFailed": "Update failed."
+  },
+  "category": {
+    "name": "Category name"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "all": "All messages",
+    "mentions": "Mentions only",
+    "mute": "Mute",
+    "updated": "Notification settings updated"
   },
   "channel": {
     "create": "Create channel",
@@ -159,7 +180,11 @@
     "toggle": "Show or hide the member list",
     "admins": "Admin — {count}",
     "online": "Online — {count}",
-    "offline": "Offline — {count}"
+    "offline": "Offline — {count}",
+    "kickedFromVoice": "Kicked from voice channel",
+    "userDisabled": "User account disabled",
+    "disableUserTitle": "Disable user account “{name}”?",
+    "disableUserBody": "The user will no longer be able to log in and active sessions will end."
   },
   "chat": {
     "selectChannel": "Choose a channel",
@@ -199,8 +224,25 @@
     "editFailed": "Couldn't save your change.",
     "deleteFailed": "Couldn't delete the message.",
     "sendFailed": "Couldn't send the message.",
-    "uploadFailed": "Upload failed. Please try again.",
-    "spoiler": "Spoiler"
+    "spoiler": "Spoiler",
+    "search": "Search",
+    "searchPlaceholder": "Search messages …",
+    "filter": "Filter",
+    "currentChannel": "Current channel",
+    "hasAttachment": "Has attachment",
+    "searchHint": "Type a search term",
+    "noResults": "No messages found",
+    "isTyping": "{name} is typing …",
+    "severalTyping": "Several people are typing …",
+    "newMessagesSince": "New since",
+    "markUnread": "Mark unread",
+    "markedUnread": "Marked as unread",
+    "markUnreadFailed": "Could not mark as unread.",
+    "copyText": "Copy text",
+    "copiedText": "Text copied",
+    "copyLink": "Copy link",
+    "copiedLink": "Link copied",
+    "moreActions": "More actions"
   },
   "thread": {
     "title": "Thread",
@@ -224,6 +266,12 @@
     "leave": "Leave",
     "channelFallback": "Voice channel",
     "audioBlocked": "You're back in the roundtable. Click to turn the sound on",
+    "join": "Join",
+    "userVolume": "User volume",
+    "muteUser": "Mute locally",
+    "unmuteUser": "Unmute locally",
+    "noOneInVoice": "No one in the Roundtable",
+    "joinToTalk": "Click Join to start the conversation.",
     "panel": {
       "label": "Voice connection",
       "connected": "Connected · {channel}",
@@ -452,7 +500,12 @@
     "shareShort": "Screen",
     "stopShareShort": "Stop",
     "chatTitle": "Roundtable chat in #{channel}",
-    "chatEmpty": "No messages yet. Write the first one – links and files work too."
+    "chatEmpty": "No messages yet. Write the first one – links and files work too.",
+    "camera": "Camera",
+    "startCamera": "Turn on camera",
+    "stopCamera": "Turn off camera",
+    "cameraShort": "Camera",
+    "stopCameraShort": "Stop camera"
   },
   "admin": {
     "title": "Storage & administration",
@@ -576,6 +629,7 @@
     "noMedia": "No media yet."
   },
   "profile": {
+    "viewProfile": "View profile",
     "unknown": "Unknown",
     "roundtable": "Roundtable",
     "change": "Change",

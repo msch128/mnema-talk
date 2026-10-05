@@ -10,6 +10,7 @@ import {
   prependOlder, appendNewer, appendLive, removeMessage
 } from '../lib/messageWindow'
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
+import { currentRoute } from '../lib/router'
 
 const MAX_PENDING_LIVE = 200
 
@@ -43,6 +44,16 @@ export const useChatStore = defineStore('chat', () => {
   const selectedUserProfile = ref(null)
   const pendingMention = ref('')
 
+  // Read states per channel: channel_id -> { channel_id, unread_count, mention_count, last_read_at, notify_level }
+  const readStates = ref({})
+  const activeChannelLastReadAt = ref(null)
+
+  // Typing state per channel: channel_id -> Array<{ user_id, username, display_name }>
+  const typingByChannel = ref({})
+  const typingTimers = new Map()
+  let lastTypingSentAt = 0
+  const TYPING_THROTTLE_MS = 2500
+
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
 
@@ -70,7 +81,8 @@ export const useChatStore = defineStore('chat', () => {
 
       const stillExists = activeChannel.value && allChannels.value.some(c => c.id === activeChannel.value.id)
       if (!stillExists) {
-        const next = allChannels.value.find(c => c.type === 'text') || allChannels.value[0]
+        const routeCh = allChannels.value.find(c => c.id === currentRoute.value?.channelId)
+        const next = routeCh || allChannels.value.find(c => c.type === 'text') || allChannels.value[0]
         if (next) {
           selectChannel(next)
         } else {
@@ -103,7 +115,11 @@ export const useChatStore = defineStore('chat', () => {
     pendingLive = []
     resetWindow()
     setWindow(emptyWindow())
+    activeChannelLastReadAt.value = readStates.value[channel.id]?.last_read_at || null
     await fetchMessages(channel.id)
+    if (channel.type !== 'voice') {
+      await markChannelRead(channel.id)
+    }
   }
 
   // ---- Message window (infinite scroll in both directions) ----
@@ -330,12 +346,14 @@ export const useChatStore = defineStore('chat', () => {
 
   async function openThread(msg) {
     if (!msg) return
-    activeThread.value = msg
+    const id = typeof msg === 'string' ? msg : msg.id
+    if (!id) return
+    activeThread.value = typeof msg === 'object' ? msg : { id }
     threadReplies.value = []
     isThreadLoading.value = true
     try {
-      const data = await api(`/api/messages/${msg.id}/thread`)
-      activeThread.value = data.root || msg
+      const data = await api(`/api/messages/${id}/thread`)
+      activeThread.value = data.root || (typeof msg === 'object' ? msg : { id })
       threadReplies.value = Array.isArray(data.replies) ? data.replies : []
     } catch (e) {
       console.error('Failed to load thread:', e)
@@ -390,6 +408,7 @@ export const useChatStore = defineStore('chat', () => {
     reconnectCount.value++
     fetchChannels()
     fetchMembers()
+    fetchReadState()
     const channel = activeChannel.value
     if (channel && channel.type === 'text' && !hasMoreAfter.value) fetchMessages(channel.id)
     if (activeThread.value) openThread(activeThread.value)
@@ -552,11 +571,66 @@ export const useChatStore = defineStore('chat', () => {
         fetchChannels()
         break
 
-      case 'message_create':
+      case 'typing':
+        if (p) handleTypingEvent(p)
+        break
+
+      case 'read_state':
+        if (!p?.channel_id) break
+        if (p.refresh) {
+          fetchReadState()
+        } else {
+          const prev = readStates.value[p.channel_id] || { channel_id: p.channel_id, notify_level: 'all' }
+          readStates.value = {
+            ...readStates.value,
+            [p.channel_id]: {
+              ...prev,
+              ...p
+            }
+          }
+        }
+        break
+
+      case 'message_create': {
         if (!p) break
         countReply(p)
         insertMessage(p)
+
+        clearTypingForUser(p.channel_id, p.user_id)
+
+        const isOwn = p.user_id === authStore.user?.id
+        const isCurrentChannel = p.channel_id === activeChannel.value?.id
+        const myUsername = authStore.user?.username
+        const isMention = !!myUsername && (
+          new RegExp('(^|[^A-Za-z0-9_.-])@' + myUsername + '($|[^A-Za-z0-9_.-])', 'i').test(p.content || '') ||
+          p.reply_to?.user_id === authStore.user?.id
+        )
+
+        if (!isOwn && !isCurrentChannel && p.channel_id) {
+          const state = readStates.value[p.channel_id] || {
+            channel_id: p.channel_id,
+            unread_count: 0,
+            mention_count: 0,
+            notify_level: 'all'
+          }
+          readStates.value = {
+            ...readStates.value,
+            [p.channel_id]: {
+              ...state,
+              unread_count: (state.unread_count || 0) + 1,
+              mention_count: isMention ? (state.mention_count || 0) + 1 : (state.mention_count || 0)
+            }
+          }
+        }
+
+        if (!isOwn && p.channel_id) {
+          const isHidden = typeof document !== 'undefined' && document.hidden
+          if (isHidden || !isCurrentChannel) {
+            triggerBrowserNotification(p, isMention)
+          }
+        }
         break
+      }
 
       case 'user_update':
         if (p) updateUserEverywhere(p)
@@ -636,6 +710,211 @@ export const useChatStore = defineStore('chat', () => {
   async function deleteCategory(categoryId) {
     await api(`/api/admin/categories/${categoryId}`, { method: 'DELETE' })
     await fetchChannels()
+  }
+
+  async function updateChannel(channelId, { name, topic }) {
+    const updated = await api(`/api/admin/channels/${channelId}`, {
+      method: 'PATCH',
+      json: { name, topic }
+    })
+    await fetchChannels()
+    return updated
+  }
+
+  async function updateCategory(categoryId, { name }) {
+    const updated = await api(`/api/admin/categories/${categoryId}`, {
+      method: 'PATCH',
+      json: { name }
+    })
+    await fetchChannels()
+    return updated
+  }
+
+  // ---- Read state & Notifications ----
+
+  async function fetchReadState() {
+    try {
+      const data = await api('/api/read-state')
+      const map = {}
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          if (item.channel_id) {
+            map[item.channel_id] = {
+              channel_id: item.channel_id,
+              unread_count: item.unread_count || 0,
+              mention_count: item.mention_count || 0,
+              last_read_at: item.last_read_at || null,
+              notify_level: item.notify_level || 'all'
+            }
+          }
+        }
+      }
+      readStates.value = map
+      return map
+    } catch (e) {
+      console.warn('Failed to fetch read-state:', e)
+      return {}
+    }
+  }
+
+  async function markChannelRead(channelId) {
+    if (!channelId) return
+    const ch = allChannels.value.find(c => c.id === channelId)
+    if (ch && ch.type === 'voice') return
+
+    const prev = readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' }
+    readStates.value = {
+      ...readStates.value,
+      [channelId]: {
+        ...prev,
+        unread_count: 0,
+        mention_count: 0,
+        last_read_at: new Date().toISOString()
+      }
+    }
+    try {
+      await api(`/api/channels/${channelId}/read`, { method: 'POST' })
+    } catch (e) {
+      console.warn('Failed to mark channel read:', e)
+    }
+  }
+
+  async function markChannelUnread(channelId, messageId) {
+    if (!channelId || !messageId) return
+    const ch = allChannels.value.find(c => c.id === channelId)
+    if (ch && ch.type === 'voice') return
+
+    try {
+      await api(`/api/channels/${channelId}/unread`, {
+        method: 'POST',
+        json: { message_id: messageId }
+      })
+      await fetchReadState()
+    } catch (e) {
+      console.warn('Failed to mark channel unread:', e)
+    }
+  }
+
+  async function setNotificationLevel(channelId, level) {
+    if (!channelId || !level) return
+    const ch = allChannels.value.find(c => c.id === channelId)
+    if (ch && ch.type === 'voice') return
+
+    const prev = readStates.value[channelId] || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
+    readStates.value = {
+      ...readStates.value,
+      [channelId]: {
+        ...prev,
+        notify_level: level
+      }
+    }
+    try {
+      await api(`/api/channels/${channelId}/notifications`, {
+        method: 'PUT',
+        json: { level }
+      })
+    } catch (e) {
+      console.warn('Failed to set notification level:', e)
+    }
+  }
+
+  const setChannelNotification = setNotificationLevel
+
+  // ---- Typing indicators ----
+
+  function sendTyping(channelId) {
+    const id = channelId || activeChannel.value?.id
+    if (!id) return
+    const ch = allChannels.value.find(c => c.id === id)
+    if (ch && ch.type === 'voice') return
+
+    const now = Date.now()
+    if (now - lastTypingSentAt < TYPING_THROTTLE_MS) return
+    lastTypingSentAt = now
+    sendWSEvent('typing', { channel_id: id })
+  }
+
+  function handleTypingEvent(payload) {
+    if (!payload?.channel_id || !payload?.user_id) return
+    const { channel_id, user_id } = payload
+    if (user_id === authStore.user?.id) return
+
+    const member = members.value.find(m => m.id === user_id)
+    const typer = {
+      user_id,
+      username: payload.username || member?.username || '',
+      display_name: payload.display_name || member?.display_name || member?.username || ''
+    }
+
+    const current = typingByChannel.value[channel_id] || []
+    const filtered = current.filter(u => u.user_id !== user_id)
+    typingByChannel.value = {
+      ...typingByChannel.value,
+      [channel_id]: [...filtered, typer]
+    }
+
+    const key = `${channel_id}:${user_id}`
+    if (typingTimers.has(key)) {
+      clearTimeout(typingTimers.get(key))
+    }
+    const timer = setTimeout(() => {
+      typingTimers.delete(key)
+      const list = typingByChannel.value[channel_id] || []
+      typingByChannel.value = {
+        ...typingByChannel.value,
+        [channel_id]: list.filter(u => u.user_id !== user_id)
+      }
+    }, 4000)
+    typingTimers.set(key, timer)
+  }
+
+  function clearTypingForUser(channelId, userId) {
+    if (!channelId || !userId) return
+    const key = `${channelId}:${userId}`
+    if (typingTimers.has(key)) {
+      clearTimeout(typingTimers.get(key))
+      typingTimers.delete(key)
+    }
+    if (typingByChannel.value[channelId]) {
+      const list = typingByChannel.value[channelId].filter(u => u.user_id !== userId)
+      typingByChannel.value = {
+        ...typingByChannel.value,
+        [channelId]: list
+      }
+    }
+  }
+
+  function triggerBrowserNotification(msg, isMention) {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    const channelState = readStates.value[msg.channel_id]
+    const level = channelState?.notify_level || 'all'
+    if (level === 'mute') return
+    if (level === 'mentions' && !isMention) return
+
+    const channel = allChannels.value.find(c => c.id === msg.channel_id)
+    const channelName = channel ? `#${channel.name}` : ''
+    const sender = msg.display_name || msg.username || ''
+    const title = channelName ? `${sender} (${channelName})` : sender
+
+    try {
+      const n = new Notification(title, {
+        body: msg.content || (msg.attachments?.length ? t('chat.attachment') : ''),
+        icon: msg.avatar_url || '/favicon.ico',
+        tag: msg.channel_id
+      })
+      n.onclick = () => {
+        if (typeof window !== 'undefined') window.focus()
+        if (channel) selectChannel(channel)
+        n.close()
+      }
+    } catch (e) {
+      console.warn('Browser notification failed:', e)
+    }
+  }
+
+  async function requestNotificationPermission() {
+    if (typeof Notification === 'undefined') return 'unsupported'
+    return Notification.requestPermission()
   }
 
   // ---- Profiles & mentions ----
@@ -742,8 +1021,20 @@ export const useChatStore = defineStore('chat', () => {
     uploadMedia,
     createChannel,
     deleteChannel,
+    updateChannel,
     createCategory,
     deleteCategory,
+    updateCategory,
+    readStates,
+    activeChannelLastReadAt,
+    fetchReadState,
+    markChannelRead,
+    markChannelUnread,
+    setNotificationLevel,
+    setChannelNotification,
+    typingByChannel,
+    sendTyping,
+    requestNotificationPermission,
     activeThread,
     threadReplies,
     isThreadLoading,

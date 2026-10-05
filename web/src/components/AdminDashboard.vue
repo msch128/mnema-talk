@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   Users,
   FolderTree,
@@ -25,6 +25,7 @@ import {
   GripVertical
 } from '@lucide/vue'
 import { api } from '../lib/api'
+import { navigate } from '../lib/router'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -34,6 +35,13 @@ import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import UserAvatar from './UserAvatar.vue'
 
+const props = defineProps({
+  initialTab: {
+    type: String,
+    default: 'users'
+  }
+})
+
 const emit = defineEmits(['close'])
 const authStore = useAuthStore()
 const chatStore = useChatStore()
@@ -41,7 +49,19 @@ const voiceStore = useVoiceStore()
 const toasts = useToastStore()
 
 const TABS = ['users', 'channels', 'invites', 'media']
-const activeTab = ref('users')
+const activeTab = ref(props.initialTab || 'users')
+
+watch(() => props.initialTab, (newTab) => {
+  if (newTab && TABS.includes(newTab)) {
+    activeTab.value = newTab
+  }
+})
+
+watch(activeTab, (tab) => {
+  if (typeof window !== 'undefined' && window.location.pathname !== `/admin/${tab}`) {
+    navigate(`/admin/${tab}`, { replace: false })
+  }
+})
 
 // Users tab state
 const users = ref([])
