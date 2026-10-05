@@ -14,9 +14,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded pull request runs only; every push to main and every
+# scheduled run is analysed to the end.
 concurrency:
-  group: codeql-${{ github.head_ref || github.ref }}
-  cancel-in-progress: true
+  group: codeql-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('{0}-{1}', github.event_name, github.sha) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   analyze:
@@ -44,8 +46,21 @@ jobs:
 
       - if: matrix.language == 'go'
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
         with:
           go-version-file: go.mod
+          cache: false
+
+      # Modules only: the traced build always compiles from scratch, so a warm
+      # build cache can never leave packages out of the extraction.
+      - if: matrix.language == 'go'
+        name: Go module cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/go/pkg/mod
+          key: gomod-${{ runner.os }}-codeql-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            gomod-${{ runner.os }}-codeql-${{ steps.go.outputs.go-version }}-
 
       - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:

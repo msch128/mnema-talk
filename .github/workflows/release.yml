@@ -53,8 +53,28 @@ jobs:
       version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
       tag_name: ${{ steps.release.outputs.tag_name || steps.publish.outputs.tag_name }}
     steps:
+      # CI runs for pushes to main are never cancelled (ci.yml), so an older
+      # push can finish green after a newer one landed. release-please always
+      # works on main's tip, so only the run for the tip may release; the run
+      # for the newer push decides about it.
+      - name: Check that CI tested main's tip
+        id: tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TESTED: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          tip=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$tip" = "$TESTED" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::CI tested $TESTED but main is at $tip; the run for the newer commit releases."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
+        if: steps.tip.outputs.current == 'true'
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -68,6 +88,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          TESTED: ${{ github.event.workflow_run.head_sha }}
         # Only ever merge release-please's own PR, opened by the Actions bot on
         # its branch and touching nothing but the version and changelog.
         # GitHub may still be computing mergeability right after the update.
@@ -103,8 +124,18 @@ jobs:
               exit 1 ;;
             esac
           fi
+          # Main may have moved while release-please ran; merging now would
+          # release a commit CI hasn't passed yet.
+          tip=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$tip" != "$TESTED" ]; then
+            echo "::notice::main moved to $tip; leaving the release to the CI run for that commit"
+            exit 0
+          fi
           for _ in 1 2 3 4 5 6; do
-            gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch && exit 0
+            if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch; then
+              echo "merged=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             sleep 10
           done
           exit 1
@@ -112,7 +143,7 @@ jobs:
       # ... and publish it (tag + GitHub Release) in the same run.
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: publish
-        if: steps.merge.outcome == 'success'
+        if: steps.merge.outputs.merged == 'true'
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
@@ -144,8 +175,22 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        id: go
         with:
           go-version-file: go.mod
+          cache: false
+
+      # Own key (see ci.yml): this job's cache holds the cross-compiled
+      # dependencies for all four targets.
+      - name: Go module + build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: go-${{ runner.os }}-release-binaries-${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            go-${{ runner.os }}-release-binaries-${{ steps.go.outputs.go-version }}-
 
       - name: Build web app
         working-directory: web
@@ -220,5 +265,7 @@ jobs:
             VERSION=${{ needs.release-please.outputs.version }}
           provenance: mode=max
           sbom: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Shares the scope with ci.yml's docker job: the web stage and the
+          # module download come from the CI build of this commit on main.
+          cache-from: type=gha,scope=image
+          cache-to: type=gha,scope=image,mode=max
