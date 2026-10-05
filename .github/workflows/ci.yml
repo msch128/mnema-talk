@@ -227,6 +227,9 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: false
           tags: mnema-talk:ci
+          # VERSION stays empty: the image reports version.txt, like a local build.
+          build-args: |
+            REVISION=${{ github.sha }}
           # Same scope as the release image build (release.yml), which then
           # reuses these layers from main.
           cache-from: type=gha,scope=image
