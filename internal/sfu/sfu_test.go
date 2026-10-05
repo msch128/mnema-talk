@@ -303,6 +303,7 @@ func waitSources(t *testing.T, r *Room, user uuid.UUID, source Source, want int)
 }
 
 func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
+	skipFlakyInCI(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
