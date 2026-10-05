@@ -378,6 +378,34 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  // Bumped on every successful reconnect; voice and other views watch it to
+  // restore their server-side state.
+  const reconnectCount = ref(0)
+  let hadConnection = false
+
+  // After a reconnect, everything that changed while the socket was down is
+  // fetched again: channels, members and the newest page of the open channel
+  // (unless the user is reading older history, which stays as it is).
+  function resyncAfterReconnect() {
+    reconnectCount.value++
+    fetchChannels()
+    fetchMembers()
+    const channel = activeChannel.value
+    if (channel && channel.type === 'text' && !hasMoreAfter.value) fetchMessages(channel.id)
+    if (activeThread.value) openThread(activeThread.value)
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(async () => {
+      const signedIn = await authStore.checkAuth()
+      if (signedIn === true) initWebSocket()
+      else if (signedIn === null) scheduleReconnect() // server unreachable: keep trying
+      // false: the session is gone; the login screen takes over.
+    }, reconnectDelay)
+    reconnectDelay = Math.min(reconnectDelay * 2, 30000)
+  }
+
   function initWebSocket() {
     if (ws.value || !authStore.isAuthenticated) return
 
@@ -390,6 +418,8 @@ export const useChatStore = defineStore('chat', () => {
       reconnectDelay = 1000
       startPingHeartbeat()
       sendWSEvent('ping', { t: Date.now() })
+      if (hadConnection) resyncAfterReconnect()
+      hadConnection = true
     }
 
     socket.onmessage = event => {
@@ -405,18 +435,15 @@ export const useChatStore = defineStore('chat', () => {
       stopPingHeartbeat()
       ws.value = null
       if (!authStore.isAuthenticated) return
-      // Exponential backoff; a revoked session makes checkAuth fail and stops the loop.
-      clearTimeout(reconnectTimer)
-      reconnectTimer = setTimeout(async () => {
-        if (await authStore.checkAuth()) initWebSocket()
-      }, reconnectDelay)
-      reconnectDelay = Math.min(reconnectDelay * 2, 30000)
+      // Exponential backoff; a revoked session (401) stops the loop.
+      scheduleReconnect()
     }
 
     ws.value = socket
   }
 
   function closeWebSocket() {
+    hadConnection = false
     clearTimeout(reconnectTimer)
     stopPingHeartbeat()
     if (ws.value) {
@@ -640,6 +667,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   return {
+    reconnectCount,
     categories,
     uncategorized,
     activeChannel,

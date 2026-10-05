@@ -74,3 +74,18 @@ describe('renderMarkdown – formatting', () => {
     expect(dom(renderMarkdown('> zitat')).querySelector('blockquote').textContent).toBe('zitat')
   })
 })
+
+describe('links with mention-like or formatting characters', () => {
+  it('keeps a URL containing (@name intact', () => {
+    const html = renderMarkdown('see https://x.com/(@abcd and @max')
+    expect(html).toContain('<a href="https://x.com/(@abcd"')
+    expect(html).toContain('>https://x.com/(@abcd</a>')
+    expect(html).toContain('<span class="md-mention">@max</span>')
+    expect(html.match(/md-mention/g)).toHaveLength(1)
+  })
+
+  it('does not format characters inside URLs but formats around them', () => {
+    const html = renderMarkdown('**https://x.com/a*b*c**')
+    expect(html).toContain('<strong><a href="https://x.com/a*b*c"')
+  })
+})
