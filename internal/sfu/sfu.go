@@ -181,7 +181,9 @@ func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error
 
 	if len(announceIPs) > 0 {
 		// Every announced address becomes its own host candidate.
-		settingEngine.SetNAT1To1IPs(announceIPs, webrtc.ICECandidateTypeHost)
+		if err := settingEngine.SetICEAddressRewriteRules(announceRewriteRules(announceIPs)...); err != nil {
+			return nil, fmt.Errorf("failed to set announced addresses: %w", err)
+		}
 	}
 
 	mediaEngine := &webrtc.MediaEngine{}
