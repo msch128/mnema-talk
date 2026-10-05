@@ -73,7 +73,7 @@ jobs:
         # GitHub may still be computing mergeability right after the update.
         run: |
           set -euo pipefail
-          pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,author,files,isCrossRepository)
+          pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,author,files,isCrossRepository,title)
           head=$(jq -r .headRefName <<<"$pr")
           author=$(jq -r .author.login <<<"$pr")
           cross=$(jq -r .isCrossRepository <<<"$pr")
@@ -85,7 +85,25 @@ jobs:
           for f in $files; do
             case "$f" in version.txt|CHANGELOG.md|.release-please-manifest.json) ;; *) echo "::error::unexpected file $f"; exit 1 ;; esac
           done
-          for attempt in 1 2 3 4 5 6; do
+          # release-please finds the last release by its tag commit in main's
+          # history. If main was rewritten (force push) that commit is gone and
+          # it proposes an already released version again, with the whole
+          # history as changelog. Stop here instead of merging that.
+          version=$(jq -r .title <<<"$pr" | sed -nE 's/^chore\(main\): release ([0-9]+\.[0-9]+\.[0-9]+.*)$/\1/p')
+          [ -n "$version" ] || { echo "::error::cannot read the version from the PR title"; exit 1; }
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::release v$version already exists; release-please lost the last release (was main rewritten?)"
+            exit 1
+          fi
+          latest=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          if [ -n "$latest" ]; then
+            status=$(gh api "repos/$GITHUB_REPOSITORY/compare/$latest...main" --jq .status)
+            case "$status" in ahead|identical) ;; *)
+              echo "::error::$latest is not in main's history (compare: $status); main was rewritten after that release"
+              exit 1 ;;
+            esac
+          fi
+          for _ in 1 2 3 4 5 6; do
             gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch && exit 0
             sleep 10
           done
