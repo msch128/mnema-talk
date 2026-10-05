@@ -28,6 +28,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
+COPY api/ ./api/
 COPY web/web.go ./web/web.go
 COPY --from=web /web/dist ./web/dist
 

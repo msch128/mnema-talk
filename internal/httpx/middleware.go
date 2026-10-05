@@ -305,7 +305,7 @@ func CSRF(allowedOrigins []string) func(http.Handler) http.Handler {
 }
 
 // CORSAllowedMethods must cover every method the router mounts.
-const CORSAllowedMethods = "GET,POST,PUT,DELETE,OPTIONS"
+const CORSAllowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
 
 // CORS answers allowlisted origins, echoing the allowlist entry rather than the
 // raw Origin header, and rejects foreign preflights with 403.
