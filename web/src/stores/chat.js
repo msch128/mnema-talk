@@ -10,9 +10,24 @@ import {
   prependOlder, appendNewer, appendLive, removeMessage
 } from '../lib/messageWindow'
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
-import { currentRoute } from '../lib/router'
+import { currentRoute, navigate } from '../lib/router'
+import { mentionsUser, shouldNotify, createKeyedThrottle } from '../lib/chatLogic'
+import { installGlobalSearch, uninstallGlobalSearch } from '../lib/globalSearch'
 
 const MAX_PENDING_LIVE = 200
+// A channel is marked read on the server at most this often while messages stream in.
+export const MARK_READ_INTERVAL_MS = 2000
+// Typing notices expire when the user stops (the server relays one per 3 s).
+export const TYPING_EXPIRY_MS = 5000
+const TYPING_THROTTLE_MS = 3000
+
+// Back in the tab (visible / focused): the store catches up on reading. One
+// pair of listeners for the page; the live store registers its handler.
+let onReturnToTab = null
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => onReturnToTab?.())
+  window.addEventListener('focus', () => onReturnToTab?.())
+}
 
 export const useChatStore = defineStore('chat', () => {
   const categories = ref([])
@@ -52,10 +67,16 @@ export const useChatStore = defineStore('chat', () => {
   const typingByChannel = ref({})
   const typingTimers = new Map()
   let lastTypingSentAt = 0
-  const TYPING_THROTTLE_MS = 2500
 
   const authStore = useAuthStore()
   const voiceStore = useVoiceStore()
+
+  // Desktop notification permission: 'default' | 'granted' | 'denied' | 'unsupported'
+  const notificationPermission = ref(
+    typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
+  )
+  // Thread to open once the jump to its root message has landed (search / notification targets).
+  let pendingThreadOpen = null
 
   let pingTimer = null
   let reconnectTimer = null
@@ -109,6 +130,7 @@ export const useChatStore = defineStore('chat', () => {
 
   async function selectChannel(channel) {
     if (!channel) return
+    if (activeChannel.value?.id !== channel.id) suppressAutoReadFor = null
     activeChannel.value = channel
     activeThread.value = null
     threadReplies.value = []
@@ -198,7 +220,9 @@ export const useChatStore = defineStore('chat', () => {
   /** "Jump to present": reload the newest page. */
   async function jumpToLatest() {
     if (!activeChannel.value) return false
-    return fetchMessages(activeChannel.value.id)
+    const ok = await fetchMessages(activeChannel.value.id)
+    if (ok) markActiveChannelReadIfReading()
+    return ok
   }
 
   async function loadOlder() {
@@ -232,6 +256,7 @@ export const useChatStore = defineStore('chat', () => {
       const data = await api(messagesUrl(channelId, { after: anchorId }))
       if (gen !== windowGen) return false
       setWindow(appendNewer(getWindow(), data, { anchorId, limit: PAGE_SIZE, cap: WINDOW_CAP }))
+      markActiveChannelReadIfReading()
       return true
     } catch (e) {
       console.error('Failed to load newer messages:', e)
@@ -246,6 +271,27 @@ export const useChatStore = defineStore('chat', () => {
    * is outside the window. Resolves to false (and shows a toast) if it's gone.
    */
   async function jumpToMessage(id) {
+    const ok = await jumpToRootMessage(id)
+    const pending = pendingThreadOpen
+    if (pending && pending.rootId === id) {
+      pendingThreadOpen = null
+      if (ok && activeChannel.value?.id === pending.channelId) openThread(pending.rootId)
+    }
+    return ok
+  }
+
+  /**
+   * Navigates to any message (search result, notification): thread replies
+   * open their thread on top of the root message, the only valid jump anchor.
+   */
+  function goToMessage(msg) {
+    if (!msg?.id || !msg.channel_id) return
+    const rootId = msg.parent_id || msg.id
+    pendingThreadOpen = msg.parent_id ? { channelId: msg.channel_id, rootId } : null
+    navigate(`/c/${msg.channel_id}/m/${rootId}`)
+  }
+
+  async function jumpToRootMessage(id) {
     const channelId = activeChannel.value?.id
     if (!id || !channelId) return false
     if (messages.value.some(m => m.id === id)) {
@@ -451,6 +497,7 @@ export const useChatStore = defineStore('chat', () => {
 
   function initWebSocket() {
     if (ws.value || !authStore.isAuthenticated) return
+    installGlobalSearch()
 
     // The session cookie authenticates the upgrade; no token in the URL.
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -489,6 +536,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function closeWebSocket() {
+    uninstallGlobalSearch()
     hadConnection = false
     wasConnected.value = false
     reconnectAttempt.value = 0
@@ -600,13 +648,13 @@ export const useChatStore = defineStore('chat', () => {
 
         const isOwn = p.user_id === authStore.user?.id
         const isCurrentChannel = p.channel_id === activeChannel.value?.id
-        const myUsername = authStore.user?.username
-        const isMention = !!myUsername && (
-          new RegExp('(^|[^A-Za-z0-9_.-])@' + myUsername + '($|[^A-Za-z0-9_.-])', 'i').test(p.content || '') ||
+        const isMention = mentionsUser(p.content || '', authStore.user?.username) ||
           p.reply_to?.user_id === authStore.user?.id
-        )
 
-        if (!isOwn && !isCurrentChannel && p.channel_id) {
+        // Read right now: open channel, visible tab, window at the newest end.
+        if (isCurrentChannel && isReadingActiveChannel()) {
+          if (!isOwn) markReadThrottled.call(p.channel_id)
+        } else if (!isOwn && p.channel_id) {
           const state = readStates.value[p.channel_id] || {
             channel_id: p.channel_id,
             unread_count: 0,
@@ -624,10 +672,7 @@ export const useChatStore = defineStore('chat', () => {
         }
 
         if (!isOwn && p.channel_id) {
-          const isHidden = typeof document !== 'undefined' && document.hidden
-          if (isHidden || !isCurrentChannel) {
-            triggerBrowserNotification(p, isMention)
-          }
+          triggerBrowserNotification(p, isMention)
         }
         break
       }
@@ -750,6 +795,8 @@ export const useChatStore = defineStore('chat', () => {
         }
       }
       readStates.value = map
+      // The server may still hold counts for the channel being read right now.
+      markActiveChannelReadIfReading()
       return map
     } catch (e) {
       console.warn('Failed to fetch read-state:', e)
@@ -761,6 +808,7 @@ export const useChatStore = defineStore('chat', () => {
     if (!channelId) return
     const ch = allChannels.value.find(c => c.id === channelId)
     if (ch && ch.type === 'voice') return
+    if (suppressAutoReadFor === channelId) suppressAutoReadFor = null
 
     const prev = readStates.value[channelId] || { channel_id: channelId, notify_level: 'all' }
     readStates.value = {
@@ -779,19 +827,52 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  let suppressAutoReadFor = null
+  const markReadThrottled =createKeyedThrottle(id => { markChannelRead(id) }, MARK_READ_INTERVAL_MS)
+
+  function isTabVisible() {
+    return typeof document === 'undefined' || !document.hidden
+  }
+
+  // The user can see the newest messages of the open text channel.
+  function isReadingActiveChannel() {
+    const ch = activeChannel.value
+    return !!ch && ch.type !== 'voice' && ch.id !== suppressAutoReadFor && isTabVisible() && !hasMoreAfter.value && !isLoadingWindow.value
+  }
+
+  // Catch up after the tab becomes visible again, a jump to the present or a
+  // read-state refresh: clears whatever piled up while nobody was looking.
+  function markActiveChannelReadIfReading() {
+    if (!isReadingActiveChannel()) return
+    const id = activeChannel.value.id
+    const st = readStates.value[id]
+    if (st && (st.unread_count > 0 || st.mention_count > 0)) markReadThrottled.call(id)
+  }
+
+  onReturnToTab = markActiveChannelReadIfReading
+
   async function markChannelUnread(channelId, messageId) {
     if (!channelId || !messageId) return
     const ch = allChannels.value.find(c => c.id === channelId)
     if (ch && ch.type === 'voice') return
 
+    // Keep the channel unread even though it is open: no auto-read until the
+    // user marks it read (Esc) or switches channel.
+    if (channelId === activeChannel.value?.id) suppressAutoReadFor = channelId
+    markReadThrottled.cancel(channelId)
     try {
       await api(`/api/channels/${channelId}/unread`, {
         method: 'POST',
         json: { message_id: messageId }
       })
-      await fetchReadState()
     } catch (e) {
-      console.warn('Failed to mark channel unread:', e)
+      if (suppressAutoReadFor === channelId) suppressAutoReadFor = null
+      throw e
+    }
+    await fetchReadState()
+    if (channelId === activeChannel.value?.id) {
+      // The "new since" divider moves to the chosen message.
+      activeChannelLastReadAt.value = readStates.value[channelId]?.last_read_at || null
     }
   }
 
@@ -819,6 +900,11 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const setChannelNotification = setNotificationLevel
+
+  /** 'all' | 'mentions' | 'mute' for a channel (default 'all'). */
+  function notificationLevel(channelId) {
+    return readStates.value[channelId]?.notify_level || 'all'
+  }
 
   // ---- Typing indicators ----
 
@@ -864,7 +950,7 @@ export const useChatStore = defineStore('chat', () => {
         ...typingByChannel.value,
         [channel_id]: list.filter(u => u.user_id !== user_id)
       }
-    }, 4000)
+    }, TYPING_EXPIRY_MS)
     typingTimers.set(key, timer)
   }
 
@@ -885,11 +971,14 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function triggerBrowserNotification(msg, isMention) {
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
-    const channelState = readStates.value[msg.channel_id]
-    const level = channelState?.notify_level || 'all'
-    if (level === 'mute') return
-    if (level === 'mentions' && !isMention) return
+    if (typeof Notification === 'undefined') return
+    if (!shouldNotify({
+      permission: Notification.permission,
+      level: notificationLevel(msg.channel_id),
+      isMention,
+      hidden: !isTabVisible(),
+      isCurrentChannel: msg.channel_id === activeChannel.value?.id
+    })) return
 
     const channel = allChannels.value.find(c => c.id === msg.channel_id)
     const channelName = channel ? `#${channel.name}` : ''
@@ -899,12 +988,12 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const n = new Notification(title, {
         body: msg.content || (msg.attachments?.length ? t('chat.attachment') : ''),
-        icon: msg.avatar_url || '/favicon.ico',
+        icon: '/favicon.svg',
         tag: msg.channel_id
       })
       n.onclick = () => {
         if (typeof window !== 'undefined') window.focus()
-        if (channel) selectChannel(channel)
+        goToMessage(msg)
         n.close()
       }
     } catch (e) {
@@ -914,7 +1003,12 @@ export const useChatStore = defineStore('chat', () => {
 
   async function requestNotificationPermission() {
     if (typeof Notification === 'undefined') return 'unsupported'
-    return Notification.requestPermission()
+    try {
+      notificationPermission.value = await Notification.requestPermission()
+    } catch {
+      notificationPermission.value = Notification.permission
+    }
+    return notificationPermission.value
   }
 
   // ---- Profiles & mentions ----
@@ -1032,6 +1126,9 @@ export const useChatStore = defineStore('chat', () => {
     markChannelUnread,
     setNotificationLevel,
     setChannelNotification,
+    notificationLevel,
+    notificationPermission,
+    goToMessage,
     typingByChannel,
     sendTyping,
     requestNotificationPermission,
