@@ -159,6 +159,10 @@ chat.example.com {
 - Set `APP_ENV=production`, a strong `JWT_SECRET` and an `https://` `PUBLIC_URL`.
 - Do not use `docker-compose.dev.yml` in production; the base compose file
   does not publish PostgreSQL or SeaweedFS.
+- The SeaweedFS S3 gateway only accepts `S3_ACCESS_KEY` / `S3_SECRET_KEY`
+  (letters, digits and `._~+/=-`; the secret at least 8 characters). The
+  container writes its identity config from them at every start, so changing
+  the keys in `.env` and running `docker compose up -d` updates both sides.
 
 ### Ports
 
