@@ -268,6 +268,27 @@ func (s *SFU) RemovePeer(channelID uuid.UUID, peer *Peer) {
 	}
 }
 
+// CloseRoom disconnects every peer of a room and drops it, e.g. because its
+// channel was deleted.
+func (s *SFU) CloseRoom(channelID uuid.UUID) {
+	s.roomsMu.Lock()
+	r, ok := s.rooms[channelID]
+	delete(s.rooms, channelID)
+	s.roomsMu.Unlock()
+	if !ok {
+		return
+	}
+	r.mu.RLock()
+	peers := make([]*Peer, 0, len(r.peers))
+	for _, p := range r.peers {
+		peers = append(peers, p)
+	}
+	r.mu.RUnlock()
+	for _, p := range peers {
+		r.removePeer(p)
+	}
+}
+
 func (r *Room) empty() bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

@@ -51,17 +51,21 @@ type Hub struct {
 	online  map[uuid.UUID]int
 	// chosen is the presence each connected user picked (online, away, dnd, focus).
 	chosen map[uuid.UUID]string
+	// profiles is the latest public profile of each connected user; it
+	// follows user_update events so voice payloads never show a stale name
+	// or avatar.
+	profiles map[uuid.UUID]auth.User
 	// voice maps channel → user → user info for everyone currently in a voice room.
 	voice map[uuid.UUID]map[uuid.UUID]auth.User
-	// grace holds users whose connection dropped while in voice. They stay listed
-	// in the room for VoiceGrace so a page reload rejoins without a leave/join
-	// flicker for everyone else (like Discord).
-	grace map[uuid.UUID]*graceLeave
-	// voiceSince is when each user in a voice room joined it; roomSince is
-	// when each room got its first member. Both survive the grace period.
-	voiceSince map[uuid.UUID]time.Time
-	// voiceMute is the mute/deafen state of each user in a voice room.
-	voiceMute map[uuid.UUID]MuteState
+	// grace holds users whose connection dropped while in a voice room. They
+	// stay listed in it for VoiceGrace so a page reload rejoins without a
+	// leave/join flicker for everyone else (like Discord).
+	grace map[voiceKey]*graceLeave
+	// voiceSince is when a user joined a voice room; roomSince is when each
+	// room got its first member. Both survive the grace period.
+	voiceSince map[voiceKey]time.Time
+	// voiceMute is the mute/deafen state of a user in a voice room.
+	voiceMute map[voiceKey]MuteState
 	roomSince map[uuid.UUID]time.Time
 
 	// VoiceGrace is how long a dropped voice user stays in the room.
@@ -93,11 +97,12 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		clients:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
 		chosen:   map[uuid.UUID]string{},
+		profiles: map[uuid.UUID]auth.User{},
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},
-		grace:    map[uuid.UUID]*graceLeave{},
+		grace:    map[voiceKey]*graceLeave{},
 
-		voiceSince: map[uuid.UUID]time.Time{},
-		voiceMute:  map[uuid.UUID]MuteState{},
+		voiceSince: map[voiceKey]time.Time{},
+		voiceMute:  map[voiceKey]MuteState{},
 		roomSince:  map[uuid.UUID]time.Time{},
 
 		VoiceGrace: DefaultVoiceGrace,
@@ -148,6 +153,11 @@ type Client struct {
 	// "online" user into "away" while all of their connections are idle.
 	idle bool // guarded by hub.mu
 
+	// voiceMu serializes this connection's voice joins and leaves (its own
+	// read loop, an admin kick, a deleted channel), so a leave never runs
+	// between a join's presence update and its SFU peer being recorded.
+	voiceMu sync.Mutex
+
 	mu      sync.Mutex
 	voiceCh *uuid.UUID
 	// sfuPeer is this connection's own media peer. Another connection of the
@@ -155,45 +165,16 @@ type Client struct {
 	// down never touches the other.
 	sfuPeer *sfu.Peer
 
-	// Typing notices are relayed at most once per typingThrottle per channel.
-	lastTypingCh uuid.UUID
-	lastTypingAt time.Time
-}
-
-// typingThrottle is how often one connection's typing notice is relayed;
-// clients show "… schreibt" for a few seconds after the last notice.
-const typingThrottle = 3 * time.Second
-
-// allowTyping reports whether a typing notice for chID may be relayed now.
-func (c *Client) allowTyping(chID uuid.UUID, now time.Time) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if chID == c.lastTypingCh && now.Sub(c.lastTypingAt) < typingThrottle {
-		return false
-	}
-	c.lastTypingCh, c.lastTypingAt = chID, now
-	return true
-}
-
-func (c *Client) currentVoice() *uuid.UUID {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.voiceCh
-}
-
-func (c *Client) setVoice(ch *uuid.UUID) {
-	c.mu.Lock()
-	c.voiceCh = ch
-	if ch == nil {
-		c.sfuPeer = nil
-	}
-	c.mu.Unlock()
-}
-
-func (c *Client) setPeer(p *sfu.Peer) {
-	c.mu.Lock()
-	c.sfuPeer = p
-	c.mu.Unlock()
+	// typing is when a typing notice was last relayed, per channel.
+	typing map[uuid.UUID]time.Time
+	// speaking is the last relayed speaking state; speakWindow/speakCount
+	// cap how often it may change.
+	speaking    bool
+	speakWindow time.Time
+	speakCount  int
+	// diagWindow/diagCount rate-limit logged client diagnostics.
+	diagWindow time.Time
+	diagCount  int
 }
 
 func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
@@ -254,6 +235,9 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 	data := encode(eventType, payload)
 	if data == nil {
 		return
+	}
+	if eventType == "user_update" {
+		h.applyUserUpdate(payload)
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -385,6 +369,8 @@ func (h *Hub) register(c *Client) {
 	before := h.statusLocked(c.User.ID)
 	h.clients[c] = struct{}{}
 	h.online[c.User.ID]++
+	// The session was just loaded from the database: the freshest profile.
+	h.profiles[c.User.ID] = c.User.Public()
 	// The session was just loaded, so its presence is the latest choice.
 	if auth.ValidPresence(c.User.Presence) {
 		h.chosen[c.User.ID] = c.User.Presence
@@ -409,19 +395,7 @@ func (h *Hub) register(c *Client) {
 }
 
 func (h *Hub) unregister(c *Client) {
-	if ch := c.currentVoice(); ch != nil {
-		// The media connection is gone, but presence lingers for the grace
-		// period so a quick reconnect resumes the call seamlessly.
-		if h.SFU != nil {
-			h.SFU.RemovePeer(*ch, c.peer())
-		}
-		c.setVoice(nil)
-		// A reconnect may already be back in the room before the old socket
-		// unregisters; then the user never left and no grace timer runs.
-		if !h.userInVoice(c.User.ID, *ch, c) {
-			h.startGrace(c.User.ID, *ch)
-		}
-	}
+	h.dropVoiceForGrace(c)
 	h.mu.Lock()
 	if _, ok := h.clients[c]; !ok {
 		h.mu.Unlock()
@@ -435,6 +409,7 @@ func (h *Hub) unregister(c *Client) {
 	if offline {
 		delete(h.online, c.User.ID)
 		delete(h.chosen, c.User.ID)
+		delete(h.profiles, c.User.ID)
 	}
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
@@ -532,9 +507,7 @@ func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
 }
 
 // OnlineUserIDs lists every user with an open connection (for @here).
-func (h *Hub) OnlineUserIDs() []uuid.UUID { return h.onlineUsers() }
-
-func (h *Hub) onlineUsers() []uuid.UUID {
+func (h *Hub) OnlineUserIDs() []uuid.UUID {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	ids := make([]uuid.UUID, 0, len(h.online))
@@ -558,251 +531,6 @@ type VoiceUser struct {
 	MuteState
 }
 
-// voiceSnapshot copies the current voice rooms (channel → users).
-func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	out := make(map[uuid.UUID]map[uuid.UUID]VoiceUser, len(h.voice))
-	for chID, users := range h.voice {
-		cp := make(map[uuid.UUID]VoiceUser, len(users))
-		for id, u := range users {
-			cp[id] = VoiceUser{User: u.Public(), JoinedAt: h.voiceSince[id], MuteState: h.voiceMute[id]}
-		}
-		out[chID] = cp
-	}
-	return out
-}
-
-// voiceRooms says since when each voice room is occupied, plus the server's
-// clock so clients can count up without trusting their own.
-func (h *Hub) voiceRooms() map[string]any {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	started := make(map[uuid.UUID]time.Time, len(h.roomSince))
-	for id, t := range h.roomSince {
-		started[id] = t
-	}
-	return map[string]any{"started": started, "now": time.Now()}
-}
-
-// voiceChannel returns chID if it exists and is a voice channel.
-func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*chat.ChannelInfo, bool) {
-	ch, err := chat.LoadChannel(ctx, h.DB, chID)
-	if err != nil || ch.Type != chat.ChannelTypeVoice {
-		return nil, false
-	}
-	return ch, true
-}
-
-// joinVoice puts c into ch's voice room. Re-joining the same room keeps the
-// presence entry but renegotiates the SFU peer, which is how a client attaches
-// its microphone once getUserMedia resolves.
-func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
-	// A user returning within the grace period resumes silently in the same
-	// room; joining a different room ends the lingering presence first.
-	rejoin := false
-	if pending := h.takeGrace(c.User.ID); pending != nil {
-		if pending.channelID == ch.ID {
-			rejoin = true
-		} else {
-			h.removePresence(c.User.ID, pending.channelID)
-		}
-	}
-	if cur := c.currentVoice(); cur != nil {
-		if *cur == ch.ID {
-			rejoin = true
-		} else {
-			h.leaveVoice(c, *cur)
-		}
-	}
-	h.mu.Lock()
-	now := time.Now()
-	if h.voice[ch.ID] == nil {
-		h.voice[ch.ID] = map[uuid.UUID]auth.User{}
-	}
-	if _, ok := h.roomSince[ch.ID]; !ok {
-		h.roomSince[ch.ID] = now
-	}
-	// Already present through another connection (reconnect, second tab).
-	if _, present := h.voice[ch.ID][c.User.ID]; present {
-		rejoin = true
-	}
-	if _, ok := h.voiceSince[c.User.ID]; !ok || !rejoin {
-		h.voiceSince[c.User.ID] = now
-	}
-	h.voice[ch.ID][c.User.ID] = c.User
-	joined := VoiceUser{User: c.User.Public(), JoinedAt: h.voiceSince[c.User.ID], MuteState: h.voiceMute[c.User.ID]}
-	roomStarted := h.roomSince[ch.ID]
-	h.mu.Unlock()
-	id := ch.ID
-	c.setVoice(&id)
-
-	if h.SFU != nil {
-		_, peer, err := h.SFU.Join(ch.ID, c.User.ID,
-			func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) },
-			func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) })
-		if err != nil {
-			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
-		}
-		c.setPeer(peer)
-		// A late joiner learns who shares a screen or runs a camera.
-		if room := h.SFU.Room(ch.ID); room != nil {
-			for uid, st := range room.MediaStates() {
-				if uid != c.User.ID {
-					c.SendEvent("webrtc_media_state", mediaStatePayload(ch.ID, uid, st))
-				}
-			}
-		}
-	}
-	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", rejoin)
-	if !rejoin {
-		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted})
-	}
-}
-
-// KickFromVoice ends userID's voice presence on every connection and in a
-// pending grace period. It reports whether the user was in a voice room.
-func (h *Hub) KickFromVoice(userID uuid.UUID) bool {
-	h.mu.RLock()
-	var mine []*Client
-	for c := range h.clients {
-		if c.User.ID == userID {
-			mine = append(mine, c)
-		}
-	}
-	h.mu.RUnlock()
-
-	kicked := false
-	for _, c := range mine {
-		if cur := c.currentVoice(); cur != nil {
-			ch := *cur
-			h.leaveVoice(c, ch)
-			c.SendEvent("voice_kicked", map[string]any{"channel_id": ch})
-			kicked = true
-		}
-	}
-	if g := h.takeGrace(userID); g != nil {
-		h.removePresence(userID, g.channelID)
-		kicked = true
-	}
-	return kicked
-}
-
-// DisconnectUser closes every live connection of userID.
-func (h *Hub) DisconnectUser(userID uuid.UUID) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for c := range h.clients {
-		if c.User.ID == userID {
-			c.close()
-		}
-	}
-}
-
-// userInVoice reports whether another connection than except of userID is in chID's voice room.
-func (h *Hub) userInVoice(userID, chID uuid.UUID, except *Client) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for other := range h.clients {
-		if other == except || other.User.ID != userID {
-			continue
-		}
-		if cur := other.currentVoice(); cur != nil && *cur == chID {
-			return true
-		}
-	}
-	return false
-}
-
-// leaveVoice is an explicit leave: presence ends immediately.
-func (h *Hub) leaveVoice(c *Client, chID uuid.UUID) {
-	if h.SFU != nil {
-		h.SFU.RemovePeer(chID, c.peer())
-	}
-	h.takeGrace(c.User.ID)
-	c.setVoice(nil)
-	h.removePresence(c.User.ID, chID)
-}
-
-// removePresence drops userID from chID's room and announces it if they were there.
-func (h *Hub) removePresence(userID, chID uuid.UUID) {
-	h.mu.Lock()
-	_, wasIn := h.voice[chID][userID]
-	since, hadSince := h.voiceSince[userID]
-	if wasIn {
-		delete(h.voiceSince, userID)
-		delete(h.voiceMute, userID)
-	}
-	if users, ok := h.voice[chID]; ok {
-		delete(users, userID)
-		if len(users) == 0 {
-			delete(h.voice, chID)
-			delete(h.roomSince, chID)
-		}
-	}
-	h.mu.Unlock()
-	if wasIn {
-		slog.Info("voice leave", "user", userID, "channel", chID)
-		h.Broadcast("voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
-		if hadSince {
-			h.addVoiceTime(userID, time.Since(since))
-		}
-	}
-}
-
-// addVoiceTime adds one finished stay in a voice room to the user's total and
-// tells everyone the new total.
-func (h *Hub) addVoiceTime(userID uuid.UUID, d time.Duration) {
-	secs := int64(d / time.Second)
-	if h.DB == nil || secs <= 0 {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	var total int64
-	err := h.DB.QueryRow(ctx, `UPDATE users SET voice_seconds = voice_seconds + $1 WHERE id = $2 RETURNING voice_seconds`,
-		secs, userID).Scan(&total)
-	if err != nil {
-		slog.Warn("record voice time", "user", userID, "err", err)
-		return
-	}
-	h.Broadcast("user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
-}
-
-// startGrace keeps userID listed in chID for VoiceGrace, then removes them
-// unless takeGrace claimed the slot first.
-func (h *Hub) startGrace(userID, chID uuid.UUID) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if old := h.grace[userID]; old != nil {
-		old.timer.Stop()
-	}
-	g := &graceLeave{channelID: chID}
-	g.timer = time.AfterFunc(h.VoiceGrace, func() {
-		h.mu.Lock()
-		current := h.grace[userID] == g
-		if current {
-			delete(h.grace, userID)
-		}
-		h.mu.Unlock()
-		if current {
-			h.removePresence(userID, chID)
-		}
-	})
-	h.grace[userID] = g
-}
-
-// takeGrace cancels and returns a pending grace leave for userID, if any.
-func (h *Hub) takeGrace(userID uuid.UUID) *graceLeave {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	g := h.grace[userID]
-	if g != nil {
-		g.timer.Stop()
-		delete(h.grace, userID)
-	}
-	return g
-}
 func (c *Client) readPump() {
 	defer func() {
 		c.hub.unregister(c)
@@ -865,9 +593,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		}
 
 	case "voice_leave":
-		if cur := c.currentVoice(); cur != nil {
-			h.leaveVoice(c, *cur)
-		}
+		h.leaveCurrentVoice(c)
 
 	case "typing":
 		if !c.allowTyping(p.ChannelID, time.Now()) {
@@ -880,8 +606,10 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "voice_speaking":
 		if cur := c.currentVoice(); cur != nil {
 			// A muted or deafened member is never shown as speaking.
-			active := p.Active && !h.isMuted(c.User.ID)
-			h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active})
+			active := p.Active && !h.isMuted(c.User.ID, *cur)
+			if c.speakingChanged(active, time.Now()) {
+				h.sendToVoiceRoom(*cur, "voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active})
+			}
 		}
 
 	case "voice_mute_state":
@@ -913,8 +641,8 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 
 	case "webrtc_diag":
 		// A browser's own view of its voice connection, for troubleshooting.
-		if len(payload) <= 4096 {
-			slog.Info("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
+		if len(payload) <= 4096 && c.allowDiag(time.Now()) {
+			slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 		}
 
 	case "webrtc_request_keyframe":
@@ -991,12 +719,6 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	}
 }
 
-func (c *Client) peer() *sfu.Peer {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.sfuPeer
-}
-
 func (c *Client) writePump() {
 	ping := time.NewTicker(pingInterval)
 	revalidate := time.NewTicker(revalidateEvery)
@@ -1035,35 +757,5 @@ func (c *Client) writePump() {
 				slog.Warn("revalidate token version failed", "user", c.User.ID, "err", err)
 			}
 		}
-	}
-}
-
-func (h *Hub) isMuted(userID uuid.UUID) bool {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	st := h.voiceMute[userID]
-	return st.Muted || st.Deafened
-}
-
-// setMuteState records c's mute/deafen state and tells everyone, so the
-// microphone and headphone marks show on their avatar. Deafened implies muted.
-func (h *Hub) setMuteState(c *Client, st MuteState) {
-	cur := c.currentVoice()
-	if cur == nil {
-		return
-	}
-	if st.Deafened {
-		st.Muted = true
-	}
-	h.mu.Lock()
-	changed := h.voiceMute[c.User.ID] != st
-	h.voiceMute[c.User.ID] = st
-	h.mu.Unlock()
-	if !changed {
-		return
-	}
-	h.Broadcast("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened})
-	if st.Muted {
-		h.Broadcast("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false})
 	}
 }
