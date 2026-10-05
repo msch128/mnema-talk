@@ -52,6 +52,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Put("/auth/password", httpx.Handle(h.changePassword))
 	r.Get("/users/{userID}", httpx.Handle(h.getUser))
 	r.Put("/users/me/profile", httpx.Handle(h.updateProfile))
+	r.Put("/users/me/locale", httpx.Handle(h.setLocale))
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
@@ -126,6 +127,21 @@ func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) setLocale(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Locale string `json:"locale"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	u, err := SetLocale(r.Context(), h.Sessions.DB, UserFrom(r.Context()).ID, req.Locale)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, u)
 	return nil
 }
 
