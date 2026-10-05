@@ -644,7 +644,8 @@
     "pipExit": "Exit picture-in-picture",
     "pipPlaying": "Playing in the picture-in-picture window",
     "pipBack": "Back to the stage",
-    "pipFailed": "Could not open picture-in-picture"
+    "pipFailed": "Could not open picture-in-picture",
+    "streamVolume": "Stream volume"
   },
   "admin": {
     "title": "Storage & administration",

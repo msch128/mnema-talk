@@ -8,6 +8,71 @@ beforeEach(() => {
   setActivePinia(createPinia())
 })
 
+describe("the volume of someone's stream", () => {
+  it('starts at 50 %, apart from the voice volume', () => {
+    const voice = useVoiceStore()
+    expect(voice.getStreamVolume('u1')).toBe(50)
+    expect(voice.streamGain('u1')).toBe(0.5)
+    voice.setStreamVolume('u1', 80)
+    expect(voice.getStreamVolume('u1')).toBe(80)
+    expect(voice.getUserVolume('u1')).toBe(100)
+    voice.setUserVolume('u1', 150)
+    expect(voice.getStreamVolume('u1')).toBe(80)
+  })
+
+  it('is clamped to 0..100 % and remembered per person once changed', () => {
+    const voice = useVoiceStore()
+    voice.setStreamVolume('u1', 150)
+    voice.setStreamVolume('u2', -3)
+    voice.setStreamVolume('u3', 'nope')
+    voice.setStreamVolume('u4', 50)
+    expect(voice.getStreamVolume('u1')).toBe(100)
+    expect(voice.getStreamVolume('u2')).toBe(0)
+    expect(voice.getStreamVolume('u3')).toBe(50)
+    setActivePinia(createPinia())
+    const again = useVoiceStore()
+    expect(again.getStreamVolume('u1')).toBe(100)
+    expect(again.getStreamVolume('u2')).toBe(0)
+    expect(JSON.parse(localStorage.getItem('mnema_stream_volumes'))).toEqual({ u1: 100, u2: 0, u4: 50 })
+  })
+
+  it('0 % is muted; mute keeps the volume, the slider unmutes', () => {
+    const voice = useVoiceStore()
+    voice.setStreamVolume('u1', 70)
+    voice.toggleStreamMute('u1')
+    expect(voice.isStreamMuted('u1')).toBe(true)
+    expect(voice.streamGain('u1')).toBe(0)
+    expect(voice.streamVolumeShown('u1')).toBe(0)
+    expect(voice.getStreamVolume('u1')).toBe(70)
+    expect(voice.isUserLocalMuted('u1')).toBe(false)
+    voice.toggleStreamMute('u1')
+    expect(voice.streamGain('u1')).toBe(0.7)
+
+    voice.toggleStreamMute('u1')
+    voice.setStreamVolume('u1', 40)
+    expect(voice.isStreamMuted('u1')).toBe(false)
+    expect(voice.streamVolumeShown('u1')).toBe(40)
+
+    // All the way down counts as muted; unmuting brings back the default.
+    voice.setStreamVolume('u1', 0)
+    expect(voice.isStreamMuted('u1')).toBe(true)
+    voice.toggleStreamMute('u1')
+    expect(voice.getStreamVolume('u1')).toBe(50)
+    expect(voice.isStreamMuted('u1')).toBe(false)
+  })
+
+  it('still works when storage is unavailable', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+    const voice = useVoiceStore()
+    voice.setStreamVolume('u1', 20)
+    expect(voice.getStreamVolume('u1')).toBe(20)
+    setItem.mockRestore()
+    localStorage.setItem('mnema_stream_volumes', '[1,2')
+    setActivePinia(createPinia())
+    expect(useVoiceStore().getStreamVolume('u1')).toBe(50)
+  })
+})
+
 describe('per-user volume and local mute', () => {
   it('defaults to 100 % and not muted', () => {
     const voice = useVoiceStore()

@@ -147,26 +147,27 @@ async function watchStream(userId) {
   voiceStore.watchScreen(userId)
 }
 
-// Audio controls on the stage: only for someone else's screen share.
+// Audio controls on the stage: only for someone else's screen share. They
+// set the volume of the stream's sound (0..100 %), never the person's voice.
 const currentStreamVolume = computed(() => {
   const uid = stageUserId.value
-  return uid ? voiceStore.getUserVolume(uid) : 100
+  return uid ? voiceStore.streamVolumeShown(uid) : 0
 })
 
 const isCurrentStreamMuted = computed(() => {
   const uid = stageUserId.value
-  return uid ? voiceStore.isUserLocalMuted(uid) : false
+  return uid ? voiceStore.isStreamMuted(uid) : false
 })
 
 function toggleCurrentStreamMute() {
   const uid = stageUserId.value
-  if (uid) voiceStore.toggleLocalMute(uid)
+  if (uid) voiceStore.toggleStreamMute(uid)
 }
 
 function onStreamVolumeChange(e) {
   const uid = stageUserId.value
   if (uid) {
-    voiceStore.setUserVolume(uid, Number(e.target.value))
+    voiceStore.setStreamVolume(uid, Number(e.target.value))
   }
 }
 
@@ -559,6 +560,8 @@ function openStageMenu(e) {
                 type="button"
                 data-testid="viewer-stream-audio-mute"
                 class="p-0.5 rounded text-white hover:text-mnema-accent transition"
+                :aria-label="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+                :aria-pressed="isCurrentStreamMuted ? 'true' : 'false'"
                 v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
                 @click="toggleCurrentStreamMute"
               >
@@ -568,8 +571,10 @@ function openStageMenu(e) {
               <input
                 type="range"
                 min="0"
-                max="200"
+                max="100"
                 data-testid="viewer-stream-volume-slider"
+                :aria-label="$t('talk.streamVolume')"
+                :aria-valuetext="`${currentStreamVolume}%`"
                 :value="currentStreamVolume"
                 class="w-16 h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition"
                 v-tooltip="`${currentStreamVolume}%`"

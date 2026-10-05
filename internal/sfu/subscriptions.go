@@ -20,9 +20,10 @@ const (
 // ErrTooManySubscriptions is returned when a viewer exceeds the per-viewer limits.
 var ErrTooManySubscriptions = errors.New("too many subscriptions")
 
-// Subscriptions is what one viewer wants to receive. Audio is always
+// Subscriptions is what one viewer wants to receive. Voices are always
 // forwarded. Cameras are on by default and the viewer opts out per publisher
-// (or for everyone); screen shares are off by default and the viewer opts in.
+// (or for everyone); screen shares, with their sound, are off by default and
+// the viewer opts in.
 type Subscriptions struct {
 	allCamerasOff bool
 	hiddenCameras map[uuid.UUID]bool
@@ -33,6 +34,9 @@ type Subscriptions struct {
 // sender should be forwarded to this viewer.
 func (s *Subscriptions) Wants(sender uuid.UUID, kind webrtc.RTPCodecType, source Source) bool {
 	if kind != webrtc.RTPCodecTypeVideo {
+		if source == SourceScreenAudio {
+			return s != nil && s.screens[sender]
+		}
 		return true
 	}
 	if s == nil {
