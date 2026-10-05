@@ -1,0 +1,22 @@
+docker-compose.yml
+  h_0ff4f4713441f4 108-129
+internal/server/metrics.go
+  h_0ff4f4713441f4 1-75
+internal/server/metrics_test.go
+  h_0ff4f4713441f4 1-31
+internal/server/server.go
+  h_0ff4f4713441f4 124
+scripts/health-check.sh
+  h_0ff4f4713441f4 1-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5e9d583b3b4ba50f9bb9e1cffbb8e48b27a93de",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

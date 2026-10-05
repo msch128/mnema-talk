@@ -1,0 +1,26 @@
+internal/auth/users_admin.go
+  h_0ff4f4713441f4 110,113,115,159-188,224-269
+internal/ws/hub.go
+  h_0ff4f4713441f4 321-327
+web/src/components/AdminDashboard.test.js
+  h_0ff4f4713441f4 1-399
+web/src/components/AdminDashboard.vue
+  h_0ff4f4713441f4 2-26,29-30,35,39-40,43-67,81-105,108-112,114-118,124-224,226-228,233-360,364,368-425,427-428,434-437,443-478,531-532,541-580,588,591-1151,1153-1156,1166-1172,1183-1184,1189,1197,1199-1200,1230,1232-1233,1242-1383
+web/src/components/SearchModal.vue
+  h_0ff4f4713441f4 1-261
+web/src/i18n/de.json
+  h_0ff4f4713441f4 437-510
+web/src/i18n/en.json
+  h_0ff4f4713441f4 437-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a24c9a3a077828288746a5d622b7436f89959fe",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
