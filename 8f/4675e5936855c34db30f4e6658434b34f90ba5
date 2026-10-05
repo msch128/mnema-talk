@@ -1,0 +1,14 @@
+web/src/composables/useWebRTC.js
+  h_0ff4f4713441f4 655-656,675-676,688
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f4675e5936855c34db30f4e6658434b34f90ba5",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
