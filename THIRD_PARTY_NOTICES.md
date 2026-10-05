@@ -106,7 +106,7 @@ modules are compiled into `mnema-talk`:
 | `github.com/pion/webrtc/v4` | v4.2.22 | MIT |
 | `github.com/wlynxg/anet` | v0.0.5 | BSD-3-Clause |
 | `golang.org/x/crypto` | v0.57.0 | BSD-3-Clause |
-| `golang.org/x/net` | v0.58.0 | BSD-3-Clause |
+| `golang.org/x/net` | v0.59.0 | BSD-3-Clause |
 | `golang.org/x/sync` | v0.23.0 | BSD-3-Clause |
 | `golang.org/x/sys` | v0.48.0 | BSD-3-Clause |
 | `golang.org/x/text` | v0.42.0 | BSD-3-Clause |
