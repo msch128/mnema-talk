@@ -244,6 +244,13 @@ func (l *LoginFailureLimiter) ResetFailures(key string) {
 	l.mu.Unlock()
 }
 
+// Len reports how many keys are tracked.
+func (l *LoginFailureLimiter) Len() int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return len(l.entries)
+}
+
 // sweepLocked forgets, at most once per sweepInterval, entries that are not
 // locked and have been quiet for the decay period (they would start over
 // anyway).

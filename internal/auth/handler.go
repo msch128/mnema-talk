@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -25,7 +26,13 @@ type Handler struct {
 	loginFailures   *httpx.LoginFailureLimiter
 	accountFailures *httpx.LoginFailureLimiter
 	passwordFails   *httpx.LoginFailureLimiter
+	// verify replaces Login in unit tests.
+	verify func(ctx context.Context, username, password string) (*User, int, error)
 }
+
+// accountAttackWeight is how many failures a wrong password counts against its
+// client address while the account-wide lockout is active (10 → 4 guesses).
+const accountAttackWeight = 3
 
 func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	return &Handler{
@@ -34,7 +41,8 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:    httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP: httpx.NewRateLimiter(10, time.Hour),
-		// 10 failures → 1 min, then 5 min, then 30 min lockouts per address+username.
+		// 10 failures → 1 min, then 5 min, then 30 min lockouts per address+username
+		// (IPv6 per /64); tiers are forgotten after an hour without failures.
 		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),
 		accountFailures: httpx.NewLoginFailureLimiter(100, time.Minute),
 		passwordFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
@@ -83,33 +91,56 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	account := strings.ToLower(strings.TrimSpace(req.Username))
-	key := httpx.ClientIP(r) + "|" + account
-	for _, l := range []struct {
-		limiter *httpx.LoginFailureLimiter
-		key     string
-	}{{h.loginFailures, key}, {h.accountFailures, account}} {
-		if locked, retry := l.limiter.IsLockedOut(l.key); locked {
+	username := strings.TrimSpace(req.Username)
+	if !usernamePattern.MatchString(username) {
+		// No such account can exist. Answer like a wrong password, with the
+		// same bcrypt cost, but never let arbitrary input become a limiter key.
+		burnPasswordCheck(req.Password)
+		return ErrInvalidCredentials
+	}
+	account := strings.ToLower(username)
+	key := httpx.ClientIPKey(r) + "|" + account
+	if locked, retry := h.loginFailures.IsLockedOut(key); locked {
+		httpx.WriteRateLimited(w, retry)
+		return nil
+	}
+
+	u, tv, err := h.verifyCredentials(r.Context(), username, req.Password)
+	if err == ErrInvalidCredentials {
+		// The account-wide lockout only ever gates wrong passwords: guessing
+		// from many addresses must not lock the real owner out. While it is
+		// active, each wrong guess counts several times against its address.
+		accountLocked, retry := h.accountFailures.IsLockedOut(account)
+		weight := 1
+		if accountLocked {
+			weight = accountAttackWeight
+		}
+		h.loginFailures.RecordFailures(key, weight)
+		h.accountFailures.RecordFailure(account)
+		if accountLocked {
 			httpx.WriteRateLimited(w, retry)
 			return nil
 		}
-	}
-
-	u, tv, err := Login(r.Context(), h.Sessions.DB, req.Username, req.Password)
-	if err == ErrInvalidCredentials {
-		h.loginFailures.RecordFailure(key)
-		h.accountFailures.RecordFailure(account)
 		return err
 	}
 	if err != nil {
 		return err
 	}
 	h.loginFailures.ResetFailures(key)
+	h.accountFailures.ResetFailures(account)
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: *u})
 	return nil
+}
+
+// verifyCredentials checks a login; tests replace it via h.verify.
+func (h *Handler) verifyCredentials(ctx context.Context, username, password string) (*User, int, error) {
+	if h.verify != nil {
+		return h.verify(ctx, username, password)
+	}
+	return Login(ctx, h.Sessions.DB, username, password)
 }
 
 // register handles POST /api/auth/register.
@@ -182,8 +213,13 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/logout-all [post]
 func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
-	if err := RevokeSessions(r.Context(), h.Sessions.DB, UserFrom(r.Context()).ID); err != nil {
+	u := UserFrom(r.Context())
+	if err := RevokeSessions(r.Context(), h.Sessions.DB, u.ID); err != nil {
 		return err
+	}
+	// Open WebSockets were authenticated with the old version; close them.
+	if h.Live != nil {
+		h.Live.DisconnectUser(u.ID)
 	}
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
@@ -281,6 +317,11 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 	// All other sessions are revoked by the version bump; keep this one alive.
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
+	}
+	// Close every open WebSocket, other devices' included; this client
+	// reconnects with the fresh cookie set above.
+	if h.Live != nil {
+		h.Live.DisconnectUser(u.ID)
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
