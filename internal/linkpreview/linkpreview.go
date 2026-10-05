@@ -56,6 +56,11 @@ type Fetcher struct {
 	client       *http.Client
 	allowPrivate bool // tests only: lets httptest servers on loopback through
 
+	// denied are extra addresses to refuse, e.g. this server's own public
+	// IP: behind a router with hairpin NAT it leads back into the LAN.
+	deniedMu sync.RWMutex
+	denied   map[netip.Addr]bool
+
 	mu    sync.Mutex
 	cache map[string]cacheEntry
 }
@@ -80,7 +85,8 @@ func New() *Fetcher {
 			if f.allowPrivate {
 				return nil
 			}
-			if !publicIP(net.ParseIP(host)) {
+			ip := net.ParseIP(host)
+			if !publicIP(ip) || f.isDenied(ip) {
 				return ErrBlocked
 			}
 			return nil
@@ -107,7 +113,25 @@ func New() *Fetcher {
 	return f
 }
 
-var cgnat = netip.MustParsePrefix("100.64.0.0/10")
+// nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but
+// that must never be fetched: shared, documentation, benchmarking and
+// reserved IPv4 space, and IPv6 prefixes that embed an IPv4 address (NAT64,
+// 6to4, Teredo), which could point at a private host.
+var nonPublic = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"),
+	netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("64:ff9b::/96"),
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+	netip.MustParsePrefix("2001::/32"),
+	netip.MustParsePrefix("2001:db8::/32"),
+	netip.MustParsePrefix("2002::/16"),
+}
 
 // publicIP reports whether ip is a globally routable unicast address.
 func publicIP(ip net.IP) bool {
@@ -121,8 +145,50 @@ func publicIP(ip net.IP) bool {
 	if !ok {
 		return false
 	}
-	return ip.IsGlobalUnicast() && !ip.IsPrivate() && !ip.IsLoopback() &&
-		!ip.IsLinkLocalUnicast() && !ip.IsUnspecified() && !cgnat.Contains(addr)
+	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsUnspecified() {
+		return false
+	}
+	for _, p := range nonPublic {
+		if p.Contains(addr) {
+			return false
+		}
+	}
+	return true
+}
+
+// Deny refuses the addresses of these hosts or IPs (resolved now and on
+// every later call to Deny). Used for the server's own public address.
+func (f *Fetcher) Deny(ctx context.Context, hostsOrIPs ...string) {
+	set := map[netip.Addr]bool{}
+	for _, h := range hostsOrIPs {
+		if h == "" {
+			continue
+		}
+		if a, err := netip.ParseAddr(h); err == nil {
+			set[a.Unmap()] = true
+			continue
+		}
+		addrs, err := net.DefaultResolver.LookupNetIP(ctx, "ip", h)
+		if err != nil {
+			continue
+		}
+		for _, a := range addrs {
+			set[a.Unmap()] = true
+		}
+	}
+	f.deniedMu.Lock()
+	f.denied = set
+	f.deniedMu.Unlock()
+}
+
+func (f *Fetcher) isDenied(ip net.IP) bool {
+	addr, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return true
+	}
+	f.deniedMu.RLock()
+	defer f.deniedMu.RUnlock()
+	return f.denied[addr.Unmap()]
 }
 
 // checkURL allows only plain http(s) URLs on the default ports.
