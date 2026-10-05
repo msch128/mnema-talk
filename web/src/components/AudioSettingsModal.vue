@@ -27,12 +27,18 @@ watch(() => voiceStore.currentInputLevel, level => {
   peakLevel.value = peakHold(level)
 })
 
+// The dialog can close while the device list or the mic test is still
+// starting; stop the test once the awaits return so the mic never stays open.
+let unmounted = false
 onMounted(async () => {
   await refreshAudioDevices()
+  if (unmounted) return
   await startMicTest()
+  if (unmounted) stopMicTest()
 })
 
 onUnmounted(() => {
+  unmounted = true
   stopMicTest()
 })
 

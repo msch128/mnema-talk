@@ -173,3 +173,41 @@ describe('AudioSettingsModal mic test and extra settings', () => {
     expect(muteSoundBtn.attributes('aria-checked')).toBe('true')
   })
 })
+
+describe('AudioSettingsModal mic test lifecycle', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    setActivePinia(createPinia())
+  })
+
+  function deferred() {
+    let resolve
+    const promise = new Promise(r => { resolve = r })
+    return { promise, resolve }
+  }
+
+  it('never starts the mic test when closed while devices are loading', async () => {
+    const devices = deferred()
+    mockRefreshAudioDevices.mockReturnValueOnce(devices.promise)
+    const wrapper = mount(AudioSettingsModal, mountOpts)
+    wrapper.unmount()
+    devices.resolve()
+    await devices.promise
+    await nextTick()
+    expect(mockStartMicTest).not.toHaveBeenCalled()
+  })
+
+  it('stops the mic test again when closed while it was starting', async () => {
+    const started = deferred()
+    mockStartMicTest.mockReturnValueOnce(started.promise)
+    const wrapper = mount(AudioSettingsModal, mountOpts)
+    await vi.waitFor(() => expect(mockStartMicTest).toHaveBeenCalledTimes(1))
+    wrapper.unmount()
+    expect(mockStopMicTest).toHaveBeenCalledTimes(1)
+    started.resolve()
+    await started.promise
+    await nextTick()
+    expect(mockStopMicTest).toHaveBeenCalledTimes(2)
+  })
+})
