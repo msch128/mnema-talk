@@ -75,10 +75,12 @@ func AvatarURL(mediaID *string) string {
 var (
 	ErrInvalidCredentials = httpx.NewAPIError(401, httpx.CodeInvalidCredentials, "invalid username or password")
 	ErrWrongPassword      = httpx.ErrForbidden("current password is incorrect")
-	ErrInvalidInvite      = httpx.ErrInvalidInput("invalid invite code")
-	ErrInviteExpired      = httpx.ErrInvalidInput("invite code has expired")
-	ErrInviteExhausted    = httpx.ErrInvalidInput("invite code usage limit reached")
-	ErrUsernameTaken      = httpx.ErrConflict("username is already taken")
+	// Only returned for the correct password, so it reveals nothing to guessers.
+	ErrAccountDisabled = httpx.NewAPIError(403, httpx.CodeAccountDisabled, "this account is disabled")
+	ErrInvalidInvite   = httpx.ErrInvalidInput("invalid invite code")
+	ErrInviteExpired   = httpx.ErrInvalidInput("invite code has expired")
+	ErrInviteExhausted = httpx.ErrInvalidInput("invite code usage limit reached")
+	ErrUsernameTaken   = httpx.ErrConflict("username is already taken")
 )
 
 // dummyHash keeps Login's timing identical for unknown usernames, so response
@@ -138,7 +140,7 @@ func GetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
 // sessionUser loads the user behind a session and its current token version.
 func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, int, error) {
 	var tv int
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users WHERE id = $1`, id), &tv)
+	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users WHERE id = $1 AND disabled_at IS NULL`, id), &tv)
 	return u, tv, err
 }
 
@@ -146,9 +148,10 @@ func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, int, err
 func Login(ctx context.Context, p *db.Pool, username, password string) (*User, int, error) {
 	var hash string
 	var tv int
+	var disabled bool
 	u, err := scanUser(p.QueryRow(ctx,
-		`SELECT `+userColumns+`, password_hash, token_version FROM users WHERE LOWER(username) = LOWER($1)`,
-		strings.TrimSpace(username)), &hash, &tv)
+		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1)`,
+		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
 		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 		return nil, 0, ErrInvalidCredentials
@@ -158,6 +161,9 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 	}
 	if !CheckPassword(password, hash) {
 		return nil, 0, ErrInvalidCredentials
+	}
+	if disabled {
+		return nil, 0, ErrAccountDisabled
 	}
 	return u, tv, nil
 }

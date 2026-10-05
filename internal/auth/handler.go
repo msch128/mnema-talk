@@ -14,6 +14,8 @@ import (
 type Handler struct {
 	Sessions *Sessions
 	Events   events.Publisher
+	// Live acts on users' open connections (voice kick, disconnect); optional.
+	Live LiveControl
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter

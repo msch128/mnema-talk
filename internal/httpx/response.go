@@ -24,6 +24,7 @@ const (
 	CodeUnauthorized         = "UNAUTHORIZED"
 	CodeInvalidCredentials   = "INVALID_CREDENTIALS"
 	CodeForbidden            = "FORBIDDEN"
+	CodeAccountDisabled      = "ACCOUNT_DISABLED"
 	CodeNotFound             = "NOT_FOUND"
 	CodeConflict             = "CONFLICT"
 	CodePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
