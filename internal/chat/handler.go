@@ -47,6 +47,10 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
+	r.Get("/read-state", httpx.Handle(h.readState))
+	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
+	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
+	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
 }
 
 // MountAdmin registers channel and category management (RequireAdmin applies).
@@ -335,6 +339,101 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.deleteObjects(r.Context(), keys)
 	h.Events.Broadcast("channels_changed", nil)
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
+	states, err := GetReadStates(r.Context(), h.DB, auth.UserFrom(r.Context()))
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, states)
+	return nil
+}
+
+// textChannelParam returns the {channelID} of an existing text channel.
+func (h *Handler) textChannelParam(r *http.Request) (uuid.UUID, error) {
+	chID, err := httpx.PathUUID(r, "channelID")
+	if err != nil {
+		return chID, err
+	}
+	ch, err := LoadChannel(r.Context(), h.DB, chID)
+	if err != nil {
+		return chID, err
+	}
+	if ch.Type != ChannelTypeText {
+		return chID, httpx.ErrInvalidInput("only text channels have a read state")
+	}
+	return chID, nil
+}
+
+// publishReadState tells the user's other sessions (tabs, devices) about it.
+func (h *Handler) publishReadState(userID, channelID uuid.UUID, payload map[string]any) {
+	payload["channel_id"] = channelID
+	h.Events.SendToUsers([]uuid.UUID{userID}, "read_state", payload)
+}
+
+func (h *Handler) markRead(w http.ResponseWriter, r *http.Request) error {
+	chID, err := h.textChannelParam(r)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		MessageID *uuid.UUID `json:"message_id"`
+	}
+	if r.ContentLength > 0 {
+		if err := httpx.DecodeJSON(r, &req); err != nil {
+			return err
+		}
+	}
+	user := auth.UserFrom(r.Context())
+	at, err := MarkRead(r.Context(), h.DB, user.ID, chID, req.MessageID)
+	if err != nil {
+		return err
+	}
+	h.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "unread_count": 0, "mention_count": 0})
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) markUnread(w http.ResponseWriter, r *http.Request) error {
+	chID, err := h.textChannelParam(r)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		MessageID uuid.UUID `json:"message_id"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	user := auth.UserFrom(r.Context())
+	at, err := MarkUnread(r.Context(), h.DB, user.ID, chID, req.MessageID)
+	if err != nil {
+		return err
+	}
+	h.publishReadState(user.ID, chID, map[string]any{"last_read_at": at, "refresh": true})
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+func (h *Handler) setNotifyLevel(w http.ResponseWriter, r *http.Request) error {
+	chID, err := h.textChannelParam(r)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Level NotifyLevel `json:"level"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	user := auth.UserFrom(r.Context())
+	if err := SetNotifyLevel(r.Context(), h.DB, user.ID, chID, req.Level); err != nil {
+		return err
+	}
+	h.publishReadState(user.ID, chID, map[string]any{"notify_level": req.Level})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
