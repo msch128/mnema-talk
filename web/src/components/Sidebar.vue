@@ -141,10 +141,10 @@ function voiceUsers(channel) {
 function handleVoiceClick(channel) {
   // Select channel messages for side-chat
   chatStore.selectChannel(channel)
-  // Join voice and switch to the Tafelrunde
+  // Join voice and switch to the Talk
   joinVoiceChannel(channel.id)
   voiceStore.activeView = 'voice'
-  // /v/:id keeps the Tafelrunde's chat toggle as it is.
+  // /v/:id keeps the Talk's chat toggle as it is.
   navigate(`/v/${channel.id}${currentRoute.value.showChat ? '/chat' : ''}`)
 }
 
@@ -453,10 +453,13 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               <div
                 v-for="user in voiceUsers(channel)"
                 :key="user.id"
-                class="h-8 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+                class="h-8 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+                role="button"
                 tabindex="0"
                 aria-haspopup="menu"
                 data-voice-user
+                @click="chatStore.openUserProfile(user)"
+                @keydown.enter.self.prevent="chatStore.openUserProfile(user)"
                 @contextmenu="openMemberMenu($event, user)"
                 @keydown.f10.shift.self.prevent="openMemberMenu($event, user)"
                 @keydown.context-menu.self.prevent="openMemberMenu($event, user)"

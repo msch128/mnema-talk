@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
 import UserBar from './UserBar.vue'
@@ -7,6 +7,9 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { setLocale } from '../i18n'
+import { api } from '../lib/api'
+
+vi.mock('../lib/api', async (orig) => ({ ...(await orig()), api: vi.fn() }))
 
 const leave = vi.fn()
 const share = vi.fn()
@@ -36,9 +39,9 @@ describe('UserBar voice status panel', () => {
     expect(w.find('[aria-label="Sprachverbindung"]').exists()).toBe(false)
     expect(w.find('[data-testid="toggle-mute"]').exists()).toBe(false)
     expect(w.find('[data-testid="toggle-deafen"]').exists()).toBe(false)
-    // audio settings and the ⋯ menu are always there
-    expect(w.find('[aria-label="Audio-Einstellungen"]').exists()).toBe(true)
+    // the ⋯ menu (with the audio settings) and the presence button are always there
     expect(w.find('[data-testid="account-menu-button"]').exists()).toBe(true)
+    expect(w.find('[data-testid="presence-button"]').exists()).toBe(true)
   })
 
   it('shows the panel with channel, ping colour and actions while connected', async () => {
@@ -66,7 +69,7 @@ describe('UserBar voice status panel', () => {
     expect(leave).toHaveBeenCalled()
   })
 
-  it('clicking the status opens the Tafelrunde', async () => {
+  it('clicking the status opens the Talk', async () => {
     const { w, voice } = setup()
     voice.setChannel('v1')
     voice.activeView = 'chat'
@@ -99,5 +102,44 @@ describe('UserBar voice status panel', () => {
     await nextTick()
     expect(w.find('[data-testid="voice-panel-open"]').text()).toBe('Connected · Lounge')
     expect(w.find('[data-testid="toggle-mute"]').attributes('aria-label')).toBe('Mute')
+  })
+})
+
+describe('UserBar presence and status', () => {
+  it('shows the status text, else the live presence', async () => {
+    const { w, chat, auth } = setup()
+    chat.presenceById = { u1: 'dnd' }
+    await nextTick()
+    expect(w.find('[data-testid="own-subline"]').text()).toBe('Nicht stören')
+    auth.user = { ...auth.user, status_text: 'zockt grad' }
+    await nextTick()
+    expect(w.find('[data-testid="own-subline"]').text()).toBe('zockt grad')
+  })
+
+  it('opens the presence menu from the avatar and offers no offline', async () => {
+    const { w } = setup()
+    await w.find('[data-testid="presence-button"]').trigger('click')
+    const menu = w.find('[data-testid="presence-menu"]')
+    expect(menu.exists()).toBe(true)
+    const choices = menu.findAll('[data-presence]').map(b => b.attributes('data-presence'))
+    expect(choices).toEqual(['online', 'away', 'dnd', 'focus'])
+  })
+
+  it('saves a chosen presence', async () => {
+    const { w, auth } = setup()
+    api.mockResolvedValueOnce({ ...auth.user, presence: 'focus' })
+    await w.find('[data-testid="presence-button"]').trigger('click')
+    await w.find('[data-presence="focus"]').trigger('click')
+    await flushPromises()
+    expect(api).toHaveBeenCalledWith('/api/users/me/presence', { method: 'PUT', json: { presence: 'focus' } })
+    expect(auth.user.presence).toBe('focus')
+    expect(w.find('[data-testid="presence-menu"]').exists()).toBe(false)
+  })
+
+  it('opens the own profile from the name', async () => {
+    const { w, chat } = setup()
+    api.mockResolvedValueOnce({ id: 'u1' })
+    await w.find('[data-testid="own-profile-button"]').trigger('click')
+    expect(chat.selectedUserProfile?.id).toBe('u1')
   })
 })

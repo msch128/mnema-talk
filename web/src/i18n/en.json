@@ -26,7 +26,21 @@
   },
   "presence": {
     "online": "Online",
-    "offline": "Offline"
+    "offline": "Offline",
+    "away": "Away",
+    "dnd": "Do not disturb",
+    "focus": "Focused",
+    "choose": "Set status",
+    "current": "Your status: {status}",
+    "saveFailed": "Couldn't save your status",
+    "setStatus": "Set a status message",
+    "editStatus": "Edit status message",
+    "hint": {
+      "online": "Reachable for everyone",
+      "away": "Away from the keyboard",
+      "dnd": "No notifications",
+      "focus": "No notifications, heads down"
+    }
   },
   "user": {
     "avatar": "Profile picture",
@@ -122,7 +136,7 @@
     "deleteChannelTitle": "Delete #{name}?",
     "deleteChannelBody": "All messages and files in this channel will be lost. This can't be undone.",
     "deleteVoiceChannelTitle": "Delete voice channel “{name}”?",
-    "deleteVoiceChannelBody": "The roundtable and its chat will be lost. This can't be undone.",
+    "deleteVoiceChannelBody": "The Talk and its chat will be lost. This can't be undone.",
     "deleteCategoryTitle": "Delete category “{name}”?",
     "deleteCategoryBody": "The channels inside it stay.",
     "channelDeleted": "Channel deleted",
@@ -176,7 +190,7 @@
     "namePlaceholderText": "e.g. off-topic",
     "namePlaceholderVoice": "e.g. Lounge",
     "nameHintText": "Lowercase letters, digits and hyphens.",
-    "nameHintVoice": "Any title for the roundtable.",
+    "nameHintVoice": "Any title for the Talk.",
     "topic": "Topic (optional)",
     "topicPlaceholder": "What is this about?",
     "nameRequired": "Please enter a name.",
@@ -283,17 +297,17 @@
     "stopShare": "Stop sharing",
     "leave": "Leave",
     "channelFallback": "Voice channel",
-    "audioBlocked": "You're back in the roundtable. Click to turn the sound on",
+    "audioBlocked": "You're back in the Talk. Click to turn the sound on",
     "join": "Join",
     "userVolume": "User volume",
     "muteUser": "Mute locally",
     "unmuteUser": "Unmute locally",
-    "noOneInVoice": "No one in the Roundtable",
+    "noOneInVoice": "No one in the Talk",
     "joinToTalk": "Click Join to start the conversation.",
     "panel": {
       "label": "Voice connection",
       "connected": "Connected · {channel}",
-      "open": "Open the roundtable",
+      "open": "Open the Talk",
       "details": "Connection details"
     },
     "cameraFailed": "Camera unavailable. Check the permission in your browser.",
@@ -499,7 +513,7 @@
     },
     "footer": "© {year} {name} · All rights reserved"
   },
-  "tafelrunde": {
+  "talk": {
     "participants": {
       "one": "{count} participant",
       "other": "{count} participants"
@@ -507,8 +521,8 @@
     "noiseToggleTip": "Toggle noise suppression",
     "chatShown": "Chat on",
     "chatHidden": "Show chat",
-    "hideChatTip": "Hide roundtable chat",
-    "showChatTip": "Show roundtable chat",
+    "hideChatTip": "Hide Talk chat",
+    "showChatTip": "Show Talk chat",
     "ownScreen": "Your screen",
     "sharedScreen": "Shared screen",
     "fullscreen": "Full screen",
@@ -516,7 +530,7 @@
     "ready": "Ready",
     "shareShort": "Screen",
     "stopShareShort": "Stop",
-    "chatTitle": "Roundtable chat in #{channel}",
+    "chatTitle": "Talk chat in #{channel}",
     "chatEmpty": "No messages yet. Write the first one – links and files work too.",
     "camera": "Camera",
     "startCamera": "Turn on camera",
@@ -525,7 +539,7 @@
     "stopCameraShort": "Stop camera",
     "previewHint": "Nobody hears you yet. Join to talk, turn on your camera or share your screen.",
     "previewChatHint": "You can read and write in the chat without joining.",
-    "inRoundtable": "In the roundtable",
+    "inTalk": "In the Talk",
     "cameraOf": "Camera of {name}",
     "localMuted": "Muted for you",
     "joining": "Joining…",
@@ -564,7 +578,7 @@
     "userDisabled": "Disabled",
     "never": "Never",
     "onlineNow": "Online",
-    "inVoice": "In roundtable",
+    "inVoice": "In a Talk",
     "disableUser": "Disable user",
     "enableUser": "Enable user",
     "disableUserTitle": "Disable “{name}”?",
@@ -587,7 +601,7 @@
     "sessionsRevoked": "All sessions terminated",
     "kickFromVoice": "Kick from voice",
     "kickFromVoiceTitle": "Kick “{name}” from voice?",
-    "kickFromVoiceBody": "The user will be disconnected from the roundtable immediately.",
+    "kickFromVoiceBody": "The user will be disconnected from the Talk immediately.",
     "kickConfirm": "Kick from voice",
     "userKicked": "Kicked from voice",
     "channelsLayout": "Channels & Layout",
@@ -664,7 +678,7 @@
   "profile": {
     "viewProfile": "View profile",
     "unknown": "Unknown",
-    "roundtable": "Roundtable",
+    "talk": "Talk",
     "change": "Change",
     "mention": "Mention",
     "mentionHint": "Mention in chat",
@@ -687,20 +701,40 @@
     "passwordMismatch": "The two passwords don't match.",
     "passwordChanged": "Password changed",
     "activity": "Activity",
-    "inVoice": "In the roundtable:",
-    "notInVoice": "Not in a roundtable right now",
+    "inVoice": "In the Talk:",
+    "notInVoice": "Not in a Talk right now",
     "membership": "Membership",
     "memberSince": "Member since",
     "avatarHint": "Tip: click your picture to upload a new one (PNG, JPG, WEBP, GIF).",
     "avatarSaved": "Avatar saved",
     "avatarTooBig": "That image is too large (max. {size} MB).",
-    "avatarFailed": "Couldn't upload your avatar."
+    "avatarFailed": "Couldn't upload your avatar.",
+    "status": "Status",
+    "statusPlaceholder": "What are you up to?",
+    "noStatus": "No status set",
+    "clearStatus": "Clear",
+    "moderateStatus": "Edit (admin)",
+    "statusSaved": "Status saved",
+    "statusCleared": "Status cleared",
+    "displayNameHint": "This is what others see. Your username @{username} stays the same. At most {count} characters.",
+    "open": "Open {name}'s profile"
   },
   "nav": {
     "channelNotFound": "That channel doesn't exist anymore.",
-    "voiceNotFound": "That roundtable doesn't exist anymore.",
+    "voiceNotFound": "That Talk doesn't exist anymore.",
     "noAccess": "You don't have access to that page.",
     "mentionCopied": "Copied @name to the clipboard",
     "actionFailed": "That didn't work. Please try again."
+  },
+  "mention": {
+    "title": "Mention",
+    "listLabel": "Mention suggestions",
+    "allHint": "Every member",
+    "hereHint": "Everyone online right now"
+  },
+  "emoji": {
+    "open": "Insert emoji",
+    "more": "More emojis",
+    "loading": "Loading emojis …"
   }
 }

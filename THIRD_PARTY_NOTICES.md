@@ -20,6 +20,8 @@ fails when a web dependency is missing from the in-app list.
 | [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.52.0 | ISC |
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
+| [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
+| [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords from Unicode CLDR and Emojibase) | 1.8.0 | Apache-2.0 |
 | [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
 
 ## AI noise suppression (shipped, runs in the browser)

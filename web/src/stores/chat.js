@@ -12,6 +12,7 @@ import {
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
 import { currentRoute, navigate } from '../lib/router'
 import { mentionsUser, shouldNotify, createKeyedThrottle } from '../lib/chatLogic'
+import { snapshotToMap, applyPresenceUpdate, isQuiet, IDLE_AFTER_MS } from '../lib/presence'
 import { installGlobalSearch, uninstallGlobalSearch } from '../lib/globalSearch'
 
 const MAX_PENDING_LIVE = 200
@@ -54,7 +55,13 @@ export const useChatStore = defineStore('chat', () => {
 
   // Community members & real-time presence
   const members = ref([])
-  const onlineUserIds = ref(new Set())
+  // Live status of every connected user: user_id → online | away | dnd | focus.
+  const presenceById = ref({})
+  const onlineUserIds = computed(() => new Set(Object.keys(presenceById.value)))
+  /** Live status of a user; 'offline' when not connected. */
+  function presenceOf(userId) {
+    return presenceById.value[userId] || 'offline'
+  }
   const showMemberList = ref(true)
   const selectedUserProfile = ref(null)
   const pendingMention = ref('')
@@ -511,6 +518,7 @@ export const useChatStore = defineStore('chat', () => {
       reconnectDelay = 1000
       startPingHeartbeat()
       sendWSEvent('ping', { t: Date.now() })
+      if (isIdle) sendWSEvent('presence_idle', { idle: true })
       if (hadConnection) resyncAfterReconnect()
       hadConnection = true
     }
@@ -600,16 +608,12 @@ export const useChatStore = defineStore('chat', () => {
         break
 
       case 'presence_snapshot':
-        onlineUserIds.value = new Set(p || [])
+        presenceById.value = snapshotToMap(p)
         break
 
-      case 'presence_update': {
-        const next = new Set(onlineUserIds.value)
-        if (p?.status === 'online') next.add(p.user_id)
-        else if (p?.status === 'offline') next.delete(p.user_id)
-        onlineUserIds.value = next
+      case 'presence_update':
+        presenceById.value = applyPresenceUpdate(presenceById.value, p)
         break
-      }
 
       case 'member_joined':
         fetchMembers()
@@ -648,8 +652,7 @@ export const useChatStore = defineStore('chat', () => {
 
         const isOwn = p.user_id === authStore.user?.id
         const isCurrentChannel = p.channel_id === activeChannel.value?.id
-        const isMention = mentionsUser(p.content || '', authStore.user?.username) ||
-          p.reply_to?.user_id === authStore.user?.id
+        const isMention = messageMentionsMe(p)
 
         // Read right now: open channel, visible tab, window at the newest end.
         if (isCurrentChannel && isReadingActiveChannel()) {
@@ -724,6 +727,68 @@ export const useChatStore = defineStore('chat', () => {
         voiceStore.handleSpeakingEvent(p)
         break
     }
+  }
+
+  // ---- Presence: idle detection and the user's own choice ----
+
+  // After IDLE_AFTER_MS without input the server shows "online" as "away".
+  let isIdle = false
+  let idleTimer = null
+  function markActive() {
+    clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => {
+      isIdle = true
+      sendWSEvent('presence_idle', { idle: true })
+    }, IDLE_AFTER_MS)
+    if (isIdle) {
+      isIdle = false
+      sendWSEvent('presence_idle', { idle: false })
+    }
+  }
+  let lastActivityAt = 0
+  function onActivity() {
+    // Input events fire constantly; re-arming once a second is plenty.
+    const now = Date.now()
+    if (now - lastActivityAt < 1000 && !isIdle) return
+    lastActivityAt = now
+    markActive()
+  }
+  if (typeof window !== 'undefined') {
+    for (const ev of ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart']) {
+      window.addEventListener(ev, onActivity, { passive: true })
+    }
+    markActive()
+  }
+
+  /** Sets the signed-in user's presence (online, away, dnd, focus). */
+  async function setMyPresence(presence) {
+    const me = authStore.user
+    if (!me) return
+    const previous = me.presence
+    authStore.user = { ...me, presence }
+    if (presenceById.value[me.id]) {
+      presenceById.value = applyPresenceUpdate(presenceById.value, {
+        user_id: me.id,
+        status: presence === 'online' && isIdle ? 'away' : presence
+      })
+    }
+    try {
+      authStore.user = await api('/api/users/me/presence', { method: 'PUT', json: { presence } })
+    } catch (e) {
+      authStore.user = { ...authStore.user, presence: previous }
+      throw e
+    }
+  }
+
+  /** Sets a status line: the user's own, or (admins) anyone's. */
+  async function setStatusText(userId, text) {
+    const own = userId === authStore.user?.id
+    const updated = await api(own ? '/api/users/me/status' : `/api/admin/users/${userId}/status`, {
+      method: 'PUT',
+      json: { status_text: text }
+    })
+    updateUserEverywhere(updated)
+    return updated
   }
 
   function sendWSEvent(type, payload) {
@@ -974,8 +1039,19 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /** Whether msg mentions the signed-in user (@username, @all, @here) or replies to them. */
+  function messageMentionsMe(msg) {
+    const me = authStore.user
+    if (!me || !msg) return false
+    if (msg.reply_to?.user_id === me.id) return true
+    if (Array.isArray(msg.mentions)) return msg.mentions.includes(me.id)
+    return mentionsUser(msg.content || '', me.username)
+  }
+
   function triggerBrowserNotification(msg, isMention) {
     if (typeof Notification === 'undefined') return
+    // Do not disturb and focus silence everything.
+    if (isQuiet(authStore.user?.presence)) return
     if (!shouldNotify({
       permission: Notification.permission,
       level: notificationLevel(msg.channel_id),
@@ -1099,7 +1175,12 @@ export const useChatStore = defineStore('chat', () => {
     jumpToMessage,
     isConnected,
     members,
+    presenceById,
+    presenceOf,
     onlineUserIds,
+    setMyPresence,
+    setStatusText,
+    messageMentionsMe,
     onlineMembers,
     offlineMembers,
     showMemberList,

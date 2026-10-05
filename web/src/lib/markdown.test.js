@@ -89,3 +89,16 @@ describe('links with mention-like or formatting characters', () => {
     expect(html).toContain('<strong><a href="https://x.com/a*b*c"')
   })
 })
+
+describe('mentions with known members', () => {
+  const known = new Set(['max', 'herzog'])
+  it('highlights only members and @all/@here, marks the reader', () => {
+    const html = renderMarkdown('@max, @nobody, @all and @herzog.', { known, me: 'Herzog' })
+    const d = dom(html)
+    const names = [...d.querySelectorAll('.md-mention')].map(e => e.dataset.mention)
+    expect(names).toEqual(['max', 'all', 'herzog'])
+    expect(d.querySelector('[data-mention="all"]').classList.contains('md-mention-group')).toBe(true)
+    expect(d.querySelector('[data-mention="herzog"]').classList.contains('md-mention-me')).toBe(true)
+    expect(d.textContent).toBe('@max, @nobody, @all and @herzog.')
+  })
+})

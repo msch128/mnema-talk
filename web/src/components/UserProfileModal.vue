@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2,
-  Camera, AtSign, Loader2, Edit3, Save
+  Camera, AtSign, Loader2, Edit3, Save, Eraser
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -10,6 +10,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
+import PresenceDot from './PresenceDot.vue'
 
 const props = defineProps({
   user: {
@@ -99,9 +100,38 @@ const isSelf = computed(() => {
   return authStore.user && profileUser.value.id === authStore.user.id
 })
 
-const isOnline = computed(() => {
-  return chatStore.onlineUserIds.has(profileUser.value.id)
+const liveStatus = computed(() => {
+  const live = chatStore.presenceOf(profileUser.value.id)
+  // Your own dot shows your choice even before the first snapshot arrives.
+  if (live === 'offline' && isSelf.value) return authStore.user?.presence || 'online'
+  return live
 })
+
+// Status line: the user edits their own; an admin may edit or clear anyone's.
+const MAX_STATUS = 32
+const canEditStatus = computed(() => isSelf.value || authStore.isAdmin)
+const isEditingStatus = ref(false)
+const editStatus = ref('')
+const isSavingStatus = ref(false)
+
+function startEditStatus() {
+  editStatus.value = profileUser.value.status_text || ''
+  isEditingStatus.value = true
+}
+
+async function saveStatus(text = editStatus.value) {
+  isSavingStatus.value = true
+  try {
+    const updated = await chatStore.setStatusText(profileUser.value.id, text.trim())
+    chatStore.selectedUserProfile = chatStore.selectedUserProfile && { ...chatStore.selectedUserProfile, status_text: updated.status_text }
+    isEditingStatus.value = false
+    toasts.success(text.trim() ? t('profile.statusSaved') : t('profile.statusCleared'))
+  } catch (err) {
+    toasts.error(err.message || t('profile.saveFailed'))
+  } finally {
+    isSavingStatus.value = false
+  }
+}
 
 // Current voice hangout channel of this user
 const voiceHangout = computed(() => {
@@ -112,7 +142,7 @@ const voiceHangout = computed(() => {
         ...chatStore.categories.flatMap(c => c.channels || []),
         ...chatStore.uncategorized
       ]
-      return allChannels.find(c => c.id === chId) || { id: chId, name: t('profile.roundtable') }
+      return allChannels.find(c => c.id === chId) || { id: chId, name: t('profile.talk') }
     }
   }
   return null
@@ -229,16 +259,15 @@ function handleMention() {
               </div>
             </div>
 
-            <!-- Online / Offline Dot -->
-            <span 
-              :class="[
-                'absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-mnema-surface shadow-sm',
-                isOnline ? 'bg-mnema-accent' : 'bg-mnema-muted/60'
-              ]"
-              v-tooltip.visual="isOnline ? $t('presence.online') : $t('presence.offline')"
+            <!-- Live status -->
+            <span
+              class="absolute bottom-0.5 right-0.5"
+              v-tooltip.visual="$t(`presence.${liveStatus}`)"
               role="img"
-              :aria-label="isOnline ? $t('presence.online') : $t('presence.offline')"
-            ></span>
+              :aria-label="$t(`presence.${liveStatus}`)"
+            >
+              <PresenceDot :status="liveStatus" :size="14" ring-class="bg-mnema-surface" />
+            </span>
 
             <!-- Hidden File Input for Avatar Upload -->
             <input 
@@ -290,6 +319,10 @@ function handleMention() {
                 />
               </h2>
               <p class="text-sm text-mnema-tertiary font-mono">@{{ profileUser.username }}</p>
+              <p class="mt-0.5 flex items-center gap-1.5 text-xs text-mnema-tertiary">
+                <PresenceDot :status="liveStatus" :size="8" :ring="false" />
+                <span data-testid="profile-presence">{{ $t(`presence.${liveStatus}`) }}</span>
+              </p>
             </div>
 
             <!-- Role Badge -->
@@ -305,6 +338,59 @@ function handleMention() {
               <User v-else class="w-3.5 h-3.5" />
               <span>{{ profileUser.role === 'admin' ? $t('role.admin') : $t('role.member') }}</span>
             </div>
+          </div>
+
+          <!-- Status line -->
+          <div v-if="profileUser.status_text || canEditStatus || isEditingStatus" class="mt-3" data-testid="profile-status">
+            <div class="mb-1 flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-mnema-tertiary">{{ $t('profile.status') }}</span>
+              <div v-if="canEditStatus && !isEditingStatus" class="flex items-center gap-2">
+                <button
+                  v-if="!isSelf && profileUser.status_text"
+                  type="button"
+                  data-testid="profile-status-clear"
+                  class="flex items-center gap-1 text-xs text-mnema-danger hover:underline"
+                  :disabled="isSavingStatus"
+                  @click="saveStatus('')"
+                >
+                  <Eraser class="h-3.5 w-3.5" />
+                  <span>{{ $t('profile.clearStatus') }}</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="profile-status-edit"
+                  class="flex items-center gap-1 text-xs text-mnema-accent hover:underline"
+                  @click="startEditStatus"
+                >
+                  <Edit3 class="h-3.5 w-3.5" />
+                  <span>{{ isSelf ? $t('profile.edit') : $t('profile.moderateStatus') }}</span>
+                </button>
+              </div>
+            </div>
+            <form v-if="isEditingStatus" class="flex items-center gap-1.5" @submit.prevent="saveStatus()">
+              <input
+                v-model="editStatus"
+                data-testid="profile-status-input"
+                type="text"
+                :maxlength="MAX_STATUS"
+                :aria-label="$t('profile.status')"
+                :placeholder="$t('profile.statusPlaceholder')"
+                class="min-w-0 flex-1 rounded-lg border border-mnema-border bg-mnema-canvas px-2.5 py-1.5 text-sm text-mnema-text focus:border-mnema-accent focus:outline-none"
+                @keydown.esc.stop.prevent="isEditingStatus = false"
+              />
+              <span class="w-10 text-right text-xs tabular-nums text-mnema-tertiary">{{ editStatus.length }}/{{ MAX_STATUS }}</span>
+              <button
+                type="submit"
+                :disabled="isSavingStatus"
+                class="flex items-center gap-1 rounded bg-mnema-accent px-2.5 py-1 text-xs font-bold text-mnema-canvas hover:brightness-110 active:scale-95 disabled:opacity-50"
+              >
+                <Loader2 v-if="isSavingStatus" class="h-3.5 w-3.5 animate-spin" />
+                <Save v-else class="h-3.5 w-3.5" />
+                <span>{{ $t('common.save') }}</span>
+              </button>
+            </form>
+            <p v-else-if="profileUser.status_text" class="break-words text-sm text-mnema-text">{{ profileUser.status_text }}</p>
+            <p v-else class="text-sm italic text-mnema-tertiary">{{ $t('profile.noStatus') }}</p>
           </div>
 
           <!-- Divider -->
@@ -338,11 +424,12 @@ function handleMention() {
             <div v-else class="space-y-2 mt-1">
               <div>
                 <label for="profile-displayname" class="text-xs text-mnema-tertiary block mb-0.5">{{ $t('profile.displayName') }}</label>
+                <p class="mb-1 text-xs text-mnema-tertiary">{{ $t('profile.displayNameHint', { username: profileUser.username, count: 24 }) }}</p>
                 <input 
                   id="profile-displayname"
                   v-model="editDisplayName" 
                   type="text" 
-                  maxlength="64"
+                  maxlength="24"
                   class="w-full text-sm px-2.5 py-1.5 rounded-lg bg-mnema-canvas border border-mnema-border text-mnema-text focus:outline-none focus:border-mnema-accent"
                 />
               </div>

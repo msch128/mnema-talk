@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
 import { extractPreviewUrls } from '../lib/chatLogic'
 import LinkPreviewCard from './LinkPreviewCard.vue'
+import { useChatStore } from '../stores/chat'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps({
   content: {
@@ -11,18 +13,43 @@ const props = defineProps({
   }
 })
 
-const parsedHtml = computed(() => renderMarkdown(props.content))
+const chatStore = useChatStore()
+const authStore = useAuthStore()
+
+// Only real members (and @all/@here) are highlighted, and clickable.
+const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username || '').toLowerCase())))
+const parsedHtml = computed(() => renderMarkdown(props.content, {
+  known: knownNames.value,
+  me: authStore.user?.username || ''
+}))
+
+function openMention(el) {
+  const name = el.dataset.mention
+  if (!name || name === 'all' || name === 'here') return
+  const member = chatStore.members.find(m => (m.username || '').toLowerCase() === name)
+  if (member) chatStore.openUserProfile(member)
+}
 
 // Only links in plain text get a card, never ones inside code or spoilers.
 const links = computed(() => extractPreviewUrls(props.content, 3))
 
 // Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
-function toggleSpoiler(event) {
+function onClick(event) {
+  const mention = event.target.closest?.('.md-mention[data-mention]')
+  if (mention) {
+    openMention(mention)
+    return
+  }
   const spoiler = event.target.closest?.('.md-spoiler')
   if (spoiler) spoiler.classList.toggle('revealed')
 }
 
 function onKeydown(event) {
+  if (event.key === 'Enter' && event.target.dataset?.mention) {
+    event.preventDefault()
+    openMention(event.target)
+    return
+  }
   if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('md-spoiler')) {
     event.preventDefault()
     event.target.classList.toggle('revealed')
@@ -36,7 +63,7 @@ function onKeydown(event) {
     <!-- eslint-disable vue/no-v-html -->
     <div
       class="markdown-body break-words whitespace-pre-wrap select-text text-message"
-      @click="toggleSpoiler"
+      @click="onClick"
       @keydown="onKeydown"
       v-html="parsedHtml"
     ></div>
@@ -85,6 +112,15 @@ function onKeydown(event) {
   color: #2da771;
   background: rgba(45, 167, 113, 0.15);
 }
+.markdown-body .md-mention[data-mention] { cursor: pointer; }
+.markdown-body .md-mention[data-mention]:hover { background: rgba(45, 167, 113, 0.28); }
+.markdown-body .md-mention-group[data-mention] { cursor: default; }
+.markdown-body .md-mention-me,
+.markdown-body .md-mention-group {
+  color: #fce4a8;
+  background: rgba(224, 162, 58, 0.18);
+}
+.markdown-body .md-mention-me[data-mention]:hover { background: rgba(224, 162, 58, 0.3); }
 
 /* Spoiler: blacked out until clicked */
 .md-spoiler {

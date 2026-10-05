@@ -1,5 +1,6 @@
 <script setup>
-// One participant of the roundtable: their camera when it is on, else their avatar.
+// One participant of the Talk: their camera when it is on, else their avatar.
+// A click anywhere on the tile opens their profile.
 import { ref, watch, nextTick } from 'vue'
 import { MicOff, Eye, EyeOff } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
@@ -18,7 +19,11 @@ const props = defineProps({
   cameraAvailable: { type: Boolean, default: false },
   cameraHidden: { type: Boolean, default: false }
 })
-defineEmits(['open-profile', 'toggle-camera'])
+const emit = defineEmits(['open-profile', 'toggle-camera'])
+
+function openProfile() {
+  emit('open-profile', props.user)
+}
 
 const videoEl = ref(null)
 watch(() => props.stream, (stream) => {
@@ -30,8 +35,15 @@ watch(() => props.stream, (stream) => {
 
 <template>
   <div
+    role="button"
+    tabindex="0"
+    data-participant-tile
+    :aria-label="$t('profile.open', { name: user.display_name || user.username })"
+    @click="openProfile"
+    @keydown.enter.self.prevent="openProfile"
+    @keydown.space.self.prevent="openProfile"
     :class="[
-      'relative rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm',
+      'relative cursor-pointer rounded-xl border overflow-hidden flex flex-col items-center justify-center transition-all shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
       stream ? 'bg-black aspect-video' : (compact ? 'p-3 h-28 bg-mnema-surface/90' : 'p-6 h-52 bg-mnema-surface'),
       speaking
         ? 'border-mnema-accent ring-2 ring-mnema-accent/40 shadow-lg shadow-mnema-accent/10'
@@ -45,7 +57,7 @@ watch(() => props.stream, (stream) => {
       autoplay
       playsinline
       muted
-      :aria-label="$t('tafelrunde.cameraOf', { name: user.display_name || user.username })"
+      :aria-label="$t('talk.cameraOf', { name: user.display_name || user.username })"
       :class="['absolute inset-0 w-full h-full object-cover', isSelf ? '-scale-x-100' : '']"
     ></video>
 
@@ -56,8 +68,7 @@ watch(() => props.stream, (stream) => {
           :user="user"
           :size="compact ? 'lg' : 'xl'"
           :is-speaking="speaking"
-          class="cursor-pointer hover:opacity-90 transition"
-          @click="$emit('open-profile', user)"
+          class="hover:opacity-90 transition"
         />
       </div>
     </template>
@@ -70,8 +81,8 @@ watch(() => props.stream, (stream) => {
         'absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-md bg-black/60 text-white hover:bg-black/80 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent',
         cameraHidden ? '' : 'opacity-0 hover:opacity-100 focus-visible:opacity-100'
       ]"
-      v-tooltip="cameraHidden ? $t('tafelrunde.showCamera') : $t('tafelrunde.hideCamera')"
-      @click="$emit('toggle-camera')"
+      v-tooltip="cameraHidden ? $t('talk.showCamera') : $t('talk.hideCamera')"
+      @click.stop="$emit('toggle-camera')"
     >
       <Eye v-if="cameraHidden" class="w-4 h-4" />
       <EyeOff v-else class="w-4 h-4" />
@@ -85,25 +96,24 @@ watch(() => props.stream, (stream) => {
       ]"
     >
       <span
-        class="text-sm font-semibold hover:text-mnema-accent transition cursor-pointer truncate"
+        class="text-sm font-semibold hover:text-mnema-accent transition truncate"
         :class="stream ? 'text-white' : 'text-mnema-text'"
-        @click="$emit('open-profile', user)"
       >
         {{ user.display_name || user.username }}
       </span>
       <span v-if="user.role === 'admin' && !stream" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 font-mono flex-shrink-0">
         {{ $t('role.admin') }}
       </span>
-      <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('tafelrunde.localMuted')" />
+      <MicOff v-if="localMuted" class="w-3.5 h-3.5 text-mnema-danger flex-shrink-0" v-tooltip="$t('talk.localMuted')" />
     </div>
 
     <!-- Status -->
     <div v-if="showStatus && !stream" class="text-xs font-mono mt-0.5">
       <span v-if="speaking" class="text-mnema-accent font-semibold flex items-center gap-1">
         <span class="w-1.5 h-1.5 rounded-full bg-mnema-accent shadow-[0_0_4px_rgba(45,167,113,0.8)]"></span>
-        {{ $t('tafelrunde.speaking') }}
+        {{ $t('talk.speaking') }}
       </span>
-      <span v-else class="text-mnema-tertiary">{{ $t('tafelrunde.ready') }}</span>
+      <span v-else class="text-mnema-tertiary">{{ $t('talk.ready') }}</span>
     </div>
   </div>
 </template>

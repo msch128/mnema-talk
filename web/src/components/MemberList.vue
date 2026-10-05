@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue'
-import { Crown, Volume2 } from '@lucide/vue'
+import { Crown } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import UserAvatar from './UserAvatar.vue'
+import MemberRow from './MemberRow.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import { t } from '../i18n'
@@ -67,45 +67,13 @@ function getUserVoiceChannel(userId) {
           <Crown class="w-3.5 h-3.5 flex-shrink-0" />
           <span class="truncate">{{ $t('members.admins', { count: admins.length }) }}</span>
         </h3>
-
-        <div
+        <MemberRow
           v-for="member in admins"
           :key="member.id"
-          role="button"
-          tabindex="0"
-          aria-haspopup="menu"
-          @click="chatStore.openUserProfile(member)"
-          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
-          @contextmenu="openMemberMenu($event, member)"
-          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
-          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
-          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
-        >
-          <UserAvatar
-            :user="member"
-            size="sm"
-            :show-status="true"
-            :is-online="chatStore.onlineUserIds.has(member.id)"
-            :is-speaking="!!voiceStore.speakingUsers[member.id]"
-          />
-
-          <div class="flex flex-col min-w-0 flex-1">
-            <div class="flex items-center gap-1 min-w-0">
-              <span class="text-nav font-semibold text-mnema-text group-hover:text-mnema-accent transition-colors truncate">
-                {{ member.display_name }}
-              </span>
-              <Crown class="w-3.5 h-3.5 text-mnema-amber flex-shrink-0" />
-            </div>
-
-            <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-xs text-mnema-mint font-medium min-w-0">
-              <Volume2 class="w-3.5 h-3.5 flex-shrink-0" />
-              <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
-            </div>
-            <span v-else class="text-xs text-mnema-tertiary truncate">
-              {{ chatStore.onlineUserIds.has(member.id) ? $t('presence.online') : $t('presence.offline') }}
-            </span>
-          </div>
-        </div>
+          :member="member"
+          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          @menu="openMemberMenu($event, member)"
+        />
       </section>
 
       <!-- 2. Online Members Group -->
@@ -113,39 +81,13 @@ function getUserVoiceChannel(userId) {
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.online', { count: onlineNonAdmins.length }) }}
         </h3>
-
-        <div
+        <MemberRow
           v-for="member in onlineNonAdmins"
           :key="member.id"
-          role="button"
-          tabindex="0"
-          aria-haspopup="menu"
-          @click="chatStore.openUserProfile(member)"
-          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
-          @contextmenu="openMemberMenu($event, member)"
-          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
-          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
-          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
-        >
-          <UserAvatar
-            :user="member"
-            size="sm"
-            :show-status="true"
-            :is-online="true"
-            :is-speaking="!!voiceStore.speakingUsers[member.id]"
-          />
-
-          <div class="flex flex-col min-w-0 flex-1">
-            <span class="text-nav font-medium text-mnema-text group-hover:text-mnema-accent transition-colors truncate">
-              {{ member.display_name }}
-            </span>
-
-            <div v-if="getUserVoiceChannel(member.id)" class="flex items-center gap-1 text-xs text-mnema-mint font-medium min-w-0">
-              <Volume2 class="w-3.5 h-3.5 flex-shrink-0" />
-              <span class="truncate">{{ getUserVoiceChannel(member.id) }}</span>
-            </div>
-          </div>
-        </div>
+          :member="member"
+          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          @menu="openMemberMenu($event, member)"
+        />
       </section>
 
       <!-- 3. Offline Members Group -->
@@ -153,32 +95,13 @@ function getUserVoiceChannel(userId) {
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.offline', { count: offlineNonAdmins.length }) }}
         </h3>
-
         <div class="opacity-60 hover:opacity-100 transition-opacity">
-          <div
+          <MemberRow
             v-for="member in offlineNonAdmins"
             :key="member.id"
-            role="button"
-          tabindex="0"
-          aria-haspopup="menu"
-          @click="chatStore.openUserProfile(member)"
-          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
-          @contextmenu="openMemberMenu($event, member)"
-          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
-          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
-            class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
-          >
-            <UserAvatar
-              :user="member"
-              size="sm"
-              :show-status="true"
-              :is-online="false"
-            />
-
-            <span class="text-nav text-mnema-muted group-hover:text-mnema-accent transition-colors truncate min-w-0 flex-1">
-              {{ member.display_name }}
-            </span>
-          </div>
+            :member="member"
+            @menu="openMemberMenu($event, member)"
+          />
         </div>
       </section>
     </div>

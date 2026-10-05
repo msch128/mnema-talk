@@ -11,7 +11,7 @@ const USER = `friend_${suffix}`
 const USER_DISPLAY = `Friend ${suffix}`
 const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const TEXT_CHANNEL = 'allgemein'
-const VOICE_CHANNEL = 'Tafelrunde'
+const VOICE_CHANNEL = 'Lounge'
 
 // Same-origin fetch from inside the page, so cookies and the Origin header
 // behave exactly like the real app (CSRF origin check included).
@@ -100,7 +100,7 @@ test('login, chat and talk', async ({ browser }) => {
   await expect(user.getByText(message)).toBeVisible()
   await expect(admin.getByText(message)).toBeVisible()
 
-  // 6. Both join the voice channel and see each other in the Tafelrunde.
+  // 6. Both join the voice channel and see each other in the Talk.
   const sidebarVoice = (page) => page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL })
   await sidebarVoice(admin).click()
   await sidebarVoice(user).click()

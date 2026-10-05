@@ -88,3 +88,12 @@
 @container (max-width: 215px) {
   .vp-narrow-hide { display: none; }
 }
+
+/* A message that mentions the reader (@name, @all, @here or a reply to them). */
+.msg-mentions-me {
+  background-color: rgba(224, 162, 58, 0.07);
+  box-shadow: inset 2px 0 0 #e0a23a;
+}
+.msg-mentions-me:hover {
+  background-color: rgba(224, 162, 58, 0.11);
+}

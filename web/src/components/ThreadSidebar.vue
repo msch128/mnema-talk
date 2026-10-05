@@ -11,6 +11,10 @@ import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import ImageLightbox from './ImageLightbox.vue'
+import ReactionPalette from './ReactionPalette.vue'
+import EmojiButton from './EmojiButton.vue'
+import MentionSuggestions from './MentionSuggestions.vue'
+import { useComposerAssist } from '../composables/useComposerAssist'
 import { previewText } from '../lib/replies'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
@@ -32,7 +36,6 @@ const editingReplyId = ref(null)
 const editReplyText = ref('')
 const isSavingEdit = ref(false)
 const activeReactionPickerMsgId = ref(null)
-const quickEmojis = ['👍', '❤️', '😂', '🔥', '🎉', '🚀']
 
 function startEditReply(reply) {
   editingReplyId.value = reply.id
@@ -107,6 +110,7 @@ watch(() => chatStore.threadReplies.length, () => {
 
 const replyingTo = ref(null)
 const replyTextArea = ref(null)
+const assist = useComposerAssist(replyTextArea, replyInput)
 const highlightedId = ref(null)
 let highlightTimer = null
 
@@ -189,6 +193,7 @@ async function handleSendReply() {
 }
 
 function handleKeyDown(e) {
+  if (assist.onKeydown(e)) return
   if (e.key === 'Escape' && replyingTo.value) {
     e.preventDefault()
     cancelReply()
@@ -355,20 +360,12 @@ function formatDate(dateStr) {
               <SmilePlus class="w-3.5 h-3.5" />
             </button>
 
-            <!-- Quick Emoji Palette Popup from bottom -->
-            <div 
+            <ReactionPalette
               v-if="activeReactionPickerMsgId === `bottom-${chatStore.activeThread.id}`"
-              class="absolute left-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
-            >
-              <button
-                v-for="emoji in quickEmojis"
-                :key="emoji"
-                @click.stop="handleToggleReaction(chatStore.activeThread.id, emoji)"
-                class="hover:scale-125 transition p-1 text-base rounded hover:bg-mnema-surface active:scale-95"
-              >
-                {{ emoji }}
-              </button>
-            </div>
+              align="left"
+              @pick="handleToggleReaction(chatStore.activeThread.id, $event)"
+              @close="activeReactionPickerMsgId = null"
+            />
           </div>
         </div>
       </div>
@@ -403,7 +400,8 @@ function formatDate(dateStr) {
         :data-reply-id="reply.id"
         :class="[
           'relative hover:bg-mnema-surface/50 -mx-2 px-2 py-1.5 rounded-md transition-colors group',
-          highlightedId === reply.id ? 'msg-flash' : ''
+          highlightedId === reply.id ? 'msg-flash' : '',
+          reply.user_id !== authStore.user?.id && chatStore.messageMentionsMe(reply) ? 'msg-mentions-me' : ''
         ]"
       >
         <!-- Hover Quick Actions Bar -->
@@ -426,19 +424,12 @@ function formatDate(dateStr) {
             >
               <Smile class="w-3.5 h-3.5" />
             </button>
-            <div 
+            <ReactionPalette
               v-if="activeReactionPickerMsgId === reply.id"
-              class="absolute right-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
-            >
-              <button
-                v-for="emoji in quickEmojis"
-                :key="emoji"
-                @click.stop="handleToggleReaction(reply.id, emoji)"
-                class="hover:scale-125 transition p-1 text-sm rounded hover:bg-mnema-surface active:scale-95"
-              >
-                {{ emoji }}
-              </button>
-            </div>
+              align="right"
+              @pick="handleToggleReaction(reply.id, $event)"
+              @close="activeReactionPickerMsgId = null"
+            />
           </div>
 
           <button
@@ -574,20 +565,12 @@ function formatDate(dateStr) {
                 <SmilePlus class="w-3.5 h-3.5" />
               </button>
 
-              <!-- Quick Emoji Palette Popup from bottom -->
-              <div 
+              <ReactionPalette
                 v-if="activeReactionPickerMsgId === `bottom-${reply.id}`"
-                class="absolute left-0 bottom-full mb-1 flex items-center gap-1 bg-mnema-elevated border border-mnema-border rounded-lg p-1.5 shadow-xl z-30 after:absolute after:top-full after:left-0 after:right-0 after:h-2 after:content-['']"
-              >
-                <button
-                  v-for="emoji in quickEmojis"
-                  :key="emoji"
-                  @click.stop="handleToggleReaction(reply.id, emoji)"
-                  class="hover:scale-125 transition p-1 text-base rounded hover:bg-mnema-surface active:scale-95"
-                >
-                  {{ emoji }}
-                </button>
-              </div>
+                align="left"
+                @pick="handleToggleReaction(reply.id, $event)"
+                @close="activeReactionPickerMsgId = null"
+              />
             </div>
           </div>
         </div>
@@ -600,10 +583,19 @@ function formatDate(dateStr) {
       <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
       <div
         :class="[
-          'min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
+          'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
           replyingTo ? 'rounded-b-lg' : 'rounded-lg'
         ]"
       >
+        <MentionSuggestions
+          v-if="assist.open.value"
+          id="thread-mentions"
+          :items="assist.suggestions.value"
+          :active="assist.active.value"
+          @pick="assist.pick"
+          @hover="assist.active.value = $event"
+        />
+
         <!-- Hidden file input for thread -->
         <input 
           ref="fileInput" 
@@ -626,11 +618,22 @@ function formatDate(dateStr) {
           ref="replyTextArea"
           v-model="replyInput"
           @keydown="handleKeyDown"
+          @input="assist.onInput"
+          @click="assist.onInput"
+          @keyup.left="assist.onInput"
+          @keyup.right="assist.onInput"
+          @blur="assist.close"
+          aria-autocomplete="list"
+          :aria-expanded="assist.open.value ? 'true' : 'false'"
+          :aria-controls="assist.open.value ? 'thread-mentions' : undefined"
+          :aria-activedescendant="assist.open.value ? `thread-mentions-${assist.active.value}` : undefined"
           :placeholder="$t('thread.placeholder')"
           :aria-label="$t('thread.placeholder')"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
+
+        <EmojiButton :disabled="isSending" @pick="assist.insertText" />
 
         <button
           @click="handleSendReply"

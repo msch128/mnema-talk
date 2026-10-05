@@ -1,5 +1,5 @@
 <script setup>
-// Shown above the user bar only while connected to a Tafelrunde.
+// Shown above the user bar only while connected to a Talk.
 import { computed } from 'vue'
 import { Monitor, MonitorOff, PhoneOff } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'

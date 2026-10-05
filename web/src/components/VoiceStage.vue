@@ -12,6 +12,9 @@ import { useWebRTC } from '../composables/useWebRTC'
 import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
+import EmojiButton from './EmojiButton.vue'
+import MentionSuggestions from './MentionSuggestions.vue'
+import { useComposerAssist } from '../composables/useComposerAssist'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
@@ -19,7 +22,7 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
-// Which roundtable is shown. Without a prop it is the one the user is in.
+// Which Talk is shown. Without a prop it is the one the user is in.
 // Not connected to it, the stage is a preview: who is there, the chat and a
 // Join button. No microphone is requested before the user joins.
 const props = defineProps({
@@ -57,6 +60,16 @@ function onVideoResize() {
   videoResolution.value = el?.videoWidth ? `${el.videoWidth}×${el.videoHeight}` : ''
 }
 const chatInput = ref('')
+const chatInputEl = ref(null)
+const assist = useComposerAssist(chatInputEl, chatInput)
+
+function onChatKeydown(e) {
+  if (assist.onKeydown(e)) return
+  if (e.key === 'Enter' && !e.isComposing) {
+    e.preventDefault()
+    sendChatMessage()
+  }
+}
 const chatContainer = ref(null)
 const fileInput = ref(null)
 const isUploading = ref(false)
@@ -130,9 +143,9 @@ const isSharingOwnScreen = computed(() => {
   return !!voiceStore.localScreenStream
 })
 const screenSharerName = computed(() => {
-  if (isSharingOwnScreen.value) return t('tafelrunde.ownScreen')
+  if (isSharingOwnScreen.value) return t('talk.ownScreen')
   const sharer = usersInVoice.value.find(u => u.id === voiceStore.remoteScreenUserId)
-  return sharer ? (sharer.display_name || sharer.username) : t('tafelrunde.sharedScreen')
+  return sharer ? (sharer.display_name || sharer.username) : t('talk.sharedScreen')
 })
 
 // Watch active screen stream and attach to video element
@@ -227,7 +240,7 @@ function formatTime(dateStr) {
 
 <template>
   <main class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
-    <!-- Tafelrunde header -->
+    <!-- Talk header -->
     <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm flex-shrink-0">
@@ -239,7 +252,7 @@ function formatTime(dateStr) {
               {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
             </h2>
             <span class="text-xs leading-4 px-1.5 rounded-full border border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent whitespace-nowrap flex-shrink-0">
-              {{ $t('tafelrunde.participants', { count: usersInVoice.length }) }}
+              {{ $t('talk.participants', { count: usersInVoice.length }) }}
             </span>
           </div>
         </div>
@@ -247,7 +260,7 @@ function formatTime(dateStr) {
 
       <!-- Top Right Actions -->
       <div class="flex items-center gap-2 flex-shrink-0">
-        <!-- View toggle (Tafelrunde + chat vs Tafelrunde only) -->
+        <!-- View toggle (Talk + chat vs Talk only) -->
         <button
           @click="emit('update:showChat', !showChat)"
           :class="[
@@ -256,11 +269,11 @@ function formatTime(dateStr) {
               ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
               : 'border-mnema-hairline bg-mnema-surface text-mnema-muted hover:text-mnema-text'
           ]"
-          v-tooltip.visual="showChat ? $t('tafelrunde.hideChatTip') : $t('tafelrunde.showChatTip')"
+          v-tooltip.visual="showChat ? $t('talk.hideChatTip') : $t('talk.showChatTip')"
           :aria-pressed="showChat ? 'true' : 'false'"
         >
           <MessageSquare class="w-4 h-4" />
-          <span>{{ showChat ? $t('tafelrunde.chatShown') : $t('tafelrunde.chatHidden') }}</span>
+          <span>{{ showChat ? $t('talk.chatShown') : $t('talk.chatHidden') }}</span>
         </button>
 
         <!-- Toggle Member List Sidebar -->
@@ -319,14 +332,14 @@ function formatTime(dateStr) {
             <button
               v-if="!isSharingOwnScreen"
               @click="voiceStore.unwatchScreen(voiceStore.remoteScreenUserId)"
-              v-tooltip="$t('tafelrunde.unwatchScreen')"
+              v-tooltip="$t('talk.unwatchScreen')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
               <X class="w-4 h-4" />
             </button>
             <button
               @click="toggleFullscreen"
-              v-tooltip="$t('tafelrunde.fullscreen')"
+              v-tooltip="$t('talk.fullscreen')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
               <Maximize2 class="w-4 h-4" />
@@ -347,7 +360,7 @@ function formatTime(dateStr) {
           >
             <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
             <span class="text-sm text-mnema-text truncate">
-              {{ $t('tafelrunde.screenShareCard', { name: card.user.display_name || card.user.username }) }}
+              {{ $t('talk.screenShareCard', { name: card.user.display_name || card.user.username }) }}
             </span>
             <button
               type="button"
@@ -355,13 +368,13 @@ function formatTime(dateStr) {
               class="h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition disabled:opacity-60 flex-shrink-0"
               @click="onScreenCard(card)"
             >
-              {{ card.state === 'idle' ? $t('tafelrunde.watchScreen') : card.state === 'queued' ? $t('tafelrunde.toStage') : $t('tafelrunde.screenConnecting') }}
+              {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
             </button>
             <button
               v-if="card.state !== 'idle'"
               type="button"
               class="w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
-              v-tooltip="$t('tafelrunde.unwatchScreen')"
+              v-tooltip="$t('talk.unwatchScreen')"
               @click="voiceStore.unwatchScreen(card.user.id)"
             >
               <X class="w-4 h-4" />
@@ -423,12 +436,12 @@ function formatTime(dateStr) {
           <p class="text-sm text-mnema-tertiary mt-0.5">{{ $t('voice.joinToTalk') }}</p>
         </div>
 
-        <!-- Preview: not connected to this roundtable -->
+        <!-- Preview: not connected to this Talk -->
         <div
           v-if="!isConnectedHere"
           class="absolute bottom-3 flex flex-col items-center gap-2 z-20"
         >
-          <p class="text-xs text-mnema-tertiary text-center max-w-md px-4">{{ $t('tafelrunde.previewHint') }}</p>
+          <p class="text-xs text-mnema-tertiary text-center max-w-md px-4">{{ $t('talk.previewHint') }}</p>
           <button
             @click="join"
             :disabled="!shownChannelId"
@@ -482,8 +495,8 @@ function formatTime(dateStr) {
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
             :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
-            v-tooltip="voiceStore.isCameraOn ? $t('tafelrunde.stopCamera') : $t('tafelrunde.startCamera')"
-            :aria-label="voiceStore.isCameraOn ? $t('tafelrunde.stopCamera') : $t('tafelrunde.startCamera')"
+            v-tooltip="voiceStore.isCameraOn ? $t('talk.stopCamera') : $t('talk.startCamera')"
+            :aria-label="voiceStore.isCameraOn ? $t('talk.stopCamera') : $t('talk.startCamera')"
           >
             <VideoOff v-if="!voiceStore.isCameraOn" class="w-4 h-4" />
             <Video v-else class="w-4 h-4" />
@@ -499,7 +512,7 @@ function formatTime(dateStr) {
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
             ]"
             :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
-            v-tooltip="voiceStore.allCamerasOff ? $t('tafelrunde.allCamerasOn') : $t('tafelrunde.allCamerasOff')"
+            v-tooltip="voiceStore.allCamerasOff ? $t('talk.allCamerasOn') : $t('talk.allCamerasOff')"
           >
             <EyeOff v-if="voiceStore.allCamerasOff" class="w-4 h-4" />
             <Eye v-else class="w-4 h-4" />
@@ -518,7 +531,7 @@ function formatTime(dateStr) {
             v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
           >
             <Monitor class="w-4 h-4" />
-            <span class="text-sm">{{ voiceStore.isScreenSharing ? $t('tafelrunde.stopShareShort') : $t('tafelrunde.shareShort') }}</span>
+            <span class="text-sm">{{ voiceStore.isScreenSharing ? $t('talk.stopShareShort') : $t('talk.shareShort') }}</span>
           </button>
 
           <!-- Noise filter toggle -->
@@ -531,7 +544,7 @@ function formatTime(dateStr) {
                 : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-tertiary'
             ]"
             :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
-            v-tooltip="$t('tafelrunde.noiseToggleTip')"
+            v-tooltip="$t('talk.noiseToggleTip')"
           >
             <Sparkles class="w-4 h-4" />
           </button>
@@ -559,7 +572,7 @@ function formatTime(dateStr) {
         </div>
       </div>
 
-      <!-- 2. Tafelrunde chat -->
+      <!-- 2. Talk chat -->
       <div 
         v-if="showChat" 
         class="flex-1 flex flex-col overflow-hidden bg-mnema-canvas"
@@ -571,9 +584,9 @@ function formatTime(dateStr) {
             <div class="w-10 h-10 rounded-full border border-dashed border-mnema-border-strong flex items-center justify-center mb-2 text-mnema-accent bg-mnema-surface/50">
               <MessageSquare class="w-4 h-4 opacity-80" />
             </div>
-            <p class="font-semibold text-base text-mnema-text">{{ $t('tafelrunde.chatTitle', { channel: activeVoiceChannel?.name || '' }) }}</p>
+            <p class="font-semibold text-base text-mnema-text">{{ $t('talk.chatTitle', { channel: activeVoiceChannel?.name || '' }) }}</p>
             <p class="text-sm text-mnema-tertiary mt-0.5 max-w-sm">
-              {{ $t('tafelrunde.chatEmpty') }}
+              {{ $t('talk.chatEmpty') }}
             </p>
           </div>
 
@@ -581,7 +594,10 @@ function formatTime(dateStr) {
           <div
             v-for="msg in chatStore.messages"
             :key="msg.id"
-            class="relative flex items-start gap-4 px-4 py-0.5 mt-[17px] first:mt-2 hover:bg-mnema-surface/50 transition-colors group"
+            :class="[
+              'relative flex items-start gap-4 px-4 py-0.5 mt-[17px] first:mt-2 hover:bg-mnema-surface/50 transition-colors group',
+              msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg) ? 'msg-mentions-me' : ''
+            ]"
           >
             <!-- User Avatar -->
             <UserAvatar 
@@ -627,7 +643,15 @@ function formatTime(dateStr) {
 
         <!-- Chat Composer Bar -->
         <div class="px-4 pb-6 flex-shrink-0">
-          <div class="min-h-[52px] bg-mnema-elevated border border-mnema-border rounded-lg pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition">
+          <div class="relative min-h-[52px] bg-mnema-elevated border border-mnema-border rounded-lg pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition">
+            <MentionSuggestions
+              v-if="assist.open.value"
+              id="talk-mentions"
+              :items="assist.suggestions.value"
+              :active="assist.active.value"
+              @pick="assist.pick"
+              @hover="assist.active.value = $event"
+            />
             <input 
               ref="fileInput" 
               type="file" 
@@ -645,12 +669,24 @@ function formatTime(dateStr) {
             </button>
 
             <input
+              ref="chatInputEl"
               v-model="chatInput"
-              @keydown.enter="sendChatMessage"
+              @keydown="onChatKeydown"
+              @input="assist.onInput"
+              @click="assist.onInput"
+              @keyup.left="assist.onInput"
+              @keyup.right="assist.onInput"
+              @blur="assist.close"
+              aria-autocomplete="list"
+              :aria-expanded="assist.open.value ? 'true' : 'false'"
+              :aria-controls="assist.open.value ? 'talk-mentions' : undefined"
+              :aria-activedescendant="assist.open.value ? `talk-mentions-${assist.active.value}` : undefined"
               :placeholder="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
               :aria-label="$t('chat.placeholder', { channel: activeVoiceChannel?.name || '' })"
               class="bg-transparent flex-1 min-w-0 outline-none text-message text-mnema-text placeholder-mnema-tertiary"
             />
+
+            <EmojiButton @pick="assist.insertText" />
 
             <button
               @click="sendChatMessage"

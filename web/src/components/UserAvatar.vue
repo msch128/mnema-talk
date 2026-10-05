@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import PresenceDot from './PresenceDot.vue'
 
 const props = defineProps({
   user: {
@@ -17,6 +18,16 @@ const props = defineProps({
   isOnline: {
     type: Boolean,
     default: false
+  },
+  // Live status (online, away, dnd, focus, offline); wins over isOnline.
+  status: {
+    type: String,
+    default: ''
+  },
+  // Background behind the avatar, so the status dot's ring blends in.
+  ringClass: {
+    type: String,
+    default: 'bg-mnema-canvas'
   },
   isSpeaking: {
     type: Boolean,
@@ -40,6 +51,9 @@ const initial = computed(() => {
   const name = props.user?.display_name || props.user?.username || '?'
   return name.charAt(0).toUpperCase()
 })
+
+const dotStatus = computed(() => props.status || (props.isOnline ? 'online' : 'offline'))
+const dotSize = computed(() => (props.size === 'xl' ? 12 : props.size === 'lg' ? 10 : 8))
 
 const avatarUrl = computed(() => {
   return props.user?.avatar_url || ''
@@ -66,14 +80,12 @@ const avatarUrl = computed(() => {
       <span v-else>{{ initial }}</span>
     </div>
 
-    <!-- Live Status Dot -->
-    <span 
+    <PresenceDot
       v-if="showStatus"
-      :class="[
-        'absolute bottom-0 right-0 rounded-full border-2 border-mnema-canvas',
-        size === 'xl' ? 'w-4 h-4' : 'w-2.5 h-2.5',
-        isOnline ? 'bg-mnema-accent' : 'bg-mnema-muted/60'
-      ]"
-    ></span>
+      :status="dotStatus"
+      :size="dotSize"
+      :ring-class="ringClass"
+      class="absolute -bottom-0.5 -right-0.5"
+    />
   </div>
 </template>
