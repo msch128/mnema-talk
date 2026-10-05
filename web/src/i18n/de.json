@@ -295,7 +295,8 @@
       "connected": "Verbunden · {channel}",
       "open": "Tafelrunde öffnen",
       "details": "Verbindungsdetails"
-    }
+    },
+    "cameraFailed": "Kamera nicht verfügbar. Prüfe die Berechtigung im Browser."
   },
   "audio": {
     "settings": "Audio-Einstellungen",
@@ -523,7 +524,13 @@
     "startCamera": "Kamera einschalten",
     "stopCamera": "Kamera ausschalten",
     "cameraShort": "Kamera",
-    "stopCameraShort": "Kamera aus"
+    "stopCameraShort": "Kamera aus",
+    "previewHint": "Noch hört dich niemand. Tritt bei, um zu sprechen, die Kamera einzuschalten oder den Bildschirm zu teilen.",
+    "previewChatHint": "Du kannst im Chat mitlesen und schreiben, ohne beizutreten.",
+    "inRoundtable": "In der Tafelrunde",
+    "cameraOf": "Kamera von {name}",
+    "localMuted": "Für dich stumm",
+    "joining": "Trete bei…"
   },
   "admin": {
     "title": "Speicher & Administration",

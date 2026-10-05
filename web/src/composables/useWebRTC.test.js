@@ -19,12 +19,19 @@ vi.mock('../lib/noiseSuppressor', () => ({
 // --- Browser API stand-ins -------------------------------------------------
 
 function fakeTrack(kind = 'audio') {
-  return { kind, enabled: true, stop: vi.fn(), clone() { return fakeTrack(kind) } }
+  return { kind, enabled: true, readyState: 'live', stop: vi.fn(), clone() { return fakeTrack(kind) } }
 }
 
-function fakeStream() {
-  const tracks = [fakeTrack()]
-  return { getTracks: () => tracks, getAudioTracks: () => tracks, getVideoTracks: () => [] }
+function streamOf(tracks) {
+  return {
+    getTracks: () => tracks,
+    getAudioTracks: () => tracks.filter(t => t.kind === 'audio'),
+    getVideoTracks: () => tracks.filter(t => t.kind === 'video')
+  }
+}
+
+function fakeStream(kinds = ['audio']) {
+  return streamOf(kinds.map(k => fakeTrack(k)))
 }
 
 class FakePC {
@@ -37,6 +44,12 @@ class FakePC {
     FakePC.instances.push(this)
   }
   addTrack(track) { const s = { track, replaceTrack: vi.fn(async t => { s.track = t }) }; this.senders.push(s); return s }
+  // Like a browser, a transceiver's sender shows up in getSenders even without a track.
+  addTransceiver(trackOrKind) {
+    const s = { track: typeof trackOrKind === 'string' ? null : trackOrKind, replaceTrack: vi.fn(async t => { s.track = t }) }
+    this.senders.push(s)
+    return { sender: s }
+  }
   getSenders() { return this.senders }
   async setRemoteDescription(d) { this.remoteDescription = d }
   async createAnswer() { return { type: 'answer', sdp: 'a' } }
@@ -48,32 +61,57 @@ class FakePC {
 
 class FakeAudioContext {
   static destinations = []
-  constructor() { this.state = 'running'; this.currentTime = 0 }
+  static sources = []
+  static gains = []
+  constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {} }
   createMediaStreamDestination() {
-    const node = { stream: fakeStream(), connect() {}, disconnect() {} }
+    const node = { stream: fakeStream(), connect() {}, disconnect: vi.fn() }
     FakeAudioContext.destinations.push(node)
     return node
   }
+  createGain() {
+    const node = { gain: { value: 1 }, connect() {}, disconnect() {} }
+    FakeAudioContext.gains.push(node)
+    return node
+  }
   createAnalyser() { return { fftSize: 256, connect() {}, getByteTimeDomainData() {} } }
-  createMediaStreamSource() { return { connect() {} } }
+  createMediaStreamSource(stream) {
+    const node = { stream, connect: vi.fn(), disconnect: vi.fn() }
+    FakeAudioContext.sources.push(node)
+    return node
+  }
   createBiquadFilter() { return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
   resume() { return Promise.resolve() }
   close() { return Promise.resolve() }
 }
 
 let micRequests
+let audioElements
 beforeEach(() => {
+  audioElements = []
   setActivePinia(createPinia())
   suppressor.node = null
   suppressor.models = []
   FakeAudioContext.destinations = []
+  FakeAudioContext.sources = []
+  FakeAudioContext.gains = []
   FakePC.instances = []
   micRequests = []
   vi.stubGlobal('RTCPeerConnection', FakePC)
   vi.stubGlobal('RTCSessionDescription', function (d) { return d })
   vi.stubGlobal('RTCIceCandidate', function (c) { return c })
   vi.stubGlobal('AudioContext', FakeAudioContext)
-  vi.stubGlobal('MediaStream', function (tracks) { return { getTracks: () => tracks, getAudioTracks: () => tracks } })
+  vi.stubGlobal('MediaStream', function (tracks) { return streamOf(tracks) })
+  // Remote audio elements: jsdom cannot play media.
+  vi.stubGlobal('Audio', function () {
+    const el = document.createElement('audio')
+    el.play = vi.fn(async () => {})
+    el.pause = vi.fn()
+    // The DOM would only accept a real MediaStream here.
+    Object.defineProperty(el, 'srcObject', { value: null, writable: true })
+    audioElements.push(el)
+    return el
+  })
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ ice_servers: [] }) }))
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
@@ -119,7 +157,10 @@ describe('useWebRTC join and leave', () => {
     await join
     expect(sent.filter(e => e.type === 'voice_join')).toEqual([{ type: 'voice_join', payload: { channel_id: 'ch-1' } }])
     expect(voice.currentChannelId).toBe('ch-1')
-    expect(FakePC.instances.at(-1).senders).toHaveLength(1)
+    // Mic, screen and camera lines exist from the start; only the mic carries a track.
+    const senders = FakePC.instances.at(-1).senders
+    expect(senders).toHaveLength(3)
+    expect(senders.filter(sd => sd.track)).toHaveLength(1)
   })
 
   it('leaving while the mic prompt is open leaves no ghost and stops the mic', async () => {
@@ -300,5 +341,219 @@ describe('AI noise suppression', () => {
     expect(suppressor.models).toEqual([])
     expect(lastConstraints().noiseSuppression).toBe(false)
     expect(FakePC.instances.at(-1).senders[0].track).toBe(raw.getAudioTracks()[0])
+  })
+})
+
+// --- Screen share audio, per-user volume, camera ----------------------------
+
+async function joined() {
+  const ctx = setup()
+  const join = ctx.rtc.joinVoiceChannel('ch-1')
+  const mic = await grantMic()
+  await join
+  const pc = FakePC.instances.at(-1)
+  const [audio, screen, camera] = pc.senders
+  return { ...ctx, mic, pc, audio, screen, camera }
+}
+
+function stubDisplayMedia(stream) {
+  navigator.mediaDevices.getDisplayMedia = vi.fn(async () => stream)
+}
+
+describe('screen share with audio', () => {
+  it('mixes screen audio with the mic into the one sent track', async () => {
+    const { rtc, audio, screen, mic } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+
+    await rtc.startScreenShare()
+
+    const mixTrack = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
+    expect(screen.track).toBe(display.getVideoTracks()[0])
+    expect(audio.replaceTrack).toHaveBeenCalledWith(mixTrack)
+    expect(audio.track).toBe(mixTrack)
+    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
+    expect(inputs).toContain(display.getAudioTracks()[0])
+    expect(inputs).toContain(mic.getAudioTracks()[0])
+  })
+
+  it('mute and the gate only silence the mic, never the screen audio', async () => {
+    const { rtc, voice, audio, mic } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+
+    voice.toggleMute()
+    expect(mic.getAudioTracks()[0].enabled).toBe(false)
+    // The sent mix track and the screen track stay enabled: only the mic input is silent.
+    expect(audio.track.enabled).toBe(true)
+    expect(display.getAudioTracks()[0].enabled).toBe(true)
+  })
+
+  it('without screen audio the plain mic keeps being sent', async () => {
+    const { rtc, audio, mic } = await joined()
+    stubDisplayMedia(fakeStream(['video']))
+    await rtc.startScreenShare()
+    expect(audio.replaceTrack).not.toHaveBeenCalled()
+    expect(audio.track).toBe(mic.getAudioTracks()[0])
+  })
+
+  it('restores the mic and tears the mix down when sharing stops', async () => {
+    const { rtc, audio, screen, mic, sent } = await joined()
+    stubDisplayMedia(fakeStream(['video', 'audio']))
+    await rtc.startScreenShare()
+    const dest = FakeAudioContext.destinations.at(-1)
+
+    rtc.stopScreenShare()
+    await vi.waitFor(() => expect(audio.track).toBe(mic.getAudioTracks()[0]))
+    expect(screen.track).toBeNull()
+    expect(dest.disconnect).toHaveBeenCalled()
+    expect(dest.stream.getAudioTracks()[0].stop).toHaveBeenCalled()
+    expect(sent.some(e => e.type === 'webrtc_screenshare_stop')).toBe(true)
+  })
+
+  it('falls back to the mic when only the screen audio track ends', async () => {
+    const { rtc, voice, audio, mic } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+
+    display.getAudioTracks()[0].onended()
+    await vi.waitFor(() => expect(audio.track).toBe(mic.getAudioTracks()[0]))
+    expect(voice.isScreenSharing).toBe(true)
+  })
+
+  it('rebuilds the mix when audio settings are applied mid-share', async () => {
+    const { rtc, audio } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+    const firstMix = audio.track
+
+    const apply = rtc.applyAudioSettings()
+    const newMic = await grantMic()
+    await apply
+
+    const newMix = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
+    expect(newMix).not.toBe(firstMix)
+    expect(audio.track).toBe(newMix)
+    const inputs = FakeAudioContext.sources.map(n => n.stream.getAudioTracks()[0])
+    expect(inputs.at(-1)).toBe(newMic.getAudioTracks()[0])
+    expect(inputs.at(-2)).toBe(display.getAudioTracks()[0])
+  })
+
+  it('a reconnect sends the mix, not the bare mic', async () => {
+    const { rtc, mic } = await joined()
+    stubDisplayMedia(fakeStream(['video', 'audio']))
+    await rtc.startScreenShare()
+    const mixTrack = FakeAudioContext.destinations.at(-1).stream.getAudioTracks()[0]
+
+    rtc.rejoinAfterReconnect()
+    const fresh = FakePC.instances.at(-1)
+    expect(fresh.senders[0].track).toBe(mixTrack)
+    expect(fresh.senders[0].track).not.toBe(mic.getAudioTracks()[0])
+    expect(fresh.senders[1].track.kind).toBe('video')
+  })
+})
+
+describe('per-user playback', () => {
+  function remoteAudio(pc, userId) {
+    pc.ontrack({ track: fakeTrack('audio'), streams: [{ id: userId }] })
+    return audioElements.at(-1)
+  }
+
+  it('applies a user volume and local mute to that user only', async () => {
+    const { voice, pc } = await joined()
+    const alice = remoteAudio(pc, 'alice')
+    const bob = remoteAudio(pc, 'bob')
+
+    voice.setUserVolume('alice', 50)
+    await vi.waitFor(() => expect(alice.volume).toBe(0.5))
+    expect(bob.volume).toBe(1)
+
+    voice.toggleLocalMute('alice')
+    await vi.waitFor(() => expect(alice.volume).toBe(0))
+    voice.toggleLocalMute('alice')
+    await vi.waitFor(() => expect(alice.volume).toBe(0.5))
+  })
+
+  it('multiplies with the master volume and deafen wins', async () => {
+    const { voice, pc } = await joined()
+    voice.outputVolume = 50
+    const alice = remoteAudio(pc, 'alice')
+    voice.setUserVolume('alice', 50)
+    await vi.waitFor(() => expect(alice.volume).toBe(0.25))
+    voice.isDeafened = true
+    await vi.waitFor(() => expect(alice.volume).toBe(0))
+  })
+
+  it('amplifies above 100 % through a gain node', async () => {
+    const { voice, pc } = await joined()
+    voice.outputVolume = 100
+    const alice = remoteAudio(pc, 'alice')
+    voice.setUserVolume('alice', 150)
+    await vi.waitFor(() => expect(FakeAudioContext.gains.at(-1)?.gain.value).toBe(1.5))
+    // The element only keeps the stream flowing; the graph does the playing.
+    expect(alice.muted).toBe(true)
+
+    voice.setUserVolume('alice', 100)
+    await vi.waitFor(() => expect(FakeAudioContext.gains.at(-1).gain.value).toBe(1))
+  })
+})
+
+describe('webcam', () => {
+  it('sends the camera on its own line, next to a screen share', async () => {
+    const { rtc, voice, screen, camera, sent } = await joined()
+    const cam = fakeStream(['video'])
+    navigator.mediaDevices.getUserMedia.mockImplementationOnce(async () => cam)
+    stubDisplayMedia(fakeStream(['video']))
+
+    await rtc.startCamera()
+    expect(navigator.mediaDevices.getUserMedia.mock.calls.at(-1)[0].video).toBeTruthy()
+    expect(camera.track).toBe(cam.getVideoTracks()[0])
+    expect(voice.isCameraOn).toBe(true)
+
+    await rtc.startScreenShare()
+    expect(screen.track).not.toBe(camera.track)
+    expect(camera.track).toBe(cam.getVideoTracks()[0])
+
+    rtc.stopCamera()
+    expect(camera.track).toBeNull()
+    expect(screen.track).not.toBeNull()
+    expect(voice.isCameraOn).toBe(false)
+    expect(cam.getVideoTracks()[0].stop).toHaveBeenCalled()
+    expect(sent.some(e => e.type === 'webrtc_camera_stop')).toBe(true)
+  })
+
+  it('does not start a camera outside a call', async () => {
+    const { rtc, voice } = setup()
+    await rtc.startCamera()
+    expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled()
+    expect(voice.isCameraOn).toBe(false)
+  })
+
+  it('stops the camera on leave', async () => {
+    const { rtc, voice } = await joined()
+    const cam = fakeStream(['video'])
+    navigator.mediaDevices.getUserMedia.mockImplementationOnce(async () => cam)
+    await rtc.startCamera()
+    rtc.leaveVoiceChannel()
+    expect(cam.getVideoTracks()[0].stop).toHaveBeenCalled()
+    expect(voice.isCameraOn).toBe(false)
+  })
+
+  it('maps remote cameras and screen shares to their publishers', async () => {
+    const { voice, pc } = await joined()
+    const camTrack = fakeTrack('video')
+    pc.ontrack({ track: camTrack, streams: [{ id: 'cam:alice' }] })
+    expect(Object.keys(voice.userVideoStreams)).toEqual(['alice'])
+    expect(voice.remoteScreenStream).toBeNull()
+
+    pc.ontrack({ track: fakeTrack('video'), streams: [{ id: 'bob' }] })
+    expect(voice.remoteScreenUserId).toBe('bob')
+    expect(voice.remoteScreenStream).not.toBeNull()
+
+    camTrack.onended()
+    expect(voice.userVideoStreams.alice).toBeUndefined()
   })
 })

@@ -295,7 +295,8 @@
       "connected": "Connected · {channel}",
       "open": "Open the roundtable",
       "details": "Connection details"
-    }
+    },
+    "cameraFailed": "Camera unavailable. Check the permission in your browser."
   },
   "audio": {
     "settings": "Audio settings",
@@ -523,7 +524,13 @@
     "startCamera": "Turn on camera",
     "stopCamera": "Turn off camera",
     "cameraShort": "Camera",
-    "stopCameraShort": "Stop camera"
+    "stopCameraShort": "Stop camera",
+    "previewHint": "Nobody hears you yet. Join to talk, turn on your camera or share your screen.",
+    "previewChatHint": "You can read and write in the chat without joining.",
+    "inRoundtable": "In the roundtable",
+    "cameraOf": "Camera of {name}",
+    "localMuted": "Muted for you",
+    "joining": "Joining…"
   },
   "admin": {
     "title": "Storage & administration",

@@ -3,11 +3,36 @@ import { ref, shallowRef, computed } from 'vue'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 
+// Per-user playback settings live in the browser only (what I hear of whom).
+const USER_VOLUMES_KEY = 'mnema_user_volumes'
+const USER_MUTED_KEY = 'mnema_user_muted'
+export const USER_VOLUME_MIN = 0
+export const USER_VOLUME_MAX = 200
+export const USER_VOLUME_DEFAULT = 100
+
+function readJson(key) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '{}')
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage blocked or full: the setting then only lasts for this session.
+  }
+}
+
 export const useVoiceStore = defineStore('voice', () => {
   const currentChannelId = ref(null)
   const isMuted = ref(false)
   const isDeafened = ref(false)
   const isScreenSharing = ref(false)
+  const isCameraOn = ref(false)
   const isConnected = ref(false)
   const activeView = ref('chat') // 'chat' | 'voice'
   const showStatsModal = ref(false)
@@ -87,6 +112,11 @@ export const useVoiceStore = defineStore('voice', () => {
   const localScreenStream = shallowRef(null)
   const localAudioStream = shallowRef(null)
   const remoteScreenStream = shallowRef(null)
+  // Who publishes the remote screen share (user ID), null when nobody does.
+  const remoteScreenUserId = ref(null)
+  const localCameraStream = shallowRef(null)
+  // userId -> MediaStream of that participant's camera (replaced, never mutated).
+  const userVideoStreams = shallowRef({})
 
   // Map of channelId -> Map of userId -> User object
   const channelUsers = ref({})
@@ -95,6 +125,54 @@ export const useVoiceStore = defineStore('voice', () => {
 
   function setVoiceSnapshot(snapshot) {
     channelUsers.value = snapshot || {}
+  }
+
+  // --- Per-user playback (volume 0..200 %, local mute) ---
+  const userVolumes = ref(readJson(USER_VOLUMES_KEY))
+  const localMutedUsers = ref(readJson(USER_MUTED_KEY))
+
+  function getUserVolume(userId) {
+    const v = userVolumes.value[userId]
+    return typeof v === 'number' ? v : USER_VOLUME_DEFAULT
+  }
+
+  function setUserVolume(userId, volume) {
+    if (!userId) return
+    const n = Number(volume)
+    if (!Number.isFinite(n)) return
+    const clamped = Math.min(USER_VOLUME_MAX, Math.max(USER_VOLUME_MIN, Math.round(n)))
+    const next = { ...userVolumes.value }
+    // The default needs no entry.
+    if (clamped === USER_VOLUME_DEFAULT) delete next[userId]
+    else next[userId] = clamped
+    userVolumes.value = next
+    writeJson(USER_VOLUMES_KEY, next)
+  }
+
+  function isUserLocalMuted(userId) {
+    return !!localMutedUsers.value[userId]
+  }
+
+  function toggleLocalMute(userId) {
+    if (!userId) return
+    const next = { ...localMutedUsers.value }
+    if (next[userId]) delete next[userId]
+    else next[userId] = true
+    localMutedUsers.value = next
+    writeJson(USER_MUTED_KEY, next)
+  }
+
+  function setUserVideoStream(userId, stream) {
+    userVideoStreams.value = { ...userVideoStreams.value, [userId]: stream }
+  }
+
+  function removeUserVideoStream(userId, stream) {
+    const current = userVideoStreams.value[userId]
+    // A stale track ending must not drop a newer stream of the same user.
+    if (!current || (stream && current !== stream)) return
+    const next = { ...userVideoStreams.value }
+    delete next[userId]
+    userVideoStreams.value = next
   }
 
   function handleVoiceStateUpdate(update) {
@@ -108,6 +186,7 @@ export const useVoiceStore = defineStore('voice', () => {
     } else if (action === 'leave' && user_id) {
       delete channelUsers.value[channel_id][user_id]
       delete speakingUsers.value[user_id]
+      removeUserVideoStream(user_id)
     }
   }
 
@@ -170,7 +249,11 @@ export const useVoiceStore = defineStore('voice', () => {
     currentChannelId.value = null
     isConnected.value = false
     isScreenSharing.value = false
+    isCameraOn.value = false
+    localCameraStream.value = null
     remoteScreenStream.value = null
+    remoteScreenUserId.value = null
+    userVideoStreams.value = {}
     activeView.value = 'chat'
   }
 
@@ -179,6 +262,18 @@ export const useVoiceStore = defineStore('voice', () => {
     isMuted,
     isDeafened,
     isScreenSharing,
+    isCameraOn,
+    localCameraStream,
+    remoteScreenUserId,
+    userVideoStreams,
+    setUserVideoStream,
+    removeUserVideoStream,
+    userVolumes,
+    localMutedUsers,
+    getUserVolume,
+    setUserVolume,
+    isUserLocalMuted,
+    toggleLocalMute,
     isConnected,
     ping,
     pingHistory,
