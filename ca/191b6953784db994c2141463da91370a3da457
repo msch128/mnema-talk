@@ -1,0 +1,25 @@
+internal/chat/handler.go
+  s_50a8e6d0bfe84a::t_37615d296de300 63-65,470-528
+internal/server/helpers_integration_test.go
+  s_50a8e6d0bfe84a::t_c0eacef91b832a 160-162
+internal/server/layout_integration_test.go
+  s_50a8e6d0bfe84a::t_c0eacef91b832a 1-79
+internal/chat/channels.go
+  s_50a8e6d0bfe84a::t_37615d296de300 5,176-265
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca191b6953784db994c2141463da91370a3da457",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
