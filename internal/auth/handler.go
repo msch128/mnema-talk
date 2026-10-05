@@ -17,19 +17,24 @@ type Handler struct {
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
-	loginFailures *httpx.LoginFailureLimiter
-	passwordFails *httpx.LoginFailureLimiter
+	// loginFailures locks one client address out of one account;
+	// accountFailures is the much higher cap against guessing from many addresses.
+	loginFailures   *httpx.LoginFailureLimiter
+	accountFailures *httpx.LoginFailureLimiter
+	passwordFails   *httpx.LoginFailureLimiter
 }
 
 func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	return &Handler{
-		Sessions:      s,
-		Events:        pub,
-		loginPerIP:    httpx.NewRateLimiter(20, 15*time.Minute),
+		Sessions: s,
+		Events:   pub,
+		// Generous per address: a household or office shares one public IP.
+		loginPerIP:    httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP: httpx.NewRateLimiter(10, time.Hour),
-		// 10 failures → 1 min, then 5 min, then 30 min lockouts per username.
-		loginFailures: httpx.NewLoginFailureLimiter(10, time.Minute),
-		passwordFails: httpx.NewLoginFailureLimiter(5, time.Minute),
+		// 10 failures → 1 min, then 5 min, then 30 min lockouts per address+username.
+		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),
+		accountFailures: httpx.NewLoginFailureLimiter(100, time.Minute),
+		passwordFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
 	}
 }
 
@@ -43,6 +48,7 @@ func (h *Handler) MountPublic(r chi.Router) {
 // MountAuthenticated registers routes that need a session.
 func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Get("/auth/me", httpx.Handle(h.me))
+	r.Post("/auth/logout-all", httpx.Handle(h.logoutAll))
 	r.Put("/auth/password", httpx.Handle(h.changePassword))
 	r.Get("/users/{userID}", httpx.Handle(h.getUser))
 	r.Put("/users/me/profile", httpx.Handle(h.updateProfile))
@@ -56,15 +62,22 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	key := strings.ToLower(strings.TrimSpace(req.Username))
-	if locked, retry := h.loginFailures.IsLockedOut(key); locked {
-		httpx.WriteRateLimited(w, retry)
-		return nil
+	account := strings.ToLower(strings.TrimSpace(req.Username))
+	key := httpx.ClientIP(r) + "|" + account
+	for _, l := range []struct {
+		limiter *httpx.LoginFailureLimiter
+		key     string
+	}{{h.loginFailures, key}, {h.accountFailures, account}} {
+		if locked, retry := l.limiter.IsLockedOut(l.key); locked {
+			httpx.WriteRateLimited(w, retry)
+			return nil
+		}
 	}
 
 	u, tv, err := Login(r.Context(), h.Sessions.DB, req.Username, req.Password)
 	if err == ErrInvalidCredentials {
 		h.loginFailures.RecordFailure(key)
+		h.accountFailures.RecordFailure(account)
 		return err
 	}
 	if err != nil {
@@ -101,6 +114,16 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
+	h.Sessions.End(w)
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
+// logoutAll ends every session of the user, including copied cookies.
+func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
+	if err := RevokeSessions(r.Context(), h.Sessions.DB, UserFrom(r.Context()).ID); err != nil {
+		return err
+	}
 	h.Sessions.End(w)
 	w.WriteHeader(http.StatusNoContent)
 	return nil

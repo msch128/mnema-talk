@@ -53,9 +53,9 @@ const (
 )
 
 // Recover catches panics, logs a bounded stack and answers a JSON 500.
-func Recover(env string) func(http.Handler) http.Handler {
+func Recover(prod bool) func(http.Handler) http.Handler {
 	limit := nonProdStackLimit
-	if IsProdEnv(env) {
+	if prod {
 		limit = prodStackLimit
 	}
 	return func(next http.Handler) http.Handler {
@@ -117,15 +117,6 @@ func MaxBody(limit int64) func(http.Handler) http.Handler {
 	}
 }
 
-// IsProdEnv reports whether env names a production-like deployment.
-func IsProdEnv(env string) bool {
-	switch env {
-	case "prod", "production", "staging":
-		return true
-	}
-	return false
-}
-
 // SPAContentSecurityPolicy guards the embedded Vue app. No inline scripts;
 // inline styles are needed for Vue :style bindings. connect-src 'self' also
 // covers same-origin WebSockets in current browsers.
@@ -146,8 +137,7 @@ const SPAContentSecurityPolicy = "default-src 'self'; " +
 // get a deny-all CSP and no-store; the SPA gets SPAContentSecurityPolicy.
 // HSTS is sent in production, over direct TLS, or when a trusted proxy reports
 // X-Forwarded-Proto=https (a spoofed header from an untrusted peer is ignored).
-func SecurityHeaders(trusted []*net.IPNet, env string) func(http.Handler) http.Handler {
-	prod := IsProdEnv(env)
+func SecurityHeaders(trusted []*net.IPNet, prod bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := w.Header()

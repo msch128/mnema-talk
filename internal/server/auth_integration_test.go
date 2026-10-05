@@ -80,6 +80,26 @@ func TestLoginLockoutAfterRepeatedFailures(t *testing.T) {
 	}
 }
 
+// TestFailedLoginsFromOneClientDoNotLockOutOthers: lockouts are per client IP
+// and username, so guessing the admin's password from one address does not
+// lock the admin out everywhere.
+func TestFailedLoginsFromOneClientDoNotLockOutOthers(t *testing.T) {
+	a := newApp(t, false)
+	a.seedAdmin()
+	attacker := a.anon()
+	from := func(ip string) map[string]string { return map[string]string{"X-Forwarded-For": ip} }
+	body := func(pw string) any { return map[string]string{"username": "Herzog", "password": pw} }
+	for i := 0; i < 10; i++ {
+		attacker.do(http.MethodPost, "/api/auth/login", body("wrong-password"), from("203.0.113.5"))
+	}
+	if res := attacker.do(http.MethodPost, "/api/auth/login", body("admin-password-123"), from("203.0.113.5")); res.status != http.StatusTooManyRequests {
+		t.Fatalf("attacker address not locked: %d", res.status)
+	}
+	if res := a.anon().do(http.MethodPost, "/api/auth/login", body("admin-password-123"), from("198.51.100.7")); res.status != http.StatusOK {
+		t.Fatalf("admin locked out from another address: %d %s", res.status, res.body)
+	}
+}
+
 func TestCSRFRejectsCrossSiteWrites(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
@@ -129,6 +149,25 @@ func TestRegistrationRequiresValidInvite(t *testing.T) {
 	weak := a.anon().post("/api/auth/register", map[string]string{"username": "weakling", "password": "123", "invite_code": inv2.Code})
 	if weak.status != http.StatusBadRequest {
 		t.Fatalf("weak password: %d", weak.status)
+	}
+}
+
+func TestLogoutEverywhereRevokesAllSessions(t *testing.T) {
+	a := newApp(t, false)
+	a.seedAdmin()
+	laptop := a.login("Herzog", "admin-password-123")
+	phone := a.login("Herzog", "admin-password-123")
+
+	if res := laptop.post("/api/auth/logout-all", nil); res.status != http.StatusNoContent {
+		t.Fatalf("logout-all: %d %s", res.status, res.body)
+	}
+	for name, c := range map[string]*client{"laptop": laptop, "phone": phone} {
+		if res := c.get("/api/auth/me"); res.status != http.StatusUnauthorized {
+			t.Fatalf("%s session still valid after logout-all: %d", name, res.status)
+		}
+	}
+	if res := a.anon().post("/api/auth/logout-all", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("logout-all without a session: %d", res.status)
 	}
 }
 
