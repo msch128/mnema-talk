@@ -1,8 +1,8 @@
 name: CodeQL
 
 # Advanced setup instead of GitHub's default setup: default setup builds Go
-# without build tags, so the `//go:build integration` files (integration tests,
-# internal/testutil) were never extracted.
+# without build tags and skips _test.go files, so tests and the integration-tagged
+# files (internal/testutil) were never extracted.
 
 on:
   push:
@@ -52,11 +52,13 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
 
-      # Compile every package including _test.go and integration-tagged files,
-      # without running any test.
+      # The CodeQL tracer hooks `go build` and extracts with the same tags;
+      # EXTRACT_TESTS pulls in _test.go files, which are skipped by default.
       - if: matrix.language == 'go'
         name: Build Go (incl. tests and integration tag)
-        run: go test -tags=integration -run='^$' ./...
+        env:
+          CODEQL_EXTRACTOR_GO_OPTION_EXTRACT_TESTS: "true"
+        run: go build -tags=integration ./...
 
       - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
