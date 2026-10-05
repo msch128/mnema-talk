@@ -236,7 +236,10 @@ export function useSortableDrag(options) {
   // ---- Click guard ----
 
   // The click (and on some touch browsers the synthesized mouse events) that
-  // follows the drag must not reach the row below the pointer.
+  // follows the drag must not reach the row below the pointer. Not every
+  // browser sends that click (Chromium doesn't after a captured drag), so the
+  // guard also ends with the next press: that is a new click of its own, e.g.
+  // on the toast's "Undo" right after the drop.
   function guardClick() {
     if (typeof window === 'undefined') return
     releaseClickGuard?.()
@@ -251,8 +254,10 @@ export function useSortableDrag(options) {
       clearTimeout(stopTimer)
       releaseClickGuard = null
       for (const type of CLICK_EVENTS) window.removeEventListener(type, swallow, true)
+      window.removeEventListener('pointerdown', done, true)
     }
     for (const type of CLICK_EVENTS) window.addEventListener(type, swallow, true)
+    window.addEventListener('pointerdown', done, true)
     releaseClickGuard = done
   }
 

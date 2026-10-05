@@ -98,6 +98,24 @@ describe('mouse', () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
+  it('lets the next press click even when the browser sent no click after the drag', () => {
+    // Chromium fires no click after a drag with pointer capture; a quick
+    // click right after the drop (e.g. "Undo" in the toast) must still work.
+    setup()
+    const onClick = vi.fn()
+    const onDown = vi.fn()
+    el.addEventListener('click', onClick)
+    el.addEventListener('mousedown', onDown)
+    press({ x: 0, y: 0 })
+    move({ x: 0, y: 30 })
+    up({ x: 0, y: 30 })
+    el.dispatchEvent(pointer('pointerdown'))
+    el.dispatchEvent(pointer('mousedown'))
+    el.click()
+    expect(onDown).toHaveBeenCalledTimes(1)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
   it('stops guarding clicks after a short while', () => {
     setup()
     const onClick = vi.fn()
