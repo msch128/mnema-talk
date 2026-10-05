@@ -68,8 +68,23 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+        # Only ever merge release-please's own PR, opened by the Actions bot on
+        # its branch and touching nothing but the version and changelog.
         # GitHub may still be computing mergeability right after the update.
         run: |
+          set -euo pipefail
+          pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,author,files,isCrossRepository)
+          head=$(jq -r .headRefName <<<"$pr")
+          author=$(jq -r .author.login <<<"$pr")
+          cross=$(jq -r .isCrossRepository <<<"$pr")
+          files=$(jq -r '.files[].path' <<<"$pr" | sort | tr '\n' ' ')
+          echo "PR #$PR_NUMBER head=$head author=$author files=$files"
+          case "$head" in release-please--*) ;; *) echo "::error::not a release-please branch"; exit 1 ;; esac
+          case "$author" in app/github-actions|github-actions\[bot\]|github-actions) ;; *) echo "::error::unexpected author $author"; exit 1 ;; esac
+          [ "$cross" = "false" ] || { echo "::error::cross-repository PR"; exit 1; }
+          for f in $files; do
+            case "$f" in version.txt|CHANGELOG.md|.release-please-manifest.json) ;; *) echo "::error::unexpected file $f"; exit 1 ;; esac
+          done
           for attempt in 1 2 3 4 5 6; do
             gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch && exit 0
             sleep 10

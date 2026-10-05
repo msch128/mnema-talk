@@ -11,7 +11,8 @@ import (
 
 func TestBlocksNonPublicAddresses(t *testing.T) {
 	for _, ip := range []string{"127.0.0.1", "10.0.0.5", "192.168.0.212", "172.16.3.4", "169.254.169.254",
-		"100.64.1.1", "0.0.0.0", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "224.0.0.1"} {
+		"100.64.1.1", "0.0.0.0", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1", "224.0.0.1",
+		"198.18.0.1", "240.0.0.1", "192.0.2.10", "64:ff9b::c0a8:1", "2002:c0a8:1::1", "2001:0:4136:e378::1"} {
 		if publicIP(net.ParseIP(ip)) {
 			t.Errorf("%s must be blocked", ip)
 		}
@@ -20,6 +21,14 @@ func TestBlocksNonPublicAddresses(t *testing.T) {
 		if !publicIP(net.ParseIP(ip)) {
 			t.Errorf("%s must be allowed", ip)
 		}
+	}
+}
+
+func TestDeniedAddressesAreRefused(t *testing.T) {
+	f := New()
+	f.Deny(context.Background(), "93.184.216.34", "")
+	if !f.isDenied(net.ParseIP("93.184.216.34")) || f.isDenied(net.ParseIP("93.184.216.35")) {
+		t.Fatal("deny list not applied")
 	}
 }
 
