@@ -626,7 +626,14 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "webrtc_screenshare_stop":
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
-				room.RemoveUserVideoTrack(c.User.ID)
+				room.RemoveUserSource(c.User.ID, sfu.SourceScreen)
+			}
+		}
+
+	case "webrtc_camera_stop":
+		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
+			if room := h.SFU.Room(*cur); room != nil {
+				room.RemoveUserSource(c.User.ID, sfu.SourceCamera)
 			}
 		}
 	}

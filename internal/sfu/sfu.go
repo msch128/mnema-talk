@@ -21,15 +21,36 @@ import (
 // a burst of PLIs from several viewers costs the publisher one keyframe.
 const keyframeMinInterval = 300 * time.Millisecond
 
+// Source tells what a forwarded track carries. Audio and screen tracks are
+// published under the user's ID as stream ID; a camera under CameraStreamPrefix
+// plus the user's ID, so clients can tell them apart and map them to people.
+type Source string
+
+const (
+	SourceAudio  Source = "audio"
+	SourceScreen Source = "screen"
+	SourceCamera Source = "camera"
+)
+
+// CameraStreamPrefix precedes the publisher's user ID in a camera's stream ID.
+const CameraStreamPrefix = "cam:"
+
+// resumeHoldoff keeps late packets of a stopped video from re-publishing it.
+const resumeHoldoff = 500 * time.Millisecond
+
 // TrackInfo is one forwarded track: the publisher's remote track and the
 // local track every other peer subscribes to.
 type TrackInfo struct {
 	Track     *webrtc.TrackLocalStaticRTP
 	SenderID  uuid.UUID
 	Kind      webrtc.RTPCodecType
+	Source    Source
 	publisher *Peer
 	ssrc      uint32
 	lastPLI   atomic.Int64 // unix nanos of the last keyframe request
+	// stoppedAt (unix nanos, 0 = live) is set when the publisher announced the
+	// stop; packets arriving later publish the track again.
+	stoppedAt atomic.Int64
 }
 
 type Peer struct {
@@ -193,13 +214,13 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		return nil, fmt.Errorf("failed to create PeerConnection: %w", err)
 	}
 
-	// Inbound transceivers to receive client's mic and screen share
-	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, webrtc.RTPTransceiverInit{
-		Direction: webrtc.RTPTransceiverDirectionRecvonly,
-	})
-	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, webrtc.RTPTransceiverInit{
-		Direction: webrtc.RTPTransceiverDirectionRecvonly,
-	})
+	// Inbound transceivers to receive the client's mic, screen share and
+	// camera. The two video ones are told apart by their position: the first
+	// is the screen, the second the camera.
+	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
+	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
+	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	cameraTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
 
 	peer := &Peer{
 		ID:        userID,
@@ -216,12 +237,21 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		}
 	})
 
-	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "codec", remoteTrack.Codec().MimeType)
+	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+		source := SourceAudio
+		streamID := userID.String()
+		if remoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
+			source = SourceScreen
+			if cameraTr != nil && receiver == cameraTr.Receiver() {
+				source = SourceCamera
+				streamID = CameraStreamPrefix + streamID
+			}
+		}
+		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "codec", remoteTrack.Codec().MimeType)
 
 		key := trackKey(userID, remoteTrack.ID())
 		// The stream ID names the publishing user, so clients can map tracks to people.
-		trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, key, userID.String())
+		trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, key, streamID)
 		if err != nil {
 			slog.Error("sfu create local track", "err", err)
 			return
@@ -231,6 +261,7 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 			Track:     trackLocal,
 			SenderID:  userID,
 			Kind:      remoteTrack.Kind(),
+			Source:    source,
 			publisher: peer,
 			ssrc:      uint32(remoteTrack.SSRC()),
 		}
@@ -252,6 +283,13 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 				// subscriber side adds its own (e.g. transport-cc).
 				rtpPkt.Extension = false
 				rtpPkt.Extensions = nil
+				// The publisher stopped and started the same transceiver again:
+				// the browser keeps the SSRC, so no new OnTrack fires.
+				if at := info.stoppedAt.Load(); at != 0 && time.Since(time.Unix(0, at)) > resumeHoldoff {
+					if info.stoppedAt.CompareAndSwap(at, 0) {
+						r.addTrack(key, info)
+					}
+				}
 				if err := trackLocal.WriteRTP(rtpPkt); err != nil {
 					r.removeTrack(key, info)
 					return
@@ -418,12 +456,15 @@ func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 	}
 }
 
-// RemoveUserVideoTrack removes video tracks published by userID and signals other peers.
-func (r *Room) RemoveUserVideoTrack(userID uuid.UUID) {
+// RemoveUserSource unpublishes the user's screen share or camera (the client
+// announces that it stopped sending it) and signals the other peers. The
+// track is published again when its packets resume.
+func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 	r.mu.Lock()
 	changed := false
 	for id, tInfo := range r.trackLocals {
-		if tInfo.SenderID == userID && tInfo.Kind == webrtc.RTPCodecTypeVideo {
+		if tInfo.SenderID == userID && tInfo.Kind == webrtc.RTPCodecTypeVideo && tInfo.Source == source {
+			tInfo.stoppedAt.Store(time.Now().UnixNano())
 			delete(r.trackLocals, id)
 			changed = true
 		}
