@@ -1,0 +1,25 @@
+e2e/tests/late-join.spec.js
+  s_5c9ee3c4dec5dd::t_70a015772dfb80 1-80
+web/src/composables/streamDiag.test.js
+  s_5c9ee3c4dec5dd::t_3d300770197132 1-18
+web/src/composables/useWebRTC.js
+  s_5c9ee3c4dec5dd::t_3cdc192acd2a5b 93-132,135-136,144-150,339,435-438,445,447
+web/src/composables/useWebRTC.test.js
+  s_5c9ee3c4dec5dd::t_c9e60d4039a8b8 762,766-768
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "17c2665d27abe86457d6d14ac92e6f1521404589",
+  "prompts": {},
+  "sessions": {
+    "s_5c9ee3c4dec5dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d4fdedf-c57c-4991-808e-5664d15cfea7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
