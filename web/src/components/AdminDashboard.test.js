@@ -209,10 +209,7 @@ describe('AdminDashboard - Users Tab', () => {
 
     await disableBtn.trigger('click')
     expect(confirmMock).toHaveBeenCalledTimes(1)
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-2', {
-      method: 'PATCH',
-      json: { is_disabled: true }
-    })
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-2/disable', { method: 'POST' })
   })
 
   it('handles enabling a previously disabled member without extra prompt', async () => {
@@ -225,10 +222,7 @@ describe('AdminDashboard - Users Tab', () => {
     expect(enableBtn.exists()).toBe(true)
 
     await enableBtn.trigger('click')
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-3', {
-      method: 'PATCH',
-      json: { is_disabled: false }
-    })
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-3/enable', { method: 'POST' })
   })
 
   it('handles revoking user sessions with confirmation dialog', async () => {
@@ -242,7 +236,7 @@ describe('AdminDashboard - Users Tab', () => {
 
     await revokeBtn.trigger('click')
     expect(confirmMock).toHaveBeenCalledTimes(1)
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-2/sessions', {
+    expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-2/sessions/revoke', {
       method: 'POST'
     })
   })
@@ -274,7 +268,7 @@ describe('AdminDashboard - Users Tab', () => {
 
     expect(apiMock).toHaveBeenCalledWith('/api/admin/users/user-member-2/password', {
       method: 'POST',
-      json: { new_password: 'supersecret123' }
+      json: { password: 'supersecret123' }
     })
     // Modal should close
     expect(w.find('[data-testid="new-password-input"]').exists()).toBe(false)

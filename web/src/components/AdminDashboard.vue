@@ -161,7 +161,7 @@ function formatDateTime(dt) {
 }
 
 async function toggleDisableUser(u) {
-  const isDisabled = !!(u.disabled || u.is_disabled)
+  const isDisabled = !!u.disabled
   if (!isDisabled) {
     const ok = await confirm({
       title: t('admin.disableUserTitle', { name: u.display_name || u.username }),
@@ -171,10 +171,7 @@ async function toggleDisableUser(u) {
     })
     if (!ok) return
     try {
-      await api(`/api/admin/users/${u.id}`, {
-        method: 'PATCH',
-        json: { is_disabled: true }
-      })
+      await api(`/api/admin/users/${u.id}/disable`, { method: 'POST' })
       toasts.success(t('admin.userDisabledToast'))
       await refreshUsers()
     } catch (e) {
@@ -182,10 +179,7 @@ async function toggleDisableUser(u) {
     }
   } else {
     try {
-      await api(`/api/admin/users/${u.id}`, {
-        method: 'PATCH',
-        json: { is_disabled: false }
-      })
+      await api(`/api/admin/users/${u.id}/enable`, { method: 'POST' })
       toasts.success(t('admin.userEnabledToast'))
       await refreshUsers()
     } catch (e) {
@@ -210,7 +204,7 @@ async function submitPasswordReset() {
   try {
     await api(`/api/admin/users/${passwordModalUser.value.id}/password`, {
       method: 'POST',
-      json: { new_password: newPasswordInput.value }
+      json: { password: newPasswordInput.value }
     })
     toasts.success(t('admin.passwordResetSuccess'))
     closePasswordModal()
@@ -230,7 +224,7 @@ async function revokeSessions(u) {
   })
   if (!ok) return
   try {
-    await api(`/api/admin/users/${u.id}/sessions`, { method: 'POST' })
+    await api(`/api/admin/users/${u.id}/sessions/revoke`, { method: 'POST' })
     toasts.success(t('admin.sessionsRevoked'))
   } catch (e) {
     showError(e)
@@ -707,7 +701,7 @@ onMounted(refresh)
                   <td class="py-3 px-4 whitespace-nowrap">
                     <div class="flex items-center gap-1.5 flex-wrap">
                       <span
-                        v-if="u.disabled || u.is_disabled"
+                        v-if="u.disabled"
                         data-testid="user-status"
                         class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-danger/10 text-mnema-danger border border-mnema-danger/20"
                       >
@@ -756,15 +750,15 @@ onMounted(refresh)
                           type="button"
                           :class="[
                             'p-1.5 rounded transition',
-                            (u.disabled || u.is_disabled)
+                            (u.disabled)
                               ? 'text-mnema-accent hover:bg-mnema-accent/15'
                               : 'text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-hover'
                           ]"
-                          :title="(u.disabled || u.is_disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
-                          :aria-label="(u.disabled || u.is_disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
+                          :title="(u.disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
+                          :aria-label="(u.disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
                           @click="toggleDisableUser(u)"
                         >
-                          <UserCheck v-if="u.disabled || u.is_disabled" class="w-4 h-4" />
+                          <UserCheck v-if="u.disabled" class="w-4 h-4" />
                           <UserX v-else class="w-4 h-4" />
                         </button>
 
