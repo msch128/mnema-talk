@@ -120,6 +120,9 @@ export function streamDiag(stats, previousBytes = new Map(), seconds = 10) {
       limit: sending ? (s.qualityLimitationReason || '') : undefined,
       encoder: sending ? (s.encoderImplementation || '') : undefined,
       decoder: sending ? undefined : (s.decoderImplementation || ''),
+      // Hardware (power efficient) encoder or decoder; Chrome reports it once
+      // the page holds a capture permission, other browsers leave it out.
+      hw: sending ? s.powerEfficientEncoder : s.powerEfficientDecoder,
       lost: s.packetsLost ?? undefined,
       dropped: sending ? undefined : (s.framesDropped ?? 0),
       freezes: sending ? undefined : (s.freezeCount ?? 0),
@@ -457,6 +460,96 @@ export function publishMids(sdp) {
   }
   flush()
   return out
+}
+
+// How a shared screen starts: the browser's bandwidth estimate opens at a few
+// hundred kbit/s and only creeps up, which at 4K means a slideshow for the
+// first half minute. The estimate starts at SCREEN_START_KBPS instead and
+// never drops below SCREEN_MIN_KBPS (congestion control still backs off above
+// that). Chrome reads both from the codec parameters of what it sends.
+export const SCREEN_START_KBPS = 6000
+export const SCREEN_MIN_KBPS = 1000
+
+// Payload types that carry no video of their own.
+const AUX_CODECS = new Set(['rtx', 'red', 'ulpfec', 'flexfec-03'])
+
+// H.264 first, preferring constrained baseline (what the hardware encoders on
+// Mac and Windows handle everywhere), then baseline, then other profiles.
+function h264Rank(name, fmtp) {
+  if (name !== 'h264') return 4
+  if (!/packetization-mode=1/.test(fmtp)) return 3
+  const profile = (/profile-level-id=([0-9a-f]{4})/i.exec(fmtp)?.[1] || '').toLowerCase()
+  if (profile === '42e0') return 0
+  if (profile === '4200') return 1
+  return 2
+}
+
+/**
+ * Tunes the screen line (mid) of the SFU's offer before it is applied: with
+ * h264, H.264 moves to the front so the browser sends it (hardware encoded on
+ * Mac and Windows; VP8 at 4K runs on the CPU and tops out near 30 fps), and
+ * every video codec on the line gets the start and floor bitrate above. The
+ * SFU forwards whatever arrives, so viewers decode the same codec.
+ */
+export function tuneScreenOffer(sdp, mid, { h264 = false, startKbps = SCREEN_START_KBPS, minKbps = SCREEN_MIN_KBPS } = {}) {
+  if (!sdp || mid === null || mid === undefined) return sdp
+  const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
+  const lines = sdp.split(/\r?\n/)
+  // Section boundaries: [start, end) per m= line.
+  const starts = []
+  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
+  for (let n = 0; n < starts.length; n++) {
+    const from = starts[n]
+    const to = n + 1 < starts.length ? starts[n + 1] : lines.length
+    const section = lines.slice(from, to)
+    if (!section[0].startsWith('m=video') || !section.includes(`a=mid:${mid}`)) continue
+
+    const names = new Map()
+    const fmtps = new Map()
+    for (const l of section) {
+      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
+      if (m) names.set(m[1], m[2].toLowerCase())
+      m = /^a=fmtp:(\d+) (.*)$/.exec(l)
+      if (m) fmtps.set(m[1], m[2])
+    }
+    const media = (pt) => names.has(pt) && !AUX_CODECS.has(names.get(pt))
+
+    const out = []
+    for (const l of section) {
+      if (l.startsWith('m=') && h264) {
+        const parts = l.split(' ')
+        const pts = parts.slice(3)
+        const rank = (pt) => (media(pt) ? h264Rank(names.get(pt), fmtps.get(pt) || '') : 5)
+        const sorted = pts.map((pt, i) => [pt, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(e => e[0])
+        out.push([...parts.slice(0, 3), ...sorted].join(' '))
+        continue
+      }
+      let m = startKbps ? /^a=fmtp:(\d+) (.*)$/.exec(l) : null
+      if (m && media(m[1]) && !m[2].includes('x-google-')) {
+        out.push(`${l};x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
+        continue
+      }
+      out.push(l)
+      m = startKbps ? /^a=rtpmap:(\d+) /.exec(l) : null
+      if (m && media(m[1]) && !fmtps.has(m[1])) {
+        out.push(`a=fmtp:${m[1]} x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
+      }
+    }
+    lines.splice(from, to - from, ...out)
+    break
+  }
+  return lines.join(eol)
+}
+
+// Whether this browser can send H.264 at all (not whether in hardware; the
+// stream diagnostics report that).
+function canSendH264() {
+  try {
+    const caps = globalThis.RTCRtpSender?.getCapabilities?.('video')
+    return !!caps?.codecs?.some(c => /^video\/h264$/i.test(c.mimeType))
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -911,7 +1004,8 @@ export function useWebRTC() {
     }
 
     try {
-      await pc.setRemoteDescription(new RTCSessionDescription(offer))
+      const sdp = tuneScreenOffer(offer.sdp, publishMids(offer.sdp).video[0], { h264: canSendH264() })
+      await pc.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
       const bound = bindPublishSenders(pc, offer.sdp)
       // A share started before the connection was up goes out now.
       if (bound.screen) {
