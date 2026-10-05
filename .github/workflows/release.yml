@@ -13,7 +13,11 @@ name: Release
 # is the release published.
 #
 # 1. release-please opens/updates a release PR from conventional commits.
-#    Merging that PR creates the GitHub Release + tag vX.Y.Z.
+#    Every green push to main is released: the job merges that release PR
+#    right away and runs release-please a second time, which creates the
+#    GitHub Release + tag vX.Y.Z. (A merge made with GITHUB_TOKEN triggers
+#    no new workflow run, so the release has to happen in this same job.)
+#    The release commit only changes version.txt and CHANGELOG.md.
 # 2. When a release was created, compiled binaries (linux amd64/arm64,
 #    windows amd64, darwin arm64) plus SHA256SUMS are attached to it, and
 #    the image is built and pushed to GHCR as
@@ -45,9 +49,9 @@ jobs:
       contents: write
       pull-requests: write
     outputs:
-      release_created: ${{ steps.release.outputs.release_created }}
-      version: ${{ steps.release.outputs.version }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      release_created: ${{ steps.release.outputs.release_created || steps.publish.outputs.release_created }}
+      version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
+      tag_name: ${{ steps.release.outputs.tag_name || steps.publish.outputs.tag_name }}
     steps:
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
@@ -55,6 +59,32 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
           target-branch: main
+
+      # Release every green main: merge the release PR that was just
+      # opened or updated ...
+      - name: Merge release PR
+        id: merge
+        if: steps.release.outputs.release_created != 'true' && steps.release.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+        # GitHub may still be computing mergeability right after the update.
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch && exit 0
+            sleep 10
+          done
+          exit 1
+
+      # ... and publish it (tag + GitHub Release) in the same run.
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: publish
+        if: steps.merge.outcome == 'success'
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          target-branch: main
+          skip-github-pull-request: true
 
   # Compiled single binaries (web app embedded) attached to the GitHub Release,
   # with a SHA256SUMS file for verification.
