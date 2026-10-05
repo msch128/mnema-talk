@@ -131,6 +131,22 @@ describe('mouse', () => {
     expect(drag.state.phase).toBe('idle')
   })
 
+  it('captures the pointer while dragging, so a release outside the window still ends it', () => {
+    setup()
+    el.setPointerCapture = vi.fn()
+    el.releasePointerCapture = vi.fn()
+    el.hasPointerCapture = vi.fn(() => true)
+    const e = pointer('pointerdown', { x: 0, y: 0, pointerId: 7 })
+    Object.defineProperty(e, 'target', { value: el })
+    Object.defineProperty(e, 'currentTarget', { value: el })
+    drag.pointerDown(e, { id: 'a' })
+    expect(el.setPointerCapture).not.toHaveBeenCalled()
+    move({ x: 0, y: 20, pointerId: 7 })
+    expect(el.setPointerCapture).toHaveBeenCalledWith(7)
+    up({ x: 0, y: 20, pointerId: 7 })
+    expect(el.releasePointerCapture).toHaveBeenCalledWith(7)
+  })
+
   it('ignores moves of other pointers', () => {
     setup()
     press({ x: 0, y: 0, pointerId: 1 })

@@ -66,8 +66,10 @@ export function useChannelLayout({ undoMs = UNDO_MS } = {}) {
     saving.value = true
     let failure = null
     while (queued) {
-      // Every move made up to now is part of this payload.
-      const payload = queued
+      // Every move made up to now is part of this payload. Laid over the
+      // latest server data, channels deleted meanwhile drop out instead of
+      // failing the whole save.
+      const payload = toLayoutPayload(applyLayoutPayload(serverTree.value, queued))
       const batch = waiters
       queued = null
       waiters = []

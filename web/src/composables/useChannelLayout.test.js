@@ -191,6 +191,18 @@ describe('serialized saves', () => {
     expect(shape(layout.value)).toBe('u1 | A: a2 a1 | B: b1')
   })
 
+  it('a queued layout leaves out channels deleted while it waited', async () => {
+    const { layout, commit } = setup()
+    commit(moveChannel(layout.value, 'a2', 'A', 0))
+    const queuedMove = commit(moveCategory(layout.value, 'B', 0))
+    h.server.categories[0].channels = h.server.categories[0].channels.filter(c => c.id !== 'a1')
+    await chat.fetchChannels()
+    await answerPut()
+    expect(h.puts[0].json.channels.map(c => c.id)).toEqual(['u1', 'b1', 'a2'])
+    await answerPut()
+    await expect(queuedMove).resolves.toBe(true)
+  })
+
   it('a refetch while saving brings new data but keeps the pending order', async () => {
     const { layout, commit } = setup()
     commit(moveCategory(layout.value, 'B', 0))

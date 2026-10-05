@@ -52,6 +52,7 @@ export function useSortableDrag(options) {
   })
 
   let pointerId = null
+  let source = null
   let startX = 0
   let startY = 0
   let pickX = 0
@@ -83,6 +84,7 @@ export function useSortableDrag(options) {
     if (e.target?.closest?.('[data-no-drag]')) return
 
     pointerId = e.pointerId ?? null
+    source = e.currentTarget instanceof Element ? e.currentTarget : null
     startX = state.x = e.clientX
     startY = state.y = e.clientY
     moved = false
@@ -100,6 +102,12 @@ export function useSortableDrag(options) {
     pickY = state.y
     if (isTouch()) navigator.vibrate?.(10)
     else moved = true
+    // Keeps pointerup coming when the mouse is released outside the window.
+    try {
+      if (pointerId !== null) source?.setPointerCapture?.(pointerId)
+    } catch {
+      // the pointer is gone already
+    }
     try {
       globalThis.getSelection?.()?.removeAllRanges?.()
     } catch {
@@ -280,7 +288,13 @@ export function useSortableDrag(options) {
     if (frame !== null) cancelRaf(frame)
     frame = null
     unlisten()
+    try {
+      if (pointerId !== null && source?.hasPointerCapture?.(pointerId)) source.releasePointerCapture(pointerId)
+    } catch {
+      // released already
+    }
     pointerId = null
+    source = null
     moved = false
     if (typeof document !== 'undefined') document.documentElement.classList.remove('mnema-dragging')
     Object.assign(state, { phase: 'idle', item: null, target: null, pointerType: '' })
