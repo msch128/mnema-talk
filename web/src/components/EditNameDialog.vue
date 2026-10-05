@@ -24,7 +24,7 @@ async function submit() {
   error.value = ''
   const trimmed = name.value.trim()
   if (!trimmed) {
-    error.value = t('sidebar.nameRequired')
+    error.value = t('channel.nameRequired')
     return
   }
   saving.value = true
