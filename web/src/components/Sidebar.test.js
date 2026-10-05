@@ -98,9 +98,15 @@ function layoutDom() {
     section.getBoundingClientRect = () => r
     y += 12
   }
+  const tail = nav().element.querySelector('[data-drop-tail]')
+  if (tail) {
+    const t = rect(y, Math.max(48, 1000 - y))
+    tail.getBoundingClientRect = () => t
+  }
   const r = rect(0, 1000)
   nav().element.getBoundingClientRect = () => r
 }
+const tailOf = () => wrapper.find('[data-drop-tail]')
 // Middle of an element's top or bottom half.
 function yIn(el, part = 0.25) {
   layoutDom()
@@ -293,6 +299,23 @@ describe('Sidebar drag and drop (admin)', () => {
     expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY))).toEqual([])
   })
 
+  it('the empty tail of the list appends to the last group', async () => {
+    await mountSidebar()
+    await dragTo(rowOf('random'), yIn(tailOf(), 0.5))
+    expect(headerOf('empty').find('[data-drop-indicator]').exists()).toBe(true)
+    await drop(yIn(tailOf(), 0.5))
+    expect(channelIds('empty')).toEqual(['random'])
+    expect(puts()[0].json.channels.find(c => c.id === 'random').category_id).toBe('empty')
+  })
+
+  it('dropping in the empty tail onto a collapsed last category appends there and keeps it collapsed', async () => {
+    await mountSidebar({ collapsed: ['empty'] })
+    await dragTo(rowOf('random'), yIn(tailOf(), 0.5))
+    await drop(yIn(tailOf(), 0.5))
+    expect(puts()[0].json.channels.find(c => c.id === 'random').category_id).toBe('empty')
+    expect(JSON.parse(localStorage.getItem(COLLAPSED_KEY))).toEqual(['empty'])
+  })
+
   it('a category opened by hovering closes again when the channel goes elsewhere', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     await mountSidebar({ collapsed: ['voice'] })
@@ -454,6 +477,14 @@ describe('Sidebar context menus', () => {
     await choose('Kanal erstellen')
     expect(document.body.textContent).toContain('Neuen Kanal erstellen')
     expect(document.querySelector('#channel-category').value).toBe('')
+  })
+
+  it('the empty tail below the last channel is part of the empty list area', async () => {
+    await mountSidebar()
+    expect(tailOf().exists()).toBe(true)
+    const e = await contextMenu(tailOf())
+    expect(e.defaultPrevented).toBe(true)
+    expect(menuLabels()).toEqual(['Kanal erstellen', 'Kategorie erstellen'])
   })
 
   it('members keep the browser menu on the empty part of the list', async () => {

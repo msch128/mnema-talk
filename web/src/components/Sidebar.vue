@@ -390,72 +390,79 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
     <!-- Navigation Scroll Area -->
     <nav
       ref="navEl"
-      :class="['flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-3 pb-4', authStore.isAdmin && '[-webkit-touch-callout:none]']"
+      :class="['flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden px-2 pt-3', authStore.isAdmin && '[-webkit-touch-callout:none]']"
       :aria-label="$t('sidebar.channels')"
       v-on="navListeners"
       @contextmenu="openListMenu"
     >
-      <!-- Uncategorized channels first (headless section), then the categories -->
-      <section
-        v-for="category in sections"
-        :key="category.id"
-        :class="[category.headless ? 'mb-1' : 'mt-3 first:mt-0', 'relative group/cat']"
-        :data-category-id="category.headless ? undefined : category.id"
-        :data-drop-section="category.id"
-      >
-        <SidebarCategoryHeader
-          v-if="!category.headless"
-          :category="category"
-          :collapsed="isCollapsed(category.id)"
-          :admin="authStore.isAdmin"
-          :dragging="isDragged('category', category.id)"
-          :indicator="indicatorFor(`header:${category.id}`)"
-          :flash="flashKey === `category:${category.id}`"
-          :hint-id="hintId"
-          @toggle="toggleCategory(category.id)"
-          @menu="openCategoryMenu($event, category)"
-          @create-channel="openCreateChannel(defaultTypeFor(category), category.id)"
-          @delete="handleDeleteCategory(category)"
-          @drag-start="startDrag($event, 'category', category)"
-          @move="moveByKey('category', category, $event)"
-        />
-
-        <div class="mt-0.5">
-          <SidebarChannelRow
-            v-for="channel in visibleChannels(category)"
-            :key="channel.id"
-            :channel="channel"
+      <div class="flex-shrink-0">
+        <!-- Uncategorized channels first (headless section), then the categories -->
+        <section
+          v-for="category in sections"
+          :key="category.id"
+          :class="[category.headless ? 'mb-1' : 'mt-3 first:mt-0', 'relative group/cat']"
+          :data-category-id="category.headless ? undefined : category.id"
+          :data-drop-section="category.id"
+        >
+          <SidebarCategoryHeader
+            v-if="!category.headless"
+            :category="category"
+            :collapsed="isCollapsed(category.id)"
             :admin="authStore.isAdmin"
-            :dragging="isDragged('channel', channel.id)"
-            :indicator="indicatorFor(`channel:${channel.id}`)"
-            :flash="flashKey === `channel:${channel.id}`"
+            :dragging="isDragged('category', category.id)"
+            :indicator="indicatorFor(`header:${category.id}`)"
+            :flash="flashKey === `category:${category.id}`"
             :hint-id="hintId"
-            @open="handleChannelClick(channel)"
-            @menu="openChannelMenu($event, channel)"
-            @delete="handleDeleteChannel(channel)"
-            @drag-start="startDrag($event, 'channel', channel)"
-            @move="moveByKey('channel', channel, $event)"
-            @voice-user-click="handleVoiceUserClick(channel, $event)"
-            @member-menu="openMemberMenu"
+            @toggle="toggleCategory(category.id)"
+            @menu="openCategoryMenu($event, category)"
+            @create-channel="openCreateChannel(defaultTypeFor(category), category.id)"
+            @delete="handleDeleteCategory(category)"
+            @drag-start="startDrag($event, 'category', category)"
+            @move="moveByKey('category', category, $event)"
           />
 
-          <div
-            v-if="!category.headless && !category.channels.length && !isCollapsed(category.id) && !isDragged('category', category.id)"
-            class="px-2 py-1 text-sm text-mnema-tertiary italic truncate"
-            data-drop="empty"
-            :data-id="category.id"
-          >
-            {{ $t('sidebar.noChannels') }}
-          </div>
-        </div>
+          <div class="mt-0.5">
+            <SidebarChannelRow
+              v-for="channel in visibleChannels(category)"
+              :key="channel.id"
+              :channel="channel"
+              :admin="authStore.isAdmin"
+              :dragging="isDragged('channel', channel.id)"
+              :indicator="indicatorFor(`channel:${channel.id}`)"
+              :flash="flashKey === `channel:${channel.id}`"
+              :hint-id="hintId"
+              @open="handleChannelClick(channel)"
+              @menu="openChannelMenu($event, channel)"
+              @delete="handleDeleteChannel(channel)"
+              @drag-start="startDrag($event, 'channel', channel)"
+              @move="moveByKey('channel', channel, $event)"
+              @voice-user-click="handleVoiceUserClick(channel, $event)"
+              @member-menu="openMemberMenu"
+            />
 
-        <span
-          v-if="indicatorFor(`section:${category.id}`) === 'bottom'"
-          class="drop-line -bottom-1.5"
-          data-drop-indicator
-          aria-hidden="true"
-        ></span>
-      </section>
+            <div
+              v-if="!category.headless && !category.channels.length && !isCollapsed(category.id) && !isDragged('category', category.id)"
+              class="px-2 py-1 text-sm text-mnema-tertiary italic truncate"
+              data-drop="empty"
+              :data-id="category.id"
+            >
+              {{ $t('sidebar.noChannels') }}
+            </div>
+          </div>
+
+          <span
+            v-if="indicatorFor(`section:${category.id}`) === 'bottom'"
+            class="drop-line -bottom-1.5"
+            data-drop-indicator
+            aria-hidden="true"
+          ></span>
+        </section>
+      </div>
+
+      <!-- The empty rest of the list (at least a little, even when it
+           scrolls): right-click here to create something, drop here to
+           append to the last group. -->
+      <div class="flex-1 min-h-12" data-drop-tail aria-hidden="true"></div>
     </nav>
 
     <!-- How to move things, and where a move ended up, for screen readers -->
