@@ -13,7 +13,8 @@
     "en": "English"
   },
   "app": {
-    "checking": "Verbindung wird geprüft …"
+    "checking": "Verbindung wird geprüft …",
+    "retrying": "Server gerade nicht erreichbar – neuer Versuch …"
   },
   "resize": {
     "default": "Breite anpassen",

@@ -13,7 +13,8 @@
     "en": "English"
   },
   "app": {
-    "checking": "Checking your session …"
+    "checking": "Checking your session …",
+    "retrying": "Server not reachable right now – trying again …"
   },
   "resize": {
     "default": "Resize",
