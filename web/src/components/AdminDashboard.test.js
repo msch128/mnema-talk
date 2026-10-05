@@ -524,6 +524,39 @@ describe('AdminDashboard - drag and drop', () => {
     expect(categoryIds(w)).toEqual(['cat-2', 'cat-1'])
     expect(unsavedBanner(w)).toBe(true)
   })
+
+  it('moves a channel into another category and saves the whole layout', async () => {
+    const w = await openChannelsTab()
+    await w.find('[data-testid="channel-item-ch-uncat-1"]').trigger('dragstart')
+    await w.find('[data-testid="channel-item-ch-2"]').trigger('drop')
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-1', 'ch-uncat-1', 'ch-2'])
+    expect(w.find('[data-testid="channel-item-ch-uncat-1"]').exists()).toBe(true)
+
+    await w.find('[data-testid="channel-item-ch-1"]').trigger('dragstart')
+    await w.find('[data-testid="category-item-cat-2"]').find('.border-l-2').trigger('drop')
+    expect(channelIds(w, 'cat-2')).toEqual(['ch-voice-1', 'ch-1'])
+
+    await w.find('[data-testid="save-layout-button"]').trigger('click')
+    const [, layout] = apiMock.mock.calls.find(([url]) => url === '/api/admin/layout')
+    expect(layout.json).toEqual({
+      categories: [{ id: 'cat-1', sort_order: 0 }, { id: 'cat-2', sort_order: 1 }],
+      channels: [
+        { id: 'ch-uncat-1', category_id: 'cat-1', sort_order: 0 },
+        { id: 'ch-2', category_id: 'cat-1', sort_order: 1 },
+        { id: 'ch-voice-1', category_id: 'cat-2', sort_order: 0 },
+        { id: 'ch-1', category_id: 'cat-2', sort_order: 1 }
+      ]
+    })
+  })
+
+  it('ignores a drop on the channel being dragged', async () => {
+    const w = await openChannelsTab()
+    const ch1 = w.find('[data-testid="channel-item-ch-1"]')
+    await ch1.trigger('dragstart')
+    await ch1.trigger('drop')
+    expect(channelIds(w, 'cat-1')).toEqual(['ch-1', 'ch-2'])
+    expect(unsavedBanner(w)).toBe(false)
+  })
 })
 
 describe('AdminDashboard - load errors', () => {

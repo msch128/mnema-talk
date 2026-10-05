@@ -5,6 +5,9 @@ import { ref, onMounted } from 'vue'
 import { FolderTree, Trash2, Edit2, ArrowUp, ArrowDown, Plus, Save, Hash, Volume2, GripVertical } from '@lucide/vue'
 import { api } from '../lib/api'
 import { confirm } from '../lib/confirm'
+import {
+  moveChannel, moveCategory, locateChannel, removeChannel, removeCategory, addCategory, nextSortOrder, toLayoutPayload
+} from '../lib/channelLayout'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { t } from '../i18n'
@@ -13,8 +16,8 @@ import BaseDialog from './BaseDialog.vue'
 const chatStore = useChatStore()
 const toasts = useToastStore()
 
-const layoutCategories = ref([])
-const layoutUncategorized = ref([])
+// { uncategorized, categories[].channels } as in lib/channelLayout.
+const layout = ref({ uncategorized: [], categories: [] })
 const hasLayoutChanges = ref(false)
 const isSavingLayout = ref(false)
 const editingCategory = ref(null)
@@ -23,8 +26,8 @@ const editingChannel = ref(null)
 const editChannelName = ref('')
 const editChannelTopic = ref('')
 const newCategoryName = ref('')
-const draggedCategoryIndex = ref(null)
-const draggedChannelInfo = ref(null)
+const draggedCategoryId = ref(null)
+const draggedChannelId = ref(null)
 
 function showError(e) {
   toasts.error(e?.message || t('admin.unknownError'))
@@ -42,11 +45,13 @@ async function loadChannelsData(patch) {
       patch?.()
       return
     }
-    layoutCategories.value = (data?.categories || []).map(cat => ({
-      ...cat,
-      channels: (cat.channels || []).map(ch => ({ ...ch }))
-    }))
-    layoutUncategorized.value = (data?.uncategorized || []).map(ch => ({ ...ch }))
+    layout.value = {
+      uncategorized: (data?.uncategorized || []).map(ch => ({ ...ch })),
+      categories: (data?.categories || []).map(cat => ({
+        ...cat,
+        channels: (cat.channels || []).map(ch => ({ ...ch }))
+      }))
+    }
     hasLayoutChanges.value = false
   } catch (e) {
     patch?.()
@@ -60,146 +65,69 @@ async function syncAfterEdit(patch) {
   else await loadChannelsData(patch)
 }
 
-function allChannelLists() {
-  return [layoutUncategorized.value, ...layoutCategories.value.map(c => c.channels || (c.channels = []))]
-}
+// ---- Ordering (shared rules in lib/channelLayout) ----
 
-function findChannel(id) {
-  for (const list of allChannelLists()) {
-    const ch = list.find(c => c.id === id)
-    if (ch) return ch
-  }
-  return null
-}
-
-function removeChannelLocally(id) {
-  for (const list of allChannelLists()) {
-    const i = list.findIndex(c => c.id === id)
-    if (i !== -1) list.splice(i, 1)
-  }
-}
-
-// Channels of a deleted category become uncategorized (ON DELETE SET NULL).
-function removeCategoryLocally(id) {
-  const i = layoutCategories.value.findIndex(c => c.id === id)
-  if (i === -1) return
-  const [cat] = layoutCategories.value.splice(i, 1)
-  for (const ch of cat.channels || []) {
-    ch.category_id = null
-    layoutUncategorized.value.push(ch)
-  }
-}
-
-// ---- Ordering ----
-
-function moveCategory(index, direction) {
-  const targetIndex = index + direction
-  if (targetIndex < 0 || targetIndex >= layoutCategories.value.length) return
-  const item = layoutCategories.value.splice(index, 1)[0]
-  layoutCategories.value.splice(targetIndex, 0, item)
+// Takes a reordered tree; an unchanged one (same object) is no change.
+function reorder(next) {
+  if (next === layout.value) return
+  layout.value = next
   hasLayoutChanges.value = true
 }
 
-function moveChannel(categoryOrList, index, direction) {
-  const list = Array.isArray(categoryOrList) ? categoryOrList : categoryOrList.channels
-  const targetIndex = index + direction
-  if (targetIndex < 0 || targetIndex >= list.length) return
-  const item = list.splice(index, 1)[0]
-  list.splice(targetIndex, 0, item)
-  hasLayoutChanges.value = true
+function moveCategoryBy(cat, direction) {
+  const index = layout.value.categories.indexOf(cat)
+  reorder(moveCategory(layout.value, cat.id, index + direction))
+}
+
+// The arrows keep a channel inside its own list (they are disabled at the ends).
+function moveChannelBy(categoryId, channel, direction) {
+  const from = locateChannel(layout.value, channel.id)
+  if (from) reorder(moveChannel(layout.value, channel.id, categoryId, from.index + direction))
 }
 
 // Only one kind of drag is ever in progress; a drag cancelled with Escape or
 // dropped outside ends in dragend, which forgets it.
 function onDragEnd() {
-  draggedCategoryIndex.value = null
-  draggedChannelInfo.value = null
+  draggedCategoryId.value = null
+  draggedChannelId.value = null
 }
 
-function onCategoryDragStart(e, index) {
-  draggedChannelInfo.value = null
-  draggedCategoryIndex.value = index
+function onCategoryDragStart(e, cat) {
+  draggedChannelId.value = null
+  draggedCategoryId.value = cat.id
   if (e?.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
   }
 }
 
 function onCategoryDrop(e, targetIndex) {
-  const sourceIndex = draggedCategoryIndex.value
-  draggedCategoryIndex.value = null
-  if (sourceIndex === null || sourceIndex === targetIndex) return
-  const item = layoutCategories.value.splice(sourceIndex, 1)[0]
-  layoutCategories.value.splice(targetIndex, 0, item)
-  hasLayoutChanges.value = true
+  const id = draggedCategoryId.value
+  draggedCategoryId.value = null
+  if (id !== null) reorder(moveCategory(layout.value, id, targetIndex))
 }
 
-function onChannelDragStart(e, categoryId, index) {
-  draggedCategoryIndex.value = null
-  draggedChannelInfo.value = { categoryId, index }
+function onChannelDragStart(e, channel) {
+  draggedCategoryId.value = null
+  draggedChannelId.value = channel.id
   if (e?.dataTransfer) {
     e.dataTransfer.effectAllowed = 'move'
   }
 }
 
+// The dropped channel takes the target's place (or goes last for a drop on
+// the category's list itself).
 function onChannelDrop(e, targetCategoryId, targetIndex) {
-  if (!draggedChannelInfo.value) return
-  const { categoryId: sourceCatId, index: sourceIndex } = draggedChannelInfo.value
-
-  let sourceList
-  if (sourceCatId === null) {
-    sourceList = layoutUncategorized.value
-  } else {
-    const cat = layoutCategories.value.find(c => c.id === sourceCatId)
-    sourceList = cat ? cat.channels : null
-  }
-
-  let targetList
-  if (targetCategoryId === null) {
-    targetList = layoutUncategorized.value
-  } else {
-    const cat = layoutCategories.value.find(c => c.id === targetCategoryId)
-    targetList = cat ? cat.channels : null
-  }
-
-  if (sourceList && targetList) {
-    const [moved] = sourceList.splice(sourceIndex, 1)
-    if (moved) {
-      moved.category_id = targetCategoryId
-      targetList.splice(targetIndex, 0, moved)
-      hasLayoutChanges.value = true
-    }
-  }
-  draggedChannelInfo.value = null
+  const id = draggedChannelId.value
+  draggedChannelId.value = null
+  if (id !== null) reorder(moveChannel(layout.value, id, targetCategoryId, targetIndex))
 }
 
 async function saveLayout() {
   isSavingLayout.value = true
   try {
-    const categoriesPayload = layoutCategories.value.map((cat, idx) => ({
-      id: cat.id,
-      sort_order: idx
-    }))
-    const channelsPayload = []
-    layoutUncategorized.value.forEach((ch, idx) => {
-      channelsPayload.push({
-        id: ch.id,
-        category_id: null,
-        sort_order: idx
-      })
-    })
-    layoutCategories.value.forEach(cat => {
-      ;(cat.channels || []).forEach((ch, idx) => {
-        channelsPayload.push({
-          id: ch.id,
-          category_id: cat.id,
-          sort_order: idx
-        })
-      })
-    })
-
     await api('/api/admin/layout', {
       method: 'PUT',
-      json: { categories: categoriesPayload, channels: channelsPayload }
+      json: toLayoutPayload(layout.value)
     })
     hasLayoutChanges.value = false
     toasts.success(t('admin.layoutSaved'))
@@ -236,7 +164,7 @@ async function saveCategoryEdit() {
     toasts.success(t('admin.categoryUpdated'))
     closeEditCategory()
     await syncAfterEdit(() => {
-      const cat = layoutCategories.value.find(c => c.id === id)
+      const cat = layout.value.categories.find(c => c.id === id)
       if (cat) cat.name = name
     })
   } catch (e) {
@@ -271,7 +199,7 @@ async function saveChannelEdit() {
     toasts.success(t('admin.channelUpdated'))
     closeEditChannel()
     await syncAfterEdit(() => {
-      const ch = findChannel(id)
+      const ch = locateChannel(layout.value, id)?.channel
       // Name and topic only: category and position stay as reordered.
       if (ch) {
         ch.name = updated?.name ?? fields.name
@@ -294,7 +222,7 @@ async function deleteCategory(cat) {
   try {
     await api(`/api/admin/categories/${cat.id}`, { method: 'DELETE' })
     toasts.success(t('admin.categoryDeleted'))
-    await syncAfterEdit(() => removeCategoryLocally(cat.id))
+    await syncAfterEdit(() => { layout.value = removeCategory(layout.value, cat.id) })
   } catch (e) {
     showError(e)
   }
@@ -311,7 +239,7 @@ async function deleteChannel(channel) {
   try {
     await api(`/api/admin/channels/${channel.id}`, { method: 'DELETE' })
     toasts.success(t('admin.channelDeleted'))
-    await syncAfterEdit(() => removeChannelLocally(channel.id))
+    await syncAfterEdit(() => { layout.value = removeChannel(layout.value, channel.id) })
   } catch (e) {
     showError(e)
   }
@@ -322,14 +250,12 @@ async function createCategory() {
   try {
     const created = await api('/api/admin/categories', {
       method: 'POST',
-      json: { name: newCategoryName.value.trim(), sort_order: layoutCategories.value.length }
+      json: { name: newCategoryName.value.trim(), sort_order: nextSortOrder(layout.value.categories) }
     })
     newCategoryName.value = ''
     toasts.success(t('admin.categoryUpdated'))
     await syncAfterEdit(() => {
-      if (created?.id && !layoutCategories.value.some(c => c.id === created.id)) {
-        layoutCategories.value.push({ ...created, channels: [] })
-      }
+      layout.value = addCategory(layout.value, created)
     })
   } catch (e) {
     showError(e)
@@ -403,20 +329,20 @@ onMounted(() => loadChannelsData())
     </div>
 
     <!-- Uncategorized Channels -->
-    <div v-if="layoutUncategorized.length" class="bg-mnema-surface rounded-lg border border-mnema-hairline p-3 space-y-2">
+    <div v-if="layout.uncategorized.length" class="bg-mnema-surface rounded-lg border border-mnema-hairline p-3 space-y-2">
       <div class="flex items-center justify-between text-xs font-mono font-semibold uppercase text-mnema-tertiary">
         <span>{{ $t('admin.uncategorized') }}</span>
-        <span>({{ layoutUncategorized.length }})</span>
+        <span>({{ layout.uncategorized.length }})</span>
       </div>
 
       <div class="space-y-1">
         <div
-          v-for="(ch, chIdx) in layoutUncategorized"
+          v-for="(ch, chIdx) in layout.uncategorized"
           :key="ch.id"
           :data-testid="`channel-item-${ch.id}`"
           draggable="true"
           class="flex items-center justify-between gap-2 p-2 rounded-md bg-mnema-canvas border border-mnema-hairline hover:border-mnema-border transition-colors group cursor-grab active:cursor-grabbing"
-          @dragstart="onChannelDragStart($event, null, chIdx)"
+          @dragstart="onChannelDragStart($event, ch)"
           @dragend="onDragEnd"
           @dragover.prevent
           @drop="onChannelDrop($event, null, chIdx)"
@@ -437,18 +363,18 @@ onMounted(() => loadChannelsData())
               class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
               :title="$t('admin.moveUp')"
               :aria-label="$t('admin.moveUp')"
-              @click="moveChannel(layoutUncategorized, chIdx, -1)"
+              @click="moveChannelBy(null, ch, -1)"
             >
               <ArrowUp class="w-3.5 h-3.5" />
             </button>
             <button
               data-testid="move-down-channel"
               type="button"
-              :disabled="chIdx === layoutUncategorized.length - 1"
+              :disabled="chIdx === layout.uncategorized.length - 1"
               class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
               :title="$t('admin.moveDown')"
               :aria-label="$t('admin.moveDown')"
-              @click="moveChannel(layoutUncategorized, chIdx, 1)"
+              @click="moveChannelBy(null, ch, 1)"
             >
               <ArrowDown class="w-3.5 h-3.5" />
             </button>
@@ -480,12 +406,12 @@ onMounted(() => loadChannelsData())
     <!-- Categories & Channels Tree -->
     <div class="space-y-3">
       <div
-        v-for="(cat, catIdx) in layoutCategories"
+        v-for="(cat, catIdx) in layout.categories"
         :key="cat.id"
         :data-testid="`category-item-${cat.id}`"
         draggable="true"
         class="bg-mnema-surface rounded-lg border border-mnema-hairline p-3.5 space-y-2.5"
-        @dragstart.self="onCategoryDragStart($event, catIdx)"
+        @dragstart.self="onCategoryDragStart($event, cat)"
         @dragend="onDragEnd"
         @dragover.prevent
         @drop.self="onCategoryDrop($event, catIdx)"
@@ -506,18 +432,18 @@ onMounted(() => loadChannelsData())
               class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition disabled:opacity-30"
               :title="$t('admin.moveUp')"
               :aria-label="$t('admin.moveUp')"
-              @click="moveCategory(catIdx, -1)"
+              @click="moveCategoryBy(cat, -1)"
             >
               <ArrowUp class="w-3.5 h-3.5" />
             </button>
             <button
               data-testid="move-down-category"
               type="button"
-              :disabled="catIdx === layoutCategories.length - 1"
+              :disabled="catIdx === layout.categories.length - 1"
               class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-elevated transition disabled:opacity-30"
               :title="$t('admin.moveDown')"
               :aria-label="$t('admin.moveDown')"
-              @click="moveCategory(catIdx, 1)"
+              @click="moveCategoryBy(cat, 1)"
             >
               <ArrowDown class="w-3.5 h-3.5" />
             </button>
@@ -560,7 +486,7 @@ onMounted(() => loadChannelsData())
             :data-testid="`channel-item-${ch.id}`"
             draggable="true"
             class="flex items-center justify-between gap-2 p-2 rounded-md bg-mnema-canvas border border-mnema-hairline hover:border-mnema-border transition-colors group cursor-grab active:cursor-grabbing"
-            @dragstart.stop="onChannelDragStart($event, cat.id, chIdx)"
+            @dragstart.stop="onChannelDragStart($event, ch)"
             @dragend.stop="onDragEnd"
             @dragover.prevent.stop
             @drop.stop="onChannelDrop($event, cat.id, chIdx)"
@@ -581,7 +507,7 @@ onMounted(() => loadChannelsData())
                 class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
                 :title="$t('admin.moveUp')"
                 :aria-label="$t('admin.moveUp')"
-                @click.stop="moveChannel(cat, chIdx, -1)"
+                @click.stop="moveChannelBy(cat.id, ch, -1)"
               >
                 <ArrowUp class="w-3.5 h-3.5" />
               </button>
@@ -592,7 +518,7 @@ onMounted(() => loadChannelsData())
                 class="p-1 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-30"
                 :title="$t('admin.moveDown')"
                 :aria-label="$t('admin.moveDown')"
-                @click.stop="moveChannel(cat, chIdx, 1)"
+                @click.stop="moveChannelBy(cat.id, ch, 1)"
               >
                 <ArrowDown class="w-3.5 h-3.5" />
               </button>
