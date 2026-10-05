@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { brotliCompressSync, gzipSync, constants as zlib } from 'node:zlib'
+import { appVersion } from './version.config.js'
 
 // Writes .br and .gz next to compressible build assets; web.Handler serves
 // them to browsers that accept the encoding. Matters most for the 16 MB
@@ -55,6 +56,9 @@ function shipLicenses() {
 
 export default defineConfig({
   plugins: [vue(), precompress(), shipLicenses()],
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion())
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

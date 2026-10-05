@@ -22,7 +22,12 @@ RUN --mount=type=cache,target=/root/.npm \
     npm ci --no-audit --no-fund
 
 COPY web/ ./
-RUN npm run build
+# The web app embeds the same version as the binary (vite define
+# __APP_VERSION__): VERSION, else version.txt. The browser compares it with
+# the server's to offer a reload after an update.
+ARG VERSION=
+COPY version.txt /version.txt
+RUN MNEMA_VERSION="${VERSION}" npm run build
 
 # --- Stage 2: Go binary ---
 FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
@@ -38,16 +43,21 @@ COPY api/ ./api/
 COPY web/web.go ./web/web.go
 COPY --from=web /web/dist ./web/dist
 
-# Release version baked into the binary (cmd/server: var version = "dev").
-# The release workflow passes the tag, e.g. --build-arg VERSION=1.2.3.
-ARG VERSION=dev
+# Release version and source revision baked into the binary
+# (internal/version). The release workflow passes the release, e.g.
+# --build-arg VERSION=1.2.3 --build-arg REVISION=<commit>; without VERSION
+# the version from version.txt is used, the same one the web stage embedded.
+ARG VERSION=
+ARG REVISION=
 # Set by buildx per target platform, e.g. linux/arm64 or linux/arm/v7 (GOARM=7).
 ARG TARGETOS TARGETARCH TARGETVARIANT
+COPY version.txt ./version.txt
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
+    v="${VERSION:-$(cat version.txt)}" && \
     CGO_ENABLED=0 GOOS="${TARGETOS:-linux}" GOARCH="${TARGETARCH:-amd64}" GOARM="${TARGETVARIANT#v}" \
     go build -trimpath \
-      -ldflags="-w -s -X main.version=${VERSION}" \
+      -ldflags="-w -s -X github.com/msch128/mnema-talk/internal/version.Version=${v} -X github.com/msch128/mnema-talk/internal/version.Revision=${REVISION}" \
       -o /out/mnema-talk ./cmd/server
 
 # --- Stage 3: runtime files, prepared on the build machine ---
