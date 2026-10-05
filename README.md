@@ -62,7 +62,7 @@ If `ADMIN_INITIAL_PASSWORD` is empty, a random password is generated and logged
 
 ## Development
 
-Requirements: Go (see `go.mod`), Node 22 + npm, Docker, GNU make (on Windows use
+Requirements: Go (see `go.mod`), Node 24 + npm, Docker, GNU make (on Windows use
 Git Bash or WSL). Run `make help` for all targets.
 
 ```sh
