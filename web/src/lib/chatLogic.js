@@ -1,5 +1,6 @@
 // Pure helpers behind the chat store and message rendering, kept free of
 // Vue/Pinia so they can be unit tested directly.
+import { CODE_BLOCK_RE, INLINE_CODE_RE, SPOILER_RE, URL_RE } from './markdown'
 
 export function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -20,14 +21,15 @@ export function shouldNotify({ permission, level = 'all', isMention = false, hid
   return hidden || !isCurrentChannel
 }
 
-// URLs worth a preview card: plain text only, never inside code or spoilers.
+// URLs worth a preview card: the links renderMarkdown makes, except those
+// inside code or spoilers.
 export function extractPreviewUrls(content, max = 3) {
   if (!content) return []
   const plain = content
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/`[^`\n]*`/g, ' ')
-    .replace(/\|\|[\s\S]*?\|\|/g, ' ')
-  const matches = plain.match(/\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g)
+    .replace(CODE_BLOCK_RE, ' ')
+    .replace(INLINE_CODE_RE, ' ')
+    .replace(SPOILER_RE, ' ')
+  const matches = plain.match(URL_RE)
   if (!matches) return []
   return [...new Set(matches)].slice(0, max)
 }
