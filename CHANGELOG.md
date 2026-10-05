@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/msch128/mnema-talk/compare/v0.1.4...v0.1.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* **voice:** announce public and LAN addresses, log connection states ([70aa20d](https://github.com/msch128/mnema-talk/commit/70aa20dbb2aac5cf9b63f926e1aa6d626cbf8340))
+
 ## [0.1.4](https://github.com/msch128/mnema-talk/compare/v0.1.3...v0.1.4) (2026-10-05)
 
 
