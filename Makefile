@@ -10,7 +10,6 @@ S3_HOST_PORT ?= 8333
 GO_PKGS    := ./...
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
-SWAG_VERSION ?= v2.0.0-rc6
 
 OPENAPI_FILE := api/openapi.json
 
@@ -19,7 +18,7 @@ OPENAPI_FILE := api/openapi.json
 # internal/tools/openapifix applies the fixes swag cannot express itself.
 define openapi_gen
 	@tmp="$$(mktemp -d)" && trap 'rm -rf "$$tmp"' EXIT && \
-	go run github.com/swaggo/swag/v2/cmd/swag@$(SWAG_VERSION) init --v3.1 --quiet \
+	go tool swag init --v3.1 --quiet \
 		-g doc.go -d internal/server,internal --parseInternal --requiredByDefault \
 		--overridesFile api/swaggo.overrides --outputTypes json -o "$$tmp" && \
 	go run ./internal/tools/openapifix "$$tmp/swagger.json" $(1)
