@@ -1,0 +1,48 @@
+web/public/mnema-talk-icon-maskable.svg
+  s_50a8e6d0bfe84a::t_048ca1cb7b1cb2 4
+  s_50a8e6d0bfe84a::t_767722fbd06df8 1-3,5-15
+docs/DESIGN.md
+  s_50a8e6d0bfe84a::t_22f0bc52c3b89e 1-96,106-176,182-222,225,229-234,240,246-347,365-385,388-390,403-539,542-557,562-569
+  s_50a8e6d0bfe84a::t_bc0ce2a323b296 386-387
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 97-105,177-181,223-224,226-228,235-239,241-245,348-364,391-402,540-541,558-561
+docs/brand/mnema-talk-wordmark-dark.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-15
+web/public/mnema-talk-mark-mono.svg
+  s_50a8e6d0bfe84a::t_f4baeab445d944 1-12
+docs/brand/mnema-talk-wordmark-light.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-15
+docs/brand/mnema-talk-mark.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-12
+web/public/mnema-talk-wordmark-dark.svg
+  s_50a8e6d0bfe84a::t_061406f83df8e2 1-15
+web/index.html
+  s_50a8e6d0bfe84a::t_ab5f2626e6e9f5 8-9
+web/public/favicon.svg
+  s_50a8e6d0bfe84a::t_733db8bd9ac6b8 1-12
+docs/brand/favicon.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-12
+web/public/mnema-talk-mark.svg
+  s_50a8e6d0bfe84a::t_739844653fb454 1-12
+docs/brand/mnema-talk-mark-mono.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-12
+web/public/mnema-talk-wordmark-light.svg
+  s_50a8e6d0bfe84a::t_caa33c855115c0 1-15
+docs/brand/mnema-talk-icon-maskable.svg
+  s_50a8e6d0bfe84a::t_6ef2e26544a32c 1-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "abb0b7403a4e52fa748dffe5b58363b7c1a8018b",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
