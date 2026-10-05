@@ -105,6 +105,11 @@
     "retryNow": "Jetzt versuchen",
     "restored": "Wieder verbunden"
   },
+  "update": {
+    "reloadBanner": "Eine neue Version ist verfügbar – hier klicken zum Neuladen",
+    "reloadInCall": "Dein Anruf wird dabei kurz getrennt und danach automatisch wieder verbunden.",
+    "dismiss": "Später"
+  },
   "login": {
     "subtitleLogin": "Anmelden bei Mnema Talk",
     "subtitleRegister": "Dem Treffpunkt beitreten",

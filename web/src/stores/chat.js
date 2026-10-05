@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import { useToastStore } from './toast'
+import { useAppVersionStore } from './appVersion'
 import { t } from '../i18n'
 import {
   PAGE_SIZE, WINDOW_CAP, emptyWindow, fromLatest, fromAround,
@@ -661,6 +662,10 @@ export const useChatStore = defineStore('chat', () => {
     switch (event.type) {
       case 'pong':
         if (p?.t) voiceStore.recordPing(Date.now() - p.t)
+        break
+
+      case 'server_info':
+        useAppVersionStore().setServerVersion(p?.version)
         break
 
       case 'presence_snapshot':

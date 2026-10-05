@@ -71,6 +71,11 @@ type Hub struct {
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
 
+	// Version is the server's release version, sent to every new connection
+	// (server_info) so browsers can offer a reload after an update. Only the
+	// version string: no commit or build details.
+	Version string
+
 	upgrader websocket.Upgrader
 }
 
@@ -397,6 +402,7 @@ func (h *Hub) register(c *Client) {
 
 	slog.Info("ws connected", "user", c.User.Username)
 	h.announcePresence(c.User.ID, before, after)
+	c.SendEvent("server_info", h.serverInfo())
 	c.SendEvent("presence_snapshot", h.presenceSnapshot())
 	c.SendEvent("voice_snapshot", h.voiceSnapshot())
 	c.SendEvent("voice_rooms", h.voiceRooms())
