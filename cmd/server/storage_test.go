@@ -45,7 +45,7 @@ func TestLazyStoreRetriesUntilStorageIsUp(t *testing.T) {
 	if err := l.Upload(ctx, "k", bytes.NewReader([]byte("x")), "text/plain", 1); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, _, err := l.GetObject(ctx, "k"); err != nil {
+	if _, err := l.GetObjectFrom(ctx, "k", 0); err != nil {
 		t.Fatal(err)
 	}
 	if attempts.Load() != 3 {
