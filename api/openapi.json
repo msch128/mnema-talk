@@ -1173,6 +1173,31 @@
         ],
         "type": "object"
       },
+      "server.DatabaseHealth": {
+        "properties": {
+          "applied_migrations": {
+            "type": "integer"
+          },
+          "latest_migration": {
+            "description": "LatestMigration is the newest applied migration file, e.g. \"0012_message_count.sql\".",
+            "type": "string"
+          },
+          "pending_migrations": {
+            "description": "PendingMigrations counts embedded migrations not applied yet (0 when\nthe server started normally: it migrates before serving).",
+            "type": "integer"
+          },
+          "reachable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "applied_migrations",
+          "latest_migration",
+          "pending_migrations",
+          "reachable"
+        ],
+        "type": "object"
+      },
       "server.Health": {
         "properties": {
           "status": {
@@ -1274,6 +1299,180 @@
           "session_expiry_days",
           "stun_servers",
           "turn_servers"
+        ],
+        "type": "object"
+      },
+      "server.RuntimeHealth": {
+        "properties": {
+          "go_version": {
+            "type": "string"
+          },
+          "goroutines": {
+            "type": "integer"
+          },
+          "mem_alloc_bytes": {
+            "description": "MemAllocBytes is live heap memory; MemSysBytes what the Go runtime\nobtained from the OS.",
+            "type": "integer"
+          },
+          "mem_sys_bytes": {
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "uptime_seconds": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "go_version",
+          "goroutines",
+          "mem_alloc_bytes",
+          "mem_sys_bytes",
+          "started_at",
+          "uptime_seconds"
+        ],
+        "type": "object"
+      },
+      "server.StorageHealth": {
+        "properties": {
+          "attachment_bytes": {
+            "type": "integer"
+          },
+          "avatar_bytes": {
+            "type": "integer"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "files": {
+            "type": "integer"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "total_bytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "attachment_bytes",
+          "avatar_bytes",
+          "configured",
+          "files",
+          "reachable",
+          "total_bytes"
+        ],
+        "type": "object"
+      },
+      "server.SystemHealth": {
+        "properties": {
+          "database": {
+            "$ref": "#/components/schemas/server.DatabaseHealth"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/server.RuntimeHealth"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/server.StorageHealth"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/server.VoiceHealth"
+          }
+        },
+        "required": [
+          "database",
+          "runtime",
+          "storage",
+          "voice"
+        ],
+        "type": "object"
+      },
+      "server.SystemStatus": {
+        "properties": {
+          "health": {
+            "$ref": "#/components/schemas/server.SystemHealth"
+          },
+          "version": {
+            "$ref": "#/components/schemas/server.SystemVersion"
+          }
+        },
+        "required": [
+          "health",
+          "version"
+        ],
+        "type": "object"
+      },
+      "server.SystemVersion": {
+        "properties": {
+          "current": {
+            "description": "Current is the release version (\"dev\" for a build without one).",
+            "type": "string"
+          },
+          "go_version": {
+            "type": "string"
+          },
+          "revision": {
+            "description": "Revision is the short git commit of the build; empty when unknown.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current",
+          "go_version",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "server.VoiceHealth": {
+        "properties": {
+          "cameras": {
+            "type": "integer"
+          },
+          "enabled": {
+            "description": "Enabled is false when the SFU could not start (voice disabled).",
+            "type": "boolean"
+          },
+          "media_connections": {
+            "description": "MediaConnections are the SFU's peer connections.",
+            "type": "integer"
+          },
+          "online_users": {
+            "type": "integer"
+          },
+          "participants": {
+            "type": "integer"
+          },
+          "rooms": {
+            "description": "Rooms and Participants are the calls as members see them.",
+            "type": "integer"
+          },
+          "screen_shares": {
+            "type": "integer"
+          },
+          "stun_configured": {
+            "type": "boolean"
+          },
+          "turn_configured": {
+            "type": "boolean"
+          },
+          "websocket_connections": {
+            "description": "WebSocketConnections are open realtime connections; OnlineUsers the\ndistinct users behind them.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cameras",
+          "enabled",
+          "media_connections",
+          "online_users",
+          "participants",
+          "rooms",
+          "screen_shares",
+          "stun_configured",
+          "turn_configured",
+          "websocket_connections"
         ],
         "type": "object"
       }
@@ -2803,6 +3002,89 @@
           }
         ],
         "summary": "Delete a media object",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/system": {
+      "get": {
+        "description": "Version, health and load of the server for the admin System tab. Contains no secrets. Requires role admin (403 otherwise).",
+        "operationId": "getSystemStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.SystemStatus"
+                }
+              }
+            },
+            "description": "System status.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "System status",
         "tags": [
           "Admin"
         ]
