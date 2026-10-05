@@ -60,6 +60,9 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
 	r.Post("/channels", httpx.Handle(h.createChannel))
 	r.Delete("/channels/{id}", httpx.Handle(h.deleteChannel))
+	r.Patch("/channels/{id}", httpx.Handle(h.updateChannel))
+	r.Patch("/categories/{id}", httpx.Handle(h.renameCategory))
+	r.Put("/layout", httpx.Handle(h.applyLayout))
 }
 
 func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
@@ -462,5 +465,64 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"messages": msgs, "has_more": more})
+	return nil
+}
+
+func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Name  *string `json:"name"`
+		Topic *string `json:"topic"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic)
+	if err != nil {
+		return err
+	}
+	h.Events.Broadcast("channels_changed", nil)
+	httpx.WriteJSON(w, http.StatusOK, ch)
+	return nil
+}
+
+func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
+	id, err := httpx.PathUUID(r, "id")
+	if err != nil {
+		return err
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	if err := RenameCategory(r.Context(), h.DB, id, req.Name); err != nil {
+		return err
+	}
+	h.Events.Broadcast("channels_changed", nil)
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"id": id, "name": req.Name})
+	return nil
+}
+
+func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Categories []CategoryOrder    `json:"categories"`
+		Channels   []ChannelPlacement `json:"channels"`
+	}
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	if len(req.Categories)+len(req.Channels) > 500 {
+		return httpx.ErrInvalidInput("too many entries")
+	}
+	if err := ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels); err != nil {
+		return err
+	}
+	h.Events.Broadcast("channels_changed", nil)
+	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

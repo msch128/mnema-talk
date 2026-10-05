@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -171,4 +172,94 @@ func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error
 		return httpx.ErrNotFound("category not found")
 	}
 	return nil
+}
+
+var errCategoryNotFound = httpx.ErrNotFound("category not found")
+
+// UpdateChannel renames a channel and/or changes its topic; nil keeps a field.
+func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string) (*Channel, error) {
+	if name != nil {
+		n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
+		if err != nil {
+			return nil, err
+		}
+		name = &n
+	}
+	if topic != nil {
+		t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
+		if err != nil {
+			return nil, err
+		}
+		topic = &t
+	}
+	var ch Channel
+	err := p.QueryRow(ctx, `
+		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic)
+		WHERE id = $1
+		RETURNING id, category_id, name, type, topic, sort_order, created_at`, id, name, topic).
+		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errChannelNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("update channel: %w", err)
+	}
+	return &ch, nil
+}
+
+// RenameCategory changes a category's name.
+func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) error {
+	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+	if err != nil {
+		return err
+	}
+	tag, err := p.Exec(ctx, `UPDATE categories SET name = $2 WHERE id = $1`, id, name)
+	if err != nil {
+		return fmt.Errorf("rename category: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return errCategoryNotFound
+	}
+	return nil
+}
+
+// CategoryOrder and ChannelPlacement describe a drag-and-drop result.
+type CategoryOrder struct {
+	ID        uuid.UUID `json:"id"`
+	SortOrder int       `json:"sort_order"`
+}
+
+type ChannelPlacement struct {
+	ID         uuid.UUID  `json:"id"`
+	CategoryID *uuid.UUID `json:"category_id"`
+	SortOrder  int        `json:"sort_order"`
+}
+
+// ApplyLayout stores category order and channel placement in one
+// transaction; an unknown category or channel rejects the whole change.
+func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []ChannelPlacement) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		for _, c := range cats {
+			tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
+			if err != nil {
+				return fmt.Errorf("order category: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				return errCategoryNotFound
+			}
+		}
+		for _, c := range chans {
+			tag, err := tx.Exec(ctx, `
+				UPDATE channels SET category_id = $2, sort_order = $3
+				WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
+				c.ID, c.CategoryID, c.SortOrder)
+			if err != nil {
+				return fmt.Errorf("place channel: %w", err)
+			}
+			if tag.RowsAffected() == 0 {
+				return httpx.ErrNotFound("channel or category not found")
+			}
+		}
+		return nil
+	})
 }
