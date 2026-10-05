@@ -608,17 +608,32 @@ function bindPublishSenders(conn, sdp) {
     if (track) tr.sender.replaceTrack(track).catch(() => {})
     return tr.sender
   }
-  const bound = { screen: false, camera: false }
-  if (!audioSender) audioSender = bind(mids.audio, activeAudioTrack())
+  // fresh: senders bound by this call, which still need their parameters.
+  const bound = { screen: false, camera: false, fresh: {} }
+  if (!audioSender) {
+    audioSender = bind(mids.audio, activeAudioTrack())
+    if (audioSender) bound.fresh.audio = audioSender
+  }
   if (!screenSender) {
     screenSender = bind(mids.video[0], localScreenStream.value?.getVideoTracks()[0])
     bound.screen = !!screenSender && !!localScreenStream.value
+    if (screenSender) bound.fresh.screen = screenSender
   }
   if (!cameraSender) {
     cameraSender = bind(mids.video[1], localCameraStream.value?.getVideoTracks()[0])
     bound.camera = !!cameraSender && !!localCameraStream.value
+    if (cameraSender) bound.fresh.camera = cameraSender
   }
   return bound
+}
+
+// Bitrate, degradation and priority of a freshly bound sender: the same a
+// share or camera started in a running connection gets, so a reconnect or a
+// channel switch keeps them.
+async function tuneBoundSenders(fresh, voiceStore) {
+  if (fresh.audio) await applyQosToSender(fresh.audio, voiceStore)
+  if (fresh.screen) await tuneSender(fresh.screen, screenSenderParams(voiceStore))
+  if (fresh.camera) await tuneSender(fresh.camera, cameraSenderParams(voiceStore))
 }
 
 // Sender limits (bits per second). The browser's own congestion control still
@@ -667,10 +682,23 @@ async function tuneSender(sender, { maxBitrate, degradationPreference, priority,
   }
 }
 
+function qosPriority(voiceStore) {
+  return voiceStore?.qosHighPriority ? 'high' : 'medium'
+}
+
+function screenSenderParams(voiceStore) {
+  const prio = qosPriority(voiceStore)
+  return { maxBitrate: SCREEN_MAX_BITRATE, degradationPreference: 'maintain-resolution', priority: prio, networkPriority: prio }
+}
+
+function cameraSenderParams(voiceStore) {
+  const prio = qosPriority(voiceStore)
+  return { maxBitrate: CAMERA_MAX_BITRATE, degradationPreference: 'balanced', priority: prio, networkPriority: prio }
+}
+
 async function applyQosToSender(sender, voiceStore) {
   if (!sender) return
-  const qos = voiceStore?.qosHighPriority
-  const prio = qos ? 'high' : 'medium'
+  const prio = qosPriority(voiceStore)
   await tuneSender(sender, { priority: prio, networkPriority: prio })
 }
 
@@ -1076,9 +1104,12 @@ export function useWebRTC() {
       const queued = pendingCandidates
       pendingCandidates = []
       for (const c of queued) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
-      const answer = await pc.createAnswer()
-      await pc.setLocalDescription(answer)
+      const conn = pc
+      const answer = await conn.createAnswer()
+      await conn.setLocalDescription(answer)
       chatStore.sendWSEvent('webrtc_answer', answer)
+      // Encoding parameters only stick once the line is negotiated.
+      if (pc === conn) await tuneBoundSenders(bound.fresh, voiceStore)
     } catch (err) {
       console.warn('[WebRTC] Offer/Answer negotiation error:', err)
       chatStore.sendWSEvent('webrtc_diag', { event: 'negotiation_error', error: String(err?.message || err) })
@@ -1463,13 +1494,7 @@ export function useWebRTC() {
 
     if (screenSender && videoTrack) {
       await screenSender.replaceTrack(videoTrack).catch(() => {})
-      const qos = voiceStore?.qosHighPriority ? 'high' : 'medium'
-      await tuneSender(screenSender, {
-        maxBitrate: SCREEN_MAX_BITRATE,
-        degradationPreference: 'maintain-resolution',
-        priority: qos,
-        networkPriority: qos
-      })
+      await tuneSender(screenSender, screenSenderParams(voiceStore))
       chatStore.sendWSEvent('webrtc_screenshare_start', {})
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
     }
@@ -1558,13 +1583,7 @@ export function useWebRTC() {
       track.onended = () => stopCamera()
       if (cameraSender) {
         await cameraSender.replaceTrack(track).catch(() => {})
-        const qos = voiceStore?.qosHighPriority ? 'high' : 'medium'
-        await tuneSender(cameraSender, {
-          maxBitrate: CAMERA_MAX_BITRATE,
-          degradationPreference: 'balanced',
-          priority: qos,
-          networkPriority: qos
-        })
+        await tuneSender(cameraSender, cameraSenderParams(voiceStore))
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       }
     }
