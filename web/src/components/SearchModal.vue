@@ -205,7 +205,7 @@ onUnmounted(() => {
           <button
             type="button"
             class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
-            :aria-label="$t('common.close')"
+            v-tooltip="$t('common.close')"
             @click="close"
           >
             <X class="w-4 h-4" />
