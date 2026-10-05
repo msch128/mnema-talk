@@ -108,3 +108,16 @@ func (c *Client) GetObject(ctx context.Context, key string) (io.ReadCloser, stri
 	}
 	return out.Body, aws.ToString(out.ContentType), aws.ToInt64(out.ContentLength), nil
 }
+
+// GetObjectFrom streams the object from byte offset to its end.
+func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error) {
+	out, err := c.client.GetObject(ctx, &s3svc.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+		Range:  aws.String(fmt.Sprintf("bytes=%d-", offset)),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get object %s from %d: %w", key, offset, err)
+	}
+	return out.Body, nil
+}

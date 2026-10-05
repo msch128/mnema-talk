@@ -64,6 +64,9 @@ func NewRouter(d Deps) (*Router, error) {
 
 	authH := auth.NewHandler(sessions, pub)
 	chatH := &chat.Handler{DB: d.DB, Events: pub}
+	if d.Store != nil {
+		chatH.Objects = d.Store
+	}
 	mediaH := &media.Handler{
 		DB:             d.DB,
 		Store:          d.Store,

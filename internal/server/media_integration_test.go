@@ -3,6 +3,7 @@
 package server
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -111,5 +112,63 @@ func TestPruneIsOptIn(t *testing.T) {
 	}
 	if a.store.Len() != 1 {
 		t.Fatal("media was deleted")
+	}
+}
+
+func TestDeletingMessagesAndChannelsRemovesTheirMedia(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "medien", "text")
+	upload := func() uploaded {
+		res := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "cat.png", "image/png", pngBytes, nil)
+		if res.status != http.StatusCreated {
+			t.Fatalf("upload: %d %s", res.status, res.body)
+		}
+		var msg uploaded
+		res.decode(t, &msg)
+		return msg
+	}
+
+	msg := upload()
+	if a.store.Len() != 1 {
+		t.Fatalf("expected 1 stored object, got %d", a.store.Len())
+	}
+	if res := admin.delete("/api/channels/" + ch.String() + "/messages/" + msg.ID.String()); res.status != http.StatusNoContent {
+		t.Fatalf("delete message: %d %s", res.status, res.body)
+	}
+	if a.store.Len() != 0 {
+		t.Fatalf("message deleted but %d object(s) left in storage", a.store.Len())
+	}
+
+	upload()
+	upload()
+	if res := admin.delete("/api/admin/channels/" + ch.String()); res.status != http.StatusNoContent {
+		t.Fatalf("delete channel: %d %s", res.status, res.body)
+	}
+	if a.store.Len() != 0 {
+		t.Fatalf("channel deleted but %d object(s) left in storage", a.store.Len())
+	}
+}
+
+func TestMediaSupportsRangeRequests(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	ch := a.createChannel(admin, "medien", "text")
+	res := admin.upload("/api/channels/"+ch.String()+"/upload", "file", "cat.png", "image/png", pngBytes, nil)
+	var msg uploaded
+	res.decode(t, &msg)
+
+	part := admin.do(http.MethodGet, msg.Attachments[0].URL, nil, map[string]string{"Range": "bytes=1-4"})
+	if part.status != http.StatusPartialContent {
+		t.Fatalf("range request: %d", part.status)
+	}
+	if got, want := string(part.body), string(pngBytes[1:5]); got != want {
+		t.Fatalf("range body %q, want %q", got, want)
+	}
+	if cr := part.header.Get("Content-Range"); cr != fmt.Sprintf("bytes 1-4/%d", len(pngBytes)) {
+		t.Fatalf("Content-Range %q", cr)
+	}
+	if full := admin.get(msg.Attachments[0].URL); full.header.Get("Accept-Ranges") != "bytes" || full.header.Get("ETag") == "" {
+		t.Fatalf("full response should advertise ranges and an ETag: %v", full.header)
 	}
 }

@@ -1,6 +1,8 @@
 package chat
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -15,6 +17,24 @@ import (
 type Handler struct {
 	DB     *db.Pool
 	Events events.Publisher
+	// Objects deletes the media of removed messages and channels; nil skips it.
+	Objects ObjectDeleter
+}
+
+// ObjectDeleter removes stored media objects (implemented by media.Store).
+type ObjectDeleter interface {
+	DeleteBatch(ctx context.Context, keys []string) error
+}
+
+// deleteObjects removes media objects after their rows are gone. A failure
+// only leaves an orphaned object behind, so it is logged, not returned.
+func (h *Handler) deleteObjects(ctx context.Context, keys []string) {
+	if h.Objects == nil || len(keys) == 0 {
+		return
+	}
+	if err := h.Objects.DeleteBatch(ctx, keys); err != nil {
+		slog.Warn("delete media objects", "count", len(keys), "err", err)
+	}
 }
 
 // Mount registers the member-facing routes (RequireUser must already apply).
@@ -192,9 +212,11 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := DeleteMessage(r.Context(), h.DB, msgID, auth.UserFrom(r.Context())); err != nil {
+	keys, err := DeleteMessage(r.Context(), h.DB, msgID, auth.UserFrom(r.Context()))
+	if err != nil {
 		return err
 	}
+	h.deleteObjects(r.Context(), keys)
 	h.Events.Broadcast("message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
@@ -307,9 +329,11 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := DeleteChannel(r.Context(), h.DB, id); err != nil {
+	keys, err := DeleteChannel(r.Context(), h.DB, id)
+	if err != nil {
 		return err
 	}
+	h.deleteObjects(r.Context(), keys)
 	h.Events.Broadcast("channels_changed", nil)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
