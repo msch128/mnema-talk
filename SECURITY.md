@@ -31,7 +31,9 @@ locally instead (`make up` or `make dev`).
   and `Secure` on HTTPS, `SameSite=Lax`). Each token carries the user's
   `token_version`; changing the password or "log out everywhere"
   (`POST /api/auth/logout-all`) increments it, which revokes every existing
-  session of that user immediately, including copied cookies.
+  session of that user immediately, including copied cookies, and closes the
+  user's open WebSockets (after a password change the current client
+  reconnects with its fresh cookie).
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
 - **Security headers.** Strict Content-Security-Policy (no inline scripts or
@@ -44,11 +46,24 @@ locally instead (`make up` or `make dev`).
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
   served only to authenticated users, through the app, not directly from S3.
 - **Abuse protection.** Per-client rate limiting, plus an escalating login
-  lockout per client address and username after repeated failures, and a much
-  higher per-account cap against guessing from many addresses. Guessing from one
-  address therefore cannot lock the account out for everyone else. Invite codes
-  are checked before any password hashing. Client IPs are taken from
-  `X-Forwarded-For` only when the request comes from `TRUSTED_PROXY_CIDRS`.
+  lockout per client address and username after repeated failures (1, 5, then
+  30 minutes; the tier is forgotten after an hour without failures). A much
+  higher per-account cap guards against guessing from many addresses: once it
+  trips, wrong passwords for that account are answered with 429 and count
+  triple against their address, but the correct password always signs in (and
+  resets the cap), so neither one address nor many can lock the owner out.
+  Rate-limit and lockout keys treat an IPv6 /64 as one client. Login attempts
+  with a username that cannot exist are rejected before they are tracked, and
+  limiter memory is capped. Invite codes are checked before any password
+  hashing.
+- **Client addresses.** Client IPs are taken from `X-Forwarded-For` (every
+  header line, right-most untrusted hop) only when the request comes from
+  loopback or `TRUSTED_PROXY_CIDRS`. When private ranges are trusted (as with
+  the Docker network behind a reverse proxy), the app port (8080) must not be
+  reachable directly from the internet or from untrusted hosts in those
+  ranges: anyone who can connect from a trusted range can set their own
+  `X-Forwarded-For` and evade the per-client limits. Publish only the reverse
+  proxy.
 - **Voice and screenshare.** Media is encrypted with DTLS-SRTP between each client
   and the SFU. This is **not end-to-end encryption**: the SFU decrypts packets in
   memory to forward them to the other participants (it does not record or
