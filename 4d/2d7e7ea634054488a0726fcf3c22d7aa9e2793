@@ -1,0 +1,21 @@
+internal/server/ws_integration_test.go
+  s_50a8e6d0bfe84a::t_d7db1e7304c14a 213-251
+internal/ws/hub.go
+  s_50a8e6d0bfe84a::t_99d290ca86b244 110-128,195-209,531-538
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d2d7e7ea634054488a0726fcf3c22d7aa9e2793",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
