@@ -49,7 +49,10 @@ let lastNoAudioWarningToastTime = 0
 
 // WebRTC Peer Connection and Remote Audio
 let pc = null
-let remoteAudioElements = []
+// Remote audio elements by track id. The SFU reuses its transceivers: the
+// same track may come back in a new stream (another speaker), so elements
+// are keyed by track and retagged instead of piling up.
+const remoteAudioElements = new Map()
 // Senders of the three fixed outgoing lines, created with the connection:
 // mic (or mix), screen share and camera. Tracks are swapped with replaceTrack,
 // so starting or stopping them never renegotiates.
@@ -261,11 +264,12 @@ function cleanupPeerConnection(voiceStore) {
     try {
       el.pause()
       el.srcObject = null
+      el.remove()
     } catch {
       // element already detached / disposed
     }
   })
-  remoteAudioElements = []
+  remoteAudioElements.clear()
   if (playbackContext) {
     playbackContext.close().catch(() => {})
     playbackContext = null
@@ -337,6 +341,66 @@ function buildScreenAudioMix(screenTrack, voiceStore) {
 }
 
 
+function removeRemoteAudio(trackId) {
+  const el = remoteAudioElements.get(trackId)
+  if (!el) return
+  remoteAudioElements.delete(trackId)
+  releaseBoost(el)
+  try {
+    el.pause?.()
+    el.srcObject = null
+    el.remove()
+  } catch { /* detached */ }
+}
+
+// Plays one remote audio track. The stream ID names the speaking user; a
+// repeated ontrack for the same track (transceiver reused for someone else)
+// only retags its element.
+function attachRemoteAudio(voiceStore, track, stream) {
+  const userId = stream?.id || ''
+  let audioEl = remoteAudioElements.get(track.id)
+  if (audioEl) {
+    if (userId) audioEl.dataset.userId = userId
+    else delete audioEl.dataset.userId
+    applyRemoteGain(voiceStore, audioEl)
+    if (audioEl.paused) audioEl.play?.().catch(() => {})
+  } else {
+    audioEl = new Audio()
+    audioEl.srcObject = new MediaStream([track])
+    audioEl.autoplay = true
+    if (userId) audioEl.dataset.userId = userId
+    applyOutput(voiceStore, audioEl)
+    applyRemoteGain(voiceStore, audioEl)
+    audioEl.play().catch(e => {
+      // After a reload without a user gesture the browser may refuse to play;
+      // the UI then offers a click to enable sound (resumeRemoteAudio).
+      if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
+      console.warn('[WebRTC] Audio auto-play warning:', e)
+    })
+    if (typeof document !== 'undefined' && document.body) {
+      let sink = document.getElementById('mnema-audio-sink')
+      if (!sink) {
+        sink = document.createElement('div')
+        sink.id = 'mnema-audio-sink'
+        sink.style.display = 'none'
+        document.body.appendChild(sink)
+      }
+      sink.appendChild(audioEl)
+    }
+    remoteAudioElements.set(track.id, audioEl)
+    track.onended = () => removeRemoteAudio(track.id)
+  }
+
+  // When the SFU stops forwarding, the browser removes the track from its
+  // stream instead of ending it. Only drop the element while it still
+  // belongs to this stream: a reused track may already play for someone else.
+  stream?.addEventListener?.('removetrack', (e) => {
+    if (e.track !== track) return
+    const el = remoteAudioElements.get(track.id)
+    if (el && (el.dataset.userId || '') === userId) removeRemoteAudio(track.id)
+  })
+}
+
 function setupPeerConnection(voiceStore, chatStore) {
   cleanupPeerConnection(voiceStore)
 
@@ -382,36 +446,7 @@ function setupPeerConnection(voiceStore, chatStore) {
     // The SFU names the publishing user in the stream ID.
     const streamId = event.streams?.[0]?.id
     if (event.track.kind === 'audio') {
-      const audioEl = new Audio()
-      audioEl.srcObject = new MediaStream([event.track])
-      audioEl.autoplay = true
-      if (streamId) audioEl.dataset.userId = streamId
-      applyOutput(voiceStore, audioEl)
-      applyRemoteGain(voiceStore, audioEl)
-      audioEl.play().catch(e => {
-        // After a reload without a user gesture the browser may refuse to play;
-        // the UI then offers a click to enable sound (resumeRemoteAudio).
-        if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
-        console.warn('[WebRTC] Audio auto-play warning:', e)
-      })
-      if (typeof document !== 'undefined' && document.body) {
-        let sink = document.getElementById('mnema-audio-sink')
-        if (!sink) {
-          sink = document.createElement('div')
-          sink.id = 'mnema-audio-sink'
-          sink.style.display = 'none'
-          document.body.appendChild(sink)
-        }
-        sink.appendChild(audioEl)
-      }
-      remoteAudioElements.push(audioEl)
-
-      event.track.onended = () => {
-        releaseBoost(audioEl)
-        audioEl.srcObject = null
-        try { audioEl.remove() } catch { /* detached */ }
-        remoteAudioElements = remoteAudioElements.filter(a => a !== audioEl)
-      }
+      attachRemoteAudio(voiceStore, event.track, event.streams?.[0])
     } else if (event.track.kind === 'video') {
       const stream = new MediaStream([event.track])
       const isCamera = !!streamId?.startsWith(CAMERA_STREAM_PREFIX)
