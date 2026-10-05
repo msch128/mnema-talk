@@ -161,12 +161,8 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	ch, err := chat.LoadChannel(r.Context(), h.DB, chID)
-	if err != nil {
+	if _, err := chat.TextChannel(r.Context(), h.DB, chID); err != nil {
 		return err
-	}
-	if ch.Type == chat.ChannelTypeVoice {
-		return httpx.ErrInvalidInput("voice channels have no text chat")
 	}
 
 	in, err := readFile(r, "file", h.MaxUploadBytes, allowedMIME, false)
@@ -187,9 +183,6 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		}
 		parentID = &id
 	}
-	if err := chat.ValidateParent(r.Context(), h.DB, chID, parentID); err != nil {
-		return err
-	}
 	var replyToID *uuid.UUID
 	if raw := r.FormValue("reply_to_id"); raw != "" {
 		id, err := uuid.Parse(raw)
@@ -198,7 +191,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		}
 		replyToID = &id
 	}
-	if err := chat.ValidateReplyTarget(r.Context(), h.DB, chID, parentID, replyToID); err != nil {
+	if err := chat.ValidateTarget(r.Context(), h.DB, chID, parentID, replyToID); err != nil {
 		return err
 	}
 
@@ -208,18 +201,10 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("store upload: %w", err)
 	}
 
-	var msgID uuid.UUID
-	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
-		var err error
-		if msgID, err = chat.CreateMessage(r.Context(), tx, chat.NewMessage{
-			ChannelID: chID, UserID: user.ID, Content: content, ParentID: parentID, ReplyToID: replyToID,
-		}); err != nil {
-			return err
-		}
-		if err := chat.RecordMentions(r.Context(), tx, h.Online, msgID, user.ID, content); err != nil {
-			return err
-		}
-		_, err = tx.Exec(r.Context(), `
+	msgID, err := chat.InsertMessage(r.Context(), h.DB, h.Online, chat.NewMessage{
+		ChannelID: chID, UserID: user.ID, Content: content, ParentID: parentID, ReplyToID: replyToID,
+	}, func(tx pgx.Tx, msgID uuid.UUID) error {
+		_, err := tx.Exec(r.Context(), `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			mediaID, user.ID, chID, msgID, h.Bucket, key, in.filename, in.mime, in.size)
@@ -232,14 +217,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		}
 		return fmt.Errorf("record upload: %w", err)
 	}
-
-	msg, err := chat.GetMessage(r.Context(), h.DB, msgID)
-	if err != nil {
-		return err
-	}
-	h.Events.Broadcast("message_create", msg)
-	httpx.WriteJSON(w, http.StatusCreated, msg)
-	return nil
+	return chat.PublishMessage(w, r, h.DB, h.Events, msgID)
 }
 
 // uploadAvatar handles POST /api/users/me/avatar.

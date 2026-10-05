@@ -142,17 +142,24 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]string, error) {
 	var keys []string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		// Locking the channel first blocks concurrent posts and uploads into
+		// it (their foreign keys need a share lock on it) until we are done,
+		// so every attachment the cascade removes is in keys.
+		var one int
+		err := tx.QueryRow(ctx, `SELECT 1 FROM channels WHERE id = $1 FOR UPDATE`, channelID).Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errChannelNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock channel: %w", err)
+		}
 		if err := collectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
 				(SELECT id FROM messages WHERE channel_id = $1)`, channelID); err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID)
-		if err != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM channels WHERE id = $1`, channelID); err != nil {
 			return fmt.Errorf("delete channel: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return errChannelNotFound
 		}
 		return nil
 	})
