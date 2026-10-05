@@ -3,7 +3,9 @@ import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Search, Hash, Paperclip, Image as ImageIcon, Link as LinkIcon, X, Loader2, ArrowRight, CornerDownRight } from '@lucide/vue'
 import { api } from '../lib/api'
 import { useChatStore } from '../stores/chat'
+import { locale } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
+import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
   modelValue: {
@@ -12,7 +14,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'select-message'])
+const emit = defineEmits(['update:modelValue'])
 
 const PAGE = 25
 
@@ -116,16 +118,11 @@ function toggleHas(value) {
 
 function handleSelect(msg) {
   chatStore.goToMessage(msg)
-  emit('select-message', msg)
   close()
 }
 
+// Escape, the focus trap and focus restore come from BaseDialog.
 function handleKeydown(e) {
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    close()
-    return
-  }
   if (e.target?.tagName === 'SELECT') return
   if (!results.value.length) return
 
@@ -146,7 +143,7 @@ function handleKeydown(e) {
 function formatDate(iso) {
   if (!iso) return ''
   const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 watch(selectedIndex, async () => {
@@ -158,7 +155,6 @@ watch(() => props.modelValue, (open) => {
   if (open) {
     selectedIndex.value = 0
     nextTick(() => {
-      searchInput.value?.focus()
       if (hasCriteria.value) performSearch()
     })
   } else {
@@ -173,161 +169,162 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <div
+    <BaseDialog
       v-if="modelValue"
-      class="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-100"
-      @click.self="close"
+      align="top"
+      panel-class="max-w-2xl"
+      initial-focus="[data-search-input]"
+      @close="close"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        :aria-label="$t('chat.search')"
-        class="w-full max-w-2xl bg-mnema-elevated border border-mnema-border rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[75vh]"
-        @keydown="handleKeydown"
-      >
-        <!-- Search Input Bar -->
-        <div class="flex items-center gap-3 px-4 py-3.5 border-b border-mnema-border bg-mnema-surface/50">
-          <Search class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
-          <input
-            ref="searchInput"
-            v-model="query"
-            type="text"
-            role="combobox"
-            aria-expanded="true"
-            aria-controls="search-results"
-            :aria-activedescendant="results.length ? `search-result-${selectedIndex}` : undefined"
-            :placeholder="$t('chat.searchPlaceholder')"
-            :aria-label="$t('chat.search')"
-            class="flex-1 bg-transparent text-base text-mnema-text placeholder-mnema-tertiary focus:outline-none"
-            @input="onInput"
-          />
-          <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin text-mnema-accent flex-shrink-0" />
-          <button
-            type="button"
-            class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
-            v-tooltip="$t('common.close')"
-            @click="close"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-
-        <!-- Filters -->
-        <div class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-mnema-hairline bg-mnema-raised text-xs text-mnema-muted">
-          <span>{{ $t('chat.filter') }}:</span>
-
-          <select
-            v-model="channelId"
-            :aria-label="$t('chat.searchChannel')"
-            class="max-w-[10rem] px-2 py-1 rounded-md border border-mnema-border bg-mnema-surface text-mnema-muted focus:outline-none focus:border-mnema-accent"
-            @change="performSearch"
-          >
-            <option value="">{{ $t('chat.searchAllChannels') }}</option>
-            <option v-for="ch in textChannels" :key="ch.id" :value="ch.id">#{{ ch.name }}</option>
-          </select>
-
-          <select
-            v-model="authorId"
-            :aria-label="$t('chat.searchAuthor')"
-            class="max-w-[10rem] px-2 py-1 rounded-md border border-mnema-border bg-mnema-surface text-mnema-muted focus:outline-none focus:border-mnema-accent"
-            @change="performSearch"
-          >
-            <option value="">{{ $t('chat.searchAnyAuthor') }}</option>
-            <option v-for="m in chatStore.members" :key="m.id" :value="m.id">{{ m.display_name || m.username }}</option>
-          </select>
-
-          <button
-            v-for="opt in hasHas"
-            :key="opt.value"
-            type="button"
-            :aria-pressed="has === opt.value ? 'true' : 'false'"
-            :class="[
-              'px-2 py-1 rounded-md border flex items-center gap-1 transition',
-              has === opt.value
-                ? 'bg-mnema-accent/10 border-mnema-accent text-mnema-accent'
-                : 'border-mnema-border hover:bg-mnema-hover text-mnema-muted'
-            ]"
-            @click="toggleHas(opt.value)"
-          >
-            <component :is="opt.icon" class="w-3 h-3" />
-            <span>{{ $t(opt.label) }}</span>
-          </button>
-
-          <span class="ml-auto text-mnema-tertiary font-mono">Esc {{ $t('common.close') }}</span>
-        </div>
-
-        <!-- Results List -->
-        <div id="search-results" ref="listEl" role="listbox" class="flex-1 overflow-y-auto p-2 space-y-1">
-          <div v-if="!hasCriteria" class="py-12 text-center text-sm text-mnema-tertiary">
-            {{ $t('chat.searchHint') }}
+      <template #default="{ titleId }">
+        <h2 :id="titleId" class="sr-only">{{ $t('chat.search') }}</h2>
+        <div class="flex max-h-[75vh] min-h-0 flex-col" @keydown="handleKeydown">
+          <!-- Search Input Bar -->
+          <div class="flex items-center gap-3 px-4 py-3.5 border-b border-mnema-border bg-mnema-surface/50">
+            <Search class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
+            <input
+              ref="searchInput"
+              data-search-input
+              v-model="query"
+              type="text"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls="search-results"
+              :aria-activedescendant="results.length ? `search-result-${selectedIndex}` : undefined"
+              :placeholder="$t('chat.searchPlaceholder')"
+              :aria-label="$t('chat.search')"
+              class="flex-1 bg-transparent text-base text-mnema-text placeholder-mnema-tertiary focus:outline-none"
+              @input="onInput"
+            />
+            <Loader2 v-if="isSearching" class="w-4 h-4 animate-spin text-mnema-accent flex-shrink-0" />
+            <button
+              type="button"
+              data-dialog-close
+              class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+              v-tooltip="$t('common.close')"
+              @click="close"
+            >
+              <X class="w-4 h-4" />
+            </button>
           </div>
 
-          <div v-else-if="failed" class="py-12 text-center text-sm text-mnema-tertiary" role="alert">
-            {{ $t('chat.searchFailed') }}
+          <!-- Filters -->
+          <div class="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-mnema-hairline bg-mnema-raised text-xs text-mnema-muted">
+            <span>{{ $t('chat.filter') }}:</span>
+
+            <select
+              v-model="channelId"
+              :aria-label="$t('chat.searchChannel')"
+              class="max-w-[10rem] px-2 py-1 rounded-md border border-mnema-border bg-mnema-surface text-mnema-muted focus:outline-none focus:border-mnema-accent"
+              @change="performSearch"
+            >
+              <option value="">{{ $t('chat.searchAllChannels') }}</option>
+              <option v-for="ch in textChannels" :key="ch.id" :value="ch.id">#{{ ch.name }}</option>
+            </select>
+
+            <select
+              v-model="authorId"
+              :aria-label="$t('chat.searchAuthor')"
+              class="max-w-[10rem] px-2 py-1 rounded-md border border-mnema-border bg-mnema-surface text-mnema-muted focus:outline-none focus:border-mnema-accent"
+              @change="performSearch"
+            >
+              <option value="">{{ $t('chat.searchAnyAuthor') }}</option>
+              <option v-for="m in chatStore.members" :key="m.id" :value="m.id">{{ m.display_name || m.username }}</option>
+            </select>
+
+            <button
+              v-for="opt in hasHas"
+              :key="opt.value"
+              type="button"
+              :aria-pressed="has === opt.value ? 'true' : 'false'"
+              :class="[
+                'px-2 py-1 rounded-md border flex items-center gap-1 transition',
+                has === opt.value
+                  ? 'bg-mnema-accent/10 border-mnema-accent text-mnema-accent'
+                  : 'border-mnema-border hover:bg-mnema-hover text-mnema-muted'
+              ]"
+              @click="toggleHas(opt.value)"
+            >
+              <component :is="opt.icon" class="w-3 h-3" />
+              <span>{{ $t(opt.label) }}</span>
+            </button>
+
+            <span class="ml-auto text-mnema-tertiary font-mono">Esc {{ $t('common.close') }}</span>
           </div>
 
-          <div v-else-if="!results.length && !isSearching" class="py-12 text-center text-sm text-mnema-tertiary">
-            {{ $t('chat.noResults') }}
-          </div>
-
-          <button
-            v-for="(msg, idx) in results"
-            :id="`search-result-${idx}`"
-            :key="msg.id"
-            type="button"
-            role="option"
-            :aria-selected="selectedIndex === idx ? 'true' : 'false'"
-            :class="[
-              'w-full p-3 rounded-lg text-left transition flex items-start gap-3 group',
-              selectedIndex === idx ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/60'
-            ]"
-            @click="handleSelect(msg)"
-          >
-            <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-medium text-sm text-mnema-text truncate">
-                  {{ msg.display_name || msg.username }}
-                </span>
-                <span v-if="channelNames.get(msg.channel_id)" class="px-1.5 py-0.5 rounded bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
-                  <Hash class="w-2.5 h-2.5 text-mnema-tertiary" />
-                  {{ channelNames.get(msg.channel_id) }}
-                </span>
-                <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
-                  <CornerDownRight class="w-3 h-3" />
-                  {{ $t('chat.inThread') }}
-                </span>
-                <span class="text-xs text-mnema-tertiary ml-auto">
-                  {{ formatDate(msg.created_at) }}
-                </span>
-              </div>
-
-              <p class="text-sm text-mnema-muted line-clamp-2 break-words">
-                {{ msg.content }}
-              </p>
-
-              <div v-if="msg.attachments?.length" class="mt-1.5 flex items-center gap-1 text-xs text-mnema-accent">
-                <Paperclip class="w-3 h-3" />
-                <span>{{ msg.attachments.length }} {{ $t('chat.attachment') }}</span>
-              </div>
+          <!-- Results List -->
+          <div id="search-results" ref="listEl" role="listbox" class="flex-1 overflow-y-auto p-2 space-y-1">
+            <div v-if="!hasCriteria" class="py-12 text-center text-sm text-mnema-tertiary">
+              {{ $t('chat.searchHint') }}
             </div>
 
-            <ArrowRight class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-text mt-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0" />
-          </button>
+            <div v-else-if="failed" class="py-12 text-center text-sm text-mnema-tertiary" role="alert">
+              {{ $t('chat.searchFailed') }}
+            </div>
 
-          <button
-            v-if="hasMore"
-            type="button"
-            :disabled="isLoadingMore"
-            class="w-full py-2 rounded-lg text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex items-center justify-center gap-2 disabled:opacity-50"
-            @click="loadMore"
-          >
-            <Loader2 v-if="isLoadingMore" class="w-4 h-4 animate-spin" />
-            {{ $t('chat.searchMore') }}
-          </button>
+            <div v-else-if="!results.length && !isSearching" class="py-12 text-center text-sm text-mnema-tertiary">
+              {{ $t('chat.noResults') }}
+            </div>
+
+            <button
+              v-for="(msg, idx) in results"
+              :id="`search-result-${idx}`"
+              :key="msg.id"
+              type="button"
+              role="option"
+              :aria-selected="selectedIndex === idx ? 'true' : 'false'"
+              :class="[
+                'w-full p-3 rounded-lg text-left transition flex items-start gap-3 group',
+                selectedIndex === idx ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/60'
+              ]"
+              @click="handleSelect(msg)"
+            >
+              <UserAvatar :user="{ username: msg.username, display_name: msg.display_name, avatar_url: msg.avatar_url }" size="sm" class="mt-0.5" />
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="font-medium text-sm text-mnema-text truncate">
+                    {{ msg.display_name || msg.username }}
+                  </span>
+                  <span v-if="channelNames.get(msg.channel_id)" class="px-1.5 py-0.5 rounded bg-mnema-surface border border-mnema-border text-xs text-mnema-muted flex items-center gap-1">
+                    <Hash class="w-2.5 h-2.5 text-mnema-tertiary" />
+                    {{ channelNames.get(msg.channel_id) }}
+                  </span>
+                  <span v-if="msg.parent_id" class="text-xs text-mnema-tertiary flex items-center gap-1">
+                    <CornerDownRight class="w-3 h-3" />
+                    {{ $t('chat.inThread') }}
+                  </span>
+                  <span class="text-xs text-mnema-tertiary ml-auto">
+                    {{ formatDate(msg.created_at) }}
+                  </span>
+                </div>
+
+                <p class="text-sm text-mnema-muted line-clamp-2 break-words">
+                  {{ msg.content }}
+                </p>
+
+                <div v-if="msg.attachments?.length" class="mt-1.5 flex items-center gap-1 text-xs text-mnema-accent">
+                  <Paperclip class="w-3 h-3" />
+                  <span>{{ msg.attachments.length }} {{ $t('chat.attachment') }}</span>
+                </div>
+              </div>
+
+              <ArrowRight class="w-4 h-4 text-mnema-tertiary group-hover:text-mnema-text mt-1 opacity-0 group-hover:opacity-100 transition flex-shrink-0" />
+            </button>
+
+            <button
+              v-if="hasMore"
+              type="button"
+              :disabled="isLoadingMore"
+              class="w-full py-2 rounded-lg text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex items-center justify-center gap-2 disabled:opacity-50"
+              @click="loadMore"
+            >
+              <Loader2 v-if="isLoadingMore" class="w-4 h-4 animate-spin" />
+              {{ $t('chat.searchMore') }}
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      </template>
+    </BaseDialog>
   </Teleport>
 </template>
