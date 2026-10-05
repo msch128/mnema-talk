@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { toRaw } from 'vue'
-import { publishMids, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE } from './useWebRTC'
+import { publishMids, tuneScreenOffer, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
@@ -266,6 +266,24 @@ describe('useWebRTC signaling', () => {
     chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
     await vi.waitFor(() => expect(sent.some(e => e.type === 'webrtc_answer')).toBe(true))
     expect(pc.candidates).toEqual([{ candidate: 'c1' }])
+  })
+
+  it('applies the offer with H.264 first on the screen line when the browser can send it', async () => {
+    vi.stubGlobal('RTCRtpSender', { getCapabilities: () => ({ codecs: [{ mimeType: 'video/VP8' }, { mimeType: 'video/H264' }] }) })
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = FakePC.instances.at(-1)
+    const offer = SFU_OFFER.replace(/(m=video 9 UDP\/TLS\/RTP\/SAVPF) 96(\r\na=mid:(\d))/g, (_, m, rest) =>
+      `${m} 96 102${rest}\r\na=rtpmap:96 VP8/90000\r\na=rtpmap:102 H264/90000\r\na=fmtp:102 packetization-mode=1;profile-level-id=42e01f`)
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    const applied = pc.remoteDescription.sdp
+    expect(pc.remoteDescription.type).toBe('offer')
+    expect(applied).toContain('m=video 9 UDP/TLS/RTP/SAVPF 102 96\r\na=mid:1')
+    expect(applied).toContain('m=video 9 UDP/TLS/RTP/SAVPF 96 102\r\na=mid:2')
+    expect(applied).toContain('x-google-start-bitrate')
   })
 
   it('reconnect starts a fresh connection and announces the join again', async () => {
@@ -767,5 +785,62 @@ describe('publishMids', () => {
     // line, which then reads sendrecv. It is still our microphone line.
     expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual({ audio: '0', video: ['1', '2'] })
     expect(publishMids('')).toEqual({ audio: null, video: [] })
+  })
+})
+
+describe('tuneScreenOffer', () => {
+  // The video part of a Pion offer with its default codecs.
+  const video = (mid) => [
+    'm=video 9 UDP/TLS/RTP/SAVPF 96 97 102 103 104 105 106 107 98',
+    'a=mid:' + mid,
+    'a=rtpmap:96 VP8/90000',
+    'a=rtcp-fb:96 nack',
+    'a=rtpmap:97 rtx/90000',
+    'a=fmtp:97 apt=96',
+    'a=rtpmap:102 H264/90000',
+    'a=fmtp:102 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f',
+    'a=rtpmap:103 rtx/90000',
+    'a=fmtp:103 apt=102',
+    'a=rtpmap:104 H264/90000',
+    'a=fmtp:104 level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f',
+    'a=rtpmap:105 rtx/90000',
+    'a=fmtp:105 apt=104',
+    'a=rtpmap:106 H264/90000',
+    'a=fmtp:106 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f',
+    'a=rtpmap:107 rtx/90000',
+    'a=fmtp:107 apt=106',
+    'a=rtpmap:98 VP9/90000',
+    'a=fmtp:98 profile-id=0'
+  ]
+  const offer = ['v=0', 'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:0', 'a=rtpmap:111 opus/48000/2',
+    ...video('1'), ...video('2'), ''].join('\r\n')
+  const section = (sdp, mid) => {
+    const parts = sdp.split('\r\nm=')
+    return parts.find(p => p.includes('a=mid:' + mid + '\r\n')).split('\r\n')
+  }
+  const extra = `x-google-start-bitrate=${SCREEN_START_KBPS};x-google-min-bitrate=${SCREEN_MIN_KBPS}`
+
+  it('puts H.264 first on the screen line only', () => {
+    const out = tuneScreenOffer(offer, '1', { h264: true })
+    expect(section(out, '1')[0]).toBe('video 9 UDP/TLS/RTP/SAVPF 106 102 104 96 98 97 103 105 107')
+    expect(section(out, '2')[0]).toBe('video 9 UDP/TLS/RTP/SAVPF 96 97 102 103 104 105 106 107 98')
+    expect(out.endsWith('\r\n')).toBe(true)
+  })
+
+  it('raises the start and floor bitrate of every video codec on the screen line', () => {
+    const screen = section(tuneScreenOffer(offer, '1', { h264: false }), '1')
+    expect(screen[0]).toBe('video 9 UDP/TLS/RTP/SAVPF 96 97 102 103 104 105 106 107 98')
+    expect(screen).toContain(`a=fmtp:96 ${extra}`)
+    expect(screen.indexOf(`a=fmtp:96 ${extra}`)).toBe(screen.indexOf('a=rtpmap:96 VP8/90000') + 1)
+    expect(screen).toContain(`a=fmtp:106 level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f;${extra}`)
+    expect(screen).toContain(`a=fmtp:98 profile-id=0;${extra}`)
+    expect(screen).toContain('a=fmtp:97 apt=96')
+    expect(section(tuneScreenOffer(offer, '1'), '2').join('\n')).not.toContain('x-google')
+  })
+
+  it('leaves the offer alone without a screen line', () => {
+    expect(tuneScreenOffer(offer, null, { h264: true })).toBe(offer)
+    expect(tuneScreenOffer(offer, '9', { h264: true })).toBe(offer)
+    expect(tuneScreenOffer('', '1')).toBe('')
   })
 })
