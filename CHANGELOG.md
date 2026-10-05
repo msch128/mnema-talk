@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/msch128/mnema-talk/compare/v0.1.2...v0.1.3) (2026-10-05)
+
+
+### Features
+
+* **api:** presence choice, status text and server-side mentions ([3d99c0d](https://github.com/msch128/mnema-talk/commit/3d99c0de2dc7ef2f38e002a9c12537e6df172c89))
+* **web:** presence menu, status text, [@mentions](https://github.com/mentions) and emoji picker ([aa34060](https://github.com/msch128/mnema-talk/commit/aa34060a40506eb193838566e1207fdbeeb6dec6))
+
 ## [0.1.2](https://github.com/msch128/mnema-talk/compare/v0.1.1...v0.1.2) (2026-10-05)
 
 
