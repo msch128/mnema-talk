@@ -154,6 +154,24 @@ describe('channel list refresh', () => {
     expect(chat.categories[0].channels[0].name).toBe('neu')
   })
 
+  it('a superseded refetch resolves only once the newest list is in', async () => {
+    // The sidebar awaits its own refetch after saving a new order and then
+    // drops the order it kept on screen; a channels_changed refetch started
+    // meanwhile must not leave the older list showing in between.
+    const { chat } = setup()
+    const list = name => ({ categories: [{ id: 'c', channels: [{ id: 'ch1', name, type: 'text' }] }], uncategorized: [] })
+    let ownDone = false
+    const own = chat.fetchChannels().then(() => { ownDone = true })
+    chat.fetchChannels()
+    const [first, second] = pending.splice(0, 2)
+    first.resolve(list('alt'))
+    await flush()
+    expect(ownDone).toBe(false)
+    second.resolve(list('neu'))
+    await own
+    expect(chat.categories[0].channels[0].name).toBe('neu')
+  })
+
   it('duplicates a channel and refetches the list', async () => {
     const { chat } = setup()
     const dup = chat.duplicateChannel('ch2')

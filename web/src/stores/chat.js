@@ -110,14 +110,22 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   // Overlapping fetches (a channels_changed broadcast while a refetch runs)
-  // may answer out of order; only the latest one counts.
+  // may answer out of order; only the latest one counts. A superseded fetch
+  // resolves once the latest one is applied, so whoever awaits it (e.g. the
+  // sidebar before it drops its pending order) never sees the older list.
   let channelsFetchSeq = 0
+  let latestChannelsFetch = null
 
-  async function fetchChannels() {
-    const seq = ++channelsFetchSeq
+  function fetchChannels() {
+    const fetching = loadChannels(++channelsFetchSeq)
+    latestChannelsFetch = fetching
+    return fetching
+  }
+
+  async function loadChannels(seq) {
     try {
       const data = await api('/api/channels')
-      if (seq !== channelsFetchSeq) return
+      if (seq !== channelsFetchSeq) return latestChannelsFetch
       categories.value = data.categories || []
       uncategorized.value = data.uncategorized || []
 
