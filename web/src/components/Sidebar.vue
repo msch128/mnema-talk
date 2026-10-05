@@ -219,14 +219,26 @@ onUnmounted(() => {
 
 watch(() => authStore.isAdmin, () => closeMenu())
 
+function unreadCount(channel) {
+  if (channel.type === 'voice') return 0
+  return chatStore.readStates[channel.id]?.unread_count || 0
+}
+
+function mentionCount(channel) {
+  if (channel.type === 'voice') return 0
+  return chatStore.readStates[channel.id]?.mention_count || 0
+}
+
 // Shared row styling (34px channel rows, rounded hover/selected states).
 const rowBase = 'relative w-full h-[34px] flex items-center justify-between gap-1.5 px-2 mb-px rounded-md text-nav transition-colors group cursor-pointer text-left min-w-0'
-function rowClass(active) {
+function rowClass(active, unread = false) {
   return [
     rowBase,
     active
       ? 'bg-mnema-hover text-mnema-text font-medium shadow-[inset_2px_0_0_0_#2DA771]'
-      : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text'
+      : unread
+        ? 'text-mnema-text font-semibold hover:bg-mnema-hover/70'
+        : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text'
   ]
 }
 const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
@@ -333,7 +345,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         <div class="mt-0.5">
           <template v-for="channel in visibleChannels(category)" :key="channel.id">
             <div
-              :class="rowClass(channel.type === 'voice' ? isVoiceActive(channel) : isTextActive(channel))"
+              :class="rowClass(
+                channel.type === 'voice' ? isVoiceActive(channel) : isTextActive(channel),
+                unreadCount(channel) > 0
+              )"
               role="button"
               tabindex="0"
               :data-channel-type="channel.type"
@@ -341,6 +356,12 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               @keydown.enter.self.prevent="handleChannelClick(channel)"
               @keydown.space.self.prevent="handleChannelClick(channel)"
             >
+              <!-- Unread pip on left edge -->
+              <span
+                v-if="unreadCount(channel) > 0 && !isTextActive(channel)"
+                class="absolute -left-1.5 w-1 h-2 rounded-r bg-mnema-text"
+              ></span>
+
               <div class="flex items-center gap-1.5 min-w-0">
                 <Volume2
                   v-if="channel.type === 'voice'"
@@ -348,9 +369,32 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 />
                 <Hash
                   v-else
-                  :class="['w-5 h-5 flex-shrink-0 transition-colors', chatStore.activeChannel?.id === channel.id ? 'text-mnema-accent' : 'text-mnema-tertiary group-hover:text-mnema-text']"
+                  :class="[
+                    'w-5 h-5 flex-shrink-0 transition-colors',
+                    chatStore.activeChannel?.id === channel.id
+                      ? 'text-mnema-accent'
+                      : unreadCount(channel) > 0
+                        ? 'text-mnema-text'
+                        : 'text-mnema-tertiary group-hover:text-mnema-text'
+                  ]"
                 />
                 <span class="truncate">{{ channel.name }}</span>
+              </div>
+
+              <!-- Unread & Mention Badges -->
+              <div class="flex items-center gap-1 ml-auto flex-shrink-0">
+                <span
+                  v-if="mentionCount(channel) > 0"
+                  class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
+                >
+                  {{ mentionCount(channel) }}
+                </span>
+                <span
+                  v-else-if="unreadCount(channel) > 0 && !isTextActive(channel)"
+                  class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
+                >
+                  {{ unreadCount(channel) }}
+                </span>
               </div>
 
               <button

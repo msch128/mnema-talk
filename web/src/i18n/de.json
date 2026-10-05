@@ -127,7 +127,28 @@
     "deleteCategoryBody": "Die Kanäle darin bleiben erhalten.",
     "channelDeleted": "Kanal gelöscht",
     "categoryDeleted": "Kategorie gelöscht",
-    "deleteFailed": "Löschen hat nicht geklappt. Versuch es noch einmal."
+    "deleteFailed": "Löschen hat nicht geklappt. Versuch es noch einmal.",
+    "markRead": "Als gelesen markieren",
+    "markedRead": "Als gelesen markiert",
+    "markAllRead": "Alle als gelesen markieren",
+    "allMarkedRead": "Alle als gelesen markiert",
+    "copyLink": "Link kopieren",
+    "copiedLink": "Link kopiert",
+    "editChannel": "Kanal bearbeiten",
+    "editCategory": "Kategorie bearbeiten",
+    "channelUpdated": "Kanal aktualisiert",
+    "categoryUpdated": "Kategorie aktualisiert",
+    "updateFailed": "Aktualisierung fehlgeschlagen."
+  },
+  "category": {
+    "name": "Kategoriename"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "all": "Alle Nachrichten",
+    "mentions": "Nur Erwähnungen",
+    "mute": "Stumm",
+    "updated": "Benachrichtigungseinstellungen aktualisiert"
   },
   "channel": {
     "create": "Kanal erstellen",
@@ -159,7 +180,11 @@
     "toggle": "Mitgliederliste ein-/ausblenden",
     "admins": "Admin — {count}",
     "online": "Online — {count}",
-    "offline": "Offline — {count}"
+    "offline": "Offline — {count}",
+    "kickedFromVoice": "Aus dem Sprachkanal entfernt",
+    "userDisabled": "Benutzerkonto deaktiviert",
+    "disableUserTitle": "Benutzerkonto „{name}“ deaktivieren?",
+    "disableUserBody": "Der Benutzer kann sich nicht mehr anmelden und laufende Sitzungen werden beendet."
   },
   "chat": {
     "selectChannel": "Kanal auswählen",
@@ -199,8 +224,25 @@
     "editFailed": "Die Änderung konnte nicht gespeichert werden.",
     "deleteFailed": "Die Nachricht konnte nicht gelöscht werden.",
     "sendFailed": "Die Nachricht konnte nicht gesendet werden.",
-    "uploadFailed": "Upload fehlgeschlagen. Versuch es noch einmal.",
-    "spoiler": "Spoiler"
+    "spoiler": "Spoiler",
+    "search": "Suche",
+    "searchPlaceholder": "Nachrichten durchsuchen …",
+    "filter": "Filter",
+    "currentChannel": "Aktueller Kanal",
+    "hasAttachment": "Mit Anhang",
+    "searchHint": "Gib einen Suchbegriff ein",
+    "noResults": "Keine Nachrichten gefunden",
+    "isTyping": "{name} tippt …",
+    "severalTyping": "Mehrere Personen tippen …",
+    "newMessagesSince": "Neu seit",
+    "markUnread": "Als ungelesen markieren",
+    "markedUnread": "Als ungelesen markiert",
+    "markUnreadFailed": "Konnte nicht als ungelesen markiert werden.",
+    "copyText": "Text kopieren",
+    "copiedText": "Text kopiert",
+    "copyLink": "Link kopieren",
+    "copiedLink": "Link kopiert",
+    "moreActions": "Weitere Aktionen"
   },
   "thread": {
     "title": "Thread",
@@ -224,6 +266,12 @@
     "leave": "Verlassen",
     "channelFallback": "Sprachkanal",
     "audioBlocked": "Du bist wieder in der Tafelrunde. Klick, um den Ton zu aktivieren",
+    "join": "Beitreten",
+    "userVolume": "Lautstärke",
+    "muteUser": "Lokal stummschalten",
+    "unmuteUser": "Lokale Stummschaltung aufheben",
+    "noOneInVoice": "Niemand in der Tafelrunde",
+    "joinToTalk": "Klick auf Beitreten, um das Gespräch zu beginnen.",
     "panel": {
       "label": "Sprachverbindung",
       "connected": "Verbunden · {channel}",
@@ -452,7 +500,12 @@
     "shareShort": "Bildschirm",
     "stopShareShort": "Beenden",
     "chatTitle": "Tafelrunden-Chat in #{channel}",
-    "chatEmpty": "Noch keine Nachrichten. Schreib die erste – Links und Dateien gehen auch."
+    "chatEmpty": "Noch keine Nachrichten. Schreib die erste – Links und Dateien gehen auch.",
+    "camera": "Kamera",
+    "startCamera": "Kamera einschalten",
+    "stopCamera": "Kamera ausschalten",
+    "cameraShort": "Kamera",
+    "stopCameraShort": "Kamera aus"
   },
   "admin": {
     "title": "Speicher & Administration",
@@ -576,6 +629,7 @@
     "noMedia": "Keine Medien vorhanden."
   },
   "profile": {
+    "viewProfile": "Profil ansehen",
     "unknown": "Unbekannt",
     "roundtable": "Tafelrunde",
     "change": "Ändern",

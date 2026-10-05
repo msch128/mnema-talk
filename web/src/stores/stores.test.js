@@ -105,6 +105,8 @@ describe('chat store history paging', () => {
     const calls = []
     const respond = body => ({ status: 200, ok: true, json: () => Promise.resolve(body) })
     vi.stubGlobal('fetch', vi.fn(async url => {
+      // Opening a channel also marks it read; only history requests matter here.
+      if (url.endsWith('/read')) return new Response(null, { status: 204 })
       calls.push(url)
       const u = new URL(url, 'http://x')
       const limit = Number(u.searchParams.get('limit'))

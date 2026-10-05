@@ -2,7 +2,8 @@
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   Hash, Plus, ArrowUp, ArrowDown, FileText, Users,
-  MessageSquare, Pencil, Trash2, Smile, SmilePlus, Check, Loader2, Reply
+  MessageSquare, Pencil, Trash2, Smile, SmilePlus, Check, Loader2, Reply,
+  MoreHorizontal, Link as LinkIcon, Copy, Bookmark
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
@@ -11,6 +12,7 @@ import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import ImageLightbox from './ImageLightbox.vue'
+import ContextMenu from './ContextMenu.vue'
 import { continuationIds } from '../lib/messageGrouping'
 import { previewText } from '../lib/replies'
 import { useToastStore } from '../stores/toast'
@@ -312,10 +314,157 @@ function handleGlobalClick(e) {
   }
 }
 
+// Context Menu
+const contextMenu = ref({
+  open: false,
+  x: 0,
+  y: 0,
+  items: []
+})
+
+function openMessageContextMenu(e, msg) {
+  if (e?.preventDefault) e.preventDefault()
+  activeReactionPickerMsgId.value = null
+
+  const items = [
+    {
+      label: t('chat.reply'),
+      icon: Reply,
+      shortcut: 'r',
+      action: () => startReply(msg)
+    },
+    {
+      label: t('chat.addReaction'),
+      icon: SmilePlus,
+      action: () => {
+        activeReactionPickerMsgId.value = msg.id
+      }
+    },
+    {
+      label: t('chat.openThread'),
+      icon: MessageSquare,
+      action: () => chatStore.openThread(msg)
+    }
+  ]
+
+  if (msg.user_id === authStore.user?.id) {
+    items.push({
+      label: t('chat.edit'),
+      icon: Pencil,
+      shortcut: 'e',
+      action: () => startEditMessage(msg)
+    })
+  }
+
+  items.push({ type: 'separator' })
+
+  items.push({
+    label: t('chat.copyText'),
+    icon: Copy,
+    action: async () => {
+      try {
+        await navigator.clipboard.writeText(msg.content || '')
+        toasts.success(t('chat.copiedText'))
+      } catch (err) {
+        console.warn('Copy failed:', err)
+      }
+    }
+  })
+
+  items.push({
+    label: t('chat.copyLink'),
+    icon: LinkIcon,
+    action: async () => {
+      try {
+        const link = `${window.location.origin}/c/${chatStore.activeChannel?.id}/m/${msg.id}`
+        await navigator.clipboard.writeText(link)
+        toasts.success(t('chat.copiedLink'))
+      } catch (err) {
+        console.warn('Copy failed:', err)
+      }
+    }
+  })
+
+  items.push({
+    label: t('chat.markUnread'),
+    icon: Bookmark,
+    action: async () => {
+      try {
+        await chatStore.markChannelUnread(chatStore.activeChannel?.id, msg.id)
+        toasts.success(t('chat.markedUnread'))
+      } catch (err) {
+        toasts.error(err.message || t('chat.markUnreadFailed'))
+      }
+    }
+  })
+
+  if (msg.user_id === authStore.user?.id || authStore.isAdmin) {
+    items.push({ type: 'separator' })
+    items.push({
+      label: t('chat.delete'),
+      icon: Trash2,
+      danger: true,
+      action: () => handleDeleteMessage(msg)
+    })
+  }
+
+  contextMenu.value = {
+    open: true,
+    x: e.clientX || 0,
+    y: e.clientY || 0,
+    items
+  }
+}
+
+function openContextMenuFromButton(e, msg) {
+  const rect = e.currentTarget.getBoundingClientRect()
+  openMessageContextMenu({
+    preventDefault: () => {},
+    clientX: rect.left,
+    clientY: rect.bottom + 4
+  }, msg)
+}
+
+function handleMessageKeydown(e, msg) {
+  if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
+
+  if (e.key === 'r' || e.key === 'R') {
+    e.preventDefault()
+    startReply(msg)
+  } else if (e.key === 'e' || e.key === 'E') {
+    if (msg.user_id === authStore.user?.id) {
+      e.preventDefault()
+      startEditMessage(msg)
+    }
+  } else if (e.key === 'Escape') {
+    if (contextMenu.value.open) {
+      e.preventDefault()
+      contextMenu.value.open = false
+    } else if (activeReactionPickerMsgId.value) {
+      e.preventDefault()
+      activeReactionPickerMsgId.value = null
+    } else if (editingMessageId.value) {
+      e.preventDefault()
+      cancelEditMessage()
+    } else if (replyingTo.value) {
+      e.preventDefault()
+      cancelReply()
+    }
+  }
+}
+
+function onGlobalKeydown(e) {
+  if (e.key === 'Escape') {
+    if (contextMenu.value.open) contextMenu.value.open = false
+    if (activeReactionPickerMsgId.value) activeReactionPickerMsgId.value = null
+  }
+}
+
 onMounted(() => {
   scrollToBottom()
   textAreaEl.value?.focus()
   window.addEventListener('click', handleGlobalClick)
+  window.addEventListener('keydown', onGlobalKeydown)
   if (typeof ResizeObserver !== 'undefined' && messageContainer.value) {
     resizeObserver = new ResizeObserver(handleContainerResize)
     resizeObserver.observe(messageContainer.value)
@@ -324,6 +473,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('click', handleGlobalClick)
+  window.removeEventListener('keydown', onGlobalKeydown)
   resizeObserver?.disconnect()
   clearTimeout(highlightTimer)
   if (scrollFrame) cancelAnimationFrame(scrollFrame)
@@ -462,8 +612,12 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
         v-for="msg in (chatStore.messages || [])"
         :key="msg.id"
         :data-msg-id="msg.id"
+        tabindex="0"
+        role="article"
+        @contextmenu.prevent="openMessageContextMenu($event, msg)"
+        @keydown="handleMessageKeydown($event, msg)"
         :class="[
-          'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group',
+          'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
           groupedIds.has(msg.id) ? '' : 'mt-[17px] first:mt-2',
           highlightedId === msg.id ? 'msg-flash' : ''
         ]"
@@ -515,15 +669,6 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
             <Reply class="w-4 h-4" />
           </button>
 
-          <!-- In Thread antworten -->
-          <button
-            @click.stop="chatStore.openThread(msg)"
-            class="flex items-center gap-1 text-xs text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface px-1.5 py-1 rounded transition"
-            v-tooltip="$t('chat.openThread')"
-          >
-            <MessageSquare class="w-4 h-4" />
-          </button>
-
           <!-- Edit Message (if author) -->
           <button
             v-if="msg.user_id === authStore.user?.id"
@@ -534,14 +679,13 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
             <Pencil class="w-4 h-4" />
           </button>
 
-          <!-- Delete Message (if author or admin) -->
+          <!-- More Actions (⋯) Context Menu Trigger -->
           <button
-            v-if="msg.user_id === authStore.user?.id || authStore.isAdmin"
-            @click.stop="handleDeleteMessage(msg)"
-            class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
-            v-tooltip="$t('chat.delete')"
+            @click.stop="openContextMenuFromButton($event, msg)"
+            class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
+            v-tooltip="$t('chat.moreActions')"
           >
-            <Trash2 class="w-4 h-4" />
+            <MoreHorizontal class="w-4 h-4" />
           </button>
         </div>
 
@@ -784,5 +928,13 @@ const groupedIds = computed(() => continuationIds(chatStore.messages))
 
     <!-- Image lightbox -->
     <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
+
+    <!-- Message context menu -->
+    <ContextMenu
+      v-model="contextMenu.open"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :items="contextMenu.items"
+    />
   </main>
 </template>

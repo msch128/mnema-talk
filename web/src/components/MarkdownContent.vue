@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
+import LinkPreviewCard from './LinkPreviewCard.vue'
 
 const props = defineProps({
   content: {
@@ -10,6 +11,14 @@ const props = defineProps({
 })
 
 const parsedHtml = computed(() => renderMarkdown(props.content))
+
+const links = computed(() => {
+  if (!props.content) return []
+  const urlRegex = /\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g
+  const matches = props.content.match(urlRegex)
+  if (!matches) return []
+  return [...new Set(matches)].slice(0, 3)
+})
 
 // Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
 function toggleSpoiler(event) {
@@ -26,15 +35,21 @@ function onKeydown(event) {
 </script>
 
 <template>
-  <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
-  <!-- eslint-disable vue/no-v-html -->
-  <div
-    class="markdown-body break-words whitespace-pre-wrap select-text text-message"
-    @click="toggleSpoiler"
-    @keydown="onKeydown"
-    v-html="parsedHtml"
-  ></div>
-  <!-- eslint-enable vue/no-v-html -->
+  <div>
+    <!-- The only intentional v-html: renderMarkdown escapes all input before adding markup. -->
+    <!-- eslint-disable vue/no-v-html -->
+    <div
+      class="markdown-body break-words whitespace-pre-wrap select-text text-message"
+      @click="toggleSpoiler"
+      @keydown="onKeydown"
+      v-html="parsedHtml"
+    ></div>
+    <!-- eslint-enable vue/no-v-html -->
+
+    <div v-if="links.length > 0" class="mt-1 space-y-1">
+      <LinkPreviewCard v-for="link in links" :key="link" :url="link" />
+    </div>
+  </div>
 </template>
 
 <style>
