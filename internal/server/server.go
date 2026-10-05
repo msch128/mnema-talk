@@ -86,6 +86,7 @@ func NewRouter(d Deps) (*Router, error) {
 		Secure: cfg.SecureCookies(),
 	}
 	hub := ws.NewHub(d.DB, sessions, d.SFU, cfg.AllowedOrigins)
+	hub.Version = d.Version
 	var pub events.Publisher = hub
 	if d.Events != nil {
 		pub = d.Events
