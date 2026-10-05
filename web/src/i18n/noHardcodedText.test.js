@@ -17,15 +17,10 @@ function templateOf(src) {
   return m ? m[1] : ''
 }
 
-// Removes HTML comments until none are left, so nested fragments like
-// `<!<!---->--` cannot leave a new comment behind.
+// Replaces HTML comments with a space rather than deleting them, so the text
+// around a removed comment cannot join into a new `<!--`.
 function stripComments(src) {
-  let prev
-  do {
-    prev = src
-    src = src.replace(/<!--[\s\S]*?-->/g, '')
-  } while (src !== prev)
-  return src.replace(/<!--/g, '')
+  return src.replace(/<!--[\s\S]*?-->/g, ' ')
 }
 
 function staticText(template) {
