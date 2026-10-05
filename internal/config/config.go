@@ -47,10 +47,12 @@ type Config struct {
 	LinkPreviews bool
 	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
 	// signed-in members. Off by default.
-	APIDocs              bool
-	WebRTCUDPPortMin     uint16
-	WebRTCUDPPortMax     uint16
-	WebRTCNAT1to1IP      string
+	APIDocs          bool
+	WebRTCUDPPortMin uint16
+	WebRTCUDPPortMax uint16
+	// WebRTCAnnounce lists the IPs or host names announced to browsers for
+	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
+	WebRTCAnnounce       []string
 	WebRTCSTUNURLs       []string
 	LegalOperatorName    string
 	LegalOperatorEmail   string
@@ -146,7 +148,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		MetricsToken:         get("METRICS_TOKEN", ""),
-		WebRTCNAT1to1IP:      get("WEBRTC_NAT_1TO1_IP", ""),
+		WebRTCAnnounce:       SplitList(get("WEBRTC_NAT_1TO1_IP", "")),
 		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
 		LegalOperatorName:    get("LEGAL_OPERATOR_NAME", "Community Operator"),
 		LegalOperatorEmail:   get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),

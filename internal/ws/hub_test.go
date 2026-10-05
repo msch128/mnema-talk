@@ -254,7 +254,7 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 }
 
 func TestHubSubscribeValidation(t *testing.T) {
-	voiceSFU, err := sfu.NewSFU(0, 0, "", nil)
+	voiceSFU, err := sfu.NewSFU(0, 0, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

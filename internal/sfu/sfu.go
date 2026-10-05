@@ -85,7 +85,13 @@ type Room struct {
 }
 
 type SFU struct {
-	api        *webrtc.API
+	apiMu sync.RWMutex
+	api   *webrtc.API
+	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
+	announced []string
+	portMin   uint16
+	portMax   uint16
+
 	iceServers []webrtc.ICEServer
 	rooms      map[uuid.UUID]*Room
 	roomsMu    sync.Mutex
@@ -98,9 +104,62 @@ func (s *SFU) SetMediaStateHandler(fn func(roomID, userID uuid.UUID, state Media
 	s.notifier.set(fn)
 }
 
-// NewSFU creates the SFU. stunURLs is optional: with WEBRTC_NAT_1TO1_IP set the
-// server needs no STUN, and leaving it empty avoids contacting third parties.
-func NewSFU(portMin, portMax uint16, nat1to1IP string, stunURLs []string) (*SFU, error) {
+// NewSFU creates the SFU. announceIPs are the addresses browsers are told to
+// send media to instead of the container's own (WEBRTC_NAT_1TO1_IP): usually
+// the public IP and the LAN IP, so both remote and local members connect.
+// stunURLs is optional: with announced IPs the server needs no STUN, and
+// leaving it empty avoids contacting third parties.
+func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string) (*SFU, error) {
+	api, err := buildAPI(portMin, portMax, announceIPs)
+	if err != nil {
+		return nil, err
+	}
+
+	var iceServers []webrtc.ICEServer
+	if len(stunURLs) > 0 {
+		iceServers = []webrtc.ICEServer{{URLs: stunURLs}}
+	}
+
+	return &SFU{
+		api:        api,
+		announced:  append([]string(nil), announceIPs...),
+		portMin:    portMin,
+		portMax:    portMax,
+		iceServers: iceServers,
+		rooms:      make(map[uuid.UUID]*Room),
+		notifier:   &mediaNotifier{},
+	}, nil
+}
+
+// AnnouncedIPs returns the addresses currently offered to browsers.
+func (s *SFU) AnnouncedIPs() []string {
+	s.apiMu.RLock()
+	defer s.apiMu.RUnlock()
+	return append([]string(nil), s.announced...)
+}
+
+// SetAnnouncedIPs switches to new announced addresses (e.g. after the public
+// IP of a home connection changed). Connections made from now on use them;
+// running ones keep theirs.
+func (s *SFU) SetAnnouncedIPs(ips []string) error {
+	api, err := buildAPI(s.portMin, s.portMax, ips)
+	if err != nil {
+		return err
+	}
+	s.apiMu.Lock()
+	s.api = api
+	s.announced = append([]string(nil), ips...)
+	s.apiMu.Unlock()
+	return nil
+}
+
+func (s *SFU) currentAPI() *webrtc.API {
+	s.apiMu.RLock()
+	defer s.apiMu.RUnlock()
+	return s.api
+}
+
+func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error) {
 	settingEngine := webrtc.SettingEngine{}
 
 	if portMin > 0 && portMax > 0 {
@@ -109,8 +168,9 @@ func NewSFU(portMin, portMax uint16, nat1to1IP string, stunURLs []string) (*SFU,
 		}
 	}
 
-	if nat1to1IP != "" {
-		settingEngine.SetNAT1To1IPs([]string{nat1to1IP}, webrtc.ICECandidateTypeHost)
+	if len(announceIPs) > 0 {
+		// Every announced address becomes its own host candidate.
+		settingEngine.SetNAT1To1IPs(announceIPs, webrtc.ICECandidateTypeHost)
 	}
 
 	mediaEngine := &webrtc.MediaEngine{}
@@ -125,23 +185,11 @@ func NewSFU(portMin, portMax uint16, nat1to1IP string, stunURLs []string) (*SFU,
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
 
-	api := webrtc.NewAPI(
+	return webrtc.NewAPI(
 		webrtc.WithSettingEngine(settingEngine),
 		webrtc.WithMediaEngine(mediaEngine),
 		webrtc.WithInterceptorRegistry(registry),
-	)
-
-	var iceServers []webrtc.ICEServer
-	if len(stunURLs) > 0 {
-		iceServers = []webrtc.ICEServer{{URLs: stunURLs}}
-	}
-
-	return &SFU{
-		api:        api,
-		iceServers: iceServers,
-		rooms:      make(map[uuid.UUID]*Room),
-		notifier:   &mediaNotifier{},
-	}, nil
+	), nil
 }
 
 // Room returns the channel's room, or nil if nobody is connected.
@@ -167,11 +215,15 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 			subs:        make(map[uuid.UUID]*Subscriptions),
 			lastMedia:   make(map[uuid.UUID]MediaState),
 			notifier:    s.notifier,
-			api:         s.api,
+			api:         s.currentAPI(),
 			iceServers:  s.iceServers,
 		}
 		s.rooms[channelID] = r
 	}
+	// A long-lived room picks up changed announced addresses for new peers.
+	r.mu.Lock()
+	r.api = s.currentAPI()
+	r.mu.Unlock()
 	peer, err := r.JoinPeer(userID, sendOffer, sendICE)
 	if err != nil {
 		if r.empty() {
@@ -316,8 +368,21 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		}()
 	})
 
+	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
+		switch state {
+		case webrtc.ICEConnectionStateConnected:
+			attrs := []any{"user", userID}
+			if pair, err := selectedPair(pc); err == nil && pair != nil {
+				attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
+			}
+			slog.Info("sfu ice connected", attrs...)
+		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
+			slog.Warn("sfu ice "+state.String(), "user", userID)
+		}
+	})
+
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		slog.Debug("sfu peer state", "user", userID, "state", state.String())
+		slog.Info("sfu peer state", "user", userID, "state", state.String())
 		if state == webrtc.PeerConnectionStateFailed || state == webrtc.PeerConnectionStateClosed {
 			r.removePeer(peer)
 		}
@@ -527,4 +592,14 @@ func (r *Room) GetPeer(userID uuid.UUID) *Peer {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.peers[userID]
+}
+
+// selectedPair is the ICE candidate pair media flows over, for the logs.
+func selectedPair(pc *webrtc.PeerConnection) (*webrtc.ICECandidatePair, error) {
+	for _, t := range pc.GetTransceivers() {
+		if r := t.Receiver(); r != nil && r.Transport() != nil {
+			return r.Transport().ICETransport().GetSelectedCandidatePair()
+		}
+	}
+	return nil, nil
 }
