@@ -1,0 +1,30 @@
+scripts/backup.sh
+  s_50a8e6d0bfe84a::t_62715e2e9377d1 1-34,36,40-48
+  s_50a8e6d0bfe84a::t_d46f41791e182f 35,37-39
+docs/SCORECARD.md
+  s_50a8e6d0bfe84a::t_fde1af65b7adde 92,98-99
+  s_50a8e6d0bfe84a::t_eb18aa1feca117 106-107
+docs/DESIGN.md
+  s_50a8e6d0bfe84a::t_6fd20a04bd9d83 243
+  s_50a8e6d0bfe84a::t_fde1af65b7adde 203,230,253-254,261,397,399,518-536,541
+scripts/restore.sh
+  s_50a8e6d0bfe84a::t_10b02873888386 1-57
+README.md
+  s_50a8e6d0bfe84a::t_e376488359e418 178-203
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba0906b96c87f8f4cc108297676d0c393bebec75",
+  "prompts": {},
+  "sessions": {
+    "s_50a8e6d0bfe84a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5e9dc4f4-1443-4a6c-98b4-1eb6666a95c6",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
