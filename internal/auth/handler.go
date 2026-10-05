@@ -71,7 +71,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 // login handles POST /api/auth/login.
 //
 // @Summary Sign in
-// @Description Sets the session cookie. Rate limited per IP (60 per 15 min) and by escalating lockouts per address+username and per account; limited requests answer 429 with Retry-After.
+// @Description Sets the session cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username; the account-wide lockout only rejects wrong passwords, so the correct password always signs in. Limited requests answer 429 with Retry-After.
 // @ID login
 // @Tags Auth
 // @Accept json
@@ -199,7 +199,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) error {
 // logoutAll ends every session of the user, including copied cookies.
 //
 // @Summary Sign out everywhere
-// @Description Invalidates every session of the caller, including copied cookies.
+// @Description Invalidates every session of the caller, including copied cookies, and closes their open WebSockets.
 // @ID logoutAll
 // @Tags Auth
 // @Produce json
@@ -278,7 +278,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) error {
 // changePassword handles PUT /api/auth/password.
 //
 // @Summary Change own password
-// @Description Signs out all other sessions and keeps the current one (a fresh cookie is set). Five wrong current passwords trigger a lockout (429).
+// @Description Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).
 // @ID changePassword
 // @Tags Auth
 // @Accept json

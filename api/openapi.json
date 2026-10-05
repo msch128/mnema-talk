@@ -1713,7 +1713,7 @@
     },
     "/api/admin/channels/{id}": {
       "delete": {
-        "description": "Cascades to its messages and attachments. Requires role admin (403 otherwise).",
+        "description": "Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires role admin (403 otherwise).",
         "operationId": "deleteChannel",
         "parameters": [
           {
@@ -3525,7 +3525,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Sets the session cookie. Rate limited per IP (60 per 15 min) and by escalating lockouts per address+username and per account; limited requests answer 429 with Retry-After.",
+        "description": "Sets the session cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username; the account-wide lockout only rejects wrong passwords, so the correct password always signs in. Limited requests answer 429 with Retry-After.",
         "operationId": "login",
         "requestBody": {
           "content": {
@@ -3669,7 +3669,7 @@
     },
     "/api/auth/logout-all": {
       "post": {
-        "description": "Invalidates every session of the caller, including copied cookies.",
+        "description": "Invalidates every session of the caller, including copied cookies, and closes their open WebSockets.",
         "operationId": "logoutAll",
         "responses": {
           "204": {
@@ -3809,7 +3809,7 @@
     },
     "/api/auth/password": {
       "put": {
-        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set). Five wrong current passwords trigger a lockout (429).",
+        "description": "Signs out all other sessions and keeps the current one (a fresh cookie is set); open WebSockets are closed and reconnect with it. Five wrong current passwords trigger a lockout (429).",
         "operationId": "changePassword",
         "requestBody": {
           "content": {
@@ -4432,7 +4432,7 @@
         ]
       },
       "put": {
-        "description": "Only the author may edit. Broadcasts message_update.",
+        "description": "Only the author may edit. The content may be empty when the message has an attachment. Broadcasts message_update.",
         "operationId": "editMessage",
         "parameters": [
           {
@@ -5540,7 +5540,7 @@
     },
     "/api/messages/{messageID}/reactions": {
       "post": {
-        "description": "Adds the caller's reaction, or removes it if already present. Broadcasts message_reaction.",
+        "description": "Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.",
         "operationId": "toggleReaction",
         "parameters": [
           {
@@ -5616,6 +5616,16 @@
             },
             "description": "NOT_FOUND: the resource, or the route, does not exist."
           },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: too many reactions on this message."
+          },
           "429": {
             "content": {
               "application/json": {
@@ -5658,7 +5668,7 @@
     },
     "/api/messages/{messageID}/thread": {
       "get": {
-        "description": "The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs).",
+        "description": "The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs). The message must be a root message; a reply has no thread (404).",
         "operationId": "getThread",
         "parameters": [
           {
@@ -6800,7 +6810,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `voice_speaking`: `{channel_id, user_id, active}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `voice_kicked`: `{channel_id}` when an admin removes the user from voice.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text channels only, rate-limited).\n- `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `voice_kicked`: `{channel_id}` when an admin removes the user from voice.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text channels only, rate-limited).\n- `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
         "operationId": "connectWebSocket",
         "parameters": [
           {
