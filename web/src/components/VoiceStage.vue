@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted, nextTick } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { 
   Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
@@ -13,6 +13,8 @@ import UserAvatar from './UserAvatar.vue'
 import ParticipantTile from './ParticipantTile.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import TalkParticipants from './TalkParticipants.vue'
+import ContextMenu from './ContextMenu.vue'
+import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
@@ -22,6 +24,12 @@ import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
 
 const voiceStore = useVoiceStore()
+
+// Right-click on a tile: the member menu with their volume (like the sidebar).
+const menu = useMenuState()
+function openMemberMenu(e, user) {
+  menu.show(e, refresh => buildMemberItems(user, { refresh }))
+}
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
@@ -192,11 +200,33 @@ const screenSharerName = computed(() => {
   return sharer ? (sharer.display_name || sharer.username) : t('talk.sharedScreen')
 })
 
+// My own share is only previewed while I look at this tab: decoding my own
+// screen costs CPU/GPU while I'm busy elsewhere, and the stream keeps going.
+const pageActive = ref(isPageActive())
+function isPageActive() {
+  if (typeof document === 'undefined') return true
+  return document.visibilityState === 'visible' && (typeof document.hasFocus !== 'function' || document.hasFocus())
+}
+function updatePageActive() {
+  pageActive.value = isPageActive()
+}
+onMounted(() => {
+  document.addEventListener('visibilitychange', updatePageActive)
+  window.addEventListener('focus', updatePageActive)
+  window.addEventListener('blur', updatePageActive)
+})
+onUnmounted(() => {
+  document.removeEventListener('visibilitychange', updatePageActive)
+  window.removeEventListener('focus', updatePageActive)
+  window.removeEventListener('blur', updatePageActive)
+})
+const ownPreviewPaused = computed(() => isSharingOwnScreen.value && !pageActive.value)
+
 // Watch active screen stream and attach to video element
-watch([activeScreenStream, isConnectedHere], ([stream]) => {
+watch([activeScreenStream, isConnectedHere, ownPreviewPaused], ([stream, , paused]) => {
   nextTick(() => {
     if (screenVideoEl.value) {
-      screenVideoEl.value.srcObject = stream
+      screenVideoEl.value.srcObject = paused ? null : stream
     }
   })
 }, { immediate: true })
@@ -371,6 +401,16 @@ function formatTime(dateStr) {
             @loadedmetadata="onVideoResize"
           ></video>
 
+          <!-- Own share while I'm elsewhere: no preview, but it keeps running -->
+          <div
+            v-if="ownPreviewPaused"
+            data-testid="own-stream-paused"
+            class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-mnema-canvas/95 text-center px-6"
+          >
+            <span class="text-base font-semibold text-mnema-text">{{ $t('talk.ownStreamRunning') }}</span>
+            <span class="text-sm text-mnema-tertiary">{{ $t('talk.ownStreamRunningHint') }}</span>
+          </div>
+
           <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
             <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
               <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
@@ -501,7 +541,9 @@ function formatTime(dateStr) {
             :user="user"
             :stream="cameraStreamOf(user)"
             :is-self="user.id === authStore.user?.id"
-            :speaking="!!voiceStore.speakingUsers[user.id]"
+            :speaking="voiceStore.isSpeaking(user.id)"
+            :muted="voiceStore.muteStateOf(user.id).muted"
+            :deafened="voiceStore.muteStateOf(user.id).deafened"
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
             :camera-available="cameraAvailable(user)"
             :camera-hidden="voiceStore.isCameraHidden(user.id)"
@@ -514,6 +556,7 @@ function formatTime(dateStr) {
             compact
             class="!w-36 !h-24 !p-1 flex-shrink-0"
             @open-profile="chatStore.openUserProfile"
+            @menu="openMemberMenu($event, user)"
           />
         </div>
 
@@ -532,7 +575,9 @@ function formatTime(dateStr) {
             :user="user"
             :stream="isConnectedHere ? cameraStreamOf(user) : null"
             :is-self="user.id === authStore.user?.id"
-            :speaking="!!voiceStore.speakingUsers[user.id]"
+            :speaking="voiceStore.isSpeaking(user.id)"
+            :muted="voiceStore.muteStateOf(user.id).muted"
+            :deafened="voiceStore.muteStateOf(user.id).deafened"
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
             :camera-available="cameraAvailable(user)"
             :camera-hidden="voiceStore.isCameraHidden(user.id)"
@@ -545,6 +590,7 @@ function formatTime(dateStr) {
             :compact="showChat"
             :show-status="isConnectedHere"
             @open-profile="chatStore.openUserProfile"
+            @menu="openMemberMenu($event, user)"
           />
         </div>
 
@@ -835,5 +881,12 @@ function formatTime(dateStr) {
         </div>
       </div>
     </div>
+    <ContextMenu
+      v-model="menu.state.open"
+      :x="menu.state.x"
+      :y="menu.state.y"
+      :anchor="menu.state.anchor"
+      :items="menu.items.value"
+    />
   </main>
 </template>

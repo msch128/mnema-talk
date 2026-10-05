@@ -71,7 +71,7 @@ function ibTone(active) {
           show-status
           :status="myStatus"
           ring-class="bg-mnema-raised"
-          :is-speaking="!!voiceStore.speakingUsers[me.id]"
+          :is-speaking="voiceStore.isSpeaking(me.id)"
         />
       </button>
 
