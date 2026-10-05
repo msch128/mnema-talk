@@ -82,6 +82,8 @@ func TestValidation(t *testing.T) {
 		"missing db":         {},
 		"bad public url":     {"DATABASE_URL": "x", "PUBLIC_URL": "chat.example.com"},
 		"bad port range":     {"DATABASE_URL": "x", "WEBRTC_UDP_PORT_MIN": "50050", "WEBRTC_UDP_PORT_MAX": "50000"},
+		"port too large":     {"DATABASE_URL": "x", "WEBRTC_UDP_PORT_MAX": "65536"},
+		"port zero":          {"DATABASE_URL": "x", "WEBRTC_UDP_PORT_MIN": "0"},
 		"negative retention": {"DATABASE_URL": "x", "MEDIA_RETENTION_DAYS": "-1"},
 		"non-numeric int":    {"DATABASE_URL": "x", "SESSION_EXPIRY_HOURS": "soon"},
 		"bad proxy cidr":     {"DATABASE_URL": "x", "TRUSTED_PROXY_CIDRS": "10.0.0.0/99"},
