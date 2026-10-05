@@ -9,6 +9,7 @@ import CreateChannelModal from './CreateChannelModal.vue'
 import EditNameDialog from './EditNameDialog.vue'
 import ContextMenu from './ContextMenu.vue'
 import UserAvatar from './UserAvatar.vue'
+import VoiceTimer from './VoiceTimer.vue'
 import { useToastStore } from '../stores/toast'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
@@ -421,8 +422,14 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 <span class="truncate">{{ channel.name }}</span>
               </div>
 
-              <!-- Unread & Mention Badges -->
+              <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->
               <div class="flex items-center gap-1 ml-auto flex-shrink-0">
+                <VoiceTimer
+                  v-if="channel.type === 'voice' && voiceStore.roomStartedAt[channel.id]"
+                  :since="voiceStore.roomStartedAt[channel.id]"
+                  data-testid="sidebar-talk-timer"
+                  class="text-xs text-mnema-tertiary"
+                />
                 <span
                   v-if="mentionCount(channel) > 0 && !isTextActive(channel)"
                   class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
@@ -453,7 +460,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               <div
                 v-for="user in voiceUsers(channel)"
                 :key="user.id"
-                class="h-8 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
+                class="min-h-8 py-1 flex items-center gap-2 px-2 rounded-md text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text transition-colors min-w-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
                 role="button"
                 tabindex="0"
                 aria-haspopup="menu"
@@ -465,7 +472,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
                 @keydown.context-menu.self.prevent="openMemberMenu($event, user)"
               >
                 <UserAvatar :user="user" size="xs" :is-speaking="!!voiceStore.speakingUsers[user.id]" />
-                <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
+                <span class="flex min-w-0 flex-col leading-4">
+                  <span class="truncate text-sm">{{ user.display_name || user.username }}</span>
+                  <VoiceTimer :since="user.joined_at" class="text-[11px] text-mnema-tertiary" />
+                </span>
                 <span v-if="user.role === 'admin'" class="text-xs px-1 rounded bg-amber-500/10 text-amber-400 ml-auto flex-shrink-0">
                   {{ $t('role.admin') }}
                 </span>

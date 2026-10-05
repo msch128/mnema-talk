@@ -132,6 +132,19 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function countMessageOf(userId) {
+    const m = members.value.find(x => x.id === userId)
+    if (m) m.message_count = (m.message_count || 0) + 1
+  }
+
+  // A deletion may take thread replies of several people with it: reload the
+  // members' totals once things calm down.
+  let memberStatsTimer = null
+  function refreshMemberStats() {
+    clearTimeout(memberStatsTimer)
+    memberStatsTimer = setTimeout(fetchMembers, 3000)
+  }
+
   const onlineMembers = computed(() => members.value.filter(m => onlineUserIds.value.has(m.id)))
   const offlineMembers = computed(() => members.value.filter(m => !onlineUserIds.value.has(m.id)))
 
@@ -647,6 +660,7 @@ export const useChatStore = defineStore('chat', () => {
         if (!p) break
         countReply(p)
         insertMessage(p)
+        countMessageOf(p.user_id)
 
         clearTypingForUser(p.channel_id, p.user_id)
 
@@ -693,6 +707,7 @@ export const useChatStore = defineStore('chat', () => {
       case 'message_delete':
         if (!p?.id) break
         removeFromWindow(p.id)
+        refreshMemberStats()
         threadReplies.value = threadReplies.value.filter(m => m.id !== p.id)
         onOriginalDeleted(p.id)
         if (p.parent_id) bumpReplyCount(p.parent_id, -1)
@@ -717,6 +732,17 @@ export const useChatStore = defineStore('chat', () => {
 
       case 'voice_state_update':
         voiceStore.handleVoiceStateUpdate(p)
+        break
+
+      case 'voice_rooms':
+        voiceStore.setVoiceRooms(p)
+        break
+
+      case 'user_stats':
+        if (p?.user_id) {
+          const m = members.value.find(x => x.id === p.user_id)
+          if (m) m.voice_seconds = p.voice_seconds
+        }
         break
 
       case 'webrtc_media_state':

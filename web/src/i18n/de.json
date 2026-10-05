@@ -552,7 +552,10 @@
     "showCamera": "Kamera einblenden",
     "cameraHidden": "Kamera ausgeblendet",
     "allCamerasOff": "Alle fremden Kameras ausblenden",
-    "allCamerasOn": "Fremde Kameras einblenden"
+    "allCamerasOn": "Fremde Kameras einblenden",
+    "participantsDetails": "Wer ist im Talk?",
+    "runningFor": "läuft seit",
+    "runningForTip": "So lange läuft dieser Talk schon"
   },
   "admin": {
     "title": "Speicher & Administration",
@@ -736,5 +739,14 @@
     "open": "Emoji einfügen",
     "more": "Weitere Emojis",
     "loading": "Emojis werden geladen …"
+  },
+  "activity": {
+    "title": "Aktivität",
+    "voiceTime": "Zeit im Talk",
+    "messages": "Nachrichten",
+    "hoursMinutes": "{h} Std. {m} Min.",
+    "minutes": "{m} Min.",
+    "underMinute": "< 1 Min.",
+    "summary": "{voice} im Talk · {messages} Nachrichten"
   }
 }

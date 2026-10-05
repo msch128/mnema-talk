@@ -181,3 +181,20 @@ describe('video subscriptions', () => {
     expect(voice.mediaState).toEqual({})
   })
 })
+
+describe('Talk timers', () => {
+  it('tracks when rooms started and when users joined', () => {
+    setActivePinia(createPinia())
+    const voice = useVoiceStore()
+    voice.setVoiceRooms({ started: { v1: '2026-10-05T10:00:00Z' }, now: new Date().toISOString() })
+    expect(voice.roomStartedAt.v1).toBe('2026-10-05T10:00:00Z')
+
+    voice.handleVoiceStateUpdate({ action: 'join', channel_id: 'v2', started_at: '2026-10-05T11:00:00Z', user: { id: 'u1', joined_at: '2026-10-05T11:00:00Z' } })
+    expect(voice.roomStartedAt.v2).toBe('2026-10-05T11:00:00Z')
+    expect(voice.joinedAtOf('u1')).toBe('2026-10-05T11:00:00Z')
+
+    voice.handleVoiceStateUpdate({ action: 'leave', channel_id: 'v2', user_id: 'u1' })
+    expect(voice.roomStartedAt.v2).toBeUndefined()
+    expect(voice.joinedAtOf('u1')).toBe('')
+  })
+})

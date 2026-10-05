@@ -61,6 +61,10 @@ type User struct {
 	StatusText  string    `json:"status_text"`
 	// Presence is the chosen presence; others see the live one from the hub.
 	Presence string `json:"presence,omitempty"`
+	// Activity totals, filled where they are shown (members, profiles):
+	// time spent in voice rooms (finished stays) and messages sent.
+	VoiceSeconds int64 `json:"voice_seconds,omitempty"`
+	MessageCount int64 `json:"message_count,omitempty"`
 	// Locale is the chosen UI language ("de", "en"); empty until chosen.
 	Locale    string    `json:"locale"`
 	CreatedAt time.Time `json:"created_at"`
@@ -368,4 +372,11 @@ func SetStatusText(ctx context.Context, p *db.Pool, userID uuid.UUID, text strin
 		return nil, httpx.ErrNotFound("user not found")
 	}
 	return u, err
+}
+
+// LoadStats fills u's activity totals.
+func LoadStats(ctx context.Context, p *db.Pool, u *User) error {
+	return p.QueryRow(ctx, `
+		SELECT voice_seconds, (SELECT COUNT(*) FROM messages WHERE user_id = $1)
+		FROM users WHERE id = $1`, u.ID).Scan(&u.VoiceSeconds, &u.MessageCount)
 }

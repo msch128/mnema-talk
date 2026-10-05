@@ -552,7 +552,10 @@
     "showCamera": "Show camera",
     "cameraHidden": "Camera hidden",
     "allCamerasOff": "Hide all other cameras",
-    "allCamerasOn": "Show other cameras"
+    "allCamerasOn": "Show other cameras",
+    "participantsDetails": "Who's in the Talk?",
+    "runningFor": "running for",
+    "runningForTip": "How long this Talk has been running"
   },
   "admin": {
     "title": "Storage & administration",
@@ -736,5 +739,14 @@
     "open": "Insert emoji",
     "more": "More emojis",
     "loading": "Loading emojis …"
+  },
+  "activity": {
+    "title": "Activity",
+    "voiceTime": "Time in Talks",
+    "messages": "Messages",
+    "hoursMinutes": "{h} h {m} min",
+    "minutes": "{m} min",
+    "underMinute": "< 1 min",
+    "summary": "{voice} in Talks · {messages} messages"
   }
 }

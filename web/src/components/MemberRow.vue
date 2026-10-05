@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
+import ActivityStats from './ActivityStats.vue'
 
 const props = defineProps({
   member: { type: Object, required: true },
@@ -67,5 +68,7 @@ const subline = computed(() => {
       </div>
       <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary">{{ subline }}</span>
     </div>
+
+    <ActivityStats :user="member" />
   </div>
 </template>
