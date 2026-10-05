@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -45,17 +46,67 @@ func New(ctx context.Context, cfg *config.Config) (*Client, error) {
 	return c, nil
 }
 
+// bucketAPI is the part of the S3 client ensureBucket needs (tests fake it).
+type bucketAPI interface {
+	HeadBucket(ctx context.Context, in *s3svc.HeadBucketInput, opts ...func(*s3svc.Options)) (*s3svc.HeadBucketOutput, error)
+	CreateBucket(ctx context.Context, in *s3svc.CreateBucketInput, opts ...func(*s3svc.Options)) (*s3svc.CreateBucketOutput, error)
+}
+
 func (c *Client) ensureBucket(ctx context.Context) error {
-	if _, err := c.client.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(c.bucket)}); err == nil {
+	return ensureBucket(ctx, c.client, c.bucket)
+}
+
+// ensureBucket creates the bucket only when HEAD says it does not exist. Any
+// other HEAD failure (wrong credentials, storage down) is returned as is, so
+// it is not mistaken for a missing bucket.
+func ensureBucket(ctx context.Context, api bucketAPI, bucket string) error {
+	_, err := api.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(bucket)})
+	if err == nil {
 		return nil
 	}
-	_, err := c.client.CreateBucket(ctx, &s3svc.CreateBucketInput{Bucket: aws.String(c.bucket)})
-	var owned *types.BucketAlreadyOwnedByYou
-	if err != nil && !errors.As(err, &owned) {
-		return fmt.Errorf("create bucket %s: %w", c.bucket, err)
+	if !isNotFound(err) {
+		return fmt.Errorf("check bucket %s: %w", bucket, err)
 	}
-	slog.Info("s3 bucket created", "bucket", c.bucket)
-	return nil
+	_, err = api.CreateBucket(ctx, &s3svc.CreateBucketInput{Bucket: aws.String(bucket)})
+	var owned *types.BucketAlreadyOwnedByYou
+	var exists *types.BucketAlreadyExists
+	switch {
+	case err == nil:
+		slog.Info("s3 bucket created", "bucket", bucket)
+		return nil
+	case errors.As(err, &owned):
+		// Created concurrently by another instance.
+		return nil
+	case errors.As(err, &exists):
+		// Either created concurrently, or owned by another account: only
+		// a successful HEAD tells them apart.
+		if _, herr := api.HeadBucket(ctx, &s3svc.HeadBucketInput{Bucket: aws.String(bucket)}); herr == nil {
+			return nil
+		}
+		return fmt.Errorf("bucket %s exists but is not accessible with these credentials: %w", bucket, err)
+	default:
+		return fmt.Errorf("create bucket %s: %w", bucket, err)
+	}
+}
+
+// isNotFound reports whether a HeadBucket error means the bucket is missing.
+// HEAD responses carry no body, so besides the typed errors the SDK may only
+// report the HTTP status.
+func isNotFound(err error) bool {
+	var nf *types.NotFound
+	var nsb *types.NoSuchBucket
+	if errors.As(err, &nf) || errors.As(err, &nsb) {
+		return true
+	}
+	var coded interface{ ErrorCode() string }
+	if errors.As(err, &coded) {
+		switch coded.ErrorCode() {
+		case "NotFound", "NoSuchBucket":
+			return true
+		}
+	}
+	var status interface{ HTTPStatusCode() int }
+	return errors.As(err, &status) && status.HTTPStatusCode() == http.StatusNotFound
 }
 
 func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error {
