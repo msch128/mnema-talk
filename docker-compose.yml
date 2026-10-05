@@ -41,6 +41,7 @@ services:
       - WEBRTC_STUN_URLS=${WEBRTC_STUN_URLS:-}
       - WEBRTC_TURN_URLS=${WEBRTC_TURN_URLS:-}
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
       - LEGAL_OPERATOR_NAME=${LEGAL_OPERATOR_NAME:-Community Operator}
       - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
       - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}
@@ -126,6 +127,21 @@ services:
       - --listening-port=3478
       - --min-port=49152
       - --max-port=49200
+      - --fingerprint
+      - --no-cli
+      - --no-multicast-peers
+      - --no-tcp-relay
+      # Never relay into private networks (protects the NAS LAN and Docker networks).
+      - --denied-peer-ip=0.0.0.0-0.255.255.255
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=100.64.0.0-100.127.255.255
+      - --denied-peer-ip=127.0.0.0-127.255.255.255
+      - --denied-peer-ip=169.254.0.0-169.254.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+      - --denied-peer-ip=::1
+      - --denied-peer-ip=fc00::-fdff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+      - --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff
 
 volumes:
   postgres-data:

@@ -121,7 +121,9 @@ func NewRouter(d Deps) (*Router, error) {
 		})
 
 		api.Get("/health", health(d.DB, d.Version))
-		api.Get("/metrics", metricsHandler(d.DB, hub, d.SFU))
+		if cfg.MetricsToken != "" {
+			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(d.DB, hub, d.SFU)))
+		}
 		api.Get("/legal", legal(cfg))
 		api.Get("/ws", hub.HandleWebSocket)
 

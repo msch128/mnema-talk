@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -71,5 +72,19 @@ func metricsHandler(p *db.Pool, hub *ws.Hub, voiceSFU *sfu.SFU) http.HandlerFunc
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(b.String()))
+	}
+}
+
+// requireBearer only lets requests through that carry "Authorization: Bearer <token>".
+func requireBearer(token string, next http.Handler) http.HandlerFunc {
+	want := []byte("Bearer " + token)
+	return func(w http.ResponseWriter, r *http.Request) {
+		got := []byte(r.Header.Get("Authorization"))
+		if subtle.ConstantTimeCompare(got, want) != 1 {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="metrics"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
 	}
 }

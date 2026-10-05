@@ -29,3 +29,27 @@ func TestMetricsEndpoint(t *testing.T) {
 		t.Fatalf("expected metrics to contain go_memstats_alloc_bytes, got:\n%s", body)
 	}
 }
+
+func TestMetricsRequiresBearerToken(t *testing.T) {
+	const token = "test-metrics-token-0123456789"
+	h := requireBearer(token, metricsHandler(nil, nil, nil))
+	for _, tc := range []struct {
+		auth string
+		want int
+	}{
+		{"", http.StatusUnauthorized},
+		{"Bearer wrong", http.StatusUnauthorized},
+		{token, http.StatusUnauthorized},
+		{"Bearer " + token, http.StatusOK},
+	} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/api/metrics", nil)
+		if tc.auth != "" {
+			req.Header.Set("Authorization", tc.auth)
+		}
+		h.ServeHTTP(rec, req)
+		if rec.Code != tc.want {
+			t.Fatalf("auth %q: got %d, want %d", tc.auth, rec.Code, tc.want)
+		}
+	}
+}
