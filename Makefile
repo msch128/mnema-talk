@@ -1,5 +1,5 @@
 # Mnema Talk - developer tasks. Run `make` or `make help` for the list.
-# Requires GNU make, Go, Node 22 + npm, and Docker (compose plugin).
+# Requires GNU make, Go, Node 24 + npm, and Docker (compose plugin).
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
@@ -56,10 +56,10 @@ test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
 
 fmt: ## Format Go code in place
-	gofmt -w cmd internal web/web.go
+	gofmt -w cmd internal api web/web.go
 
 lint: $(WEB_DEPS) ## gofmt check, go vet, eslint
-	@out="$$(gofmt -l cmd internal web/web.go)"; \
+	@out="$$(gofmt -l cmd internal api web/web.go)"; \
 	if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
 	go vet $(GO_PKGS)
 	go vet -tags=integration $(GO_PKGS)
@@ -101,5 +101,5 @@ install-hooks: ## Use scripts/git-hooks as this clone's git hooks
 	@chmod +x scripts/git-hooks/* 2>/dev/null || true
 	@echo "git hooks installed (core.hooksPath=scripts/git-hooks)"
 
-scorecard: ## Print the weighted 1.0 score from docs/SCORECARD.md
+scorecard: ## Print the weighted 1.0 score from docs/SCORECARD.md (local, untracked file; skipped when absent)
 	@node scripts/scorecard.mjs
