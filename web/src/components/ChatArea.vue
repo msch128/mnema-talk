@@ -1,27 +1,23 @@
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
-  Hash, Plus, ArrowUp, ArrowDown, FileText, Users,
-  MessageSquare, Pencil, Trash2, Smile, SmilePlus, Check, Loader2, Reply,
-  MoreHorizontal, Link as LinkIcon, Copy, Bookmark, Bell, BellOff, AtSign, X
+  Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import UserAvatar from './UserAvatar.vue'
-import MarkdownContent from './MarkdownContent.vue'
-import ReplyPreview from './ReplyPreview.vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
-import ReactionPalette from './ReactionPalette.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import MessageRow from './MessageRow.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useMessageActions } from '../composables/useMessageActions'
+import { useMessageMenu } from '../composables/useMessageMenu'
+import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { continuationIds } from '../lib/messageGrouping'
-import { previewText } from '../lib/replies'
 import { firstUnreadId, typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
-import { confirm } from '../lib/confirm'
 import { t, locale } from '../i18n'
 
 const chatStore = useChatStore()
@@ -33,72 +29,16 @@ const messageContainer = ref(null)
 const fileInput = ref(null)
 const textAreaEl = ref(null)
 const assist = useComposerAssist(textAreaEl, inputMessage)
-const isUploading = ref(false)
 const isSending = ref(false)
 const selectedImage = ref(null)
 // Message the composer is currently replying to.
 const replyingTo = ref(null)
 
-// Message Editing & Reactions
-const editingMessageId = ref(null)
-const editMessageText = ref('')
-const isSavingEdit = ref(false)
-const activeReactionPickerMsgId = ref(null)
-
-function startEditMessage(msg) {
-  editingMessageId.value = msg.id
-  editMessageText.value = msg.content
-  activeReactionPickerMsgId.value = null
-}
-
-function cancelEditMessage() {
-  editingMessageId.value = null
-  editMessageText.value = ''
-}
-
-async function saveEditMessage(msg) {
-  if (!editMessageText.value.trim() || isSavingEdit.value) return
-  isSavingEdit.value = true
-  try {
-    await chatStore.editMessage(chatStore.activeChannel.id, msg.id, editMessageText.value.trim())
-    editingMessageId.value = null
-    editMessageText.value = ''
-  } catch (err) {
-    toasts.error(err.message || t('chat.editFailed'))
-  } finally {
-    isSavingEdit.value = false
-  }
-}
-
-async function handleDeleteMessage(msg) {
-  const ok = await confirm({
-    title: t('chat.deleteTitle'),
-    body: t('chat.deleteBody'),
-    excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
-    confirmLabel: t('common.delete'),
-    danger: true
-  })
-  if (!ok) return
-  try {
-    await chatStore.deleteMessage(chatStore.activeChannel.id, msg.id)
-  } catch (err) {
-    toasts.error(err.message || t('chat.deleteFailed'))
-  }
-}
-
-async function handleToggleReaction(msgId, emoji) {
-  try {
-    activeReactionPickerMsgId.value = null
-    await chatStore.toggleReaction(msgId, emoji)
-  } catch (err) {
-    console.warn('Reaction error:', err)
-  }
-}
-
-function hasUserReacted(reaction) {
-  if (!authStore.user?.id || !reaction?.users) return false
-  return reaction.users.includes(authStore.user.id)
-}
+// Editing, deleting, reactions and uploads
+const actions = useMessageActions({ container: messageContainer })
+const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUploading } = actions
+const menu = useMessageMenu({ actions, reply: startReply })
+const contextMenu = menu.state
 
 // ---- Scrolling, infinite history & jump-to-message ----
 
@@ -130,10 +70,6 @@ function scrollToBottomNow() {
 
 function scrollToBottom() {
   nextTick(scrollToBottomNow)
-}
-
-function messageRows() {
-  return messageContainer.value ? messageContainer.value.querySelectorAll('[data-msg-id]') : []
 }
 
 function findRow(id) {
@@ -347,23 +283,18 @@ function openNotificationMenu(e) {
     { level: 'mentions', icon: AtSign },
     { level: 'mute', icon: BellOff }
   ]
-  contextMenu.value = {
-    open: true,
-    x: Math.max(8, rect.right - 200),
-    y: rect.bottom + 4,
-    items: levels.map(({ level, icon }) => ({
-      label: t(`notifications.${level}`),
-      icon,
-      shortcut: current === level ? '✓' : '',
-      action: () => chatStore.setNotificationLevel(channel.id, level)
-    }))
-  }
+  menu.show(Math.max(8, rect.right - 200), rect.bottom + 4, levels.map(({ level, icon }) => ({
+    label: t(`notifications.${level}`),
+    icon,
+    shortcut: current === level ? '✓' : '',
+    action: () => chatStore.setNotificationLevel(channel.id, level)
+  })))
 }
 
 watch(() => chatStore.activeChannel?.id, () => {
   showUnreadPill.value = false
   replyingTo.value = null
-  cancelEditMessage()
+  actions.cancelEdit()
   nextTick(() => textAreaEl.value?.focus())
 })
 
@@ -401,202 +332,33 @@ watch(() => chatStore.pendingMention, (newVal) => {
   }
 })
 
-function toggleReactionPicker(pickerId) {
-  activeReactionPickerMsgId.value = activeReactionPickerMsgId.value === pickerId ? null : pickerId
+function messageRows() {
+  return messageContainer.value ? messageContainer.value.querySelectorAll('[data-msg-id]') : []
 }
 
-function handleGlobalClick(e) {
-  if (activeReactionPickerMsgId.value && !e.target.closest('.reaction-picker-anchor')) {
-    activeReactionPickerMsgId.value = null
-  }
-}
-
-// Context Menu
-const contextMenu = ref({
-  open: false,
-  x: 0,
-  y: 0,
-  items: []
-})
-
-function openMessageContextMenu(e, msg) {
-  if (e?.preventDefault) e.preventDefault()
-  activeReactionPickerMsgId.value = null
-
-  const items = [
-    {
-      label: t('chat.reply'),
-      icon: Reply,
-      shortcut: 'r',
-      action: () => startReply(msg)
+function onMessageKeydown(e, msg) {
+  handleMessageKeydown(e, {
+    rows: messageRows,
+    menu: el => menu.openAtElement(el, msg),
+    reply: () => startReply(msg),
+    edit: () => {
+      if (!actions.isOwn(msg)) return false
+      actions.startEdit(msg)
+      return true
     },
-    {
-      label: t('chat.addReaction'),
-      icon: SmilePlus,
-      action: () => {
-        // After the menu's own click has finished bubbling: the window click
-        // handler would otherwise close the picker straight away.
-        setTimeout(() => { activeReactionPickerMsgId.value = msg.id }, 0)
-      }
-    },
-    {
-      label: t('chat.openThread'),
-      icon: MessageSquare,
-      action: () => chatStore.openThread(msg)
-    }
-  ]
-
-  if (msg.user_id === authStore.user?.id) {
-    items.push({
-      label: t('chat.edit'),
-      icon: Pencil,
-      shortcut: 'e',
-      action: () => startEditMessage(msg)
-    })
-  }
-
-  items.push({ type: 'separator' })
-
-  items.push({
-    label: t('chat.copyText'),
-    icon: Copy,
-    action: async () => {
-      try {
-        await navigator.clipboard.writeText(msg.content || '')
-        toasts.success(t('chat.copiedText'))
-      } catch (err) {
-        console.warn('Copy failed:', err)
-      }
+    escape: () => {
+      if (contextMenu.value.open) menu.close()
+      else if (editingMessageId.value) actions.cancelEdit()
+      else if (replyingTo.value) cancelReply()
+      else return false
+      return true
     }
   })
-
-  items.push({
-    label: t('chat.copyLink'),
-    icon: LinkIcon,
-    action: async () => {
-      try {
-        const link = `${window.location.origin}/c/${chatStore.activeChannel?.id}/m/${msg.id}`
-        await navigator.clipboard.writeText(link)
-        toasts.success(t('chat.copiedLink'))
-      } catch (err) {
-        console.warn('Copy failed:', err)
-      }
-    }
-  })
-
-  items.push({
-    label: t('chat.markUnread'),
-    icon: Bookmark,
-    action: async () => {
-      try {
-        await chatStore.markChannelUnread(chatStore.activeChannel?.id, msg.id)
-        toasts.success(t('chat.markedUnread'))
-      } catch (err) {
-        toasts.error(err.message || t('chat.markUnreadFailed'))
-      }
-    }
-  })
-
-  if (msg.user_id === authStore.user?.id || authStore.isAdmin) {
-    items.push({ type: 'separator' })
-    items.push({
-      label: t('chat.delete'),
-      icon: Trash2,
-      danger: true,
-      action: () => handleDeleteMessage(msg)
-    })
-  }
-
-  contextMenu.value = {
-    open: true,
-    x: e.clientX || 0,
-    y: e.clientY || 0,
-    items
-  }
-}
-
-function openContextMenuFromButton(e, msg) {
-  const rect = e.currentTarget.getBoundingClientRect()
-  openMessageContextMenu({
-    preventDefault: () => {},
-    clientX: rect.left,
-    clientY: rect.bottom + 4
-  }, msg)
-}
-
-// Right-click opens at the pointer; the keyboard (no pointer position) opens
-// at the message's own position.
-function onMessageContextMenu(e, msg) {
-  if (!e.clientX && !e.clientY && e.currentTarget) {
-    openMenuAtElement(e.currentTarget, msg)
-    return
-  }
-  openMessageContextMenu(e, msg)
-}
-
-function openMenuAtElement(el, msg) {
-  const rect = el.getBoundingClientRect()
-  openMessageContextMenu({
-    preventDefault: () => {},
-    clientX: rect.left + 80,
-    clientY: Math.min(Math.max(rect.top, 0) + 24, window.innerHeight - 24)
-  }, msg)
-}
-
-// Moves focus to the previous/next message row.
-function focusSiblingMessage(row, dir) {
-  const rows = [...messageRows()]
-  const next = rows[rows.indexOf(row) + dir]
-  if (!next) return false
-  next.focus()
-  return true
-}
-
-function handleMessageKeydown(e, msg) {
-  if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return
-
-  if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
-    e.preventDefault()
-    openMenuAtElement(e.currentTarget, msg)
-    return
-  }
-  if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.target === e.currentTarget && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-    e.preventDefault()
-    focusSiblingMessage(e.currentTarget, e.key === 'ArrowUp' ? -1 : 1)
-    return
-  }
-  // Ctrl/Cmd/Alt combos belong to the browser or OS (reload, find, ...).
-  if (e.ctrlKey || e.metaKey || e.altKey) return
-
-  if (e.key === 'r' || e.key === 'R') {
-    e.preventDefault()
-    startReply(msg)
-  } else if (e.key === 'e' || e.key === 'E') {
-    if (msg.user_id === authStore.user?.id) {
-      e.preventDefault()
-      startEditMessage(msg)
-    }
-  } else if (e.key === 'Escape') {
-    if (contextMenu.value.open) {
-      e.preventDefault()
-      contextMenu.value.open = false
-    } else if (activeReactionPickerMsgId.value) {
-      e.preventDefault()
-      activeReactionPickerMsgId.value = null
-    } else if (editingMessageId.value) {
-      e.preventDefault()
-      cancelEditMessage()
-    } else if (replyingTo.value) {
-      e.preventDefault()
-      cancelReply()
-    }
-  }
 }
 
 function onGlobalKeydown(e) {
   if (e.key !== 'Escape') return
-  if (contextMenu.value.open) { contextMenu.value.open = false; return }
-  if (activeReactionPickerMsgId.value) { activeReactionPickerMsgId.value = null; return }
+  if (contextMenu.value.open) { menu.close(); return }
   // Something else (dialog, lightbox, composer reply, editor) already used the key.
   if (e.defaultPrevented || selectedImage.value || editingMessageId.value || replyingTo.value) return
   if (inputMessage.value.trim() || document.querySelector('[role="dialog"]')) return
@@ -608,7 +370,6 @@ function onGlobalKeydown(e) {
 onMounted(() => {
   scrollToBottom()
   textAreaEl.value?.focus()
-  window.addEventListener('click', handleGlobalClick)
   window.addEventListener('keydown', onGlobalKeydown)
   if (typeof ResizeObserver !== 'undefined' && messageContainer.value) {
     resizeObserver = new ResizeObserver(handleContainerResize)
@@ -617,7 +378,6 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('click', handleGlobalClick)
   window.removeEventListener('keydown', onGlobalKeydown)
   resizeObserver?.disconnect()
   clearTimeout(highlightTimer)
@@ -661,26 +421,11 @@ function handleKeyDown(e) {
 }
 
 async function handleFileUpload(e) {
-  const file = e.target.files?.[0]
-  if (!file) return
-
-  isUploading.value = true
-  try {
-    await chatStore.uploadMedia(file, '', null, replyingTo.value?.id || null)
-    if (fileInput.value) fileInput.value.value = ''
-    replyingTo.value = null
-    await revealOwnMessage()
-  } catch (err) {
-    toasts.error(err.message || t('chat.uploadFailed'))
-  } finally {
-    isUploading.value = false
-  }
-}
-
-function formatTime(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
+  const replyId = replyingTo.value?.id || null
+  const ok = await actions.upload(e.target, file => chatStore.uploadMedia(file, '', null, replyId))
+  if (!ok) return
+  replyingTo.value = null
+  await revealOwnMessage()
 }
 
 // Consecutive messages by the same author (< 7 min apart) render compactly.
@@ -811,225 +556,31 @@ const groupedIds = computed(() => {
         <span class="text-xs font-semibold text-mnema-accent uppercase tracking-wide">{{ dividerLabel() }}</span>
         <span class="flex-1 h-px bg-mnema-accent/40"></span>
       </div>
-      <div
-        :data-msg-id="msg.id"
-        tabindex="0"
-        role="article"
-        @contextmenu.prevent="onMessageContextMenu($event, msg)"
-        @keydown="handleMessageKeydown($event, msg)"
-        :class="[
-          'relative pl-[72px] pr-12 py-0.5 hover:bg-mnema-surface/50 transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
-          groupedIds.has(msg.id) ? '' : 'mt-[17px] first:mt-2',
-          highlightedId === msg.id ? 'msg-flash' : '',
-          msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg) ? 'msg-mentions-me' : ''
-        ]"
-      >
-        <!-- Hover Quick Actions Bar -->
-        <div
-          :class="[
-            'absolute right-4 -top-4 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-1 shadow-lg z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
-            activeReactionPickerMsgId === msg.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
-          ]"
-        >
-          <!-- Emoji Reactions Trigger -->
-          <div class="relative reaction-picker-anchor">
-            <button
-              @click.stop="toggleReactionPicker(msg.id)"
-              :class="[
-                'p-1.5 rounded transition',
-                activeReactionPickerMsgId === msg.id 
-                  ? 'bg-mnema-surface text-amber-400' 
-                  : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
-              ]"
-              v-tooltip="$t('chat.addReaction')"
-            >
-              <Smile class="w-4 h-4" />
-            </button>
-
-            <ReactionPalette
-              v-if="activeReactionPickerMsgId === msg.id"
-              align="right"
-              @pick="handleToggleReaction(msg.id, $event)"
-              @close="activeReactionPickerMsgId = null"
-            />
-          </div>
-
-          <!-- Reply -->
-          <button
-            @click.stop="startReply(msg)"
-            class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-            v-tooltip="$t('chat.reply')"
-          >
-            <Reply class="w-4 h-4" />
-          </button>
-
-          <!-- Edit Message (if author) -->
-          <button
-            v-if="msg.user_id === authStore.user?.id"
-            @click.stop="startEditMessage(msg)"
-            class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
-            v-tooltip="$t('chat.edit')"
-          >
-            <Pencil class="w-4 h-4" />
-          </button>
-
-          <!-- More Actions (⋯) Context Menu Trigger -->
-          <button
-            @click.stop="openContextMenuFromButton($event, msg)"
-            class="p-1.5 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-            v-tooltip="$t('chat.moreActions')"
-          >
-            <MoreHorizontal class="w-4 h-4" />
-          </button>
-        </div>
-
-        <!-- Grouped follow-up: small time in the gutter on hover -->
-        <span
-          v-if="groupedIds.has(msg.id)"
-          class="absolute left-0 top-0.5 w-[72px] text-center text-xs leading-[1.375rem] text-mnema-tertiary tabular-nums opacity-0 group-hover:opacity-100 select-none"
-          aria-hidden="true"
-        >
-          {{ formatTime(msg.created_at) }}
-        </span>
-
-        <!-- User Avatar (first message of a group only) -->
-        <UserAvatar
-          v-else
-          :user="msg"
-          size="md"
-          :class="['!absolute left-4 cursor-pointer hover:opacity-85 transition', msg.reply_to ? 'top-6' : 'top-1']"
-          @click="chatStore.openUserProfile(msg)"
-        />
-
-        <!-- Content Body -->
-        <div class="min-w-0">
-          <!-- "Replied to" reference line -->
-          <ReplyPreview v-if="msg.reply_to" :reply="msg.reply_to" @jump="jumpToReplied(msg)" />
-          <div v-if="!groupedIds.has(msg.id)" class="flex items-baseline gap-2 min-w-0">
-            <span
-              @click="chatStore.openUserProfile(msg)"
-              class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate"
-            >
-              {{ msg.display_name || msg.username }}
-            </span>
-            <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
-            <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
-          </div>
-
-          <!-- Inline Message Editor -->
-          <div v-if="editingMessageId === msg.id" class="mt-1 space-y-1.5">
-            <textarea
-              v-model="editMessageText"
-              rows="2"
-              @keydown.enter.exact.prevent="saveEditMessage(msg)"
-              @keydown.esc.prevent="cancelEditMessage"
-              class="w-full text-message p-2 rounded-lg bg-mnema-surface border border-mnema-accent text-mnema-text focus:outline-none resize-none"
-            ></textarea>
-            <div class="flex items-center justify-between text-xs text-mnema-tertiary">
-              <span class="font-mono">{{ $t('chat.editHint') }}</span>
-              <div class="flex items-center gap-1.5">
-                <button @click="cancelEditMessage" class="px-2 py-0.5 rounded text-mnema-muted hover:text-mnema-text">{{ $t('common.cancel') }}</button>
-                <button @click="saveEditMessage(msg)" :disabled="isSavingEdit" class="px-2.5 py-1 rounded bg-mnema-accent text-mnema-canvas font-bold flex items-center gap-1 hover:brightness-110 active:scale-95 disabled:opacity-50">
-                  <Loader2 v-if="isSavingEdit" class="w-3.5 h-3.5 animate-spin" />
-                  <Check v-else class="w-3.5 h-3.5" />
-                  <span>{{ $t('common.save') }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Markdown Message Content -->
-          <MarkdownContent v-else-if="msg.content" :content="msg.content" />
-
-          <!-- Grouped messages have no header line, so the edit marker follows the body -->
-          <span
-            v-if="groupedIds.has(msg.id) && msg.is_edited && editingMessageId !== msg.id"
-            class="block text-xs text-mnema-tertiary italic"
-          >{{ $t('chat.edited') }}</span>
-
-          <!-- Media Attachments (Images, Clips, Documents) -->
-          <div v-if="msg.attachments && msg.attachments.length" class="mt-2 space-y-2">
-            <div 
-              v-for="att in msg.attachments" 
-              :key="att.id" 
-              class="max-w-md rounded-lg overflow-hidden border border-mnema-border bg-mnema-elevated shadow-sm"
-            >
-              <template v-if="att.mime_type.startsWith('image/')">
-                <img 
-                  :src="att.url" 
-                  :alt="att.original_filename" 
-                  @click="selectedImage = att.url"
-                  class="max-h-80 w-auto max-w-full rounded-t object-cover cursor-pointer hover:opacity-95 transition"
-                  loading="lazy"
-                />
-              </template>
-              <template v-else-if="att.mime_type.startsWith('video/')">
-                <video :src="att.url" controls class="max-h-80 w-full rounded-t"></video>
-              </template>
-              <div class="p-2.5 flex items-center justify-between text-sm bg-mnema-raised border-t border-mnema-hairline">
-                <div class="flex items-center gap-2 truncate">
-                  <FileText class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
-                  <a :href="att.url" target="_blank" class="text-mnema-text hover:text-mnema-accent hover:underline truncate text-sm">
-                    {{ att.original_filename }}
-                  </a>
-                </div>
-                <span class="text-xs font-mono text-mnema-tertiary pl-2 flex-shrink-0">
-                  {{ $t('media.sizeMb', { size: (att.size_bytes / 1024 / 1024).toFixed(2) }) }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Thread counter -->
-          <div v-if="msg.reply_count > 0" class="mt-2">
-            <button
-              @click.stop="chatStore.openThread(msg)"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-mnema-accent-subtle/80 hover:bg-mnema-accent-subtle text-mnema-accent border border-mnema-accent/30 transition shadow-xs"
-            >
-              <MessageSquare class="w-4 h-4 text-mnema-accent" />
-              <span>{{ $t('chat.replies', { count: msg.reply_count }) }}</span>
-              <span class="text-xs opacity-75 font-mono ml-0.5">{{ $t('chat.openThread') }} &rarr;</span>
-            </button>
-          </div>
-
-          <!-- Reaction badges -->
-          <div v-if="msg.reactions && msg.reactions.length" class="flex flex-wrap gap-1 mt-2 items-center">
-            <button 
-              v-for="r in msg.reactions" 
-              :key="r.emoji"
-              @click.stop="handleToggleReaction(msg.id, r.emoji)"
-              :class="[
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-sm border transition cursor-pointer active:scale-95',
-                hasUserReacted(r)
-                  ? 'bg-mnema-accent/20 border-mnema-accent/40 text-mnema-accent font-semibold'
-                  : 'bg-mnema-surface hover:bg-mnema-band border-mnema-border text-mnema-muted'
-              ]"
-              v-tooltip="$t('chat.reaction', { emoji: r.emoji })"
-            >
-              <span>{{ r.emoji }}</span>
-              <span class="text-xs font-mono">{{ r.count }}</span>
-            </button>
-
-            <!-- Add-reaction button inline with reactions -->
-            <div class="relative reaction-picker-anchor inline-block">
-              <button
-                @click.stop="toggleReactionPicker(`bottom-${msg.id}`)"
-                class="inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-mnema-border hover:border-mnema-accent text-mnema-tertiary hover:text-mnema-accent hover:bg-mnema-surface transition cursor-pointer text-sm"
-                v-tooltip="$t('chat.addReaction')"
-              >
-                <SmilePlus class="w-4 h-4" />
-              </button>
-
-              <ReactionPalette
-                v-if="activeReactionPickerMsgId === `bottom-${msg.id}`"
-                align="left"
-                @pick="handleToggleReaction(msg.id, $event)"
-                @close="activeReactionPickerMsgId = null"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <MessageRow
+        :msg="msg"
+        :grouped="groupedIds.has(msg.id)"
+        :highlighted="highlightedId === msg.id"
+        :mentions-me="msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg)"
+        :is-own="actions.isOwn(msg)"
+        :editing="editingMessageId === msg.id"
+        v-model:edit-text="actions.editText.value"
+        :saving="actions.isSavingEdit.value"
+        :picker-id="activeReactionPickerMsgId"
+        @contextmenu.prevent="menu.onContextMenu($event, msg)"
+        @keydown="onMessageKeydown($event, msg)"
+        @reply="startReply(msg)"
+        @edit="actions.startEdit(msg)"
+        @save="actions.saveEdit(msg)"
+        @cancel-edit="actions.cancelEdit()"
+        @more="menu.openFromButton($event, msg)"
+        @react="actions.toggleReaction(msg.id, $event)"
+        @toggle-picker="actions.togglePicker($event)"
+        @close-picker="actions.closePicker()"
+        @open-thread="chatStore.openThread(msg)"
+        @open-profile="chatStore.openUserProfile(msg)"
+        @open-image="selectedImage = $event"
+        @jump="jumpToReplied(msg)"
+      />
       </template>
     </div>
 

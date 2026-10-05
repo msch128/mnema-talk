@@ -173,3 +173,86 @@ describe('ChatArea message keyboard handling', () => {
     expect(bar.classes()).toContain('group-focus-within:flex')
   })
 })
+
+describe('ChatArea message actions', () => {
+  it('e on an own message opens the editor with focus in it', async () => {
+    setup()
+    const row = w.find('[data-msg-id="c"]')
+    row.element.focus()
+    key(row, { key: 'e' })
+    await flushPromises()
+    const editor = w.find('[data-msg-id="c"] textarea')
+    expect(editor.exists()).toBe(true)
+    expect(document.activeElement).toBe(editor.element)
+    // Escape in the editor cancels and hands focus back to the message.
+    key(editor, { key: 'Escape' })
+    await flushPromises()
+    expect(w.find('[data-msg-id="c"] textarea').exists()).toBe(false)
+    expect(document.activeElement).toBe(w.find('[data-msg-id="c"]').element)
+  })
+
+  it('e on someone else\'s message does nothing', async () => {
+    setup()
+    const ev = new KeyboardEvent('keydown', { key: 'e', bubbles: true, cancelable: true })
+    w.find('[data-msg-id="a"]').element.dispatchEvent(ev)
+    await nextTick()
+    expect(ev.defaultPrevented).toBe(false)
+    expect(w.find('[data-msg-id="a"] textarea').exists()).toBe(false)
+  })
+
+  it('opens the author profile from a keyboard-reachable button', async () => {
+    const chat = setup()
+    const open = vi.spyOn(chat, 'openUserProfile').mockImplementation(() => {})
+    const name = w.find('[data-msg-id="a"] [data-testid="author-name"]')
+    expect(name.element.tagName).toBe('BUTTON')
+    await name.trigger('click')
+    expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'a' }))
+  })
+
+  it('reaction picker closes on Escape and on a press outside', async () => {
+    setup()
+    const smile = () => w.find('[data-msg-id="b"] .reaction-picker-anchor button')
+    await smile().trigger('click')
+    expect(w.find('[data-testid="reaction-palette"]').exists()).toBe(true)
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    await nextTick()
+    expect(w.find('[data-testid="reaction-palette"]').exists()).toBe(false)
+
+    await smile().trigger('click')
+    w.find('[data-msg-id="a"]').element.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    await nextTick()
+    expect(w.find('[data-testid="reaction-palette"]').exists()).toBe(false)
+  })
+
+  it('"add reaction" in the message menu opens the picker on that message', async () => {
+    setup()
+    key(w.find('[data-msg-id="b"]'), { key: 'F10', shiftKey: true })
+    await nextTick()
+    const items = [...document.body.querySelectorAll('[role="menuitem"]')]
+    items[1].dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    items[1].click()
+    await flushPromises()
+    expect(w.find('[data-msg-id="b"] [data-testid="reaction-palette"]').exists()).toBe(true)
+  })
+
+  it('renders video attachments as a player', async () => {
+    const chat = setup()
+    chat.messages = [{ ...msg('v', 'u2', 0), attachments: [{ id: 'att', url: '/m/v', mime_type: 'video/mp4', original_filename: 'clip.mp4', size_bytes: 10 }] }]
+    await nextTick()
+    expect(w.find('[data-msg-id="v"] video').exists()).toBe(true)
+  })
+
+  it('clears the file input after a failed upload', async () => {
+    const chat = setup()
+    vi.spyOn(chat, 'uploadMedia').mockRejectedValue(new Error('zu groß'))
+    const input = w.find('input[type="file"]').element
+    const file = new File(['x'], 'a.png', { type: 'image/png' })
+    Object.defineProperty(input, 'files', { configurable: true, value: [file] })
+    let value = 'C:\\fakepath\\a.png'
+    Object.defineProperty(input, 'value', { configurable: true, get: () => value, set: v => { value = v } })
+    input.dispatchEvent(new Event('change'))
+    await flushPromises()
+    expect(chat.uploadMedia).toHaveBeenCalled()
+    expect(value).toBe('')
+  })
+})
