@@ -1,0 +1,25 @@
+e2e/run.sh
+  s_5c9ee3c4dec5dd::t_0160568a13a8af 71,87
+e2e/tests/screenshare.spec.js
+  s_5c9ee3c4dec5dd::t_1ba9a492621a68 1-101
+web/src/composables/useWebRTC.js
+  s_5c9ee3c4dec5dd::t_c8ad7d99be8490 357-358,362-419,829-834
+web/src/composables/useWebRTC.test.js
+  s_5c9ee3c4dec5dd::t_1918a80b10aa49 4,47-55,59-61,67,70,73-74,76-84,180-188,206-212,251,266,324,347,406,447,450,505,752-767
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a1639230365c8f7959dfe99ee0169bd7658bced",
+  "prompts": {},
+  "sessions": {
+    "s_5c9ee3c4dec5dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d4fdedf-c57c-4991-808e-5664d15cfea7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
