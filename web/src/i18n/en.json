@@ -315,7 +315,8 @@
     "cameraNotFound": "No camera found.",
     "cameraBusy": "The camera is in use by another app.",
     "memberMuted": "Muted",
-    "memberDeafened": "Deafened"
+    "memberDeafened": "Deafened",
+    "kicked": "An admin removed you from the voice channel."
   },
   "audio": {
     "settings": "Audio settings",
