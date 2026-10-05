@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -74,17 +75,50 @@ func metricsHandler(p *db.Pool, hub *ws.Hub, voiceSFU *sfu.SFU) http.HandlerFunc
 			fmt.Fprintf(&b, "mnema_db_connections_max %d\n\n", stat.MaxConns())
 		}
 
-		// WebSocket & Voice stats
+		// WebSocket stats
 		if hub != nil {
 			b.WriteString("# HELP mnema_ws_online_users Number of distinct online users\n")
 			b.WriteString("# TYPE mnema_ws_online_users gauge\n")
 			fmt.Fprintf(&b, "mnema_ws_online_users %d\n\n", hub.OnlineCount())
 		}
 
+		// Voice (SFU) stats: what the SFU exposes publicly is who publishes
+		// video, so these count screen shares and cameras being forwarded.
+		if voiceSFU != nil {
+			writeSFUMetrics(&b, voiceSFU.AllMediaStates())
+		}
+
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(b.String()))
 	}
+}
+
+// writeSFUMetrics writes the video gauges from the SFU's media states
+// (room -> user -> what that user publishes).
+func writeSFUMetrics(b *strings.Builder, states map[uuid.UUID]map[uuid.UUID]sfu.MediaState) {
+	var screens, cameras int
+	for _, room := range states {
+		for _, st := range room {
+			if st.Screen {
+				screens++
+			}
+			if st.Camera {
+				cameras++
+			}
+		}
+	}
+	b.WriteString("# HELP mnema_sfu_video_rooms Voice channels in which at least one member shares a screen or camera\n")
+	b.WriteString("# TYPE mnema_sfu_video_rooms gauge\n")
+	fmt.Fprintf(b, "mnema_sfu_video_rooms %d\n\n", len(states))
+
+	b.WriteString("# HELP mnema_sfu_screen_shares Screen shares currently forwarded by the SFU\n")
+	b.WriteString("# TYPE mnema_sfu_screen_shares gauge\n")
+	fmt.Fprintf(b, "mnema_sfu_screen_shares %d\n\n", screens)
+
+	b.WriteString("# HELP mnema_sfu_cameras Cameras currently forwarded by the SFU\n")
+	b.WriteString("# TYPE mnema_sfu_cameras gauge\n")
+	fmt.Fprintf(b, "mnema_sfu_cameras %d\n\n", cameras)
 }
 
 // requireBearer only lets requests through that carry "Authorization: Bearer <token>".

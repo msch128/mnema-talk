@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -37,13 +38,34 @@ type Deps struct {
 	Events events.Publisher
 	// Version is the build version reported by /api/health.
 	Version string
+	// StorageReady reports whether object storage is usable (nil = not
+	// checked); /api/health answers 503 while it returns an error.
+	StorageReady func() error
+	// Context bounds the router's background work (deny-list refresh);
+	// nil = until Close.
+	Context context.Context
 }
 
 // Router holds the assembled handler and the hub (for shutdown/tests).
 type Router struct {
 	http.Handler
-	Hub *ws.Hub
+	Hub    *ws.Hub
+	cancel context.CancelFunc
 }
+
+// Close stops the router's background goroutines.
+func (r *Router) Close() {
+	if r.cancel != nil {
+		r.cancel()
+	}
+}
+
+// denyRefresh is how often the link-preview deny list (the server's own
+// public address) is resolved again, and denyTimeout bounds one resolution.
+const (
+	denyRefresh = 10 * time.Minute
+	denyTimeout = 10 * time.Second
+)
 
 func NewRouter(d Deps) (*Router, error) {
 	cfg := d.Config
@@ -51,6 +73,11 @@ func NewRouter(d Deps) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	parent := d.Context
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithCancel(parent)
 
 	sessions := &auth.Sessions{
 		DB:     d.DB,
@@ -86,14 +113,24 @@ func NewRouter(d Deps) (*Router, error) {
 		// Our own public address leads back into the LAN through the
 		// router (hairpin NAT); never let a preview fetch go there.
 		if u, err := url.Parse(cfg.PublicURL); err == nil {
+			hosts := append([]string{u.Hostname()}, cfg.WebRTCAnnounce...)
 			deny := func() {
-				fetcher.Deny(context.Background(), append([]string{u.Hostname()}, cfg.WebRTCAnnounce...)...)
+				dctx, dcancel := context.WithTimeout(ctx, denyTimeout)
+				defer dcancel()
+				fetcher.Deny(dctx, hosts...)
 			}
 			deny()
 			// A home connection's public IP changes; keep the list current.
 			go func() {
-				for range time.Tick(10 * time.Minute) {
-					deny()
+				t := time.NewTicker(denyRefresh)
+				defer t.Stop()
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-t.C:
+						deny()
+					}
 				}
 			}()
 		}
@@ -123,7 +160,7 @@ func NewRouter(d Deps) (*Router, error) {
 			httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
 		})
 
-		api.Get("/health", health(d.DB, d.Version))
+		api.Get("/health", health(newHealthCheck(d.DB, d.StorageReady, healthCacheTTL), d.Version))
 		if cfg.MetricsToken != "" {
 			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(d.DB, hub, d.SFU)))
 		}
@@ -177,7 +214,7 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub}, nil
+	return &Router{Handler: r, Hub: hub, cancel: cancel}, nil
 }
 
 // Health is the response of GET /api/health.
@@ -186,7 +223,55 @@ type Health struct {
 	Version string `json:"version"`
 }
 
-// health handles GET /api/health.
+// healthCacheTTL is how long a health result is reused: the endpoint is
+// public and unauthenticated, so callers must not be able to turn it into a
+// stream of database pings.
+const healthCacheTTL = 2 * time.Second
+
+// healthCheck pings the database (and checks object storage) at most once
+// per ttl; concurrent callers wait for the one check in flight.
+type healthCheck struct {
+	ping    func(context.Context) error
+	storage func() error
+	ttl     time.Duration
+
+	mu      sync.Mutex
+	checked time.Time
+	err     *httpx.APIError
+}
+
+func newHealthCheck(p *db.Pool, storage func() error, ttl time.Duration) *healthCheck {
+	ping := func(context.Context) error { return errors.New("no database") }
+	if p != nil {
+		ping = p.Ping
+	}
+	return &healthCheck{ping: ping, storage: storage, ttl: ttl}
+}
+
+// check returns nil when healthy, otherwise the error to answer with.
+func (h *healthCheck) check(ctx context.Context) *httpx.APIError {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !h.checked.IsZero() && time.Since(h.checked) < h.ttl {
+		return h.err
+	}
+	// Not tied to one caller: its result is shared with the others.
+	pctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Second)
+	defer cancel()
+	h.err = nil
+	if err := h.ping(pctx); err != nil {
+		h.err = httpx.ErrUnavailable("database unavailable")
+	} else if h.storage != nil {
+		if err := h.storage(); err != nil {
+			h.err = httpx.ErrUnavailable("file storage unavailable")
+		}
+	}
+	h.checked = time.Now()
+	return h.err
+}
+
+// health handles GET /api/health. The result is cached for healthCacheTTL,
+// and an object storage outage answers 503 as well.
 //
 // @Summary Health check
 // @Description Pings the database.
@@ -197,15 +282,13 @@ type Health struct {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
 // @Router /api/health [get]
-func health(p *db.Pool, version string) http.HandlerFunc {
+func health(hc *healthCheck, version string) http.HandlerFunc {
 	if version == "" {
 		version = "dev"
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		if err := p.Ping(ctx); err != nil {
-			httpx.WriteError(w, httpx.ErrUnavailable("database unavailable"))
+		if err := hc.check(r.Context()); err != nil {
+			httpx.WriteError(w, err)
 			return
 		}
 		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version})
