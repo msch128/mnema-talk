@@ -580,11 +580,80 @@ describe('webcam', () => {
     expect(Object.keys(voice.userVideoStreams)).toEqual(['alice'])
     expect(voice.remoteScreenStream).toBeNull()
 
+    // A screen share nobody opted into is not shown.
+    pc.ontrack({ track: fakeTrack('video'), streams: [{ id: 'bob' }] })
+    expect(voice.remoteScreenStream).toBeNull()
+    voice.watchScreen('bob')
     pc.ontrack({ track: fakeTrack('video'), streams: [{ id: 'bob' }] })
     expect(voice.remoteScreenUserId).toBe('bob')
     expect(voice.remoteScreenStream).not.toBeNull()
 
     camTrack.onended()
     expect(voice.userVideoStreams.alice).toBeUndefined()
+  })
+})
+
+describe('video subscriptions', () => {
+  const subs = sent => sent.filter(e => e.type === 'webrtc_subscribe').map(e => e.payload)
+
+  beforeEach(() => localStorage.clear())
+
+  it('sends camera opt-outs right after joining, nothing by default', async () => {
+    const first = await joined()
+    expect(subs(first.sent)).toEqual([])
+    first.rtc.leaveVoiceChannel()
+
+    localStorage.setItem('mnema_hidden_cameras', JSON.stringify({ alice: true }))
+    setActivePinia(createPinia())
+    const { sent } = await joined()
+    const types = sent.map(e => e.type)
+    expect(types.indexOf('webrtc_subscribe')).toBeGreaterThan(types.indexOf('voice_join'))
+    expect(subs(sent)).toEqual([{ kind: 'camera', user_id: 'alice', on: false }])
+  })
+
+  it('forwards later changes: hide camera, opt into and out of a screen share', async () => {
+    const { voice, sent } = await joined()
+    voice.setCameraHidden('alice', true)
+    voice.watchScreen('bob')
+    voice.unwatchScreen('bob')
+    voice.setAllCamerasOff(true)
+    expect(subs(sent)).toEqual([
+      { kind: 'camera', user_id: 'alice', on: false },
+      { kind: 'screen', user_id: 'bob', on: true },
+      { kind: 'screen', user_id: 'bob', on: false },
+      { kind: 'camera', all: true, on: false }
+    ])
+  })
+
+  it('resends opt-outs and still-running screen opt-ins after a reconnect', async () => {
+    const { rtc, voice, sent } = await joined()
+    voice.setCameraHidden('alice', true)
+    voice.handleMediaState({ user_id: 'bob', screen: true })
+    voice.handleMediaState({ user_id: 'carol', screen: true })
+    voice.watchScreen('bob')
+    voice.watchScreen('carol')
+    // carol's share ended while the connection was down
+    voice.mediaState = { bob: { screen: true } }
+    sent.length = 0
+    rtc.rejoinAfterReconnect()
+    expect(subs(sent)).toEqual([
+      { kind: 'camera', user_id: 'alice', on: false },
+      { kind: 'screen', user_id: 'bob', on: true }
+    ])
+    expect(voice.watchedScreens).toEqual({ bob: true })
+  })
+
+  it('stops sending after leaving', async () => {
+    const { rtc, voice, sent } = await joined()
+    rtc.leaveVoiceChannel()
+    sent.length = 0
+    voice.setCameraHidden('alice', true)
+    expect(subs(sent)).toEqual([])
+  })
+
+  it('applies webrtc_media_state events', async () => {
+    const { chat, voice } = await joined()
+    chat.handleWSEvent({ type: 'webrtc_media_state', payload: { user_id: 'bob', screen: true, camera: false } })
+    expect(voice.mediaState.bob).toEqual({ screen: true, camera: false })
   })
 })

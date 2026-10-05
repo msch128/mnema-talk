@@ -84,3 +84,100 @@ describe('participant video streams', () => {
     expect(voice.userVideoStreams.u1).toBeUndefined()
   })
 })
+
+describe('video subscriptions', () => {
+  it('cameras are visible by default and opt-outs are persisted', () => {
+    const voice = useVoiceStore()
+    expect(voice.isCameraHidden('u1')).toBe(false)
+    voice.setCameraHidden('u1', true)
+    expect(voice.isCameraHidden('u1')).toBe(true)
+    expect(voice.isCameraHidden('u2')).toBe(false)
+
+    setActivePinia(createPinia())
+    const again = useVoiceStore()
+    expect(again.isCameraHidden('u1')).toBe(true)
+    again.toggleCameraHidden('u1')
+    expect(again.isCameraHidden('u1')).toBe(false)
+    expect(JSON.parse(localStorage.getItem('mnema_hidden_cameras'))).toEqual({})
+  })
+
+  it('all cameras off hides everyone and is persisted', () => {
+    const voice = useVoiceStore()
+    voice.setUserVideoStream('u1', {})
+    voice.setAllCamerasOff(true)
+    expect(voice.isCameraHidden('anyone')).toBe(true)
+    expect(voice.userVideoStreams).toEqual({})
+    voice.setUserVideoStream('u1', {})
+    expect(voice.userVideoStreams).toEqual({})
+    setActivePinia(createPinia())
+    expect(useVoiceStore().allCamerasOff).toBe(true)
+  })
+
+  it('survives blocked storage', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+    const voice = useVoiceStore()
+    expect(() => voice.setCameraHidden('u1', true)).not.toThrow()
+    expect(voice.isCameraHidden('u1')).toBe(true)
+    spy.mockRestore()
+  })
+
+  it('screen shares are opt-in, not persisted, and watching sends a subscribe', () => {
+    const voice = useVoiceStore()
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    expect(voice.watchedScreens).toEqual({})
+
+    voice.setRemoteScreen('u1', {})
+    expect(voice.remoteScreenStream).toBeNull()
+
+    voice.watchScreen('u1')
+    expect(sink).toHaveBeenCalledWith({ kind: 'screen', user_id: 'u1', on: true })
+    const stream = {}
+    voice.setRemoteScreen('u1', stream)
+    expect(voice.remoteScreenStream).toBe(stream)
+    expect(voice.remoteScreenUserId).toBe('u1')
+
+    voice.unwatchScreen('u1')
+    expect(sink).toHaveBeenLastCalledWith({ kind: 'screen', user_id: 'u1', on: false })
+    expect(voice.remoteScreenStream).toBeNull()
+    expect(voice.remoteScreenUserId).toBeNull()
+
+    setActivePinia(createPinia())
+    expect(useVoiceStore().watchedScreens).toEqual({})
+  })
+
+  it('several shares: the viewer picks which one is on the stage', () => {
+    const voice = useVoiceStore()
+    const a = {}
+    const b = {}
+    voice.watchScreen('a')
+    voice.watchScreen('b')
+    voice.setRemoteScreen('a', a)
+    voice.setRemoteScreen('b', b)
+    voice.focusScreen('a')
+    expect(voice.remoteScreenStream).toBe(a)
+    voice.unwatchScreen('a')
+    expect(voice.remoteScreenStream).toBe(b)
+    expect(voice.remoteScreenUserId).toBe('b')
+  })
+
+  it('a finished share ends the opt-in', () => {
+    const voice = useVoiceStore()
+    voice.handleMediaState({ user_id: 'u1', screen: true })
+    voice.watchScreen('u1')
+    voice.setRemoteScreen('u1', {})
+    voice.handleMediaState({ user_id: 'u1', screen: false })
+    expect(voice.watchedScreens).toEqual({})
+    expect(voice.remoteScreenStream).toBeNull()
+    expect(voice.mediaState.u1).toBeUndefined()
+  })
+
+  it('leaving the call drops all media state', () => {
+    const voice = useVoiceStore()
+    voice.handleMediaState({ user_id: 'u1', screen: true, camera: true })
+    voice.watchScreen('u1')
+    voice.disconnect()
+    expect(voice.watchedScreens).toEqual({})
+    expect(voice.mediaState).toEqual({})
+  })
+})

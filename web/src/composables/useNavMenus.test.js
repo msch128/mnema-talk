@@ -75,13 +75,24 @@ describe('member menu', () => {
     voice.getUserVolume = vi.fn(() => 150)
     const refresh = vi.fn()
     const list = buildMemberItems(other, { refresh })
-    expect(ids(list)).toEqual(['profile', 'mention', 'volume', 'local-mute'])
+    expect(ids(list)).toEqual(['profile', 'mention', 'volume', 'local-mute', 'camera-hide'])
     const slider = list.find(i => i.id === 'volume')
     expect(slider.value).toBe(150)
     expect(slider.max).toBe(200)
     slider.onInput(80)
     expect(voice.setUserVolume).toHaveBeenCalledWith('u2', 80)
     expect(refresh).toHaveBeenCalled()
+  })
+
+  it('toggles hiding someone\'s camera, unless all cameras are off', () => {
+    voice.currentChannelId = 'v1'
+    voice.channelUsers = { v1: { me: { id: 'me' }, u2: { id: 'u2' } } }
+    const hide = buildMemberItems(other).find(i => i.id === 'camera-hide')
+    hide.action()
+    expect(voice.isCameraHidden('u2')).toBe(true)
+    expect(buildMemberItems(other).find(i => i.id === 'camera-hide').label).toBe('Show camera')
+    voice.setAllCamerasOff(true)
+    expect(ids(buildMemberItems(other))).not.toContain('camera-hide')
   })
 
   it('never offers volume for myself', () => {

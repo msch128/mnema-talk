@@ -716,6 +716,10 @@ export const useChatStore = defineStore('chat', () => {
         voiceStore.handleVoiceStateUpdate(p)
         break
 
+      case 'webrtc_media_state':
+        voiceStore.handleMediaState(p)
+        break
+
       case 'voice_speaking':
         voiceStore.handleSpeakingEvent(p)
         break

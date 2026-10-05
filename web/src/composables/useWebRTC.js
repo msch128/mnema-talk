@@ -189,11 +189,7 @@ function cleanupPeerConnection(voiceStore) {
   audioSender = null
   screenSender = null
   cameraSender = null
-  if (voiceStore) {
-    voiceStore.remoteScreenStream = null
-    voiceStore.remoteScreenUserId = null
-    voiceStore.userVideoStreams = {}
-  }
+  voiceStore?.resetRemoteMedia()
 }
 
 // The track that goes out as "audio": the mic/screen mix while sharing screen
@@ -303,14 +299,8 @@ function setupPeerConnection(voiceStore, chatStore) {
         if (userId) voiceStore.setUserVideoStream(userId, stream)
         drop = () => { if (userId) voiceStore.removeUserVideoStream(userId, stream) }
       } else {
-        voiceStore.remoteScreenStream = stream
-        voiceStore.remoteScreenUserId = userId || null
-        drop = () => {
-          if (voiceStore.remoteScreenStream === stream) {
-            voiceStore.remoteScreenStream = null
-            voiceStore.remoteScreenUserId = null
-          }
-        }
+        if (userId) voiceStore.setRemoteScreen(userId, stream)
+        drop = () => { if (userId) voiceStore.removeRemoteScreen(userId, stream) }
       }
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
 
@@ -689,6 +679,7 @@ export function useWebRTC() {
     voiceStore.localAudioStream = sendStream
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+    attachSubscriptions()
 
     if (sendStream) {
       startSpeakingDetection()
@@ -704,6 +695,14 @@ export function useWebRTC() {
     if (!channelId) return
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+    attachSubscriptions()
+  }
+
+  // Which video I receive is decided on the server: tell it my camera opt-outs
+  // and screen opt-ins after every join, and forward later changes.
+  function attachSubscriptions() {
+    voiceStore.setSubscriptionSink(msg => chatStore.sendWSEvent('webrtc_subscribe', msg))
+    voiceStore.resendSubscriptions()
   }
 
   // Applies changed input settings (device, AGC, noise suppression, echo

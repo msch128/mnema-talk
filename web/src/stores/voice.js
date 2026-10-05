@@ -6,6 +6,9 @@ export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 // Per-user playback settings live in the browser only (what I hear of whom).
 const USER_VOLUMES_KEY = 'mnema_user_volumes'
 const USER_MUTED_KEY = 'mnema_user_muted'
+// Cameras of others are on by default; what I opted out of is remembered.
+const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
+const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
 export const USER_VOLUME_MIN = 0
 export const USER_VOLUME_MAX = 200
 export const USER_VOLUME_DEFAULT = 100
@@ -111,9 +114,16 @@ export const useVoiceStore = defineStore('voice', () => {
   // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
   const localScreenStream = shallowRef(null)
   const localAudioStream = shallowRef(null)
+  // The remote screen share on the stage and its publisher (user ID).
   const remoteScreenStream = shallowRef(null)
-  // Who publishes the remote screen share (user ID), null when nobody does.
   const remoteScreenUserId = ref(null)
+  // userId -> MediaStream of every screen share I watch (replaced, never mutated).
+  const remoteScreenStreams = shallowRef({})
+  // userId -> true for screen shares I opted into. Not persisted: it lasts
+  // for one share and one call.
+  const watchedScreens = ref({})
+  // userId -> { screen, camera }: who publishes what, known without receiving it.
+  const mediaState = ref({})
   const localCameraStream = shallowRef(null)
   // userId -> MediaStream of that participant's camera (replaced, never mutated).
   const userVideoStreams = shallowRef({})
@@ -162,7 +172,142 @@ export const useVoiceStore = defineStore('voice', () => {
     writeJson(USER_MUTED_KEY, next)
   }
 
+  // --- Video subscriptions (enforced by the server's SFU) ---
+  const hiddenCameras = ref(readJson(HIDDEN_CAMERAS_KEY))
+  const allCamerasOff = ref(readJson(ALL_CAMERAS_OFF_KEY).off === true)
+  // Set by useWebRTC while in a call: sends a webrtc_subscribe event.
+  let subscriptionSink = null
+
+  function setSubscriptionSink(fn) {
+    subscriptionSink = typeof fn === 'function' ? fn : null
+  }
+
+  function emitSubscription(msg) {
+    subscriptionSink?.(msg)
+  }
+
+  function isCameraHidden(userId) {
+    return allCamerasOff.value || !!hiddenCameras.value[userId]
+  }
+
+  function setCameraHidden(userId, hidden) {
+    if (!userId) return
+    const next = { ...hiddenCameras.value }
+    if (hidden) next[userId] = true
+    else delete next[userId]
+    hiddenCameras.value = next
+    writeJson(HIDDEN_CAMERAS_KEY, next)
+    if (hidden) removeUserVideoStream(userId)
+    emitSubscription({ kind: 'camera', user_id: userId, on: !hidden })
+  }
+
+  function toggleCameraHidden(userId) {
+    setCameraHidden(userId, !hiddenCameras.value[userId])
+  }
+
+  function setAllCamerasOff(off) {
+    allCamerasOff.value = !!off
+    writeJson(ALL_CAMERAS_OFF_KEY, { off: !!off })
+    if (off) userVideoStreams.value = {}
+    emitSubscription({ kind: 'camera', all: true, on: !off })
+  }
+
+  // Sends every stored choice; right after joining and after a reconnect.
+  function resendSubscriptions() {
+    if (allCamerasOff.value) emitSubscription({ kind: 'camera', all: true, on: false })
+    for (const id of Object.keys(hiddenCameras.value)) {
+      emitSubscription({ kind: 'camera', user_id: id, on: false })
+    }
+    for (const id of Object.keys(watchedScreens.value)) {
+      emitSubscription({ kind: 'screen', user_id: id, on: true })
+    }
+  }
+
+  function syncScreenFocus(preferred) {
+    let id = preferred
+    if (!id || !watchedScreens.value[id]) {
+      id = remoteScreenUserId.value && watchedScreens.value[remoteScreenUserId.value]
+        ? remoteScreenUserId.value
+        : Object.keys(watchedScreens.value)[0] || null
+    }
+    remoteScreenUserId.value = id
+    remoteScreenStream.value = (id && remoteScreenStreams.value[id]) || null
+  }
+
+  // Opt into someone's screen share; it goes on the stage.
+  function watchScreen(userId) {
+    if (!userId) return
+    watchedScreens.value = { ...watchedScreens.value, [userId]: true }
+    syncScreenFocus(userId)
+    emitSubscription({ kind: 'screen', user_id: userId, on: true })
+  }
+
+  function unwatchScreen(userId) {
+    if (!userId || !watchedScreens.value[userId]) return
+    const next = { ...watchedScreens.value }
+    delete next[userId]
+    watchedScreens.value = next
+    const streams = { ...remoteScreenStreams.value }
+    delete streams[userId]
+    remoteScreenStreams.value = streams
+    syncScreenFocus(null)
+    emitSubscription({ kind: 'screen', user_id: userId, on: false })
+  }
+
+  // Which of the screen shares I watch is on the stage.
+  function focusScreen(userId) {
+    if (watchedScreens.value[userId]) syncScreenFocus(userId)
+  }
+
+  function setRemoteScreen(userId, stream) {
+    // A track that arrives after I stopped watching is not shown.
+    if (!userId || !watchedScreens.value[userId]) return
+    remoteScreenStreams.value = { ...remoteScreenStreams.value, [userId]: stream }
+    syncScreenFocus(remoteScreenUserId.value === userId || !remoteScreenStream.value ? userId : null)
+  }
+
+  function removeRemoteScreen(userId, stream) {
+    const current = remoteScreenStreams.value[userId]
+    if (!current || (stream && current !== stream)) return
+    const next = { ...remoteScreenStreams.value }
+    delete next[userId]
+    remoteScreenStreams.value = next
+    syncScreenFocus(null)
+  }
+
+  function handleMediaState(update) {
+    const { user_id, screen, camera } = update || {}
+    if (!user_id) return
+    const next = { ...mediaState.value }
+    if (screen || camera) next[user_id] = { screen: !!screen, camera: !!camera }
+    else delete next[user_id]
+    mediaState.value = next
+    // The share ended: the opt-in ended with it.
+    if (!screen && watchedScreens.value[user_id]) {
+      const w = { ...watchedScreens.value }
+      delete w[user_id]
+      watchedScreens.value = w
+      removeRemoteScreen(user_id)
+      syncScreenFocus(null)
+    }
+  }
+
+  // The media connection restarted (reconnect): streams are gone and the server
+  // announces what is published again. Opt-ins for shares that ended are dropped.
+  function resetRemoteMedia() {
+    const keep = {}
+    for (const id of Object.keys(watchedScreens.value)) {
+      if (mediaState.value[id]?.screen) keep[id] = true
+    }
+    watchedScreens.value = keep
+    remoteScreenStreams.value = {}
+    mediaState.value = {}
+    userVideoStreams.value = {}
+    syncScreenFocus(null)
+  }
+
   function setUserVideoStream(userId, stream) {
+    if (isCameraHidden(userId)) return
     userVideoStreams.value = { ...userVideoStreams.value, [userId]: stream }
   }
 
@@ -187,6 +332,7 @@ export const useVoiceStore = defineStore('voice', () => {
       delete channelUsers.value[channel_id][user_id]
       delete speakingUsers.value[user_id]
       removeUserVideoStream(user_id)
+      handleMediaState({ user_id })
     }
   }
 
@@ -253,7 +399,11 @@ export const useVoiceStore = defineStore('voice', () => {
     localCameraStream.value = null
     remoteScreenStream.value = null
     remoteScreenUserId.value = null
+    remoteScreenStreams.value = {}
+    watchedScreens.value = {}
+    mediaState.value = {}
     userVideoStreams.value = {}
+    subscriptionSink = null
     activeView.value = 'chat'
   }
 
@@ -265,6 +415,24 @@ export const useVoiceStore = defineStore('voice', () => {
     isCameraOn,
     localCameraStream,
     remoteScreenUserId,
+    remoteScreenStreams,
+    watchedScreens,
+    mediaState,
+    hiddenCameras,
+    allCamerasOff,
+    setSubscriptionSink,
+    isCameraHidden,
+    setCameraHidden,
+    toggleCameraHidden,
+    setAllCamerasOff,
+    resendSubscriptions,
+    watchScreen,
+    unwatchScreen,
+    focusScreen,
+    setRemoteScreen,
+    removeRemoteScreen,
+    handleMediaState,
+    resetRemoteMedia,
     userVideoStreams,
     setUserVideoStream,
     removeUserVideoStream,

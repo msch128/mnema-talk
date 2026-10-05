@@ -3,7 +3,7 @@ import { computed, ref, watch, onMounted, nextTick } from 'vue'
 import { 
   Volume2, Mic, MicOff, Headphones, Monitor, PhoneOff, 
   MessageSquare, Maximize2, Sparkles, Send, 
-  Plus, Users, Activity, Sliders, Video, VideoOff
+  Plus, Users, Activity, Sliders, Video, VideoOff, Eye, EyeOff, X
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -89,6 +89,31 @@ const usersInVoice = computed(() => {
 function cameraStreamOf(user) {
   if (user.id === authStore.user?.id) return voiceStore.localCameraStream
   return voiceStore.userVideoStreams[user.id] || null
+}
+
+// Someone else's screen share is only received after I opt in. Until then
+// (and for shares I watch but that are not on the stage) a card is shown.
+const screenCards = computed(() => {
+  if (!isConnectedHere.value) return []
+  const cards = []
+  for (const user of usersInVoice.value) {
+    if (user.id === authStore.user?.id || !voiceStore.mediaState[user.id]?.screen) continue
+    const watching = !!voiceStore.watchedScreens[user.id]
+    const onStage = voiceStore.remoteScreenUserId === user.id && !!voiceStore.remoteScreenStream
+    if (onStage) continue
+    const state = !watching ? 'idle' : voiceStore.remoteScreenUserId === user.id ? 'pending' : 'queued'
+    cards.push({ user, state })
+  }
+  return cards
+})
+
+function onScreenCard(card) {
+  if (card.state === 'idle') voiceStore.watchScreen(card.user.id)
+  else if (card.state === 'queued') voiceStore.focusScreen(card.user.id)
+}
+
+function cameraAvailable(user) {
+  return !voiceStore.allCamerasOff && !!voiceStore.mediaState[user.id]?.camera
 }
 
 // The chat under the stage belongs to the shown channel, also in the preview.
@@ -315,13 +340,56 @@ function formatTime(dateStr) {
             <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
           </div>
 
-          <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div class="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              v-if="!isSharingOwnScreen"
+              @click="voiceStore.unwatchScreen(voiceStore.remoteScreenUserId)"
+              v-tooltip="$t('tafelrunde.unwatchScreen')"
+              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
+            >
+              <X class="w-4 h-4" />
+            </button>
             <button
               @click="toggleFullscreen"
               v-tooltip="$t('tafelrunde.fullscreen')"
               class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
             >
               <Maximize2 class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Screen shares I can opt into -->
+        <div
+          v-if="screenCards.length"
+          class="w-full max-w-5xl flex flex-wrap gap-2 flex-shrink-0 mb-3"
+        >
+          <div
+            v-for="card in screenCards"
+            :key="card.user.id"
+            data-testid="screen-card"
+            class="flex items-center gap-3 min-w-0 rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
+          >
+            <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
+            <span class="text-sm text-mnema-text truncate">
+              {{ $t('tafelrunde.screenShareCard', { name: card.user.display_name || card.user.username }) }}
+            </span>
+            <button
+              type="button"
+              :disabled="card.state === 'pending'"
+              class="h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition disabled:opacity-60 flex-shrink-0"
+              @click="onScreenCard(card)"
+            >
+              {{ card.state === 'idle' ? $t('tafelrunde.watchScreen') : card.state === 'queued' ? $t('tafelrunde.toStage') : $t('tafelrunde.screenConnecting') }}
+            </button>
+            <button
+              v-if="card.state !== 'idle'"
+              type="button"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
+              v-tooltip="$t('tafelrunde.unwatchScreen')"
+              @click="voiceStore.unwatchScreen(card.user.id)"
+            >
+              <X class="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -339,6 +407,9 @@ function formatTime(dateStr) {
             :is-self="user.id === authStore.user?.id"
             :speaking="!!voiceStore.speakingUsers[user.id]"
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
+            :camera-available="cameraAvailable(user)"
+            :camera-hidden="voiceStore.isCameraHidden(user.id)"
+            @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
             compact
             class="!w-36 !h-24 !p-1 flex-shrink-0"
             @open-profile="chatStore.openUserProfile"
@@ -362,6 +433,9 @@ function formatTime(dateStr) {
             :is-self="user.id === authStore.user?.id"
             :speaking="!!voiceStore.speakingUsers[user.id]"
             :local-muted="voiceStore.isUserLocalMuted(user.id)"
+            :camera-available="cameraAvailable(user)"
+            :camera-hidden="voiceStore.isCameraHidden(user.id)"
+            @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
             :compact="showChat"
             :show-status="isConnectedHere"
             @open-profile="chatStore.openUserProfile"
@@ -438,6 +512,22 @@ function formatTime(dateStr) {
           >
             <VideoOff v-if="!voiceStore.isCameraOn" class="w-4 h-4" />
             <Video v-else class="w-4 h-4" />
+          </button>
+
+          <!-- All other cameras -->
+          <button
+            @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
+            :class="[
+              'p-2.5 rounded-full transition-all',
+              voiceStore.allCamerasOff
+                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
+                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
+            ]"
+            :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
+            v-tooltip="voiceStore.allCamerasOff ? $t('tafelrunde.allCamerasOn') : $t('tafelrunde.allCamerasOff')"
+          >
+            <EyeOff v-if="voiceStore.allCamerasOff" class="w-4 h-4" />
+            <Eye v-else class="w-4 h-4" />
           </button>
 
           <!-- Screen share -->
