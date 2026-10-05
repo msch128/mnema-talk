@@ -90,8 +90,50 @@ function loadIceServers() {
 let statsTimer = null
 let lastStatsSample = null
 
+// Where stream diagnostics go (the server log, via the WebSocket).
+let diagSink = null
+let statsTicks = 0
+const lastVideoBytes = new Map()
+
+/**
+ * What a shared screen looks like on the wire, for the server log: per video
+ * stream its codec, size, frame rate, bitrate, losses and, when sending, why
+ * the browser holds the quality back (cpu, bandwidth). Never addresses.
+ */
+export function streamDiag(stats, previousBytes = new Map(), seconds = 10) {
+  const codecs = new Map()
+  for (const s of stats) if (s.type === 'codec') codecs.set(s.id, s.mimeType)
+  const out = []
+  for (const s of stats) {
+    if (s.kind !== 'video' || (s.type !== 'outbound-rtp' && s.type !== 'inbound-rtp')) continue
+    const sending = s.type === 'outbound-rtp'
+    const bytes = sending ? s.bytesSent : s.bytesReceived
+    if (!bytes) continue
+    const before = previousBytes.get(s.id)
+    previousBytes.set(s.id, bytes)
+    out.push({
+      dir: sending ? 'out' : 'in',
+      codec: codecs.get(s.codecId) || '',
+      size: s.frameWidth ? `${s.frameWidth}x${s.frameHeight}` : '',
+      fps: Math.round(s.framesPerSecond || 0),
+      kbps: before === undefined ? null : Math.round(((bytes - before) * 8) / 1000 / seconds),
+      limit: sending ? (s.qualityLimitationReason || '') : undefined,
+      encoder: sending ? (s.encoderImplementation || '') : undefined,
+      decoder: sending ? undefined : (s.decoderImplementation || ''),
+      lost: s.packetsLost ?? undefined,
+      dropped: sending ? undefined : (s.framesDropped ?? 0),
+      freezes: sending ? undefined : (s.freezeCount ?? 0),
+      nacks: s.nackCount ?? undefined,
+      plis: s.pliCount ?? undefined
+    })
+  }
+  return out
+}
+
 function startStatsPolling(voiceStore) {
   stopStatsPolling(voiceStore)
+  statsTicks = 0
+  lastVideoBytes.clear()
   statsTimer = setInterval(async () => {
     if (!pc) return
     try {
@@ -99,6 +141,13 @@ function startStatsPolling(voiceStore) {
       const summary = summarizeStats(report.values(), lastStatsSample)
       lastStatsSample = summary.sample
       voiceStore.rtcStats = summary
+      // Every 10 s while a screen is shared or watched: what the stream does.
+      if (++statsTicks % 5 === 0 && diagSink && (voiceStore.isScreenSharing || voiceStore.remoteScreenStream)) {
+        const video = streamDiag([...report.values()], lastVideoBytes, 10)
+        if (video.length) {
+          diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, sharing: !!voiceStore.isScreenSharing })
+        }
+      }
     } catch {
       // The connection may be closing; the next tick retries.
     }
@@ -287,6 +336,7 @@ function setupPeerConnection(voiceStore, chatStore) {
     rtcConfig.dscp = true
   }
   pc = new RTCPeerConnection(rtcConfig)
+  diagSink = (payload) => chatStore.sendWSEvent('webrtc_diag', payload)
   startStatsPolling(voiceStore)
 
   // Connection diagnostics for the server log: what this browser gathers and
@@ -382,29 +432,27 @@ function setupPeerConnection(voiceStore, chatStore) {
 }
 
 /**
- * The SFU's offer starts with three receive-only lines in a fixed order:
- * microphone, screen, camera. Returns their mids from the offer SDP.
+ * The SFU creates our three receive lines before anything else, so they are
+ * the offer's first audio line (microphone) and first two video lines
+ * (screen, camera). Their direction says nothing: the SFU may reuse them to
+ * forward other members' media (then they read sendrecv/sendonly).
  */
 export function publishMids(sdp) {
   const out = { audio: null, video: [] }
   let kind = null
   let mid = null
-  let recvOnly = false
   const flush = () => {
-    if (!kind || mid === null || !recvOnly) return
+    if (!kind || mid === null) return
     if (kind === 'audio' && out.audio === null) out.audio = mid
-    else if (kind === 'video') out.video.push(mid)
+    else if (kind === 'video' && out.video.length < 2) out.video.push(mid)
   }
   for (const line of String(sdp || '').split(/\r?\n/)) {
     if (line.startsWith('m=')) {
       flush()
       kind = line.slice(2).split(' ')[0]
       mid = null
-      recvOnly = false
     } else if (line.startsWith('a=mid:')) {
       mid = line.slice(6).trim()
-    } else if (line.trim() === 'a=recvonly') {
-      recvOnly = true
     }
   }
   flush()
