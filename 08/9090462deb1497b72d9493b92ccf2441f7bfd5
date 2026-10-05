@@ -1,0 +1,23 @@
+web/src/components/UserBar.test.js
+  s_b14660589987ff::t_0b771c49bd8fe9 51,60-61
+web/src/components/VoiceStage.vue
+  s_b14660589987ff::t_5f905e956d57a6 6
+web/src/components/VoiceStatusPanel.vue
+  s_b14660589987ff::t_9707bf562aadbe 44-53,55-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "089090462deb1497b72d9493b92ccf2441f7bfd5",
+  "prompts": {},
+  "sessions": {
+    "s_b14660589987ff": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0756ee62-6f98-4225-ac3f-874e4a460943",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
