@@ -109,7 +109,9 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
 
 1. After CI passes on a push to `main`, release-please opens or updates a
    **release PR** that bumps `version.txt` and `CHANGELOG.md`.
-2. Merging that PR creates the GitHub Release and tag `vX.Y.Z` (first release: `0.1.0`).
+2. The release workflow merges that PR right away and publishes the GitHub
+   Release and tag `vX.Y.Z` (first release: `0.1.0`), so every green push to
+   `main` that contains a `feat:` or `fix:` becomes a release.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest`, with OCI labels,
    provenance and SBOM. The version is baked into the binary
