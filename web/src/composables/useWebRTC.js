@@ -70,6 +70,9 @@ let outputDeviceStore = null
 let watcherScope = null
 let watchedStore = null
 let inputVolumeTimer = null
+// applyAudioSettings runs one at a time; busy counts queued and running ones.
+let audioSettingsChain = Promise.resolve()
+let audioSettingsBusy = 0
 const boosts = new WeakMap()
 // Offers are applied one after another; candidates that arrive before the
 // remote description is set wait in pendingCandidates.
@@ -1212,17 +1215,28 @@ export function useWebRTC() {
   // Applies changed input settings (device, AGC, noise suppression, echo
   // cancellation). In a call the mic is re-acquired and swapped into the
   // running connection without renegotiation; otherwise the mic test restarts.
-  async function applyAudioSettings() {
-    if (audioSender) {
-      await applyQosToSender(audioSender, voiceStore)
+  // Runs are serialized: two overlapping swaps would each tear down the
+  // other's pipeline and lose the screen-audio mix on the way.
+  function applyAudioSettings() {
+    if (!localAudioStream.value && !audioSettingsBusy) {
+      return applyQos().then(() => startMicTest())
     }
-    if (screenSender) {
-      await applyQosToSender(screenSender, voiceStore)
-    }
-    if (cameraSender) {
-      await applyQosToSender(cameraSender, voiceStore)
-    }
-    if (!localAudioStream.value) return startMicTest()
+    audioSettingsBusy++
+    const run = audioSettingsChain.then(() => swapMicrophone())
+    audioSettingsChain = run.catch(() => {}).finally(() => { audioSettingsBusy-- })
+    return run
+  }
+
+  async function applyQos() {
+    if (audioSender) await applyQosToSender(audioSender, voiceStore)
+    if (screenSender) await applyQosToSender(screenSender, voiceStore)
+    if (cameraSender) await applyQosToSender(cameraSender, voiceStore)
+  }
+
+  async function swapMicrophone() {
+    await applyQos()
+    // Left the call while an earlier run was busy.
+    if (!localAudioStream.value) return
     const gen = joinGeneration
     let stream
     try {
@@ -1237,7 +1251,7 @@ export function useWebRTC() {
     }
     const old = localAudioStream.value
     // The mix lives in the old audio context: rebuilt on the new one below.
-    const screenAudio = mix?.screenTrack
+    const sharedAudio = mix?.screenTrack
     teardownScreenAudioMix(voiceStore)
     if (speakingInterval) {
       clearInterval(speakingInterval)
@@ -1251,6 +1265,9 @@ export function useWebRTC() {
     track.enabled = !voiceStore.isMuted
     localAudioStream.value = sendStream
     voiceStore.localAudioStream = sendStream
+    // A share started meanwhile mixed in the old (stopped) mic: rebuild with
+    // whichever screen audio is current.
+    const screenAudio = mix?.screenTrack || sharedAudio
     if (screenAudio && screenAudio.readyState !== 'ended') {
       if (buildScreenAudioMix(screenAudio, voiceStore)) screenAudio.onended = detachScreenAudio
     }
