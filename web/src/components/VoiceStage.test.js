@@ -308,13 +308,26 @@ describe('VoiceStage screen share opt-in', () => {
     expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(true)
     expect(w.find('[data-testid="viewer-stream-volume-slider"]').exists()).toBe(true)
 
-    // Slider updates user volume
-    await w.find('[data-testid="viewer-stream-volume-slider"]').setValue('150')
-    expect(voice.getUserVolume('a')).toBe(150)
+    // The slider is the stream's sound, 0..100 %, starting at half volume.
+    const slider = w.find('[data-testid="viewer-stream-volume-slider"]')
+    expect(slider.attributes('max')).toBe('100')
+    expect(slider.element.value).toBe('50')
+    await slider.setValue('30')
+    expect(voice.getStreamVolume('a')).toBe(30)
+    // ... never the person's voice.
+    expect(voice.getUserVolume('a')).toBe(100)
+    expect(JSON.parse(localStorage.getItem('mnema_stream_volumes'))).toEqual({ a: 30 })
 
-    // Mute button toggles local mute for stream
-    await w.find('[data-testid="viewer-stream-audio-mute"]').trigger('click')
-    expect(voice.isUserLocalMuted('a')).toBe(true)
+    // The mute button mutes only the stream's sound, and shows 0 meanwhile.
+    const mute = w.find('[data-testid="viewer-stream-audio-mute"]')
+    await mute.trigger('click')
+    expect(voice.isStreamMuted('a')).toBe(true)
+    expect(voice.isUserLocalMuted('a')).toBe(false)
+    expect(mute.attributes('aria-pressed')).toBe('true')
+    expect(slider.element.value).toBe('0')
+    await mute.trigger('click')
+    expect(voice.isStreamMuted('a')).toBe(false)
+    expect(slider.element.value).toBe('30')
   })
 
   it('provides streamer audio toggle when sharing own screen', async () => {

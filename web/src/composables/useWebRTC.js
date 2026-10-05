@@ -1,4 +1,4 @@
-import { ref, watch, effectScope } from 'vue'
+import { ref, watch, effectScope, toRaw } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { summarizeStats } from '../lib/rtcStats'
@@ -11,9 +11,11 @@ import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
 import { t } from '../i18n'
 
-// The SFU publishes a camera under this prefix plus the user ID as stream ID
-// (screen share and audio use the plain user ID); see internal/sfu.
+// The SFU publishes a camera under this prefix plus the user ID as stream ID,
+// and the sound of a screen share under SCREEN_AUDIO_STREAM_PREFIX (screen
+// share and voice use the plain user ID); see internal/sfu.
 const CAMERA_STREAM_PREFIX = 'cam:'
+const SCREEN_AUDIO_STREAM_PREFIX = 'screen:'
 
 // Module-level shared singletons across all components
 const localAudioStream = ref(null)
@@ -32,12 +34,6 @@ let suppressorNode = null
 function aiModel(noiseMode) {
   return { ai: 'dfn3', 'ai-lite': 'gtcrn' }[noiseMode] ?? null
 }
-// Screen audio mixed with the microphone into one sent track:
-// { ctx, ownsContext, screenTrack, screenSource, micSource, destination }.
-// The gate and mute switch the *mic track* off (track.enabled); a disabled
-// track feeds silence into its source node, so only the mic part of the mix
-// goes quiet while the screen audio keeps playing for the viewers.
-let mix = null
 let speakingInterval = null
 // The mic-test monitor: a gain stage to the speakers on the context it was
 // built on (the call's or the standalone test's).
@@ -53,12 +49,15 @@ let pc = null
 // same track may come back in a new stream (another speaker), so elements
 // are keyed by track and retagged instead of piling up.
 const remoteAudioElements = new Map()
-// Senders of the three fixed outgoing lines, created with the connection:
-// mic (or mix), screen share and camera. Tracks are swapped with replaceTrack,
-// so starting or stopping them never renegotiates.
+// Senders of the four fixed outgoing lines, created with the connection:
+// mic, screen share, camera and the screen share's sound. Tracks are swapped
+// with replaceTrack, so starting or stopping them never renegotiates. The
+// screen's sound goes on its own line (not mixed into the mic), so viewers
+// set its volume apart from the voice and only those watching receive it.
 let audioSender = null
 let screenSender = null
 let cameraSender = null
+let screenAudioSender = null
 // Playback above 100 % needs a gain stage: element.volume tops out at 1.
 let playbackContext = null
 // Input volume: a gain stage in the mic pipeline, only built when the input
@@ -180,12 +179,14 @@ function stopStatsPolling(voiceStore) {
   if (voiceStore) voiceStore.rtcStats = null
 }
 
-// Linear gain for one remote audio element: master volume x that user's volume.
+// Linear gain for one remote audio element: master volume x that user's
+// voice volume, or x the volume of their stream for a screen share's sound.
 function remoteGain(voiceStore, el) {
   if (voiceStore.isDeafened || voiceStore.isMicTesting) return 0
   const master = voiceStore.outputVolume / 100
   const userId = el.dataset?.userId
   if (!userId) return master
+  if (el.dataset.source === 'screen') return master * voiceStore.streamGain(userId)
   if (voiceStore.isUserLocalMuted(userId)) return 0
   return master * (voiceStore.getUserVolume(userId) / 100)
 }
@@ -280,67 +281,19 @@ function cleanupPeerConnection(voiceStore) {
   audioSender = null
   screenSender = null
   cameraSender = null
+  screenAudioSender = null
   voiceStore?.resetRemoteMedia()
 }
 
-// The track that goes out as "audio": the mic/screen mix while sharing screen
-// audio, otherwise the (processed) microphone.
+// The track that goes out as "audio": the (processed) microphone.
 function activeAudioTrack() {
-  return mix?.destination.stream.getAudioTracks()[0] || localAudioStream.value?.getAudioTracks()[0] || null
+  return localAudioStream.value?.getAudioTracks()[0] || null
 }
 
-function teardownScreenAudioMix(voiceStore) {
-  if (!mix) return
-  const m = mix
-  mix = null
-  if (voiceStore) voiceStore.hasScreenAudio = false
-  m.screenTrack.onended = null
-  for (const node of [m.screenSource, m.screenGain, m.micSource]) {
-    try { node?.disconnect() } catch { /* already disconnected */ }
-  }
-  try { m.destination.disconnect?.() } catch { /* ignore */ }
-  m.destination.stream.getTracks().forEach(tr => tr.stop())
-  if (m.ownsContext) m.ctx.close().catch(() => {})
-}
-
-// Mixes the screen's audio track with the microphone in the call's audio
-// context (or a private one when the call has no mic).
-function buildScreenAudioMix(screenTrack, voiceStore) {
-  teardownScreenAudioMix(voiceStore)
-  const AudioCtx = window.AudioContext || window.webkitAudioContext
-  let ctx = audioContext
-  let ownsContext = false
-  try {
-    if (!ctx || ctx.state === 'closed') {
-      ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
-      ownsContext = true
-    }
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {})
-    const destination = ctx.createMediaStreamDestination()
-    const screenSource = ctx.createMediaStreamSource(new MediaStream([screenTrack]))
-    const screenGain = ctx.createGain()
-    const targetGain = voiceStore?.isScreenAudioMuted ? 0 : ((voiceStore?.screenAudioVolume ?? 100) / 100)
-    if (screenGain.gain?.setValueAtTime) {
-      screenGain.gain.setValueAtTime(targetGain, ctx.currentTime)
-    } else if (screenGain.gain) {
-      screenGain.gain.value = targetGain
-    }
-    screenSource.connect(screenGain)
-    screenGain.connect(destination)
-
-    let micSource = null
-    if (localAudioStream.value) {
-      micSource = ctx.createMediaStreamSource(localAudioStream.value)
-      micSource.connect(destination)
-    }
-    mix = { ctx, ownsContext, screenTrack, screenSource, screenGain, micSource, destination }
-    if (voiceStore) voiceStore.hasScreenAudio = true
-    return mix
-  } catch (err) {
-    console.warn('[WebRTC] Screen audio mixing unavailable:', err)
-    if (voiceStore) voiceStore.hasScreenAudio = false
-    return null
-  }
+// The sound of my running screen share, while it lasts.
+function liveScreenAudioTrack() {
+  const track = localScreenStream.value?.getAudioTracks()[0]
+  return track && track.readyState !== 'ended' ? track : null
 }
 
 
@@ -356,22 +309,33 @@ function removeRemoteAudio(trackId) {
   } catch { /* detached */ }
 }
 
-// Plays one remote audio track. The stream ID names the speaking user; a
-// repeated ontrack for the same track (transceiver reused for someone else)
-// only retags its element.
+// Who an audio element plays (data-user-id) and whether it is the sound of
+// their screen share (data-source="screen") rather than their voice.
+function tagRemoteAudio(el, streamId) {
+  const screen = streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
+  const userId = screen ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length) : streamId
+  if (userId) el.dataset.userId = userId
+  else delete el.dataset.userId
+  if (screen) el.dataset.source = 'screen'
+  else delete el.dataset.source
+  el.dataset.streamId = streamId
+}
+
+// Plays one remote audio track. The stream ID names the speaking user (or,
+// prefixed, the user whose screen share it is); a repeated ontrack for the
+// same track (transceiver reused for someone else) only retags its element.
 function attachRemoteAudio(voiceStore, track, stream) {
-  const userId = stream?.id || ''
+  const streamId = stream?.id || ''
   let audioEl = remoteAudioElements.get(track.id)
   if (audioEl) {
-    if (userId) audioEl.dataset.userId = userId
-    else delete audioEl.dataset.userId
+    tagRemoteAudio(audioEl, streamId)
     applyRemoteGain(voiceStore, audioEl)
     if (audioEl.paused) audioEl.play?.().catch(() => {})
   } else {
     audioEl = new Audio()
     audioEl.srcObject = new MediaStream([track])
     audioEl.autoplay = true
-    if (userId) audioEl.dataset.userId = userId
+    tagRemoteAudio(audioEl, streamId)
     applyOutput(voiceStore, audioEl)
     applyRemoteGain(voiceStore, audioEl)
     audioEl.play().catch(e => {
@@ -400,7 +364,7 @@ function attachRemoteAudio(voiceStore, track, stream) {
   stream?.addEventListener?.('removetrack', (e) => {
     if (e.track !== track) return
     const el = remoteAudioElements.get(track.id)
-    if (el && (el.dataset.userId || '') === userId) removeRemoteAudio(track.id)
+    if (el && (el.dataset.streamId || '') === streamId) removeRemoteAudio(track.id)
   })
 }
 
@@ -479,18 +443,20 @@ function setupPeerConnection(voiceStore, chatStore) {
 }
 
 /**
- * The SFU creates our three receive lines before anything else, so they are
- * the offer's first audio line (microphone) and first two video lines
- * (screen, camera). Their direction says nothing: the SFU may reuse them to
- * forward other members' media (then they read sendrecv/sendonly).
+ * The SFU creates our four receive lines before anything else, so they are
+ * the offer's first two audio lines (microphone, screen share's sound) and
+ * first two video lines (screen, camera). Their direction says nothing: the
+ * SFU may reuse them to forward other members' media (then they read
+ * sendrecv/sendonly).
  */
 export function publishMids(sdp) {
-  const out = { audio: null, video: [] }
+  const out = { audio: null, screenAudio: null, video: [] }
   let kind = null
   let mid = null
   const flush = () => {
     if (!kind || mid === null) return
     if (kind === 'audio' && out.audio === null) out.audio = mid
+    else if (kind === 'audio' && out.screenAudio === null) out.screenAudio = mid
     else if (kind === 'video' && out.video.length < 2) out.video.push(mid)
   }
   for (const line of String(sdp || '').split(/\r?\n/)) {
@@ -627,6 +593,10 @@ function bindPublishSenders(conn, sdp) {
     bound.camera = !!cameraSender && !!localCameraStream.value
     if (cameraSender) bound.fresh.camera = cameraSender
   }
+  if (!screenAudioSender) {
+    screenAudioSender = bind(mids.screenAudio, liveScreenAudioTrack())
+    if (screenAudioSender) bound.fresh.screenAudio = screenAudioSender
+  }
   return bound
 }
 
@@ -637,6 +607,7 @@ async function tuneBoundSenders(fresh, voiceStore) {
   if (fresh.audio) await applyQosToSender(fresh.audio, voiceStore)
   if (fresh.screen) await tuneSender(fresh.screen, screenSenderParams(voiceStore))
   if (fresh.camera) await tuneSender(fresh.camera, cameraSenderParams(voiceStore))
+  if (fresh.screenAudio) await applyQosToSender(fresh.screenAudio, voiceStore)
 }
 
 // Sender limits (bits per second). The browser's own congestion control still
@@ -1077,7 +1048,6 @@ export function useWebRTC() {
     }
     voiceStore.localAudioStream = null
 
-    teardownScreenAudioMix(voiceStore)
     teardownMicPipeline()
     voiceStore.currentInputLevel = 0
   }
@@ -1221,7 +1191,7 @@ export function useWebRTC() {
   // cancellation). In a call the mic is re-acquired and swapped into the
   // running connection without renegotiation; otherwise the mic test restarts.
   // Runs are serialized: two overlapping swaps would each tear down the
-  // other's pipeline and lose the screen-audio mix on the way.
+  // other's pipeline.
   function applyAudioSettings() {
     if (!localAudioStream.value && !audioSettingsBusy) {
       return applyQos().then(() => startMicTest())
@@ -1236,6 +1206,7 @@ export function useWebRTC() {
     if (audioSender) await applyQosToSender(audioSender, voiceStore)
     if (screenSender) await applyQosToSender(screenSender, voiceStore)
     if (cameraSender) await applyQosToSender(cameraSender, voiceStore)
+    if (screenAudioSender) await applyQosToSender(screenAudioSender, voiceStore)
   }
 
   async function swapMicrophone() {
@@ -1255,9 +1226,6 @@ export function useWebRTC() {
       return
     }
     const old = localAudioStream.value
-    // The mix lives in the old audio context: rebuilt on the new one below.
-    const sharedAudio = mix?.screenTrack
-    teardownScreenAudioMix(voiceStore)
     if (speakingInterval) {
       clearInterval(speakingInterval)
       speakingInterval = null
@@ -1270,12 +1238,6 @@ export function useWebRTC() {
     track.enabled = !voiceStore.isMuted
     localAudioStream.value = sendStream
     voiceStore.localAudioStream = sendStream
-    // A share started meanwhile mixed in the old (stopped) mic: rebuild with
-    // whichever screen audio is current.
-    const screenAudio = mix?.screenTrack || sharedAudio
-    if (screenAudio && screenAudio.readyState !== 'ended') {
-      if (buildScreenAudioMix(screenAudio, voiceStore)) screenAudio.onended = detachScreenAudio
-    }
     const outgoing = activeAudioTrack()
     if (audioSender && outgoing) await audioSender.replaceTrack(outgoing).catch(() => {})
     startSpeakingDetection()
@@ -1482,11 +1444,47 @@ export function useWebRTC() {
     }, 60)
   }
 
-  // Screen audio ended (or sharing stopped): back to the plain microphone.
+  // The screen's sound ended (or sharing stopped): its line goes silent.
   async function detachScreenAudio() {
-    if (!mix) return
-    teardownScreenAudioMix(voiceStore)
-    if (audioSender) await audioSender.replaceTrack(localAudioStream.value?.getAudioTracks()[0] ?? null).catch(() => {})
+    voiceStore.hasScreenAudio = false
+    if (screenAudioSender) await screenAudioSender.replaceTrack(null).catch(() => {})
+  }
+
+  function pickScreen() {
+    return navigator.mediaDevices.getDisplayMedia({
+      video: {
+        frameRate: { ideal: 60, max: 60 },
+        width: { ideal: 3840, max: 3840 },
+        height: { ideal: 2160, max: 2160 }
+      },
+      audio: screenAudioConstraints()
+    })
+  }
+
+  // Sends a freshly picked screen (and its sound, on its own line).
+  async function attachScreen(stream) {
+    const videoTrack = stream.getVideoTracks()[0]
+    if (videoTrack) {
+      if ('contentHint' in videoTrack) videoTrack.contentHint = 'detail'
+      videoTrack.onended = () => { if (toRaw(localScreenStream.value) === stream) stopScreenShare() }
+    }
+    const screenAudio = stream.getAudioTracks()[0] || null
+    screenAudioGuard = screenAudio ? ownAudioGuard(screenAudio) : null
+    if (screenAudio) {
+      // The streamer's mute: a disabled track sends silence.
+      screenAudio.enabled = !voiceStore.isScreenAudioMuted
+      screenAudio.onended = () => { if (toRaw(localScreenStream.value) === stream) detachScreenAudio() }
+    }
+    voiceStore.hasScreenAudio = !!screenAudio
+
+    if (screenSender && videoTrack) {
+      await screenSender.replaceTrack(videoTrack).catch(() => {})
+      await tuneSender(screenSender, screenSenderParams(voiceStore))
+      chatStore.sendWSEvent('webrtc_screenshare_start', {})
+      chatStore.sendWSEvent('webrtc_request_keyframe', {})
+    }
+    if (screenAudioSender) await screenAudioSender.replaceTrack(screenAudio).catch(() => {})
+    if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
   }
 
   async function startScreenShare() {
@@ -1495,14 +1493,7 @@ export function useWebRTC() {
     const channelId = voiceStore.currentChannelId
     let stream
     try {
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          frameRate: { ideal: 60, max: 60 },
-          width: { ideal: 3840, max: 3840 },
-          height: { ideal: 2160, max: 2160 }
-        },
-        audio: screenAudioConstraints()
-      })
+      stream = await pickScreen()
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
       return
@@ -1515,33 +1506,7 @@ export function useWebRTC() {
     localScreenStream.value = stream
     voiceStore.localScreenStream = stream
     voiceStore.isScreenSharing = true
-
-    const videoTrack = stream.getVideoTracks()[0]
-    if (videoTrack && 'contentHint' in videoTrack) {
-      videoTrack.contentHint = 'detail'
-    }
-    if (videoTrack) videoTrack.onended = () => stopScreenShare()
-
-    if (screenSender && videoTrack) {
-      await screenSender.replaceTrack(videoTrack).catch(() => {})
-      await tuneSender(screenSender, screenSenderParams(voiceStore))
-      chatStore.sendWSEvent('webrtc_screenshare_start', {})
-      chatStore.sendWSEvent('webrtc_request_keyframe', {})
-    }
-
-    // Share the screen's sound too: one mixed track replaces the mic track.
-    const screenAudio = stream.getAudioTracks()[0]
-    screenAudioGuard = screenAudio ? ownAudioGuard(screenAudio) : null
-    if (screenAudio) {
-      if (buildScreenAudioMix(screenAudio, voiceStore)) {
-        screenAudio.onended = detachScreenAudio
-        const mixed = activeAudioTrack()
-        if (audioSender && mixed) await audioSender.replaceTrack(mixed).catch(() => {})
-      }
-    } else {
-      voiceStore.hasScreenAudio = false
-      useToastStore().info(t('talk.noAudioInShareTip'))
-    }
+    await attachScreen(stream)
   }
 
   function stopScreenShare() {
@@ -1711,23 +1676,17 @@ export function useWebRTC() {
         () => voiceStore.outputVolume,
         () => voiceStore.isDeafened,
         () => voiceStore.userVolumes,
-        () => voiceStore.localMutedUsers
+        () => voiceStore.localMutedUsers,
+        () => voiceStore.streamVolumes,
+        () => voiceStore.mutedStreams
       ], () => {
         updateRemoteVolume(voiceStore)
       })
 
-      watch([
-        () => voiceStore.isScreenAudioMuted,
-        () => voiceStore.screenAudioVolume
-      ], ([muted, vol]) => {
-        if (mix?.screenGain && mix.ctx) {
-          const target = muted ? 0 : ((vol ?? 100) / 100)
-          if (mix.screenGain.gain?.setValueAtTime) {
-            mix.screenGain.gain.setValueAtTime(target, mix.ctx.currentTime)
-          } else if (mix.screenGain.gain) {
-            mix.screenGain.gain.value = target
-          }
-        }
+      // The streamer's mute of their own share's sound: silence on its line.
+      watch(() => voiceStore.isScreenAudioMuted, (muted) => {
+        const track = liveScreenAudioTrack()
+        if (track) track.enabled = !muted
       })
 
       // Everyone sees whether I am muted or deafened.
