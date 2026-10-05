@@ -1,6 +1,6 @@
 // What every message list does with its messages: edit, delete, react,
 // upload. Shared by the channel chat, the thread panel and the Talk chat.
-import { ref, toValue } from 'vue'
+import { ref, toValue, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
@@ -21,7 +21,8 @@ export const PICKER_ANCHOR = 'reaction-picker-anchor'
 /**
  * @param options.container ref/getter of the element holding the list; the
  *                          open reaction picker closes on presses outside its
- *                          anchors within it and on Escape.
+ *                          anchors within it and on Escape. Rows in it carry
+ *                          data-msg-id or data-reply-id.
  * @param options.deleteTitle i18n key of the delete confirmation title.
  */
 export function useMessageActions({ container = null, deleteTitle = 'chat.deleteTitle' } = {}) {
@@ -36,6 +37,15 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   // (the add button next to the reactions).
   const pickerId = ref(null)
   const isUploading = ref(false)
+
+  // Leaving the editor drops focus with it: hand it back to the message row
+  // so keyboard users stay where they were.
+  watch(editingId, (now, was) => {
+    if (!was || now) return
+    const active = document.activeElement
+    if (active && active !== document.body && active.isConnected) return
+    toValue(container)?.querySelector(`[data-msg-id="${was}"], [data-reply-id="${was}"]`)?.focus()
+  }, { flush: 'post' })
 
   function channelOf(msg) {
     return chatStore.activeChannel?.id || msg.channel_id
