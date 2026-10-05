@@ -662,5 +662,12 @@
     "avatarSaved": "Avatar gespeichert",
     "avatarTooBig": "Das Bild ist zu groß (max. {size} MB).",
     "avatarFailed": "Avatar konnte nicht hochgeladen werden."
+  },
+  "nav": {
+    "channelNotFound": "Diesen Kanal gibt es nicht mehr.",
+    "voiceNotFound": "Diese Tafelrunde gibt es nicht mehr.",
+    "noAccess": "Dafür fehlt dir die Berechtigung.",
+    "mentionCopied": "@Name in die Zwischenablage kopiert",
+    "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
   }
 }

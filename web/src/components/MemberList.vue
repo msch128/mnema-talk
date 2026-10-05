@@ -4,6 +4,8 @@ import { Crown, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
+import ContextMenu from './ContextMenu.vue'
+import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import { t } from '../i18n'
 
 const chatStore = useChatStore()
@@ -21,6 +23,12 @@ const onlineNonAdmins = computed(() => {
 const offlineNonAdmins = computed(() => {
   return chatStore.offlineMembers.filter(m => m.role !== 'admin')
 })
+
+const menu = useMenuState()
+
+function openMemberMenu(e, member) {
+  menu.show(e, refresh => buildMemberItems(member, { refresh }))
+}
 
 function getUserVoiceChannel(userId) {
   for (const [chId, users] of Object.entries(voiceStore.channelUsers)) {
@@ -63,8 +71,15 @@ function getUserVoiceChannel(userId) {
         <div
           v-for="member in admins"
           :key="member.id"
+          role="button"
+          tabindex="0"
+          aria-haspopup="menu"
           @click="chatStore.openUserProfile(member)"
-          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
+          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
+          @contextmenu="openMemberMenu($event, member)"
+          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
+          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
+          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
         >
           <UserAvatar
             :user="member"
@@ -102,8 +117,15 @@ function getUserVoiceChannel(userId) {
         <div
           v-for="member in onlineNonAdmins"
           :key="member.id"
+          role="button"
+          tabindex="0"
+          aria-haspopup="menu"
           @click="chatStore.openUserProfile(member)"
-          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
+          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
+          @contextmenu="openMemberMenu($event, member)"
+          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
+          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
+          class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
         >
           <UserAvatar
             :user="member"
@@ -136,8 +158,15 @@ function getUserVoiceChannel(userId) {
           <div
             v-for="member in offlineNonAdmins"
             :key="member.id"
-            @click="chatStore.openUserProfile(member)"
-            class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0"
+            role="button"
+          tabindex="0"
+          aria-haspopup="menu"
+          @click="chatStore.openUserProfile(member)"
+          @keydown.enter.self.prevent="chatStore.openUserProfile(member)"
+          @contextmenu="openMemberMenu($event, member)"
+          @keydown.f10.shift.self.prevent="openMemberMenu($event, member)"
+          @keydown.context-menu.self.prevent="openMemberMenu($event, member)"
+            class="h-[42px] flex items-center gap-3 px-2 rounded-md hover:bg-mnema-hover transition-colors group cursor-pointer min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent"
           >
             <UserAvatar
               :user="member"
@@ -153,5 +182,13 @@ function getUserVoiceChannel(userId) {
         </div>
       </section>
     </div>
+
+    <ContextMenu
+      v-model="menu.state.open"
+      :x="menu.state.x"
+      :y="menu.state.y"
+      :anchor="menu.state.anchor"
+      :items="menu.items.value"
+    />
   </aside>
 </template>
