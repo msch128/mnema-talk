@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { toRaw } from 'vue'
-import { useWebRTC } from './useWebRTC'
+import { useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 
@@ -34,6 +34,16 @@ function fakeStream(kinds = ['audio']) {
   return streamOf(kinds.map(k => fakeTrack(k)))
 }
 
+function fakeSender(track) {
+  const s = {
+    track,
+    replaceTrack: vi.fn(async t => { s.track = t }),
+    getParameters: () => ({ encodings: [{}] }),
+    setParameters: vi.fn(async () => {})
+  }
+  return s
+}
+
 class FakePC {
   static instances = []
   constructor() {
@@ -43,10 +53,10 @@ class FakePC {
     this.closed = false
     FakePC.instances.push(this)
   }
-  addTrack(track) { const s = { track, replaceTrack: vi.fn(async t => { s.track = t }) }; this.senders.push(s); return s }
+  addTrack(track) { const s = fakeSender(track); this.senders.push(s); return s }
   // Like a browser, a transceiver's sender shows up in getSenders even without a track.
   addTransceiver(trackOrKind) {
-    const s = { track: typeof trackOrKind === 'string' ? null : trackOrKind, replaceTrack: vi.fn(async t => { s.track = t }) }
+    const s = fakeSender(typeof trackOrKind === 'string' ? null : trackOrKind)
     this.senders.push(s)
     return { sender: s }
   }
@@ -523,6 +533,27 @@ describe('webcam', () => {
     expect(voice.isCameraOn).toBe(false)
     expect(cam.getVideoTracks()[0].stop).toHaveBeenCalled()
     expect(sent.some(e => e.type === 'webrtc_camera_stop')).toBe(true)
+  })
+
+  it('caps the bitrate and keeps the screen resolution under congestion', async () => {
+    const { rtc, screen, camera } = await joined()
+    navigator.mediaDevices.getUserMedia.mockImplementationOnce(async () => fakeStream(['video']))
+    stubDisplayMedia(fakeStream(['video']))
+    await rtc.startScreenShare()
+    await rtc.startCamera()
+
+    const screenParams = screen.setParameters.mock.calls[0][0]
+    expect(screenParams.encodings[0].maxBitrate).toBe(SCREEN_MAX_BITRATE)
+    expect(screenParams.degradationPreference).toBe('maintain-resolution')
+    expect(camera.setParameters.mock.calls[0][0].encodings[0].maxBitrate).toBe(CAMERA_MAX_BITRATE)
+  })
+
+  it('still shares when the browser rejects the sender parameters', async () => {
+    const { rtc, screen } = await joined()
+    screen.setParameters.mockRejectedValue(new Error('unsupported'))
+    stubDisplayMedia(fakeStream(['video']))
+    await rtc.startScreenShare()
+    expect(screen.track).not.toBeNull()
   })
 
   it('does not start a camera outside a call', async () => {

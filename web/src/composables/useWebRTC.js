@@ -335,6 +335,27 @@ function setupPeerConnection(voiceStore, chatStore) {
   return pc
 }
 
+// Sender limits (bits per second). The browser's own congestion control still
+// lowers the bitrate on a weak uplink; these decide what it gives up while
+// doing so and cap the ceiling. A shared screen keeps its resolution and drops
+// frames instead (text stays readable); a camera may trade either.
+export const SCREEN_MAX_BITRATE = 12_000_000
+export const CAMERA_MAX_BITRATE = 2_500_000
+
+async function tuneSender(sender, { maxBitrate, degradationPreference }) {
+  try {
+    const params = sender.getParameters?.()
+    if (!params) return
+    if (!params.encodings?.length) params.encodings = [{}]
+    params.encodings[0].maxBitrate = maxBitrate
+    if (degradationPreference) params.degradationPreference = degradationPreference
+    await sender.setParameters(params)
+  } catch (err) {
+    // Not every browser accepts every field; the defaults still work.
+    console.debug('[WebRTC] Could not tune sender:', err)
+  }
+}
+
 function addVideoSender(conn, stream) {
   const track = stream?.getVideoTracks()[0]
   if (track) return conn.addTransceiver(track, { direction: 'sendrecv', streams: [stream] }).sender
@@ -913,6 +934,7 @@ export function useWebRTC() {
 
     if (screenSender && videoTrack) {
       await screenSender.replaceTrack(videoTrack).catch(() => {})
+      await tuneSender(screenSender, { maxBitrate: SCREEN_MAX_BITRATE, degradationPreference: 'maintain-resolution' })
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
     }
 
@@ -975,6 +997,7 @@ export function useWebRTC() {
       track.onended = () => stopCamera()
       if (cameraSender) {
         await cameraSender.replaceTrack(track).catch(() => {})
+        await tuneSender(cameraSender, { maxBitrate: CAMERA_MAX_BITRATE, degradationPreference: 'balanced' })
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       }
     }
