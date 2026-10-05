@@ -118,9 +118,20 @@ var (
 	ErrUsernameTaken   = httpx.ErrConflict("username is already taken")
 )
 
+// passwordCost is the bcrypt cost new hashes use. It is always bcryptCost in
+// production; only integration test binaries lower it (see
+// testhooks_integration.go), because under -race every cost-12 hash takes
+// seconds and the suites log in hundreds of times.
+var passwordCost = bcryptCost
+
 // dummyHash keeps Login's timing identical for unknown usernames, so response
 // times do not reveal which accounts exist.
-var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), bcryptCost)
+var dummyHash = newDummyHash()
+
+func newDummyHash() []byte {
+	h, _ := bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), passwordCost)
+	return h
+}
 
 // burnPasswordCheck spends the same bcrypt work as checking a real password.
 func burnPasswordCheck(password string) {
@@ -135,7 +146,7 @@ func isUniqueViolation(err error) bool {
 }
 
 func HashPassword(password string) (string, error) {
-	b, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	b, err := bcrypt.GenerateFromPassword([]byte(password), passwordCost)
 	return string(b), err
 }
 

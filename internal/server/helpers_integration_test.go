@@ -23,10 +23,16 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/testutil"
+	"golang.org/x/crypto/bcrypt"
 )
 
-// TestMain removes the shared Postgres test container after the run.
-func TestMain(m *testing.M) { os.Exit(testutil.Main(m)) }
+// TestMain hashes passwords at bcrypt's minimum cost (production uses 12,
+// which under -race costs seconds per login and pushed this package past the
+// CI timeout) and removes the shared Postgres test container after the run.
+func TestMain(m *testing.M) {
+	auth.SetPasswordCostForTests(bcrypt.MinCost)
+	os.Exit(testutil.Main(m))
+}
 
 type app struct {
 	t      *testing.T
