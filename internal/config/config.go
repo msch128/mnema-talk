@@ -113,7 +113,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	cfg := &Config{
 		Port:                 get("PORT", "8080"),
 		BindAddr:             get("BIND_ADDR", "0.0.0.0"),
-		AppEnv:               get("APP_ENV", "development"),
+		AppEnv:               strings.ToLower(get("APP_ENV", "development")),
 		PublicURL:            strings.TrimRight(get("PUBLIC_URL", "http://localhost:8080"), "/"),
 		TrustedProxies:       SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
 		JWTSecret:            get("JWT_SECRET", ""),
@@ -174,6 +174,16 @@ func (c *Config) validate(portMin, portMax uint16) error {
 		}
 	}
 
+	switch c.AppEnv {
+	case "prod":
+		c.AppEnv = "production"
+	case "dev":
+		c.AppEnv = "development"
+	case "production", "staging", "development", "test":
+	default:
+		return fmt.Errorf("APP_ENV must be production, staging, development or test, got %q", c.AppEnv)
+	}
+
 	if c.IsProduction() {
 		if len(c.JWTSecret) < 32 || examplePlaceholders[c.JWTSecret] {
 			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
@@ -189,7 +199,9 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	return nil
 }
 
-func (c *Config) IsProduction() bool { return c.AppEnv == "production" }
+// IsProduction is the single definition of a production-like deployment:
+// strict secret checks, HSTS, short panic stacks and info-level logs.
+func (c *Config) IsProduction() bool { return c.AppEnv == "production" || c.AppEnv == "staging" }
 
 // SecureCookies reports whether cookies must carry the Secure flag (HTTPS deployments).
 func (c *Config) SecureCookies() bool { return strings.HasPrefix(c.PublicURL, "https://") }

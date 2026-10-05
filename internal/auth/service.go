@@ -163,6 +163,16 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		return nil, ErrInvalidInvite
 	}
 
+	// Cheap pre-check so unauthenticated guesses never cost a bcrypt hash;
+	// the transaction below re-checks under a row lock.
+	var known bool
+	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM invites WHERE code = $1)`, inviteCode).Scan(&known); err != nil {
+		return nil, fmt.Errorf("invite lookup: %w", err)
+	}
+	if !known {
+		return nil, ErrInvalidInvite
+	}
+
 	hash, err := HashPassword(password)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
@@ -241,6 +251,12 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 		UPDATE users SET password_hash = $1, token_version = token_version + 1, updated_at = NOW()
 		WHERE id = $2 RETURNING token_version`, newHash, userID).Scan(&tv)
 	return tv, err
+}
+
+// RevokeSessions invalidates every session of userID ("log out everywhere").
+func RevokeSessions(ctx context.Context, p *db.Pool, userID uuid.UUID) error {
+	_, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID)
+	return err
 }
 
 // UpdateProfile changes display name and bio.

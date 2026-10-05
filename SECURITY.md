@@ -29,8 +29,9 @@ locally instead (`make up` or `make dev`).
   (configurable, default `Herzog`) can create invite codes.
 - **Sessions.** A signed session token in an `HttpOnly` cookie (`__Host-` prefix
   and `Secure` on HTTPS, `SameSite=Lax`). Each token carries the user's
-  `token_version`; changing the password increments it, which revokes every
-  existing session of that user immediately.
+  `token_version`; changing the password or "log out everywhere"
+  (`POST /api/auth/logout-all`) increments it, which revokes every existing
+  session of that user immediately, including copied cookies.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
 - **Security headers.** Strict Content-Security-Policy (no inline scripts),
@@ -40,8 +41,11 @@ locally instead (`make up` or `make dev`).
   client-supplied name or MIME type. Risky types (HTML, SVG, scripts, unknown
   binaries, ...) are only ever served as downloads, never rendered inline. Media is
   served only to authenticated users, through the app, not directly from S3.
-- **Abuse protection.** Per-client rate limiting, plus an escalating per-username
-  login lockout after repeated failures. Client IPs are taken from
+- **Abuse protection.** Per-client rate limiting, plus an escalating login
+  lockout per client address and username after repeated failures, and a much
+  higher per-account cap against guessing from many addresses. Guessing from one
+  address therefore cannot lock the account out for everyone else. Invite codes
+  are checked before any password hashing. Client IPs are taken from
   `X-Forwarded-For` only when the request comes from `TRUSTED_PROXY_CIDRS`.
 - **Voice and screenshare.** Media is encrypted with DTLS-SRTP between each client
   and the SFU. This is **not end-to-end encryption**: the SFU decrypts packets in
