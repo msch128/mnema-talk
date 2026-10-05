@@ -44,7 +44,10 @@ type Config struct {
 	// empty keeps the endpoint off.
 	MetricsToken string
 	// LinkPreviews lets the server fetch public web pages for link cards.
-	LinkPreviews         bool
+	LinkPreviews bool
+	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
+	// signed-in members. Off by default.
+	APIDocs              bool
 	WebRTCUDPPortMin     uint16
 	WebRTCUDPPortMax     uint16
 	WebRTCNAT1to1IP      string
@@ -139,6 +142,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		MediaRetentionDays:   retentionDays,
 		MaxUploadMB:          maxUpload,
 		LinkPreviews:         get("LINK_PREVIEWS_ENABLED", "true") == "true",
+		APIDocs:              get("API_DOCS_ENABLED", "false") == "true",
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		MetricsToken:         get("METRICS_TOKEN", ""),

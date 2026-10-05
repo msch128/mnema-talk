@@ -28,10 +28,10 @@ func (l NotifyLevel) valid() bool {
 
 // ReadState is one text channel's unread summary for one user.
 type ReadState struct {
-	ChannelID    uuid.UUID   `json:"channel_id"`
+	ChannelID    uuid.UUID   `json:"channel_id" format:"uuid"`
 	UnreadCount  int         `json:"unread_count"`
 	MentionCount int         `json:"mention_count"`
-	LastReadAt   *time.Time  `json:"last_read_at"`
+	LastReadAt   *time.Time  `json:"last_read_at" format:"date-time" extensions:"x-nullable"`
 	NotifyLevel  NotifyLevel `json:"notify_level"`
 }
 

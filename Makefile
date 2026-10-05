@@ -3,13 +3,27 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web lint fmt vuln check docker up down logs install-hooks scorecard e2e
+.PHONY: help dev web build run test test-integration test-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
 GO_PKGS    := ./...
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
+SWAG_VERSION ?= v2.0.0-rc6
+
+OPENAPI_FILE := api/openapi.json
+
+# openapi_gen,<target file>: swag v2 writes an OpenAPI 3.1 document from the
+# handler annotations (internal/server/doc.go holds the general info); then
+# internal/tools/openapifix applies the fixes swag cannot express itself.
+define openapi_gen
+	@tmp="$$(mktemp -d)" && trap 'rm -rf "$$tmp"' EXIT && \
+	go run github.com/swaggo/swag/v2/cmd/swag@$(SWAG_VERSION) init --v3.1 --quiet \
+		-g doc.go -d internal/server,internal --parseInternal --requiredByDefault \
+		--overridesFile api/swaggo.overrides --outputTypes json -o "$$tmp" && \
+	go run ./internal/tools/openapifix "$$tmp/swagger.json" $(1)
+endef
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS=":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
@@ -55,7 +69,15 @@ lint: $(WEB_DEPS) ## gofmt check, go vet, eslint
 vuln: ## govulncheck (Go vulnerability scan)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) $(GO_PKGS)
 
-check: lint test test-integration vuln test-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
+openapi: ## Generate api/openapi.json from the handler annotations (swag v2, OpenAPI 3.1)
+	$(call openapi_gen,$(OPENAPI_FILE))
+
+openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp file and diffs)
+	@tmp="$$(mktemp -d)" && trap 'rm -rf "$$tmp"' EXIT && \
+	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
+	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
+
+check: lint openapi-check test test-integration vuln test-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build -t mnema-talk:ci .

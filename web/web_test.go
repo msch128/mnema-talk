@@ -53,3 +53,17 @@ func TestServesPrecompressedAssets(t *testing.T) {
 		t.Errorf("Content-Type = %q, want application/wasm", ct)
 	}
 }
+
+// The API reference page needs a session, so the static handler must never
+// hand it out; /api/docs serves it behind the session check.
+func TestDoesNotServeAPIDocsPageStatically(t *testing.T) {
+	h := newHandler(fstest.MapFS{
+		"index.html":    {Data: []byte("<html>app")},
+		"api-docs.html": {Data: []byte("<html>docs")},
+	})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api-docs.html", nil))
+	if body, _ := io.ReadAll(rec.Body); string(body) != "<html>app" {
+		t.Fatalf("/api-docs.html served %q, want the app shell", body)
+	}
+}

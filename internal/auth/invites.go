@@ -18,12 +18,12 @@ import (
 )
 
 type Invite struct {
-	ID        uuid.UUID  `json:"id"`
+	ID        uuid.UUID  `json:"id" format:"uuid"`
 	Code      string     `json:"code"`
-	MaxUses   *int       `json:"max_uses"`
+	MaxUses   *int       `json:"max_uses" extensions:"x-nullable"`
 	UsesCount int        `json:"uses_count"`
-	ExpiresAt *time.Time `json:"expires_at"`
-	CreatedAt time.Time  `json:"created_at"`
+	ExpiresAt *time.Time `json:"expires_at" format:"date-time" extensions:"x-nullable"`
+	CreatedAt time.Time  `json:"created_at" format:"date-time"`
 }
 
 var inviteCodePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{6,64}$`)
@@ -119,6 +119,21 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	h.mountUserAdmin(r)
 }
 
+// listInvites handles GET /api/admin/invites.
+//
+// @Summary List invites
+// @Description Requires role admin (403 otherwise).
+// @ID listInvites
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {array} Invite "Invites, newest first."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/invites [get]
 func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) error {
 	invites, err := ListInvites(r.Context(), h.Sessions.DB)
 	if err != nil {
@@ -128,12 +143,27 @@ func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// createInvite handles POST /api/admin/invites.
+//
+// @Summary Create an invite
+// @Description Requires role admin (403 otherwise).
+// @ID createInvite
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param request body CreateInviteRequest true "Request body."
+// @Success 201 {object} Invite "Created invite."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the resource already exists."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/invites [post]
 func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Code           string `json:"code"`
-		MaxUses        *int   `json:"max_uses"`
-		ExpiresInHours *int   `json:"expires_in_hours"`
-	}
+	var req CreateInviteRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
@@ -145,6 +175,24 @@ func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// deleteInvite handles DELETE /api/admin/invites/{id}.
+//
+// @Summary Delete an invite
+// @Description Requires role admin (403 otherwise).
+// @ID deleteInvite
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "Resource ID." Format(uuid)
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/invites/{id} [delete]
 func (h *Handler) deleteInvite(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -155,4 +203,14 @@ func (h *Handler) deleteInvite(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// CreateInviteRequest is the body of POST /api/admin/invites.
+type CreateInviteRequest struct {
+	// Code is generated (12 characters) when omitted or empty.
+	Code string `json:"code" pattern:"^[A-Za-z0-9_-]{6,64}$" binding:"optional"`
+	// MaxUses is unlimited when null or omitted.
+	MaxUses *int `json:"max_uses" minimum:"1" maximum:"1000" binding:"optional" extensions:"x-nullable"`
+	// ExpiresInHours never expires when null or omitted.
+	ExpiresInHours *int `json:"expires_in_hours" minimum:"1" maximum:"8760" binding:"optional" extensions:"x-nullable"`
 }

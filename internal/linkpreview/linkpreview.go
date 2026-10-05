@@ -39,11 +39,11 @@ const (
 type Preview struct {
 	URL         string `json:"url"`
 	Title       string `json:"title"`
-	Description string `json:"description,omitempty"`
-	SiteName    string `json:"site_name,omitempty"`
+	Description string `json:"description,omitempty" binding:"optional"`
+	SiteName    string `json:"site_name,omitempty" binding:"optional"`
 	// Image is the original absolute image URL; clients load it through the
 	// image proxy because the CSP only allows same-origin images.
-	Image string `json:"image,omitempty"`
+	Image string `json:"image,omitempty" binding:"optional"`
 }
 
 var (

@@ -23,21 +23,21 @@ const (
 )
 
 type Channel struct {
-	ID         uuid.UUID   `json:"id"`
-	CategoryID *uuid.UUID  `json:"category_id"`
-	Name       string      `json:"name"`
+	ID         uuid.UUID   `json:"id" format:"uuid"`
+	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" extensions:"x-nullable"`
+	Name       string      `json:"name" maxLength:"64"`
 	Type       ChannelType `json:"type"`
-	Topic      string      `json:"topic"`
+	Topic      string      `json:"topic" maxLength:"255"`
 	SortOrder  int         `json:"sort_order"`
-	CreatedAt  time.Time   `json:"created_at"`
+	CreatedAt  time.Time   `json:"created_at" format:"date-time"`
 }
 
 type Category struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
+	ID        uuid.UUID `json:"id" format:"uuid"`
+	Name      string    `json:"name" maxLength:"64"`
 	SortOrder int       `json:"sort_order"`
 	Channels  []Channel `json:"channels"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
 // GetServerHierarchy returns all categories with their nested channels, plus
@@ -225,13 +225,13 @@ func RenameCategory(ctx context.Context, p *db.Pool, id uuid.UUID, name string) 
 
 // CategoryOrder and ChannelPlacement describe a drag-and-drop result.
 type CategoryOrder struct {
-	ID        uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id" format:"uuid"`
 	SortOrder int       `json:"sort_order"`
 }
 
 type ChannelPlacement struct {
-	ID         uuid.UUID  `json:"id"`
-	CategoryID *uuid.UUID `json:"category_id"`
+	ID         uuid.UUID  `json:"id" format:"uuid"`
+	CategoryID *uuid.UUID `json:"category_id" format:"uuid" extensions:"x-nullable"`
 	SortOrder  int        `json:"sort_order"`
 }
 

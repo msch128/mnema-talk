@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import { brotliCompressSync, gzipSync, constants as zlib } from 'node:zlib'
 
 // Writes .br and .gz next to compressible build assets; web.Handler serves
@@ -28,8 +28,32 @@ function precompress() {
   }
 }
 
+// License and NOTICE texts of bundled packages whose builds drop their
+// license comments; shipped under /licenses/ (see THIRD_PARTY_NOTICES.md).
+const SHIPPED_LICENSES = {
+  'swagger-ui/LICENSE': 'swagger-ui-dist/LICENSE',
+  'swagger-ui/NOTICE': 'swagger-ui-dist/NOTICE',
+  'swagger-ui/bundled-components.txt': 'swagger-ui-dist/swagger-ui-es-bundle.js.LICENSE.txt',
+  'emoji-picker-element/LICENSE': 'emoji-picker-element/LICENSE',
+  'emoji-picker-element-data/LICENSE': 'emoji-picker-element-data/LICENSE'
+}
+
+function shipLicenses() {
+  return {
+    name: 'mnema-ship-licenses',
+    apply: 'build',
+    closeBundle() {
+      for (const [to, from] of Object.entries(SHIPPED_LICENSES)) {
+        const dest = fileURLToPath(new URL(`./dist/licenses/${to}`, import.meta.url))
+        mkdirSync(dirname(dest), { recursive: true })
+        copyFileSync(fileURLToPath(new URL(`./node_modules/${from}`, import.meta.url)), dest)
+      }
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [vue(), precompress()],
+  plugins: [vue(), precompress(), shipLicenses()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -50,7 +74,15 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     // Source maps would publish the original sources from the server.
-    sourcemap: false
+    sourcemap: false,
+    rollupOptions: {
+      // api-docs.html is the API reference (Swagger UI), served by the Go
+      // server at /api/docs for signed-in members.
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        apiDocs: fileURLToPath(new URL('./api-docs.html', import.meta.url))
+      }
+    }
   },
   test: {
     environment: 'happy-dom',

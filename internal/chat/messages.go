@@ -22,53 +22,54 @@ const (
 )
 
 type MediaAttachment struct {
-	ID               uuid.UUID `json:"id"`
+	ID               uuid.UUID `json:"id" format:"uuid"`
 	OriginalFilename string    `json:"original_filename"`
 	MimeType         string    `json:"mime_type"`
 	SizeBytes        int64     `json:"size_bytes"`
-	URL              string    `json:"url"`
-	IsDeleted        bool      `json:"is_deleted"`
+	// URL is /api/media/{id}.
+	URL       string `json:"url"`
+	IsDeleted bool   `json:"is_deleted"`
 }
 
 type ReactionSummary struct {
 	Emoji string      `json:"emoji"`
 	Count int         `json:"count"`
-	Users []uuid.UUID `json:"users"`
+	Users []uuid.UUID `json:"users" format:"uuid"`
 }
 
 type Message struct {
-	ID          uuid.UUID         `json:"id"`
-	ChannelID   uuid.UUID         `json:"channel_id"`
-	UserID      uuid.UUID         `json:"user_id"`
-	ParentID    *uuid.UUID        `json:"parent_id,omitempty"`
+	ID          uuid.UUID         `json:"id" format:"uuid"`
+	ChannelID   uuid.UUID         `json:"channel_id" format:"uuid"`
+	UserID      uuid.UUID         `json:"user_id" format:"uuid"`
+	ParentID    *uuid.UUID        `json:"parent_id,omitempty" binding:"optional" format:"uuid"`
 	Username    string            `json:"username"`
 	DisplayName string            `json:"display_name"`
-	AvatarURL   string            `json:"avatar_url,omitempty"`
-	Content     string            `json:"content"`
+	AvatarURL   string            `json:"avatar_url,omitempty" binding:"optional"`
+	Content     string            `json:"content" maxLength:"4000"`
 	IsPinned    bool              `json:"is_pinned"`
 	IsEdited    bool              `json:"is_edited"`
 	ReplyCount  int               `json:"reply_count"`
-	ReplyToID   *uuid.UUID        `json:"reply_to_id,omitempty"`
-	ReplyTo     *ReplyPreview     `json:"reply_to,omitempty"`
+	ReplyToID   *uuid.UUID        `json:"reply_to_id,omitempty" binding:"optional" format:"uuid"`
+	ReplyTo     *ReplyPreview     `json:"reply_to,omitempty" binding:"optional"`
 	Attachments []MediaAttachment `json:"attachments"`
 	Reactions   []ReactionSummary `json:"reactions"`
 	// Mentions are the users this message mentions (@username, @all, @here).
-	Mentions  []uuid.UUID `json:"mentions"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	Mentions  []uuid.UUID `json:"mentions" format:"uuid"`
+	CreatedAt time.Time   `json:"created_at" format:"date-time"`
+	UpdatedAt time.Time   `json:"updated_at" format:"date-time"`
 }
 
 // ReplyPreview is the quoted header of a reply. Deleted is true when the
 // original message no longer exists.
 type ReplyPreview struct {
-	ID             uuid.UUID `json:"id"`
+	ID             uuid.UUID `json:"id" format:"uuid"`
 	Deleted        bool      `json:"deleted"`
-	UserID         uuid.UUID `json:"user_id,omitempty"`
-	Username       string    `json:"username,omitempty"`
-	DisplayName    string    `json:"display_name,omitempty"`
-	AvatarURL      string    `json:"avatar_url,omitempty"`
-	Content        string    `json:"content,omitempty"`
-	HasAttachments bool      `json:"has_attachments,omitempty"`
+	UserID         uuid.UUID `json:"user_id,omitempty" binding:"optional" format:"uuid"`
+	Username       string    `json:"username,omitempty" binding:"optional"`
+	DisplayName    string    `json:"display_name,omitempty" binding:"optional"`
+	AvatarURL      string    `json:"avatar_url,omitempty" binding:"optional"`
+	Content        string    `json:"content,omitempty" binding:"optional"`
+	HasAttachments bool      `json:"has_attachments,omitempty" binding:"optional"`
 }
 
 // replyPreviewLen bounds the quoted snippet sent with every reply.
