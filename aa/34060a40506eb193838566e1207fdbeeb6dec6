@@ -1,0 +1,117 @@
+web/src/components/ReactionPalette.vue
+  s_5c9ee3c4dec5dd::t_d48a8cbf5a9eea 12
+  s_5c9ee3c4dec5dd::t_457d7734dfd3a8 1-11,13-51
+web/src/lib/thirdParty.js
+  s_5c9ee3c4dec5dd::t_50aa79b535c34f 18-19
+web/src/lib/markdown.test.js
+  s_5c9ee3c4dec5dd::t_87f091ea604d9b 92-104
+web/src/components/ThreadSidebar.vue
+  s_5c9ee3c4dec5dd::t_64461209973a89 403-404
+  s_5c9ee3c4dec5dd::t_8cc43dd101227f 14-17,113,196,363,365-368,427,429-432,568,570-573,586,590-598,621-629,636
+  s_5c9ee3c4dec5dd::t_0ba07b72d79873 637
+web/src/lib/presence.js
+  s_5c9ee3c4dec5dd::t_eb4e12b5a34aa9 1-33,37-49
+  s_5c9ee3c4dec5dd::t_c8386835f434da 34-36
+web/src/components/PresenceMenu.vue
+  s_5c9ee3c4dec5dd::t_172e6def291fad 1-111
+web/src/components/VoiceStatusPanel.vue
+  s_5c9ee3c4dec5dd::t_172e6def291fad 2
+web/src/components/ParticipantTile.vue
+  s_5c9ee3c4dec5dd::t_4b0bd25a9179a1 2-3,22-26,38-44,46,60,71,84-85,99
+  s_5c9ee3c4dec5dd::t_f0acb91e78c851 107,114,116
+web/src/components/ChatArea.vue
+  s_5c9ee3c4dec5dd::t_d48a8cbf5a9eea 16-19,35,651,823-824,849,851-854,1023,1025-1028,1070,1074-1082,1107-1115,1122
+  s_5c9ee3c4dec5dd::t_b87d94d1ee12e2 1123
+web/src/components/VoiceStage.vue
+  s_5c9ee3c4dec5dd::t_eafd7ea5a432d4 15-17,63-72,597-600,646-654,672,674-683,689
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 25,146,148,243,255,263,272,276,335,342,363,371,377,439,444,498-499,515,534,547,575,587,589
+  s_5c9ee3c4dec5dd::t_d285ae7ca83616 690
+web/src/lib/presence.test.js
+  s_5c9ee3c4dec5dd::t_eb4e12b5a34aa9 1-18,20-30
+  s_5c9ee3c4dec5dd::t_c8386835f434da 19
+web/src/components/UserProfileModal.vue
+  s_5c9ee3c4dec5dd::t_c46320aca70bfd 5,13,103-107,110-135,145,262-265,267-270,322-325,343-395,427,432
+web/src/composables/useComposerAssist.js
+  s_5c9ee3c4dec5dd::t_3fe5e4a37b783f 1-93
+web/src/composables/useComposerAssist.test.js
+  s_5c9ee3c4dec5dd::t_adff9ed77335bc 1-78
+web/src/components/UserBar.vue
+  s_5c9ee3c4dec5dd::t_172e6def291fad 2-3,7,11,21-40,55-56,58,60-66,69-70,72-74,76-87,123,129
+web/src/components/MemberRow.vue
+  s_5c9ee3c4dec5dd::t_09d7522a45a53a 1-71
+web/src/components/EmojiButton.vue
+  s_5c9ee3c4dec5dd::t_6e4ae0e4bafac2 18
+  s_5c9ee3c4dec5dd::t_f9c99ded422e0c 1-17,19-50
+web/src/i18n/de.json
+  s_5c9ee3c4dec5dd::t_2aa076d56486b7 139,193,300,305,310,516,524-525,533,542,581,604,681,704-705,724
+  s_5c9ee3c4dec5dd::t_98874c34460762 29-43,711-720,728-738
+web/src/stores/chat.js
+  s_5c9ee3c4dec5dd::t_25a9a17b556384 15,58-64,521,611,614-615,655,732-793,1042-1050,1053-1054,1178-1179,1181-1183
+web/src/lib/mentionQuery.test.js
+  s_5c9ee3c4dec5dd::t_80240e2b8d8007 1-46
+web/src/components/MemberList.vue
+  s_5c9ee3c4dec5dd::t_09d7522a45a53a 3,6,70,73-76,84,87-90,99,102-104
+web/src/components/Sidebar.vue
+  s_5c9ee3c4dec5dd::t_4b0bd25a9179a1 456-457,461-462
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 144,147
+web/src/components/UserAvatar.vue
+  s_5c9ee3c4dec5dd::t_0e0f6d0aaccc0e 3,22-31,55-57,83,85-89
+web/src/style.css
+  s_5c9ee3c4dec5dd::t_8cc0ca57b08d76 91-99
+web/src/components/smoke.test.js
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 33
+  s_5c9ee3c4dec5dd::t_e034694eca9d77 47
+web/src/lib/markdown.js
+  s_5c9ee3c4dec5dd::t_87f091ea604d9b 15-21,49-62
+web/src/components/MentionSuggestions.vue
+  s_5c9ee3c4dec5dd::t_3fe5e4a37b783f 1-55
+web/src/stores/chatComfort.test.js
+  s_5c9ee3c4dec5dd::t_4f7eb6a7a0e1ec 239-283
+web/src/lib/mentionQuery.js
+  s_5c9ee3c4dec5dd::t_80240e2b8d8007 1-60
+web/src/components/EmojiPicker.vue
+  s_5c9ee3c4dec5dd::t_f9c99ded422e0c 1-18,20-107
+  s_5c9ee3c4dec5dd::t_69740ee992c9d1 19
+web/src/components/UserBar.test.js
+  s_5c9ee3c4dec5dd::t_97416a743c186a 2,10-12,42,44,107-144
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 72
+  s_5c9ee3c4dec5dd::t_caa716ce6155e1 145
+web/src/components/MarkdownContent.vue
+  s_5c9ee3c4dec5dd::t_83d2542a485088 6-7,16-31,37-42,48-52,66,115-123
+web/src/components/PresenceDot.vue
+  s_5c9ee3c4dec5dd::t_fda6e1123ce2d4 1-10,13-27,29-59
+  s_5c9ee3c4dec5dd::t_5de778c3996db8 11-12,28
+web/tailwind.config.js
+  s_5c9ee3c4dec5dd::t_fda6e1123ce2d4 34-36
+web/src/composables/useNavMenus.js
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 156,221
+web/src/i18n/en.json
+  s_5c9ee3c4dec5dd::t_98874c34460762 29-43,711-720,728-738
+  s_5c9ee3c4dec5dd::t_2aa076d56486b7 139,193,300,305,310,516,524-525,533,542,581,604,681,704-705,724
+web/package.json
+  s_5c9ee3c4dec5dd::t_32dd2989fd3ade 19-20
+web/src/App.vue
+  s_5c9ee3c4dec5dd::t_a922e8cc325fba 45,47,284
+THIRD_PARTY_NOTICES.md
+  s_5c9ee3c4dec5dd::t_71b38b1a4f6a14 23-24
+e2e/tests/smoke.spec.js
+  s_5c9ee3c4dec5dd::t_cb0d614665fe6b 14,103
+web/package-lock.json
+  s_5c9ee3c4dec5dd::t_1e171851c07f4a 15-16,1520-1531
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa34060a40506eb193838566e1207fdbeeb6dec6",
+  "prompts": {},
+  "sessions": {
+    "s_5c9ee3c4dec5dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0d4fdedf-c57c-4991-808e-5664d15cfea7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
