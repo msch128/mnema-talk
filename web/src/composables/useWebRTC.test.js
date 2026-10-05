@@ -447,6 +447,13 @@ describe('screen share with audio', () => {
     expect(inputs).toContain(mic.getAudioTracks()[0])
   })
 
+  it('asks the browser to leave out the voices this page plays', async () => {
+    const { rtc } = await joined()
+    stubDisplayMedia(fakeStream(['video', 'audio']))
+    await rtc.startScreenShare()
+    expect(navigator.mediaDevices.getDisplayMedia.mock.calls[0][0].audio.restrictOwnAudio).toBe(true)
+  })
+
   it('mute and the gate only silence the mic, never the screen audio', async () => {
     const { rtc, voice, audio, mic } = await joined()
     const display = fakeStream(['video', 'audio'])
