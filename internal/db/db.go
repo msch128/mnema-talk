@@ -1,13 +1,10 @@
-// Package db owns the PostgreSQL connection pool, the embedded schema migrations
-// and the first-start seed of the administrator account.
+// Package db owns the PostgreSQL connection pool and the embedded schema
+// migrations. The administrator is seeded by auth.EnsureAdminUser.
 package db
 
 import (
 	"context"
-	"crypto/rand"
 	"embed"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -18,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 )
 
 //go:embed migrations/*.sql
@@ -145,59 +141,4 @@ func MigrationFiles() ([]string, error) {
 	}
 	sort.Strings(names)
 	return names, nil
-}
-
-// EnsureAdminUser seeds the administrator on first start. An empty password
-// generates a random one, which is logged exactly once.
-func (p *Pool) EnsureAdminUser(ctx context.Context, username, password string) error {
-	var exists bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`).Scan(&exists); err != nil {
-		return err
-	}
-	if exists {
-		return nil
-	}
-
-	generated := password == ""
-	if generated {
-		b := make([]byte, 18)
-		if _, err := rand.Read(b); err != nil {
-			return fmt.Errorf("generate admin password: %w", err)
-		}
-		password = base64.RawURLEncoding.EncodeToString(b)
-	}
-
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("hash admin password: %w", err)
-	}
-
-	tag, err := p.Exec(ctx, `
-		INSERT INTO users (username, display_name, password_hash, role)
-		VALUES ($1, $3, $2, 'admin')
-		ON CONFLICT (username) DO NOTHING
-	`, username, string(hash), displayNameFor(username))
-	if err != nil {
-		return fmt.Errorf("insert admin user: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return errors.New("admin username is taken by a regular user")
-	}
-
-	slog.Info("initial administrator created", "username", username)
-	if generated {
-		// Printed once on first start only; change it after the first login.
-		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", password)
-	}
-	return nil
-}
-
-// displayNameFor is the initial display name of an account: its username,
-// cut to the 24 characters a display name may have.
-func displayNameFor(username string) string {
-	r := []rune(username)
-	if len(r) > 24 {
-		r = r[:24]
-	}
-	return string(r)
 }
