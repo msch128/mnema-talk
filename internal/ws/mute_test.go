@@ -43,17 +43,37 @@ func TestMutedMembersAreNeverShownSpeaking(t *testing.T) {
 	h.mu.Unlock()
 	events(t, c, "")
 
+	c.handle("voice_speaking", []byte(`{"active":true}`))
+	if got := events(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != true {
+		t.Fatalf("speaking = %v, want active true", got)
+	}
+
 	c.handle("voice_mute_state", []byte(`{"muted":false,"deafened":true}`))
-	if got := events(t, c, "voice_mute_state"); len(got) != 1 || got[0]["muted"] != true || got[0]["deafened"] != true {
-		t.Fatalf("mute state = %v, want muted and deafened (deafen implies mute)", got)
+	var types []string
+	for len(c.send) > 0 {
+		var ev Event
+		if err := json.Unmarshal(<-c.send, &ev); err != nil {
+			t.Fatal(err)
+		}
+		types = append(types, ev.Type)
+	}
+	if len(types) != 2 || types[0] != "voice_mute_state" || types[1] != "voice_speaking" {
+		t.Fatalf("events after deafening = %v, want the mute state and speaking stopped", types)
+	}
+	h.mu.RLock()
+	st := h.voiceMute[voiceKey{user.ID, chID}]
+	h.mu.RUnlock()
+	if !st.Muted || !st.Deafened {
+		t.Fatalf("mute state = %+v, want muted and deafened (deafen implies mute)", st)
 	}
 	if snap := h.voiceSnapshot(); !snap[chID][user.ID].Deafened {
 		t.Fatal("snapshot does not carry the deafened state")
 	}
 
+	// Already shown as silent: speaking while deafened changes nothing.
 	c.handle("voice_speaking", []byte(`{"active":true}`))
-	if got := events(t, c, "voice_speaking"); len(got) != 1 || got[0]["active"] != false {
-		t.Fatalf("speaking while deafened = %v, want active false", got)
+	if got := events(t, c, "voice_speaking"); len(got) != 0 {
+		t.Fatalf("speaking while deafened = %v, want no event", got)
 	}
 
 	c.handle("voice_mute_state", []byte(`{"muted":false,"deafened":false}`))
