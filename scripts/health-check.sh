@@ -59,7 +59,7 @@ fi
 
 # Check healthy status in response
 case "$RESPONSE" in
-    *"healthy"*)
+    *"\"status\":\"ok\""*)
         exit 0
         ;;
     *)

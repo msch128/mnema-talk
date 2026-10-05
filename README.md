@@ -218,11 +218,17 @@ either make it public once under the package's settings on GitHub, or run
 
 Everything stateful lives in two Docker volumes (PostgreSQL and SeaweedFS) plus
 your `.env`. `scripts/backup.sh` saves all three into one timestamped folder
-and removes folders older than `KEEP_DAYS` (default 14). Run it from the
-deployment directory, for example nightly via cron:
+under `BACKUP_DIR` (default `$HOME/mnema-talk-backups`) and removes folders
+older than `KEEP_DAYS` (default 14). A backup contains your secrets, so the
+script refuses a `BACKUP_DIR` inside a git checkout (`BACKUP_ALLOW_IN_REPO=1`
+overrides that; `/backups/` is git-ignored). SeaweedFS is stopped for the few
+moments of the media copy so the archive is consistent; the app keeps running
+and only uploads and media loads fail meanwhile (`SEAWEED_LIVE=1` copies the
+running volume instead). Run it from the deployment directory, for example
+nightly via cron:
 
 ```sh
-30 3 * * *  cd /path/to/mnema-talk && BACKUP_DIR=./backups/nightly ./scripts/backup.sh >> ./backups/nightly/backup.log 2>&1
+30 3 * * *  cd /path/to/mnema-talk && BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh >> /srv/backups/mnema/backup.log 2>&1
 ```
 
 Copy the backup folder off the machine as well (another disk, NAS share or
@@ -231,13 +237,13 @@ cloud storage); a backup on the same disk does not survive a disk failure.
 Prove that a backup restores, without touching the live data:
 
 ```sh
-./scripts/restore.sh backups/nightly/20261005-033000 --verify
+./scripts/restore.sh /srv/backups/mnema/20261005-033000 --verify
 ```
 
 Restore for real (stops the app, replaces database and media, starts again):
 
 ```sh
-./scripts/restore.sh backups/nightly/20261005-033000
+./scripts/restore.sh /srv/backups/mnema/20261005-033000
 ```
 
 ## Security

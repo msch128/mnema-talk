@@ -29,6 +29,9 @@
 /media/
 /storage/
 
+# Backups (scripts/backup.sh): contain .env and all data
+/backups/
+
 # Build artifacts & binaries
 /bin/
 /dist/
