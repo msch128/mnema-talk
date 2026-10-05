@@ -227,14 +227,20 @@ func TestTypingIsRelayedToOthersAndThrottled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	typer.send("typing", map[string]any{"channel_id": voice})
 	typer.send("typing", map[string]any{"channel_id": uuid.New()})
 	if payload, got := watcher.expect("typing", 400*time.Millisecond); got {
-		t.Fatalf("typing in a voice or unknown channel relayed: %s", payload)
+		t.Fatalf("typing in an unknown channel relayed: %s", payload)
+	}
+
+	// A voice channel's chat has a typing indicator too.
+	typer.send("typing", map[string]any{"channel_id": voice})
+	payload, got := watcher.expect("typing", 2*time.Second)
+	if !got || !strings.Contains(string(payload), voice.String()) {
+		t.Fatalf("typing in a voice channel not relayed: %s", payload)
 	}
 
 	typer.send("typing", map[string]any{"channel_id": text})
-	payload, got := watcher.expect("typing", 2*time.Second)
+	payload, got = watcher.expect("typing", 2*time.Second)
 	if !got || !strings.Contains(string(payload), text.String()) || !strings.Contains(string(payload), max.user.ID.String()) {
 		t.Fatalf("typing not relayed: %s", payload)
 	}

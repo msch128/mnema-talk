@@ -130,7 +130,7 @@ func storageKey(prefix string, id uuid.UUID, mimeType string) string {
 // upload handles POST /api/channels/{channelID}/upload.
 //
 // @Summary Post a message with an attachment
-// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Not allowed in voice channels. Stricter rate limit (30 per minute).
+// @Description multipart/form-data. Creates a message carrying the file and broadcasts message_create. Works in text and voice channels. Stricter rate limit (30 per minute).
 // @ID uploadFile
 // @Tags Media
 // @Accept mpfd
@@ -162,7 +162,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := chat.TextChannel(r.Context(), h.DB, chID); err != nil {
+	if _, err := chat.ChannelForMessages(r.Context(), h.DB, chID); err != nil {
 		return err
 	}
 

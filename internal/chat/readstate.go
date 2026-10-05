@@ -26,7 +26,7 @@ func (l NotifyLevel) valid() bool {
 	return l == NotifyAll || l == NotifyMentions || l == NotifyMute
 }
 
-// ReadState is one text channel's unread summary for one user.
+// ReadState is one channel's unread summary for one user.
 type ReadState struct {
 	ChannelID    uuid.UUID   `json:"channel_id" format:"uuid"`
 	UnreadCount  int         `json:"unread_count"`
@@ -35,7 +35,8 @@ type ReadState struct {
 	NotifyLevel  NotifyLevel `json:"notify_level"`
 }
 
-// GetReadStates returns the unread summary of every text channel for user.
+// GetReadStates returns the unread summary of every channel for user (a
+// voice channel's chat counts like a text channel).
 // Unread counts top-level messages by others since the last read; mentions
 // count any message (also thread replies) that mentions the user (@username,
 // @all, @here; see message_mentions) or replies to one of their messages. Before the first read, "last read" is the sign-up.
@@ -53,7 +54,6 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
 		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
-		WHERE c.type = 'text'
 		GROUP BY c.id, cr.last_read_at, cr.notify_level
 		ORDER BY c.id`, user.ID)
 	if err != nil {
