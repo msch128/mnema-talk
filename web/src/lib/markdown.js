@@ -3,6 +3,33 @@
 // handlers are emitted (the CSP forbids them). Spoilers are toggled by the
 // MarkdownContent component via event delegation.
 
+// The syntax, shared with the plain-text helpers (lib/replies.js reply
+// previews, lib/chatLogic.js link previews) so they treat exactly what is
+// rendered here as markup. All are global regexes for String.replace/match.
+
+/** ```lang\n code ``` (group 1: the code). */
+export const CODE_BLOCK_RE = /```(?:[a-zA-Z0-9_-]+\n)?([\s\S]*?)```/g
+/** `code` (group 1: the code). */
+export const INLINE_CODE_RE = /`([^`\n]+)`/g
+/** An http(s) URL. The trailing class keeps a closing ")" or "*" that belongs
+ *  to the text, not to the URL; a "*" inside the URL stays. */
+export const URL_RE = /\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g
+/** ||spoiler|| (group 1: the hidden text). */
+export const SPOILER_RE = /\|\|([\s\S]+?)\|\|/g
+
+/**
+ * Inline emphasis, in the order it is applied: [regex, html, plain]. `html`
+ * is the replacement renderMarkdown uses, `plain` the one that keeps only
+ * the text.
+ */
+export const INLINE_FORMATS = [
+  [/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>', '$1'],
+  [/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>', '$1'],
+  [/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>', '$1$2'],
+  [/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?])/g, '$1<em>$2</em>', '$1$2'],
+  [/~~([^~\n]+)~~/g, '<del>$1</del>', '$1']
+]
+
 export function escapeHtml(text) {
   return text
     .replace(/&/g, '&amp;')
@@ -26,23 +53,17 @@ export function renderMarkdown(content, { known = null, me = '' } = {}) {
   const code = []
   const stash = html => `\u0000${code.push(html) - 1}\u0000`
 
-  text = text.replace(/```(?:[a-zA-Z0-9_-]+\n)?([\s\S]*?)```/g, (_, body) =>
+  text = text.replace(CODE_BLOCK_RE, (_, body) =>
     stash(`<pre class="md-codeblock">${body.replace(/^\n+|\n+$/g, '')}</pre>`))
-  text = text.replace(/`([^`\n]+)`/g, (_, body) => stash(`<code class="md-code">${body}</code>`))
+  text = text.replace(INLINE_CODE_RE, (_, body) => stash(`<code class="md-code">${body}</code>`))
 
   // Links are stashed too, so formatting and mentions never reach inside a
   // URL. Only http(s); the URL was escaped above and cannot contain quotes.
-  // The trailing class keeps a closing ")" or "*" that belongs to the text,
-  // not to the URL; a "*" inside the URL stays.
-  text = text.replace(/\bhttps?:\/\/[^\s<]+[^\s<.,:;!?)\]'"*]/g, url =>
+  text = text.replace(URL_RE, url =>
     stash(`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow" class="md-link">${url}</a>`))
 
-  text = text.replace(/\|\|([\s\S]+?)\|\|/g, '<span class="md-spoiler" role="button" tabindex="0">$1</span>')
-  text = text.replace(/\*\*\*([^*\n]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-  text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
-  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
-  text = text.replace(/(^|[\s(])_([^_\n]+)_(?=$|[\s).,!?])/g, '$1<em>$2</em>')
-  text = text.replace(/~~([^~\n]+)~~/g, '<del>$1</del>')
+  text = text.replace(SPOILER_RE, '<span class="md-spoiler" role="button" tabindex="0">$1</span>')
+  for (const [re, html] of INLINE_FORMATS) text = text.replace(re, html)
   text = text.replace(/^&gt;\s?(.*)$/gm, '<blockquote class="md-quote">$1</blockquote>')
 
   // Mentions (links are already stashed, so URLs are never touched).
