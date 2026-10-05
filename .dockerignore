@@ -10,6 +10,7 @@
 data/
 uploads/
 media/
+backups/
 bin/
 tmp/
 **/node_modules

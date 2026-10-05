@@ -2,9 +2,9 @@
 # Restores a backup made by scripts/backup.sh into this compose deployment.
 # DESTRUCTIVE: replaces the current database and media with the backup.
 #
-#   ./scripts/restore.sh backups/20261005-030000          # asks for confirmation
-#   ./scripts/restore.sh backups/20261005-030000 --yes    # no prompt
-#   ./scripts/restore.sh backups/20261005-030000 --verify # dry run, see below
+#   ./scripts/restore.sh /srv/backups/mnema/20261005-030000          # asks for confirmation
+#   ./scripts/restore.sh /srv/backups/mnema/20261005-030000 --yes    # no prompt
+#   ./scripts/restore.sh /srv/backups/mnema/20261005-030000 --verify # dry run, see below
 #
 # --verify restores the database dump into a scratch database next to the live
 # one, prints row counts and drops it again. Nothing live is touched; use it
