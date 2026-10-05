@@ -855,6 +855,12 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 			}
 		}
 
+	case "webrtc_diag":
+		// A browser's own view of its voice connection, for troubleshooting.
+		if len(payload) <= 4096 {
+			slog.Info("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
+		}
+
 	case "webrtc_request_keyframe":
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
