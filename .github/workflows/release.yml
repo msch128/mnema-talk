@@ -20,7 +20,8 @@ name: Release
 #    The release commit only changes version.txt and CHANGELOG.md.
 # 2. When a release was created, compiled binaries (linux amd64/arm64,
 #    windows amd64, darwin arm64) plus SHA256SUMS are attached to it, and
-#    the image is built and pushed to GHCR as
+#    the image is built for linux/amd64 and linux/arm64 (cross-compiled, no
+#    QEMU) and pushed to GHCR as
 #    :X.Y.Z, :X.Y and :latest, with OCI labels plus BuildKit provenance and
 #    SBOM attestations attached to the image.
 #
@@ -257,7 +258,9 @@ jobs:
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          platforms: linux/amd64
+          # Keep in sync with ci.yml's docker job. linux/arm/v7 is left out:
+          # the server doesn't compile for 32-bit targets yet (see README).
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
