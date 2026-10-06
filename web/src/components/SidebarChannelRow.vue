@@ -135,12 +135,14 @@ const rowClass = computed(() => [
         />
         <span
           v-if="mentions > 0 && !reading"
+          data-testid="channel-mentions"
           class="px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center"
         >
           {{ mentions }}
         </span>
         <span
           v-else-if="unread > 0 && !reading"
+          data-testid="channel-unread"
           class="px-1.5 py-0.5 rounded-full bg-mnema-surface border border-mnema-border text-mnema-text text-xs font-semibold leading-none min-w-[18px] text-center"
         >
           {{ unread }}
