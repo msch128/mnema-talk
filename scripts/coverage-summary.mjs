@@ -1,11 +1,19 @@
 #!/usr/bin/env node
 // Prints a Markdown coverage summary (total + least covered files) for the
 // CI job summary. Usage:
-//   node scripts/coverage-summary.mjs go coverage.out
-//   node scripts/coverage-summary.mjs web web/coverage/coverage-summary.json
+//   node scripts/coverage-summary.mjs go coverage.out [--min 80]
+//   node scripts/coverage-summary.mjs web web/coverage/coverage-summary.json [--min 80]
+// With --min it exits 1 when the total is below that percentage.
 import { readFileSync } from 'node:fs'
 
-const [kind, file] = process.argv.slice(2)
+const args = process.argv.slice(2)
+const minAt = args.indexOf('--min')
+const min = minAt === -1 ? null : Number(args.splice(minAt, 2)[1])
+if (min !== null && !(min >= 0 && min <= 100)) {
+  console.error('--min needs a percentage between 0 and 100')
+  process.exit(2)
+}
+const [kind, file] = args
 const LOWEST = 15
 // Files below this many statements/lines are too small to be worth listing.
 const MIN_SIZE = 30
@@ -62,3 +70,10 @@ files
   .forEach(f => out.push(`| \`${f.name}\` | ${pct(f.covered, f.total)} % | ${f.total} |`))
 out.push('', '</details>', '')
 console.log(out.join('\n'))
+
+// Compare the rounded figure that is shown, so 79.96 % printed as "80.0 %"
+// does not fail with a message that contradicts the summary.
+if (min !== null && Number(pct(total.covered, total.total)) < min) {
+  console.error(`${title}: ${pct(total.covered, total.total)} % is below the required ${min} %`)
+  process.exit(1)
+}
