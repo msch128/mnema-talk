@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { t } from '../i18n'
-import { THIRD_PARTY, NOTICES_FILE, NOTICES_URL } from '../lib/thirdParty'
+import { THIRD_PARTY, NOTICES_FILE, NOTICES_URL, SOURCE_URL } from '../lib/thirdParty'
 
 const emit = defineEmits(['close'])
 
@@ -228,6 +228,9 @@ onMounted(async () => {
           <h3>{{ $t('legal.oss.heading') }}</h3>
         </div>
         <p class="text-xs">{{ $t('legal.oss.intro') }}</p>
+        <p class="text-xs">
+          {{ $t('legal.oss.sourceBefore') }}<a :href="SOURCE_URL" target="_blank" rel="noopener" class="text-mnema-accent hover:underline">{{ SOURCE_URL.replace('https://', '') }}</a>{{ $t('legal.oss.sourceAfter') }}
+        </p>
         <div v-for="group in THIRD_PARTY" :key="group.group" class="space-y-2">
           <h4 class="font-semibold text-mnema-text text-sm">{{ $t(`legal.oss.groups.${group.group}`) }}</h4>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
