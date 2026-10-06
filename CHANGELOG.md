@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.2](https://github.com/msch128/mnema-talk/compare/v0.4.1...v0.4.2) (2026-10-06)
+
+
+### Features
+
+* **talk:** expose stream settings in compact talk bar and add menu tests ([417fd09](https://github.com/msch128/mnema-talk/commit/417fd09305a13d74d429d87cdbbcc229ffcc9e7c))
+* **talk:** screen share quality selection modal (720p–Source, 15/30/60fps) ([3d0ffbe](https://github.com/msch128/mnema-talk/commit/3d0ffbe02a2962c6ce98dd0e1859f602cd3cd594))
+
+
+### Bug Fixes
+
+* **talk:** unify screen quality storage key across store and modal ([781f5d3](https://github.com/msch128/mnema-talk/commit/781f5d399f66eb3e43a4b84ca00468ff75f90ef1))
+
 ## [0.4.1](https://github.com/msch128/mnema-talk/compare/v0.4.0...v0.4.1) (2026-10-06)
 
 
