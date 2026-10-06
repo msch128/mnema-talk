@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/msch128/mnema-talk/compare/v0.3.4...v0.4.0) (2026-10-06)
+
+
+### Continuous Integration
+
+* don't fail the release run when the tip guard skips release-please ([#63](https://github.com/msch128/mnema-talk/issues/63)) ([8433baa](https://github.com/msch128/mnema-talk/commit/8433baaf81571e07cccff40827dbfba03901a0a7))
+
 ## [0.3.4](https://github.com/msch128/mnema-talk/compare/v0.3.3...v0.3.4) (2026-10-06)
 
 
