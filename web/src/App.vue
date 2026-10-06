@@ -53,7 +53,9 @@ const adminTab = ref('users')
 const previewVoiceChannelId = ref(null)
 // /v/:id is the Talk on its own, /v/:id/chat adds its chat under the stage.
 // Open or closed is remembered per browser (closed by default).
-const voiceShowChat = ref(loadVoiceChatOpen())
+// A deep link to /v/:id/chat counts from the start: a resumed call can sync
+// the address before that route is applied.
+const voiceShowChat = ref((currentRoute.value.view === 'voice' && !!currentRoute.value.showChat) || loadVoiceChatOpen())
 watch(voiceShowChat, open => saveVoiceChatOpen(open))
 // The voice channel of the last applied route (null after any other route):
 // /v/:id within that Talk closes its chat, entering a Talk keeps it as it was.
