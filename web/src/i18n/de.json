@@ -645,7 +645,28 @@
     "pipPlaying": "Läuft im Bild-im-Bild-Fenster",
     "pipBack": "Zurück auf die Bühne",
     "pipFailed": "Bild-im-Bild konnte nicht geöffnet werden",
-    "streamVolume": "Stream-Lautstärke"
+    "streamVolume": "Stream-Lautstärke",
+    "replaceShareTitle": "Bildschirmübertragung ersetzen?",
+    "replaceShareBody": "Du teilst bereits deinen Bildschirm. Pro Person läuft nur eine Übertragung: die neue ersetzt die laufende.",
+    "replaceShareConfirm": "Ersetzen",
+    "quality": {
+      "title": "Stream-Qualität",
+      "mode": "Stream-Modus",
+      "gaming": "Gaming",
+      "gamingHint": "Flüssigeres Video (1440p, 60 fps)",
+      "screen": "Bildschirm",
+      "screenHint": "Klarere Schrift (Quelle, 15 fps)",
+      "custom": "Benutzerdefiniert",
+      "resolution": "Auflösung",
+      "frameRate": "Bildrate",
+      "source": "Quelle",
+      "fps": "{fps} fps",
+      "muteSound": "Stream-Ton stummschalten",
+      "advanced": "Erweitert",
+      "codec": "Codec",
+      "bitrate": "Bitrate",
+      "changeSource": "Bildschirm wechseln"
+    }
   },
   "admin": {
     "title": "Speicher & Administration",
