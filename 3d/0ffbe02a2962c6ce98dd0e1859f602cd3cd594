@@ -1,0 +1,36 @@
+web/src/App.vue
+  h_0ff4f4713441f4 20,413-418
+web/src/components/AccountMenu.vue
+  h_0ff4f4713441f4 56
+web/src/components/ScreenShareModal.test.js
+  h_0ff4f4713441f4 1-112
+web/src/components/ScreenShareModal.vue
+  h_0ff4f4713441f4 1-275
+web/src/components/StreamQualityMenu.test.js
+  h_0ff4f4713441f4 14
+web/src/components/TalkControlBar.vue
+  h_0ff4f4713441f4 31-32
+web/src/composables/useStreamQuality.js
+  h_0ff4f4713441f4 158
+web/src/composables/useWebRTC.js
+  h_0ff4f4713441f4 1524,1538-1539
+web/src/i18n/de.json
+  h_0ff4f4713441f4 656-660,670,676-679
+web/src/i18n/en.json
+  h_0ff4f4713441f4 656-660,670,676-679
+web/src/stores/voice.js
+  h_0ff4f4713441f4 81-91,94-95,739-743,750-757,795-797
+web/src/stores/voice.test.js
+  h_0ff4f4713441f4 612-646
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d0ffbe02a2962c6ce98dd0e1859f602cd3cd594",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
