@@ -19,7 +19,7 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
-const { startScreenShare, stopScreenShare } = useWebRTC()
+const { stopScreenShare } = useWebRTC()
 
 const root = ref(null)
 const langOpen = ref(false)

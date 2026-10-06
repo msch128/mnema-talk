@@ -14,25 +14,17 @@ import {
 } from '../lib/streamQuality'
 import { t } from '../i18n'
 
-const SAVED_PREF_KEY = 'mnema_preferred_stream_quality'
-
 const emit = defineEmits(['close'])
 
 const voiceStore = useVoiceStore()
 const { startScreenShare } = useWebRTC()
 
-function loadPreferredQuality() {
-  try {
-    const raw = localStorage.getItem(SAVED_PREF_KEY)
-    if (raw) return normalizeQuality(JSON.parse(raw))
-  } catch {}
-  return normalizeQuality(voiceStore.screenQuality)
-}
-
-const initialQuality = loadPreferredQuality()
+// The store already loads the persisted preference from localStorage on init;
+// use it directly as the starting state for the modal.
+const initialQuality = normalizeQuality(voiceStore.screenQuality)
 const selectedResolution = ref(initialQuality.resolution)
 const selectedFps = ref(initialQuality.fps)
-const customPicked = ref(initialQuality.custom === true)
+const customPicked = ref(voiceStore.screenQuality?.custom === true)
 
 const currentMode = computed(() => {
   if (customPicked.value) return 'custom'
@@ -90,15 +82,14 @@ async function handleStart() {
     fps: selectedFps.value,
     custom: currentMode.value === 'custom'
   }
-  try {
-    localStorage.setItem(SAVED_PREF_KEY, JSON.stringify(q))
-  } catch {}
+  // setScreenQuality persists to localStorage automatically
   voiceStore.setScreenQuality(q)
   emit('close')
   if (!voiceStore.isScreenSharing) {
     await startScreenShare(q)
   }
 }
+
 </script>
 
 <template>

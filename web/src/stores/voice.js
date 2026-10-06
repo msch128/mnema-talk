@@ -3,7 +3,7 @@ import { ref, shallowRef, computed, watch } from 'vue'
 import { syncServerClock } from '../lib/clock'
 import { playSoundEffect } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
-import { DEFAULT_STREAM_QUALITY, normalizeQuality } from '../lib/streamQuality'
+import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 
@@ -80,12 +80,14 @@ export const useVoiceStore = defineStore('voice', () => {
   // share starts at the default).
   function loadSavedScreenQuality() {
     try {
-      const raw = localStorage.getItem('mnema_screen_quality')
+      const raw = localStorage.getItem(SCREEN_QUALITY_STORAGE_KEY)
       if (raw) {
         const parsed = JSON.parse(raw)
         return { ...normalizeQuality(parsed), ...(parsed?.custom === true ? { custom: true } : {}) }
       }
-    } catch {}
+    } catch {
+      // Storage blocked or invalid JSON: fall back to default quality.
+    }
     return { ...DEFAULT_STREAM_QUALITY }
   }
 
@@ -739,8 +741,10 @@ export const useVoiceStore = defineStore('voice', () => {
     const norm = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
     screenQuality.value = norm
     try {
-      localStorage.setItem('mnema_screen_quality', JSON.stringify(norm))
-    } catch {}
+      localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify(norm))
+    } catch {
+      // Storage blocked or full: keeps quality for this session only.
+    }
   }
 
   function resetScreenQuality() {

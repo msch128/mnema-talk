@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useVoiceStore } from './voice'
 import { useAuthStore } from './auth'
+import { SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
 
 beforeEach(() => {
   localStorage.clear()
@@ -621,6 +622,7 @@ describe('screen quality persistence and modal', () => {
     const voice = useVoiceStore()
     voice.setScreenQuality({ resolution: 1440, fps: 60 })
     expect(voice.screenQuality).toEqual({ resolution: 1440, fps: 60 })
+    expect(JSON.parse(localStorage.getItem(SCREEN_QUALITY_STORAGE_KEY))).toEqual({ resolution: 1440, fps: 60 })
 
     setActivePinia(createPinia())
     const nextVoice = useVoiceStore()

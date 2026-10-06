@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   normalizeQuality, streamModeOf, trackConstraints, streamBitrate, streamEncoding, streamTuning,
-  summarizeSendStats, formatSendStats, DEFAULT_STREAM_QUALITY, STREAM_PRESETS, STREAM_MIN_BITRATE, STREAM_MAX_BITRATE
+  summarizeSendStats, formatSendStats, DEFAULT_STREAM_QUALITY, STREAM_PRESETS, STREAM_MIN_BITRATE,
+  STREAM_MAX_BITRATE, SCREEN_QUALITY_STORAGE_KEY
 } from './streamQuality'
 
 const UHD = { width: 3840, height: 2160 }
@@ -103,5 +104,12 @@ describe('send statistics', () => {
     expect(formatSendStats(s, 'en').bitrate).toBe('4.5 Mbit/s')
     expect(formatSendStats({ ...s, kbps: 800 }, 'en').bitrate).toBe('800 kbit/s')
     expect(formatSendStats({ ...s, kbps: null }, 'en').bitrate).toBe('–')
+  })
+})
+
+describe('storage key', () => {
+  it('SCREEN_QUALITY_STORAGE_KEY is the shared localStorage key', () => {
+    // Regression guard: one key across voice store and ScreenShareModal
+    expect(SCREEN_QUALITY_STORAGE_KEY).toBe('mnema_screen_quality')
   })
 })

@@ -15,6 +15,7 @@ export const STREAM_PRESETS = {
 }
 export const STREAM_MODES = ['gaming', 'screen', 'custom']
 export const DEFAULT_STREAM_QUALITY = Object.freeze({ resolution: 1080, fps: 30 })
+export const SCREEN_QUALITY_STORAGE_KEY = 'mnema_screen_quality'
 
 // Bitrate bounds (bits per second): the floor matches the start-bitrate
 // floor of the screen line (see tuneScreenOffer), the ceiling the former

@@ -109,4 +109,14 @@ describe('ScreenShareModal', () => {
     await w.find('[data-testid="stream-modal-cancel"]').trigger('click')
     expect(w.emitted('close')).toBeTruthy()
   })
+
+  it('initializes with quality from voiceStore', () => {
+    const voice = useVoiceStore()
+    voice.setScreenQuality({ resolution: 720, fps: 15, custom: true })
+    w = mount(ScreenShareModal)
+    const res720 = w.find('[data-testid="resolution-btn-720"]')
+    expect(res720.classes()).toContain('border-mnema-accent')
+    const fps15 = w.find('[data-testid="fps-btn-15"]')
+    expect(fps15.classes()).toContain('border-mnema-accent')
+  })
 })
