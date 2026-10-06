@@ -98,7 +98,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{js,vue}'],
-      exclude: ['src/**/*.test.js', 'src/test-setup.js', 'src/third_party/**'],
+      exclude: ['src/**/*.test.js', 'src/**/*.fixture.js','src/test-setup.js', 'src/third_party/**'],
       reporter: ['text-summary', 'json-summary', 'lcov'],
       reportsDirectory: './coverage'
     }

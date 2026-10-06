@@ -109,7 +109,8 @@
     "reloadBanner": "Eine neue Version ist verfügbar – hier klicken zum Neuladen",
     "reloadInCall": "Dein Anruf wird dabei kurz getrennt und danach automatisch wieder verbunden.",
     "dismiss": "Später",
-    "badge": "Update {version}"
+    "badge": "Update {version}",
+    "updating": "Der Server wird gerade auf Version {version} aktualisiert – gleich kurze Unterbrechung."
   },
   "login": {
     "subtitleLogin": "Anmelden bei Mnema Talk",
@@ -565,7 +566,8 @@
         "dfnBuild": "WebAssembly-Build und AudioWorklet für DeepFilterNet3.",
         "crates": "Rust-Bibliotheken im DeepFilterNet-WASM, u. a. tract, ndarray, rustfft.",
         "image": "Basis der Docker-Images von App und Datenbank.",
-        "turn": "Optional, als TURN-Server für Verbindungen hinter strikten Firewalls."
+        "turn": "Optional, als TURN-Server für Verbindungen hinter strikten Firewalls.",
+        "updater": "Optional, aktualisiert auf Wunsch des Admins den App-Container."
       },
       "fullListBefore": "Die vollständige Liste mit allen Bibliotheken, Versionen und Lizenztexten steht in ",
       "fullListAfter": " im Quellcode."
@@ -699,7 +701,27 @@
       "manualUpdate": "Manuell aktualisieren (auf dem Server, im Verzeichnis mit docker-compose.yml):",
       "copy": "Kopieren",
       "copied": "Befehl kopiert",
-      "copyFailed": "Kopieren nicht möglich"
+      "copyFailed": "Kopieren nicht möglich",
+      "selfUpdateTitle": "Server jetzt aktualisieren?",
+      "selfUpdateButton": "Jetzt aktualisieren",
+      "selfUpdateStarting": "Starte Update …",
+      "selfUpdateWarning": "Der Server lädt das neue Image und startet neu. Alle werden für etwa 30–60 Sekunden getrennt; laufende Talks werden danach automatisch wieder verbunden.",
+      "selfUpdatePassword": "Dein Passwort zur Bestätigung",
+      "selfUpdateRateLimited": "Gerade nicht möglich: Ein Update läuft bereits, oder es gab zu viele falsche Passwörter. Bitte später erneut versuchen.",
+      "selfUpdateRunning": "Update läuft … Der Server startet gleich neu. Sobald die neue Version da ist, erscheint oben der Hinweis zum Neuladen.",
+      "selfUpdateStalled": "Nach 5 Minuten läuft noch die alte Version. Prüfe das Log des Updaters (docker compose logs updater) und ob MNEMA_IMAGE einen Tag nutzt, der die neue Version enthält.",
+      "selfUpdateDone": "Version {version} läuft",
+      "selfUpdateCooldown": "Ein Update wurde gerade angestoßen; das nächste ist ab {when} möglich.",
+      "selfUpdateNotConfigured": "Direkt aus Mnema aktualisieren ist nicht eingerichtet (optionaler Updater, siehe README „Updates“).",
+      "reach": {
+        "follows": "Das Image {image} folgt neuen Versionen.",
+        "unset": "MNEMA_IMAGE ist nicht gesetzt.",
+        "local_build": "Das Image {image} wird auf dem Server gebaut und kann nicht gezogen werden – bitte manuell aktualisieren.",
+        "digest_pinned": "Das Image {image} ist per Digest festgelegt – bitte manuell aktualisieren.",
+        "version_pinned": "Das Image {image} ist auf eine Version festgelegt – für {version} den Tag in .env ändern.",
+        "track_mismatch": "Der Tag von {image} enthält {version} nicht (z. B. größerer Versionssprung) – Tag in .env ändern.",
+        "custom_tag": "Unbekannter Tag bei {image}."
+      }
     },
     "users": "Nutzerverwaltung",
     "searchUsers": "Nutzer suchen …",

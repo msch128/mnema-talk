@@ -18,12 +18,23 @@ export const useAppVersionStore = defineStore('appVersion', () => {
   const dismissedVersion = ref('')
   const adminUpdate = ref(null)
 
+  // An admin started a self-update to this version (system_update event).
+  const updatingTo = ref('')
+
   const reloadAvailable = computed(() => isNewServerVersion(serverVersion.value, clientVersion))
+  const showUpdatingBanner = computed(() => !!updatingTo.value && !reloadAvailable.value && serverVersion.value !== updatingTo.value)
+
+  function setUpdating(v) {
+    updatingTo.value = normalizeVersion(v)
+  }
   const showReloadBanner = computed(() => reloadAvailable.value && dismissedVersion.value !== serverVersion.value)
   const adminUpdateAvailable = computed(() => adminUpdate.value?.update_available === true)
 
+  // A server_info after system_update comes from the restarted server (or the
+  // old one, if the update didn't happen): either way the update is over.
   function setServerVersion(v) {
     serverVersion.value = normalizeVersion(v)
+    updatingTo.value = ''
   }
 
   function dismiss() {
@@ -62,6 +73,7 @@ export const useAppVersionStore = defineStore('appVersion', () => {
 
   return {
     clientVersion, serverVersion, reloadAvailable, showReloadBanner, setServerVersion, dismiss,
+    updatingTo, showUpdatingBanner, setUpdating,
     adminUpdate, adminUpdateAvailable, setAdminUpdate, refreshAdminUpdate, followAdminUpdates
   }
 })
