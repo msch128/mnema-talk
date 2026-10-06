@@ -217,7 +217,7 @@ test('double-click and F toggle full screen of the stage', async ({ browser }) =
   await expect.poll(fullscreenSource).toBe(null)
 
   // Not while typing in the Talk chat.
-  await a.getByRole('button', { name: 'Chat einblenden' }).click()
+  await a.getByTestId('voice-chat-toggle').click()
   const composer = a.getByRole('textbox', { name: /^Nachricht an/ })
   await composer.click()
   await a.keyboard.type('ff')
