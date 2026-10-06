@@ -1,0 +1,26 @@
+web/src/components/AccountMenu.vue
+  h_0ff4f4713441f4 22
+web/src/components/ScreenShareModal.test.js
+  h_0ff4f4713441f4 112-121
+web/src/components/ScreenShareModal.vue
+  h_0ff4f4713441f4 22-24,27,85,92
+web/src/lib/streamQuality.js
+  h_0ff4f4713441f4 18
+web/src/lib/streamQuality.test.js
+  h_0ff4f4713441f4 4-5,109-115
+web/src/stores/voice.js
+  h_0ff4f4713441f4 6,83,88-90,744-747
+web/src/stores/voice.test.js
+  h_0ff4f4713441f4 5,625
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "781f5d399f66eb3e43a4b84ca00468ff75f90ef1",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
