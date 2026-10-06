@@ -71,7 +71,9 @@ async function shot(page, name) {
   if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: `${process.env.E2E_SHOT_DIR}/${name}.png` })
 }
 
-// Two members (A: the admin, B: a new member) in a new Talk.
+let memberRegistered = false
+
+// Two members (A: the admin, B: the file's member) in a new Talk.
 async function twoMembers(browser, tag, { pip = false } = {}) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
@@ -85,12 +87,19 @@ async function twoMembers(browser, tag, { pip = false } = {}) {
   }
 
   const channel = `${VOICE_CHANNEL} ${tag}`
-  const bName = `${USER}_${tag}`
   await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
   expect((await apiFetch(a, 'POST', '/api/admin/channels', { name: channel, type: 'voice' })).status).toBe(201)
-  const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
   await b.goto('/')
-  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: USER_PASSWORD, invite_code: invite.json.code })).status).toBe(201)
+  // One member for all tests of this file: registrations are rate-limited
+  // per IP (10 per hour) and the whole suite runs from one address.
+  const bName = USER
+  if (!memberRegistered) {
+    const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
+    expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: USER_PASSWORD, invite_code: invite.json.code })).status).toBe(201)
+    memberRegistered = true
+  } else {
+    expect((await apiFetch(b, 'POST', '/api/auth/login', { username: bName, password: USER_PASSWORD })).status).toBe(200)
+  }
   await b.reload()
   const me = await apiFetch(b, 'GET', '/api/auth/me')
   const bId = me.json?.user?.id || me.json?.id
