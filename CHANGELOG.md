@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.3](https://github.com/msch128/mnema-talk/compare/v0.3.2...v0.3.3) (2026-10-06)
+
+
+### Features
+
+* **talk:** text chat as a resizable panel under the stage, like Discord ([0052220](https://github.com/msch128/mnema-talk/commit/0052220af3491b98721389c568e6749080132872))
+
+
+### Bug Fixes
+
+* **chat:** voice channels have their own text chat ([8dc73f1](https://github.com/msch128/mnema-talk/commit/8dc73f13ff50bbe816b1480242d2c2aaf1efb716))
+* **talk:** a /v/:id/chat deep link stays open when the call resumes first ([bcf23ad](https://github.com/msch128/mnema-talk/commit/bcf23ad56c33e7fa05aafda464598f558e2ec428))
+* **talk:** the Talk chat's header shows the whole channel name ([17e620d](https://github.com/msch128/mnema-talk/commit/17e620de4fa6d20d31d1d83a807c185215de2e73))
+
 ## [0.3.2](https://github.com/msch128/mnema-talk/compare/v0.3.1...v0.3.2) (2026-10-06)
 
 
