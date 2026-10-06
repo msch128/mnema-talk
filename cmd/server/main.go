@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
 )
 
@@ -80,7 +81,15 @@ func run() error {
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 
-	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Context: ctx})
+	// Release check against GitHub (admin System tab). Disabled with
+	// UPDATE_CHECK_ENABLED=false: then the server makes no request at all.
+	var updates *update.Checker
+	if cfg.UpdateCheck {
+		updates = update.NewChecker(update.DefaultReleaseURL, version.Current())
+		go updates.Run(ctx, 30*time.Second)
+	}
+
+	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Updates: updates, Context: ctx})
 	if err != nil {
 		return err
 	}

@@ -20,7 +20,8 @@ const operator = computed(() => ({
 const mediaRetentionDays = ref(0) // 0 = no automatic deletion
 const sessionExpiryDays = ref(30)
 const stunServers = ref([])
-const legalVersion = ref('1.3')
+const legalVersion = ref('1.4')
+const updateCheck = ref(false)
 
 const TABS = ['all', 'operator', 'privacy', 'terms', 'oss']
 
@@ -38,6 +39,7 @@ onMounted(async () => {
       mediaRetentionDays.value = data.media_retention_days || 0
       if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
       stunServers.value = data.stun_servers || []
+      updateCheck.value = data.update_check === true
       if (data.legal_version) legalVersion.value = data.legal_version
     }
   } catch {
@@ -141,6 +143,11 @@ onMounted(async () => {
             {{ $t('legal.privacy.noStun') }}
           </p>
         </div>
+
+        <!-- Outbound connection of the server itself -->
+        <p v-if="updateCheck" class="text-xs" data-testid="legal-update-check">
+          <strong class="text-mnema-text">{{ $t('legal.privacy.updateCheckTitle') }}</strong>{{ $t('legal.privacy.updateCheck') }}
+        </p>
 
         <!-- Data categories & retention -->
         <div class="space-y-2">

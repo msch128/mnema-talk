@@ -11,6 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
@@ -28,12 +29,14 @@ type systemHandler struct {
 	hasStore bool
 	version  string
 	started  time.Time
+	updates  *update.Checker // nil: update check disabled
 }
 
 // SystemStatus is the response of GET /api/admin/system.
 type SystemStatus struct {
 	Version SystemVersion `json:"version"`
 	Health  SystemHealth  `json:"health"`
+	Update  UpdateStatus  `json:"update"`
 }
 
 // SystemVersion describes the running build.
@@ -108,6 +111,8 @@ type RuntimeHealth struct {
 
 func (h *systemHandler) mountAdmin(r chi.Router) {
 	r.Get("/system", httpx.Handle(h.status))
+	r.Get("/system/update", httpx.Handle(h.getUpdate))
+	r.Post("/system/check", httpx.Handle(h.checkNow))
 }
 
 // status handles GET /api/admin/system.
@@ -136,6 +141,7 @@ func (h *systemHandler) snapshot(ctx context.Context) SystemStatus {
 	return SystemStatus{
 		Version: SystemVersion{Current: h.version, Revision: version.Commit(), GoVersion: version.GoVersion()},
 		Health:  h.health(ctx),
+		Update:  h.updateStatus(),
 	}
 }
 
