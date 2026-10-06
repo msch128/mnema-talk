@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useAppVersionStore } from '../stores/appVersion'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
@@ -17,6 +18,7 @@ const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
+const versionStore = useAppVersionStore()
 const { startScreenShare, stopScreenShare } = useWebRTC()
 
 const root = ref(null)
@@ -179,6 +181,11 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
     <button v-if="authStore.isAdmin" type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-admin'))">
       <ShieldCheck class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.adminConsole') }}
+      <span
+        v-if="versionStore.adminUpdateAvailable"
+        data-testid="admin-update-badge"
+        class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
+      >{{ $t('update.badge', { version: versionStore.adminUpdate.latest_version }) }}</span>
     </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-legal'))">
       <HelpCircle class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.legal') }}

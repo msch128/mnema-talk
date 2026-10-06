@@ -71,5 +71,15 @@ locally instead (`make up` or `make dev`).
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
+- **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
+  and optional STUN/TURN, the server only asks GitHub for the latest release
+  (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to
+  `api.github.com/repos/msch128/mnema-talk/releases/latest` every 30 minutes
+  with `If-None-Match`, a 10 s timeout, a 1 MiB response cap, redirects only
+  to the same host, and a pause when GitHub answers 403/429. Only
+  `tag_name`, `html_url` (accepted only for this repository's release pages),
+  `published_at` and `body` are read; the body is shown to admins as plain
+  text, never as HTML. No user data is sent; the privacy policy names the
+  connection while it is on. `UPDATE_CHECK_ENABLED=false` makes no request.
 - **Secrets.** All secrets come from environment variables. The repository is
   public and contains placeholders only; CI and the pre-commit hook run gitleaks.

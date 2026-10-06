@@ -159,6 +159,9 @@ them with safe placeholder values. Notable ones:
 - `API_DOCS_ENABLED`: `true` serves the API reference (Swagger UI) at `/api/docs` and the OpenAPI document at `/api/openapi.json` to signed-in members; off by default.
 - `WEBRTC_UDP_PORT_MIN/MAX`, `WEBRTC_NAT_1TO1_IP`, `WEBRTC_STUN_URLS`: voice networking.
 - `LEGAL_*`: operator details shown in the privacy policy.
+- `UPDATE_CHECK_ENABLED`: `true` (default) lets the server ask GitHub every 30
+  minutes for the latest release; admins see it in the System tab. `false`
+  = no outbound request.
 
 ## Deployment behind a reverse proxy
 

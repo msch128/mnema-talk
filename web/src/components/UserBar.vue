@@ -4,6 +4,7 @@ import { Mic, MicOff, Headphones, HeadphoneOff, MoreHorizontal } from '@lucide/v
 import { useAuthStore } from '../stores/auth'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { useAppVersionStore } from '../stores/appVersion'
 import { t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import VoiceStatusPanel from './VoiceStatusPanel.vue'
@@ -15,6 +16,8 @@ const emit = defineEmits(['open-admin', 'open-legal'])
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
+// Admins: a dot on the ⋯ button while an update is available.
+const versionStore = useAppVersionStore()
 
 const menuOpen = ref(false)
 const menuButton = ref(null)
@@ -119,10 +122,16 @@ function ibTone(active) {
         v-tooltip="$t('account.menu')"
         aria-haspopup="menu"
         :aria-expanded="menuOpen ? 'true' : 'false'"
-        :class="[ib, menuOpen ? 'bg-mnema-hover text-mnema-text' : ibTone(false)]"
+        :class="[ib, 'relative', menuOpen ? 'bg-mnema-hover text-mnema-text' : ibTone(false)]"
         @click="toggleMenu"
       >
         <MoreHorizontal class="h-[18px] w-[18px]" />
+        <span
+          v-if="authStore.isAdmin && versionStore.adminUpdateAvailable"
+          data-testid="admin-update-dot"
+          class="absolute right-1 top-1 h-2 w-2 rounded-full bg-mnema-accent ring-2 ring-mnema-raised"
+          aria-hidden="true"
+        ></span>
       </button>
     </div>
 
