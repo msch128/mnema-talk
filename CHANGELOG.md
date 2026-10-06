@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/msch128/mnema-talk/compare/v0.3.0...v0.3.1) (2026-10-06)
+
+
+### Features
+
+* **docker:** publish release images for linux/amd64 and linux/arm64 ([09b7c90](https://github.com/msch128/mnema-talk/commit/09b7c90e876fef145bcb3a48c581c327c911503a))
+
 ## [0.3.0](https://github.com/msch128/mnema-talk/compare/v0.1.16...v0.3.0) (2026-10-05)
 
 
