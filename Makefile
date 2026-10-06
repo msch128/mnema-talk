@@ -64,16 +64,19 @@ test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
+# Minimum total coverage (%) for Go and web; keep in sync with .github/workflows/ci.yml.
+COVERAGE_MIN ?= 80
 COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
 coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
 	go test -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
-	@node scripts/coverage-summary.mjs go coverage.out
+	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN)
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)
 	cd web && npm run test:coverage
+	@node scripts/coverage-summary.mjs web web/coverage/coverage-summary.json --min $(COVERAGE_MIN)
 
 fmt: ## Format Go code in place
 	gofmt -w cmd internal api web/web.go

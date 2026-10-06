@@ -124,10 +124,14 @@ jobs:
       - name: Integration tests (with coverage)
         run: make coverage-go
 
+      # make coverage-go fails below 80 %; the summary and the report are
+      # still published then, so the job summary shows what is missing.
       - name: Coverage summary
-        run: node scripts/coverage-summary.mjs go coverage.out >> "$GITHUB_STEP_SUMMARY"
+        if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
+        run: node scripts/coverage-summary.mjs go coverage.out --min 80 >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-go
@@ -190,10 +194,13 @@ jobs:
       - run: npm run lint
       - run: npm run test:coverage
 
+      # Fails below 80 % (keep in sync with COVERAGE_MIN in the Makefile);
+      # the report is uploaded either way.
       - name: Coverage summary
-        run: node ../scripts/coverage-summary.mjs web coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
+        run: node ../scripts/coverage-summary.mjs web coverage/coverage-summary.json --min 80 >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
+        if: ${{ !cancelled() && hashFiles('web/coverage/coverage-summary.json') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage-web
