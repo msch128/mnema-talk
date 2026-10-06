@@ -1,0 +1,18 @@
+web/src/components/StreamQualityMenu.test.js
+  h_0ff4f4713441f4 176-182
+web/src/components/TalkControlBar.vue
+  h_0ff4f4713441f4 10,62-64
+web/src/components/VoiceStage.test.js
+  h_0ff4f4713441f4 1122-1135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "417fd09305a13d74d429d87cdbbcc229ffcc9e7c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
