@@ -88,13 +88,16 @@ jobs:
         if: steps.release.outputs.release_created != 'true' && steps.release.outputs.pr != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ fromJSON(steps.release.outputs.pr).number }}
+          # Read in the script: fromJSON on an empty output breaks the whole
+          # job when the tip guard skipped release-please.
+          PR_JSON: ${{ steps.release.outputs.pr }}
           TESTED: ${{ github.event.workflow_run.head_sha }}
         # Only ever merge release-please's own PR, opened by the Actions bot on
         # its branch and touching nothing but the version and changelog.
         # GitHub may still be computing mergeability right after the update.
         run: |
           set -euo pipefail
+          PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
           pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,author,files,isCrossRepository,title)
           head=$(jq -r .headRefName <<<"$pr")
           author=$(jq -r .author.login <<<"$pr")
