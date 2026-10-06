@@ -95,9 +95,11 @@ func TestAnnounceRulesMatchLegacyNAT1To1(t *testing.T) {
 	ips := []string{"203.0.113.7", "192.168.0.212"}
 
 	var legacy webrtc.SettingEngine
+	legacy.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	//lint:ignore SA1019 the deprecated call is the reference behaviour under test.
 	legacy.SetNAT1To1IPs(ips, webrtc.ICECandidateTypeHost)
 	var rewrite webrtc.SettingEngine
+	rewrite.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	if err := rewrite.SetICEAddressRewriteRules(announceRewriteRules(ips)...); err != nil {
 		t.Fatal(err)
 	}
