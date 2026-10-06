@@ -6,9 +6,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: mnema-talk:local
+    # Default: built on this host. To run (and self-update) a released image,
+    # set MNEMA_IMAGE in .env, e.g. ghcr.io/msch128/mnema-talk:0.4 (follows
+    # 0.4.x) or :latest, and start with `docker compose pull app && docker
+    # compose up -d` instead of --build. See README, "Updates".
+    image: ${MNEMA_IMAGE:-mnema-talk:local}
     container_name: mnema-talk
     restart: unless-stopped
+    labels:
+      # Only containers with BOTH labels may be touched by the optional
+      # updater sidecar (profile autoupdate): it runs with --label-enable and
+      # --scope mnema-talk. postgres, seaweedfs and coturn carry neither.
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "com.centurylinklabs.watchtower.scope=mnema-talk"
     ports:
       - "${PORT:-8080}:8080"
       - "${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}:${WEBRTC_UDP_PORT_MIN:-50000}-${WEBRTC_UDP_PORT_MAX:-50050}/udp"
@@ -39,6 +49,11 @@ services:
       - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
       # Release check against api.github.com every 30 min; false = no request.
       - UPDATE_CHECK_ENABLED=${UPDATE_CHECK_ENABLED:-true}
+      # Self-update through the updater sidecar (profile autoupdate). Empty
+      # UPDATER_TOKEN = no "update now" button. The app gets no Docker access.
+      - UPDATER_URL=${UPDATER_URL:-http://mnema-updater:8080}
+      - UPDATER_TOKEN=${UPDATER_TOKEN:-}
+      - MNEMA_IMAGE=${MNEMA_IMAGE:-mnema-talk:local}
       - LOG_LEVEL=${LOG_LEVEL:-}
       # 0 = automatic media deletion OFF. Keep it off unless you really want pruning.
       - MEDIA_RETENTION_DAYS=${MEDIA_RETENTION_DAYS:-0}
@@ -74,6 +89,8 @@ services:
         condition: service_healthy
     networks:
       - mnema-network
+      # Only the app and the updater sidecar are on this internal network.
+      - mnema-updater
 
   # ==========================================================
   # Database: PostgreSQL 17
@@ -215,6 +232,60 @@ services:
           --denied-peer-ip=fe80::-febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff \
           $$self
 
+  # ==========================================================
+  # Optional updater sidecar: Watchtower (profile: autoupdate)
+  # ==========================================================
+  # Enable with: docker compose --profile autoupdate up -d
+  # plus UPDATER_TOKEN in .env (openssl rand -hex 32). It lets an admin
+  # update the app from the System tab ("update now", with password).
+  #
+  # SECURITY: this container holds the Docker socket, which is root on the
+  # host. That is why it is a separate, opt-in container and the app never
+  # gets Docker access. It
+  #   - only updates containers labelled enable=true AND scope=mnema-talk
+  #     (the app; never postgres/seaweedfs/coturn or anything else on the host),
+  #   - never updates on its own: no schedule, only POST /v1/update with the
+  #     bearer token (WATCHTOWER_HTTP_API_PERIODIC_POLLS=false),
+  #   - publishes no port and sits only on the internal "mnema-updater"
+  #     network shared with the app (no other container, no internet; image
+  #     pulls are done by the Docker daemon, not by this container),
+  #   - re-pulls the tag the app runs (MNEMA_IMAGE); it never switches tags.
+  # nicholas-fedor/watchtower is the maintained fork of containrrr/watchtower
+  # (archived December 2025). Pinned by version and multi-arch digest.
+  updater:
+    image: nickfedor/watchtower:1.22.3@sha256:2f8f2a9bd21a195b3b650409532a20f6aada8ef5834f00d0d7a999dee0779a81
+    container_name: mnema-updater
+    restart: unless-stopped
+    profiles:
+      - autoupdate
+    environment:
+      - WATCHTOWER_HTTP_API_ENDPOINTS=update
+      # Watchtower refuses to start the HTTP API without a token.
+      - WATCHTOWER_HTTP_API_TOKEN=${UPDATER_TOKEN:-}
+      - WATCHTOWER_HTTP_API_PERIODIC_POLLS=false
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_SCOPE=mnema-talk
+      # Remove the replaced image afterwards (roll back by pinning an older tag).
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+    labels:
+      # Same scope, but no enable label: it never updates itself.
+      - "com.centurylinklabs.watchtower.scope=mnema-talk"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    mem_limit: 128m
+    pids_limit: 64
+    networks:
+      - mnema-updater
+
 volumes:
   postgres-data:
     driver: local
@@ -225,3 +296,8 @@ networks:
   mnema-network:
     name: mnema-network
     driver: bridge
+  # App <-> updater only. internal: no route to the internet or the host LAN.
+  mnema-updater:
+    name: mnema-updater
+    driver: bridge
+    internal: true

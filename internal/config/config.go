@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,15 @@ type Config struct {
 	APIDocs bool
 	// UpdateCheck lets the server ask GitHub every 30 minutes for the latest
 	// release (admin System tab). false = no outbound request at all.
-	UpdateCheck      bool
+	UpdateCheck bool
+	// UpdaterURL and UpdaterToken reach the optional updater sidecar
+	// (compose profile "autoupdate"). Self-update from the admin UI is only
+	// offered when the token is set. The app itself never touches Docker.
+	UpdaterURL   string
+	UpdaterToken string
+	// AppImage is the image reference the app container runs (MNEMA_IMAGE),
+	// used to tell admins whether a re-pull can reach the latest release.
+	AppImage         string
 	WebRTCUDPPortMin uint16
 	WebRTCUDPPortMax uint16
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
@@ -198,6 +207,9 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		LinkPreviews:         linkPreviews,
 		APIDocs:              apiDocs,
 		UpdateCheck:          updateCheck,
+		UpdaterURL:           get("UPDATER_URL", ""),
+		UpdaterToken:         get("UPDATER_TOKEN", ""),
+		AppImage:             get("MNEMA_IMAGE", ""),
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		MetricsToken:         get("METRICS_TOKEN", ""),
@@ -272,6 +284,10 @@ func (c *Config) validate(portMin, portMax uint16) error {
 		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
 	}
 
+	if err := c.validateUpdater(); err != nil {
+		return err
+	}
+
 	if c.IsProduction() {
 		if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
 			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
@@ -297,6 +313,41 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	}
 	return nil
 }
+
+// DefaultUpdaterURL is the updater sidecar's address on the compose network.
+const DefaultUpdaterURL = "http://mnema-updater:8080"
+
+// minUpdaterTokenLen is the least UPDATER_TOKEN length: the token lets its
+// holder restart the app with a freshly pulled image.
+const minUpdaterTokenLen = 32
+
+var updaterTokenPattern = regexp.MustCompile(`^[A-Za-z0-9._~+/=-]+$`)
+
+// validateUpdater checks the self-update settings. Without UPDATER_TOKEN the
+// feature is off and UPDATER_URL is ignored.
+func (c *Config) validateUpdater() error {
+	if c.UpdaterToken == "" {
+		c.UpdaterURL = ""
+		return nil
+	}
+	if isPlaceholder(c.UpdaterToken) {
+		return fmt.Errorf("UPDATER_TOKEN still uses the public example value; generate one with: openssl rand -hex 32")
+	}
+	if len(c.UpdaterToken) < minUpdaterTokenLen || !updaterTokenPattern.MatchString(c.UpdaterToken) {
+		return fmt.Errorf("UPDATER_TOKEN must be at least %d characters of letters, digits and . _ ~ + / = -", minUpdaterTokenLen)
+	}
+	if c.UpdaterURL == "" {
+		c.UpdaterURL = DefaultUpdaterURL
+	}
+	u, err := url.Parse(c.UpdaterURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("UPDATER_URL must be an http(s) URL without credentials, query or fragment, got %q", c.UpdaterURL)
+	}
+	return nil
+}
+
+// SelfUpdateConfigured reports whether the updater sidecar may be called.
+func (c *Config) SelfUpdateConfigured() bool { return c.UpdaterToken != "" && c.UpdaterURL != "" }
 
 // IsProduction is the single definition of a production-like deployment:
 // strict secret checks, HSTS, short panic stacks and info-level logs.

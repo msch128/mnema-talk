@@ -1,11 +1,12 @@
 <script setup>
 // Admin dashboard: version, health and load of the server (GET /api/admin/system).
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RefreshCw, CheckCircle2, XCircle } from '@lucide/vue'
 import { api } from '../lib/api'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
+import SelfUpdateDialog from './SelfUpdateDialog.vue'
 
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
@@ -59,6 +60,57 @@ function formatDate(iso) {
   if (Number.isNaN(d.getTime())) return '–'
   return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(d)
 }
+
+// ---- Self-update (optional updater sidecar) ----
+const self = computed(() => status.value?.self_update || null)
+const showConfirm = ref(false)
+// 'idle' | 'running' (waiting for the new version) | 'stalled' (no new version after a while)
+const updatePhase = ref('idle')
+const POLL_MS = 5000
+const STALL_MS = 5 * 60 * 1000
+let pollTimer = null
+let pollStarted = 0
+
+function stopPolling() {
+  clearTimeout(pollTimer)
+  pollTimer = null
+}
+
+// /api/health is public and answers 503 or nothing while the container
+// restarts; once it reports another version, the reload banner takes over.
+async function pollHealth(fromVersion) {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' })
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.version && data.version !== fromVersion) {
+        versionStore.setServerVersion(data.version)
+        updatePhase.value = 'idle'
+        stopPolling()
+        toasts.success(t('admin.system.selfUpdateDone', { version: data.version }))
+        return
+      }
+    }
+  } catch {
+    // Restarting: keep waiting.
+  }
+  if (Date.now() - pollStarted > STALL_MS) {
+    updatePhase.value = 'stalled'
+    stopPolling()
+    return
+  }
+  pollTimer = setTimeout(() => pollHealth(fromVersion), POLL_MS)
+}
+
+function onUpdateStarted(res) {
+  showConfirm.value = false
+  updatePhase.value = 'running'
+  pollStarted = Date.now()
+  stopPolling()
+  pollTimer = setTimeout(() => pollHealth(res?.from_version || status.value?.version?.current), POLL_MS)
+}
+
+onBeforeUnmount(stopPolling)
 
 defineExpose({ refresh, status })
 
@@ -152,6 +204,32 @@ onMounted(refresh)
         </button>
       </div>
 
+      <!-- Self-update through the updater sidecar -->
+      <div v-if="updatePhase === 'running'" role="status" class="rounded-md border border-mnema-accent/30 bg-mnema-accent/10 p-3 text-sm text-mnema-text" data-testid="self-update-running">
+        {{ $t('admin.system.selfUpdateRunning') }}
+      </div>
+      <div v-else-if="updatePhase === 'stalled'" role="status" class="rounded-md border border-mnema-warning/35 bg-mnema-warning/10 p-3 text-sm text-mnema-text" data-testid="self-update-stalled">
+        {{ $t('admin.system.selfUpdateStalled') }}
+      </div>
+      <template v-else-if="upd.update_available && self">
+        <button
+          v-if="self.available"
+          type="button"
+          data-testid="self-update-open"
+          class="px-4 py-1.5 rounded-md bg-mnema-accent hover:bg-mnema-accent-hover text-mnema-accent-ink text-sm font-semibold transition"
+          @click="showConfirm = true"
+        >{{ $t('admin.system.selfUpdateButton') }}</button>
+        <p v-else-if="self.configured && self.next_allowed_at" class="text-xs text-mnema-muted" data-testid="self-update-cooldown">
+          {{ $t('admin.system.selfUpdateCooldown', { when: formatDate(self.next_allowed_at) }) }}
+        </p>
+        <p v-else-if="self.configured && self.reach === 'no'" class="text-xs text-mnema-muted" data-testid="self-update-unreachable">
+          {{ $t(`admin.system.reach.${self.reach_reason}`, { image: self.image, version: upd.latest_version }) }}
+        </p>
+        <p v-else-if="!self.configured" class="text-xs text-mnema-tertiary" data-testid="self-update-not-configured">
+          {{ $t('admin.system.selfUpdateNotConfigured') }}
+        </p>
+      </template>
+
       <template v-if="upd.update_available">
         <a
           v-if="upd.release_url"
@@ -180,6 +258,15 @@ onMounted(refresh)
         </div>
       </template>
     </div>
+
+    <SelfUpdateDialog
+      v-if="showConfirm && upd"
+      :current-version="upd.current_version"
+      :target-version="upd.latest_version"
+      :release-url="upd.release_url"
+      @close="showConfirm = false"
+      @started="onUpdateStarted"
+    />
 
     <!-- Health -->
     <div v-if="health" class="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="system-health">

@@ -126,6 +126,16 @@ func NewRouter(d Deps) (*Router, error) {
 	if systemH.version == "" {
 		systemH.version = "dev"
 	}
+	systemH.events = pub
+	systemH.self = selfUpdate{confirm: authH.ConfirmPassword, now: time.Now}
+	if cfg.SelfUpdateConfigured() {
+		u, err := update.NewUpdater(cfg.UpdaterURL, cfg.UpdaterToken)
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		systemH.self.updater = u
+	}
 
 	var previewH *linkpreview.Handler
 	if cfg.LinkPreviews {

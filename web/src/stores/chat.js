@@ -671,6 +671,11 @@ export const useChatStore = defineStore('chat', () => {
         break
       }
 
+      case 'system_update':
+        // An admin started an update: the server restarts in a moment.
+        useAppVersionStore().setUpdating(p?.version)
+        break
+
       case 'presence_snapshot':
         presenceById.value = snapshotToMap(p)
         break

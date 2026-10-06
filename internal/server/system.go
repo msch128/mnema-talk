@@ -4,11 +4,13 @@ import (
 	"context"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
@@ -30,13 +32,18 @@ type systemHandler struct {
 	version  string
 	started  time.Time
 	updates  *update.Checker // nil: update check disabled
+	events   events.Publisher
+
+	selfMu sync.Mutex
+	self   selfUpdate
 }
 
 // SystemStatus is the response of GET /api/admin/system.
 type SystemStatus struct {
-	Version SystemVersion `json:"version"`
-	Health  SystemHealth  `json:"health"`
-	Update  UpdateStatus  `json:"update"`
+	Version    SystemVersion    `json:"version"`
+	Health     SystemHealth     `json:"health"`
+	Update     UpdateStatus     `json:"update"`
+	SelfUpdate SelfUpdateStatus `json:"self_update"`
 }
 
 // SystemVersion describes the running build.
@@ -113,6 +120,7 @@ func (h *systemHandler) mountAdmin(r chi.Router) {
 	r.Get("/system", httpx.Handle(h.status))
 	r.Get("/system/update", httpx.Handle(h.getUpdate))
 	r.Post("/system/check", httpx.Handle(h.checkNow))
+	r.Post("/system/update", httpx.Handle(h.startSelfUpdate))
 }
 
 // status handles GET /api/admin/system.
@@ -138,10 +146,12 @@ func (h *systemHandler) status(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (h *systemHandler) snapshot(ctx context.Context) SystemStatus {
+	upd := h.updateStatus()
 	return SystemStatus{
-		Version: SystemVersion{Current: h.version, Revision: version.Commit(), GoVersion: version.GoVersion()},
-		Health:  h.health(ctx),
-		Update:  h.updateStatus(),
+		Version:    SystemVersion{Current: h.version, Revision: version.Commit(), GoVersion: version.GoVersion()},
+		Health:     h.health(ctx),
+		Update:     upd,
+		SelfUpdate: h.selfUpdateStatus(upd),
 	}
 }
 

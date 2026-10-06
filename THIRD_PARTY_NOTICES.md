@@ -122,6 +122,7 @@ binary.
 | [PostgreSQL 17](https://www.postgresql.org) (`postgres:17-alpine`) | PostgreSQL License |
 | [SeaweedFS](https://github.com/seaweedfs/seaweedfs) (`chrislusf/seaweedfs`) | Apache-2.0 |
 | [coturn](https://github.com/coturn/coturn) (`coturn/coturn`, optional `turn` profile) | BSD-3-Clause |
+| [Watchtower](https://github.com/nicholas-fedor/watchtower) (`nickfedor/watchtower`, maintained fork of containrrr/watchtower, optional `autoupdate` profile) | Apache-2.0 |
 | [Alpine Linux](https://alpinelinux.org) (base of the app image `alpine:3.24` and the Postgres image) | GPL-2.0 and others, per package |
 
 ## Build and development tools (not shipped)

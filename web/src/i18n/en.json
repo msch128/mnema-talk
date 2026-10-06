@@ -109,7 +109,8 @@
     "reloadBanner": "A new version is available – click here to reload",
     "reloadInCall": "Your call drops for a moment and reconnects automatically.",
     "dismiss": "Later",
-    "badge": "Update {version}"
+    "badge": "Update {version}",
+    "updating": "The server is being updated to version {version} – a short interruption follows."
   },
   "login": {
     "subtitleLogin": "Sign in to Mnema Talk",
@@ -565,7 +566,8 @@
         "dfnBuild": "WebAssembly build and AudioWorklet for DeepFilterNet3.",
         "crates": "Rust libraries inside the DeepFilterNet wasm, including tract, ndarray and rustfft.",
         "image": "Base of the app and database Docker images.",
-        "turn": "Optional, as a TURN server for connections behind strict firewalls."
+        "turn": "Optional, as a TURN server for connections behind strict firewalls.",
+        "updater": "Optional, updates the app container when the admin asks for it."
       },
       "fullListBefore": "The complete list with every library, version and license text is in ",
       "fullListAfter": " in the source code."
@@ -699,7 +701,27 @@
       "manualUpdate": "Update manually (on the server, in the directory with docker-compose.yml):",
       "copy": "Copy",
       "copied": "Command copied",
-      "copyFailed": "Could not copy"
+      "copyFailed": "Could not copy",
+      "selfUpdateTitle": "Update the server now?",
+      "selfUpdateButton": "Update now",
+      "selfUpdateStarting": "Starting update …",
+      "selfUpdateWarning": "The server pulls the new image and restarts. Everyone is disconnected for about 30–60 seconds; running talks reconnect automatically afterwards.",
+      "selfUpdatePassword": "Your password to confirm",
+      "selfUpdateRateLimited": "Not possible right now: an update is already running, or there were too many wrong passwords. Please try again later.",
+      "selfUpdateRunning": "Updating … The server restarts in a moment. Once the new version is up, the reload notice appears at the top.",
+      "selfUpdateStalled": "After 5 minutes the old version is still running. Check the updater's log (docker compose logs updater) and whether MNEMA_IMAGE uses a tag that contains the new version.",
+      "selfUpdateDone": "Version {version} is running",
+      "selfUpdateCooldown": "An update was just requested; the next one is possible from {when}.",
+      "selfUpdateNotConfigured": "Updating from within Mnema is not set up (optional updater, see README \"Updates\").",
+      "reach": {
+        "follows": "The image {image} follows new versions.",
+        "unset": "MNEMA_IMAGE is not set.",
+        "local_build": "The image {image} is built on the server and cannot be pulled – please update manually.",
+        "digest_pinned": "The image {image} is pinned by digest – please update manually.",
+        "version_pinned": "The image {image} is pinned to a version – change the tag in .env for {version}.",
+        "track_mismatch": "The tag of {image} does not include {version} (e.g. a bigger version jump) – change the tag in .env.",
+        "custom_tag": "Unknown tag on {image}."
+      }
     },
     "users": "User Management",
     "searchUsers": "Search users …",

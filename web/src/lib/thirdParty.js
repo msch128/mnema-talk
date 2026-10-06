@@ -53,6 +53,7 @@ export const THIRD_PARTY = [
       { name: 'PostgreSQL 17', license: 'PostgreSQL License', url: 'https://www.postgresql.org' },
       { name: 'SeaweedFS', license: 'Apache-2.0', url: 'https://github.com/seaweedfs/seaweedfs' },
       { name: 'coturn', license: 'BSD-3-Clause', url: 'https://github.com/coturn/coturn', note: 'turn' },
+      { name: 'Watchtower', license: 'Apache-2.0', url: 'https://github.com/nicholas-fedor/watchtower', note: 'updater' },
       { name: 'Alpine Linux', license: 'GPL-2.0 and others', url: 'https://alpinelinux.org', note: 'image' }
     ]
   }
