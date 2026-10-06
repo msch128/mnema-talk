@@ -668,7 +668,11 @@
       "codec": "Codec",
       "bitrate": "Bitrate",
       "changeSource": "Change screen"
-    }
+    },
+    "controls": "Talk controls",
+    "moreControls": "More options",
+    "hideParticipants": "Hide participants",
+    "showParticipants": "Show participants"
   },
   "admin": {
     "title": "Storage & administration",

@@ -10,6 +10,8 @@ import { t } from '../i18n'
 
 // stage: on the dark video overlay; card: in the own share's card.
 const props = defineProps({ variant: { type: String, default: 'stage' } })
+// open-change: the menu opened or closed (the Talk keeps its controls shown).
+const emit = defineEmits(['open-change'])
 
 const rtc = useWebRTC()
 const quality = useStreamQuality({ getStats: () => rtc.getScreenSendStats?.() ?? null })
@@ -32,7 +34,10 @@ function toggle() {
   menu.show({ currentTarget: button.value }, () => quality.menuItems({ onChangeSource: () => rtc.startScreenShare() }))
 }
 
-watch(() => menu.state.open, open => { if (!open) quality.stopStats() })
+watch(() => menu.state.open, open => {
+  if (!open) quality.stopStats()
+  emit('open-change', open)
+})
 </script>
 
 <template>
@@ -45,8 +50,8 @@ watch(() => menu.state.open, open => { if (!open) quality.stopStats() })
     :aria-label="t('talk.quality.title')"
     v-tooltip="t('talk.quality.title')"
     :class="props.variant === 'card'
-      ? 'w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0'
-      : 'p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition'"
+      ? 'w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition-colors flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent'
+      : 'w-8 h-8 flex items-center justify-center rounded-lg bg-black/75 hover:bg-black/90 text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'"
     @pointerdown="onPointerDown"
     @click="toggle"
   >

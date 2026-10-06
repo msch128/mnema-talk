@@ -668,7 +668,11 @@
       "codec": "Codec",
       "bitrate": "Bitrate",
       "changeSource": "Bildschirm wechseln"
-    }
+    },
+    "controls": "Talk-Steuerung",
+    "moreControls": "Weitere Optionen",
+    "hideParticipants": "Teilnehmer ausblenden",
+    "showParticipants": "Teilnehmer einblenden"
   },
   "admin": {
     "title": "Speicher & Administration",
