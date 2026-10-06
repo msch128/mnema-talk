@@ -1,0 +1,14 @@
+internal/sfu/announce_test.go
+  h_0ff4f4713441f4 98,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1cdb8d6b4593315ac393a9ef68accc93e5d0506f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
