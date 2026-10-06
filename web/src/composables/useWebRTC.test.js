@@ -4,6 +4,7 @@ import { toRaw } from 'vue'
 import { publishMids, tuneScreenOffer, screenAudioConstraints, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { streamBitrate, DEFAULT_STREAM_QUALITY } from '../lib/streamQuality'
 
 // The AI filter worklets can't run in jsdom; tests hand in a fake node instead.
 const suppressor = vi.hoisted(() => ({ node: null, models: [] }))
@@ -644,6 +645,52 @@ describe('screen share with audio', () => {
   })
 })
 
+describe('one screen share per person', () => {
+  async function answer(result) {
+    const { pendingConfirm } = await import('../lib/confirm')
+    await vi.waitFor(() => expect(pendingConfirm.value).not.toBeNull())
+    pendingConfirm.value.resolve(result)
+  }
+
+  it('starting another share asks first and then replaces the running one', async () => {
+    const { rtc, voice, screen, screenAudio, sent } = await joined()
+    const first = fakeStream(['video', 'audio'])
+    stubDisplayMedia(first)
+    await rtc.startScreenShare()
+    const second = fakeStream(['video', 'audio'])
+    stubDisplayMedia(second)
+
+    const start = rtc.startScreenShare()
+    await answer(true)
+    await start
+
+    expect(screen.track).toBe(second.getVideoTracks()[0])
+    expect(screenAudio.track).toBe(second.getAudioTracks()[0])
+    expect(first.getTracks().every(tr => tr.stop.mock.calls.length > 0)).toBe(true)
+    expect(toRaw(voice.localScreenStream)).toBe(second)
+    expect(voice.isScreenSharing).toBe(true)
+    // Still one share: it never stopped for the others.
+    expect(sent.some(e => e.type === 'webrtc_screenshare_stop')).toBe(false)
+  })
+
+  it('keeps the running share when the question is declined', async () => {
+    const { rtc, voice, screen } = await joined()
+    const first = fakeStream(['video'])
+    stubDisplayMedia(first)
+    await rtc.startScreenShare()
+    navigator.mediaDevices.getDisplayMedia.mockClear()
+
+    const start = rtc.startScreenShare()
+    await answer(false)
+    await start
+
+    expect(navigator.mediaDevices.getDisplayMedia).not.toHaveBeenCalled()
+    expect(screen.track).toBe(first.getVideoTracks()[0])
+    expect(first.getVideoTracks()[0].stop).not.toHaveBeenCalled()
+    expect(toRaw(voice.localScreenStream)).toBe(first)
+  })
+})
+
 describe('per-user playback', () => {
   function remoteAudio(pc, userId) {
     pc.ontrack({ track: fakeTrack('audio'), streams: [{ id: userId }] })
@@ -783,7 +830,8 @@ describe('webcam', () => {
     await rtc.startCamera()
 
     const screenParams = screen.setParameters.mock.calls[0][0]
-    expect(screenParams.encodings[0].maxBitrate).toBe(SCREEN_MAX_BITRATE)
+    expect(screenParams.encodings[0].maxBitrate).toBe(streamBitrate(DEFAULT_STREAM_QUALITY))
+    expect(screenParams.encodings[0].maxBitrate).toBeLessThanOrEqual(SCREEN_MAX_BITRATE)
     expect(screenParams.degradationPreference).toBe('maintain-resolution')
     expect(camera.setParameters.mock.calls[0][0].encodings[0].maxBitrate).toBe(CAMERA_MAX_BITRATE)
   })
@@ -800,7 +848,7 @@ describe('webcam', () => {
     const [audio, screen, camera] = (await negotiate()).senders
     await vi.waitFor(() => expect(camera.setParameters).toHaveBeenCalled())
     const screenParams = screen.setParameters.mock.calls.at(-1)[0]
-    expect(screenParams.encodings[0].maxBitrate).toBe(SCREEN_MAX_BITRATE)
+    expect(screenParams.encodings[0].maxBitrate).toBe(streamBitrate(DEFAULT_STREAM_QUALITY))
     expect(screenParams.degradationPreference).toBe('maintain-resolution')
     expect(camera.setParameters.mock.calls.at(-1)[0].encodings[0].maxBitrate).toBe(CAMERA_MAX_BITRATE)
     expect(audio.setParameters.mock.calls.at(-1)[0].encodings[0].priority).toBe('high')
@@ -871,6 +919,116 @@ describe('webcam', () => {
     expect(voice.userVideoStreams.alice).toBeUndefined()
   })
 })
+
+describe('stream quality of my own share', () => {
+  // A 4K screen whose capture the browser cannot scale (settings stay 4K),
+  // or one it scales to the constrained height.
+  function display4k({ scales = false } = {}) {
+    const stream = fakeStream(['video', 'audio'])
+    const track = stream.getVideoTracks()[0]
+    let settings = { width: 3840, height: 2160, frameRate: 60 }
+    track.contentHint = ''
+    track.getSettings = () => settings
+    track.applyConstraints = vi.fn(async (c) => {
+      if (!scales) return
+      const h = c.height?.max ?? 2160
+      settings = { width: Math.round(3840 * h / 2160), height: h, frameRate: c.frameRate?.max ?? 60 }
+    })
+    return { stream, track }
+  }
+  const lastParams = sender => sender.setParameters.mock.calls.at(-1)[0]
+
+  it('captures and sends a new share at 1080p and 30 fps', async () => {
+    const { rtc, screen, voice } = await joined()
+    voice.setScreenQuality({ resolution: 720, fps: 15 })
+    const { stream, track } = display4k()
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+
+    // Every new share starts at the default, whatever the last one used.
+    expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
+    expect(navigator.mediaDevices.getDisplayMedia.mock.calls[0][0].video).toEqual({ frameRate: { ideal: 30, max: 30 }, height: { max: 1080 } })
+    const enc = lastParams(screen).encodings[0]
+    expect(enc.maxFramerate).toBe(30)
+    // The browser did not scale the capture: the encoder does.
+    expect(enc.scaleResolutionDownBy).toBe(2)
+    expect(enc.maxBitrate).toBe(streamBitrate(DEFAULT_STREAM_QUALITY, { width: 3840, height: 2160 }))
+    expect(track.contentHint).toBe('detail')
+  })
+
+  it('applies a new resolution and frame rate live, without a new capture', async () => {
+    const { rtc, screen, voice } = await joined()
+    const { stream, track } = display4k({ scales: true })
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+
+    voice.setScreenQuality({ resolution: 720, fps: 15 })
+    await vi.waitFor(() => expect(lastParams(screen).encodings[0].maxFramerate).toBe(15))
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ frameRate: { ideal: 15, max: 15 }, height: { max: 720 } })
+    const enc = lastParams(screen).encodings[0]
+    // The capture is 720p now: no extra scaling in the encoder.
+    expect(enc.scaleResolutionDownBy).toBe(1)
+    expect(enc.maxBitrate).toBe(streamBitrate({ resolution: 720, fps: 15 }, { width: 1280, height: 720 }))
+    expect(navigator.mediaDevices.getDisplayMedia).toHaveBeenCalledTimes(1)
+    expect(screen.track).toBe(track)
+  })
+
+  it('Gaming is smooth motion, Source lifts the size cap again', async () => {
+    const { rtc, screen, voice } = await joined()
+    const { stream, track } = display4k({ scales: true })
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+
+    voice.setScreenQuality({ resolution: 1440, fps: 60 })
+    await vi.waitFor(() => expect(lastParams(screen).encodings[0].maxFramerate).toBe(60))
+    expect(track.contentHint).toBe('motion')
+    expect(lastParams(screen).degradationPreference).toBe('balanced')
+
+    voice.setScreenQuality({ resolution: 'source', fps: 15 })
+    await vi.waitFor(() => expect(lastParams(screen).encodings[0].maxFramerate).toBe(15))
+    expect(track.applyConstraints).toHaveBeenLastCalledWith({ frameRate: { ideal: 15, max: 15 } })
+    expect(track.contentHint).toBe('detail')
+    expect(lastParams(screen).degradationPreference).toBe('maintain-resolution')
+    expect(lastParams(screen).encodings[0].scaleResolutionDownBy).toBe(1)
+  })
+
+  it('a reconnect sends in the chosen quality again', async () => {
+    const { rtc, voice } = await joined()
+    const { stream } = display4k()
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    voice.setScreenQuality({ resolution: 720, fps: 15 })
+    await new Promise(r => setTimeout(r, 0))
+
+    rtc.rejoinAfterReconnect()
+    const [, screen] = (await negotiate()).senders
+    await vi.waitFor(() => expect(screen.setParameters).toHaveBeenCalled())
+    const enc = lastParams(screen).encodings[0]
+    expect(enc.maxFramerate).toBe(15)
+    expect(enc.scaleResolutionDownBy).toBe(3)
+    expect(enc.maxBitrate).toBe(streamBitrate({ resolution: 720, fps: 15 }, { width: 3840, height: 2160 }))
+  })
+
+  it('stopping resets the quality for the next share', async () => {
+    const { rtc, voice } = await joined()
+    stubDisplayMedia(display4k().stream)
+    await rtc.startScreenShare()
+    voice.setScreenQuality({ resolution: 1440, fps: 60 })
+    rtc.stopScreenShare()
+    expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
+  })
+
+  it('reports what the screen sender sends', async () => {
+    const { rtc, screen } = await joined()
+    expect(await rtc.getScreenSendStats()).toBeNull()
+    stubDisplayMedia(display4k().stream)
+    await rtc.startScreenShare()
+    const stat = { id: 'o1', type: 'outbound-rtp', kind: 'video', bytesSent: 10 }
+    screen.getStats = vi.fn(async () => new Map([['o1', stat]]))
+    expect(await rtc.getScreenSendStats()).toEqual([stat])
+  })
+})
+
 
 describe('video subscriptions', () => {
   const subs = sent => sent.filter(e => e.type === 'webrtc_subscribe').map(e => e.payload)

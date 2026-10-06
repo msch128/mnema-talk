@@ -3,6 +3,7 @@ import { ref, shallowRef, computed, watch } from 'vue'
 import { syncServerClock } from '../lib/clock'
 import { playSoundEffect } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
+import { DEFAULT_STREAM_QUALITY, normalizeQuality } from '../lib/streamQuality'
 
 export const NOISE_MODES = ['ai', 'ai-lite', 'browser', 'off']
 
@@ -74,10 +75,12 @@ export const useVoiceStore = defineStore('voice', () => {
   const isMuted = ref(false)
   const isDeafened = ref(false)
   const isScreenSharing = ref(false)
-  // My own share: its sound is not sent (the streamer's mute), and whether
-  // it has sound at all.
+  // My own share: its sound is not sent (the streamer's mute), whether it has
+  // sound at all, and the quality it is sent in (see useStreamQuality; every
+  // share starts at the default).
   const isScreenAudioMuted = ref(false)
   const hasScreenAudio = ref(false)
+  const screenQuality = ref({ ...DEFAULT_STREAM_QUALITY })
   const isCameraOn = ref(false)
   const isConnected = ref(false)
   const activeView = ref('chat') // 'chat' | 'voice'
@@ -719,6 +722,15 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenAudioMuted.value = !isScreenAudioMuted.value
   }
 
+  // q: { resolution, fps, custom? } (see useStreamQuality).
+  function setScreenQuality(q) {
+    screenQuality.value = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
+  }
+
+  function resetScreenQuality() {
+    screenQuality.value = { ...DEFAULT_STREAM_QUALITY }
+  }
+
   function disconnect() {
     if (isConnected.value || currentChannelId.value) {
       playSoundEffect('leave')
@@ -729,6 +741,7 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenSharing.value = false
     isScreenAudioMuted.value = false
     hasScreenAudio.value = false
+    resetScreenQuality()
     isCameraOn.value = false
     localCameraStream.value = null
     remoteScreenStream.value = null
@@ -752,6 +765,9 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenAudioMuted,
     hasScreenAudio,
     toggleScreenAudioMute,
+    screenQuality,
+    setScreenQuality,
+    resetScreenQuality,
     isCameraOn,
     localCameraStream,
     remoteScreenUserId,

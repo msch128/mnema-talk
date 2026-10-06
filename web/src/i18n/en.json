@@ -645,7 +645,28 @@
     "pipPlaying": "Playing in the picture-in-picture window",
     "pipBack": "Back to the stage",
     "pipFailed": "Could not open picture-in-picture",
-    "streamVolume": "Stream volume"
+    "streamVolume": "Stream volume",
+    "replaceShareTitle": "Replace your screen share?",
+    "replaceShareBody": "You are already sharing your screen. One share per person: the new one replaces the running one.",
+    "replaceShareConfirm": "Replace",
+    "quality": {
+      "title": "Stream quality",
+      "mode": "Stream mode",
+      "gaming": "Gaming",
+      "gamingHint": "Smoother video (1440p, 60 fps)",
+      "screen": "Screen",
+      "screenHint": "Clearer text (source, 15 fps)",
+      "custom": "Custom",
+      "resolution": "Resolution",
+      "frameRate": "Frame rate",
+      "source": "Source",
+      "fps": "{fps} fps",
+      "muteSound": "Mute stream sound",
+      "advanced": "Advanced",
+      "codec": "Codec",
+      "bitrate": "Bitrate",
+      "changeSource": "Change screen"
+    }
   },
   "admin": {
     "title": "Storage & administration",

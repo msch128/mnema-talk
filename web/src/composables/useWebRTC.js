@@ -9,6 +9,8 @@ import { useToastStore } from '../stores/toast'
 import { playSoundEffect } from '../lib/soundEffects'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
+import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
+import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 
 // The SFU publishes a camera under this prefix plus the user ID as stream ID,
@@ -58,6 +60,8 @@ let audioSender = null
 let screenSender = null
 let cameraSender = null
 let screenAudioSender = null
+// Quality changes are applied one after another.
+let qualityChain = Promise.resolve()
 // Playback above 100 % needs a gain stage: element.volume tops out at 1.
 let playbackContext = null
 // Input volume: a gain stage in the mic pipeline, only built when the input
@@ -600,9 +604,9 @@ function bindPublishSenders(conn, sdp) {
   return bound
 }
 
-// Bitrate, degradation and priority of a freshly bound sender: the same a
-// share or camera started in a running connection gets, so a reconnect or a
-// channel switch keeps them.
+// Bitrate, degradation, quality and priority of a freshly bound sender: the
+// same a share or camera started in a running connection gets, so a
+// reconnect or a channel switch keeps them (the chosen stream quality too).
 async function tuneBoundSenders(fresh, voiceStore) {
   if (fresh.audio) await applyQosToSender(fresh.audio, voiceStore)
   if (fresh.screen) await tuneSender(fresh.screen, screenSenderParams(voiceStore))
@@ -613,8 +617,10 @@ async function tuneBoundSenders(fresh, voiceStore) {
 // Sender limits (bits per second). The browser's own congestion control still
 // lowers the bitrate on a weak uplink; these decide what it gives up while
 // doing so and cap the ceiling. A shared screen keeps its resolution and drops
-// frames instead (text stays readable); a camera may trade either.
-export const SCREEN_MAX_BITRATE = 12_000_000
+// frames instead (text stays readable; at 60 fps it may trade either, see
+// lib/streamQuality), and its cap follows the chosen quality up to
+// SCREEN_MAX_BITRATE; a camera may trade either.
+export const SCREEN_MAX_BITRATE = STREAM_MAX_BITRATE
 export const CAMERA_MAX_BITRATE = 2_500_000
 
 /**
@@ -640,12 +646,14 @@ function ownAudioGuard(track) {
 }
 let screenAudioGuard = null
 
-async function tuneSender(sender, { maxBitrate, degradationPreference, priority, networkPriority } = {}) {
+async function tuneSender(sender, { maxBitrate, maxFramerate, scaleResolutionDownBy, degradationPreference, priority, networkPriority } = {}) {
   try {
     const params = sender.getParameters?.()
     if (!params) return
     if (!params.encodings?.length) params.encodings = [{}]
     if (maxBitrate !== undefined) params.encodings[0].maxBitrate = maxBitrate
+    if (maxFramerate !== undefined) params.encodings[0].maxFramerate = maxFramerate
+    if (scaleResolutionDownBy !== undefined) params.encodings[0].scaleResolutionDownBy = scaleResolutionDownBy
     if (degradationPreference) params.degradationPreference = degradationPreference
     if (priority) params.encodings[0].priority = priority
     if (networkPriority) params.encodings[0].networkPriority = networkPriority
@@ -660,9 +668,36 @@ function qosPriority(voiceStore) {
   return voiceStore?.qosHighPriority ? 'high' : 'medium'
 }
 
+// The screen sender's parameters for the chosen stream quality, at the size
+// the capture delivers now.
 function screenSenderParams(voiceStore) {
   const prio = qosPriority(voiceStore)
-  return { maxBitrate: SCREEN_MAX_BITRATE, degradationPreference: 'maintain-resolution', priority: prio, networkPriority: prio }
+  const quality = voiceStore?.screenQuality
+  const settings = localScreenStream.value?.getVideoTracks()[0]?.getSettings?.() || {}
+  const { degradationPreference } = streamTuning(quality)
+  return { ...streamEncoding(quality, settings), degradationPreference, priority: prio, networkPriority: prio }
+}
+
+// Applies the chosen stream quality to the running share: the capture is
+// constrained (frame rate, height) and the sender re-tuned, without
+// restarting the share. Where the browser cannot scale the capture, the
+// encoder scales it down (see streamEncoding).
+function applyScreenQuality(voiceStore) {
+  qualityChain = qualityChain.then(async () => {
+    const track = localScreenStream.value?.getVideoTracks()[0]
+    if (!track) return
+    const quality = voiceStore.screenQuality
+    try {
+      await track.applyConstraints?.(trackConstraints(quality))
+    } catch (err) {
+      console.debug('[WebRTC] Could not constrain the shared screen:', err)
+    }
+    if ('contentHint' in track) track.contentHint = streamTuning(quality).contentHint
+    if (screenSender && track === localScreenStream.value?.getVideoTracks()[0]) {
+      await tuneSender(screenSender, screenSenderParams(voiceStore))
+    }
+  }).catch(() => {})
+  return qualityChain
 }
 
 function cameraSenderParams(voiceStore) {
@@ -1450,13 +1485,10 @@ export function useWebRTC() {
     if (screenAudioSender) await screenAudioSender.replaceTrack(null).catch(() => {})
   }
 
+  // Asks the browser for a screen, captured in the quality chosen for the share.
   function pickScreen() {
     return navigator.mediaDevices.getDisplayMedia({
-      video: {
-        frameRate: { ideal: 60, max: 60 },
-        width: { ideal: 3840, max: 3840 },
-        height: { ideal: 2160, max: 2160 }
-      },
+      video: trackConstraints(voiceStore.screenQuality),
       audio: screenAudioConstraints()
     })
   }
@@ -1465,7 +1497,7 @@ export function useWebRTC() {
   async function attachScreen(stream) {
     const videoTrack = stream.getVideoTracks()[0]
     if (videoTrack) {
-      if ('contentHint' in videoTrack) videoTrack.contentHint = 'detail'
+      if ('contentHint' in videoTrack) videoTrack.contentHint = streamTuning(voiceStore.screenQuality).contentHint
       videoTrack.onended = () => { if (toRaw(localScreenStream.value) === stream) stopScreenShare() }
     }
     const screenAudio = stream.getAudioTracks()[0] || null
@@ -1487,10 +1519,24 @@ export function useWebRTC() {
     if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
   }
 
+  // One screen share per person: starting another while sharing asks first;
+  // the new screen then replaces the running one (see replaceScreenShare).
   async function startScreenShare() {
-    if (localScreenStream.value) return
+    if (localScreenStream.value) {
+      const ok = await confirm({
+        title: t('talk.replaceShareTitle'),
+        body: t('talk.replaceShareBody'),
+        confirmLabel: t('talk.replaceShareConfirm'),
+        cancelLabel: t('common.cancel'),
+        danger: false
+      })
+      if (!ok || !localScreenStream.value) return
+      return replaceScreenShare()
+    }
     const gen = joinGeneration
     const channelId = voiceStore.currentChannelId
+    // Every new share starts at the default quality.
+    voiceStore.resetScreenQuality()
     let stream
     try {
       stream = await pickScreen()
@@ -1509,6 +1555,33 @@ export function useWebRTC() {
     await attachScreen(stream)
   }
 
+  // Swaps the running share for a newly picked screen on the same lines: no
+  // renegotiation, the viewers keep watching, the quality stays as chosen.
+  async function replaceScreenShare() {
+    const old = localScreenStream.value
+    if (!old) return startScreenShare()
+    const gen = joinGeneration
+    let stream
+    try {
+      stream = await pickScreen()
+    } catch (err) {
+      console.warn('Screen share canceled or failed:', err)
+      return
+    }
+    // Left, stopped or replaced meanwhile.
+    if (gen !== joinGeneration || localScreenStream.value !== old) {
+      stream.getTracks().forEach(tr => tr.stop())
+      return
+    }
+    localScreenStream.value = stream
+    voiceStore.localScreenStream = stream
+    await attachScreen(stream)
+    old.getTracks().forEach(tr => {
+      tr.onended = null
+      tr.stop()
+    })
+  }
+
   function stopScreenShare() {
     const wasSharing = !!localScreenStream.value
     if (screenSender) screenSender.replaceTrack(null).catch(() => {})
@@ -1522,7 +1595,19 @@ export function useWebRTC() {
     voiceStore.isScreenSharing = false
     voiceStore.hasScreenAudio = false
     voiceStore.isScreenAudioMuted = false
+    voiceStore.resetScreenQuality()
     if (wasSharing) chatStore.sendWSEvent('webrtc_screenshare_stop', {})
+  }
+
+  // What the screen sender sends right now (RTCRtpSender.getStats), for the
+  // streamer's "Advanced" info; null without a share.
+  async function getScreenSendStats() {
+    if (!screenSender?.getStats || !localScreenStream.value) return null
+    try {
+      return [...(await screenSender.getStats()).values()]
+    } catch {
+      return null
+    }
   }
 
   function toggleScreenShare() {
@@ -1689,6 +1774,9 @@ export function useWebRTC() {
         if (track) track.enabled = !muted
       })
 
+      // The chosen stream quality, applied to the running share.
+      watch(() => voiceStore.screenQuality, () => applyScreenQuality(voiceStore))
+
       // Everyone sees whether I am muted or deafened.
       watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
     })
@@ -1707,8 +1795,10 @@ export function useWebRTC() {
     rejoinAfterReconnect,
     applyAudioSettings,
     startScreenShare,
+    replaceScreenShare,
     stopScreenShare,
     toggleScreenShare,
+    getScreenSendStats,
     startCamera,
     stopCamera,
     toggleCamera,
