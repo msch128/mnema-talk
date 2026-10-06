@@ -78,9 +78,21 @@ export const useVoiceStore = defineStore('voice', () => {
   // My own share: its sound is not sent (the streamer's mute), whether it has
   // sound at all, and the quality it is sent in (see useStreamQuality; every
   // share starts at the default).
+  function loadSavedScreenQuality() {
+    try {
+      const raw = localStorage.getItem('mnema_screen_quality')
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        return { ...normalizeQuality(parsed), ...(parsed?.custom === true ? { custom: true } : {}) }
+      }
+    } catch {}
+    return { ...DEFAULT_STREAM_QUALITY }
+  }
+
   const isScreenAudioMuted = ref(false)
   const hasScreenAudio = ref(false)
-  const screenQuality = ref({ ...DEFAULT_STREAM_QUALITY })
+  const screenQuality = ref(loadSavedScreenQuality())
+  const showScreenShareModal = ref(false)
   const isCameraOn = ref(false)
   const isConnected = ref(false)
   const activeView = ref('chat') // 'chat' | 'voice'
@@ -724,11 +736,23 @@ export const useVoiceStore = defineStore('voice', () => {
 
   // q: { resolution, fps, custom? } (see useStreamQuality).
   function setScreenQuality(q) {
-    screenQuality.value = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
+    const norm = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
+    screenQuality.value = norm
+    try {
+      localStorage.setItem('mnema_screen_quality', JSON.stringify(norm))
+    } catch {}
   }
 
   function resetScreenQuality() {
     screenQuality.value = { ...DEFAULT_STREAM_QUALITY }
+  }
+
+  function openScreenShareModal() {
+    showScreenShareModal.value = true
+  }
+
+  function closeScreenShareModal() {
+    showScreenShareModal.value = false
   }
 
   function disconnect() {
@@ -768,6 +792,9 @@ export const useVoiceStore = defineStore('voice', () => {
     screenQuality,
     setScreenQuality,
     resetScreenQuality,
+    showScreenShareModal,
+    openScreenShareModal,
+    closeScreenShareModal,
     isCameraOn,
     localCameraStream,
     remoteScreenUserId,

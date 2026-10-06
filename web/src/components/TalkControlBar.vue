@@ -28,7 +28,8 @@ const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings
 
 function toggleScreenShare() {
   if (voiceStore.isScreenSharing) stopScreenShare()
-  else startScreenShare()
+  else if (props.fullscreen) startScreenShare()
+  else voiceStore.openScreenShareModal()
 }
 
 // The quick toggle must swap the running mic, not just flip the setting.

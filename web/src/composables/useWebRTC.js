@@ -1521,7 +1521,7 @@ export function useWebRTC() {
 
   // One screen share per person: starting another while sharing asks first;
   // the new screen then replaces the running one (see replaceScreenShare).
-  async function startScreenShare() {
+  async function startScreenShare(quality) {
     if (localScreenStream.value) {
       const ok = await confirm({
         title: t('talk.replaceShareTitle'),
@@ -1535,8 +1535,8 @@ export function useWebRTC() {
     }
     const gen = joinGeneration
     const channelId = voiceStore.currentChannelId
-    // Every new share starts at the default quality.
-    voiceStore.resetScreenQuality()
+    if (quality) voiceStore.setScreenQuality(quality)
+    else voiceStore.resetScreenQuality()
     let stream
     try {
       stream = await pickScreen()

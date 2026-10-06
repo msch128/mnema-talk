@@ -17,6 +17,7 @@ import LoginModal from './components/LoginModal.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
+import ScreenShareModal from './components/ScreenShareModal.vue'
 import UserProfileModal from './components/UserProfileModal.vue'
 import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
@@ -407,6 +408,12 @@ onMounted(async () => {
       <AudioSettingsModal 
         v-if="voiceStore.showAudioSettings" 
         @close="voiceStore.showAudioSettings = false" 
+      />
+
+      <!-- Screen share quality dialog -->
+      <ScreenShareModal
+        v-if="voiceStore.showScreenShareModal"
+        @close="voiceStore.closeScreenShareModal()"
       />
 
       <!-- User profile dialog -->

@@ -11,6 +11,7 @@ vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
 
 let w
 beforeEach(() => {
+  localStorage.clear()
   setLocale('de')
   setActivePinia(createPinia())
   rtc.getScreenSendStats.mockReset()

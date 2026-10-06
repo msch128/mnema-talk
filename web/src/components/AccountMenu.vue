@@ -53,7 +53,7 @@ async function chooseLanguage(l) {
 
 function toggleShare() {
   if (voiceStore.isScreenSharing) stopScreenShare()
-  else startScreenShare()
+  else voiceStore.openScreenShareModal()
 }
 
 function onKeydown(e) {

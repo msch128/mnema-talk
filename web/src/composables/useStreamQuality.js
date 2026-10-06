@@ -155,6 +155,7 @@ export function useStreamQuality({ getStats } = {}) {
     ]
     if (onChangeSource) {
       items.push({ type: 'separator' })
+      items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), action: () => voiceStore.openScreenShareModal() })
       items.push({ id: 'change-source', label: t('talk.quality.changeSource'), action: onChangeSource })
     }
     return items

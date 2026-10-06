@@ -609,3 +609,38 @@ describe('hide participants without video', () => {
     expect(useVoiceStore().hideNoVideo).toBe(false)
   })
 })
+
+describe('screen quality persistence and modal', () => {
+  it('defaults to 1080p at 30 fps', () => {
+    const voice = useVoiceStore()
+    expect(voice.screenQuality.resolution).toBe(1080)
+    expect(voice.screenQuality.fps).toBe(30)
+  })
+
+  it('persists chosen quality across store instances', () => {
+    const voice = useVoiceStore()
+    voice.setScreenQuality({ resolution: 1440, fps: 60 })
+    expect(voice.screenQuality).toEqual({ resolution: 1440, fps: 60 })
+
+    setActivePinia(createPinia())
+    const nextVoice = useVoiceStore()
+    expect(nextVoice.screenQuality).toEqual({ resolution: 1440, fps: 60 })
+  })
+
+  it('resetScreenQuality resets to the default 1080p/30fps', () => {
+    const voice = useVoiceStore()
+    voice.setScreenQuality({ resolution: 'source', fps: 15, custom: true })
+    voice.resetScreenQuality()
+    expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
+  })
+
+  it('toggles screen share modal state', () => {
+    const voice = useVoiceStore()
+    expect(voice.showScreenShareModal).toBe(false)
+    voice.openScreenShareModal()
+    expect(voice.showScreenShareModal).toBe(true)
+    voice.closeScreenShareModal()
+    expect(voice.showScreenShareModal).toBe(false)
+  })
+})
+
