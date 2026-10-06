@@ -342,6 +342,9 @@ describe('VoiceStage screen share opt-in', () => {
     expect(voice.isScreenAudioMuted).toBe(false)
     await toggle.trigger('click')
     expect(voice.isScreenAudioMuted).toBe(true)
+    // The gear with the stream quality, on my own share only.
+    expect(w.find('[data-testid="stage"] [data-testid="stream-quality-button"]').exists()).toBe(true)
+    expect(w.find('[data-testid="viewer-stream-volume-slider"]').exists()).toBe(false)
   })
 
   it('while I share and watch someone, the cards switch the stage both ways', async () => {
@@ -367,6 +370,9 @@ describe('VoiceStage screen share opt-in', () => {
     await flushPromises()
     expect(cardKeys()).toEqual(['own'])
     expect(w.find('[data-screen-card="own"]').text()).toContain('Your screen')
+    // Its quality stays reachable from the card; the stage has no gear for Alice.
+    expect(w.find('[data-screen-card="own"] [data-testid="stream-quality-button"]').exists()).toBe(true)
+    expect(w.find('[data-testid="stage"] [data-testid="stream-quality-button"]').exists()).toBe(false)
     expect(stageVideo().srcObject).toBe(alice)
     expect(stageVideo().muted).toBe(false)
     expect(w.text()).toContain('Alice')
