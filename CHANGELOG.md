@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/msch128/mnema-talk/compare/v0.4.0...v0.4.1) (2026-10-06)
+
+
+### Features
+
+* **talk:** WIP floating auto-hide control bar and collapsible participant strip ([#62](https://github.com/msch128/mnema-talk/issues/62)) ([355e7a4](https://github.com/msch128/mnema-talk/commit/355e7a4e60cf6f1cb83c2e0470b5b6eed792a534))
+
 ## [0.4.0](https://github.com/msch128/mnema-talk/compare/v0.3.4...v0.4.0) (2026-10-06)
 
 
