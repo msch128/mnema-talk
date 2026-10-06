@@ -8,6 +8,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import VoiceStage from './VoiceStage.vue'
 import ParticipantTile from './ParticipantTile.vue'
+import TalkControlBar from './TalkControlBar.vue'
 import PipHost from './PipHost.vue'
 import { pendingConfirm } from '../lib/confirm'
 
@@ -1050,5 +1051,125 @@ describe('VoiceStage watch from the preview', () => {
     await flushPromises()
     expect(rtc.joinVoiceChannel).toHaveBeenCalledWith('v1')
     expect(watch).toHaveBeenCalledWith('a')
+  })
+})
+
+describe('VoiceStage floating controls', () => {
+  function connected() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    return voice
+  }
+  const bar = w => w.get('[data-testid="talk-controls"]')
+
+  it('fade out after 3 s without activity and come back on a mouse move', async () => {
+    vi.useFakeTimers()
+    try {
+      connected()
+      const w = mountStage({ channelId: 'v1' })
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('true')
+      vi.advanceTimersByTime(2900)
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('true')
+      vi.advanceTimersByTime(100)
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('false')
+      await w.get('main').trigger('pointermove')
+      expect(bar(w).attributes('data-visible')).toBe('true')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stay while keyboard focus or the pointer is on them', async () => {
+    vi.useFakeTimers()
+    try {
+      connected()
+      const w = mountStage({ channelId: 'v1' })
+      await nextTick()
+      bar(w).get('[data-testid="talk-mute"]').element.focus()
+      await nextTick()
+      vi.advanceTimersByTime(10_000)
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('true')
+      bar(w).get('[data-testid="talk-mute"]').element.blur()
+      await nextTick()
+      await bar(w).trigger('pointerenter', { pointerType: 'mouse' })
+      vi.advanceTimersByTime(10_000)
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('true')
+      await bar(w).trigger('pointerleave', { pointerType: 'mouse' })
+      vi.advanceTimersByTime(3000)
+      await nextTick()
+      expect(bar(w).attributes('data-visible')).toBe('false')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stay while the "more" menu of the compact bar is open', async () => {
+    connected()
+    const w = mount(TalkControlBar, { props: { compact: true }, attachTo: document.body })
+    mounted.push(w)
+    expect(w.emitted('update:pinned').at(-1)).toEqual([false])
+    await w.get('[data-testid="talk-more"]').trigger('click')
+    await flushPromises()
+    expect(w.emitted('update:pinned').at(-1)).toEqual([true])
+    expect(document.body.textContent).toContain('Noise suppression')
+  })
+
+  it('are never there in a preview (nothing hides the Join button)', async () => {
+    vi.useFakeTimers()
+    try {
+      seed()
+      const w = mountStage({ channelId: 'v1' })
+      await nextTick()
+      vi.advanceTimersByTime(10_000)
+      await nextTick()
+      expect(w.find('[data-testid="talk-controls"]').exists()).toBe(false)
+      expect(w.text()).toContain('Join')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe('VoiceStage participant strip', () => {
+  function watching() {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.channelUsers = { v1: {
+      a: { id: 'a', username: 'alice', display_name: 'Alice' },
+      b: { id: 'b', username: 'bob', display_name: 'Bob' }
+    } }
+    voice.handleMediaState({ user_id: 'a', screen: true })
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', new MediaStream())
+    return voice
+  }
+
+  it('collapses under a stage and stays collapsed (per browser)', async () => {
+    watching()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const toggle = () => w.get('[data-testid="talk-strip-toggle"]')
+    const strip = () => w.get('[data-testid="talk-strip"]')
+    expect(toggle().attributes('aria-expanded')).toBe('true')
+    expect(strip().attributes('data-collapsed')).toBe('false')
+    await toggle().trigger('click')
+    expect(toggle().attributes('aria-expanded')).toBe('false')
+    expect(strip().attributes('data-collapsed')).toBe('true')
+    expect(strip().attributes()).toHaveProperty('inert')
+    expect(toggle().text()).toContain('3')
+    expect(localStorage.getItem('mnema.talk.stripCollapsed')).toBe('true')
+
+    w.unmount()
+    const again = mountStage({ channelId: 'v1' })
+    await nextTick()
+    expect(again.get('[data-testid="talk-strip"]').attributes('data-collapsed')).toBe('true')
+    await again.get('[data-testid="talk-strip-toggle"]').trigger('click')
+    expect(again.get('[data-testid="talk-strip"]').attributes('data-collapsed')).toBe('false')
+    expect(localStorage.getItem('mnema.talk.stripCollapsed')).toBe(null)
   })
 })

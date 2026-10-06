@@ -1,15 +1,15 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
-  Volume2, VolumeX, Mic, MicOff, Headphones, Monitor, MonitorOff, PhoneOff,
-  MessageSquare, Maximize2, Minimize2, Sparkles,
-  Users, Sliders, Video, VideoOff, Eye, EyeOff, X, UserRoundX, PictureInPicture2
+  Volume2, VolumeX, Monitor, MonitorOff, MessageSquare, Maximize2, Minimize2,
+  Users, Video, VideoOff, X, UserRoundX, PictureInPicture2, ChevronDown, ChevronUp
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import ParticipantTile from './ParticipantTile.vue'
+import TalkControlBar from './TalkControlBar.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import ScreenViewers from './ScreenViewers.vue'
 import StreamQualityMenu from './StreamQualityMenu.vue'
@@ -19,6 +19,9 @@ import VoiceTimer from './VoiceTimer.vue'
 import { useTalkStage } from '../composables/useTalkStage'
 import { useVideoGrid } from '../composables/useVideoGrid'
 import { usePictureInPicture } from '../composables/usePictureInPicture'
+import { useAutoHide } from '../composables/useAutoHide'
+import { useElementSize } from '../composables/useElementSize'
+import { loadStripCollapsed, saveStripCollapsed, fitAspect, COMPACT_BAR_WIDTH } from '../lib/talkLayout'
 import { unreadBadge } from '../lib/voiceChatPanel'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
@@ -43,7 +46,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['join', 'update:showChat'])
 
-const { joinVoiceChannel, leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
+const { joinVoiceChannel, stopScreenShare } = useWebRTC()
 
 const shownChannelId = computed(() => props.channelId || voiceStore.currentChannelId || null)
 const isConnectedHere = computed(() => voiceStore.isConnected && !!shownChannelId.value && voiceStore.currentChannelId === shownChannelId.value)
@@ -70,20 +73,16 @@ async function join() {
   return true
 }
 
-// The quick toggle must swap the running mic, not just flip the setting.
-function toggleNoiseCancelling() {
-  voiceStore.toggleNoiseCancelling()
-  // Without a mic in the call, applyAudioSettings would start a mic test instead.
-  if (voiceStore.localAudioStream) applyAudioSettings()
-}
-
 const videoContainer = ref(null)
 const screenVideoEl = ref(null)
 // Actual resolution of the shared screen as decoded by the browser.
 const videoResolution = ref('')
+// Its shape: the stage takes it (16:9 until the first frame is known).
+const videoAspect = ref(16 / 9)
 function onVideoResize() {
   const el = screenVideoEl.value
   videoResolution.value = el?.videoWidth ? `${el.videoWidth}×${el.videoHeight}` : ''
+  if (el?.videoWidth && el.videoHeight) videoAspect.value = el.videoWidth / el.videoHeight
 }
 
 // Unread messages in this Talk's chat while it is closed (like Discord's
@@ -253,14 +252,6 @@ watch([activeScreenStream, isConnectedHere, ownPreviewPaused, pipActive], ([stre
   })
 }, { immediate: true })
 
-function toggleScreenShare() {
-  if (voiceStore.isScreenSharing) {
-    stopScreenShare()
-  } else {
-    startScreenShare()
-  }
-}
-
 // --- Full screen: the stage's button, a double-click and the F key ---
 const isFullscreen = ref(false)
 function updateFullscreen() {
@@ -345,7 +336,7 @@ onUnmounted(() => {
 // Right-click on the stage: its actions as a menu (outside full screen,
 // where the page's menus cannot show).
 function openStageMenu(e) {
-  if (document.fullscreenElement) return
+  if (document.fullscreenElement || e.target?.closest?.('[data-testid="talk-controls"]')) return
   e.preventDefault()
   menu.show(e, () => {
     const items = [{
@@ -375,30 +366,117 @@ function openStageMenu(e) {
   })
 }
 
+// --- Layout: the stage takes the video's shape in the free area ---
+// The stage, the share cards and the strip are one group, centred in the
+// area: the stage gets what the others leave (no empty bands between them).
+const area = ref(null) // the Talk area under the header (stage, strip, grid)
+const cardsEl = ref(null)
+const stripRegion = ref(null)
+const areaSize = useElementSize(area)
+const cardsSize = useElementSize(cardsEl)
+const stripSize = useElementSize(stripRegion)
+const rootSize = useElementSize(root)
+const AREA_PAD_X = 16
+const AREA_PAD_TOP = 16
+const AREA_PAD_BOTTOM = 12
+const AREA_GAP = 12
+const hasStage = computed(() => !!activeScreenStream.value && isConnectedHere.value)
+const stageBox = computed(() => {
+  const a = areaSize.value
+  let height = a.height - AREA_PAD_TOP - AREA_PAD_BOTTOM
+  if (screenCards.value.length) height -= cardsSize.value.height + AREA_GAP
+  if (tileUsers.value.length) height -= stripSize.value.height + AREA_GAP
+  return fitAspect(a.width - 2 * AREA_PAD_X, height, videoAspect.value)
+})
+const stageStyle = computed(() => {
+  const b = stageBox.value
+  return isFullscreen.value || !b.width ? {} : { width: `${b.width}px`, height: `${b.height}px` }
+})
+// Narrow stage: fewer details in its overlays. Narrow header: no timer.
+const stageNarrow = computed(() => !isFullscreen.value && stageBox.value.width > 0 && stageBox.value.width < 560)
+// Tiny stage: no volume slider and no Picture-in-Picture button (its right-click menu has it).
+const stageTiny = computed(() => stageNarrow.value && stageBox.value.width < 440)
+const headerNarrow = computed(() => rootSize.value.width > 0 && rootSize.value.width < 560)
+// Narrow Talk area: the control bar shows icons only (secondary ones in "more").
+const compactBar = computed(() => {
+  const w = isFullscreen.value ? window.innerWidth : areaSize.value.width
+  return w > 0 && w < COMPACT_BAR_WIDTH
+})
+
+// The participant strip under a stream collapses (remembered per browser).
+const stripCollapsed = ref(loadStripCollapsed())
+function toggleStrip() {
+  stripCollapsed.value = !stripCollapsed.value
+  saveStripCollapsed(stripCollapsed.value)
+}
+
+// The floating controls (call bar, stage overlays) fade out after 3 s
+// without activity in the Talk view; never in a preview, never while a menu
+// from them is open or the pointer or keyboard focus is on them.
+const barPinned = ref(false)
+const overlayHover = ref(false)
+const qualityMenuOpen = ref(false)
+const controls = useAutoHide({
+  enabled: () => isConnectedHere.value,
+  pinned: () => barPinned.value || overlayHover.value || qualityMenuOpen.value || menu.state.open
+})
+const controlsShown = computed(() => controls.visible.value)
+function onActivity() {
+  controls.show()
+}
+function onOverlayPointer(e, on) {
+  if (e.pointerType !== 'touch') overlayHover.value = on
+}
+const fade = computed(() => [
+  'transition-opacity duration-200 motion-reduce:transition-none',
+  controlsShown.value ? 'opacity-100' : 'opacity-0'
+])
+
+// Shared button looks: the header's square buttons, the stage's dark ones.
+const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent'
+function headerButton(active) {
+  return [
+    'relative w-8 h-8 flex items-center justify-center rounded-md border transition-colors motion-reduce:transition-none',
+    focusRing,
+    active
+      ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
+      : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover'
+  ]
+}
+const overlayButton = 'w-8 h-8 flex items-center justify-center rounded-lg text-white transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80'
+
 </script>
 
 <template>
-  <main ref="root" class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none">
+  <main
+    ref="root"
+    class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden select-none"
+    @pointermove="onActivity"
+    @pointerdown="onActivity"
+    @focusin="onActivity"
+  >
     <!-- Talk header -->
     <header class="h-12 px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10">
       <div class="flex items-center gap-3 min-w-0">
-        <div class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm flex-shrink-0">
+        <div
+          v-if="!headerNarrow"
+          class="w-8 h-8 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint flex-shrink-0"
+          aria-hidden="true"
+        >
           <Volume2 class="w-4 h-4" />
         </div>
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <h2 class="font-semibold text-base leading-5 text-mnema-text truncate">
-              {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
-            </h2>
-            <TalkParticipants :users="usersInVoice" :started-at="voiceStore.roomStartedAt[shownChannelId] || ''" />
-            <VoiceTimer
-              v-if="voiceStore.roomStartedAt[shownChannelId]"
-              :since="voiceStore.roomStartedAt[shownChannelId]"
-              data-testid="talk-timer"
-              v-tooltip="$t('talk.runningForTip')"
-              class="text-xs text-mnema-tertiary"
-            />
-          </div>
+        <div class="flex items-center gap-2 min-w-0">
+          <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-[3rem]">
+            {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
+          </h2>
+          <TalkParticipants class="flex-shrink-0" :users="usersInVoice" :started-at="voiceStore.roomStartedAt[shownChannelId] || ''" />
+          <VoiceTimer
+            v-if="voiceStore.roomStartedAt[shownChannelId] && !headerNarrow"
+            :since="voiceStore.roomStartedAt[shownChannelId]"
+            data-testid="talk-timer"
+            v-tooltip="$t('talk.runningForTip')"
+            class="text-xs text-mnema-tertiary flex-shrink-0"
+          />
         </div>
       </div>
 
@@ -409,12 +487,7 @@ function openStageMenu(e) {
           type="button"
           data-testid="voice-chat-toggle"
           @click="emit('update:showChat', !showChat)"
-          :class="[
-            'relative w-8 h-8 flex items-center justify-center rounded-md border transition',
-            showChat
-              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
-              : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
-          ]"
+          :class="headerButton(showChat)"
           v-tooltip.visual="showChat ? $t('talk.closeChat') : $t('talk.openChat')"
           :aria-label="chatUnread ? $t('talk.openChatUnread', { count: chatUnread }) : showChat ? $t('talk.closeChat') : $t('talk.openChat')"
           :aria-pressed="showChat ? 'true' : 'false'"
@@ -434,12 +507,7 @@ function openStageMenu(e) {
           type="button"
           data-testid="hide-no-video"
           @click="voiceStore.toggleHideNoVideo()"
-          :class="[
-            'w-8 h-8 flex items-center justify-center rounded-md border transition',
-            voiceStore.hideNoVideo
-              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
-              : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
-          ]"
+          :class="headerButton(voiceStore.hideNoVideo)"
           v-tooltip="$t('talk.hideNoVideo')"
           :aria-pressed="voiceStore.hideNoVideo ? 'true' : 'false'"
         >
@@ -448,13 +516,9 @@ function openStageMenu(e) {
 
         <!-- Toggle Member List Sidebar -->
         <button
+          type="button"
           @click="chatStore.showMemberList = !chatStore.showMemberList"
-          :class="[
-            'w-8 h-8 flex items-center justify-center rounded-md border transition',
-            chatStore.showMemberList
-              ? 'border-mnema-accent/40 bg-mnema-accent-subtle text-mnema-accent'
-              : 'border-mnema-hairline bg-mnema-surface text-mnema-tertiary hover:text-mnema-text'
-          ]"
+          :class="headerButton(chatStore.showMemberList)"
           v-tooltip="$t('members.toggle')"
           :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
         >
@@ -463,201 +527,231 @@ function openStageMenu(e) {
       </div>
     </header>
 
-    <!-- Center container -->
-    <div class="flex-1 flex flex-col overflow-hidden relative">
-      <!-- 1. Participants and shared screen -->
+    <!-- The Talk area: the stage with its strip, or the grid; the floating
+         controls belong to it (never over the chat panel below). -->
+    <div
+      ref="area"
+      data-testid="talk-area"
+      :class="[
+        'flex-1 min-h-0 relative flex flex-col bg-gradient-to-b from-mnema-raised/40 to-transparent'
+      ]"
+      @dblclick="onAreaDblclick"
+    >
       <div
         :class="[
-          'transition-all flex flex-col items-center relative overflow-hidden bg-gradient-to-b from-mnema-raised/40 to-transparent flex-1 min-h-0 p-6 pb-20 overflow-y-auto',
-          activeScreenStream && isConnectedHere ? 'justify-start' : 'justify-center'
+          'flex-1 min-h-0 flex flex-col items-center gap-3 px-4 pt-4',
+          hasStage ? 'pb-3 justify-center' : !isConnectedHere && usersInVoice.length ? 'pb-28' : isConnectedHere ? 'pb-20' : 'pb-4'
         ]"
-        @dblclick="onAreaDblclick"
       >
-        <!-- The stage: one screen share (mine or one I watch) or one camera -->
+        <!-- The stage: one screen share (mine or one I watch) or one camera,
+             as large as the free space allows in the video's own shape -->
         <div
-          v-if="activeScreenStream && isConnectedHere"
-          ref="videoContainer"
-          data-testid="stage"
-          :data-stage-source="stageSource"
-          :data-fullscreen="isFullscreen ? 'true' : undefined"
-          @contextmenu="openStageMenu"
-          :class="[
-            'w-full max-w-5xl bg-black border-mnema-border relative overflow-hidden flex items-center justify-center shadow-2xl group',
-            isFullscreen ? '' : 'rounded-xl border',
-            'flex-1 min-h-0 mb-3'
-          ]"
+          v-if="hasStage"
+          :class="['w-full flex justify-center flex-shrink-0', stageBox.width ? '' : 'flex-1 min-h-0']"
+          :style="stageBox.height ? { height: `${stageBox.height}px` } : null"
         >
-          <video
-            ref="screenVideoEl"
-            autoplay
-            playsinline
-            :muted="ownOnStage || cameraOnStage"
-            :class="['w-full h-full object-contain', stage?.kind === 'camera' && stage.own ? '-scale-x-100' : '']"
-            @resize="onVideoResize"
-            @loadedmetadata="onVideoResize"
-          ></video>
-
-          <!-- Own share while I'm elsewhere: no preview, but it keeps running -->
           <div
-            v-if="ownPreviewPaused"
-            data-testid="own-stream-paused"
-            class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-mnema-canvas/95 text-center px-6"
+            ref="videoContainer"
+            data-testid="stage"
+            :data-stage-source="stageSource"
+            :data-fullscreen="isFullscreen ? 'true' : undefined"
+            :style="stageStyle"
+            @contextmenu="openStageMenu"
+            :class="[
+              'bg-black relative overflow-hidden flex items-center justify-center shadow-2xl shadow-black/40',
+              isFullscreen ? '' : 'rounded-xl ring-1 ring-mnema-border',
+              stageBox.width ? '' : 'w-full h-full',
+              controlsShown ? '' : 'cursor-none'
+            ]"
           >
-            <span class="text-base font-semibold text-mnema-text">{{ $t('talk.ownStreamRunning') }}</span>
-            <span class="text-sm text-mnema-tertiary">{{ $t('talk.ownStreamRunningHint') }}</span>
-          </div>
+            <video
+              ref="screenVideoEl"
+              autoplay
+              playsinline
+              :muted="ownOnStage || cameraOnStage"
+              :class="['w-full h-full object-contain', stage?.kind === 'camera' && stage.own ? '-scale-x-100' : '']"
+              @resize="onVideoResize"
+              @loadedmetadata="onVideoResize"
+            ></video>
 
-          <!-- Playing in the Picture-in-Picture window -->
-          <div
-            v-else-if="pipActive"
-            data-testid="stage-in-pip"
-            class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-mnema-canvas/95 text-center px-6"
-          >
-            <PictureInPicture2 class="w-7 h-7 text-mnema-tertiary" aria-hidden="true" />
-            <span class="text-base font-semibold text-mnema-text">{{ $t('talk.pipPlaying') }}</span>
-            <button
-              type="button"
-              class="mt-1 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition"
-              @click="pip.exit()"
-            >
-              {{ $t('talk.pipBack') }}
-            </button>
-          </div>
-
-          <div class="absolute top-3 left-3 bg-black/85 border border-white/10 px-2.5 py-1 rounded-md flex items-center gap-2 text-sm text-white">
-            <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80" />
-            <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
-              <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
-              {{ $t('talk.live') }}
-            </span>
-            <ScreenViewers v-if="!cameraOnStage && stage" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1" />
-            <span class="font-mono font-semibold text-xs">{{ stageName }}</span>
-            <span v-if="videoResolution" class="text-white/60 text-xs font-mono">{{ videoResolution }}</span>
-          </div>
-
-          <div class="absolute top-3 right-3 flex items-center gap-2 z-20">
-            <!-- Stream Audio Toggle for Streamer (Own Screen) -->
-            <button
-              v-if="ownOnStage"
-              type="button"
-              data-testid="streamer-audio-toggle"
-              :class="[
-                'p-2 rounded-lg transition text-white',
-                voiceStore.isScreenAudioMuted ? 'bg-mnema-danger/80 hover:bg-mnema-danger' : 'bg-black/75 hover:bg-black/90'
-              ]"
-              v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
-              @click="voiceStore.toggleScreenAudioMute"
-            >
-              <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
-              <Volume2 v-else class="w-4 h-4" />
-            </button>
-            <!-- Stream quality of my own share (its menu cannot show in full screen) -->
-            <StreamQualityMenu v-if="ownOnStage && !isFullscreen" />
-
-            <!-- Viewer Stream Audio Controls (Volume & Mute) -->
+            <!-- Own share while I'm elsewhere: no preview, but it keeps running -->
             <div
-              v-else-if="stageUserId"
-              class="flex items-center gap-1.5 bg-black/75 hover:bg-black/90 px-2 py-1.5 rounded-lg text-white group/vol"
+              v-if="ownPreviewPaused"
+              data-testid="own-stream-paused"
+              class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-mnema-canvas/95 text-center px-6"
             >
-              <button
-                type="button"
-                data-testid="viewer-stream-audio-mute"
-                class="p-0.5 rounded text-white hover:text-mnema-accent transition"
-                :aria-label="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
-                :aria-pressed="isCurrentStreamMuted ? 'true' : 'false'"
-                v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
-                @click="toggleCurrentStreamMute"
-              >
-                <VolumeX v-if="isCurrentStreamMuted" class="w-4 h-4 text-mnema-danger" />
-                <Volume2 v-else class="w-4 h-4" />
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                data-testid="viewer-stream-volume-slider"
-                :aria-label="$t('talk.streamVolume')"
-                :aria-valuetext="`${currentStreamVolume}%`"
-                :value="currentStreamVolume"
-                class="w-16 h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition"
-                v-tooltip="`${currentStreamVolume}%`"
-                @input="onStreamVolumeChange"
-              />
+              <span class="text-base font-semibold text-mnema-text">{{ $t('talk.ownStreamRunning') }}</span>
+              <span class="text-sm text-mnema-tertiary">{{ $t('talk.ownStreamRunningHint') }}</span>
             </div>
 
-            <!-- A camera leaves the stage (back to the screen share or the grid) -->
-            <button
-              v-if="cameraOnStage"
-              type="button"
-              data-testid="stage-unfocus-camera"
-              v-tooltip="$t('talk.unfocusCamera')"
-              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
-              @click="voiceStore.unfocusCamera()"
+            <!-- Playing in the Picture-in-Picture window -->
+            <div
+              v-else-if="pipActive"
+              data-testid="stage-in-pip"
+              class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-mnema-canvas/95 text-center px-6"
             >
-              <X class="w-4 h-4" />
-            </button>
-            <!-- Stop Watching (Viewer) -->
-            <button
-              v-else-if="!ownOnStage"
-              @click="voiceStore.unwatchScreen(stageUserId)"
-              :aria-label="$t('talk.unwatchScreen')"
-              v-tooltip="$t('talk.stopWatching')"
-              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition hover:text-mnema-danger"
-            >
-              <X class="w-4 h-4" />
-            </button>
-            <!-- Stop Sharing (Streamer) -->
-            <button
-              v-else
-              @click="stopScreenShare"
-              v-tooltip="$t('voice.stopShare')"
-              class="p-2 rounded-lg bg-mnema-danger/80 hover:bg-mnema-danger text-white transition"
-            >
-              <MonitorOff class="w-4 h-4" />
-            </button>
+              <PictureInPicture2 class="w-7 h-7 text-mnema-tertiary" aria-hidden="true" />
+              <span class="text-base font-semibold text-mnema-text">{{ $t('talk.pipPlaying') }}</span>
+              <button
+                type="button"
+                :class="['mt-1 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition-colors', focusRing]"
+                @click="pip.exit()"
+              >
+                {{ $t('talk.pipBack') }}
+              </button>
+            </div>
 
-            <!-- Picture-in-Picture (only where the browser has it) -->
-            <button
-              v-if="pip.supported"
-              type="button"
-              data-testid="stage-pip"
-              @click="pip.toggle()"
-              v-tooltip="pipActive ? $t('talk.pipExit') : $t('talk.pip')"
-              :aria-pressed="pipActive ? 'true' : 'false'"
-              :class="[
-                'p-2 rounded-lg text-white transition',
-                pipActive ? 'bg-mnema-accent/80 hover:bg-mnema-accent' : 'bg-black/75 hover:bg-black/90'
-              ]"
-            >
-              <PictureInPicture2 class="w-4 h-4" />
-            </button>
+            <!-- Top: who is on the stage, and its controls (fade with the call bar) -->
+            <div :class="['absolute top-3 inset-x-3 flex items-start justify-between gap-2 z-20 pointer-events-none', fade]">
+              <div class="min-w-0 overflow-hidden pointer-events-auto bg-black/80 border border-white/10 h-8 px-2.5 rounded-lg flex items-center gap-2 text-sm text-white">
+                <Video v-if="cameraOnStage" class="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
+                <span v-else class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 flex-shrink-0">
+                  <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
+                  {{ $t('talk.live') }}
+                </span>
+                <ScreenViewers v-if="!cameraOnStage && stage" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 flex-shrink-0" />
+                <span v-if="!stageTiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
+                <span v-if="videoResolution && !stageNarrow" class="text-white/60 text-xs font-mono flex-shrink-0">{{ videoResolution }}</span>
+              </div>
 
-            <!-- Fullscreen (also a double-click on the stage or F) -->
-            <button
-              type="button"
-              data-testid="stage-fullscreen"
-              @click="toggleFullscreen"
-              v-tooltip="{ text: isFullscreen ? $t('talk.exitFullscreen') : $t('talk.fullscreen'), shortcut: 'F' }"
-              :aria-pressed="isFullscreen ? 'true' : 'false'"
-              class="p-2 rounded-lg bg-black/75 hover:bg-black/90 text-white transition"
-            >
-              <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
-              <Maximize2 v-else class="w-4 h-4" />
-            </button>
+              <div
+                class="flex items-center gap-1.5 flex-shrink-0 pointer-events-auto"
+                @pointerenter="onOverlayPointer($event, true)"
+                @pointerleave="onOverlayPointer($event, false)"
+              >
+                <!-- Stream Audio Toggle for Streamer (Own Screen) -->
+                <button
+                  v-if="ownOnStage"
+                  type="button"
+                  data-testid="streamer-audio-toggle"
+                  :class="[overlayButton, voiceStore.isScreenAudioMuted ? 'bg-mnema-danger/80 hover:bg-mnema-danger' : 'bg-black/75 hover:bg-black/90']"
+                  v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+                  @click="voiceStore.toggleScreenAudioMute"
+                >
+                  <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
+                  <Volume2 v-else class="w-4 h-4" />
+                </button>
+                <!-- Stream quality of my own share (its menu cannot show in full screen) -->
+                <StreamQualityMenu v-if="ownOnStage && !isFullscreen" @open-change="qualityMenuOpen = $event" />
+
+                <!-- Viewer Stream Audio Controls (Volume & Mute) -->
+                <div
+                  v-else-if="stageUserId"
+                  class="h-8 flex items-center gap-1.5 bg-black/75 hover:bg-black/90 px-2 rounded-lg text-white group/vol"
+                >
+                  <button
+                    type="button"
+                    data-testid="viewer-stream-audio-mute"
+                    class="p-0.5 rounded text-white hover:text-mnema-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    :aria-label="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+                    :aria-pressed="isCurrentStreamMuted ? 'true' : 'false'"
+                    v-tooltip="isCurrentStreamMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
+                    @click="toggleCurrentStreamMute"
+                  >
+                    <VolumeX v-if="isCurrentStreamMuted" class="w-4 h-4 text-mnema-danger" />
+                    <Volume2 v-else class="w-4 h-4" />
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    data-testid="viewer-stream-volume-slider"
+                    :aria-label="$t('talk.streamVolume')"
+                    :aria-valuetext="`${currentStreamVolume}%`"
+                    :value="currentStreamVolume"
+                    v-if="!stageTiny"
+                    :class="['h-1 accent-mnema-accent cursor-pointer opacity-80 group-hover/vol:opacity-100 transition-opacity', stageNarrow ? 'w-12' : 'w-16']"
+                    v-tooltip="`${currentStreamVolume}%`"
+                    @input="onStreamVolumeChange"
+                  />
+                </div>
+
+                <!-- A camera leaves the stage (back to the screen share or the grid) -->
+                <button
+                  v-if="cameraOnStage"
+                  type="button"
+                  data-testid="stage-unfocus-camera"
+                  v-tooltip="$t('talk.unfocusCamera')"
+                  :class="[overlayButton, 'bg-black/75 hover:bg-black/90']"
+                  @click="voiceStore.unfocusCamera()"
+                >
+                  <X class="w-4 h-4" />
+                </button>
+                <!-- Stop Watching (Viewer) -->
+                <button
+                  v-else-if="!ownOnStage"
+                  type="button"
+                  @click="voiceStore.unwatchScreen(stageUserId)"
+                  :aria-label="$t('talk.unwatchScreen')"
+                  v-tooltip="$t('talk.stopWatching')"
+                  :class="[overlayButton, 'bg-black/75 hover:bg-black/90 hover:text-mnema-danger']"
+                >
+                  <X class="w-4 h-4" />
+                </button>
+                <!-- Stop Sharing (Streamer) -->
+                <button
+                  v-else
+                  type="button"
+                  @click="stopScreenShare"
+                  v-tooltip="$t('voice.stopShare')"
+                  :class="[overlayButton, 'bg-mnema-danger/80 hover:bg-mnema-danger']"
+                >
+                  <MonitorOff class="w-4 h-4" />
+                </button>
+
+                <!-- Picture-in-Picture (only where the browser has it) -->
+                <button
+                  v-if="pip.supported && !stageTiny"
+                  type="button"
+                  data-testid="stage-pip"
+                  @click="pip.toggle()"
+                  v-tooltip="pipActive ? $t('talk.pipExit') : $t('talk.pip')"
+                  :aria-pressed="pipActive ? 'true' : 'false'"
+                  :class="[overlayButton, pipActive ? 'bg-mnema-accent/80 hover:bg-mnema-accent' : 'bg-black/75 hover:bg-black/90']"
+                >
+                  <PictureInPicture2 class="w-4 h-4" />
+                </button>
+
+                <!-- Fullscreen (also a double-click on the stage or F) -->
+                <button
+                  type="button"
+                  data-testid="stage-fullscreen"
+                  @click="toggleFullscreen"
+                  v-tooltip="{ text: isFullscreen ? $t('talk.exitFullscreen') : $t('talk.fullscreen'), shortcut: 'F' }"
+                  :aria-pressed="isFullscreen ? 'true' : 'false'"
+                  :class="[overlayButton, 'bg-black/75 hover:bg-black/90']"
+                >
+                  <Minimize2 v-if="isFullscreen" class="w-4 h-4" />
+                  <Maximize2 v-else class="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <!-- The call controls float over the stage (in full screen too) -->
+            <div class="absolute inset-x-0 bottom-3 px-3 flex justify-center pointer-events-none z-20">
+              <TalkControlBar
+                class="pointer-events-auto"
+                :visible="controlsShown"
+                :compact="compactBar"
+                :fullscreen="isFullscreen"
+                @update:pinned="barPinned = $event"
+              />
+            </div>
           </div>
         </div>
 
         <!-- Screen shares not on the stage: mine, ones I watch, ones I can opt into -->
         <div
           v-if="screenCards.length"
-          class="w-full max-w-5xl flex flex-wrap gap-2 flex-shrink-0 mb-3"
+          ref="cardsEl"
+          :class="['w-full flex flex-wrap justify-center gap-2 flex-shrink-0', hasStage ? '' : 'max-w-5xl']"
         >
           <div
             v-for="card in screenCards"
             :key="card.key"
             data-testid="screen-card"
             :data-screen-card="card.key"
-            class="flex items-center gap-3 min-w-0 rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
+            class="flex items-center gap-3 min-w-0 max-w-full rounded-lg border border-mnema-accent/30 bg-mnema-accent-subtle pl-3 pr-1.5 py-1.5"
           >
             <Monitor class="w-4 h-4 text-mnema-accent flex-shrink-0" />
             <span class="text-sm text-mnema-text truncate">
@@ -672,16 +766,16 @@ function openStageMenu(e) {
               type="button"
               data-testid="screen-card-action"
               :disabled="card.state === 'pending'"
-              class="h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition disabled:opacity-60 flex-shrink-0"
+              :class="['h-7 px-3 rounded-md text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors disabled:opacity-60 flex-shrink-0', focusRing, 'focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-accent-subtle']"
               @click="onScreenCard(card)"
             >
               {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
             </button>
-            <StreamQualityMenu v-if="card.kind === 'own'" variant="card" />
+            <StreamQualityMenu v-if="card.kind === 'own'" variant="card" @open-change="qualityMenuOpen = $event" />
             <button
               v-if="card.kind === 'remote' && card.state !== 'idle'"
               type="button"
-              class="w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
+              :class="['w-7 h-7 flex items-center justify-center rounded-md text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition-colors flex-shrink-0', focusRing]"
               v-tooltip="$t('talk.unwatchScreen')"
               @click="voiceStore.unwatchScreen(card.user.id)"
             >
@@ -690,44 +784,78 @@ function openStageMenu(e) {
           </div>
         </div>
 
-        <!-- Participant tiles: a strip under the screen share, else the grid -->
+        <!-- Participants under the stage: a strip that collapses (like
+             Discord's "hide members"); the stage then takes the room -->
         <div
-          v-if="activeScreenStream && isConnectedHere"
-          data-testid="talk-strip"
-          :class="['w-full max-w-5xl flex gap-2 overflow-x-auto flex-shrink-0 pb-1', tileUsers.length ? '' : 'hidden']"
+          v-if="hasStage && tileUsers.length"
+          ref="stripRegion"
+          data-testid="talk-strip-region"
+          class="w-full flex-shrink-0 flex flex-col items-center"
         >
-          <ParticipantTile
-            v-for="user in tileUsers"
-            :key="user.id"
-            :user="user"
-            :stream="cameraStreamOf(user)"
-            :is-self="user.id === authStore.user?.id"
-            :speaking="voiceStore.isSpeaking(user.id)"
-            :muted="voiceStore.muteStateOf(user.id).muted"
-            :deafened="voiceStore.muteStateOf(user.id).deafened"
-            :local-muted="voiceStore.isUserLocalMuted(user.id)"
-            :camera-available="cameraAvailable(user)"
-            :camera-hidden="voiceStore.isCameraHidden(user.id)"
-            :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
-            :is-watching="!!voiceStore.watchedScreens[user.id]"
-            :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
-            :camera-focusable="canFocusCamera(user)"
-            :camera-focused="isCameraFocused(user)"
-            @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
-            @focus-camera="onTileFocusCamera(user)"
-            @fullscreen-camera="fullscreenCamera(user.id)"
-            @watch-stream="watchStream(user.id)"
-            @stop-watching="voiceStore.unwatchScreen(user.id)"
-            compact
-            class="flex-shrink-0"
-            @open-profile="chatStore.openUserProfile"
-            @menu="openMemberMenu($event, user)"
-          />
+          <button
+            type="button"
+            data-testid="talk-strip-toggle"
+            :aria-expanded="stripCollapsed ? 'false' : 'true'"
+            aria-controls="talk-strip"
+            v-tooltip="stripCollapsed ? $t('talk.showParticipants') : $t('talk.hideParticipants')"
+            :class="['h-6 px-2 flex items-center gap-1 rounded-full text-xs font-semibold text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition-colors motion-reduce:transition-none', focusRing]"
+            @click="toggleStrip"
+          >
+            <ChevronUp v-if="stripCollapsed" class="w-4 h-4" aria-hidden="true" />
+            <ChevronDown v-else class="w-4 h-4" aria-hidden="true" />
+            <template v-if="stripCollapsed">
+              <Users class="w-3.5 h-3.5" aria-hidden="true" />
+              <span>{{ tileUsers.length }}</span>
+            </template>
+          </button>
+          <div
+            :class="['w-full grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none', stripCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]']"
+          >
+            <div class="min-h-0 overflow-hidden">
+              <div
+                id="talk-strip"
+                data-testid="talk-strip"
+                :data-collapsed="stripCollapsed ? 'true' : 'false'"
+                :inert="stripCollapsed"
+                class="w-full overflow-x-auto pt-1.5 pb-1"
+              >
+                <div class="flex gap-2 w-max mx-auto px-0.5">
+                  <ParticipantTile
+                    v-for="user in tileUsers"
+                    :key="user.id"
+                    :user="user"
+                    :stream="cameraStreamOf(user)"
+                    :is-self="user.id === authStore.user?.id"
+                    :speaking="voiceStore.isSpeaking(user.id)"
+                    :muted="voiceStore.muteStateOf(user.id).muted"
+                    :deafened="voiceStore.muteStateOf(user.id).deafened"
+                    :local-muted="voiceStore.isUserLocalMuted(user.id)"
+                    :camera-available="cameraAvailable(user)"
+                    :camera-hidden="voiceStore.isCameraHidden(user.id)"
+                    :is-screensharing="!!voiceStore.mediaState[user.id]?.screen"
+                    :is-watching="!!voiceStore.watchedScreens[user.id]"
+                    :is-connecting="voiceStore.remoteScreenUserId === user.id && !voiceStore.remoteScreenStream"
+                    :camera-focusable="canFocusCamera(user)"
+                    :camera-focused="isCameraFocused(user)"
+                    @toggle-camera="voiceStore.toggleCameraHidden(user.id)"
+                    @focus-camera="onTileFocusCamera(user)"
+                    @fullscreen-camera="fullscreenCamera(user.id)"
+                    @watch-stream="watchStream(user.id)"
+                    @stop-watching="voiceStore.unwatchScreen(user.id)"
+                    compact
+                    class="flex-shrink-0"
+                    @open-profile="chatStore.openUserProfile"
+                    @menu="openMemberMenu($event, user)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- The grid: every participant as a 16:9 tile, as large as the area allows -->
         <div
-          v-else-if="tileUsers.length"
+          v-else-if="!hasStage && tileUsers.length"
           ref="gridArea"
           data-testid="talk-grid"
           :data-grid-cols="gridLayout.cols"
@@ -775,179 +903,76 @@ function openStageMenu(e) {
 
         <!-- Everyone is hidden: nobody has video on -->
         <div
-          v-else-if="hidingNoVideo && usersInVoice.length"
+          v-else-if="!hasStage && hidingNoVideo && usersInVoice.length"
           data-testid="no-video-hint"
           class="flex-1 flex flex-col items-center justify-center text-center max-w-sm gap-1"
         >
-          <VideoOff class="w-6 h-6 text-mnema-tertiary mb-1" aria-hidden="true" />
+          <div class="w-12 h-12 mb-2 rounded-full bg-mnema-surface border border-mnema-hairline flex items-center justify-center" aria-hidden="true">
+            <VideoOff class="w-5 h-5 text-mnema-tertiary" />
+          </div>
           <p class="font-semibold text-base text-mnema-text">{{ $t('talk.noVideoTitle') }}</p>
           <p class="text-sm text-mnema-tertiary">{{ $t('talk.noVideoHint') }}</p>
           <button
             type="button"
-            class="mt-2 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition"
+            :class="['mt-3 h-8 px-3 rounded-md text-sm font-medium border border-mnema-hairline bg-mnema-surface text-mnema-text hover:bg-mnema-hover transition-colors', focusRing]"
             @click="voiceStore.setHideNoVideo(false)"
           >
             {{ $t('talk.showAllParticipants') }}
           </button>
         </div>
 
-        <!-- Nobody there yet (preview) -->
-        <div v-else class="text-center max-w-sm">
-          <p class="font-semibold text-base text-mnema-text">{{ $t('voice.noOneInVoice') }}</p>
-          <p class="text-sm text-mnema-tertiary mt-0.5">{{ $t('voice.joinToTalk') }}</p>
-        </div>
-
-        <!-- Preview: not connected to this Talk -->
+        <!-- Nobody there yet (preview): what to do, right where one looks -->
         <div
-          v-if="!isConnectedHere"
-          class="absolute bottom-3 flex flex-col items-center gap-2 z-20"
+          v-else-if="!hasStage"
+          data-testid="talk-empty"
+          class="flex-1 flex flex-col items-center justify-center text-center max-w-sm gap-1"
         >
-          <p class="text-xs text-mnema-tertiary text-center max-w-md px-4">{{ $t('talk.previewHint') }}</p>
+          <div class="w-14 h-14 mb-3 rounded-full bg-mnema-band border border-mnema-mint/30 flex items-center justify-center" aria-hidden="true">
+            <Volume2 class="w-6 h-6 text-mnema-mint" />
+          </div>
+          <p class="font-semibold text-base text-mnema-text">{{ $t('voice.noOneInVoice') }}</p>
+          <p class="text-sm text-mnema-tertiary">{{ $t('voice.joinToTalk') }}</p>
           <button
+            v-if="!isConnectedHere"
+            type="button"
             @click="join"
             :disabled="!shownChannelId"
-            class="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition shadow-xl disabled:opacity-40"
+            :class="['mt-4 flex items-center gap-2 h-10 px-6 rounded-full text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors shadow-lg disabled:opacity-40', focusRing, 'focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-canvas']"
           >
             <Volume2 class="w-4 h-4" />
             <span>{{ $t('voice.join') }}</span>
           </button>
         </div>
+      </div>
 
-        <!-- Control dock -->
-        <div v-else class="absolute bottom-3 flex items-center gap-1.5 p-1.5 rounded-full bg-mnema-elevated border border-mnema-border shadow-xl z-20">
-          <!-- Mute Toggle -->
-          <button
-            @click="voiceStore.toggleMute"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.isMuted
-                ? 'bg-mnema-danger text-white'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
-            v-tooltip="voiceStore.isMuted ? $t('voice.unmute') : $t('voice.mute')"
-          >
-            <MicOff v-if="voiceStore.isMuted" class="w-4 h-4" />
-            <Mic v-else class="w-4 h-4" />
-          </button>
+      <!-- Preview with people there: join at the bottom -->
+      <div
+        v-if="!isConnectedHere && usersInVoice.length"
+        class="absolute inset-x-0 bottom-4 px-4 flex flex-col items-center gap-2 z-20"
+      >
+        <p class="text-xs text-mnema-tertiary text-center max-w-md">{{ $t('talk.previewHint') }}</p>
+        <button
+          type="button"
+          @click="join"
+          :disabled="!shownChannelId"
+          :class="['flex items-center gap-2 h-10 px-6 rounded-full text-sm font-semibold bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover transition-colors shadow-xl disabled:opacity-40', focusRing, 'focus-visible:ring-offset-2 focus-visible:ring-offset-mnema-canvas']"
+        >
+          <Volume2 class="w-4 h-4" />
+          <span>{{ $t('voice.join') }}</span>
+        </button>
+      </div>
 
-          <!-- Deafen Toggle -->
-          <button
-            @click="voiceStore.toggleDeafen"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.isDeafened
-                ? 'bg-mnema-danger text-white'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.isDeafened ? 'true' : 'false'"
-            v-tooltip="voiceStore.isDeafened ? $t('voice.undeafen') : $t('voice.deafen')"
-          >
-            <Headphones class="w-4 h-4" />
-          </button>
-
-          <!-- Camera -->
-          <button
-            @click="toggleCamera"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.isCameraOn
-                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
-            v-tooltip="voiceStore.isCameraOn ? $t('talk.stopCamera') : $t('talk.startCamera')"
-            :aria-label="voiceStore.isCameraOn ? $t('talk.stopCamera') : $t('talk.startCamera')"
-          >
-            <VideoOff v-if="!voiceStore.isCameraOn" class="w-4 h-4" />
-            <Video v-else class="w-4 h-4" />
-          </button>
-
-          <!-- All other cameras -->
-          <button
-            @click="voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff)"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.allCamerasOff
-                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.allCamerasOff ? 'true' : 'false'"
-            v-tooltip="voiceStore.allCamerasOff ? $t('talk.allCamerasOn') : $t('talk.allCamerasOff')"
-          >
-            <EyeOff v-if="voiceStore.allCamerasOff" class="w-4 h-4" />
-            <Eye v-else class="w-4 h-4" />
-          </button>
-
-          <!-- Screen share -->
-          <button
-            @click="toggleScreenShare"
-            :class="[
-              'flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold transition',
-              voiceStore.isScreenSharing
-                ? 'bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
-            v-tooltip="voiceStore.isScreenSharing ? $t('voice.stopShare') : $t('voice.share')"
-          >
-            <Monitor class="w-4 h-4" />
-            <span class="text-sm">{{ voiceStore.isScreenSharing ? $t('talk.stopShareShort') : $t('talk.shareShort') }}</span>
-          </button>
-
-          <!-- Stream audio mute toggle for streamer -->
-          <button
-            v-if="voiceStore.isScreenSharing"
-            @click="voiceStore.toggleScreenAudioMute"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.isScreenAudioMuted
-                ? 'bg-mnema-danger/20 text-mnema-danger border border-mnema-danger/30'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-text'
-            ]"
-            :aria-pressed="voiceStore.isScreenAudioMuted ? 'true' : 'false'"
-            v-tooltip="voiceStore.isScreenAudioMuted ? $t('talk.unmuteStreamAudio') : $t('talk.muteStreamAudio')"
-          >
-            <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
-            <Volume2 v-else class="w-4 h-4" />
-          </button>
-
-          <!-- Noise filter toggle -->
-          <button
-            @click="toggleNoiseCancelling"
-            :class="[
-              'p-2.5 rounded-full transition-all',
-              voiceStore.noiseCancelling
-                ? 'bg-mnema-accent/20 text-mnema-accent border border-mnema-accent/30'
-                : 'bg-mnema-surface hover:bg-mnema-hover text-mnema-tertiary'
-            ]"
-            :aria-pressed="voiceStore.noiseCancelling ? 'true' : 'false'"
-            v-tooltip="$t('talk.noiseToggleTip')"
-          >
-            <Sparkles class="w-4 h-4" />
-          </button>
-
-          <!-- Audio settings -->
-          <button
-            @click="voiceStore.showAudioSettings = true"
-            class="p-2.5 rounded-full transition-all bg-mnema-surface hover:bg-mnema-hover text-mnema-text"
-            v-tooltip="$t('audio.settings')"
-          >
-            <Sliders class="w-4 h-4" />
-          </button>
-
-          <div class="w-px h-5 bg-mnema-hairline mx-0.5"></div>
-
-          <!-- Leave -->
-          <button
-            @click="leaveVoiceChannel"
-            class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold bg-mnema-danger text-white hover:bg-mnema-danger/90 transition shadow-sm"
-            v-tooltip="$t('voice.leave')"
-          >
-            <PhoneOff class="w-4 h-4" />
-            <span class="text-sm">{{ $t('voice.leave') }}</span>
-          </button>
-        </div>
+      <!-- Connected, no stage: the call controls float at the bottom -->
+      <div
+        v-else-if="isConnectedHere && !hasStage"
+        class="absolute inset-x-0 bottom-3 px-3 flex justify-center pointer-events-none z-20"
+      >
+        <TalkControlBar
+          class="pointer-events-auto"
+          :visible="controlsShown"
+          :compact="compactBar"
+          @update:pinned="barPinned = $event"
+        />
       </div>
     </div>
 
