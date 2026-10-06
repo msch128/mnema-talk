@@ -570,6 +570,8 @@
         "turn": "Optional, as a TURN server for connections behind strict firewalls.",
         "updater": "Optional, updates the app container when the admin asks for it."
       },
+      "sourceBefore": "The complete source code of this software is at ",
+      "sourceAfter": " (© Marius Schröder, GNU AGPL-3.0).",
       "fullListBefore": "The complete list with every library, version and license text is in ",
       "fullListAfter": " in the source code."
     },

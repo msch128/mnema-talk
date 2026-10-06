@@ -3,8 +3,11 @@
 // location is THIRD_PARTY_NOTICES.md; keep both in sync when dependencies
 // change (thirdParty.test.js checks the web dependencies).
 
+// AGPL-3.0 section 13: users of a network deployment get the source. A modified
+// deployment must point this at its own source.
+export const SOURCE_URL = 'https://github.com/msch128/mnema-talk'
 export const NOTICES_FILE = 'THIRD_PARTY_NOTICES.md'
-export const NOTICES_URL = `https://github.com/msch128/mnema-talk/blob/main/${NOTICES_FILE}`
+export const NOTICES_URL = `${SOURCE_URL}/blob/main/${NOTICES_FILE}`
 
 export const THIRD_PARTY = [
   {
