@@ -173,4 +173,11 @@ describe('stream quality menu', () => {
     item('change-source').click()
     expect(rtc.startScreenShare).toHaveBeenCalled()
   })
+
+  it('opens screen share modal via stream settings', async () => {
+    const voice = await open()
+    expect(voice.showScreenShareModal).toBe(false)
+    item('stream-settings').click()
+    expect(voice.showScreenShareModal).toBe(true)
+  })
 })

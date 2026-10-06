@@ -7,7 +7,7 @@
 import { computed, ref, watch } from 'vue'
 import {
   Mic, MicOff, Headphones, HeadphoneOff, Video, VideoOff, Eye, EyeOff, Monitor,
-  Volume2, VolumeX, Sparkles, Sliders, PhoneOff, Ellipsis
+  Volume2, VolumeX, Sparkles, Sliders, Settings, PhoneOff, Ellipsis
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -59,6 +59,9 @@ function toggleMore() {
     ]
     if (voiceStore.isScreenSharing) {
       items.push({ type: 'checkbox', id: 'stream-audio', label: t('talk.muteStreamAudio'), checked: voiceStore.isScreenAudioMuted, action: () => voiceStore.toggleScreenAudioMute() })
+      if (!props.fullscreen) {
+        items.push({ id: 'stream-settings', label: t('talk.quality.streamModalTitle'), icon: Settings, action: () => voiceStore.openScreenShareModal() })
+      }
     }
     if (!props.fullscreen) {
       items.push({ type: 'separator' }, { id: 'audio-settings', label: t('audio.settings'), icon: Sliders, action: () => { voiceStore.showAudioSettings = true } })

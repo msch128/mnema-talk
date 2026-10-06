@@ -1119,6 +1119,20 @@ describe('VoiceStage floating controls', () => {
     expect(document.body.textContent).toContain('Noise suppression')
   })
 
+  it('offers stream settings in more menu while sharing screen', async () => {
+    const voice = connected()
+    voice.isScreenSharing = true
+    const w = mount(TalkControlBar, { props: { compact: true }, attachTo: document.body })
+    mounted.push(w)
+    await w.get('[data-testid="talk-more"]').trigger('click')
+    await flushPromises()
+    const item = document.querySelector('[data-menu-item="stream-settings"]')
+    expect(item).not.toBeNull()
+    expect(voice.showScreenShareModal).toBe(false)
+    item.click()
+    expect(voice.showScreenShareModal).toBe(true)
+  })
+
   it('are never there in a preview (nothing hides the Join button)', async () => {
     vi.useFakeTimers()
     try {
