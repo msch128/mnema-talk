@@ -18,6 +18,20 @@ type voiceKey struct {
 	ch   uuid.UUID
 }
 
+// MuteState is whether a voice member muted their microphone or deafened.
+type MuteState struct {
+	Muted    bool `json:"muted"`
+	Deafened bool `json:"deafened"`
+}
+
+// VoiceUser is a member of a voice room, since when they are in it and
+// whether they are muted or deafened.
+type VoiceUser struct {
+	auth.User
+	JoinedAt time.Time `json:"joined_at"`
+	MuteState
+}
+
 // voiceSnapshot copies the current voice rooms (channel → users).
 func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 	h.mu.RLock()

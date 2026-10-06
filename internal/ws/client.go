@@ -1,11 +1,105 @@
 package ws
 
 import (
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
+
+// Client is one WebSocket connection.
+type Client struct {
+	hub  *Hub
+	conn *websocket.Conn
+	send chan []byte
+	User auth.User
+
+	tokenVersion int
+	closeOnce    sync.Once
+
+	// send is never closed: SendEvent runs from goroutines other than the
+	// read loop (SFU callbacks, admin kicks), and a send on a closed channel
+	// panics. done is closed instead once the client is unregistered; the
+	// write loop exits on it and deliver drops further events.
+	done     chan struct{}
+	doneOnce sync.Once
+	closed   atomic.Bool
+
+	// idle is set by the client after a while without input; it turns an
+	// "online" user into "away" while all of their connections are idle.
+	idle bool // guarded by hub.mu
+
+	// voiceMu serializes this connection's voice joins and leaves (its own
+	// read loop, an admin kick, a deleted channel), so a leave never runs
+	// between a join's presence update and its SFU peer being recorded.
+	voiceMu sync.Mutex
+
+	mu      sync.Mutex
+	voiceCh *uuid.UUID
+	// sfuPeer is this connection's own media peer. Another connection of the
+	// same user (reconnect, second tab) gets its own, and tearing this one
+	// down never touches the other.
+	sfuPeer *sfu.Peer
+
+	// typing is when a typing notice was last relayed, per channel.
+	typing map[uuid.UUID]time.Time
+	// speaking is the last relayed speaking state; speakWindow/speakCount
+	// cap how often it may change.
+	speaking    bool
+	speakWindow time.Time
+	speakCount  int
+	// diagWindow/diagCount rate-limit logged client diagnostics.
+	diagWindow time.Time
+	diagCount  int
+}
+
+func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
+	return &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
+		User: user, tokenVersion: tokenVersion}
+}
+
+// close tears the connection down once; readPump then unregisters the client.
+func (c *Client) close() {
+	c.closeOnce.Do(func() {
+		if c.conn != nil {
+			_ = c.conn.Close()
+		}
+	})
+}
+
+// shutdown marks the client as gone: later events are dropped and the write
+// loop stops. Safe to call more than once and concurrently with deliver.
+func (c *Client) shutdown() {
+	c.doneOnce.Do(func() {
+		c.closed.Store(true)
+		if c.done != nil {
+			close(c.done)
+		}
+	})
+}
+
+// deliver queues data for c; a client whose buffer is full is too slow to keep
+// up and gets disconnected rather than blocking everyone else.
+func (c *Client) deliver(data []byte) {
+	if c.closed.Load() {
+		return
+	}
+	select {
+	case c.send <- data:
+	default:
+		go c.close()
+	}
+}
+
+func (c *Client) SendEvent(eventType string, payload any) {
+	if data := encode(eventType, payload); data != nil {
+		c.deliver(data)
+	}
+}
 
 const (
 	// typingThrottle is how often one connection's typing notice is relayed
