@@ -5,7 +5,8 @@ import { nextTick } from 'vue'
 import ThreadSidebar from './ThreadSidebar.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import { setLocale } from '../i18n'
+import { useToastStore } from '../stores/toast'
+import { setLocale, t } from '../i18n'
 
 let w
 
@@ -128,5 +129,111 @@ describe('ThreadSidebar content', () => {
     await flushPromises()
     expect(chat.uploadThreadMedia).toHaveBeenCalled()
     expect(value).toBe('')
+  })
+})
+
+describe('ThreadSidebar replies', () => {
+  const textarea = () => w.find('textarea')
+
+  it('sends with Enter, keeps Shift+Enter for new lines and ignores blank input', async () => {
+    const chat = setup()
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue()
+    await textarea().setValue('   ')
+    key(textarea(), { key: 'Enter' })
+    await flushPromises()
+    expect(send).not.toHaveBeenCalled()
+
+    await textarea().setValue('  hallo thread  ')
+    expect(key(textarea(), { key: 'Enter', shiftKey: true }).defaultPrevented).toBe(false)
+    expect(send).not.toHaveBeenCalled()
+    expect(key(textarea(), { key: 'Enter' }).defaultPrevented).toBe(true)
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('hallo thread', null)
+    expect(textarea().element.value).toBe('')
+  })
+
+  it('sends as a reply to the chosen message, then clears the target', async () => {
+    const chat = setup()
+    const send = vi.spyOn(chat, 'sendThreadReply').mockResolvedValue()
+    key(w.find('[data-reply-id="r3"]'), { key: 'r' })
+    await nextTick()
+    expect(w.text()).toContain('Antwort an')
+    await textarea().setValue('genau')
+    key(textarea(), { key: 'Enter' })
+    await flushPromises()
+    expect(send).toHaveBeenCalledWith('genau', 'r3')
+    expect(w.text()).not.toContain('Antwort an')
+  })
+
+  it('Escape in the composer cancels the reply target', async () => {
+    setup()
+    await w.find('[data-reply-id="root"] button.absolute').trigger('click')
+    expect(w.text()).toContain('Antwort an')
+    expect(key(textarea(), { key: 'Escape' }).defaultPrevented).toBe(true)
+    await nextTick()
+    expect(w.text()).not.toContain('Antwort an')
+  })
+
+  it('keeps the text and reports a failed send', async () => {
+    const chat = setup()
+    vi.spyOn(chat, 'sendThreadReply').mockRejectedValueOnce(new Error('')).mockRejectedValueOnce(new Error('zu lang'))
+    await textarea().setValue('wichtig')
+    key(textarea(), { key: 'Enter' })
+    await flushPromises()
+    expect(textarea().element.value).toBe('wichtig')
+    expect(useToastStore().toasts.at(-1)).toMatchObject({ type: 'error', text: t('thread.sendFailed') })
+    key(textarea(), { key: 'Enter' })
+    await flushPromises()
+    expect(useToastStore().toasts.at(-1).text).toBe('zu lang')
+  })
+
+  it('a successful upload clears the reply target', async () => {
+    const chat = setup()
+    const upload = vi.spyOn(chat, 'uploadThreadMedia').mockResolvedValue({})
+    key(w.find('[data-reply-id="r1"]'), { key: 'r' })
+    await nextTick()
+    const input = w.find('input[type="file"]').element
+    Object.defineProperty(input, 'files', { configurable: true, value: [new File(['x'], 'a.png', { type: 'image/png' })] })
+    input.dispatchEvent(new Event('change'))
+    await flushPromises()
+    expect(upload).toHaveBeenCalledWith(expect.any(File), '', 'r1')
+    expect(w.text()).not.toContain('Antwort an')
+  })
+
+  it('jumps to the replied message, or says it is gone', async () => {
+    useAuthStore().user = { id: 'me', username: 'me', role: 'user' }
+    const chat = useChatStore()
+    chat.activeChannel = { id: 'ch1', name: 'allgemein', type: 'text' }
+    chat.activeThread = msg('root', 'u2')
+    chat.threadReplies = [
+      msg('r1', 'u2'),
+      msg('r2', 'me', { reply_to_id: 'r1', reply_to: { id: 'r1', username: 'u2', display_name: 'U2', content: 'text r1' } }),
+      msg('r3', 'me', { reply_to_id: 'gone', reply_to: { id: 'gone', deleted: true } }),
+      msg('r4', 'me', { reply_to_id: 'elsewhere', reply_to: { id: 'elsewhere', username: 'x', display_name: 'X', content: 'old' } })
+    ]
+    w = mount(ThreadSidebar, { attachTo: document.body })
+    const target = w.find('[data-reply-id="r1"]').element
+    target.scrollIntoView = vi.fn()
+
+    await w.find('[data-reply-id="r2"] [data-reply-preview] button').trigger('click')
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+
+    const notFound = () => useToastStore().toasts.filter(x => x.text === t('chat.messageNotFound')).length
+    expect(notFound()).toBe(0)
+    await w.find('[data-reply-id="r3"] [data-reply-preview] button').trigger('click')
+    expect(notFound()).toBe(1)
+    await w.find('[data-reply-id="r4"] [data-reply-preview] button').trigger('click')
+    expect(notFound()).toBe(2)
+  })
+
+  it('shows the loading state and closes', async () => {
+    const chat = setup()
+    chat.threadReplies = []
+    chat.isThreadLoading = true
+    const close = vi.spyOn(chat, 'closeThread').mockImplementation(() => {})
+    await nextTick()
+    expect(w.text()).toContain(t('thread.loading'))
+    await w.find('button').trigger('click')
+    expect(close).toHaveBeenCalled()
   })
 })
