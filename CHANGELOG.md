@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.4](https://github.com/msch128/mnema-talk/compare/v0.3.3...v0.3.4) (2026-10-06)
+
+
+### Features
+
+* **talk:** stream quality menu like Discord (mode, resolution, frame rate) ([f98d0a8](https://github.com/msch128/mnema-talk/commit/f98d0a82e1400ad983a21be9faa4b6b377354ad4))
+
+
+### Bug Fixes
+
+* **talk:** the stage's volume slider controls the stream's audio, 0-100 % ([e355320](https://github.com/msch128/mnema-talk/commit/e3553207322bbce2302c3ad80a2a0257459dba84))
+
 ## [0.3.3](https://github.com/msch128/mnema-talk/compare/v0.3.2...v0.3.3) (2026-10-06)
 
 
