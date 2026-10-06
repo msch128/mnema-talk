@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.2](https://github.com/msch128/mnema-talk/compare/v0.3.1...v0.3.2) (2026-10-06)
+
+
+### Features
+
+* **admin:** check GitHub for new releases every 30 minutes ([638f608](https://github.com/msch128/mnema-talk/commit/638f608c41d6392fb925b750b9c1529c5beabc3d))
+* **admin:** optional self-update through an isolated updater sidecar ([e77900d](https://github.com/msch128/mnema-talk/commit/e77900d83ce1c10853c11239c4d64d1f4d3cbfbe))
+* **admin:** system tab with version and health ([6792c0a](https://github.com/msch128/mnema-talk/commit/6792c0afd4f1ed00ca87c0dfe82d78d86df89e77))
+* **build:** bake version and revision into the binary and the web app ([5c0cde0](https://github.com/msch128/mnema-talk/commit/5c0cde031077fa7a8270a7f67b75a05aee668ddd))
+* **web:** offer a reload when the server runs a newer version ([4dc0c0f](https://github.com/msch128/mnema-talk/commit/4dc0c0ff86dddae4a783b18fa2ba1ba3d1f6b0e3))
+
 ## [0.3.1](https://github.com/msch128/mnema-talk/compare/v0.3.0...v0.3.1) (2026-10-06)
 
 
