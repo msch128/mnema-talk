@@ -50,7 +50,10 @@ type Config struct {
 	LinkPreviews bool
 	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
 	// signed-in members. Off by default.
-	APIDocs          bool
+	APIDocs bool
+	// UpdateCheck lets the server ask GitHub every 30 minutes for the latest
+	// release (admin System tab). false = no outbound request at all.
+	UpdateCheck      bool
 	WebRTCUDPPortMin uint16
 	WebRTCUDPPortMax uint16
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
@@ -167,6 +170,10 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	updateCheck, err := getBool("UPDATE_CHECK_ENABLED", true)
+	if err != nil {
+		return nil, err
+	}
 
 	cfg := &Config{
 		Port:                 strconv.Itoa(int(httpPort)),
@@ -190,6 +197,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		MaxUploadMB:          maxUpload,
 		LinkPreviews:         linkPreviews,
 		APIDocs:              apiDocs,
+		UpdateCheck:          updateCheck,
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		MetricsToken:         get("METRICS_TOKEN", ""),

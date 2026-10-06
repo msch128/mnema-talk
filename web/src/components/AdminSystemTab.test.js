@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import AdminSystemTab from './AdminSystemTab.vue'
 import { setLocale } from '../i18n'
+import { useAppVersionStore } from '../stores/appVersion'
 
 export function systemStatus(overrides = {}) {
   return {
@@ -15,6 +16,10 @@ export function systemStatus(overrides = {}) {
         websocket_connections: 5, online_users: 4, turn_configured: true, stun_configured: false
       },
       runtime: { started_at: '2026-10-05T10:00:00Z', uptime_seconds: 93784, go_version: 'go1.27.0', goroutines: 42, mem_alloc_bytes: 10 * 1024 * 1024, mem_sys_bytes: 20 * 1024 * 1024 }
+    },
+    update: {
+      check_enabled: true, current_version: '0.4.0', latest_version: '0.4.0', update_available: false,
+      release_url: '', release_notes: '', published_at: null, checked_at: '2026-10-05T11:00:00Z', check_error: '', retry_at: null
     },
     ...overrides
   }
@@ -58,6 +63,48 @@ describe('AdminSystemTab', () => {
     const w = mount(AdminSystemTab)
     await flushPromises()
     expect(w.find('[data-testid="system-health"]').text()).toContain('Not reachable')
+  })
+
+  it('shows an available update with plain-text notes and a release link', async () => {
+    const st = systemStatus()
+    st.update = {
+      ...st.update, current_version: '0.3.0', latest_version: '0.4.0', update_available: true,
+      release_url: 'https://github.com/msch128/mnema-talk/releases/tag/v0.4.0',
+      release_notes: '<img src=x onerror=alert(1)> **bold**'
+    }
+    apiMock.mockResolvedValue(st)
+    const w = mount(AdminSystemTab)
+    await flushPromises()
+    expect(w.find('[data-testid="update-available"]').text()).toContain('0.3.0 → 0.4.0')
+    const notes = w.find('[data-testid="update-notes"]')
+    expect(notes.text()).toBe('<img src=x onerror=alert(1)> **bold**')
+    expect(notes.find('img').exists()).toBe(false)
+    const link = w.find('[data-testid="update-release-link"]')
+    expect(link.attributes('href')).toBe('https://github.com/msch128/mnema-talk/releases/tag/v0.4.0')
+    expect(link.attributes('rel')).toContain('noopener')
+    expect(w.find('[data-testid="update-command"]').text()).toContain('docker compose pull app')
+    expect(useAppVersionStore().adminUpdateAvailable).toBe(true)
+  })
+
+  it('checks now on request', async () => {
+    apiMock.mockResolvedValueOnce(systemStatus())
+    const w = mount(AdminSystemTab)
+    await flushPromises()
+    apiMock.mockResolvedValueOnce({ ...systemStatus().update, latest_version: '0.5.0', update_available: true, current_version: '0.4.0' })
+    await w.find('[data-testid="update-check-now"]').trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith('/api/admin/system/check', { method: 'POST' })
+    expect(w.find('[data-testid="update-available"]').text()).toContain('0.5.0')
+  })
+
+  it('says when the update check is disabled', async () => {
+    const st = systemStatus()
+    st.update = { ...st.update, check_enabled: false, latest_version: '' }
+    apiMock.mockResolvedValue(st)
+    const w = mount(AdminSystemTab)
+    await flushPromises()
+    expect(w.find('[data-testid="update-check-disabled"]').exists()).toBe(true)
+    expect(w.find('[data-testid="update-check-now"]').exists()).toBe(false)
   })
 
   it('shows an error toast when loading fails', async () => {

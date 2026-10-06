@@ -108,7 +108,8 @@
   "update": {
     "reloadBanner": "Eine neue Version ist verfügbar – hier klicken zum Neuladen",
     "reloadInCall": "Dein Anruf wird dabei kurz getrennt und danach automatisch wieder verbunden.",
-    "dismiss": "Später"
+    "dismiss": "Später",
+    "badge": "Update {version}"
   },
   "login": {
     "subtitleLogin": "Anmelden bei Mnema Talk",
@@ -493,6 +494,8 @@
       "stunBefore": " Zum Aufbau der Sprachverbindung fragt Ihr Browser folgende STUN-Server nach Ihrer öffentlichen Adresse: ",
       "stunAfter": ". Dabei wird Ihre IP-Adresse an den jeweiligen Betreiber dieser Server übermittelt; Inhalte von Gesprächen oder Nachrichten werden nicht übertragen.",
       "noStun": "Es werden keine externen STUN- oder TURN-Server von Drittanbietern verwendet.",
+    "updateCheckTitle": "Update-Prüfung:",
+    "updateCheck": " Der Server fragt etwa alle 30 Minuten bei GitHub (api.github.com, GitHub Inc., USA) nach, ob eine neue Version von Mnema Talk erschienen ist. Dabei sieht GitHub nur die IP-Adresse des Servers; Daten von Nutzerinnen und Nutzern werden nicht übertragen. Der Betreiber kann die Prüfung abschalten.",
       "dataHeading": "Kategorien & Speicherdauer",
       "colCategory": "Datenkategorie",
       "colPurpose": "Zweck",
@@ -679,7 +682,24 @@
       "uptimeHours": "{h} Std {m} Min",
       "uptimeMinutes": "{m} Min",
       "memory": "Speicher (belegt / reserviert)",
-      "goroutines": "Goroutinen"
+      "goroutines": "Goroutinen",
+      "updates": "Updates",
+      "checkDisabled": "Die Update-Prüfung ist abgeschaltet (UPDATE_CHECK_ENABLED=false). Der Server fragt GitHub nicht.",
+      "updateAvailable": "Neue Version verfügbar: {current} → {latest}",
+      "latestIs": "Aktuell – neueste Version ist {latest}",
+      "notCheckedYet": "Noch nicht geprüft",
+      "checkedAt": "Zuletzt geprüft: {when}",
+      "checkFailed": "Prüfung fehlgeschlagen: {reason}",
+      "checkNow": "Jetzt prüfen",
+      "checking": "Prüfe …",
+      "checkTooSoon": "Gerade erst geprüft – bitte in einer Minute noch einmal.",
+      "updateFound": "Version {version} ist verfügbar",
+      "upToDate": "Mnema Talk ist aktuell",
+      "releaseNotesLink": "Änderungen in {version} auf GitHub",
+      "manualUpdate": "Manuell aktualisieren (auf dem Server, im Verzeichnis mit docker-compose.yml):",
+      "copy": "Kopieren",
+      "copied": "Befehl kopiert",
+      "copyFailed": "Kopieren nicht möglich"
     },
     "users": "Nutzerverwaltung",
     "searchUsers": "Nutzer suchen …",

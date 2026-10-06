@@ -23,6 +23,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/ws"
 	"github.com/msch128/mnema-talk/web"
 )
@@ -38,6 +39,9 @@ type Deps struct {
 	Events events.Publisher
 	// Version is the build version reported by /api/health.
 	Version string
+	// Updates is the release checker (nil when UPDATE_CHECK_ENABLED=false;
+	// then nothing is ever requested from GitHub). The caller runs its loop.
+	Updates *update.Checker
 	// StorageReady reports whether object storage is usable (nil = not
 	// checked); /api/health answers 503 while it returns an error.
 	StorageReady func() error
@@ -117,6 +121,7 @@ func NewRouter(d Deps) (*Router, error) {
 		hasStore: d.Store != nil,
 		version:  d.Version,
 		started:  time.Now(),
+		updates:  d.Updates,
 	}
 	if systemH.version == "" {
 		systemH.version = "dev"
