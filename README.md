@@ -6,18 +6,56 @@ single Go binary with the web app and a WebRTC SFU built in.
 
 ## Features
 
-- **One community, no guilds**: categories with text and voice channels.
-- **Text chat**: real-time messages over WebSocket, replies/threads, reactions,
-  Markdown, file and image attachments, and live presence.
-- **Replies**: Discord-style replies quote the original message and jump to it, even thousands of messages back.
-- **Voice hangouts**: click a voice channel and you are in, no ringing. A page
+**Chat**
+
+- **One community, no guilds**: categories with text channels and voice
+  channels. Every voice channel has its own text chat as well.
+- **Text chat** over WebSocket: Markdown, replies that quote and jump to the
+  original (even thousands of messages back), threads, reactions, emoji,
+  @mentions, file and image attachments, link cards, search, typing notices,
+  unread and mention markers, per-channel notification settings and live
+  presence with status text.
+
+**Talk (voice channels)**
+
+- **Hangout spots**: click a voice channel and you are in, no ringing. A page
   reload within 30 seconds puts you back into the call.
+- **Voice**: voice activity or push-to-talk (while the tab has focus), noise
+  suppression, per-person volume and mute, output device choice, mic test and
+  sound effects.
+- **Discord-like Talk view**: a participant grid that fits the free space, a
+  **stage** for the screen share or camera you focus, cameras on the stage,
+  full screen (double-click or `F`), **picture-in-picture** that keeps
+  playing while you read a text channel, an option to hide participants
+  without video, and the voice channel's chat as a resizable panel under the
+  stage (deep link `/v/<id>/chat`).
 - **Screen sharing** up to source quality (e.g. 1440p/4K at 60 FPS, hardware
-  encoding in the browser). The Pion-based SFU forwards RTP packets and never transcodes.
+  encoding in the browser). Watching is opt-in: a share is only sent to the
+  people who click "Watch", and everyone sees who is watching. The sharer's
+  **quality menu** sets mode (Gaming, Screen, Custom), resolution, frame rate
+  and stream sound, with live codec and bitrate stats; every new share starts
+  at 1080p / 30 FPS. Viewers set the **stream's volume** separately from the
+  person's voice (0–100 %, default 50 %, remembered per sharer). One share per
+  person; starting another one replaces it.
+- The Pion-based SFU forwards RTP packets and never transcodes (see
+  [doc/architecture.md](doc/architecture.md)).
+
+**Administration**
+
 - **Invite-only**: no public registration; the admin (default `Herzog`,
   configurable) creates invite codes.
+- **Sidebar management** for admins: drag and drop channels and categories
+  (mouse, pen, touch) or move them with `Alt+↑/↓`; every move is saved at
+  once and can be undone from a toast. Context menus create, duplicate and
+  edit channels and categories, collapse or expand them and mark them read.
+- **Admin console**: users (disable, kick, reset password, revoke sessions),
+  channel layout, invites, media (usage, pruning) and a **System** tab with
+  version, health of database, storage and voice, the update check against
+  GitHub releases and an optional "Update now" (see [Updates](#updates)).
 - **Privacy-minded defaults**: no third-party STUN unless configured, no
-  automatic data deletion unless enabled, generic legal/privacy page driven by env vars.
+  automatic data deletion unless enabled, generic legal/privacy page driven by
+  env vars. The security model is summarised in [SECURITY.md](SECURITY.md).
+- UI in German and English (chosen per account).
 
 ## Architecture
 
@@ -37,7 +75,8 @@ single Go binary with the web app and a WebRTC SFU built in.
       (data)              (uploads, avatars)
 ```
 
-`docker compose` runs three containers: `app`, `postgres` and `seaweedfs`. Any
+`docker compose` runs three containers: `app`, `postgres` and `seaweedfs`
+(plus `coturn` and the updater sidecar when you enable their profiles). Any
 S3-compatible store can replace SeaweedFS.
 
 | Part      | Tech |
@@ -45,6 +84,17 @@ S3-compatible store can replace SeaweedFS.
 | Backend   | Go, chi, pgx, gorilla/websocket, Pion WebRTC v4, AWS SDK v2 (S3) |
 | Frontend  | Vue 3, Pinia, Vite, Tailwind CSS (`web/`) |
 | Storage   | PostgreSQL 17, S3 (SeaweedFS by default) |
+
+More documentation in [`doc/`](doc/):
+
+- [doc/architecture.md](doc/architecture.md): components, data flow for chat
+  and voice, frontend structure, design decisions
+- [doc/operations.md](doc/operations.md): configuration reference, reverse
+  proxy, TURN, backups, monitoring, troubleshooting
+- [doc/upgrade.md](doc/upgrade.md): upgrade notes per version and the update
+  procedure
+- [doc/desktop-app.md](doc/desktop-app.md): plan for a desktop app with global
+  push-to-talk
 
 ## Quickstart (Docker Compose)
 
@@ -94,7 +144,32 @@ make coverage          # Go (unit + integration) and web coverage: coverage.out,
 make lint              # gofmt, go vet, eslint
 make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
+make e2e               # Playwright (Chromium) against the real binary, see below
 ```
+
+### Browser tests (e2e)
+
+`make e2e` (= `e2e/run.sh`) builds the web app and the binary, starts a
+throwaway PostgreSQL and SeaweedFS with Docker on loopback ports, runs the
+Playwright specs in `e2e/tests/` with fake camera/microphone devices and tears
+everything down again. `SKIP_BUILD=1` reuses the last build,
+`E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
+file.
+
+**Without Docker** (e.g. in a sandbox): start PostgreSQL 17 and a SeaweedFS
+S3 gateway any other way, run the binary with the environment `e2e/run.sh`
+uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,
+`DATABASE_URL`, `S3_*`, `UPDATE_CHECK_ENABLED=false`,
+`WEBRTC_NAT_1TO1_IP=127.0.0.1`, ...), then point Playwright at it:
+
+```sh
+cd e2e && npm ci
+E2E_BASE_URL=http://127.0.0.1:58080 E2E_ADMIN_USER=Herzog \
+  E2E_ADMIN_PASSWORD=<the admin password you set> npx playwright test
+```
+
+The screen share specs need a Chromium with an H.264 encoder (CI's Chrome
+has one; a locally installed open-source Chromium may not).
 
 ### CI pipeline
 
@@ -146,7 +221,10 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
 ## Configuration
 
 All settings are environment variables; `.env.example` documents every one of
-them with safe placeholder values. Notable ones:
+them with safe placeholder values, and
+[doc/operations.md](doc/operations.md#configuration-reference) lists each with
+its default and validation. The server refuses to start on an invalid value
+or, in production, on a placeholder secret. Notable ones:
 
 - `PUBLIC_URL`: the URL browsers use; `https://` enables Secure/`__Host-` cookies.
 - `CORS_ALLOWED_ORIGINS`: extra allowed origins (defaults to `PUBLIC_URL`).
@@ -233,6 +311,8 @@ docker compose pull app && docker compose up -d
 Then update with `docker compose pull app && docker compose up -d app`, or
 from the admin console (see [Updates](#updates)).
 
+### Supported platforms
+
 Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
 4/5 with a 64-bit OS); Docker picks the right one. The rest of the stack
 (`postgres:17-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
@@ -241,6 +321,8 @@ for it too, but the server doesn't compile for 32-bit targets yet (a 64-bit
 constant in `internal/db` overflows `int`). Builders cross-compile the Go
 binary on the build machine, so a multi-arch build needs no QEMU:
 `docker buildx build --platform linux/amd64,linux/arm64 .`
+
+### Pull-based deployment
 
 Deployment to a LAN/self-hosted server stays **manual and pull-based**: GitHub's
 hosted runners cannot reach a server inside a private network, so nothing
@@ -301,6 +383,10 @@ app && docker compose up -d app`; database migrations are forward-only, so
 check the changelog before going back across a release that changed the
 schema.
 
+**Manual update, step by step** (backup, compose file for the new tag, image,
+pull, verify, rollback) and what changed between versions for operators:
+[doc/upgrade.md](doc/upgrade.md).
+
 ## Backups
 
 Everything stateful lives in two Docker volumes (PostgreSQL and SeaweedFS) plus
@@ -332,6 +418,9 @@ Restore for real (stops the app, replaces database and media, starts again):
 ```sh
 ./scripts/restore.sh /srv/backups/mnema/20261005-033000
 ```
+
+More on monitoring, health checks and troubleshooting voice connections:
+[doc/operations.md](doc/operations.md).
 
 ## Security
 
