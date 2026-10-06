@@ -1,5 +1,4 @@
-# One-off maintenance: removes all releases, tags, earlier workflow runs and
-# container image versions. Started by hand; delete this file afterwards.
+# One-off maintenance: removes all tags and earlier runs of this workflow. Started by hand; delete this file afterwards.
 name: Cleanup
 
 on:
@@ -14,36 +13,21 @@ jobs:
     permissions:
       contents: write
       actions: write
-      packages: write
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
       OWNER: ${{ github.repository_owner }}
-      PACKAGE: mnema-talk
       SELF: ${{ github.run_id }}
     steps:
-      - name: Delete releases
-        run: |
-          for id in $(gh api --paginate "repos/$REPO/releases" --jq '.[].id'); do
-            gh api -X DELETE "repos/$REPO/releases/$id" && echo "release $id deleted" || echo "::warning::release $id not deleted"
-          done
-
       - name: Delete tags
         run: |
           for ref in $(gh api --paginate "repos/$REPO/git/matching-refs/tags" --jq '.[].ref'); do
             gh api -X DELETE "repos/$REPO/git/$ref" && echo "$ref deleted" || echo "::warning::$ref not deleted"
           done
 
-      - name: Delete container image versions
+      - name: Delete earlier cleanup runs
         run: |
-          versions=$(gh api --paginate "users/$OWNER/packages/container/$PACKAGE/versions" --jq '.[].id') || { echo "::warning::cannot list package versions"; exit 0; }
-          for id in $versions; do
-            gh api -X DELETE "users/$OWNER/packages/container/$PACKAGE/versions/$id" && echo "image version $id deleted" || echo "::warning::image version $id not deleted"
-          done
-
-      - name: Delete earlier workflow runs
-        run: |
-          for id in $(gh api --paginate "repos/$REPO/actions/runs" --jq '.workflow_runs[].id'); do
+          for id in $(gh api --paginate "repos/$REPO/actions/workflows/cleanup.yml/runs" --jq '.workflow_runs[].id'); do
             [ "$id" = "$SELF" ] && continue
-            gh api -X DELETE "repos/$REPO/actions/runs/$id" >/dev/null 2>&1 && echo "run $id deleted" || echo "run $id still running, skipped"
+            gh api -X DELETE "repos/$REPO/actions/runs/$id" && echo "run $id deleted" || echo "::warning::run $id not deleted"
           done
