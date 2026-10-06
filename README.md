@@ -430,4 +430,20 @@ first. This repository is public, so never commit secrets.
 
 ## License
 
-See [LICENSE](LICENSE).
+Copyright (C) 2026 Marius Schröder ([msch128](https://github.com/msch128)).
+
+Mnema Talk is licensed under the
+[GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may
+use, change and share it, also commercially, as long as you publish the
+complete source code of your version under the same license. That includes
+running a changed version as a network service: its users must be able to get
+the source (the legal dialog in the app links to it; point `SOURCE_URL` in
+`web/src/lib/thirdParty.js` at your own repository).
+
+**Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
+obligations (for example in a closed-source product or service), get a
+separate commercial license from the copyright holder. Contact
+[msch128 on GitHub](https://github.com/msch128).
+
+Contributions are accepted under the AGPL-3.0, and their authors agree that
+Marius Schröder may also distribute them under a commercial license.

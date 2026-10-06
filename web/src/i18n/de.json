@@ -570,6 +570,8 @@
         "turn": "Optional, als TURN-Server für Verbindungen hinter strikten Firewalls.",
         "updater": "Optional, aktualisiert auf Wunsch des Admins den App-Container."
       },
+      "sourceBefore": "Den vollständigen Quellcode dieser Software findest du unter ",
+      "sourceAfter": " (© Marius Schröder, GNU AGPL-3.0).",
       "fullListBefore": "Die vollständige Liste mit allen Bibliotheken, Versionen und Lizenztexten steht in ",
       "fullListAfter": " im Quellcode."
     },
