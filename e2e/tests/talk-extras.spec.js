@@ -34,6 +34,38 @@ const fakeDisplayMedia = () => {
   }
 }
 
+// A full HD "screen" with sound (a tone), and every peer connection of the
+// page in window.__pcs so a test can look at what is sent.
+const fakeDisplayMediaWithSound = () => {
+  navigator.mediaDevices.getDisplayMedia = async () => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1920
+    canvas.height = 1080
+    const ctx = canvas.getContext('2d')
+    let n = 0
+    setInterval(() => {
+      ctx.fillStyle = `hsl(${(n++ * 7) % 360} 70% 50%)`
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    }, 33)
+    const stream = canvas.captureStream(30)
+    const audio = new AudioContext()
+    const tone = audio.createOscillator()
+    const out = audio.createMediaStreamDestination()
+    tone.connect(out)
+    tone.start()
+    stream.addTrack(out.stream.getAudioTracks()[0])
+    return stream
+  }
+  const Native = window.RTCPeerConnection
+  window.__pcs = []
+  window.RTCPeerConnection = function (...args) {
+    const pc = new Native(...args)
+    window.__pcs.push(pc)
+    return pc
+  }
+  window.RTCPeerConnection.prototype = Native.prototype
+}
+
 // Headless Chromium may have no Picture-in-Picture: a stand-in that records
 // the call and behaves like the API (element, enter/leave events).
 const fakePictureInPicture = () => {
@@ -74,10 +106,10 @@ async function shot(page, name) {
 let memberRegistered = false
 
 // Two members (A: the admin, B: the file's member) in a new Talk.
-async function twoMembers(browser, tag, { pip = false } = {}) {
+async function twoMembers(browser, tag, { pip = false, sound = false } = {}) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
-  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(fakeDisplayMedia)
+  for (const ctx of [aCtx, bCtx]) await ctx.addInitScript(sound ? fakeDisplayMediaWithSound : fakeDisplayMedia)
   if (pip) await aCtx.addInitScript(fakePictureInPicture)
   const a = await aCtx.newPage()
   const b = await bCtx.newPage()
@@ -278,6 +310,94 @@ test('picture-in-picture keeps playing after leaving the Talk view', async ({ br
   // The stage empties (B's camera goes off): PiP closes.
   await b.getByRole('button', { name: 'Kamera ausschalten' }).first().click()
   await expect.poll(pipState, { timeout: 20_000 }).toMatchObject({ inPip: false, exits: 1 })
+
+  await close()
+})
+
+test('the streamer picks the stream quality, the viewer sets the stream volume', async ({ browser }) => {
+  const { a, b, close } = await twoMembers(browser, 'quality', { sound: true })
+
+  // What A's screen sender is told and actually sends.
+  const sent = () => a.evaluate(async () => {
+    const sender = window.__pcs.flatMap(pc => pc.getSenders()).find(s => s.track?.kind === 'video')
+    if (!sender) return null
+    const enc = sender.getParameters().encodings?.[0] || {}
+    let frameHeight = 0
+    for (const s of (await sender.getStats()).values()) {
+      if (s.type === 'outbound-rtp' && s.frameHeight) frameHeight = Math.max(frameHeight, s.frameHeight)
+    }
+    const settings = sender.track.getSettings()
+    return { maxFramerate: enc.maxFramerate, maxBitrate: enc.maxBitrate, scale: enc.scaleResolutionDownBy ?? 1, frameHeight, height: settings.height }
+  })
+
+  // A shares (1080p, 30 fps by default), B watches.
+  await a.getByRole('button', { name: 'Bildschirm teilen' }).first().click()
+  const aStage = a.getByTestId('stage')
+  await expect(aStage).toHaveAttribute('data-stage-source', 'own')
+  await b.getByTestId('screen-card').getByRole('button', { name: 'Ansehen' }).click()
+  const bVideo = b.getByTestId('stage').locator('video')
+  await expect.poll(() => bVideo.evaluate(v => v.videoHeight), { timeout: 20_000 }).toBeGreaterThan(0)
+  await expect.poll(async () => (await sent())?.maxFramerate).toBe(30)
+
+  // The gear on A's own share: Discord's stream menu.
+  await aStage.getByTestId('stream-quality-button').click()
+  const menu = a.getByRole('menu', { name: 'Stream-Qualität' })
+  await expect(menu).toBeVisible()
+  await expect(menu.getByRole('menuitemradio', { name: /Benutzerdefiniert/ })).toHaveAttribute('aria-checked', 'true')
+  await shot(a, 'quality-main')
+
+  await menu.getByRole('menuitem', { name: /Auflösung/ }).click()
+  const resolutions = a.getByRole('menu', { name: 'Auflösung' })
+  await expect(resolutions.getByRole('menuitemradio')).toHaveText(['720p', '1080p', '1440p', 'Quelle'])
+  await shot(a, 'quality-resolution')
+  await resolutions.getByRole('menuitemradio', { name: '720p' }).click()
+
+  await menu.getByRole('menuitem', { name: /Bildrate/ }).click()
+  const rates = a.getByRole('menu', { name: 'Bildrate' })
+  await expect(rates.getByRole('menuitemradio')).toHaveText(['15 fps', '30 fps', '60 fps'])
+  await shot(a, 'quality-fps')
+  await rates.getByRole('menuitemradio', { name: '15 fps' }).click()
+  await expect(menu.getByRole('menuitem', { name: /Bildrate/ })).toContainText('15 fps')
+  await expect(menu.getByRole('menuitem', { name: /Auflösung/ })).toContainText('720p')
+
+  // Applied live: 15 fps, at most 720 lines going out (scaled by the
+  // browser or, for a capture it cannot scale, by the encoder).
+  await expect.poll(async () => (await sent())?.maxFramerate).toBe(15)
+  const now = await sent()
+  expect(now.height / now.scale).toBeLessThanOrEqual(720)
+  await expect.poll(async () => (await sent()).frameHeight, { timeout: 20_000 }).toBeLessThanOrEqual(720)
+  expect((await sent()).frameHeight).toBeGreaterThan(0)
+
+  // Advanced: what is actually sent.
+  await menu.getByRole('menuitem', { name: /Erweitert/ }).click()
+  const advanced = a.getByRole('menu', { name: 'Erweitert' })
+  await expect(advanced).toContainText(/VP8|VP9|H264|AV1/)
+  await expect(advanced).toContainText(/fps/)
+  await expect(advanced).toContainText(/bit\/s/, { timeout: 10_000 })
+  await shot(a, 'quality-advanced')
+  await a.keyboard.press('Escape')
+  await a.keyboard.press('Escape')
+  await expect(menu).toBeHidden()
+
+  // B still gets the video, now at most 720 lines.
+  await expect.poll(() => bVideo.evaluate(v => v.videoHeight), { timeout: 20_000 }).toBeLessThanOrEqual(720)
+  expect(await bVideo.evaluate(v => v.videoWidth)).toBeGreaterThan(0)
+
+  // B: the stream's sound plays apart from A's voice, at half volume first.
+  const volumes = () => b.evaluate(() => {
+    const els = [...document.querySelectorAll('#mnema-audio-sink audio')]
+    const pick = screen => els.find(el => (el.dataset.source === 'screen') === screen)
+    return { stream: pick(true)?.volume ?? null, voice: pick(false)?.volume ?? null }
+  })
+  await expect.poll(volumes, { timeout: 20_000 }).toEqual({ stream: 0.5, voice: 1 })
+  const slider = b.getByTestId('viewer-stream-volume-slider')
+  await expect(slider).toHaveAttribute('max', '100')
+  await slider.fill('20')
+  await expect.poll(volumes).toEqual({ stream: 0.2, voice: 1 })
+  await b.getByTestId('viewer-stream-audio-mute').click()
+  await expect.poll(volumes).toEqual({ stream: 0, voice: 1 })
+  await b.getByTestId('viewer-stream-audio-mute').click()
+  await expect.poll(volumes).toEqual({ stream: 0.2, voice: 1 })
 
   await close()
 })
