@@ -465,9 +465,12 @@ const groupedIds = computed(() => {
       ]"
     >
       <!-- Left: Channel name & topic -->
-      <div class="flex items-center gap-2 min-w-0">
+      <div :class="['flex items-center gap-2 min-w-0', panel ? 'flex-1' : '']">
         <component :is="channelIcon" class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
-        <span data-testid="chat-channel-name" class="font-semibold text-base text-mnema-text truncate flex-shrink-0 max-w-[60%]">
+        <span
+          data-testid="chat-channel-name"
+          :class="['font-semibold text-base text-mnema-text truncate', panel ? 'min-w-0' : 'flex-shrink-0 max-w-[60%]']"
+        >
           {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
         </span>
         <span v-if="chatStore.activeChannel?.topic && !panel" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
