@@ -38,6 +38,25 @@ func TestDefaults(t *testing.T) {
 	if cfg.SecureCookies() {
 		t.Error("http PUBLIC_URL must not force Secure cookies")
 	}
+	if !cfg.UpdateCheck {
+		t.Error("the update check should default to on")
+	}
+}
+
+func TestUpdateCheckCanBeDisabled(t *testing.T) {
+	env := base()
+	env["UPDATE_CHECK_ENABLED"] = "false"
+	cfg, err := FromEnv(lookup(env))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.UpdateCheck {
+		t.Fatal("UPDATE_CHECK_ENABLED=false ignored")
+	}
+	env["UPDATE_CHECK_ENABLED"] = "maybe"
+	if _, err := FromEnv(lookup(env)); err == nil {
+		t.Fatal("invalid UPDATE_CHECK_ENABLED accepted")
+	}
 }
 
 func TestDevSecretIsRandomPerProcess(t *testing.T) {

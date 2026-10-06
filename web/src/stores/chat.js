@@ -664,9 +664,12 @@ export const useChatStore = defineStore('chat', () => {
         if (p?.t) voiceStore.recordPing(Date.now() - p.t)
         break
 
-      case 'server_info':
-        useAppVersionStore().setServerVersion(p?.version)
+      case 'server_info': {
+        const versions = useAppVersionStore()
+        versions.setServerVersion(p?.version)
+        versions.followAdminUpdates(() => authStore.isAdmin)
         break
+      }
 
       case 'presence_snapshot':
         presenceById.value = snapshotToMap(p)

@@ -1287,6 +1287,10 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "update_check": {
+            "description": "UpdateCheck is true when the server asks GitHub for new releases\n(UPDATE_CHECK_ENABLED); the privacy policy then names the connection.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -1298,7 +1302,8 @@
           "project_notice",
           "session_expiry_days",
           "stun_servers",
-          "turn_servers"
+          "turn_servers",
+          "update_check"
         ],
         "type": "object"
       },
@@ -1394,12 +1399,16 @@
           "health": {
             "$ref": "#/components/schemas/server.SystemHealth"
           },
+          "update": {
+            "$ref": "#/components/schemas/server.UpdateStatus"
+          },
           "version": {
             "$ref": "#/components/schemas/server.SystemVersion"
           }
         },
         "required": [
           "health",
+          "update",
           "version"
         ],
         "type": "object"
@@ -1422,6 +1431,71 @@
           "current",
           "go_version",
           "revision"
+        ],
+        "type": "object"
+      },
+      "server.UpdateStatus": {
+        "properties": {
+          "check_enabled": {
+            "description": "CheckEnabled is false with UPDATE_CHECK_ENABLED=false (no requests to GitHub).",
+            "type": "boolean"
+          },
+          "check_error": {
+            "description": "CheckError says why the last check failed (empty when it worked).",
+            "type": "string"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current_version": {
+            "type": "string"
+          },
+          "latest_version": {
+            "description": "LatestVersion is empty until a check succeeded.",
+            "type": "string"
+          },
+          "published_at": {
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "release_notes": {
+            "description": "ReleaseNotes is Markdown; clients render it as untrusted text.",
+            "type": "string"
+          },
+          "release_url": {
+            "description": "ReleaseURL is the release page on github.com.",
+            "type": "string"
+          },
+          "retry_at": {
+            "description": "RetryAt is set while GitHub's rate limit pauses the checks.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "update_available": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "check_enabled",
+          "check_error",
+          "checked_at",
+          "current_version",
+          "latest_version",
+          "published_at",
+          "release_notes",
+          "release_url",
+          "retry_at",
+          "update_available"
         ],
         "type": "object"
       },
@@ -3085,6 +3159,174 @@
           }
         ],
         "summary": "System status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/system/check": {
+      "post": {
+        "description": "Asks GitHub for the latest release right away (at most once a minute; while GitHub rate-limits the server, 429 until that ends). 409 when UPDATE_CHECK_ENABLED=false. A failed check still answers 200 with check_error set. Requires role admin (403 otherwise).",
+        "operationId": "checkSystemUpdate",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.UpdateStatus"
+                }
+              }
+            },
+            "description": "Update status after the check."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the update check is disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Check for a new release now",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/system/update": {
+      "get": {
+        "description": "What the last release check found (cheap: no request to GitHub). Requires role admin (403 otherwise).",
+        "operationId": "getSystemUpdate",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.UpdateStatus"
+                }
+              }
+            },
+            "description": "Update status.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update status",
         "tags": [
           "Admin"
         ]

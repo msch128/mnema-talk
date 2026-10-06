@@ -21,7 +21,7 @@ const turnCredentialTTL = 12 * time.Hour
 
 // LegalVersion changes whenever recipients, retention or rights in the
 // privacy policy change.
-const LegalVersion = "1.3"
+const LegalVersion = "1.4"
 
 // Legal is the response of GET /api/legal: the operator details and the facts
 // the privacy policy must state.
@@ -35,7 +35,10 @@ type Legal struct {
 	SessionExpiryDays  int      `json:"session_expiry_days"`
 	STUNServers        []string `json:"stun_servers"`
 	TURNServers        []string `json:"turn_servers"`
-	LegalVersion       string   `json:"legal_version"`
+	// UpdateCheck is true when the server asks GitHub for new releases
+	// (UPDATE_CHECK_ENABLED); the privacy policy then names the connection.
+	UpdateCheck  bool   `json:"update_check"`
+	LegalVersion string `json:"legal_version"`
 }
 
 // IceServer is one entry of the WebRTC ICE configuration.
@@ -76,6 +79,7 @@ func legal(cfg *config.Config) http.HandlerFunc {
 		SessionExpiryDays:  (cfg.SessionExpiryHours + 23) / 24,
 		STUNServers:        stun,
 		TURNServers:        nonNil(cfg.WebRTCTURNURLs),
+		UpdateCheck:        cfg.UpdateCheck,
 		LegalVersion:       LegalVersion,
 	}
 	return func(w http.ResponseWriter, r *http.Request) {

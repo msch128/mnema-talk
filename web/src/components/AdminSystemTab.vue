@@ -13,10 +13,13 @@ const versionStore = useAppVersionStore()
 const status = ref(null)
 const loading = ref(false)
 
+const checking = ref(false)
+
 async function refresh() {
   loading.value = true
   try {
     status.value = await api('/api/admin/system')
+    versionStore.setAdminUpdate(status.value?.update)
   } catch (e) {
     toasts.error(e?.message || t('admin.unknownError'))
   } finally {
@@ -24,9 +27,43 @@ async function refresh() {
   }
 }
 
+async function checkNow() {
+  checking.value = true
+  try {
+    const upd = await api('/api/admin/system/check', { method: 'POST' })
+    if (status.value) status.value = { ...status.value, update: upd }
+    versionStore.setAdminUpdate(upd)
+    if (upd?.check_error) toasts.error(t('admin.system.checkFailed', { reason: upd.check_error }))
+    else toasts.success(upd?.update_available ? t('admin.system.updateFound', { version: upd.latest_version }) : t('admin.system.upToDate'))
+  } catch (e) {
+    toasts.error(e?.code === 'RATE_LIMITED' ? t('admin.system.checkTooSoon') : (e?.message || t('admin.unknownError')))
+  } finally {
+    checking.value = false
+  }
+}
+
+const UPDATE_COMMAND = 'docker compose pull app && docker compose up -d app'
+
+async function copyCommand() {
+  try {
+    await navigator.clipboard.writeText(UPDATE_COMMAND)
+    toasts.success(t('admin.system.copied'))
+  } catch {
+    toasts.error(t('admin.system.copyFailed'))
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return '–'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '–'
+  return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium', timeStyle: 'short' }).format(d)
+}
+
 defineExpose({ refresh, status })
 
 const health = computed(() => status.value?.health || null)
+const upd = computed(() => status.value?.update || null)
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B'
@@ -83,6 +120,65 @@ onMounted(refresh)
           <dd class="font-mono text-mnema-text">{{ status.version.go_version }}</dd>
         </div>
       </dl>
+    </div>
+
+    <!-- Updates -->
+    <div v-if="upd" class="bg-mnema-surface p-5 rounded-lg border border-mnema-hairline space-y-3" data-testid="system-update">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="space-y-1">
+          <span class="text-xs uppercase font-semibold font-mono text-mnema-tertiary tracking-wider">{{ $t('admin.system.updates') }}</span>
+          <p v-if="!upd.check_enabled" class="text-sm text-mnema-muted" data-testid="update-check-disabled">{{ $t('admin.system.checkDisabled') }}</p>
+          <template v-else>
+            <p v-if="upd.update_available" class="text-sm font-semibold text-mnema-accent" data-testid="update-available">
+              {{ $t('admin.system.updateAvailable', { current: upd.current_version, latest: upd.latest_version }) }}
+            </p>
+            <p v-else-if="upd.latest_version" class="text-sm text-mnema-text" data-testid="update-current">
+              {{ $t('admin.system.latestIs', { latest: upd.latest_version }) }}
+            </p>
+            <p v-else class="text-sm text-mnema-muted">{{ $t('admin.system.notCheckedYet') }}</p>
+            <p class="text-xs text-mnema-tertiary">{{ $t('admin.system.checkedAt', { when: formatDate(upd.checked_at) }) }}</p>
+            <p v-if="upd.check_error" class="text-xs text-mnema-warning" data-testid="update-check-error">{{ $t('admin.system.checkFailed', { reason: upd.check_error }) }}</p>
+          </template>
+        </div>
+        <button
+          v-if="upd.check_enabled"
+          type="button"
+          data-testid="update-check-now"
+          :disabled="checking"
+          class="border border-mnema-border bg-mnema-canvas hover:bg-mnema-elevated text-mnema-text font-medium px-3 py-1.5 rounded-md text-sm transition disabled:opacity-40"
+          @click="checkNow"
+        >
+          {{ checking ? $t('admin.system.checking') : $t('admin.system.checkNow') }}
+        </button>
+      </div>
+
+      <template v-if="upd.update_available">
+        <a
+          v-if="upd.release_url"
+          :href="upd.release_url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-sm text-mnema-accent hover:underline"
+          data-testid="update-release-link"
+        >{{ $t('admin.system.releaseNotesLink', { version: upd.latest_version }) }}</a>
+        <!-- Release notes are untrusted text: shown as plain text, never as HTML. -->
+        <pre
+          v-if="upd.release_notes"
+          data-testid="update-notes"
+          class="max-h-60 overflow-y-auto whitespace-pre-wrap break-words rounded-md bg-mnema-canvas p-3 font-mono text-xs text-mnema-muted"
+        >{{ upd.release_notes }}</pre>
+        <div class="space-y-1">
+          <p class="text-xs text-mnema-muted">{{ $t('admin.system.manualUpdate') }}</p>
+          <div class="flex items-center gap-2">
+            <code class="min-w-0 flex-1 truncate rounded bg-mnema-canvas px-2 py-1 font-mono text-xs text-mnema-text" data-testid="update-command">{{ UPDATE_COMMAND }}</code>
+            <button
+              type="button"
+              class="flex-shrink-0 rounded-md px-2 py-1 text-xs text-mnema-tertiary hover:bg-mnema-elevated hover:text-mnema-text"
+              @click="copyCommand"
+            >{{ $t('admin.system.copy') }}</button>
+          </div>
+        </div>
+      </template>
     </div>
 
     <!-- Health -->
