@@ -29,7 +29,7 @@ func TestSystemStatusIsAdminOnly(t *testing.T) {
 }
 
 func TestSystemStatusReportsHealthWithoutSecrets(t *testing.T) {
-	const turnSecret = "turn-secret-for-the-system-test"
+	turnSecret := strings.Repeat("turn-", 5)
 	a := newAppWithDeps(t, true, func(c *config.Config) {
 		c.WebRTCTURNURLs = []string{"turn:turn.example.com:3478"}
 		c.WebRTCTURNSecret = turnSecret

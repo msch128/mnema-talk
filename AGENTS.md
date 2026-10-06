@@ -66,6 +66,8 @@ mnema-talk/
 │   ├── events/              # Event types / publishing to the hub
 │   ├── ws/                  # Real-time WebSocket hub (events, presence)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
+│   ├── update/              # GitHub release check + client for the optional updater sidecar
+│   ├── version/             # Build version/revision (ldflags), shared with the web build
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist

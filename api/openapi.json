@@ -1340,6 +1340,100 @@
         ],
         "type": "object"
       },
+      "server.SelfUpdateRequest": {
+        "properties": {
+          "password": {
+            "description": "Password is the admin's current password (re-authentication).",
+            "format": "password",
+            "type": "string"
+          },
+          "target_version": {
+            "description": "TargetVersion must equal the latest release the server knows, so a\ndialog opened before a newer release can't start the wrong update.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "target_version"
+        ],
+        "type": "object"
+      },
+      "server.SelfUpdateStarted": {
+        "properties": {
+          "from_version": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "started"
+            ],
+            "type": "string"
+          },
+          "target_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_version",
+          "status",
+          "target_version"
+        ],
+        "type": "object"
+      },
+      "server.SelfUpdateStatus": {
+        "properties": {
+          "available": {
+            "description": "Available: configured, an update exists, the image can reach it and no\nupdate ran in the last five minutes.",
+            "type": "boolean"
+          },
+          "configured": {
+            "description": "Configured is true when UPDATER_TOKEN is set (sidecar opted in).",
+            "type": "boolean"
+          },
+          "image": {
+            "description": "Image is MNEMA_IMAGE, the image reference the app container runs.",
+            "type": "string"
+          },
+          "next_allowed_at": {
+            "description": "NextAllowedAt is set during the cooldown after an update request.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reach": {
+            "description": "Reach says whether re-pulling Image can reach the latest release.",
+            "enum": [
+              "yes",
+              "no",
+              "unknown"
+            ],
+            "type": "string"
+          },
+          "reach_reason": {
+            "enum": [
+              "follows",
+              "unset",
+              "local_build",
+              "digest_pinned",
+              "version_pinned",
+              "track_mismatch",
+              "custom_tag"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "configured",
+          "image",
+          "next_allowed_at",
+          "reach",
+          "reach_reason"
+        ],
+        "type": "object"
+      },
       "server.StorageHealth": {
         "properties": {
           "attachment_bytes": {
@@ -1399,6 +1493,9 @@
           "health": {
             "$ref": "#/components/schemas/server.SystemHealth"
           },
+          "self_update": {
+            "$ref": "#/components/schemas/server.SelfUpdateStatus"
+          },
           "update": {
             "$ref": "#/components/schemas/server.UpdateStatus"
           },
@@ -1408,6 +1505,7 @@
         },
         "required": [
           "health",
+          "self_update",
           "update",
           "version"
         ],
@@ -3327,6 +3425,120 @@
           }
         ],
         "summary": "Update status",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Requires role admin (403 otherwise).",
+        "operationId": "startSelfUpdate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/server.SelfUpdateRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.SelfUpdateStarted"
+                }
+              }
+            },
+            "description": "The updater accepted the request."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not an admin, wrong current password, or cross-origin request rejected."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: self-update not configured, no update available, target_version outdated, the image tag cannot reach the release, or an update is already running."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: an update was requested less than 5 minutes ago, or too many wrong passwords.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: the updater is not reachable or rejected the request."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update the server now",
         "tags": [
           "Admin"
         ]

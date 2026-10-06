@@ -83,3 +83,49 @@ locally instead (`make up` or `make dev`).
   connection while it is on. `UPDATE_CHECK_ENABLED=false` makes no request.
 - **Secrets.** All secrets come from environment variables. The repository is
   public and contains placeholders only; CI and the pre-commit hook run gitleaks.
+
+## Self-update sidecar
+
+"Update now" in the admin console is optional and **off by default** (compose
+profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
+
+- **The Docker socket is root on the host.** Whoever can talk to it can start
+  a privileged container that mounts `/`. So the app container never gets the
+  socket or any other Docker API access. A separate container, the updater
+  (`nickfedor/watchtower`, the maintained fork of the archived
+  containrrr/watchtower, pinned by version and digest), holds it, and only
+  when the operator opts in.
+- **What the updater may do.** It runs with `--label-enable` and
+  `--scope mnema-talk`: only containers carrying both labels
+  (`com.centurylinklabs.watchtower.enable=true`, `...scope=mnema-talk`) are
+  touched, which in `docker-compose.yml` is the app alone (not PostgreSQL,
+  SeaweedFS, coturn, the updater itself or anything else on the host). It
+  re-pulls the image tag the app already runs and recreates the container
+  with the same configuration; it cannot be told to run another image.
+- **When it acts.** Never on a schedule (`WATCHTOWER_HTTP_API_PERIODIC_POLLS=false`):
+  only on `POST /v1/update` with `Authorization: Bearer <UPDATER_TOKEN>`.
+- **Who can reach it.** No published port. It is only attached to the
+  `internal` network `mnema-updater`, which it shares with the app and
+  nothing else, and which has no route to the internet or the LAN (image
+  pulls are done by the Docker daemon). The container runs read-only, with all
+  capabilities dropped, `no-new-privileges`, and memory and PID limits.
+- **Token.** `UPDATER_TOKEN` is shared by app and updater through `.env`
+  only, must have at least 32 characters (`openssl rand -hex 32`), is
+  rejected if it is a public example value, never appears in API responses
+  or logs, and is only ever sent to `UPDATER_URL` (redirects are not
+  followed). Without it the app offers no button and makes no call. Rotate it
+  by changing `.env` and running
+  `docker compose --profile autoupdate up -d`.
+- **Who can trigger it.** `POST /api/admin/system/update` is admin-only and
+  behind the same-origin CSRF check like every admin route. It asks for the
+  admin's current password again (bcrypt; 5 wrong passwords lock it together
+  with password changes), runs at most once every 5 minutes, only while the
+  update check knows a newer release and only for exactly that version, and
+  is audit-logged (`"audit":"self_update"`, admin id, versions, client
+  address) whether it succeeds or not. A stolen admin session therefore cannot
+  update without the password, and even then can only restart the app on the
+  image tag the operator configured.
+- **Residual risk.** A compromised updater image, or anyone who obtains both
+  the token and a foothold on the `mnema-updater` network, could have
+  containers in scope recreated; anyone who compromises the updater container
+  has root on the host. Leave the profile off if you update by hand anyway.
