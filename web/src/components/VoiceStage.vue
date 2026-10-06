@@ -12,6 +12,7 @@ import { useWebRTC } from '../composables/useWebRTC'
 import ParticipantTile from './ParticipantTile.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import ScreenViewers from './ScreenViewers.vue'
+import StreamQualityMenu from './StreamQualityMenu.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
@@ -550,6 +551,8 @@ function openStageMenu(e) {
               <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
               <Volume2 v-else class="w-4 h-4" />
             </button>
+            <!-- Stream quality of my own share (its menu cannot show in full screen) -->
+            <StreamQualityMenu v-if="ownOnStage && !isFullscreen" />
 
             <!-- Viewer Stream Audio Controls (Volume & Mute) -->
             <div
@@ -674,6 +677,7 @@ function openStageMenu(e) {
             >
               {{ card.state === 'idle' ? $t('talk.watchScreen') : card.state === 'queued' ? $t('talk.toStage') : $t('talk.screenConnecting') }}
             </button>
+            <StreamQualityMenu v-if="card.kind === 'own'" variant="card" />
             <button
               v-if="card.kind === 'remote' && card.state !== 'idle'"
               type="button"
