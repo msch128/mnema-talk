@@ -43,6 +43,46 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
+func TestUpdaterSettings(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.SelfUpdateConfigured() {
+		t.Fatal("self-update must be off without UPDATER_TOKEN")
+	}
+
+	env := base()
+	env["UPDATER_URL"] = "http://elsewhere:9000"
+	if cfg, err := FromEnv(lookup(env)); err != nil || cfg.UpdaterURL != "" || cfg.SelfUpdateConfigured() {
+		t.Fatalf("URL without token: err=%v url=%q", err, cfg.UpdaterURL)
+	}
+
+	token := strings.Repeat("a1", 16)
+	env = base()
+	env["UPDATER_TOKEN"] = token
+	cfg, err = FromEnv(lookup(env))
+	if err != nil || !cfg.SelfUpdateConfigured() || cfg.UpdaterURL != DefaultUpdaterURL {
+		t.Fatalf("token only: err=%v url=%q", err, cfg.UpdaterURL)
+	}
+
+	for name, kv := range map[string][2]string{
+		"short token":       {"UPDATER_TOKEN", "too-short"},
+		"placeholder token": {"UPDATER_TOKEN", "replace_with_a_random_updater_token_of_32_chars"},
+		"token with space":  {"UPDATER_TOKEN", strings.Repeat("a", 32) + " b"},
+		"bad url scheme":    {"UPDATER_URL", "ftp://mnema-updater:8080"},
+		"url credentials":   {"UPDATER_URL", "http://u:p@mnema-updater:8080"},
+		"url query":         {"UPDATER_URL", "http://mnema-updater:8080/?x=1"},
+	} {
+		env := base()
+		env["UPDATER_TOKEN"] = token
+		env[kv[0]] = kv[1]
+		if _, err := FromEnv(lookup(env)); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+}
+
 func TestUpdateCheckCanBeDisabled(t *testing.T) {
 	env := base()
 	env["UPDATE_CHECK_ENABLED"] = "false"
