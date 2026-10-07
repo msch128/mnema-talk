@@ -568,7 +568,7 @@ const overlayButton = 'w-8 h-8 flex items-center justify-center rounded-lg text-
               ref="screenVideoEl"
               autoplay
               playsinline
-              :muted="ownOnStage || cameraOnStage"
+              :muted="true"
               :class="['w-full h-full object-contain', stage?.kind === 'camera' && stage.own ? '-scale-x-100' : '']"
               @resize="onVideoResize"
               @loadedmetadata="onVideoResize"

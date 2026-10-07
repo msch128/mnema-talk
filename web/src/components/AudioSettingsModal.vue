@@ -10,7 +10,7 @@ import BaseDialog from './BaseDialog.vue'
 
 const emit = defineEmits(['close'])
 const voiceStore = useVoiceStore()
-const { refreshAudioDevices, startMicTest, stopMicTest, toggleMicTest, applyAudioSettings } = useWebRTC()
+const { refreshAudioDevices, stopMicTest, toggleMicTest, applyAudioSettings } = useWebRTC()
 
 const isRecordingPttKey = ref(false)
 const outputSelectable = canChooseOutputDevice()
@@ -27,20 +27,27 @@ watch(() => voiceStore.currentInputLevel, level => {
   peakLevel.value = peakHold(level)
 })
 
-// The dialog can close while the device list or the mic test is still
-// starting; stop the test once the awaits return so the mic never stays open.
-let unmounted = false
-onMounted(async () => {
-  await refreshAudioDevices()
-  if (unmounted) return
-  await startMicTest()
-  if (unmounted) stopMicTest()
-})
+// Listing devices does not request capture. A local test needs its own action.
+onMounted(() => refreshAudioDevices())
 
 onUnmounted(() => {
-  unmounted = true
   stopMicTest()
 })
+
+function handleMicTest() {
+  if (voiceStore.isMicTesting) {
+    stopMicTest()
+    return
+  }
+  // Capture owns generation-bound cancellation. A late result from a closed
+  // dialog must not stop a newer dialog's test through global cleanup.
+  return toggleMicTest()
+}
+
+function applyActiveAudioSettings() {
+  // Saving preferences must not acquire a microphone outside a call/test.
+  if (voiceStore.localAudioStream || voiceStore.isMicTesting) return applyAudioSettings()
+}
 
 function handleSliderChange(e) {
   voiceStore.sensitivityThreshold = parseInt(e.target.value, 10)
@@ -62,31 +69,31 @@ function handleKeyRecord(e) {
 
 async function handleDeviceChange() {
   voiceStore.saveSettings()
-  await applyAudioSettings()
+  await applyActiveAudioSettings()
 }
 
 async function toggleAgc() {
   voiceStore.autoGainControl = !voiceStore.autoGainControl
   voiceStore.saveSettings()
-  await applyAudioSettings()
+  await applyActiveAudioSettings()
 }
 
 async function setNoiseMode(mode) {
   if (voiceStore.noiseMode === mode) return
   voiceStore.setNoiseMode(mode)
-  await applyAudioSettings()
+  await applyActiveAudioSettings()
 }
 
 async function toggleEcho() {
   voiceStore.echoCancellation = !voiceStore.echoCancellation
   voiceStore.saveSettings()
-  await applyAudioSettings()
+  await applyActiveAudioSettings()
 }
 
 async function toggleQos() {
   voiceStore.qosHighPriority = !voiceStore.qosHighPriority
   voiceStore.saveSettings()
-  await applyAudioSettings()
+  await applyActiveAudioSettings()
 }
 
 function toggleWarnNoAudio() {
@@ -214,7 +221,9 @@ function playPreviewSound(sound = 'join') {
               </div>
               <button
                 type="button"
-                @click="toggleMicTest"
+                @click="handleMicTest"
+                data-testid="mic-test-toggle"
+                :aria-pressed="voiceStore.isMicTesting ? 'true' : 'false'"
                 :class="[
                   'px-3.5 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-1.5 flex-shrink-0 shadow-sm mt-0.5',
                   voiceStore.isMicTesting

@@ -375,7 +375,8 @@ describe('VoiceStage screen share opt-in', () => {
     expect(w.find('[data-screen-card="own"] [data-testid="stream-quality-button"]').exists()).toBe(true)
     expect(w.find('[data-testid="stage"] [data-testid="stream-quality-button"]').exists()).toBe(false)
     expect(stageVideo().srcObject).toBe(alice)
-    expect(stageVideo().muted).toBe(false)
+    // The dedicated screen-audio sink plays the sound, never the stage video.
+    expect(stageVideo().muted).toBe(true)
     expect(w.text()).toContain('Alice')
     expect(w.find('[data-testid="viewer-stream-audio-mute"]').exists()).toBe(true)
     expect(w.find('[data-testid="streamer-audio-toggle"]').exists()).toBe(false)

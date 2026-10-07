@@ -28,7 +28,7 @@ export const THIRD_PARTY = [
     group: 'noise',
     items: [
       { name: 'DeepFilterNet3', license: 'MIT OR Apache-2.0', url: 'https://github.com/Rikorose/DeepFilterNet', note: 'dfn' },
-      { name: 'mezon-noise-suppression', license: 'MIT OR Apache-2.0', url: 'https://github.com/mezonai/mezon-noise-suppression', note: 'dfnBuild' },
+      { name: 'mezon-noise-suppression (adapted WASM glue)', license: 'MIT OR Apache-2.0', url: 'https://github.com/mezonai/mezon-noise-suppression', note: 'dfnBuild' },
       { name: 'tract & Rust crates', license: 'MIT / Apache-2.0', url: 'https://github.com/sonos/tract', note: 'crates' },
       { name: 'web-noise-suppressor', pkg: '@sapphi-red/web-noise-suppressor', license: 'MIT', url: 'https://github.com/sapphi-red/web-noise-suppressor' },
       { name: 'GTCRN', license: 'MIT', url: 'https://github.com/Xiaobin-Rong/gtcrn' },

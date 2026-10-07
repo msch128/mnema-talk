@@ -63,6 +63,8 @@ type TrackInfo struct {
 	// stoppedAt (unix nanos, 0 = live) is set when the publisher announced the
 	// stop; packets arriving later publish the track again.
 	stoppedAt atomic.Int64
+	// A replaced capture must never resume or forward alongside its successor.
+	superseded atomic.Bool
 }
 
 type Peer struct {
@@ -89,9 +91,12 @@ type Room struct {
 	// trackLocals is keyed by the local track ID, which is scoped to the
 	// publishing user (see trackKey) so clients cannot collide.
 	trackLocals map[string]*TrackInfo
-	mu          sync.RWMutex
-	api         *webrtc.API
-	iceServers  []webrtc.ICEServer
+	// Keeps the latest source even while stopped, so late packets from an older
+	// capture cannot replace a newer track. At most four entries per publisher.
+	latestSources map[string]*TrackInfo
+	mu            sync.RWMutex
+	api           *webrtc.API
+	iceServers    []webrtc.ICEServer
 
 	// subs is what each viewer receives (see Subscriptions); guarded by mu.
 	subs map[uuid.UUID]*Subscriptions
@@ -536,6 +541,9 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
 			continue
 		}
+		if info.superseded.Load() {
+			return
+		}
 		// Header extension IDs are negotiated per connection; the
 		// subscriber side adds its own (e.g. transport-cc).
 		rtpPkt.Extension = false
@@ -718,10 +726,23 @@ func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.mu.Lock()
 	// The publisher may have been replaced while its track was arriving.
-	if r.peers[info.SenderID] != info.publisher {
+	if r.peers[info.SenderID] != info.publisher || info.superseded.Load() {
 		r.mu.Unlock()
 		return
 	}
+	if r.latestSources == nil {
+		r.latestSources = make(map[string]*TrackInfo)
+	}
+	sourceKey := trackKey(info.SenderID, string(info.Source))
+	if previous := r.latestSources[sourceKey]; previous != nil && previous != info {
+		previous.superseded.Store(true)
+		for oldKey, old := range r.trackLocals {
+			if old == previous {
+				delete(r.trackLocals, oldKey)
+			}
+		}
+	}
+	r.latestSources[sourceKey] = info
 	r.trackLocals[key] = info
 	r.mu.Unlock()
 	go r.SignalPeerConnections()
@@ -739,6 +760,12 @@ func (r *Room) removeTrack(key string, info *TrackInfo) {
 }
 
 func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
+	for key, info := range r.latestSources {
+		if info.SenderID == userID {
+			info.superseded.Store(true)
+			delete(r.latestSources, key)
+		}
+	}
 	for id, tInfo := range r.trackLocals {
 		if tInfo.SenderID == userID {
 			delete(r.trackLocals, id)

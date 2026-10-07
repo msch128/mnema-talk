@@ -83,3 +83,9 @@ desktop.ini
 SPEC.md
 *.spec.md
 docs/
+
+# Deployment backup/restore serialization
+.mnema-maintenance.lock/
+
+# Python fault-test bytecode
+scripts/tests/__pycache__/

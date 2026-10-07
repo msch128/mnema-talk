@@ -48,7 +48,7 @@ shipped under `/licenses/` as well.
 | Component | Version | License |
 |---|---|---|
 | [DeepFilterNet3](https://github.com/Rikorose/DeepFilterNet) model and libDF, © Hendrik Schröter | 3 | MIT OR Apache-2.0 |
-| [mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) (`deepfilternet3-noise-filter`: wasm build and AudioWorklet, vendored in `web/src/third_party/deepfilternet3`) | 1.3.0 | MIT OR Apache-2.0 |
+| [mezon-noise-suppression](https://github.com/mezonai/mezon-noise-suppression) (`deepfilternet3-noise-filter`: wasm build and glue, vendored in `web/src/third_party/deepfilternet3`; Mnema's adapted `worker-glue.js` runs initialization and inference in a dedicated Worker) | 1.3.0 | MIT OR Apache-2.0 |
 | Rust crates compiled into `df_bg.wasm`: [tract](https://github.com/sonos/tract) (core, data, hir, linalg, nnef, onnx, onnx-opl, pulse, pulse-opl, transformers 0.23.3), ndarray, rustfft, realfft, transpose, strength_reduce, primal-check, num-integer, flate2, miniz_oxide, tar, serde, serde_json, erased-serde, safetensors, minijinja, memo-map, rust-ini, ordered-multimap, dlv-list, nom, scan_fmt, regex, aho-corasick, memchr, hashbrown, smallvec, itertools, string-interner, bit-set, bit-vec, bytes, rand, chacha20, lazy_static, lock_api, parking_lot_core, log, anyhow, dlmalloc, rustc-demangle, wasm-bindgen | see crate | MIT and/or Apache-2.0 (aho-corasick, memchr: Unlicense OR MIT; miniz_oxide: also Zlib) |
 | [web-noise-suppressor](https://github.com/sapphi-red/web-noise-suppressor) (`@sapphi-red/web-noise-suppressor`) | 0.4.1 | MIT |
 | [GTCRN](https://github.com/Xiaobin-Rong/gtcrn), © Rong Xiaobin (inside web-noise-suppressor) | – | MIT |

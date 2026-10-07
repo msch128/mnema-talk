@@ -14,7 +14,10 @@ const props = defineProps({ variant: { type: String, default: 'stage' } })
 const emit = defineEmits(['open-change'])
 
 const rtc = useWebRTC()
-const quality = useStreamQuality({ getStats: () => rtc.getScreenSendStats?.() ?? null })
+const quality = useStreamQuality({
+  getStats: () => rtc.getScreenSendStats?.() ?? null,
+  getCaptureSettings: () => rtc.getScreenCaptureSettings?.() ?? null
+})
 const menu = useMenuState()
 const button = ref(null)
 // The menu closes on pointer down outside it (also on this button): a click

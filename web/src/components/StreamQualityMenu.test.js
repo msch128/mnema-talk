@@ -6,7 +6,7 @@ import { setLocale } from '../i18n'
 import { useVoiceStore } from '../stores/voice'
 import StreamQualityMenu from './StreamQualityMenu.vue'
 
-const rtc = vi.hoisted(() => ({ getScreenSendStats: vi.fn(), startScreenShare: vi.fn() }))
+const rtc = vi.hoisted(() => ({ getScreenSendStats: vi.fn(), getScreenCaptureSettings: vi.fn(), startScreenShare: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
 
 let w
@@ -15,6 +15,7 @@ beforeEach(() => {
   setLocale('de')
   setActivePinia(createPinia())
   rtc.getScreenSendStats.mockReset()
+  rtc.getScreenCaptureSettings.mockReset()
   rtc.startScreenShare.mockReset()
 })
 afterEach(() => {
@@ -166,6 +167,25 @@ describe('stream quality menu', () => {
     await nextTick()
     expect(w.emitted()).toBeTruthy()
     expect(voice.screenQuality).toEqual({ resolution: 1080, fps: 30 })
+  })
+
+  it('shows selected target, capture setting, measured capture and encoded fps separately', async () => {
+    rtc.getScreenCaptureSettings.mockReturnValue({ width: 3840, height: 2160, frameRate: 60 })
+    rtc.getScreenSendStats.mockResolvedValue([
+      { id: 'source', type: 'media-source', kind: 'video', framesPerSecond: 60 },
+      { id: 'out', type: 'outbound-rtp', kind: 'video', mediaSourceId: 'source', framesPerSecond: 20,
+        qualityLimitationReason: 'cpu', encoderImplementation: 'ExternalEncoder', powerEfficientEncoder: true }
+    ])
+    const voice = await open()
+    voice.setScreenQuality({ resolution: 'source', fps: 60 })
+    await openSub('advanced')
+    const info = id => q(`[data-menu-info="${id}"]`)?.textContent
+    await vi.waitFor(() => expect(info('capture-fps')).toContain('60 fps'))
+    expect(info('target-fps')).toContain('60 fps')
+    expect(info('capture-setting')).toContain('60 fps')
+    expect(info('fps')).toContain('20 fps')
+    expect(info('encoder')).toContain('ExternalEncoder')
+    expect(info('limitation')).toContain('Encoderlast')
   })
 
   it('offers to change the shared screen', async () => {

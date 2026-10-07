@@ -22,6 +22,47 @@ const trackPeerConnections = () => {
   window.RTCPeerConnection.generateCertificate = Native.generateCertificate
 }
 
+// Observe the real production filter without mocking assets, PCM or transfer
+// ports. Received RTP alone could also pass after browser-filter fallback.
+const trackAudioFilters = () => {
+  localStorage.setItem('mnema_noise', 'ai')
+  window.__dfnWorkers = []
+  window.__dfnNodes = []
+  const NativeWorker = window.Worker
+  window.Worker = class extends NativeWorker {
+    constructor(...args) {
+      super(...args)
+      if (!String(args[0]).includes('dfnWorker')) return
+      const state = { ready: false, failed: false }
+      window.__dfnWorkers.push(state)
+      this.addEventListener('message', ({ data }) => {
+        if (data.type === 'ready') state.ready = true
+        if (data.type === 'failed') state.failed = true
+      })
+      this.addEventListener('error', () => { state.failed = true })
+    }
+  }
+  const NativeNode = window.AudioWorkletNode
+  window.AudioWorkletNode = class extends NativeNode {
+    constructor(...args) {
+      super(...args)
+      if (args[1] !== 'deepfilter-worker-bridge') return
+      const state = { node: this, failed: false }
+      window.__dfnNodes.push(state)
+      this.port.addEventListener('message', ({ data }) => {
+        if (data.type === 'failed') state.failed = true
+      })
+      this.addEventListener('processorerror', () => { state.failed = true })
+    }
+  }
+}
+
+const filterState = (page) => page.evaluate(() => ({
+  ready: window.__dfnWorkers.at(-1)?.ready ?? false,
+  failed: window.__dfnWorkers.some(w => w.failed) || window.__dfnNodes.some(n => n.failed),
+  processed: window.__dfnNodes.at(-1)?.node.filterStats?.processedFrames ?? 0,
+}))
+
 // Audio bytes received on the current connection, from all other members.
 const audioBytesIn = (page) => page.evaluate(async () => {
   const pc = window.__pcs.at(-1)
@@ -45,6 +86,8 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   const lateCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
   await firstCtx.addInitScript(trackPeerConnections)
   await lateCtx.addInitScript(trackPeerConnections)
+  await firstCtx.addInitScript(trackAudioFilters)
+  await lateCtx.addInitScript(trackAudioFilters)
   const first = await firstCtx.newPage()
   const late = await lateCtx.newPage()
 
@@ -64,7 +107,8 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   const sidebarVoice = (page) => page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL })
   await sidebarVoice(first).click()
   await expect.poll(() => first.evaluate(() => window.__pcs.at(-1)?.connectionState)).toBe('connected')
-  await first.waitForTimeout(500)
+  await expect.poll(async () => (await filterState(first)).processed, { timeout: 15_000 }).toBeGreaterThan(0)
+  const beforeLateJoin = (await filterState(first)).processed
 
   // The second member joins the occupied Talk.
   await sidebarVoice(late).click()
@@ -73,7 +117,13 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   // Audio flows both ways (the fake microphone sends a tone).
   for (const page of [first, late]) {
     await expect.poll(() => audioBytesIn(page), { timeout: 15_000 }).toBeGreaterThan(2000)
+    await expect.poll(async () => (await filterState(page)).processed, { timeout: 15_000 }).toBeGreaterThan(0)
+    expect((await filterState(page)).ready).toBe(true)
+    expect((await filterState(page)).failed).toBe(false)
   }
+  // The first microphone keeps processing after the other member starts its
+  // own filter; counts reflect accepted PCM replies from the actual Worker.
+  await expect.poll(async () => (await filterState(first)).processed, { timeout: 15_000 }).toBeGreaterThan(beforeLateJoin)
 
   await firstCtx.close()
   await lateCtx.close()

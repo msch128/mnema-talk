@@ -118,7 +118,7 @@ Shown in the privacy policy (`GET /api/legal`). Set your real details in
 
 | Script | Variables |
 |---|---|
-| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `SEAWEED_LIVE=1`, `BACKUP_ALLOW_IN_REPO=1` |
+| [`scripts/backup.sh`](../scripts/backup.sh) | `BACKUP_DIR` (default `$HOME/mnema-talk-backups`), `KEEP_DAYS` (14), `BACKUP_ALLOW_IN_REPO=1` |
 | [`scripts/health-check.sh`](../scripts/health-check.sh) | `MNEMA_URL` (default `http://127.0.0.1:8080`), `HEALTH_TIMEOUT` (5 s), `ALERT_WEBHOOK_URL` |
 
 ## Reverse proxy and `TRUSTED_PROXY_CIDRS`
@@ -226,27 +226,58 @@ the Docker network.
 ## Backups and restore
 
 Everything stateful is the PostgreSQL volume, the SeaweedFS volume and
-`.env`. Run the scripts from the deployment directory (where
+deployment configuration. Run the scripts from the deployment directory (where
 `docker-compose.yml` and `.env` are):
 
 ```sh
-# Backup: postgres.sql.gz, seaweedfs.tar.gz and .env into BACKUP_DIR/<timestamp>/
+# Backup: database, media, env and compose.yaml into BACKUP_DIR/<timestamp>/
 BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
 
-# Prove a backup restores (scratch database, nothing live is touched)
+# Check integrity and SQL import in a disposable PostgreSQL container
 ./scripts/restore.sh /srv/backups/mnema/20261005-033000 --verify
 
-# Restore for real: stops the app, replaces database and media, starts again
+# Restore data: stops writers, replaces database/media, resumes prior services
 ./scripts/restore.sh /srv/backups/mnema/20261005-033000          # asks first
 ./scripts/restore.sh /srv/backups/mnema/20261005-033000 --yes    # no prompt
 ```
 
-- SeaweedFS is stopped for the few moments of the media copy, so the archive
-  is consistent; the app keeps running (uploads and media loads fail
-  meanwhile). `SEAWEED_LIVE=1` copies the running volume instead.
+- Backup stops the app (including retention) and then SeaweedFS before the
+  database snapshot and volume copy. Active calls disconnect during this
+  maintenance window. Other programs must not write to these stores during
+  the backup. `SEAWEED_LIVE=1` is refused because it cannot guarantee this boundary.
+- Success and failure resume only services that were running before backup.
+  Restore resumes them after success; a failure after replacing data leaves
+  app and SeaweedFS stopped to avoid serving a partial restore. Resolve the
+  failure before restarting them. A failed SeaweedFS restart also keeps the app
+  stopped. PostgreSQL must already be running.
+- New backup directories contain a format manifest, image identities,
+  migration filenames/checksums, `env`, rendered uninterpolated `compose.yaml`,
+  SHA-256 checksums and a `COMPLETE` marker
+  written after validation. Restore validates all required files, checksums
+  and archives before stopping services or replacing data. Checksums detect
+  damage; they do not authenticate an untrusted backup's SQL or configuration.
 - A backup contains `.env` with all secrets; the script refuses a
   `BACKUP_DIR` inside a git checkout unless `BACKUP_ALLOW_IN_REPO=1`.
-- Old backups beyond `KEEP_DAYS` are removed. Copy backups off the machine.
+- The scripts serialize maintenance using `.mnema-maintenance.lock` in the
+  deployment directory. An uncatchable kill may leave this lock; confirm no
+  maintenance process is running before removing it manually.
+- Retention removes only validated complete old backups after a successful
+  backup and service restart. Incomplete/legacy directories require manual
+  review and cleanup. Copy backups off the machine and encrypt offsite copies.
+- `--verify` imports into a network-isolated disposable PostgreSQL 17 container
+  with no live volumes or published ports, and removes it and its disposable
+  database volume on success/failure. Allow disk space for the imported database.
+  It checks SQL import and archive integrity. It does **not** prove login,
+  attachment/avatar retrieval or device recovery: test those on a separately
+  restored deployment with fresh volumes before relying on a restore point.
+- Pre-manifest backups need explicit `--allow-legacy` alongside `--verify` or
+  `--yes`; they still need readable SQL/media archives and `env`. Their original
+  snapshot consistency and checksums cannot be retroactively established.
+- Restore preserves the current `.env` and compose files. Review the backed-up
+  `env` and `compose.yaml` manually:
+  blindly replacing database credentials or storage endpoints can make the
+  restored deployment inaccessible or target the wrong stores. Client content
+  recovery remains separate from a server backup.
 - Nightly via cron, see the [README](../README.md#backups).
 
 ## Health and metrics

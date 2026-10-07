@@ -4,15 +4,17 @@ import { toRaw } from 'vue'
 import { publishMids, tuneScreenOffer, screenAudioConstraints, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
+import { useToastStore } from '../stores/toast'
 import { streamBitrate, DEFAULT_STREAM_QUALITY } from '../lib/streamQuality'
 
 // The AI filter worklets can't run in jsdom; tests hand in a fake node instead.
-const suppressor = vi.hoisted(() => ({ node: null, models: [] }))
+const suppressor = vi.hoisted(() => ({ node: null, models: [], options: [] }))
 vi.mock('../lib/noiseSuppressor', () => ({
   isNoiseSuppressionSupported: () => suppressor.node !== null,
   preloadNoiseSuppressor: () => {},
-  createNoiseSuppressorNode: async (ctx, model) => {
+  createNoiseSuppressorNode: async (ctx, model, options) => {
     suppressor.models.push(model)
+    suppressor.options.push(options)
     return suppressor.node
   }
 }))
@@ -142,6 +144,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   suppressor.node = null
   suppressor.models = []
+  suppressor.options = []
   FakeAudioContext.destinations = []
   FakeAudioContext.sources = []
   FakeAudioContext.gains = []
@@ -320,6 +323,72 @@ describe('kicked from voice', () => {
 })
 
 describe('useWebRTC signaling', () => {
+  it('discards an offer suspended on a connection replaced by reconnect', async () => {
+    const { rtc, chat, sent } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const old = FakePC.instances.at(-1)
+    let release
+    const original = old.setRemoteDescription.bind(old)
+    old.setRemoteDescription = vi.fn(async description => {
+      await new Promise(resolve => { release = resolve })
+      await original(description)
+    })
+    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    rtc.rejoinAfterReconnect()
+    const replacement = FakePC.instances.at(-1)
+    release()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(replacement.transceivers).toEqual([])
+    expect(sent.filter(event => event.type === 'webrtc_answer')).toEqual([])
+    await negotiate()
+    expect(sent.filter(event => event.type === 'webrtc_answer')).toHaveLength(1)
+  })
+
+  it('does not publish an old answer after leaving during answer creation', async () => {
+    const { rtc, chat, sent } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const old = FakePC.instances.at(-1)
+    let release
+    old.createAnswer = vi.fn(() => new Promise(resolve => { release = resolve }))
+    old.setLocalDescription = vi.fn(async () => {})
+    chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_OFFER } })
+    await vi.waitFor(() => expect(release).toBeTypeOf('function'))
+    rtc.leaveVoiceChannel()
+    release({ type: 'answer', sdp: 'old-session' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(old.setLocalDescription).not.toHaveBeenCalled()
+    expect(sent.filter(event => event.type === 'webrtc_answer')).toEqual([])
+  })
+
+  it('ignores ICE and media callbacks from a retired connection', async () => {
+    const { rtc, voice, sent } = await joined()
+    const old = FakePC.instances.at(-1)
+    rtc.rejoinAfterReconnect()
+    const before = sent.length
+    old.onicecandidate({ candidate: { toJSON: () => ({ candidate: 'retired' }) } })
+    old.ontrack({ track: fakeTrack('video'), streams: [{ id: 'cam:retired' }] })
+    expect(sent).toHaveLength(before)
+    expect(voice.userVideoStreams).toEqual({})
+  })
+
+  it('configures screen limits before restoring a share on a negotiated new sender', async () => {
+    const { rtc } = await joined()
+    const stream = fakeStream(['video'])
+    stream.getVideoTracks()[0].getSettings = () => ({ width: 1920, height: 1080 })
+    navigator.mediaDevices.getDisplayMedia = vi.fn().mockResolvedValue(stream)
+    await rtc.startScreenShare()
+    rtc.rejoinAfterReconnect()
+    const replacement = await negotiate()
+    const screen = replacement.senders[1]
+    expect(screen.track).toBe(stream.getVideoTracks()[0])
+    expect(screen.setParameters.mock.invocationCallOrder[0]).toBeLessThan(screen.replaceTrack.mock.invocationCallOrder[0])
+  })
+
   it('ignores offers that arrive after leaving', async () => {
     const { rtc, chat } = setup()
     const join = rtc.joinVoiceChannel('ch-1')
@@ -474,6 +543,25 @@ describe('AI noise suppression', () => {
     rtc.leaveVoiceChannel()
     expect(raw.getAudioTracks()[0].stop).toHaveBeenCalled()
     expect(node.destroy).toHaveBeenCalled()
+    expect(suppressor.options[0].signal.aborted).toBe(true)
+  })
+
+  it('discloses native fallback after worker failure, preserves the AI choice and never unmutes', async () => {
+    const { useToastStore } = await import('../stores/toast')
+    const { t } = await import('../i18n')
+    suppressor.node = fakeSuppressor()
+    const { voice } = await joinWith('ai')
+    voice.isMuted = true
+    const previous = voice.localAudioStream
+    suppressor.options[0].onFailure()
+    suppressor.options[0].onFailure()
+    const nativeStream = await grantMic()
+    await vi.waitFor(() => expect(voice.localAudioStream).not.toBe(previous))
+    expect(lastConstraints().noiseSuppression).toBe(true)
+    expect(voice.noiseMode).toBe('ai')
+    expect(nativeStream.getAudioTracks()[0].enabled).toBe(false)
+    expect(useToastStore().toasts.filter(x => x.text === t('audio.filterDegraded'))).toHaveLength(1)
+    expect(suppressor.models).toEqual(['dfn3'])
   })
 
   it('falls back to the browser filter when the worklet is unavailable', async () => {
@@ -550,6 +638,73 @@ describe('screen share with audio', () => {
   it('leaves the page out of the capture where supported, else cancels its echo', () => {
     expect(screenAudioConstraints({ restrictOwnAudio: true })).toEqual({ autoGainControl: false, noiseSuppression: false, echoCancellation: false, restrictOwnAudio: true })
     expect(screenAudioConstraints({})).toEqual({ autoGainControl: false, noiseSuppression: false, echoCancellation: true })
+  })
+
+  it('checks actual captured audio and requests echo cancellation when exclusion was not applied', async () => {
+    const { rtc } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    const track = display.getAudioTracks()[0]
+    let echoCancellation = false
+    track.getSettings = () => ({ restrictOwnAudio: false, echoCancellation })
+    track.getConstraints = () => ({ restrictOwnAudio: true, noiseSuppression: false })
+    track.applyConstraints = vi.fn(async () => { echoCancellation = true })
+    navigator.mediaDevices.getSupportedConstraints = () => ({ restrictOwnAudio: true })
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+    expect(track.applyConstraints).toHaveBeenCalledWith({ restrictOwnAudio: true, noiseSuppression: false, echoCancellation: true })
+    expect(useToastStore().toasts.filter(toast => toast.action)).toHaveLength(0)
+  })
+
+  it('leaves a confirmed own-audio restriction untouched', async () => {
+    const { rtc } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    const track = display.getAudioTracks()[0]
+    track.getSettings = () => ({ restrictOwnAudio: true, echoCancellation: false })
+    track.applyConstraints = vi.fn()
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+    expect(track.applyConstraints).not.toHaveBeenCalled()
+    expect(useToastStore().toasts.filter(toast => toast.action)).toHaveLength(0)
+  })
+
+  it('warns once if capture protection cannot be confirmed and offers stream-only mute', async () => {
+    const { rtc, mic, screenAudio, voice } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    const track = display.getAudioTracks()[0]
+    track.getSettings = () => ({ restrictOwnAudio: false, echoCancellation: false })
+    track.applyConstraints = vi.fn(async () => { throw new DOMException('not supported', 'OverconstrainedError') })
+    stubDisplayMedia(display)
+    await rtc.startScreenShare()
+    const actionable = useToastStore().toasts.filter(toast => toast.action)
+    expect(actionable).toHaveLength(1)
+    expect(screenAudio.track).toBe(track)
+    expect(track.enabled).toBe(true)
+    actionable[0].action.onClick()
+    expect(voice.isScreenAudioMuted).toBe(true)
+    expect(track.enabled).toBe(false)
+    expect(mic.getAudioTracks()[0].enabled).toBe(true)
+    rtc.stopScreenShare()
+    voice.isScreenAudioMuted = false
+    actionable[0].action.onClick()
+    expect(voice.isScreenAudioMuted).toBe(false)
+  })
+
+  it('does not attach screen audio after leaving while its fallback constraints are pending', async () => {
+    const { rtc, voice, screenAudio, sent } = await joined()
+    const display = fakeStream(['video', 'audio'])
+    const track = display.getAudioTracks()[0]
+    let resolve
+    track.getSettings = () => ({ restrictOwnAudio: false })
+    track.applyConstraints = vi.fn(() => new Promise(r => { resolve = r }))
+    stubDisplayMedia(display)
+    const starting = rtc.startScreenShare()
+    await vi.waitFor(() => expect(resolve).toBeTypeOf('function'))
+    rtc.leaveVoiceChannel()
+    resolve()
+    await starting
+    expect(screenAudio.replaceTrack).not.toHaveBeenCalledWith(track)
+    expect(voice.hasScreenAudio).toBe(false)
+    expect(sent.some(event => event.type === 'webrtc_screenshare_start')).toBe(false)
   })
 
   it('mute and the gate only silence the mic, never the screen audio', async () => {
@@ -782,6 +937,87 @@ describe('per-user playback', () => {
     expect(el.srcObject).not.toBeNull()
     bob.removeTrack(track)
     expect(el.srcObject).toBeNull()
+  })
+
+  it('replaces one screen-audio sink without duplicating it or removing the microphone', async () => {
+    const { voice, pc } = await joined()
+    voice.outputVolume = 100
+    const microphone = remoteAudio(pc, 'alice')
+    const previousTrack = fakeTrack('audio')
+    const previousStream = remoteStream('screen:alice')
+    pc.ontrack({ track: previousTrack, streams: [previousStream] })
+    const previousElement = audioElements.at(-1)
+    voice.setStreamVolume('alice', 80)
+    await vi.waitFor(() => expect(previousElement.volume).toBe(0.8))
+
+    const replacementTrack = fakeTrack('audio')
+    const replacementStream = remoteStream('screen:alice')
+    pc.ontrack({ track: replacementTrack, streams: [replacementStream] })
+    const replacementElement = audioElements.at(-1)
+    expect(previousElement.srcObject).toBeNull()
+    expect(previousElement.pause).toHaveBeenCalledOnce()
+    expect(replacementElement.volume).toBe(0.8)
+    expect(microphone.srcObject.getAudioTracks()).toHaveLength(1)
+    expect(replacementElement.srcObject.getAudioTracks()).toEqual([replacementTrack])
+    expect(audioElements.filter(el => el.srcObject).map(el => el.dataset.streamId)).toEqual(['alice', 'screen:alice'])
+
+    previousTrack.onended()
+    previousStream.removeTrack(previousTrack)
+    expect(replacementElement.srcObject.getAudioTracks()).toEqual([replacementTrack])
+    replacementStream.removeTrack(replacementTrack)
+    expect(replacementElement.srcObject).toBeNull()
+    expect(microphone.srcObject).not.toBeNull()
+  })
+
+  it('disconnects a replaced amplified voice graph before its new track starts playing', async () => {
+    const { voice, pc } = await joined()
+    voice.outputVolume = 100
+    const old = remoteAudio(pc, 'alice')
+    voice.setUserVolume('alice', 150)
+    await vi.waitFor(() => expect(old.muted).toBe(true))
+    const previousSource = FakeAudioContext.sources.at(-1)
+    const previousGain = FakeAudioContext.gains.at(-1)
+    const next = remoteAudio(pc, 'alice')
+    expect(old.srcObject).toBeNull()
+    expect(previousSource.disconnect).toHaveBeenCalledOnce()
+    expect(previousGain.disconnect).toHaveBeenCalledOnce()
+    expect(next.muted).toBe(true)
+    expect(audioElements.filter(el => el.srcObject)).toEqual([next])
+  })
+
+  it('keeps microphone and screen sound out of the video stream and ignores repeated delivery', async () => {
+    const { voice, pc } = await joined()
+    const mic = fakeTrack('audio')
+    const audio = fakeTrack('audio')
+    const video = fakeTrack('video')
+    const mixedIncoming = { ...streamOf([video, mic, audio]), id: 'alice' }
+    voice.watchScreen('alice')
+    pc.ontrack({ track: mic, streams: [mixedIncoming] })
+    pc.ontrack({ track: audio, streams: [{ id: 'screen:alice' }] })
+    pc.ontrack({ track: audio, streams: [{ id: 'screen:alice' }] })
+    pc.ontrack({ track: video, streams: [mixedIncoming] })
+    expect(audioElements).toHaveLength(2)
+    expect(audioElements[0].srcObject.getAudioTracks()).toEqual([mic])
+    expect(audioElements[1].srcObject.getAudioTracks()).toEqual([audio])
+    expect(voice.remoteScreenStream.getVideoTracks()).toEqual([video])
+    expect(voice.remoteScreenStream.getAudioTracks()).toEqual([])
+  })
+
+  it('does not let callbacks from a replaced track object remove its replacement with the same ID', async () => {
+    const { pc } = await joined()
+    const previous = { ...fakeTrack('audio'), id: 'reused' }
+    const next = { ...fakeTrack('audio'), id: 'reused' }
+    const stream = remoteStream('screen:alice')
+    pc.ontrack({ track: previous, streams: [stream] })
+    const old = audioElements.at(-1)
+    pc.ontrack({ track: next, streams: [stream] })
+    const current = audioElements.at(-1)
+    expect(old.srcObject).toBeNull()
+    previous.onended()
+    stream.removeTrack(previous)
+    expect(current.srcObject.getAudioTracks()).toEqual([next])
+    next.onended()
+    expect(current.srcObject).toBeNull()
   })
 
   it('amplifies above 100 % through a gain node', async () => {

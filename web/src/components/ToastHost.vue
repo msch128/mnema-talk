@@ -24,24 +24,25 @@ function runAction(toast) {
       :role="toast.type === 'error' ? 'alert' : 'status'"
       data-toast
       :data-type="toast.type"
-      class="pointer-events-auto flex items-start gap-2.5 rounded-[10px] bg-mnema-elevated py-3 pl-3.5 pr-2 shadow-[inset_0_0_0_1px_#2B2F2D,0_10px_28px_rgba(0,0,0,0.5)]"
+      class="pointer-events-none grid grid-cols-[1rem_minmax(0,1fr)_1.75rem] items-start gap-x-2.5 gap-y-2 rounded-[10px] bg-mnema-elevated py-3 pl-3.5 pr-2 shadow-[inset_0_0_0_1px_#2B2F2D,0_10px_28px_rgba(0,0,0,0.5)]"
     >
-      <component :is="icons[toast.type] || Info" :class="['mt-0.5 h-4 w-4 flex-shrink-0', tones[toast.type] || tones.info]" />
-      <div class="min-w-0 flex-1 text-sm">
+      <component :is="icons[toast.type] || Info" :class="['col-start-1 row-start-1 mt-0.5 h-4 w-4', tones[toast.type] || tones.info]" />
+      <div class="col-start-2 row-start-1 min-w-0 text-sm">
         <div class="break-words text-mnema-text">{{ toast.text }}</div>
         <div v-if="toast.detail" class="break-words text-[13px] text-mnema-tertiary">{{ toast.detail }}</div>
       </div>
       <button
         v-if="toast.action"
         type="button"
-        class="-mt-1 h-7 flex-shrink-0 rounded-md bg-mnema-elevated px-3 text-[13px] font-semibold text-mnema-text shadow-[inset_0_0_0_1px_#2B2F2D] transition hover:bg-mnema-hover"
+        class="pointer-events-auto col-start-2 row-start-2 min-h-7 max-w-full justify-self-start break-words rounded-md bg-mnema-elevated px-3 py-1 text-left text-[13px] font-semibold text-mnema-text shadow-[inset_0_0_0_1px_#2B2F2D] transition hover:bg-mnema-hover"
         @click="runAction(toast)"
       >{{ toast.action.label }}</button>
       <button
         v-if="toast.type === 'error' || toast.action"
         type="button"
+        :aria-label="$t('common.close')"
         v-tooltip="$t('common.close')"
-        class="-mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
+        class="pointer-events-auto col-start-3 row-start-1 -mt-1 flex h-7 w-7 items-center justify-center rounded-md text-mnema-tertiary transition hover:bg-mnema-hover hover:text-mnema-text"
         @click="toastStore.dismiss(toast.id)"
       >
         <X class="h-3.5 w-3.5" />

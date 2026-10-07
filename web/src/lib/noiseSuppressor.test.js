@@ -7,7 +7,20 @@ vi.mock('@sapphi-red/web-noise-suppressor', () => ({
 }))
 
 class FakeWorkletNode {
-  constructor(ctx, name, opts) { this.ctx = ctx; this.name = name; this.opts = opts }
+  constructor(ctx, name, opts) {
+    this.ctx = ctx; this.name = name; this.opts = opts
+    this.port = { postMessage: vi.fn() }
+    this.disconnect = vi.fn()
+  }
+}
+
+class FakeWorker {
+  static instances = []
+  constructor() { this.messages = []; this.terminate = vi.fn(); FakeWorker.instances.push(this) }
+  postMessage(message) {
+    this.messages.push(message)
+    if (message.type === 'init') queueMicrotask(() => this.onmessage({ data: { type: 'ready', frameLength: 480 } }))
+  }
 }
 
 function fakeContext(sampleRate = 48000) {
@@ -18,6 +31,11 @@ let mod
 beforeEach(async () => {
   vi.resetModules()
   vi.stubGlobal('AudioWorkletNode', FakeWorkletNode)
+  FakeWorker.instances = []
+  vi.stubGlobal('Worker', FakeWorker)
+  vi.stubGlobal('MessageChannel', class {
+    constructor() { this.port1 = { close: vi.fn() }; this.port2 = { close: vi.fn() } }
+  })
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }))
   vi.spyOn(WebAssembly, 'compile').mockResolvedValue({ compiled: true })
   mod = await import('./noiseSuppressor')
@@ -42,10 +60,13 @@ describe('createNoiseSuppressorNode', () => {
 
   it('creates DeepFilterNet3 by default with the compiled wasm and the model', async () => {
     const node = await mod.createNoiseSuppressorNode(fakeContext())
-    expect(node.name).toBe('deepfilter-audio-processor')
-    expect(node.opts.processorOptions.wasmModule).toEqual({ compiled: true })
-    expect(node.opts.processorOptions.modelBytes).toBeInstanceOf(ArrayBuffer)
-    expect(node.opts.processorOptions.suppressionLevel).toBe(100)
+    expect(node.name).toBe('deepfilter-worker-bridge')
+    const initialization = FakeWorker.instances[0].messages[0]
+    expect(initialization.wasmModule).toEqual({ compiled: true })
+    expect(initialization.modelBytes).toBeInstanceOf(ArrayBuffer)
+    expect(initialization.suppressionLevel).toBe(100)
+    expect(node.opts.processorOptions).toBeUndefined()
+    node.destroy()
   })
 
   it('creates GTCRN on request', async () => {
@@ -71,5 +92,46 @@ describe('createNoiseSuppressorNode', () => {
     fetch.mockResolvedValueOnce({ ok: false, status: 404 })
     expect(await mod.createNoiseSuppressorNode(fakeContext())).toBeNull()
     expect(await mod.createNoiseSuppressorNode(fakeContext())).not.toBeNull()
+  })
+
+  it('deduplicates concurrent worklet registration in one context', async () => {
+    const ctx = fakeContext()
+    const nodes = await Promise.all([mod.createNoiseSuppressorNode(ctx), mod.createNoiseSuppressorNode(ctx)])
+    expect(ctx.audioWorklet.addModule).toHaveBeenCalledTimes(1)
+    nodes.forEach(node => node.destroy())
+  })
+
+  it('does not initialize a model after capture was canceled during asset loading', async () => {
+    let release
+    fetch.mockImplementationOnce(() => new Promise(resolve => { release = resolve }))
+    const controller = new AbortController()
+    const ctx = fakeContext()
+    const creating = mod.createNoiseSuppressorNode(ctx, 'dfn3', { signal: controller.signal })
+    controller.abort()
+    release({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) })
+    expect(await creating).toBeNull()
+    expect(FakeWorker.instances).toHaveLength(0)
+    expect(ctx.audioWorklet.addModule).not.toHaveBeenCalled()
+  })
+
+  it('terminates initialization if capture is canceled before the worker is ready', async () => {
+    vi.spyOn(FakeWorker.prototype, 'postMessage').mockImplementation(function (message) { this.messages.push(message) })
+    const controller = new AbortController()
+    const creating = mod.createNoiseSuppressorNode(fakeContext(), 'dfn3', { signal: controller.signal })
+    await vi.waitFor(() => expect(FakeWorker.instances).toHaveLength(1))
+    controller.abort()
+    expect(await creating).toBeNull()
+    expect(FakeWorker.instances[0].terminate).toHaveBeenCalledOnce()
+  })
+
+  it('reports a runtime worker failure once and leaves bounded bridge bypass until replacement', async () => {
+    const onFailure = vi.fn()
+    const node = await mod.createNoiseSuppressorNode(fakeContext(), 'dfn3', { onFailure })
+    const worker = FakeWorker.instances[0]
+    worker.onerror()
+    worker.onerror()
+    expect(onFailure).toHaveBeenCalledOnce()
+    expect(node.port.postMessage).toHaveBeenCalledWith({ type: 'failed' })
+    node.destroy()
   })
 })

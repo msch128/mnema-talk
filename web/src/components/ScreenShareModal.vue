@@ -193,9 +193,6 @@ async function handleStart() {
             <span class="text-sm font-semibold">
               {{ r === 'source' ? t('talk.quality.source') : `${r}p` }}
             </span>
-            <span v-if="r === 'source'" class="text-[10px] text-mnema-accent font-mono font-medium">
-              {{ '4K' }}
-            </span>
           </button>
         </div>
       </div>
@@ -231,14 +228,12 @@ async function handleStart() {
             <Activity class="w-3.5 h-3.5 text-mnema-accent" />
             <span>{{ t('talk.quality.estimatedBitrate', { bitrate: estimatedBitrateDisplay }) }}</span>
           </div>
-          <span class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-mnema-raised text-mnema-tertiary">
-            {{ 'H.264' }}
-          </span>
         </div>
         <p class="text-xs text-mnema-tertiary flex items-start gap-1.5">
           <Sparkles class="w-3.5 h-3.5 text-mnema-mint flex-shrink-0 mt-0.5" />
           <span>{{ isMotionPriority ? t('talk.quality.motionPriority') : t('talk.quality.detailPriority') }}</span>
         </p>
+        <p class="text-xs text-mnema-tertiary">{{ t('talk.quality.targetNote') }}</p>
       </div>
 
       <!-- 5. Actions Footer -->

@@ -1,9 +1,9 @@
 # Mnema Talk - developer tasks. Run `make` or `make help` for the list.
-# Requires GNU make, Go, Node 24 + npm, and Docker (compose plugin).
+# Requires GNU make, Go, Node 24 + npm, Python 3, and Docker (compose plugin).
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e
+.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -62,6 +62,10 @@ test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
 test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
 
+test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
+	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
+	python3 scripts/tests/test_backup_restore.py
+
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
 # Minimum total coverage (%) for Go and web; keep in sync with .github/workflows/ci.yml.
@@ -99,7 +103,7 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint openapi-check test coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
+check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .

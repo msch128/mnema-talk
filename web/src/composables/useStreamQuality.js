@@ -6,7 +6,7 @@ import { computed, ref, getCurrentInstance, onBeforeUnmount } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import {
   normalizeQuality, streamModeOf, STREAM_PRESETS, STREAM_RESOLUTIONS, STREAM_FRAME_RATES,
-  summarizeSendStats, formatSendStats
+  summarizeSendStats, formatSendStats, formatStreamDiagnostics
 } from '../lib/streamQuality'
 import { t } from '../i18n'
 
@@ -25,7 +25,7 @@ export function frameRateLabel(fps) {
  * getStats: async () => RTCStatsReport values of the screen sender (or null);
  * see useWebRTC().getScreenSendStats.
  */
-export function useStreamQuality({ getStats } = {}) {
+export function useStreamQuality({ getStats, getCaptureSettings } = {}) {
   const voiceStore = useVoiceStore()
   const quality = computed(() => normalizeQuality(voiceStore.screenQuality))
   const mode = computed(() => streamModeOf(voiceStore.screenQuality))
@@ -45,6 +45,7 @@ export function useStreamQuality({ getStats } = {}) {
 
   // --- What is being sent, sampled while "Advanced" is open ---
   const sendStats = ref(null)
+  const captureSettings = ref(null)
   let timer = null
   let previous = null
   let sampling = 0
@@ -58,6 +59,7 @@ export function useStreamQuality({ getStats } = {}) {
       raw = null
     }
     if (run !== sampling) return
+    captureSettings.value = getCaptureSettings?.() || null
     const summary = raw ? summarizeSendStats(raw, previous) : null
     if (summary) previous = summary.sample
     sendStats.value = summary
@@ -83,6 +85,9 @@ export function useStreamQuality({ getStats } = {}) {
     const q = quality.value
     const m = mode.value
     const shown = formatSendStats(sendStats.value)
+    const diagnosis = formatStreamDiagnostics(sendStats.value, captureSettings.value)
+    const limitation = sendStats.value?.limitation
+    const efficient = sendStats.value?.efficientEncoder
     const modeItem = (id, subtitle) => ({
       id: `mode-${id}`,
       type: 'radio',
@@ -142,14 +147,23 @@ export function useStreamQuality({ getStats } = {}) {
         id: 'advanced',
         type: 'submenu',
         label: t('talk.quality.advanced'),
-        minWidth: 220,
+        minWidth: 290,
         onOpen: () => { startStats() },
         onClose: stopStats,
         items: [
           { id: 'codec', type: 'info', label: t('talk.quality.codec'), value: shown.codec },
+          { id: 'codec-profile', type: 'info', label: t('talk.quality.codecProfile'), value: diagnosis.codecProfile },
+          { id: 'target-fps', type: 'info', label: t('talk.quality.targetFps'), value: frameRateLabel(q.fps) },
+          { id: 'capture-setting', type: 'info', label: t('talk.quality.captureSetting'), value: diagnosis.captureSetting },
+          { id: 'capture-fps', type: 'info', label: t('talk.quality.captureFps'), value: diagnosis.captureFps },
           { id: 'size', type: 'info', label: t('talk.quality.resolution'), value: shown.resolution },
-          { id: 'fps', type: 'info', label: t('talk.quality.frameRate'), value: shown.fps },
-          { id: 'bitrate', type: 'info', label: t('talk.quality.bitrate'), value: shown.bitrate }
+          { id: 'fps', type: 'info', label: t('talk.quality.encodedFps'), value: shown.fps },
+          { id: 'bitrate', type: 'info', label: t('talk.quality.bitrate'), value: shown.bitrate },
+          { id: 'encoder', type: 'info', label: t('talk.quality.encoder'), value: diagnosis.encoder },
+          { id: 'efficient-encoder', type: 'info', label: t('talk.quality.efficientEncoder'), value: efficient === null || efficient === undefined ? '–' : t(`talk.quality.${efficient ? 'yes' : 'no'}`) },
+          { id: 'encode-time', type: 'info', label: t('talk.quality.encodeTime'), value: diagnosis.encodeTime },
+          { id: 'limitation', type: 'info', label: t('talk.quality.limitation'), value: limitation ? t(`talk.quality.limit_${limitation}`) : '–' },
+          { type: 'label', label: t('talk.quality.fpsNote') }
         ]
       }
     ]

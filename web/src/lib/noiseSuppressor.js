@@ -1,5 +1,6 @@
-// AI noise suppression as an AudioWorklet. Both models run as WebAssembly
-// entirely in the browser; worklets, wasm and weights are bundled and served
+// AI noise suppression in the browser. DFN3 runs in a dedicated Worker with
+// an AudioWorklet bridge; GTCRN runs in an AudioWorklet. WASM and weights are
+// bundled and served
 // by our own binary, so no audio or request ever leaves for a third party.
 //
 //   'dfn3'  DeepFilterNet3 (third_party/deepfilternet3): full-band 48 kHz, best
@@ -8,12 +9,10 @@
 //           works on 16 kHz internally, so voices lose their top end.
 import gtcrnWorkletUrl from '@sapphi-red/web-noise-suppressor/gtcrnWorklet.js?url'
 import gtcrnWasmUrl from '@sapphi-red/web-noise-suppressor/gtcrn.wasm?url'
-import dfnWorkletUrl from '../third_party/deepfilternet3/worklet.js?url'
+import dfnWorkletUrl from './dfnBridgeWorklet.js?url&no-inline'
 import dfnWasmUrl from '../third_party/deepfilternet3/df_bg.wasm?url'
 import dfnModelUrl from '../third_party/deepfilternet3/DeepFilterNet3_onnx.tgz?url'
-
-// No upper bound on how far DeepFilterNet may attenuate noise (dB).
-const DFN_ATTENUATION_LIMIT = 100
+import { createDeepFilterNode } from './dfnNode'
 
 const assetPromises = new Map()
 let gtcrnModulePromise = null
@@ -41,13 +40,11 @@ const MODELS = {
     sampleRates: [48000],
     workletUrl: dfnWorkletUrl,
     load: () => Promise.all([
-      // Compiled once on the main thread; the Module is shared with every worklet.
+      // Compiled once asynchronously; the Module is shared with each Worker.
       fetchOnce(dfnWasmUrl, res => res.arrayBuffer().then(buf => WebAssembly.compile(buf))),
       fetchOnce(dfnModelUrl)
     ]),
-    create: (ctx, [wasmModule, modelBytes]) => new AudioWorkletNode(ctx, 'deepfilter-audio-processor', {
-      processorOptions: { wasmModule, modelBytes, suppressionLevel: DFN_ATTENUATION_LIMIT }
-    })
+    create: createDeepFilterNode
   },
   gtcrn: {
     sampleRates: [16000, 48000],
@@ -71,20 +68,26 @@ export function preloadNoiseSuppressor(model = 'dfn3') {
  * Returns a mono AudioWorkletNode running the model, or null when the browser
  * can't run it. Callers fall back to the browser's own suppression.
  */
-export async function createNoiseSuppressorNode(audioContext, model = 'dfn3') {
+export async function createNoiseSuppressorNode(audioContext, model = 'dfn3', options = {}) {
   const spec = MODELS[model]
   if (!spec || !isNoiseSuppressionSupported() || !audioContext?.audioWorklet) return null
   if (!spec.sampleRates.includes(audioContext.sampleRate)) return null
+  const stale = () => options.signal?.aborted || audioContext.state === 'closed'
+  if (stale()) return null
 
   try {
     const assets = await spec.load()
+    if (stale()) return null
     let registered = registeredWorklets.get(audioContext)
-    if (!registered) registeredWorklets.set(audioContext, registered = new Set())
+    if (!registered) registeredWorklets.set(audioContext, registered = new Map())
     if (!registered.has(model)) {
-      await audioContext.audioWorklet.addModule(spec.workletUrl)
-      registered.add(model)
+      const registration = audioContext.audioWorklet.addModule(spec.workletUrl)
+      registered.set(model, registration)
+      registration.catch(() => { if (registered.get(model) === registration) registered.delete(model) })
     }
-    return spec.create(audioContext, assets)
+    await registered.get(model)
+    if (stale()) return null
+    return await spec.create(audioContext, assets, options)
   } catch (err) {
     console.warn(`AI noise suppression (${model}) unavailable:`, err)
     return null

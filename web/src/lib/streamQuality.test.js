@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeQuality, streamModeOf, trackConstraints, streamBitrate, streamEncoding, streamTuning,
   summarizeSendStats, formatSendStats, DEFAULT_STREAM_QUALITY, STREAM_PRESETS, STREAM_MIN_BITRATE,
-  STREAM_MAX_BITRATE, SCREEN_QUALITY_STORAGE_KEY
+  STREAM_MAX_BITRATE, SCREEN_QUALITY_STORAGE_KEY, formatStreamDiagnostics
 } from './streamQuality'
 
 const UHD = { width: 3840, height: 2160 }
@@ -104,6 +104,36 @@ describe('send statistics', () => {
     expect(formatSendStats(s, 'en').bitrate).toBe('4.5 Mbit/s')
     expect(formatSendStats({ ...s, kbps: 800 }, 'en').bitrate).toBe('800 kbit/s')
     expect(formatSendStats({ ...s, kbps: null }, 'en').bitrate).toBe('–')
+  })
+
+  it('distinguishes capture cadence from encoded cadence and reports encoder limitations', () => {
+    const stats = [
+      { id: 'c', type: 'codec', mimeType: 'video/H264', sdpFmtpLine: 'packetization-mode=1;profile-level-id=42e01f;level-asymmetry-allowed=1' },
+      { id: 'capture', type: 'media-source', kind: 'video', framesPerSecond: 59.7 },
+      { id: 'other', type: 'media-source', kind: 'video', framesPerSecond: 15 },
+      { id: 'video', type: 'outbound-rtp', kind: 'video', mediaSourceId: 'capture', codecId: 'c', framesPerSecond: 20.4,
+        framesEncoded: 100, totalEncodeTime: 2, encoderImplementation: 'ExternalEncoder', powerEfficientEncoder: true, qualityLimitationReason: 'cpu' }
+    ]
+    const summary = summarizeSendStats(stats)
+    expect(summary).toMatchObject({ captureFps: 60, fps: 20, encoder: 'ExternalEncoder', efficientEncoder: true, limitation: 'cpu', encodeMs: 20 })
+    expect(formatStreamDiagnostics(summary, { frameRate: 60 }, 'de')).toMatchObject({ captureSetting: '60 fps', captureFps: '60 fps', encoder: 'ExternalEncoder', encodeTime: '20 ms', codecProfile: '42e01f' })
+  })
+
+  it('uses matching stream counter deltas when a browser omits framesPerSecond', () => {
+    const first = summarizeSendStats([{ id: 'video', type: 'outbound-rtp', kind: 'video', timestamp: 1000, framesEncoded: 100, totalEncodeTime: 1 }])
+    const second = summarizeSendStats([{ id: 'video', type: 'outbound-rtp', kind: 'video', timestamp: 2000, framesEncoded: 160, totalEncodeTime: 1.6 }], first.sample)
+    expect(second.fps).toBe(60)
+    expect(second.encodeMs).toBeCloseTo(10)
+    const replacement = summarizeSendStats([{ id: 'new-video', type: 'outbound-rtp', kind: 'video', timestamp: 3000, framesEncoded: 5, totalEncodeTime: 0.1 }], second.sample)
+    expect(replacement.fps).toBeNull()
+    expect(replacement.kbps).toBeNull()
+  })
+
+  it('keeps unavailable diagnosis unknown and preserves a measured zero rate', () => {
+    const missing = summarizeSendStats([{ id: 'video', type: 'outbound-rtp', kind: 'video' }])
+    expect(missing).toMatchObject({ fps: null, captureFps: null, efficientEncoder: null, limitation: null, encodeMs: null })
+    expect(formatStreamDiagnostics(missing)).toEqual({ captureSetting: '–', captureFps: '–', encoder: '–', encodeTime: '–', codecProfile: '–' })
+    expect(summarizeSendStats([{ id: 'video', type: 'outbound-rtp', kind: 'video', framesPerSecond: 0 }]).fps).toBe(0)
   })
 })
 

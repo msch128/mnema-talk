@@ -31,6 +31,11 @@ let meteringTrack = null
 // localAudioStream is then the processed stream that is sent, gated and muted.
 let rawMicStream = null
 let suppressorNode = null
+let micPipelineController = null
+let micTestController = null
+// A failed model uses browser suppression for this session; the saved choice
+// is untouched, and leaving/rejoining permits a fresh attempt.
+let failedAIModel = null
 
 // Noise mode -> model in lib/noiseSuppressor (null: no AI filter).
 function aiModel(noiseMode) {
@@ -60,6 +65,10 @@ let audioSender = null
 let screenSender = null
 let cameraSender = null
 let screenAudioSender = null
+// A browser picker may stay open for a long time. Repeated clicks must not
+// launch several capture pipelines; stopping also invalidates its result.
+let screenCapturePending = false
+let screenCaptureGeneration = 0
 // Quality changes are applied one after another.
 let qualityChain = Promise.resolve()
 // Playback above 100 % needs a gain stage: element.volume tops out at 1.
@@ -330,6 +339,14 @@ function tagRemoteAudio(el, streamId) {
 // same track (transceiver reused for someone else) only retags its element.
 function attachRemoteAudio(voiceStore, track, stream) {
   const streamId = stream?.id || ''
+  // A source can return on a different receiver track after renegotiation.
+  // Its previous HTML/WebAudio sink must leave before the replacement plays;
+  // microphone and screen audio stay distinct through their stream prefixes.
+  for (const [trackId, el] of remoteAudioElements) {
+    const sameSource = streamId && el.dataset.streamId === streamId
+    const replacedTrack = trackId === track.id && el.srcObject?.getAudioTracks()[0] !== track
+    if ((sameSource && trackId !== track.id) || replacedTrack) removeRemoteAudio(trackId)
+  }
   let audioEl = remoteAudioElements.get(track.id)
   if (audioEl) {
     tagRemoteAudio(audioEl, streamId)
@@ -359,7 +376,10 @@ function attachRemoteAudio(voiceStore, track, stream) {
       sink.appendChild(audioEl)
     }
     remoteAudioElements.set(track.id, audioEl)
-    track.onended = () => removeRemoteAudio(track.id)
+    track.onended = () => {
+      const current = remoteAudioElements.get(track.id)
+      if (current?.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
+    }
   }
 
   // When the SFU stops forwarding, the browser removes the track from its
@@ -368,7 +388,7 @@ function attachRemoteAudio(voiceStore, track, stream) {
   stream?.addEventListener?.('removetrack', (e) => {
     if (e.track !== track) return
     const el = remoteAudioElements.get(track.id)
-    if (el && (el.dataset.streamId || '') === streamId) removeRemoteAudio(track.id)
+    if (el && (el.dataset.streamId || '') === streamId && el.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
   })
 }
 
@@ -380,13 +400,14 @@ function setupPeerConnection(voiceStore, chatStore) {
     rtcConfig.dscp = true
   }
   pc = new RTCPeerConnection(rtcConfig)
+  const conn = pc
   diagSink = (payload) => chatStore.sendWSEvent('webrtc_diag', payload)
   startStatsPolling(voiceStore)
 
   // Connection diagnostics for the server log: what this browser gathers and
   // how the connection develops (candidate types only, never addresses).
   const diag = { candidates: {}, errors: [] }
-  const reportDiag = (event) => chatStore.sendWSEvent('webrtc_diag', {
+  const reportDiag = (event) => pc === conn && chatStore.sendWSEvent('webrtc_diag', {
     event,
     gathering: pc?.iceGatheringState,
     ice: pc?.iceConnectionState,
@@ -399,6 +420,7 @@ function setupPeerConnection(voiceStore, chatStore) {
   })
 
   pc.onicecandidate = (event) => {
+    if (pc !== conn) return
     if (event.candidate) {
       const key = `${event.candidate.protocol || '?'}/${event.candidate.type || '?'}`
       diag.candidates[key] = (diag.candidates[key] || 0) + 1
@@ -406,6 +428,7 @@ function setupPeerConnection(voiceStore, chatStore) {
     }
   }
   pc.onicecandidateerror = (event) => {
+    if (pc !== conn) return
     diag.errors.push(`${event.errorCode} ${event.errorText || ''} ${event.url || ''}`.trim())
   }
   pc.onicegatheringstatechange = () => reportDiag('gathering')
@@ -414,6 +437,7 @@ function setupPeerConnection(voiceStore, chatStore) {
   }
 
   pc.ontrack = (event) => {
+    if (pc !== conn) return
     // The SFU names the publishing user in the stream ID.
     const streamId = event.streams?.[0]?.id
     if (event.track.kind === 'audio') {
@@ -588,7 +612,7 @@ function bindPublishSenders(conn, sdp) {
     if (audioSender) bound.fresh.audio = audioSender
   }
   if (!screenSender) {
-    screenSender = bind(mids.video[0], localScreenStream.value?.getVideoTracks()[0])
+    screenSender = bind(mids.video[0], null)
     bound.screen = !!screenSender && !!localScreenStream.value
     if (screenSender) bound.fresh.screen = screenSender
   }
@@ -645,6 +669,18 @@ function ownAudioGuard(track) {
   return 'none'
 }
 let screenAudioGuard = null
+const warnedScreenAudioTracks = new WeakSet()
+
+// Recognizing a constraint does not prove it was applied to the selected
+// monitor's audio. Inspect the actual track before turning off the fallback.
+async function ensureScreenAudioGuard(track) {
+  if (ownAudioGuard(track) === 'none' && typeof track?.applyConstraints === 'function') {
+    try {
+      await track.applyConstraints({ ...(track.getConstraints?.() || {}), echoCancellation: true })
+    } catch { /* The selected capture may not support echo cancellation. */ }
+  }
+  return ownAudioGuard(track)
+}
 
 async function tuneSender(sender, { maxBitrate, maxFramerate, scaleResolutionDownBy, degradationPreference, priority, networkPriority } = {}) {
   try {
@@ -670,10 +706,10 @@ function qosPriority(voiceStore) {
 
 // The screen sender's parameters for the chosen stream quality, at the size
 // the capture delivers now.
-function screenSenderParams(voiceStore) {
+function screenSenderParams(voiceStore, track = localScreenStream.value?.getVideoTracks()[0]) {
   const prio = qosPriority(voiceStore)
   const quality = voiceStore?.screenQuality
-  const settings = localScreenStream.value?.getVideoTracks()[0]?.getSettings?.() || {}
+  const settings = track?.getSettings?.() || {}
   const { degradationPreference } = streamTuning(quality)
   return { ...streamEncoding(quality, settings), degradationPreference, priority: prio, networkPriority: prio }
 }
@@ -683,10 +719,13 @@ function screenSenderParams(voiceStore) {
 // restarting the share. Where the browser cannot scale the capture, the
 // encoder scales it down (see streamEncoding).
 function applyScreenQuality(voiceStore) {
+  // A preset selected before the picker opens belongs to the next capture.
+  // Do not let its queued watcher find that future track and configure it a
+  // second time immediately after attachScreen has prepared the encoder.
+  const track = localScreenStream.value?.getVideoTracks()[0]
+  const quality = { ...voiceStore.screenQuality }
   qualityChain = qualityChain.then(async () => {
-    const track = localScreenStream.value?.getVideoTracks()[0]
-    if (!track) return
-    const quality = voiceStore.screenQuality
+    if (!track || track !== localScreenStream.value?.getVideoTracks()[0]) return
     try {
       await track.applyConstraints?.(trackConstraints(quality))
     } catch (err) {
@@ -846,7 +885,23 @@ export function useWebRTC() {
   // browser's own suppression stands in for it.
   function useBrowserNoiseSuppression() {
     const mode = voiceStore.noiseMode
-    return mode === 'browser' || (aiModel(mode) !== null && !isNoiseSuppressionSupported())
+    return mode === 'browser' || (aiModel(mode) !== null && (!isNoiseSuppressionSupported() || aiModel(mode) === failedAIModel))
+  }
+
+  function recoverFilter(ctx, model, test = false) {
+    if ((test ? testAudioContext : audioContext) !== ctx || failedAIModel === model) return
+    failedAIModel = model
+    useToastStore().info(t('audio.filterDegraded'))
+    // Allow the current setup to finish before acquiring the native fallback.
+    // The old downstream mute/gate remains active throughout this transition.
+    setTimeout(() => {
+      if ((test ? testAudioContext : audioContext) !== ctx) return
+      if (test) {
+        if (voiceStore.isMicTesting) startMicTest().catch(() => {})
+      } else if (localAudioStream.value && voiceStore.currentChannelId) {
+        applyAudioSettings().catch(() => {})
+      }
+    }, 0)
   }
 
   function getAudioConstraints() {
@@ -901,9 +956,9 @@ export function useWebRTC() {
     // If we're already connected to a voice channel, ensure audioContext is active
     if (localAudioStream.value && audioContext) {
       if (audioContext.state === 'suspended') {
-        await audioContext.resume().catch(() => {})
+        audioContext.resume().catch(() => {})
       }
-      return
+      return true
     }
 
     teardownTestPipeline()
@@ -916,11 +971,12 @@ export function useWebRTC() {
     } catch (err) {
       console.warn('Mic test failed (permission denied or no device):', err)
       if (!stale()) voiceStore.currentInputLevel = 0
-      return
+      if (!stale()) voiceStore.isMicTesting = false
+      return false
     }
     if (stale()) {
       stream.getTracks().forEach(tr => tr.stop())
-      return
+      return false
     }
     testAudioStream = stream
 
@@ -928,6 +984,8 @@ export function useWebRTC() {
       const AudioCtx = window.AudioContext || window.webkitAudioContext
       const ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
       testAudioContext = ctx
+      const controller = new AbortController()
+      micTestController = controller
       // Not awaited: without a user gesture resume() may never settle.
       if (ctx.state === 'suspended') ctx.resume().catch(() => {})
 
@@ -938,18 +996,18 @@ export function useWebRTC() {
       let source = ctx.createMediaStreamSource(stream)
       // Meter the filtered signal so the gate threshold calibrates like in a call.
       const model = aiModel(voiceStore.noiseMode)
-      if (model) {
-        const node = await createNoiseSuppressorNode(ctx, model)
+      if (model && model !== failedAIModel && isNoiseSuppressionSupported()) {
+        const node = await createNoiseSuppressorNode(ctx, model, { signal: controller.signal, onFailure: () => recoverFilter(ctx, model, true) })
         if (stale()) {
           // stopMicTest already closed the context and stopped the stream.
           try { node?.destroy?.() } catch { /* ignore */ }
-          return
+          return false
         }
         if (node) {
           source.connect(node)
           source = node
           testSuppressor = node
-        }
+        } else recoverFilter(ctx, model, true)
       }
       const biquad = ctx.createBiquadFilter()
       biquad.type = 'highpass'
@@ -981,12 +1039,15 @@ export function useWebRTC() {
 
       // Refresh devices after permission is granted so device labels are available
       await refreshAudioDevices()
+      return !stale()
     } catch (err) {
       console.warn('Mic test setup failed:', err)
       if (!stale()) {
         teardownTestPipeline()
         voiceStore.currentInputLevel = 0
+        voiceStore.isMicTesting = false
       }
+      return false
     }
   }
 
@@ -1001,14 +1062,20 @@ export function useWebRTC() {
       if (track) track.enabled = false
       chatStore.sendWSEvent('voice_speaking', { active: false })
       updateRemoteVolume(voiceStore)
-      return
+      return !!loopbackGain
     }
 
     // Not in a voice call: the test builds the loopback itself once it runs.
     if (testAudioContext && testBiquad) {
       connectLoopback(testAudioContext, testBiquad)
+      return !!loopbackGain
     } else {
-      await startMicTest()
+      const starting = startMicTest()
+      const gen = micTestGen
+      const started = await starting
+      if (gen !== micTestGen) return false
+      if (!started || !loopbackGain) voiceStore.isMicTesting = false
+      return started && !!loopbackGain
     }
   }
 
@@ -1023,13 +1090,15 @@ export function useWebRTC() {
   }
 
   function toggleMicTest() {
-    if (voiceStore.isMicTesting) stopMicLoopback()
-    else startMicLoopback()
+    if (voiceStore.isMicTesting) { stopMicTest(); return Promise.resolve(false) }
+    return startMicLoopback()
   }
 
   // Ends the standalone test pipeline (and any start still awaiting the mic).
   function teardownTestPipeline() {
     micTestGen++
+    micTestController?.abort()
+    micTestController = null
     if (testSpeakingInterval) {
       clearInterval(testSpeakingInterval)
       testSpeakingInterval = null
@@ -1070,6 +1139,7 @@ export function useWebRTC() {
   }
 
   function cleanupVoiceAudio() {
+    failedAIModel = null
     if (speakingInterval) {
       clearInterval(speakingInterval)
       speakingInterval = null
@@ -1087,38 +1157,51 @@ export function useWebRTC() {
     voiceStore.currentInputLevel = 0
   }
 
-  // Offers are queued so overlapping renegotiations never interleave.
+  // Queue only within the connection that received the offer. An old task
+  // must never bind tracks or send an answer into a replacement connection.
   function handleRemoteOffer(offer) {
-    signalingChain = signalingChain.then(() => applyRemoteOffer(offer))
+    const generation = joinGeneration
+    const expectedConnection = pc
+    signalingChain = signalingChain.then(() => applyRemoteOffer(offer, generation, expectedConnection))
     return signalingChain
   }
 
-  async function applyRemoteOffer(offer) {
-    // A late offer after leaving must not resurrect a connection.
-    if (!voiceStore.currentChannelId) return
-    if (!pc) {
-      setupPeerConnection(voiceStore, chatStore)
-    }
+  async function applyRemoteOffer(offer, generation, expectedConnection) {
+    if (!voiceStore.currentChannelId || generation !== joinGeneration || pc !== expectedConnection) return
+    if (!pc) setupPeerConnection(voiceStore, chatStore)
+    const conn = pc
+    const channelId = voiceStore.currentChannelId
+    const isCurrent = () => pc === conn && generation === joinGeneration && voiceStore.currentChannelId === channelId
 
     try {
       const sdp = tuneScreenOffer(offer.sdp, publishMids(offer.sdp).video[0], { h264: canSendH264() })
-      await pc.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
-      const bound = bindPublishSenders(pc, offer.sdp)
-      // A share started before the connection was up goes out now.
-      if (bound.screen) {
+      await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
+      if (!isCurrent()) return
+      const bound = bindPublishSenders(conn, offer.sdp)
+      const queued = pendingCandidates
+      pendingCandidates = []
+      for (const candidate of queued) {
+        await conn.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {})
+        if (!isCurrent()) return
+      }
+      const answer = await conn.createAnswer()
+      if (!isCurrent()) return
+      await conn.setLocalDescription(answer)
+      if (!isCurrent()) return
+      chatStore.sendWSEvent('webrtc_answer', answer)
+      await tuneBoundSenders(bound.fresh, voiceStore)
+      if (!isCurrent()) return
+      // A screen waiting for negotiation starts with its chosen limits already
+      // applied, avoiding a second encoder configuration immediately on start.
+      const track = localScreenStream.value?.getVideoTracks()[0]
+      if (bound.screen && track) {
+        await bound.fresh.screen.replaceTrack(track)
+        if (!isCurrent() || localScreenStream.value?.getVideoTracks()[0] !== track) return
         chatStore.sendWSEvent('webrtc_screenshare_start', {})
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       }
-      const queued = pendingCandidates
-      pendingCandidates = []
-      for (const c of queued) await pc.addIceCandidate(new RTCIceCandidate(c)).catch(() => {})
-      const conn = pc
-      const answer = await conn.createAnswer()
-      await conn.setLocalDescription(answer)
-      chatStore.sendWSEvent('webrtc_answer', answer)
-      // Encoding parameters only stick once the line is negotiated.
-      if (pc === conn) await tuneBoundSenders(bound.fresh, voiceStore)
     } catch (err) {
+      if (!isCurrent()) return
       console.warn('[WebRTC] Offer/Answer negotiation error:', err)
       chatStore.sendWSEvent('webrtc_diag', { event: 'negotiation_error', error: String(err?.message || err) })
     }
@@ -1126,16 +1209,15 @@ export function useWebRTC() {
 
   async function handleRemoteCandidate(candidate) {
     if (!candidate || !voiceStore.currentChannelId) return
-    if (!pc || !pc.remoteDescription) {
+    const conn = pc
+    if (!conn || !conn.remoteDescription) {
       pendingCandidates.push(candidate)
       return
     }
-    {
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate))
-      } catch (err) {
-        console.warn('[WebRTC] ICE candidate error:', err)
-      }
+    try {
+      await conn.addIceCandidate(new RTCIceCandidate(candidate))
+    } catch (err) {
+      if (pc === conn) console.warn('[WebRTC] ICE candidate error:', err)
     }
   }
 
@@ -1295,6 +1377,8 @@ export function useWebRTC() {
       return stream
     }
     audioContext = ctx
+    const controller = new AbortController()
+    micPipelineController = controller
     // Not awaited: after a reload (voice resume) there is no user gesture yet
     // and resume() may stay pending until there is one; the graph starts then.
     if (ctx.state === 'suspended') ctx.resume().catch(() => {})
@@ -1302,8 +1386,8 @@ export function useWebRTC() {
     let sendStream = stream
     let meterSource = null
     const model = aiModel(voiceStore.noiseMode)
-    if (model) {
-      const node = await createNoiseSuppressorNode(ctx, model)
+    if (model && model !== failedAIModel && isNoiseSuppressionSupported()) {
+      const node = await createNoiseSuppressorNode(ctx, model, { signal: controller.signal, onFailure: () => recoverFilter(ctx, model) })
       // Torn down (left or settings changed again) while the model loaded.
       if (audioContext !== ctx) {
         stream.getTracks().forEach(t => t.stop())
@@ -1317,7 +1401,7 @@ export function useWebRTC() {
         rawMicStream = stream
         sendStream = destination.stream
         meterSource = node
-      }
+      } else recoverFilter(ctx, model)
     }
 
     // Input volume other than 100 %: microphone (or AI filter) -> gain -> sent stream.
@@ -1365,6 +1449,8 @@ export function useWebRTC() {
   }
 
   function teardownMicPipeline() {
+    micPipelineController?.abort()
+    micPipelineController = null
     callBiquad = null
     if (inputGainNode) {
       try { inputGainNode.disconnect() } catch { /* ignore */ }
@@ -1495,23 +1581,52 @@ export function useWebRTC() {
 
   // Sends a freshly picked screen (and its sound, on its own line).
   async function attachScreen(stream) {
+    const gen = joinGeneration
+    const captureGen = screenCaptureGeneration
+    const currentCapture = () => gen === joinGeneration && captureGen === screenCaptureGeneration && toRaw(localScreenStream.value) === stream
     const videoTrack = stream.getVideoTracks()[0]
     if (videoTrack) {
       if ('contentHint' in videoTrack) videoTrack.contentHint = streamTuning(voiceStore.screenQuality).contentHint
       videoTrack.onended = () => { if (toRaw(localScreenStream.value) === stream) stopScreenShare() }
     }
     const screenAudio = stream.getAudioTracks()[0] || null
-    screenAudioGuard = screenAudio ? ownAudioGuard(screenAudio) : null
+    const guard = screenAudio ? await ensureScreenAudioGuard(screenAudio) : null
+    if (!currentCapture()) return
+    screenAudioGuard = guard
     if (screenAudio) {
       // The streamer's mute: a disabled track sends silence.
       screenAudio.enabled = !voiceStore.isScreenAudioMuted
       screenAudio.onended = () => { if (toRaw(localScreenStream.value) === stream) detachScreenAudio() }
+      if (guard === 'none' && !warnedScreenAudioTracks.has(screenAudio)) {
+        warnedScreenAudioTracks.add(screenAudio)
+        useToastStore().info(t('talk.screenAudioFeedbackWarning'), {
+          action: {
+            label: t('talk.muteStreamAudio'),
+            onClick: () => {
+              if (!currentCapture()) return
+              voiceStore.isScreenAudioMuted = true
+              screenAudio.enabled = false
+            }
+          }
+        })
+      }
     }
     voiceStore.hasScreenAudio = !!screenAudio
 
     if (screenSender && videoTrack) {
-      await screenSender.replaceTrack(videoTrack).catch(() => {})
-      await tuneSender(screenSender, screenSenderParams(voiceStore))
+      const sender = screenSender
+      const gen = joinGeneration
+      const current = () => gen === joinGeneration && screenSender === sender && toRaw(localScreenStream.value) === stream
+      // Set the chosen limits while the negotiated line is dormant. Attaching
+      // first starts an encoder at the previous/default size, then immediately
+      // asks it to reconfigure (particularly expensive for a 4K capture).
+      const dormant = !sender.track
+      if (dormant) await tuneSender(sender, screenSenderParams(voiceStore, videoTrack))
+      if (!current()) return
+      await sender.replaceTrack(videoTrack).catch(() => {})
+      if (!current()) return
+      if (!dormant) await tuneSender(sender, screenSenderParams(voiceStore, videoTrack))
+      if (!current()) return
       chatStore.sendWSEvent('webrtc_screenshare_start', {})
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
     }
@@ -1522,6 +1637,7 @@ export function useWebRTC() {
   // One screen share per person: starting another while sharing asks first;
   // the new screen then replaces the running one (see replaceScreenShare).
   async function startScreenShare(quality) {
+    if (screenCapturePending) return
     if (localScreenStream.value) {
       const ok = await confirm({
         title: t('talk.replaceShareTitle'),
@@ -1534,18 +1650,22 @@ export function useWebRTC() {
       return replaceScreenShare()
     }
     const gen = joinGeneration
+    const captureGen = ++screenCaptureGeneration
     const channelId = voiceStore.currentChannelId
     if (quality) voiceStore.setScreenQuality(quality)
     else voiceStore.resetScreenQuality()
     let stream
+    screenCapturePending = true
     try {
       stream = await pickScreen()
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
       return
+    } finally {
+      screenCapturePending = false
     }
     // Left or switched the call (or started twice) while the picker was open.
-    if (gen !== joinGeneration || voiceStore.currentChannelId !== channelId || localScreenStream.value) {
+    if (gen !== joinGeneration || captureGen !== screenCaptureGeneration || voiceStore.currentChannelId !== channelId || localScreenStream.value) {
       stream.getTracks().forEach(tr => tr.stop())
       return
     }
@@ -1558,18 +1678,23 @@ export function useWebRTC() {
   // Swaps the running share for a newly picked screen on the same lines: no
   // renegotiation, the viewers keep watching, the quality stays as chosen.
   async function replaceScreenShare() {
+    if (screenCapturePending) return
     const old = localScreenStream.value
     if (!old) return startScreenShare()
     const gen = joinGeneration
+    const captureGen = ++screenCaptureGeneration
     let stream
+    screenCapturePending = true
     try {
       stream = await pickScreen()
     } catch (err) {
       console.warn('Screen share canceled or failed:', err)
       return
+    } finally {
+      screenCapturePending = false
     }
     // Left, stopped or replaced meanwhile.
-    if (gen !== joinGeneration || localScreenStream.value !== old) {
+    if (gen !== joinGeneration || captureGen !== screenCaptureGeneration || localScreenStream.value !== old) {
       stream.getTracks().forEach(tr => tr.stop())
       return
     }
@@ -1583,6 +1708,7 @@ export function useWebRTC() {
   }
 
   function stopScreenShare() {
+    screenCaptureGeneration++
     const wasSharing = !!localScreenStream.value
     if (screenSender) screenSender.replaceTrack(null).catch(() => {})
     detachScreenAudio()
@@ -1608,6 +1734,13 @@ export function useWebRTC() {
     } catch {
       return null
     }
+  }
+
+  // A track setting is the capture's configured rate, not measured frame
+  // delivery. The advanced menu displays media-source FPS separately.
+  function getScreenCaptureSettings() {
+    const settings = localScreenStream.value?.getVideoTracks()[0]?.getSettings?.()
+    return settings ? { width: settings.width, height: settings.height, frameRate: settings.frameRate } : null
   }
 
   function toggleScreenShare() {
@@ -1799,6 +1932,7 @@ export function useWebRTC() {
     stopScreenShare,
     toggleScreenShare,
     getScreenSendStats,
+    getScreenCaptureSettings,
     startCamera,
     stopCamera,
     toggleCamera,

@@ -122,20 +122,55 @@ export function summarizeSendStats(stats, previous = null) {
     .filter(s => s.type === 'outbound-rtp' && (s.kind === 'video' || s.mediaType === 'video'))
     .sort((a, b) => (b.bytesSent || 0) - (a.bytesSent || 0))[0]
   if (!out) return null
+  const source = list.find(s => s.type === 'media-source' && s.id === out.mediaSourceId)
+  const codec = list.find(s => s.type === 'codec' && s.id === out.codecId)
   const mime = codecs.get(out.codecId) || ''
   const bytes = out.bytesSent || 0
   const ts = out.timestamp || 0
+  const sameStream = previous && (previous.id === undefined || previous.id === out.id)
   let kbps = null
-  if (previous && ts > previous.ts && bytes >= previous.bytes) {
+  if (sameStream && ts > previous.ts && bytes >= previous.bytes) {
     kbps = Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
+  }
+  let fps = Number.isFinite(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
+  let encodeMs = null
+  const frames = out.framesEncoded
+  const encodeTime = out.totalEncodeTime
+  if (sameStream && ts > previous.ts && Number.isFinite(frames) && Number.isFinite(previous.frames)) {
+    const count = frames - previous.frames
+    if (count >= 0 && fps === null) fps = Math.round(count * 1000 / (ts - previous.ts))
+    if (count > 0 && Number.isFinite(encodeTime) && Number.isFinite(previous.encodeTime) && encodeTime >= previous.encodeTime) {
+      encodeMs = (encodeTime - previous.encodeTime) * 1000 / count
+    }
+  } else if (frames > 0 && Number.isFinite(encodeTime)) {
+    encodeMs = encodeTime * 1000 / frames
   }
   return {
     codec: mime.replace(/^video\//i, '').toUpperCase(),
     width: out.frameWidth || 0,
     height: out.frameHeight || 0,
-    fps: out.framesPerSecond !== undefined ? Math.round(out.framesPerSecond) : null,
+    fps,
     kbps,
-    sample: { bytes, ts }
+    captureFps: Number.isFinite(source?.framesPerSecond) ? Math.round(source.framesPerSecond) : null,
+    encoder: out.encoderImplementation || '',
+    efficientEncoder: typeof out.powerEfficientEncoder === 'boolean' ? out.powerEfficientEncoder : null,
+    limitation: ['none', 'cpu', 'bandwidth', 'other'].includes(out.qualityLimitationReason) ? out.qualityLimitationReason : null,
+    encodeMs,
+    codecParameters: codec?.sdpFmtpLine || '',
+    sample: { id: out.id, bytes, ts, frames, encodeTime }
+  }
+}
+
+/** Values used by the advanced diagnosis, distinct from the selected target. */
+export function formatStreamDiagnostics(summary, captureSettings = {}, lang = locale.value) {
+  const dash = '–'
+  const num = n => new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(n)
+  return {
+    captureSetting: Number.isFinite(captureSettings?.frameRate) ? `${num(captureSettings.frameRate)} fps` : dash,
+    captureFps: summary?.captureFps !== null && summary?.captureFps !== undefined ? `${num(summary.captureFps)} fps` : dash,
+    encoder: summary?.encoder || dash,
+    encodeTime: Number.isFinite(summary?.encodeMs) ? `${num(summary.encodeMs)} ms` : dash,
+    codecProfile: /(?:^|;)\s*profile-level-id=([0-9a-f]{6})(?:;|$)/i.exec(summary?.codecParameters || '')?.[1] || dash
   }
 }
 

@@ -103,9 +103,12 @@ describe('AudioSettingsModal mic test and extra settings', () => {
     await nextTick()
     expect(wrapper.text()).toContain('Test beenden')
     expect(wrapper.text()).toContain('Aktiv (stumm für andere)')
+    await wrapper.get('[data-testid="mic-test-toggle"]').trigger('click')
+    expect(mockStopMicTest).toHaveBeenCalledTimes(1)
   })
 
   it('toggles QoS high priority and applies settings', async () => {
+    voice.localAudioStream = {}
     const wrapper = mount(AudioSettingsModal, mountOpts)
     const qosBtn = wrapper.find('button[aria-label="Quality of Service (Hohe Paketpriorität)"]')
     expect(qosBtn.exists()).toBe(true)
@@ -187,6 +190,27 @@ describe('AudioSettingsModal mic test lifecycle', () => {
     return { promise, resolve }
   }
 
+  it('lists devices without starting capture or loopback when opened', async () => {
+    const wrapper = mount(AudioSettingsModal, mountOpts)
+    await nextTick()
+    expect(mockRefreshAudioDevices).toHaveBeenCalledTimes(1)
+    expect(mockStartMicTest).not.toHaveBeenCalled()
+    expect(mockToggleMicTest).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="mic-test-toggle"]').attributes('aria-pressed')).toBe('false')
+    expect(wrapper.text()).toContain('Dieser Test bleibt lokal und wird nicht an andere übertragen.')
+    wrapper.unmount()
+  })
+
+  it('saves input preferences without starting capture outside a call or test', async () => {
+    const voice = useVoiceStore()
+    const wrapper = mount(AudioSettingsModal, mountOpts)
+    await wrapper.get('button[aria-label="Quality of Service (Hohe Paketpriorität)"]').trigger('click')
+    expect(voice.qosHighPriority).toBe(false)
+    expect(mockApplyAudioSettings).not.toHaveBeenCalled()
+    expect(mockStartMicTest).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('never starts the mic test when closed while devices are loading', async () => {
     const devices = deferred()
     mockRefreshAudioDevices.mockReturnValueOnce(devices.promise)
@@ -198,16 +222,51 @@ describe('AudioSettingsModal mic test lifecycle', () => {
     expect(mockStartMicTest).not.toHaveBeenCalled()
   })
 
-  it('stops the mic test again when closed while it was starting', async () => {
+  it('stops immediately when closed during test startup without late global cleanup', async () => {
     const started = deferred()
-    mockStartMicTest.mockReturnValueOnce(started.promise)
+    mockToggleMicTest.mockReturnValueOnce(started.promise)
     const wrapper = mount(AudioSettingsModal, mountOpts)
-    await vi.waitFor(() => expect(mockStartMicTest).toHaveBeenCalledTimes(1))
+    await wrapper.get('[data-testid="mic-test-toggle"]').trigger('click')
+    expect(mockToggleMicTest).toHaveBeenCalledTimes(1)
     wrapper.unmount()
     expect(mockStopMicTest).toHaveBeenCalledTimes(1)
     started.resolve()
     await started.promise
     await nextTick()
-    expect(mockStopMicTest).toHaveBeenCalledTimes(2)
+    expect(mockStopMicTest).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not stop a newer dialog test when an old startup finishes', async () => {
+    const voice = useVoiceStore()
+    const started = deferred()
+    let owner = null
+    mockToggleMicTest.mockImplementationOnce(() => {
+      owner = 'old'
+      voice.isMicTesting = true
+      return started.promise
+    }).mockImplementationOnce(() => {
+      owner = 'new'
+      voice.isMicTesting = true
+      return Promise.resolve(true)
+    })
+    const release = () => { owner = null; voice.isMicTesting = false }
+    mockStopMicTest.mockImplementationOnce(release).mockImplementationOnce(release)
+
+    const previous = mount(AudioSettingsModal, mountOpts)
+    await previous.get('[data-testid="mic-test-toggle"]').trigger('click')
+    previous.unmount()
+    expect(owner).toBeNull()
+    const current = mount(AudioSettingsModal, mountOpts)
+    await current.get('[data-testid="mic-test-toggle"]').trigger('click')
+    expect(owner).toBe('new')
+    started.resolve(false)
+    await started.promise
+    await nextTick()
+
+    expect(owner).toBe('new')
+    expect(voice.isMicTesting).toBe(true)
+    expect(mockStopMicTest).toHaveBeenCalledTimes(1)
+    current.unmount()
+    expect(owner).toBeNull()
   })
 })

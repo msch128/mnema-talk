@@ -36,6 +36,10 @@ describe('ScreenShareModal', () => {
     expect(w.find('[data-testid="fps-btn-15"]').exists()).toBe(true)
     expect(w.find('[data-testid="fps-btn-30"]').exists()).toBe(true)
     expect(w.find('[data-testid="fps-btn-60"]').exists()).toBe(true)
+    // Source follows the chosen capture, and the negotiated codec is unknown
+    // before capture/connection: neither is a guaranteed 4K/H.264 mode.
+    expect(w.find('[data-testid="resolution-btn-source"]').text()).not.toContain('4K')
+    expect(w.text()).not.toContain('H.264')
   })
 
   it('switches to gaming preset when clicked', async () => {

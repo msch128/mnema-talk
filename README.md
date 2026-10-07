@@ -390,14 +390,16 @@ pull, verify, rollback) and what changed between versions for operators:
 ## Backups
 
 Everything stateful lives in two Docker volumes (PostgreSQL and SeaweedFS) plus
-your `.env`. `scripts/backup.sh` saves all three into one timestamped folder
-under `BACKUP_DIR` (default `$HOME/mnema-talk-backups`) and removes folders
-older than `KEEP_DAYS` (default 14). A backup contains your secrets, so the
-script refuses a `BACKUP_DIR` inside a git checkout (`BACKUP_ALLOW_IN_REPO=1`
-overrides that; `/backups/` is git-ignored). SeaweedFS is stopped for the few
-moments of the media copy so the archive is consistent; the app keeps running
-and only uploads and media loads fail meanwhile (`SEAWEED_LIVE=1` copies the
-running volume instead). Run it from the deployment directory, for example
+deployment configuration. `scripts/backup.sh` saves the data, `.env` and a
+rendered uninterpolated `compose.yaml` into one timestamped folder
+under `BACKUP_DIR` (default `$HOME/mnema-talk-backups`) and removes validated,
+complete folders older than `KEEP_DAYS` (default 14). A backup contains your
+secrets, so the script refuses a `BACKUP_DIR` inside a git checkout (`BACKUP_ALLOW_IN_REPO=1`
+overrides that; `/backups/` is git-ignored). The app and SeaweedFS are stopped
+before the database snapshot and media copy, so writes and retention pause
+together; active calls disconnect. Previously running services resume afterward.
+New backups include checksums and a completion marker. Retention runs after
+successful backup and service recovery. Run from the deployment directory, for example
 nightly via cron:
 
 ```sh
@@ -407,7 +409,9 @@ nightly via cron:
 Copy the backup folder off the machine as well (another disk, NAS share or
 cloud storage); a backup on the same disk does not survive a disk failure.
 
-Prove that a backup restores, without touching the live data:
+Check backup integrity and SQL import in an isolated disposable PostgreSQL
+container, without touching live data (then test application functions on a
+separately restored deployment):
 
 ```sh
 ./scripts/restore.sh /srv/backups/mnema/20261005-033000 --verify
