@@ -114,6 +114,18 @@ General rules:
 Shown in the privacy policy (`GET /api/legal`). Set your real details in
 `.env` only.
 
+### Container resources (compose only)
+
+Read by `docker-compose.yml`, not by the app. All services also rotate their
+logs at 3 x 10 MB.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_MEM_LIMIT` | `2g` | Memory cap of the app container, including its RAM-backed `/tmp`. |
+| `APP_TMP_SIZE` | `1g` | Size of the app's `/tmp` tmpfs. Uploads above 8 MB are buffered there until they reach S3, so keep it above `MAX_UPLOAD_SIZE_MB` times the uploads you expect at once; a full `/tmp` fails uploads instead of exhausting host RAM. |
+| `POSTGRES_MEM_LIMIT` | `1g` | Memory cap of PostgreSQL. |
+| `SEAWEEDFS_MEM_LIMIT` | `1g` | Memory cap of SeaweedFS. |
+
 ### Script variables
 
 | Script | Variables |
@@ -316,6 +328,9 @@ docker compose logs -f app            # or: make logs
 docker compose logs app | grep '"sfu'  # voice connection events
 docker compose logs app | grep '"audit":"self_update"'
 ```
+
+Compose rotates every container's log at 3 x 10 MB, so older lines drop off;
+ship them elsewhere if you need a longer history.
 
 At startup the app logs `webrtc announce` with the announced IPs and the
 port range, or `webrtc sfu unavailable, voice disabled` when the SFU could
