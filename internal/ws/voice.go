@@ -141,11 +141,12 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 		h.mu.Unlock()
 		return
 	}
-	// A full room turns away newcomers; someone already present (another
-	// tab, a reload within the grace period) always gets back in.
-	if _, present := h.voice[ch.ID][c.User.ID]; !present && h.MaxRoomPeers > 0 && len(h.voice[ch.ID]) >= h.MaxRoomPeers {
+	// A full room (the channel's user_limit, set by the admin) turns away
+	// newcomers; someone already present (another tab, a reload within the
+	// grace period) always gets back in.
+	if _, present := h.voice[ch.ID][c.User.ID]; !present && ch.UserLimit > 0 && len(h.voice[ch.ID]) >= ch.UserLimit {
 		h.mu.Unlock()
-		slog.Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "max", h.MaxRoomPeers)
+		slog.Info("voice join refused, room full", "user", c.User.Username, "channel", ch.ID, "limit", ch.UserLimit)
 		// The client ends the call on voice_kicked; reason tells it why.
 		c.SendEvent("voice_kicked", map[string]any{"channel_id": ch.ID, "reason": "room_full"})
 		return

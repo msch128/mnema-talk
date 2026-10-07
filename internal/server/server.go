@@ -94,7 +94,6 @@ func NewRouter(d Deps) (*Router, error) {
 	}
 	hub := ws.NewHub(d.DB, sessions, d.SFU, cfg.AllowedOrigins)
 	hub.Version = d.Version
-	hub.MaxRoomPeers = cfg.WebRTCMaxRoomPeers
 	var pub events.Publisher = hub
 	if d.Events != nil {
 		pub = d.Events

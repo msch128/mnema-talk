@@ -351,24 +351,26 @@ func TestPublicURLDropsDefaultPort(t *testing.T) {
 	}
 }
 
-func TestMaxRoomPeers(t *testing.T) {
+func TestUDPMuxIsDefault(t *testing.T) {
 	cfg, err := FromEnv(lookup(base()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.WebRTCMaxRoomPeers != 0 {
-		t.Errorf("WEBRTC_MAX_ROOM_PEERS must default to 0 (no limit), got %d", cfg.WebRTCMaxRoomPeers)
+	if cfg.WebRTCUDPMuxPort != cfg.WebRTCUDPPortMin {
+		t.Errorf("WEBRTC_UDP_MUX_PORT must default to WEBRTC_UDP_PORT_MIN (%d), got %d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPMuxPort)
 	}
 	env := base()
-	env["WEBRTC_MAX_ROOM_PEERS"] = "12"
-	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCMaxRoomPeers != 12 {
-		t.Fatalf("got %v, %v; want 12", cfg, err)
+	env["WEBRTC_UDP_PORT_MIN"], env["WEBRTC_UDP_PORT_MAX"] = "51000", "51010"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 51000 {
+		t.Fatalf("got %v, %v; want the moved range's first port", cfg, err)
 	}
-	for _, bad := range []string{"-1", "many"} {
-		env["WEBRTC_MAX_ROOM_PEERS"] = bad
-		if _, err := FromEnv(lookup(env)); err == nil {
-			t.Errorf("WEBRTC_MAX_ROOM_PEERS=%q was accepted", bad)
-		}
+	env["WEBRTC_UDP_MUX_PORT"] = "0"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 0 {
+		t.Fatalf("explicit 0 must keep per-peer ports: %v, %v", cfg, err)
+	}
+	env["WEBRTC_UDP_MUX_PORT"] = "51005"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 51005 {
+		t.Fatalf("got %v, %v; want 51005", cfg, err)
 	}
 }
 

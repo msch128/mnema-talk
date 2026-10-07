@@ -49,11 +49,6 @@ type Hub struct {
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
 
-	// MaxRoomPeers caps the members of one voice room (0 = no limit). Every
-	// member's media is forwarded to every other, so the SFU's load grows
-	// with the square of a room's size.
-	MaxRoomPeers int
-
 	// Version is the server's release version, sent to every new connection
 	// (server_info) so browsers can offer a reload after an update. Only the
 	// version string: no commit or build details.

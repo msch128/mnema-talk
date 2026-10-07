@@ -295,12 +295,12 @@ func TestCloseVoiceChannelEvictsEveryone(t *testing.T) {
 	}
 }
 
-// A full room turns away a newcomer with voice_kicked (reason room_full);
+// A room full by its channel's user_limit turns away a newcomer with voice_kicked (reason room_full);
 // a member already present, e.g. in a second tab, still gets in.
 func TestFullVoiceRoomRefusesNewcomers(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil)
-	h.MaxRoomPeers = 2
 	ch := voiceCh()
+	ch.UserLimit = 2
 	a := testClient(h, auth.User{ID: uuid.New(), Username: "a"})
 	b := testClient(h, auth.User{ID: uuid.New(), Username: "b"})
 	h.joinVoice(a, ch)

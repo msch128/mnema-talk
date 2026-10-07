@@ -834,8 +834,8 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
-// @Summary Rename a channel or change its topic
-// @Description Requires role admin (403 otherwise).
+// @Summary Rename a channel, change its topic or member limit
+// @Description Requires role admin (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -861,7 +861,7 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic)
+	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit)
 	if err != nil {
 		return err
 	}
@@ -1033,6 +1033,8 @@ type CreateChannelRequest struct {
 type UpdateChannelRequest struct {
 	Name  *string `json:"name" minLength:"1" maxLength:"64" binding:"optional"`
 	Topic *string `json:"topic" maxLength:"255" binding:"optional"`
+	// UserLimit caps a voice channel's members at once; 0 removes the limit.
+	UserLimit *int `json:"user_limit" minimum:"0" maximum:"999" binding:"optional"`
 }
 
 // LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in

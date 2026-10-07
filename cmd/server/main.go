@@ -89,7 +89,7 @@ func run() error {
 		if cfg.WebRTCUDPMuxPort == 0 {
 			// Each peer takes its own port(s) from the range, so the range
 			// bounds how many people can be in calls at once.
-			slog.Info("webrtc media uses one UDP port per peer from the range; set WEBRTC_UDP_MUX_PORT to a port inside it to share one port across all peers",
+			slog.Warn("WEBRTC_UDP_MUX_PORT=0: every media peer takes its own UDP port(s) from the range, which caps how many people can be in calls at once; leave it empty to share one port",
 				"ports", int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
 		}
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)

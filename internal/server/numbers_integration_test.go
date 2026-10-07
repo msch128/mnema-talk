@@ -93,3 +93,54 @@ func TestChannelsAndMessagesCarryLinkNumbers(t *testing.T) {
 		t.Errorf("anonymous: %d, want 401", res.status)
 	}
 }
+
+func TestVoiceChannelUserLimit(t *testing.T) {
+	a := newApp(t, false)
+	admin := a.seedAdmin()
+	voice := a.createChannel(admin, "Lounge", "voice")
+	text := a.createChannel(admin, "general", "text")
+
+	var ch struct {
+		UserLimit int `json:"user_limit"`
+	}
+	path := "/api/admin/channels/" + voice.String()
+	admin.patch(path, map[string]string{"topic": "hi"}).decode(t, &ch)
+	if ch.UserLimit != 0 {
+		t.Fatalf("default user_limit %d, want 0 (no limit)", ch.UserLimit)
+	}
+	admin.patch(path, map[string]int{"user_limit": 5}).decode(t, &ch)
+	if ch.UserLimit != 5 {
+		t.Fatalf("user_limit %d, want 5", ch.UserLimit)
+	}
+	// Omitted keeps it; 0 removes it.
+	admin.patch(path, map[string]string{"name": "Lounge 2"}).decode(t, &ch)
+	if ch.UserLimit != 5 {
+		t.Fatalf("rename changed user_limit to %d", ch.UserLimit)
+	}
+	admin.patch(path, map[string]int{"user_limit": 0}).decode(t, &ch)
+	if ch.UserLimit != 0 {
+		t.Fatalf("user_limit %d after removing it", ch.UserLimit)
+	}
+
+	for _, bad := range []int{-1, 1000} {
+		if res := admin.patch(path, map[string]int{"user_limit": bad}); res.status != http.StatusBadRequest {
+			t.Errorf("user_limit %d: %d, want 400", bad, res.status)
+		}
+	}
+	if res := admin.patch("/api/admin/channels/"+text.String(), map[string]int{"user_limit": 3}); res.status != http.StatusBadRequest {
+		t.Errorf("user_limit on a text channel: %d, want 400", res.status)
+	}
+	if res := admin.patch("/api/admin/channels/"+uuid.NewString(), map[string]int{"user_limit": 3}); res.status != http.StatusNotFound {
+		t.Errorf("unknown channel: %d, want 404", res.status)
+	}
+
+	// A duplicate keeps the limit.
+	admin.patch(path, map[string]int{"user_limit": 7}).decode(t, &ch)
+	var dup struct {
+		UserLimit int `json:"user_limit"`
+	}
+	admin.post(path+"/duplicate", nil).decode(t, &dup)
+	if dup.UserLimit != 7 {
+		t.Errorf("duplicate user_limit %d, want 7", dup.UserLimit)
+	}
+}
