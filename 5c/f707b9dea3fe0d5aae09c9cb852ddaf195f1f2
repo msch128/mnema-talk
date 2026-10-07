@@ -1,0 +1,23 @@
+doc/upgrade.md
+  s_f5ea48d5e7be05::t_44b9dc31b71159 80-81
+internal/db/checksum_test.go
+  s_f5ea48d5e7be05::t_1e7efa5f9bfa93 28-34
+internal/db/db.go
+  s_f5ea48d5e7be05::t_23509a67109f3b 181-183,185-189,193-195,206-209
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5cf707b9dea3fe0d5aae09c9cb852ddaf195f1f2",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
