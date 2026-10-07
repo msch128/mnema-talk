@@ -1,0 +1,27 @@
+internal/sfu/keyframe_test.go
+  s_f5ea48d5e7be05::t_1339b664a23785 1-39
+internal/sfu/sfu.go
+  s_f5ea48d5e7be05::t_26b5af3f5494cf 795-813
+internal/ws/client.go
+  s_f5ea48d5e7be05::t_ea49b761f80544 23-25,97-99
+internal/ws/handle.go
+  s_f5ea48d5e7be05::t_4a79dab6c165da 104-105,108
+internal/ws/lifecycle_test.go
+  s_f5ea48d5e7be05::t_a68a8a37083eea 197-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f656b6be65036219e64a25c3b1c5a20cfd83ad85",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
