@@ -103,10 +103,12 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build
+check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup drill
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
+	scripts/smoke-image.sh mnema-talk:ci
+	scripts/backup-drill.sh mnema-talk:ci
 
 e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; needs Docker
 	e2e/run.sh
@@ -117,8 +119,10 @@ smoke: docker ## Start the built image with the production compose file and chec
 backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
 	scripts/backup-drill.sh mnema-talk:local
 
-docker: ## Build the app image via compose
-	docker compose build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) app
+# docker build, not compose: compose would need a .env with the required
+# secrets just to build. Same tag as the compose default (MNEMA_IMAGE).
+docker: ## Build the app image (mnema-talk:local, what compose runs by default)
+	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:local .
 
 up: ## Start the full stack (docker compose up -d)
 	docker compose up -d

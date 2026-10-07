@@ -1,3 +1,4 @@
+# Images are pinned by tag and digest; Dependabot refreshes both weekly.
 # Container logs rotate at 3 x 10 MB per service instead of growing forever.
 x-logging: &default-logging
   driver: json-file
@@ -114,7 +115,7 @@ services:
   # Database: PostgreSQL 17
   # ==========================================================
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     container_name: mnema-postgres
     restart: unless-stopped
     environment:
@@ -140,7 +141,7 @@ services:
   # Object Storage: SeaweedFS (S3-compatible)
   # ==========================================================
   seaweedfs:
-    image: chrislusf/seaweedfs:4.48
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
     container_name: mnema-seaweedfs
     restart: unless-stopped
     environment:
@@ -202,7 +203,7 @@ services:
   # not use UDP, e.g. Opera with its VPN or WebRTC protection); 49152-49200 UDP
   # only for relaying to peers outside the LAN.
   coturn:
-    image: coturn/coturn:4.18.0-alpine
+    image: coturn/coturn:4.18.0-alpine@sha256:c29135c08565810d37053f384584392b7c24b69570fc81a721b878d6fe63e04e
     container_name: mnema-coturn
     restart: unless-stopped
     profiles:
