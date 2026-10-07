@@ -47,6 +47,15 @@ const CameraStreamPrefix = "cam:"
 // of a screen share's sound.
 const ScreenAudioStreamPrefix = "screen:"
 
+// defaultOfferTimeout is how long an offer may stay unanswered before the SFU
+// sends it again. An offer or answer can get lost (a dropped WebSocket frame,
+// a client that failed to apply the offer); without the retry the peer would
+// stay in have-local-offer and never negotiate again. Pion cannot roll back a
+// local offer, so the same offer is repeated, at most maxOfferResends times.
+const defaultOfferTimeout = 10 * time.Second
+
+const maxOfferResends = 6
+
 // resumeHoldoff keeps late packets of a stopped video from re-publishing it.
 const resumeHoldoff = 500 * time.Millisecond
 
@@ -82,6 +91,9 @@ type Peer struct {
 	offerSent bool
 	// signalingMu permits one active signaling task per peer.
 	signalingMu sync.Mutex
+	// offerGen identifies the latest offer; a watchdog for an older one
+	// does nothing.
+	offerGen atomic.Uint64
 }
 
 type Room struct {
@@ -97,6 +109,7 @@ type Room struct {
 	mu            sync.RWMutex
 	api           *webrtc.API
 	iceServers    []webrtc.ICEServer
+	offerTimeout  time.Duration
 
 	// subs is what each viewer receives (see Subscriptions); guarded by mu.
 	subs map[uuid.UUID]*Subscriptions
@@ -122,9 +135,11 @@ type SFU struct {
 	closeErr  error
 
 	iceServers []webrtc.ICEServer
-	rooms      map[uuid.UUID]*Room
-	roomsMu    sync.Mutex
-	notifier   *mediaNotifier
+	// offerTimeout is defaultOfferTimeout; tests shorten it.
+	offerTimeout time.Duration
+	rooms        map[uuid.UUID]*Room
+	roomsMu      sync.Mutex
+	notifier     *mediaNotifier
 }
 
 // SetMediaStateHandler registers the callback that announces when a user
@@ -169,14 +184,15 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	}
 
 	return &SFU{
-		api:        api,
-		announced:  append([]string(nil), announceIPs...),
-		portMin:    portMin,
-		portMax:    portMax,
-		udpMux:     mux,
-		iceServers: iceServers,
-		rooms:      make(map[uuid.UUID]*Room),
-		notifier:   &mediaNotifier{},
+		api:          api,
+		announced:    append([]string(nil), announceIPs...),
+		portMin:      portMin,
+		portMax:      portMax,
+		udpMux:       mux,
+		iceServers:   iceServers,
+		offerTimeout: defaultOfferTimeout,
+		rooms:        make(map[uuid.UUID]*Room),
+		notifier:     &mediaNotifier{},
 	}, nil
 }
 
@@ -301,14 +317,15 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 	r, ok := s.rooms[channelID]
 	if !ok {
 		r = &Room{
-			ID:          channelID,
-			peers:       make(map[uuid.UUID]*Peer),
-			trackLocals: make(map[string]*TrackInfo),
-			subs:        make(map[uuid.UUID]*Subscriptions),
-			lastMedia:   make(map[uuid.UUID]MediaState),
-			notifier:    s.notifier,
-			api:         s.currentAPI(),
-			iceServers:  s.iceServers,
+			ID:           channelID,
+			peers:        make(map[uuid.UUID]*Peer),
+			trackLocals:  make(map[string]*TrackInfo),
+			subs:         make(map[uuid.UUID]*Subscriptions),
+			lastMedia:    make(map[uuid.UUID]MediaState),
+			notifier:     s.notifier,
+			api:          s.currentAPI(),
+			iceServers:   s.iceServers,
+			offerTimeout: s.offerTimeout,
 		}
 		s.rooms[channelID] = r
 	}
@@ -560,6 +577,8 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 }
 
 // SetAnswer applies the client's answer and runs a pending renegotiation.
+// An answer that cannot be applied leaves the offer outstanding, so its
+// watchdog sends it again after the room's offerTimeout.
 func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
 		return err
@@ -674,10 +693,38 @@ func (r *Room) signalPeer(peer *Peer) {
 			return
 		}
 		peer.offerSent = true
+		gen := peer.offerGen.Add(1)
+		peer.watchOffer(gen, 1)
 		if peer.SendOffer != nil {
 			peer.SendOffer(offer)
 		}
 	}
+}
+
+// watchOffer arms the watchdog for offer gen: if it is still unanswered
+// after the room's offerTimeout, the same offer goes out again.
+func (p *Peer) watchOffer(gen uint64, attempt int) {
+	time.AfterFunc(p.room.offerTimeout, func() {
+		p.signalingMu.Lock()
+		defer p.signalingMu.Unlock()
+		if p.offerGen.Load() != gen || p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed ||
+			p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
+			return
+		}
+		pending := p.PC.PendingLocalDescription()
+		if pending == nil {
+			return
+		}
+		if attempt > maxOfferResends {
+			slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
+			return
+		}
+		slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
+		if p.SendOffer != nil {
+			p.SendOffer(*pending)
+		}
+		p.watchOffer(gen, attempt+1)
+	})
 }
 
 // forwardRTCP reads a subscriber's feedback for one forwarded track. Keyframe

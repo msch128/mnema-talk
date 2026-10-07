@@ -68,7 +68,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if err := json.Unmarshal(payload, &answer); err == nil {
 			if peer := c.peer(); peer != nil {
 				if err := peer.SetAnswer(answer); err != nil {
-					slog.Warn("sfu set remote description", "user", c.User.ID, "err", err)
+					slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 				}
 			}
 		}
