@@ -4,7 +4,9 @@
 package sfu
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/netip"
@@ -74,6 +76,8 @@ type TrackInfo struct {
 	stoppedAt atomic.Int64
 	// A replaced capture must never resume or forward alongside its successor.
 	superseded atomic.Bool
+	// writeErrLogged keeps a failing forward from logging every packet.
+	writeErrLogged atomic.Bool
 }
 
 type Peer struct {
@@ -94,6 +98,10 @@ type Peer struct {
 	// offerGen identifies the latest offer; a watchdog for an older one
 	// does nothing.
 	offerGen atomic.Uint64
+	// addTrackFailed holds the tracks that could not be added to this peer,
+	// so each failure is logged once rather than every signaling round.
+	// Guarded by signalingMu.
+	addTrackFailed map[string]bool
 }
 
 type Room struct {
@@ -572,7 +580,10 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 				r.addTrack(key, info)
 			}
 		}
-		_ = local.WriteRTP(rtpPkt)
+		// io.ErrClosedPipe only means a subscriber's sender just stopped.
+		if err := local.WriteRTP(rtpPkt); err != nil && !errors.Is(err, io.ErrClosedPipe) && info.writeErrLogged.CompareAndSwap(false, true) {
+			slog.Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
+		}
 	}
 }
 
@@ -672,8 +683,19 @@ func (r *Room) signalPeer(peer *Peer) {
 		}
 		sender, err := peer.PC.AddTrack(info.Track)
 		if err != nil {
+			// E.g. the viewer's browser cannot receive the publisher's codec:
+			// it then gets no media from this track.
+			if !peer.addTrackFailed[trackID] {
+				if peer.addTrackFailed == nil {
+					peer.addTrackFailed = make(map[string]bool)
+				}
+				peer.addTrackFailed[trackID] = true
+				slog.Warn("sfu add track", "viewer", peer.ID, "publisher", info.SenderID, "source", string(info.Source),
+					"codec", info.Track.Codec().MimeType, "err", err)
+			}
 			continue
 		}
+		delete(peer.addTrackFailed, trackID)
 		needRenegotiate = true
 		go r.forwardRTCP(sender, info)
 		if info.Kind == webrtc.RTPCodecTypeVideo {
