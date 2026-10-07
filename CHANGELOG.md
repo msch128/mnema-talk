@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/msch128/mnema-talk/compare/v0.4.4...v0.5.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* existing installs must run ./scripts/upgrade-postgres.sh once instead of docker compose up -d (doc/upgrade.md, 0.4.x -> 0.5.0).
+
+### Features
+
+* harden backend, voice and CI; PostgreSQL 18 ([#69](https://github.com/msch128/mnema-talk/issues/69)) ([57e8915](https://github.com/msch128/mnema-talk/commit/57e891537bec348a46259bd5fd1d4cc9a63effb0))
+
 ## [0.4.4](https://github.com/msch128/mnema-talk/compare/v0.4.3...v0.4.4) (2026-10-07)
 
 
