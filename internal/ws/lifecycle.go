@@ -55,7 +55,7 @@ const (
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
 // @Description - `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.
 // @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
-// @Description - `voice_kicked`: `{channel_id}` when an admin removes the user from voice.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when an admin removes the user from voice, or `reason: "room_full"` when a voice join is refused because the room is full (WEBRTC_MAX_ROOM_PEERS).
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:

@@ -83,6 +83,15 @@ func run() error {
 			}
 		}()
 		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
+		if w := cfg.WebRTCReachabilityWarning(); w != "" {
+			slog.Warn(w)
+		}
+		if cfg.WebRTCUDPMuxPort == 0 {
+			// Each peer takes its own port(s) from the range, so the range
+			// bounds how many people can be in calls at once.
+			slog.Info("webrtc media uses one UDP port per peer from the range; set WEBRTC_UDP_MUX_PORT to a port inside it to share one port across all peers",
+				"ports", int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
+		}
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 

@@ -350,3 +350,42 @@ func TestPublicURLDropsDefaultPort(t *testing.T) {
 		t.Fatalf("origins=%v", cfg.AllowedOrigins)
 	}
 }
+
+func TestMaxRoomPeers(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WebRTCMaxRoomPeers != 0 {
+		t.Errorf("WEBRTC_MAX_ROOM_PEERS must default to 0 (no limit), got %d", cfg.WebRTCMaxRoomPeers)
+	}
+	env := base()
+	env["WEBRTC_MAX_ROOM_PEERS"] = "12"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCMaxRoomPeers != 12 {
+		t.Fatalf("got %v, %v; want 12", cfg, err)
+	}
+	for _, bad := range []string{"-1", "many"} {
+		env["WEBRTC_MAX_ROOM_PEERS"] = bad
+		if _, err := FromEnv(lookup(env)); err == nil {
+			t.Errorf("WEBRTC_MAX_ROOM_PEERS=%q was accepted", bad)
+		}
+	}
+}
+
+func TestWebRTCReachabilityWarning(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+		warn bool
+	}{
+		{"development", Config{AppEnv: "development"}, false},
+		{"production without address or TURN", Config{AppEnv: "production"}, true},
+		{"production with announced address", Config{AppEnv: "production", WebRTCAnnounce: []string{"203.0.113.7"}}, false},
+		{"production with TURN", Config{AppEnv: "production", WebRTCTURNURLs: []string{"turn:turn.example.com:3478"}}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.cfg.WebRTCReachabilityWarning() != ""; got != tc.warn {
+			t.Errorf("%s: warning %v, want %v", tc.name, got, tc.warn)
+		}
+	}
+}

@@ -67,6 +67,8 @@ type Config struct {
 	WebRTCUDPPortMax uint16
 	// WebRTCUDPMuxPort optionally shares one port across media peers (0 = off).
 	WebRTCUDPMuxPort uint16
+	// WebRTCMaxRoomPeers caps the members of one voice room (0 = no limit).
+	WebRTCMaxRoomPeers int
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
 	WebRTCAnnounce       []string
@@ -172,6 +174,13 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if muxPort != 0 && (muxPort < portMin || muxPort > portMax) {
 		return nil, fmt.Errorf("WEBRTC_UDP_MUX_PORT must be 0 or inside WEBRTC_UDP_PORT_MIN/MAX")
 	}
+	maxRoomPeers, err := getInt("WEBRTC_MAX_ROOM_PEERS", 0)
+	if err != nil {
+		return nil, err
+	}
+	if maxRoomPeers < 0 {
+		return nil, fmt.Errorf("WEBRTC_MAX_ROOM_PEERS must be 0 (no limit) or positive, got %d", maxRoomPeers)
+	}
 	httpPort, err := getPort("PORT", 8080)
 	if err != nil {
 		return nil, err
@@ -222,6 +231,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
 		WebRTCUDPMuxPort:     muxPort,
+		WebRTCMaxRoomPeers:   maxRoomPeers,
 		MetricsToken:         get("METRICS_TOKEN", ""),
 		WebRTCAnnounce:       SplitList(get("WEBRTC_NAT_1TO1_IP", "")),
 		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
@@ -358,6 +368,18 @@ func (c *Config) validateUpdater() error {
 
 // SelfUpdateConfigured reports whether the updater sidecar may be called.
 func (c *Config) SelfUpdateConfigured() bool { return c.UpdaterToken != "" && c.UpdaterURL != "" }
+
+// WebRTCReachabilityWarning explains why members outside the server's own
+// network will likely get no voice, or returns "". In production without
+// WEBRTC_NAT_1TO1_IP the SFU announces the container's own (Docker bridge)
+// address, which no browser elsewhere can reach, and without TURN there is
+// no fallback either.
+func (c *Config) WebRTCReachabilityWarning() string {
+	if !c.IsProduction() || len(c.WebRTCAnnounce) > 0 || len(c.WebRTCTURNURLs) > 0 {
+		return ""
+	}
+	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
+}
 
 // IsProduction is the single definition of a production-like deployment:
 // strict secret checks, HSTS, short panic stacks and info-level logs.
