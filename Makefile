@@ -1,5 +1,5 @@
 # Mnema Talk - developer tasks. Run `make` or `make help` for the list.
-# Requires GNU make, Go, Node 24 + npm, Python 3, and Docker (compose plugin).
+# Requires GNU make, Go, Node 26 + npm, Python 3, and Docker (compose plugin).
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help

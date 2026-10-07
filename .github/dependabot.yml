@@ -60,7 +60,7 @@ updates:
       base-images:
         patterns: ["*"]
     ignore:
-      # Stay on the active Node LTS; bump majors deliberately.
+      # Node majors (build only) are bumped deliberately, together with CI.
       - dependency-name: node
         update-types: ["version-update:semver-major"]
 

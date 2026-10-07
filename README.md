@@ -112,7 +112,7 @@ from `.env`). In development an empty value generates a password and logs it onc
 
 ## Development
 
-Requirements: Go (see `go.mod`), Node 24 + npm, Docker, GNU make (on Windows use
+Requirements: Go (see `go.mod`), Node 26 + npm, Docker, GNU make (on Windows use
 Git Bash or WSL). Run `make help` for all targets.
 
 ```sh
