@@ -36,6 +36,10 @@ const (
 	// Proxied images are kept in memory up to this many bytes in total.
 	imageCacheBytes = 32 << 20
 	imageCacheTTL   = time.Hour
+	// maxConcurrentFetches caps outbound fetches across all members (the
+	// per-user rate limit alone allows many in parallel). Callers wait for a
+	// slot within the fetch timeout, then get no preview.
+	maxConcurrentFetches = 8
 )
 
 // Preview is what a link card shows.
@@ -71,6 +75,8 @@ type Fetcher struct {
 	mu    sync.Mutex
 	cache map[string]cacheEntry
 
+	slots chan struct{} // one per outbound fetch in flight
+
 	previews flightGroup[*Preview]
 	images   flightGroup[cachedImage]
 	imgCache *imageCache
@@ -84,6 +90,7 @@ type cacheEntry struct {
 
 func New() *Fetcher {
 	f := &Fetcher{
+		slots:    make(chan struct{}, maxConcurrentFetches),
 		cache:    map[string]cacheEntry{},
 		imgCache: newImageCache(imageCacheBytes, imageCacheTTL),
 		lookup: func(ctx context.Context, host string) ([]netip.Addr, error) {
@@ -132,13 +139,15 @@ func New() *Fetcher {
 
 // nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but
 // that must never be fetched: shared, documentation, benchmarking and
-// reserved IPv4 space, and IPv6 prefixes that embed an IPv4 address (NAT64,
+// reserved IPv4 space, the deprecated 6to4 relay anycast and IPv6
+// site-local ranges, and IPv6 prefixes that embed an IPv4 address (NAT64,
 // 6to4, Teredo), which could point at a private host.
 var nonPublic = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/8"),
 	netip.MustParsePrefix("100.64.0.0/10"),
 	netip.MustParsePrefix("192.0.0.0/24"),
 	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("192.88.99.0/24"),
 	netip.MustParsePrefix("198.18.0.0/15"),
 	netip.MustParsePrefix("198.51.100.0/24"),
 	netip.MustParsePrefix("203.0.113.0/24"),
@@ -148,6 +157,7 @@ var nonPublic = []netip.Prefix{
 	netip.MustParsePrefix("2001::/32"),
 	netip.MustParsePrefix("2001:db8::/32"),
 	netip.MustParsePrefix("2002::/16"),
+	netip.MustParsePrefix("fec0::/10"),
 }
 
 // publicIP reports whether ip is a globally routable unicast address.
@@ -247,6 +257,12 @@ func (f *Fetcher) parse(raw string) (*url.URL, error) {
 func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int64) ([]byte, string, *url.URL, error) {
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
+	select {
+	case f.slots <- struct{}{}:
+		defer func() { <-f.slots }()
+	case <-ctx.Done():
+		return nil, "", nil, fmt.Errorf("fetch: no free slot: %w", ctx.Err())
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, "", nil, ErrBlocked
