@@ -178,12 +178,21 @@ func Checksum(b []byte) string {
 // verifyChecksums compares the recorded checksums of applied migrations with
 // the shipped files. It fails when an applied file changed and returns the
 // applied files whose checksum was never recorded (to backfill). Applied
-// migrations that no longer ship are ignored.
+// migrations that no longer ship are ignored, unless they sort after the
+// newest shipped one: then a newer version already ran against this
+// database, and this older one must not start on a schema it doesn't know.
 func verifyChecksums(applied, files map[string]string) ([]string, error) {
-	var backfill []string
+	newest := ""
+	for name := range files {
+		newest = max(newest, name)
+	}
+	var backfill, ahead []string
 	for name, recorded := range applied {
 		sum, ok := files[name]
 		if !ok {
+			if name > newest {
+				ahead = append(ahead, name)
+			}
 			continue
 		}
 		if recorded == "" {
@@ -193,6 +202,10 @@ func verifyChecksums(applied, files map[string]string) ([]string, error) {
 		if recorded != sum {
 			return nil, fmt.Errorf("migration %s was changed after it was applied (checksum %s, recorded %s): never edit an applied migration, add a new one", name, sum, recorded)
 		}
+	}
+	if len(ahead) > 0 {
+		sort.Strings(ahead)
+		return nil, fmt.Errorf("the database was migrated by a newer version (%s, this version ships up to %s): run that version or newer, or restore the backup taken before the update (doc/upgrade.md, Rollback)", strings.Join(ahead, ", "), newest)
 	}
 	sort.Strings(backfill)
 	return backfill, nil

@@ -77,8 +77,8 @@ docker compose pull app && docker compose up -d
 ```
 
 If the new version applied a migration (`migration applied` in the log), the
-old version may not work with the new schema: restore the backup from step 1
-as well (`./scripts/restore.sh /path/to/backups/<timestamp>`), which replaces
+old version refuses to start on the newer schema ("the database was migrated
+by a newer version"): restore the backup from step 1 as well (`./scripts/restore.sh /path/to/backups/<timestamp>`), which replaces
 the database and media with the state before the update.
 
 ## Version notes
