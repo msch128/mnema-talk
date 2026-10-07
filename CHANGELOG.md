@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0](https://github.com/msch128/mnema-talk/compare/v0.5.0...v0.6.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* existing installs must run ./scripts/upgrade-postgres.sh once instead of docker compose up -d (doc/upgrade.md, 0.4.x -> 0.5.0).
+
+### Bug Fixes
+
+* validate frontend contracts with strict TypeScript ([#70](https://github.com/msch128/mnema-talk/issues/70)) ([d03dac5](https://github.com/msch128/mnema-talk/commit/d03dac59ff89492f38de94e68116f56eccf51918))
+
 ## [0.5.0](https://github.com/msch128/mnema-talk/compare/v0.4.4...v0.5.0) (2026-10-07)
 
 
