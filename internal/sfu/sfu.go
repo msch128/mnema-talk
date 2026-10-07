@@ -792,6 +792,25 @@ func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 	}
 }
 
+// RequestSourceKeyframe asks publisherID for a keyframe of their own video
+// of the given source, e.g. when their screen share (re)starts, so everyone
+// watching gets a decodable picture right away. A track whose first packets
+// have not arrived yet is not published; its viewers get a keyframe when
+// they are added to it.
+func (r *Room) RequestSourceKeyframe(publisherID uuid.UUID, source Source) {
+	r.mu.RLock()
+	var tracks []*TrackInfo
+	for _, info := range r.trackLocals {
+		if info.SenderID == publisherID && info.Source == source && info.Kind == webrtc.RTPCodecTypeVideo {
+			tracks = append(tracks, info)
+		}
+	}
+	r.mu.RUnlock()
+	for _, info := range tracks {
+		info.requestKeyframe()
+	}
+}
+
 func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.mu.Lock()
 	// The publisher may have been replaced while its track was arriving.

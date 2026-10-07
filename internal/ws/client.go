@@ -20,6 +20,9 @@ type Client struct {
 
 	tokenVersion int
 	closeOnce    sync.Once
+	// closing is set by the first deliver that finds the buffer full, so a
+	// slow client's later events don't each start another close.
+	closing atomic.Bool
 
 	// send is never closed: SendEvent runs from goroutines other than the
 	// read loop (SFU callbacks, admin kicks), and a send on a closed channel
@@ -91,7 +94,9 @@ func (c *Client) deliver(data []byte) {
 	select {
 	case c.send <- data:
 	default:
-		go c.close()
+		if c.closing.CompareAndSwap(false, true) {
+			go c.close()
+		}
 	}
 }
 

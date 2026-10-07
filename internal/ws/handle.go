@@ -101,9 +101,11 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		c.handleSubscribe(payload)
 
 	case "webrtc_screenshare_start":
+		// The sharer's own screen needs a fresh keyframe for its viewers
+		// (DispatchKeyframe would ask for the videos the sharer watches).
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
-				room.DispatchKeyframe(c.User.ID)
+				room.RequestSourceKeyframe(c.User.ID, sfu.SourceScreen)
 			}
 		}
 
