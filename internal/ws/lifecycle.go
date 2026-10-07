@@ -22,7 +22,6 @@ const (
 	pingInterval    = 30 * time.Second
 	writeWait       = 10 * time.Second
 	revalidateEvery = 2 * time.Minute
-	maxEventsPerSec = 40
 )
 
 // HandleWebSocket authenticates the session cookie, checks the origin and
@@ -235,17 +234,15 @@ func (c *Client) readPump() {
 		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
-	windowStart, count := time.Now(), 0
+	var budget eventBudget
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			return
 		}
 		// Per-connection flood guard: excess events are dropped.
-		if now := time.Now(); now.Sub(windowStart) >= time.Second {
-			windowStart, count = now, 0
-		}
-		if count++; count > maxEventsPerSec {
+		now := time.Now()
+		if !budget.allowFrame(now) {
 			continue
 		}
 		var ev struct {
@@ -253,6 +250,9 @@ func (c *Client) readPump() {
 			Payload json.RawMessage `json:"payload"`
 		}
 		if err := json.Unmarshal(message, &ev); err != nil {
+			continue
+		}
+		if !budget.allowEvent(ev.Type, len(ev.Payload), now) {
 			continue
 		}
 		c.handle(ev.Type, ev.Payload)
