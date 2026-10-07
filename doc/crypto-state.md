@@ -6,7 +6,7 @@ application end-to-end encrypted. No existing chat or media path uses this modul
 yet. The production cryptographic provider and its admission/freshness contract
 remain release gates.
 
-The implementation is `web/src/lib/crypto/stateStore.js`. Runtime dependencies
+The implementation is `web/src/lib/crypto/stateStore.ts`. Runtime dependencies
 are browser IndexedDB and Web Locks. `fake-indexeddb` 6.2.5 is an exact-pinned
 development dependency for transaction tests and is not shipped with the app.
 
@@ -141,13 +141,13 @@ capacity or latency promise for those paths.
 Run the unit transaction suite from `web/`:
 
 ```sh
-npx vitest run src/lib/crypto/stateStore.test.js
+npx vitest run src/lib/crypto/stateStore.test.ts
 ```
 
 Run native Chromium tests from `e2e/`, using the existing Playwright installation:
 
 ```sh
-npx playwright test tests/crypto-state.spec.js
+npx playwright test tests/crypto-state.spec.ts
 ```
 
 The unit suite forces abort after the group write and before outbox insertion;

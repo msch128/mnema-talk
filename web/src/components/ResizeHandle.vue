@@ -1,11 +1,13 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ResizePanel } from './presentationTypes'
 import { computed } from 'vue'
 
 // Drag handle sitting on a panel edge: a vertical bar for side panels, a
 // horizontal one for top/bottom panels (axis 'y'). `panel` is one entry
 // returned by useResizable(); all sizing logic lives there.
 const props = defineProps({
-  panel: { type: Object, required: true },
+  panel: { type: Object as PropType<ResizePanel>, required: true },
   label: { type: String, default: '' }
 })
 

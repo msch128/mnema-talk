@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { LinkPreview } from '../types/domain'
 import { ref, onMounted } from 'vue'
 import { ExternalLink } from '@lucide/vue'
 import { fetchLinkPreview } from '../lib/linkPreview'
@@ -10,15 +11,15 @@ const props = defineProps({
   }
 })
 
-const preview = ref(null)
+const preview = ref<LinkPreview | null>(null)
 const imageFailed = ref(false)
 
-function imageUrl(raw) {
+function imageUrl(raw: string | undefined) {
   if (!raw) return ''
   return `/api/link-preview/image?url=${encodeURIComponent(raw)}`
 }
 
-function domainFrom(raw) {
+function domainFrom(raw: string) {
   try {
     return new URL(raw).hostname.replace(/^www\./, '')
   } catch {

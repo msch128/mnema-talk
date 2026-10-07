@@ -4,11 +4,11 @@ Mnema Talk is licensed under the GNU AGPL-3.0 (see `LICENSE`). It is built
 from, and ships, the open-source software listed here. The license texts are
 in each project's repository and, for Go modules and npm packages, in the
 module or package itself. The legal dialog in the app shows a summary of this
-list (`web/src/lib/thirdParty.js`).
+list (`web/src/lib/thirdParty.ts`).
 
 Keep this file current when dependencies change. `go list -deps -f
 '{{with .Module}}{{.Path}} {{.Version}}{{end}}' ./cmd/server | sort -u`
-lists the Go modules compiled into the binary; `web/src/lib/thirdParty.test.js`
+lists the Go modules compiled into the binary; `web/src/lib/thirdParty.test.ts`
 fails when a web dependency is missing from the in-app list.
 
 ## Web app (shipped to every browser)

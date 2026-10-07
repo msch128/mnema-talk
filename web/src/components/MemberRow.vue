@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { User } from '../types/domain'
 // One member in the member list: avatar with live status, display name and
 // a second line (Talk, status text or presence). Click opens the profile.
 import { computed } from 'vue'
@@ -10,11 +12,11 @@ import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
 
 const props = defineProps({
-  member: { type: Object, required: true },
+  member: { type: Object as PropType<User>, required: true },
   // Talk the member is in, if any.
   voiceChannel: { type: String, default: '' }
 })
-const emit = defineEmits(['menu'])
+const emit = defineEmits<{ menu: [event: MouseEvent | KeyboardEvent] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()

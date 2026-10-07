@@ -5,12 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run typecheck:app && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "lint": "eslint .",
-    "check": "npm run lint && npm run test && npm run build"
+    "test": "npm run test:tooling && vitest run",
+    "test:coverage": "npm run test:tooling && vitest run --coverage && npm run coverage:check",
+    "lint": "node scripts/lint.ts",
+    "check": "npm run lint && npm run contracts:check && npm run typecheck && npm run test:coverage && npm run build",
+    "typecheck": "npm run typecheck:source && vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
+    "contracts:check": "node scripts/generate-contracts.ts --check",
+    "typecheck:source": "node scripts/check-typescript.ts --e2e",
+    "typecheck:app": "node scripts/check-typescript.ts && vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.worklet.json",
+    "test:tooling": "node --test scripts/*.test.ts",
+    "coverage:check": "node scripts/check-coverage.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.3.0",
@@ -25,22 +31,31 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "24.19.1",
     "@vitejs/plugin-vue": "^6.0.9",
     "@vitest/coverage-v8": "^5.0.3",
+    "@vue/compiler-sfc": "3.5.43",
     "@vue/test-utils": "^2.5.1",
+    "@vue/tsconfig": "0.9.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.12.0",
     "eslint-plugin-vue": "^10.11.1",
     "fake-indexeddb": "6.2.5",
     "globals": "^17.13.0",
     "happy-dom": "^20.14.5",
+    "jiti": "2.7.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
     "vite": "^8.3.2",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "vue-eslint-parser": "10.4.1",
+    "vue-tsc": "3.3.12"
   },
   "overrides": {
     "braces": "^3.0.3",
-    "micromatch": "^4.0.8"
+    "micromatch": "^4.0.8",
+    "postcss-selector-parser": "7.1.6"
   }
 }

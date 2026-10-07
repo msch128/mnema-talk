@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { Message } from '../types/domain'
+import { decodeSearchResult } from '../types/domain'
 import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
 import { Search, Hash, Volume2, Paperclip, Image as ImageIcon, Link as LinkIcon, X, Loader2, ArrowRight, CornerDownRight } from '@lucide/vue'
 import { api } from '../lib/api'
@@ -14,13 +16,13 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 
 const PAGE = 25
 
 const chatStore = useChatStore()
 const query = ref('')
-const results = ref([])
+const results = ref<Message[]>([])
 const hasMore = ref(false)
 const isSearching = ref(false)
 const isLoadingMore = ref(false)
@@ -29,8 +31,8 @@ const channelId = ref('')
 const authorId = ref('')
 const has = ref('') // '' | 'file' | 'image' | 'link'
 const selectedIndex = ref(0)
-const searchInput = ref(null)
-const listEl = ref(null)
+const searchInput = ref<HTMLInputElement | null>(null)
+const listEl = ref<HTMLElement | null>(null)
 
 const hasHas = [
   { value: 'file', label: 'chat.hasAttachment', icon: Paperclip },
@@ -45,14 +47,14 @@ const channelTypes = computed(() => new Map(chatStore.allChannels.map(c => [c.id
 const channelNames = computed(() => new Map(chatStore.allChannels.map(c => [c.id, c.name])))
 const hasCriteria = computed(() => !!(query.value.trim() || channelId.value || authorId.value || has.value))
 
-let searchTimeout = null
+let searchTimeout: ReturnType<typeof setTimeout> | undefined
 let searchSeq = 0
 
 function close() {
   emit('update:modelValue', false)
 }
 
-function buildParams(before) {
+function buildParams(before?: string) {
   const params = new URLSearchParams({ limit: String(PAGE) })
   const q = query.value.trim()
   if (q) params.set('q', q)
@@ -76,7 +78,7 @@ async function performSearch() {
 
   isSearching.value = true
   try {
-    const data = await api(`/api/search?${buildParams().toString()}`)
+    const data = await api(`/api/search?${buildParams().toString()}`, { decode: decodeSearchResult })
     if (seq !== searchSeq) return
     results.value = data.messages || []
     hasMore.value = !!data.has_more
@@ -98,7 +100,7 @@ async function loadMore() {
   const seq = searchSeq
   isLoadingMore.value = true
   try {
-    const data = await api(`/api/search?${buildParams(last.id).toString()}`)
+    const data = await api(`/api/search?${buildParams(last.id).toString()}`, { decode: decodeSearchResult })
     if (seq !== searchSeq) return
     results.value = [...results.value, ...(data.messages || [])]
     hasMore.value = !!data.has_more
@@ -114,19 +116,19 @@ function onInput() {
   searchTimeout = setTimeout(performSearch, 250)
 }
 
-function toggleHas(value) {
+function toggleHas(value: string) {
   has.value = has.value === value ? '' : value
   performSearch()
 }
 
-function handleSelect(msg) {
+function handleSelect(msg: Message) {
   chatStore.goToMessage(msg)
   close()
 }
 
 // Escape, the focus trap and focus restore come from BaseDialog.
-function handleKeydown(e) {
-  if (e.target?.tagName === 'SELECT') return
+function handleKeydown(e: KeyboardEvent) {
+  if (e.target instanceof Element && e.target.tagName === 'SELECT') return
   if (!results.value.length) return
 
   if (e.key === 'ArrowDown') {
@@ -138,12 +140,13 @@ function handleKeydown(e) {
   } else if (e.key === 'Enter' && e.target === searchInput.value) {
     e.preventDefault()
     if (selectedIndex.value >= 0 && selectedIndex.value < results.value.length) {
-      handleSelect(results.value[selectedIndex.value])
+      const selected = results.value[selectedIndex.value]
+      if (selected) handleSelect(selected)
     }
   }
 }
 
-function formatDate(iso) {
+function formatDate(iso: string) {
   if (!iso) return ''
   const d = new Date(iso)
   return d.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })

@@ -197,13 +197,24 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - run: npm ci --no-audit --no-fund
+      - name: Browser test compiler dependencies
+        working-directory: e2e
+        run: npm ci --no-audit --no-fund
       - run: npm run lint
+      - name: Generated frontend contracts are up to date
+        run: npm run contracts:check
+      - name: Strict TypeScript checks
+        run: npm run typecheck
+      - name: Strict browser test TypeScript checks
+        working-directory: e2e
+        run: npm run typecheck
       - run: npm run test:coverage
 
-      # Fails below 80 % (keep in sync with COVERAGE_MIN in the Makefile);
-      # the report is uploaded either way.
+      # Require 95% on all four totals and all modules; reviewed per-module
+      # exceptions may lower individual thresholds to 80%, never the totals.
       - name: Coverage summary
-        run: node ../scripts/coverage-summary.mjs web coverage/coverage-summary.json --min 80 >> "$GITHUB_STEP_SUMMARY"
+        if: ${{ !cancelled() && hashFiles('web/coverage/coverage-summary.json') != '' }}
+        run: npm run coverage:check >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
         if: ${{ !cancelled() && hashFiles('web/coverage/coverage-summary.json') != '' }}
@@ -212,6 +223,7 @@ jobs:
           name: coverage-web
           path: |
             web/coverage/lcov.info
+            web/coverage/coverage-final.json
             web/coverage/coverage-summary.json
           if-no-files-found: error
           retention-days: 30

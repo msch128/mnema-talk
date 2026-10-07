@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Shown to everyone when the server runs a newer (or just different) build
 // than this page. Reloading is always the user's click: during a call the
 // page reload rejoins the call automatically (voice session resume).

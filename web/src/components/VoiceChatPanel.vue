@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ResizePanel } from './presentationTypes'
 // A voice channel's own text chat, under its Talk's stage (like Discord's
 // chat next to a voice channel). The whole chat is the regular one
 // (ChatArea in its panel variant): messages, attachments, reactions, edits,
@@ -13,9 +15,9 @@ import ResizeHandle from './ResizeHandle.vue'
 const props = defineProps({
   channelId: { type: String, required: true },
   // Height handle from useResizable (axis 'y'); without one the panel takes 300px.
-  panel: { type: Object, default: null }
+  panel: { type: Object as PropType<ResizePanel | null>, default: null }
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
 

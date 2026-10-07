@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { TalkParticipant } from './presentationTypes'
 // "N participants" in the Talk header; opens who is in the Talk and since when.
 import { ref, nextTick } from 'vue'
 import { useChatStore } from '../stores/chat'
@@ -9,7 +11,7 @@ import MuteMarks from './MuteMarks.vue'
 import { useDismissable } from '../composables/useDismissable'
 
 defineProps({
-  users: { type: Array, required: true },
+  users: { type: Array as PropType<TalkParticipant[]>, required: true },
   // When the room got its first member (ISO), for the total time.
   startedAt: { type: String, default: '' }
 })
@@ -17,15 +19,15 @@ defineProps({
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const open = ref(false)
-const root = ref(null)
-const button = ref(null)
+const root = ref<HTMLElement | null>(null)
+const button = ref<HTMLButtonElement | null>(null)
 
 // A press elsewhere closes quietly; Escape hands focus back to the button.
 useDismissable(root, (e, reason) => close(reason === 'escape'), { active: open })
 
 function show() {
   open.value = true
-  nextTick(() => root.value?.querySelector('[role="menuitem"]')?.focus())
+  nextTick(() => root.value?.querySelector<HTMLElement>('[role="menuitem"]')?.focus())
 }
 function close(returnFocus = true) {
   open.value = false
@@ -35,13 +37,13 @@ function toggle() {
   if (open.value) close()
   else show()
 }
-function openProfile(user) {
+function openProfile(user: TalkParticipant) {
   close(false)
   chatStore.openUserProfile(user)
 }
-function onKeydown(e) {
-  const items = [...(root.value?.querySelectorAll('[role="menuitem"]') || [])]
-  const i = items.indexOf(document.activeElement)
+function onKeydown(e: KeyboardEvent) {
+  const items = [...(root.value?.querySelectorAll<HTMLElement>('[role="menuitem"]') || [])]
+  const i = items.findIndex(el => el === document.activeElement)
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     items[(i + 1) % items.length]?.focus()

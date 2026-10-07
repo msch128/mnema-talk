@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Inline editor for a message. Takes focus when it opens, so editing from
 // the keyboard (e on a message) can go straight on typing.
 import { ref, onMounted, nextTick } from 'vue'
@@ -10,10 +10,10 @@ defineProps({
   compact: { type: Boolean, default: false },
   label: { type: String, default: '' }
 })
-const emit = defineEmits(['save', 'cancel'])
-const text = defineModel({ type: String, default: '' })
+const emit = defineEmits<{ save: []; cancel: [] }>()
+const text = defineModel<string>({ type: String, default: '' })
 
-const input = ref(null)
+const input = ref<HTMLTextAreaElement | null>(null)
 
 onMounted(() => {
   nextTick(() => {

@@ -1,19 +1,21 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type PickerElement from 'emoji-picker-element/picker.js'
 // Searchable emoji picker (emoji-picker-element). It is loaded on first use
 // and reads its emoji data from our own server, never from a CDN.
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { locale } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
 
-const emit = defineEmits(['pick', 'close'])
+const emit = defineEmits<{ pick: [emoji: string]; close: [] }>()
 const props = defineProps({
   // Element that opened the picker; clicks on it do not count as "outside".
-  trigger: { type: Object, default: null }
+  trigger: { type: Object as PropType<HTMLElement | null>, default: null }
 })
 
-const host = ref(null)
+const host = ref<HTMLElement | null>(null)
 const loading = ref(true)
-let picker = null
+let picker: PickerElement | null = null
 
 async function create() {
   const lang = locale.value === 'en' ? 'en' : 'de'

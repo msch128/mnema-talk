@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Host for confirm() from lib/confirm.js. Safe default: focus starts on Cancel.
 import { computed, useId } from 'vue'
 import BaseDialog from './BaseDialog.vue'
@@ -7,8 +7,10 @@ import { t } from '../i18n'
 
 const request = computed(() => pendingConfirm.value)
 const descId = useId()
+// A new request remounts the shell so its safe initial focus is restored.
+const requestKey = computed(() => Symbol(request.value?.title ?? 'confirm'))
 
-function answer(result) {
+function answer(result: boolean) {
   request.value?.resolve(result)
 }
 </script>
@@ -16,7 +18,7 @@ function answer(result) {
 <template>
   <BaseDialog
     v-if="request"
-    :key="request"
+    :key="requestKey"
     role="alertdialog"
     :describedby="request.body ? descId : ''"
     panel-class="max-w-[440px]"

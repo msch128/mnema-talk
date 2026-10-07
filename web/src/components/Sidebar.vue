@@ -1,4 +1,9 @@
-<script setup>
+<script setup lang="ts">
+import type { Channel, ChannelType, Category, VoiceUser } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
+type MenuOpener = MouseEvent | KeyboardEvent | { currentTarget: HTMLElement | null; preventDefault?: () => void }
+interface EditingEntity { kind: 'channel' | 'category'; entity: Channel | Category | null; after?: string | null }
+type SidebarSection = (Category & { headless?: false }) | { id: string; headless: true; channels: Channel[] }
 import { ref, computed, watch, nextTick } from 'vue'
 import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
@@ -26,7 +31,7 @@ import { useSidebarReorder, UNCATEGORIZED_SECTION } from '../composables/useSide
 
 const SERVER_NAME = 'Mnema Talk'
 
-const emit = defineEmits(['open-admin', 'open-legal'])
+const emit = defineEmits<{ 'open-admin': []; 'open-legal': [] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -37,16 +42,16 @@ const { joinVoiceChannel } = useWebRTC()
 const { layout, commit } = useChannelLayout()
 
 const showCreateChannelModal = ref(false)
-const modalChannelType = ref('text')
+const modalChannelType = ref<ChannelType>('text')
 const modalCategoryId = ref('')
 
-function openCreateChannel(type = 'text', categoryId = '') {
+function openCreateChannel(type: ChannelType = 'text', categoryId = '') {
   modalChannelType.value = type
   modalCategoryId.value = categoryId
   showCreateChannelModal.value = true
 }
 
-async function handleDeleteChannel(channel) {
+async function handleDeleteChannel(channel: Channel) {
   const isVoice = channel.type === 'voice'
   const ok = await confirm({
     title: t(isVoice ? 'sidebar.deleteVoiceChannelTitle' : 'sidebar.deleteChannelTitle', { name: channel.name }),
@@ -59,11 +64,11 @@ async function handleDeleteChannel(channel) {
     await chatStore.deleteChannel(channel.id)
     toasts.success(t('sidebar.channelDeleted'))
   } catch (err) {
-    toasts.error(err.message || t('sidebar.deleteFailed'))
+    toasts.error(caughtErrorMessage(err, t('sidebar.deleteFailed')))
   }
 }
 
-async function handleDeleteCategory(category) {
+async function handleDeleteCategory(category: Category) {
   const ok = await confirm({
     title: t('sidebar.deleteCategoryTitle', { name: category.name }),
     body: t('sidebar.deleteCategoryBody'),
@@ -75,28 +80,28 @@ async function handleDeleteCategory(category) {
     await chatStore.deleteCategory(category.id)
     toasts.success(t('sidebar.categoryDeleted'))
   } catch (err) {
-    toasts.error(err.message || t('sidebar.deleteFailed'))
+    toasts.error(caughtErrorMessage(err, t('sidebar.deleteFailed')))
   }
 }
 
-async function handleDuplicateChannel(channel) {
+async function handleDuplicateChannel(channel: Channel) {
   try {
     const created = await chatStore.duplicateChannel(channel.id)
     toasts.success(t('sidebar.channelDuplicated', { name: channel.name }))
     // The copy sits right below the original; show it without navigating.
     if (created?.id) reveal('channel', created.id)
   } catch (err) {
-    toasts.error(err?.message || t('sidebar.duplicateFailed'))
+    toasts.error(caughtErrorMessage(err, t('sidebar.duplicateFailed')))
   }
 }
 
 // New categories go to the end; one created from a category's menu then
 // moves right below that category (a silent layout save).
-function openCreateCategory(afterCategoryId = null) {
+function openCreateCategory(afterCategoryId: string | null = null) {
   editing.value = { kind: 'category', entity: null, after: afterCategoryId }
 }
 
-function handleCategoryCreated(category) {
+function handleCategoryCreated(category: Category) {
   const after = editing.value?.after
   if (!category?.id) return
   const anchor = after && locateCategory(layout.value, after)
@@ -107,13 +112,13 @@ function handleCategoryCreated(category) {
 // ---- Context menus (channels, categories, voice participants, the list) ----
 
 const menu = useMenuState()
-const editing = ref(null) // { kind: 'channel' | 'category', entity (null: create), after }
+const editing = ref<EditingEntity | null>(null) // { kind: 'channel' | 'category', entity (null: create), after }
 const menuHandlers = {
-  onEdit: entity => { editing.value = { kind: entity.channels ? 'category' : 'channel', entity } },
-  onDelete: entity => (entity.channels ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
-  onDuplicate: channel => handleDuplicateChannel(channel),
-  onCreateChannel: category => openCreateChannel(category ? defaultTypeFor(category) : 'text', category?.id || ''),
-  onCreateCategory: category => openCreateCategory(category?.id ?? null),
+  onEdit: (entity: Channel | Category) => { editing.value = { kind: 'channels' in entity ? 'category' : 'channel', entity } },
+  onDelete: (entity: Channel | Category) => ('channels' in entity ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
+  onDuplicate: (channel: Channel) => handleDuplicateChannel(channel),
+  onCreateChannel: (category?: Category | null) => openCreateChannel(category ? defaultTypeFor(category) : 'text', category?.id || ''),
+  onCreateCategory: (category?: Category | null) => openCreateCategory(category?.id ?? null),
   onCollapseAll: () => setCollapsed(layout.value.categories.map(c => c.id)),
   onExpandAll: () => setCollapsed([])
 }
@@ -126,28 +131,28 @@ function collapseState() {
   }
 }
 
-function openChannelMenu(e, channel) {
+function openChannelMenu(e: MenuOpener, channel: Channel) {
   menu.show(e, () => buildChannelItems(channel, menuHandlers))
 }
 
-function openCategoryMenu(e, category) {
+function openCategoryMenu(e: MenuOpener, category: Category) {
   menu.show(e, () => buildCategoryItems(category, { ...menuHandlers, ...collapseState() }))
 }
 
 // The empty part of the channel list: admins can create things there,
 // everyone else keeps the browser's menu.
-function openListMenu(e) {
+function openListMenu(e: MouseEvent) {
   if (!buildSidebarItems(menuHandlers).length) return
   menu.show(e, () => buildSidebarItems(menuHandlers))
 }
 
-function openMemberMenu(e, user) {
+function openMemberMenu(e: MouseEvent | KeyboardEvent, user: VoiceUser) {
   menu.show(e, refresh => buildMemberItems(user, { refresh }))
 }
 
 // ---- Channel tree (uncategorized first, then categories in sort order) ----
 
-const sections = computed(() => {
+const sections = computed<SidebarSection[]>(() => {
   const tree = layout.value
   return tree.uncategorized.length
     ? [{ id: UNCATEGORIZED_SECTION, headless: true, channels: tree.uncategorized }, ...tree.categories]
@@ -156,19 +161,19 @@ const sections = computed(() => {
 
 const collapsed = ref(new Set(loadCollapsed()))
 
-function setCollapsed(ids) {
+function setCollapsed(ids: Iterable<string>) {
   collapsed.value = new Set(ids)
   saveCollapsed([...collapsed.value])
 }
 
-function toggleCategory(id) {
+function toggleCategory(id: string) {
   const next = new Set(collapsed.value)
   if (next.has(id)) next.delete(id)
   else next.add(id)
   setCollapsed(next)
 }
 
-function expandCategory(id) {
+function expandCategory(id: string) {
   if (!collapsed.value.has(id)) return
   const next = new Set(collapsed.value)
   next.delete(id)
@@ -177,8 +182,8 @@ function expandCategory(id) {
 
 // A collapsed category still shows the selected text channel
 // and the voice channel you're connected to. A dragged category shows none.
-function visibleChannels(category) {
-  if (category.headless) return category.channels
+function visibleChannels(category: SidebarSection) {
+  if ('headless' in category && category.headless) return category.channels
   if (isDragged('category', category.id)) return []
   if (!isCollapsed(category.id)) return category.channels
   return category.channels.filter(ch =>
@@ -187,12 +192,12 @@ function visibleChannels(category) {
 }
 
 // Guess the type for the category's "+" from what the category already holds.
-function defaultTypeFor(category) {
+function defaultTypeFor(category: Category) {
   const chs = category.channels || []
   return chs.length && chs.every(c => c.type === 'voice') ? 'voice' : 'text'
 }
 
-async function handleVoiceClick(channel) {
+async function handleVoiceClick(channel: Channel) {
   if (voiceStore.warnSwitchChannel && voiceStore.currentChannelId && voiceStore.currentChannelId !== channel.id) {
     const ok = await confirm({
       title: t('audio.switchChannelTitle'),
@@ -209,20 +214,20 @@ async function handleVoiceClick(channel) {
   joinVoiceChannel(channel.id)
   voiceStore.activeView = 'voice'
   // /v/:id keeps the Talk's chat toggle as it is.
-  navigate(`/v/${channel.id}${currentRoute.value.showChat ? '/chat' : ''}`)
+  navigate(`/v/${channel.id}${currentRoute.value.view === 'voice' && currentRoute.value.showChat ? '/chat' : ''}`)
 }
 
-function handleTextClick(channel) {
+function handleTextClick(channel: Channel) {
   chatStore.selectChannel(channel)
   voiceStore.activeView = 'chat'
 }
 
-function handleChannelClick(channel) {
+function handleChannelClick(channel: Channel) {
   if (channel.type === 'voice') handleVoiceClick(channel)
   else handleTextClick(channel)
 }
 
-async function handleVoiceUserClick(channel, user) {
+async function handleVoiceUserClick(channel: Channel, user: VoiceUser) {
   if (voiceStore.mediaState[user.id]?.screen) {
     if (voiceStore.currentChannelId !== channel.id) {
       await handleVoiceClick(channel)
@@ -250,18 +255,24 @@ const {
   expandCategory,
   enabled: () => authStore.isAdmin,
   // Touch: holding an item and letting go without moving opens its menu.
-  onLongPress: (kind, entity, e) => (kind === 'channel' ? openChannelMenu(e, entity) : openCategoryMenu(e, entity))
+  onLongPress: (_kind: 'channel' | 'category', entity: Channel | Category, e: PointerEvent) => ('channels' in entity ? openCategoryMenu(e, entity) : openChannelMenu(e, entity))
 })
+
+// Channel rows accept boundary drops; inside drops belong to categories.
+function channelIndicator(id: string): '' | 'top' | 'bottom' {
+  const indicator = indicatorFor(`channel:${id}`)
+  return indicator === 'inside' ? '' : indicator
+}
 
 // ---- Server header dropdown ----
 
 const menuOpen = ref(false)
-const menuRoot = ref(null)
-const menuButton = ref(null)
-const menuEl = ref(null)
+const menuRoot = ref<HTMLElement | null>(null)
+const menuButton = ref<HTMLButtonElement | null>(null)
+const menuEl = ref<HTMLElement | null>(null)
 
 function menuItems() {
-  return menuEl.value ? [...menuEl.value.querySelectorAll('[role="menuitem"]')] : []
+  return menuEl.value ? [...menuEl.value.querySelectorAll<HTMLElement>('[role="menuitem"]')] : []
 }
 
 function openMenu(focusIndex = 0) {
@@ -283,7 +294,7 @@ function toggleMenu() {
   else openMenu()
 }
 
-function onMenuButtonKeydown(e) {
+function onMenuButtonKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     openMenu(0)
@@ -293,9 +304,9 @@ function onMenuButtonKeydown(e) {
   }
 }
 
-function onMenuKeydown(e) {
+function onMenuKeydown(e: KeyboardEvent) {
   const items = menuItems()
-  const i = items.indexOf(document.activeElement)
+  const i = items.findIndex(el => el === document.activeElement)
   if (e.key === 'ArrowDown') {
     e.preventDefault()
     items[(i + 1) % items.length]?.focus()
@@ -313,7 +324,7 @@ function onMenuKeydown(e) {
   }
 }
 
-function runMenuAction(action) {
+function runMenuAction(action: () => void) {
   closeMenu(true)
   action()
 }
@@ -428,7 +439,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               :channel="channel"
               :admin="authStore.isAdmin"
               :dragging="isDragged('channel', channel.id)"
-              :indicator="indicatorFor(`channel:${channel.id}`)"
+              :indicator="channelIndicator(channel.id)"
               :flash="flashKey === `channel:${channel.id}`"
               :hint-id="hintId"
               @open="handleChannelClick(channel)"

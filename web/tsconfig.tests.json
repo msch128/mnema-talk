@@ -1,0 +1,20 @@
+{
+  "extends": [
+    "@vue/tsconfig/tsconfig.dom.json",
+    "./tsconfig.base.json"
+  ],
+  "compilerOptions": {
+    "types": [
+      "vite/client",
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.fixture.ts",
+    "src/test-setup.ts",
+    "src/env.d.ts",
+    "src/types/audio-worklet.d.ts",
+    "src/types/swagger-ui.d.ts"
+  ]
+}

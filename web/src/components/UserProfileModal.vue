@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { User as ProfileUser } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 import { ref, computed } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2,
@@ -17,19 +20,19 @@ import VoiceTimer from './VoiceTimer.vue'
 
 const props = defineProps({
   user: {
-    type: Object,
+    type: Object as PropType<Partial<ProfileUser> | null>,
     default: null
   }
 })
 
-const emit = defineEmits(['close', 'mention'])
+const emit = defineEmits<{ close: []; mention: [username: string] }>()
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const toasts = useToastStore()
 
-const fileInput = ref(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const isUploading = ref(false)
 
 // Bio editing state
@@ -40,7 +43,7 @@ const isSavingProfile = ref(false)
 const profileSaveError = ref('')
 
 // Determine the active user object
-const profileUser = computed(() => {
+const profileUser = computed<Partial<ProfileUser>>(() => {
   return props.user || chatStore.selectedUserProfile || authStore.user || {}
 })
 
@@ -87,7 +90,7 @@ async function saveProfile() {
     isEditingBio.value = false
     toasts.success(t('profile.profileSaved'))
   } catch (err) {
-    profileSaveError.value = err.message || t('profile.saveFailed')
+    profileSaveError.value = caughtErrorMessage(err, t('profile.saveFailed'))
   } finally {
     isSavingProfile.value = false
   }
@@ -118,7 +121,7 @@ async function savePassword() {
     isChangingPassword.value = false
     toasts.success(t('profile.passwordChanged'))
   } catch (err) {
-    passwordError.value = err.message
+    passwordError.value = caughtErrorMessage(err, t('profile.saveFailed'))
   } finally {
     isSavingPassword.value = false
   }
@@ -129,7 +132,7 @@ const isSelf = computed(() => {
 })
 
 const liveStatus = computed(() => {
-  const live = chatStore.presenceOf(profileUser.value.id)
+  const live = chatStore.presenceOf(profileUser.value.id ?? null)
   // Your own dot shows your choice even before the first snapshot arrives.
   if (live === 'offline' && isSelf.value) return authStore.user?.presence || 'online'
   return live
@@ -148,14 +151,16 @@ function startEditStatus() {
 }
 
 async function saveStatus(text = editStatus.value) {
+  const id = profileUser.value.id
+  if (!id) return
   isSavingStatus.value = true
   try {
-    const updated = await chatStore.setStatusText(profileUser.value.id, text.trim())
+    const updated = await chatStore.setStatusText(id, text.trim())
     chatStore.selectedUserProfile = chatStore.selectedUserProfile && { ...chatStore.selectedUserProfile, status_text: updated.status_text }
     isEditingStatus.value = false
     toasts.success(text.trim() ? t('profile.statusSaved') : t('profile.statusCleared'))
   } catch (err) {
-    toasts.error(err.message || t('profile.saveFailed'))
+    toasts.error(caughtErrorMessage(err, t('profile.saveFailed')))
   } finally {
     isSavingStatus.value = false
   }
@@ -198,8 +203,8 @@ function triggerAvatarUpload() {
   }
 }
 
-async function onAvatarSelected(e) {
-  const file = e.target.files?.[0]
+async function onAvatarSelected(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
 
   // Validate size (max 10MB)
@@ -218,7 +223,7 @@ async function onAvatarSelected(e) {
     }
     toasts.success(t('profile.avatarSaved'))
   } catch (err) {
-    toasts.error(err.message || t('profile.avatarFailed'))
+    toasts.error(caughtErrorMessage(err, t('profile.avatarFailed')))
   } finally {
     isUploading.value = false
     if (fileInput.value) fileInput.value.value = ''
@@ -226,7 +231,9 @@ async function onAvatarSelected(e) {
 }
 
 function handleMention() {
-  emit('mention', profileUser.value.username)
+  const username = profileUser.value.username
+  if (!username) return
+  emit('mention', username)
   emit('close')
 }
 </script>
@@ -578,7 +585,7 @@ function handleMention() {
                 <span class="font-medium">{{ $t('profile.inVoice') }}</span>
                 <span class="font-bold ml-1 text-mnema-text">#{{ voiceHangout.name }}</span>
               </div>
-              <VoiceTimer :since="voiceStore.joinedAtOf(profileUser.id)" class="ml-auto text-xs" />
+              <VoiceTimer :since="voiceStore.joinedAtOf(profileUser.id ?? null)" class="ml-auto text-xs" />
             </div>
             <div 
               v-else 

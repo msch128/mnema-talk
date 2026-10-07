@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // The microphone / headphone marks of a muted or deafened Talk member.
 import { MicOff, HeadphoneOff } from '@lucide/vue'
 

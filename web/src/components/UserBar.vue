@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { User } from '../types/domain'
 import { ref, computed } from 'vue'
 import { Mic, MicOff, Headphones, HeadphoneOff, MoreHorizontal } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
@@ -11,7 +12,7 @@ import VoiceStatusPanel from './VoiceStatusPanel.vue'
 import AccountMenu from './AccountMenu.vue'
 import PresenceMenu from './PresenceMenu.vue'
 
-const emit = defineEmits(['open-admin', 'open-legal'])
+const emit = defineEmits<{ 'open-admin': []; 'open-legal': [] }>()
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
@@ -20,14 +21,14 @@ const chatStore = useChatStore()
 const versionStore = useAppVersionStore()
 
 const menuOpen = ref(false)
-const menuButton = ref(null)
+const menuButton = ref<HTMLButtonElement | null>(null)
 const presenceOpen = ref(false)
-const presenceButton = ref(null)
+const presenceButton = ref<HTMLButtonElement | null>(null)
 
-const me = computed(() => authStore.user || {})
+const me = computed<Partial<User>>(() => authStore.user || {})
 // What others see; before the first snapshot arrives, the own choice.
 const myStatus = computed(() => {
-  const live = chatStore.presenceOf(me.value.id)
+  const live = chatStore.presenceOf(me.value.id ?? null)
   return live === 'offline' ? me.value.presence || 'online' : live
 })
 // Second line: the status text, else the presence.
@@ -42,8 +43,12 @@ function toggleMenu() {
   menuOpen.value = !menuOpen.value
 }
 
+function openOwnProfile() {
+  if (authStore.user) chatStore.openUserProfile(authStore.user)
+}
+
 const ib = 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent'
-function ibTone(active) {
+function ibTone(active: boolean) {
   return active
     ? 'bg-mnema-danger/[0.12] text-mnema-danger'
     : 'text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text'
@@ -74,7 +79,7 @@ function ibTone(active) {
           show-status
           :status="myStatus"
           ring-class="bg-mnema-raised"
-          :is-speaking="voiceStore.isSpeaking(me.id)"
+          :is-speaking="voiceStore.isSpeaking(me.id ?? null)"
         />
       </button>
 
@@ -84,7 +89,7 @@ function ibTone(active) {
         data-testid="own-profile-button"
         v-tooltip.visual="$t('user.openProfile')"
         class="flex min-w-0 flex-1 flex-col rounded-md px-1.5 py-1 text-left leading-[18px] transition-colors hover:bg-mnema-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-mnema-accent"
-        @click="chatStore.openUserProfile(me)"
+        @click="openOwnProfile"
       >
         <span class="truncate text-sm font-semibold text-mnema-text">{{ me.display_name || me.username }}</span>
         <span data-testid="own-subline" class="truncate text-xs text-mnema-tertiary">{{ subline }}</span>

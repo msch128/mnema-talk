@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { ContextMenuItem } from './menuTypes'
 // The Talk's floating call controls (mute, deafen, camera, screen, … leave).
 // VoiceStage places it over the stage area and fades it out when idle
 // (useAutoHide); `visible` is that state. It reports `pinned` while it must
@@ -21,7 +22,7 @@ const props = defineProps({
   // In the stage's full screen: page dialogs and menus cannot show there.
   fullscreen: { type: Boolean, default: false }
 })
-const emit = defineEmits(['update:pinned'])
+const emit = defineEmits<{ 'update:pinned': [pinned: boolean] }>()
 
 const voiceStore = useVoiceStore()
 const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
@@ -41,7 +42,7 @@ function toggleNoiseCancelling() {
 
 // --- "More" (compact only): the secondary toggles as a menu ---
 const more = useMenuState()
-const moreButton = ref(null)
+const moreButton = ref<HTMLButtonElement | null>(null)
 let moreWasOpen = false
 function onMorePointerDown() {
   moreWasOpen = more.state.open
@@ -53,7 +54,7 @@ function toggleMore() {
     return
   }
   more.show({ currentTarget: moreButton.value }, () => {
-    const items = [
+    const items: ContextMenuItem[] = [
       { type: 'checkbox', id: 'all-cameras-off', label: t('talk.allCamerasOff'), checked: voiceStore.allCamerasOff, action: () => voiceStore.setAllCamerasOff(!voiceStore.allCamerasOff) },
       { type: 'checkbox', id: 'noise', label: t('audio.noise'), checked: !!voiceStore.noiseCancelling, action: toggleNoiseCancelling }
     ]
@@ -74,35 +75,35 @@ function toggleMore() {
 const hovered = ref(false)
 const keyboardFocus = ref(false)
 let pointerFocus = false
-function onPointerEnter(e) {
+function onPointerEnter(e: PointerEvent) {
   if (e.pointerType !== 'touch') hovered.value = true
 }
 function onPointerLeave() {
   hovered.value = false
 }
-function onFocusIn(e) {
+function onFocusIn(e: FocusEvent) {
   let visibleFocus = !pointerFocus
   try {
-    visibleFocus = e.target.matches(':focus-visible')
+    if (e.target instanceof Element) visibleFocus = e.target.matches(':focus-visible')
   } catch {
     // Older engines: the pointer flag decides.
   }
   keyboardFocus.value = visibleFocus
 }
-function onFocusOut(e) {
-  if (!e.currentTarget.contains(e.relatedTarget)) keyboardFocus.value = false
+function onFocusOut(e: FocusEvent) {
+  if (!(e.currentTarget instanceof Node && e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget))) keyboardFocus.value = false
 }
 const pinned = computed(() => hovered.value || keyboardFocus.value || more.state.open)
 watch(pinned, v => emit('update:pinned', v), { immediate: true })
 
 // A tap on the hidden bar only brings it back: no invisible button fires.
 let swallowClick = false
-function onPointerDownCapture(e) {
+function onPointerDownCapture(e: PointerEvent) {
   pointerFocus = true
   setTimeout(() => { pointerFocus = false }, 0)
   swallowClick = !props.visible && e.pointerType === 'touch'
 }
-function onClickCapture(e) {
+function onClickCapture(e: MouseEvent) {
   if (!swallowClick) return
   swallowClick = false
   e.preventDefault()

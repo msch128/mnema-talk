@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill postgres-upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill postgres-upgrade-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -40,6 +40,11 @@ dev: ## Start postgres + seaweedfs via compose, then run the server with go run 
 
 WEB_DEPS := web/node_modules/.package-lock.json
 
+E2E_DEPS := e2e/node_modules/.package-lock.json
+
+$(E2E_DEPS): e2e/package-lock.json
+	cd e2e && npm ci --no-audit --no-fund
+
 $(WEB_DEPS): web/package-lock.json
 	cd web && npm ci --no-audit --no-fund
 
@@ -62,13 +67,21 @@ test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
 test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
 
+contracts-check: $(WEB_DEPS) ## Check frontend declarations against the committed OpenAPI document
+	cd web && npm run contracts:check
+
+typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, tests, build config and media workers
+	cd web && npm run typecheck
+	cd e2e && npm run typecheck
+
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
 	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
 	python3 scripts/tests/test_backup_restore.py
 
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
-# Minimum total coverage (%) for Go and web; keep in sync with .github/workflows/ci.yml.
+# Minimum total Go coverage (%); frontend enforces all four metrics at 95%
+# through web/scripts/check-coverage.ts and its reviewed per-module policy.
 COVERAGE_MIN ?= 80
 COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
 
@@ -80,7 +93,6 @@ coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docke
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)
 	cd web && npm run test:coverage
-	@node scripts/coverage-summary.mjs web web/coverage/coverage-summary.json --min $(COVERAGE_MIN)
 
 fmt: ## Format Go code in place
 	gofmt -w cmd internal api web/web.go
@@ -103,7 +115,7 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup and PostgreSQL upgrade drills
+check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, types, contracts, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup and PostgreSQL upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .

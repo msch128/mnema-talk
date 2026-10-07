@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { User } from '../types/domain'
 import { computed } from 'vue'
 import { Crown } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
@@ -26,11 +27,11 @@ const offlineNonAdmins = computed(() => {
 
 const menu = useMenuState()
 
-function openMemberMenu(e, member) {
+function openMemberMenu(e: MouseEvent | KeyboardEvent, member: User) {
   menu.show(e, refresh => buildMemberItems(member, { refresh }))
 }
 
-function getUserVoiceChannel(userId) {
+function getUserVoiceChannel(userId: string) {
   for (const [chId, users] of Object.entries(voiceStore.channelUsers)) {
     if (users && users[userId]) {
       for (const cat of chatStore.categories) {

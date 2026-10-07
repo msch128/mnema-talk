@@ -132,6 +132,10 @@ DATABASE_URL=postgres://mnema:<password>@localhost:5432/mnema_talk?sslmode=disab
 `make build` produces `bin/mnema-talk` with the web app embedded (`make web`
 builds only `web/dist`).
 
+Frontend source uses strict TypeScript, including Vue scripts, media workers,
+browser tests and build tools. See [the TypeScript contract](doc/typescript.md)
+for compiler scopes, runtime decoding and the generated-vendor exception.
+
 ## Testing
 
 ```sh
@@ -142,6 +146,8 @@ make test-web          # vitest
 make coverage          # Go (unit + integration) and web coverage: coverage.out,
                        # web/coverage/lcov.info; CI shows the totals in the job summary
 make lint              # gofmt, go vet, eslint
+make typecheck-web     # complete frontend source and strict compiler checks
+make contracts-check   # generated frontend REST contract drift check
 make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
@@ -181,7 +187,7 @@ these jobs in parallel (rough wall times with warm caches):
 | `secret-scan` | gitleaks (pinned, checksum verified) over the tree and the history | < 1 min |
 | `backend` | gofmt, go vet, OpenAPI check, unit tests, unit + integration tests with coverage (Postgres service), build | 4–6 min |
 | `govulncheck` | Go vulnerability scan | 1–2 min |
-| `frontend` | eslint, vitest with coverage, build, `npm audit` | 2–3 min |
+| `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
 | `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
 | `e2e` | Playwright smoke test against the real binary | 4–6 min |
 
@@ -442,7 +448,7 @@ use, change and share it, also commercially, as long as you publish the
 complete source code of your version under the same license. That includes
 running a changed version as a network service: its users must be able to get
 the source (the legal dialog in the app links to it; point `SOURCE_URL` in
-`web/src/lib/thirdParty.js` at your own repository).
+`web/src/lib/thirdParty.ts` at your own repository).
 
 **Commercial license:** to use Mnema Talk, or parts of it, without the AGPL
 obligations (for example in a closed-source product or service), get a

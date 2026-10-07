@@ -1,13 +1,15 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ShieldCheck, Scale, Server, Lock, Cookie, Code, ExternalLink } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
 import { t } from '../i18n'
+import { decodeServerLegal } from '../types/rest'
 import { THIRD_PARTY, NOTICES_FILE, NOTICES_URL, SOURCE_URL } from '../lib/thirdParty'
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
-const activeTab = ref('all') // 'all', 'operator', 'privacy', 'terms', 'oss'
+type LegalTab = 'all' | 'operator' | 'privacy' | 'terms' | 'oss'
+const activeTab = ref<LegalTab>('all')
 
 // Raw values from the server; fallbacks are translated at render time.
 const operatorRaw = ref({ name: '', email: '', country: '', status: '' })
@@ -19,17 +21,18 @@ const operator = computed(() => ({
 }))
 const mediaRetentionDays = ref(0) // 0 = no automatic deletion
 const sessionExpiryDays = ref(30)
-const stunServers = ref([])
+const stunServers = ref<string[]>([])
 const legalVersion = ref('1.4')
 const updateCheck = ref(false)
 
-const TABS = ['all', 'operator', 'privacy', 'terms', 'oss']
+const TABS: readonly LegalTab[] = ['all', 'operator', 'privacy', 'terms', 'oss']
 
 onMounted(async () => {
   try {
     const res = await fetch('/api/legal')
     if (res.ok) {
-      const data = await res.json()
+      const raw: unknown = await res.json()
+      const data = decodeServerLegal(raw)
       operatorRaw.value = {
         name: data.operator_name || '',
         email: data.operator_email || '',

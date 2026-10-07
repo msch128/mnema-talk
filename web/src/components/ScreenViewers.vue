@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { AvatarUser } from './presentationTypes'
 // "Eye N" on a screen share: how many in the Talk watch it. Hovering or a
 // click shows who (avatars and names); the sharer sees it on their own share.
 import { ref, computed, onUnmounted, useId } from 'vue'
@@ -14,7 +16,7 @@ const props = defineProps({
   // The sharer: whose screen share this is.
   userId: { type: String, required: true },
   // 'stage' sits on the dark video, 'card' on a screen-share card.
-  variant: { type: String, default: 'stage' },
+  variant: { type: String as PropType<'stage' | 'card'>, default: 'stage' },
   // Also show "0" (my own share: nobody watches yet).
   showZero: { type: Boolean, default: false }
 })
@@ -23,8 +25,8 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 
-function userById(id) {
-  const room = voiceStore.channelUsers[voiceStore.currentChannelId] || {}
+function userById(id: string): AvatarUser & { id: string } {
+  const room = voiceStore.channelUsers[voiceStore.currentChannelId ?? ''] || {}
   if (room[id]) return room[id]
   if (id === authStore.user?.id) return authStore.user
   return chatStore.members?.find(m => m.id === id) || { id, username: '?' }
@@ -32,7 +34,7 @@ function userById(id) {
 
 const viewers = computed(() => voiceStore.viewersOf(props.userId).map(userById))
 const count = computed(() => viewers.value.length)
-const nameOf = u => u.display_name || u.username
+const nameOf = (u: AvatarUser) => u.display_name || u.username
 const label = computed(() => (count.value
   ? t('talk.viewers', { count: count.value, names: viewers.value.map(nameOf).join(', ') })
   : t('talk.viewersNone')))
@@ -41,10 +43,10 @@ const label = computed(() => (count.value
 const hovered = ref(false)
 const pinned = ref(false)
 const open = computed(() => hovered.value || pinned.value)
-const root = ref(null)
-const button = ref(null)
+const root = ref<HTMLElement | null>(null)
+const button = ref<HTMLButtonElement | null>(null)
 const popoverId = `screen-viewers-${useId()}`
-let hoverTimer = null
+let hoverTimer: ReturnType<typeof setTimeout> | undefined
 
 useDismissable(root, (e, reason) => {
   pinned.value = false

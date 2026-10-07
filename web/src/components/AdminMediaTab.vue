@@ -1,8 +1,11 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard: storage summary, manual prune and the media list.
 import { ref, onMounted } from 'vue'
 import { RefreshCw, Trash2 } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api, caughtErrorMessage } from '../lib/api'
+import type { MediaDashboardItem } from '../types/domain'
+import { decodeMediaStats, decodeMediaPruneResult, isMediaDashboardItem } from '../types/rest'
+import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
@@ -12,20 +15,20 @@ const EMPTY_STATS = { total_files: 0, total_size_bytes: 0, deleted_files: 0 }
 const toasts = useToastStore()
 
 const stats = ref({ ...EMPTY_STATS })
-const mediaItems = ref([])
-const pruneDays = ref('')
+const mediaItems = ref<MediaDashboardItem[]>([])
+const pruneDays = ref<string | number>('')
 const isPruning = ref(false)
 
-function showError(e) {
-  toasts.error(e?.message || t('admin.unknownError'))
+function showError(e: unknown) {
+  toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
 // Each request reports its own failure and keeps what is already shown, so
 // one broken endpoint neither hides the other nor blanks the numbers.
 async function refresh() {
   const [s, m] = await Promise.allSettled([
-    api('/api/admin/media/stats'),
-    api('/api/admin/media?limit=50')
+    api('/api/admin/media/stats', { decode: decodeMediaStats }),
+    api('/api/admin/media?limit=50', { decode: arrayDecoder('media dashboard', isMediaDashboardItem) })
   ])
   if (s.status === 'fulfilled') stats.value = s.value || { ...EMPTY_STATS }
   else showError(s.reason)
@@ -33,7 +36,7 @@ async function refresh() {
   else showError(m.reason)
 }
 
-function formatBytes(bytes) {
+function formatBytes(bytes: number) {
   if (!bytes) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -42,7 +45,7 @@ function formatBytes(bytes) {
 }
 
 async function runPrune() {
-  const days = parseInt(pruneDays.value, 10)
+  const days = parseInt(String(pruneDays.value), 10)
   if (!days || days < 1) return
   const ok = await confirm({
     title: t('admin.pruneTitle', { days }),
@@ -53,7 +56,7 @@ async function runPrune() {
   if (!ok) return
   isPruning.value = true
   try {
-    const data = await api(`/api/admin/media/prune?days=${days}`, { method: 'POST' })
+    const data = await api(`/api/admin/media/prune?days=${days}`, { method: 'POST', decode: decodeMediaPruneResult })
     toasts.success(t('admin.pruned', { count: data.pruned_count, days }))
     pruneDays.value = ''
   } catch (e) {
@@ -65,7 +68,7 @@ async function runPrune() {
   await refresh()
 }
 
-async function deleteMedia(item) {
+async function deleteMedia(item: MediaDashboardItem) {
   const ok = await confirm({
     title: t('admin.deleteFileTitle', { name: item.original_filename }),
     body: t('admin.deleteFileBody'),
@@ -123,7 +126,7 @@ onMounted(refresh)
         <span class="text-sm text-mnema-muted">{{ $t('admin.days') }}</span>
         <button
           type="button"
-          :disabled="!pruneDays || pruneDays < 1 || isPruning"
+          :disabled="!pruneDays || Number(pruneDays) < 1 || isPruning"
           class="border border-mnema-danger/40 bg-mnema-danger/10 text-mnema-danger hover:bg-mnema-danger hover:text-mnema-accent-ink font-medium px-3 py-1 rounded-md text-sm transition disabled:opacity-40"
           @click="runPrune"
         >

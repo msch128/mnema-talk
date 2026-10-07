@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
 import { extractPreviewUrls } from '../lib/chatLogic'
@@ -23,7 +23,7 @@ const parsedHtml = computed(() => renderMarkdown(props.content, {
   me: authStore.user?.username || ''
 }))
 
-function openMention(el) {
+function openMention(el: HTMLElement) {
   const name = el.dataset.mention
   if (!name || name === 'all' || name === 'here') return
   const member = chatStore.members.find(m => (m.username || '').toLowerCase() === name)
@@ -34,23 +34,23 @@ function openMention(el) {
 const links = computed(() => extractPreviewUrls(props.content, 3))
 
 // Spoilers are revealed via delegation: the CSP forbids inline onclick handlers.
-function onClick(event) {
-  const mention = event.target.closest?.('.md-mention[data-mention]')
+function onClick(event: MouseEvent) {
+  const mention = event.target instanceof Element ? event.target.closest<HTMLElement>('.md-mention[data-mention]') : null
   if (mention) {
     openMention(mention)
     return
   }
-  const spoiler = event.target.closest?.('.md-spoiler')
+  const spoiler = event.target instanceof Element ? event.target.closest('.md-spoiler') : null
   if (spoiler) spoiler.classList.toggle('revealed')
 }
 
-function onKeydown(event) {
-  if (event.key === 'Enter' && event.target.dataset?.mention) {
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.mention) {
     event.preventDefault()
     openMention(event.target)
     return
   }
-  if ((event.key === 'Enter' || event.key === ' ') && event.target.classList?.contains('md-spoiler')) {
+  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof Element && event.target.classList.contains('md-spoiler')) {
     event.preventDefault()
     event.target.classList.toggle('revealed')
   }

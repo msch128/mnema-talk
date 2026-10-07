@@ -1,13 +1,15 @@
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
+import type { Toast } from '../stores/toast'
 import { AlertCircle, Check, Info, X } from '@lucide/vue'
 import { useToastStore } from '../stores/toast'
 
 const toastStore = useToastStore()
 
-const icons = { error: AlertCircle, success: Check, info: Info }
-const tones = { error: 'text-mnema-danger', success: 'text-mnema-accent', info: 'text-mnema-mint' }
+const icons: Record<Toast['type'], Component> = { error: AlertCircle, success: Check, info: Info }
+const tones: Record<Toast['type'], string> = { error: 'text-mnema-danger', success: 'text-mnema-accent', info: 'text-mnema-mint' }
 
-function runAction(toast) {
+function runAction(toast: Toast) {
   toast.action?.onClick?.()
   toastStore.dismiss(toast.id)
 }

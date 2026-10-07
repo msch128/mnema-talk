@@ -1,24 +1,26 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { DropIndicator } from './presentationTypes'
 // Header of a sidebar category: collapse toggle, and for admins "+" / delete.
 // Admins can drag the header to move the whole category, or move it with
 // Alt+ArrowUp / Alt+ArrowDown on the toggle.
 import { Plus, Trash2, ChevronDown, ChevronRight } from '@lucide/vue'
 
 const props = defineProps({
-  category: { type: Object, required: true },
+  category: { type: Object as PropType<{ id: string; name: string }>, required: true },
   collapsed: { type: Boolean, default: false },
   admin: { type: Boolean, default: false },
   // This category is being dragged.
   dragging: { type: Boolean, default: false },
   // Drop indicator: 'top' | 'bottom' | 'inside' (a channel goes into it) | ''.
-  indicator: { type: String, default: '' },
+  indicator: { type: String as PropType<DropIndicator>, default: '' },
   flash: { type: Boolean, default: false },
   hintId: { type: String, default: '' }
 })
 
-const emit = defineEmits(['toggle', 'menu', 'create-channel', 'delete', 'drag-start', 'move'])
+const emit = defineEmits<{ toggle: []; menu: [event: MouseEvent | KeyboardEvent]; 'create-channel': []; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1] }>()
 
-function moveKey(e, dir) {
+function moveKey(e: KeyboardEvent, dir: -1 | 1) {
   if (!props.admin) return
   e.preventDefault()
   emit('move', dir)

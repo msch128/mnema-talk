@@ -336,7 +336,8 @@
     "cameraBusy": "The camera is in use by another app.",
     "memberMuted": "Muted",
     "memberDeafened": "Deafened",
-    "kicked": "An admin removed you from the voice channel."
+    "kicked": "An admin removed you from the voice channel.",
+    "roomFull": "This voice channel is full. Try again when someone leaves."
   },
   "audio": {
     "settings": "Audio settings",

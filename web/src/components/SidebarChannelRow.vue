@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { Channel, VoiceUser } from '../types/domain'
 // One channel in the sidebar: the row itself, plus the people connected to
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
@@ -11,21 +13,21 @@ import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
 
 const props = defineProps({
-  channel: { type: Object, required: true },
+  channel: { type: Object as PropType<Channel>, required: true },
   admin: { type: Boolean, default: false },
   // This row is being dragged.
   dragging: { type: Boolean, default: false },
   // Drop indicator: 'top' | 'bottom' | ''.
-  indicator: { type: String, default: '' },
+  indicator: { type: String as PropType<'' | 'top' | 'bottom'>, default: '' },
   // Briefly highlighted (moved, duplicated).
   flash: { type: Boolean, default: false },
   // id of the hint that tells admins how to move rows.
   hintId: { type: String, default: '' }
 })
 
-const emit = defineEmits(['open', 'menu', 'delete', 'drag-start', 'move', 'voice-user-click', 'member-menu'])
+const emit = defineEmits<{ open: []; menu: [event: MouseEvent | KeyboardEvent]; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1]; 'voice-user-click': [user: VoiceUser]; 'member-menu': [event: MouseEvent | KeyboardEvent, user: VoiceUser] }>()
 
-function moveKey(e, dir) {
+function moveKey(e: KeyboardEvent, dir: -1 | 1) {
   if (!props.admin) return
   e.preventDefault()
   emit('move', dir)

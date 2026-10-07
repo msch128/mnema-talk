@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // The gear on my own screen share: its quality menu (see useStreamQuality).
 import { ref, watch } from 'vue'
 import { Settings } from '@lucide/vue'
@@ -9,9 +10,9 @@ import { useWebRTC } from '../composables/useWebRTC'
 import { t } from '../i18n'
 
 // stage: on the dark video overlay; card: in the own share's card.
-const props = defineProps({ variant: { type: String, default: 'stage' } })
+const props = defineProps({ variant: { type: String as PropType<'stage' | 'card'>, default: 'stage' } })
 // open-change: the menu opened or closed (the Talk keeps its controls shown).
-const emit = defineEmits(['open-change'])
+const emit = defineEmits<{ 'open-change': [open: boolean] }>()
 
 const rtc = useWebRTC()
 const quality = useStreamQuality({
@@ -19,7 +20,7 @@ const quality = useStreamQuality({
   getCaptureSettings: () => rtc.getScreenCaptureSettings?.() ?? null
 })
 const menu = useMenuState()
-const button = ref(null)
+const button = ref<HTMLButtonElement | null>(null)
 // The menu closes on pointer down outside it (also on this button): a click
 // on the button while it was open only closes it.
 let wasOpen = false

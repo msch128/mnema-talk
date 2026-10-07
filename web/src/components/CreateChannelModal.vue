@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { Channel, ChannelType } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 import { ref } from 'vue'
 import { Hash, Volume2, FolderPlus, Plus, AlertCircle } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
@@ -7,7 +10,7 @@ import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
   initialType: {
-    type: String,
+    type: String as PropType<ChannelType>,
     default: 'text' // 'text' | 'voice'
   },
   initialCategoryId: {
@@ -16,7 +19,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close', 'created'])
+const emit = defineEmits<{ close: []; created: [channel: Channel] }>()
 const chatStore = useChatStore()
 
 const channelType = ref(props.initialType || 'text')
@@ -29,18 +32,18 @@ const error = ref('')
 const isSubmitting = ref(false)
 
 // Slugify helper for text channels
-function formatName(val) {
+function formatName(val: string) {
   if (channelType.value === 'text') {
     return val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
   }
   return val
 }
 
-function handleNameInput(e) {
+function handleNameInput(e: Event) {
   if (channelType.value === 'text') {
-    channelName.value = formatName(e.target.value)
+    channelName.value = formatName((e.target as HTMLInputElement).value)
   } else {
-    channelName.value = e.target.value
+    channelName.value = (e.target as HTMLInputElement).value
   }
 }
 
@@ -71,7 +74,7 @@ async function handleSubmit() {
     emit('created', createdChannel)
     emit('close')
   } catch (err) {
-    error.value = err.message || t('channel.createFailed')
+    error.value = caughtErrorMessage(err, t('channel.createFailed'))
   } finally {
     isSubmitting.value = false
   }

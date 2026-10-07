@@ -1,0 +1,26 @@
+{
+  "extends": [
+    "@vue/tsconfig/tsconfig.dom.json",
+    "./tsconfig.base.json"
+  ],
+  "compilerOptions": {
+    "types": [
+      "vite/client"
+    ],
+    "allowJs": false,
+    "skipLibCheck": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.fixture.ts",
+    "src/test-setup.ts",
+    "src/lib/dfnWorker.ts",
+    "src/lib/dfnBridgeWorklet.ts",
+    "src/types/audio-worklet.d.ts",
+    "src/types/worker-env.d.ts"
+  ]
+}

@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Route } from './lib/router'
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
@@ -51,7 +52,7 @@ const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin
 const showAdminModal = ref(false)
 const showLegalModal = ref(false)
 const adminTab = ref('users')
-const previewVoiceChannelId = ref(null)
+const previewVoiceChannelId = ref<string | null>(null)
 // /v/:id is the Talk on its own, /v/:id/chat adds its chat under the stage.
 // Open or closed is remembered per browser (closed by default).
 // A deep link to /v/:id/chat counts from the start: a resumed call can sync
@@ -60,7 +61,7 @@ const voiceShowChat = ref((currentRoute.value.view === 'voice' && !!currentRoute
 watch(voiceShowChat, open => saveVoiceChatOpen(open))
 // The voice channel of the last applied route (null after any other route):
 // /v/:id within that Talk closes its chat, entering a Talk keeps it as it was.
-let lastVoiceRouteChannel = null
+let lastVoiceRouteChannel: string | null = null
 // The channel the Talk view shows: a previewed one (not joined) or the joined one.
 const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
 let isSyncingFromRoute = false
@@ -98,7 +99,7 @@ function currentStatePath() {
 // arrives stops after its current await instead of acting on stale state.
 let routeGen = 0
 
-async function applyRoute(route) {
+async function applyRoute(route: Route) {
   if (!authStore.isAuthenticated) return
   const gen = ++routeGen
   const superseded = () => gen !== routeGen
@@ -130,6 +131,7 @@ async function applyRoute(route) {
       previewVoiceChannelId.value = null
       voiceStore.activeView = 'chat'
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
+      if (!targetChannel) return
       if (chatStore.activeChannel?.id !== targetChannel.id) {
         await chatStore.selectChannel(targetChannel)
         if (superseded()) return
@@ -171,6 +173,7 @@ async function applyRoute(route) {
         return
       }
       const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
+      if (!targetChannel) return
       if (chatStore.activeChannel?.id !== targetChannel.id) {
         await chatStore.selectChannel(targetChannel)
         if (superseded()) return
@@ -252,7 +255,7 @@ function closeAdmin() {
   navigate(currentStatePath(), { replace: true })
 }
 
-function onVoiceJoin(channelId) {
+function onVoiceJoin(channelId: string) {
   previewVoiceChannelId.value = channelId === voiceStore.currentChannelId ? null : channelId
 }
 

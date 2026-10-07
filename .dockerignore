@@ -1,6 +1,9 @@
 # Keep secrets, local data and host build artefacts out of the build context.
 .git
 .github
+# Agent worktrees, proofs and reports are private local artifacts.
+.codex
+**/.codex
 .env
 .env.*
 !.env.example

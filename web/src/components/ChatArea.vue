@@ -1,4 +1,8 @@
-<script setup>
+<script setup lang="ts">
+import type { Component } from 'vue'
+import type { Message, NotifyLevel } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
+interface ScrollAnchor { id: string | undefined; offset: number }
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X, Volume2
@@ -25,7 +29,7 @@ import { t, locale } from '../i18n'
 const props = defineProps({
   panel: { type: Boolean, default: false }
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
@@ -38,14 +42,14 @@ const beginningText = computed(() => t(props.panel ? 'talk.chatBeginning' : 'cha
 const placeholder = computed(() => t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }))
 
 const inputMessage = ref('')
-const messageContainer = ref(null)
-const fileInput = ref(null)
-const textAreaEl = ref(null)
+const messageContainer = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, inputMessage)
 const isSending = ref(false)
-const selectedImage = ref(null)
+const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
-const replyingTo = ref(null)
+const replyingTo = ref<Message | null>(null)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: messageContainer })
@@ -61,11 +65,11 @@ const LOAD_THRESHOLD_PX = 600
 const STICK_THRESHOLD_PX = 80
 
 const showUnreadPill = ref(false)
-const highlightedId = ref(null)
-let highlightTimer = null
+const highlightedId = ref<string | null>(null)
+let highlightTimer: ReturnType<typeof setTimeout> | undefined
 let scrollFrame = 0
 
-function distanceFromBottom(el) {
+function distanceFromBottom(el: HTMLElement) {
   return el.scrollHeight - el.scrollTop - el.clientHeight
 }
 
@@ -85,7 +89,7 @@ function scrollToBottom() {
   nextTick(scrollToBottomNow)
 }
 
-function findRow(id) {
+function findRow(id: string | undefined) {
   for (const row of messageRows()) if (row.dataset.msgId === id) return row
   return null
 }
@@ -96,7 +100,7 @@ function captureAnchor() {
   const el = messageContainer.value
   if (!el) return []
   const top = el.getBoundingClientRect().top
-  const anchors = []
+  const anchors: ScrollAnchor[] = []
   for (const row of messageRows()) {
     const rect = row.getBoundingClientRect()
     if (rect.bottom <= top) continue
@@ -106,7 +110,7 @@ function captureAnchor() {
   return anchors
 }
 
-function restoreAnchor(anchors) {
+function restoreAnchor(anchors: ScrollAnchor[]) {
   const el = messageContainer.value
   if (!el) return
   const top = el.getBoundingClientRect().top
@@ -119,7 +123,7 @@ function restoreAnchor(anchors) {
   }
 }
 
-function flashMessage(id) {
+function flashMessage(id: string) {
   clearTimeout(highlightTimer)
   highlightedId.value = null
   // Re-render without the class first so the animation restarts on repeat jumps.
@@ -129,7 +133,7 @@ function flashMessage(id) {
   })
 }
 
-function scrollToMessage(id) {
+function scrollToMessage(id: string) {
   const row = findRow(id)
   if (!row) return
   row.scrollIntoView({ block: 'center' })
@@ -152,9 +156,9 @@ function maybeLoadMore() {
 // shrinking viewport doesn't leave the newest message behind the composer.
 let stickToBottom = true
 let lastSize = { w: 0, h: 0 }
-let resizeObserver = null
+let resizeObserver: ResizeObserver | null = null
 
-function sizeChangedSinceObserved(el) {
+function sizeChangedSinceObserved(el: HTMLElement) {
   return el.clientWidth !== lastSize.w || el.clientHeight !== lastSize.h
 }
 
@@ -221,7 +225,7 @@ watch(
 
 // Last-read time captured when the channel was opened: the divider stays put
 // while the channel is open, even though the server marks it read meanwhile.
-const dividerSince = ref(null)
+const dividerSince = ref<string | null>(null)
 watch(
   () => [chatStore.activeChannel?.id, chatStore.activeChannelLastReadAt],
   () => { dividerSince.value = chatStore.activeChannelLastReadAt },
@@ -232,7 +236,7 @@ const dividerBeforeId = computed(() =>
 )
 
 function dividerLabel() {
-  const d = new Date(dividerSince.value)
+  const d = new Date(dividerSince.value ?? 0)
   const sameDay = d.toDateString() === new Date().toDateString()
   const time = sameDay
     ? d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
@@ -245,7 +249,7 @@ function markAllRead() {
   const id = chatStore.activeChannel?.id
   if (!id) return false
   const st = chatStore.readStates[id]
-  if (!dividerBeforeId.value && !(st?.unread_count > 0) && !(st?.mention_count > 0)) return false
+  if (!dividerBeforeId.value && !((st?.unread_count ?? 0) > 0) && !((st?.mention_count ?? 0) > 0)) return false
   dividerSince.value = null
   chatStore.markChannelRead(id)
   return true
@@ -254,7 +258,7 @@ function markAllRead() {
 // ---- Typing indicator ----
 
 const typingText = computed(() => {
-  const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id])
+  const line = typingLine(chatStore.typingByChannel[chatStore.activeChannel?.id ?? ''])
   return line ? t(line.key, line.params) : ''
 })
 
@@ -286,12 +290,13 @@ async function enableNotifications() {
   if (result !== 'default') dismissNotifHint()
 }
 
-function openNotificationMenu(e) {
+function openNotificationMenu(e: MouseEvent) {
   const channel = chatStore.activeChannel
   if (!channel) return
+  if (!(e.currentTarget instanceof Element)) return
   const rect = e.currentTarget.getBoundingClientRect()
   const current = chatStore.notificationLevel(channel.id)
-  const levels = [
+  const levels: { level: NotifyLevel; icon: Component }[] = [
     { level: 'all', icon: Bell },
     { level: 'mentions', icon: AtSign },
     { level: 'mute', icon: BellOff }
@@ -317,7 +322,7 @@ async function handleJumpToPresent() {
 
 // ---- Replies ----
 
-function startReply(msg) {
+function startReply(msg: Message) {
   replyingTo.value = msg
   activeReactionPickerMsgId.value = null
   nextTick(() => textAreaEl.value?.focus())
@@ -327,8 +332,8 @@ function cancelReply() {
   replyingTo.value = null
 }
 
-function jumpToReplied(msg) {
-  if (msg.reply_to?.deleted) {
+function jumpToReplied(msg: Message) {
+  if (msg.reply_to?.deleted || !msg.reply_to_id) {
     chatStore.showToast(t('chat.messageNotFound'))
     return
   }
@@ -347,13 +352,13 @@ watch(() => chatStore.pendingMention, (newVal) => {
 }, { immediate: true })
 
 function messageRows() {
-  return messageContainer.value ? messageContainer.value.querySelectorAll('[data-msg-id]') : []
+  return messageContainer.value ? messageContainer.value.querySelectorAll<HTMLElement>('[data-msg-id]') : []
 }
 
-function onMessageKeydown(e, msg) {
+function onMessageKeydown(e: KeyboardEvent, msg: Message) {
   handleMessageKeydown(e, {
     rows: messageRows,
-    menu: el => menu.openAtElement(el, msg),
+    menu: (el: HTMLElement) => menu.openAtElement(el, msg),
     reply: () => startReply(msg),
     edit: () => {
       if (!actions.isOwn(msg)) return false
@@ -370,13 +375,13 @@ function onMessageKeydown(e, msg) {
   })
 }
 
-function onGlobalKeydown(e) {
+function onGlobalKeydown(e: KeyboardEvent) {
   if (e.key !== 'Escape') return
   if (contextMenu.value.open) { menu.close(); return }
   // Something else (dialog, lightbox, composer reply, editor) already used the key.
   if (e.defaultPrevented || selectedImage.value || editingMessageId.value || replyingTo.value) return
   if (inputMessage.value.trim() || document.querySelector('[role="dialog"]')) return
-  const tag = e.target?.tagName
+  const tag = e.target instanceof Element ? e.target.tagName : undefined
   if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.target !== textAreaEl.value) return
   if (markAllRead()) e.preventDefault()
 }
@@ -415,13 +420,13 @@ async function handleSend() {
     replyingTo.value = null
     await revealOwnMessage()
   } catch (err) {
-    toasts.error(err.message || t('chat.sendFailed'))
+    toasts.error(caughtErrorMessage(err, t('chat.sendFailed')))
   } finally {
     isSending.value = false
   }
 }
 
-function handleKeyDown(e) {
+function handleKeyDown(e: KeyboardEvent) {
   if (assist.onKeydown(e)) return
   if (e.key === 'Escape' && replyingTo.value) {
     e.preventDefault()
@@ -434,9 +439,9 @@ function handleKeyDown(e) {
   }
 }
 
-async function handleFileUpload(e) {
+async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
-  const ok = await actions.upload(e.target, file => chatStore.uploadMedia(file, '', null, replyId))
+  const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadMedia(file, '', null, replyId))
   if (!ok) return
   replyingTo.value = null
   await revealOwnMessage()

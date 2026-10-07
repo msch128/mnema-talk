@@ -1,11 +1,12 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // The channel or category being dragged, following the pointer (above the
 // finger on touch, so it stays visible).
 import { computed } from 'vue'
 import { ChevronDown, Hash, Volume2 } from '@lucide/vue'
 
 const props = defineProps({
-  item: { type: Object, required: true }, // { kind, name, type }
+  item: { type: Object as PropType<{ kind: 'channel' | 'category'; name: string; type?: 'text' | 'voice' }>, required: true }, // { kind, name, type }
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
   touch: { type: Boolean, default: false }

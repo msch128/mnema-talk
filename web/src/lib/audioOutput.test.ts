@@ -1,0 +1,50 @@
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { applyOutputDevice, canChooseOutputDevice } from './audioOutput'
+function audioTarget(sinkId: string | { type: string } = '') {
+  const element = document.createElement('audio')
+  Object.defineProperty(element, 'sinkId', { configurable: true, value: sinkId })
+  return Object.assign(element, { setSinkId: vi.fn(async (_id: string) => {}) })
+}
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+describe('audio output device selection', () => {
+  it('detects the browser API and missing media-element global', () => {
+    const previous = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'setSinkId')
+    Reflect.deleteProperty(HTMLMediaElement.prototype, 'setSinkId')
+    expect(canChooseOutputDevice()).toBe(false)
+    Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', { configurable: true, value: vi.fn() })
+    expect(canChooseOutputDevice()).toBe(true)
+    if (previous) Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', previous)
+    else Reflect.deleteProperty(HTMLMediaElement.prototype, 'setSinkId')
+    vi.stubGlobal('HTMLMediaElement', undefined)
+    expect(canChooseOutputDevice()).toBe(false)
+  })
+  it('ignores absent targets and browsers without output selection', () => {
+    expect(() => applyOutputDevice(null, 'headset')).not.toThrow()
+    expect(() => applyOutputDevice(undefined, 'headset')).not.toThrow()
+    expect(() => applyOutputDevice(document.createElement('audio'), 'headset')).not.toThrow()
+  })
+  it('changes devices once, preserving the system default and AudioSinkInfo form', () => {
+    const target = audioTarget('headset')
+    applyOutputDevice(target, 'headset')
+    expect(target.setSinkId).not.toHaveBeenCalled()
+    applyOutputDevice(target, '')
+    expect(target.setSinkId).toHaveBeenCalledWith('')
+    const silent = audioTarget({ type: 'none' })
+    applyOutputDevice(silent, '')
+    expect(silent.setSinkId).not.toHaveBeenCalled()
+    applyOutputDevice(silent, 'speakers')
+    expect(silent.setSinkId).toHaveBeenCalledWith('speakers')
+  })
+  it('reports synchronous and asynchronous failures without interrupting playback', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const target = audioTarget()
+    const denied = new DOMException('device removed', 'NotFoundError')
+    target.setSinkId.mockRejectedValueOnce(denied)
+    applyOutputDevice(target, 'removed')
+    await Promise.resolve()
+    expect(warning).toHaveBeenCalledWith('[audio] Output device unavailable:', denied)
+    target.setSinkId.mockImplementationOnce(() => { throw denied })
+    expect(() => applyOutputDevice(target, 'removed')).not.toThrow()
+    expect(warning).toHaveBeenCalledTimes(2)
+  })
+})

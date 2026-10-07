@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // Smiley button that opens the emoji picker above it.
 import { ref } from 'vue'
 import { Smile } from '@lucide/vue'
@@ -6,15 +7,15 @@ import EmojiPicker from './EmojiPicker.vue'
 
 defineProps({
   // Which side of the button the picker aligns to.
-  align: { type: String, default: 'right' },
+  align: { type: String as PropType<'left' | 'right'>, default: 'right' },
   disabled: { type: Boolean, default: false }
 })
-const emit = defineEmits(['pick'])
+const emit = defineEmits<{ pick: [emoji: string] }>()
 
 const open = ref(false)
-const button = ref(null)
+const button = ref<HTMLButtonElement | null>(null)
 
-function pick(emoji) {
+function pick(emoji: string) {
   open.value = false
   emit('pick', emoji)
 }

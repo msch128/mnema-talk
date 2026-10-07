@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // The one modal shell: scrim, dialog semantics, focus trap, Escape, focus
 // restore. Slot content provides the heading with :id="titleId".
 import { ref, useId } from 'vue'
@@ -10,28 +11,28 @@ const props = defineProps({
   // inside the slot and label the dialog with the titleId slot prop.
   title: { type: String, default: '' },
   subtitle: { type: String, default: '' },
-  role: { type: String, default: 'dialog' }, // 'dialog' | 'alertdialog'
+  role: { type: String as PropType<'dialog' | 'alertdialog'>, default: 'dialog' }, // 'dialog' | 'alertdialog'
   describedby: { type: String, default: '' },
   // Tailwind classes for the panel (width etc.)
   panelClass: { type: String, default: 'max-w-md' },
   closeOnScrim: { type: Boolean, default: true },
   // 'center' (default) or 'top' for palette-style dialogs such as search
-  align: { type: String, default: 'center' },
-  initialFocus: { type: [String, Function], default: undefined }
+  align: { type: String as PropType<'center' | 'top'>, default: 'center' },
+  initialFocus: { type: [String, Function] as PropType<string | ((root: HTMLElement) => HTMLElement | null | undefined)>, default: undefined }
 })
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
-const panel = ref(null)
+const panel = ref<HTMLElement | null>(null)
 const titleId = useId()
 const close = () => emit('close')
 
-useDialog(panel, { onClose: close, initialFocus: props.initialFocus })
+useDialog(panel, { onClose: close, ...(props.initialFocus !== undefined ? { initialFocus: props.initialFocus } : {}) })
 
 // Close on scrim only when the press both started and ended on the scrim, so
 // selecting text inside the dialog and releasing outside never closes it.
 let downOnScrim = false
-function onScrimDown(e) { downOnScrim = e.target === e.currentTarget }
-function onScrimUp(e) {
+function onScrimDown(e: PointerEvent) { downOnScrim = e.target === e.currentTarget }
+function onScrimUp(e: PointerEvent) {
   if (props.closeOnScrim && downOnScrim && e.target === e.currentTarget) close()
   downOnScrim = false
 }

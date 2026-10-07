@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { User } from '../types/domain'
 // A member's totals: time in Talks (finished stays plus the running one)
 // and messages sent.
 import { computed } from 'vue'
@@ -8,15 +10,15 @@ import { now, secondsSince, totalParts } from '../lib/clock'
 import { t, locale } from '../i18n'
 
 const props = defineProps({
-  user: { type: Object, required: true },
+  user: { type: Object as PropType<Partial<Pick<User, 'id' | 'voice_seconds' | 'message_count'>>>, required: true },
   // 'compact': two tiny lines for the member list; 'full': labelled, for the profile.
-  variant: { type: String, default: 'compact' }
+  variant: { type: String as PropType<'compact' | 'full'>, default: 'compact' }
 })
 
 const voiceStore = useVoiceStore()
 
 const voiceSeconds = computed(() => {
-  const running = voiceStore.joinedAtOf(props.user.id)
+  const running = voiceStore.joinedAtOf(props.user.id ?? '')
   return (props.user.voice_seconds || 0) + (running ? secondsSince(running, now.value) : 0)
 })
 const voiceText = computed(() => {

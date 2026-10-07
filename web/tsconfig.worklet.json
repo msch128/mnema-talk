@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [],
+    "skipLibCheck": false
+  },
+  "include": [
+    "src/lib/dfnBridgeWorklet.ts",
+    "src/types/audio-worklet.d.ts"
+  ]
+}

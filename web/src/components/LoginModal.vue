@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import { caughtErrorMessage } from '../lib/api'
 import { ref, onMounted, useId } from 'vue'
 import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
@@ -10,7 +11,7 @@ const authStore = useAuthStore()
 
 // The login screen is a dialog that cannot be dismissed: it traps focus but
 // has no Escape-to-close.
-const panel = ref(null)
+const panel = ref<HTMLElement | null>(null)
 const titleId = useId()
 useDialog(panel, { initialFocus: 'input' })
 
@@ -49,7 +50,7 @@ async function handleSubmit() {
       await authStore.login(username.value, password.value)
     }
   } catch (err) {
-    errorMsg.value = err.message || t('login.failed')
+    errorMsg.value = caughtErrorMessage(err, t('login.failed'))
   } finally {
     isLoading.value = false
   }

@@ -1,8 +1,12 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard: accounts (disable, password reset, sessions, voice kick).
 import { ref, computed, onMounted } from 'vue'
 import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2 } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api, caughtErrorMessage } from '../lib/api'
+import type { VoiceSnapshot } from '../types/events'
+import type { AdminUser } from '../types/domain'
+import { isAuthAdminUser } from '../types/rest'
+import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import { useChatStore } from '../stores/chat'
@@ -16,23 +20,23 @@ const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const toasts = useToastStore()
 
-const users = ref([])
+const users = ref<AdminUser[]>([])
 const userSearch = ref('')
-const passwordModalUser = ref(null)
+const passwordModalUser = ref<AdminUser | null>(null)
 const newPasswordInput = ref('')
 const isResettingPassword = ref(false)
 
 // Counted in characters like the server does, not UTF-16 units.
 const passwordTooShort = computed(() => [...newPasswordInput.value].length < MIN_PASSWORD_LENGTH)
 
-function showError(e) {
-  toasts.error(e?.message || t('admin.unknownError'))
+function showError(e: unknown) {
+  toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
 // A failed reload keeps the list that is already on screen.
 async function refreshUsers() {
   try {
-    users.value = (await api('/api/admin/users')) || []
+    users.value = await api('/api/admin/users', { decode: arrayDecoder('admin users', isAuthAdminUser) })
   } catch (e) {
     showError(e)
   }
@@ -47,17 +51,19 @@ const filteredUsers = computed(() => {
   )
 })
 
-function isUserInVoice(userId) {
+function isUserInVoice(userId: string) {
   if (!voiceStore.channelUsers) return false
-  for (const group of Object.values(voiceStore.channelUsers)) {
+  const rooms: VoiceSnapshot = voiceStore.channelUsers
+  for (const group of Object.values(rooms)) {
     if (group && group[userId]) return true
   }
   return false
 }
 
-function userVoiceChannelName(userId) {
+function userVoiceChannelName(userId: string) {
   if (!voiceStore.channelUsers) return ''
-  for (const [chId, group] of Object.entries(voiceStore.channelUsers)) {
+  const rooms: VoiceSnapshot = voiceStore.channelUsers
+  for (const [chId, group] of Object.entries(rooms)) {
     if (group && group[userId]) {
       const ch = chatStore.allChannels?.find(c => c.id === chId)
       return ch?.name || chId
@@ -66,7 +72,7 @@ function userVoiceChannelName(userId) {
   return ''
 }
 
-function formatDateTime(dt) {
+function formatDateTime(dt: string | null | undefined) {
   if (!dt) return t('admin.never')
   try {
     return new Date(dt).toLocaleString(locale.value)
@@ -75,7 +81,7 @@ function formatDateTime(dt) {
   }
 }
 
-async function toggleDisableUser(u) {
+async function toggleDisableUser(u: AdminUser) {
   const isDisabled = !!u.disabled
   if (!isDisabled) {
     const ok = await confirm({
@@ -103,7 +109,7 @@ async function toggleDisableUser(u) {
   }
 }
 
-function openPasswordModal(u) {
+function openPasswordModal(u: AdminUser) {
   passwordModalUser.value = u
   newPasswordInput.value = ''
 }
@@ -130,7 +136,7 @@ async function submitPasswordReset() {
   }
 }
 
-async function revokeSessions(u) {
+async function revokeSessions(u: AdminUser) {
   const ok = await confirm({
     title: t('admin.revokeSessionsTitle', { name: u.display_name || u.username }),
     body: t('admin.revokeSessionsBody'),
@@ -146,7 +152,7 @@ async function revokeSessions(u) {
   }
 }
 
-async function kickUserFromVoice(u) {
+async function kickUserFromVoice(u: AdminUser) {
   const ok = await confirm({
     title: t('admin.kickFromVoiceTitle', { name: u.display_name || u.username }),
     body: t('admin.kickFromVoiceBody'),
