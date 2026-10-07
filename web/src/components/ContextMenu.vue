@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ContextMenuItem, MenuAnchor, MenuItemId, MenuSubmenu } from './menuTypes'
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ChevronRight } from '@lucide/vue'
 import ContextMenuRow from './ContextMenuRow.vue'
@@ -17,30 +19,30 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
-  anchor: { type: [Object, null], default: null },
-  items: { type: Array, default: () => [] },
+  anchor: { type: Object as PropType<MenuAnchor | null>, default: null },
+  items: { type: Array as PropType<ContextMenuItem[]>, default: () => [] },
   minWidth: { type: Number, default: 180 },
   ariaLabel: { type: String, default: '' }
 })
 
-const emit = defineEmits(['update:modelValue', 'close', 'select'])
+const emit = defineEmits<{ 'update:modelValue': [value: boolean]; close: []; select: [item: ContextMenuItem] }>()
 
-const menuEl = ref(null)
+const menuEl = ref<HTMLElement | null>(null)
 const posX = ref(props.x)
 const posY = ref(props.y)
-let opener = null
+let opener: HTMLElement | null = null
 
 // The open submenu: its item id, its onClose, where it shows.
-const openSub = ref(null)
-let subClose = null
+const openSub = ref<MenuItemId | null>(null)
+let subClose: (() => void) | null = null
 const subFlip = ref(false)
 const subShift = ref(0)
-let hoverTimer = null
+let hoverTimer: ReturnType<typeof setTimeout> | undefined
 
 function basePoint() {
   const a = props.anchor
   if (a) {
-    const r = typeof a.getBoundingClientRect === 'function' ? a.getBoundingClientRect() : a
+    const r = 'getBoundingClientRect' in a ? a.getBoundingClientRect() : a
     const left = r.left ?? r.x ?? 0
     const bottom = r.bottom ?? ((r.top ?? r.y ?? 0) + (r.height ?? 0))
     return { x: left, y: bottom }
@@ -64,29 +66,29 @@ function adjustPosition() {
 // The menu level the focus is in: the root or an open submenu.
 function currentPanel() {
   const a = document.activeElement
-  if (a && menuEl.value?.contains(a)) return a.closest('[data-menu-panel]') || menuEl.value
+  if (a && menuEl.value?.contains(a)) return a.closest<HTMLElement>('[data-menu-panel]') || menuEl.value
   return menuEl.value
 }
 
 // Focusable rows of one level in DOM order: menu items plus slider inputs.
-function rows(panel = currentPanel()) {
+function rows(panel: HTMLElement | null = currentPanel()) {
   if (!panel) return []
-  return [...panel.querySelectorAll('[data-menu-nav]:not([disabled])')]
+  return [...panel.querySelectorAll<HTMLElement>('[data-menu-nav]:not([disabled])')]
     .filter(el => el.closest('[data-menu-panel]') === panel)
 }
 
-function focusRow(i, panel) {
+function focusRow(i: number, panel: HTMLElement | null) {
   const list = rows(panel)
   if (!list.length) return
   list[(i + list.length) % list.length]?.focus()
 }
 
 function subPanel() {
-  return menuEl.value?.querySelector('[data-submenu-panel]') || null
+  return menuEl.value?.querySelector<HTMLElement>('[data-submenu-panel]') || null
 }
 
-function triggerOf(id) {
-  return menuEl.value?.querySelector(`[data-submenu-trigger="${id}"]`) || null
+function triggerOf(id: MenuItemId) {
+  return menuEl.value?.querySelector<HTMLElement>(`[data-submenu-trigger="${id}"]`) || null
 }
 
 function placeSubmenu() {
@@ -96,13 +98,13 @@ function placeSubmenu() {
     const panel = subPanel()
     if (!panel) return
     const pad = 8
-    let r = panel.getBoundingClientRect()
+    const r = panel.getBoundingClientRect()
     if (r.right > window.innerWidth - pad) subFlip.value = true
     if (r.bottom > window.innerHeight - pad) subShift.value = -Math.min(r.top - pad, r.bottom - (window.innerHeight - pad))
   })
 }
 
-function openSubmenu(item, { focus = false } = {}) {
+function openSubmenu(item: MenuSubmenu, { focus = false } = {}) {
   clearTimeout(hoverTimer)
   if (item.disabled) return
   if (openSub.value !== item.id) {
@@ -128,7 +130,7 @@ function closeSubmenu({ focusTrigger = false } = {}) {
 
 // A click opens the submenu (hovering may have opened it already: it stays);
 // a keyboard click (Enter, Space) also moves into it.
-function onTriggerClick(item, e) {
+function onTriggerClick(item: MenuSubmenu, e: MouseEvent) {
   openSubmenu(item, { focus: e.detail === 0 })
 }
 
@@ -182,7 +184,7 @@ function close({ focus = false } = {}) {
   if (focus) nextTick(restoreFocus)
 }
 
-function handleSelect(item) {
+function handleSelect(item: ContextMenuItem) {
   if (item.disabled) return
   if (item.action) item.action()
   emit('select', item)
@@ -199,7 +201,7 @@ function handleSelect(item) {
   })
 }
 
-function handleKeydown(e) {
+function handleKeydown(e: KeyboardEvent) {
   const panel = currentPanel()
   const inSub = !!panel && panel !== menuEl.value
   if (e.key === 'Escape') {
@@ -223,13 +225,13 @@ function handleKeydown(e) {
   if (e.key === 'ArrowRight' && trigger && menuEl.value?.contains(trigger)) {
     e.preventDefault()
     const item = props.items.find(i => i.type === 'submenu' && String(i.id) === trigger.getAttribute('data-submenu-trigger'))
-    if (item) openSubmenu(item, { focus: true })
+    if (item?.type === 'submenu') openSubmenu(item, { focus: true })
     return
   }
 
   const list = rows(panel)
   if (!list.length) return
-  const cur = list.indexOf(document.activeElement)
+  const cur = list.findIndex(el => el === document.activeElement)
 
   if (e.key === 'ArrowDown') {
     e.preventDefault()
@@ -249,7 +251,7 @@ function handleKeydown(e) {
     const n = list.length
     for (let k = 1; k <= n; k++) {
       const el = list[(Math.max(cur, -1) + k) % n]
-      if (el.textContent.trim().toLowerCase().startsWith(ch)) {
+      if (el?.textContent?.trim().toLowerCase().startsWith(ch)) {
         el.focus()
         break
       }
@@ -257,15 +259,15 @@ function handleKeydown(e) {
   }
 }
 
-function handleClickOutside(e) {
-  if (props.modelValue && menuEl.value && !menuEl.value.contains(e.target)) {
+function handleClickOutside(e: MouseEvent) {
+  if (props.modelValue && menuEl.value && !(e.target instanceof Node && menuEl.value.contains(e.target))) {
     opener = null
     close()
   }
 }
 
-function handleScroll(e) {
-  if (props.modelValue && !(menuEl.value && menuEl.value.contains(e.target))) {
+function handleScroll(e: Event) {
+  if (props.modelValue && !(menuEl.value && e.target instanceof Node && menuEl.value.contains(e.target))) {
     opener = null
     close()
   }

@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { Message } from '../types/domain'
 // One message in the channel timeline: hover/focus action bar, avatar or
 // gutter time, header, inline editor or body, attachments, thread counter
 // and reactions. Keyboard and context-menu handling stay with the list
@@ -15,7 +17,7 @@ import ReactionBar from './ReactionBar.vue'
 import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
 
 defineProps({
-  msg: { type: Object, required: true },
+  msg: { type: Object as PropType<Message>, required: true },
   // Follow-up of the previous message by the same author: no header.
   grouped: { type: Boolean, default: false },
   highlighted: { type: Boolean, default: false },
@@ -24,16 +26,12 @@ defineProps({
   editing: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
   // Id of the open reaction picker in the list (see useMessageActions).
-  pickerId: { type: String, default: null }
+  pickerId: { type: String as PropType<string | null>, default: null }
 })
-const editText = defineModel('editText', { type: String, default: '' })
-const emit = defineEmits([
-  'reply', 'edit', 'save', 'cancel-edit', 'more',
-  'react', 'toggle-picker', 'close-picker',
-  'open-thread', 'open-profile', 'open-image', 'jump'
-])
+const editText = defineModel<string>('editText', { type: String, default: '' })
+const emit = defineEmits<{ reply: []; edit: []; save: []; 'cancel-edit': []; more: [event: MouseEvent]; react: [emoji: string]; 'toggle-picker': [id: string]; 'close-picker': []; 'open-thread': []; 'open-profile': []; 'open-image': [src: string]; jump: [] }>()
 
-const row = ref(null)
+const row = ref<HTMLElement | null>(null)
 
 defineExpose({ el: row })
 </script>

@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ContextMenuItem } from './menuTypes'
+import type { TalkParticipant } from './presentationTypes'
 import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   Volume2, VolumeX, Monitor, MonitorOff, MessageSquare, Maximize2, Minimize2,
@@ -30,7 +33,7 @@ const voiceStore = useVoiceStore()
 
 // Right-click on a tile: the member menu with their volume (like the sidebar).
 const menu = useMenuState()
-function openMemberMenu(e, user) {
+function openMemberMenu(e: MouseEvent | KeyboardEvent, user: TalkParticipant) {
   menu.show(e, refresh => buildMemberItems(user, { refresh }))
 }
 const chatStore = useChatStore()
@@ -41,10 +44,10 @@ const authStore = useAuthStore()
 // showChat: the Talk's chat (VoiceChatPanel, under the stage) is open; the
 // header's chat button toggles it.
 const props = defineProps({
-  channelId: { type: String, default: null },
+  channelId: { type: String as PropType<string | null>, default: null },
   showChat: { type: Boolean, default: false }
 })
-const emit = defineEmits(['join', 'update:showChat'])
+const emit = defineEmits<{ join: [id: string]; 'update:showChat': [show: boolean] }>()
 
 const { joinVoiceChannel, stopScreenShare } = useWebRTC()
 
@@ -73,8 +76,8 @@ async function join() {
   return true
 }
 
-const videoContainer = ref(null)
-const screenVideoEl = ref(null)
+const videoContainer = ref<HTMLElement | null>(null)
+const screenVideoEl = ref<HTMLVideoElement | null>(null)
 // Actual resolution of the shared screen as decoded by the browser.
 const videoResolution = ref('')
 // Its shape: the stage takes it (16:9 until the first frame is known).
@@ -92,6 +95,11 @@ const chatUnread = computed(() => {
   return props.showChat || !id ? '' : unreadBadge(chatStore.readStates[id]?.unread_count)
 })
 
+const roomStartedAt = computed(() => {
+  const id = shownChannelId.value
+  return id ? voiceStore.roomStartedAt[id] ?? '' : ''
+})
+
 // The shown channel object
 const activeVoiceChannel = computed(() => {
   const id = shownChannelId.value
@@ -107,17 +115,17 @@ const activeVoiceChannel = computed(() => {
 const usersInVoice = computed(() => {
   const id = shownChannelId.value
   if (!id) return []
-  const list = Object.values(voiceStore.channelUsers[id] || {})
+  const list: TalkParticipant[] = Object.values(voiceStore.channelUsers[id] || {})
 
   // Ensure the current user is always included visually while connected
-  if (isConnectedHere.value && authStore.user && !list.some(u => u.id === authStore.user.id)) {
+  if (isConnectedHere.value && authStore.user && !list.some(u => u.id === authStore.user?.id)) {
     list.unshift(authStore.user)
   }
   return list
 })
 
 // Camera stream of a participant: my own, or the one the SFU forwards.
-function cameraStreamOf(user) {
+function cameraStreamOf(user: TalkParticipant) {
   if (user.id === authStore.user?.id) return voiceStore.localCameraStream
   return voiceStore.userVideoStreams[user.id] || null
 }
@@ -137,12 +145,12 @@ const {
   toggleCamera: toggleCameraFocus
 } = useTalkStage({
   users: () => usersInVoice.value,
-  myId: () => authStore.user?.id,
+  myId: () => authStore.user?.id ?? null,
   active: () => isConnectedHere.value,
   watch: userId => watchStream(userId)
 })
 
-async function watchStream(userId) {
+async function watchStream(userId: string) {
   if (!isConnectedHere.value && !(await join())) return
   voiceStore.watchScreen(userId)
 }
@@ -164,20 +172,20 @@ function toggleCurrentStreamMute() {
   if (uid) voiceStore.toggleStreamMute(uid)
 }
 
-function onStreamVolumeChange(e) {
+function onStreamVolumeChange(e: Event) {
   const uid = stageUserId.value
   if (uid) {
-    voiceStore.setStreamVolume(uid, Number(e.target.value))
+    voiceStore.setStreamVolume(uid, Number((e.target as HTMLInputElement).value))
   }
 }
 
-function cameraAvailable(user) {
+function cameraAvailable(user: TalkParticipant) {
   return !voiceStore.allCamerasOff && !!voiceStore.mediaState[user.id]?.camera
 }
 
 // "Hide participants without video" (Discord's "only videos"): only tiles
 // with a camera I receive or a screen share, mine included.
-function hasVideo(user) {
+function hasVideo(user: TalkParticipant) {
   if (user.id === authStore.user?.id) return !!voiceStore.localCameraStream || voiceStore.isScreenSharing
   const media = voiceStore.mediaState[user.id]
   return !!media?.screen || (!!media?.camera && !voiceStore.isCameraHidden(user.id))
@@ -187,7 +195,7 @@ const tileUsers = computed(() => (hidingNoVideo.value ? usersInVoice.value.filte
 
 // The grid fits every tile into the free area at 16:9, like Discord. Tiles
 // without any camera stay smaller: a huge avatar tile only looks empty.
-const gridArea = ref(null)
+const gridArea = ref<HTMLElement | null>(null)
 const GRID_GAP = 12
 const gridHasVideo = computed(() => isConnectedHere.value && tileUsers.value.some(u => !!cameraStreamOf(u)))
 const { layout: gridLayout, gridStyle, tileStyle } = useVideoGrid(gridArea, {
@@ -275,15 +283,15 @@ function toggleFullscreen() {
 // moved the tiles: the second click and the dblclick may land elsewhere, so
 // the camera clicked last decides.
 const DOUBLE_CLICK_MS = 600
-let lastCameraClick = null
-function onTileFocusCamera(user) {
+let lastCameraClick: { userId: string; at: number } | null = null
+function onTileFocusCamera(user: TalkParticipant) {
   lastCameraClick = { userId: user.id, at: Date.now() }
   toggleCameraFocus(user)
 }
 function recentCameraClick() {
   return lastCameraClick && Date.now() - lastCameraClick.at < DOUBLE_CLICK_MS ? lastCameraClick.userId : null
 }
-function fullscreenCamera(userId) {
+function fullscreenCamera(userId: string) {
   const id = recentCameraClick() || userId
   lastCameraClick = null
   if (!isConnectedHere.value || !id) return
@@ -292,32 +300,32 @@ function fullscreenCamera(userId) {
 }
 
 // Double-clicks in the Talk area: on the stage they toggle full screen.
-function onAreaDblclick(e) {
-  if (e.target?.closest?.('button, input, a, [data-testid="screen-viewers"]')) return
+function onAreaDblclick(e: MouseEvent) {
+  if ((e.target instanceof Element && e.target.closest('button, input, a, [data-testid="screen-viewers"]'))) return
   const recent = recentCameraClick()
   if (recent) {
     fullscreenCamera(recent)
     return
   }
-  if (videoContainer.value?.contains(e.target)) toggleFullscreen()
+  if (e.target instanceof Node && videoContainer.value?.contains(e.target)) toggleFullscreen()
 }
 
-function isTypingTarget(el) {
-  return !!el && (el.isContentEditable || !!el.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
+function isTypingTarget(el: EventTarget | null) {
+  return el instanceof HTMLElement && (el.isContentEditable || !!el.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
 }
 
 // F toggles the stage's full screen, like in a video player: while the
 // focus is in the Talk view (or nowhere), not while typing, with a dialog or
 // menu open, or when F is the push-to-talk key.
-const root = ref(null)
-function inTalkView(el) {
-  return !el || el === document.body || el === document.documentElement || !!root.value?.contains(el)
+const root = ref<HTMLElement | null>(null)
+function inTalkView(el: EventTarget | null) {
+  return !el || el === document.body || el === document.documentElement || el instanceof Node && !!root.value?.contains(el)
 }
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   if (e.key !== 'f' && e.key !== 'F') return
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing || e.defaultPrevented) return
   if (!inTalkView(e.target) || isTypingTarget(e.target)) return
-  if (e.target?.closest?.('[role="dialog"], [role="menu"]') || document.querySelector('[aria-modal="true"]')) return
+  if ((e.target instanceof Element && e.target.closest('[role="dialog"], [role="menu"]')) || document.querySelector('[aria-modal="true"]')) return
   if (voiceStore.inputMode === 'ptt' && voiceStore.pttKey === e.code) return
   if (!videoContainer.value) return
   e.preventDefault()
@@ -335,11 +343,11 @@ onUnmounted(() => {
 
 // Right-click on the stage: its actions as a menu (outside full screen,
 // where the page's menus cannot show).
-function openStageMenu(e) {
-  if (document.fullscreenElement || e.target?.closest?.('[data-testid="talk-controls"]')) return
+function openStageMenu(e: MouseEvent) {
+  if (document.fullscreenElement || (e.target instanceof Element && e.target.closest('[data-testid="talk-controls"]'))) return
   e.preventDefault()
   menu.show(e, () => {
-    const items = [{
+    const items: ContextMenuItem[] = [{
       id: 'fullscreen',
       label: t('talk.fullscreen'),
       icon: Maximize2,
@@ -369,9 +377,9 @@ function openStageMenu(e) {
 // --- Layout: the stage takes the video's shape in the free area ---
 // The stage, the share cards and the strip are one group, centred in the
 // area: the stage gets what the others leave (no empty bands between them).
-const area = ref(null) // the Talk area under the header (stage, strip, grid)
-const cardsEl = ref(null)
-const stripRegion = ref(null)
+const area = ref<HTMLElement | null>(null) // the Talk area under the header (stage, strip, grid)
+const cardsEl = ref<HTMLElement | null>(null)
+const stripRegion = ref<HTMLElement | null>(null)
 const areaSize = useElementSize(area)
 const cardsSize = useElementSize(cardsEl)
 const stripSize = useElementSize(stripRegion)
@@ -424,7 +432,7 @@ const controlsShown = computed(() => controls.visible.value)
 function onActivity() {
   controls.show()
 }
-function onOverlayPointer(e, on) {
+function onOverlayPointer(e: PointerEvent, on: boolean) {
   if (e.pointerType !== 'touch') overlayHover.value = on
 }
 const fade = computed(() => [
@@ -434,7 +442,7 @@ const fade = computed(() => [
 
 // Shared button looks: the header's square buttons, the stage's dark ones.
 const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-mnema-accent'
-function headerButton(active) {
+function headerButton(active: boolean) {
   return [
     'relative w-8 h-8 flex items-center justify-center rounded-md border transition-colors motion-reduce:transition-none',
     focusRing,
@@ -469,10 +477,10 @@ const overlayButton = 'w-8 h-8 flex items-center justify-center rounded-lg text-
           <h2 class="font-semibold text-base leading-5 text-mnema-text truncate min-w-[3rem]">
             {{ activeVoiceChannel?.name || $t('voice.channelFallback') }}
           </h2>
-          <TalkParticipants class="flex-shrink-0" :users="usersInVoice" :started-at="voiceStore.roomStartedAt[shownChannelId] || ''" />
+          <TalkParticipants class="flex-shrink-0" :users="usersInVoice" :started-at="roomStartedAt" />
           <VoiceTimer
-            v-if="voiceStore.roomStartedAt[shownChannelId] && !headerNarrow"
-            :since="voiceStore.roomStartedAt[shownChannelId]"
+            v-if="roomStartedAt && !headerNarrow"
+            :since="roomStartedAt"
             data-testid="talk-timer"
             v-tooltip="$t('talk.runningForTip')"
             class="text-xs text-mnema-tertiary flex-shrink-0"
@@ -609,7 +617,7 @@ const overlayButton = 'w-8 h-8 flex items-center justify-center rounded-lg text-
                   <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse motion-reduce:animate-none"></span>
                   {{ $t('talk.live') }}
                 </span>
-                <ScreenViewers v-if="!cameraOnStage && stage" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 flex-shrink-0" />
+                <ScreenViewers v-if="!cameraOnStage && stage?.userId" :user-id="stage.userId" :show-zero="ownOnStage" class="-mx-1 flex-shrink-0" />
                 <span v-if="!stageTiny" class="font-semibold text-xs truncate">{{ stageName }}</span>
                 <span v-if="videoResolution && !stageNarrow" class="text-white/60 text-xs font-mono flex-shrink-0">{{ videoResolution }}</span>
               </div>

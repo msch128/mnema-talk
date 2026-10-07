@@ -1,9 +1,10 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // Counts up from a server timestamp, once a second.
 import { computed } from 'vue'
 import { now, secondsSince, formatClock } from '../lib/clock'
 
-const props = defineProps({ since: { type: String, default: '' } })
+const props = defineProps({ since: { type: String as PropType<string | undefined>, default: '' } })
 const text = computed(() => (props.since ? formatClock(secondsSince(props.since, now.value)) : ''))
 </script>
 

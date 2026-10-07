@@ -1,9 +1,11 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard: categories and channels, their order (drag or arrows),
 // renames and deletes. The order is edited locally and saved in one go.
 import { ref, onMounted } from 'vue'
 import { FolderTree, Trash2, Edit2, ArrowUp, ArrowDown, Plus, Save, Hash, Volume2, GripVertical } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api, caughtErrorMessage } from '../lib/api'
+import type { Channel, Category, ChannelHierarchy } from '../types/domain'
+import { decodeChannelHierarchy, decodeChannel, decodeCategory } from '../types/domain'
 import { confirm } from '../lib/confirm'
 import {
   moveChannel, moveCategory, locateChannel, removeChannel, removeCategory, addCategory, nextSortOrder, toLayoutPayload
@@ -17,20 +19,20 @@ const chatStore = useChatStore()
 const toasts = useToastStore()
 
 // { uncategorized, categories[].channels } as in lib/channelLayout.
-const layout = ref({ uncategorized: [], categories: [] })
+const layout = ref<ChannelHierarchy>({ uncategorized: [], categories: [] })
 const hasLayoutChanges = ref(false)
 const isSavingLayout = ref(false)
-const editingCategory = ref(null)
+const editingCategory = ref<Category | null>(null)
 const editCategoryName = ref('')
-const editingChannel = ref(null)
+const editingChannel = ref<Channel | null>(null)
 const editChannelName = ref('')
 const editChannelTopic = ref('')
 const newCategoryName = ref('')
-const draggedCategoryId = ref(null)
-const draggedChannelId = ref(null)
+const draggedCategoryId = ref<string | null>(null)
+const draggedChannelId = ref<string | null>(null)
 
-function showError(e) {
-  toasts.error(e?.message || t('admin.unknownError'))
+function showError(e: unknown) {
+  toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
 // ---- Loading and keeping unsaved order ----
@@ -38,9 +40,9 @@ function showError(e) {
 // `patch` applies one server-side change to the local layout. It runs instead
 // of the reload whenever an unsaved reorder exists (also one started while
 // the reload was in flight), so that reorder is never thrown away.
-async function loadChannelsData(patch) {
+async function loadChannelsData(patch?: () => void) {
   try {
-    const data = await api('/api/channels')
+    const data = await api('/api/channels', { decode: decodeChannelHierarchy })
     if (hasLayoutChanges.value) {
       patch?.()
       return
@@ -59,7 +61,7 @@ async function loadChannelsData(patch) {
   }
 }
 
-async function syncAfterEdit(patch) {
+async function syncAfterEdit(patch: () => void) {
   await chatStore.fetchChannels()
   if (hasLayoutChanges.value) patch()
   else await loadChannelsData(patch)
@@ -68,19 +70,19 @@ async function syncAfterEdit(patch) {
 // ---- Ordering (shared rules in lib/channelLayout) ----
 
 // Takes a reordered tree; an unchanged one (same object) is no change.
-function reorder(next) {
+function reorder(next: ChannelHierarchy) {
   if (next === layout.value) return
   layout.value = next
   hasLayoutChanges.value = true
 }
 
-function moveCategoryBy(cat, direction) {
+function moveCategoryBy(cat: Category, direction: number) {
   const index = layout.value.categories.indexOf(cat)
   reorder(moveCategory(layout.value, cat.id, index + direction))
 }
 
 // The arrows keep a channel inside its own list (they are disabled at the ends).
-function moveChannelBy(categoryId, channel, direction) {
+function moveChannelBy(categoryId: string | null, channel: Channel, direction: number) {
   const from = locateChannel(layout.value, channel.id)
   if (from) reorder(moveChannel(layout.value, channel.id, categoryId, from.index + direction))
 }
@@ -92,7 +94,7 @@ function onDragEnd() {
   draggedChannelId.value = null
 }
 
-function onCategoryDragStart(e, cat) {
+function onCategoryDragStart(e: DragEvent, cat: Category) {
   draggedChannelId.value = null
   draggedCategoryId.value = cat.id
   if (e?.dataTransfer) {
@@ -100,13 +102,13 @@ function onCategoryDragStart(e, cat) {
   }
 }
 
-function onCategoryDrop(e, targetIndex) {
+function onCategoryDrop(e: DragEvent, targetIndex: number) {
   const id = draggedCategoryId.value
   draggedCategoryId.value = null
   if (id !== null) reorder(moveCategory(layout.value, id, targetIndex))
 }
 
-function onChannelDragStart(e, channel) {
+function onChannelDragStart(e: DragEvent, channel: Channel) {
   draggedCategoryId.value = null
   draggedChannelId.value = channel.id
   if (e?.dataTransfer) {
@@ -116,7 +118,7 @@ function onChannelDragStart(e, channel) {
 
 // The dropped channel takes the target's place (or goes last for a drop on
 // the category's list itself).
-function onChannelDrop(e, targetCategoryId, targetIndex) {
+function onChannelDrop(e: DragEvent, targetCategoryId: string | null, targetIndex: number) {
   const id = draggedChannelId.value
   draggedChannelId.value = null
   if (id !== null) reorder(moveChannel(layout.value, id, targetCategoryId, targetIndex))
@@ -142,7 +144,7 @@ async function saveLayout() {
 
 // ---- Editing ----
 
-function openEditCategory(cat) {
+function openEditCategory(cat: Category) {
   editingCategory.value = cat
   editCategoryName.value = cat.name || ''
 }
@@ -172,7 +174,7 @@ async function saveCategoryEdit() {
   }
 }
 
-function openEditChannel(channel) {
+function openEditChannel(channel: Channel) {
   editingChannel.value = channel
   editChannelName.value = channel.name || ''
   editChannelTopic.value = channel.topic || ''
@@ -194,7 +196,8 @@ async function saveChannelEdit() {
   try {
     const updated = await api(`/api/admin/channels/${id}`, {
       method: 'PATCH',
-      json: fields
+      json: fields,
+      decode: decodeChannel
     })
     toasts.success(t('admin.channelUpdated'))
     closeEditChannel()
@@ -211,7 +214,7 @@ async function saveChannelEdit() {
   }
 }
 
-async function deleteCategory(cat) {
+async function deleteCategory(cat: Category) {
   const ok = await confirm({
     title: t('admin.deleteCategoryTitle', { name: cat.name }),
     body: t('admin.deleteCategoryBody'),
@@ -228,7 +231,7 @@ async function deleteCategory(cat) {
   }
 }
 
-async function deleteChannel(channel) {
+async function deleteChannel(channel: Channel) {
   const ok = await confirm({
     title: t('admin.deleteChannelTitle', { name: channel.name }),
     body: t('admin.deleteChannelBody'),
@@ -250,7 +253,8 @@ async function createCategory() {
   try {
     const created = await api('/api/admin/categories', {
       method: 'POST',
-      json: { name: newCategoryName.value.trim(), sort_order: nextSortOrder(layout.value.categories) }
+      json: { name: newCategoryName.value.trim(), sort_order: nextSortOrder(layout.value.categories) },
+      decode: decodeCategory
     })
     newCategoryName.value = ''
     toasts.success(t('admin.categoryUpdated'))

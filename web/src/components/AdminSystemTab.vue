@@ -1,8 +1,10 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard: version, health and load of the server (GET /api/admin/system).
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { RefreshCw, CheckCircle2, XCircle } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api, caughtErrorMessage, isApiError } from '../lib/api'
+import type { SystemStatus } from '../types/domain'
+import { decodeServerSystemStatus, decodeServerUpdateStatus, decodeServerHealth, type ServerSelfUpdateStarted } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
@@ -11,7 +13,7 @@ import SelfUpdateDialog from './SelfUpdateDialog.vue'
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
 
-const status = ref(null)
+const status = ref<SystemStatus | null>(null)
 const loading = ref(false)
 
 const checking = ref(false)
@@ -19,10 +21,10 @@ const checking = ref(false)
 async function refresh() {
   loading.value = true
   try {
-    status.value = await api('/api/admin/system')
+    status.value = await api('/api/admin/system', { decode: decodeServerSystemStatus })
     versionStore.setAdminUpdate(status.value?.update)
   } catch (e) {
-    toasts.error(e?.message || t('admin.unknownError'))
+    toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
     loading.value = false
   }
@@ -31,13 +33,13 @@ async function refresh() {
 async function checkNow() {
   checking.value = true
   try {
-    const upd = await api('/api/admin/system/check', { method: 'POST' })
+    const upd = await api('/api/admin/system/check', { method: 'POST', decode: decodeServerUpdateStatus })
     if (status.value) status.value = { ...status.value, update: upd }
     versionStore.setAdminUpdate(upd)
     if (upd?.check_error) toasts.error(t('admin.system.checkFailed', { reason: upd.check_error }))
     else toasts.success(upd?.update_available ? t('admin.system.updateFound', { version: upd.latest_version }) : t('admin.system.upToDate'))
   } catch (e) {
-    toasts.error(e?.code === 'RATE_LIMITED' ? t('admin.system.checkTooSoon') : (e?.message || t('admin.unknownError')))
+    toasts.error(isApiError(e) && e.code === 'RATE_LIMITED' ? t('admin.system.checkTooSoon') : caughtErrorMessage(e, t('admin.unknownError')))
   } finally {
     checking.value = false
   }
@@ -54,7 +56,7 @@ async function copyCommand() {
   }
 }
 
-function formatDate(iso) {
+function formatDate(iso: string | null | undefined) {
   if (!iso) return '–'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '–'
@@ -65,24 +67,25 @@ function formatDate(iso) {
 const self = computed(() => status.value?.self_update || null)
 const showConfirm = ref(false)
 // 'idle' | 'running' (waiting for the new version) | 'stalled' (no new version after a while)
-const updatePhase = ref('idle')
+const updatePhase = ref<'idle' | 'running' | 'stalled'>('idle')
 const POLL_MS = 5000
 const STALL_MS = 5 * 60 * 1000
-let pollTimer = null
+let pollTimer: ReturnType<typeof setTimeout> | null = null
 let pollStarted = 0
 
 function stopPolling() {
-  clearTimeout(pollTimer)
+  if (pollTimer !== null) clearTimeout(pollTimer)
   pollTimer = null
 }
 
 // /api/health is public and answers 503 or nothing while the container
 // restarts; once it reports another version, the reload banner takes over.
-async function pollHealth(fromVersion) {
+async function pollHealth(fromVersion: string | undefined) {
   try {
     const res = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' })
     if (res.ok) {
-      const data = await res.json()
+      const raw: unknown = await res.json()
+      const data = decodeServerHealth(raw)
       if (data?.version && data.version !== fromVersion) {
         versionStore.setServerVersion(data.version)
         updatePhase.value = 'idle'
@@ -102,7 +105,7 @@ async function pollHealth(fromVersion) {
   pollTimer = setTimeout(() => pollHealth(fromVersion), POLL_MS)
 }
 
-function onUpdateStarted(res) {
+function onUpdateStarted(res: ServerSelfUpdateStarted) {
   showConfirm.value = false
   updatePhase.value = 'running'
   pollStarted = Date.now()
@@ -117,7 +120,7 @@ defineExpose({ refresh, status })
 const health = computed(() => status.value?.health || null)
 const upd = computed(() => status.value?.update || null)
 
-function formatBytes(bytes) {
+function formatBytes(bytes: number) {
   if (!bytes) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -125,7 +128,7 @@ function formatBytes(bytes) {
   return new Intl.NumberFormat(locale.value, { maximumFractionDigits: 1 }).format(bytes / Math.pow(k, i)) + ' ' + sizes[i]
 }
 
-function formatUptime(seconds) {
+function formatUptime(seconds: number) {
   const s = Math.max(0, Math.floor(seconds || 0))
   const d = Math.floor(s / 86400)
   const h = Math.floor((s % 86400) / 3600)

@@ -1,27 +1,30 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard: invite codes (registration is invite-only).
 import { ref, onMounted } from 'vue'
 import { Link, Trash2, Check, Copy } from '@lucide/vue'
-import { api } from '../lib/api'
+import { api, caughtErrorMessage } from '../lib/api'
+import type { Invite, CreateInviteRequest } from '../types/domain'
+import { isAuthInvite } from '../types/rest'
+import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
 const toasts = useToastStore()
 
-const invites = ref([])
-const newInviteUses = ref('')
-const newInviteHours = ref('')
+const invites = ref<Invite[]>([])
+const newInviteUses = ref<string | number>('')
+const newInviteHours = ref<string | number>('')
 const copiedCode = ref('')
 
-function showError(e) {
-  toasts.error(e?.message || t('admin.unknownError'))
+function showError(e: unknown) {
+  toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
 
 // A failed reload keeps the list that is already on screen.
 async function loadInvites() {
   try {
-    invites.value = (await api('/api/admin/invites')) || []
+    invites.value = await api('/api/admin/invites', { decode: arrayDecoder('invites', isAuthInvite) })
   } catch (e) {
     showError(e)
   }
@@ -29,9 +32,9 @@ async function loadInvites() {
 
 async function createInvite() {
   try {
-    const body = {}
-    if (newInviteUses.value) body.max_uses = parseInt(newInviteUses.value, 10)
-    if (newInviteHours.value) body.expires_in_hours = parseInt(newInviteHours.value, 10)
+    const body: CreateInviteRequest = {}
+    if (newInviteUses.value) body.max_uses = parseInt(String(newInviteUses.value), 10)
+    if (newInviteHours.value) body.expires_in_hours = parseInt(String(newInviteHours.value), 10)
     await api('/api/admin/invites', { method: 'POST', json: body })
     newInviteUses.value = ''
     newInviteHours.value = ''
@@ -43,7 +46,7 @@ async function createInvite() {
   await loadInvites()
 }
 
-async function deleteInvite(inv) {
+async function deleteInvite(inv: Invite) {
   const ok = await confirm({
     title: t('admin.deleteInviteTitle', { code: inv.code }),
     body: t('admin.deleteInviteBody'),
@@ -60,7 +63,7 @@ async function deleteInvite(inv) {
   }
 }
 
-async function copyInviteLink(code) {
+async function copyInviteLink(code: string) {
   const url = `${window.location.origin}/?invite=${encodeURIComponent(code)}`
   try {
     await navigator.clipboard.writeText(url)
@@ -72,7 +75,7 @@ async function copyInviteLink(code) {
   }
 }
 
-function inviteStatus(inv) {
+function inviteStatus(inv: Invite) {
   if (inv.expires_at && new Date(inv.expires_at) < new Date()) return t('admin.expired')
   if (inv.max_uses != null && inv.uses_count >= inv.max_uses) return t('admin.usedUp')
   return inv.expires_at

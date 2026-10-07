@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Shown under the header while the live connection is down, after it has been
 // up at least once. Turns into a short "reconnected" note afterwards.
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
@@ -10,8 +10,8 @@ const chatStore = useChatStore()
 const lost = computed(() => chatStore.wasConnected && !chatStore.isConnected)
 const justReconnected = ref(false)
 const now = ref(Date.now())
-let tick = null
-let hideTimer = null
+let tick: ReturnType<typeof setInterval> | undefined
+let hideTimer: ReturnType<typeof setTimeout> | undefined
 
 const secondsLeft = computed(() => Math.max(0, Math.ceil((chatStore.nextRetryAt - now.value) / 1000)))
 
@@ -23,7 +23,7 @@ watch(lost, (isLost, wasLost) => {
     tick = setInterval(() => { now.value = Date.now() }, 1000)
   } else {
     clearInterval(tick)
-    tick = null
+    tick = undefined
     if (wasLost && chatStore.isConnected) {
       justReconnected.value = true
       hideTimer = setTimeout(() => { justReconnected.value = false }, 2000)

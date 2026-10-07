@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ReplyPreview } from '../types/domain'
 import { computed } from 'vue'
 import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
@@ -8,13 +10,13 @@ import { t } from '../i18n'
 // The "replied to" line above a message: curved connector into the
 // author's avatar, 16px avatar, name and a one-line snippet of the original.
 const props = defineProps({
-  reply: { type: Object, required: true },
+  reply: { type: Object as PropType<ReplyPreview>, required: true },
   // Tailwind classes positioning the connector relative to this line
   // (it starts at the avatar's horizontal center).
   spineClass: { type: String, default: 'left-[-37px] w-[33px]' }
 })
 
-defineEmits(['jump'])
+defineEmits<{ jump: [] }>()
 
 const text = computed(() => previewText(props.reply?.content))
 const name = computed(() => props.reply?.display_name || props.reply?.username || t('chat.unknownUser'))

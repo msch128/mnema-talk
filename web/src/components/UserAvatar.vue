@@ -1,14 +1,16 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { AvatarUser, AvatarSize, LivePresence } from './presentationTypes'
 import { computed } from 'vue'
 import PresenceDot from './PresenceDot.vue'
 
 const props = defineProps({
   user: {
-    type: Object,
+    type: Object as PropType<AvatarUser | null>,
     default: () => ({})
   },
   size: {
-    type: String,
+    type: String as PropType<AvatarSize>,
     default: 'md' // 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   },
   showStatus: {
@@ -21,7 +23,7 @@ const props = defineProps({
   },
   // Live status (online, away, dnd, focus, offline); wins over isOnline.
   status: {
-    type: String,
+    type: String as PropType<LivePresence | ''>,
     default: ''
   },
   // Background behind the avatar, so the status dot's ring blends in.

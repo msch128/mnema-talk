@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { MentionSuggestion } from '../lib/mentionQuery'
 // The @mention list above a composer. Mouse picks; the keyboard is handled
 // by the composer (useComposerAssist) so focus stays in the textarea.
 import { Users, Radio } from '@lucide/vue'
@@ -6,11 +8,11 @@ import UserAvatar from './UserAvatar.vue'
 import { useChatStore } from '../stores/chat'
 
 defineProps({
-  items: { type: Array, required: true },
+  items: { type: Array as PropType<MentionSuggestion[]>, required: true },
   active: { type: Number, default: 0 },
   id: { type: String, default: 'mention-suggestions' }
 })
-const emit = defineEmits(['pick', 'hover'])
+const emit = defineEmits<{ pick: [item: MentionSuggestion]; hover: [index: number] }>()
 const chatStore = useChatStore()
 </script>
 

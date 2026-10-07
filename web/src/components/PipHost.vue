@@ -1,10 +1,10 @@
-<script setup>
+<script setup lang="ts">
 // Owns the <video> of the Picture-in-Picture window, outside the Talk view,
 // so the window keeps playing in a text channel (see usePictureInPicture).
 import { ref } from 'vue'
 import { usePictureInPictureHost } from '../composables/usePictureInPicture'
 
-const videoEl = ref(null)
+const videoEl = ref<HTMLVideoElement | null>(null)
 usePictureInPictureHost(videoEl)
 </script>
 

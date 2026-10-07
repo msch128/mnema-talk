@@ -1,12 +1,12 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { X } from '@lucide/vue'
 import { useDialog } from '../composables/useDialog'
 
 defineProps({ src: { type: String, required: true } })
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
-const root = ref(null)
+const root = ref<HTMLElement | null>(null)
 useDialog(root, { onClose: () => emit('close'), initialFocus: '[data-autofocus]' })
 </script>
 

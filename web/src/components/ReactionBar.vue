@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ReactionSummary } from '../types/domain'
 // Reaction badges under a message plus the dashed "add reaction" button
 // with its palette.
 import { SmilePlus } from '@lucide/vue'
@@ -7,7 +9,7 @@ import ReactionPalette from './ReactionPalette.vue'
 import { PICKER_ANCHOR } from '../composables/useMessageActions'
 
 defineProps({
-  reactions: { type: Array, default: () => [] },
+  reactions: { type: Array as PropType<ReactionSummary[]>, default: () => [] },
   // Whether this bar's palette is open.
   pickerOpen: { type: Boolean, default: false },
   // Smaller badges for thread replies.
@@ -15,11 +17,11 @@ defineProps({
   // Smaller add-reaction icon (thread panel).
   smallIcon: { type: Boolean, default: false }
 })
-const emit = defineEmits(['toggle', 'toggle-picker', 'close-picker'])
+const emit = defineEmits<{ toggle: [emoji: string]; 'toggle-picker': []; 'close-picker': [] }>()
 
 const authStore = useAuthStore()
 
-function reacted(reaction) {
+function reacted(reaction: ReactionSummary) {
   const me = authStore.user?.id
   return !!me && !!reaction?.users?.includes(me)
 }

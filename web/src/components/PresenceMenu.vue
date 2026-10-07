@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ChosenPresence } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 // Opened from the avatar in the user bar: choose online, away, do not
 // disturb or focus. Offline is deliberately not offered.
 import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
@@ -10,16 +13,16 @@ import { CHOOSABLE } from '../lib/presence'
 import { t } from '../i18n'
 import PresenceDot from './PresenceDot.vue'
 
-const props = defineProps({ trigger: { type: Object, default: null } })
-const emit = defineEmits(['close'])
+const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
+const emit = defineEmits<{ close: [] }>()
 
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
-const root = ref(null)
+const root = ref<HTMLElement | null>(null)
 
 function items() {
-  return root.value ? [...root.value.querySelectorAll('[role^="menuitem"]')] : []
+  return root.value ? [...root.value.querySelectorAll<HTMLElement>('[role^="menuitem"]')] : []
 }
 
 function close(returnFocus = true) {
@@ -27,24 +30,24 @@ function close(returnFocus = true) {
   if (returnFocus) props.trigger?.focus()
 }
 
-async function choose(p) {
+async function choose(p: ChosenPresence) {
   close()
   if (p === (authStore.user?.presence || 'online')) return
   try {
     await chatStore.setMyPresence(p)
   } catch (err) {
-    toasts.error(err.message || t('presence.saveFailed'))
+    toasts.error(caughtErrorMessage(err, t('presence.saveFailed')))
   }
 }
 
 function editStatus() {
   close()
-  chatStore.openUserProfile(authStore.user)
+  if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   const list = items()
-  const i = list.indexOf(document.activeElement)
+  const i = list.findIndex(el => el === document.activeElement)
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
@@ -60,14 +63,14 @@ function onKeydown(e) {
   }
 }
 
-function onPointerDown(e) {
-  if (root.value && !root.value.contains(e.target) && !props.trigger?.contains(e.target)) close(false)
+function onPointerDown(e: PointerEvent) {
+  if (root.value && !(e.target instanceof Node && (root.value.contains(e.target) || props.trigger?.contains(e.target)))) close(false)
 }
 
 onMounted(() => {
   document.addEventListener('pointerdown', onPointerDown)
   nextTick(() => {
-    const current = root.value?.querySelector('[aria-checked="true"]')
+    const current = root.value?.querySelector<HTMLElement>('[aria-checked="true"]')
     ;(current || items()[0])?.focus()
   })
 })

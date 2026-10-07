@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Shown above the user bar only while connected to a Talk.
 import { computed } from 'vue'
 import { Monitor, MonitorOff, PhoneOff, Volume2, VolumeX } from '@lucide/vue'

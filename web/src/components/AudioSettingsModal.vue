@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { NoiseMode, InputMode, SoundEvent } from '../stores/voice'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { Mic, Sparkles, HelpCircle, Radio, Volume2, Square, Play } from '@lucide/vue'
 import { useVoiceStore, NOISE_MODES, SOUND_EVENTS } from '../stores/voice'
@@ -8,7 +9,7 @@ import { effectiveThreshold, createPeakHold } from '../lib/levelMeter'
 import { playSoundEffect } from '../lib/soundEffects'
 import BaseDialog from './BaseDialog.vue'
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 const voiceStore = useVoiceStore()
 const { refreshAudioDevices, stopMicTest, toggleMicTest, applyAudioSettings } = useWebRTC()
 
@@ -49,17 +50,17 @@ function applyActiveAudioSettings() {
   if (voiceStore.localAudioStream || voiceStore.isMicTesting) return applyAudioSettings()
 }
 
-function handleSliderChange(e) {
-  voiceStore.sensitivityThreshold = parseInt(e.target.value, 10)
+function handleSliderChange(e: Event) {
+  voiceStore.sensitivityThreshold = parseInt((e.target as HTMLInputElement).value, 10)
   voiceStore.saveSettings()
 }
 
-function handleInputModeChange(mode) {
+function handleInputModeChange(mode: InputMode) {
   voiceStore.inputMode = mode
   voiceStore.saveSettings()
 }
 
-function handleKeyRecord(e) {
+function handleKeyRecord(e: KeyboardEvent) {
   if (!isRecordingPttKey.value) return
   e.preventDefault()
   voiceStore.pttKey = e.code || e.key
@@ -78,7 +79,7 @@ async function toggleAgc() {
   await applyActiveAudioSettings()
 }
 
-async function setNoiseMode(mode) {
+async function setNoiseMode(mode: NoiseMode) {
   if (voiceStore.noiseMode === mode) return
   voiceStore.setNoiseMode(mode)
   await applyActiveAudioSettings()
@@ -114,12 +115,12 @@ function toggleSoundEffects() {
   }
 }
 
-function handleSoundsVolumeChange(e) {
-  voiceStore.soundEffectsVolume = parseInt(e.target.value, 10)
+function handleSoundsVolumeChange(e: Event) {
+  voiceStore.soundEffectsVolume = parseInt((e.target as HTMLInputElement).value, 10)
   voiceStore.saveSettings()
 }
 
-function playPreviewSound(sound = 'join') {
+function playPreviewSound(sound: SoundEvent = 'join') {
   playSoundEffect(sound, null, true)
 }
 </script>
@@ -512,7 +513,7 @@ function playPreviewSound(sound = 'join') {
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
-                    @click="playPreviewSound"
+                    @click="playPreviewSound()"
                     class="text-xs text-mnema-accent hover:underline font-mono"
                   >
                     {{ $t('audio.soundsTest') }}

@@ -1,11 +1,13 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { LivePresence } from './presentationTypes'
 // The live-status mark on avatars and in menus. Each status has its own
 // shape as well as its own colour, so it reads without colour vision too.
 import { computed } from 'vue'
 import { normalizeStatus } from '../lib/presence'
 
 const props = defineProps({
-  status: { type: String, default: 'offline' },
+  status: { type: String as PropType<LivePresence>, default: 'offline' },
   // Diameter in px.
   size: { type: Number, default: 10 },
   // Background colour of the 2px ring that cuts the dot out of the avatar.
@@ -13,7 +15,7 @@ const props = defineProps({
   ring: { type: Boolean, default: true }
 })
 
-const s = computed(() => normalizeStatus(props.status))
+const s = computed<LivePresence>(() => normalizeStatus(props.status))
 const colour = computed(() => ({
   online: 'text-mnema-accent',
   away: 'text-mnema-away',

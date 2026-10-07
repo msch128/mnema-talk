@@ -1,11 +1,12 @@
-<script setup>
+<script setup lang="ts">
 // Confirms a self-update: current → new version, a link to the changes, a
 // warning that everyone is disconnected, and the admin's password, which the
 // server checks again before it asks the updater sidecar.
 import { ref } from 'vue'
 import { AlertTriangle } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
-import { api } from '../lib/api'
+import { api, isApiError, caughtErrorMessage } from '../lib/api'
+import { decodeServerSelfUpdateStarted, type ServerSelfUpdateStarted } from '../types/rest'
 import { t } from '../i18n'
 
 const props = defineProps({
@@ -13,7 +14,7 @@ const props = defineProps({
   targetVersion: { type: String, required: true },
   releaseUrl: { type: String, default: '' }
 })
-const emit = defineEmits(['close', 'started'])
+const emit = defineEmits<{ close: []; started: [result: ServerSelfUpdateStarted] }>()
 
 const password = ref('')
 const busy = ref(false)
@@ -26,13 +27,14 @@ async function submit() {
   try {
     const res = await api('/api/admin/system/update', {
       method: 'POST',
-      json: { password: password.value, target_version: props.targetVersion }
+      json: { password: password.value, target_version: props.targetVersion },
+      decode: decodeServerSelfUpdateStarted
     })
     password.value = ''
     emit('started', res)
   } catch (e) {
     password.value = ''
-    error.value = e?.code === 'RATE_LIMITED' ? t('admin.system.selfUpdateRateLimited') : (e?.message || t('admin.unknownError'))
+    error.value = isApiError(e) && e.code === 'RATE_LIMITED' ? t('admin.system.selfUpdateRateLimited') : caughtErrorMessage(e, t('admin.unknownError'))
   } finally {
     busy.value = false
   }

@@ -1,13 +1,14 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
 // Quick reactions plus "more", which opens the full emoji picker in place.
 import { ref } from 'vue'
 import { Plus } from '@lucide/vue'
 import EmojiPicker from './EmojiPicker.vue'
 
 defineProps({
-  align: { type: String, default: 'right' }
+  align: { type: String as PropType<'left' | 'right'>, default: 'right' }
 })
-const emit = defineEmits(['pick', 'close'])
+const emit = defineEmits<{ pick: [emoji: string]; close: [] }>()
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '🔥', '🎉', '🚀']
 const full = ref(false)

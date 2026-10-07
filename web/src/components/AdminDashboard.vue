@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
 import { ref, watch } from 'vue'
@@ -19,10 +19,12 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 const authStore = useAuthStore()
 
-const TABS = ['users', 'channels', 'invites', 'media', 'system']
+type AdminTab = 'users' | 'channels' | 'invites' | 'media' | 'system'
+const TABS: readonly AdminTab[] = ['users', 'channels', 'invites', 'media', 'system']
+function isAdminTab(value: string): value is AdminTab { return TABS.some(tab => tab === value) }
 const TAB_COMPONENTS = {
   users: AdminUsersTab,
   channels: AdminLayoutTab,
@@ -30,10 +32,10 @@ const TAB_COMPONENTS = {
   media: AdminMediaTab,
   system: AdminSystemTab
 }
-const activeTab = ref(TABS.includes(props.initialTab) ? props.initialTab : 'users')
+const activeTab = ref<AdminTab>(isAdminTab(props.initialTab) ? props.initialTab : 'users')
 
 watch(() => props.initialTab, (newTab) => {
-  if (newTab && TABS.includes(newTab)) {
+  if (newTab && isAdminTab(newTab)) {
     activeTab.value = newTab
   }
 })

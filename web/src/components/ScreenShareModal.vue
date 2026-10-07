@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { StreamMode, StreamResolution, StreamFrameRate } from '../lib/streamQuality'
 import { ref, computed } from 'vue'
 import { Monitor, Gamepad2, FileText, Sliders, Activity, Sparkles } from '@lucide/vue'
 import BaseDialog from './BaseDialog.vue'
@@ -14,7 +15,7 @@ import {
 } from '../lib/streamQuality'
 import { t } from '../i18n'
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 
 const voiceStore = useVoiceStore()
 const { startScreenShare } = useWebRTC()
@@ -31,7 +32,7 @@ const currentMode = computed(() => {
   return streamModeOf({ resolution: selectedResolution.value, fps: selectedFps.value })
 })
 
-function applyPreset(mode) {
+function applyPreset(mode: StreamMode) {
   if (mode === 'gaming') {
     selectedResolution.value = STREAM_PRESETS.gaming.resolution
     selectedFps.value = STREAM_PRESETS.gaming.fps
@@ -45,12 +46,12 @@ function applyPreset(mode) {
   }
 }
 
-function selectResolution(r) {
+function selectResolution(r: StreamResolution) {
   selectedResolution.value = r
   checkIfCustomMatchesPreset()
 }
 
-function selectFps(fps) {
+function selectFps(fps: StreamFrameRate) {
   selectedFps.value = fps
   checkIfCustomMatchesPreset()
 }

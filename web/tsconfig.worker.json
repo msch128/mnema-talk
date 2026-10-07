@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "WebWorker"
+    ],
+    "types": [],
+    "skipLibCheck": false
+  },
+  "include": [
+    "src/lib/dfnWorker.ts",
+    "src/types/worker-env.d.ts"
+  ]
+}

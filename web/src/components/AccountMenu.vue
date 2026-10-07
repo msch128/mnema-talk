@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { Locale } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 // The ⋯ menu of the user bar: profile, audio, language, admin, legal, sign out.
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { User, Sliders, Languages, ShieldCheck, HelpCircle, LogOut, ChevronRight, Activity, Monitor, MonitorOff } from '@lucide/vue'
@@ -11,8 +14,8 @@ import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 
-const props = defineProps({ trigger: { type: Object, default: null } })
-const emit = defineEmits(['close', 'open-admin', 'open-legal'])
+const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | null>, default: null } })
+const emit = defineEmits<{ close: []; 'open-admin': []; 'open-legal': [] }>()
 
 const authStore = useAuthStore()
 const voiceStore = useVoiceStore()
@@ -21,12 +24,12 @@ const toasts = useToastStore()
 const versionStore = useAppVersionStore()
 const { stopScreenShare } = useWebRTC()
 
-const root = ref(null)
+const root = ref<HTMLElement | null>(null)
 const langOpen = ref(false)
 const currentLanguage = computed(() => t(`language.${locale.value}`))
 
 function items() {
-  return root.value ? [...root.value.querySelectorAll('[role^="menuitem"]')] : []
+  return root.value ? [...root.value.querySelectorAll<HTMLElement>('[role^="menuitem"]')] : []
 }
 
 function close(returnFocus = true) {
@@ -34,12 +37,12 @@ function close(returnFocus = true) {
   if (returnFocus) props.trigger?.focus()
 }
 
-function run(fn) {
+function run(fn: () => void) {
   close()
   fn()
 }
 
-async function chooseLanguage(l) {
+async function chooseLanguage(l: Locale) {
   langOpen.value = false
   close()
   if (l === locale.value) return
@@ -47,8 +50,12 @@ async function chooseLanguage(l) {
     await authStore.changeLocale(l)
     toasts.success(t('account.languageSet', { language: t(`language.${l}`) }))
   } catch (err) {
-    toasts.error(err.message || t('account.languageFailed'))
+    toasts.error(caughtErrorMessage(err, t('account.languageFailed')))
   }
+}
+
+function openOwnProfile() {
+  if (authStore.user) chatStore.openUserProfile(authStore.user)
 }
 
 function toggleShare() {
@@ -56,16 +63,16 @@ function toggleShare() {
   else voiceStore.openScreenShareModal()
 }
 
-function onKeydown(e) {
+function onKeydown(e: KeyboardEvent) {
   const list = items().filter(el => el.offsetParent !== null || el === document.activeElement)
-  const i = list.indexOf(document.activeElement)
+  const i = list.findIndex(el => el === document.activeElement)
   const inSub = !!document.activeElement?.closest?.('[data-submenu]')
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
     if (langOpen.value) {
       langOpen.value = false
-      nextTick(() => root.value?.querySelector('[data-lang-trigger]')?.focus())
+      nextTick(() => root.value?.querySelector<HTMLElement>('[data-lang-trigger]')?.focus())
     } else close()
   } else if (e.key === 'ArrowDown') {
     e.preventDefault()
@@ -79,7 +86,7 @@ function onKeydown(e) {
   } else if (e.key === 'ArrowLeft' && inSub) {
     e.preventDefault()
     langOpen.value = false
-    nextTick(() => root.value?.querySelector('[data-lang-trigger]')?.focus())
+    nextTick(() => root.value?.querySelector<HTMLElement>('[data-lang-trigger]')?.focus())
   } else if (e.key === 'Tab') {
     close(false)
   }
@@ -87,11 +94,11 @@ function onKeydown(e) {
 
 function openLang() {
   langOpen.value = true
-  nextTick(() => root.value?.querySelector('[data-submenu] [role="menuitemradio"]')?.focus())
+  nextTick(() => root.value?.querySelector<HTMLElement>('[data-submenu] [role="menuitemradio"]')?.focus())
 }
 
-function onPointerDown(e) {
-  if (root.value && !root.value.contains(e.target) && !props.trigger?.contains(e.target)) close(false)
+function onPointerDown(e: PointerEvent) {
+  if (root.value && !(e.target instanceof Node && (root.value.contains(e.target) || props.trigger?.contains(e.target)))) close(false)
 }
 
 onMounted(() => {
@@ -120,7 +127,7 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     </div>
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
 
-    <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => chatStore.openUserProfile(authStore.user))">
+    <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(openOwnProfile)">
       <User class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.editProfile') }}
     </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => { voiceStore.showAudioSettings = true })">
@@ -185,7 +192,7 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
         v-if="versionStore.adminUpdateAvailable"
         data-testid="admin-update-badge"
         class="ml-auto rounded-full bg-mnema-accent/15 px-2 py-0.5 text-xs font-semibold text-mnema-accent"
-      >{{ $t('update.badge', { version: versionStore.adminUpdate.latest_version }) }}</span>
+      >{{ $t('update.badge', { version: versionStore.adminUpdate?.latest_version }) }}</span>
     </button>
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-legal'))">
       <HelpCircle class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.legal') }}

@@ -1,0 +1,232 @@
+import { isRecord } from '../types/validation'
+import { required } from '../store-test-support.fixture'
+import type { ApiOptions } from '../lib/api'
+interface PendingRequest { url: string; method: string; resolve(value: unknown): void; reject(reason?: unknown): void }
+import { categoryFixture, channelFixture, messageFixture, userFixture } from '../test-fixtures.fixture'
+// Stale responses and partial updates in the chat store: a late load must
+// never overwrite what the user opened since, and a partial user update must
+// not blank fields it does not carry.
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+
+// Every api() call waits until the test answers it.
+const pending = vi.hoisted(() => [] as PendingRequest[])
+vi.mock('../lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: vi.fn((url: string, opts?: ApiOptions) => new Promise<unknown>((resolve, reject) => {
+    pending.push({ url, method: opts?.method || 'GET', resolve, reject })
+  }))
+}))
+
+import { useChatStore } from './chat'
+import { useAuthStore } from './auth'
+
+function answer(match: string, body: unknown) {
+  const i = pending.findIndex(p => p.url.includes(match))
+  if (i < 0) throw new Error(`no pending request for ${match}`)
+  const [req] = pending.splice(i, 1)
+  required(req).resolve(body)
+}
+
+// Lets awaited api() results run their continuations.
+const flush = () => new Promise(r => setTimeout(r, 0))
+
+function typingChannels(sent: unknown[]): string[] {
+  return sent.flatMap(event => {
+    if (!isRecord(event) || event.type !== 'typing') return []
+    if (!isRecord(event.payload) || typeof event.payload.channel_id !== 'string') throw new Error('Malformed typing event')
+    return [event.payload.channel_id]
+  })
+}
+
+function setup() {
+  const chat = useChatStore()
+  useAuthStore().user = userFixture({ id: 'me', username: 'max', role: 'user' })
+  chat.categories = [categoryFixture({
+    id: 'c',
+    channels: [
+      channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' }),
+      channelFixture({ id: 'ch2', name: 'musik', type: 'text' }),
+      channelFixture({ id: 'v1', name: 'talk', type: 'voice' })
+    ]
+  })]
+  chat.activeChannel = channelFixture({ id: 'ch1', name: 'allgemein', type: 'text' })
+  chat.messages = []
+  // An already connected socket that records what the store sends. Socket
+  // initialization and its snapshot refresh are covered in connection.test.
+  const sent: unknown[] = []
+  vi.stubGlobal('WebSocket', class {
+    send(data: string) { sent.push(JSON.parse(data)) }
+    close() {}
+  })
+  chat.initWebSocket()
+  chat.isConnected = true
+  return { chat, sent }
+}
+
+beforeEach(() => {
+  pending.length = 0
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  useChatStore().closeWebSocket()
+  vi.unstubAllGlobals()
+})
+
+
+describe('openThread', () => {
+  it('drops a thread load that another thread superseded', async () => {
+    const { chat } = setup()
+    const first = chat.openThread('a')
+    const second = chat.openThread('b')
+    answer('/messages/b/thread', { root: messageFixture({ id: 'b', content: 'B' }), replies: [messageFixture({ id: 'rb', parent_id: 'b' })] })
+    await second
+    answer('/messages/a/thread', { root: messageFixture({ id: 'a', content: 'A' }), replies: [messageFixture({ id: 'ra', parent_id: 'a' })] })
+    await first
+    expect(required(chat.activeThread).id).toBe('b')
+    expect(chat.threadReplies.map(r => r.id)).toEqual(['rb'])
+    expect(chat.isThreadLoading).toBe(false)
+  })
+
+  it('does not reopen a thread that was closed while it loaded', async () => {
+    const { chat } = setup()
+    const open = chat.openThread('a')
+    chat.closeThread()
+    answer('/messages/a/thread', { root: messageFixture({ id: 'a' }), replies: [] })
+    await open
+    expect(chat.activeThread).toBeNull()
+  })
+})
+
+describe('openUserProfile', () => {
+  it('ignores a profile that loads after another one was opened', async () => {
+    const { chat } = setup()
+    chat.openUserProfile(userFixture({ id: 'u1', username: 'anna' }))
+    chat.openUserProfile(userFixture({ id: 'u2', username: 'ben' }))
+    answer('/users/u1', userFixture({ id: 'u1', username: 'anna', bio: 'A' }))
+    await flush()
+    expect(required(chat.selectedUserProfile).id).toBe('u2')
+    expect(required(chat.selectedUserProfile).bio).toBeUndefined()
+  })
+
+  it('stays closed when closed while loading', async () => {
+    const { chat } = setup()
+    chat.openUserProfile(userFixture({ id: 'u1', username: 'anna' }))
+    chat.closeUserProfile()
+    answer('/users/u1', userFixture({ id: 'u1', username: 'anna' }))
+    await flush()
+    expect(chat.selectedUserProfile).toBeNull()
+  })
+})
+
+describe('user updates', () => {
+  it('a partial update keeps names and avatars', () => {
+    const { chat } = setup()
+    chat.messages = [messageFixture({ id: 'm1', user_id: 'u1', display_name: 'Anna', avatar_url: '/a.png', reply_to: { id: 'original', deleted: false, user_id: 'u1', display_name: 'Anna', avatar_url: '/a.png' } })]
+    chat.handleWSEvent({ type: 'user_update', payload: { id: 'u1', disabled: true } })
+    expect(required(chat.messages[0]).display_name).toBe('Anna')
+    expect(required(chat.messages[0]).avatar_url).toBe('/a.png')
+    expect(required(required(chat.messages[0]).reply_to).display_name).toBe('Anna')
+  })
+
+  it('updates the open thread root too', () => {
+    const { chat } = setup()
+    chat.activeThread = messageFixture({ id: 'root', user_id: 'u1', display_name: 'Anna', avatar_url: '/a.png' })
+    chat.handleWSEvent({ type: 'user_update', payload: userFixture({ id: 'u1', display_name: 'Annie', avatar_url: '/b.png' }) })
+    expect(required(chat.activeThread).display_name).toBe('Annie')
+    expect(required(chat.activeThread).avatar_url).toBe('/b.png')
+  })
+})
+
+describe('channel list refresh', () => {
+  it('shows a renamed active channel under its new name', async () => {
+    const { chat } = setup()
+    const fetching = chat.fetchChannels()
+    answer('/api/channels', {
+      categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name: 'neu', type: 'text', topic: 'T' })] })],
+      uncategorized: []
+    })
+    await fetching
+    expect(required(chat.activeChannel).name).toBe('neu')
+    expect(required(chat.activeChannel).topic).toBe('T')
+  })
+
+  it('keeps the newest list when overlapping refetches answer out of order', async () => {
+    const { chat } = setup()
+    const older = chat.fetchChannels()
+    const newer = chat.fetchChannels()
+    const list = (name: string) => ({ categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name, type: 'text' })] })], uncategorized: [] })
+    // Requests are answered first-in-first-out by answer(); swap them.
+    const [first, second] = pending.splice(0, 2)
+    required(second).resolve(list('neu'))
+    await newer
+    required(first).resolve(list('alt'))
+    await older
+    expect(required(required(chat.categories[0]).channels[0]).name).toBe('neu')
+  })
+
+  it('a superseded refetch resolves only once the newest list is in', async () => {
+    // The sidebar awaits its own refetch after saving a new order and then
+    // drops the order it kept on screen; a channels_changed refetch started
+    // meanwhile must not leave the older list showing in between.
+    const { chat } = setup()
+    const list = (name: string) => ({ categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch1', name, type: 'text' })] })], uncategorized: [] })
+    let ownDone = false
+    const own = chat.fetchChannels().then(() => { ownDone = true })
+    chat.fetchChannels()
+    const [first, second] = pending.splice(0, 2)
+    required(first).resolve(list('alt'))
+    await flush()
+    expect(ownDone).toBe(false)
+    required(second).resolve(list('neu'))
+    await own
+    expect(required(required(chat.categories[0]).channels[0]).name).toBe('neu')
+  })
+
+  it('duplicates a channel and refetches the list', async () => {
+    const { chat } = setup()
+    const dup = chat.duplicateChannel('ch2')
+    expect(pending[0]).toMatchObject({ url: '/api/admin/channels/ch2/duplicate', method: 'POST' })
+    answer('/duplicate', channelFixture({ id: 'ch3', name: 'musik', type: 'text' }))
+    await flush()
+    answer('/api/channels', { categories: [categoryFixture({ id: 'c', channels: [channelFixture({ id: 'ch3', name: 'musik', type: 'text' })] })], uncategorized: [] })
+    await expect(dup).resolves.toEqual(channelFixture({ id: 'ch3', name: 'musik', type: 'text' }))
+    expect(chat.allChannels.map(c => c.id)).toEqual(['ch3'])
+  })
+})
+
+describe('typing notices', () => {
+  it('are throttled per channel', () => {
+    const { chat, sent } = setup()
+    chat.sendTyping('ch1')
+    chat.sendTyping('ch1')
+    chat.sendTyping('ch2')
+    expect(typingChannels(sent)).toEqual(['ch1', 'ch2'])
+  })
+
+  it('are sent for a voice channel\'s chat too', () => {
+    const { chat, sent } = setup()
+    chat.sendTyping('v1')
+    expect(typingChannels(sent)).toEqual(['v1'])
+  })
+})
+
+describe('missed live messages', () => {
+  it('my own messages do not count as missed', () => {
+    const { chat } = setup()
+    chat.hasMoreAfter = true
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: 'x1', channel_id: 'ch1', user_id: 'me' }) })
+    chat.handleWSEvent({ type: 'message_create', payload: messageFixture({ id: 'x2', channel_id: 'ch1', user_id: 'u1' }) })
+    expect(chat.missedLiveCount).toBe(1)
+  })
+})
+
+describe('isVoiceChannel', () => {
+  it('knows voice channels by id', () => {
+    const { chat } = setup()
+    expect(chat.isVoiceChannel('v1')).toBe(true)
+    expect(chat.isVoiceChannel('ch1')).toBe(false)
+    expect(chat.isVoiceChannel('nope')).toBe(false)
+  })
+})

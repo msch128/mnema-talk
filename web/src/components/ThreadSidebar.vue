@@ -1,9 +1,12 @@
-<script setup>
+<script setup lang="ts">
+import type { Message } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   X, MessageSquare, ArrowUp, Plus, Loader2,
   Pencil, Trash2, Smile, Reply
 } from '@lucide/vue'
+import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import UserAvatar from './UserAvatar.vue'
@@ -28,10 +31,10 @@ const authStore = useAuthStore()
 const toasts = useToastStore()
 
 const replyInput = ref('')
-const repliesContainer = ref(null)
-const fileInput = ref(null)
+const repliesContainer = ref<HTMLElement | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const isSending = ref(false)
-const selectedImage = ref(null)
+const selectedImage = ref<string | null>(null)
 
 // Editing, deleting, reactions and uploads
 const actions = useMessageActions({ container: repliesContainer, deleteTitle: 'thread.deleteTitle' })
@@ -51,18 +54,18 @@ watch(() => chatStore.threadReplies.length, () => {
 
 // ---- Replies inside the thread ----
 
-const replyingTo = ref(null)
-const replyTextArea = ref(null)
+const replyingTo = ref<ThreadRoot | null>(null)
+const replyTextArea = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(replyTextArea, replyInput)
-const highlightedId = ref(null)
-let highlightTimer = null
+const highlightedId = ref<string | null>(null)
+let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
 watch(() => chatStore.activeThread?.id, () => {
   replyingTo.value = null
   actions.cancelEdit()
 })
 
-function startReply(msg) {
+function startReply(msg: ThreadRoot) {
   replyingTo.value = msg
   activeReactionPickerMsgId.value = null
   nextTick(() => replyTextArea.value?.focus())
@@ -72,7 +75,7 @@ function cancelReply() {
   replyingTo.value = null
 }
 
-function flash(id) {
+function flash(id: string) {
   clearTimeout(highlightTimer)
   highlightedId.value = null
   requestAnimationFrame(() => {
@@ -82,7 +85,7 @@ function flash(id) {
 }
 
 // Thread replies are fully loaded here, so jumps stay inside the panel.
-function jumpToReplied(msg) {
+function jumpToReplied(msg: Message) {
   const id = msg.reply_to_id
   const container = repliesContainer.value
   if (!id || !container || msg.reply_to?.deleted) {
@@ -100,9 +103,22 @@ function jumpToReplied(msg) {
 
 // Same keys as in the channel: arrows move between the root and the
 // replies, r replies, e edits an own reply, Escape backs out.
-function onReplyKeydown(e, msg, { editable = true } = {}) {
+function onRootKeydown(e: KeyboardEvent, msg: ThreadRoot) {
   handleMessageKeydown(e, {
-    rows: () => repliesContainer.value?.querySelectorAll('[data-reply-id]') || [],
+    rows: () => repliesContainer.value?.querySelectorAll<HTMLElement>('[data-reply-id]') || [],
+    reply: () => startReply(msg),
+    escape: () => {
+      if (editingReplyId.value) actions.cancelEdit()
+      else if (replyingTo.value) cancelReply()
+      else return false
+      return true
+    }
+  })
+}
+
+function onReplyKeydown(e: KeyboardEvent, msg: Message, { editable = true } = {}) {
+  handleMessageKeydown(e, {
+    rows: () => repliesContainer.value?.querySelectorAll<HTMLElement>('[data-reply-id]') || [],
     reply: () => startReply(msg),
     edit: () => {
       if (!editable || !actions.isOwn(msg)) return false
@@ -137,13 +153,13 @@ async function handleSendReply() {
     replyingTo.value = null
     scrollToBottom()
   } catch (err) {
-    toasts.error(err.message || t('thread.sendFailed'))
+    toasts.error(caughtErrorMessage(err, t('thread.sendFailed')))
   } finally {
     isSending.value = false
   }
 }
 
-function handleKeyDown(e) {
+function handleKeyDown(e: KeyboardEvent) {
   if (assist.onKeydown(e)) return
   if (e.key === 'Escape' && replyingTo.value) {
     e.preventDefault()
@@ -156,15 +172,15 @@ function handleKeyDown(e) {
   }
 }
 
-async function handleFileUpload(e) {
+async function handleFileUpload(e: Event) {
   const replyId = replyingTo.value?.id || null
-  const ok = await actions.upload(e.target, file => chatStore.uploadThreadMedia(file, '', replyId))
+  const ok = await actions.upload(e.target as HTMLInputElement, (file: File) => chatStore.uploadThreadMedia(file, '', replyId))
   if (!ok) return
   replyingTo.value = null
   scrollToBottom()
 }
 
-function formatDate(dateStr) {
+function formatDate(dateStr?: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return d.toLocaleDateString([locale.value], { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
@@ -204,7 +220,7 @@ function formatDate(dateStr) {
         :data-reply-id="chatStore.activeThread.id"
         tabindex="0"
         role="article"
-        @keydown="onReplyKeydown($event, chatStore.activeThread, { editable: false })"
+        @keydown="onRootKeydown($event, chatStore.activeThread)"
         :class="[
           'relative group bg-mnema-elevated border border-mnema-border/80 rounded-xl p-3.5 shadow-sm space-y-2 focus:outline-none focus-visible:border-mnema-accent/60',
           highlightedId === chatStore.activeThread.id ? 'msg-flash' : ''
@@ -246,13 +262,13 @@ function formatDate(dateStr) {
 
         <!-- Root Message Attachments -->
         <MessageAttachments
-          :attachments="chatStore.activeThread.attachments"
+          :attachments="chatStore.activeThread.attachments ?? []"
           variant="root"
           @open-image="selectedImage = $event"
         />
         <!-- Root message reactions -->
         <ReactionBar
-          :reactions="chatStore.activeThread.reactions"
+          :reactions="chatStore.activeThread.reactions ?? []"
           small-icon
           :picker-open="activeReactionPickerMsgId === `bottom-${chatStore.activeThread.id}`"
           @toggle="actions.toggleReaction(chatStore.activeThread.id, $event)"

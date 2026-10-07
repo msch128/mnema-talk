@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
 import { Activity, Zap, ShieldCheck } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
@@ -6,11 +6,11 @@ import { rateJitter } from '../lib/rtcStats'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
-const emit = defineEmits(['close'])
+const emit = defineEmits<{ close: [] }>()
 const voiceStore = useVoiceStore()
 
 const stats = computed(() => voiceStore.rtcStats)
-const dash = value => (value == null || value === '' ? '–' : value)
+const dash = (value: string | number | null | undefined) => (value == null || value === '' ? '–' : value)
 
 // Sparkline of the measured WebSocket round trips.
 const sparklinePoints = computed(() => {

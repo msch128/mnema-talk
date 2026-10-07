@@ -1,4 +1,7 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { Channel, Category } from '../types/domain'
+import { caughtErrorMessage } from '../lib/api'
 // Rename a channel (name + topic) or a category (name) from the sidebar menu.
 // Without an entity it creates a new category instead (appended at the end).
 import { ref, computed } from 'vue'
@@ -9,23 +12,23 @@ import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
 const props = defineProps({
-  kind: { type: String, default: 'channel' }, // 'channel' | 'category'
-  entity: { type: Object, default: null } // null: create a category
+  kind: { type: String as PropType<'channel' | 'category'>, default: 'channel' }, // 'channel' | 'category'
+  entity: { type: Object as PropType<Channel | Category | null>, default: null } // null: create a category
 })
-const emit = defineEmits(['close', 'created'])
+const emit = defineEmits<{ close: []; created: [category: Category] }>()
 
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const isCreate = computed(() => !props.entity)
 const isChannel = computed(() => !isCreate.value && props.kind === 'channel')
 const name = ref(props.entity?.name || '')
-const topic = ref(props.entity?.topic || '')
+const topic = ref((props.entity && 'topic' in props.entity ? props.entity.topic : '') || '')
 const error = ref('')
 const saving = ref(false)
 
 const title = computed(() => {
   if (isCreate.value) return t('sidebar.createCategory')
-  return t(isChannel.value ? 'admin.editChannelTitle' : 'admin.editCategoryTitle', { name: props.entity.name })
+  return t(isChannel.value ? 'admin.editChannelTitle' : 'admin.editCategoryTitle', { name: props.entity?.name })
 })
 
 async function submit() {
@@ -36,21 +39,22 @@ async function submit() {
     return
   }
   saving.value = true
+  const entity = props.entity
   try {
     if (isCreate.value) {
       const created = await chatStore.createCategory(trimmed, nextSortOrder(chatStore.categories))
       toasts.success(t('sidebar.categoryCreated'))
       emit('created', created)
-    } else if (isChannel.value) {
-      await chatStore.updateChannel(props.entity.id, { name: trimmed, topic: topic.value.trim() })
+    } else if (entity && isChannel.value) {
+      await chatStore.updateChannel(entity.id, { name: trimmed, topic: topic.value.trim() })
       toasts.success(t('sidebar.channelUpdated'))
-    } else {
-      await chatStore.updateCategory(props.entity.id, { name: trimmed })
+    } else if (entity) {
+      await chatStore.updateCategory(entity.id, { name: trimmed })
       toasts.success(t('sidebar.categoryUpdated'))
     }
     emit('close')
   } catch (e) {
-    error.value = e?.message || t(isCreate.value ? 'sidebar.createCategoryFailed' : 'sidebar.updateFailed')
+    error.value = caughtErrorMessage(e, t(isCreate.value ? 'sidebar.createCategoryFailed' : 'sidebar.updateFailed'))
   } finally {
     saving.value = false
   }
@@ -78,7 +82,7 @@ async function submit() {
         />
       </div>
 
-      <div v-if="isChannel && entity.type !== 'voice'" class="space-y-1.5">
+      <div v-if="isChannel && entity && 'type' in entity && entity.type !== 'voice'" class="space-y-1.5">
         <label for="edit-topic" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
           {{ $t('admin.channelTopicLabel') }}
         </label>

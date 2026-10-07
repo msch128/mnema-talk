@@ -1,4 +1,6 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { AvatarUser } from './presentationTypes'
 // One participant of the Talk, like a Discord voice tile: their camera when it
 // is on, else their avatar centered in the tile and scaled to its size. The
 // name sits centered at the bottom, LIVE in the top-right corner, the time in
@@ -11,12 +13,12 @@ import VoiceTimer from './VoiceTimer.vue'
 import MuteMarks from './MuteMarks.vue'
 
 const props = defineProps({
-  user: { type: Object, required: true },
+  user: { type: Object as PropType<AvatarUser & { id: string; joined_at?: string; role?: 'admin' | 'user' }>, required: true },
   // They muted their microphone / deafened themselves (shown to everyone).
   muted: { type: Boolean, default: false },
   deafened: { type: Boolean, default: false },
   // Camera stream of this participant, null while the camera is off.
-  stream: { type: Object, default: null },
+  stream: { type: Object as PropType<MediaStream | null>, default: null },
   isSelf: { type: Boolean, default: false },
   speaking: { type: Boolean, default: false },
   // Smaller type and badges (the strip under a screen share, small grids).
@@ -38,7 +40,7 @@ const props = defineProps({
   isWatching: { type: Boolean, default: false },
   isConnecting: { type: Boolean, default: false }
 })
-const emit = defineEmits(['open-profile', 'toggle-camera', 'focus-camera', 'fullscreen-camera', 'watch-stream', 'stop-watching', 'menu'])
+const emit = defineEmits<{ 'open-profile': [user: { id: string }]; 'toggle-camera': []; 'focus-camera': [id: string]; 'fullscreen-camera': [id: string]; 'watch-stream': [id: string]; 'stop-watching': [id: string]; menu: [event: MouseEvent | KeyboardEvent] }>()
 
 const focusable = computed(() => !!props.stream && (props.cameraFocusable || props.cameraFocused))
 const name = computed(() => props.user.display_name || props.user.username)
@@ -47,11 +49,11 @@ const initial = computed(() => (name.value || '?').charAt(0).toUpperCase())
 // Shown on hover / keyboard focus of the tile (or of a button on it).
 const REVEAL = 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 group-has-[:focus-visible]:opacity-100'
 
-function handleTileClick(e) {
+function handleTileClick(e: MouseEvent | KeyboardEvent) {
   if (focusable.value) {
     // The second click of a double-click: the dblclick (fullscreen) decides.
     // The first one already acted, without waiting to tell them apart.
-    if (e?.detail >= 2) return
+    if (e instanceof MouseEvent && e.detail >= 2) return
     emit('focus-camera', props.user.id)
     return
   }
@@ -63,13 +65,13 @@ function handleTileClick(e) {
 }
 
 // A double-click on a camera: on the stage and full screen.
-function onDblclick(e) {
-  if (!props.stream || !focusable.value || e.target?.closest?.('button')) return
+function onDblclick(e: MouseEvent) {
+  if (!props.stream || !focusable.value || (e.target instanceof Element && e.target.closest('button'))) return
   e.stopPropagation()
   emit('fullscreen-camera', props.user.id)
 }
 
-const videoEl = ref(null)
+const videoEl = ref<HTMLVideoElement | null>(null)
 watch(() => props.stream, (stream) => {
   nextTick(() => {
     if (videoEl.value) videoEl.value.srcObject = stream

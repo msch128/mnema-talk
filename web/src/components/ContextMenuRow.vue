@@ -1,12 +1,14 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ContextMenuItem } from './menuTypes'
 // One row of a ContextMenu (or of one of its submenus); see ContextMenu.vue
 // for the item shapes. Submenu triggers are rendered by the menu itself.
 import { Check } from '@lucide/vue'
 
-defineProps({ item: { type: Object, required: true } })
-const emit = defineEmits(['select'])
+defineProps({ item: { type: Object as PropType<ContextMenuItem>, required: true } })
+const emit = defineEmits<{ select: [item: ContextMenuItem] }>()
 
-function role(item) {
+function role(item: ContextMenuItem) {
   if (item.type === 'radio') return 'menuitemradio'
   if (item.type === 'checkbox') return 'menuitemcheckbox'
   return 'menuitem'
@@ -47,7 +49,7 @@ function role(item) {
       :max="item.max ?? 200"
       :step="item.step ?? 1"
       :value="item.value"
-      @input="item.onInput?.(Number($event.target.value))"
+      @input="item.onInput?.(Number(($event.target as HTMLInputElement).value))"
       class="w-full cursor-pointer accent-mnema-accent"
     />
   </div>

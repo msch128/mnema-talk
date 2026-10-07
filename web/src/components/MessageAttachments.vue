@@ -1,15 +1,17 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+import type { MediaAttachment } from '../types/domain'
 // Attachment cards under a message: image (opens the lightbox), video
 // player, and the file name with its size.
 import { computed } from 'vue'
 import { FileText } from '@lucide/vue'
 
 const props = defineProps({
-  attachments: { type: Array, default: () => [] },
+  attachments: { type: Array as PropType<MediaAttachment[]>, default: () => [] },
   // 'chat': channel and Talk chat, 'reply': thread replies, 'root': thread root card.
-  variant: { type: String, default: 'chat' }
+  variant: { type: String as PropType<'chat' | 'reply' | 'root'>, default: 'chat' }
 })
-const emit = defineEmits(['open-image'])
+const emit = defineEmits<{ 'open-image': [src: string] }>()
 
 const STYLES = {
   chat: {
@@ -52,8 +54,8 @@ const STYLES = {
 
 const s = computed(() => STYLES[props.variant] || STYLES.chat)
 
-const kind = att => (att.mime_type?.startsWith('image/') ? 'image' : att.mime_type?.startsWith('video/') ? 'video' : 'file')
-const sizeMb = att => ((att.size_bytes || 0) / 1024 / 1024).toFixed(2)
+const kind = (att: MediaAttachment) => (att.mime_type?.startsWith('image/') ? 'image' : att.mime_type?.startsWith('video/') ? 'video' : 'file')
+const sizeMb = (att: MediaAttachment) => ((att.size_bytes || 0) / 1024 / 1024).toFixed(2)
 </script>
 
 <template>
