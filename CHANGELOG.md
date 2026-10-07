@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.4](https://github.com/msch128/mnema-talk/compare/v0.4.3...v0.4.4) (2026-10-07)
+
+
+### Bug Fixes
+
+* recover audio filtering after temporary worker stalls ([0ffcc14](https://github.com/msch128/mnema-talk/commit/0ffcc142798a80f90b5bc92ddea66b977c660151))
+* stabilize media startup, playback and recovery ([db1931f](https://github.com/msch128/mnema-talk/commit/db1931f6cb2f5e0d141d201c38c82594708de8a5))
+
 ## [0.4.3](https://github.com/msch128/mnema-talk/compare/v0.4.2...v0.4.3) (2026-10-07)
 
 
