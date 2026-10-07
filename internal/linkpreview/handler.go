@@ -1,11 +1,13 @@
 package linkpreview
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -37,7 +39,7 @@ func (h *Handler) Mount(r chi.Router) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/link-preview [get]
 func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
-	p, err := h.Fetcher.Preview(r.Context(), r.URL.Query().Get("url"))
+	p, err := h.Fetcher.Preview(requester(r), r.URL.Query().Get("url"))
 	if err != nil {
 		w.WriteHeader(http.StatusNoContent)
 		return nil
@@ -65,7 +67,7 @@ func (h *Handler) preview(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/link-preview/image [get]
 func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
-	body, mime, err := h.Fetcher.Image(r.Context(), r.URL.Query().Get("url"))
+	body, mime, err := h.Fetcher.Image(requester(r), r.URL.Query().Get("url"))
 	if errors.Is(err, ErrBlocked) {
 		return httpx.ErrInvalidInput("not a public image address")
 	}
@@ -81,4 +83,13 @@ func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(body)
 	return nil
+}
+
+// requester tags the request context with the signed-in member, so one
+// member's fetches cannot take every server-wide fetch slot.
+func requester(r *http.Request) context.Context {
+	if u := auth.UserFrom(r.Context()); u != nil {
+		return WithRequester(r.Context(), u.ID.String())
+	}
+	return r.Context()
 }

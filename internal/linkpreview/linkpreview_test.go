@@ -2,6 +2,7 @@ package linkpreview
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestBlocksNonPublicAddresses(t *testing.T) {
@@ -173,5 +175,81 @@ func TestCapsConcurrentFetches(t *testing.T) {
 	wg.Wait()
 	if got := peak.Load(); got != maxConcurrentFetches {
 		t.Fatalf("peak concurrent fetches %d, want %d", got, maxConcurrentFetches)
+	}
+}
+
+func TestCapsFetchesPerRequester(t *testing.T) {
+	var inFlight, peak atomic.Int32
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("who") == "slow" {
+			n := inFlight.Add(1)
+			defer inFlight.Add(-1)
+			for {
+				p := peak.Load()
+				if n <= p || peak.CompareAndSwap(p, n) {
+					break
+				}
+			}
+			<-release
+		}
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<title>x</title>`))
+	}))
+	defer srv.Close()
+	f := New()
+	f.allowPrivate = true
+
+	// One member opens many slow links at once ...
+	slow := WithRequester(context.Background(), "slow")
+	var wg sync.WaitGroup
+	for i := 0; i < maxConcurrentFetches; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = f.Preview(slow, srv.URL+"/?who=slow&p="+strconv.Itoa(i))
+		}()
+	}
+	for inFlight.Load() < maxFetchesPerRequester {
+		runtime.Gosched()
+	}
+	// ... and another member still gets a preview meanwhile.
+	if _, err := f.Preview(WithRequester(context.Background(), "other"), srv.URL+"/?who=other"); err != nil {
+		t.Fatalf("other member starved: %v", err)
+	}
+	close(release)
+	wg.Wait()
+	if got := peak.Load(); got != maxFetchesPerRequester {
+		t.Fatalf("peak fetches of one member %d, want %d", got, maxFetchesPerRequester)
+	}
+}
+
+func TestBusyIsNotCached(t *testing.T) {
+	old := slotWait
+	slotWait = 50 * time.Millisecond
+	defer func() { slotWait = old }()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<title>x</title>`))
+	}))
+	defer srv.Close()
+	f := New()
+	f.allowPrivate = true
+
+	// Every server-wide slot taken: the fetch gives up without a preview.
+	for i := 0; i < maxConcurrentFetches; i++ {
+		f.slots <- struct{}{}
+	}
+	if _, err := f.Preview(context.Background(), srv.URL); !errors.Is(err, errBusy) {
+		t.Fatalf("got %v, want errBusy", err)
+	}
+	for i := 0; i < maxConcurrentFetches; i++ {
+		<-f.slots
+	}
+	// Once a slot is free the same link must be fetched, not answered from
+	// a cached failure.
+	if _, err := f.Preview(context.Background(), srv.URL); err != nil {
+		t.Fatalf("busy result was cached: %v", err)
 	}
 }

@@ -37,9 +37,12 @@ const (
 	imageCacheBytes = 32 << 20
 	imageCacheTTL   = time.Hour
 	// maxConcurrentFetches caps outbound fetches across all members (the
-	// per-user rate limit alone allows many in parallel). Callers wait for a
-	// slot within the fetch timeout, then get no preview.
-	maxConcurrentFetches = 8
+	// per-user rate limit alone allows many in parallel), and
+	// maxFetchesPerRequester keeps one member's slow links from holding all
+	// of them. Callers wait up to fetchTimeout for both slots, then get no
+	// preview; that outcome is not cached.
+	maxConcurrentFetches   = 8
+	maxFetchesPerRequester = 2
 )
 
 // Preview is what a link card shows.
@@ -56,7 +59,22 @@ type Preview struct {
 var (
 	ErrBlocked   = errors.New("link target is not a public web address")
 	ErrNoPreview = errors.New("page has no preview")
+	// errBusy means no fetch slot was free in time. It says nothing about
+	// the link, so it is never cached.
+	errBusy = errors.New("too many link previews in flight")
 )
+
+// slotWait is how long a fetch waits for its slots; tests shorten it.
+var slotWait = fetchTimeout
+
+type requesterKey struct{}
+
+// WithRequester tags ctx with who asked for a fetch (a user ID), for the
+// per-requester fetch limit. Untagged fetches only count against the
+// server-wide limit.
+func WithRequester(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requesterKey{}, id)
+}
 
 // Fetcher fetches and caches previews.
 type Fetcher struct {
@@ -75,7 +93,8 @@ type Fetcher struct {
 	mu    sync.Mutex
 	cache map[string]cacheEntry
 
-	slots chan struct{} // one per outbound fetch in flight
+	slots     chan struct{} // one per outbound fetch in flight
+	requester requesterSlots
 
 	previews flightGroup[*Preview]
 	images   flightGroup[cachedImage]
@@ -255,14 +274,13 @@ func (f *Fetcher) parse(raw string) (*url.URL, error) {
 
 // get fetches u and returns at most limit bytes of the body.
 func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int64) ([]byte, string, *url.URL, error) {
+	release, err := f.acquire(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	defer release()
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
-	select {
-	case f.slots <- struct{}{}:
-		defer func() { <-f.slots }()
-	case <-ctx.Done():
-		return nil, "", nil, fmt.Errorf("fetch: no free slot: %w", ctx.Err())
-	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, "", nil, ErrBlocked
@@ -304,7 +322,9 @@ func (f *Fetcher) Preview(ctx context.Context, raw string) (*Preview, error) {
 			return p, err
 		}
 		p, err := f.fetchPreview(context.WithoutCancel(ctx), u)
-		f.store(key, p, err)
+		if !errors.Is(err, errBusy) {
+			f.store(key, p, err)
+		}
 		return p, err
 	})
 }
@@ -482,4 +502,68 @@ func (f *Fetcher) store(key string, p *Preview, err error) {
 		ttl = 5 * time.Minute // transient failures are retried sooner
 	}
 	f.cache[key] = cacheEntry{preview: p, err: err, expires: time.Now().Add(ttl)}
+}
+
+// acquire waits up to slotWait for the requester's slot, then for a
+// server-wide one. The requester's slot is taken first, so a member waiting
+// on their own limit never holds a server-wide slot meanwhile.
+func (f *Fetcher) acquire(ctx context.Context) (func(), error) {
+	ctx, cancel := context.WithTimeout(ctx, slotWait)
+	defer cancel()
+	id, _ := ctx.Value(requesterKey{}).(string)
+	releaseRequester := func() {}
+	if id != "" {
+		r, err := f.requester.acquire(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		releaseRequester = r
+	}
+	select {
+	case f.slots <- struct{}{}:
+		return func() { <-f.slots; releaseRequester() }, nil
+	case <-ctx.Done():
+		releaseRequester()
+		return nil, errBusy
+	}
+}
+
+// requesterSlots holds a semaphore of maxFetchesPerRequester per requester
+// with fetches in flight or waiting; idle requesters are dropped.
+type requesterSlots struct {
+	mu sync.Mutex
+	m  map[string]*requesterSlot
+}
+
+type requesterSlot struct {
+	sem  chan struct{}
+	refs int
+}
+
+func (r *requesterSlots) acquire(ctx context.Context, id string) (func(), error) {
+	r.mu.Lock()
+	if r.m == nil {
+		r.m = map[string]*requesterSlot{}
+	}
+	s := r.m[id]
+	if s == nil {
+		s = &requesterSlot{sem: make(chan struct{}, maxFetchesPerRequester)}
+		r.m[id] = s
+	}
+	s.refs++
+	r.mu.Unlock()
+	done := func() {
+		r.mu.Lock()
+		if s.refs--; s.refs == 0 {
+			delete(r.m, id)
+		}
+		r.mu.Unlock()
+	}
+	select {
+	case s.sem <- struct{}{}:
+		return func() { <-s.sem; done() }, nil
+	case <-ctx.Done():
+		done()
+		return nil, errBusy
+	}
 }
