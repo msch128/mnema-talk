@@ -1,0 +1,38 @@
+internal/media/handler.go
+  s_f5ea48d5e7be05::t_52d30f222b5d3d 71-72,482-541
+internal/media/orphans.go
+  s_f5ea48d5e7be05::t_d887ed14c228cf 1-122
+cmd/server/storage.go
+  s_f5ea48d5e7be05::t_7e208008460733 115-122
+internal/server/media_orphans_integration_test.go
+  s_f5ea48d5e7be05::t_5f2e03046a551b 1-77
+internal/s3/s3.go
+  s_f5ea48d5e7be05::t_7e208008460733 19,173-191
+  s_f5ea48d5e7be05::t_d668399b371059 192
+cmd/server/main.go
+  s_f5ea48d5e7be05::t_52d30f222b5d3d 68
+api/openapi.json
+  s_f5ea48d5e7be05::t_c381d6e45a2306 1165-1184,2933-3102
+doc/operations.md
+  s_f5ea48d5e7be05::t_c381d6e45a2306 322-337
+scripts/smoke-image.sh
+  s_f5ea48d5e7be05::t_1f71c01e8d13c5 86-89
+internal/media/store.go
+  s_f5ea48d5e7be05::t_7e208008460733 8-9,11,23-31,44-46,58,95-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "55f9410a4665ba765c1db01341f3e36181075536",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
