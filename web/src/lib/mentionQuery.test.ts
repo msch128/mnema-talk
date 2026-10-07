@@ -45,3 +45,7 @@ describe('applyMention', () => {
     expect(applyMention('@hezog', 0, 3, 'herzog')).toEqual({ text: '@herzog ', caret: 8 })
   })
 })
+
+it('ignores a caret outside the current draft', () => {
+  expect(findMentionQuery('@draft', 100)).toBeNull()
+})

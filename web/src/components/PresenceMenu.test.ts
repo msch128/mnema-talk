@@ -148,3 +148,23 @@ describe('PresenceMenu', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 })
+
+it('remains dismissible when the account signs out before editing status and ignores unrelated keys', async () => {
+  const w = mountMenu()
+  await flushPromises()
+  auth.user = null
+  await w.vm.$nextTick()
+  await key(w, 'Enter')
+  expect(w.emitted('close')).toBeUndefined()
+  await w.find('[role="menuitem"]').trigger('click')
+  expect(chat.openUserProfile).not.toHaveBeenCalled()
+  expect(w.emitted('close')).toHaveLength(1)
+})
+
+it('saves a choice for an account using the default online presence', async () => {
+  auth.user = userFixture({ status_text: '' })
+  const w = mountMenu()
+  await option(w, 'focus').trigger('click')
+  await flushPromises()
+  expect(chat.setMyPresence).toHaveBeenCalledWith('focus')
+})

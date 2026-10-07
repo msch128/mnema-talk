@@ -150,3 +150,37 @@ describe('caught error display', () => {
     for (const value of [null, undefined, [], 'thrown text', { message: '' }, { message: 1 }]) expect(caughtErrorMessage(value, 'fallback')).toBe('fallback')
   })
 })
+
+describe('unauthorized listeners belong to request start', () => {
+  it('does not deliver an old 401 to a newly registered session listener', async () => {
+    let resolveResponse: ((response: Response) => void) | undefined
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>(() => new Promise<Response>(resolve => { resolveResponse = resolve })))
+    const oldListener = vi.fn()
+    const offOld = onUnauthorized(oldListener)
+    const pending = api('/api/members')
+    offOld()
+    const newListener = vi.fn()
+    const offNew = onUnauthorized(newListener)
+    try {
+      assert(resolveResponse)
+      resolveResponse(new Response(JSON.stringify({ error: { code: 'UNAUTHORIZED' } }), { status: 401 }))
+      await expect(pending).rejects.toBeInstanceOf(ApiError)
+      expect(oldListener).not.toHaveBeenCalled()
+      expect(newListener).not.toHaveBeenCalled()
+    } finally { offNew() }
+  })
+})
+
+describe('queued-session unauthorized effect guards', () => {
+  it('still rejects stale 401 but suppresses only its obsolete listener effects', async () => {
+    const listener = vi.fn(), off = onUnauthorized(listener)
+    try {
+      mockFetch(401, { error: { code: 'UNAUTHORIZED' } })
+      await expect(api('/api/auth/logout', { method: 'POST', shouldNotifyUnauthorized: () => false })).rejects.toBeInstanceOf(ApiError)
+      expect(listener).not.toHaveBeenCalled()
+      mockFetch(401, { error: { code: 'UNAUTHORIZED' } })
+      await expect(api('/api/auth/password', { method: 'PUT', shouldNotifyUnauthorized: () => true })).rejects.toBeInstanceOf(ApiError)
+      expect(listener).toHaveBeenCalledOnce()
+    } finally { off() }
+  })
+})

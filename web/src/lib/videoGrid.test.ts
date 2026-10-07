@@ -183,3 +183,7 @@ describe('videoGridSize', () => {
     expect(videoGridSize({ cols: 2, rows: 1, tileWidth: 0, tileHeight: 0 }, 10)).toEqual({ width: 0, height: 0 })
   })
 })
+
+it('returns a bounded fallback for an area too small to produce one whole video pixel', () => {
+  expect(videoGridLayout({ count: 2, width: 0.1, height: 0.1 })).toEqual({ cols: 1, rows: 2, tileWidth: 1, tileHeight: 0, overflow: false })
+})

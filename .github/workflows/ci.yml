@@ -130,11 +130,11 @@ jobs:
       - name: Integration tests (with coverage)
         run: make coverage-go
 
-      # make coverage-go fails below 80 %; the summary and the report are
+      # make coverage-go fails below 98 %; the summary and the report are
       # still published then, so the job summary shows what is missing.
       - name: Coverage summary
         if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
-        run: node scripts/coverage-summary.mjs go coverage.out --min 80 >> "$GITHUB_STEP_SUMMARY"
+        run: node scripts/coverage-summary.mjs go coverage.out --min 98 >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage report
         if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}

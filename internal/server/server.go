@@ -154,18 +154,7 @@ func NewRouter(d Deps) (*Router, error) {
 			}
 			deny()
 			// A home connection's public IP changes; keep the list current.
-			go func() {
-				t := time.NewTicker(denyRefresh)
-				defer t.Stop()
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case <-t.C:
-						deny()
-					}
-				}
-			}()
+			go refreshPreviewDeny(ctx, denyRefresh, deny)
 		}
 		previewH = &linkpreview.Handler{Fetcher: fetcher}
 	}
@@ -249,6 +238,21 @@ func NewRouter(d Deps) (*Router, error) {
 
 	r.Handle("/*", web.Handler())
 	return &Router{Handler: r, Hub: hub, cancel: cancel}, nil
+}
+
+// refreshPreviewDeny keeps the server's changing public address excluded from
+// link previews until the router closes.
+func refreshPreviewDeny(ctx context.Context, interval time.Duration, deny func()) {
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			deny()
+		}
+	}
 }
 
 // Health is the response of GET /api/health.

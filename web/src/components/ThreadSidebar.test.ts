@@ -463,3 +463,17 @@ describe('ThreadSidebar complete interactions', () => {
     expect(useToastStore().toasts.at(-1)?.text).toBe(t('chat.messageNotFound'))
   })
 })
+
+it('marks a reply mentioning the signed-in member', async () => {
+  const chat = setup()
+  chat.threadReplies = [msg('mentioned', 'u2', { mentions: ['me'] })]
+  await nextTick()
+  expect(w.get('[data-reply-id="mentioned"]').classes()).toContain('msg-mentions-me')
+})
+
+it('does not scroll a thread panel that closes before its initial scroll tick', async () => {
+  setup()
+  w.unmount()
+  await nextTick()
+  expect(document.querySelector('[data-reply-id]')).toBeNull()
+})

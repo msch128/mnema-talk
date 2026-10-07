@@ -632,9 +632,19 @@ export const useVoiceStore = defineStore('voice', () => {
         delete next[channel_id]
         roomStartedAt.value = next
       }
-      delete speakingUsers.value[user_id]
-      removeUserVideoStream(user_id)
-      handleMediaState({ user_id })
+      // A delayed departure from another room must not clear this room's
+      // receiver streams or speaking state for a participant who moved here.
+      const leavesCurrentRoom = currentChannelId.value === channel_id
+      const mediaChannelId = mediaState.value[user_id]?.channel_id
+      if (leavesCurrentRoom || !currentChannelId.value) {
+        delete speakingUsers.value[user_id]
+        removeUserVideoStream(user_id)
+      }
+      // Publication snapshots cover every room. Only retire the publication
+      // named by this departure, or a current-room share without a snapshot.
+      if (mediaChannelId === channel_id || (!mediaChannelId && (leavesCurrentRoom || !currentChannelId.value))) {
+        handleMediaState({ user_id })
+      }
       if (currentChannelId.value === channel_id && myId && user_id !== myId) {
         playSoundEffect('user_leave')
       }

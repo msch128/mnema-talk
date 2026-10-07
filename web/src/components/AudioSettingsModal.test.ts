@@ -336,3 +336,17 @@ describe('AudioSettingsModal device selection', () => {
     wrapper.unmount()
   })
 })
+
+it('explains system output routing when the browser has no device selection API', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'setSinkId')
+  Reflect.deleteProperty(HTMLMediaElement.prototype, 'setSinkId')
+  try {
+    setActivePinia(createPinia())
+    const w = mount(AudioSettingsModal, mountOpts)
+    expect(w.find('[data-testid="output-device"]').exists()).toBe(false)
+    expect(w.text()).toContain(t('audio.outputDeviceUnsupported'))
+    w.unmount()
+  } finally {
+    if (descriptor) Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', descriptor)
+  }
+})

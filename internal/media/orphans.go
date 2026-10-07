@@ -109,7 +109,12 @@ func StartOrphanScan(ctx context.Context, p *db.Pool, store Store) {
 	if store == nil {
 		return
 	}
-	go runPeriodically(ctx, orphanScanFirstRun, retentionInterval, func(ctx context.Context) {
+	go runPeriodically(ctx, orphanScanFirstRun, retentionInterval, orphanScanTask(p, store))
+}
+
+// orphanScanTask reports scan results without coupling the scan to its timer.
+func orphanScanTask(p *db.Pool, store Store) func(context.Context) {
+	return func(ctx context.Context) {
 		o, err := FindOrphans(ctx, p, store, false)
 		if err != nil {
 			slog.Warn("orphaned media scan failed", "err", err)
@@ -118,5 +123,5 @@ func StartOrphanScan(ctx context.Context, p *db.Pool, store Store) {
 		if o.Count > 0 {
 			slog.Warn("orphaned media objects found; an admin can remove them with POST /api/admin/media/orphans/cleanup", "count", o.Count, "bytes", o.Bytes)
 		}
-	})
+	}
 }

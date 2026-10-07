@@ -19,6 +19,14 @@ const escape = (node = document.body) => {
 afterEach(() => { document.body.innerHTML = '' })
 
 describe('useDismissable', () => {
+  it('supports a render environment without a document and permits stopping twice', () => {
+    vi.stubGlobal('document', undefined)
+    try {
+      const dismissable = useDismissable(null, vi.fn())
+      dismissable.stop()
+      dismissable.stop()
+    } finally { vi.unstubAllGlobals() }
+  })
   it('falls back to target containment when composedPath is absent or empty', () => {
     const root = el()
     const child = document.createElement('span')

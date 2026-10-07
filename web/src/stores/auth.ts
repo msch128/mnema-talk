@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { api, onUnauthorized } from '../lib/api'
+import { ref, computed, onScopeDispose } from 'vue'
+import { api, ApiError, onUnauthorized } from '../lib/api'
 import { decodeUser, decodeUserEnvelope, type User, type Locale } from '../types/domain'
 import { isRecord } from '../types/validation'
-import { setLocale, browserLocale, explicitLocale, SUPPORTED, isSupportedLocale } from '../i18n'
+import { t, setLocale, browserLocale, explicitLocale, SUPPORTED, isSupportedLocale } from '../i18n'
 
 // The session is an HttpOnly cookie set by the server; this store only keeps
 // the current user. Nothing secret is ever stored in localStorage.
@@ -12,9 +12,60 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!user.value)
   const isAdmin = computed(() => user.value?.role === 'admin')
 
-  // Any 401 (expired or revoked session) drops back to the login screen.
-  onUnauthorized(() => {
-    user.value = null
+  // A response belongs to the session that started its request. Rotating
+  // listeners also makes old requests' captured 401 callbacks harmless.
+  let sessionGeneration = 0
+  let unauthorizedGeneration: number | null = null
+  let localeRevision = 0
+  let cookieRequests: Promise<void> = Promise.resolve()
+  let cookieAccountId: string | null | undefined
+  let removeUnauthorized: () => boolean = () => false
+
+  function advanceSession() {
+    sessionGeneration++
+    unauthorizedGeneration = null
+    removeUnauthorized()
+    const generation = sessionGeneration
+    removeUnauthorized = onUnauthorized(() => {
+      // api invokes a request snapshot only while this exact callback is
+      // still registered; every generation change removes it synchronously.
+      advanceSession()
+      unauthorizedGeneration = generation
+      user.value = null
+    })
+    return sessionGeneration
+  }
+
+  function sessionSnapshot() {
+    return { generation: sessionGeneration, userId: user.value?.id ?? null }
+  }
+
+  function isCurrentSession(snapshot: ReturnType<typeof sessionSnapshot>) {
+    return snapshot.generation === sessionGeneration && snapshot.userId === (user.value?.id ?? null)
+  }
+
+  function clearMismatchedCookieAccount(session: ReturnType<typeof sessionSnapshot>) {
+    // An earlier queued sign-in may have set a different cookie while its
+    // UI result was superseded. A failed newest intent must not retain the
+    // previous account's UI; a fresh /me can establish the actual session.
+    if (isCurrentSession(session) && cookieAccountId !== undefined && cookieAccountId !== session.userId) {
+      advanceSession()
+      user.value = null
+    }
+  }
+
+  // Cookie-changing responses must arrive in invocation order too: a late
+  // logout must not clear a newer login's HttpOnly cookie.
+  function queueCookieRequest<T>(request: () => Promise<T>): Promise<T> {
+    const pending = cookieRequests.then(request)
+    cookieRequests = pending.then(() => {}, () => {})
+    return pending
+  }
+
+  advanceSession()
+  onScopeDispose(() => {
+    sessionGeneration++
+    removeUnauthorized()
   })
 
   // Remove the token kept by earlier versions of the app.
@@ -31,35 +82,72 @@ export const useAuthStore = defineStore('auth', () => {
    * blip never logs anyone out.
    */
   async function checkAuth() {
+    const session = sessionSnapshot()
     try {
-      user.value = await api('/api/auth/me', { decode: decodeUser })
+      await cookieRequests
+      if (!isCurrentSession(session)) return null
+      const currentUser = await api('/api/auth/me', { decode: decodeUser, shouldNotifyUnauthorized: () => isCurrentSession(session) })
+      if (!isCurrentSession(session)) return null
+      cookieAccountId = currentUser.id
+      if (currentUser.id !== session.userId) advanceSession()
+      user.value = currentUser
       applyAccountLocale()
       return true
     } catch (err) {
       if (isRecord(err) && err['status'] === 401) {
-        user.value = null
-        return false
+        // api already invalidated the current generation before rejecting.
+        return unauthorizedGeneration === session.generation && sessionGeneration === session.generation + 1
+          ? false : null
       }
       return null
     }
   }
 
   async function login(username: string, password: string) {
-    const data = await api('/api/auth/login', { method: 'POST', json: { username, password }, decode: decodeUserEnvelope })
-    user.value = data.user
-    applyAccountLocale()
-    return data.user
+    advanceSession()
+    const session = sessionSnapshot()
+    return queueCookieRequest(async () => {
+      try {
+        const data = await api('/api/auth/login', {
+          method: 'POST', json: { username, password }, decode: decodeUserEnvelope
+        })
+        cookieAccountId = data.user.id
+        if (isCurrentSession(session)) {
+          advanceSession()
+          user.value = data.user
+          applyAccountLocale()
+        }
+        return data.user
+      } catch (err) {
+        clearMismatchedCookieAccount(session)
+        throw err
+      }
+    })
   }
 
   async function register(username: string, displayName: string, password: string, inviteCode: string) {
-    const data = await api('/api/auth/register', {
-      method: 'POST',
-      decode: decodeUserEnvelope,
-      json: { username, display_name: displayName, password, invite_code: inviteCode }
+    advanceSession()
+    const session = sessionSnapshot()
+    return queueCookieRequest(async () => {
+      try {
+        const data = await api('/api/auth/register', {
+          method: 'POST',
+          decode: decodeUserEnvelope,
+          shouldNotifyUnauthorized: () => isCurrentSession(session),
+          json: { username, display_name: displayName, password, invite_code: inviteCode }
+        })
+        cookieAccountId = data.user.id
+        if (isCurrentSession(session)) {
+          advanceSession()
+          user.value = data.user
+          applyAccountLocale()
+        }
+        return data.user
+      } catch (err) {
+        clearMismatchedCookieAccount(session)
+        throw err
+      }
     })
-    user.value = data.user
-    applyAccountLocale()
-    return data.user
   }
 
   /**
@@ -82,53 +170,77 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
-  async function saveLocale(l: Locale) {
-    user.value = await api('/api/users/me/locale', { method: 'PUT', json: { locale: l }, decode: decodeUser })
-    return user.value
+  async function saveLocale(l: Locale, revision = ++localeRevision) {
+    const session = sessionSnapshot()
+    const currentUser = await api('/api/users/me/locale', { method: 'PUT', json: { locale: l }, decode: decodeUser })
+    if (isCurrentSession(session) && currentUser.id === session.userId && revision === localeRevision) user.value = currentUser
+    return currentUser
   }
 
   /** Language switcher in the account menu. */
   async function changeLocale(l: Locale) {
     if (!SUPPORTED.includes(l)) return
+    const session = sessionSnapshot()
+    const revision = ++localeRevision
     const previous = user.value?.locale
     setLocale(l)
     try {
-      await saveLocale(l)
+      await saveLocale(l, revision)
     } catch (err) {
-      if (typeof previous === 'string' && isSupportedLocale(previous)) setLocale(previous)
+      if (isCurrentSession(session) && revision === localeRevision && typeof previous === 'string' && isSupportedLocale(previous)) setLocale(previous)
       throw err
     }
   }
 
   async function uploadAvatar(file: File) {
+    const session = sessionSnapshot()
     const form = new FormData()
     form.append('avatar', file)
-    user.value = await api('/api/users/me/avatar', { method: 'POST', form, decode: decodeUser })
-    return user.value
+    const currentUser = await api('/api/users/me/avatar', { method: 'POST', form, decode: decodeUser })
+    if (isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
   }
 
   async function updateProfile({ displayName, bio }: { displayName: string; bio: string }) {
-    user.value = await api('/api/users/me/profile', {
+    const session = sessionSnapshot()
+    const currentUser = await api('/api/users/me/profile', {
       method: 'PUT',
       decode: decodeUser,
       json: { display_name: displayName, bio }
     })
-    return user.value
+    if (isCurrentSession(session) && currentUser.id === session.userId) user.value = currentUser
+    return currentUser
   }
 
   async function changePassword(currentPassword: string, newPassword: string) {
-    await api('/api/auth/password', {
-      method: 'PUT',
-      json: { current_password: currentPassword, new_password: newPassword }
+    const requestedSession = sessionSnapshot()
+    await queueCookieRequest(async () => {
+      // An earlier queued login may have changed the cookie's account. Never
+      // send this account's password change against a replacement session.
+      if (!isCurrentSession(requestedSession) || (cookieAccountId !== undefined && cookieAccountId !== requestedSession.userId)) {
+        throw new ApiError(401, 'UNAUTHORIZED', t('errors.code.UNAUTHORIZED'))
+      }
+      advanceSession()
+      const session = sessionSnapshot()
+      await api('/api/auth/password', {
+        method: 'PUT',
+        shouldNotifyUnauthorized: () => isCurrentSession(session),
+        json: { current_password: currentPassword, new_password: newPassword }
+      })
+      if (isCurrentSession(session)) advanceSession()
     })
   }
 
   async function logout() {
-    try {
-      await api('/api/auth/logout', { method: 'POST' })
-    } finally {
-      user.value = null
-    }
+    advanceSession()
+    user.value = null
+    const session = sessionSnapshot()
+    await queueCookieRequest(async () => {
+      await api('/api/auth/logout', {
+        method: 'POST', shouldNotifyUnauthorized: () => isCurrentSession(session)
+      })
+      cookieAccountId = null
+    })
   }
 
   return {

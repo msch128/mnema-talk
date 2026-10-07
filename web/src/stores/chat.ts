@@ -71,6 +71,13 @@ export const useChatStore = defineStore('chat', () => {
 
   // Community members & real-time presence
   const members = ref<User[]>([])
+  let membersFetchSeq = 0
+  let memberRevision = 0
+  // A disable event wins over requests already in flight. A later active-only
+  // roster may restore someone re-enabled while this client was disconnected.
+  const disabledMembers = new Map<string, number>()
+  const suppressedPresence = new Map<string, Presence>()
+  const memberProfileUpdates = new Map<string, { revision: number; user: User }>()
   // Live status of every connected user: user_id → online | away | dnd | focus.
   const presenceById = ref<Record<string, Presence>>({})
   const onlineUserIds = computed(() => new Set(Object.keys(presenceById.value)))
@@ -105,6 +112,8 @@ export const useChatStore = defineStore('chat', () => {
   // Thread to open once the jump to its root message has landed (search / notification targets).
   let pendingThreadOpen: { rootId: string; channelId: string } | null = null
 
+  let socketGeneration = 0
+  let reconnectCheckSeq = 0
   let pingTimer: Timer | undefined
   let reconnectTimer: Timer | undefined
   let reconnectDelay = 1000
@@ -119,7 +128,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   const allChannels = computed(() => [
-    ...categories.value.flatMap(c => c.channels || []),
+    ...categories.value.flatMap(c => c.channels),
     ...uncategorized.value
   ])
 
@@ -133,7 +142,7 @@ export const useChatStore = defineStore('chat', () => {
   // resolves once the latest one is applied, so whoever awaits it (e.g. the
   // sidebar before it drops its pending order) never sees the older list.
   let channelsFetchSeq = 0
-  let latestChannelsFetch: Promise<void> | null = null
+  let latestChannelsFetch: Promise<void> = Promise.resolve()
 
   function fetchChannels(): Promise<void> {
     const fetching = loadChannels(++channelsFetchSeq)
@@ -144,9 +153,9 @@ export const useChatStore = defineStore('chat', () => {
   async function loadChannels(seq: number): Promise<void> {
     try {
       const data = await api('/api/channels', { decode: decodeChannelHierarchy })
-      if (seq !== channelsFetchSeq) return latestChannelsFetch ?? undefined
-      categories.value = data.categories || []
-      uncategorized.value = data.uncategorized || []
+      if (seq !== channelsFetchSeq) return latestChannelsFetch
+      categories.value = data.categories
+      uncategorized.value = data.uncategorized
 
       const activeId = activeChannel.value?.id
       const fresh = activeId && allChannels.value.find(c => c.id === activeId)
@@ -171,9 +180,30 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  function confirmActiveMember(id: string) {
+    disabledMembers.delete(id)
+    const presence = suppressedPresence.get(id)
+    if (presence) presenceById.value = applyPresenceUpdate(presenceById.value, { user_id: id, status: presence })
+    suppressedPresence.delete(id)
+  }
+
   async function fetchMembers() {
+    const seq = ++membersFetchSeq
+    const revision = memberRevision
     try {
-      members.value = await api('/api/members', { decode: decodeMembers })
+      const data = await api('/api/members', { decode: decodeMembers })
+      if (seq !== membersFetchSeq) return
+      members.value = data.filter(member => {
+        const disabledAt = disabledMembers.get(member.id)
+        if (disabledAt !== undefined && disabledAt > revision) return false
+        // This request started after the disable event. Since the server only
+        // returns active accounts, presence here confirms a later re-enable.
+        confirmActiveMember(member.id)
+        return true
+      }).map(member => {
+        const latest = memberProfileUpdates.get(member.id)
+        return latest && latest.revision > revision ? { ...member, ...latest.user } : member
+      })
     } catch (e) {
       console.error('Failed to fetch members:', e)
     }
@@ -478,8 +508,8 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread })
       if (gen !== threadGen || activeThread.value?.id !== id) return
-      activeThread.value = data.root || (typeof msg === 'object' ? msg : { id })
-      threadReplies.value = Array.isArray(data.replies) ? data.replies : []
+      activeThread.value = data.root
+      threadReplies.value = data.replies
     } catch (e) {
       if (gen === threadGen) console.error('Failed to load thread:', e)
     } finally {
@@ -541,7 +571,12 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function attemptReconnect() {
+    const accountId = authStore.user?.id
+    if (!accountId) return
+    const generation = socketGeneration
+    const check = ++reconnectCheckSeq
     const signedIn = await authStore.checkAuth()
+    if (generation !== socketGeneration || check !== reconnectCheckSeq || authStore.user?.id !== accountId) return
     if (signedIn === true) initWebSocket()
     else if (signedIn === null) scheduleReconnect() // server unreachable: keep trying
     // false: the session is gone; the login screen takes over.
@@ -576,14 +611,19 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function initWebSocket() {
-    if (ws.value || !authStore.isAuthenticated) return
+    const accountId = authStore.user?.id
+    if (ws.value || !accountId) return
+    const generation = ++socketGeneration
     installGlobalSearch()
 
     // The session cookie authenticates the upgrade; no token in the URL.
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const socket = new WebSocket(`${protocol}//${window.location.host}/api/ws`)
 
+    const currentSocket = () => ws.value === socket && socketGeneration === generation
+    const currentAccount = () => authStore.user?.id === accountId
     socket.onopen = () => {
+      if (!currentSocket() || !currentAccount()) return
       isConnected.value = true
       wasConnected.value = true
       reconnectAttempt.value = 0
@@ -598,6 +638,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     socket.onmessage = event => {
+      if (!currentSocket() || !currentAccount()) return
       try {
         const decoded = decodeServerEvent(JSON.parse(event.data))
         if (decoded) handleWSEvent(decoded)
@@ -607,10 +648,12 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     socket.onclose = () => {
+      if (!currentSocket()) return
+      suppressedPresence.clear()
       isConnected.value = false
       stopPingHeartbeat()
       ws.value = null
-      if (!authStore.isAuthenticated) return
+      if (!currentAccount()) return
       // Exponential backoff; a revoked session (401) stops the loop.
       scheduleReconnect()
     }
@@ -619,6 +662,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   function closeWebSocket() {
+    ++socketGeneration
+    suppressedPresence.clear()
     uninstallGlobalSearch()
     hadConnection = false
     wasConnected.value = false
@@ -633,20 +678,31 @@ export const useChatStore = defineStore('chat', () => {
     isConnected.value = false
   }
 
-  // Author fields that messages and reply previews carry a copy of.
-  const AUTHOR_FIELDS = ['avatar_url', 'display_name'] as const
-
   function updateUserEverywhere(updated: UserUpdate) {
     if (!updated?.id) return
-    const idx = members.value.findIndex(m => m.id === updated.id)
-    const existing = members.value[idx]
-    if (existing) members.value[idx] = { ...existing, ...updated }
-    // Only fields the update carries: a partial one (e.g. {id, disabled})
-    // must not blank the names and avatars.
-    const fields = AUTHOR_FIELDS.filter(f => f in updated)
-    if (fields.length) {
+    const revision = ++memberRevision
+    if ('disabled' in updated) {
+      if (updated.disabled) {
+        disabledMembers.set(updated.id, revision)
+        suppressedPresence.delete(updated.id)
+        members.value = members.value.filter(member => member.id !== updated.id)
+        presenceById.value = applyPresenceUpdate(presenceById.value, { user_id: updated.id, status: 'offline' })
+      } else {
+        confirmActiveMember(updated.id)
+        fetchMembers()
+      }
+    } else {
+      memberProfileUpdates.set(updated.id, { revision, user: updated })
+      const idx = members.value.findIndex(member => member.id === updated.id)
+      const existing = members.value[idx]
+      // Profiles do not establish membership. Registration uses member_joined,
+      // and re-enabling uses the authoritative active-member roster above.
+      if (existing) members.value[idx] = { ...existing, ...updated }
+    }
+    // Disabled updates carry no author fields; full profiles always carry a name.
+    if (!('disabled' in updated)) {
       const copy = (target: { avatar_url?: string; display_name?: string }) => {
-        if ('display_name' in updated) target.display_name = updated.display_name
+        target.display_name = updated.display_name
         if ('avatar_url' in updated && updated.avatar_url !== undefined) target.avatar_url = updated.avatar_url
       }
       for (const list of loadedLists()) {
@@ -677,7 +733,7 @@ export const useChatStore = defineStore('chat', () => {
 
   // Keep "replied to" previews in sync with their original message.
   function onOriginalEdited(original: Message) {
-    if (original?.id) markPreviewEdited(loadedLists(), original)
+    markPreviewEdited(loadedLists(), original)
   }
 
   function onOriginalDeleted(id: string) {
@@ -703,12 +759,25 @@ export const useChatStore = defineStore('chat', () => {
         useAppVersionStore().setUpdating(p?.version)
         break
 
-      case 'presence_snapshot':
-        presenceById.value = snapshotToMap(p)
+      case 'presence_snapshot': {
+        const snapshot = snapshotToMap(p)
+        for (const id of disabledMembers.keys()) {
+          const presence = snapshot[id]
+          if (presence) suppressedPresence.set(id, presence)
+          else suppressedPresence.delete(id)
+          delete snapshot[id]
+        }
+        presenceById.value = snapshot
         break
+      }
 
       case 'presence_update':
-        presenceById.value = applyPresenceUpdate(presenceById.value, p)
+        if (p && disabledMembers.has(p.user_id)) {
+          if (p.status === 'offline') suppressedPresence.delete(p.user_id)
+          else suppressedPresence.set(p.user_id, p.status)
+        } else {
+          presenceById.value = applyPresenceUpdate(presenceById.value, p)
+        }
         break
 
       case 'member_joined':
@@ -799,7 +868,7 @@ export const useChatStore = defineStore('chat', () => {
         break
 
       case 'message_reaction':
-        if (p?.message_id) applyToMessage(p.message_id, m => { m.reactions = p.reactions || [] })
+        if (p?.message_id) applyToMessage(p.message_id, m => { m.reactions = p.reactions })
         break
 
       case 'webrtc_offer':
@@ -989,17 +1058,13 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const data = await api('/api/read-state', { decode: decodeReadStates })
       const map: Record<string, ReadState> = {}
-      if (Array.isArray(data)) {
-        for (const item of data) {
-          if (item.channel_id) {
-            map[item.channel_id] = {
-              channel_id: item.channel_id,
-              unread_count: item.unread_count || 0,
-              mention_count: item.mention_count || 0,
-              last_read_at: item.last_read_at || null,
-              notify_level: item.notify_level || 'all'
-            }
-          }
+      for (const item of data) {
+        map[item.channel_id] = {
+          channel_id: item.channel_id,
+          unread_count: item.unread_count || 0,
+          mention_count: item.mention_count || 0,
+          last_read_at: item.last_read_at || null,
+          notify_level: item.notify_level
         }
       }
       readStates.value = map
@@ -1050,9 +1115,9 @@ export const useChatStore = defineStore('chat', () => {
   // Catch up after the tab becomes visible again, a jump to the present or a
   // read-state refresh: clears whatever piled up while nobody was looking.
   function markActiveChannelReadIfReading() {
-    if (!isReadingActiveChannel()) return
-    const id = activeChannel.value?.id
-    if (!id) return
+    const channel = activeChannel.value
+    if (!channel || !isReadingActiveChannel()) return
+    const id = channel.id
     const st = readStates.value[id]
     if (st && (st.unread_count > 0 || st.mention_count > 0)) markReadThrottled.call(id)
   }
@@ -1169,8 +1234,9 @@ export const useChatStore = defineStore('chat', () => {
       clearTimeout(typingTimers.get(key))
       typingTimers.delete(key)
     }
-    if (typingByChannel.value[channelId]) {
-      const list = (typingByChannel.value[channelId] ?? []).filter(u => u.user_id !== userId)
+    const current = typingByChannel.value[channelId]
+    if (current) {
+      const list = current.filter(u => u.user_id !== userId)
       typingByChannel.value = {
         ...typingByChannel.value,
         [channelId]: list
@@ -1236,13 +1302,14 @@ export const useChatStore = defineStore('chat', () => {
     const userId = userOrMessage?.user_id || userOrMessage?.id
     if (!userId) return
     const known = members.value.find(m => m.id === userId)
+    const createdAt = userOrMessage.created_at || known?.created_at
     selectedUserProfile.value = {
       id: userId,
       username: userOrMessage.username || known?.username || '',
       display_name: userOrMessage.display_name || known?.display_name || userOrMessage.username || '',
       avatar_url: userOrMessage.avatar_url || known?.avatar_url || '',
       role: userOrMessage.role || known?.role || 'user',
-      ...(userOrMessage.created_at || known?.created_at ? { created_at: userOrMessage.created_at || known?.created_at || '' } : {})
+      ...(createdAt ? { created_at: createdAt } : {})
     }
     try {
       const full = await api(`/api/users/${userId}`, { decode: decodeUser })

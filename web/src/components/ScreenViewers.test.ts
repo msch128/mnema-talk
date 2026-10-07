@@ -141,3 +141,12 @@ describe('ScreenViewers identity fallback', () => {
     w.unmount()
   })
 })
+
+it('opens the zero-viewer popover for an own share', async () => {
+  seed([])
+  const w = mountViewers({ showZero: true })
+  await w.get('[data-testid="screen-viewers-button"]').trigger('click')
+  expect(w.get('[data-testid="screen-viewers-list"]').text()).toBe('Nobody is watching yet')
+  expect(w.find('ul').exists()).toBe(false)
+  w.unmount()
+})

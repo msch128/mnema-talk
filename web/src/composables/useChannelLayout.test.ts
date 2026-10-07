@@ -170,6 +170,30 @@ describe('rollback', () => {
 })
 
 describe('serialized saves', () => {
+  it('keeps the latest overlay when an older refetch completes during a newer save', async () => {
+    const { layout, commit, saving } = setup()
+    const fetch = chat.fetchChannels.bind(chat)
+    const refetches: (() => Promise<void>)[] = []
+    vi.spyOn(chat, 'fetchChannels').mockImplementation(() => new Promise<void>((resolve, reject) => {
+      refetches.push(async () => { try { await fetch(); resolve() } catch (error) { reject(error) } })
+    }))
+    const first = commit(moveChannel(layout.value, 'a2', 'A', 0))
+    await answerPut()
+    await first
+    expect(refetches).toHaveLength(1)
+    const second = commit(moveCategory(layout.value, 'B', 0))
+    expect(saving.value).toBe(true)
+    await required(refetches.shift())()
+    await flush()
+    expect(shape(layout.value)).toBe('u1 | B: b1 | A: a2 a1')
+    expect(saving.value).toBe(true)
+    await answerPut()
+    await second
+    await required(refetches.shift())()
+    await flush()
+    expect(shape(layout.value)).toBe('u1 | B: b1 | A: a2 a1')
+    expect(saving.value).toBe(false)
+  })
   it('keeps one save in flight and sends only the latest queued layout next', async () => {
     const { layout, commit } = setup()
     const first = commit(moveChannel(layout.value, 'a2', 'A', 0), { toast: 'eins' })

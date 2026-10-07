@@ -459,3 +459,7 @@ describe('optional layout data and default hit positions', () => {
     expect(resolveChannelDrop(tree(), 'u1', { zone: 'end', id: 'C' }, { isCollapsed: () => true })).toMatchObject({ categoryId: 'C', gap: 0, indicator: { key: 'header:C', edge: 'inside' } })
   })
 })
+
+it('moves a channel into an uncategorized drop gap', () => {
+  expect(shape(moveChannelToGap(tree(), 'a1', null, 1))).toBe('u1 a1 u2 | A: a2 a3 | B: b1 | C:')
+})

@@ -20,7 +20,7 @@ const sparklinePoints = computed(() => {
   const height = 50
   const min = Math.max(0, Math.min(...history) - 2)
   const max = Math.max(...history, min + 5)
-  const range = max - min || 1
+  const range = max - min
   return history
     .map((val, idx) => {
       const x = (idx / (history.length - 1)) * width

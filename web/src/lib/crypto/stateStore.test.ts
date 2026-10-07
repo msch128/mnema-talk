@@ -474,3 +474,22 @@ describe('cryptographic state persistence boundaries', () => {
     expect(await open()).toBeDefined()
   })
 })
+
+describe('cryptographic establishment close races', () => {
+  it('does not activate a persisted context when the store closes on its committing transaction completion', async () => {
+    const original = IDBDatabase.prototype.transaction
+    vi.spyOn(IDBDatabase.prototype, 'transaction').mockImplementation(function (this: IDBDatabase, ...args: Parameters<typeof original>) {
+      const tx = original.apply(this, args)
+      if (args[1] === 'readwrite') tx.addEventListener('complete', () => { void store?.close() }, { once: true })
+      return tx
+    })
+    const store = await open()
+    await expect(establish(store)).rejects.toMatchObject({ code: 'store-closed' })
+    await store.close()
+    vi.restoreAllMocks()
+    const reopened = await open()
+    const saved = requireState(await reopened.loadState('group'))
+    expect(saved.revision).toBe(1)
+    await expect(reopened.commitSend(send(saved))).rejects.toMatchObject({ code: 'fresh-context-required' })
+  })
+})

@@ -26,6 +26,8 @@ type Hub struct {
 	mu      sync.RWMutex
 	closed  bool // guarded by mu; shutdown rejects further registrations
 	clients map[*Client]struct{}
+	// pending handshakes can be revoked, but receive no events or presence.
+	pending map[*Client]struct{}
 	online  map[uuid.UUID]int
 	// chosen is the presence each connected user picked (online, away, dnd, focus).
 	chosen map[uuid.UUID]string
@@ -78,6 +80,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		SFU:      voiceSFU,
 		Origins:  origins,
 		clients:  map[*Client]struct{}{},
+		pending:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
 		chosen:   map[uuid.UUID]string{},
 		profiles: map[uuid.UUID]auth.User{},

@@ -107,9 +107,19 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
-	if !h.register(c) {
+	if !h.registerPending(c) {
 		c.shutdown()
 		c.close()
+		return
+	}
+	// Revocation can finish between the first check and the upgrade. Track
+	// this socket before checking again so a later revocation also cancels
+	// admission. Never hold the hub lock while consulting the database.
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	fresh, freshTV, err := h.Sessions.AuthenticateRequest(r.WithContext(ctx))
+	cancel()
+	if err != nil || fresh == nil || fresh.ID != user.ID || freshTV != tv || !h.registerVerified(c, fresh) {
+		h.cancelPending(c)
 		return
 	}
 	go c.writePump()
@@ -122,11 +132,43 @@ func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
 	return tv, err
 }
 
-func (h *Hub) register(c *Client) bool {
+func (h *Hub) registerPending(c *Client) bool {
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	if h.closed {
+		return false
+	}
+	h.pending[c] = struct{}{}
+	return true
+}
+
+func (h *Hub) cancelPending(c *Client) {
+	h.mu.Lock()
+	delete(h.pending, c)
+	c.shutdown()
+	h.mu.Unlock()
+	c.close()
+}
+
+func (h *Hub) register(c *Client) bool {
+	return h.registerVerified(c, nil)
+}
+
+// A fresh user promotes an existing pending handshake atomically. The nil
+// case registers the in-memory clients used by internal hub callers.
+func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
+	h.mu.Lock()
+	if h.closed || c.closed.Load() {
 		h.mu.Unlock()
 		return false
+	}
+	if fresh != nil {
+		if _, ok := h.pending[c]; !ok {
+			h.mu.Unlock()
+			return false
+		}
+		delete(h.pending, c)
+		c.User = *fresh
 	}
 	before := h.statusLocked(c.User.ID)
 	h.clients[c] = struct{}{}
@@ -176,6 +218,10 @@ func (h *Hub) Close() {
 	h.closed = true
 	clients := make([]*Client, 0, len(h.clients))
 	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	for c := range h.pending {
+		delete(h.pending, c)
 		clients = append(clients, c)
 	}
 	for key, grace := range h.grace {
