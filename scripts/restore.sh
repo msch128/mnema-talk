@@ -54,12 +54,12 @@ cleanup_restore() {
   storage_ready=true
   if [ "$mutated" = false ] || [ "$status" = 0 ]; then
     if [ "$seaweed_resume" = true ]; then
-      if ! docker compose start --wait seaweedfs >/dev/null; then
+      if ! service_start seaweedfs; then
         status=1 storage_ready=false
         echo 'seaweedfs did not resume; app remains stopped' >&2
       fi
     fi
-    if [ "$app_resume" = true ] && [ "$storage_ready" = true ]; then docker compose start --wait app >/dev/null || status=1; fi
+    if [ "$app_resume" = true ] && [ "$storage_ready" = true ]; then service_start app || status=1; fi
   else
     echo 'restore failed after mutation: services remain stopped; resolve or restore a complete backup before starting' >&2
   fi

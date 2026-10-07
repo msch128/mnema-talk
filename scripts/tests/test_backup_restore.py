@@ -19,6 +19,7 @@ with open(os.environ['FAKE_LOG'],'a') as f: f.write(json.dumps(args)+'\n')
 def done(code=0): p.write_text(json.dumps(state)); sys.exit(code)
 if args[:2]==['compose','config']: print('services: {}'); done()
 if args[:2]==['compose','ps']: print(args[-1]); done()
+if args[0]=='inspect' and 'Health' in args[2]: print('healthy' if state.get(args[-1],False) else 'false'); done()
 if args[0]=='inspect': print(str(state.get(args[-1],False)).lower() if args[2]=='{{.State.Running}}' else 'sha256:fixture'); done()
 if args[:2]==['compose','stop']:
  if os.environ.get('FAIL_AT')=='stop': done(1)
