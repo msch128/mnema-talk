@@ -23,7 +23,9 @@ const (
 )
 
 type Channel struct {
-	ID         uuid.UUID   `json:"id" format:"uuid"`
+	ID uuid.UUID `json:"id" format:"uuid"`
+	// Number is the channel's short, stable link number (/c/12-general).
+	Number     int64       `json:"number"`
 	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" extensions:"x-nullable"`
 	Name       string      `json:"name" maxLength:"64"`
 	Type       ChannelType `json:"type"`
@@ -64,7 +66,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	}
 
 	chanRows, err := p.Query(ctx, `
-		SELECT id, category_id, name, type, topic, sort_order, created_at
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at
 		FROM channels ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query channels: %w", err)
@@ -74,7 +76,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt); err != nil {
 			return nil, nil, err
 		}
 		if ch.CategoryID != nil {
@@ -128,9 +130,9 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 	var ch Channel
 	err = p.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, category_id, name, type, topic, sort_order, created_at`,
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at`,
 		categoryID, name, chType, topic, sortOrder).
-		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -203,8 +205,8 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 	err := p.QueryRow(ctx, `
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic)
 		WHERE id = $1
-		RETURNING id, category_id, name, type, topic, sort_order, created_at`, id, name, topic).
-		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at`, id, name, topic).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errChannelNotFound
 	}
@@ -338,9 +340,9 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 
 		err = tx.QueryRow(ctx, `
 			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, category_id, name, type, topic, sort_order, created_at`,
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at`,
 			src.CategoryID, src.Name, src.Type, src.Topic, newOrder).
-			Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
 		if err != nil {
 			return fmt.Errorf("duplicate channel: %w", err)
 		}

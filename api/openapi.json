@@ -454,6 +454,10 @@
             "maxLength": 64,
             "type": "string"
           },
+          "number": {
+            "description": "Number is the channel's short, stable link number (/c/12-general).",
+            "type": "integer"
+          },
           "sort_order": {
             "type": "integer"
           },
@@ -470,6 +474,7 @@
           "created_at",
           "id",
           "name",
+          "number",
           "sort_order",
           "topic",
           "type"
@@ -740,6 +745,10 @@
             },
             "type": "array"
           },
+          "number": {
+            "description": "Number is the message's short, stable link number (/m/4821).",
+            "type": "integer"
+          },
           "parent_id": {
             "format": "uuid",
             "type": "string"
@@ -782,6 +791,7 @@
           "is_edited",
           "is_pinned",
           "mentions",
+          "number",
           "reactions",
           "reply_count",
           "updated_at",
@@ -6378,6 +6388,103 @@
         "summary": "List members",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/messages/by-number/{number}": {
+      "get": {
+        "description": "Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.",
+        "operationId": "getMessageByNumber",
+        "parameters": [
+          {
+            "description": "Message number.",
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "Message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a message by its link number",
+        "tags": [
+          "Messages"
         ]
       }
     },
