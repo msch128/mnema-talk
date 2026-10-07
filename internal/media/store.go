@@ -11,6 +11,7 @@ import (
 // Store is the object storage the media package needs. *s3.Client satisfies
 // it in production; MemoryStore backs the tests.
 type Store interface {
+	// Upload stores body; size < 0 means its length is not known up front.
 	Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error
 	// GetObjectFrom streams the object starting at byte offset (for Range requests).
 	GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error)

@@ -80,19 +80,17 @@ services:
       - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
       - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}
       - LEGAL_PROJECT_NOTICE=${LEGAL_PROJECT_NOTICE:-Privates, nicht-kommerzielles Projekt}
-    # The app writes nothing to disk except multipart upload temp files. /tmp
-    # is RAM-backed and counts against mem_limit, so it is capped: keep
-    # APP_TMP_SIZE above MAX_UPLOAD_SIZE_MB times the uploads you expect at
-    # once, and APP_MEM_LIMIT well above APP_TMP_SIZE.
+    # The app writes nothing to disk: uploads stream to S3 in 5 MB parts.
+    # /tmp is a small RAM-backed scratch area, capped like everything else.
     read_only: true
     tmpfs:
-      - /tmp:size=${APP_TMP_SIZE:-1g}
+      - /tmp:size=${APP_TMP_SIZE:-64m}
     # Runs as uid 10001 on unprivileged ports: no capabilities needed.
     cap_drop:
       - ALL
     security_opt:
       - "no-new-privileges:true"
-    mem_limit: ${APP_MEM_LIMIT:-2g}
+    mem_limit: ${APP_MEM_LIMIT:-1g}
     pids_limit: 512
     logging: *default-logging
     healthcheck:

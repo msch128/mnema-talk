@@ -121,8 +121,8 @@ logs at 3 x 10 MB.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `APP_MEM_LIMIT` | `2g` | Memory cap of the app container, including its RAM-backed `/tmp`. |
-| `APP_TMP_SIZE` | `1g` | Size of the app's `/tmp` tmpfs. Uploads above 8 MB are buffered there until they reach S3, so keep it above `MAX_UPLOAD_SIZE_MB` times the uploads you expect at once; a full `/tmp` fails uploads instead of exhausting host RAM. |
+| `APP_MEM_LIMIT` | `1g` | Memory cap of the app container, including its RAM-backed `/tmp`. Uploads stream to S3 in 5 MB parts, so each upload in flight needs about 5 MB, whatever `MAX_UPLOAD_SIZE_MB` is. |
+| `APP_TMP_SIZE` | `64m` | Size of the app's `/tmp` tmpfs (scratch only; uploads no longer pass through it). |
 | `POSTGRES_MEM_LIMIT` | `1g` | Memory cap of PostgreSQL. |
 | `SEAWEEDFS_MEM_LIMIT` | `1g` | Memory cap of SeaweedFS. |
 

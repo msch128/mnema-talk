@@ -109,7 +109,12 @@ func isNotFound(err error) bool {
 	return errors.As(err, &status) && status.HTTPStatusCode() == http.StatusNotFound
 }
 
+// Upload stores body under key. A negative size means the length is not
+// known up front (a streamed upload): the body is then sent in parts.
 func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error {
+	if size < 0 {
+		return uploadStream(ctx, c.client, c.bucket, key, body, mimeType)
+	}
 	_, err := c.client.PutObject(ctx, &s3svc.PutObjectInput{
 		Bucket:        aws.String(c.bucket),
 		Key:           aws.String(key),

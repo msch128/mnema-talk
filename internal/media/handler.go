@@ -26,7 +26,7 @@ import (
 const (
 	MaxAvatarBytes  = 5 << 20
 	maxFilenameLen  = 255
-	multipartMemory = 8 << 20 // larger parts spill to a temp file
+	multipartMemory = 8 << 20 // avatar forms stay in memory (body capped below this)
 )
 
 // Handler serves uploads, media downloads and the admin storage dashboard.
@@ -51,7 +51,9 @@ func (h *Handler) UploadBodyLimit() int64 { return h.MaxUploadBytes + 1<<20 }
 // larger MaxBody than the JSON default.
 func (h *Handler) MountUploads(r chi.Router) {
 	r.Post("/channels/{channelID}/upload", httpx.Handle(h.upload))
-	r.Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
+	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
+	// its body gets a tighter cap than file uploads.
+	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
 }
 
 // Mount registers authenticated media serving.
@@ -166,56 +168,23 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	in, err := readFile(r, "file", h.MaxUploadBytes, allowedMIME, false)
+	in, target, err := h.readUpload(r, chID)
 	if err != nil {
 		return err
-	}
-	defer in.file.Close()
-
-	content, err := chat.ValidateContent(r.FormValue("content"), true)
-	if err != nil {
-		return err
-	}
-	var parentID *uuid.UUID
-	if raw := r.FormValue("parent_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid parent_id")
-		}
-		parentID = &id
-	}
-	var replyToID *uuid.UUID
-	if raw := r.FormValue("reply_to_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid reply_to_id")
-		}
-		replyToID = &id
-	}
-	if err := chat.ValidateTarget(r.Context(), h.DB, chID, parentID, replyToID); err != nil {
-		return err
-	}
-
-	mediaID := uuid.New()
-	key := storageKey("uploads", mediaID, in.mime)
-	if err := h.Store.Upload(r.Context(), key, in.file, in.mime, in.size); err != nil {
-		return fmt.Errorf("store upload: %w", err)
 	}
 
 	msgID, err := chat.InsertMessage(r.Context(), h.DB, h.Online, chat.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: parentID, ReplyToID: replyToID,
+		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
 	}, func(tx pgx.Tx, msgID uuid.UUID) error {
 		_, err := tx.Exec(r.Context(), `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			mediaID, user.ID, chID, msgID, h.Bucket, key, in.filename, in.mime, in.size)
+			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size)
 		return err
 	})
 	if err != nil {
 		// The object must not outlive a failed DB write.
-		if delErr := h.Store.Delete(context.WithoutCancel(r.Context()), key); delErr != nil {
-			slog.Warn("orphaned upload after failed insert", "key", key, "err", delErr)
-		}
+		h.discard(r.Context(), in.key)
 		return fmt.Errorf("record upload: %w", err)
 	}
 	return chat.PublishMessage(w, r, h.DB, h.Events, msgID)

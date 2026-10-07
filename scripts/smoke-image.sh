@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Image smoke test: starts the production docker-compose.yml (app, postgres,
 # SeaweedFS) with a given image and throwaway secrets, then checks the
-# healthcheck, /api/health, an admin login and the session, and tears
+# healthcheck, /api/health, an admin login and the session, a 12 MB upload
+# round trip (streamed to SeaweedFS as a multipart upload), and tears
 # everything down again. Exercises the image, its entrypoint and the compose
 # hardening (read-only root, cap_drop, tmpfs, memory limits) together.
 # Usage: scripts/smoke-image.sh [image]   (default mnema-talk:local; `make smoke`)
@@ -15,6 +16,8 @@ PORT="${SMOKE_PORT:-58090}"
 PROJECT="mnema-smoke"
 ENV_FILE="$(mktemp)"
 COOKIES="$(mktemp)"
+PAYLOAD="$(mktemp)"
+RESTORED="$(mktemp)"
 ADMIN_PASSWORD="smoke-$(openssl rand -hex 8)"
 BASE="http://127.0.0.1:$PORT"
 
@@ -47,7 +50,7 @@ cleanup() {
     "${COMPOSE[@]}" logs --no-color --tail 60 app >&2 || true
   fi
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$ENV_FILE" "$COOKIES"
+  rm -f "$ENV_FILE" "$COOKIES" "$PAYLOAD" "$RESTORED"
   exit "$status"
 }
 trap cleanup EXIT
@@ -70,5 +73,14 @@ case "$me" in
   *'"role":"admin"'*) ;;
   *) echo "unexpected /api/auth/me: $me" >&2; exit 1 ;;
 esac
+
+echo "==> 12 MB upload round trip"
+CHANNEL="$(curl -fsS -b "$COOKIES" "$BASE/api/channels" | jq -r '[.categories[].channels[], .uncategorized[]] | map(select(.type == "text")) | first | .id')"
+head -c $((12 << 20)) /dev/urandom >"$PAYLOAD"
+MEDIA_URL="$(curl -fsS -b "$COOKIES" -H "Origin: $BASE" \
+  -F "file=@$PAYLOAD;filename=big.bin;type=application/octet-stream" \
+  "$BASE/api/channels/$CHANNEL/upload" | jq -r '.attachments[0].url')"
+curl -fsS -b "$COOKIES" "$BASE$MEDIA_URL" -o "$RESTORED"
+cmp -s "$PAYLOAD" "$RESTORED" || { echo "downloaded file differs from the upload" >&2; exit 1; }
 
 echo "==> smoke test passed"
