@@ -1,0 +1,33 @@
+internal/config/transport_test.go
+  s_f5ea48d5e7be05::t_3a3488b798e296 20
+cmd/server/main.go
+  s_f5ea48d5e7be05::t_fb9333e70ba856 92
+internal/config/config_test.go
+  s_f5ea48d5e7be05::t_fb9333e70ba856 354,359-360,363-365,367-373
+internal/config/config.go
+  s_f5ea48d5e7be05::t_cf56138bb3a07d 68-70,170
+.env.example
+  s_f5ea48d5e7be05::t_cf56138bb3a07d 107-113
+docker-compose.yml
+  s_f5ea48d5e7be05::t_cf56138bb3a07d 72-73
+doc/operations.md
+  s_f5ea48d5e7be05::t_fb9333e70ba856 83
+e2e/run.sh
+  s_f5ea48d5e7be05::t_fb9333e70ba856 8,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "789dc053097513daa42f7385fcee106b7ff8b536",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
