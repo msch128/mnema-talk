@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,6 +14,25 @@ import (
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
+
+// SFU callbacks log asynchronously. TextHandler serializes writes, but test
+// snapshots also need to share that lock rather than read a raw bytes.Buffer.
+type synchronizedLogCapture struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *synchronizedLogCapture) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *synchronizedLogCapture) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
 
 // fakeRemote yields n RTP packets, then fails like an ended remote track.
 type fakeRemote struct {
@@ -92,7 +112,7 @@ func TestForwardIgnoresSubscriberWriteErrors(t *testing.T) {
 // A forwarding error other than a stopped subscriber is logged, once per
 // track; a stopped subscriber is not logged at all.
 func TestForwardLogsWriteErrorsOnce(t *testing.T) {
-	var buf bytes.Buffer
+	var buf synchronizedLogCapture
 	prev := slog.Default()
 	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
 	t.Cleanup(func() { slog.SetDefault(prev) })
@@ -109,7 +129,31 @@ func TestForwardLogsWriteErrorsOnce(t *testing.T) {
 		t.Fatalf("stopped subscriber was logged: %s", buf.String())
 	}
 	forward(errors.New("codec mismatch"))
-	if n := strings.Count(buf.String(), "sfu forward rtp"); n != 1 {
-		t.Fatalf("logged %d times, want once: %s", n, buf.String())
+	// Connection-state callbacks can keep logging after another test closes
+	// its SFU. Exercise those writes while inspecting the forwarding log.
+	const peerEvents = 100
+	start := make(chan struct{})
+	var logged sync.WaitGroup
+	logged.Add(1)
+	go func() {
+		defer logged.Done()
+		<-start
+		for range peerEvents {
+			slog.Info("sfu peer state", "user", user, "state", "closed")
+		}
+	}()
+	t.Cleanup(logged.Wait)
+	close(start)
+	for range peerEvents {
+		if n := strings.Count(buf.String(), "sfu forward rtp"); n != 1 {
+			t.Fatalf("logged %d times, want once: %s", n, buf.String())
+		}
+	}
+	logged.Wait()
+	if n := strings.Count(buf.String(), "level=WARN msg=\"sfu forward rtp\""); n != 1 {
+		t.Fatalf("forwarding error was not logged once at WARN: %s", buf.String())
+	}
+	if n := strings.Count(buf.String(), "msg=\"sfu peer state\" user="+user.String()); n != peerEvents {
+		t.Fatalf("captured %d peer events, want %d: %s", n, peerEvents, buf.String())
 	}
 }
