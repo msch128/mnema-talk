@@ -208,7 +208,7 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    for the commit that is still `main`'s tip releases; if `main` moved on, the
    run for the newer commit decides.
 2. The release workflow merges that PR right away and publishes the GitHub
-   Release and tag `vX.Y.Z` (first release: `0.1.0`), so every green push to
+   Release and tag `vX.Y.Z`, so every green push to
    `main` that contains a `feat:` or `fix:` becomes a release.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
