@@ -11,7 +11,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-// Mention keywords: @all reaches every member, @here everyone connected.
+// Mention keywords: @all reaches every active member, @here active connected members.
 const (
 	MentionAll  = "all"
 	MentionHere = "here"
@@ -44,7 +44,7 @@ func ParseMentions(content string) []string {
 }
 
 // ResolveMentions turns the mentions in content into user IDs: named users,
-// every active member for @all and the online users for @here. The author is
+// every active member for @all and active online users for @here. The author is
 // never mentioned by their own message.
 func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) ([]uuid.UUID, error) {
 	names := ParseMentions(content)
@@ -65,15 +65,10 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	}
 
 	ids := map[uuid.UUID]bool{}
-	if here {
-		for _, id := range online {
-			ids[id] = true
-		}
-	}
-	if all || len(usernames) > 0 {
+	if all || len(usernames) > 0 || (here && len(online) > 0) {
 		rows, err := q.Query(ctx, `
 			SELECT id FROM users
-			WHERE disabled_at IS NULL AND ($1 OR LOWER(username) = ANY($2))`, all, usernames)
+			WHERE disabled_at IS NULL AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
 		if err != nil {
 			return nil, fmt.Errorf("resolve mentions: %w", err)
 		}

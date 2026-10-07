@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
 import { nextTick } from 'vue'
-import { setLocale } from '../i18n'
+import { setLocale, t } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -1034,6 +1034,12 @@ describe('VoiceStage picture-in-picture', () => {
     requireValue(item).click()
     await flushPromises()
     expect(requestPip).toHaveBeenCalledTimes(1)
+    await w.get<HTMLElement>('[data-testid="stage"]').trigger('contextmenu')
+    await flushPromises()
+    const exitItem = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(i => i.textContent.includes(t('talk.pipExit')))
+    requireValue(exitItem).click()
+    await flushPromises()
+    expect(document.exitPictureInPicture).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -1555,5 +1561,65 @@ describe('VoiceStage measured layout and overlay behavior', () => {
     await size(w, 350, 90)
     expect(w.get('[data-testid="talk-grid"]').classes()).toContain('overflow-y-auto')
     expect(w.findAll('[data-participant-tile]')).toHaveLength(13)
+  })
+})
+
+
+describe('VoiceStage residual normal interactions', () => {
+  it('keeps the switch confirmation usable when the previewed channel disappears', async () => {
+    const { chat, voice } = seed()
+    voice.setChannel('v2')
+    voice.warnSwitchChannel = true
+    const w = mountStage({ channelId: 'v1' })
+    chat.categories = []
+    await nextTick()
+    expect(w.text()).not.toContain('Lounge')
+    const joinButton = requireValue(w.findAll('button').find(button => button.text().includes('Join')))
+    await joinButton.trigger('click')
+    expect(pendingConfirm.value).not.toBeNull()
+    requireValue(pendingConfirm.value).resolve(false)
+    await flushPromises()
+    expect(rtc.joinVoiceChannel).not.toHaveBeenCalled()
+    expect(w.emitted('join')).toBeUndefined()
+  })
+
+  it('resolves an uncategorized Talk and displays an empty room preview', async () => {
+    const { chat } = seed()
+    chat.uncategorized = [channelFixture({ id: 'uncategorized', name: 'Uncategorized Talk', type: 'voice' })]
+    const w = mountStage({ channelId: 'uncategorized' })
+    await nextTick()
+    expect(w.text()).toContain('Uncategorized Talk')
+    expect(w.find('[data-testid="talk-empty"]').exists()).toBe(true)
+    expect(w.findAllComponents(ParticipantTile)).toHaveLength(0)
+  })
+  it('takes a focused camera off through its context menu', async () => {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', camera: true })
+    voice.setUserVideoStream('a', new MediaStream())
+    voice.focusCamera('a')
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    await w.get('[data-testid="stage"]').trigger('contextmenu')
+    await flushPromises()
+    const item = requireValue([...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(row => row.textContent.includes('Back to everyone')))
+    item.click()
+    await nextTick()
+    expect(voice.focusedCamera).toBeNull()
+    expect(w.find('[data-testid="stage"]').exists()).toBe(false)
+  })
+  it('ignores a double click in the surrounding Talk area', async () => {
+    const { voice } = seed()
+    voice.setChannel('v1')
+    voice.isScreenSharing = true
+    voice.localScreenStream = new MediaStream()
+    const w = mountStage({ channelId: 'v1' })
+    await nextTick()
+    const fullscreen = vi.fn<() => Promise<void>>().mockResolvedValue()
+    const stage = w.get<HTMLElement>('[data-testid="stage"]').element
+    stage.requestFullscreen = fullscreen
+    await w.get('[data-testid="talk-area"]').trigger('dblclick')
+    await flushPromises()
+    expect(fullscreen).not.toHaveBeenCalled()
   })
 })

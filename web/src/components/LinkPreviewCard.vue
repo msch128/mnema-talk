@@ -14,8 +14,7 @@ const props = defineProps({
 const preview = ref<LinkPreview | null>(null)
 const imageFailed = ref(false)
 
-function imageUrl(raw: string | undefined) {
-  if (!raw) return ''
+function imageUrl(raw: string) {
   return `/api/link-preview/image?url=${encodeURIComponent(raw)}`
 }
 

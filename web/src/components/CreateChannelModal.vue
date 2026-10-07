@@ -33,10 +33,7 @@ const isSubmitting = ref(false)
 
 // Slugify helper for text channels
 function formatName(val: string) {
-  if (channelType.value === 'text') {
-    return val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
-  }
-  return val
+  return val.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')
 }
 
 function handleNameInput(e: Event) {

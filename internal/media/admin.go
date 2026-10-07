@@ -179,11 +179,16 @@ func StartRetentionWorker(ctx context.Context, p *db.Pool, store Store, retentio
 		return
 	}
 	slog.Info("automatic media pruning enabled", "older_than_days", retentionDays)
-	go runPeriodically(ctx, retentionFirstRun, retentionInterval, func(ctx context.Context) {
+	go runPeriodically(ctx, retentionFirstRun, retentionInterval, retentionTask(p, store, retentionDays))
+}
+
+// retentionTask keeps pruning policy separate from the worker's schedule.
+func retentionTask(p *db.Pool, store Store, retentionDays int) func(context.Context) {
+	return func(ctx context.Context) {
 		if _, err := PruneOlderThan(ctx, p, store, retentionDays); err != nil {
 			slog.Error("media pruning failed", "err", err)
 		}
-	})
+	}
 }
 
 // runPeriodically calls fn after first and then every interval until ctx ends.

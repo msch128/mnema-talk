@@ -100,3 +100,11 @@ describe('browser stats fallbacks and counter changes', () => {
     expect(rateJitter(60)).toBe('schlecht')
   })
 })
+
+it('ignores audio media-source records that carry no RTP counters', () => {
+  const summary = summarizeStats([{ id: 'source', type: 'media-source', kind: 'audio', timestamp: 1000 }])
+  expect(summary.connected).toBe(false)
+  expect(summary.packetsReceived).toBe(0)
+  expect(summary.packetsSent).toBe(0)
+  expect(summary.codec).toBeNull()
+})

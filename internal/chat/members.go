@@ -8,7 +8,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
-// GetAllMembers lists every account, admins first, then by display name.
+// GetAllMembers lists active accounts, admins first, then by display name.
 // message_count is maintained by triggers (migration 0012), so this does not
 // scan the messages table.
 func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
@@ -16,6 +16,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 		SELECT id, username, display_name, bio, role, avatar_s3_key, status_text, created_at,
 		       voice_seconds, message_count
 		FROM users
+		WHERE disabled_at IS NULL
 		ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`)
 	if err != nil {
 		return nil, fmt.Errorf("query members: %w", err)

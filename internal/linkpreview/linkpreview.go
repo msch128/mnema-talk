@@ -121,18 +121,7 @@ func New() *Fetcher {
 		// Runs for the resolved address of every connection attempt, so
 		// neither DNS rebinding nor a redirect can reach an internal host.
 		Control: func(_, address string, _ syscall.RawConn) error {
-			host, _, err := net.SplitHostPort(address)
-			if err != nil {
-				return ErrBlocked
-			}
-			if f.allowPrivate {
-				return nil
-			}
-			ip := net.ParseIP(host)
-			if !publicIP(ip) || f.isDenied(ip) {
-				return ErrBlocked
-			}
-			return nil
+			return f.checkResolvedAddress(address)
 		},
 	}
 	transport := &http.Transport{
@@ -154,6 +143,23 @@ func New() *Fetcher {
 		},
 	}
 	return f
+}
+
+// checkResolvedAddress applies the address policy after DNS resolution.
+// The native dialer calls it for every connection attempt, including redirects.
+func (f *Fetcher) checkResolvedAddress(address string) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return ErrBlocked
+	}
+	if f.allowPrivate {
+		return nil
+	}
+	ip := net.ParseIP(host)
+	if !publicIP(ip) || f.isDenied(ip) {
+		return ErrBlocked
+	}
+	return nil
 }
 
 // nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but

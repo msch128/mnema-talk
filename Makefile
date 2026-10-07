@@ -8,6 +8,9 @@
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
 GO_PKGS    := ./...
+# Package fixtures reset a supplied shared test database. Serialize package
+# binaries when one is configured; Docker fixtures otherwise remain isolated.
+GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL)),,-p=1)
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
 
@@ -62,7 +65,7 @@ test: ## Go unit tests (race detector)
 	go test -race -count=1 $(GO_PKGS)
 
 test-integration: ## Go integration tests (Docker, or TEST_DATABASE_URL)
-	go test -tags=integration -race -count=1 -timeout=300s $(GO_PKGS)
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=300s $(GO_PKGS)
 
 test-web: $(WEB_DEPS) ## Frontend unit tests (vitest)
 	cd web && npm run test
@@ -77,18 +80,19 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
 	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
 	python3 scripts/tests/test_backup_restore.py
+	python3 scripts/tests/test_coverage_summary.py
 
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
 # Minimum total Go coverage (%); frontend enforces all four metrics at 95%
 # through web/scripts/check-coverage.ts and its reviewed per-module policy.
-COVERAGE_MIN ?= 80
+COVERAGE_MIN ?= 98
 COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)
 
 coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
-	go test -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
+	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
 	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN)
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)

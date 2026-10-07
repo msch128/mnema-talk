@@ -36,3 +36,12 @@ describe('message grouping', () => {
     expect(continuationIds(undefined).size).toBe(0)
   })
 })
+
+it('starts a new group for a malformed nonempty timestamp', () => {
+  expect(isContinuation({ user_id: 'same', created_at: 'invalid' }, { user_id: 'same', created_at: '2026-10-07T00:00:00Z' })).toBe(false)
+})
+
+it('starts a new group when either partial message has no timestamp yet', () => {
+  expect(isContinuation({ user_id: 'same' }, { user_id: 'same', created_at: '2026-10-07T00:00:00Z' })).toBe(false)
+  expect(isContinuation({ user_id: 'same', created_at: '2026-10-07T00:00:00Z' }, { user_id: 'same' })).toBe(false)
+})

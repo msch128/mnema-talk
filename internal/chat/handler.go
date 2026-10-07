@@ -90,7 +90,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // listMembers handles GET /api/members.
 //
 // @Summary List members
-// @Description Every account, admins first, then by display name, with voice_seconds and message_count. Presence and locale are not filled.
+// @Description Active accounts, admins first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
 // @ID listMembers
 // @Tags Users
 // @Produce json

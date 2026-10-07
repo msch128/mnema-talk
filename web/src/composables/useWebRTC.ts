@@ -131,6 +131,7 @@ function loadIceServers() {
 // Connection statistics measured by the browser (RTCPeerConnection.getStats).
 let statsTimer: ReturnType<typeof setInterval> | null = null
 let lastStatsSample: RTCStatsSample | null = null
+let statsPollingGeneration = 0
 
 // Where stream diagnostics go (the server log, via the WebSocket).
 let diagSink: ((payload: Record<string, JsonValue | undefined>) => void) | null = null
@@ -179,10 +180,15 @@ function startStatsPolling(voiceStore: VoiceStore) {
   stopStatsPolling(voiceStore)
   statsTicks = 0
   lastVideoBytes.clear()
+  const generation = statsPollingGeneration
   statsTimer = setInterval(async () => {
-    if (!pc) return
+    const conn = pc
+    if (!conn) return
     try {
-      const report = await pc.getStats()
+      const report = await conn.getStats()
+      // A stopped poll must not restore statistics from a retired connection,
+      // including a restarted poll that happens to use the same connection.
+      if (pc !== conn || generation !== statsPollingGeneration) return
       const summary = summarizeStats(report.values(), lastStatsSample)
       lastStatsSample = summary.sample
       voiceStore.rtcStats = summary
@@ -200,6 +206,7 @@ function startStatsPolling(voiceStore: VoiceStore) {
 }
 
 function stopStatsPolling(voiceStore: VoiceStore) {
+  statsPollingGeneration++
   if (statsTimer) {
     clearInterval(statsTimer)
     statsTimer = null
@@ -1370,7 +1377,13 @@ export function useWebRTC() {
     teardownMicPipeline()
     old.getTracks().forEach(t => t.stop())
     const sendStream = await setupMicPipeline(stream)
-    if (gen !== joinGeneration || !sendStream) return
+    if (gen !== joinGeneration || !sendStream) {
+      // The new capture is not installed yet, so leaving can only stop the
+      // previous localAudioStream. Release this run's own streams as well.
+      sendStream?.getTracks().forEach(track => track.stop())
+      stream.getTracks().forEach(track => track.stop())
+      return
+    }
     const track = sendStream.getAudioTracks()[0]
     if (track) track.enabled = !voiceStore.isMuted
     localAudioStream.value = sendStream

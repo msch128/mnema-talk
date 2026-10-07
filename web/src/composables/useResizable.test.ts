@@ -1,6 +1,7 @@
 import { required } from '../store-test-support.fixture'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { effectScope, nextTick, reactive, ref } from 'vue'
+import { defineComponent, effectScope, h, nextTick, reactive, ref } from 'vue'
+import { mount } from '@vue/test-utils'
 import type { PanelDefinition } from './useResizable'
 import {
   clamp, sanitizeWidth, loadWidth, saveWidth, storageKey,
@@ -216,6 +217,76 @@ describe('vertical panels (axis y)', () => {
 })
 
 describe('resize interaction lifecycle', () => {
+  it('fits a panel definition added reactively without losing the existing preferred width', () => {
+    window.innerWidth = 900
+    const definitions = reactive<PanelDefinition<'panel' | 'later'>[]>([{ name: 'panel', side: 'left', ...cfg }])
+    const scope = effectScope()
+    const handles = required(scope.run(() => useResizable(definitions, { storage: memoryStorage() })))
+    expect(handles.panel.width).toBe(240)
+    expect(handles.panel.maxNow).toBe(360)
+    definitions.push({ name: 'later', side: 'right', ...cfg })
+    expect(handles.panel.width).toBe(240)
+    expect(handles.panel.maxNow).toBe(260)
+    definitions.pop()
+    expect(handles.panel.width).toBe(240)
+    expect(handles.panel.maxNow).toBe(360)
+    scope.stop()
+  })
+  it('finishes the previous drag when another separator press begins and restores the original styles', () => {
+    const frames = controlledFrames()
+    const { scope, panel, pointer, save } = setupOne()
+    document.body.style.userSelect = 'text'
+    document.body.style.cursor = 'crosshair'
+    pointer('pointerdown', 100)
+    pointer('pointermove', 130)
+    pointer('pointerdown', 150, 0, 9)
+    expect(frames.frames.size).toBe(0)
+    expect(save).toHaveBeenCalledOnce()
+    expect(panel.width).toBe(270)
+    expect(panel.dragging).toBe(true)
+    pointer('pointerup', 180, 0, 9)
+    expect(panel.width).toBe(300)
+    expect(save).toHaveBeenCalledTimes(2)
+    expect(document.body.style.userSelect).toBe('text')
+    expect(document.body.style.cursor).toBe('crosshair')
+    scope.stop()
+  })
+  it('restores prior body styles and removes active drag listeners when its component unmounts', () => {
+    const frames = controlledFrames()
+    const storage = memoryStorage()
+    const save = vi.spyOn(storage, 'setItem')
+    document.body.style.userSelect = 'text'
+    document.body.style.cursor = 'crosshair'
+    let resizePanel: ReturnType<typeof useResizable<'panel'>>['panel'] | undefined
+    const wrapper = mount(defineComponent({ setup() {
+      const { panel } = useResizable([{ name: 'panel', side: 'left', ...cfg }], { storage })
+      resizePanel = panel
+      return () => h('div', { onPointerdown: (event: PointerEvent) => panel.startDrag(event) })
+    } }), { attachTo: document.body })
+    const handle = wrapper.element
+    if (!(handle instanceof HTMLElement)) throw new Error('Expected resize handle')
+    handle.setPointerCapture = vi.fn()
+    handle.hasPointerCapture = vi.fn(() => true)
+    handle.releasePointerCapture = vi.fn()
+    handle.dispatchEvent(new PointerEvent('pointerdown', { button: 0, pointerId: 4, clientX: 100 }))
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 4, clientX: 130 }))
+    expect(required(resizePanel).dragging).toBe(true)
+    expect(document.body.style.userSelect).toBe('none')
+    expect(document.body.style.cursor).toBe('col-resize')
+    expect(frames.frames.size).toBe(1)
+    wrapper.unmount()
+    expect(required(resizePanel).dragging).toBe(false)
+    expect(document.body.style.userSelect).toBe('text')
+    expect(document.body.style.cursor).toBe('crosshair')
+    expect(handle.releasePointerCapture).toHaveBeenCalledWith(4)
+    expect(frames.frames.size).toBe(0)
+    expect(save).toHaveBeenCalledOnce()
+    expect(storage.data[storageKey('panel')]).toBe('270')
+    handle.dispatchEvent(new PointerEvent('pointermove', { pointerId: 4, clientX: 400 }))
+    handle.dispatchEvent(new PointerEvent('pointerup', { pointerId: 4, clientX: 400 }))
+    expect(save).toHaveBeenCalledOnce()
+    expect(frames.frames.size).toBe(0)
+  })
   function controlledFrames() {
     let nextId = 0
     const frames = new Map<number, FrameRequestCallback>()

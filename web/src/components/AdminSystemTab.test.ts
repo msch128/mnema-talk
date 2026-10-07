@@ -99,3 +99,16 @@ describe('AdminSystemTab', () => {
     expect(w.find('[data-testid="system-version"]')!.exists()).toBe(false)
   })
 })
+
+it('keeps the update controls unavailable while sidecar reachability is not known', async () => {
+  const st = systemStatus()
+  st.update = { ...st.update, update_available: true, latest_version: '0.5.0' }
+  st.self_update = { ...st.self_update, configured: true, reach: 'unknown', reach_reason: 'unset' }
+  apiMock.mockResolvedValue(st)
+  const w = mount(AdminSystemTab)
+  await flushPromises()
+  expect(w.find('[data-testid="self-update-not-configured"]').exists()).toBe(false)
+  expect(w.find('[data-testid="self-update-unreachable"]').exists()).toBe(false)
+  expect(w.find('[data-testid="self-update-open"]').exists()).toBe(false)
+  w.unmount()
+})

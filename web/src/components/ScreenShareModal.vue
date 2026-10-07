@@ -67,12 +67,8 @@ function checkIfCustomMatchesPreset() {
 
 const estimatedBitrateDisplay = computed(() => {
   const bps = streamBitrate({ resolution: selectedResolution.value, fps: selectedFps.value })
-  if (bps >= 1_000_000) {
-    const mbps = (bps / 1_000_000).toFixed(1)
-    return `${mbps} Mbit/s`
-  }
-  const kbps = Math.round(bps / 1000)
-  return `${kbps} kbit/s`
+  const mbps = (bps / 1_000_000).toFixed(1)
+  return `${mbps} Mbit/s`
 })
 
 const isMotionPriority = computed(() => selectedFps.value >= 60)

@@ -101,13 +101,13 @@ func TestGenerateInviteCode(t *testing.T) {
 	}
 }
 
-// The production bcrypt cost must stay 12; only integration test binaries may
-// lower it (SetPasswordCostForTests), and this package never does.
+// Production's cost stays 12; only integration test binaries lower it once in
+// TestMain. Check the timing-equaliser has the same cost in either binary.
 func TestProductionPasswordCost(t *testing.T) {
-	if passwordCost != 12 || bcryptCost != 12 {
-		t.Fatalf("password cost %d (const %d), want 12", passwordCost, bcryptCost)
+	if passwordCost != expectedPasswordCost || bcryptCost != 12 {
+		t.Fatalf("password cost %d (const %d), want %d (const 12)", passwordCost, bcryptCost, expectedPasswordCost)
 	}
-	if c, err := bcrypt.Cost(dummyHash); err != nil || c != 12 {
-		t.Fatalf("timing-equaliser hash cost %d (%v), want 12", c, err)
+	if c, err := bcrypt.Cost(dummyHash); err != nil || c != expectedPasswordCost {
+		t.Fatalf("timing-equaliser hash cost %d (%v), want %d", c, err, expectedPasswordCost)
 	}
 }

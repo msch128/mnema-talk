@@ -85,4 +85,9 @@ describe('handleMessageKeydown', () => {
     expect(press(row, { key: 'Escape' }, { escape: () => false }).defaultPrevented).toBe(false)
     expect(press(row, { key: 'Escape' }, { escape: () => true }).defaultPrevented).toBe(true)
   })
+
+  it('leaves unassigned keys on focused message rows to the browser', () => {
+    const [row] = rows(1)
+    expect(press(row, { key: 'Home' }, {}).defaultPrevented).toBe(false)
+  })
 })

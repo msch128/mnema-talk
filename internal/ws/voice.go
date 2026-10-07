@@ -328,7 +328,23 @@ func (h *Hub) CloseVoiceChannel(chID uuid.UUID) {
 
 // DisconnectUser closes every live connection of userID.
 func (h *Hub) DisconnectUser(userID uuid.UUID) {
-	for _, c := range h.clientsOf(userID) {
+	h.mu.Lock()
+	var clients []*Client
+	for c := range h.clients {
+		if c.User.ID == userID {
+			c.shutdown()
+			clients = append(clients, c)
+		}
+	}
+	for c := range h.pending {
+		if c.User.ID == userID {
+			delete(h.pending, c)
+			c.shutdown()
+			clients = append(clients, c)
+		}
+	}
+	h.mu.Unlock()
+	for _, c := range clients {
 		c.close()
 	}
 }

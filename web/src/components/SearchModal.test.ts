@@ -236,3 +236,18 @@ it('does not paginate an empty result page even if the server advertises more', 
   more.click(); await flushPromises()
   expect(mockApi).toHaveBeenCalledTimes(1)
 })
+
+it('searches by channel alone without sending an empty text query', async () => {
+  const ch = channelFixture()
+  useChatStore().uncategorized = [ch]
+  mockApi.mockResolvedValue({ messages: [], has_more: false })
+  await open()
+  const channel = requireValue(document.querySelector<HTMLSelectElement>('[role="dialog"] select'))
+  channel.value = ch.id
+  channel.dispatchEvent(new Event('change', { bubbles: true }))
+  await flushPromises()
+  const request = requireValue(mockApi.mock.calls.at(-1))
+  const params = new URL(request[0], 'http://localhost').searchParams
+  expect(params.get('channel_id')).toBe(ch.id)
+  expect(params.has('q')).toBe(false)
+})

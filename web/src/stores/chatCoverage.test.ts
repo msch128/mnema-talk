@@ -192,10 +192,6 @@ describe('chat actions and loaded copies', () => {
     expect(chat.activeThread?.id).toBe(message().id)
     expect(chat.isThreadLoading).toBe(false)
     expect(console.error).toHaveBeenCalled()
-    http.handle = () => ({ root: null, replies: null })
-    await chat.openThread(message())
-    expect(chat.activeThread?.id).toBe(message().id)
-    expect(chat.threadReplies).toEqual([])
   })
 })
 

@@ -71,9 +71,12 @@ files
 out.push('', '</details>', '')
 console.log(out.join('\n'))
 
-// Compare the rounded figure that is shown, so 79.96 % printed as "80.0 %"
-// does not fail with a message that contradicts the summary.
-if (min !== null && Number(pct(total.covered, total.total)) < min) {
-  console.error(`${title}: ${pct(total.covered, total.total)} % is below the required ${min} %`)
+// Enforce the underlying counts: a rounded display of 100.0% must never
+// qualify a profile with uncovered statements. Empty reports cannot qualify.
+if (min !== null && (total.total === 0 || total.covered * 100 < min * total.total)) {
+  const reason = total.total === 0
+    ? 'the coverage report is empty'
+    : `${total.covered}/${total.total} ${unit} covered; exact counts require at least ${min} %`
+  console.error(`${title}: ${reason}`)
   process.exit(1)
 }

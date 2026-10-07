@@ -64,6 +64,12 @@ describe('useMessageActions upload', () => {
     const send = vi.fn()
     expect(await a.upload(fileInput(null), send)).toBe(false)
     expect(send).not.toHaveBeenCalled()
+    expect(await a.upload(document.createElement('input'), send)).toBe(false)
+    const textInput = document.createElement('input')
+    // The native files getter is null for a text input.
+    Object.defineProperty(textInput, 'files', { value: null })
+    expect(await a.upload(textInput, send)).toBe(false)
+    expect(send).not.toHaveBeenCalled()
   })
 
   it('is uploading while the request runs', async () => {
@@ -201,6 +207,13 @@ describe('useMessageActions edit / delete / react', () => {
 })
 
 describe('useMessageActions reaction picker', () => {
+  it('closes a picker without a mounted list container on an outside press', async () => {
+    const actions = setup()
+    actions.togglePicker('m1')
+    await nextTick()
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    expect(actions.pickerId.value).toBeNull()
+  })
   it('closes on a press outside the picker anchors and on Escape', async () => {
     const container = document.createElement('div')
     container.innerHTML = '<div class="reaction-picker-anchor"><button id="in"></button></div><p id="out"></p>'

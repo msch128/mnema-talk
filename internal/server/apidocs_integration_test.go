@@ -10,6 +10,7 @@ import (
 
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/web"
 )
 
 func TestAPIDocsNeedASession(t *testing.T) {
@@ -37,6 +38,13 @@ func TestAPIDocsNeedASession(t *testing.T) {
 	// The page is only embedded when the web app was built; either way a
 	// member never gets the API's default-src 'none' page policy for HTML.
 	page := admin.get("/api/docs")
+	wantPageStatus := http.StatusServiceUnavailable
+	if web.APIDocsPage() != nil {
+		wantPageStatus = http.StatusOK
+	}
+	if page.status != wantPageStatus {
+		t.Fatalf("embedded docs status: got %d, want %d", page.status, wantPageStatus)
+	}
 	switch page.status {
 	case http.StatusOK:
 		if page.header.Get("Content-Security-Policy") != httpx.SPAContentSecurityPolicy || !strings.HasPrefix(page.header.Get("Content-Type"), "text/html") {

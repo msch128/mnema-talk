@@ -30,6 +30,14 @@ func main() {
 }
 
 func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	return runWithContext(ctx)
+}
+
+// runWithContext owns the application lifetime. Cancelling the supplied context
+// stops the server and its background workers.
+func runWithContext(ctx context.Context) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -41,9 +49,6 @@ func run() error {
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 	slog.Info("starting mnema-talk", "version", version.Current(), "revision", version.Commit(), "env", cfg.AppEnv)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {

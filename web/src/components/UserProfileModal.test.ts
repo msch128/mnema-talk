@@ -407,3 +407,10 @@ describe('UserProfileModal account interactions', () => {
     expect(button('profile.changeAvatar').attributes('disabled')).toBeUndefined()
   })
 })
+
+it('starts editing an account whose optional display name is empty', async () => {
+  auth.user = userFixture({ ...stub, display_name: '' })
+  wrapper = mount(UserProfileModal, { attachTo: document.body })
+  await editButton()!.trigger('click')
+  expect(wrapper.get<HTMLInputElement>('#profile-displayname').element.value).toBe('')
+})

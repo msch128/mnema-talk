@@ -363,6 +363,20 @@ describe('picture-in-picture host boundaries', () => {
 })
 
 describe('empty host state changes', () => {
+  it('cancels a browser request resolved immediately before the stage disappears', async () => {
+    const { voice, video, pip } = setup()
+    cameraOnStage(voice)
+    let resolveRequest: ((value: PictureInPictureWindow) => void) | undefined
+    requestPip.mockImplementationOnce(() => new Promise<PictureInPictureWindow>(resolve => { resolveRequest = resolve }))
+    const opening = pip.enter()
+    await flushPromises()
+    const window = await enterPip(video)
+    required(resolveRequest)(window)
+    voice.removeUserVideoStream('a')
+    expect(await opening).toBe(false)
+    expect(pip.active.value).toBe(false)
+    expect(video.srcObject).toBeNull()
+  })
   it('handles connecting and disconnecting without a mounted video', async () => {
     const scope = effectScope()
     const voice = useVoiceStore()

@@ -1643,7 +1643,7 @@ describe('connection diagnostics and polling', () => {
     expect(active.getStats).toHaveBeenCalledTimes(5)
     expect(voice.rtcStats).not.toBeNull()
     expect(sent.filter(e => e.type === 'webrtc_diag' && 'event' in e.payload && e.payload.event === 'stream')).toHaveLength(1)
-    expect(sent.at(-1)).toMatchObject({ payload: { event: 'stream', sharing: true, screen_audio: false, video: [{ dir: 'out', kbps: null }] } })
+    expect(sent.filter(event => event.type === 'webrtc_diag' && 'event' in event.payload && event.payload.event === 'stream').at(-1)).toMatchObject({ payload: { event: 'stream', sharing: true, screen_audio: false, video: [{ dir: 'out', kbps: null }] } })
     rtc.leaveVoiceChannel()
     expect(voice.rtcStats).toBeNull()
     await vi.advanceTimersByTimeAsync(2000)
@@ -3046,7 +3046,7 @@ describe('loopback microphone changes and cancellation errors', () => {
     voice.setRemoteScreen('alice', fakeStream(['video']))
     pc.getStats = vi.fn(async () => new Map([['i', { id: 'i', type: 'inbound-rtp', kind: 'video', bytesReceived: 1000 }]]))
     await vi.advanceTimersByTimeAsync(10_000)
-    expect(sent.at(-1)).toMatchObject({ type: 'webrtc_diag', payload: { event: 'stream', sharing: false, own_audio: undefined } })
+    expect(sent.filter(event => event.type === 'webrtc_diag' && 'event' in event.payload && event.payload.event === 'stream').at(-1)).toMatchObject({ type: 'webrtc_diag', payload: { event: 'stream', sharing: false, own_audio: undefined } })
     pc.getStats = vi.fn(async () => new Map())
     const count = sent.filter(event => event.type === 'webrtc_diag').length
     await vi.advanceTimersByTimeAsync(10_000)
@@ -3083,6 +3083,187 @@ describe('standalone meter without audio monitoring', () => {
     document.dispatchEvent(new Event('visibilitychange'))
     expect(voice.isConnected).toBe(false)
     rtc.stopMicTest()
+    expect(voice.currentInputLevel).toBe(0)
+  })
+})
+
+describe('late peer statistics after teardown', () => {
+  it.each(['leave', 'reconnect'] as const)('does not publish a retired peer report after %s', async action => {
+    const { rtc, voice, sent } = await joined()
+    vi.useFakeTimers()
+    rtc.rejoinAfterReconnect()
+    const retired = present(FakePC.instances.at(-1))
+    let finish: ((report: Map<string, import('../lib/mediaStats').MediaStat>) => void) | undefined
+    retired.getStats = vi.fn(() => new Promise<Map<string, import('../lib/mediaStats').MediaStat>>(resolve => { finish = resolve }))
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(retired.getStats).toHaveBeenCalledTimes(1)
+    if (action === 'leave') rtc.leaveVoiceChannel()
+    else rtc.rejoinAfterReconnect()
+    const diagnostics = sent.filter(event => event.type === 'webrtc_diag').length
+    present(finish)(new Map([['old', { id: 'old', type: 'outbound-rtp', kind: 'video', bytesSent: 1_000_000, timestamp: 1_000 }]]))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(voice.rtcStats).toBeNull()
+    expect(sent.filter(event => event.type === 'webrtc_diag')).toHaveLength(diagnostics)
+  })
+})
+
+describe('native microphone graph rejection handling', () => {
+  it('joins when a suspended native audio context rejects resume until a user gesture', async () => {
+    class SuspendedContext extends FakeAudioContext {
+      constructor() { super(); this.state = 'suspended' }
+      resume() { return Promise.reject(new DOMException('A user gesture is required', 'NotAllowedError')) }
+    }
+    vi.stubGlobal('AudioContext', SuspendedContext)
+    const { rtc, voice, sent } = setup()
+    const join = rtc.joinVoiceChannel('suspended-call')
+    await grantMic()
+    await join
+    await Promise.resolve()
+    expect(voice.currentChannelId).toBe('suspended-call')
+    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'suspended-call' } })
+  })
+
+  it('retains microphone transmission when corrupt persisted volume is rejected by the native gain parameter', async () => {
+    localStorage.setItem('mnema_input_volume', 'invalid persisted volume')
+    const original = FakeAudioContext.prototype.createGain
+    vi.spyOn(FakeAudioContext.prototype, 'createGain').mockImplementation(function (this: FakeAudioContext) {
+      const node = original.call(this)
+      node.gain.setValueAtTime.mockImplementation((value: number) => {
+        if (!Number.isFinite(value)) throw new TypeError('AudioParam requires a finite value')
+        node.gain.value = value
+      })
+      return node
+    })
+    const { rtc, voice } = setup()
+    expect(Number.isNaN(voice.inputVolume)).toBe(true)
+    const join = rtc.joinVoiceChannel('corrupt-setting')
+    await grantMic()
+    await join
+    expect(voice.localAudioStream).not.toBeNull()
+    expect(present(FakeAudioContext.gains.at(-1)).gain.setValueAtTime).toHaveBeenCalledWith(NaN, 0)
+    expect(present(FakeAudioContext.gains.at(-1)).gain.value).toBe(1)
+  })
+})
+
+describe('capture delivery microtasks and microphone source removal', () => {
+  it('cleans a completed microphone graph when leave runs before the join continuation', async () => {
+    const { rtc, voice, sent } = setup()
+    const join = rtc.joinVoiceChannel('cancelled-continuation')
+    const capture = await grantMic()
+    rtc.leaveVoiceChannel()
+    await join
+    expect(present(capture.getTracks()[0]).stop).toHaveBeenCalled()
+    expect(voice.localAudioStream).toBeNull()
+    expect(sent.some(event => event.type === 'voice_join')).toBe(false)
+  })
+
+  it('does not install a replacement whose permission continuation runs just before leave', async () => {
+    const { rtc, voice } = await joined()
+    const swap = rtc.applyAudioSettings()
+    const capture = await grantMic()
+    rtc.leaveVoiceChannel()
+    await swap
+    expect(present(capture.getTracks()[0]).stop).toHaveBeenCalled()
+    expect(voice.localAudioStream).toBeNull()
+  })
+
+  it('joins for receiving when the granted microphone disappears before the browser creates its source node', async () => {
+    const originalSource = FakeAudioContext.prototype.createMediaStreamSource
+    vi.spyOn(FakeAudioContext.prototype, 'createMediaStreamSource').mockImplementation(function (this: FakeAudioContext, stream: MediaStream) {
+      if (!stream.getAudioTracks().length) throw new DOMException('No audio track remains', 'InvalidStateError')
+      return originalSource.call(this, stream)
+    })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { rtc, sent } = setup()
+    const removedCapture = fakeStream()
+    removedCapture.removeTrack(present(removedCapture.getAudioTracks()[0]))
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue(removedCapture)
+    await rtc.joinVoiceChannel('device-removed')
+    const pc = await negotiate()
+    expect(present(pc.senders[0]).track).toBeNull()
+    expect(sent).toContainEqual({ type: 'voice_join', payload: { channel_id: 'device-removed' } })
+    await rtc.applyAudioSettings()
+    expect(present(pc.senders[0]).track).toBeNull()
+  })
+})
+
+describe('audio graph fallback without a mounted document body', () => {
+  it('plays a remote voice after the page body was detached and releases the sink on leave', async () => {
+    const { rtc, pc, voice } = await joined()
+    const body = document.body
+    const parent = present(body.parentNode)
+    body.remove()
+    try {
+      present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('detached-page-participant')] })
+      const sink = present(audioElements.at(-1))
+      expect(sink.play).toHaveBeenCalled()
+      expect(sink.parentNode).toBeNull()
+      expect(voice.audioBlocked).toBe(false)
+      rtc.leaveVoiceChannel()
+      expect(sink.srcObject).toBeNull()
+    } finally {
+      parent.appendChild(body)
+    }
+  })
+
+  it('keeps existing call PTT listeners while a native context retry builds a standalone meter', async () => {
+    let attempts = 0
+    vi.stubGlobal('AudioContext', function () {
+      if (++attempts === 1) throw new DOMException('Audio context temporarily unavailable', 'NotSupportedError')
+      return new FakeAudioContext()
+    })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const { rtc, voice } = setup()
+    voice.inputMode = 'ptt'
+    const join = rtc.joinVoiceChannel('context-retry-call')
+    await grantMic()
+    await join
+    expect(voice.localAudioStream).not.toBeNull()
+    const meter = rtc.startMicTest()
+    await grantMic()
+    expect(await meter).toBe(true)
+    rtc.stopMicTest()
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: voice.pttKey }))
+    expect(voice.isPttPressed).toBe(true)
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: voice.pttKey }))
+    expect(voice.isPttPressed).toBe(false)
+  })
+})
+
+describe('serialized settings after native source construction fails', () => {
+  it('accepts the next microphone setting after the previous AI graph lost its audio source', async () => {
+    const { rtc, voice, audio } = await joined()
+    const originalSource = FakeAudioContext.prototype.createMediaStreamSource
+    vi.spyOn(FakeAudioContext.prototype, 'createMediaStreamSource').mockImplementation(function (this: FakeAudioContext, stream: MediaStream) {
+      if (!stream.getAudioTracks().length) throw new DOMException('The microphone disconnected', 'InvalidStateError')
+      return originalSource.call(this, stream)
+    })
+    suppressor.node = { connect: vi.fn(), disconnect: vi.fn(), destroy: vi.fn() }
+    voice.noiseMode = 'ai'
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(new TestStream())
+    await expect(rtc.applyAudioSettings()).rejects.toMatchObject({ name: 'InvalidStateError' })
+    voice.noiseMode = 'browser'
+    const retry = rtc.applyAudioSettings()
+    const replacement = await grantMic()
+    await retry
+    expect(audio.track).toBe(replacement.getAudioTracks()[0])
+    expect(voice.currentChannelId).toBe('ch-1')
+  })
+})
+
+describe('standalone meter on the WebKit constructor fallback', () => {
+  it('builds and tears down metering when only webkitAudioContext is available', async () => {
+    vi.stubGlobal('AudioContext', undefined)
+    vi.stubGlobal('webkitAudioContext', FakeAudioContext)
+    const { rtc, voice } = setup()
+    const starting = rtc.startMicTest()
+    const capture = await grantMic()
+    expect(await starting).toBe(true)
+    expect(FakeAudioContext.instances).toHaveLength(1)
+    rtc.stopMicTest()
+    expect(present(capture.getTracks()[0]).stop).toHaveBeenCalled()
+    expect(present(FakeAudioContext.instances.at(-1)).closed).toBe(true)
     expect(voice.currentInputLevel).toBe(0)
   })
 })

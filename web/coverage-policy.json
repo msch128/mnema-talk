@@ -20,26 +20,6 @@
         }
       }
     },
-    "src/components/LinkPreviewCard.vue": {
-      "reason": "The sole uncovered statement is imageUrl(raw) returning an empty string for falsy raw input (line 18). Its only invocation is the image :src binding inside the template guard preview.image && !imageFailed, so rendered calls always receive a truthy image string. Missing optional images are tested through the UI and do not invoke imageUrl. Independent review_contracts and review_ui source/test/report inspection approved 14/15 statements, 20/21 branches, 4/4 functions and 14/14 lines. Only the statement threshold is lowered; actual UI rendering and image-error handling remain covered.",
-      "author": "messages_tests",
-      "reviewers": [
-        "review_contracts",
-        "review_ui"
-      ],
-      "minimum": {
-        "statements": 93.3,
-        "branches": 95,
-        "functions": 95,
-        "lines": 95
-      },
-      "approvedCounts": {
-        "statements": {
-          "covered": 14,
-          "total": 15
-        }
-      }
-    },
     "src/components/AdminLayoutTab.vue": {
       "reason": "The five uncovered [] fallback branches at lines 51, 52, 54, 481 and 521 read uncategorized, categories or category.channels. Runtime decodeChannelHierarchy/isChatChannelHierarchy/isChatCategory require those fields to be arrays. Initial layout state and local edit/create/delete/reorder helpers preserve those arrays; empty arrays remain truthy and are exercised by UI tests. Missing arrays cannot reach these reads through valid decoded or UI states. Independent review_contracts and review_ui source/test/report inspection approved 86/91 branches with 187/187 statements, 63/63 functions and 100% lines. Only the branch threshold is lowered; source guards remain intact.",
       "author": "admin_tests",
@@ -57,26 +37,6 @@
         "branches": {
           "covered": 86,
           "total": 91
-        }
-      }
-    },
-    "src/components/MuteMarks.vue": {
-      "reason": "The only uncovered branch is the false arm of the inner MicOff muted || deafened condition at line 15, beneath the enclosing span with the identical condition at line 14. Boolean props remain stable within one synchronous render, so every inner evaluation has already passed the outer condition. The navigationPresentation test covers all four Boolean prop combinations. Independent review_contracts and review_ui source/test inspection and focused measurements approved 7/8 branches with all other metrics 100%. Only this branch threshold is lowered; both production guards remain intact.",
-      "author": "navigation_tests",
-      "reviewers": [
-        "review_contracts",
-        "review_ui"
-      ],
-      "minimum": {
-        "statements": 95,
-        "branches": 87.5,
-        "functions": 95,
-        "lines": 95
-      },
-      "approvedCounts": {
-        "branches": {
-          "covered": 7,
-          "total": 8
         }
       }
     },

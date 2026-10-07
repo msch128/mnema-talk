@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { defineComponent, h, nextTick, ref } from 'vue'
+import { defineComponent, h, nextTick, ref, Suspense } from 'vue'
 import { useDialog, focusableIn } from './useDialog'
 
 const mounted: (() => void)[] = []
@@ -20,6 +20,30 @@ function key(key: string, shiftKey = false) {
 afterEach(() => { mounted.splice(0).reverse().forEach(unmount => unmount()); document.body.innerHTML = '' })
 
 describe('useDialog', () => {
+  it('disposes a suspended dialog before its mounted hook runs', async () => {
+    let finish: (() => void) | undefined
+    const ready = new Promise<void>(resolve => { finish = resolve })
+    const AsyncContent = defineComponent({ async setup() { await ready; return () => h('button', 'ready') } })
+    const Dialog = defineComponent({ setup() { useDialog(ref<HTMLElement | null>(null)); return () => h(AsyncContent) } })
+    const wrapper = mount(defineComponent({ setup() { return () => h(Suspense, null, { default: () => h(Dialog), fallback: () => h('p', 'loading') }) } }))
+    expect(wrapper.text()).toBe('loading')
+    wrapper.unmount()
+    finish?.()
+    await nextTick()
+    expect(key('Escape').defaultPrevented).toBe(false)
+  })
+  it('accepts an SVG opener and leaves focus in the document when it is not an HTML control', async () => {
+    const opener = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    opener.tabIndex = 0
+    document.body.append(opener)
+    opener.focus()
+    expect(document.activeElement).toBe(opener)
+    const { wrapper } = setup('<button id="content">content</button>')
+    await nextTick()
+    expect(document.activeElement?.id).toBe('content')
+    wrapper.unmount()
+    expect(document.activeElement).toBe(document.body)
+  })
   it('filters inert and hidden controls, focuses the first content control and restores the opener', async () => {
     const opener = document.createElement('button')
     document.body.append(opener)

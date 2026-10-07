@@ -5,6 +5,7 @@ import { nextTick } from 'vue'
 import { setLocale } from '../i18n'
 import { useVoiceStore } from '../stores/voice'
 import ScreenShareModal from './ScreenShareModal.vue'
+import { STREAM_FRAME_RATES, STREAM_RESOLUTIONS, streamBitrate } from '../lib/streamQuality'
 
 const rtc = vi.hoisted(() => ({ startScreenShare: vi.fn() }))
 vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
@@ -126,6 +127,18 @@ describe('ScreenShareModal', () => {
 })
 
 describe('ScreenShareModal custom selection and dismissal', () => {
+  it('displays every supported quality combination in Mbit/s', async () => {
+    w = mount(ScreenShareModal)
+    for (const resolution of STREAM_RESOLUTIONS) {
+      await w.get(`[data-testid="resolution-btn-${resolution}"]`).trigger('click')
+      for (const fps of STREAM_FRAME_RATES) {
+        await w.get(`[data-testid="fps-btn-${fps}"]`).trigger('click')
+        const expected = `${(streamBitrate({ resolution, fps }) / 1_000_000).toFixed(1)} Mbit/s`
+        expect(w.text()).toContain(expected)
+      }
+    }
+  })
+
   it('selects custom preset, returns to screen preset through matching values, dismisses dialog', async () => {
     w = mount(ScreenShareModal)
     await w.get('[data-testid="preset-custom"]').trigger('click')

@@ -241,3 +241,13 @@ describe('ParticipantTile accessible controls', () => {
     expect(wrapper.emitted('watch-stream')).toEqual([['a']]); wrapper.unmount()
   })
 })
+
+it('announces the pending screen subscription and prevents a duplicate watch action', async () => {
+  const w = tile({ isScreensharing: true, isConnecting: true })
+  const button = w.get('[data-testid="tile-watch-button"]')
+  expect(button.text()).toBe('Connecting…')
+  expect(button.attributes('disabled')).toBeDefined()
+  await button.trigger('click')
+  expect(w.emitted('watch-stream')).toBeUndefined()
+  w.unmount()
+})

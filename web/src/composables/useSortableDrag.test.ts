@@ -65,6 +65,17 @@ afterEach(() => {
 })
 
 describe('mouse', () => {
+  it('updates a running drag from noncancelable pointer moves without suppressing that event', () => {
+    setup()
+    press()
+    move({ y: 30 })
+    const event = new TestPointerEvent('pointermove', { clientX: 10, clientY: 50, bubbles: true, cancelable: false })
+    window.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(false)
+    expect(drag.state.target).toEqual({ y: 50 })
+    up({ x: 10, y: 50 })
+    expect(calls.drop).toEqual([[{ id: 'a' }, { y: 50 }]])
+  })
   it('supports legacy pointer events without an identifier and swallows synthesized mouse events', () => {
     setup()
     const e = pointer('pointerdown')
@@ -84,9 +95,9 @@ describe('mouse', () => {
   it('allows use without a scope and cleans up safely when the browser globals go away', () => {
     const standalone = useSortableDrag<TestItem, TestTarget>({ resolve: () => ({ y: 1 }), onDrop: vi.fn() })
     vi.stubGlobal('window', undefined)
+    vi.stubGlobal('document', undefined)
     standalone.pointerDown(pointer('pointerdown'), { id: 'a' })
     standalone.cancel()
-    vi.stubGlobal('document', undefined)
     standalone.cancel()
     vi.unstubAllGlobals()
   })

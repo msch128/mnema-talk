@@ -6,6 +6,7 @@ import type { ChannelTree } from '../lib/channelTree'
 import { channelFixture, categoryFixture } from '../test-fixtures.fixture'
 import { required } from '../store-test-support.fixture'
 import { setLocale } from '../i18n'
+import { moveChannel } from '../lib/channelLayout'
 import { PEEK_MS, useSidebarReorder } from './useSidebarReorder'
 import type { useChannelLayout } from './useChannelLayout'
 
@@ -167,6 +168,17 @@ describe('sidebar keyboard and reveal', () => {
 })
 
 describe('sidebar pointer drop', () => {
+  it('skips saving when a concurrent layout update has already moved the dragged channel to the drop target', async () => {
+    const { api, tree, start, move, drop, commit } = setup()
+    start(a1)
+    move(325)
+    await nextTick()
+    expect(api.drag.state.target?.categoryId).toBe('C')
+    tree.value = moveChannel(tree.value, a1.id, 'C', 0)
+    drop(325)
+    expect(commit).not.toHaveBeenCalled()
+    expect(tree.value.categories.find(category => category.id === 'C')?.channels[0]?.id).toBe(a1.id)
+  })
   it('resolves empty sections, malformed drop markers and zero-height rows without crashing', async () => {
     const { nav, start, move, drop, api } = setup()
     const section = required(nav.querySelector('[data-drop-section="C"]'))

@@ -71,6 +71,8 @@ export interface ApiOptions {
   json?: unknown
   form?: FormData
   signal?: AbortSignal
+  /** A queued session request may become stale before its HTTP response. */
+  shouldNotifyUnauthorized?: () => boolean
 }
 
 export interface DecodedApiOptions<T> extends ApiOptions {
@@ -80,7 +82,8 @@ export interface DecodedApiOptions<T> extends ApiOptions {
 export function api<T>(path: string, options: DecodedApiOptions<T>): Promise<T>
 export function api(path: string, options?: ApiOptions): Promise<unknown>
 export async function api<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
-  const { method = 'GET', json, form, signal, decode } = options
+  const { method = 'GET', json, form, signal, decode, shouldNotifyUnauthorized } = options
+  const requestUnauthorizedHandlers = [...unauthorizedHandlers]
   const headers: Record<string, string> = {}
   const init: RequestInit = { method, credentials: 'same-origin', headers }
   if (signal !== undefined) init.signal = signal
@@ -106,8 +109,10 @@ export async function api<T>(path: string, options: ApiOptions & { decode?: Deco
     const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
       ? serverError['code'] : 'INTERNAL_ERROR'
     const error = new ApiError(response.status, code, errorMessage(code, serverError?.['message']))
-    if (response.status === 401 && path !== '/api/auth/login') {
-      unauthorizedHandlers.forEach(handler => handler(error))
+    if (response.status === 401 && path !== '/api/auth/login' && (shouldNotifyUnauthorized?.() ?? true)) {
+      requestUnauthorizedHandlers.forEach(handler => {
+        if (unauthorizedHandlers.has(handler)) handler(error)
+      })
     }
     throw error
   }

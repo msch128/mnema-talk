@@ -12,7 +12,7 @@ const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>(
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: (...args: [path: string, options?: ApiOptions]) => apiMock(...args),
-  onUnauthorized: vi.fn(),
+  onUnauthorized: vi.fn(() => () => true),
   ApiError: class ApiError extends Error {}
 }))
 
@@ -84,7 +84,7 @@ describe('LoginModal', () => {
     await w.find<HTMLInputElement>('#login-invite')!.setValue('team-code')
     await submit(w)
     await flushPromises()
-    expect(apiMock).toHaveBeenCalledWith('/api/auth/register', { decode: expect.any(Function),
+    expect(apiMock).toHaveBeenCalledWith('/api/auth/register', { decode: expect.any(Function), shouldNotifyUnauthorized: expect.any(Function),
       method: 'POST',
       json: { username: 'max', display_name: 'max', password: 'member-password-123', invite_code: 'team-code' }
     })

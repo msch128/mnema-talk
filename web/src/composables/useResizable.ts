@@ -137,6 +137,8 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
   const dimension = axis === 'y' ? 'height' : 'width'
   const viewport = ref(currentViewportSize(axis))
   const dragging = ref<string | null>(null)
+  let finishDrag: (() => void) | null = null
+  onScopeDispose(() => finishDrag?.())
   const preferred = reactive(Object.fromEntries(defs.map(d => [d.name, loadWidth(d.name, d, storage, dimension)])))
 
   const visibility = () => defs.map(d => (d.visible ? !!d.visible() : true))
@@ -181,6 +183,7 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
     const def = defs[index]
     const handle = e.currentTarget
     if (!def || !(handle instanceof Element)) return
+    finishDrag?.()
     const pointerId = e.pointerId
     e.preventDefault()
     try {
@@ -213,11 +216,11 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
       lastX = coord(ev)
       if (!frame) frame = requestAnimationFrame(apply)
     }
-    const onEnd = (ev: PointerEvent) => {
-      if (ended || ev.pointerId !== pointerId) return
+    const finish = () => {
+      if (ended) return
       ended = true
+      finishDrag = null
       if (frame) cancelAnimationFrame(frame)
-      if (ev.type === 'pointerup') lastX = coord(ev)
       apply()
       saveWidth(def.name, preferred[def.name] ?? def.defaultWidth, storage, dimension)
       dragging.value = null
@@ -233,6 +236,12 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
         // already released
       }
     }
+    const onEnd = (ev: PointerEvent) => {
+      if (ev.pointerId !== pointerId) return
+      if (ev.type === 'pointerup') lastX = coord(ev)
+      finish()
+    }
+    finishDrag = finish
     handle.addEventListener('pointermove', onMove as EventListener)
     handle.addEventListener('pointerup', onEnd as EventListener)
     handle.addEventListener('pointercancel', onEnd as EventListener)

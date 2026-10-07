@@ -167,3 +167,8 @@ describe('multiple encodings and reset statistics', () => {
     expect(summarizeSendStats([{ ...stat, framesEncoded: 11, totalEncodeTime: NaN }], previous)?.encodeMs).toBeNull()
   })
 })
+
+it('shows unknown send measurements while a browser outbound track has no frame statistics yet', () => {
+  const summary = summarizeSendStats([{ id: 'out', type: 'outbound-rtp', kind: 'video' }])
+  expect(formatSendStats(summary)).toEqual({ codec: '–', resolution: '–', fps: '–', bitrate: '–' })
+})

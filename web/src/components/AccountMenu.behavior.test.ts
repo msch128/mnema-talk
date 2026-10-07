@@ -83,3 +83,11 @@ it('UserBar handles missing account, chosen presence, menu exclusivity and forwa
   const version = useAppVersionStore(); version.adminUpdate = { ...systemStatus().update, update_available: true, latest_version: '0.5.0' }
   await nextTick(); expect(w.find('[data-testid="admin-update-dot"]').exists()).toBe(true)
 })
+
+it('does not focus menu items after the menu is unmounted before its initial focus tick', async () => {
+  mountMenu()
+  const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+  w.unmount()
+  await nextTick()
+  expect(focus).not.toHaveBeenCalled()
+})
