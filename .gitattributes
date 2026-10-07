@@ -1,0 +1,7 @@
+# Desktop sources have deterministic line endings on Windows as well.
+desktop/** text=auto eol=lf
+# These are verbatim upstream bytes bound by the distribution hash manifest.
+desktop/licenses/** -text
+desktop/ui/src/assets/fonts/*.woff2 -text
+desktop/ui/src/assets/fonts/Inter-LICENSE.txt -text
+desktop/icons/** -text
