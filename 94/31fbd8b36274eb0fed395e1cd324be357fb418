@@ -1,0 +1,26 @@
+Makefile
+  s_f5ea48d5e7be05::t_ad002127c928f8 6,114-115
+  s_f5ea48d5e7be05::t_219781528a914c 116
+scripts/smoke-image.sh
+  s_f5ea48d5e7be05::t_3146057b92a755 1-74
+.github/workflows/ci.yml
+  s_f5ea48d5e7be05::t_ad002127c928f8 31-33,251-285
+  s_f5ea48d5e7be05::t_0c590179667bc3 229
+  s_f5ea48d5e7be05::t_6763565a87e488 286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9431fbd8b36274eb0fed395e1cd324be357fb418",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+internal/sfu/offer_watchdog_test.go
+  s_f5ea48d5e7be05::t_aaa72412f03831 1-136
+internal/sfu/sfu.go
+  s_f5ea48d5e7be05::t_1f51182a5365f0 50-58,94-96,112,138-142,187-195,320-328,580-581,696-697,704-729
+internal/ws/handle.go
+  s_f5ea48d5e7be05::t_e63d8ed9811c1e 71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2da29cae08cbd24262209308642d606569bbdb49",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+internal/sfu/forward_test.go
+  s_f5ea48d5e7be05::t_f48e6abfe3b9d3 4-5,7-8,36-37,41,49-51,91-115
+internal/sfu/sfu.go
+  s_f5ea48d5e7be05::t_056acf4a02c733 7,9,79-80,101-104,583-586,686-695,698
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "18fa362b8a324850e2a7ec0135c107fee483cc87",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+Dockerfile
+  s_f5ea48d5e7be05::t_3a0c68c7b02d0c 9
+  s_f5ea48d5e7be05::t_1c0db7dea546c5 18,34,67,74
+Makefile
+  s_f5ea48d5e7be05::t_869cd915a9f964 106,110-111,122-125
+docker-compose.yml
+  s_f5ea48d5e7be05::t_3a0c68c7b02d0c 1
+  s_f5ea48d5e7be05::t_1c0db7dea546c5 118,144,206
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0f401ec8a4bf70b701a6866c6499fdb2994ab1d4",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
