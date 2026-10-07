@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/msch128/mnema-talk/compare/v0.6.0...v0.6.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* isolate active members and session lifecycle races ([#73](https://github.com/msch128/mnema-talk/issues/73)) ([58704c3](https://github.com/msch128/mnema-talk/commit/58704c36572c7c9ebeb478059c420b94cb04429a))
+
 ## [0.6.0](https://github.com/msch128/mnema-talk/compare/v0.5.0...v0.6.0) (2026-10-07)
 
 
