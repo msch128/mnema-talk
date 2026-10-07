@@ -101,14 +101,14 @@ More documentation in [`doc/`](doc/):
 ```sh
 cp .env.example .env
 # edit .env: set PUBLIC_URL, JWT_SECRET (openssl rand -hex 32),
-# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY
+# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY, ADMIN_INITIAL_PASSWORD
 docker compose up -d --build      # or: make up
-docker compose logs app           # shows the generated admin password on first start
 ```
 
 Open `PUBLIC_URL`, log in as the admin, and create invite codes for your users.
-If `ADMIN_INITIAL_PASSWORD` is empty, a random password is generated and logged
-**once**. Change it after the first login.
+`ADMIN_INITIAL_PASSWORD` is required for the first production start; it is only
+used to create the admin. Change it after the first login (and then remove it
+from `.env`). In development an empty value generates a password and logs it once.
 
 ## Development
 

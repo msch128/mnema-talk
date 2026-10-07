@@ -54,7 +54,7 @@ func run() error {
 	if err := pool.Migrate(ctx); err != nil {
 		return err
 	}
-	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword); err != nil {
+	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword, cfg.IsProduction()); err != nil {
 		return err
 	}
 

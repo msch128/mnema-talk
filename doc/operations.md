@@ -44,7 +44,7 @@ General rules:
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
 | `ADMIN_USERNAME` | `Herzog` | The administrator account, created on first start when no admin exists. |
-| `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start. Empty = a random password is generated and logged **once**. A placeholder value is rejected. |
+| `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
 ### Database
 
