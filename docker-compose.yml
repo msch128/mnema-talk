@@ -110,18 +110,36 @@ services:
       - mnema-updater
 
   # ==========================================================
-  # Database: PostgreSQL 17
+  # Database: PostgreSQL 18
   # ==========================================================
   postgres:
-    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    image: postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
     container_name: mnema-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mnema}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-mnema_talk}
+      # Set only by scripts/upgrade-postgres.sh for its one-time import.
+      MNEMA_PG_UPGRADE: ${MNEMA_PG_UPGRADE:-}
+    # PostgreSQL 18 keeps its data in a version directory under
+    # /var/lib/postgresql, on a new volume. The PostgreSQL 17 volume of older
+    # versions is only mounted read-only to notice an install that was not
+    # upgraded yet: then this refuses to start (instead of serving a new,
+    # empty database) until scripts/upgrade-postgres.sh has moved the data.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -s /var/lib/postgresql/17-data/PG_VERSION ] && [ ! -s "$$PGDATA/PG_VERSION" ] && [ "$$MNEMA_PG_UPGRADE" != 1 ]; then
+          echo "PostgreSQL 17 data from an older Mnema Talk found, but no PostgreSQL 18 database yet." >&2
+          echo "Run ./scripts/upgrade-postgres.sh in the deployment directory (doc/upgrade.md)." >&2
+          exit 1
+        fi
+        exec docker-entrypoint.sh postgres
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - postgres18-data:/var/lib/postgresql
+      - postgres-data:/var/lib/postgresql/17-data:ro
     security_opt:
       - "no-new-privileges:true"
     mem_limit: ${POSTGRES_MEM_LIMIT:-1g}
@@ -316,6 +334,10 @@ services:
       - mnema-updater
 
 volumes:
+  postgres18-data:
+    driver: local
+  # PostgreSQL 17 data of versions before 0.5, kept read-only after the
+  # upgrade (rollback); empty on new installs.
   postgres-data:
     driver: local
   seaweedfs-data:

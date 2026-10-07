@@ -30,7 +30,7 @@ if [ "$mode" = --verify ]; then
   trap 'exit 143' TERM
   # No published ports, network or live volumes. Trust auth is confined to
   # this throwaway container's Unix socket; all access uses docker exec.
-  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql/data -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:17-alpine)
+  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:18-alpine)
   ready=false
   for _ in $(seq 1 60); do
     if docker exec "$check_container" sh -c '[ "$(cat /proc/1/comm)" = postgres ] && pg_isready -U postgres -d mnema_verify' </dev/null >/dev/null 2>&1; then ready=true; break; fi

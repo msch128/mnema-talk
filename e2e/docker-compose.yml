@@ -2,7 +2,7 @@
 # Loopback-only ports, no volumes: everything is gone after `down`.
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_USER: mnema
       POSTGRES_PASSWORD: mnema

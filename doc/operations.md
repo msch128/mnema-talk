@@ -276,7 +276,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
 - Retention removes only validated complete old backups after a successful
   backup and service restart. Incomplete/legacy directories require manual
   review and cleanup. Copy backups off the machine and encrypt offsite copies.
-- `--verify` imports into a network-isolated disposable PostgreSQL 17 container
+- `--verify` imports into a network-isolated disposable PostgreSQL 18 container
   with no live volumes or published ports, and removes it and its disposable
   database volume on success/failure. Allow disk space for the imported database.
   It checks SQL import and archive integrity. It does **not** prove login,

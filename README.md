@@ -71,7 +71,7 @@ single Go binary with the web app and a WebRTC SFU built in.
    │  - embedded SQL migrations            │
    └──────────┬─────────────────┬──────────┘
               ▼                 ▼
-      PostgreSQL 17       SeaweedFS (S3 API)
+      PostgreSQL 18       SeaweedFS (S3 API)
       (data)              (uploads, avatars)
 ```
 
@@ -83,7 +83,7 @@ S3-compatible store can replace SeaweedFS.
 |-----------|------|
 | Backend   | Go, chi, pgx, gorilla/websocket, Pion WebRTC v4, AWS SDK v2 (S3) |
 | Frontend  | Vue 3, Pinia, Vite, Tailwind CSS (`web/`) |
-| Storage   | PostgreSQL 17, S3 (SeaweedFS by default) |
+| Storage   | PostgreSQL 18, S3 (SeaweedFS by default) |
 
 More documentation in [`doc/`](doc/):
 
@@ -136,7 +136,7 @@ builds only `web/dist`).
 
 ```sh
 make test              # Go unit tests (-race)
-make test-integration  # Go integration tests: starts postgres:17-alpine via Docker,
+make test-integration  # Go integration tests: starts postgres:18-alpine via Docker,
                        # or uses TEST_DATABASE_URL if set
 make test-web          # vitest
 make coverage          # Go (unit + integration) and web coverage: coverage.out,
@@ -156,7 +156,7 @@ everything down again. `SKIP_BUILD=1` reuses the last build,
 `E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
 file.
 
-**Without Docker** (e.g. in a sandbox): start PostgreSQL 17 and a SeaweedFS
+**Without Docker** (e.g. in a sandbox): start PostgreSQL 18 and a SeaweedFS
 S3 gateway any other way, run the binary with the environment `e2e/run.sh`
 uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,
 `DATABASE_URL`, `S3_*`, `UPDATE_CHECK_ENABLED=false`,
@@ -315,7 +315,7 @@ from the admin console (see [Updates](#updates)).
 
 Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
 4/5 with a 64-bit OS); Docker picks the right one. The rest of the stack
-(`postgres:17-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
+(`postgres:18-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
 both as well. **linux/arm/v7** (32-bit ARM) is not built: those images exist
 for it too, but the server doesn't compile for 32-bit targets yet (a 64-bit
 constant in `internal/db` overflows `int`). Builders cross-compile the Go

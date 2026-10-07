@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill
+.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill postgres-upgrade-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -103,12 +103,13 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup drill
+check: lint openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup and PostgreSQL upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .
 	scripts/smoke-image.sh mnema-talk:ci
 	scripts/backup-drill.sh mnema-talk:ci
+	scripts/postgres-upgrade-drill.sh mnema-talk:ci
 
 e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; needs Docker
 	e2e/run.sh
@@ -121,6 +122,9 @@ backup-drill: docker ## Back up, change, verify and restore a throwaway compose 
 
 # docker build, not compose: compose would need a .env with the required
 # secrets just to build. Same tag as the compose default (MNEMA_IMAGE).
+postgres-upgrade-drill: docker ## Install like 0.4 (PostgreSQL 17), then check the guard and scripts/upgrade-postgres.sh
+	scripts/postgres-upgrade-drill.sh mnema-talk:local
+
 docker: ## Build the app image (mnema-talk:local, what compose runs by default)
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:local .
 

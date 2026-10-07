@@ -83,6 +83,45 @@ the database and media with the state before the update.
 
 ## Version notes
 
+### 0.4.x → 0.5.0
+
+- **PostgreSQL 17 → 18, one manual step.** The database moves to a new
+  volume (`postgres18-data`); the PostgreSQL 17 volume (`postgres-data`)
+  stays untouched as the rollback. With the new compose file PostgreSQL
+  refuses to start until the data is moved, so nothing ever runs on an
+  empty database. Instead of step 5 (`docker compose up -d`):
+
+  ```sh
+  ./scripts/backup.sh                     # still with 0.4.x running (step 1)
+  # steps 3 and 4: new compose file, scripts and MNEMA_IMAGE
+  docker compose pull
+  ./scripts/upgrade-postgres.sh           # dumps 17, imports into 18, starts the stack
+  ```
+
+  The script stops the app, starts a throwaway PostgreSQL 17 (no network)
+  on the old volume, dumps the database to `BACKUP_DIR`, imports it into
+  PostgreSQL 18 and starts everything. Media is not touched. Rolling back
+  means the 0.4.x compose file and image again; the old volume still holds
+  the data. Once 0.5 works, remove it with the `docker volume rm` command
+  the script prints. A local development database (`make dev`) upgrades the
+  same way, or start fresh with `docker compose down -v`.
+- **Migrations** `0013_readable_numbers.sql` (link numbers for channels and
+  messages) and `0014_channel_user_limit.sql`. 0.4.x refuses to start on the
+  migrated database: roll back with the old volume (above) or a backup.
+- **Production needs `ADMIN_INITIAL_PASSWORD` on a fresh install** (no
+  effect once the admin exists). The generated password is no longer logged.
+- **Voice: one shared UDP port.** `WEBRTC_UDP_MUX_PORT` now defaults to
+  `WEBRTC_UDP_PORT_MIN`; no Docker or router change. An `.env` still saying
+  `WEBRTC_UDP_MUX_PORT=0` keeps the old per-peer mode (about 25 people in
+  calls at once) and logs a warning: empty or remove the line.
+- **Per-channel member limit** replaces any idea of a global one: voice
+  channels have an optional `user_limit` (default: none).
+- **Compose:** memory and pids limits, log rotation, digest-pinned images,
+  `POSTGRES_PASSWORD` and `S3_SECRET_KEY` required at interpolation. New
+  optional variables `APP_MEM_LIMIT` (1g), `APP_TMP_SIZE` (64m),
+  `POSTGRES_MEM_LIMIT` (1g), `SEAWEEDFS_MEM_LIMIT` (1g). Uploads stream to S3
+  and no longer pass through `/tmp`.
+
 ### 0.3.x → 0.4.0
 
 Operator-relevant changes (0.3.1, 0.3.2, 0.3.3 and 0.4.0):
