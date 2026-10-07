@@ -1162,6 +1162,26 @@
         ],
         "type": "object"
       },
+      "media.Orphans": {
+        "properties": {
+          "bytes": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "deleted": {
+            "description": "Deleted is how many were removed (cleanup only).",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bytes",
+          "count",
+          "deleted"
+        ],
+        "type": "object"
+      },
       "media.PruneResult": {
         "properties": {
           "cutoff_days": {
@@ -2905,6 +2925,176 @@
           }
         ],
         "summary": "List all media, newest first",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/media/orphans": {
+      "get": {
+        "description": "Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Requires role admin (403 otherwise).",
+        "operationId": "getMediaOrphans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/media.Orphans"
+                }
+              }
+            },
+            "description": "Orphaned objects (deleted is 0)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Count orphaned media objects",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/media/orphans/cleanup": {
+      "post": {
+        "description": "Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Requires role admin (403 otherwise).",
+        "operationId": "cleanupMediaOrphans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/media.Orphans"
+                }
+              }
+            },
+            "description": "Orphaned objects found and deleted."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: a dependency (database, file storage) is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete orphaned media objects",
         "tags": [
           "Admin"
         ]

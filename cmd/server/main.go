@@ -65,6 +65,7 @@ func run() error {
 		return s3.New(ctx, cfg)
 	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
+	media.StartOrphanScan(ctx, pool, store)
 
 	// Addresses browsers send media to: typically the public IP (or a
 	// dynamic-DNS name for it) plus the LAN IP.

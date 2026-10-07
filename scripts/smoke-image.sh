@@ -83,4 +83,8 @@ MEDIA_URL="$(curl -fsS -b "$COOKIES" -H "Origin: $BASE" \
 curl -fsS -b "$COOKIES" "$BASE$MEDIA_URL" -o "$RESTORED"
 cmp -s "$PAYLOAD" "$RESTORED" || { echo "downloaded file differs from the upload" >&2; exit 1; }
 
+echo "==> orphan scan lists the bucket"
+orphans="$(curl -fsS -b "$COOKIES" "$BASE/api/admin/media/orphans" | jq -r '.count')"
+[ "$orphans" = 0 ] || { echo "unexpected orphans: $orphans" >&2; exit 1; }
+
 echo "==> smoke test passed"

@@ -68,6 +68,8 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Get("/media/stats", httpx.Handle(h.stats))
 	r.Get("/media", httpx.Handle(h.list))
 	r.Post("/media/prune", httpx.Handle(h.prune))
+	r.Get("/media/orphans", httpx.Handle(h.orphans))
+	r.Post("/media/orphans/cleanup", httpx.Handle(h.cleanupOrphans))
 	r.Delete("/media/{id}", httpx.Handle(h.delete))
 }
 
@@ -476,4 +478,64 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 type PruneResult struct {
 	PrunedCount int `json:"pruned_count"`
 	CutoffDays  int `json:"cutoff_days"`
+}
+
+// orphans handles GET /api/admin/media/orphans.
+//
+// @Summary Count orphaned media objects
+// @Description Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Requires role admin (403 otherwise).
+// @ID getMediaOrphans
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} Orphans "Orphaned objects (deleted is 0)."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/orphans [get]
+func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	o, err := FindOrphans(r.Context(), h.DB, h.Store, false)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, o)
+	return nil
+}
+
+// cleanupOrphans handles POST /api/admin/media/orphans/cleanup.
+//
+// @Summary Delete orphaned media objects
+// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Requires role admin (403 otherwise).
+// @ID cleanupMediaOrphans
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} Orphans "Orphaned objects found and deleted."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/orphans/cleanup [post]
+func (h *Handler) cleanupOrphans(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	admin := auth.UserFrom(r.Context())
+	o, err := FindOrphans(r.Context(), h.DB, h.Store, true)
+	if o != nil && o.Deleted > 0 {
+		slog.Info("orphaned media removed", "audit", "media_orphans", "admin_id", admin.ID, "admin", admin.Username, "deleted", o.Deleted, "bytes", o.Bytes)
+	}
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, o)
+	return nil
 }

@@ -5,7 +5,10 @@ import (
 	"context"
 	"errors"
 	"io"
+	"sort"
+	"strings"
 	"sync"
+	"time"
 )
 
 // Store is the object storage the media package needs. *s3.Client satisfies
@@ -17,6 +20,15 @@ type Store interface {
 	GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error)
 	Delete(ctx context.Context, key string) error
 	DeleteBatch(ctx context.Context, keys []string) error
+	// List calls fn for every object whose key starts with prefix.
+	List(ctx context.Context, prefix string, fn func(ObjectInfo) error) error
+}
+
+// ObjectInfo describes a stored object.
+type ObjectInfo struct {
+	Key          string
+	Size         int64
+	LastModified time.Time
 }
 
 // ErrObjectNotFound is returned by MemoryStore for unknown keys.
@@ -29,8 +41,9 @@ type MemoryStore struct {
 }
 
 type memObject struct {
-	data []byte
-	mime string
+	data     []byte
+	mime     string
+	modified time.Time
 }
 
 func NewMemoryStore() *MemoryStore { return &MemoryStore{objects: map[string]memObject{}} }
@@ -42,7 +55,7 @@ func (m *MemoryStore) Upload(_ context.Context, key string, body io.Reader, mime
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.objects[key] = memObject{data: data, mime: mimeType}
+	m.objects[key] = memObject{data: data, mime: mimeType, modified: time.Now()}
 	return nil
 }
 
@@ -78,4 +91,37 @@ func (m *MemoryStore) Len() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return len(m.objects)
+}
+
+func (m *MemoryStore) List(_ context.Context, prefix string, fn func(ObjectInfo) error) error {
+	m.mu.Lock()
+	infos := make([]ObjectInfo, 0, len(m.objects))
+	for k, o := range m.objects {
+		if strings.HasPrefix(k, prefix) {
+			infos = append(infos, ObjectInfo{Key: k, Size: int64(len(o.data)), LastModified: o.modified})
+		}
+	}
+	m.mu.Unlock()
+	sort.Slice(infos, func(i, j int) bool { return infos[i].Key < infos[j].Key })
+	for _, info := range infos {
+		if err := fn(info); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Put stores an object directly, as if uploaded at modified (tests only).
+func (m *MemoryStore) Put(key string, data []byte, modified time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.objects[key] = memObject{data: data, modified: modified}
+}
+
+// Has reports whether key is stored.
+func (m *MemoryStore) Has(key string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	_, ok := m.objects[key]
+	return ok
 }

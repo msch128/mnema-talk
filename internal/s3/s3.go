@@ -16,6 +16,7 @@ import (
 	s3svc "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/media"
 )
 
 type Client struct {
@@ -168,4 +169,24 @@ func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (i
 		return nil, fmt.Errorf("get object %s from %d: %w", key, offset, err)
 	}
 	return out.Body, nil
+}
+
+// List calls fn for every object whose key starts with prefix, page by page.
+func (c *Client) List(ctx context.Context, prefix string, fn func(media.ObjectInfo) error) error {
+	pages := s3svc.NewListObjectsV2Paginator(c.client, &s3svc.ListObjectsV2Input{
+		Bucket: aws.String(c.bucket),
+		Prefix: aws.String(prefix),
+	})
+	for pages.HasMorePages() {
+		page, err := pages.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("list objects %s: %w", prefix, err)
+		}
+		for _, o := range page.Contents {
+			if err := fn(media.ObjectInfo{Key: aws.ToString(o.Key), Size: aws.ToInt64(o.Size), LastModified: aws.ToTime(o.LastModified)}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
