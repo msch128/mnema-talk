@@ -1,0 +1,19 @@
+internal/sfu/forward_test.go
+  s_0ae926f6f8634a::t_a57d77891a639a 9,18-36,115,132-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "43939dbd3b989d81c67a309ba3acd945f446bcee",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
