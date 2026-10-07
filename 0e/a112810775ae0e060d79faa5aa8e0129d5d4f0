@@ -1,0 +1,29 @@
+.gitattributes
+  s_0ae926f6f8634a::t_57b4ef2c8fe7bb 1-7
+desktop/licenses/texts/016d20f335060a70e79d9fcf8dfaa6201114d65d592211f4bdfb8ae9ca2bc1dc.txt
+  s_0ae926f6f8634a::t_37e0fcfeaf4d70 1-26
+desktop/licenses/texts/4665f973ccb9393807a7fb1264add6b3513d19abc6b357e4cb52c6fe59cc6a3b.txt
+  s_0ae926f6f8634a::t_36610ac34e8cf1 1-201
+desktop/licenses/texts/60c93a31f490375aadf64098b75f10715010379541021e00261045d7800611d3.txt
+  s_0ae926f6f8634a::t_c253f28d19d867 1-202
+desktop/licenses/texts/a7d00bfd54525bc694b6e32f64c7ebcf5e6b7ae3657be5cc12767bce74654a47.txt
+  s_0ae926f6f8634a::t_4970d2b5983ff9 1-55
+desktop/licenses/texts/c09aae9d3c77b531f56351a9947bc7446511d6b025b3255312d3e3442a9a7583.txt
+  s_0ae926f6f8634a::t_b6606037449665 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0ea112810775ae0e060d79faa5aa8e0129d5d4f0",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
