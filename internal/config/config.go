@@ -65,7 +65,9 @@ type Config struct {
 	AppImage         string
 	WebRTCUDPPortMin uint16
 	WebRTCUDPPortMax uint16
-	// WebRTCUDPMuxPort optionally shares one port across media peers (0 = off).
+	// WebRTCUDPMuxPort is the one UDP port all media peers share (default
+	// WEBRTC_UDP_PORT_MIN). 0 gives every peer its own port(s) from the range
+	// instead, which caps how many people can be in calls at once.
 	WebRTCUDPMuxPort uint16
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
@@ -165,7 +167,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	muxPort, err := getPort("WEBRTC_UDP_MUX_PORT", 0)
+	muxPort, err := getPort("WEBRTC_UDP_MUX_PORT", portMin)
 	if err != nil {
 		return nil, err
 	}
@@ -358,6 +360,18 @@ func (c *Config) validateUpdater() error {
 
 // SelfUpdateConfigured reports whether the updater sidecar may be called.
 func (c *Config) SelfUpdateConfigured() bool { return c.UpdaterToken != "" && c.UpdaterURL != "" }
+
+// WebRTCReachabilityWarning explains why members outside the server's own
+// network will likely get no voice, or returns "". In production without
+// WEBRTC_NAT_1TO1_IP the SFU announces the container's own (Docker bridge)
+// address, which no browser elsewhere can reach, and without TURN there is
+// no fallback either.
+func (c *Config) WebRTCReachabilityWarning() string {
+	if !c.IsProduction() || len(c.WebRTCAnnounce) > 0 || len(c.WebRTCTURNURLs) > 0 {
+		return ""
+	}
+	return "WEBRTC_NAT_1TO1_IP and WEBRTC_TURN_URLS are empty: browsers are told the container's own address, so voice and video will likely fail for members outside this host; set WEBRTC_NAT_1TO1_IP to the public (and LAN) address"
+}
 
 // IsProduction is the single definition of a production-like deployment:
 // strict secret checks, HSTS, short panic stacks and info-level logs.

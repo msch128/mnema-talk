@@ -17,11 +17,5 @@ func TestUDPMuxPortConfiguration(t *testing.T) {
 			t.Errorf("invalid mux port %s accepted", port)
 		}
 	}
-	cfg, err := FromEnv(lookup(base()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.WebRTCUDPMuxPort != 0 {
-		t.Fatalf("mux must default off, got %d", cfg.WebRTCUDPMuxPort)
-	}
+	// The default (shared port) is covered by TestUDPMuxIsDefault.
 }

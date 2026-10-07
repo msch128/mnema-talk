@@ -22,7 +22,6 @@ const (
 	pingInterval    = 30 * time.Second
 	writeWait       = 10 * time.Second
 	revalidateEvery = 2 * time.Minute
-	maxEventsPerSec = 40
 )
 
 // HandleWebSocket authenticates the session cookie, checks the origin and
@@ -56,7 +55,7 @@ const (
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
 // @Description - `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.
 // @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
-// @Description - `voice_kicked`: `{channel_id}` when an admin removes the user from voice.
+// @Description - `voice_kicked`: `{channel_id, reason?}` when an admin removes the user from voice, or `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`).
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:
@@ -235,17 +234,15 @@ func (c *Client) readPump() {
 		return c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	})
 
-	windowStart, count := time.Now(), 0
+	var budget eventBudget
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			return
 		}
 		// Per-connection flood guard: excess events are dropped.
-		if now := time.Now(); now.Sub(windowStart) >= time.Second {
-			windowStart, count = now, 0
-		}
-		if count++; count > maxEventsPerSec {
+		now := time.Now()
+		if !budget.allowFrame(now) {
 			continue
 		}
 		var ev struct {
@@ -253,6 +250,9 @@ func (c *Client) readPump() {
 			Payload json.RawMessage `json:"payload"`
 		}
 		if err := json.Unmarshal(message, &ev); err != nil {
+			continue
+		}
+		if !budget.allowEvent(ev.Type, len(ev.Payload), now) {
 			continue
 		}
 		c.handle(ev.Type, ev.Payload)

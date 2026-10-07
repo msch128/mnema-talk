@@ -3,7 +3,7 @@
 // Package testutil provides the shared Postgres fixture for integration tests
 // (build tag "integration"), modelled on mnema.xyz's internal/testutil.
 //
-// A single postgres:17-alpine container is started per test binary via
+// A single postgres:18-alpine container is started per test binary via
 // dockertest and migrated with the embedded migrations. Set
 // TEST_DATABASE_URL to use an existing database instead (CI service
 // container). Tests isolate themselves with Reset, which truncates all data.
@@ -54,7 +54,7 @@ func start() (*db.Pool, error) {
 	}
 
 	res, err := pool.Run(ctx, "postgres",
-		dockertest.WithTag("17-alpine"),
+		dockertest.WithTag("18-alpine"),
 		dockertest.WithEnv([]string{"POSTGRES_USER=mnema", "POSTGRES_PASSWORD=mnema", "POSTGRES_DB=mnema_test"}),
 		dockertest.WithLabels(map[string]string{"mnema-talk.testutil": "postgres"}),
 		dockertest.WithoutReuse(),

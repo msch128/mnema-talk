@@ -61,8 +61,8 @@ export type AuthCreateInviteRequest = {
 export function isAuthCreateInviteRequest(value: unknown): value is AuthCreateInviteRequest {
   return isRecord(value)
     && (!hasOwn(value, "code") || isString(value["code"]))
-    && (!hasOwn(value, "expires_in_hours") || (isInteger(value["expires_in_hours"]) || value["expires_in_hours"] === null))
-    && (!hasOwn(value, "max_uses") || (isInteger(value["max_uses"]) || value["max_uses"] === null))
+    && (!hasOwn(value, "expires_in_hours") || ((isInteger(value["expires_in_hours"]) && value["expires_in_hours"] >= 1 && value["expires_in_hours"] <= 8760) || value["expires_in_hours"] === null))
+    && (!hasOwn(value, "max_uses") || ((isInteger(value["max_uses"]) && value["max_uses"] >= 1 && value["max_uses"] <= 1000) || value["max_uses"] === null))
 }
 
 export const decodeAuthCreateInviteRequest = decoder("auth.CreateInviteRequest", isAuthCreateInviteRequest)
@@ -267,9 +267,11 @@ export type ChatChannel = {
   created_at: string
   id: string
   name: string
+  number: number
   sort_order: number
   topic: string
   type: ChatChannelType
+  user_limit: number
 }
 
 export function isChatChannel(value: unknown): value is ChatChannel {
@@ -278,9 +280,11 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
+    && (hasOwn(value, "number") && isInteger(value["number"]))
     && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
     && (hasOwn(value, "topic") && isString(value["topic"], 255))
     && (hasOwn(value, "type") && isChatChannelType(value["type"]))
+    && (hasOwn(value, "user_limit") && (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
 }
 
 export const decodeChatChannel = decoder("chat.Channel", isChatChannel)
@@ -446,6 +450,7 @@ export type ChatMessage = {
   is_edited: boolean
   is_pinned: boolean
   mentions: Array<string>
+  number: number
   parent_id?: string
   reactions: Array<ChatReactionSummary>
   reply_count: number
@@ -468,6 +473,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
+    && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
     && (hasOwn(value, "reactions") && isArrayOf(value["reactions"], item => isChatReactionSummary(item)))
     && (hasOwn(value, "reply_count") && isInteger(value["reply_count"]))
@@ -635,12 +641,14 @@ export const decodeChatThread = decoder("chat.Thread", isChatThread)
 export type ChatUpdateChannelRequest = {
   name?: string
   topic?: string
+  user_limit?: number
 }
 
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "name") || isString(value["name"], 64))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
+    && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
 }
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
@@ -718,6 +726,21 @@ export function isMediaDashboardItem(value: unknown): value is MediaDashboardIte
 }
 
 export const decodeMediaDashboardItem = decoder("media.DashboardItem", isMediaDashboardItem)
+
+export type MediaOrphans = {
+  bytes: number
+  count: number
+  deleted: number
+}
+
+export function isMediaOrphans(value: unknown): value is MediaOrphans {
+  return isRecord(value)
+    && (hasOwn(value, "bytes") && isInteger(value["bytes"]))
+    && (hasOwn(value, "count") && isInteger(value["count"]))
+    && (hasOwn(value, "deleted") && isInteger(value["deleted"]))
+}
+
+export const decodeMediaOrphans = decoder("media.Orphans", isMediaOrphans)
 
 export type MediaPruneResult = {
   cutoff_days: number

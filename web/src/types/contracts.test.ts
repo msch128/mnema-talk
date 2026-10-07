@@ -1,11 +1,45 @@
 import { describe, expect, it } from 'vitest'
 import { channelFixture, fixtureId, FIXTURE_TIMESTAMP, messageFixture, userFixture } from '../test-fixtures.fixture'
-import { isChatChannel, isChatMessage } from './rest'
+import { isChatChannel, isChatMessage, isChatUpdateChannelRequest, decodeMediaOrphans } from './rest'
 import { decodeServerEvent } from './events'
 import type { VoiceSnapshot } from './events'
 import { ContractError } from './validation'
 
 describe('application wire contracts', () => {
+  it('validates stable link numbers and voice capacity bounds added by the backend', () => {
+    for (const user_limit of [0, 1, 999]) {
+      expect(isChatChannel(channelFixture({ user_limit }))).toBe(true)
+      expect(isChatUpdateChannelRequest({ user_limit })).toBe(true)
+    }
+    for (const user_limit of [-1, 1000, 0.5, '1', undefined, null]) {
+      expect(isChatChannel({ ...channelFixture(), user_limit })).toBe(false)
+      expect(isChatUpdateChannelRequest({ user_limit })).toBe(false)
+    }
+    expect(isChatUpdateChannelRequest({})).toBe(true)
+    for (const number of [1, Number.MAX_SAFE_INTEGER]) {
+      expect(isChatChannel(channelFixture({ number }))).toBe(true)
+      expect(isChatMessage(messageFixture({ number }))).toBe(true)
+    }
+    for (const number of [undefined, null, '1', 0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(isChatChannel({ ...channelFixture(), number })).toBe(false)
+      expect(isChatMessage({ ...messageFixture(), number })).toBe(false)
+    }
+    const channel: Partial<ReturnType<typeof channelFixture>> = { ...channelFixture() }
+    delete channel.number
+    delete channel.user_limit
+    expect(isChatChannel(channel)).toBe(false)
+    const message: Partial<ReturnType<typeof messageFixture>> = { ...messageFixture() }
+    delete message.number
+    expect(isChatMessage(message)).toBe(false)
+  })
+
+  it('decodes administrative orphan counts without trusting malformed storage statistics', () => {
+    const result = { bytes: 4096, count: 2, deleted: 0 }
+    expect(decodeMediaOrphans(result)).toBe(result)
+    for (const value of [{ ...result, count: '2' }, { ...result, bytes: Number.MAX_SAFE_INTEGER + 1 }, { bytes: 0, count: 0 }, null]) {
+      expect(() => decodeMediaOrphans(value)).toThrow(ContractError)
+    }
+  })
   it('distinguishes required nullable channel parents from omitted optional message references', () => {
     const channel = channelFixture()
     expect(isChatChannel(channel)).toBe(true)

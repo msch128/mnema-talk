@@ -194,3 +194,20 @@ func TestHubCloseDuringAuthenticationRejectsUpgrade(t *testing.T) {
 		t.Fatal("racing upgrade registered a client")
 	}
 }
+
+// A slow client is closed once: further events past the full buffer do not
+// start more closes.
+func TestSlowClientClosesOnce(t *testing.T) {
+	c := newClient(nil, nil, auth.User{}, 0)
+	c.send = make(chan []byte, 1)
+	c.deliver([]byte("a"))
+	if c.closing.Load() {
+		t.Fatal("client with room in its buffer marked closing")
+	}
+	for range 100 {
+		c.deliver([]byte("b"))
+	}
+	if !c.closing.Load() {
+		t.Fatal("slow client not closed")
+	}
+}

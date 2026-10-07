@@ -212,7 +212,7 @@ func (c *client) upload(path, field, filename, contentType string, data []byte, 
 // seedAdmin creates the admin account directly and logs it in.
 func (a *app) seedAdmin() *client {
 	a.t.Helper()
-	if err := auth.EnsureAdminUser(context.Background(), a.db, "Herzog", "admin-password-123"); err != nil {
+	if err := auth.EnsureAdminUser(context.Background(), a.db, "Herzog", "admin-password-123", false); err != nil {
 		a.t.Fatal(err)
 	}
 	return a.login("Herzog", "admin-password-123")

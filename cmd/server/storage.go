@@ -112,3 +112,11 @@ func (l *lazyStore) DeleteBatch(ctx context.Context, keys []string) error {
 	}
 	return s.DeleteBatch(ctx, keys)
 }
+
+func (l *lazyStore) List(ctx context.Context, prefix string, fn func(media.ObjectInfo) error) error {
+	s, err := l.get()
+	if err != nil {
+		return err
+	}
+	return s.List(ctx, prefix, fn)
+}

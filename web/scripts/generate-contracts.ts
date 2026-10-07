@@ -12,6 +12,8 @@ interface Schema {
   items?: Schema
   format?: string
   maxLength?: number
+  minimum?: number
+  maximum?: number
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,6 +30,8 @@ function isSchema(value: unknown): value is Schema {
     && (value['items'] === undefined || isSchema(value['items']))
     && (value['format'] === undefined || typeof value['format'] === 'string')
     && (value['maxLength'] === undefined || typeof value['maxLength'] === 'number')
+    && (value['minimum'] === undefined || typeof value['minimum'] === 'number')
+    && (value['maximum'] === undefined || typeof value['maximum'] === 'number')
 }
 
 const specPath = new URL('../../api/openapi.json', import.meta.url)
@@ -73,8 +77,13 @@ function guard(schema: Schema, expression: string): string {
   if (Array.isArray(schema.type)) return `(${schema.type.map(type => guard({ ...schema, type }, expression)).join(' || ')})`
   switch (schema.type) {
     case 'null': return `${expression} === null`
-    case 'integer': return `isInteger(${expression})`
-    case 'number': return `(typeof ${expression} === 'number' && Number.isFinite(${expression}))`
+    case 'integer':
+    case 'number': {
+      const checks = [schema.type === 'integer' ? `isInteger(${expression})` : `(typeof ${expression} === 'number' && Number.isFinite(${expression}))`]
+      if (schema.minimum !== undefined) checks.push(`${expression} >= ${schema.minimum}`)
+      if (schema.maximum !== undefined) checks.push(`${expression} <= ${schema.maximum}`)
+      return checks.length === 1 ? checks[0]! : `(${checks.join(' && ')})`
+    }
     case 'boolean': return `typeof ${expression} === 'boolean'`
     case 'string': {
       if (schema.format === 'uuid') return `isIdentifier(${expression})`

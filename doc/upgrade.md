@@ -31,6 +31,8 @@ base=https://raw.githubusercontent.com/msch128/mnema-talk/v$NEW
 curl -fsSLo docker-compose.yml        "$base/docker-compose.yml"
 curl -fsSLo .env.example.new          "$base/.env.example"
 curl -fsSLo scripts/backup.sh         "$base/scripts/backup.sh"
+curl -fsSLo scripts/backup-common.sh  "$base/scripts/backup-common.sh"
+curl -fsSLo scripts/upgrade-postgres.sh "$base/scripts/upgrade-postgres.sh"
 curl -fsSLo scripts/restore.sh        "$base/scripts/restore.sh"
 curl -fsSLo scripts/health-check.sh   "$base/scripts/health-check.sh"
 chmod +x scripts/*.sh
@@ -70,18 +72,143 @@ replaces steps 3–5.
 
 ### Rollback
 
+Stop the app before changing its image or database. If the new version applied
+migrations (`migration applied` in its log), restore the pre-update database
+and media before starting the old app. **Released 0.4.x binaries, including
+0.4.4, have no downgrade refusal guard.** The newer migration runner adds
+that guard; it cannot protect an older binary. Never run the old image against
+the migrated PostgreSQL 18 database.
+
+For a PostgreSQL 17 → 18 upgrade, use the saved 0.4.x compose file and image
+with the preserved `postgres-data` volume. PostgreSQL 18 has a separate
+`postgres18-data` volume; keep both until the rollback or recovery is verified.
+The preserved PostgreSQL 17 database reflects the upgrade's cutover, so writes
+made afterward on PostgreSQL 18 are not in that rollback.
+
 ```sh
+set -e
+docker compose stop app postgres
 cp docker-compose.yml.bak docker-compose.yml
-sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.3.3|" .env   # the old version
-docker compose pull app && docker compose up -d
+sed -i "s|^MNEMA_IMAGE=.*|MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4.4|" .env # the saved old version
+docker compose pull app
+docker compose up -d --wait postgres seaweedfs
+# If the preserved volume is unavailable or a backup rollback is required,
+# restore a complete pre-update backup here, while the app is still stopped:
+# ./scripts/restore.sh /path/to/backups/<timestamp> --verify
+# ./scripts/restore.sh /path/to/backups/<timestamp> --yes
+docker compose up -d --wait app
+curl -fsS http://127.0.0.1:8080/api/health
 ```
 
-If the new version applied a migration (`migration applied` in the log), the
-old version may not work with the new schema: restore the backup from step 1
-as well (`./scripts/restore.sh /path/to/backups/<timestamp>`), which replaces
-the database and media with the state before the update.
+For an update that kept the same database volume, the backup restore is
+required if migrations changed its schema. The restore replaces the database
+and media with the backup's state and preserves the current `.env` and compose
+configuration. Keep the complete backup from step 1 and the saved compose file
+until the new release has passed your application checks.
 
 ## Version notes
+
+### 0.4.x → 0.5.0
+
+- **PostgreSQL 17 → 18, one manual step.** The database moves to a new
+  volume (`postgres18-data`); the PostgreSQL 17 volume (`postgres-data`)
+  stays untouched for rollback. Take the complete database/media/config backup
+  in step 1 with 0.4.x still running. Fetch every script listed in step 3,
+  including `backup-common.sh` and `upgrade-postgres.sh`. Instead of the
+  ordinary startup in step 5, run:
+
+  ```sh
+  # steps 1–4 completed: backup saved, new compose/scripts/image selected
+  docker compose pull
+  ./scripts/upgrade-postgres.sh
+  ```
+
+  The script stops both the app and the existing PostgreSQL service before
+  copying the old volume. It mounts the original read-only, makes a cold copy
+  in a disposable volume, and starts the throwaway PostgreSQL 17 without a
+  network on that copy. It dumps the database to `BACKUP_DIR`, imports it into
+  PostgreSQL 18, checks the imported tables, and then starts the stack. The
+  original PostgreSQL 17 volume receives no temporary-server writes; media
+  is not changed by the upgrade.
+
+  Normal startup beside an old PostgreSQL 17 cluster requires the persistent
+  completion marker `/var/lib/postgresql/.mnema-pg17-upgrade-complete`, with
+  contents `mnema-postgres17-upgrade-v1`. The script publishes it atomically
+  only after import and verification succeed. Merely initializing an empty
+  PostgreSQL 18 cluster, or completing part of an import, does not authorize
+  startup. `MNEMA_PG_UPGRADE=1` is a temporary import bypass; do not save it in
+  `.env` or leave it exported. If import fails, keep the app stopped and use
+  the rollback above or the complete-backup recovery below. The upgrade's
+  standalone SQL dump is not a complete backup.
+
+  Keep the old volume until application checks and recovery verification
+  succeed. The script prints its removal command. A local development database
+  (`make dev`) upgrades the same way; `docker compose down -v` discards all
+  database and media volumes and is suitable only for intentionally disposable
+  development data.
+- **Migrations** `0013_readable_numbers.sql` (link numbers for channels and
+  messages) and `0014_channel_user_limit.sql`. The new migration runner rejects
+  a schema newer than its embedded migrations. Released 0.4.x binaries lack
+  this guard: roll back using the saved 0.4.x compose file and original
+  PostgreSQL 17 volume, or a complete pre-update backup, before starting them.
+- **Production needs `ADMIN_INITIAL_PASSWORD` on a fresh install** (no
+  effect once the admin exists). The generated password is no longer logged.
+- **Voice: one shared UDP port.** `WEBRTC_UDP_MUX_PORT` now defaults to
+  `WEBRTC_UDP_PORT_MIN`; no Docker or router change. An `.env` still saying
+  `WEBRTC_UDP_MUX_PORT=0` keeps the old per-peer mode (about 25 people in
+  calls at once) and logs a warning: empty or remove the line.
+- **Per-channel member limit** replaces any idea of a global one: voice
+  channels have an optional `user_limit` (default: none).
+- **Compose:** memory and pids limits, log rotation, digest-pinned images,
+  `POSTGRES_PASSWORD` and `S3_SECRET_KEY` required at interpolation. New
+  optional variables `APP_MEM_LIMIT` (1g), `APP_TMP_SIZE` (64m),
+  `POSTGRES_MEM_LIMIT` (1g), `SEAWEEDFS_MEM_LIMIT` (1g). Uploads stream to S3
+  and no longer pass through `/tmp`.
+
+### Recover PostgreSQL 18 from a complete backup after a failed upgrade
+
+Use this path when the new PostgreSQL 18 volume is initialized but its import
+failed, and you have a complete canonical backup from before the update. It
+also restores media from that same backup. Run in the existing deployment
+with the new compose file and all tagged scripts; the stopped app and existing
+SeaweedFS containers must still exist. Keep the original PostgreSQL 17 volume
+and the backup. Do not replace or delete volumes during this recovery.
+
+Verify the backup before live changes. `--verify` checks the canonical manifest,
+completion marker, checksums, archive safety and an isolated SQL import. An
+upgrade-only SQL dump or an incomplete backup does not qualify; do not use
+`--allow-legacy` for this recipe. The verification proves structural recovery;
+login, media retrieval and voice/device checks still follow afterward.
+
+```sh
+(
+  set -e
+  MNEMA_RECOVERY_BACKUP="/path/to/backups/<timestamp>"
+  ./scripts/restore.sh "$MNEMA_RECOVERY_BACKUP" --verify
+
+  # Existing app stays stopped throughout database and media restoration.
+  docker compose stop app
+  MNEMA_PG_UPGRADE=1 docker compose up -d --wait --no-deps postgres
+  ./scripts/restore.sh "$MNEMA_RECOVERY_BACKUP" --yes
+
+  # Reached only after SQL AND media restoration have succeeded.
+  docker compose exec -T postgres sh -c 'umask 077; printf "%s\n" mnema-postgres17-upgrade-v1 > /var/lib/postgresql/.mnema-pg17-upgrade-complete.tmp && mv /var/lib/postgresql/.mnema-pg17-upgrade-complete.tmp /var/lib/postgresql/.mnema-pg17-upgrade-complete'
+
+  # Clear the temporary bypass even if inherited from the shell or .env.
+  MNEMA_PG_UPGRADE= docker compose up -d --wait --no-deps postgres
+  MNEMA_PG_UPGRADE= docker compose up -d --wait
+  curl -fsS http://127.0.0.1:8080/api/health
+)
+```
+
+`restore.sh --yes` records that the app was already stopped, so it does not
+resume it. If restore or marker publication fails, `set -e` stops the sequence;
+keep the app stopped and resolve the failure before proceeding. The marker
+lives in the PostgreSQL 18 volume and survives container recreation. Remove any
+`MNEMA_PG_UPGRADE=1` setting from `.env` and the invoking shell before later
+normal operations; the empty assignments above apply only to those commands.
+After health succeeds, test login, an uploaded object and voice on the restored
+release. The newer app applies its embedded migrations when it finally starts.
 
 ### 0.3.x → 0.4.0
 

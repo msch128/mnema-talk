@@ -44,7 +44,7 @@ General rules:
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
 | `ADMIN_USERNAME` | `Herzog` | The administrator account, created on first start when no admin exists. |
-| `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start. Empty = a random password is generated and logged **once**. A placeholder value is rejected. |
+| `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
 ### Database
 
@@ -80,8 +80,8 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | `50000` / `50050` | UDP range of the SFU; `1 <= MIN <= MAX`. Compose publishes the same range; forward it in your router. |
-| `WEBRTC_UDP_MUX_PORT` | `0` | Optional shared UDP port across media peers, separately bound on each local IPv4/IPv6 interface. `0` keeps per-peer range allocation. Otherwise it must be inside `MIN`–`MAX`, already published by Compose. Requires restart. Reduces port use, not outgoing bandwidth; no participant-capacity guarantee. |
-| `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. |
+| `WEBRTC_UDP_MUX_PORT` | `WEBRTC_UDP_PORT_MIN` | The one UDP port all media peers share (like LiveKit or Discord voice servers), separately bound on each local IPv4/IPv6 interface. Must be inside `MIN`–`MAX`, which Compose already publishes. `0` = legacy mode: every peer takes its own port(s) from the range, so the default 51 ports fit only about 25 people in calls at once (logged at startup). Requires restart. |
+| `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. In production, an empty value with no TURN configured logs a warning at startup. |
 | `WEBRTC_STUN_URLS` | empty | Optional STUN servers. Empty = no third-party STUN (named in the privacy policy when set). |
 | `WEBRTC_TURN_URLS` | empty | Optional TURN URLs, e.g. `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp`. |
 | `WEBRTC_TURN_SECRET` | empty | Shared secret with coturn (`use-auth-secret`). At least 16 characters when `WEBRTC_TURN_URLS` is set; no placeholder in production. |
@@ -113,6 +113,18 @@ General rules:
 
 Shown in the privacy policy (`GET /api/legal`). Set your real details in
 `.env` only.
+
+### Container resources (compose only)
+
+Read by `docker-compose.yml`, not by the app. All services also rotate their
+logs at 3 x 10 MB.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `APP_MEM_LIMIT` | `1g` | Memory cap of the app container, including its RAM-backed `/tmp`. Uploads stream to S3 in 5 MB parts, so each upload in flight needs about 5 MB, whatever `MAX_UPLOAD_SIZE_MB` is. |
+| `APP_TMP_SIZE` | `64m` | Size of the app's `/tmp` tmpfs (scratch only; uploads no longer pass through it). |
+| `POSTGRES_MEM_LIMIT` | `1g` | Memory cap of PostgreSQL. |
+| `SEAWEEDFS_MEM_LIMIT` | `1g` | Memory cap of SeaweedFS. |
 
 ### Script variables
 
@@ -264,7 +276,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
 - Retention removes only validated complete old backups after a successful
   backup and service restart. Incomplete/legacy directories require manual
   review and cleanup. Copy backups off the machine and encrypt offsite copies.
-- `--verify` imports into a network-isolated disposable PostgreSQL 17 container
+- `--verify` imports into a network-isolated disposable PostgreSQL 18 container
   with no live volumes or published ports, and removes it and its disposable
   database volume on success/failure. Allow disk space for the imported database.
   It checks SQL import and archive integrity. It does **not** prove login,
@@ -307,6 +319,22 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
 - **Admin → System** shows version and commit, database and migration state,
   storage, voice/SFU and server resources, and the update check.
 
+## Orphaned media
+
+Objects in storage that no media row refers to (a failed delete, a crash
+during an upload) are invisible to members and only take space. Once a day
+the app counts those older than 24 hours under `uploads/` and `avatars/` and
+logs a warning when it finds any; it never deletes them on its own.
+
+```sh
+# as admin (session cookie): count, then remove
+GET  /api/admin/media/orphans           -> {"count": 2, "bytes": 150, "deleted": 0}
+POST /api/admin/media/orphans/cleanup   -> {"count": 2, "bytes": 150, "deleted": 2}
+```
+
+Objects with a media row, objects younger than 24 hours and anything outside
+those two prefixes are never touched.
+
 ## Logs
 
 The app logs JSON lines to stdout:
@@ -316,6 +344,9 @@ docker compose logs -f app            # or: make logs
 docker compose logs app | grep '"sfu'  # voice connection events
 docker compose logs app | grep '"audit":"self_update"'
 ```
+
+Compose rotates every container's log at 3 x 10 MB, so older lines drop off;
+ship them elsewhere if you need a longer history.
 
 At startup the app logs `webrtc announce` with the announced IPs and the
 port range, or `webrtc sfu unavailable, voice disabled` when the SFU could

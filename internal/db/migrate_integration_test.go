@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"io/fs"
 	"net/url"
 	"os"
 	"strings"
@@ -14,7 +15,8 @@ import (
 )
 
 // scratchPool connects to TEST_DATABASE_URL with search_path set to a fresh
-// schema, so these tests never touch the shared tables other packages use.
+// schema (then public), so these tests never touch the shared tables other
+// packages use.
 func scratchPool(t *testing.T) *Pool {
 	t.Helper()
 	dsn := os.Getenv("TEST_DATABASE_URL")
@@ -43,7 +45,9 @@ func scratchPool(t *testing.T) *Pool {
 		t.Fatal(err)
 	}
 	q := u.Query()
-	q.Set("search_path", schema)
+	// public stays on the path for extensions (pg_trgm) another test or
+	// the shared database already installed there.
+	q.Set("search_path", schema+",public")
 	u.RawQuery = q.Encode()
 	p, err := Connect(ctx, u.String())
 	if err != nil {
@@ -142,5 +146,86 @@ func TestMigrateUpgradesOldSchemaMigrationsTable(t *testing.T) {
 	var sum string
 	if err := p.QueryRow(ctx, `SELECT checksum FROM schema_migrations WHERE filename = '0001_a.sql'`).Scan(&sum); err != nil || sum == "" {
 		t.Fatalf("checksum=%q err=%v", sum, err)
+	}
+}
+
+// 0013 numbers existing channels and messages in creation order (not in
+// insertion order) and new rows continue after them.
+func TestReadableNumbersBackfillInCreationOrder(t *testing.T) {
+	p := scratchPool(t)
+	ctx := context.Background()
+	sub, err := fs.Sub(migrationFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := listMigrations(sub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := fstest.MapFS{}
+	for _, name := range files {
+		if name >= "0013" {
+			break
+		}
+		b, err := fs.ReadFile(sub, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[name] = &fstest.MapFile{Data: b}
+	}
+	if err := p.MigrateFS(ctx, before); err != nil {
+		t.Fatal(err)
+	}
+
+	// The seed channels of 0001 are older than these; "late" is inserted
+	// first but created after "early".
+	var late, early, user string
+	if err := p.QueryRow(ctx, `INSERT INTO channels (name, type, created_at) VALUES ('late', 'text', NOW() + INTERVAL '2 hours') RETURNING id`).Scan(&late); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO channels (name, type, created_at) VALUES ('early', 'text', NOW() + INTERVAL '1 hour') RETURNING id`).Scan(&early); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('numbers', 'n', 'x') RETURNING id`).Scan(&user); err != nil {
+		t.Fatal(err)
+	}
+	var second, first string
+	if err := p.QueryRow(ctx, `INSERT INTO messages (channel_id, user_id, content, created_at) VALUES ($1, $2, 'second', NOW() + INTERVAL '1 minute') RETURNING id`, early, user).Scan(&second); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.QueryRow(ctx, `INSERT INTO messages (channel_id, user_id, content, created_at) VALUES ($1, $2, 'first', NOW()) RETURNING id`, early, user).Scan(&first); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := p.MigrateFS(ctx, sub); err != nil {
+		t.Fatal(err)
+	}
+	number := func(table, id string) int64 {
+		var n int64
+		if err := p.QueryRow(ctx, `SELECT number FROM `+table+` WHERE id = $1`, id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	var channels int64
+	if err := p.QueryRow(ctx, `SELECT COUNT(*) FROM channels`).Scan(&channels); err != nil {
+		t.Fatal(err)
+	}
+	if number("channels", early) != channels-1 || number("channels", late) != channels {
+		t.Errorf("channel numbers early=%d late=%d of %d, want creation order at the end", number("channels", early), number("channels", late), channels)
+	}
+	if number("messages", first) != 1 || number("messages", second) != 2 {
+		t.Errorf("message numbers first=%d second=%d, want 1 and 2", number("messages", first), number("messages", second))
+	}
+
+	var next string
+	if err := p.QueryRow(ctx, `INSERT INTO messages (channel_id, user_id, content) VALUES ($1, $2, 'third') RETURNING id`, early, user).Scan(&next); err != nil {
+		t.Fatal(err)
+	}
+	if n := number("messages", next); n != 3 {
+		t.Errorf("new message number %d, want 3", n)
+	}
+	if _, err := p.Exec(ctx, `INSERT INTO messages (channel_id, user_id, content, number) VALUES ($1, $2, 'forged', 99)`, early, user); err == nil {
+		t.Error("an explicit number was accepted")
 	}
 }

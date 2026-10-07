@@ -4,6 +4,8 @@ import { TestTrack, TestStream, present } from '../media-test.fixture'
 import type { NoiseModel, FilterOptions } from '../lib/dfnTypes'
 type ClientSentEvent = { type: keyof ClientEventPayloads; payload: ClientEventPayloads[keyof ClientEventPayloads] }
 import type { ClientEventPayloads } from '../types/events'
+import { decodeServerEvent } from '../types/events'
+import { fixtureId } from '../test-fixtures.fixture'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
@@ -353,6 +355,50 @@ describe('kicked from voice', () => {
     const joins = sent.filter(e => e.type === 'voice_join').length
     rtc.rejoinAfterReconnect()
     expect(sent.filter(e => e.type === 'voice_join').length).toBe(joins)
+  })
+
+  it.each(['de', 'en'] as const)('ends a refused full-room join with the %s capacity message and no retry', async language => {
+    const { rtc, chat, voice, sent } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const { setLocale, t } = await import('../i18n')
+    const { recent } = await import('../lib/voiceSession')
+    setLocale(language)
+    try {
+      const channelId = fixtureId(301)
+      const join = rtc.joinVoiceChannel(channelId)
+      const mic = await grantMic()
+      await join
+      const pc = present(FakePC.instances.at(-1))
+      const joins = sent.filter(event => event.type === 'voice_join').length
+      const refusal = decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: channelId, reason: 'room_full' } })
+      expect(refusal).toEqual({ type: 'voice_kicked', payload: { channel_id: channelId, reason: 'room_full' } })
+      chat.handleWSEvent(present(refusal))
+      expect(voice.currentChannelId).toBeNull()
+      expect(voice.isConnected).toBe(false)
+      expect(pc.closed).toBe(true)
+      expect(present(mic.getTracks()[0]).stop).toHaveBeenCalled()
+      expect(recent()).toBeNull()
+      expect(sent.some(event => event.type === 'voice_leave')).toBe(false)
+      expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('voice.roomFull'))
+      expect(useToastStore().toasts.map(toast => toast.text)).not.toContain(t('voice.kicked'))
+      expect(t('voice.roomFull')).toBe(language === 'de'
+        ? 'Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.'
+        : 'This voice channel is full. Try again when someone leaves.')
+      rtc.rejoinAfterReconnect()
+      expect(sent.filter(event => event.type === 'voice_join')).toHaveLength(joins)
+    } finally { setLocale('de') }
+  })
+
+  it('ignores a stale full-room refusal for a different channel', async () => {
+    const { rtc, chat, voice } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const join = rtc.joinVoiceChannel('ch-2')
+    await grantMic()
+    await join
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-1', reason: 'room_full' } })
+    expect(voice.currentChannelId).toBe('ch-2')
+    expect(present(FakePC.instances.at(-1)).closed).toBe(false)
+    expect(useToastStore().toasts).toEqual([])
   })
 
   it('ignores a kick from a channel I already left', async () => {

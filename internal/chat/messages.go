@@ -38,7 +38,9 @@ type ReactionSummary struct {
 }
 
 type Message struct {
-	ID          uuid.UUID         `json:"id" format:"uuid"`
+	ID uuid.UUID `json:"id" format:"uuid"`
+	// Number is the message's short, stable link number (/m/4821).
+	Number      int64             `json:"number"`
 	ChannelID   uuid.UUID         `json:"channel_id" format:"uuid"`
 	UserID      uuid.UUID         `json:"user_id" format:"uuid"`
 	ParentID    *uuid.UUID        `json:"parent_id,omitempty" binding:"optional" format:"uuid"`
@@ -96,7 +98,7 @@ func ValidateEmoji(emoji string) (string, error) {
 // preview in one round trip. rm/ru are the replied-to message and its author;
 // the quoted snippet sent with every reply is bounded to 200 characters.
 const messageSelect = `
-	SELECT m.id, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key,
+	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
 	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
 	       m.created_at, m.updated_at,
@@ -117,7 +119,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		var avatar, rUsername, rDisplay, rAvatar, rContent *string
 		var rID, rUser *uuid.UUID
 		var rHasMedia bool
-		if err := rows.Scan(&m.ID, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
+		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
 			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia); err != nil {
 			return nil, err
@@ -350,6 +352,18 @@ func GetThreadReplies(ctx context.Context, p *db.Pool, parentID uuid.UUID, q His
 		WHERE m.parent_id = $1
 		ORDER BY m.created_at ASC, m.id ASC
 		LIMIT $2`, parentID, q.Limit)
+}
+
+// GetMessageByNumber returns one fully populated message by its link number.
+func GetMessageByNumber(ctx context.Context, p *db.Pool, number int64) (*Message, error) {
+	msgs, err := queryMessages(ctx, p, messageSelect+` WHERE m.number = $1`, number)
+	if err != nil {
+		return nil, err
+	}
+	if len(msgs) == 0 {
+		return nil, errMessageNotFound
+	}
+	return &msgs[0], nil
 }
 
 // GetMessage returns one fully populated message.

@@ -28,6 +28,9 @@ env:
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
   GOVULNCHECK_VERSION: v1.8.0
+  TRIVY_VERSION: 0.75.0
+  # sha256 of trivy_0.75.0_Linux-64bit.tar.gz from the upstream checksums.txt
+  TRIVY_SHA256: c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
 
 jobs:
   # -- Secret scan: the whole tree plus the commits this push/PR adds --------
@@ -63,7 +66,7 @@ jobs:
     timeout-minutes: 20
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_USER: mnema
           POSTGRES_PASSWORD: mnema
@@ -135,7 +138,7 @@ jobs:
 
       - name: Upload coverage report
         if: ${{ !cancelled() && hashFiles('coverage.out') != '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-go
           path: coverage.out
@@ -189,7 +192,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
 
@@ -215,7 +218,7 @@ jobs:
 
       - name: Upload coverage report
         if: ${{ !cancelled() && hashFiles('web/coverage/coverage-summary.json') != '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-web
           path: |
@@ -235,7 +238,7 @@ jobs:
   # cross-compiled on the runner (no QEMU), so arm64 adds about one compile.
   docker:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -256,6 +259,53 @@ jobs:
           # reuses these layers from main.
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
+
+      # The runner's architecture again, from the cache above, into the local
+      # Docker daemon for the smoke test and the scan.
+      - name: Load the amd64 image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: mnema-talk:ci
+          build-args: |
+            REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=image
+
+      # The production docker-compose.yml with throwaway secrets: healthcheck,
+      # /api/health and an admin login against the real image.
+      - name: Smoke test (compose stack)
+        run: scripts/smoke-image.sh mnema-talk:ci
+
+      # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
+      # seeded message and upload come back, later changes are gone.
+      - name: Backup/restore drill (compose stack)
+        run: scripts/backup-drill.sh mnema-talk:ci
+
+      # Mnema Talk 0.4 ran PostgreSQL 17 on another volume: the current
+      # compose file must refuse to start on it, and upgrade-postgres.sh
+      # must carry the data over.
+      - name: PostgreSQL 17 -> 18 upgrade drill
+        run: scripts/postgres-upgrade-drill.sh mnema-talk:ci
+
+      - name: Install trivy (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archive}" \
+            --output "$RUNNER_TEMP/$archive"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" trivy
+          "$RUNNER_TEMP/trivy" --version
+
+      # Fixable HIGH/CRITICAL vulnerabilities in the OS packages and the Go
+      # binary fail the build (and so the release, which waits for CI).
+      - name: Scan image
+        run: |
+          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
+            --ignore-unfixed --exit-code 1 --no-progress mnema-talk:ci
 
   # -- Browser smoke test: login, chat message, talk, against the real binary -
   e2e:
@@ -286,7 +336,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 24
+          node-version: 26
           cache: npm
           cache-dependency-path: |
             web/package-lock.json
@@ -312,7 +362,7 @@ jobs:
 
       - name: Upload Playwright traces and screenshots
         if: failure()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results
           path: |

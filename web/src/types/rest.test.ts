@@ -10,6 +10,8 @@ interface Schema {
   enum?: unknown[]
   format?: string
   maxLength?: number
+  minimum?: number
+  maximum?: number
   properties?: Record<string, Schema>
   required?: string[]
   items?: Schema
@@ -47,6 +49,8 @@ function validVariants(input: Schema): unknown[] {
   if (schema.type === 'array') variants.push([])
   if (schema.type === 'boolean') variants.push(true)
   if (schema.maxLength !== undefined) variants.push('😀'.repeat(schema.maxLength))
+  if (schema.minimum !== undefined) variants.push(schema.minimum)
+  if (schema.maximum !== undefined) variants.push(schema.maximum)
   return variants
 }
 
@@ -60,6 +64,8 @@ function invalidVariants(input: Schema): unknown[] {
   if (schema.type === 'array') return [undefined, null, {}, [null], [1.5]]
   if (schema.type === 'object') return [undefined, null, [], { malformed: true }]
   if (schema.maxLength !== undefined) variants.push('😀'.repeat(schema.maxLength + 1))
+  if (schema.minimum !== undefined) variants.push(schema.minimum - 1)
+  if (schema.maximum !== undefined) variants.push(schema.maximum + 1)
   return variants
 }
 

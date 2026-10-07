@@ -44,7 +44,7 @@ export interface ServerEventPayloads {
   screen_viewers: ScreenViewers
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
-  voice_kicked: { channel_id: string }
+  voice_kicked: { channel_id: string; reason?: 'room_full' }
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -147,6 +147,7 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     case 'voice_speaking': return roomUser(payload) && typeof payload['active'] === 'boolean'
     case 'voice_mute_state': return roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'
     case 'voice_kicked': return isIdentifier(payload['channel_id'])
+      && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full')
     default: return false
   }
 }

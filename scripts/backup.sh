@@ -27,13 +27,13 @@ cleanup() {
   storage_ready=true
   # A failed copy/dump must restore precisely the previous running services.
   if [ "$seaweed_resume" = true ]; then
-    if ! docker compose start --wait seaweedfs >/dev/null; then
+    if ! service_start seaweedfs; then
       status=1 storage_ready=false
       echo 'seaweedfs did not resume; app remains stopped' >&2
     fi
   fi
   if [ "$app_resume" = true ] && [ "$storage_ready" = true ]; then
-    if ! docker compose start --wait app >/dev/null; then status=1; fi
+    if ! service_start app; then status=1; fi
   fi
   rmdir .mnema-maintenance.lock
   [ "$status" = 0 ] || echo 'backup failed; incomplete directories are not restore points' >&2
@@ -72,8 +72,8 @@ chmod 600 "$dest"/*
 backup_validate "$dest" 0 preparing
 printf 'mnema-backup-v1\n' > "$dest/COMPLETE"
 # Recover service availability before pruning; failure leaves older backups intact.
-if [ "$seaweed_resume" = true ]; then docker compose start --wait seaweedfs >/dev/null; seaweed_resume=false; fi
-if [ "$app_resume" = true ]; then docker compose start --wait app >/dev/null; app_resume=false; fi
+if [ "$seaweed_resume" = true ]; then service_start seaweedfs; seaweed_resume=false; fi
+if [ "$app_resume" = true ]; then service_start app; app_resume=false; fi
 while IFS= read -r -d '' old; do
   [ "$old" != "$dest" ] || continue
   if backup_validate "$old" 0 >/dev/null 2>&1; then rm -rf -- "$old"; fi

@@ -42,7 +42,7 @@ optional WebRTC statistics and storage/provider failures remain explicit.
 Workers exchange typed messages with runtime validation; TypeScript does not
 make messages from another execution context trustworthy.
 
-Build tools run on Node 24 using its native type stripping; config loaders use
+Build tools run on Node 26 using its native type stripping; config loaders use
 the pinned tooling where needed. Vite transpiles TypeScript and does not replace
 `vue-tsc` or `tsc`. An AudioWorklet module is imported through Vite's bundled
 `?worker&url` path; a raw `.ts?url` asset could contain syntax browsers cannot

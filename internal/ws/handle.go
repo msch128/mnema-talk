@@ -68,7 +68,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if err := json.Unmarshal(payload, &answer); err == nil {
 			if peer := c.peer(); peer != nil {
 				if err := peer.SetAnswer(answer); err != nil {
-					slog.Warn("sfu set remote description", "user", c.User.ID, "err", err)
+					slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 				}
 			}
 		}
@@ -101,9 +101,11 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		c.handleSubscribe(payload)
 
 	case "webrtc_screenshare_start":
+		// The sharer's own screen needs a fresh keyframe for its viewers
+		// (DispatchKeyframe would ask for the videos the sharer watches).
 		if cur := c.currentVoice(); cur != nil && h.SFU != nil {
 			if room := h.SFU.Room(*cur); room != nil {
-				room.DispatchKeyframe(c.User.ID)
+				room.RequestSourceKeyframe(c.User.ID, sfu.SourceScreen)
 			}
 		}
 

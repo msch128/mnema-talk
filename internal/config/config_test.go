@@ -350,3 +350,44 @@ func TestPublicURLDropsDefaultPort(t *testing.T) {
 		t.Fatalf("origins=%v", cfg.AllowedOrigins)
 	}
 }
+
+func TestUDPMuxIsDefault(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WebRTCUDPMuxPort != cfg.WebRTCUDPPortMin {
+		t.Errorf("WEBRTC_UDP_MUX_PORT must default to WEBRTC_UDP_PORT_MIN (%d), got %d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPMuxPort)
+	}
+	env := base()
+	env["WEBRTC_UDP_PORT_MIN"], env["WEBRTC_UDP_PORT_MAX"] = "51000", "51010"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 51000 {
+		t.Fatalf("got %v, %v; want the moved range's first port", cfg, err)
+	}
+	env["WEBRTC_UDP_MUX_PORT"] = "0"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 0 {
+		t.Fatalf("explicit 0 must keep per-peer ports: %v, %v", cfg, err)
+	}
+	env["WEBRTC_UDP_MUX_PORT"] = "51005"
+	if cfg, err = FromEnv(lookup(env)); err != nil || cfg.WebRTCUDPMuxPort != 51005 {
+		t.Fatalf("got %v, %v; want 51005", cfg, err)
+	}
+}
+
+func TestWebRTCReachabilityWarning(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  Config
+		warn bool
+	}{
+		{"development", Config{AppEnv: "development"}, false},
+		{"production without address or TURN", Config{AppEnv: "production"}, true},
+		{"production with announced address", Config{AppEnv: "production", WebRTCAnnounce: []string{"203.0.113.7"}}, false},
+		{"production with TURN", Config{AppEnv: "production", WebRTCTURNURLs: []string{"turn:turn.example.com:3478"}}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.cfg.WebRTCReachabilityWarning() != ""; got != tc.warn {
+			t.Errorf("%s: warning %v, want %v", tc.name, got, tc.warn)
+		}
+	}
+}

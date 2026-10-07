@@ -16,6 +16,8 @@ import (
 type ChannelInfo struct {
 	ID   uuid.UUID
 	Type ChannelType
+	// UserLimit caps a voice room's members at once (0 = no limit).
+	UserLimit int
 }
 
 var errChannelNotFound = httpx.ErrNotFound("channel not found")
@@ -23,7 +25,7 @@ var errChannelNotFound = httpx.ErrNotFound("channel not found")
 // LoadChannel fetches a channel's type; a missing channel is a 404.
 func LoadChannel(ctx context.Context, p *db.Pool, id uuid.UUID) (*ChannelInfo, error) {
 	ch := &ChannelInfo{ID: id}
-	err := p.QueryRow(ctx, `SELECT type FROM channels WHERE id = $1`, id).Scan(&ch.Type)
+	err := p.QueryRow(ctx, `SELECT type, user_limit FROM channels WHERE id = $1`, id).Scan(&ch.Type, &ch.UserLimit)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errChannelNotFound
 	}

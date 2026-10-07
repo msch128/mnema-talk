@@ -18,7 +18,7 @@ import type { MediaStat } from '../lib/mediaStats'
 import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
 import type { AudioOutputTarget } from '../lib/audioOutput'
-import type { SubscribeRequest, JsonValue } from '../types/events'
+import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
 import { decodeServerICEConfig } from '../types/rest'
 
 type VoiceStore = ReturnType<typeof useVoiceStore>
@@ -1860,13 +1860,13 @@ export function useWebRTC() {
     endCall({ notifyServer: true })
   }
 
-  // An admin removed me from the call (voice_kicked): the server already
-  // dropped me, so no voice_leave goes out.
-  function handleKicked(payload: { channel_id?: string }) {
+  // An admin removed me, or the server refused a full room. The server has
+  // already ended or rejected membership, so no voice_leave goes out.
+  function handleKicked(payload: ServerEventPayloads['voice_kicked']) {
     if (!voiceStore.currentChannelId) return
-    if (payload?.channel_id && payload.channel_id !== voiceStore.currentChannelId) return
+    if (payload.channel_id !== voiceStore.currentChannelId) return
     endCall({ notifyServer: false })
-    useToastStore().info(t('voice.kicked'))
+    useToastStore().info(t(payload.reason === 'room_full' ? 'voice.roomFull' : 'voice.kicked'))
   }
 
   // Rejoins the channel of a call interrupted by a reload less than 30 s ago.

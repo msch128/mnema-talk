@@ -336,7 +336,8 @@
     "cameraBusy": "Die Kamera wird gerade von einer anderen App benutzt.",
     "memberMuted": "Stummgeschaltet",
     "memberDeafened": "Taub geschaltet",
-    "kicked": "Ein Admin hat dich aus dem Talk entfernt."
+    "kicked": "Ein Admin hat dich aus dem Talk entfernt.",
+    "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt."
   },
   "audio": {
     "settings": "Audio-Einstellungen",

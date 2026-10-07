@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -66,6 +67,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
+	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
 	r.Get("/read-state", httpx.Handle(h.readState))
 	r.Get("/search", httpx.Handle(h.search))
 	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
@@ -436,6 +438,36 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+// getMessageByNumber handles GET /api/messages/by-number/{number}.
+//
+// @Summary Get a message by its link number
+// @Description Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.
+// @ID getMessageByNumber
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param number path int true "Message number." minimum(1)
+// @Success 200 {object} Message "Message."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/by-number/{number} [get]
+func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) error {
+	n, err := strconv.ParseInt(chi.URLParam(r, "number"), 10, 64)
+	if err != nil || n < 1 {
+		return httpx.ErrInvalidInput("invalid number")
+	}
+	msg, err := GetMessageByNumber(r.Context(), h.DB, n)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, msg)
+	return nil
+}
+
 // createCategory handles POST /api/admin/categories.
 //
 // @Summary Create a category
@@ -802,8 +834,8 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
-// @Summary Rename a channel or change its topic
-// @Description Requires role admin (403 otherwise).
+// @Summary Rename a channel, change its topic or member limit
+// @Description Requires role admin (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -829,7 +861,7 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic)
+	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit)
 	if err != nil {
 		return err
 	}
@@ -1001,6 +1033,8 @@ type CreateChannelRequest struct {
 type UpdateChannelRequest struct {
 	Name  *string `json:"name" minLength:"1" maxLength:"64" binding:"optional"`
 	Topic *string `json:"topic" maxLength:"255" binding:"optional"`
+	// UserLimit caps a voice channel's members at once; 0 removes the limit.
+	UserLimit *int `json:"user_limit" minimum:"0" maximum:"999" binding:"optional"`
 }
 
 // LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in

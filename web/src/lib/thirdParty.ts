@@ -1,7 +1,7 @@
 // Open-source software that Mnema Talk is built from or ships, shown in the
 // legal dialog. The full list with every Go module, version and license text
 // location is THIRD_PARTY_NOTICES.md; keep both in sync when dependencies
-// change (thirdParty.test.js checks the web dependencies).
+// change (thirdParty.test.ts checks the web dependencies).
 
 // AGPL-3.0 section 13: users of a network deployment get the source. A modified
 // deployment must point this at its own source.
@@ -53,7 +53,7 @@ export const THIRD_PARTY = [
   {
     group: 'services',
     items: [
-      { name: 'PostgreSQL 17', license: 'PostgreSQL License', url: 'https://www.postgresql.org' },
+      { name: 'PostgreSQL 18', license: 'PostgreSQL License', url: 'https://www.postgresql.org' },
       { name: 'SeaweedFS', license: 'Apache-2.0', url: 'https://github.com/seaweedfs/seaweedfs' },
       { name: 'coturn', license: 'BSD-3-Clause', url: 'https://github.com/coturn/coturn', note: 'turn' },
       { name: 'Watchtower', license: 'Apache-2.0', url: 'https://github.com/nicholas-fedor/watchtower', note: 'updater' },

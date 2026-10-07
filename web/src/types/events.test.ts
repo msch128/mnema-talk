@@ -40,10 +40,20 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_viewers: [{ ...room, viewers: [] }, { ...room, viewers: [id] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
-  voice_kicked: [{ channel_id: id }],
+  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }],
 }
 
 describe('WebSocket runtime event contracts', () => {
+  it('preserves capacity rejection reasons while rejecting malformed or future reason values', () => {
+    const event = decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id, reason: 'room_full' } })
+    expect(event?.type).toBe('voice_kicked')
+    if (event?.type !== 'voice_kicked') throw new Error('Expected voice rejection')
+    expect(event.payload.reason).toBe('room_full')
+    for (const reason of [undefined, null, '', 'admin', 'unknown']) {
+      expect(() => decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id, reason } })).toThrow(ContractError)
+    }
+    expect(decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id } })).toEqual({ type: 'voice_kicked', payload: { channel_id: id } })
+  })
   for (const [type, variants] of Object.entries(examples)) {
     it(`${type}: accepts actual Go variants without changing their contents`, () => {
       for (const payload of variants) {
