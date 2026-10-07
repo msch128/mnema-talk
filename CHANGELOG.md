@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/msch128/mnema-talk/compare/v0.4.2...v0.4.3) (2026-10-07)
+
+
+### Bug Fixes
+
+* harden media signaling and live connection recovery ([1e91ff8](https://github.com/msch128/mnema-talk/commit/1e91ff86a1b017ebf8de918c2314513a831cc898))
+
 ## [0.4.2](https://github.com/msch128/mnema-talk/compare/v0.4.1...v0.4.2) (2026-10-06)
 
 
