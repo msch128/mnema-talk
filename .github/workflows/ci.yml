@@ -266,6 +266,11 @@ jobs:
       - name: Smoke test (compose stack)
         run: scripts/smoke-image.sh mnema-talk:ci
 
+      # scripts/backup.sh and restore.sh (--verify and --yes) end to end:
+      # seeded message and upload come back, later changes are gone.
+      - name: Backup/restore drill (compose stack)
+        run: scripts/backup-drill.sh mnema-talk:ci
+
       - name: Install trivy (pinned, checksum verified)
         run: |
           set -euo pipefail

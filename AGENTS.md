@@ -72,8 +72,12 @@ mnema-talk/
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
+├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
+├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`)
 ├── .github/workflows/
-│   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, docker build
+│   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e,
+│   │                        # docker build + smoke test, backup/restore drill, trivy scan
+│   ├── image-scan.yml       # Weekly trivy scan of the released :latest image
 │   └── release.yml          # CD after green CI on main: release-please + GHCR image push
 ├── release-please-config.json, .release-please-manifest.json, version.txt, CHANGELOG.md
 │                            # Managed by release-please; don't edit version/changelog by hand

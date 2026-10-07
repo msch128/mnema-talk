@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke
+.PHONY: help dev web build run test test-integration test-web test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -113,6 +113,9 @@ e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; need
 
 smoke: docker ## Start the built image with the production compose file and check health + admin login
 	scripts/smoke-image.sh mnema-talk:local
+
+backup-drill: docker ## Back up, change, verify and restore a throwaway compose stack, then check the data
+	scripts/backup-drill.sh mnema-talk:local
 
 docker: ## Build the app image via compose
 	docker compose build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) app
