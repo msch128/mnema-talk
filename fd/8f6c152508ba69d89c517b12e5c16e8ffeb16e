@@ -1,0 +1,47 @@
+THIRD_PARTY_NOTICES.md
+  s_0ae926f6f8634a::t_bd70780a6f5bf0 65-66,75-79,81,89,92-93,96,100,102,106,113
+api/openapi.json
+  s_0ae926f6f8634a::t_b49996767304cb 6270,6367
+doc/upgrade.md
+  s_0ae926f6f8634a::t_866d1979dbab42 34-35,75-87,89-90,92-100,103-107,115-118,121,123,126-148,150-153,168-212
+docker-compose.yml
+  s_0ae926f6f8634a::t_0348fa3f50cd2c 128-130,135-136
+internal/linkpreview/handler.go
+  s_0ae926f6f8634a::t_4e49b0fd40e243 25-26,38,44-47,70,76-79
+internal/linkpreview/handler_test.go
+  s_0ae926f6f8634a::t_264f09d82113e3 1-163
+internal/sfu/offer_watchdog_test.go
+  s_0ae926f6f8634a::t_74bbaa3c400314 5-6,139-201
+internal/sfu/sfu.go
+  s_0ae926f6f8634a::t_ef62fc6945cf9b 731-738
+scripts/backup-drill.sh
+  s_0ae926f6f8634a::t_9f7ef73d33648a 19-24,46-67,70-97
+scripts/postgres-upgrade-drill.sh
+  s_0ae926f6f8634a::t_edc16651217a24 2-6,12-33,35-79,82,86-88,104-147,150-153,155-164,166-176,178-225
+scripts/restore.sh
+  s_0ae926f6f8634a::t_664b8724b24b70 33
+scripts/smoke-image.sh
+  s_0ae926f6f8634a::t_3f06a60f8e8937 16-18,23-24,29-30,49-99,108
+scripts/tests/test_backup_restore.py
+  s_0ae926f6f8634a::t_0e7353fa174533 45
+scripts/upgrade-postgres.sh
+  s_0ae926f6f8634a::t_eb0f070c86b45d 7-10,24-32,59,64,77-86,90-92,98,104-105,113-117
+web/src/lib/thirdParty.js
+  s_0ae926f6f8634a::t_c0f2b70631b566 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fd8f6c152508ba69d89c517b12e5c16e8ffeb16e",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
