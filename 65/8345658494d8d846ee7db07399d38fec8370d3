@@ -1,0 +1,54 @@
+.github/workflows/ci.yml
+  s_f5ea48d5e7be05::t_3f0f38cec10132 69
+  s_f5ea48d5e7be05::t_d90e0f1c608014 274-278
+  s_f5ea48d5e7be05::t_8915444742956e 279
+docker-compose.yml
+  s_f5ea48d5e7be05::t_3f0f38cec10132 113,116,123-139,141-142,337-340
+Makefile
+  s_f5ea48d5e7be05::t_d90e0f1c608014 6,106,112,125-127
+scripts/tests/test_backup_restore.py
+  s_f5ea48d5e7be05::t_3f0f38cec10132 45
+scripts/restore.sh
+  s_f5ea48d5e7be05::t_3f0f38cec10132 33
+doc/upgrade.md
+  s_f5ea48d5e7be05::t_30570b2ecfabe6 86-124
+scripts/postgres-upgrade-drill.sh
+  s_f5ea48d5e7be05::t_735800500dffe8 60-63,77-81
+  s_f5ea48d5e7be05::t_a13254e69b35a8 93-103
+  s_f5ea48d5e7be05::t_44b88d0e89fc35 1-59,64-76,82-92,104-121
+README.md
+  s_f5ea48d5e7be05::t_3f0f38cec10132 139,318
+  s_f5ea48d5e7be05::t_491afa8c6b2608 74,86,159
+doc/operations.md
+  s_f5ea48d5e7be05::t_491afa8c6b2608 279
+THIRD_PARTY_NOTICES.md
+  s_f5ea48d5e7be05::t_3f0f38cec10132 122
+scripts/upgrade-postgres.sh
+  s_f5ea48d5e7be05::t_bcef9fbfbc9a79 37-39
+  s_f5ea48d5e7be05::t_2d328b1cb875f2 1-36,40-95
+AGENTS.md
+  s_f5ea48d5e7be05::t_491afa8c6b2608 32
+  s_f5ea48d5e7be05::t_30570b2ecfabe6 77-78
+e2e/docker-compose.yml
+  s_f5ea48d5e7be05::t_3f0f38cec10132 5
+doc/architecture.md
+  s_f5ea48d5e7be05::t_491afa8c6b2608 21
+internal/testutil/db.go
+  s_f5ea48d5e7be05::t_3f0f38cec10132 6,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "658345658494d8d846ee7db07399d38fec8370d3",
+  "prompts": {},
+  "sessions": {
+    "s_f5ea48d5e7be05": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6cd10222-44d0-4533-bbbf-0cf766d5063e",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
