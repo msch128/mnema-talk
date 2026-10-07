@@ -68,7 +68,8 @@ describe('websocket reconnect', () => {
       if (url === '/api/auth/me') return jsonResponse({ id: 'u1' })
       if (url === '/api/channels') return jsonResponse({ categories: [], uncategorized: [{ id: 'ch1', type: 'text' }] })
       if (url === '/api/members') return jsonResponse([])
-      return jsonResponse({ messages: [{ id: 'm-new', channel_id: 'ch1' }], has_more: false })
+      if (url === '/api/read-state') return jsonResponse([])
+      return jsonResponse([{ id: 'm-new', channel_id: 'ch1' }])
     }))
     chat.activeChannel = { id: 'ch1', type: 'text' }
     return { chat, calls }
@@ -78,7 +79,8 @@ describe('websocket reconnect', () => {
     const { chat, calls } = setup()
     chat.initWebSocket()
     FakeSocket.instances[0].open()
-    expect(calls).toEqual([]) // the first connect needs no resync
+    await vi.advanceTimersByTimeAsync(0)
+    calls.length = 0
 
     FakeSocket.instances[0].drop()
     await vi.advanceTimersByTimeAsync(1000)
@@ -89,6 +91,37 @@ describe('websocket reconnect', () => {
     expect(calls).toContain('/api/members')
     expect(calls.some(u => u.startsWith('/api/channels/ch1/messages'))).toBe(true)
     expect(chat.reconnectCount).toBe(1)
+  })
+
+  it('catches changes between the initial snapshot and the first socket opening', async () => {
+    const { chat, calls } = setup()
+    await chat.fetchChannels()
+    expect(chat.allChannels.map(c => c.id)).toEqual(['ch1'])
+
+    // The server changes after the snapshot, before this client can receive
+    // broadcasts. Opening the socket must recover the missed state.
+    const fetch = globalThis.fetch
+    fetch.mockImplementation(url => {
+      calls.push(url)
+      if (url === '/api/channels') return jsonResponse({ categories: [], uncategorized: [
+        { id: 'ch1', type: 'text' }, { id: 'ch2', type: 'voice' }
+      ] })
+      if (url === '/api/members') return jsonResponse([{ id: 'u2', display_name: 'New member' }])
+      if (url === '/api/read-state') return jsonResponse([{ channel_id: 'ch1', unread_count: 1 }])
+      return jsonResponse([{ id: 'm-new', channel_id: 'ch1' }])
+    })
+
+    chat.initWebSocket()
+    FakeSocket.instances[0].open()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(chat.allChannels.map(c => c.id)).toEqual(['ch1', 'ch2'])
+    expect(chat.members.map(u => u.id)).toEqual(['u2'])
+    expect(chat.readStates.ch1.unread_count).toBe(1)
+    expect(chat.messages.map(m => m.id)).toEqual(['m-new'])
+    // Initial catch-up must not trigger a media rejoin.
+    expect(chat.reconnectCount).toBe(0)
+    chat.closeWebSocket()
   })
 
   it('keeps retrying while the server is unreachable instead of logging out', async () => {

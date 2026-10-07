@@ -6,11 +6,14 @@ package sfu
 import (
 	"fmt"
 	"log/slog"
+	"net"
+	"net/netip"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pion/ice/v4"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
 	"github.com/pion/rtp"
@@ -72,6 +75,11 @@ type Peer struct {
 	// negotiationPending is set when tracks changed while an offer was still
 	// unanswered; the next answer triggers another round.
 	negotiationPending atomic.Bool
+	// offerSent is guarded by signalingMu. Reading LocalDescription may wait for
+	// the ICE task loop, so it must not be used as a flag under the room lock.
+	offerSent bool
+	// signalingMu permits one active signaling task per peer.
+	signalingMu sync.Mutex
 }
 
 type Room struct {
@@ -103,6 +111,10 @@ type SFU struct {
 	announced []string
 	portMin   uint16
 	portMax   uint16
+	udpMux    ice.UDPMux
+	closed    atomic.Bool
+	closeOnce sync.Once
+	closeErr  error
 
 	iceServers []webrtc.ICEServer
 	rooms      map[uuid.UUID]*Room
@@ -129,9 +141,20 @@ func (s *SFU) SetScreenViewersHandler(fn func(roomID, sharer uuid.UUID, viewers 
 // the public IP and the LAN IP, so both remote and local members connect.
 // stunURLs is optional: with announced IPs the server needs no STUN, and
 // leaving it empty avoids contacting third parties.
-func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string) (*SFU, error) {
-	api, err := buildAPI(portMin, portMax, announceIPs)
+func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, options ...Option) (*SFU, error) {
+	opts := transportOptions{}
+	for _, option := range options {
+		option(&opts)
+	}
+	mux, err := openUDPMux(opts.udpMuxPort, portMin, portMax, announceIPs)
 	if err != nil {
+		return nil, err
+	}
+	api, err := buildAPIWithMux(portMin, portMax, announceIPs, mux)
+	if err != nil {
+		if mux != nil {
+			_ = mux.Close()
+		}
 		return nil, err
 	}
 
@@ -145,6 +168,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string) (*
 		announced:  append([]string(nil), announceIPs...),
 		portMin:    portMin,
 		portMax:    portMax,
+		udpMux:     mux,
 		iceServers: iceServers,
 		rooms:      make(map[uuid.UUID]*Room),
 		notifier:   &mediaNotifier{},
@@ -162,14 +186,20 @@ func (s *SFU) AnnouncedIPs() []string {
 // IP of a home connection changed). Connections made from now on use them;
 // running ones keep theirs.
 func (s *SFU) SetAnnouncedIPs(ips []string) error {
-	api, err := buildAPI(s.portMin, s.portMax, ips)
+	s.apiMu.Lock()
+	defer s.apiMu.Unlock()
+	if s.closed.Load() {
+		return errSFUClosed
+	}
+	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
+		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
+	}
+	api, err := buildAPIWithMux(s.portMin, s.portMax, ips, s.udpMux)
 	if err != nil {
 		return err
 	}
-	s.apiMu.Lock()
 	s.api = api
 	s.announced = append([]string(nil), ips...)
-	s.apiMu.Unlock()
 	return nil
 }
 
@@ -180,9 +210,27 @@ func (s *SFU) currentAPI() *webrtc.API {
 }
 
 func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error) {
-	settingEngine := webrtc.SettingEngine{}
+	return buildAPIWithMux(portMin, portMax, announceIPs, nil)
+}
 
-	if portMin > 0 && portMax > 0 {
+func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (*webrtc.API, error) {
+	settingEngine := webrtc.SettingEngine{}
+	if onlyLoopbackAnnouncements(announceIPs) {
+		settingEngine.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	}
+	// Explicit loopback announcements are used by local browser deployments.
+	// Gather a socket on that interface too, rather than only rewriting the
+	// addresses of sockets bound to other interfaces.
+	for _, ip := range announceIPs {
+		if addr, err := netip.ParseAddr(ip); err == nil && addr.IsLoopback() {
+			settingEngine.SetIncludeLoopbackCandidate(true)
+			break
+		}
+	}
+
+	if mux != nil {
+		settingEngine.SetICEUDPMux(mux)
+	} else if portMin > 0 && portMax > 0 {
 		if err := settingEngine.SetEphemeralUDPPortRange(portMin, portMax); err != nil {
 			return nil, fmt.Errorf("failed to set UDP port range: %w", err)
 		}
@@ -241,6 +289,9 @@ func (s *SFU) AllMediaStates() map[uuid.UUID]map[uuid.UUID]MediaState {
 func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Room, *Peer, error) {
 	s.roomsMu.Lock()
 	defer s.roomsMu.Unlock()
+	if s.closed.Load() {
+		return nil, nil, errSFUClosed
+	}
 
 	r, ok := s.rooms[channelID]
 	if !ok {
@@ -278,16 +329,23 @@ func (s *SFU) RemovePeer(channelID uuid.UUID, peer *Peer) {
 		return
 	}
 	s.roomsMu.Lock()
-	defer s.roomsMu.Unlock()
 	r, ok := s.rooms[channelID]
 	if !ok {
+		s.roomsMu.Unlock()
 		_ = peer.PC.Close()
 		return
 	}
-	r.removePeer(peer)
+	current := r.detachPeer(peer)
 	if r.empty() {
 		delete(s.rooms, channelID)
 	}
+	s.roomsMu.Unlock()
+	// Closing transports may wait on network operations. Other rooms and
+	// WebSocket registration must remain available while this peer closes.
+	if current {
+		go r.SignalPeerConnections()
+	}
+	_ = peer.PC.Close()
 }
 
 // CloseRoom disconnects every peer of a room and drops it, e.g. because its
@@ -499,71 +557,117 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 		return err
 	}
 	if p.negotiationPending.Swap(false) {
-		go p.room.SignalPeerConnections()
+		p.room.requestPeerSignal(p)
 	}
 	return nil
 }
 
 func (r *Room) SignalPeerConnections() {
 	r.notifyMedia()
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
+	r.mu.RLock()
+	peers := make([]*Peer, 0, len(r.peers))
 	for _, peer := range r.peers {
-		if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		peers = append(peers, peer)
+	}
+	r.mu.RUnlock()
+	for _, peer := range peers {
+		r.requestPeerSignal(peer)
+	}
+}
+
+// requestPeerSignal coalesces changes behind one peer's active task. Completion
+// and answer retries concern only that peer: repeating a whole-room scan would
+// mark unrelated busy peers pending again and amplify a signaling burst.
+func (r *Room) requestPeerSignal(peer *Peer) {
+	// Publish the request before testing task admission. Otherwise a task can
+	// finish before a failed TryLock caller stores its request, losing a change.
+	peer.negotiationPending.Store(true)
+	if !peer.signalingMu.TryLock() {
+		return
+	}
+	go func() {
+		defer func() {
+			peer.signalingMu.Unlock()
+			if peer.PC.SignalingState() == webrtc.SignalingStateStable && peer.negotiationPending.Swap(false) {
+				r.requestPeerSignal(peer)
+			}
+		}()
+		r.signalPeer(peer)
+	}()
+}
+
+// signalPeer operates on a membership snapshot. No PeerConnection/network
+// operation runs under the room lock, and a blocked peer cannot hold up others.
+// The caller owns peer.signalingMu.
+func (r *Room) signalPeer(peer *Peer) {
+	// Consume requests before taking the membership snapshot. Any subsequent
+	// request stays pending for the completion/answer path; earlier requests
+	// are reflected in the snapshot below.
+	peer.negotiationPending.Store(false)
+	r.mu.RLock()
+	if r.peers[peer.ID] != peer {
+		r.mu.RUnlock()
+		return
+	}
+	desired := make(map[string]*TrackInfo)
+	for id, info := range r.trackLocals {
+		if r.wantsLocked(peer.ID, info) {
+			desired[id] = info
+		}
+	}
+	r.mu.RUnlock()
+	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		return
+	}
+	if peer.PC.SignalingState() != webrtc.SignalingStateStable {
+		peer.negotiationPending.Store(true)
+		return
+	}
+	existingSenders := make(map[string]bool)
+	needRenegotiate := false
+	for _, sender := range peer.PC.GetSenders() {
+		if sender.Track() == nil {
 			continue
 		}
-		// Only one offer may be in flight; the answer re-runs signaling.
-		if peer.PC.SignalingState() != webrtc.SignalingStateStable {
-			peer.negotiationPending.Store(true)
+		trackID := sender.Track().ID()
+		existingSenders[trackID] = true
+
+		if _, ok := desired[trackID]; !ok {
+			if err := peer.PC.RemoveTrack(sender); err == nil {
+				needRenegotiate = true
+			}
+		}
+	}
+
+	for trackID, info := range desired {
+		if existingSenders[trackID] {
 			continue
 		}
-
-		existingSenders := make(map[string]bool)
-		needRenegotiate := false
-		for _, sender := range peer.PC.GetSenders() {
-			if sender.Track() == nil {
-				continue
-			}
-			trackID := sender.Track().ID()
-			existingSenders[trackID] = true
-
-			if info, ok := r.trackLocals[trackID]; !ok || !r.wantsLocked(peer.ID, info) {
-				if err := peer.PC.RemoveTrack(sender); err == nil {
-					needRenegotiate = true
-				}
-			}
+		sender, err := peer.PC.AddTrack(info.Track)
+		if err != nil {
+			continue
 		}
-
-		for trackID, info := range r.trackLocals {
-			if existingSenders[trackID] || !r.wantsLocked(peer.ID, info) {
-				continue
-			}
-			sender, err := peer.PC.AddTrack(info.Track)
-			if err != nil {
-				continue
-			}
-			needRenegotiate = true
-			go r.forwardRTCP(sender, info)
-			if info.Kind == webrtc.RTPCodecTypeVideo {
-				// A new viewer needs a keyframe to start decoding.
-				info.requestKeyframe()
-			}
+		needRenegotiate = true
+		go r.forwardRTCP(sender, info)
+		if info.Kind == webrtc.RTPCodecTypeVideo {
+			// A new viewer needs a keyframe to start decoding.
+			info.requestKeyframe()
 		}
+	}
 
-		if needRenegotiate || peer.PC.LocalDescription() == nil {
-			offer, err := peer.PC.CreateOffer(nil)
-			if err != nil {
-				slog.Error("sfu create offer", "err", err)
-				continue
-			}
-			if err := peer.PC.SetLocalDescription(offer); err != nil {
-				slog.Error("sfu set local description", "err", err)
-				continue
-			}
-			if peer.SendOffer != nil {
-				peer.SendOffer(offer)
-			}
+	if needRenegotiate || !peer.offerSent {
+		offer, err := peer.PC.CreateOffer(nil)
+		if err != nil {
+			slog.Error("sfu create offer", "err", err)
+			return
+		}
+		if err := peer.PC.SetLocalDescription(offer); err != nil {
+			slog.Error("sfu set local description", "err", err)
+			return
+		}
+		peer.offerSent = true
+		if peer.SendOffer != nil {
+			peer.SendOffer(offer)
 		}
 	}
 }
@@ -599,11 +703,15 @@ func (t *TrackInfo) requestKeyframe() {
 // keyframe (the browser sends this when a remote video starts).
 func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	var tracks []*TrackInfo
 	for _, info := range r.trackLocals {
 		if info.Kind == webrtc.RTPCodecTypeVideo && r.wantsLocked(viewerID, info) {
-			info.requestKeyframe()
+			tracks = append(tracks, info)
 		}
+	}
+	r.mu.RUnlock()
+	for _, info := range tracks {
+		info.requestKeyframe()
 	}
 }
 
@@ -676,18 +784,25 @@ func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 // removePeer closes peer and, if it is still the user's current connection,
 // removes it and its tracks from the room.
 func (r *Room) removePeer(peer *Peer) {
+	current := r.detachPeer(peer)
+	if current {
+		go r.SignalPeerConnections()
+	}
+	_ = peer.PC.Close()
+}
+
+// detachPeer changes membership without closing network transports. This
+// lets the SFU atomically remove an empty room before releasing roomsMu.
+func (r *Room) detachPeer(peer *Peer) bool {
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	current := r.peers[peer.ID] == peer
 	if current {
 		delete(r.peers, peer.ID)
 		delete(r.subs, peer.ID)
 		r.removePeerTracksLocked(peer.ID)
 	}
-	r.mu.Unlock()
-	_ = peer.PC.Close()
-	if current {
-		go r.SignalPeerConnections()
-	}
+	return current
 }
 
 // selectedPair is the ICE candidate pair media flows over, for the logs.

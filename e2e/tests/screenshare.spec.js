@@ -66,6 +66,9 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
   }
 
   await signIn(sharer, ADMIN_USER, ADMIN_PASSWORD)
+  const me = await apiFetch(sharer, 'GET', '/api/auth/me')
+  const sharerId = me.json?.user?.id || me.json?.id
+  expect(sharerId).toBeTruthy()
   const voice = await apiFetch(sharer, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })
   expect(voice.status).toBe(201)
   const invite = await apiFetch(sharer, 'POST', '/api/admin/invites', { max_uses: 1 })
@@ -89,12 +92,39 @@ test('a viewer sees a shared screen after choosing to watch it', async ({ browse
   await expect(card).toBeVisible()
   await card.getByRole('button', { name: 'Ansehen' }).click()
 
-  // Real frames arrive: the stage video has a size and keeps playing.
-  await expect
-    .poll(() => viewer.evaluate(() =>
-      [...document.querySelectorAll('video')].some((v) => v.videoWidth > 0 && !v.paused)),
-    { timeout: 20_000 })
-    .toBe(true)
+  // Observe the selected publisher's stage, not any video on the page. A
+  // frozen frame can still have a size and report !paused, so also require
+  // advancing presentation times and changing pixels from the animated source.
+  const stage = viewer.getByTestId('stage')
+  await expect(stage).toHaveAttribute('data-stage-source', sharerId)
+  const video = stage.locator('video')
+  await expect.poll(() => video.evaluate(v => `${v.videoWidth}x${v.videoHeight}`),
+    { timeout: 20_000 }).toBe('640x360')
+  const samples = await video.evaluate(v => new Promise(resolve => {
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 1
+    const ctx = canvas.getContext('2d')
+    const frames = []
+    let callback = null
+    let nextSample = null
+    const finish = () => {
+      clearTimeout(deadline)
+      clearTimeout(nextSample)
+      if (callback !== null) v.cancelVideoFrameCallback(callback)
+      resolve(frames)
+    }
+    const deadline = setTimeout(finish, 5_000)
+    const sample = (_, metadata) => {
+      ctx.drawImage(v, 0, 0, 1, 1, 0, 0, 1, 1)
+      frames.push({ time: metadata.mediaTime, color: [...ctx.getImageData(0, 0, 1, 1).data].join(',') })
+      if (frames.length === 4) finish()
+      else nextSample = setTimeout(() => { callback = v.requestVideoFrameCallback(sample) }, 300)
+    }
+    callback = v.requestVideoFrameCallback(sample)
+  }))
+  expect(samples).toHaveLength(4)
+  for (let i = 1; i < samples.length; i++) expect(samples[i].time).toBeGreaterThan(samples[i - 1].time)
+  expect(new Set(samples.map(frame => frame.color)).size).toBeGreaterThan(1)
 
   await sharerCtx.close()
   await viewerCtx.close()

@@ -72,12 +72,17 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs)
+	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs, sfu.WithUDPMuxPort(cfg.WebRTCUDPMuxPort))
 	if err != nil {
 		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
 		voice = nil
 	} else {
-		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax))
+		defer func() {
+			if err := voice.Close(); err != nil {
+				slog.Warn("close SFU", "err", err)
+			}
+		}()
+		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 
@@ -93,6 +98,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	defer router.Close()
 	return server.Run(ctx, cfg, router)
 }
 

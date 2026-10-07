@@ -65,6 +65,8 @@ type Config struct {
 	AppImage         string
 	WebRTCUDPPortMin uint16
 	WebRTCUDPPortMax uint16
+	// WebRTCUDPMuxPort optionally shares one port across media peers (0 = off).
+	WebRTCUDPMuxPort uint16
 	// WebRTCAnnounce lists the IPs or host names announced to browsers for
 	// media (WEBRTC_NAT_1TO1_IP, comma-separated).
 	WebRTCAnnounce       []string
@@ -163,6 +165,13 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	muxPort, err := getPort("WEBRTC_UDP_MUX_PORT", 0)
+	if err != nil {
+		return nil, err
+	}
+	if muxPort != 0 && (muxPort < portMin || muxPort > portMax) {
+		return nil, fmt.Errorf("WEBRTC_UDP_MUX_PORT must be 0 or inside WEBRTC_UDP_PORT_MIN/MAX")
+	}
 	httpPort, err := getPort("PORT", 8080)
 	if err != nil {
 		return nil, err
@@ -212,6 +221,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		AppImage:             get("MNEMA_IMAGE", ""),
 		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
 		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
+		WebRTCUDPMuxPort:     muxPort,
 		MetricsToken:         get("METRICS_TOKEN", ""),
 		WebRTCAnnounce:       SplitList(get("WEBRTC_NAT_1TO1_IP", "")),
 		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),

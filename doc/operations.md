@@ -80,6 +80,7 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `WEBRTC_UDP_PORT_MIN` / `WEBRTC_UDP_PORT_MAX` | `50000` / `50050` | UDP range of the SFU; `1 <= MIN <= MAX`. Compose publishes the same range; forward it in your router. |
+| `WEBRTC_UDP_MUX_PORT` | `0` | Optional shared UDP port across media peers, separately bound on each local IPv4/IPv6 interface. `0` keeps per-peer range allocation. Otherwise it must be inside `MIN`–`MAX`, already published by Compose. Requires restart. Reduces port use, not outgoing bandwidth; no participant-capacity guarantee. |
 | `WEBRTC_NAT_1TO1_IP` | empty | Comma-separated IPs or host names announced to browsers. Behind a home router list the public address (or a dynamic-DNS name, re-resolved every 5 minutes) **and** the server's LAN IP. |
 | `WEBRTC_STUN_URLS` | empty | Optional STUN servers. Empty = no third-party STUN (named in the privacy policy when set). |
 | `WEBRTC_TURN_URLS` | empty | Optional TURN URLs, e.g. `turn:turn.example.com:3478?transport=udp,turn:turn.example.com:3478?transport=tcp`. |

@@ -510,11 +510,10 @@ export const useChatStore = defineStore('chat', () => {
   const reconnectAttempt = ref(0)
   const nextRetryAt = ref(0)
 
-  // After a reconnect, everything that changed while the socket was down is
-  // fetched again: channels, members and the newest page of the open channel
-  // (unless the user is reading older history, which stays as it is).
-  function resyncAfterReconnect() {
-    reconnectCount.value++
+  // Refresh after every socket opens, including the first one: the initial
+  // HTTP snapshots were fetched before broadcasts could reach this client.
+  // Older history stays where the user is reading it.
+  function resyncState() {
     fetchChannels()
     fetchMembers()
     fetchReadState()
@@ -575,7 +574,8 @@ export const useChatStore = defineStore('chat', () => {
       startPingHeartbeat()
       sendWSEvent('ping', { t: Date.now() })
       if (isIdle) sendWSEvent('presence_idle', { idle: true })
-      if (hadConnection) resyncAfterReconnect()
+      if (hadConnection) reconnectCount.value++
+      resyncState()
       hadConnection = true
     }
 

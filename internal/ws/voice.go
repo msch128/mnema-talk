@@ -137,6 +137,10 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	key := voiceKey{c.User.ID, ch.ID}
 	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		return
+	}
 	now := time.Now()
 	if h.voice[ch.ID] == nil {
 		h.voice[ch.ID] = map[uuid.UUID]auth.User{}
@@ -393,6 +397,9 @@ func (h *Hub) addVoiceTime(userID uuid.UUID, d time.Duration) {
 func (h *Hub) startGrace(key voiceKey) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	if h.closed {
+		return
+	}
 	if old := h.grace[key]; old != nil {
 		old.timer.Stop()
 	}

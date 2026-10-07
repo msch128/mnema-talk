@@ -39,16 +39,15 @@ function setup() {
   }]
   chat.activeChannel = { id: 'ch1', name: 'allgemein', type: 'text' }
   chat.messages = []
-  // A connected socket that records what the store sends.
+  // An already connected socket that records what the store sends. Socket
+  // initialization and its snapshot refresh are covered in connection.test.
   const sent = []
-  let socket = null
   vi.stubGlobal('WebSocket', class {
-    constructor() { socket = this }
     send(data) { sent.push(JSON.parse(data)) }
     close() {}
   })
   chat.initWebSocket()
-  socket.onopen()
+  chat.isConnected = true
   return { chat, sent }
 }
 

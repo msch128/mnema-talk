@@ -7720,6 +7720,16 @@
               }
             },
             "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: server shutting down."
           }
         },
         "security": [

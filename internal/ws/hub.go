@@ -24,6 +24,7 @@ type Hub struct {
 	Origins  []string
 
 	mu      sync.RWMutex
+	closed  bool // guarded by mu; shutdown rejects further registrations
 	clients map[*Client]struct{}
 	online  map[uuid.UUID]int
 	// chosen is the presence each connected user picked (online, away, dnd, focus).

@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/ws"
 )
 
 func TestHealthCachesThePing(t *testing.T) {
@@ -115,9 +116,14 @@ func TestRouterCloseStopsBackgroundWork(t *testing.T) {
 	r := &Router{}
 	r.Close() // no cancel set: must not panic
 	ctx, cancel := context.WithCancel(context.Background())
-	r = &Router{cancel: cancel}
+	r = &Router{cancel: cancel, Hub: ws.NewHub(nil, nil, nil, nil)}
 	r.Close()
 	if ctx.Err() == nil {
 		t.Fatal("Close did not cancel the router context")
+	}
+	response := httptest.NewRecorder()
+	r.Hub.HandleWebSocket(response, httptest.NewRequest(http.MethodGet, "/api/ws", nil))
+	if response.Code != http.StatusServiceUnavailable {
+		t.Fatal("Close did not stop WebSocket admission")
 	}
 }

@@ -17,7 +17,15 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: {
-      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+      args: [
+        '--use-fake-ui-for-media-stream',
+        '--use-fake-device-for-media-stream',
+        // The local harness exercises the default route. Exclude additional
+        // VM/VPN interfaces whose UDP writes can stall on developer machines.
+        ...(process.env.E2E_WEBRTC_ALL_INTERFACES === '1'
+          ? []
+          : ['--force-webrtc-ip-handling-policy=default_public_and_private_interfaces']),
+      ],
     },
   },
   projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],

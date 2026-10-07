@@ -57,8 +57,11 @@ type Router struct {
 	cancel context.CancelFunc
 }
 
-// Close stops the router's background goroutines.
+// Close stops background work and closes the hub's upgraded WebSockets.
 func (r *Router) Close() {
+	if r.Hub != nil {
+		r.Hub.Close()
+	}
 	if r.cancel != nil {
 		r.cancel()
 	}

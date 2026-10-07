@@ -79,8 +79,13 @@ const (
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: server shutting down."
 // @Router /api/ws [get]
 func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if h.isClosed() {
+		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
+		return
+	}
 	// The version is the cookie's own: re-reading it from the database here
 	// would let a revocation between the two reads slip through, and the
 	// connection would then outlive it.
@@ -92,6 +97,10 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, err)
 		return
 	}
+	if h.isClosed() {
+		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
+		return
+	}
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// The upgrader already answered (e.g. 403 for a foreign origin).
@@ -99,7 +108,11 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
-	h.register(c)
+	if !h.register(c) {
+		c.shutdown()
+		c.close()
+		return
+	}
 	go c.writePump()
 	go c.readPump()
 }
@@ -110,8 +123,12 @@ func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
 	return tv, err
 }
 
-func (h *Hub) register(c *Client) {
+func (h *Hub) register(c *Client) bool {
 	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		return false
+	}
 	before := h.statusLocked(c.User.ID)
 	h.clients[c] = struct{}{}
 	h.online[c.User.ID]++
@@ -138,6 +155,38 @@ func (h *Hub) register(c *Client) {
 				c.SendEvent("webrtc_media_state", mediaStatePayload(chID, uid, st))
 			}
 		}
+	}
+	return true
+}
+
+func (h *Hub) isClosed() bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.closed
+}
+
+// Close rejects new connections and terminates upgraded sockets. HTTP server
+// shutdown does not close hijacked WebSockets. Peer teardown belongs to the
+// SFU owner; closing sockets here never waits on its network operations.
+func (h *Hub) Close() {
+	h.mu.Lock()
+	if h.closed {
+		h.mu.Unlock()
+		return
+	}
+	h.closed = true
+	clients := make([]*Client, 0, len(h.clients))
+	for c := range h.clients {
+		clients = append(clients, c)
+	}
+	for key, grace := range h.grace {
+		grace.timer.Stop()
+		delete(h.grace, key)
+	}
+	h.mu.Unlock()
+	for _, c := range clients {
+		c.shutdown()
+		c.close()
 	}
 }
 

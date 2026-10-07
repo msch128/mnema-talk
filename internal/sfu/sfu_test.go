@@ -1,7 +1,8 @@
 package sfu
 
 import (
-	"os"
+	"fmt"
+	"net"
 	"sync"
 	"testing"
 	"time"
@@ -21,36 +22,34 @@ type client struct {
 	peer   *Peer
 	tracks chan *webrtc.TrackRemote
 	plis   chan uint32 // SSRCs the SFU asked this client to refresh
-}
-
-// skipFlakyInCI skips media-forwarding tests on CI runners: ICE between two
-// in-process peers occasionally never connects there ("no track forwarded").
-// They still run locally.
-func skipFlakyInCI(t *testing.T) {
-	t.Helper()
-	if os.Getenv("CI") != "" {
-		t.Skip("flaky ICE connectivity on CI runners")
-	}
+	errors chan error
 }
 
 func newTestSFU(t *testing.T) *SFU {
 	t.Helper()
-	s, err := NewSFU(0, 0, nil, nil)
+	// These are in-process media tests, not a NAT/interface compatibility
+	// matrix. Keep them independent of a runner's VM and VPN interfaces.
+	s, err := NewSFU(0, 0, []string{"127.0.0.1"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() { _ = s.Close() })
 	return s
 }
 
 func newClient(t *testing.T) *client {
 	t.Helper()
-	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	settings := webrtc.SettingEngine{}
+	settings.SetIncludeLoopbackCandidate(true)
+	settings.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	pc, err := webrtc.NewAPI(webrtc.WithSettingEngine(settings)).NewPeerConnection(webrtc.Configuration{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = pc.Close() })
 	c := &client{t: t, id: uuid.New(), pc: pc,
-		tracks: make(chan *webrtc.TrackRemote, 8), plis: make(chan uint32, 64)}
+		tracks: make(chan *webrtc.TrackRemote, 8), plis: make(chan uint32, 64), errors: make(chan error, 8)}
 	pc.OnTrack(func(tr *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		c.tracks <- tr
 		go func() {
@@ -72,41 +71,60 @@ func (c *client) join(s *SFU, room uuid.UUID) {
 	var peer *Peer
 	ready := make(chan struct{})
 	_, p, err := s.Join(room, c.id,
-		func(offer webrtc.SessionDescription) {
+		func(webrtc.SessionDescription) {
 			<-ready
-			go c.answer(peer, offer, &mu)
-		},
-		func(cand *webrtc.ICECandidateInit) {
-			<-ready
-			_ = c.pc.AddICECandidate(*cand)
-		})
+			go func() {
+				if err := c.answer(peer, &mu); err != nil {
+					select {
+					case c.errors <- err:
+					default:
+					}
+				}
+			}()
+		}, nil)
 	if err != nil {
 		c.t.Fatal(err)
 	}
 	peer = p
 	c.peer = p
-	c.pc.OnICECandidate(func(cand *webrtc.ICECandidate) {
-		if cand != nil {
-			_ = p.PC.AddICECandidate(cand.ToJSON())
-		}
-	})
 	close(ready)
 }
 
-func (c *client) answer(p *Peer, offer webrtc.SessionDescription, mu *sync.Mutex) {
+// Use complete gathered descriptions. The former trickle callbacks discarded
+// candidates arriving before SetRemoteDescription/SetAnswer and ignored their
+// errors, making media assertions depend on goroutine scheduling.
+func (c *client) answer(p *Peer, mu *sync.Mutex) error {
 	mu.Lock()
 	defer mu.Unlock()
-	if err := c.pc.SetRemoteDescription(offer); err != nil {
-		return
+	select {
+	case <-webrtc.GatheringCompletePromise(p.PC):
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("SFU ICE gathering timed out")
+	}
+	offer := p.PC.LocalDescription()
+	if offer == nil {
+		return fmt.Errorf("SFU offer missing after gathering")
+	}
+	if err := c.pc.SetRemoteDescription(*offer); err != nil {
+		return fmt.Errorf("client remote description: %w", err)
 	}
 	ans, err := c.pc.CreateAnswer(nil)
 	if err != nil {
-		return
+		return fmt.Errorf("client answer: %w", err)
 	}
+	gathered := webrtc.GatheringCompletePromise(c.pc)
 	if err := c.pc.SetLocalDescription(ans); err != nil {
-		return
+		return fmt.Errorf("client local description: %w", err)
 	}
-	_ = p.SetAnswer(ans)
+	select {
+	case <-gathered:
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("client ICE gathering timed out")
+	}
+	if err := p.SetAnswer(*c.pc.LocalDescription()); err != nil {
+		return fmt.Errorf("SFU remote answer: %w", err)
+	}
+	return nil
 }
 
 // publishVideo adds a VP8 track before joining and keeps sending packets.
@@ -177,6 +195,9 @@ func waitTrack(t *testing.T, c *client) *webrtc.TrackRemote {
 	select {
 	case tr := <-c.tracks:
 		return tr
+	case err := <-c.errors:
+		t.Fatalf("signaling failed: %v", err)
+		return nil
 	case <-time.After(10 * time.Second):
 		t.Fatal("no track forwarded")
 		return nil
@@ -187,6 +208,8 @@ func waitPLI(t *testing.T, c *client) {
 	t.Helper()
 	select {
 	case <-c.plis:
+	case err := <-c.errors:
+		t.Fatalf("signaling failed: %v", err)
 	case <-time.After(10 * time.Second):
 		t.Fatal("publisher never received a keyframe request")
 	}
@@ -203,7 +226,6 @@ func drainPLIs(c *client) {
 }
 
 func TestForwardsVideoAndRequestsKeyframeFromPublisher(t *testing.T) {
-	skipFlakyInCI(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
@@ -267,7 +289,6 @@ func TestRejoinKeepsTheNewPeer(t *testing.T) {
 }
 
 func TestSameTrackIDFromTwoUsersIsForwardedSeparately(t *testing.T) {
-	skipFlakyInCI(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
@@ -320,7 +341,6 @@ func waitSources(t *testing.T, r *Room, user uuid.UUID, source Source, want int)
 }
 
 func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
-	skipFlakyInCI(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
@@ -357,7 +377,6 @@ func TestCameraAndScreenAreForwardedAsSeparateSources(t *testing.T) {
 }
 
 func TestScreenAudioReachesOnlyTheViewersOfTheShare(t *testing.T) {
-	skipFlakyInCI(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
