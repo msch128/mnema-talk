@@ -23,7 +23,7 @@ describe('DFN render-thread bridge', () => {
   it('never queues more than three frames behind a stalled worker and bypasses after bounded startup', () => {
     const { node, frames, reports, render } = createBridge()
     let output
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 120; i++) {
       output = render()
       expect(node.pending.size).toBeLessThanOrEqual(3)
       expect(node.outputCount).toBeLessThanOrEqual(1440)
@@ -31,6 +31,36 @@ describe('DFN render-thread bridge', () => {
     expect(frames).toHaveLength(3)
     expect(reports).toEqual([{ type: 'failed' }])
     expect(output.every(sample => sample === 0.25)).toBe(true)
+  })
+
+  it('recovers filtered playback after a temporary 60ms Worker scheduling gap without increasing buffers', () => {
+    const { node, frames, reports, render } = createBridge()
+    for (let i = 0; i < 4; i++) render()
+    node.receive({ type: 'frame', id: frames[0].id, samples: new Float32Array(480).fill(0.1) })
+    let delivered = 1
+    // Audio keeps rendering while the Worker is temporarily unavailable.
+    for (let i = 0; i < 23; i++) {
+      render()
+      expect(node.pending.size).toBeLessThanOrEqual(3)
+      expect(node.outputCount).toBeLessThanOrEqual(1440)
+    }
+    expect(node.failed).toBe(false)
+    // Its outstanding old replies are discarded, then fresh replies resume.
+    while (delivered < frames.length) {
+      node.receive({ type: 'frame', id: frames[delivered++].id, samples: new Float32Array(480).fill(0.1) })
+    }
+    let filtered = false
+    for (let i = 0; i < 30; i++) {
+      filtered ||= render().every(sample => Math.abs(sample - 0.1) < 0.0001)
+      while (delivered < frames.length) {
+        node.receive({ type: 'frame', id: frames[delivered++].id, samples: new Float32Array(480).fill(0.1) })
+      }
+      expect(node.pending.size).toBeLessThanOrEqual(3)
+      expect(node.outputCount).toBeLessThanOrEqual(1440)
+    }
+    expect(filtered).toBe(true)
+    expect(node.failed).toBe(false)
+    expect(reports.some(report => report.type === 'failed')).toBe(false)
   })
 
   it('plays valid processed output and drops replies older than 30ms', () => {

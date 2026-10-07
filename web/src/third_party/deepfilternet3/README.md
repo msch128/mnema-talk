@@ -43,7 +43,9 @@ copies mono PCM; it does not decompress weights or run the neural network on
 the audio rendering thread. At 48 kHz it sends 480-sample frames, limits
 in-flight work and queued output to three frames, and discards output beyond
 the 30 ms bridge budget. This budget excludes the model's intrinsic delay,
-capture, encoding and the network. Persistent failure produces a visible
+capture, encoding and the network. Temporary scheduling gaps bypass filtering
+without extending that buffer; a sustained 250 ms outage is treated as failure.
+Persistent failure produces a visible
 warning and native browser suppression, while retaining the user's AI choice.
 The original `worklet.js` remains as provenance and a diagnostic comparison;
 it is no longer imported by the production pipeline.

@@ -7,6 +7,9 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     super()
     this.frameLength = 480
     this.maxFrames = 3
+    // Buffering stays capped at 30 ms. A temporary Worker scheduling gap is
+    // bypassed immediately, but only a sustained 250 ms outage is a failure.
+    this.failureSamples = this.frameLength * 25
     this.input = new Float32Array(this.frameLength)
     this.inputPos = 0
     this.output = new Float32Array(this.frameLength * this.maxFrames)
@@ -80,7 +83,7 @@ class DeepFilterBridge extends AudioWorkletProcessor {
         this.input[this.inputPos++] = sample
         if (this.inputPos !== this.frameLength) continue
         const id = this.nextFrame++
-        if (this.pending.size && id - this.pending.values().next().value > 20) this.fail()
+        if (this.pending.size && (id - this.pending.values().next().value) * this.frameLength > this.failureSamples) this.fail()
         if (!this.failed && this.workerPort && this.pending.size < this.maxFrames) {
           const samples = this.input
           this.pending.add(id)
@@ -99,7 +102,7 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     const startupExpired = this.nextFrame >= this.maxFrames
     if ((this.hasOutput || startupExpired) && underrun && !this.failed) {
       this.underrunSamples += input.length
-      if (this.underrunSamples > this.frameLength * this.maxFrames) this.fail()
+      if (this.underrunSamples > this.failureSamples) this.fail()
     } else if (!underrun) this.underrunSamples = 0
     const bypass = this.failed || ((this.hasOutput || startupExpired) && underrun)
     for (let i = 0; i < input.length; i++) {
