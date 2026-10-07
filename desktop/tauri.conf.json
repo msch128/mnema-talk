@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Mnema Desktop Probe",
+  "identifier": "com.mnema.desktop.probe",
+  "version": "0.0.0",
+  "build": {
+    "beforeDevCommand": "npm --prefix ui run dev",
+    "beforeBuildCommand": "npm --prefix ui run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "ui/dist"
+  },
+  "app": {
+    "windows": [{ "label": "main", "title": "Mnema — Desktop-Machbarkeitsprüfung", "width": 1040, "height": 760, "minWidth": 720, "minHeight": 600 }],
+    "security": {
+      "capabilities": ["main"],
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'"
+    }
+  },
+  "bundle": { "active": false }
+}

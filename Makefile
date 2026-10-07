@@ -1,5 +1,6 @@
 # Mnema Talk - developer tasks. Run `make` or `make help` for the list.
-# Requires GNU make, Go, Node 26 + npm, Python 3, and Docker (compose plugin).
+# Requires GNU make, Go, Node 26 + npm, Python 3, Docker (compose plugin),
+# and Rust 1.99.0 + cargo-audit 0.22.2 for desktop checks.
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
@@ -13,6 +14,7 @@ GO_PKGS    := ./...
 GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL)),,-p=1)
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
+CARGO_AUDIT_VERSION := 0.22.2
 
 OPENAPI_FILE := api/openapi.json
 
@@ -119,7 +121,25 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: lint, types, contracts, tests, vuln scan, builds, npm audit, docker build, image smoke test, backup and PostgreSQL upgrade drills
+.PHONY: check-desktop
+DESKTOP_DEPS := desktop/ui/node_modules/.package-lock.json
+
+$(DESKTOP_DEPS): desktop/ui/package-lock.json
+	cd desktop/ui && npm ci --no-audit --no-fund
+
+check-desktop: $(DESKTOP_DEPS) ## Desktop probe: lint, coverage, types, Rust checks, advisories and native build (Rust + cargo-audit required)
+	npm --prefix desktop/ui run check
+	cargo fmt --manifest-path desktop/Cargo.toml --check
+	cargo test --locked --manifest-path desktop/Cargo.toml
+	cargo clippy --locked --manifest-path desktop/Cargo.toml --all-targets --features shell -- -D warnings
+	cargo-audit --version | grep -Fx 'cargo-audit $(CARGO_AUDIT_VERSION)'
+	cargo audit --file desktop/Cargo.lock
+	npm audit --prefix desktop/ui --omit=dev --audit-level=high
+	node --test desktop/scripts/*.test.mjs
+	node desktop/scripts/collect-licenses.mjs --check
+	npm --prefix desktop run build
+
+check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web check-desktop ## Everything CI runs: backend/web/desktop checks, Docker build, smoke, backup and PostgreSQL upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .

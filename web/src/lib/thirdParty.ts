@@ -21,7 +21,8 @@ export const THIRD_PARTY = [
       { name: 'emoji-picker-element', pkg: 'emoji-picker-element', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element' },
       { name: 'emoji-picker-element-data (CLDR, Emojibase)', pkg: 'emoji-picker-element-data', license: 'Apache-2.0', url: 'https://github.com/nolanlawson/emoji-picker-element-data' },
       { name: 'Swagger UI (API reference)', pkg: 'swagger-ui-dist', license: 'Apache-2.0', url: 'https://github.com/swagger-api/swagger-ui' },
-      { name: 'Tailwind CSS', license: 'MIT', url: 'https://tailwindcss.com', note: 'generated' }
+      { name: 'Tailwind CSS', license: 'MIT', url: 'https://tailwindcss.com', note: 'generated' },
+      { name: 'Tauri API (desktop feasibility probe)', license: 'MIT OR Apache-2.0', url: 'https://github.com/tauri-apps/tauri' }
     ]
   },
   {
@@ -47,7 +48,8 @@ export const THIRD_PARTY = [
       { name: 'golang-jwt', license: 'MIT', url: 'https://github.com/golang-jwt/jwt' },
       { name: 'google/uuid', license: 'BSD-3-Clause', url: 'https://github.com/google/uuid' },
       { name: 'godotenv', license: 'MIT', url: 'https://github.com/joho/godotenv' },
-      { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' }
+      { name: 'Go x/ libraries', license: 'BSD-3-Clause', url: 'https://pkg.go.dev/golang.org/x' },
+      { name: 'Tauri, reqwest, serde, url and Windows bindings (desktop probe)', license: 'MIT OR Apache-2.0; dependency inventory in desktop/THIRD_PARTY_NOTICES.md', url: 'https://github.com/msch128/mnema-talk/blob/main/desktop/THIRD_PARTY_NOTICES.md' }
     ]
   },
   {
