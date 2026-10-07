@@ -1,0 +1,37 @@
+name: Image scan
+
+# CI scans every image before it is released; this catches vulnerabilities
+# published later in the image people already run. A failed run is the alert.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Keep in sync with ci.yml.
+  TRIVY_VERSION: 0.75.0
+  # sha256 of trivy_0.75.0_Linux-64bit.tar.gz from the upstream checksums.txt
+  TRIVY_SHA256: c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Install trivy (pinned, checksum verified)
+        run: |
+          set -euo pipefail
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${archive}" \
+            --output "$RUNNER_TEMP/$archive"
+          echo "${TRIVY_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" trivy
+
+      - name: Scan the released image
+        run: |
+          "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
+            --ignore-unfixed --exit-code 1 --no-progress "ghcr.io/${GITHUB_REPOSITORY,,}:latest"

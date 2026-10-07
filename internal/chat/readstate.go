@@ -79,20 +79,24 @@ func messageTime(ctx context.Context, p *db.Pool, channelID, messageID uuid.UUID
 // MarkRead moves the user's read marker forward to messageID (or to now). It
 // never moves backwards; use MarkUnread for that.
 func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, messageID *uuid.UUID) (time.Time, error) {
-	at := time.Now()
+	// "Now" is the database's clock, the one messages.created_at comes from:
+	// the app's clock may lag it by a few milliseconds (separate containers,
+	// Docker Desktop's VM), which left the newest message unread.
+	var at *time.Time
 	if messageID != nil {
 		t, err := messageTime(ctx, p, channelID, *messageID)
 		if err != nil {
-			return at, err
+			return time.Time{}, err
 		}
-		at = t
+		at = &t
 	}
+	var marked time.Time
 	err := p.QueryRow(ctx, `
-		INSERT INTO channel_reads (user_id, channel_id, last_read_at) VALUES ($1, $2, $3)
+		INSERT INTO channel_reads (user_id, channel_id, last_read_at) VALUES ($1, $2, COALESCE($3, NOW()))
 		ON CONFLICT (user_id, channel_id) DO UPDATE
 		SET last_read_at = GREATEST(COALESCE(channel_reads.last_read_at, EXCLUDED.last_read_at), EXCLUDED.last_read_at)
-		RETURNING last_read_at`, userID, channelID, at).Scan(&at)
-	return at, err
+		RETURNING last_read_at`, userID, channelID, at).Scan(&marked)
+	return marked, err
 }
 
 // MarkUnread sets the read marker just before messageID, so it and

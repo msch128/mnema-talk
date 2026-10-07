@@ -18,7 +18,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
    │  web.go ───── embedded web/dist       │
    └──────────┬─────────────────┬──────────┘
               ▼                 ▼
-      PostgreSQL 17       SeaweedFS (S3 API)
+      PostgreSQL 18       SeaweedFS (S3 API)
 ```
 
 ## Backend components

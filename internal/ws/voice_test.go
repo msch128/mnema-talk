@@ -294,3 +294,41 @@ func TestCloseVoiceChannelEvictsEveryone(t *testing.T) {
 		t.Fatal("a member of another room was affected")
 	}
 }
+
+// A room full by its channel's user_limit turns away a newcomer with voice_kicked (reason room_full);
+// a member already present, e.g. in a second tab, still gets in.
+func TestFullVoiceRoomRefusesNewcomers(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	ch := voiceCh()
+	ch.UserLimit = 2
+	a := testClient(h, auth.User{ID: uuid.New(), Username: "a"})
+	b := testClient(h, auth.User{ID: uuid.New(), Username: "b"})
+	h.joinVoice(a, ch)
+	h.joinVoice(b, ch)
+
+	late := testClient(h, auth.User{ID: uuid.New(), Username: "late"})
+	drainTypes(t, late)
+	h.joinVoice(late, ch)
+	if inRoom(h, ch.ID, late.User.ID) || late.currentVoice() != nil {
+		t.Fatal("newcomer joined a full room")
+	}
+	var ev struct {
+		Type    string `json:"type"`
+		Payload struct {
+			ChannelID uuid.UUID `json:"channel_id"`
+			Reason    string    `json:"reason"`
+		} `json:"payload"`
+	}
+	if err := json.Unmarshal(<-late.send, &ev); err != nil {
+		t.Fatal(err)
+	}
+	if ev.Type != "voice_kicked" || ev.Payload.ChannelID != ch.ID || ev.Payload.Reason != "room_full" {
+		t.Fatalf("got %s %+v, want voice_kicked room_full", ev.Type, ev.Payload)
+	}
+
+	secondTab := testClient(h, a.User)
+	h.joinVoice(secondTab, ch)
+	if secondTab.currentVoice() == nil {
+		t.Fatal("a member's second connection was turned away")
+	}
+}

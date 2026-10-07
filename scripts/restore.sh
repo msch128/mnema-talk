@@ -30,7 +30,7 @@ if [ "$mode" = --verify ]; then
   trap 'exit 143' TERM
   # No published ports, network or live volumes. Trust auth is confined to
   # this throwaway container's Unix socket; all access uses docker exec.
-  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql/data -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:17-alpine)
+  check_container=$(docker run --rm -d --network none --mount type=volume,dst=/var/lib/postgresql -e POSTGRES_HOST_AUTH_METHOD=trust -e POSTGRES_DB=mnema_verify postgres:18-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873)
   ready=false
   for _ in $(seq 1 60); do
     if docker exec "$check_container" sh -c '[ "$(cat /proc/1/comm)" = postgres ] && pg_isready -U postgres -d mnema_verify' </dev/null >/dev/null 2>&1; then ready=true; break; fi
@@ -54,12 +54,12 @@ cleanup_restore() {
   storage_ready=true
   if [ "$mutated" = false ] || [ "$status" = 0 ]; then
     if [ "$seaweed_resume" = true ]; then
-      if ! docker compose start --wait seaweedfs >/dev/null; then
+      if ! service_start seaweedfs; then
         status=1 storage_ready=false
         echo 'seaweedfs did not resume; app remains stopped' >&2
       fi
     fi
-    if [ "$app_resume" = true ] && [ "$storage_ready" = true ]; then docker compose start --wait app >/dev/null || status=1; fi
+    if [ "$app_resume" = true ] && [ "$storage_ready" = true ]; then service_start app || status=1; fi
   else
     echo 'restore failed after mutation: services remain stopped; resolve or restore a complete backup before starting' >&2
   fi

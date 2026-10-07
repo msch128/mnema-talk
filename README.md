@@ -71,7 +71,7 @@ single Go binary with the web app and a WebRTC SFU built in.
    │  - embedded SQL migrations            │
    └──────────┬─────────────────┬──────────┘
               ▼                 ▼
-      PostgreSQL 17       SeaweedFS (S3 API)
+      PostgreSQL 18       SeaweedFS (S3 API)
       (data)              (uploads, avatars)
 ```
 
@@ -83,7 +83,7 @@ S3-compatible store can replace SeaweedFS.
 |-----------|------|
 | Backend   | Go, chi, pgx, gorilla/websocket, Pion WebRTC v4, AWS SDK v2 (S3) |
 | Frontend  | Vue 3, Pinia, Vite, Tailwind CSS (`web/`) |
-| Storage   | PostgreSQL 17, S3 (SeaweedFS by default) |
+| Storage   | PostgreSQL 18, S3 (SeaweedFS by default) |
 
 More documentation in [`doc/`](doc/):
 
@@ -101,18 +101,18 @@ More documentation in [`doc/`](doc/):
 ```sh
 cp .env.example .env
 # edit .env: set PUBLIC_URL, JWT_SECRET (openssl rand -hex 32),
-# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY
+# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY, ADMIN_INITIAL_PASSWORD
 docker compose up -d --build      # or: make up
-docker compose logs app           # shows the generated admin password on first start
 ```
 
 Open `PUBLIC_URL`, log in as the admin, and create invite codes for your users.
-If `ADMIN_INITIAL_PASSWORD` is empty, a random password is generated and logged
-**once**. Change it after the first login.
+`ADMIN_INITIAL_PASSWORD` is required for the first production start; it is only
+used to create the admin. Change it after the first login (and then remove it
+from `.env`). In development an empty value generates a password and logs it once.
 
 ## Development
 
-Requirements: Go (see `go.mod`), Node 24 + npm, Docker, GNU make (on Windows use
+Requirements: Go (see `go.mod`), Node 26 + npm, Docker, GNU make (on Windows use
 Git Bash or WSL). Run `make help` for all targets.
 
 ```sh
@@ -136,7 +136,7 @@ builds only `web/dist`).
 
 ```sh
 make test              # Go unit tests (-race)
-make test-integration  # Go integration tests: starts postgres:17-alpine via Docker,
+make test-integration  # Go integration tests: starts postgres:18-alpine via Docker,
                        # or uses TEST_DATABASE_URL if set
 make test-web          # vitest
 make coverage          # Go (unit + integration) and web coverage: coverage.out,
@@ -156,7 +156,7 @@ everything down again. `SKIP_BUILD=1` reuses the last build,
 `E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
 file.
 
-**Without Docker** (e.g. in a sandbox): start PostgreSQL 17 and a SeaweedFS
+**Without Docker** (e.g. in a sandbox): start PostgreSQL 18 and a SeaweedFS
 S3 gateway any other way, run the binary with the environment `e2e/run.sh`
 uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,
 `DATABASE_URL`, `S3_*`, `UPDATE_CHECK_ENABLED=false`,
@@ -208,7 +208,7 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    for the commit that is still `main`'s tip releases; if `main` moved on, the
    run for the newer commit decides.
 2. The release workflow merges that PR right away and publishes the GitHub
-   Release and tag `vX.Y.Z` (first release: `0.1.0`), so every green push to
+   Release and tag `vX.Y.Z`, so every green push to
    `main` that contains a `feat:` or `fix:` becomes a release.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
@@ -315,7 +315,7 @@ from the admin console (see [Updates](#updates)).
 
 Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
 4/5 with a 64-bit OS); Docker picks the right one. The rest of the stack
-(`postgres:17-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
+(`postgres:18-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
 both as well. **linux/arm/v7** (32-bit ARM) is not built: those images exist
 for it too, but the server doesn't compile for 32-bit targets yet (a 64-bit
 constant in `internal/db` overflows `int`). Builders cross-compile the Go

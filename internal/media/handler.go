@@ -26,7 +26,7 @@ import (
 const (
 	MaxAvatarBytes  = 5 << 20
 	maxFilenameLen  = 255
-	multipartMemory = 8 << 20 // larger parts spill to a temp file
+	multipartMemory = 8 << 20 // avatar forms stay in memory (body capped below this)
 )
 
 // Handler serves uploads, media downloads and the admin storage dashboard.
@@ -51,7 +51,9 @@ func (h *Handler) UploadBodyLimit() int64 { return h.MaxUploadBytes + 1<<20 }
 // larger MaxBody than the JSON default.
 func (h *Handler) MountUploads(r chi.Router) {
 	r.Post("/channels/{channelID}/upload", httpx.Handle(h.upload))
-	r.Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
+	// An avatar is parsed in memory (at most 5 MB), never spilled to /tmp:
+	// its body gets a tighter cap than file uploads.
+	r.With(httpx.MaxBody(MaxAvatarBytes+1<<20)).Post("/users/me/avatar", httpx.Handle(h.uploadAvatar))
 }
 
 // Mount registers authenticated media serving.
@@ -66,6 +68,8 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Get("/media/stats", httpx.Handle(h.stats))
 	r.Get("/media", httpx.Handle(h.list))
 	r.Post("/media/prune", httpx.Handle(h.prune))
+	r.Get("/media/orphans", httpx.Handle(h.orphans))
+	r.Post("/media/orphans/cleanup", httpx.Handle(h.cleanupOrphans))
 	r.Delete("/media/{id}", httpx.Handle(h.delete))
 }
 
@@ -166,56 +170,23 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	in, err := readFile(r, "file", h.MaxUploadBytes, allowedMIME, false)
+	in, target, err := h.readUpload(r, chID)
 	if err != nil {
 		return err
-	}
-	defer in.file.Close()
-
-	content, err := chat.ValidateContent(r.FormValue("content"), true)
-	if err != nil {
-		return err
-	}
-	var parentID *uuid.UUID
-	if raw := r.FormValue("parent_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid parent_id")
-		}
-		parentID = &id
-	}
-	var replyToID *uuid.UUID
-	if raw := r.FormValue("reply_to_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid reply_to_id")
-		}
-		replyToID = &id
-	}
-	if err := chat.ValidateTarget(r.Context(), h.DB, chID, parentID, replyToID); err != nil {
-		return err
-	}
-
-	mediaID := uuid.New()
-	key := storageKey("uploads", mediaID, in.mime)
-	if err := h.Store.Upload(r.Context(), key, in.file, in.mime, in.size); err != nil {
-		return fmt.Errorf("store upload: %w", err)
 	}
 
 	msgID, err := chat.InsertMessage(r.Context(), h.DB, h.Online, chat.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: content, ParentID: parentID, ReplyToID: replyToID,
+		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
 	}, func(tx pgx.Tx, msgID uuid.UUID) error {
 		_, err := tx.Exec(r.Context(), `
 			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			mediaID, user.ID, chID, msgID, h.Bucket, key, in.filename, in.mime, in.size)
+			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size)
 		return err
 	})
 	if err != nil {
 		// The object must not outlive a failed DB write.
-		if delErr := h.Store.Delete(context.WithoutCancel(r.Context()), key); delErr != nil {
-			slog.Warn("orphaned upload after failed insert", "key", key, "err", delErr)
-		}
+		h.discard(r.Context(), in.key)
 		return fmt.Errorf("record upload: %w", err)
 	}
 	return chat.PublishMessage(w, r, h.DB, h.Events, msgID)
@@ -507,4 +478,64 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 type PruneResult struct {
 	PrunedCount int `json:"pruned_count"`
 	CutoffDays  int `json:"cutoff_days"`
+}
+
+// orphans handles GET /api/admin/media/orphans.
+//
+// @Summary Count orphaned media objects
+// @Description Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Requires role admin (403 otherwise).
+// @ID getMediaOrphans
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} Orphans "Orphaned objects (deleted is 0)."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/orphans [get]
+func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	o, err := FindOrphans(r.Context(), h.DB, h.Store, false)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, o)
+	return nil
+}
+
+// cleanupOrphans handles POST /api/admin/media/orphans/cleanup.
+//
+// @Summary Delete orphaned media objects
+// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Requires role admin (403 otherwise).
+// @ID cleanupMediaOrphans
+// @Tags Admin
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} Orphans "Orphaned objects found and deleted."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Failure 503 {object} httpx.ErrorResponse "UNAVAILABLE: a dependency (database, file storage) is not available."
+// @Router /api/admin/media/orphans/cleanup [post]
+func (h *Handler) cleanupOrphans(w http.ResponseWriter, r *http.Request) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
+	admin := auth.UserFrom(r.Context())
+	o, err := FindOrphans(r.Context(), h.DB, h.Store, true)
+	if o != nil && o.Deleted > 0 {
+		slog.Info("orphaned media removed", "audit", "media_orphans", "admin_id", admin.ID, "admin", admin.Username, "deleted", o.Deleted, "bytes", o.Bytes)
+	}
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, o)
+	return nil
 }

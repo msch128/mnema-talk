@@ -23,13 +23,18 @@ const (
 )
 
 type Channel struct {
-	ID         uuid.UUID   `json:"id" format:"uuid"`
+	ID uuid.UUID `json:"id" format:"uuid"`
+	// Number is the channel's short, stable link number (/c/12-general).
+	Number     int64       `json:"number"`
 	CategoryID *uuid.UUID  `json:"category_id" format:"uuid" extensions:"x-nullable"`
 	Name       string      `json:"name" maxLength:"64"`
 	Type       ChannelType `json:"type"`
 	Topic      string      `json:"topic" maxLength:"255"`
 	SortOrder  int         `json:"sort_order"`
 	CreatedAt  time.Time   `json:"created_at" format:"date-time"`
+	// UserLimit is the most members a voice channel admits at once; 0 = no
+	// limit.
+	UserLimit int `json:"user_limit" minimum:"0" maximum:"999"`
 }
 
 type Category struct {
@@ -64,7 +69,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	}
 
 	chanRows, err := p.Query(ctx, `
-		SELECT id, category_id, name, type, topic, sort_order, created_at
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit
 		FROM channels ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query channels: %w", err)
@@ -74,7 +79,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit); err != nil {
 			return nil, nil, err
 		}
 		if ch.CategoryID != nil {
@@ -128,9 +133,9 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 	var ch Channel
 	err = p.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, category_id, name, type, topic, sort_order, created_at`,
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`,
 		categoryID, name, chType, topic, sortOrder).
-		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -183,8 +188,15 @@ func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error
 
 var errCategoryNotFound = httpx.ErrNotFound("category not found")
 
-// UpdateChannel renames a channel and/or changes its topic; nil keeps a field.
-func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string) (*Channel, error) {
+// MaxUserLimit is the highest member limit a voice channel can have.
+const MaxUserLimit = 999
+
+// UpdateChannel renames a channel, changes its topic and/or its member limit
+// (voice channels only; 0 removes it); nil keeps a field.
+func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit *int) (*Channel, error) {
+	if userLimit != nil && (*userLimit < 0 || *userLimit > MaxUserLimit) {
+		return nil, httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
+	}
 	if name != nil {
 		n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
 		if err != nil {
@@ -201,11 +213,17 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 	}
 	var ch Channel
 	err := p.QueryRow(ctx, `
-		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic)
-		WHERE id = $1
-		RETURNING id, category_id, name, type, topic, sort_order, created_at`, id, name, topic).
-		Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
+			user_limit = COALESCE($4, user_limit)
+		WHERE id = $1 AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`, id, name, topic, userLimit).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
 	if errors.Is(err, pgx.ErrNoRows) {
+		if userLimit != nil && *userLimit > 0 {
+			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
+				return nil, httpx.ErrInvalidInput("user_limit applies to voice channels only")
+			}
+		}
 		return nil, errChannelNotFound
 	}
 	if err != nil {
@@ -299,9 +317,9 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		}
 		var src Channel
 		err := tx.QueryRow(ctx, `
-			SELECT id, category_id, name, type, topic, sort_order
+			SELECT id, category_id, name, type, topic, sort_order, user_limit
 			FROM channels WHERE id = $1 FOR UPDATE`, sourceID).
-			Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder)
+			Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errChannelNotFound
 		}
@@ -337,10 +355,10 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		}
 
 		err = tx.QueryRow(ctx, `
-			INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-			RETURNING id, category_id, name, type, topic, sort_order, created_at`,
-			src.CategoryID, src.Name, src.Type, src.Topic, newOrder).
-			Scan(&ch.ID, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt)
+			INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit) VALUES ($1, $2, $3, $4, $5, $6)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`,
+			src.CategoryID, src.Name, src.Type, src.Topic, newOrder, src.UserLimit).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
 		if err != nil {
 			return fmt.Errorf("duplicate channel: %w", err)
 		}

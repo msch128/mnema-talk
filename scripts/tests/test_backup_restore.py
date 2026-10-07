@@ -19,6 +19,7 @@ with open(os.environ['FAKE_LOG'],'a') as f: f.write(json.dumps(args)+'\n')
 def done(code=0): p.write_text(json.dumps(state)); sys.exit(code)
 if args[:2]==['compose','config']: print('services: {}'); done()
 if args[:2]==['compose','ps']: print(args[-1]); done()
+if args[0]=='inspect' and 'Health' in args[2]: print('healthy' if state.get(args[-1],False) else 'false'); done()
 if args[0]=='inspect': print(str(state.get(args[-1],False)).lower() if args[2]=='{{.State.Running}}' else 'sha256:fixture'); done()
 if args[:2]==['compose','stop']:
  if os.environ.get('FAIL_AT')=='stop': done(1)
@@ -41,7 +42,7 @@ if args[0]=='run' and '/out/seaweedfs.tar.gz' in ' '.join(args):
  with tarfile.open(dest/'seaweedfs.tar.gz','w:gz') as t:
   b=b'fixture'; i=tarfile.TarInfo('./object'); i.size=len(b); t.addfile(i,io.BytesIO(b))
  done()
-if args[0]=='run' and 'postgres:17-alpine' in args: print('isolated-check'); done()
+if args[0]=='run' and any(a.split('@')[0]=='postgres:18-alpine' for a in args): print('isolated-check'); done()
 if args[0]=='run': done(1 if os.environ.get('FAIL_AT')=='extract' else 0)
 if args[0]=='exec':
  if 'psql' in args: sys.stdin.read()

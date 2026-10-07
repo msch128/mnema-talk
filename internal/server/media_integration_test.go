@@ -86,6 +86,10 @@ func TestAvatarUploadReplacesPrevious(t *testing.T) {
 	if r := admin.upload("/api/users/me/avatar", "avatar", "me.svg", "image/svg+xml", xssSVG, nil); r.status != http.StatusUnsupportedMediaType {
 		t.Fatalf("svg avatar: %d", r.status)
 	}
+	big := append(append([]byte{}, pngBytes...), make([]byte, 7<<20)...)
+	if r := admin.upload("/api/users/me/avatar", "avatar", "big.png", "image/png", big, nil); r.status != http.StatusRequestEntityTooLarge {
+		t.Errorf("7 MB avatar: %d, want 413", r.status)
+	}
 	if r := admin.upload("/api/users/me/avatar", "avatar", "a.png", "image/png", pngBytes, nil); r.status != http.StatusOK {
 		t.Fatalf("first avatar: %d %s", r.status, r.body)
 	}

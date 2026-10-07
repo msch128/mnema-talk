@@ -108,12 +108,17 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 		{"Herzog", "short", "ADMIN_INITIAL_PASSWORD"},
 		{"Herzog", strings.Repeat("p", 73), "ADMIN_INITIAL_PASSWORD"},
 	} {
-		if err := auth.EnsureAdminUser(ctx, a.db, tc.user, tc.pass); err == nil || !strings.Contains(err.Error(), tc.want) {
+		if err := auth.EnsureAdminUser(ctx, a.db, tc.user, tc.pass, false); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Errorf("EnsureAdminUser(%q): %v, want an error naming %s", tc.user, err, tc.want)
 		}
 	}
 
-	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123"); err != nil {
+	// Production never generates (and so never logs) a password.
+	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "", true); err == nil || !strings.Contains(err.Error(), "ADMIN_INITIAL_PASSWORD") {
+		t.Errorf("empty password in production: %v, want an error naming ADMIN_INITIAL_PASSWORD", err)
+	}
+
+	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123", false); err != nil {
 		t.Fatal(err)
 	}
 	var hash, display string
@@ -127,8 +132,11 @@ func TestEnsureAdminUserValidatesAndUsesAuthHashing(t *testing.T) {
 		t.Errorf("display name %q", display)
 	}
 	// Idempotent, and settings no longer matter once the admin exists.
-	if err := auth.EnsureAdminUser(ctx, a.db, "x", "short"); err != nil {
+	if err := auth.EnsureAdminUser(ctx, a.db, "x", "short", false); err != nil {
 		t.Fatalf("existing admin: %v", err)
+	}
+	if err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "", true); err != nil {
+		t.Fatalf("existing admin, production, empty password: %v", err)
 	}
 }
 
@@ -139,7 +147,7 @@ func TestEnsureAdminUserRefusesCaseInsensitiveClash(t *testing.T) {
 	if _, err := a.db.Exec(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('herzog', 'herzog', $1, 'user')`, hash); err != nil {
 		t.Fatal(err)
 	}
-	err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123")
+	err := auth.EnsureAdminUser(ctx, a.db, "Herzog", "admin-password-123", false)
 	if err == nil || !strings.Contains(err.Error(), "taken") {
 		t.Fatalf("got %v, want a 'taken' error", err)
 	}

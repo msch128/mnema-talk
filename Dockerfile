@@ -6,6 +6,7 @@
 #   3. rootfs:  CA bundle, tzdata and the app user, prepared on the build machine
 #   4. runtime: minimal Alpine, non-root, no shell tools beyond busybox
 # Database migrations are embedded in the binary (internal/db/migrations).
+# Base images are pinned by tag and digest; Dependabot refreshes both weekly.
 #
 # Multi-arch (docker buildx --platform linux/amd64,linux/arm64): every build
 # stage runs on the build machine ($BUILDPLATFORM). The web app is built once,
@@ -14,7 +15,7 @@
 # ==========================================================
 
 # --- Stage 1: frontend ---
-FROM --platform=$BUILDPLATFORM node:24-alpine AS web
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS web
 WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
@@ -30,7 +31,7 @@ COPY version.txt /version.txt
 RUN MNEMA_VERSION="${VERSION}" npm run build
 
 # --- Stage 2: Go binary ---
-FROM --platform=$BUILDPLATFORM golang:1.27-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
@@ -63,14 +64,14 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # --- Stage 3: runtime files, prepared on the build machine ---
 # CA bundle, time zone data and /etc/passwd are the same on every
 # architecture, so they are assembled here and copied into the target image.
-FROM --platform=$BUILDPLATFORM alpine:3.24 AS rootfs
+FROM --platform=$BUILDPLATFORM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS rootfs
 RUN apk add --no-cache ca-certificates tzdata
 # Least-privilege runtime user. The binary writes nothing to disk except
 # multipart upload temp files in /tmp; media lives in S3, data in PostgreSQL.
 RUN adduser -D -H -u 10001 app
 
 # --- Stage 4: runtime ---
-FROM alpine:3.24
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 COPY --from=rootfs /etc/passwd /etc/group /etc/shadow /etc/
 COPY --from=rootfs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=rootfs /usr/share/zoneinfo /usr/share/zoneinfo

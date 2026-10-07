@@ -12,11 +12,11 @@ import (
 )
 
 func TestResolveAnnounce(t *testing.T) {
-	got, err := ResolveAnnounce(context.Background(), []string{"91.66.75.113", "192.168.0.212", "91.66.75.113", "localhost"})
+	got, err := ResolveAnnounce(context.Background(), []string{"198.51.100.23", "192.168.1.20", "198.51.100.23", "localhost"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Equal(got[:2], []string{"91.66.75.113", "192.168.0.212"}) || !slices.Contains(got, "127.0.0.1") || len(got) != 3 {
+	if !slices.Equal(got[:2], []string{"198.51.100.23", "192.168.1.20"}) || !slices.Contains(got, "127.0.0.1") || len(got) != 3 {
 		t.Fatalf("got %v", got)
 	}
 	if _, err := ResolveAnnounce(context.Background(), []string{"::1"}); err == nil {
@@ -27,12 +27,12 @@ func TestResolveAnnounce(t *testing.T) {
 // Browsers must be offered every announced address, so members on the
 // internet and in the LAN can both reach the server.
 func TestOffersEveryAnnouncedAddress(t *testing.T) {
-	s, err := NewSFU(0, 0, []string{"203.0.113.7", "192.168.0.212"}, nil)
+	s, err := NewSFU(0, 0, []string{"203.0.113.7", "192.168.1.20"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	offer := gatherOffer(t, s)
-	for _, ip := range []string{"203.0.113.7", "192.168.0.212"} {
+	for _, ip := range []string{"203.0.113.7", "192.168.1.20"} {
 		if !strings.Contains(offer, " "+ip+" ") {
 			t.Errorf("offer has no candidate for %s:\n%s", ip, offer)
 		}
@@ -67,14 +67,14 @@ func TestAnnounceRewriteRules(t *testing.T) {
 		"none":   {nil, []webrtc.ICEAddressRewriteRule{}},
 		"single": {[]string{"203.0.113.7"}, []webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7"}, "")}},
 		"public and LAN": {
-			[]string{"203.0.113.7", "192.168.0.212"},
-			[]webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7", "192.168.0.212"}, "")},
+			[]string{"203.0.113.7", "192.168.1.20"},
+			[]webrtc.ICEAddressRewriteRule{host([]string{"203.0.113.7", "192.168.1.20"}, "")},
 		},
 		"pinned to a local address": {
-			[]string{"203.0.113.7/10.0.0.2", "192.168.0.212"},
+			[]string{"203.0.113.7/10.0.0.2", "192.168.1.20"},
 			[]webrtc.ICEAddressRewriteRule{
 				host([]string{"203.0.113.7"}, "10.0.0.2"),
-				host([]string{"203.0.113.7", "192.168.0.212"}, ""),
+				host([]string{"203.0.113.7", "192.168.1.20"}, ""),
 			},
 		},
 	}
@@ -92,7 +92,7 @@ func TestAnnounceRewriteRules(t *testing.T) {
 // SetNAT1To1IPs(ips, ICECandidateTypeHost) offered: the announced addresses
 // as host candidates and none of the container's own addresses.
 func TestAnnounceRulesMatchLegacyNAT1To1(t *testing.T) {
-	ips := []string{"203.0.113.7", "192.168.0.212"}
+	ips := []string{"203.0.113.7", "192.168.1.20"}
 
 	var legacy webrtc.SettingEngine
 	legacy.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})

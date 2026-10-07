@@ -25,6 +25,13 @@ func TestVerifyChecksums(t *testing.T) {
 	if _, err := verifyChecksums(map[string]string{"0000_gone.sql": "x"}, files); err != nil {
 		t.Fatal(err)
 	}
+
+	// One newer than every shipped file means a newer version migrated the
+	// database: an older binary must refuse it.
+	_, err = verifyChecksums(map[string]string{"0001_a.sql": files["0001_a.sql"], "0003_new.sql": "x"}, files)
+	if err == nil || !strings.Contains(err.Error(), "0003_new.sql") || !strings.Contains(err.Error(), "newer version") {
+		t.Fatalf("schema from a newer version not detected: %v", err)
+	}
 }
 
 func TestChecksumIgnoresLineEndings(t *testing.T) {

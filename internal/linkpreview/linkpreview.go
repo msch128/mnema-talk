@@ -36,6 +36,13 @@ const (
 	// Proxied images are kept in memory up to this many bytes in total.
 	imageCacheBytes = 32 << 20
 	imageCacheTTL   = time.Hour
+	// maxConcurrentFetches caps outbound fetches across all members (the
+	// per-user rate limit alone allows many in parallel), and
+	// maxFetchesPerRequester keeps one member's slow links from holding all
+	// of them. Callers wait up to fetchTimeout for both slots, then get no
+	// preview; that outcome is not cached.
+	maxConcurrentFetches   = 8
+	maxFetchesPerRequester = 2
 )
 
 // Preview is what a link card shows.
@@ -52,7 +59,22 @@ type Preview struct {
 var (
 	ErrBlocked   = errors.New("link target is not a public web address")
 	ErrNoPreview = errors.New("page has no preview")
+	// errBusy means no fetch slot was free in time. It says nothing about
+	// the link, so it is never cached.
+	errBusy = errors.New("too many link previews in flight")
 )
+
+// slotWait is how long a fetch waits for its slots; tests shorten it.
+var slotWait = fetchTimeout
+
+type requesterKey struct{}
+
+// WithRequester tags ctx with who asked for a fetch (a user ID), for the
+// per-requester fetch limit. Untagged fetches only count against the
+// server-wide limit.
+func WithRequester(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, requesterKey{}, id)
+}
 
 // Fetcher fetches and caches previews.
 type Fetcher struct {
@@ -71,6 +93,9 @@ type Fetcher struct {
 	mu    sync.Mutex
 	cache map[string]cacheEntry
 
+	slots     chan struct{} // one per outbound fetch in flight
+	requester requesterSlots
+
 	previews flightGroup[*Preview]
 	images   flightGroup[cachedImage]
 	imgCache *imageCache
@@ -84,6 +109,7 @@ type cacheEntry struct {
 
 func New() *Fetcher {
 	f := &Fetcher{
+		slots:    make(chan struct{}, maxConcurrentFetches),
 		cache:    map[string]cacheEntry{},
 		imgCache: newImageCache(imageCacheBytes, imageCacheTTL),
 		lookup: func(ctx context.Context, host string) ([]netip.Addr, error) {
@@ -132,13 +158,15 @@ func New() *Fetcher {
 
 // nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but
 // that must never be fetched: shared, documentation, benchmarking and
-// reserved IPv4 space, and IPv6 prefixes that embed an IPv4 address (NAT64,
+// reserved IPv4 space, the deprecated 6to4 relay anycast and IPv6
+// site-local ranges, and IPv6 prefixes that embed an IPv4 address (NAT64,
 // 6to4, Teredo), which could point at a private host.
 var nonPublic = []netip.Prefix{
 	netip.MustParsePrefix("0.0.0.0/8"),
 	netip.MustParsePrefix("100.64.0.0/10"),
 	netip.MustParsePrefix("192.0.0.0/24"),
 	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("192.88.99.0/24"),
 	netip.MustParsePrefix("198.18.0.0/15"),
 	netip.MustParsePrefix("198.51.100.0/24"),
 	netip.MustParsePrefix("203.0.113.0/24"),
@@ -148,6 +176,7 @@ var nonPublic = []netip.Prefix{
 	netip.MustParsePrefix("2001::/32"),
 	netip.MustParsePrefix("2001:db8::/32"),
 	netip.MustParsePrefix("2002::/16"),
+	netip.MustParsePrefix("fec0::/10"),
 }
 
 // publicIP reports whether ip is a globally routable unicast address.
@@ -245,6 +274,11 @@ func (f *Fetcher) parse(raw string) (*url.URL, error) {
 
 // get fetches u and returns at most limit bytes of the body.
 func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int64) ([]byte, string, *url.URL, error) {
+	release, err := f.acquire(ctx)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	defer release()
 	ctx, cancel := context.WithTimeout(ctx, fetchTimeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
@@ -288,7 +322,9 @@ func (f *Fetcher) Preview(ctx context.Context, raw string) (*Preview, error) {
 			return p, err
 		}
 		p, err := f.fetchPreview(context.WithoutCancel(ctx), u)
-		f.store(key, p, err)
+		if !errors.Is(err, errBusy) {
+			f.store(key, p, err)
+		}
 		return p, err
 	})
 }
@@ -466,4 +502,68 @@ func (f *Fetcher) store(key string, p *Preview, err error) {
 		ttl = 5 * time.Minute // transient failures are retried sooner
 	}
 	f.cache[key] = cacheEntry{preview: p, err: err, expires: time.Now().Add(ttl)}
+}
+
+// acquire waits up to slotWait for the requester's slot, then for a
+// server-wide one. The requester's slot is taken first, so a member waiting
+// on their own limit never holds a server-wide slot meanwhile.
+func (f *Fetcher) acquire(ctx context.Context) (func(), error) {
+	ctx, cancel := context.WithTimeout(ctx, slotWait)
+	defer cancel()
+	id, _ := ctx.Value(requesterKey{}).(string)
+	releaseRequester := func() {}
+	if id != "" {
+		r, err := f.requester.acquire(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		releaseRequester = r
+	}
+	select {
+	case f.slots <- struct{}{}:
+		return func() { <-f.slots; releaseRequester() }, nil
+	case <-ctx.Done():
+		releaseRequester()
+		return nil, errBusy
+	}
+}
+
+// requesterSlots holds a semaphore of maxFetchesPerRequester per requester
+// with fetches in flight or waiting; idle requesters are dropped.
+type requesterSlots struct {
+	mu sync.Mutex
+	m  map[string]*requesterSlot
+}
+
+type requesterSlot struct {
+	sem  chan struct{}
+	refs int
+}
+
+func (r *requesterSlots) acquire(ctx context.Context, id string) (func(), error) {
+	r.mu.Lock()
+	if r.m == nil {
+		r.m = map[string]*requesterSlot{}
+	}
+	s := r.m[id]
+	if s == nil {
+		s = &requesterSlot{sem: make(chan struct{}, maxFetchesPerRequester)}
+		r.m[id] = s
+	}
+	s.refs++
+	r.mu.Unlock()
+	done := func() {
+		r.mu.Lock()
+		if s.refs--; s.refs == 0 {
+			delete(r.m, id)
+		}
+		r.mu.Unlock()
+	}
+	select {
+	case s.sem <- struct{}{}:
+		return func() { <-s.sem; done() }, nil
+	case <-ctx.Done():
+		done()
+		return nil, errBusy
+	}
 }

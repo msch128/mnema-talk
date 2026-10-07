@@ -54,7 +54,7 @@ func run() error {
 	if err := pool.Migrate(ctx); err != nil {
 		return err
 	}
-	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword); err != nil {
+	if err := auth.EnsureAdminUser(ctx, pool, cfg.AdminUsername, cfg.AdminInitialPassword, cfg.IsProduction()); err != nil {
 		return err
 	}
 
@@ -65,6 +65,7 @@ func run() error {
 		return s3.New(ctx, cfg)
 	}, 2*time.Second, time.Minute)
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
+	media.StartOrphanScan(ctx, pool, store)
 
 	// Addresses browsers send media to: typically the public IP (or a
 	// dynamic-DNS name for it) plus the LAN IP.
@@ -83,6 +84,15 @@ func run() error {
 			}
 		}()
 		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
+		if w := cfg.WebRTCReachabilityWarning(); w != "" {
+			slog.Warn(w)
+		}
+		if cfg.WebRTCUDPMuxPort == 0 {
+			// Each peer takes its own port(s) from the range, so the range
+			// bounds how many people can be in calls at once.
+			slog.Warn("WEBRTC_UDP_MUX_PORT=0: every media peer takes its own UDP port(s) from the range, which caps how many people can be in calls at once; leave it empty to share one port",
+				"ports", int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
+		}
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}
 

@@ -5,7 +5,7 @@
 #   SKIP_BUILD=1          reuse web/dist and bin/mnema-talk-e2e
 #   E2E_INSTALL_BROWSER=1 also run `playwright install --with-deps chromium`
 #   E2E_WEBRTC_ALL_INTERFACES=1 include VM/VPN interfaces in the browser ICE test
-#   E2E_WEBRTC_UDP_MUX_PORT=50100 test the shared UDP socket instead of per-peer ports
+#   E2E_WEBRTC_UDP_MUX_PORT=0    test legacy per-peer ports instead of the shared UDP port
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -72,7 +72,7 @@ env -i PATH="$PATH" HOME="$HOME" \
   S3_ACCESS_KEY="$S3_KEY" S3_SECRET_KEY="$S3_SECRET" S3_FORCE_PATH_STYLE=true \
   LINK_PREVIEWS_ENABLED=false UPDATE_CHECK_ENABLED=false LOG_LEVEL="${E2E_LOG_LEVEL:-}" \
   WEBRTC_UDP_PORT_MIN=50100 WEBRTC_UDP_PORT_MAX=50150 \
-  WEBRTC_UDP_MUX_PORT="${E2E_WEBRTC_UDP_MUX_PORT:-0}" \
+  WEBRTC_UDP_MUX_PORT="${E2E_WEBRTC_UDP_MUX_PORT:-}" \
   WEBRTC_NAT_1TO1_IP=127.0.0.1 \
   "$BIN" >"$LOG" 2>&1 &
 SERVER_PID=$!

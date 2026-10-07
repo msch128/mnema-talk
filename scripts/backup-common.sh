@@ -15,6 +15,19 @@ service_id() {
   printf '%s\n' "$id"
 }
 service_running() { docker inspect -f '{{.State.Running}}' "$1"; }
+# Start a stopped service and wait until it is healthy (or running, without a
+# healthcheck). Unlike `compose start --wait` this works with every Compose v2.
+service_start() {
+  local id state _
+  docker compose start "$1" >/dev/null || return 1
+  id=$(service_id "$1") || return 1
+  for _ in $(seq 1 "${SERVICE_START_TIMEOUT:-180}"); do
+    state=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Running}}{{end}}' "$id") || return 1
+    case "$state" in healthy|true) return 0 ;; esac
+    sleep 1
+  done
+  backup_fail "$1 did not become healthy"
+}
 backup_validate() {
   local src=$1 legacy=$2 preparing=${3:-} name actual
   for name in postgres.sql.gz seaweedfs.tar.gz env; do
