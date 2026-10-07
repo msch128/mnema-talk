@@ -728,7 +728,14 @@ func (r *Room) signalPeer(peer *Peer) {
 func (p *Peer) watchOffer(gen uint64, attempt int) {
 	time.AfterFunc(p.room.offerTimeout, func() {
 		p.signalingMu.Lock()
-		defer p.signalingMu.Unlock()
+		defer func() {
+			p.signalingMu.Unlock()
+			// An answer may stabilize the peer while the resend callback is
+			// still running. Drain changes queued behind this task as well.
+			if p.PC.SignalingState() == webrtc.SignalingStateStable && p.negotiationPending.Swap(false) {
+				p.room.requestPeerSignal(p)
+			}
+		}()
 		if p.offerGen.Load() != gen || p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed ||
 			p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
 			return

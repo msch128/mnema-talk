@@ -6267,7 +6267,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests or outbound fetch capacity exhausted.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",
@@ -6364,7 +6364,7 @@
                 }
               }
             },
-            "description": "RATE_LIMITED: too many requests.",
+            "description": "RATE_LIMITED: too many requests or outbound fetch capacity exhausted.",
             "headers": {
               "Retry-After": {
                 "description": "Seconds until the client may retry.",

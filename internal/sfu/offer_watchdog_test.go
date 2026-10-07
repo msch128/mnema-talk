@@ -2,6 +2,8 @@ package sfu
 
 import (
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -133,4 +135,67 @@ func originLine(sdp string) string {
 		}
 	}
 	return ""
+}
+
+// A valid answer can arrive while a watchdog resend callback is returning.
+// Track changes queued behind that callback must still reach the stable peer.
+func TestWatchdogResendDrainsTrackChangeAfterConcurrentAnswer(t *testing.T) {
+	s, err := NewSFU(0, 0, []string{"127.0.0.1"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.offerTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { _ = s.Close() })
+	client, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = client.Close() })
+	offers := make(chan webrtc.SessionDescription, 8)
+	resendStarted := make(chan struct{})
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
+	var count atomic.Int32
+	r, peer, err := s.Join(uuid.New(), uuid.New(), func(offer webrtc.SessionDescription) {
+		if count.Add(1) == 2 {
+			close(resendStarted)
+			<-release
+		}
+		offers <- offer
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initial := nextOffer(t, offers, "initial offer")
+	answer := answerOffer(t, client, initial)
+	select {
+	case <-resendStarted:
+	case <-time.After(5 * time.Second):
+		t.Fatal("watchdog resend did not start")
+	}
+	track, err := webrtc.NewTrackLocalStaticRTP(webrtc.RTPCodecCapability{MimeType: webrtc.MimeTypeOpus}, "watchdog-late-audio", "late-publisher")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.addTrack(track.ID(), &TrackInfo{Track: track, SenderID: uuid.New(), Kind: webrtc.RTPCodecTypeAudio, Source: SourceAudio})
+	// Ensure the real request path has queued the track change while the
+	// watchdog owns signalingMu, before applying the answer.
+	r.requestPeerSignal(peer)
+	if err := peer.SetAnswer(answer); err != nil {
+		t.Fatal(err)
+	}
+	releaseOnce.Do(func() { close(release) })
+	retried := nextOffer(t, offers, "in-flight watchdog resend")
+	if originLine(retried.SDP) != originLine(initial.SDP) {
+		t.Fatal("watchdog resend replaced the outstanding offer")
+	}
+	followup := nextOffer(t, offers, "offer for queued track change")
+	if !strings.Contains(followup.SDP, track.ID()) {
+		t.Fatal("queued track missing from follow-up offer")
+	}
+	if err := peer.SetAnswer(answerOffer(t, client, followup)); err != nil {
+		t.Fatal(err)
+	}
+	waitSignalingIdle(t, peer)
 }

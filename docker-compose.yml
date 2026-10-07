@@ -125,14 +125,15 @@ services:
     # PostgreSQL 18 keeps its data in a version directory under
     # /var/lib/postgresql, on a new volume. The PostgreSQL 17 volume of older
     # versions is only mounted read-only to notice an install that was not
-    # upgraded yet: then this refuses to start (instead of serving a new,
-    # empty database) until scripts/upgrade-postgres.sh has moved the data.
+    # upgraded yet: then this refuses to start (instead of serving an empty
+    # or partially imported database) until scripts/upgrade-postgres.sh has
+    # verified the import and written its completion marker.
     entrypoint:
       - sh
       - -c
       - |
-        if [ -s /var/lib/postgresql/17-data/PG_VERSION ] && [ ! -s "$$PGDATA/PG_VERSION" ] && [ "$$MNEMA_PG_UPGRADE" != 1 ]; then
-          echo "PostgreSQL 17 data from an older Mnema Talk found, but no PostgreSQL 18 database yet." >&2
+        if [ -s /var/lib/postgresql/17-data/PG_VERSION ] && [ "$$MNEMA_PG_UPGRADE" != 1 ] && [ "$$(cat /var/lib/postgresql/.mnema-pg17-upgrade-complete 2>/dev/null)" != mnema-postgres17-upgrade-v1 ]; then
+          echo "PostgreSQL 17 data from an older Mnema Talk found, but no verified PostgreSQL 18 upgrade yet." >&2
           echo "Run ./scripts/upgrade-postgres.sh in the deployment directory (doc/upgrade.md)." >&2
           exit 1
         fi

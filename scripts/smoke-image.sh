@@ -13,16 +13,21 @@ cd "$(dirname "$0")/.."
 
 IMAGE="${1:-mnema-talk:local}"
 PORT="${SMOKE_PORT:-58090}"
-PROJECT="mnema-smoke"
+PROJECT="mnema-smoke-$(openssl rand -hex 8)"
+export COMPOSE_PROFILES=""
+OVERRIDE_FILE="$(mktemp)"
 ENV_FILE="$(mktemp)"
 COOKIES="$(mktemp)"
 PAYLOAD="$(mktemp)"
 RESTORED="$(mktemp)"
+# Preflight failures may remove only this run's temporary files.
+trap 'rm -f "$ENV_FILE" "$OVERRIDE_FILE" "$COOKIES" "$PAYLOAD" "$RESTORED"' EXIT
 ADMIN_PASSWORD="smoke-$(openssl rand -hex 8)"
 BASE="http://127.0.0.1:$PORT"
 
 # Throwaway values, generated per run; nothing here is a real secret. The
-# production compose file is used unchanged; only the env differs.
+# base production compose stays unchanged; scoped overrides isolate resource
+# names and published test ports.
 cat >"$ENV_FILE" <<EOF
 MNEMA_IMAGE=$IMAGE
 APP_ENV=production
@@ -41,7 +46,57 @@ WEBRTC_UDP_PORT_MAX=58110
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 EOF
 
-COMPOSE=(docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f docker-compose.yml)
+# Only namespace and published test ports differ from the production stack.
+cat >"$OVERRIDE_FILE" <<EOF
+services:
+  app:
+    container_name: $PROJECT-app
+    ports: !override
+      - "127.0.0.1:$PORT:8080"
+      - "127.0.0.1:58100-58110:58100-58110/udp"
+  postgres:
+    container_name: $PROJECT-postgres
+  seaweedfs:
+    container_name: $PROJECT-seaweedfs
+  coturn:
+    container_name: $PROJECT-coturn
+  updater:
+    container_name: $PROJECT-updater
+networks:
+  mnema-network:
+    name: $PROJECT-network
+  mnema-updater:
+    name: $PROJECT-updater
+EOF
+COMPOSE=(docker compose -p "$PROJECT" --env-file "$ENV_FILE" -f docker-compose.yml -f "$OVERRIDE_FILE")
+
+# Refuse collisions before any cleanup that could remove Docker resources.
+"${COMPOSE[@]}" config --quiet
+for kind in container network volume; do
+  case "$kind" in
+    container) names="$PROJECT-app $PROJECT-postgres $PROJECT-seaweedfs $PROJECT-coturn $PROJECT-updater" ;;
+    network) names="$PROJECT-network $PROJECT-updater" ;;
+    volume) names="${PROJECT}_postgres18-data ${PROJECT}_postgres-data ${PROJECT}_seaweedfs-data" ;;
+  esac
+  if [ "$kind" = container ]; then
+    existing=$(docker container ls -a --format '{{.Names}}')
+    project_resources=$(docker container ls -aq --filter "label=com.docker.compose.project=$PROJECT")
+  else
+    existing=$(docker "$kind" ls --format '{{.Name}}')
+    project_resources=$(docker "$kind" ls -q --filter "label=com.docker.compose.project=$PROJECT")
+  fi
+  if [ -n "$project_resources" ]; then
+    echo "refusing existing resources of project $PROJECT" >&2
+    exit 1
+  fi
+  for name in $names; do
+    if [[ $'\n'"$existing"$'\n' == *$'\n'"$name"$'\n'* ]]; then
+      echo "refusing existing $kind: $name" >&2
+      rm -f "$ENV_FILE" "$OVERRIDE_FILE" "$COOKIES" "$PAYLOAD" "$RESTORED"
+      exit 1
+    fi
+  done
+done
 
 cleanup() {
   status=$?
@@ -50,7 +105,7 @@ cleanup() {
     "${COMPOSE[@]}" logs --no-color --tail 60 app >&2 || true
   fi
   "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-  rm -f "$ENV_FILE" "$COOKIES" "$PAYLOAD" "$RESTORED"
+  rm -f "$ENV_FILE" "$OVERRIDE_FILE" "$COOKIES" "$PAYLOAD" "$RESTORED"
   exit "$status"
 }
 trap cleanup EXIT

@@ -16,7 +16,12 @@ ADMIN_PASSWORD="drill-$(openssl rand -hex 8)"
 # A throwaway deployment directory, laid out like a real one: compose file,
 # scripts and .env. backup.sh refuses BACKUP_DIR inside a git work tree.
 DEPLOY="$(mktemp -d)"
-export COMPOSE_PROJECT_NAME="mnema-drill"
+# Preflight failures may remove only this run's temporary directory.
+trap 'rm -rf "$DEPLOY"' EXIT
+COMPOSE_PROJECT_NAME="mnema-drill-$(openssl rand -hex 8)"
+export COMPOSE_PROJECT_NAME
+export COMPOSE_PROFILES=""
+export COMPOSE_FILE="docker-compose.yml:isolated.yml"
 export BACKUP_DIR="$DEPLOY/backups"
 cp "$ROOT/docker-compose.yml" "$DEPLOY/"
 cp -R "$ROOT/scripts" "$DEPLOY/scripts"
@@ -38,7 +43,57 @@ WEBRTC_UDP_PORT_MAX=58210
 WEBRTC_NAT_1TO1_IP=127.0.0.1
 EOF
 chmod 600 "$DEPLOY/.env"
+# Only namespace and published test ports differ from the production stack.
+cat >"$DEPLOY/isolated.yml" <<EOF
+services:
+  app:
+    container_name: $COMPOSE_PROJECT_NAME-app
+    ports: !override
+      - "127.0.0.1:$PORT:8080"
+      - "127.0.0.1:58200-58210:58200-58210/udp"
+  postgres:
+    container_name: $COMPOSE_PROJECT_NAME-postgres
+  seaweedfs:
+    container_name: $COMPOSE_PROJECT_NAME-seaweedfs
+  coturn:
+    container_name: $COMPOSE_PROJECT_NAME-coturn
+  updater:
+    container_name: $COMPOSE_PROJECT_NAME-updater
+networks:
+  mnema-network:
+    name: $COMPOSE_PROJECT_NAME-network
+  mnema-updater:
+    name: $COMPOSE_PROJECT_NAME-updater
+EOF
 cd "$DEPLOY"
+
+# Refuse collisions before any cleanup that could remove Docker resources.
+docker compose config --quiet
+for kind in container network volume; do
+  case "$kind" in
+    container) names="$COMPOSE_PROJECT_NAME-app $COMPOSE_PROJECT_NAME-postgres $COMPOSE_PROJECT_NAME-seaweedfs $COMPOSE_PROJECT_NAME-coturn $COMPOSE_PROJECT_NAME-updater" ;;
+    network) names="$COMPOSE_PROJECT_NAME-network $COMPOSE_PROJECT_NAME-updater" ;;
+    volume) names="${COMPOSE_PROJECT_NAME}_postgres18-data ${COMPOSE_PROJECT_NAME}_postgres-data ${COMPOSE_PROJECT_NAME}_seaweedfs-data" ;;
+  esac
+  if [ "$kind" = container ]; then
+    existing=$(docker container ls -a --format '{{.Names}}')
+    project_resources=$(docker container ls -aq --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")
+  else
+    existing=$(docker "$kind" ls --format '{{.Name}}')
+    project_resources=$(docker "$kind" ls -q --filter "label=com.docker.compose.project=$COMPOSE_PROJECT_NAME")
+  fi
+  if [ -n "$project_resources" ]; then
+    echo "refusing existing resources of project $COMPOSE_PROJECT_NAME" >&2
+    exit 1
+  fi
+  for name in $names; do
+    if [[ $'\n'"$existing"$'\n' == *$'\n'"$name"$'\n'* ]]; then
+      echo "refusing existing $kind: $name" >&2
+      rm -rf "$DEPLOY"
+      exit 1
+    fi
+  done
+done
 
 cleanup() {
   status=$?

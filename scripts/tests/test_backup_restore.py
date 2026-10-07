@@ -42,7 +42,7 @@ if args[0]=='run' and '/out/seaweedfs.tar.gz' in ' '.join(args):
  with tarfile.open(dest/'seaweedfs.tar.gz','w:gz') as t:
   b=b'fixture'; i=tarfile.TarInfo('./object'); i.size=len(b); t.addfile(i,io.BytesIO(b))
  done()
-if args[0]=='run' and 'postgres:18-alpine' in args: print('isolated-check'); done()
+if args[0]=='run' and any(a.split('@')[0]=='postgres:18-alpine' for a in args): print('isolated-check'); done()
 if args[0]=='run': done(1 if os.environ.get('FAIL_AT')=='extract' else 0)
 if args[0]=='exec':
  if 'psql' in args: sys.stdin.read()
