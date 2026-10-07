@@ -1,0 +1,192 @@
+web/src/types/events.test.ts
+  s_0ae926f6f8634a::t_7c4b668bb0678c 43,47-56
+docker-compose.yml
+  s_0ae926f6f8634a::t_7c4b668bb0678c 1-8,48,53,72-73,83-84,87-90,93-95,113,116,121,123-140,142-148,161,169,200-204,223,229,303,333,338-341
+web/src/types/contracts.test.ts
+  s_0ae926f6f8634a::t_e50228290bfa9f 3,9-42
+internal/linkpreview/handler.go
+  s_0ae926f6f8634a::t_c79f8b9cd14e64 4,10,25-26,38,43-47,70,75-79,96-103
+  s_0ae926f6f8634a::t_3242ffc880e522 104
+web/src/types/rest.test.ts
+  s_0ae926f6f8634a::t_e50228290bfa9f 13-14,52-53,67-68
+web/src/test-fixtures.fixture.ts
+  s_0ae926f6f8634a::t_7c4b668bb0678c 39,47
+web/scripts/generate-contracts.ts
+  s_0ae926f6f8634a::t_7c4b668bb0678c 15-16,33-34,80-86
+web/src/types/events.ts
+  s_0ae926f6f8634a::t_7c4b668bb0678c 47,150
+.env.example
+  s_0ae926f6f8634a::t_21d0db8b563ba8 46-49,107-113,118-120,170-180
+.github/dependabot.yml
+  s_0ae926f6f8634a::t_844495c9fc61ac 63
+.github/workflows/ci.yml
+  s_0ae926f6f8634a::t_2bca505bf3bce3 31-33,69,141,195,221,241,263-309,339,365
+.github/workflows/image-scan.yml
+  s_0ae926f6f8634a::t_bcd7099097bd96 1-37
+.github/workflows/release.yml
+  s_0ae926f6f8634a::t_ea4c740648790e 177
+AGENTS.md
+  s_0ae926f6f8634a::t_af90fec76e57fa 32,75-78,80-82
+Dockerfile
+  s_0ae926f6f8634a::t_7642a3a823d883 9,18,34,67,74
+Makefile
+  s_0ae926f6f8634a::t_0de260f63c1efa 2,6,118,122-124,129-141
+README.md
+  s_0ae926f6f8634a::t_e8e09fadad91df 74,86,104,109-111,115,143,165,217,324
+THIRD_PARTY_NOTICES.md
+  s_0ae926f6f8634a::t_088980c4d4162e 65-66,75-79,81,89,92-93,96,100,102,106,113,122
+api/openapi.json
+  s_0ae926f6f8634a::t_1cf44414b10e21 457-460,470-475,483,486-487,755-758,801,1031-1036,1165-1184,2228,2338,2933-3102,6270,6367,6597-6693,7966
+cmd/server/main.go
+  s_0ae926f6f8634a::t_88f943e9e90972 57,68,87-95
+cmd/server/storage.go
+  s_0ae926f6f8634a::t_258f109a4350dc 115-122
+doc/architecture.md
+  s_0ae926f6f8634a::t_bf697548143391 21
+doc/operations.md
+  s_0ae926f6f8634a::t_5b19a2bc8fb53f 47,83-84,117-128,279,322-337,348-350
+doc/typescript.md
+  s_0ae926f6f8634a::t_90110e514cad11 45
+doc/upgrade.md
+  s_0ae926f6f8634a::t_212c053ebc056a 34-35,75-87,89-90,92-100,103-107,111-212
+e2e/docker-compose.yml
+  s_0ae926f6f8634a::t_98fa8ed043e996 5
+e2e/run.sh
+  s_0ae926f6f8634a::t_ebf005cd61f42d 8,75
+go.mod
+  s_0ae926f6f8634a::t_71788551f38793 5,9-11,20,24,41-45,62,70,72,74,76,94
+go.sum
+  s_0ae926f6f8634a::t_ae600cdfa2422b 9-12,29-40,95-96,129-132,137-138,145-146,149-150,157-158,213-214
+internal/auth/admin_seed.go
+  s_0ae926f6f8634a::t_8fccdc86d355cd 16-17,30-38,54-56,97
+internal/chat/access.go
+  s_0ae926f6f8634a::t_3c5a237d8222ca 19-20,28
+internal/chat/channels.go
+  s_0ae926f6f8634a::t_9723cfa07c3621 26-28,35-37,72,82,136,138,191-199,216-220,222-226,320,322,358-361
+internal/chat/handler.go
+  s_0ae926f6f8634a::t_8a6757ea86eed9 7,70,441-470,837-838,864,1036-1037
+internal/chat/messages.go
+  s_0ae926f6f8634a::t_9b02e74013562c 41-43,101,122,357-368
+internal/chat/readstate.go
+  s_0ae926f6f8634a::t_0ccbbeb84865f5 82-85,89,91,93,95,98-99
+internal/config/config.go
+  s_0ae926f6f8634a::t_37bf825e2a5714 68-70,170,364-375
+internal/config/config_test.go
+  s_0ae926f6f8634a::t_f970b87e24ea4b 353-393
+internal/config/transport_test.go
+  s_0ae926f6f8634a::t_6fd5e00f0d4dd6 20
+internal/db/checksum_test.go
+  s_0ae926f6f8634a::t_1c7d1db70a7b7b 28-34
+internal/db/db.go
+  s_0ae926f6f8634a::t_d94914970d6671 181-183,185-189,193-195,206-209
+internal/db/migrate_integration_test.go
+  s_0ae926f6f8634a::t_00f6d036371511 9,18-19,48-50,151-231
+internal/db/migrations/0013_readable_numbers.sql
+  s_0ae926f6f8634a::t_a89f8adde9c763 1-29
+internal/db/migrations/0014_channel_user_limit.sql
+  s_0ae926f6f8634a::t_551c35323ecc23 1-4
+internal/linkpreview/handler_test.go
+  s_0ae926f6f8634a::t_71491a442e4d0e 1-163
+internal/linkpreview/linkpreview.go
+  s_0ae926f6f8634a::t_9a5e98fe42cbe1 39-45,62-64,67-78,96-98,112,161-162,169,179,277-281,325-327,506-569
+internal/linkpreview/linkpreview_test.go
+  s_0ae926f6f8634a::t_bf033309bff183 5,9-10,12-13,15,19,21-22,141-255
+internal/media/handler.go
+  s_0ae926f6f8634a::t_92605a9cd1815c 29,54-56,71-72,173,179,184,189,482-541
+internal/media/orphans.go
+  s_0ae926f6f8634a::t_9552e66eb902c7 1-122
+internal/media/store.go
+  s_0ae926f6f8634a::t_c64b787af6dbb0 8-9,11,17,23-31,44-46,58,95-127
+internal/media/stream.go
+  s_0ae926f6f8634a::t_444e6e68e91cce 1-207
+internal/s3/s3.go
+  s_0ae926f6f8634a::t_354884d33624ac 19,113-114,116-118,173-192
+internal/s3/stream.go
+  s_0ae926f6f8634a::t_b04e697cd2f41e 1-112
+internal/s3/stream_test.go
+  s_0ae926f6f8634a::t_bc6460546c251d 1-141
+internal/server/auth_hardening_integration_test.go
+  s_0ae926f6f8634a::t_d85b3e49610367 111,116-121,135,138-140,150
+internal/server/helpers_integration_test.go
+  s_0ae926f6f8634a::t_5921609544bd9e 215
+internal/server/media_integration_test.go
+  s_0ae926f6f8634a::t_fbb4d3a18358a3 89-92
+internal/server/media_orphans_integration_test.go
+  s_0ae926f6f8634a::t_ef10032106c62a 1-77
+internal/server/numbers_integration_test.go
+  s_0ae926f6f8634a::t_99015ab49ef578 1-146
+internal/server/upload_stream_integration_test.go
+  s_0ae926f6f8634a::t_2a0104516008f5 1-115
+internal/sfu/announce_test.go
+  s_0ae926f6f8634a::t_8db5130090e1a1 15,19,30,35,70-71,74,77,95
+internal/sfu/forward_test.go
+  s_0ae926f6f8634a::t_86f7d38ef8f330 4-5,7-8,36-37,41,49-51,91-115
+internal/sfu/keyframe_test.go
+  s_0ae926f6f8634a::t_a0d6d70e86daa8 1-39
+internal/sfu/offer_watchdog_test.go
+  s_0ae926f6f8634a::t_e780b41e042cec 1-201
+internal/sfu/sfu.go
+  s_0ae926f6f8634a::t_96add4530a3001 7,9,52-60,79-80,98-104,120,146-150,195-203,328-336,583-586,591-592,686-695,698,718-719,726-758,802-820
+internal/testutil/db.go
+  s_0ae926f6f8634a::t_f927f8d77194ac 6,57
+internal/ws/budget.go
+  s_0ae926f6f8634a::t_1f08d30cb7fa7e 1-58
+internal/ws/budget_test.go
+  s_0ae926f6f8634a::t_5f8b5faced85ae 1-67
+internal/ws/client.go
+  s_0ae926f6f8634a::t_9438576a5a8697 23-25,97-99
+internal/ws/handle.go
+  s_0ae926f6f8634a::t_e2f1eab6e69fe6 71,104-105,108
+internal/ws/lifecycle.go
+  s_0ae926f6f8634a::t_369556948e430a 58,237,244-245,255-257
+internal/ws/lifecycle_test.go
+  s_0ae926f6f8634a::t_2fb8fe9e2190ca 197-213
+internal/ws/voice.go
+  s_0ae926f6f8634a::t_9c937b51638a80 144-153
+internal/ws/voice_test.go
+  s_0ae926f6f8634a::t_6288d86081b0fe 297-334
+scripts/backup-common.sh
+  s_0ae926f6f8634a::t_8bec8da9c4eb21 18-30
+scripts/backup-drill.sh
+  s_0ae926f6f8634a::t_8bf21bf005e3e3 1-163
+scripts/backup.sh
+  s_0ae926f6f8634a::t_084c460a58e7a1 30,36,75-76
+scripts/postgres-upgrade-drill.sh
+  s_0ae926f6f8634a::t_7987e8af49b209 1-225
+scripts/restore.sh
+  s_0ae926f6f8634a::t_7ed390c9e55165 33,57,62
+scripts/smoke-image.sh
+  s_0ae926f6f8634a::t_f327eb7977fdcc 1-145
+scripts/tests/test_backup_restore.py
+  s_0ae926f6f8634a::t_524adfd0d8038e 22,45
+scripts/upgrade-postgres.sh
+  s_0ae926f6f8634a::t_0ad92bf4cba13f 1-123
+web/src/composables/useWebRTC.test.ts
+  s_0ae926f6f8634a::t_f54f152456f942 7-8,360-403
+web/src/composables/useWebRTC.ts
+  s_0ae926f6f8634a::t_ed43bfc418c27d 21,1863-1865,1867,1869
+web/src/i18n/de.json
+  s_0ae926f6f8634a::t_898507bc70b55d 339-340
+web/src/i18n/en.json
+  s_0ae926f6f8634a::t_c49be52c8c6002 339-340
+web/src/lib/thirdParty.ts
+  s_0ae926f6f8634a::t_603ef9c143846a 4,56
+web/src/types/rest.ts
+  s_0ae926f6f8634a::t_9aad71f74ce2af 64-65,270,274,283,287,453,476,644,651,730-744
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d5e7c913e7bc7cac064c9094ebcbe5c96fd6af98",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
