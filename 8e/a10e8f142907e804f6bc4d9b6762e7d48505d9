@@ -1,0 +1,23 @@
+internal/server/native_ciphertext_preview_integration_test.go
+  s_0ae926f6f8634a::t_71327c3322ddd8 189
+internal/server/native_ciphertext_schema_test.go
+  s_0ae926f6f8634a::t_71327c3322ddd8 91
+internal/server/native_ciphertext_preview.go
+  s_0ae926f6f8634a::t_1cc3eef1402e80 215-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8ea10e8f142907e804f6bc4d9b6762e7d48505d9",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
