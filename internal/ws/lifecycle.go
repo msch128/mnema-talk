@@ -383,12 +383,18 @@ func (c *Client) writePump() {
 			tv, err := c.hub.tokenVersion(ctx, c.User.ID)
 			cancel()
 			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tv != c.tokenVersion) {
-				_ = c.conn.WriteMessage(websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"))
+				c.writeSessionRevokedClose()
 				return
 			} else if err != nil {
 				slog.Warn("revalidate token version failed", "user", c.User.ID, "err", err)
 			}
 		}
 	}
+}
+
+func (c *Client) writeSessionRevokedClose() {
+	// Revalidation may run after the previous ping's write deadline expired.
+	// Control writes use their own fresh bounded deadline before teardown.
+	_ = c.conn.WriteControl(websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"), time.Now().Add(writeWait))
 }

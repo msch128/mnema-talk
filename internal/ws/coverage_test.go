@@ -524,6 +524,46 @@ func TestDisconnectUserStopsEverySessionAndPreservesOtherUsers(t *testing.T) {
 	}
 }
 
+func TestSessionRevokedCloseReplacesExpiredRealSocketWriteDeadline(t *testing.T) {
+	done := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			t.Error("real websocket fixture upgrade failed")
+			close(done)
+			return
+		}
+		defer close(done)
+		client := newClient(nil, conn, auth.User{}, 0)
+		defer client.close()
+		// At120s revalidation the90s ping's ten-second write deadline has
+		// already expired. Preserve the real Gorilla deadline state without
+		// shortening production timers or replacing the socket with a fake.
+		if err := conn.SetWriteDeadline(time.Now().Add(-time.Minute)); err != nil {
+			t.Error("fixture write deadline could not be set")
+			return
+		}
+		client.writeSessionRevokedClose()
+	}))
+	defer server.Close()
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
+	if err != nil {
+		t.Fatal("real websocket fixture dial failed")
+	}
+	defer conn.Close()
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, _, err = conn.ReadMessage()
+	var closed *websocket.CloseError
+	if !errors.As(err, &closed) || closed.Code != websocket.ClosePolicyViolation || closed.Text != "session revoked" {
+		t.Fatal("expired socket write deadline prevented exact1008 session-revoked control frame")
+	}
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("revocation close failed to terminate bounded writer")
+	}
+}
+
 func TestReconnectWithinGraceResumesOriginalVoiceStay(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil)
 	h.VoiceGrace = time.Hour
