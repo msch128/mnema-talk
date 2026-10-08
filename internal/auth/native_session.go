@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,6 +48,7 @@ type NativePrincipal struct {
 	tokenVersion    int
 	accessExpiresAt time.Time
 	familyExpiresAt time.Time
+	accessHash      [32]byte
 }
 
 func (p NativePrincipal) User() User                  { return p.user }
@@ -57,15 +59,17 @@ func (p NativePrincipal) TokenVersion() int           { return p.tokenVersion }
 // IssuedNative never marshals automatically; eventual HTTP wire conversion
 // belongs only to the native broker endpoint after its own security review.
 type IssuedNative struct {
-	principal NativePrincipal
-	access    nativeSecret
-	refresh   nativeSecret
+	principal       NativePrincipal
+	access          nativeSecret
+	refresh         nativeSecret
+	refreshSequence uint64
 }
 
 func (IssuedNative) Format(state fmt.State, _ rune) {
 	_, _ = io.WriteString(state, "[native grant redacted]")
 }
 
+func (g IssuedNative) RefreshSequence() uint64    { return g.refreshSequence }
 func (g IssuedNative) Principal() NativePrincipal { return g.principal }
 func (g IssuedNative) AccessExpiresAt() time.Time { return g.principal.accessExpiresAt }
 func (g IssuedNative) FamilyExpiresAt() time.Time { return g.principal.familyExpiresAt }
@@ -75,10 +79,12 @@ func (IssuedNative) LogValue() slog.Value         { return slog.StringValue("[na
 func (IssuedNative) MarshalJSON() ([]byte, error) { return nil, errNativeSerialization }
 
 type NativeSessions struct {
-	pool   *db.Pool
-	policy NativePolicy
-	random io.Reader
-	begin  func(context.Context) (pgx.Tx, error)
+	pool            *db.Pool
+	policy          NativePolicy
+	random          io.Reader
+	begin           func(context.Context) (pgx.Tx, error)
+	familyControlMu sync.RWMutex
+	familyControl   NativeFamilyControl
 }
 
 func NewNativeSessions(pool *db.Pool, policy NativePolicy) (*NativeSessions, error) {
@@ -229,7 +235,7 @@ func (s *NativeSessions) IssueVerified(ctx context.Context, proof verifiedNative
 			return nativeStoreFailure(err)
 		}
 		result = IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: instanceID,
-			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: expiry}, access: access, refresh: refresh}
+			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: expiry, accessHash: access.digest()}, access: access, refresh: refresh}
 		return nil
 	})
 	if err != nil {
@@ -243,26 +249,8 @@ func (s *NativeSessions) AuthenticateAccess(ctx context.Context, encoded string)
 	if err != nil {
 		return NativePrincipal{}, err
 	}
-	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)
-	defer cancel()
-	hash := secret.digest()
-	var principal NativePrincipal
-	user, err := scanUser(s.pool.QueryRow(ctx, `SELECT u.id,u.username,u.display_name,u.bio,u.role,
-		u.avatar_s3_key,u.status_text,u.presence,u.locale,u.created_at,
-		f.id,f.client_instance_id,f.issued_token_version,a.expires_at,f.expires_at
-		FROM native_access_tokens a JOIN native_session_families f ON f.id=a.family_id
-		JOIN users u ON u.id=f.user_id WHERE a.token_hash=$1
-		AND a.expires_at>clock_timestamp() AND f.expires_at>clock_timestamp()
-		AND f.revoked_at IS NULL AND u.disabled_at IS NULL AND f.issued_token_version=u.token_version`, hash[:]),
-		&principal.familyID, &principal.instanceID, &principal.tokenVersion, &principal.accessExpiresAt, &principal.familyExpiresAt)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return NativePrincipal{}, ErrNativeUnauthorized
-	}
-	if err != nil {
-		return NativePrincipal{}, nativeStoreFailure(err)
-	}
-	principal.user = *user
-	return principal, nil
+	principal, _, err := s.authenticateNativeHash(ctx, secret.digest())
+	return principal, err
 }
 
 func (s *NativeSessions) RotateRefresh(ctx context.Context, encoded string) (IssuedNative, error) {
@@ -360,13 +348,14 @@ func (s *NativeSessions) RotateRefresh(ctx context.Context, encoded string) (Iss
 			return nativeStoreFailure(err)
 		}
 		result = IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: family.instanceID,
-			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: family.expiresAt}, access: access, refresh: refresh}
+			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: family.expiresAt, accessHash: access.digest()}, access: access, refresh: refresh, refreshSequence: uint64(sequence + 1)}
 		return nil
 	})
 	if err != nil {
 		return IssuedNative{}, err
 	}
 	if outcome != nil {
+		s.disconnectNativeFamily(familyID)
 		return IssuedNative{}, outcome
 	}
 	return result, nil
@@ -378,7 +367,7 @@ func (s *NativeSessions) RevokeFamily(ctx context.Context, principal NativePrinc
 	}
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)
 	defer cancel()
-	return s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
+	err := s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		user, version, disabled, err := lockNativeUser(ctx, tx, principal.user.ID, false)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrNativeUnauthorized
@@ -406,6 +395,10 @@ func (s *NativeSessions) RevokeFamily(ctx context.Context, principal NativePrinc
 		}
 		return nil
 	})
+	if err == nil {
+		s.disconnectNativeFamily(principal.familyID)
+	}
+	return err
 }
 
 // Cleanup counts deleted family/access rows, not cascaded child rows. Consumed

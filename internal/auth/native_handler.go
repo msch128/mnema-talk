@@ -222,11 +222,14 @@ func (nativeWireSecret) LogValue() slog.Value {
 func (s nativeWireSecret) MarshalJSON() ([]byte, error) { return json.Marshal(s.value.wire()) }
 
 type nativeGrantResponse struct {
-	User            User             `json:"user"`
-	AccessToken     nativeWireSecret `json:"access_token"`
-	RefreshToken    nativeWireSecret `json:"refresh_token"`
-	AccessExpiresAt time.Time        `json:"access_expires_at"`
-	FamilyExpiresAt time.Time        `json:"family_expires_at"`
+	User             User             `json:"user"`
+	FamilyID         uuid.UUID        `json:"family_id"`
+	ClientInstanceID uuid.UUID        `json:"client_instance_id"`
+	RefreshSequence  uint64           `json:"refresh_sequence"`
+	AccessToken      nativeWireSecret `json:"access_token"`
+	RefreshToken     nativeWireSecret `json:"refresh_token"`
+	AccessExpiresAt  time.Time        `json:"access_expires_at"`
+	FamilyExpiresAt  time.Time        `json:"family_expires_at"`
 }
 
 func (nativeGrantResponse) Format(state fmt.State, _ rune) {
@@ -240,7 +243,13 @@ func (nativeGrantResponse) LogValue() slog.Value {
 }
 
 func writeNativeGrant(w http.ResponseWriter, grant IssuedNative) {
-	httpx.WriteJSON(w, http.StatusOK, nativeGrantResponse{User: grant.Principal().User(),
+	p := grant.Principal()
+	if p.User().ID == uuid.Nil || p.FamilyID() == uuid.Nil || p.ClientInstanceID() == uuid.Nil || grant.RefreshSequence() > nativeMaxSequence || grant.access.wire() == "" || grant.refresh.wire() == "" {
+		httpx.WriteError(w, httpx.ErrInternal("invalid native grant"))
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, nativeGrantResponse{User: grant.Principal().User(), FamilyID: p.FamilyID(), ClientInstanceID: p.ClientInstanceID(), RefreshSequence: grant.RefreshSequence(),
 		AccessToken: nativeWireSecret{value: grant.access}, RefreshToken: nativeWireSecret{value: grant.refresh},
 		AccessExpiresAt: grant.AccessExpiresAt(), FamilyExpiresAt: grant.FamilyExpiresAt()})
 }
@@ -368,4 +377,28 @@ func (h *NativeHandler) logout(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+// AuthenticateNativeRequest shares the reviewed native header and target boundary.
+// It returns an auth-owned lease for native socket admission, never a browser cookie.
+func (h *NativeHandler) AuthenticateNativeRequest(r *http.Request) (NativeLease, error) {
+	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") || r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != "" {
+		return NativeLease{}, httpx.ErrForbidden("native transport request rejected")
+	}
+	encoded, err := nativeBearer(r)
+	if err != nil {
+		return NativeLease{}, nativeHandlerError(err)
+	}
+	lease, err := h.sessions.AuthenticateAccessLease(r.Context(), encoded)
+	if err != nil {
+		return NativeLease{}, nativeHandlerError(err)
+	}
+	return lease, nil
+}
+
+func (h *NativeHandler) RevalidateNativeLease(ctx context.Context, p NativePrincipal) (NativeLease, error) {
+	return h.sessions.RevalidateNativeLease(ctx, p)
+}
+func (h *NativeHandler) AuthenticateAccessLease(ctx context.Context, encoded string) (NativeLease, error) {
+	return h.sessions.AuthenticateAccessLease(ctx, encoded)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -115,7 +116,7 @@ func (h *Hub) profileLocked(c *Client) auth.User {
 func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
-	if c.closed.Load() {
+	if c.closed.Load() || !c.nativeLive() {
 		return
 	}
 	// A user returning within the grace period resumes silently in the same
@@ -137,7 +138,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	key := voiceKey{c.User.ID, ch.ID}
 	h.mu.Lock()
-	if h.closed {
+	if h.closed || !c.nativeLive() {
 		h.mu.Unlock()
 		return
 	}
@@ -174,9 +175,15 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	c.setVoice(&id)
 
 	if h.SFU != nil {
-		_, peer, err := h.SFU.Join(ch.ID, c.User.ID,
-			func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) },
-			func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) })
+		sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) }
+		sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) }
+		var peer *sfu.Peer
+		var err error
+		if c.native == nil {
+			_, peer, err = h.SFU.Join(ch.ID, c.User.ID, sendOffer, sendICE)
+		} else {
+			_, peer, err = h.SFU.JoinWithAuthorization(ch.ID, c.User.ID, sendOffer, sendICE, c.nativeLive)
+		}
 		if err != nil {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
@@ -196,7 +203,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", rejoin)
 	if !rejoin {
-		h.Broadcast("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted})
+		c.emitApplicationEvent("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted}, false, nil)
 	}
 }
 
@@ -505,14 +512,18 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	}
 	key := voiceKey{c.User.ID, *cur}
 	h.mu.Lock()
+	if !c.nativeLive() {
+		h.mu.Unlock()
+		return
+	}
 	changed := h.voiceMute[key] != st
 	h.voiceMute[key] = st
 	h.mu.Unlock()
 	if !changed {
 		return
 	}
-	h.Broadcast("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened})
+	c.emitApplicationEvent("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil)
 	if st.Muted && c.speakingChanged(false, time.Now()) {
-		h.sendToVoiceRoom(*cur, "voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false})
+		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur)
 	}
 }

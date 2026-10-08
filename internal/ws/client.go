@@ -19,6 +19,7 @@ type Client struct {
 	User auth.User
 
 	tokenVersion int
+	native       *nativeSocketState
 	closeOnce    sync.Once
 	// closing is set by the first deliver that finds the buffer full, so a
 	// slow client's later events don't each start another close.
@@ -79,6 +80,9 @@ func (c *Client) close() {
 func (c *Client) shutdown() {
 	c.doneOnce.Do(func() {
 		c.closed.Store(true)
+		if c.native != nil {
+			c.native.cancel()
+		}
 		if c.done != nil {
 			close(c.done)
 		}
@@ -153,6 +157,9 @@ func (c *Client) allowTyping(chID uuid.UUID, now time.Time) bool {
 func (c *Client) speakingChanged(active bool, now time.Time) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if !c.nativeLive() {
+		return false
+	}
 	if active == c.speaking {
 		return false
 	}
