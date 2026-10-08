@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-auth-register"
+description = "Enables the native_auth_register command without any pre-configured scope."
+commands.allow = ["native_auth_register"]
+
+[[permission]]
+identifier = "deny-native-auth-register"
+description = "Denies the native_auth_register command without any pre-configured scope."
+commands.deny = ["native_auth_register"]

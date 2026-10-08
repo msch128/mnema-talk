@@ -9,6 +9,9 @@ fn main() {
             "native_personal_metadata_request",
             "native_public_metadata_request",
             "native_auth_login",
+            "native_auth_password",
+            "native_auth_register",
+            "native_admin_request",
             "native_auth_me",
             "native_auth_refresh",
             "native_auth_logout",
@@ -26,6 +29,9 @@ fn main() {
             "native_personal_metadata_request",
             "native_public_metadata_request",
             "native_auth_login",
+            "native_auth_password",
+            "native_auth_register",
+            "native_admin_request",
             "native_auth_me",
             "native_auth_refresh",
             "native_auth_logout",
@@ -40,6 +46,8 @@ fn main() {
             "native_trust_read_status",
             "native_chat_publish",
             "native_chat_receive",
+            "native_chat_mutate",
+            "native_chat_snapshot",
         ];
         #[cfg(feature = "synthetic-media-fixture")]
         const COMMANDS: &[&str] = &[
@@ -49,6 +57,9 @@ fn main() {
             "native_personal_metadata_request",
             "native_public_metadata_request",
             "native_auth_login",
+            "native_auth_password",
+            "native_auth_register",
+            "native_admin_request",
             "native_auth_me",
             "native_auth_refresh",
             "native_auth_logout",

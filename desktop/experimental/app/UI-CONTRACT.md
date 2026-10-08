@@ -64,3 +64,34 @@ Native validates the injected actual window plus expected UUID under the SAME li
 The four trust commands use `{context,profileIntent,channelId,onStatus}` for Begin, `{context,profileIntent,operationId}` for confirmation/cancel, and `{context,profileIntent}` for status. Chat uses `{context,profileIntent,channelId,clientEventId,body,onMessages}` for publish and the same without event/body for receive. Original native Control, operation and authenticated scope retain exact profile identity independently of this public comparator. Native first-root reservation runs inside the actual authenticated publication closure; no getter, native vault or other I/O runs under that closure.
 
 `native_request_cancel` takes `{context,profileIntent:canonicalUUID|null,requestId}`. Null is needed for cancellation of first/unselected Connect and still selects only its originally owned opaque request UUID. Cancellation never chooses an arbitrary current operation. Replies and Channel events remain fenced by actual native incarnation, original operation scope, and renderer captured profile generation.
+
+## Shared client integration successor
+
+The host's application input is now the canonical `web/dist` bundle. The
+historical `experimental/ui` checkpoint is not built or loaded by this host.
+Browser and desktop mount the same App, ChatArea, MessageRow and ThreadSidebar.
+Desktop first selects an instance through NativeBootstrap and verifies discovery.
+
+The commands above additionally capture `authenticationIntent`, the public
+nullable comparison identifier from `native_context` or an acknowledged login.
+It is not a credential. Native admission validates it under the same lifetime
+lock as custody retirement. Queue jobs and final native publication retain the
+original authenticated scope. Renderer profile generation and authentication
+revision checks suppress stale presentation independently.
+
+The shared chat adapter uses `native_chat_snapshot` and `native_chat_mutate`.
+Both receive the captured context/profile/authentication identifiers, channelId
+and onMessages channel. Mutations additionally receive clientEventId and one
+closed typed input: create body; reply body with parent/quote receipt claims;
+edit body with target receipt and expected revision; delete target with expected
+revision; or reaction target, emoji and toggle action. Unknown authority fields
+are rejected. Native resolves current account, device, permission and history.
+
+Success publishes a bounded closed native projection and acknowledges completion
+with the affected native message receipt. The renderer validates both before
+updating the shared chat store. Unknown mutation ACKs are not replayed
+automatically; an explicit retry preserves its original event claim. Root keys,
+MLS frames, tokens and native grants never form part of this projection.
+
+The current text schema cannot provide uploads, pins, mentions or voice. RAM
+projections do not establish persistent history or enrollment across devices.

@@ -46,6 +46,7 @@ desktop/ui/dist/
 desktop/ui/coverage/
 desktop/experimental/**/target/
 desktop/experimental/**/gen/
+desktop/experimental/**/test-runtime/
 desktop/experimental/ui/dist/
 desktop/experimental/ui/coverage/
 mnema-talk.exe

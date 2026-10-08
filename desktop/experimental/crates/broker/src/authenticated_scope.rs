@@ -30,6 +30,7 @@ pub struct NativeAuthenticatedScope {
     window_identity: Uuid,
     profile_identity: Uuid,
     session_identity: Uuid,
+    authentication_identity: Uuid,
     deadline: Instant,
     pub(super) client_binding: Option<(Uuid, u64)>,
 }
@@ -70,6 +71,9 @@ impl NativeAuthenticatedScope {
     pub fn native_session_identity(&self) -> Uuid {
         self.session_identity
     }
+    pub fn authentication_intent(&self) -> Uuid {
+        self.authentication_identity
+    }
     pub fn monotonic_access_deadline(&self) -> Instant {
         self.deadline
     }
@@ -105,7 +109,10 @@ impl State {
             return Err(Error::Stale);
         }
         let active = self.active.as_ref().ok_or(Error::NoProfile)?;
-        if active.status == Status::Rotating || active.flight.is_some() {
+        if active.pending_invocation.is_some()
+            || active.status == Status::Rotating
+            || active.flight.is_some()
+        {
             return Err(Error::Busy);
         }
         if active.status != Status::Authenticated {
@@ -141,6 +148,7 @@ impl State {
             || window.native_identity != scope.window_identity
             || active.native_identity != scope.profile_identity
             || session.native_identity != scope.session_identity
+            || session.authentication_identity != scope.authentication_identity
             || profile.origin().as_str() != scope.origin
             || profile.community_id() != scope.community
             || session.grant.user.account_id() != scope.account
@@ -190,6 +198,7 @@ impl Broker {
             window_identity: window.native_identity,
             profile_identity: active.native_identity,
             session_identity: session.native_identity,
+            authentication_identity: session.authentication_identity,
             deadline: session.access_deadline,
             client_binding: None,
         })

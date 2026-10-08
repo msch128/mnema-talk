@@ -1633,3 +1633,568 @@ fn authorization_database_failure_drops_live_capabilities() {
     );
     assert_eq!(count(&f.core.connection, "core_stage"), 1);
 }
+
+#[test]
+fn one_decrypt_dispatch_interleaved_source_then_chat_preserves_actual_private_ratchet() {
+    let dir = run_dir();
+    let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("dispatch.sqlite"));
+    let (epoch, generation, _, _, _) = sdk.current(NOW).unwrap();
+    let sender = peer.alice_group.own_leaf_index().u32();
+    let mut source = peer_envelope("MnemaTalk ProtectedSource", EVENT);
+    let Value::Array(fields) = &mut source else {
+        panic!("fixture")
+    };
+    fields[9] = Value::Array(vec![
+        Value::Integer(epoch.into()),
+        Value::Integer(sender.into()),
+        Value::Integer(42.into()),
+        Value::Text(SOURCE.into()),
+        Value::Text("opus".into()),
+    ]);
+    let wire = peer.peer_message(&encode(&source));
+    let received = sdk.receive_protected(EVENT, &wire, NOW).unwrap();
+    let ProtectedReceived::Source(received) = received else {
+        panic!("wrong dispatcher")
+    };
+    let facts = received.facts();
+    assert_eq!(facts.account(), "alice");
+    assert_eq!(facts.device(), "desktop");
+    assert_eq!(facts.source_id(), SOURCE);
+    assert_eq!(facts.event_id(), EVENT);
+    assert_eq!(facts.channel(), CHANNEL);
+    assert_eq!(facts.group(), GROUP);
+    assert_eq!(facts.epoch(), epoch);
+    assert_eq!(facts.roster_generation(), generation);
+    assert_eq!(facts.sender_index(), sender);
+    assert_eq!(facts.context(), 42);
+    assert_eq!(facts.codec(), SourceKind::Opus);
+    let chat_event = "77777777-7777-4777-8777-777777777777";
+    let chat = peer.peer_message(&encode(&peer_envelope(
+        "MnemaTalk ProtectedChat",
+        chat_event,
+    )));
+    let ProtectedReceived::Chat(chat) = sdk.receive_protected(chat_event, &chat, NOW).unwrap()
+    else {
+        panic!("wrong dispatcher")
+    };
+    assert_eq!(chat.body, "authenticated peer chat");
+    assert!(sdk.matches_native_actor("profile", "main", "session"));
+    assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+    assert!(!sdk.matches_native_actor("profile", "main", "session"));
+}
+#[test]
+fn one_decrypt_unknown_domain_and_spoofed_source_author_never_publish_facts() {
+    for spoofed in [false, true] {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("dispatch-bad.sqlite"));
+        let mut value = peer_envelope(
+            if spoofed {
+                "MnemaTalk ProtectedSource"
+            } else {
+                "Unknown ProtectedDomain"
+            },
+            EVENT,
+        );
+        if spoofed {
+            let Value::Array(fields) = &mut value else {
+                panic!("fixture")
+            };
+            fields[6] = Value::Text("bob".into());
+        }
+        let wire = peer.peer_message(&encode(&value));
+        assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+        assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        assert!(sdk.receive_chat(EVENT, &wire, NOW).is_err()); // no second decrypt fallback
+    }
+}
+
+#[test]
+fn one_decrypt_bound_voice_source_receipt_preserves_all_transport_claims_then_chat() {
+    let dir = run_dir();
+    let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("bound-dispatch.sqlite"));
+    let (epoch, _, _, _, _) = sdk.current(NOW).unwrap();
+    let sender = peer.alice_group.own_leaf_index().u32();
+    let claim = SourceTransportClaim::claim(
+        SourceKind::Opus,
+        CHANNEL,
+        "88888888-8888-4888-8888-888888888888",
+        "99999999-9999-4999-8999-999999999999",
+        SourcePurpose::Voice,
+        7,
+        "actual-peer-track",
+    )
+    .unwrap();
+    let mut payload = vec![
+        Value::Integer(epoch.into()),
+        Value::Integer(sender.into()),
+        Value::Integer(12.into()),
+        Value::Text(SOURCE.into()),
+        Value::Text("opus".into()),
+    ];
+    payload.extend(claim.payload_tail());
+    let mut message = peer_envelope("MnemaTalk ProtectedVoiceSource", EVENT);
+    let Value::Array(fields) = &mut message else {
+        panic!("fixture")
+    };
+    fields[9] = Value::Array(payload);
+    let wire = peer.peer_message(&encode(&message));
+    let ProtectedReceived::Source(received) = sdk.receive_protected(EVENT, &wire, NOW).unwrap()
+    else {
+        panic!("wrong dispatch")
+    };
+    let facts = received.facts();
+    let bound = facts.voice_binding().unwrap();
+    assert_eq!(facts.account(), "alice");
+    assert_eq!(facts.device(), "desktop");
+    assert_eq!(bound.voice_channel(), CHANNEL);
+    assert_eq!(bound.room_incarnation(), claim.room_incarnation());
+    assert_eq!(bound.publisher_connection(), claim.publisher_connection());
+    assert_eq!(bound.publisher_track_id(), "actual-peer-track");
+    assert_eq!(bound.capture_generation(), 7);
+    assert!(bound.purpose() == SourcePurpose::Voice);
+    // A different native room/connection/track cannot match these authenticated
+    // facts; no selected routing hint replaces the signed inner claim.
+    assert_ne!(
+        bound.room_incarnation(),
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    );
+    assert_ne!(
+        bound.publisher_connection(),
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    );
+    assert_ne!(bound.publisher_track_id(), "different-track");
+    let event = "77777777-7777-4777-8777-777777777777";
+    let wire = peer.peer_message(&encode(&peer_envelope("MnemaTalk ProtectedChat", event)));
+    assert!(matches!(
+        sdk.receive_protected(event, &wire, NOW),
+        Ok(ProtectedReceived::Chat(_))
+    ));
+    assert!(sdk.matches_native_actor("profile", "main", "session"));
+}
+#[test]
+fn no_matching_voice_channel_reservation_has_no_context_ratchet_or_outbox_mutation() {
+    let dir = run_dir();
+    let (mut sdk, _) = sdk_fixture(&dir.path().join("no-voice.sqlite"));
+    let claim = SourceTransportClaim::claim(
+        SourceKind::Opus,
+        "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "88888888-8888-4888-8888-888888888888",
+        "99999999-9999-4999-8999-999999999999",
+        SourcePurpose::Voice,
+        7,
+        "track",
+    )
+    .unwrap();
+    let before = secret(&sdk.core.connection);
+    let contexts = count(&sdk.core.connection, "sdk_sources");
+    let outbox = count(&sdk.core.connection, "core_outbox");
+    assert!(matches!(
+        sdk.reserve_bound_voice_source(EVENT, SOURCE, &claim, NOW),
+        Err(Error::Unauthorized)
+    ));
+    assert_eq!(secret(&sdk.core.connection), before);
+    assert_eq!(count(&sdk.core.connection, "sdk_sources"), contexts);
+    assert_eq!(count(&sdk.core.connection, "core_outbox"), outbox);
+    assert!(sdk.matches_native_actor("profile", "main", "session"));
+}
+#[test]
+fn authenticated_voice_source_wrong_channel_or_invalid_purpose_never_returns_binding() {
+    for wrong_channel in [true, false] {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("voice-bad.sqlite"));
+        let (epoch, _, _, _, _) = sdk.current(NOW).unwrap();
+        let sender = peer.alice_group.own_leaf_index().u32();
+        let claim = SourceTransportClaim::claim(
+            SourceKind::Opus,
+            CHANNEL,
+            "88888888-8888-4888-8888-888888888888",
+            "99999999-9999-4999-8999-999999999999",
+            SourcePurpose::Voice,
+            7,
+            "track",
+        )
+        .unwrap();
+        let mut tail = claim.payload_tail();
+        tail[if wrong_channel { 0 } else { 3 }] = Value::Text(
+            if wrong_channel {
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+            } else {
+                "camera"
+            }
+            .into(),
+        );
+        let mut payload = vec![
+            Value::Integer(epoch.into()),
+            Value::Integer(sender.into()),
+            Value::Integer(12.into()),
+            Value::Text(SOURCE.into()),
+            Value::Text("opus".into()),
+        ];
+        payload.extend(tail);
+        let mut value = peer_envelope("MnemaTalk ProtectedVoiceSource", EVENT);
+        let Value::Array(fields) = &mut value else {
+            panic!("fixture")
+        };
+        fields[9] = Value::Array(payload);
+        let wire = peer.peer_message(&encode(&value));
+        assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+        assert!(!sdk.matches_native_actor("profile", "main", "session"));
+    }
+}
+
+#[test]
+fn typed_chat_events_actual_private_mls_dispatch_all_actions_without_text_commands() {
+    let dir = run_dir();
+    let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("typed-events.sqlite"));
+    let original = EVENT.to_owned();
+    let edit = "44444444-4444-4444-8444-444444444444";
+    let events = [
+        (
+            EVENT,
+            ChatOperation::Create {
+                message_id: original.clone(),
+                parent_id: None,
+                body: "/delete is ordinary text 😀".into(),
+            },
+        ),
+        (
+            edit,
+            ChatOperation::Edit {
+                message_id: original.clone(),
+                expected_revision: original.clone(),
+                body: "actual encrypted edit".into(),
+            },
+        ),
+        (
+            "55555555-5555-4555-8555-555555555555",
+            ChatOperation::Delete {
+                message_id: original.clone(),
+                expected_revision: edit.into(),
+            },
+        ),
+        (
+            "66666666-6666-4666-8666-666666666666",
+            ChatOperation::Reply {
+                message_id: "66666666-6666-4666-8666-666666666666".into(),
+                parent_id: None,
+                reply_to_id: original.clone(),
+                body: "actual encrypted quote".into(),
+            },
+        ),
+        (
+            "77777777-7777-4777-8777-777777777777",
+            ChatOperation::Reaction {
+                message_id: original.clone(),
+                emoji: "👍".into(),
+                action: ReactionAction::Add,
+            },
+        ),
+        (
+            "88888888-8888-4888-8888-888888888888",
+            ChatOperation::Reaction {
+                message_id: original.clone(),
+                emoji: "👍".into(),
+                action: ReactionAction::Remove,
+            },
+        ),
+    ];
+    for (event, operation) in events {
+        let kind = operation.kind();
+        let claim = ChatEventClaim::claim(operation).unwrap();
+        let mut envelope = peer_envelope("MnemaTalk ProtectedChatEvent", event);
+        let Value::Array(fields) = &mut envelope else {
+            panic!("fixture envelope")
+        };
+        fields[9] = claim.payload();
+        let wire = peer.peer_message(&encode(&envelope));
+        let ProtectedReceived::ChatEvent(received) =
+            sdk.receive_protected(event, &wire, NOW).unwrap()
+        else {
+            panic!("wrong domain")
+        };
+        assert_eq!(received.event_id(), event);
+        assert_eq!(received.account(), "alice");
+        assert_eq!(received.device(), "desktop");
+        assert_eq!(received.operation().kind(), kind);
+        // Typed authentication is not history/role authorization: this fixture
+        // verifies all operations including delete-before-reply, but never
+        // applies any event to a display/history or claims mutation permission.
+    }
+    let event = "99999999-9999-4999-8999-999999999999";
+    let wire = peer.peer_message(&encode(&peer_envelope("MnemaTalk ProtectedChat", event)));
+    let ProtectedReceived::Chat(received) = sdk.receive_protected(event, &wire, NOW).unwrap()
+    else {
+        panic!("wrong legacy domain")
+    };
+    assert_eq!(received.body, "authenticated peer chat");
+}
+
+#[test]
+fn typed_chat_actual_durable_outbox_and_suppressed_storage_never_return_ciphertext() {
+    for suppressed in [None, Some("core_outbox"), Some("sdk_events")] {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("typed-send.sqlite"));
+        let claim = ChatEventClaim::claim(ChatOperation::Create {
+            message_id: EVENT.into(),
+            parent_id: None,
+            body: "typed durable fixture".into(),
+        })
+        .unwrap();
+        let before = secret(&sdk.core.connection);
+        if let Some(table) = suppressed {
+            sdk.core.connection.execute_batch(&format!("CREATE TRIGGER suppress BEFORE INSERT ON {table} BEGIN SELECT RAISE(IGNORE);END;")).unwrap();
+            assert_eq!(
+                sdk.send_chat_event(EVENT, &claim, NOW),
+                Err(Error::Database)
+            );
+            assert_eq!(secret(&sdk.core.connection), before);
+            assert_eq!(count(&sdk.core.connection, "core_outbox"), 0);
+            assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        } else {
+            let wire = sdk.send_chat_event(EVENT, &claim, NOW).unwrap();
+            assert_eq!(
+                sdk.pending_chat_for_native_publish(EVENT, NOW).unwrap(),
+                Some(wire.clone())
+            );
+            let value: Value =
+                coset::cbor::de::from_reader(peer.decrypt(&wire).as_slice()).unwrap();
+            let Value::Array(fields) = value else {
+                panic!("fixture envelope")
+            };
+            assert_eq!(
+                fields[0],
+                Value::Text("MnemaTalk ProtectedChatEvent".into())
+            );
+            assert_eq!(fields[6], Value::Text("bob".into()));
+            assert_eq!(fields[7], Value::Text("desktop".into()));
+            assert_eq!(fields[8], Value::Text(EVENT.into()));
+            assert_eq!(fields[9], claim.payload());
+            assert_ne!(secret(&sdk.core.connection), before);
+        }
+    }
+}
+
+#[test]
+fn typed_chat_authenticated_bad_author_version_event_or_payload_retires_without_fallback() {
+    for fault in 0..5 {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("typed-bad.sqlite"));
+        let claim = ChatEventClaim::claim(ChatOperation::Create {
+            message_id: EVENT.into(),
+            parent_id: None,
+            body: "typed malformed fixture".into(),
+        })
+        .unwrap();
+        let mut envelope = peer_envelope("MnemaTalk ProtectedChatEvent", EVENT);
+        let Value::Array(fields) = &mut envelope else {
+            panic!("fixture envelope")
+        };
+        fields[9] = claim.payload();
+        match fault {
+            0 => fields[6] = Value::Text("bob".into()),
+            1 => fields[7] = Value::Text("unknown-device".into()),
+            2 => {
+                let Value::Array(payload) = &mut fields[9] else {
+                    panic!("fixture payload")
+                };
+                payload[0] = Value::Integer(2.into());
+            }
+            3 => {
+                let Value::Array(payload) = &mut fields[9] else {
+                    panic!("fixture payload")
+                };
+                payload[2] = Value::Text(SOURCE.into());
+            }
+            _ => fields[9] = Value::Text("/delete ordinary text cannot be typed command".into()),
+        }
+        let wire = peer.peer_message(&encode(&envelope));
+        assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+        assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        assert!(sdk.receive_chat(EVENT, &wire, NOW).is_err());
+    }
+}
+
+fn projection_claim() -> ChatEventClaim {
+    ChatEventClaim::claim(ChatOperation::Create {
+        message_id: EVENT.into(),
+        parent_id: None,
+        body: "native exact reserved fixture".into(),
+    })
+    .unwrap()
+}
+
+#[test]
+fn native_projection_actual_durable_reservation_repeated_projection_never_changes_ratchet_or_wire()
+{
+    let dir = run_dir();
+    let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("projection.sqlite"));
+    let before = secret(&sdk.core.connection);
+    let reserved = sdk
+        .reserve_native_chat_event(EVENT, &projection_claim(), NOW)
+        .unwrap();
+    let after = secret(&sdk.core.connection);
+    assert_ne!(before, after);
+    let wire = reserved.wire_for_native_relay().to_vec();
+    let rows = count(&sdk.core.connection, "core_outbox");
+    let scope = sdk.native_protected_event_scope(NOW).unwrap();
+    for _ in 0..3 {
+        let projected = sdk
+            .pending_native_chat_event_projection(&reserved, NOW)
+            .unwrap();
+        assert_eq!(projected.event_id(), EVENT);
+        assert_eq!(projected.account(), "bob");
+        assert_eq!(projected.device(), "desktop");
+        assert!(projected.scope().matches_exact(&scope));
+        assert_eq!(secret(&sdk.core.connection), after);
+        assert_eq!(count(&sdk.core.connection, "core_outbox"), rows);
+        assert_eq!(
+            sdk.pending_chat_for_native_publish(EVENT, NOW)
+                .unwrap()
+                .unwrap(),
+            wire
+        );
+    }
+    // Only the real opposite peer consumes this private wire. Own projection
+    // has never invoked MLS decrypt and remains compatible with the next peer send.
+    let value: Value = coset::cbor::de::from_reader(peer.decrypt(&wire).as_slice()).unwrap();
+    let Value::Array(fields) = value else {
+        panic!("fixture envelope")
+    };
+    assert_eq!(fields[9], projection_claim().payload());
+    let incoming = "44444444-4444-4444-8444-444444444444";
+    let claim = ChatEventClaim::claim(ChatOperation::Create {
+        message_id: incoming.into(),
+        parent_id: None,
+        body: "actual peer after own projection".into(),
+    })
+    .unwrap();
+    let mut envelope = peer_envelope(CHAT_EVENT_DOMAIN, incoming);
+    let Value::Array(fields) = &mut envelope else {
+        panic!("fixture envelope")
+    };
+    fields[9] = claim.payload();
+    let received_wire = peer.peer_message(&encode(&envelope));
+    let ProtectedReceived::ChatEvent(received) = sdk
+        .receive_protected(incoming, &received_wire, NOW)
+        .unwrap()
+    else {
+        panic!("fixture domain")
+    };
+    assert_eq!(received.account(), "alice");
+    assert!(received.scope().matches_exact(&scope));
+    assert!(
+        sdk.pending_native_chat_event_projection(&reserved, NOW)
+            .is_ok()
+    );
+}
+
+#[test]
+fn native_projection_actual_foreign_owner_and_changed_durable_wire_are_denied() {
+    let dir = run_dir();
+    let (mut first, _) = sdk_fixture(&dir.path().join("first.sqlite"));
+    let (second, _) = sdk_fixture(&dir.path().join("second.sqlite"));
+    let reserved = first
+        .reserve_native_chat_event(EVENT, &projection_claim(), NOW)
+        .unwrap();
+    let first_scope = first.native_protected_event_scope(NOW).unwrap();
+    let second_scope = second.native_protected_event_scope(NOW).unwrap();
+    // Same external labels, group bytes, epoch and fixture credential still
+    // cannot substitute another actual provider owner.
+    assert!(!first_scope.same_native_context(&second_scope));
+    let before = secret(&second.core.connection);
+    assert!(matches!(
+        second.pending_native_chat_event_projection(&reserved, NOW),
+        Err(Error::Stale)
+    ));
+    assert_eq!(secret(&second.core.connection), before);
+    first
+        .core
+        .connection
+        .execute(
+            "UPDATE core_outbox SET wire=? WHERE event_id=?",
+            params![b"altered local ciphertext".as_slice(), EVENT],
+        )
+        .unwrap();
+    assert!(matches!(
+        first.pending_native_chat_event_projection(&reserved, NOW),
+        Err(Error::Stale)
+    ));
+}
+
+#[test]
+fn native_projection_actual_epoch_roster_removed_leaf_and_retirement_never_borrow_new_authority() {
+    for change in 0..4 {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("stale.sqlite"));
+        let original = sdk.native_protected_event_scope(NOW).unwrap();
+        let reserved = sdk
+            .reserve_native_chat_event(EVENT, &projection_claim(), NOW)
+            .unwrap();
+        match change {
+            0 => {
+                let commit = peer.self_update();
+                let staged = sdk.stage_native_commit(&commit, NOW).unwrap();
+                sdk.inspect_native_commit(staged).unwrap();
+                let approval = sdk.authorize_native_commit(staged, NOW).unwrap();
+                sdk.merge_native_commit(approval, "44444444-4444-4444-8444-444444444444", NOW)
+                    .unwrap();
+                let current = sdk.native_protected_event_scope(NOW).unwrap();
+                assert!(original.same_native_context(&current));
+                assert!(!original.matches_exact(&current));
+            }
+            1 => {
+                sdk.install_native_roster(&roster(2, peer.entries()), NOW)
+                    .unwrap();
+                let current = sdk.native_protected_event_scope(NOW).unwrap();
+                assert!(original.same_native_context(&current));
+                assert!(!original.matches_exact(&current));
+            }
+            2 => {
+                let revoked = roster(
+                    2,
+                    vec![("alice", "desktop", b"alice", peer.alice_signer.public())],
+                );
+                sdk.install_native_roster(&revoked, NOW).unwrap();
+            }
+            _ => sdk.retire_native(),
+        }
+        assert!(
+            sdk.pending_native_chat_event_projection(&reserved, NOW)
+                .is_err()
+        );
+    }
+}
+
+#[test]
+fn native_projection_actual_repeated_reserve_is_replay_and_suppressed_outbox_never_returns_handle()
+{
+    for suppress in [false, true] {
+        let dir = run_dir();
+        let (mut sdk, _) = sdk_fixture(&dir.path().join("reserve.sqlite"));
+        let before = secret(&sdk.core.connection);
+        if suppress {
+            sdk.core.connection.execute_batch("CREATE TRIGGER suppress BEFORE INSERT ON core_outbox BEGIN SELECT RAISE(IGNORE);END;").unwrap();
+            assert!(matches!(
+                sdk.reserve_native_chat_event(EVENT, &projection_claim(), NOW),
+                Err(Error::Database)
+            ));
+            assert_eq!(secret(&sdk.core.connection), before);
+            assert_eq!(count(&sdk.core.connection, "core_outbox"), 0);
+            assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        } else {
+            let reserved = sdk
+                .reserve_native_chat_event(EVENT, &projection_claim(), NOW)
+                .unwrap();
+            let after = secret(&sdk.core.connection);
+            let rows = count(&sdk.core.connection, "core_outbox");
+            assert!(matches!(
+                sdk.reserve_native_chat_event(EVENT, &projection_claim(), NOW),
+                Err(Error::Replay)
+            ));
+            assert_eq!(secret(&sdk.core.connection), after);
+            assert_eq!(count(&sdk.core.connection, "core_outbox"), rows);
+            assert_eq!(reserved.event_id(), EVENT);
+            assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        }
+    }
+}

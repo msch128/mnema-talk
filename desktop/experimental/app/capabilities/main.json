@@ -1,6 +1,6 @@
 {
   "identifier": "main",
-  "description": "Local bundled main auth/metadata preview; native ownership enforced again at IPC registry. No E2EE/media/content grant.",
+  "description": "Shared bundled Mnema client; native ownership and captured authentication enforced at IPC.",
   "windows": [
     "main"
   ],
@@ -18,6 +18,9 @@
     "allow-native-socket-open",
     "allow-native-socket-send",
     "allow-native-socket-close",
-    "allow-native-personal-metadata-request"
+    "allow-native-personal-metadata-request",
+    "allow-native-auth-password",
+    "allow-native-auth-register",
+    "allow-native-admin-request"
   ]
 }

@@ -19,6 +19,7 @@ export const useAppVersionStore = defineStore('appVersion', () => {
   // The user closed the banner for this server version.
   const dismissedVersion = ref('')
   const adminUpdate = ref<UpdateStatus | null>(null)
+  let adminGeneration = 0
 
   // An admin started a self-update to this version (system_update event).
   const updatingTo = ref('')
@@ -49,8 +50,10 @@ export const useAppVersionStore = defineStore('appVersion', () => {
 
   /** Admins only: reads what the server's last release check found (no GitHub request). */
   async function refreshAdminUpdate() {
+    const generation = adminGeneration
     try {
-      setAdminUpdate(await api('/api/admin/system/update', { decode: decodeUpdateStatus }))
+      const status = await api('/api/admin/system/update', { decode: decodeUpdateStatus })
+      if (generation === adminGeneration) setAdminUpdate(status)
     } catch {
       // Not an admin any more, or the server is restarting: keep the last state.
     }
@@ -60,6 +63,7 @@ export const useAppVersionStore = defineStore('appVersion', () => {
   // so admins follow it at the same pace (and on every reconnect).
   let poll: ReturnType<typeof setInterval> | null = null
   function followAdminUpdates(isAdmin: () => boolean) {
+    ++adminGeneration
     if (poll !== null) clearInterval(poll)
     poll = null
     if (!isAdmin()) {

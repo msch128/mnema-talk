@@ -2112,3 +2112,1190 @@ async fn rejected_login_can_disconnect_and_reconnect_without_reusing_old_profile
     assert_eq!(calls[1]["port"], fixture.port2);
     client.detach_main_window(&lease).unwrap();
 }
+
+async fn selected_authentication_client(
+    fixture: &Fixture,
+) -> (crate::NativeClient, crate::NativeWindowLease, Uuid) {
+    let client = crate::NativeClient::fixture(fixture.root.clone());
+    let lease = client.attach_main_window().unwrap();
+    let selected = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            None,
+            None,
+            crate::NativeRequest::Connect {
+                address: fixture.origin(),
+            },
+            || {},
+        )
+        .await
+        .unwrap();
+    let profile = Uuid::parse_str(
+        client.commit(&lease, selected).unwrap().body["profile_intent"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    (client, lease, profile)
+}
+async fn admitted_authentication_login(
+    client: &crate::NativeClient,
+    lease: &crate::NativeWindowLease,
+    profile: Uuid,
+    expected: Option<Uuid>,
+) -> Uuid {
+    let delivery = client
+        .request_with_authentication_admission(
+            lease,
+            Uuid::new_v4(),
+            Some(profile),
+            expected,
+            crate::NativeRequest::Login {
+                username: "fixture".into(),
+                password: password(),
+            },
+            || {},
+        )
+        .await
+        .unwrap();
+    let body = client.commit(lease, delivery).unwrap().body;
+    assert_eq!(body.as_object().unwrap().len(), 2);
+    assert!(body.get("user").is_some());
+    Uuid::parse_str(body["authentication_intent"].as_str().unwrap()).unwrap()
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_delayed_first_admission_never_targets_replacement_family_or_custody()
+{
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    assert_eq!(client.authentication_intent(&lease).unwrap(), None);
+    let old = admitted_authentication_login(&client, &lease, profile, None).await;
+    let old_scope = client.authenticated_scope_with_intent(&lease, old).unwrap();
+    let custody = Arc::new(AtomicUsize::new(0));
+    let marker = custody.clone();
+    let delayed_login = client.request_with_authentication_admission(
+        &lease,
+        Uuid::new_v4(),
+        Some(profile),
+        Some(old),
+        crate::NativeRequest::Login {
+            username: "fixture".into(),
+            password: password(),
+        },
+        move || {
+            marker.fetch_add(1, Ordering::AcqRel);
+        },
+    );
+    let marker = custody.clone();
+    let delayed_logout = client.request_with_authentication_admission(
+        &lease,
+        Uuid::new_v4(),
+        Some(profile),
+        Some(old),
+        crate::NativeRequest::Logout,
+        move || {
+            marker.fetch_add(1, Ordering::AcqRel);
+        },
+    );
+    let delayed_me = client.request_with_authentication_admission(
+        &lease,
+        Uuid::new_v4(),
+        Some(profile),
+        Some(old),
+        crate::NativeRequest::Me,
+        || {},
+    );
+    let current = admitted_authentication_login(&client, &lease, profile, Some(old)).await;
+    assert_ne!(old, current);
+    assert_eq!(client.authentication_intent(&lease).unwrap(), Some(current));
+    assert_eq!(client.profile_intent(&lease).unwrap(), Some(profile));
+    assert!(matches!(delayed_login.await, Err(Error::Stale)));
+    assert!(matches!(delayed_logout.await, Err(Error::Stale)));
+    assert!(matches!(delayed_me.await, Err(Error::Stale)));
+    assert_eq!(custody.load(Ordering::Acquire), 0);
+    assert_eq!(fixture.calls(LOGIN).len(), 2);
+    assert!(fixture.calls(LOGOUT).is_empty());
+    assert!(fixture.calls(ME).is_empty());
+    assert_eq!(
+        client.check_authenticated_scope(&lease, &old_scope),
+        Err(Error::Stale)
+    );
+    assert_eq!(
+        client
+            .authenticated_scope_with_intent(&lease, old)
+            .unwrap_err(),
+        Error::Stale
+    );
+    let me = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(current),
+            crate::NativeRequest::Me,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, me).unwrap().status, 200);
+    assert_eq!(fixture.calls(ME).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_ticket_is_consumed_at_prepare_and_never_recaptures_new_grant() {
+    let fixture = Fixture::start();
+    let (broker, window) = logged(&fixture).await;
+    let old = broker.authentication_intent(window).unwrap().unwrap();
+    let bound = broker
+        .bind_invocation(window, Some(old), Uuid::new_v4(), InvocationKind::Read)
+        .unwrap();
+    broker.logout(window).await.unwrap();
+    broker.login(window, "fixture", password()).await.unwrap();
+    let current = broker.authentication_intent(window).unwrap().unwrap();
+    assert_ne!(old, current);
+    assert_eq!(bound.prepare_me(window).unwrap_err(), Error::Stale);
+    assert!(fixture.calls(ME).is_empty());
+    assert_eq!(broker.me(window).await.unwrap().username, "fixture");
+    assert_eq!(fixture.calls(ME).len(), 1);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_pending_drop_retires_only_its_owned_transition_and_requires_fresh_login()
+ {
+    let fixture = Fixture::start();
+    let (broker, window) = logged(&fixture).await;
+    let old = broker.authentication_intent(window).unwrap().unwrap();
+    let old_scope = broker.authenticated_scope(window).unwrap();
+    let pending = broker
+        .bind_invocation(window, Some(old), Uuid::new_v4(), InvocationKind::Login)
+        .unwrap();
+    assert_eq!(broker.authentication_intent(window), Err(Error::Busy));
+    assert_eq!(broker.authenticated_scope(window).unwrap_err(), Error::Busy);
+    assert!(matches!(
+        broker.bind_invocation(window, None, Uuid::new_v4(), InvocationKind::Login),
+        Err(Error::Busy)
+    ));
+    assert!(matches!(
+        broker.bind_invocation(window, Some(old), Uuid::new_v4(), InvocationKind::Read),
+        Err(Error::Busy)
+    ));
+    assert_eq!(fixture.calls(LOGIN).len(), 1);
+    drop(pending);
+    assert_eq!(broker.status().unwrap(), Status::ReauthRequired);
+    assert_eq!(broker.authentication_intent(window).unwrap(), None);
+    assert_eq!(
+        broker.check_authenticated_scope(window, &old_scope),
+        Err(Error::ReauthRequired)
+    );
+    assert!(matches!(
+        broker.bind_invocation(window, Some(old), Uuid::new_v4(), InvocationKind::Read),
+        Err(Error::ReauthRequired)
+    ));
+    broker.login(window, "fixture", password()).await.unwrap();
+    let current = broker.authentication_intent(window).unwrap().unwrap();
+    assert_ne!(old, current);
+    assert!(matches!(
+        broker.bind_invocation(window, Some(old), Uuid::new_v4(), InvocationKind::Read),
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(LOGIN).len(), 2);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_validated_refresh_preserves_family_selector_and_retires_scope_revision()
+ {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let authentication = admitted_authentication_login(&client, &lease, profile, None).await;
+    let old = client
+        .authenticated_scope_with_intent(&lease, authentication)
+        .unwrap();
+    let refresh = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(authentication),
+            crate::NativeRequest::Refresh,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, refresh).unwrap().status, 204);
+    assert_eq!(
+        client.authentication_intent(&lease).unwrap(),
+        Some(authentication)
+    );
+    let next = client
+        .authenticated_scope_with_intent(&lease, authentication)
+        .unwrap();
+    assert_eq!(next.authentication_intent(), old.authentication_intent());
+    assert_eq!(next.family_id(), old.family_id());
+    assert_eq!(next.client_instance_id(), old.client_instance_id());
+    assert_eq!(next.refresh_sequence(), old.refresh_sequence() + 1);
+    assert_ne!(
+        next.native_session_identity(),
+        old.native_session_identity()
+    );
+    assert_eq!(
+        client.check_authenticated_scope(&lease, &old),
+        Err(Error::Stale)
+    );
+    assert_eq!(client.check_authenticated_scope(&lease, &next), Ok(()));
+    assert_eq!(fixture.calls(REFRESH).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_admitted_actor_ticket_cannot_prepare_replacement_family() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let old = admitted_authentication_login(&client, &lease, profile, None).await;
+    let (started, release) = client.hold_next_prepare();
+    let old_client = client.clone();
+    let old_lease = lease.clone();
+    let old_request = tokio::spawn(async move {
+        old_client
+            .request_with_authentication_admission(
+                &old_lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(old),
+                crate::NativeRequest::Me,
+                || {},
+            )
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(3), started)
+        .await
+        .unwrap()
+        .unwrap();
+    let current = admitted_authentication_login(&client, &lease, profile, Some(old)).await;
+    assert_ne!(old, current);
+    release.send(()).unwrap();
+    assert!(matches!(old_request.await.unwrap(), Err(Error::Stale)));
+    assert!(fixture.calls(ME).is_empty());
+    let fresh = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(current),
+            crate::NativeRequest::Me,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, fresh).unwrap().status, 200);
+    assert_eq!(fixture.calls(ME).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_ticket_cannot_select_grant_after_accepted_role_revision() {
+    let fixture = Fixture::start();
+    fixture.control(LOGIN, "admin_login");
+    let (broker, window) = logged(&fixture).await;
+    let intent = broker.authentication_intent(window).unwrap().unwrap();
+    let admin = broker.authenticated_scope(window).unwrap();
+    assert_eq!(admin.role(), "admin");
+    let request_id = Uuid::new_v4();
+    let queued = broker
+        .bind_invocation(window, Some(intent), request_id, InvocationKind::Read)
+        .unwrap();
+    assert_eq!(
+        queued.check_invocation_job(Uuid::new_v4()),
+        Err(Error::Stale)
+    );
+    assert_eq!(queued.check_invocation_job(request_id), Ok(()));
+    assert_eq!(broker.me(window).await.unwrap().role, "user");
+    assert_eq!(broker.authentication_intent(window).unwrap(), Some(intent));
+    assert_eq!(queued.prepare_me(window).unwrap_err(), Error::Stale);
+    assert_eq!(fixture.calls(ME).len(), 1);
+    assert_eq!(broker.authenticated_scope(window).unwrap().role(), "user");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_pending_cancel_uses_original_submission_and_never_current_descriptor()
+ {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let (started, release) = client.hold_next_prepare();
+    let id = Uuid::new_v4();
+    let queued_client = client.clone();
+    let queued_lease = lease.clone();
+    let login = tokio::spawn(async move {
+        queued_client
+            .request_with_authentication_admission(
+                &queued_lease,
+                id,
+                Some(profile),
+                None,
+                crate::NativeRequest::Login {
+                    username: "fixture".into(),
+                    password: password(),
+                },
+                || {},
+            )
+            .await
+    });
+    tokio::time::timeout(Duration::from_secs(3), started)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(client.selected_intents(&lease), Err(Error::Busy));
+    assert_eq!(
+        client.cancel_request_with_intents(&lease, Some(profile), Some(Uuid::new_v4()), id),
+        Err(Error::Stale)
+    );
+    assert_eq!(
+        client.cancel_request_with_intents(&lease, Some(profile), None, id),
+        Ok(())
+    );
+    assert!(matches!(login.await.unwrap(), Err(Error::Cancelled)));
+    let _ = release.send(());
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while client.selected_intents(&lease) == Err(Error::Busy) {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), None)
+    );
+    assert!(fixture.calls(LOGIN).is_empty());
+    let accepted = admitted_authentication_login(&client, &lease, profile, None).await;
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), Some(accepted))
+    );
+    assert_eq!(fixture.calls(LOGIN).len(), 1);
+    assert_eq!(
+        client.cancel_request_with_intents(&lease, Some(profile), None, id),
+        Ok(())
+    );
+    assert_eq!(
+        client.authentication_intent(&lease).unwrap(),
+        Some(accepted)
+    );
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_current_401_allows_same_selection_retry_without_null_bypass() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let accepted = admitted_authentication_login(&client, &lease, profile, None).await;
+    fixture.control(ME, "unauthorized");
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(accepted),
+                crate::NativeRequest::Me,
+                || {}
+            )
+            .await,
+        Err(Error::Unauthorized)
+    ));
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), None)
+    );
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(accepted),
+                crate::NativeRequest::Logout,
+                || {}
+            )
+            .await,
+        Err(Error::ReauthRequired)
+    ));
+    fixture.control(ME, "normal");
+    let fresh = admitted_authentication_login(&client, &lease, profile, None).await;
+    assert_ne!(fresh, accepted);
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                None,
+                crate::NativeRequest::Login {
+                    username: "fixture".into(),
+                    password: password()
+                },
+                || {}
+            )
+            .await,
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(LOGIN).len(), 2);
+    assert!(fixture.calls(LOGOUT).is_empty());
+    client.detach_main_window(&lease).unwrap();
+}
+
+const PASSWORD_CHANGE: &str = "/api/native/v1/auth/password";
+fn changed_password() -> Password {
+    Password::from_native_input("changed-native-fixture-password".into()).unwrap()
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_password_seals_before_dispatch_installs_new_family_and_ack_only_nonce()
+ {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let old = admitted_authentication_login(&client, &lease, profile, None).await;
+    let old_scope = client.authenticated_scope_with_intent(&lease, old).unwrap();
+    fixture.control(PASSWORD_CHANGE, "hold");
+    let retired = Arc::new(AtomicBool::new(false));
+    let marker = retired.clone();
+    let pw_client = client.clone();
+    let pw_lease = lease.clone();
+    let changing = tokio::spawn(async move {
+        pw_client
+            .request_with_authentication_admission(
+                &pw_lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(old),
+                crate::NativeRequest::Password {
+                    current_password: password(),
+                    new_password: changed_password(),
+                },
+                move || marker.store(true, Ordering::Release),
+            )
+            .await
+    });
+    fixture.wait(PASSWORD_CHANGE, 1).await;
+    assert!(retired.load(Ordering::Acquire));
+    assert_eq!(client.selected_intents(&lease), Err(Error::Busy));
+    assert!(matches!(
+        client.check_authenticated_scope(&lease, &old_scope),
+        Err(Error::ReauthRequired)
+    ));
+    fixture.release();
+    let reply = client
+        .commit(&lease, changing.await.unwrap().unwrap())
+        .unwrap();
+    assert_eq!(reply.status, 200);
+    assert_eq!(reply.body.as_object().unwrap().len(), 1);
+    let accepted = Uuid::parse_str(reply.body["authentication_intent"].as_str().unwrap()).unwrap();
+    assert_ne!(accepted, old);
+    let current = client
+        .authenticated_scope_with_intent(&lease, accepted)
+        .unwrap();
+    assert_ne!(current.family_id(), old_scope.family_id());
+    assert_eq!(current.client_instance_id(), old_scope.client_instance_id());
+    assert_eq!(current.account_id(), old_scope.account_id());
+    assert_eq!(current.refresh_sequence(), 0);
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), Some(accepted))
+    );
+    let wire: Value =
+        serde_json::from_str(fixture.calls(PASSWORD_CHANGE)[0]["body"].as_str().unwrap()).unwrap();
+    assert_eq!(wire.as_object().unwrap().len(), 2);
+    assert_eq!(wire["current_password"], "native-fixture-password");
+    assert_eq!(wire["new_password"], "changed-native-fixture-password");
+    assert_eq!(fixture.calls(PASSWORD_CHANGE)[0]["method"], "PUT");
+    let delayed = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(old),
+            crate::NativeRequest::Password {
+                current_password: password(),
+                new_password: changed_password(),
+            },
+            || panic!("stale password must never retire current owner"),
+        )
+        .await;
+    assert!(matches!(delayed, Err(Error::Stale)));
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(old),
+                crate::NativeRequest::Logout,
+                || {}
+            )
+            .await,
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 1);
+    assert!(fixture.calls(LOGOUT).is_empty());
+    let me = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(accepted),
+            crate::NativeRequest::Me,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, me).unwrap().status, 200);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_password_uncertain_ack_never_replays_or_recovers_replacement() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let old = admitted_authentication_login(&client, &lease, profile, None).await;
+    fixture.control(PASSWORD_CHANGE, "password_drop_ack");
+    let result = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(old),
+            crate::NativeRequest::Password {
+                current_password: password(),
+                new_password: changed_password(),
+            },
+            || {},
+        )
+        .await;
+    assert!(matches!(result, Err(Error::Network)));
+    assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 1);
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), None)
+    );
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(old),
+                crate::NativeRequest::Password {
+                    current_password: password(),
+                    new_password: changed_password()
+                },
+                || {}
+            )
+            .await,
+        Err(Error::ReauthRequired)
+    ));
+    assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 1);
+    assert!(fixture.calls(REFRESH).is_empty());
+    let login = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            None,
+            crate::NativeRequest::Login {
+                username: "fixture".into(),
+                password: changed_password(),
+            },
+            || {},
+        )
+        .await
+        .unwrap();
+    let reply = client.commit(&lease, login).unwrap();
+    let fresh = Uuid::parse_str(reply.body["authentication_intent"].as_str().unwrap()).unwrap();
+    assert_ne!(fresh, old);
+    assert_eq!(fixture.calls(LOGIN).len(), 2);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_password_wrong_initial_successor_is_quarantined_once() {
+    for mode in [
+        "password_old_family",
+        "password_wrong_account",
+        "password_bad_sequence",
+        "bad_instance",
+    ] {
+        let fixture = Fixture::start();
+        let (client, lease, profile) = selected_authentication_client(&fixture).await;
+        let old = admitted_authentication_login(&client, &lease, profile, None).await;
+        fixture.control(PASSWORD_CHANGE, mode);
+        let result = client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(old),
+                crate::NativeRequest::Password {
+                    current_password: password(),
+                    new_password: changed_password(),
+                },
+                || {},
+            )
+            .await;
+        assert!(matches!(result, Err(Error::Protocol)), "{mode}");
+        assert_eq!(
+            client.selected_intents(&lease).unwrap(),
+            (Some(profile), None)
+        );
+        assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 1);
+        assert!(fixture.calls(REFRESH).is_empty());
+        client.detach_main_window(&lease).unwrap();
+    }
+}
+
+const REGISTER: &str = "/api/native/v1/auth/register";
+fn registration() -> crate::NativeRequest {
+    crate::NativeRequest::Register {
+        username: "fixture".into(),
+        display_name: "Native Ω".into(),
+        password: password(),
+        invite_code: Zeroizing::new("public-test-invite".into()),
+    }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_register_acknowledges_account_only_before_separate_login() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let created = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            None,
+            registration(),
+            || {},
+        )
+        .await
+        .unwrap();
+    let reply = client.commit(&lease, created).unwrap();
+    assert_eq!(reply.status, 201);
+    assert_eq!(reply.body.as_object().unwrap().len(), 1);
+    assert_eq!(reply.body["user"]["display_name"], "Native Ω");
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), None)
+    );
+    assert!(matches!(
+        client.authenticated_scope(&lease),
+        Err(Error::ReauthRequired)
+    ));
+    assert!(fixture.calls(LOGIN).is_empty());
+    assert!(fixture.calls(REFRESH).is_empty());
+    let call = &fixture.calls(REGISTER)[0];
+    assert_eq!(call["method"], "POST");
+    let headers = call["headers"].as_object().unwrap();
+    assert!(!headers.keys().any(|key| matches!(
+        key.to_ascii_lowercase().as_str(),
+        "authorization" | "origin" | "cookie"
+    )));
+    let body: Value = serde_json::from_str(call["body"].as_str().unwrap()).unwrap();
+    assert_eq!(body.as_object().unwrap().len(), 4);
+    assert_eq!(body["invite_code"], "public-test-invite");
+    let current = admitted_authentication_login(&client, &lease, profile, None).await;
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), Some(current))
+    );
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                None,
+                registration(),
+                || {}
+            )
+            .await,
+        Err(Error::Stale)
+    ));
+    assert!(matches!(
+        client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(current),
+                registration(),
+                || {}
+            )
+            .await,
+        Err(Error::Denied)
+    ));
+    assert_eq!(fixture.calls(REGISTER).len(), 1);
+    assert_eq!(fixture.calls(LOGIN).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_register_uncertain_ack_never_mints_auth_or_automatically_logs_in() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    fixture.control(REGISTER, "register_drop_ack");
+    let result = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            None,
+            registration(),
+            || {},
+        )
+        .await;
+    assert!(matches!(result, Err(Error::Network)));
+    assert_eq!(fixture.calls(REGISTER).len(), 1);
+    assert!(fixture.calls(LOGIN).is_empty());
+    assert_eq!(
+        client.selected_intents(&lease).unwrap(),
+        (Some(profile), None)
+    );
+    let current = admitted_authentication_login(&client, &lease, profile, None).await;
+    assert_eq!(client.authentication_intent(&lease).unwrap(), Some(current));
+    assert_eq!(fixture.calls(REGISTER).len(), 1);
+    assert_eq!(fixture.calls(LOGIN).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_register_queued_success_is_stale_after_login_family_install() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let created = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            None,
+            registration(),
+            || {},
+        )
+        .await
+        .unwrap();
+    let current = admitted_authentication_login(&client, &lease, profile, None).await;
+    assert!(matches!(
+        client.commit(&lease, created),
+        Err(Error::Stale | Error::Cancelled)
+    ));
+    assert_eq!(client.authentication_intent(&lease).unwrap(), Some(current));
+    assert_eq!(fixture.calls(REGISTER).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_register_closed_envelope_never_accepts_secret_or_wrong_account_name()
+{
+    for mode in ["register_extra_field", "register_wrong_username"] {
+        let fixture = Fixture::start();
+        let (client, lease, profile) = selected_authentication_client(&fixture).await;
+        fixture.control(REGISTER, mode);
+        let result = client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                None,
+                registration(),
+                || {},
+            )
+            .await;
+        assert!(matches!(result, Err(Error::Protocol)), "{mode}");
+        assert_eq!(
+            client.selected_intents(&lease).unwrap(),
+            (Some(profile), None)
+        );
+        assert_eq!(fixture.calls(REGISTER).len(), 1);
+        assert!(fixture.calls(LOGIN).is_empty());
+        client.detach_main_window(&lease).unwrap();
+    }
+}
+
+#[path = "admin_metadata_tests.rs"]
+mod admin_metadata_tests;
+
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_admin_reply_cannot_cross_accepted_role_revision_or_replacement_family()
+ {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    fixture.control(LOGIN, "admin_login");
+    let admin = admitted_authentication_login(&client, &lease, profile, None).await;
+    let stale_first_admission = client.request_with_authentication_admission(
+        &lease,
+        Uuid::new_v4(),
+        Some(profile),
+        Some(admin),
+        crate::NativeRequest::AdminMetadata {
+            operation: crate::AdminMetadataOperation::Users {},
+        },
+        || {},
+    );
+    let current = admitted_authentication_login(&client, &lease, profile, Some(admin)).await;
+    assert!(matches!(stale_first_admission.await, Err(Error::Stale)));
+    let admin_path = "/api/native/v1/admin/invites";
+    fixture.control(admin_path, "hold");
+    let pending_client = client.clone();
+    let pending_lease = lease.clone();
+    let pending = tokio::spawn(async move {
+        pending_client
+            .request_with_authentication_admission(
+                &pending_lease,
+                Uuid::new_v4(),
+                Some(profile),
+                Some(current),
+                crate::NativeRequest::AdminMetadata {
+                    operation: crate::AdminMetadataOperation::Invites {},
+                },
+                || {},
+            )
+            .await
+    });
+    fixture.wait(admin_path, 1).await;
+    fixture.control(ME, "normal");
+    let me = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(current),
+            crate::NativeRequest::Me,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, me).unwrap().body["role"], "user");
+    fixture.release();
+    assert!(matches!(pending.await.unwrap(), Err(Error::Stale)));
+    assert_eq!(client.authentication_intent(&lease).unwrap(), Some(current));
+    assert!(fixture.calls("/api/native/v1/admin/users").is_empty());
+    assert_eq!(fixture.calls(admin_path).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}
+
+#[cfg(feature = "synthetic-transport-fixture")]
+#[tokio::test(flavor = "current_thread")]
+async fn authentication_intent_actual_go_password_new_family_revokes_other_session_and_restores_owned_fixture()
+ {
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct OwnedBootstrap {
+        protocol: String,
+        origin: String,
+        community_id: String,
+        username: String,
+        password: String,
+        user_id: String,
+        public_ca_pem: String,
+        content_authorization: String,
+    }
+    let Ok(path) = std::env::var("MNEMA_NATIVE_PASSWORD_BOOTSTRAP") else {
+        return;
+    };
+    let metadata = std::fs::symlink_metadata(&path).unwrap();
+    assert!(metadata.is_file() && !metadata.file_type().is_symlink());
+    assert!(metadata.len() <= 16384);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        assert_eq!(metadata.uid(), unsafe { libc::geteuid() });
+        assert_eq!(metadata.mode() & 0o777, 0o600);
+    }
+    let bootstrap: OwnedBootstrap = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+    assert_eq!(bootstrap.protocol, "mnema-native-loopback-fixture-v1");
+    assert_eq!(bootstrap.content_authorization, "unavailable");
+    assert_eq!(bootstrap.username, "relay-user");
+    assert_eq!(bootstrap.password, "native-preview-fixture-password");
+    let origin = url::Url::parse(&bootstrap.origin).unwrap();
+    assert_eq!(origin.scheme(), "https");
+    assert_eq!(origin.host_str(), Some("127.0.0.1"));
+    assert!(origin.port().is_some());
+    let user = Uuid::parse_str(&bootstrap.user_id).unwrap();
+    assert!(!user.is_nil());
+    async fn connected(
+        b: &OwnedBootstrap,
+        account: Uuid,
+    ) -> (crate::NativeClient, crate::NativeWindowLease, Uuid, Uuid) {
+        let client = crate::NativeClient::qualification_fixture(
+            b.origin.clone(),
+            b.community_id.clone(),
+            account,
+            b.public_ca_pem.as_bytes().to_vec(),
+        )
+        .unwrap();
+        let lease = client.attach_main_window().unwrap();
+        let connected = client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                None,
+                None,
+                crate::NativeRequest::Connect {
+                    address: b.origin.clone(),
+                },
+                || {},
+            )
+            .await
+            .unwrap();
+        let profile = Uuid::parse_str(
+            client.commit(&lease, connected).unwrap().body["profile_intent"]
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        let login = client
+            .request_with_authentication_admission(
+                &lease,
+                Uuid::new_v4(),
+                Some(profile),
+                None,
+                crate::NativeRequest::Login {
+                    username: b.username.clone(),
+                    password: Password::from_native_input(b.password.clone()).unwrap(),
+                },
+                || {},
+            )
+            .await
+            .unwrap();
+        let intent = Uuid::parse_str(
+            client.commit(&lease, login).unwrap().body["authentication_intent"]
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        (client, lease, profile, intent)
+    }
+    let (client, lease, profile, old) = connected(&bootstrap, user).await;
+    let (other, other_lease, other_profile, other_auth) = connected(&bootstrap, user).await;
+    let old_scope = client.authenticated_scope_with_intent(&lease, old).unwrap();
+    let successor = "native-password-successor-fixture-only";
+    let replaced = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(old),
+            crate::NativeRequest::Password {
+                current_password: Password::from_native_input(bootstrap.password.clone()).unwrap(),
+                new_password: Password::from_native_input(successor.into()).unwrap(),
+            },
+            || {},
+        )
+        .await
+        .unwrap();
+    let ack = client.commit(&lease, replaced).unwrap();
+    assert_eq!(ack.status, 200);
+    assert_eq!(ack.body.as_object().unwrap().len(), 1);
+    let current = Uuid::parse_str(ack.body["authentication_intent"].as_str().unwrap()).unwrap();
+    assert_ne!(current, old);
+    let new_scope = client
+        .authenticated_scope_with_intent(&lease, current)
+        .unwrap();
+    assert_eq!(new_scope.account_id(), user);
+    assert_ne!(new_scope.family_id(), old_scope.family_id());
+    assert_eq!(
+        new_scope.client_instance_id(),
+        old_scope.client_instance_id()
+    );
+    assert_eq!(new_scope.refresh_sequence(), 0);
+    assert!(matches!(
+        other
+            .request_with_authentication_admission(
+                &other_lease,
+                Uuid::new_v4(),
+                Some(other_profile),
+                Some(other_auth),
+                crate::NativeRequest::Me,
+                || {}
+            )
+            .await,
+        Err(Error::Unauthorized)
+    ));
+    let me = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(current),
+            crate::NativeRequest::Me,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        client.commit(&lease, me).unwrap().body["id"],
+        user.to_string()
+    );
+    let restore = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(current),
+            crate::NativeRequest::Password {
+                current_password: Password::from_native_input(successor.into()).unwrap(),
+                new_password: Password::from_native_input(bootstrap.password.clone()).unwrap(),
+            },
+            || {},
+        )
+        .await
+        .unwrap();
+    let restored = Uuid::parse_str(
+        client.commit(&lease, restore).unwrap().body["authentication_intent"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    assert_ne!(restored, current);
+    let logout = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(restored),
+            crate::NativeRequest::Logout,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, logout).unwrap().status, 204);
+    client.detach_main_window(&lease).unwrap();
+    other.detach_main_window(&other_lease).unwrap();
+    let (verify, verify_lease, verify_profile, verify_auth) = connected(&bootstrap, user).await;
+    let logout = verify
+        .request_with_authentication_admission(
+            &verify_lease,
+            Uuid::new_v4(),
+            Some(verify_profile),
+            Some(verify_auth),
+            crate::NativeRequest::Logout,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(verify.commit(&verify_lease, logout).unwrap().status, 204);
+    verify.detach_main_window(&verify_lease).unwrap();
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn author_expired_password_prepare_retires_cancelled_family_descriptor() {
+    let fixture = Fixture::start();
+    let (broker, owner) = logged(&fixture).await;
+    let old = broker.authentication_intent(owner).unwrap().unwrap();
+    {
+        let mut state = broker.inner.state.lock().unwrap();
+        let active = state.active.as_mut().unwrap();
+        let grant = Arc::get_mut(&mut active.session.as_mut().unwrap().grant).unwrap();
+        grant.access_expires_at = Utc::now() - chrono::Duration::seconds(1);
+    }
+    let bound = broker
+        .bind_invocation(owner, Some(old), Uuid::new_v4(), InvocationKind::Password)
+        .unwrap();
+    assert!(matches!(
+        bound
+            .password_delivery(owner, password(), changed_password())
+            .await,
+        Err(Error::Expired)
+    ));
+    assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 0);
+    assert_eq!(broker.status().unwrap(), Status::ReauthRequired);
+    assert_eq!(broker.authentication_intent(owner).unwrap(), None);
+    let retry = broker
+        .bind_invocation(owner, None, Uuid::new_v4(), InvocationKind::Login)
+        .unwrap();
+    let delivery = retry
+        .login_delivery(owner, "fixture", password())
+        .await
+        .unwrap();
+    broker.commit_login(owner, delivery).unwrap();
+    assert_ne!(broker.authentication_intent(owner).unwrap(), Some(old));
+    assert_eq!(broker.status().unwrap(), Status::Authenticated);
+    assert_eq!(fixture.calls(LOGIN).len(), 2);
+    assert!(matches!(
+        broker.bind_invocation(owner, Some(old), Uuid::new_v4(), InvocationKind::Password),
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(PASSWORD_CHANGE).len(), 0);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn retained_native_metadata_ticket_cannot_prepare_after_same_family_refresh() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let authentication = admitted_authentication_login(&client, &lease, profile, None).await;
+    let original = Arc::new(
+        client
+            .authenticated_scope_with_intent(&lease, authentication)
+            .unwrap(),
+    );
+    let (started, release) = client.hold_next_prepare();
+    let waiting_client = client.clone();
+    let waiting_lease = lease.clone();
+    let old = original.clone();
+    let waiting = tokio::spawn(async move {
+        waiting_client
+            .request_retained_authenticated(
+                &waiting_lease,
+                old,
+                Uuid::new_v4(),
+                crate::NativeRequest::Me,
+            )
+            .await
+    });
+    started.await.unwrap();
+    let refresh = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(authentication),
+            crate::NativeRequest::Refresh,
+            || {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, refresh).unwrap().status, 204);
+    assert_eq!(
+        client.authentication_intent(&lease).unwrap(),
+        Some(authentication)
+    );
+    release.send(()).unwrap();
+    assert!(matches!(waiting.await.unwrap(), Err(Error::Stale)));
+    assert_eq!(fixture.calls(ME).len(), 0);
+    let current = Arc::new(
+        client
+            .authenticated_scope_with_intent(&lease, authentication)
+            .unwrap(),
+    );
+    let me = client
+        .request_retained_authenticated(&lease, current, Uuid::new_v4(), crate::NativeRequest::Me)
+        .await
+        .unwrap();
+    assert_eq!(client.commit(&lease, me).unwrap().status, 200);
+    assert_eq!(fixture.calls(ME).len(), 1);
+    assert!(matches!(
+        client
+            .request_retained_authenticated(
+                &lease,
+                original,
+                Uuid::new_v4(),
+                crate::NativeRequest::Me
+            )
+            .await,
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(ME).len(), 1);
+    client.detach_main_window(&lease).unwrap();
+}

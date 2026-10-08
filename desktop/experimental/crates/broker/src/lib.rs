@@ -57,3 +57,8 @@ pub use broker::{
     NativeOpaqueDelivery, NativeOpaqueEvent, NativeOpaqueReceipt, NativeOpaqueRecord,
     NativeOpaqueRelayOperation,
 };
+
+pub use broker::{
+    AdminCategoryOrder, AdminChannelKind, AdminChannelPlacement, AdminDelivery,
+    AdminMetadataOperation, AdminReply,
+};

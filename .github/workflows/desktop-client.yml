@@ -1,0 +1,226 @@
+name: Shared desktop client DEV builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'codex/**']
+    paths:
+      - web/**
+      - desktop/experimental/**
+      - .github/workflows/desktop-client.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-client:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      RUST_VERSION: 1.99.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Select pinned Rust toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install $env:RUST_VERSION --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { throw 'Rust installation failed' }
+          rustup default $env:RUST_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Rust selection failed' }
+      - name: Check and build the canonical Vue client
+        working-directory: web
+        shell: pwsh
+        run: |
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Web dependencies failed' }
+          npm run lint
+          if ($LASTEXITCODE -ne 0) { throw 'Web lint failed' }
+          npm run typecheck
+          if ($LASTEXITCODE -ne 0) { throw 'Web typecheck failed' }
+          npm run test -- --run
+          if ($LASTEXITCODE -ne 0) { throw 'Web tests failed' }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw 'Web build failed' }
+      - name: Test native chat owner and qualified SDK
+        shell: pwsh
+        run: |
+          cargo test --locked --manifest-path desktop/experimental/crates/crypto-owner/Cargo.toml --features opaque-relay
+          if ($LASTEXITCODE -ne 0) { throw 'Native owner tests failed' }
+          cargo test --locked --manifest-path desktop/experimental/crates/crypto-owner/qualified-sdk/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Qualified SDK tests failed' }
+      - name: Check and link the actual shared-client Tauri host
+        shell: pwsh
+        run: |
+          cargo test --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol
+          if ($LASTEXITCODE -ne 0) { throw 'Shared host tests failed' }
+          cargo clippy --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { throw 'Shared host Clippy failed' }
+          cargo build --locked --release --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol
+          if ($LASTEXITCODE -ne 0) { throw 'Shared Windows executable build failed' }
+          if (!(Test-Path 'desktop/experimental/app/target/release/mnema-native-client-preview.exe')) { throw 'Shared executable missing' }
+          'Unsigned DEV host linked from desktop/experimental/app with embedded web/dist. This job does not qualify GUI, multi-device E2EE, voice, games, fullscreen overlays or distribution licenses. No installer, release or automatic update is published.' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+      - name: Prepare unsigned Windows DEV artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $devOutput = Join-Path $env:RUNNER_TEMP 'mnema-desktop-windows-dev'
+          New-Item -ItemType Directory -Path $devOutput -Force | Out-Null
+          $devExe = Join-Path $devOutput 'Mnema Desktop DEV.exe'
+          Copy-Item 'desktop/experimental/app/target/release/mnema-native-client-preview.exe' $devExe
+          Copy-Item 'desktop/experimental/licenses' (Join-Path $devOutput 'licenses') -Recurse
+          Copy-Item 'LICENSE' $devOutput
+          Copy-Item 'THIRD_PARTY_NOTICES.md' $devOutput
+          Copy-Item 'desktop/experimental/THIRD_PARTY_NOTICES.md' (Join-Path $devOutput 'NATIVE_THIRD_PARTY_NOTICES.md')
+          Copy-Item 'desktop/experimental/README.md' (Join-Path $devOutput 'SOURCE_STATUS.md')
+          $devReceipt = [ordered]@{
+            kind = 'unsigned-development-shared-desktop-client'
+            revision = '${{ github.sha }}'
+            target = 'x86_64-pc-windows-msvc'
+            executable = 'Mnema Desktop DEV.exe'
+            executable_sha256 = (Get-FileHash -Algorithm SHA256 $devExe).Hash.ToLowerInvariant()
+            shared_frontend = 'web/src'
+            synthetic_fixture_features = $false
+            windows_gui_qualified = $false
+            multi_device_e2ee_qualified = $false
+            restored_history_qualified = $false
+            native_voice_qualified = $false
+            real_games_qualified = $false
+            distribution_license_closure_complete = $false
+            signed = $false
+            automatic_updater_package = $false
+          }
+          $devReceipt | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $devOutput 'DEV-BUILD.json')
+          @'
+          Mnema Desktop DEV — unsigned development build
+
+          This is the canonical Mnema Vue client embedded in the experimental Tauri host.
+          It requires a compatible native-preview instance. Normal production servers
+          do not currently enable those experimental API routes.
+
+          Windows GUI, multi-device E2EE, restored history, native voice and game
+          overlays have not been qualified. Talks, camera and screen sharing are
+          unavailable in this build. No automatic update mechanism is configured.
+
+          Check DEV-BUILD.json for the source revision and executable SHA-256.
+          Source and dependency notices accompany this build. The existing prebuilt
+          DeepFilterNet WASM still has an incomplete transitive provenance inventory;
+          this build does not claim final distribution-license qualification.
+          '@ | Set-Content -Encoding utf8 (Join-Path $devOutput 'README-DEV.txt')
+      - name: Upload explicitly unsigned Windows DEV artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mnema-desktop-windows-DEV-UNSIGNED-${{ github.sha }}
+          path: ${{ runner.temp }}/mnema-desktop-windows-dev/
+          if-no-files-found: error
+          retention-days: 7
+
+  unix-clients:
+    needs: windows-client
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos
+          - os: ubuntu-24.04
+            platform: linux
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      RUST_VERSION: 1.99.0
+      DEV_PLATFORM: ${{ matrix.platform }}
+      BUILD_REVISION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install Linux Tauri system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Select pinned Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --component clippy --component rustfmt
+          rustup default "$RUST_VERSION"
+      - name: Build canonical Vue assets
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Check and link native DEV host
+        run: |
+          cargo test --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol
+          cargo clippy --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol --all-targets -- -D warnings
+          cargo build --locked --release --manifest-path desktop/experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol
+      - name: Prepare unsigned DEV archive with preserved executable permissions
+        shell: bash
+        run: |
+          set -euo pipefail
+          dev_output="$RUNNER_TEMP/mnema-desktop-$DEV_PLATFORM-dev"
+          export DEV_OUTPUT="$dev_output"
+          export DEV_TARGET
+          DEV_TARGET="$(rustc -vV | sed -n 's/^host: //p')"
+          mkdir -p "$dev_output"
+          cp -R desktop/experimental/licenses "$dev_output/licenses"
+          cp LICENSE THIRD_PARTY_NOTICES.md "$dev_output/"
+          cp desktop/experimental/THIRD_PARTY_NOTICES.md "$dev_output/NATIVE_THIRD_PARTY_NOTICES.md"
+          cp desktop/experimental/README.md "$dev_output/SOURCE_STATUS.md"
+          if [[ "$DEV_PLATFORM" == macos ]]; then
+            mkdir -p "$dev_output/Mnema Desktop DEV.app/Contents/MacOS"
+            cp desktop/experimental/app/target/release/mnema-native-client-preview "$dev_output/Mnema Desktop DEV.app/Contents/MacOS/Mnema Desktop DEV"
+            chmod 755 "$dev_output/Mnema Desktop DEV.app/Contents/MacOS/Mnema Desktop DEV"
+            cat > "$dev_output/Mnema Desktop DEV.app/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>CFBundleExecutable</key><string>Mnema Desktop DEV</string><key>CFBundleIdentifier</key><string>com.mnema.desktop.shareddev</string><key>CFBundleName</key><string>Mnema Desktop DEV</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleVersion</key><string>0.0.0</string><key>CFBundleShortVersionString</key><string>0.0.0</string><key>NSMicrophoneUsageDescription</key><string>Mnema DEV microphone tests require your permission.</string><key>NSCameraUsageDescription</key><string>Mnema DEV camera tests require your permission.</string></dict></plist>
+          PLIST
+          else
+            cp desktop/experimental/app/target/release/mnema-native-client-preview "$dev_output/mnema-desktop-DEV"
+            chmod 755 "$dev_output/mnema-desktop-DEV"
+          fi
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { join } from 'node:path';
+          const root = process.env.DEV_OUTPUT;
+          const executable = process.env.DEV_PLATFORM === 'macos' ? 'Mnema Desktop DEV.app/Contents/MacOS/Mnema Desktop DEV' : 'mnema-desktop-DEV';
+          const receipt = {
+            kind: 'unsigned-development-shared-desktop-client', revision: process.env.BUILD_REVISION,
+            target: process.env.DEV_TARGET, executable,
+            executable_sha256: createHash('sha256').update(readFileSync(join(root, executable))).digest('hex'),
+            shared_frontend: 'web/src', synthetic_fixture_features: false, signed: false,
+            GUI_qualified: false, multi_device_e2ee_qualified: false, restored_history_qualified: false,
+            native_voice_qualified: false, real_games_qualified: false,
+            distribution_license_closure_complete: false, automatic_updater_package: false,
+            linux_native_key_custody_available: false
+          };
+          writeFileSync(join(root, 'DEV-BUILD.json'), JSON.stringify(receipt, null, 2) + '\n');
+          writeFileSync(join(root, 'README-DEV.txt'), 'Unsigned Mnema Desktop DEV build. Requires a compatible experimental native-preview instance. Normal production routes are disabled. Voice, camera and screen sharing are unavailable. Linux native key custody is not implemented. This archive does not qualify GUI, E2EE, restored history, games or final distribution-license closure. No automatic updater is configured. See DEV-BUILD.json and accompanying notices.\n');
+          NODE
+          tar -czf "$RUNNER_TEMP/mnema-desktop-$DEV_PLATFORM-DEV-UNSIGNED.tar.gz" -C "$RUNNER_TEMP" "mnema-desktop-$DEV_PLATFORM-dev"
+          echo 'Unsigned development archive linked and packaged; GUI and feature qualification remain open.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload explicitly unsigned DEV archive
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mnema-desktop-${{ matrix.platform }}-DEV-UNSIGNED-${{ github.sha }}
+          path: ${{ runner.temp }}/mnema-desktop-${{ matrix.platform }}-DEV-UNSIGNED.tar.gz
+          if-no-files-found: error
+          retention-days: 7

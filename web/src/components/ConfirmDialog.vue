@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Host for confirm() from lib/confirm.js. Safe default: focus starts on Cancel.
-import { computed, useId } from 'vue'
+import { computed, useId, onBeforeUnmount } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import { pendingConfirm } from '../lib/confirm'
 import { t } from '../i18n'
@@ -13,6 +13,8 @@ const requestKey = computed(() => Symbol(request.value?.title ?? 'confirm'))
 function answer(result: boolean) {
   request.value?.resolve(result)
 }
+// A dialog must not carry an old instance's text or approval into a new host.
+onBeforeUnmount(() => request.value?.resolve(false))
 </script>
 
 <template>

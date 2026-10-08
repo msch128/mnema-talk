@@ -19,8 +19,9 @@ compile_error!("Native Core host and unrelated synthetic-media entry cannot shar
 mod crypto_host;
 #[cfg(feature = "native-crypto")]
 use crypto_host::{
-    native_chat_publish, native_chat_receive, native_trust_begin_first_root, native_trust_cancel,
-    native_trust_read_status, native_trust_request_confirmation,
+    native_chat_mutate, native_chat_publish, native_chat_receive, native_chat_snapshot,
+    native_trust_begin_first_root, native_trust_cancel, native_trust_read_status,
+    native_trust_request_confirmation,
 };
 #[cfg(feature = "synthetic-media-fixture")]
 mod media_fixture;
@@ -221,36 +222,53 @@ fn rejected(context: String, error: Error) -> NativeReply {
         body: serde_json::json!({"error":{"code":code,"message":message}}),
     }
 }
+#[allow(clippy::too_many_arguments)]
 async fn invoke(
     window: WebviewWindow,
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: Option<String>,
+    authentication_intent: Option<String>,
     request_id: String,
     request: NativeRequest,
 ) -> NativeReply {
     let result = async {
         let lease = require(&window, &state, Some(&context))?;
         let expected = profile_intent.as_deref().map(canonical).transpose()?;
+        let authentication = authentication_intent
+            .as_deref()
+            .map(canonical)
+            .transpose()?;
         let retires = matches!(
             request,
-            NativeRequest::Connect { .. } | NativeRequest::Login { .. } | NativeRequest::Logout
+            NativeRequest::Connect { .. }
+                | NativeRequest::Login { .. }
+                | NativeRequest::Password { .. }
+                | NativeRequest::Register { .. }
+                | NativeRequest::Logout
         );
         let id = canonical(&request_id)?;
         let publication = state
             .client
-            .request_with_profile_admission(&lease, id, expected, request, || {
-                #[cfg(feature = "native-crypto")]
-                if retires {
-                    if let Some(profile) = expected {
-                        state.core.retire_profile(&lease.context_nonce(), profile)
-                    } else {
-                        state.core.retire_context(&lease.context_nonce())
+            .request_with_authentication_admission(
+                &lease,
+                id,
+                expected,
+                authentication,
+                request,
+                || {
+                    #[cfg(feature = "native-crypto")]
+                    if retires {
+                        if let Some(profile) = expected {
+                            state.core.retire_profile(&lease.context_nonce(), profile)
+                        } else {
+                            state.core.retire_context(&lease.context_nonce())
+                        }
                     }
-                }
-                #[cfg(not(feature = "native-crypto"))]
-                let _ = retires;
-            })
+                    #[cfg(not(feature = "native-crypto"))]
+                    let _ = retires;
+                },
+            )
             .await?;
         let current = require(&window, &state, Some(&context))?;
         let reply = state.client.commit(&current, publication)?;
@@ -267,6 +285,7 @@ async fn invoke(
 struct Context {
     context: String,
     profile_intent: Option<Uuid>,
+    authentication_intent: Option<Uuid>,
     content_authorization: &'static str,
     remembered_login: bool,
 }
@@ -276,12 +295,14 @@ fn native_context(
     state: tauri::State<'_, RuntimeState>,
 ) -> Result<Context, &'static str> {
     let lease = require(&window, &state, None).map_err(|_| "native context unavailable")?;
+    let (profile_intent, authentication_intent) = state
+        .client
+        .selected_intents(&lease)
+        .map_err(|_| "native selectors unavailable")?;
     Ok(Context {
         context: lease.context_nonce(),
-        profile_intent: state
-            .client
-            .profile_intent(&lease)
-            .map_err(|_| "native profile unavailable")?,
+        profile_intent,
+        authentication_intent,
         content_authorization: "unavailable",
         remembered_login: false,
     })
@@ -292,6 +313,7 @@ async fn native_connect(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: Option<String>,
+    authentication_intent: Option<String>,
     request_id: String,
     address: String,
 ) -> Result<NativeReply, ()> {
@@ -300,17 +322,20 @@ async fn native_connect(
         state,
         context,
         profile_intent,
+        authentication_intent,
         request_id,
         NativeRequest::Connect { address },
     )
     .await)
 }
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 async fn native_auth_login(
     window: WebviewWindow,
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
     username: String,
     password: String,
@@ -324,8 +349,100 @@ async fn native_auth_login(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::Login { username, password },
+    )
+    .await)
+}
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn native_auth_password(
+    window: WebviewWindow,
+    state: tauri::State<'_, RuntimeState>,
+    context: String,
+    profile_intent: String,
+    authentication_intent: String,
+    request_id: String,
+    current_password: String,
+    new_password: String,
+) -> Result<NativeReply, ()> {
+    // Convert both credential arguments at entry, before any await/admission.
+    let (current_password, new_password) = match (
+        Password::from_native_input(current_password),
+        Password::from_native_input(new_password),
+    ) {
+        (Ok(current), Ok(new)) => (current, new),
+        (Err(error), _) | (_, Err(error)) => return Ok(rejected(context, error)),
+    };
+    Ok(invoke(
+        window,
+        state,
+        context,
+        Some(profile_intent),
+        Some(authentication_intent),
+        request_id,
+        NativeRequest::Password {
+            current_password,
+            new_password,
+        },
+    )
+    .await)
+}
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn native_auth_register(
+    window: WebviewWindow,
+    state: tauri::State<'_, RuntimeState>,
+    context: String,
+    profile_intent: String,
+    authentication_intent: Option<String>,
+    request_id: String,
+    username: String,
+    display_name: String,
+    password: String,
+    invite_code: String,
+) -> Result<NativeReply, ()> {
+    let invite_code = zeroize::Zeroizing::new(invite_code);
+    let password = match Password::from_native_input(password) {
+        Ok(value) => value,
+        Err(error) => return Ok(rejected(context, error)),
+    };
+    Ok(invoke(
+        window,
+        state,
+        context,
+        Some(profile_intent),
+        authentication_intent,
+        request_id,
+        NativeRequest::Register {
+            username,
+            display_name,
+            password,
+            invite_code,
+        },
+    )
+    .await)
+}
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+async fn native_admin_request(
+    window: WebviewWindow,
+    state: tauri::State<'_, RuntimeState>,
+    context: String,
+    profile_intent: String,
+    authentication_intent: String,
+    request_id: String,
+    input: mnema_private_native_client_broker::AdminMetadataOperation,
+) -> Result<NativeReply, ()> {
+    Ok(invoke(
+        window,
+        state,
+        context,
+        Some(profile_intent),
+        Some(authentication_intent),
+        request_id,
+        NativeRequest::AdminMetadata { operation: input },
     )
     .await)
 }
@@ -335,6 +452,7 @@ async fn native_auth_me(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
 ) -> Result<NativeReply, ()> {
     Ok(invoke(
@@ -342,6 +460,7 @@ async fn native_auth_me(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::Me,
     )
@@ -353,6 +472,7 @@ async fn native_auth_refresh(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
 ) -> Result<NativeReply, ()> {
     Ok(invoke(
@@ -360,6 +480,7 @@ async fn native_auth_refresh(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::Refresh,
     )
@@ -371,6 +492,7 @@ async fn native_auth_logout(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
 ) -> Result<NativeReply, ()> {
     Ok(invoke(
@@ -378,6 +500,7 @@ async fn native_auth_logout(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::Logout,
     )
@@ -389,19 +512,26 @@ fn native_disconnect(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: Option<String>,
+    authentication_intent: Option<String>,
 ) -> NativeReply {
     match require(&window, &state, Some(&context)).and_then(|lease| {
         let expected = profile_intent.as_deref().map(canonical).transpose()?;
-        state
-            .client
-            .disconnect_with_profile_admission(&lease, expected, || {
+        state.client.disconnect_with_authentication_admission(
+            &lease,
+            expected,
+            authentication_intent
+                .as_deref()
+                .map(canonical)
+                .transpose()?,
+            || {
                 #[cfg(feature = "native-crypto")]
                 if let Some(profile) = expected {
                     state.core.retire_profile(&lease.context_nonce(), profile)
                 } else {
                     state.core.retire_context(&lease.context_nonce())
                 }
-            })
+            },
+        )
     }) {
         Ok(()) => NativeReply {
             context,
@@ -417,15 +547,19 @@ fn native_request_cancel(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: Option<String>,
+    authentication_intent: Option<String>,
     request_id: String,
 ) -> NativeReply {
     let r = require(&window, &state, Some(&context)).and_then(|lease| {
-        if let Some(profile) = profile_intent.as_deref() {
-            state
-                .client
-                .check_profile_intent(&lease, canonical(profile)?)?
-        }
-        state.client.cancel_request(&lease, canonical(&request_id)?)
+        state.client.cancel_request_with_intents(
+            &lease,
+            profile_intent.as_deref().map(canonical).transpose()?,
+            authentication_intent
+                .as_deref()
+                .map(canonical)
+                .transpose()?,
+            canonical(&request_id)?,
+        )
     });
     match r {
         Ok(()) => NativeReply {
@@ -442,6 +576,7 @@ async fn native_metadata_request(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
     resource: MetadataResource,
 ) -> Result<NativeReply, ()> {
@@ -450,6 +585,7 @@ async fn native_metadata_request(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::Metadata { resource },
     )
@@ -461,6 +597,7 @@ async fn native_personal_metadata_request(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
     input: PersonalMetadataOperation,
 ) -> Result<NativeReply, ()> {
@@ -469,6 +606,7 @@ async fn native_personal_metadata_request(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::PersonalMetadata { operation: input },
     )
@@ -480,6 +618,7 @@ async fn native_public_metadata_request(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
     resource: PublicMetadataResource,
 ) -> Result<NativeReply, ()> {
@@ -488,6 +627,7 @@ async fn native_public_metadata_request(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::PublicMetadata { resource },
     )
@@ -499,6 +639,7 @@ async fn native_socket_open(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     request_id: String,
     on_event: Channel<NativeSocketNotice>,
 ) -> Result<NativeReply, ()> {
@@ -537,6 +678,7 @@ async fn native_socket_open(
         state,
         context,
         Some(profile_intent),
+        authentication_intent,
         request_id,
         NativeRequest::OpenSocket { observer },
     )
@@ -548,6 +690,7 @@ async fn native_socket_send(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     handle: String,
     action: NativeSocketAction,
 ) -> Result<NativeReply, ()> {
@@ -558,12 +701,28 @@ async fn native_socket_send(
             .check_profile_intent(&lease, canonical(&profile_intent)?)?;
         state
             .client
-            .socket_send(&lease, canonical(&handle)?, action)
+            .socket_send_with_intents(
+                &lease,
+                canonical(&profile_intent)?,
+                authentication_intent
+                    .as_deref()
+                    .map(canonical)
+                    .transpose()?
+                    .ok_or(Error::Stale)?,
+                canonical(&handle)?,
+                action,
+            )
             .await?;
         require(&window, &state, Some(&context))?;
-        state
-            .client
-            .check_profile_intent(&lease, canonical(&profile_intent)?)?;
+        state.client.with_selected_authentication(
+            &lease,
+            canonical(&profile_intent)?,
+            authentication_intent
+                .as_deref()
+                .map(canonical)
+                .transpose()?,
+            || (),
+        )?;
         Ok::<_, Error>(())
     }
     .await;
@@ -582,13 +741,23 @@ fn native_socket_close(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: Option<String>,
     handle: String,
 ) -> NativeReply {
     let result = require(&window, &state, Some(&context)).and_then(|lease| {
         state
             .client
             .check_profile_intent(&lease, canonical(&profile_intent)?)?;
-        state.client.socket_close(&lease, canonical(&handle)?)
+        state.client.socket_close_with_intents(
+            &lease,
+            canonical(&profile_intent)?,
+            authentication_intent
+                .as_deref()
+                .map(canonical)
+                .transpose()?
+                .ok_or(Error::Stale)?,
+            canonical(&handle)?,
+        )
     });
     match result {
         Ok(()) => NativeReply {
@@ -634,7 +803,9 @@ fn main() {
                     .permission("allow-native-trust-cancel")
                     .permission("allow-native-trust-read-status")
                     .permission("allow-native-chat-publish")
-                    .permission("allow-native-chat-receive"),
+                    .permission("allow-native-chat-receive")
+                    .permission("allow-native-chat-mutate")
+                    .permission("allow-native-chat-snapshot"),
             )?;
             #[cfg(feature = "synthetic-media-fixture")]
             if handle.state::<RuntimeState>().media.is_some() {
@@ -655,7 +826,7 @@ fn main() {
                 entry
             };
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(entry.into()))
-                .title("Mnema — nativer Auth-/Metadaten-Entwicklungsclient")
+                .title("Mnema Desktop DEV")
                 .inner_size(1200.0, 820.0)
                 .on_navigation(move |url| {
                     let state = navigation.state::<RuntimeState>();
@@ -723,6 +894,9 @@ fn main() {
         native_personal_metadata_request,
         native_public_metadata_request,
         native_auth_login,
+        native_auth_password,
+        native_auth_register,
+        native_admin_request,
         native_auth_me,
         native_auth_refresh,
         native_auth_logout,
@@ -740,6 +914,9 @@ fn main() {
         native_personal_metadata_request,
         native_public_metadata_request,
         native_auth_login,
+        native_auth_password,
+        native_auth_register,
+        native_admin_request,
         native_auth_me,
         native_auth_refresh,
         native_auth_logout,
@@ -753,7 +930,9 @@ fn main() {
         native_trust_cancel,
         native_trust_read_status,
         native_chat_publish,
-        native_chat_receive
+        native_chat_receive,
+        native_chat_mutate,
+        native_chat_snapshot
     ]);
     #[cfg(feature = "synthetic-media-fixture")]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -763,6 +942,9 @@ fn main() {
         native_personal_metadata_request,
         native_public_metadata_request,
         native_auth_login,
+        native_auth_password,
+        native_auth_register,
+        native_admin_request,
         native_auth_me,
         native_auth_refresh,
         native_auth_logout,

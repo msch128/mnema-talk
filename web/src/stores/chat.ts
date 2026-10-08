@@ -1,3 +1,5 @@
+import { NativeSocket } from '../lib/nativeTransport'
+import { isDesktopRuntime } from '../lib/desktopRuntime'
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
 import type { Category, Channel, Message, User, UserUpdate, Presence, ChosenPresence, ReadState, NotifyLevel, CreateMessageRequest } from '../types/domain'
@@ -47,6 +49,10 @@ if (typeof document !== 'undefined') {
 }
 
 export const useChatStore = defineStore('chat', () => {
+  let communityGeneration = 0
+  function assertCommunity(generation: number) {
+    if (generation !== communityGeneration) throw new Error('Community request retired')
+  }
   const categories = ref<Category[]>([])
   const uncategorized = ref<Channel[]>([])
   const activeChannel = ref<Channel | null>(null)
@@ -66,7 +72,7 @@ export const useChatStore = defineStore('chat', () => {
   const activeThread = ref<ThreadRoot | null>(null)
   const threadReplies = ref<Message[]>([])
   const isThreadLoading = ref(false)
-  const ws = shallowRef<WebSocket | null>(null)
+  const ws = shallowRef<WebSocket | NativeSocket | null>(null)
   const isConnected = ref(false)
 
   // Community members & real-time presence
@@ -226,6 +232,7 @@ export const useChatStore = defineStore('chat', () => {
   const offlineMembers = computed(() => members.value.filter(m => !onlineUserIds.value.has(m.id)))
 
   async function selectChannel(channel: Channel | null) {
+    const community = communityGeneration
     if (!channel) return
     if (activeChannel.value?.id !== channel.id) suppressAutoReadFor = null
     activeChannel.value = channel
@@ -235,6 +242,7 @@ export const useChatStore = defineStore('chat', () => {
     setWindow(emptyWindow())
     activeChannelLastReadAt.value = readStates.value[channel.id]?.last_read_at || null
     await fetchMessages(channel.id)
+    if (community !== communityGeneration) return
     if (channel.type !== 'voice' || voiceChatReading.value) {
       await markChannelRead(channel.id)
     }
@@ -367,7 +375,9 @@ export const useChatStore = defineStore('chat', () => {
    * is outside the window. Resolves to false (and shows a toast) if it's gone.
    */
   async function jumpToMessage(id: string) {
+    const community = communityGeneration
     const ok = await jumpToRootMessage(id)
+    if (community !== communityGeneration) return false
     const pending = pendingThreadOpen
     if (pending && pending.rootId === id) {
       pendingThreadOpen = null
@@ -468,11 +478,13 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function sendMessage(content: string, parentId: string | null = null, replyToId: string | null = null) {
+    const community = communityGeneration
     if (!activeChannel.value || !content.trim()) return null
     const json: CreateMessageRequest = { content: content.trim() }
     if (parentId) json.parent_id = parentId
     if (replyToId) json.reply_to_id = replyToId
     const msg = await api(`/api/channels/${activeChannel.value.id}/messages`, { method: 'POST', json, decode: decodeMessage })
+    assertCommunity(community)
     // The WebSocket echo is de-duplicated by insertMessage / countReply.
     countReply(msg)
     insertMessage(msg)
@@ -480,6 +492,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function uploadMedia(file: File, content = '', parentId: string | null = null, replyToId: string | null = null) {
+    const community = communityGeneration
     if (!activeChannel.value || !file) return null
     const form = new FormData()
     // Text fields go before the file so the server reads them first.
@@ -488,6 +501,7 @@ export const useChatStore = defineStore('chat', () => {
     if (replyToId) form.append('reply_to_id', replyToId)
     form.append('file', file)
     const msg = await api(`/api/channels/${activeChannel.value.id}/upload`, { method: 'POST', form, decode: decodeMessage })
+    assertCommunity(community)
     countReply(msg)
     insertMessage(msg)
     return msg
@@ -618,7 +632,9 @@ export const useChatStore = defineStore('chat', () => {
 
     // The session cookie authenticates the upgrade; no token in the URL.
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const socket = new WebSocket(`${protocol}//${window.location.host}/api/ws`)
+    const socket = isDesktopRuntime()
+      ? new NativeSocket()
+      : new WebSocket(`${protocol}//${window.location.host}/api/ws`)
 
     const currentSocket = () => ws.value === socket && socketGeneration === generation
     const currentAccount = () => authStore.user?.id === accountId
@@ -637,7 +653,7 @@ export const useChatStore = defineStore('chat', () => {
       hadConnection = true
     }
 
-    socket.onmessage = event => {
+    socket.onmessage = (event: { data: string }) => {
       if (!currentSocket() || !currentAccount()) return
       try {
         const decoded = decodeServerEvent(JSON.parse(event.data))
@@ -955,6 +971,7 @@ export const useChatStore = defineStore('chat', () => {
 
   /** Sets the signed-in user's presence (online, away, dnd, focus). */
   async function setMyPresence(presence: ChosenPresence) {
+    const community = communityGeneration
     const me = authStore.user
     if (!me) return
     const previous = me.presence
@@ -966,8 +983,11 @@ export const useChatStore = defineStore('chat', () => {
       })
     }
     try {
-      authStore.user = await api('/api/users/me/presence', { method: 'PUT', json: { presence }, decode: decodeUser })
+      const updated = await api('/api/users/me/presence', { method: 'PUT', json: { presence }, decode: decodeUser })
+      assertCommunity(community)
+      authStore.user = updated
     } catch (e) {
+      assertCommunity(community)
       // A failed presence request must preserve newer profile updates and a
       // session that was cleared or switched while the request was pending.
       const current = authStore.user
@@ -983,11 +1003,13 @@ export const useChatStore = defineStore('chat', () => {
 
   /** Sets a status line: the user's own, or (admins) anyone's. */
   async function setStatusText(userId: string, text: string) {
+    const community = communityGeneration
     const own = userId === authStore.user?.id
     const updated = await api(own ? '/api/users/me/status' : `/api/admin/users/${userId}/status`, {
       method: 'PUT',
       json: { status_text: text }, decode: decodeUser
     })
+    assertCommunity(community)
     updateUserEverywhere(updated)
     return updated
   }
@@ -1001,62 +1023,87 @@ export const useChatStore = defineStore('chat', () => {
   // ---- Admin: channels & categories ----
 
   async function createChannel({ categoryId, name, type, topic, sortOrder = 0 }: { categoryId?: string | null; name: string; type?: Channel['type']; topic?: string; sortOrder?: number }) {
+    const community = communityGeneration
     const channel = await api('/api/admin/channels', {
       method: 'POST',
       json: { category_id: categoryId || null, name, type: type || 'text', topic: topic || '', sort_order: sortOrder }, decode: decodeChannel
     })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
     selectChannel(channel)
     return channel
   }
 
   /** Copy of a channel, placed right below it by the server. */
   async function duplicateChannel(channelId: string) {
+    const community = communityGeneration
     const channel = await api(`/api/admin/channels/${channelId}/duplicate`, { method: 'POST', decode: decodeChannel })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
     return channel
   }
 
   async function deleteChannel(channelId: string) {
+    const community = communityGeneration
     await api(`/api/admin/channels/${channelId}`, { method: 'DELETE' })
+    assertCommunity(community)
     if (activeChannel.value?.id === channelId) activeChannel.value = null
     await fetchChannels()
+    assertCommunity(community)
+
   }
 
   async function createCategory(name: string, sortOrder = 0) {
+    const community = communityGeneration
     const category = await api('/api/admin/categories', { method: 'POST', json: { name, sort_order: sortOrder }, decode: decodeCategory })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
     return category
   }
 
   async function deleteCategory(categoryId: string) {
+    const community = communityGeneration
     await api(`/api/admin/categories/${categoryId}`, { method: 'DELETE' })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
+
   }
 
   async function updateChannel(channelId: string, { name, topic }: { name: string; topic: string }) {
+    const community = communityGeneration
     const updated = await api(`/api/admin/channels/${channelId}`, {
       method: 'PATCH',
       json: { name, topic }, decode: decodeChannel
     })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
     return updated
   }
 
   async function updateCategory(categoryId: string, { name }: { name: string }) {
+    const community = communityGeneration
     const updated = await api(`/api/admin/categories/${categoryId}`, {
       method: 'PATCH',
       json: { name }, decode: decodeChatRenamedCategory
     })
+    assertCommunity(community)
     await fetchChannels()
+    assertCommunity(community)
     return updated
   }
 
   // ---- Read state & Notifications ----
 
   async function fetchReadState() {
+    const community = communityGeneration
     try {
       const data = await api('/api/read-state', { decode: decodeReadStates })
+      if (community !== communityGeneration) return {}
       const map: Record<string, ReadState> = {}
       for (const item of data) {
         map[item.channel_id] = {
@@ -1131,6 +1178,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function markChannelUnread(channelId: string, messageId: string) {
+    const community = communityGeneration
     if (!channelId || !messageId) return
 
     // Keep the channel unread even though it is open: no auto-read until the
@@ -1142,11 +1190,14 @@ export const useChatStore = defineStore('chat', () => {
         method: 'POST',
         json: { message_id: messageId }
       })
+      assertCommunity(community)
     } catch (e) {
+      assertCommunity(community)
       if (suppressAutoReadFor === channelId) suppressAutoReadFor = null
       throw e
     }
     await fetchReadState()
+    assertCommunity(community)
     if (channelId === activeChannel.value?.id) {
       // The "new since" divider moves to the chosen message.
       activeChannelLastReadAt.value = readStates.value[channelId]?.last_read_at || null
@@ -1299,6 +1350,7 @@ export const useChatStore = defineStore('chat', () => {
   // ---- Profiles & mentions ----
 
   async function openUserProfile(userOrMessage: Pick<User, 'id'> & Partial<User> & { user_id?: string }) {
+    const community = communityGeneration
     const userId = userOrMessage?.user_id || userOrMessage?.id
     if (!userId) return
     const known = members.value.find(m => m.id === userId)
@@ -1314,7 +1366,7 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const full = await api(`/api/users/${userId}`, { decode: decodeUser })
       // Closed, or another profile opened, while this one loaded.
-      if (selectedUserProfile.value?.id !== userId) return
+      if (community !== communityGeneration || selectedUserProfile.value?.id !== userId) return
       selectedUserProfile.value = { ...selectedUserProfile.value, ...full }
     } catch (e) {
       console.warn('Failed to fetch full user profile:', e)
@@ -1332,18 +1384,22 @@ export const useChatStore = defineStore('chat', () => {
   // ---- Message actions ----
 
   async function editMessage(channelId: string, messageId: string, content: string) {
+    const community = communityGeneration
     if (!content.trim()) return null
     const updated = await api(`/api/channels/${channelId}/messages/${messageId}`, {
       method: 'PUT',
       json: { content: content.trim() }, decode: decodeMessage
     })
+    assertCommunity(community)
     applyToMessage(messageId, m => Object.assign(m, updated))
     onOriginalEdited(updated)
     return updated
   }
 
   async function deleteMessage(channelId: string, messageId: string) {
+    const community = communityGeneration
     await api(`/api/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' })
+    assertCommunity(community)
     removeFromWindow(messageId)
     threadReplies.value = threadReplies.value.filter(m => m.id !== messageId)
     onOriginalDeleted(messageId)
@@ -1351,12 +1407,68 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   async function toggleReaction(messageId: string, emoji: string) {
+    const community = communityGeneration
     const data = await api(`/api/messages/${messageId}/reactions`, { method: 'POST', json: { emoji }, decode: decodeReactionResult })
+    assertCommunity(community)
     applyToMessage(messageId, m => { m.reactions = data.reactions || [] })
     return data.reactions
   }
 
+  /** Retire all instance data and pending work before selecting another origin. */
+  function resetCommunityState() {
+    ++communityGeneration
+    ++channelsFetchSeq
+    latestChannelsFetch = Promise.resolve()
+    ++membersFetchSeq
+    ++memberRevision
+    ++reconnectCheckSeq
+    closeWebSocket()
+    closeThread()
+    pendingThreadOpen = null
+    pendingLive = []
+    resetWindow()
+    setWindow(emptyWindow())
+    ++jumpSeq
+    jumpTarget.value = null
+    categories.value = []
+    uncategorized.value = []
+    activeChannel.value = null
+    members.value = []
+    presenceById.value = {}
+    disabledMembers.clear()
+    suppressedPresence.clear()
+    memberProfileUpdates.clear()
+    countedReplies.clear()
+    readStates.value = {}
+    activeChannelLastReadAt.value = null
+    voiceChatReading.value = false
+    suppressAutoReadFor = null
+    selectedUserProfile.value = null
+    pendingMention.value = ''
+    typingByChannel.value = {}
+    for (const timer of typingTimers.values()) clearTimeout(timer)
+    typingTimers.clear()
+    lastTypingSentAt.clear()
+    markReadThrottled.reset()
+    clearTimeout(memberStatsTimer)
+    clearTimeout(idleTimer)
+    isIdle = false
+    lastActivityAt = 0
+    reconnectDelay = 1000
+    reconnectCount.value = 0
+    nextRetryAt.value = 0
+    webrtcOfferHandler = null
+    webrtcCandidateHandler = null
+    voiceKickedHandler = null
+    const version = useAppVersionStore()
+    version.followAdminUpdates(() => false)
+    version.setServerVersion('')
+    const toasts = useToastStore()
+    for (const toast of [...toasts.toasts]) toasts.dismiss(toast.id)
+  }
+
   return {
+    resetCommunityState,
     reconnectCount,
     wasConnected,
     reconnectAttempt,

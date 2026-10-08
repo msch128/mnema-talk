@@ -12,6 +12,7 @@ import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
+import { isDesktopRuntime } from '../lib/desktopRuntime'
 import type { FilterNode } from '../lib/dfnNode'
 import type { NoiseModel } from '../lib/dfnTypes'
 import type { MediaStat } from '../lib/mediaStats'
@@ -1249,6 +1250,12 @@ export function useWebRTC() {
   }
 
   async function joinVoiceChannel(channelId: string) {
+    // The native transport has no qualified protected-media owner yet.
+    // Reject before changing connection state or requesting physical capture.
+    if (isDesktopRuntime()) {
+      useToastStore().error(t('nativeDesktop.mediaUnavailable'))
+      return
+    }
     // If already in this channel, don't re-create audio graphs
     if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
       return
@@ -1316,6 +1323,7 @@ export function useWebRTC() {
   // peer; start a fresh connection and announce the join again. The server
   // treats it as a resume (no leave/join for the others) within its grace time.
   function rejoinAfterReconnect() {
+    if (isDesktopRuntime()) return
     const channelId = voiceStore.currentChannelId
     if (!channelId) return
     setupPeerConnection(voiceStore, chatStore)
@@ -1670,6 +1678,10 @@ export function useWebRTC() {
   // One screen share per person: starting another while sharing asks first;
   // the new screen then replaces the running one (see replaceScreenShare).
   async function startScreenShare(quality?: StreamQuality): Promise<void> {
+    if (isDesktopRuntime()) {
+      useToastStore().error(t('nativeDesktop.mediaUnavailable'))
+      return
+    }
     if (screenCapturePending) return
     if (localScreenStream.value) {
       const ok = await confirm({
@@ -1802,6 +1814,10 @@ export function useWebRTC() {
   }
 
   async function startCamera() {
+    if (isDesktopRuntime()) {
+      useToastStore().error(t('nativeDesktop.mediaUnavailable'))
+      return
+    }
     if (!voiceStore.currentChannelId || localCameraStream.value) return
     const gen = joinGeneration
     let stream
@@ -1885,6 +1901,7 @@ export function useWebRTC() {
   // Rejoins the channel of a call interrupted by a reload less than 30 s ago.
   // Must run once the WebSocket is connected (voice_join goes over it).
   async function resumeVoiceSession() {
+    if (isDesktopRuntime()) return false
     const channelId = voiceSession.recent()
     if (!channelId || voiceStore.currentChannelId) return false
     if (!chatStore.isVoiceChannel(channelId)) {

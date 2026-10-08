@@ -15,6 +15,9 @@ use std::{
 use tokio::sync::{mpsc, oneshot};
 #[path = "crypto_custody.rs"]
 mod custody;
+#[path = "typed_chat_host.rs"]
+mod typed_chat;
+pub(super) use typed_chat::{native_chat_mutate, native_chat_snapshot};
 
 static SETUPS: AtomicUsize = AtomicUsize::new(0);
 #[derive(Clone, Serialize)]
@@ -33,8 +36,16 @@ pub(super) struct ChatDisplay {
     body: String,
 }
 enum Job {
+    TypedChat {
+        scope: Arc<NativeAuthenticatedScope>,
+        event: Option<Uuid>,
+        input: Option<typed_chat::Input>,
+        output: Channel<serde_json::Value>,
+        reply: oneshot::Sender<Result<Option<Uuid>, Error>>,
+    },
     Confirm(Arc<TauriNativeTrustDialog>),
     Chat {
+        scope: Arc<NativeAuthenticatedScope>,
         event: Option<Uuid>,
         body: zeroize::Zeroizing<String>,
         output: Channel<Vec<ChatDisplay>>,
@@ -63,6 +74,7 @@ impl Control {
             && scope.client_instance_id() == self.scope.client_instance_id()
             && scope.native_profile_identity() == self.scope.native_profile_identity()
             && scope.native_window_identity() == self.scope.native_window_identity()
+            && scope.authentication_intent() == self.scope.authentication_intent()
     }
     fn stop(&self) {
         self.stop.store(true, Ordering::Release);
@@ -240,9 +252,10 @@ impl Host {
         lease: NativeWindowLease,
         channel: Uuid,
         profile: Uuid,
+        authentication: Uuid,
         on_status: Channel<Status>,
     ) -> Result<serde_json::Value, Error> {
-        let scope = Arc::new(client.authenticated_scope(&lease)?);
+        let scope = Arc::new(client.authenticated_scope_with_intent(&lease, authentication)?);
         if scope.native_profile_identity() != profile {
             return Err(Error::Stale);
         }
@@ -368,12 +381,13 @@ async fn run_core(
             return;
         }
     };
-    let (pending, cancel) = match PendingFirstRoot::begin(
+    let (pending, cancel) = match PendingFirstRoot::begin_retained(
         client.clone(),
         lease.clone(),
         &dir.join("root.sqlite"),
         &secrets,
         control.channel,
+        scope.clone(),
     )
     .await
     {
@@ -405,7 +419,10 @@ async fn run_core(
         return;
     }
     let mut pending = Some(pending);
-    let mut owner = None;
+    let mut owner: Option<
+        mnema_private_native_crypto_owner::NativeFirstRootOwner<'_, custody::Secrets>,
+    > = None;
+    let mut typed_claims = typed_chat::Claims::default();
     let mut access_deadline = scope.monotonic_access_deadline();
     let mut heartbeat = tokio::time::interval(Duration::from_millis(100));
     loop {
@@ -437,6 +454,37 @@ async fn run_core(
         let Some(job) = job else { break };
         match job {
             Job::Stop => break,
+            Job::TypedChat {
+                scope,
+                event,
+                input,
+                output,
+                reply,
+            } => {
+                let result = if control.stop.load(Ordering::Acquire)
+                    || !control.same_family(&scope)
+                    || client.check_authenticated_scope(&lease, &scope).is_err()
+                {
+                    Err(Error::Stale)
+                } else if let Some(owner) = owner.as_mut() {
+                    typed_chat::process(
+                        owner.chat_mut(),
+                        &mut typed_claims,
+                        &app,
+                        &client,
+                        &lease,
+                        &control,
+                        scope,
+                        event,
+                        input,
+                        output,
+                    )
+                    .await
+                } else {
+                    Err(Error::QualificationRequired)
+                };
+                let _ = reply.send(result);
+            }
             Job::Confirm(dialog) => {
                 let Some(pending) = pending.take() else {
                     continue;
@@ -496,6 +544,7 @@ async fn run_core(
                 }
             }
             Job::Chat {
+                scope,
                 event,
                 body,
                 output,
@@ -504,6 +553,8 @@ async fn run_core(
                 let mut terminal = false;
                 let result = if control.stop.load(Ordering::Acquire) {
                     terminal = true;
+                    Err(Error::Stale)
+                } else if client.check_authenticated_scope(&lease, &scope).is_err() {
                     Err(Error::Stale)
                 } else if let Some(owner) = owner.as_mut() {
                     let sink = |rows: Vec<ChatDisplay>| {
@@ -530,7 +581,7 @@ async fn run_core(
                     };
                     let chat = owner.chat_mut();
                     let result = if let Some(event) = event {
-                        match chat.prepare_chat(event, &body) {
+                        match chat.prepare_chat_retained(scope.clone(), event, &body) {
                             Ok(prepared) => {
                                 chat.publish_chat(prepared, |row| {
                                     sink(vec![ChatDisplay {
@@ -548,7 +599,7 @@ async fn run_core(
                             Err(error) => Err(error),
                         }
                     } else {
-                        chat.receive_page(|rows| {
+                        chat.receive_page_retained(scope.clone(), |rows| {
                             sink(
                                 rows.iter()
                                     .map(|row| ChatDisplay {
@@ -661,6 +712,7 @@ async fn chat_command(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     channel: String,
     event: Option<String>,
     body: zeroize::Zeroizing<String>,
@@ -677,7 +729,11 @@ async fn chat_command(
         let control = state
             .core
             .current_profile(&lease, None, canonical(&profile_intent)?)?;
-        let scope = state.client.authenticated_scope(&lease)?;
+        let scope = Arc::new(
+            state
+                .client
+                .authenticated_scope_with_intent(&lease, canonical(&authentication_intent)?)?,
+        );
         if !control.same_family(&scope) || control.channel != channel {
             return Err(Error::Denied);
         }
@@ -691,18 +747,23 @@ async fn chat_command(
             return Err(Error::QualificationRequired);
         }
         let (reply, answer) = oneshot::channel();
-        control
-            .jobs
-            .try_send(Job::Chat {
-                event,
-                body,
-                output,
-                reply,
-            })
-            .map_err(|_| Error::Busy)?;
+        state
+            .client
+            .with_authenticated_publication(&lease, &scope, || {
+                control
+                    .jobs
+                    .try_send(Job::Chat {
+                        scope: scope.clone(),
+                        event,
+                        body,
+                        output,
+                        reply,
+                    })
+                    .map_err(|_| Error::Busy)
+            })??;
         answer.await.map_err(|_| Error::Stale)??;
         require(&window, &state, Some(&context))?;
-        let scope = state.client.authenticated_scope(&lease)?;
+        state.client.check_authenticated_scope(&lease, &scope)?;
         if !control.same_family(&scope) || control.stop.load(Ordering::Acquire) {
             return Err(Error::Stale);
         }
@@ -721,6 +782,7 @@ pub(super) async fn native_chat_publish(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     channel_id: String,
     client_event_id: String,
     body: String,
@@ -731,6 +793,7 @@ pub(super) async fn native_chat_publish(
         state,
         context,
         profile_intent,
+        authentication_intent,
         channel_id,
         Some(client_event_id),
         zeroize::Zeroizing::new(body),
@@ -739,11 +802,13 @@ pub(super) async fn native_chat_publish(
     .await)
 }
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn native_chat_receive(
     window: WebviewWindow,
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     channel_id: String,
     on_messages: Channel<Vec<ChatDisplay>>,
 ) -> Result<NativeReply, ()> {
@@ -752,6 +817,7 @@ pub(super) async fn native_chat_receive(
         state,
         context,
         profile_intent,
+        authentication_intent,
         channel_id,
         None,
         zeroize::Zeroizing::new(String::new()),
@@ -767,11 +833,13 @@ fn reply(context: String, body: serde_json::Value) -> NativeReply {
     }
 }
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub(super) async fn native_trust_begin_first_root(
     window: WebviewWindow,
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     channel_id: String,
     on_status: Channel<Status>,
 ) -> Result<NativeReply, ()> {
@@ -789,6 +857,7 @@ pub(super) async fn native_trust_begin_first_root(
                 lease.clone(),
                 canonical(&channel_id)?,
                 canonical(&profile_intent)?,
+                canonical(&authentication_intent)?,
                 on_status,
             )
             .await?;
@@ -810,6 +879,7 @@ pub(super) fn native_trust_request_confirmation(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     operation_id: String,
 ) -> NativeReply {
     let result = (|| {
@@ -817,10 +887,20 @@ pub(super) fn native_trust_request_confirmation(
         state
             .client
             .check_profile_intent(&lease, canonical(&profile_intent)?)?;
+        let expected_authentication = canonical(&authentication_intent)?;
+        state.client.with_selected_authentication(
+            &lease,
+            canonical(&profile_intent)?,
+            Some(expected_authentication),
+            || (),
+        )?;
         let op = canonical(&operation_id)?;
         let control = state
             .core
             .current_profile(&lease, Some(op), canonical(&profile_intent)?)?;
+        if control.scope.authentication_intent() != expected_authentication {
+            return Err(Error::Stale);
+        }
         state
             .client
             .check_authenticated_scope(&lease, &control.scope)?;
@@ -838,20 +918,25 @@ pub(super) fn native_trust_request_confirmation(
             TauriNativeTrustDialog::from_native_window(
                 window,
                 state.client.clone(),
-                lease,
+                lease.clone(),
                 validator,
             )
             .map_err(|_| Error::Denied)?,
         );
-        let mut existing = control.dialog.lock().map_err(|_| Error::Internal)?;
-        if existing.is_some() {
-            return Err(Error::Busy);
-        }
-        *existing = Some(dialog.clone());
-        control
-            .jobs
-            .try_send(Job::Confirm(dialog))
-            .map_err(|_| Error::Busy)?;
+        state
+            .client
+            .with_authenticated_publication(&lease, &control.scope, || {
+                let mut existing = control.dialog.lock().map_err(|_| Error::Internal)?;
+                if existing.is_some() {
+                    return Err(Error::Busy);
+                }
+                control
+                    .jobs
+                    .try_send(Job::Confirm(dialog.clone()))
+                    .map_err(|_| Error::Busy)?;
+                *existing = Some(dialog);
+                Ok::<_, Error>(())
+            })??;
         Ok::<_, Error>(serde_json::json!({"operation_id":op.to_string(),"state":"pending"}))
     })();
     match result {
@@ -865,6 +950,7 @@ pub(super) fn native_trust_cancel(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
     operation_id: String,
 ) -> NativeReply {
     let result = (|| {
@@ -872,10 +958,20 @@ pub(super) fn native_trust_cancel(
         state
             .client
             .check_profile_intent(&lease, canonical(&profile_intent)?)?;
+        let expected_authentication = canonical(&authentication_intent)?;
+        state.client.with_selected_authentication(
+            &lease,
+            canonical(&profile_intent)?,
+            Some(expected_authentication),
+            || (),
+        )?;
         let op = canonical(&operation_id)?;
         let control = state
             .core
             .current_profile(&lease, Some(op), canonical(&profile_intent)?)?;
+        if control.scope.authentication_intent() != expected_authentication {
+            return Err(Error::Stale);
+        }
         let cancel = control.cancel.lock().map_err(|_| Error::Internal)?;
         if let Some(cancel) = cancel.as_ref()
             && cancel.cancel().is_err()
@@ -921,12 +1017,18 @@ pub(super) fn native_trust_read_status(
     state: tauri::State<'_, RuntimeState>,
     context: String,
     profile_intent: String,
+    authentication_intent: String,
 ) -> NativeReply {
     let result = require(&window, &state, Some(&context)).and_then(|lease| {
         state
             .client
             .check_profile_intent(&lease, canonical(&profile_intent)?)?;
-        state.core.status(&lease, canonical(&profile_intent)?)
+        state.client.with_selected_authentication(
+            &lease,
+            canonical(&profile_intent)?,
+            Some(canonical(&authentication_intent)?),
+            || state.core.status(&lease, canonical(&profile_intent)?),
+        )?
     });
     match result {
         Ok(Some(status)) => reply(

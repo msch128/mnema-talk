@@ -21,7 +21,12 @@ mod host_tests;
 mod protected;
 pub use host::{HostAdmission, NativeOwnerFacts};
 pub use protected::{
-    ChatMessage, NativeBinding, NativeFrameGrant, Sdk, SourceKind, SourceLease, WorkerMaterial,
+    CHAT_EVENT_DOMAIN, CHAT_EVENT_VERSION, ChatEventClaim, ChatKind, ChatMessage, ChatOperation,
+    NativeBinding, NativeCommunityAnchor, NativeFrameGrant, NativeProtectedEventScope,
+    NativeReservedChatEvent, ProtectedReceived, ProtectedSourceBinding, ReactionAction, Sdk,
+    SourceKind, SourceLease, SourcePurpose, SourceTransportClaim, VerifiedChatEvent,
+    VerifiedCommunityAuthorization, VerifiedSource, VerifiedSourceFacts, VerifiedVoiceCreation,
+    WorkerMaterial,
 };
 const SUITE: Ciphersuite = Ciphersuite::MLS_128_DHKEMX25519_CHACHA20POLY1305_SHA256_Ed25519;
 static OWNER: AtomicU64 = AtomicU64::new(1);

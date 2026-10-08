@@ -3,10 +3,12 @@
 //! auto-login or arbitrary trusted origins. Account expectation stays native.
 use mnema_private_native_client_broker::{Error, NativeClient};
 use serde::Deserialize;
+use std::path::Path;
+#[cfg(unix)]
 use std::{
     fs::{self, OpenOptions},
     io::Read,
-    path::{Component, Path},
+    path::Component,
 };
 use uuid::Uuid;
 #[derive(Deserialize)]

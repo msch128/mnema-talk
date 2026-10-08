@@ -11,6 +11,8 @@ pub(crate) enum Endpoint {
     Refresh,
     Me,
     Logout,
+    Password,
+    Register,
     Discovery,
     Channels,
     Members,
@@ -24,16 +26,20 @@ pub(crate) enum Endpoint {
     Locale,
     Presence,
     UserStatus,
+    Admin(crate::broker::admin_metadata::AdminEndpoint),
     OpaquePost(uuid::Uuid),
     OpaquePage(uuid::Uuid, i64),
 }
 impl Endpoint {
     fn route(self) -> (Method, String) {
         let (method, path) = match self {
+            Self::Admin(endpoint) => return endpoint.route(),
             Self::Login => (Method::POST, "/api/native/v1/auth/login"),
             Self::Refresh => (Method::POST, "/api/native/v1/auth/refresh"),
             Self::Me => (Method::GET, "/api/native/v1/auth/me"),
             Self::Logout => (Method::POST, "/api/native/v1/auth/logout"),
+            Self::Password => (Method::PUT, "/api/native/v1/auth/password"),
+            Self::Register => (Method::POST, "/api/native/v1/auth/register"),
             Self::Channels => (Method::GET, "/api/native/v1/channels"),
             Self::Members => (Method::GET, "/api/native/v1/members"),
             Self::ReadState => (Method::GET, "/api/native/v1/read-state"),
@@ -67,6 +73,7 @@ impl Endpoint {
             self,
             Self::Me
                 | Self::Logout
+                | Self::Password
                 | Self::Channels
                 | Self::Members
                 | Self::ReadState
@@ -77,6 +84,7 @@ impl Endpoint {
                 | Self::Locale
                 | Self::Presence
                 | Self::UserStatus
+                | Self::Admin(_)
                 | Self::OpaquePost(_)
                 | Self::OpaquePage(_, _)
         )
@@ -89,13 +97,16 @@ impl fmt::Debug for Http {
         f.write_str("Http(REDACTED)")
     }
 }
-pub(crate) struct Body(Zeroizing<Vec<u8>>);
+pub(crate) struct Body(Zeroizing<Vec<u8>>, u16);
 impl fmt::Debug for Body {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("Body(REDACTED)")
     }
 }
 impl Body {
+    pub(crate) fn status(&self) -> u16 {
+        self.1
+    }
     pub(crate) fn bytes(&self) -> &[u8] {
         &self.0
     }
@@ -170,6 +181,7 @@ impl Http {
                 | Endpoint::PublicHealth
                 | Endpoint::PublicLegal
                 | Endpoint::OpaquePage(_, _)
+                | Endpoint::Admin(_)
                 | Endpoint::OpaquePost(_)
         ) {
             1024 * 1024
@@ -206,6 +218,8 @@ impl Http {
         if let Some(bytes) = body {
             let request_max = if matches!(endpoint, Endpoint::OpaquePost(_)) {
                 96 * 1024
+            } else if matches!(endpoint, Endpoint::Admin(_)) {
+                65536
             } else {
                 AUTH_BODY_MAX
             };
@@ -240,14 +254,39 @@ impl Http {
         {
             return Err(Error::Protocol);
         }
+        if let Endpoint::Admin(admin) = endpoint {
+            let status = response.status().as_u16();
+            if [400, 403, 404, 409, 429, 500, 503].contains(&status) {
+                // Do not expose arbitrary server error bodies or auto-retry writes.
+                return Ok(Body(Zeroizing::new(Vec::new()), status));
+            }
+            if status != admin.status() {
+                return Err(Error::Protocol);
+            }
+            if status == 204 {
+                if response
+                    .headers()
+                    .get(header::CONTENT_LENGTH)
+                    .is_some_and(|h| h.as_bytes() != b"0")
+                    || response.headers().contains_key(header::TRANSFER_ENCODING)
+                {
+                    return Err(Error::Protocol);
+                }
+                return Ok(Body(Zeroizing::new(Vec::new()), 204));
+            }
+        }
         if endpoint == Endpoint::Logout {
             if response.status() != reqwest::StatusCode::NO_CONTENT {
                 return Err(Error::Protocol);
             }
-            return Ok(Body(Zeroizing::new(Vec::new())));
+            return Ok(Body(Zeroizing::new(Vec::new()), 204));
         }
-        if response.status() != reqwest::StatusCode::OK
-            && !(matches!(endpoint, Endpoint::OpaquePost(_))
+        if endpoint == Endpoint::Register && response.status() != reqwest::StatusCode::CREATED {
+            return Err(Error::Protocol);
+        }
+        if !matches!(endpoint, Endpoint::Admin(_))
+            && response.status() != reqwest::StatusCode::OK
+            && !(matches!(endpoint, Endpoint::OpaquePost(_) | Endpoint::Register)
                 && response.status() == reqwest::StatusCode::CREATED)
         {
             return Err(Error::Protocol);
@@ -279,6 +318,6 @@ impl Http {
             }
             bytes.extend_from_slice(&chunk)
         }
-        Ok(Body(bytes))
+        Ok(Body(bytes, response.status().as_u16()))
     }
 }

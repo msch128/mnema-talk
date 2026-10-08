@@ -130,7 +130,7 @@ impl NativeOpaqueReceipt {
 }
 pub struct NativeOpaqueDelivery {
     operation: Operation,
-    scope: NativeAuthenticatedScope,
+    scope: Arc<NativeAuthenticatedScope>,
     receipt: NativeOpaqueReceipt,
 }
 impl fmt::Debug for NativeOpaqueDelivery {
@@ -212,6 +212,15 @@ impl Broker {
         &self,
         owner: WindowOwner,
         scope: NativeAuthenticatedScope,
+        input: NativeOpaqueRelayOperation,
+    ) -> Result<NativeOpaqueDelivery, Error> {
+        self.opaque_relay_retained(owner, Arc::new(scope), input)
+            .await
+    }
+    pub(super) async fn opaque_relay_retained(
+        &self,
+        owner: WindowOwner,
+        scope: Arc<NativeAuthenticatedScope>,
         input: NativeOpaqueRelayOperation,
     ) -> Result<NativeOpaqueDelivery, Error> {
         let (endpoint, body, expected, after) = match &input {

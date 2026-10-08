@@ -99,6 +99,7 @@ pub struct PendingFirstRoot<'a, S: NativeSecrets> {
     lease: NativeWindowLease,
     fresh: FreshCommunity<'a, S>,
     request: NativeDialogRequest,
+    auth: Arc<NativeAuthenticatedScope>,
     channel: Uuid,
     device: Uuid,
     outcome: Arc<AdoptionGate>,
@@ -133,36 +134,30 @@ async fn fresh_root_metadata(
     client: &NativeClient,
     lease: &NativeWindowLease,
     channel: Uuid,
-    expected: Option<&NativeAuthenticatedScope>,
-) -> Result<NativeAuthenticatedScope> {
+    auth: &Arc<NativeAuthenticatedScope>,
+) -> Result<()> {
     if channel.is_nil() {
         return Err(Error::Invalid);
     }
-    if let Some(scope) = expected {
-        client
-            .check_authenticated_scope(lease, scope)
-            .map_err(|_| Error::Auth)?;
-    }
+    client
+        .check_authenticated_scope(lease, auth)
+        .map_err(|_| Error::Auth)?;
     let response = client
-        .request(lease, NativeRequest::Me)
+        .request_retained_authenticated(lease, auth.clone(), Uuid::new_v4(), NativeRequest::Me)
         .await
         .map_err(|_| Error::Auth)?;
     let me = client.commit(lease, response).map_err(|_| Error::Auth)?;
-    if me.status != 200 {
+    client
+        .check_authenticated_scope(lease, auth)
+        .map_err(|_| Error::Auth)?;
+    if me.status != 200 || auth.role() != "admin" {
         return Err(Error::Auth);
-    }
-    let current = client.authenticated_scope(lease).map_err(|_| Error::Auth)?;
-    if current.role() != "admin" {
-        return Err(Error::Auth);
-    }
-    if let Some(scope) = expected {
-        client
-            .check_authenticated_scope(lease, scope)
-            .map_err(|_| Error::Auth)?;
     }
     let response = client
-        .request(
+        .request_retained_authenticated(
             lease,
+            auth.clone(),
+            Uuid::new_v4(),
             NativeRequest::Metadata {
                 resource: MetadataResource::Channels,
             },
@@ -170,18 +165,13 @@ async fn fresh_root_metadata(
         .await
         .map_err(|_| Error::Auth)?;
     let hierarchy = client.commit(lease, response).map_err(|_| Error::Auth)?;
+    client
+        .check_authenticated_scope(lease, auth)
+        .map_err(|_| Error::Auth)?;
     if hierarchy.status != 200 || !channel_visible(&hierarchy.body, channel) {
         return Err(Error::Auth);
     }
-    client
-        .check_authenticated_scope(lease, &current)
-        .map_err(|_| Error::Auth)?;
-    if let Some(scope) = expected {
-        client
-            .check_authenticated_scope(lease, scope)
-            .map_err(|_| Error::Auth)?;
-    }
-    Ok(current)
+    Ok(())
 }
 impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
     /// The path/custody are native-owned fresh namespace, never renderer input.
@@ -194,7 +184,38 @@ impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
         secrets: &'a S,
         channel: Uuid,
     ) -> Result<(Self, PendingRootCancellation)> {
-        let auth = fresh_root_metadata(&client, &lease, channel, None).await?;
+        let auth = Arc::new(
+            client
+                .authenticated_scope(&lease)
+                .map_err(|_| Error::Auth)?,
+        );
+        fresh_root_metadata(&client, &lease, channel, &auth).await?;
+        Self::provision_for_admitted_scope(client, lease, path, secrets, channel, auth)
+    }
+    /// Retain the host's original admitted identity before generating any
+    /// device/root/database state or constructing a native modal request.
+    pub async fn begin_retained(
+        client: NativeClient,
+        lease: NativeWindowLease,
+        path: &Path,
+        secrets: &'a S,
+        channel: Uuid,
+        auth: Arc<NativeAuthenticatedScope>,
+    ) -> Result<(Self, PendingRootCancellation)> {
+        fresh_root_metadata(&client, &lease, channel, &auth).await?;
+        Self::provision_for_admitted_scope(client, lease, path, secrets, channel, auth)
+    }
+    fn provision_for_admitted_scope(
+        client: NativeClient,
+        lease: NativeWindowLease,
+        path: &Path,
+        secrets: &'a S,
+        channel: Uuid,
+        auth: Arc<NativeAuthenticatedScope>,
+    ) -> Result<(Self, PendingRootCancellation)> {
+        client
+            .check_authenticated_scope(&lease, &auth)
+            .map_err(|_| Error::Auth)?;
         let scope = canonical_scope(&auth)?;
         let device = Uuid::new_v4();
         let identity = format!("{}.{}", auth.account_id(), device);
@@ -231,7 +252,7 @@ impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
             .map_err(|_| Error::Auth)?;
         let operation = Uuid::new_v4();
         let outcome = Arc::new(AdoptionGate::new());
-        let request = NativeDialogRequest::first_root(operation, Arc::new(auth), facts, deadline)
+        let request = NativeDialogRequest::first_root(operation, auth.clone(), facts, deadline)
             .map_err(|_| Error::Auth)?;
         Ok((
             Self {
@@ -239,6 +260,7 @@ impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
                 lease,
                 fresh,
                 request,
+                auth,
                 channel,
                 device,
                 outcome: outcome.clone(),
@@ -278,6 +300,7 @@ impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
             lease,
             fresh,
             request,
+            auth: admitted,
             channel,
             device,
             outcome,
@@ -299,13 +322,7 @@ impl<'a, S: NativeSecrets> PendingFirstRoot<'a, S> {
         }
         decision.consume(&request).map_err(|_| Error::Auth)?;
         request.check_deadline().map_err(|_| Error::Auth)?;
-        fresh_root_metadata(
-            &client,
-            &lease,
-            channel,
-            Some(request.authenticated_scope()),
-        )
-        .await?;
+        fresh_root_metadata(&client, &lease, channel, &admitted).await?;
         if !outcome.is_pending() {
             return Err(Error::Auth);
         }

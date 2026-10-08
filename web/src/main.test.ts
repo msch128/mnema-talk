@@ -13,12 +13,20 @@ vi.mock('./i18n', () => ({ i18nPlugin: boot.plugin, browserLocale: boot.browserL
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
   boot.browserLocale.mockReturnValue('de')
   boot.app.mount.mockReturnValue(undefined)
   document.body.innerHTML = '<div id="app"></div>'
 })
 
 describe('browser application entry', () => {
+  it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
+    vi.stubGlobal('isTauri', true)
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativeBootstrap.vue')).default)
+    expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
+    expect(boot.app.mount).toHaveBeenCalledWith('#app')
+  })
   it('selects browser language and mounts App with Pinia, translations and accessible tooltips', async () => {
     await import('./main')
     expect(boot.setLocale).toHaveBeenCalledWith('de')

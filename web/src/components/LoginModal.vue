@@ -21,6 +21,10 @@ const username = ref('')
 const displayName = ref('')
 const password = ref('')
 const inviteCode = ref('')
+const usernameInput = ref<HTMLInputElement | null>(null)
+const displayNameInput = ref<HTMLInputElement | null>(null)
+const passwordInput = ref<HTMLInputElement | null>(null)
+const inviteCodeInput = ref<HTMLInputElement | null>(null)
 const errorMsg = ref('')
 const isLoading = ref(false)
 
@@ -36,18 +40,32 @@ onMounted(() => {
 })
 
 async function handleSubmit() {
+  // Autofill and native accessibility may update input.value without an input
+  // event. Snapshot the displayed fields before any reactive/async work, then
+  // synchronize the models so a pending render cannot restore older values.
+  // Password bytes are preserved exactly; native validation stays authoritative.
+  const submittedUsername = usernameInput.value?.value ?? ''
+  const submittedPassword = passwordInput.value?.value ?? ''
+  const submittedDisplayName = displayNameInput.value?.value ?? ''
+  const submittedInviteCode = inviteCodeInput.value?.value ?? ''
+  username.value = submittedUsername
+  password.value = submittedPassword
+  if (isRegister.value) {
+    displayName.value = submittedDisplayName
+    inviteCode.value = submittedInviteCode
+  }
   errorMsg.value = ''
   isLoading.value = true
   try {
     if (isRegister.value) {
-      if (!inviteCode.value.trim()) {
+      if (!submittedInviteCode.trim()) {
         errorMsg.value = t('login.inviteRequired')
         isLoading.value = false
         return
       }
-      await authStore.register(username.value, displayName.value || username.value, password.value, inviteCode.value)
+      await authStore.register(submittedUsername, submittedDisplayName || submittedUsername, submittedPassword, submittedInviteCode)
     } else {
-      await authStore.login(username.value, password.value)
+      await authStore.login(submittedUsername, submittedPassword)
     }
   } catch (err) {
     errorMsg.value = caughtErrorMessage(err, t('login.failed'))
@@ -91,6 +109,7 @@ async function handleSubmit() {
           <label for="login-username" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.username') }}</label>
           <input
             id="login-username"
+            ref="usernameInput"
             v-model="username"
             type="text"
             required
@@ -104,6 +123,7 @@ async function handleSubmit() {
           <label for="login-displayname" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.displayName') }}</label>
           <input
             id="login-displayname"
+            ref="displayNameInput"
             v-model="displayName"
             type="text"
             :placeholder="$t('login.displayNamePlaceholder')"
@@ -115,6 +135,7 @@ async function handleSubmit() {
           <label for="login-password" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.password') }}</label>
           <input
             id="login-password"
+            ref="passwordInput"
             v-model="password"
             type="password"
             required
@@ -128,6 +149,7 @@ async function handleSubmit() {
           <label for="login-invite" class="block text-xs font-medium text-mnema-muted mb-1 font-mono uppercase tracking-wider">{{ $t('login.inviteCode') }}</label>
           <input
             id="login-invite"
+            ref="inviteCodeInput"
             v-model="inviteCode"
             type="text"
             required

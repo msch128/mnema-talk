@@ -13,6 +13,16 @@ beforeEach(() => { setActivePinia(createPinia()); vi.useFakeTimers() })
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 describe('application version notifications', () => {
+  it('does not restore old instance update metadata after polling is retired', async () => {
+    let resolve!: (value: Response) => void
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(r => { resolve = r })))
+    const store = useAppVersionStore()
+    const pending = store.refreshAdminUpdate()
+    store.followAdminUpdates(() => false)
+    resolve(await respond(status()))
+    await pending
+    expect(store.adminUpdate).toBeNull()
+  })
   it('shows each new server release once and clears an update after reconnect', () => {
     const store = useAppVersionStore()
     expect(store.showReloadBanner).toBe(false)

@@ -246,7 +246,7 @@ impl Broker {
     pub async fn open_native_socket(&self, owner: WindowOwner) -> Result<NativeSocket, Error> {
         let (op, grant) = {
             let mut s = self.inner.state.lock().map_err(|_| Error::Internal)?;
-            s.main(self.inner.owner, owner)?;
+            self.consume_invocation(&mut s, owner, InvocationKind::Read)?;
             let active = s.active.as_ref().ok_or(Error::NoProfile)?;
             if active.status != Status::Authenticated {
                 return Err(Error::ReauthRequired);
@@ -260,7 +260,7 @@ impl Broker {
             if grant.access_expires_at <= Utc::now() {
                 return Err(Error::Expired);
             }
-            let op = self.reserve(&mut s, owner, RequestPhase::Running)?;
+            let op = self.reserve_checked(&mut s, owner, RequestPhase::Running)?;
             (op, grant)
         };
         let mut url = op
