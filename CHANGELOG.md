@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/msch128/mnema-talk/compare/v0.6.1...v0.7.0) (2026-10-08)
+
+
+### Features
+
+* integrate shared desktop client and automatic DEV builds ([e873878](https://github.com/msch128/mnema-talk/commit/e8738787fbecfc8d5eea62e79c0e0537c5f19e4c))
+
+
+### Bug Fixes
+
+* update Go security patches before 0.7 release ([6b9ae64](https://github.com/msch128/mnema-talk/commit/6b9ae64a911e60fe049b7fe9189a5e384aca2efb))
+
 ## [0.6.1](https://github.com/msch128/mnema-talk/compare/v0.6.0...v0.6.1) (2026-10-07)
 
 
