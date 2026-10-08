@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mnema Forest Identity Base */
+@layer base {
+  /* 16px root so rem-based Tailwind sizes stay predictable */
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    font-size: 1rem;
+    line-height: 1.375;
+    background-color: #0F1110;
+    color: #E6EAE8;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: #1F3A2E;
+    color: #2DA771;
+  }
+}
+
+/* Jump-to-message highlight: warm flash that fades out */
+@keyframes mnema-msg-flash {
+  0%, 25% { background-color: rgba(252, 228, 168, 0.16); box-shadow: inset 2px 0 0 #FCE4A8; }
+  100% { background-color: transparent; box-shadow: inset 2px 0 0 transparent; }
+}
+
+.msg-flash {
+  animation: mnema-msg-flash 2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The class is removed after ~2s, so a static tint is enough. */
+  .msg-flash { animation: none; background-color: rgba(252, 228, 168, 0.12); }
+}
+
+/* Sidebar drag and drop: where the item lands, and the item that just moved */
+.drop-line {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: #2DA771;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.drop-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  border: 2px solid #2DA771;
+  background-color: #171918;
+}
+
+@keyframes mnema-nav-flash {
+  0%, 30% { background-color: rgba(45, 167, 113, 0.22); }
+  100% { background-color: transparent; }
+}
+
+.nav-flash {
+  animation: mnema-nav-flash 1.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-flash { animation: none; background-color: rgba(45, 167, 113, 0.14); }
+}
+
+/* While something is dragged: a grabbing hand everywhere, no text selection */
+.mnema-dragging,
+.mnema-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Mnema Subtle Hairline Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #242826;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B413E;
+}
+
+/* Tooltips (directive in src/directives/tooltip.js) */
+.mnema-tooltip {
+  position: fixed;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #1C1E1D;
+  color: #E6EAE8;
+  box-shadow: inset 0 0 0 1px #2B2F2D, 0 4px 12px rgba(0, 0, 0, 0.4);
+  font: 500 12px/16px Inter, system-ui, sans-serif;
+  pointer-events: none;
+  white-space: normal;
+}
+.mnema-tooltip[hidden] { display: none; }
+.mnema-tooltip-kbd {
+  font: 500 12px/16px 'JetBrains Mono', ui-monospace, monospace;
+  color: #8E9C94;
+}
+
+/* Voice status panel: below ~215px the details link and screen-share button
+   move out of the way (they are also in the account menu). */
+.vpanel-wrap { container-type: inline-size; }
+@container (max-width: 215px) {
+  .vp-narrow-hide { display: none; }
+}
+
+/* A message that mentions the reader (@name, @all, @here or a reply to them). */
+.msg-mentions-me {
+  background-color: rgba(224, 162, 58, 0.07);
+  box-shadow: inset 2px 0 0 #e0a23a;
+}
+.msg-mentions-me:hover {
+  background-color: rgba(224, 162, 58, 0.11);
+}

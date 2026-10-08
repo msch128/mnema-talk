@@ -52,6 +52,8 @@ type Deps struct {
 
 // Router holds the assembled handler and the hub (for shutdown/tests).
 type Router struct {
+	// Retained for explicitly constructed native preview; NewRouter mounts no native routes.
+	preview nativePreviewDependencies
 	http.Handler
 	Hub    *ws.Hub
 	cancel context.CancelFunc
@@ -237,7 +239,7 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub, cancel: cancel}, nil
+	return &Router{Handler: r, Hub: hub, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser}}, nil
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from

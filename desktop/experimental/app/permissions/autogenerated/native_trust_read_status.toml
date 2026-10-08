@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-trust-read-status"
+description = "Enables the native_trust_read_status command without any pre-configured scope."
+commands.allow = ["native_trust_read_status"]
+
+[[permission]]
+identifier = "deny-native-trust-read-status"
+description = "Denies the native_trust_read_status command without any pre-configured scope."
+commands.deny = ["native_trust_read_status"]

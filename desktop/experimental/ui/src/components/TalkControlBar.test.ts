@@ -1,0 +1,90 @@
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
+import TalkControlBar from './TalkControlBar.vue'
+import { useVoiceStore } from '../stores/voice'
+import { setLocale } from '../i18n'
+import { requireValue } from '../test-fixtures.fixture'
+const rtc = vi.hoisted(() => ({ leaveVoiceChannel: vi.fn(), startScreenShare: vi.fn(), stopScreenShare: vi.fn(), applyAudioSettings: vi.fn(), toggleCamera: vi.fn() }))
+vi.mock('../composables/useWebRTC', () => ({ useWebRTC: () => rtc }))
+let wrapper: ReturnType<typeof mount<typeof TalkControlBar>> | undefined
+beforeEach(() => { localStorage.clear(); setActivePinia(createPinia()); setLocale('en'); vi.clearAllMocks() })
+afterEach(() => { wrapper?.unmount(); document.body.innerHTML = ''; vi.restoreAllMocks(); vi.useRealTimers() })
+const lastPin = () => wrapper?.emitted('update:pinned')?.at(-1)
+function button(label: string) {
+  if (!wrapper) throw new Error('Missing control bar')
+  return requireValue(wrapper.findAll('button').find(b => b.attributes('aria-label') === label || b.text() === label))
+}
+describe('TalkControlBar', () => {
+  it('dispatches full controls and reflects mute, deafen, camera and sharing states', async () => {
+    const voice = useVoiceStore(); wrapper = mount(TalkControlBar)
+    await wrapper.get('[data-testid="talk-mute"]').trigger('click'); expect(voice.isMuted).toBe(true)
+    await wrapper.get('[data-testid="talk-deafen"]').trigger('click'); expect(voice.isDeafened).toBe(true)
+    await button('Turn on camera').trigger('click'); expect(rtc.toggleCamera).toHaveBeenCalledOnce()
+    voice.isCameraOn = true; await nextTick(); expect(button('Turn off camera').attributes('aria-pressed')).toBe('true')
+    await button('Hide all other cameras').trigger('click'); expect(voice.allCamerasOff).toBe(true)
+    await button('Show other cameras').trigger('click'); expect(voice.allCamerasOff).toBe(false)
+    await button('Share screen').trigger('click'); expect(voice.showScreenShareModal).toBe(true)
+    voice.isScreenSharing = true; await nextTick()
+    await button('Stop sharing').trigger('click'); expect(rtc.stopScreenShare).toHaveBeenCalledOnce()
+    await button('Mute stream audio').trigger('click'); expect(voice.isScreenAudioMuted).toBe(true)
+    await button('Unmute stream audio').trigger('click'); expect(voice.isScreenAudioMuted).toBe(false)
+    const noiseButton = wrapper.findAll('button').find(b => b.attributes('aria-label')?.includes('noise suppression'))
+    await requireValue(noiseButton).trigger('click'); expect(rtc.applyAudioSettings).not.toHaveBeenCalled()
+    voice.localAudioStream = new MediaStream()
+    await requireValue(noiseButton).trigger('click'); expect(rtc.applyAudioSettings).toHaveBeenCalledOnce()
+    await button('Audio settings').trigger('click'); expect(voice.showAudioSettings).toBe(true)
+    await wrapper.get('[data-testid="talk-leave"]').trigger('click'); expect(rtc.leaveVoiceChannel).toHaveBeenCalledOnce()
+  })
+  it('fullscreen capture starts directly and suppresses page dialogs in compact menus', async () => {
+    const voice = useVoiceStore(); wrapper = mount(TalkControlBar, { props: { compact: true, fullscreen: true }, attachTo: document.body })
+    const share = wrapper.findAll('button').find(b => b.attributes('aria-label') === 'Share screen')
+    await requireValue(share).trigger('click'); expect(rtc.startScreenShare).toHaveBeenCalledOnce()
+    voice.isScreenSharing = true; await nextTick()
+    await wrapper.get('[data-testid="talk-more"]').trigger('click'); await flushPromises()
+    expect(document.querySelector('[data-menu-item="audio-settings"]')).toBeNull()
+    expect(document.querySelector('[data-menu-item="stream-settings"]')).toBeNull()
+    requireValue(document.querySelector<HTMLElement>('[data-menu-item="all-cameras-off"]')).click(); await nextTick()
+    expect(voice.allCamerasOff).toBe(true)
+    await wrapper.get('[data-testid="talk-more"]').trigger('click'); await flushPromises()
+    requireValue(document.querySelector<HTMLElement>('[data-menu-item="noise"]')).click(); await nextTick()
+    await wrapper.get('[data-testid="talk-more"]').trigger('click'); await flushPromises()
+    requireValue(document.querySelector<HTMLElement>('[data-menu-item="stream-audio"]')).click(); await nextTick()
+    expect(voice.isScreenAudioMuted).toBe(true)
+  })
+  it('opens audio settings from compact menu and pointerdown on an open menu closes it', async () => {
+    const voice = useVoiceStore(); wrapper = mount(TalkControlBar, { props: { compact: true }, attachTo: document.body })
+    const more = wrapper.get('[data-testid="talk-more"]')
+    await more.trigger('click'); await flushPromises()
+    requireValue(document.querySelector<HTMLElement>('[data-menu-item="audio-settings"]')).click(); await nextTick()
+    expect(voice.showAudioSettings).toBe(true)
+    await more.trigger('click'); await more.trigger('pointerdown')
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    await more.trigger('click'); expect(more.attributes('aria-expanded')).toBe('false')
+    await more.trigger('click'); await more.trigger('click'); expect(more.attributes('aria-expanded')).toBe('false')
+  })
+  it('pins on mouse hover but not touch, swallows first touch on hidden controls, then acts', async () => {
+    vi.useFakeTimers(); const voice = useVoiceStore(); wrapper = mount(TalkControlBar, { props: { visible: false }, attachTo: document.body })
+    expect(lastPin()).toEqual([false])
+    await wrapper.trigger('pointerenter', { pointerType: 'touch' }); expect(lastPin()).toEqual([false])
+    await wrapper.trigger('pointerenter', { pointerType: 'mouse' }); expect(lastPin()).toEqual([true])
+    await wrapper.trigger('pointerleave'); expect(lastPin()).toEqual([false])
+    const mute = wrapper.get('[data-testid="talk-mute"]')
+    await mute.trigger('pointerdown', { pointerType: 'touch' }); await mute.trigger('click'); expect(voice.isMuted).toBe(false)
+    await mute.trigger('click'); expect(voice.isMuted).toBe(true)
+    vi.runOnlyPendingTimers()
+    await wrapper.setProps({ visible: true }); await mute.trigger('pointerdown', { pointerType: 'touch' }); await mute.trigger('click'); expect(voice.isMuted).toBe(false)
+  })
+  it('pins keyboard focus, keeps it while moving inside, and uses legacy fallback when focus-visible fails', async () => {
+    wrapper = mount(TalkControlBar, { attachTo: document.body })
+    const mute = wrapper.get<HTMLButtonElement>('[data-testid="talk-mute"]'); const leave = wrapper.get<HTMLButtonElement>('[data-testid="talk-leave"]')
+    mute.element.focus(); await mute.trigger('focusin'); expect(lastPin()).toEqual([true])
+    await mute.trigger('focusout', { relatedTarget: leave.element }); expect(lastPin()).toEqual([true])
+    await mute.trigger('focusout', { relatedTarget: document.body }); expect(lastPin()).toEqual([false])
+    vi.spyOn(mute.element, 'matches').mockImplementation(() => { throw new Error('Legacy selector unsupported') })
+    await mute.trigger('focusin'); expect(lastPin()).toEqual([true])
+    await mute.trigger('focusout'); expect(lastPin()).toEqual([false])
+    await wrapper.trigger('pointerdown', { pointerType: 'mouse' }); await mute.trigger('focusin'); expect(lastPin()).toEqual([false])
+  })
+})

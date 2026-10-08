@@ -1,0 +1,37 @@
+{
+  "sourceReceiptSha256": "1e6342a82c36200f9380360e64a3382ed41cd9a87581c93f1226ed7ddafdc687",
+  "scope": "actual synthetic PG18 verified-TLS native Rust three-concurrent-response qualification",
+  "members": [
+    {
+      "avatar_url": "",
+      "bio": "",
+      "created_at": "2026-10-08T02:05:40.926897+00:00",
+      "display_name": "preview-admin",
+      "id": "34148bbf-4e5b-4394-9042-264e1a8bbbb7",
+      "locale": "",
+      "message_count": 0,
+      "role": "admin",
+      "status_text": "",
+      "username": "preview-admin",
+      "voice_seconds": 0
+    },
+    {
+      "avatar_url": "",
+      "bio": "",
+      "created_at": "2026-10-08T02:05:40.913200+00:00",
+      "display_name": "preview-user",
+      "id": "96948627-a828-45f7-86d5-77a1d122b5fe",
+      "locale": "",
+      "message_count": 0,
+      "role": "user",
+      "status_text": "",
+      "username": "preview-user",
+      "voice_seconds": 0
+    }
+  ],
+  "statuses": [
+    200,
+    200,
+    200
+  ]
+}

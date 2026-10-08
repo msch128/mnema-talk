@@ -1,5 +1,6 @@
-// Same-origin cookies remain the sole HTTP session transport. Response JSON
-// stays unknown until an explicit runtime decoder establishes its contract.
+// The browser client retains same-origin cookies. A separately constructed native
+// client can inject transport without sharing unauthorized listeners or credentials.
+// Response JSON stays unknown until an explicit runtime decoder accepts it.
 import { t } from '../i18n'
 import { isRecord, type Decoder } from '../types/validation'
 
@@ -58,13 +59,24 @@ export function errorMessage(code: unknown, serverMessage?: unknown): string {
   return message || t('errors.unknown')
 }
 
-type UnauthorizedHandler = (error: ApiError) => void
-const unauthorizedHandlers = new Set<UnauthorizedHandler>()
+export type UnauthorizedHandler = (error: ApiError) => void
 
-export function onUnauthorized(handler: UnauthorizedHandler): () => boolean {
-  unauthorizedHandlers.add(handler)
-  return () => unauthorizedHandlers.delete(handler)
+/** Requests expose no direct transport headers, cookie or credential options.
+ * Path and payload remain caller input; a native adapter must independently
+ * enforce its fixed endpoint registry, body schemas and broker capabilities. */
+export interface ApiRequest {
+  readonly method: string
+  readonly json?: unknown
+  readonly form?: FormData
+  readonly signal?: AbortSignal
 }
+
+export interface ApiReply {
+  readonly status: number
+  readonly body: unknown
+}
+
+export type ApiTransport = (path: string, request: ApiRequest) => Promise<ApiReply>
 
 export interface ApiOptions {
   method?: string
@@ -79,42 +91,88 @@ export interface DecodedApiOptions<T> extends ApiOptions {
   decode: Decoder<T>
 }
 
-export function api<T>(path: string, options: DecodedApiOptions<T>): Promise<T>
-export function api(path: string, options?: ApiOptions): Promise<unknown>
-export async function api<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
-  const { method = 'GET', json, form, signal, decode, shouldNotifyUnauthorized } = options
-  const requestUnauthorizedHandlers = [...unauthorizedHandlers]
+export interface ApiCall {
+  <T>(path: string, options: DecodedApiOptions<T>): Promise<T>
+  (path: string, options?: ApiOptions): Promise<unknown>
+}
+
+// Distinguish local browser serialization failures from connectivity errors.
+class BrowserPreparationFailure {
+  constructor(readonly cause: unknown) {}
+}
+
+export interface ApiClient {
+  readonly api: ApiCall
+  readonly onUnauthorized: (handler: UnauthorizedHandler) => () => boolean
+}
+
+/** Construct once for a native session owner. Transport is immutable and every
+ * client owns its listeners; choosing a profile never replaces global fetch. */
+export function createApiClient(transport: ApiTransport): ApiClient {
+  const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
+  async function request<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
+    const { method = 'GET', json, form, signal, decode, shouldNotifyUnauthorized } = options
+    const requestUnauthorizedHandlers = [...unauthorizedHandlers]
+    const operation: ApiRequest = {
+      method,
+      ...(json !== undefined ? { json } : form ? { form } : {}),
+      ...(signal !== undefined ? { signal } : {})
+    }
+    let response: ApiReply
+    try {
+      response = await transport(path, operation)
+    } catch (error: unknown) {
+      if (error instanceof BrowserPreparationFailure) throw error.cause
+      if (isRecord(error) && error['name'] === 'AbortError') throw error
+      throw new ApiError(0, 'NETWORK', t('errors.network'))
+    }
+    if (!isRecord(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
+      throw new ApiError(0, 'NETWORK', t('errors.network'))
+    }
+    if (response.status === 204) return decode ? decode(null) : null
+    const body = response.body
+    if (response.status < 200 || response.status >= 300) {
+      const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
+      const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
+        ? serverError['code'] : 'INTERNAL_ERROR'
+      const error = new ApiError(response.status, code, errorMessage(code, serverError?.['message']))
+      if (response.status === 401 && path !== '/api/auth/login' && (shouldNotifyUnauthorized?.() ?? true)) {
+        requestUnauthorizedHandlers.forEach(subscription => {
+          if (unauthorizedHandlers.has(subscription)) subscription.handler(error)
+        })
+      }
+      throw error
+    }
+    return decode ? decode(body) : body
+  }
+  return Object.freeze({
+    api: request as ApiCall,
+    onUnauthorized: (handler: UnauthorizedHandler) => {
+      const subscription = { handler }
+      unauthorizedHandlers.add(subscription)
+      return () => unauthorizedHandlers.delete(subscription)
+    }
+  })
+}
+
+const browserTransport: ApiTransport = async (path, { method, json, form, signal }) => {
   const headers: Record<string, string> = {}
   const init: RequestInit = { method, credentials: 'same-origin', headers }
   if (signal !== undefined) init.signal = signal
   if (json !== undefined) {
     headers['Content-Type'] = 'application/json'
-    init.body = JSON.stringify(json)
+    try {
+      init.body = JSON.stringify(json)
+    } catch (error: unknown) {
+      throw new BrowserPreparationFailure(error)
+    }
   } else if (form) {
     init.body = form
   }
-
-  let response: Response
-  try {
-    response = await fetch(path, init)
-  } catch (error: unknown) {
-    if (isRecord(error) && error['name'] === 'AbortError') throw error
-    throw new ApiError(0, 'NETWORK', t('errors.network'))
-  }
-
-  if (response.status === 204) return decode ? decode(null) : null
-  const body: unknown = await response.json().catch(() => null)
-  if (!response.ok) {
-    const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
-    const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
-      ? serverError['code'] : 'INTERNAL_ERROR'
-    const error = new ApiError(response.status, code, errorMessage(code, serverError?.['message']))
-    if (response.status === 401 && path !== '/api/auth/login' && (shouldNotifyUnauthorized?.() ?? true)) {
-      requestUnauthorizedHandlers.forEach(handler => {
-        if (unauthorizedHandlers.has(handler)) handler(error)
-      })
-    }
-    throw error
-  }
-  return decode ? decode(body) : body
+  const response = await fetch(path, init)
+  return { status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) }
 }
+
+const browserClient = createApiClient(browserTransport)
+export const api: ApiCall = browserClient.api
+export const onUnauthorized = browserClient.onUnauthorized

@@ -138,6 +138,22 @@ func (h *Hub) registerPending(c *Client) bool {
 	if h.closed {
 		return false
 	}
+	if c.native != nil {
+		count := 0
+		for existing := range h.clients {
+			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
+				count++
+			}
+		}
+		for existing := range h.pending {
+			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
+				count++
+			}
+		}
+		if count >= 4 {
+			return false
+		}
+	}
 	h.pending[c] = struct{}{}
 	return true
 }
@@ -158,7 +174,7 @@ func (h *Hub) register(c *Client) bool {
 // case registers the in-memory clients used by internal hub callers.
 func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	h.mu.Lock()
-	if h.closed || c.closed.Load() {
+	if h.closed || c.closed.Load() || !c.nativeLive() {
 		h.mu.Unlock()
 		return false
 	}
@@ -236,7 +252,11 @@ func (h *Hub) Close() {
 }
 
 func (h *Hub) unregister(c *Client) {
-	h.dropVoiceForGrace(c)
+	if c.native != nil && c.native.securityClosed.Load() {
+		h.leaveCurrentVoice(c)
+	} else {
+		h.dropVoiceForGrace(c)
+	}
 	h.mu.Lock()
 	if _, ok := h.clients[c]; !ok {
 		h.mu.Unlock()
@@ -282,8 +302,12 @@ func (c *Client) readPump() {
 
 	var budget eventBudget
 	for {
-		_, message, err := c.conn.ReadMessage()
+		messageType, message, err := c.conn.ReadMessage()
 		if err != nil {
+			return
+		}
+		if c.native != nil && messageType != websocket.TextMessage {
+			c.hub.terminateNativeClient(c)
 			return
 		}
 		// Per-connection flood guard: excess events are dropped.
@@ -296,6 +320,13 @@ func (c *Client) readPump() {
 			Payload json.RawMessage `json:"payload"`
 		}
 		if err := json.Unmarshal(message, &ev); err != nil {
+			continue
+		}
+		if c.native != nil && !c.nativeLive() {
+			c.hub.terminateNativeClient(c)
+			return
+		}
+		if c.handleNativeControl(ev.Type, message) {
 			continue
 		}
 		if !budget.allowEvent(ev.Type, len(ev.Payload), now) {
@@ -321,27 +352,49 @@ func (c *Client) writePump() {
 			_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 			return
 		case msg := <-c.send:
-			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if c.native != nil && !c.nativeLive() {
+				c.hub.terminateNativeClient(c)
+				return
+			}
+			deadline := time.Now().Add(writeWait)
+			if c.native != nil {
+				_, _, leaseDeadline := c.native.snapshot()
+				deadline = minTime(deadline, leaseDeadline)
+			}
+			_ = c.conn.SetWriteDeadline(deadline)
 			if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				return
 			}
 		case <-ping.C:
+			if c.native != nil && !c.nativeLive() {
+				c.hub.terminateNativeClient(c)
+				return
+			}
 			_ = c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		case <-revalidate.C:
+			if c.native != nil {
+				continue
+			}
 			// A password change or account deletion ends live connections too.
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			tv, err := c.hub.tokenVersion(ctx, c.User.ID)
 			cancel()
 			if errors.Is(err, pgx.ErrNoRows) || (err == nil && tv != c.tokenVersion) {
-				_ = c.conn.WriteMessage(websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"))
+				c.writeSessionRevokedClose()
 				return
 			} else if err != nil {
 				slog.Warn("revalidate token version failed", "user", c.User.ID, "err", err)
 			}
 		}
 	}
+}
+
+func (c *Client) writeSessionRevokedClose() {
+	// Revalidation may run after the previous ping's write deadline expired.
+	// Control writes use their own fresh bounded deadline before teardown.
+	_ = c.conn.WriteControl(websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session revoked"), time.Now().Add(writeWait))
 }

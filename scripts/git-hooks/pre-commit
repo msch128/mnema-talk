@@ -22,6 +22,7 @@ fi
 # 1. Secret scan of the staged diff. Skips with a warning if gitleaks is not
 #    installed: CI scans every push and PR regardless.
 if command -v gitleaks >/dev/null 2>&1; then
+  node scripts/check-native-test-vectors.mjs --staged
   if ! gitleaks protect --staged --redact --no-banner --config "$repo_root/.gitleaks.toml"; then
     echo -e "${RED}pre-commit: gitleaks flagged a potential secret in the staged changes.${RESET}"
     echo -e "${RED}            Remove it (and rotate it if it is real). Genuine false positives${RESET}"

@@ -28,6 +28,7 @@ env:
   GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
   # Keep in sync with GOVULNCHECK_VERSION in the Makefile.
   GOVULNCHECK_VERSION: v1.8.0
+  CARGO_AUDIT_VERSION: 0.22.2
   TRIVY_VERSION: 0.75.0
   # sha256 of trivy_0.75.0_Linux-64bit.tar.gz from the upstream checksums.txt
   TRIVY_SHA256: c6e65abddb348e25f10549df887045629cf28cc72453cd1c63acb717316b3f3f
@@ -57,6 +58,7 @@ jobs:
       - name: gitleaks
         run: |
           set -euo pipefail
+          node scripts/check-native-test-vectors.mjs
           "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
           "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
 
@@ -231,6 +233,62 @@ jobs:
       - run: npm run build
       - name: npm audit (runtime deps)
         run: npm audit --omit=dev --audit-level=high
+
+  # -- Unsigned development probe; does not qualify gaming or E2EE -----------
+  desktop-probe:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26'
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy
+      - name: Frontend dependencies, tests and local-asset build
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix desktop/ui --no-audit --no-fund
+          npm --prefix desktop/ui run check
+          npm audit --prefix desktop/ui --omit=dev --audit-level=high
+      - name: Rust format, tests and native checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +1.99.0 fmt --manifest-path desktop/Cargo.toml --check
+          cargo +1.99.0 test --locked --manifest-path desktop/Cargo.toml
+          cargo +1.99.0 clippy --locked --manifest-path desktop/Cargo.toml --all-targets --features shell -- -D warnings
+      - name: Build unsigned feasibility probe (not a release)
+        run: npm --prefix desktop run build
+      - name: Verify distribution notices and development manifest tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test desktop/scripts/*.test.mjs
+          node desktop/scripts/collect-licenses.mjs --check
+          node desktop/scripts/artifact-manifest.mjs desktop/target/release/mnema-desktop-probe.exe desktop/target/release/development-manifest.json x86_64-pc-windows-msvc
+      - name: Rust advisory scan (pinned tool; no advisory ignores)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +1.99.0 install cargo-audit --version "$CARGO_AUDIT_VERSION" --locked
+          cargo audit --file desktop/Cargo.lock
+      - name: Upload Windows probe for qualification
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-desktop-feasibility-probe
+          path: |
+            desktop/target/release/mnema-desktop-probe.exe
+            desktop/target/release/development-manifest.json
+            desktop/README.md
+            desktop/THIRD_PARTY_NOTICES.md
+            desktop/licenses/
+            LICENSE
+          if-no-files-found: error
+          retention-days: 7
 
   # -- Container image (build only, never pushed) ----------------------------
   # Same platforms as the release image, so a Dockerfile change that breaks

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-socket-close"
+description = "Enables the native_socket_close command without any pre-configured scope."
+commands.allow = ["native_socket_close"]
+
+[[permission]]
+identifier = "deny-native-socket-close"
+description = "Denies the native_socket_close command without any pre-configured scope."
+commands.deny = ["native_socket_close"]

@@ -1,0 +1,15 @@
+[package]
+name = "mnema-crypto-adapter-candidate"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+openmls = { path = "../../../vendor/openmls/openmls" }
+openmls_rust_crypto = { path = "../../../vendor/openmls/openmls_rust_crypto" }
+openmls_traits = { path = "../../../vendor/openmls/traits" }
+url = "=2.5.8"
+
+[dev-dependencies]
+openmls_basic_credential = { path = "../../../vendor/openmls/basic_credential" }

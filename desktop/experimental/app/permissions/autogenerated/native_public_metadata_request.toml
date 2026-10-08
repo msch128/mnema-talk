@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-public-metadata-request"
+description = "Enables the native_public_metadata_request command without any pre-configured scope."
+commands.allow = ["native_public_metadata_request"]
+
+[[permission]]
+identifier = "deny-native-public-metadata-request"
+description = "Denies the native_public_metadata_request command without any pre-configured scope."
+commands.deny = ["native_public_metadata_request"]

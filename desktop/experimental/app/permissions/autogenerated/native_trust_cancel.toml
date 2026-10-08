@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-trust-cancel"
+description = "Enables the native_trust_cancel command without any pre-configured scope."
+commands.allow = ["native_trust_cancel"]
+
+[[permission]]
+identifier = "deny-native-trust-cancel"
+description = "Denies the native_trust_cancel command without any pre-configured scope."
+commands.deny = ["native_trust_cancel"]

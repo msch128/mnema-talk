@@ -55,7 +55,7 @@ func (h *Hub) SetPresence(userID uuid.UUID, presence string) {
 // setIdle records whether c has gone idle and announces a resulting change.
 func (h *Hub) setIdle(c *Client, idle bool) {
 	h.mu.Lock()
-	if _, ok := h.clients[c]; !ok {
+	if _, ok := h.clients[c]; !ok || !c.nativeLive() {
 		h.mu.Unlock()
 		return
 	}
@@ -63,7 +63,9 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 	c.idle = idle
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
-	h.announcePresence(c.User.ID, before, after)
+	if before != after {
+		c.emitApplicationEvent("presence_update", map[string]any{"user_id": c.User.ID, "status": after}, false, nil)
+	}
 }
 
 // OnlineCount returns the number of distinct online users.

@@ -18,5 +18,7 @@ bin/
 tmp/
 **/node_modules
 web/dist
+# The independent desktop client is not part of the Go server image.
+desktop/
 *.md
 !README.md

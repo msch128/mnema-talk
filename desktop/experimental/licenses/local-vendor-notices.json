@@ -1,0 +1,41 @@
+[
+  {
+    "name": "OpenMLS",
+    "file": "OpenMLS-LICENSE.txt",
+    "sha256": "43e5e3c4b5cca67f9ea912f7e1929702a848aa765d3b3e14f25d3838a5a5565d",
+    "commit": "3a3e35de3feeca8f6605143c464d5452ae584d43",
+    "provenance": "verbatim root license from exact locally pinned upstream source; source files included in corresponding source bundle"
+  },
+  {
+    "name": "SFrame",
+    "file": "SFrame-LICENSE-APACHE.txt",
+    "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+    "commit": "c11d7f452c6c947ed5ea6a13c35ce600ba1584e2",
+    "provenance": "verbatim root license from exact locally pinned upstream source; source files included in corresponding source bundle"
+  },
+  {
+    "name": "SFrame",
+    "file": "SFrame-LICENSE-MIT.txt",
+    "sha256": "f9c4c77baa3828004ee54b8a4f2db2e88ed44a6237a493965bf551fac0fcb62d",
+    "commit": "c11d7f452c6c947ed5ea6a13c35ce600ba1584e2",
+    "provenance": "verbatim root license from exact locally pinned upstream source; source files included in corresponding source bundle"
+  },
+  {
+    "name": "DeepFilterNet3/mezon adapted WASM glue",
+    "file": "DeepFilterNet3-LICENSE-APACHE.txt",
+    "sha256": "5f907b170974f449d8426342af1168d84599de1b7682f8ec9d46a0816d930891",
+    "provenance": "verbatim license attribution already shipped with unchanged vendored Vue DeepFilterNet source; transitive wasm component source/license closure needs separate verification"
+  },
+  {
+    "name": "DeepFilterNet3/mezon adapted WASM glue",
+    "file": "DeepFilterNet3-LICENSE-MIT.txt",
+    "sha256": "c50e9ee0999923305c5cc8e8bddcb3f841adf3b1f9d55257f5f3a139c3501075",
+    "provenance": "verbatim license attribution already shipped with unchanged vendored Vue DeepFilterNet source; transitive wasm component source/license closure needs separate verification"
+  },
+  {
+    "name": "tailwindcss",
+    "file": "tailwindcss-LICENSE.txt",
+    "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+    "provenance": "verbatim pinned existing npm build package license, conservatively retained for generated CSS"
+  }
+]

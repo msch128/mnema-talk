@@ -1,0 +1,13 @@
+{
+  "identifier": "gaming-fixture",
+  "description": "Local synthetic projections only; no native, media or window commands.",
+  "local": true,
+  "windows": [
+    "voice-widget",
+    "game-overlay"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten"
+  ]
+}

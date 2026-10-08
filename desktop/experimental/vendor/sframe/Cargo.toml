@@ -1,0 +1,93 @@
+[package]
+edition = "2024"
+license = "MIT/Apache-2.0"
+name = "sframe"
+rust-version = "1.85"
+version = "2.0.0"
+
+authors = [
+  "Tobias Waurick <tobtherock@proton.me>",
+  "Hendrik Sollich <hendrik.sollich@goto.com>",
+  "Richard Haehne <richard.haehne@goto.com>",
+]
+
+description = "pure rust implementation of SFrame (RFC 9605)"
+repository = "https://github.com/TobTheRock/sframe-rs"
+documentation = "https://docs.rs/sframe/"
+readme = "README.md"
+
+keywords = ["rfc9605", "encryption", "sframe", "secure-frame", "wasm"]
+categories = ["cryptography", "wasm", "web-programming", "network-programming"]
+
+[build-dependencies]
+cfg_aliases = "0.2"
+
+[dependencies]
+bitfield = "0.19"
+cfg-if = "1.0"
+log = "0.4"
+thiserror = "2.0"
+zeroize = { version = "1.8", features = ["derive"] }
+
+[dependencies.ring]
+version = "0.17"
+optional = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+ring = { version = "0.17", features = [
+  "wasm32_unknown_unknown_js",
+], optional = true }
+getrandom = { version = "0.4", features = ["wasm_js"],  optional = true }
+
+[dependencies.openssl]
+version = "0.10"
+features = ["vendored"]
+optional = true
+
+[dependencies.getrandom]
+version = "0.4"
+optional = true
+
+[dependencies.aes-gcm]
+version = "0.11.0"
+optional = true
+
+[dependencies.hkdf]
+version = "0.13"
+optional = true
+
+[dependencies.sha2]
+version = "0.11"
+optional = true
+
+[dependencies.cipher]
+version = "0.5"
+optional = true
+
+[dependencies.ctr]
+version = "0.10"
+optional = true
+
+[dev-dependencies]
+bbqueue = "0.7"
+cgisf_lib = "0.2"
+clap = { version = "4.5", features = ["derive"] }
+criterion = { version = "0.8", features = ["html_reports"] }
+hex = "0.4"
+lazy_static = "1.5"
+mockall = "0.15.0"
+phf = { version = "0.14", features = ["macros"] }
+pretty_assertions = "1.3"
+rand = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+simple_logger = "5.0"
+test-case = "3.1"
+
+[features]
+default = ["ring"]
+rust-crypto = ["aes-gcm", "hkdf", "sha2", "cipher", "ctr", "getrandom"]
+
+[[bench]]
+name = "bench_main"
+harness = false

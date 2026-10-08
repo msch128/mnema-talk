@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-auth-refresh"
+description = "Enables the native_auth_refresh command without any pre-configured scope."
+commands.allow = ["native_auth_refresh"]
+
+[[permission]]
+identifier = "deny-native-auth-refresh"
+description = "Denies the native_auth_refresh command without any pre-configured scope."
+commands.deny = ["native_auth_refresh"]

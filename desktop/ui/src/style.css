@@ -1,0 +1,79 @@
+/* Existing Mnema Forest tokens: web/tailwind.config.ts and web/src/style.css.
+   Control density follows LoginModal.vue and the Sidebar.vue header. */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/inter-latin-600-normal.woff2') format('woff2');
+}
+:root {
+  color-scheme: dark;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.375;
+  background: #0F1110;
+  color: #E6EAE8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 760px; margin: 0 auto; padding: 0 24px 16px; }
+header { display: flex; align-items: center; gap: 10px; min-height: 56px; border-bottom: 1px solid #242826; }
+.brand-mark { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; background: #143D2E; color: #8CCBAA; border: 1px solid #8CCBAA4D; font-weight: 600; }
+h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+.badge { margin-left: auto; color: #8E9C94; font-size: 12px; }
+section { padding: 18px 0; border-bottom: 1px solid #242826; }
+h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+p { margin: 10px 0 0; }
+.help, footer { color: #8E9C94; font-size: 12px; line-height: 1.5; }
+label { display: block; margin-bottom: 4px; color: #A3B3AA; font-size: 12px; font-weight: 500; }
+.row { display: flex; align-items: center; gap: 8px; }
+input { flex: 1; min-width: 0; height: 36px; border: 1px solid #6E7672; border-radius: 6px; background: #1A1E1C; color: #E6EAE8; padding: 8px 12px; font: inherit; }
+input::placeholder { color: #8E9C94; }
+input:focus { border-color: #2DA771; }
+button { flex-shrink: 0; min-height: 36px; padding: 8px 12px; border: 1px solid #2B2F2D; border-radius: 6px; background: #1C1E1D; color: #E6EAE8; font: inherit; font-weight: 500; cursor: pointer; }
+button:hover { background: #202423; }
+form button { background: #2DA771; color: #0A0A0B; border-color: #2DA771; }
+form button:hover { background: #36BD81; border-color: #36BD81; }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid #2DA771; outline-offset: 2px; }
+dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 8px; margin: 10px 0 0; font-size: 12px; }
+dt { color: #A3B3AA; }
+dd { margin: 0; overflow-wrap: anywhere; }
+.status { color: #A3B3AA; font-size: 12px; }
+.runtime-list { list-style: none; padding: 0; margin: 0; }
+.runtime-list li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; color: #A3B3AA; font-size: 12px; }
+.runtime-list span { color: #8E9C94; }
+[role=alert] { color: #F35549; font-size: 12px; line-height: 1.5; }
+details { margin-top: 14px; color: #8E9C94; font-size: 12px; }
+summary { cursor: pointer; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+footer { margin-top: 12px; }
+::selection { background: #1F3A2E; color: #2DA771; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #242826; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #3B413E; }
+@media (max-width: 620px) {
+  main { padding: 0 16px 16px; }
+  header { flex-wrap: wrap; gap: 8px; }
+  .badge { font-size: 12px; }
+  .row { flex-direction: column; align-items: stretch; }
+  dl { grid-template-columns: 1fr; }
+}

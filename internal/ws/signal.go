@@ -40,11 +40,11 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 		return
 	}
 	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil {
+	if cur == nil || c.hub.SFU == nil || !c.nativeLive() {
 		return
 	}
 	room := c.hub.SFU.Room(*cur)
-	if room == nil {
+	if room == nil || !c.nativeLive() {
 		return
 	}
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {

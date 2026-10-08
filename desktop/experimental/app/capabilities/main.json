@@ -1,0 +1,23 @@
+{
+  "identifier": "main",
+  "description": "Local bundled main auth/metadata preview; native ownership enforced again at IPC registry. No E2EE/media/content grant.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-native-context",
+    "allow-native-connect",
+    "allow-native-metadata-request",
+    "allow-native-public-metadata-request",
+    "allow-native-auth-login",
+    "allow-native-auth-me",
+    "allow-native-auth-refresh",
+    "allow-native-auth-logout",
+    "allow-native-disconnect",
+    "allow-native-request-cancel",
+    "allow-native-socket-open",
+    "allow-native-socket-send",
+    "allow-native-socket-close",
+    "allow-native-personal-metadata-request"
+  ]
+}

@@ -1,0 +1,19 @@
+[package]
+name = "mnema-private-vault-facade"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "AGPL-3.0-only"
+
+[dependencies]
+sha2 = "=0.10.9"
+zeroize = "=1.9.1"
+url = "=2.5.8"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Credentials", "Win32_Security_Authorization", "Win32_System_Threading"] }
+
+[features]
+default = []
+native-facade = []
+test-fixture = ["native-facade"]

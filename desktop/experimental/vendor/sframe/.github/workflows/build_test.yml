@@ -1,0 +1,106 @@
+name: Build & Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+  schedule:
+    - cron: "0 5 * * 4" # 5 o'clock utc on thursdays
+
+jobs:
+  build-test-native:
+    name: build and test native
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          #- stable minus 2 releases
+          #- beta
+        feature:
+          - ring
+          - openssl
+          - rust-crypto
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: clippy, rustfmt
+
+      - name: check 
+        run: cargo check --all-targets --no-default-features --features ${{ matrix.feature }}
+
+      - name: test
+        run: cargo test --all-targets --no-default-features --features ${{ matrix.feature }}
+
+      # --all-targets skips doctests, which is where the crate's front page example lives
+      - name: test doc
+        run: cargo test --doc --no-default-features --features ${{ matrix.feature }}
+
+      - name: clippy
+        run: cargo clippy --all-targets --no-default-features --features ${{ matrix.feature }} -- -Dwarnings
+
+      # test packaging to avoid surprises at release time
+      - name: package
+        run: cargo package
+
+  # No backend feature: only the generic crypto traits are exposed for custom backends.
+  # Examples and benches need a concrete backend, so we test the lib only.
+  test-no-backend:
+    name: test no backend (custom crypto)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: test
+        run: cargo test --lib --no-default-features
+
+      - name: clippy
+        run: cargo clippy --lib --tests --no-default-features -- -Dwarnings
+
+  # The examples which are crates of their own, so `cargo check --all-targets` does not see them
+  build-examples:
+    name: build standalone examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+
+      # needs sframe without a crypto backend
+      - name: run custom crypto backend example
+        working-directory: examples/custom-crypto-backend
+        run: cargo run
+
+      # needs the wasm32 target and the unstable web-sys APIs its .cargo/config.toml enables
+      - name: build wasm webrtc example
+        working-directory: examples/wasm-webrtc
+        run: cargo build --target wasm32-unknown-unknown
+
+  build-wasm:
+    name: build wasm32
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature:
+          - ring
+          - rust-crypto
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown 
+      - name: build
+        run: cargo build --target wasm32-unknown-unknown --no-default-features --features  ${{ matrix.feature }}

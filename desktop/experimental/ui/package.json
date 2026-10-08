@@ -1,0 +1,55 @@
+{
+  "name": "mnema-talk-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.native-media-worker.json && vite build",
+    "preview": "vite preview",
+    "test": "vitest run src/NativeBootstrap.test.ts src/components/NativeChatArea.test.ts src/components/NativeTrustControl.test.ts src/components/NativeTrustSetup.test.ts src/components/LegalModal.native.test.ts src/composables/useWebRTC.native.test.ts src/stores/nativeReconnect.test.ts src/lib/nativeChat.test.ts src/lib/nativeTransport.test.ts src/lib/nativeTrustCapture.test.ts src/lib/nativeTauriChannels.test.ts src/lib/nativeMemberContract.test.ts src/lib/nativeProfileIntent.test.ts src/lib/nativeChatCache.test.ts src/lib/nativeChatCapture.test.ts",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && vue-tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p tsconfig.native-media-worker.json",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@lucide/vue": "^1.52.0",
+    "@sapphi-red/web-noise-suppressor": "^0.4.1",
+    "@tauri-apps/api": "2.12.1",
+    "emoji-picker-element": "^1.29.1",
+    "emoji-picker-element-data": "^1.8.0",
+    "pinia": "^4.0.3",
+    "swagger-ui-dist": "^5.33.1",
+    "vue": "^3.5.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "24.19.1",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "@vitest/coverage-v8": "^5.0.3",
+    "@vue/compiler-sfc": "3.5.43",
+    "@vue/test-utils": "^2.5.1",
+    "@vue/tsconfig": "0.9.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^10.12.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "fake-indexeddb": "6.2.5",
+    "globals": "^17.13.0",
+    "happy-dom": "^20.14.5",
+    "jiti": "2.7.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.14",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3",
+    "vue-eslint-parser": "10.4.1",
+    "vue-tsc": "3.3.12"
+  },
+  "overrides": {
+    "braces": "^3.0.3",
+    "micromatch": "^4.0.8",
+    "postcss-selector-parser": "7.1.6"
+  }
+}

@@ -81,11 +81,12 @@ type TrackInfo struct {
 }
 
 type Peer struct {
-	ID        uuid.UUID
-	PC        *webrtc.PeerConnection
-	SendOffer func(offer webrtc.SessionDescription)
-	SendICE   func(candidate *webrtc.ICECandidateInit)
-	room      *Room
+	authorizeMedia func() bool
+	ID             uuid.UUID
+	PC             *webrtc.PeerConnection
+	SendOffer      func(offer webrtc.SessionDescription)
+	SendICE        func(candidate *webrtc.ICECandidateInit)
+	room           *Room
 
 	// negotiationPending is set when tracks changed while an offer was still
 	// unanswered; the next answer triggers another round.
@@ -105,7 +106,9 @@ type Peer struct {
 }
 
 type Room struct {
-	ID uuid.UUID
+	nativeAPI           func(func() bool) (*webrtc.API, error)
+	sourceAuthorization *sourceAuthorizationRegistry
+	ID                  uuid.UUID
 	// peers maps user → their current connection; a rejoin replaces it.
 	peers map[uuid.UUID]*Peer
 	// trackLocals is keyed by the local track ID, which is scoped to the
@@ -131,8 +134,9 @@ type Room struct {
 }
 
 type SFU struct {
-	apiMu sync.RWMutex
-	api   *webrtc.API
+	sourceAuthorization *sourceAuthorizationRegistry
+	apiMu               sync.RWMutex
+	api                 *webrtc.API
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
 	announced []string
 	portMin   uint16
@@ -178,7 +182,8 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	if err != nil {
 		return nil, err
 	}
-	api, err := buildAPIWithMux(portMin, portMax, announceIPs, mux)
+	sources := &sourceAuthorizationRegistry{}
+	api, err := buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, sources)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -192,15 +197,16 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	}
 
 	return &SFU{
-		api:          api,
-		announced:    append([]string(nil), announceIPs...),
-		portMin:      portMin,
-		portMax:      portMax,
-		udpMux:       mux,
-		iceServers:   iceServers,
-		offerTimeout: defaultOfferTimeout,
-		rooms:        make(map[uuid.UUID]*Room),
-		notifier:     &mediaNotifier{},
+		api:                 api,
+		sourceAuthorization: sources,
+		announced:           append([]string(nil), announceIPs...),
+		portMin:             portMin,
+		portMax:             portMax,
+		udpMux:              mux,
+		iceServers:          iceServers,
+		offerTimeout:        defaultOfferTimeout,
+		rooms:               make(map[uuid.UUID]*Room),
+		notifier:            &mediaNotifier{},
 	}, nil
 }
 
@@ -223,13 +229,22 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPIWithMux(s.portMin, s.portMax, ips, s.udpMux)
+	api, err := buildAPIWithAuthorization(s.portMin, s.portMax, ips, s.udpMux, nil, s.sourceAuthorization)
 	if err != nil {
 		return err
 	}
 	s.api = api
 	s.announced = append([]string(nil), ips...)
 	return nil
+}
+
+func (s *SFU) nativeAPI(authorize func() bool) (*webrtc.API, error) {
+	s.apiMu.RLock()
+	defer s.apiMu.RUnlock()
+	if s.closed.Load() || authorize == nil {
+		return nil, errSFUClosed
+	}
+	return buildAPIWithAuthorization(s.portMin, s.portMax, s.announced, s.udpMux, authorize, s.sourceAuthorization)
 }
 
 func (s *SFU) currentAPI() *webrtc.API {
@@ -243,6 +258,10 @@ func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error
 }
 
 func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (*webrtc.API, error) {
+	return buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, nil)
+}
+
+func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry) (*webrtc.API, error) {
 	settingEngine := webrtc.SettingEngine{}
 	if onlyLoopbackAnnouncements(announceIPs) {
 		settingEngine.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
@@ -280,6 +299,10 @@ func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPM
 	// NACK (retransmissions both ways), RTCP sender/receiver reports and
 	// transport-wide congestion control feedback to the publishers.
 	registry := &interceptor.Registry{}
+	if authorize != nil || sources != nil {
+		// First is the innermost writer, beneath retransmission caches.
+		registry.Add(mediaAuthorizationFactory{authorize: authorize, sources: sources})
+	}
 	if err := webrtc.RegisterDefaultInterceptors(mediaEngine, registry); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
@@ -316,6 +339,19 @@ func (s *SFU) AllMediaStates() map[uuid.UUID]map[uuid.UUID]MediaState {
 // connection of the same user. Lookup and join happen under one lock, so a
 // concurrent RemovePeer cannot drop the room in between.
 func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Room, *Peer, error) {
+	return s.joinAuthorized(channelID, userID, sendOffer, sendICE, nil)
+}
+
+// JoinWithAuthorization attaches native transport authorization to every media
+// publication and recipient binding. No caller-supplied key/crypto trust is used.
+func (s *SFU) JoinWithAuthorization(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Room, *Peer, error) {
+	if authorize == nil || !authorize() {
+		return nil, nil, errors.New("native media authorization required")
+	}
+	return s.joinAuthorized(channelID, userID, sendOffer, sendICE, authorize)
+}
+
+func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Room, *Peer, error) {
 	s.roomsMu.Lock()
 	defer s.roomsMu.Unlock()
 	if s.closed.Load() {
@@ -325,15 +361,17 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 	r, ok := s.rooms[channelID]
 	if !ok {
 		r = &Room{
-			ID:           channelID,
-			peers:        make(map[uuid.UUID]*Peer),
-			trackLocals:  make(map[string]*TrackInfo),
-			subs:         make(map[uuid.UUID]*Subscriptions),
-			lastMedia:    make(map[uuid.UUID]MediaState),
-			notifier:     s.notifier,
-			api:          s.currentAPI(),
-			iceServers:   s.iceServers,
-			offerTimeout: s.offerTimeout,
+			ID:                  channelID,
+			nativeAPI:           s.nativeAPI,
+			sourceAuthorization: s.sourceAuthorization,
+			peers:               make(map[uuid.UUID]*Peer),
+			trackLocals:         make(map[string]*TrackInfo),
+			subs:                make(map[uuid.UUID]*Subscriptions),
+			lastMedia:           make(map[uuid.UUID]MediaState),
+			notifier:            s.notifier,
+			api:                 s.currentAPI(),
+			iceServers:          s.iceServers,
+			offerTimeout:        s.offerTimeout,
 		}
 		s.rooms[channelID] = r
 	}
@@ -341,7 +379,7 @@ func (s *SFU) Join(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDes
 	r.mu.Lock()
 	r.api = s.currentAPI()
 	r.mu.Unlock()
-	peer, err := r.JoinPeer(userID, sendOffer, sendICE)
+	peer, err := r.joinPeer(userID, sendOffer, sendICE, authorize)
 	if err != nil {
 		if r.empty() {
 			delete(s.rooms, channelID)
@@ -411,6 +449,10 @@ func trackKey(userID uuid.UUID, trackID string) string {
 }
 
 func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit)) (*Peer, error) {
+	return r.joinPeer(userID, sendOffer, sendICE, nil)
+}
+
+func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Peer, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -422,7 +464,18 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		go func() { _ = existing.PC.Close() }()
 	}
 
-	pc, err := r.api.NewPeerConnection(webrtc.Configuration{
+	api := r.api
+	if authorize != nil {
+		if r.nativeAPI == nil {
+			return nil, errors.New("native media authorization unavailable")
+		}
+		var err error
+		api, err = r.nativeAPI(authorize)
+		if err != nil {
+			return nil, err
+		}
+	}
+	pc, err := api.NewPeerConnection(webrtc.Configuration{
 		ICEServers: r.iceServers,
 	})
 	if err != nil {
@@ -442,11 +495,12 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	pinCodecOrder(screenTr, cameraTr)
 
 	peer := &Peer{
-		ID:        userID,
-		PC:        pc,
-		SendOffer: sendOffer,
-		SendICE:   sendICE,
-		room:      r,
+		authorizeMedia: authorize,
+		ID:             userID,
+		PC:             pc,
+		SendOffer:      sendOffer,
+		SendICE:        sendICE,
+		room:           r,
 	}
 
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
@@ -566,7 +620,7 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
 			continue
 		}
-		if info.superseded.Load() {
+		if info.superseded.Load() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 			return
 		}
 		// Header extension IDs are negotiated per connection; the
@@ -681,7 +735,15 @@ func (r *Room) signalPeer(peer *Peer) {
 		if existingSenders[trackID] {
 			continue
 		}
-		sender, err := peer.PC.AddTrack(info.Track)
+		var recipientTrack webrtc.TrackLocal = info.Track
+		if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
+			var source func() bool
+			if info.publisher != nil && info.publisher.authorizeMedia != nil {
+				source = info.publisher.mediaAuthorized
+			}
+			recipientTrack = &authorizedTrack{TrackLocal: info.Track, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
+		}
+		sender, err := peer.PC.AddTrack(recipientTrack)
 		if err != nil {
 			// E.g. the viewer's browser cannot receive the publisher's codec:
 			// it then gets no media from this track.
@@ -821,7 +883,7 @@ func (r *Room) RequestSourceKeyframe(publisherID uuid.UUID, source Source) {
 func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.mu.Lock()
 	// The publisher may have been replaced while its track was arriving.
-	if r.peers[info.SenderID] != info.publisher || info.superseded.Load() {
+	if r.peers[info.SenderID] != info.publisher || info.superseded.Load() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 		r.mu.Unlock()
 		return
 	}
