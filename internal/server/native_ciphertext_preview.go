@@ -212,7 +212,9 @@ func parseNativeCiphertextQuery(method string, target *url.URL) (nativeCiphertex
 			paging.After = n
 		case "limit":
 			n, ok := nativeCiphertextDecimal(value[0], 1, 100)
-			if !ok {
+			// Keep the narrowing bounds at the conversion site as well as in
+			// the shared decimal parser, including on 32-bit targets.
+			if !ok || n < 1 || n > 100 {
 				return invalid()
 			}
 			paging.Limit = int(n)

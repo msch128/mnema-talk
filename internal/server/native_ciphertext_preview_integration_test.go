@@ -186,7 +186,7 @@ func TestNativeCiphertextPreviewHTTPSClosedSchemaAndBoundary(t *testing.T) {
 	for _, q := range []string{"?", "?token=x", "?after=1", "?limit=1&after=0"} {
 		a.rawRequest(t, http.MethodPost, path+q, body, grant.Access, nil, 400)
 	}
-	for _, q := range []string{"?", "?token=x", "?limit=101", "?after=-1", "?after=00", "?after=0&after=0", "?limit=1&after=0"} {
+	for _, q := range []string{"?", "?token=x", "?limit=101", "?limit=2147483647", "?limit=2147483648", "?limit=9223372036854775807", "?limit=9223372036854775808", "?after=-1", "?after=00", "?after=0&after=0", "?limit=1&after=0"} {
 		a.request(t, http.MethodGet, path+q, nil, grant.Access, nil, 400)
 	}
 	a.rawRequest(t, http.MethodGet, path, body, grant.Access, nil, 400)

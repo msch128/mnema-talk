@@ -88,7 +88,7 @@ func TestNativeCiphertextCanonicalPaginationAndChannel(t *testing.T) {
 			t.Fatal("valid fixed pagination denied")
 		}
 	}
-	for _, query := range []string{"after=-1", "after=01", "after=+1", "after=9223372036854775808", "limit=0", "limit=101", "limit=1&after=0", "after=0&after=1", "unknown=1", "a=1&b=2&c=3", "after=%31", "%61fter=1", "after=1&", "after=1;limit=1", "after=%zz", "limit="} {
+	for _, query := range []string{"after=-1", "after=01", "after=+1", "after=9223372036854775808", "limit=0", "limit=101", "limit=2147483647", "limit=2147483648", "limit=9223372036854775807", "limit=9223372036854775808", "limit=1&after=0", "after=0&after=1", "unknown=1", "a=1&b=2&c=3", "after=%31", "%61fter=1", "after=1&", "after=1;limit=1", "after=%zz", "limit="} {
 		u := &url.URL{RawQuery: query}
 		if _, err := parseNativeCiphertextQuery(http.MethodGet, u); err == nil {
 			t.Fatal("invalid pagination admitted")
