@@ -1,0 +1,23 @@
+scripts/upgrade-postgres.sh
+  s_0ae926f6f8634a::t_448cf8d6aa8ef0 81-92
+Makefile
+  s_0ae926f6f8634a::t_448cf8d6aa8ef0 85
+scripts/tests/test_upgrade_mount_guard.py
+  s_0ae926f6f8634a::t_448cf8d6aa8ef0 1-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "81ca16781550fd866ebcb029afa560e38abb29fe",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
