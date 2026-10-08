@@ -1,0 +1,34 @@
+internal/auth/native_session_integration_test.go
+  s_0a885d5f0c193a::t_3dd55a1ac8072d 331-372
+Dockerfile
+  s_0a885d5f0c193a::t_62b2b160e1ce88 34
+internal/auth/native_lease_integration_test.go
+  s_0a885d5f0c193a::t_3dd55a1ac8072d 11
+  s_0a885d5f0c193a::t_1bcd82284d261e 12,17,71-73,118-155
+  s_0a885d5f0c193a::t_287782e2c17b93 156-157
+go.mod
+  s_0a885d5f0c193a::t_e8c16058f4ed77 5,26
+internal/auth/native_transaction_integration_test.go
+  s_0a885d5f0c193a::t_3dd55a1ac8072d 11,15-73
+  s_0a885d5f0c193a::t_00f545156da415 74
+THIRD_PARTY_NOTICES.md
+  s_0a885d5f0c193a::t_f831913ed9b0f7 116
+go.sum
+  s_0a885d5f0c193a::t_881dc8959d7737 207-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b9ae64a911e60fe049b7fe9189a5e384aca2efb",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
