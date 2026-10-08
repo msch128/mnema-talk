@@ -1,3 +1,5 @@
+import { isDesktopRuntime } from './desktopRuntime'
+import { nativeApiTransport } from './nativeTransport'
 // The browser client retains same-origin cookies. A separately constructed native
 // client can inject transport without sharing unauthorized listeners or credentials.
 // Response JSON stays unknown until an explicit runtime decoder accepts it.
@@ -173,6 +175,11 @@ const browserTransport: ApiTransport = async (path, { method, json, form, signal
   return { status: response.status, body: response.status === 204 ? null : await response.json().catch(() => null) }
 }
 
-const browserClient = createApiClient(browserTransport)
+const browserClient = createApiClient(async (path, request) => {
+  if (isDesktopRuntime()) {
+    return nativeApiTransport(path, request)
+  }
+  return browserTransport(path, request)
+})
 export const api: ApiCall = browserClient.api
 export const onUnauthorized = browserClient.onUnauthorized

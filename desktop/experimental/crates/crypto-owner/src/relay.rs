@@ -42,10 +42,14 @@ impl NativeChatOwner {
         // An uncertain POST preserves the exact SDK outbox/event/body. Caller
         // can prepare the same event/body and retry identical bytes only.
         let response = client
-            .request_opaque_relay(&lease, auth, NativeOpaqueRelayOperation::Publish(input))
+            .request_opaque_relay_retained(
+                &lease,
+                auth.clone(),
+                NativeOpaqueRelayOperation::Publish(input),
+            )
             .await
             .map_err(|_| Error::Auth)?;
-        self.scope()?;
+        self.check_admitted_scope(&auth)?;
         if self.current(now()?)? != (epoch, generation) {
             self.retire();
             return Err(Error::Binding);
@@ -90,16 +94,25 @@ impl NativeChatOwner {
         &mut self,
         publish: impl FnOnce(&[NativeChatDisplay]) -> Result<T>,
     ) -> Result<T> {
-        let auth = self.scope()?;
+        let admitted = Arc::new(self.scope()?);
+        self.receive_page_retained(admitted, publish).await
+    }
+    pub async fn receive_page_retained<T>(
+        &mut self,
+        auth: Arc<NativeAuthenticatedScope>,
+        publish: impl FnOnce(&[NativeChatDisplay]) -> Result<T>,
+    ) -> Result<T> {
+        self.check_admitted_scope(&auth)?;
+        self.enter_chat_protocol(false)?;
         let when = now()?;
         self.current(when)?;
         let client = self.client.clone();
         let lease = self.lease.clone();
         let after = self.cursor;
         let response = client
-            .request_opaque_relay(
+            .request_opaque_relay_retained(
                 &lease,
-                auth,
+                auth.clone(),
                 NativeOpaqueRelayOperation::Page {
                     channel: self.owner.channel,
                     after,
@@ -107,7 +120,7 @@ impl NativeChatOwner {
             )
             .await
             .map_err(|_| Error::Auth)?;
-        self.scope()?;
+        self.check_admitted_scope(&auth)?;
         let when = now()?;
         self.current(when)?;
         let receipt = response.opaque_relay_receipt().ok_or(Error::Binding)?;
@@ -169,7 +182,16 @@ impl NativeChatOwner {
             self.retire();
             return Err(Error::Binding);
         }
-        self.current(now()?)?;
+        // These checks happen AFTER real stateful receive. If the original
+        // admitted scope/epoch is lost now, retire rather than re-read consumed
+        // ciphertext under a successor admission.
+        if let Err(error) = now()
+            .and_then(|when| self.current(when))
+            .and_then(|_| self.check_admitted_scope(&auth))
+        {
+            self.retire();
+            return Err(error);
+        }
         match client.with_opaque_relay_publication(&lease, response, |_| publish(&rows)) {
             Ok(Ok(value)) => {
                 self.cursor = next;

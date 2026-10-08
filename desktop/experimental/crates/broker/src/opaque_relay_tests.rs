@@ -357,3 +357,68 @@ async fn opaque_page_event_ids_are_unique_per_authenticated_account_not_globally
         Err(Error::Protocol)
     ));
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn retained_relay_keeps_exact_admitted_scope_through_http_and_final_enqueue() {
+    let fixture = Fixture::start();
+    let (client, lease, profile) = selected_authentication_client(&fixture).await;
+    let authentication = admitted_authentication_login(&client, &lease, profile, None).await;
+    let original = Arc::new(
+        client
+            .authenticated_scope_with_intent(&lease, authentication)
+            .unwrap(),
+    );
+    let deadline = original.monotonic_access_deadline();
+    assert_eq!(Arc::strong_count(&original), 1);
+    let receipt = client
+        .request_opaque_relay_retained(&lease, original.clone(), event())
+        .await
+        .unwrap();
+    assert_eq!(Arc::strong_count(&original), 2);
+    assert_eq!(original.monotonic_access_deadline(), deadline);
+    let refresh = client
+        .request_with_authentication_admission(
+            &lease,
+            Uuid::new_v4(),
+            Some(profile),
+            Some(authentication),
+            crate::NativeRequest::Refresh,
+            || {},
+        )
+        .await
+        .unwrap();
+    client.commit(&lease, refresh).unwrap();
+    assert_eq!(
+        client.authentication_intent(&lease).unwrap(),
+        Some(authentication)
+    );
+    let published = std::cell::Cell::new(false);
+    assert!(matches!(
+        client.with_opaque_relay_publication(&lease, receipt, |_| published.set(true)),
+        Err(Error::Stale)
+    ));
+    assert!(!published.get());
+    assert_eq!(Arc::strong_count(&original), 1);
+    assert!(matches!(
+        client
+            .request_opaque_relay_retained(&lease, original.clone(), event())
+            .await,
+        Err(Error::Stale)
+    ));
+    assert_eq!(fixture.calls(&post()).len(), 1);
+    let current = Arc::new(
+        client
+            .authenticated_scope_with_intent(&lease, authentication)
+            .unwrap(),
+    );
+    let receipt = client
+        .request_opaque_relay_retained(&lease, current.clone(), event())
+        .await
+        .unwrap();
+    client
+        .with_opaque_relay_publication(&lease, receipt, |_| published.set(true))
+        .unwrap();
+    assert!(published.get());
+    assert_eq!(fixture.calls(&post()).len(), 2);
+    client.detach_main_window(&lease).unwrap();
+}

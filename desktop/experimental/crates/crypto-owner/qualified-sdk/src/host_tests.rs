@@ -605,3 +605,314 @@ fn actual_suppressed_sender_private_ratchet_never_releases_ciphertext_or_retries
     assert!(sdk.send_chat(CHAT, "never retry encrypt", NOW).is_err());
     assert!(sdk.pending_chat_for_native_publish(CHAT, NOW).is_err());
 }
+
+const COMMUNITY_ACCOUNT: &str = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const COMMUNITY_DEVICE: &str = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+fn community_sdk(keys: &FixtureSeeds, path: &Path) -> Sdk {
+    let identity = format!("{COMMUNITY_ACCOUNT}.{COMMUNITY_DEVICE}");
+    let subject = NativeAdminSubject::from_native_admin_workflow(
+        COMMUNITY_ACCOUNT,
+        COMMUNITY_DEVICE,
+        identity.as_bytes(),
+    )
+    .unwrap();
+    let fresh = FreshCommunity::provision_first_group(path, keys, scope(), subject, NOW).unwrap();
+    let (_, transfer) = fresh.into_native_host();
+    let binding = NativeBinding::from_native_actor(
+        CHANNEL,
+        "profile",
+        "main",
+        "session",
+        COMMUNITY_ACCOUNT,
+        COMMUNITY_DEVICE,
+    )
+    .unwrap();
+    Sdk::from_fresh_native_host(transfer, binding, NOW).unwrap()
+}
+fn signed_voice_creation(
+    keys: &FixtureSeeds,
+    authorization: &VerifiedCommunityAuthorization,
+) -> Vec<u8> {
+    let fields = Value::Array(vec![
+        Value::Text("MnemaTalk VoiceGroupCreation".into()),
+        Value::Integer(1.into()),
+        Value::Text(scope().origin().into()),
+        Value::Text(scope().community().into()),
+        Value::Text(CHANNEL.into()),
+        Value::Text("cccccccc-cccc-4ccc-8ccc-cccccccccccc".into()),
+        Value::Bytes(vec![37; 32]),
+        Value::Text(COMMUNITY_ACCOUNT.into()),
+        Value::Text(COMMUNITY_DEVICE.into()),
+        Value::Integer(authorization.generation().into()),
+        Value::Bytes(authorization.digest().to_vec()),
+        Value::Integer(NOW.into()),
+        Value::Integer((NOW + 200).into()),
+    ]);
+    let mut payload = Vec::new();
+    coset::cbor::ser::into_writer(&fields, &mut payload).unwrap();
+    use ed25519_dalek::Signer;
+    let seed = keys.read_seed("device-key").unwrap();
+    let signer = ed25519_dalek::SigningKey::from_bytes(&seed);
+    coset::CoseSign1Builder::new()
+        .protected(
+            coset::HeaderBuilder::new()
+                .algorithm(coset::iana::Algorithm::Ed25519)
+                .build(),
+        )
+        .payload(payload)
+        .create_signature(b"MnemaTalk VoiceGroupCreation/v1", |t| {
+            signer.sign(t).to_bytes().to_vec()
+        })
+        .build()
+        .to_tagged_vec()
+        .unwrap()
+}
+#[test]
+fn community_actual_root_key_and_admitted_device_issuance_durable_idempotence_and_time_floor() {
+    let d = dir();
+    let keys = FixtureSeeds::fresh();
+    let mut sdk = community_sdk(&keys, &d.path().join("community.sqlite"));
+    let wire = sdk
+        .issue_native_community_authorization(&keys, NOW)
+        .unwrap();
+    let author = sdk
+        .install_native_community_authorization(&wire, NOW)
+        .unwrap();
+    assert_eq!(author.generation(), 1);
+    assert_eq!(author.device_count(), 1);
+    assert_eq!(author.origin(), scope().origin());
+    assert_eq!(author.community(), scope().community());
+    assert_eq!(
+        sdk.issue_native_community_authorization(&keys, NOW + 1)
+            .unwrap(),
+        wire
+    );
+    let creation = signed_voice_creation(&keys, &author);
+    let verified = sdk
+        .verify_native_voice_creation(&author, &creation, NOW + 10)
+        .unwrap();
+    assert_eq!(verified.channel(), CHANNEL);
+    assert_eq!(verified.group(), &[37; 32]);
+    assert_eq!(verified.creator_account(), COMMUNITY_ACCOUNT);
+    assert_eq!(verified.creator_device(), COMMUNITY_DEVICE);
+    assert_eq!(
+        verified.room_incarnation(),
+        "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+    );
+    let floor: i64 = sdk
+        .core
+        .connection
+        .query_row(
+            "SELECT observed_time FROM sdk_community_authorization WHERE id=1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(floor, (NOW + 10) as i64);
+    assert!(
+        sdk.verify_native_voice_creation(&author, &creation, NOW + 9)
+            .is_err()
+    );
+    assert!(!sdk.matches_native_actor("profile", "main", "session"));
+}
+#[test]
+fn community_suppressed_floor_insert_or_update_has_no_authorization_output_and_retires() {
+    for update in [false, true] {
+        let d = dir();
+        let keys = FixtureSeeds::fresh();
+        let mut sdk = community_sdk(&keys, &d.path().join("community-fault.sqlite"));
+        let wire = if update {
+            Some(
+                sdk.issue_native_community_authorization(&keys, NOW)
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
+        sdk.core.connection.execute_batch("CREATE TABLE IF NOT EXISTS sdk_community_authorization(id INTEGER PRIMARY KEY,generation BLOB,digest BLOB,wire BLOB,observed_time INTEGER);").unwrap();
+        sdk.core.connection.execute_batch(if update{"CREATE TRIGGER suppress BEFORE UPDATE ON sdk_community_authorization BEGIN SELECT RAISE(IGNORE);END;"}else{"CREATE TRIGGER suppress BEFORE INSERT ON sdk_community_authorization BEGIN SELECT RAISE(IGNORE);END;"}).unwrap();
+        let result = if let Some(wire) = wire {
+            sdk.install_native_community_authorization(&wire, NOW + 1)
+                .map(|_| ())
+        } else {
+            sdk.issue_native_community_authorization(&keys, NOW)
+                .map(|_| ())
+        };
+        assert_eq!(result, Err(Error::Database));
+        assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        let count: i64 = sdk
+            .core
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM sdk_community_authorization",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, if update { 1 } else { 0 });
+        if update {
+            let last: i64 = sdk
+                .core
+                .connection
+                .query_row(
+                    "SELECT observed_time FROM sdk_community_authorization WHERE id=1",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(last, NOW as i64)
+        }
+    }
+}
+#[test]
+fn community_creation_cannot_cross_sdk_owner_and_same_generation_changed_root_wire_rejects() {
+    let d = dir();
+    let keys = FixtureSeeds::fresh();
+    let mut sdk = community_sdk(&keys, &d.path().join("community-owner.sqlite"));
+    let wire = sdk
+        .issue_native_community_authorization(&keys, NOW)
+        .unwrap();
+    let author = sdk
+        .install_native_community_authorization(&wire, NOW)
+        .unwrap();
+    let creation = signed_voice_creation(&keys, &author);
+    let other_keys = FixtureSeeds::fresh();
+    let mut other = community_sdk(&other_keys, &d.path().join("foreign.sqlite"));
+    let other_wire = other
+        .issue_native_community_authorization(&other_keys, NOW)
+        .unwrap();
+    other
+        .install_native_community_authorization(&other_wire, NOW)
+        .unwrap();
+    assert!(
+        other
+            .verify_native_voice_creation(&author, &creation, NOW)
+            .is_err()
+    );
+    assert!(!other.matches_native_actor("profile", "main", "session"));
+    let envelope = CoseSign1::from_tagged_slice(&wire).unwrap();
+    let mut payload: Value =
+        coset::cbor::de::from_reader(envelope.payload.unwrap().as_slice()).unwrap();
+    let Value::Array(fields) = &mut payload else {
+        panic!("fixture")
+    };
+    fields[6] = Value::Integer((NOW + 600).into());
+    let mut encoded = Vec::new();
+    coset::cbor::ser::into_writer(&payload, &mut encoded).unwrap();
+    use ed25519_dalek::Signer;
+    let seed = keys.read_seed("issuer-root").unwrap();
+    let root = ed25519_dalek::SigningKey::from_bytes(&seed);
+    let changed = coset::CoseSign1Builder::new()
+        .protected(
+            coset::HeaderBuilder::new()
+                .algorithm(coset::iana::Algorithm::Ed25519)
+                .build(),
+        )
+        .payload(encoded)
+        .create_signature(b"MnemaTalk CommunityAuthorization/v1", |t| {
+            root.sign(t).to_bytes().to_vec()
+        })
+        .build()
+        .to_tagged_vec()
+        .unwrap();
+    assert!(matches!(
+        sdk.install_native_community_authorization(&changed, NOW),
+        Err(Error::Replay)
+    ));
+    let exact: bool = sdk
+        .core
+        .connection
+        .query_row(
+            "SELECT wire=? FROM sdk_community_authorization WHERE id=1",
+            [wire.as_slice()],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(exact);
+}
+
+#[test]
+fn community_new_generation_retires_old_approval_and_own_revocation_persists_before_denial() {
+    for revoke_own in [false, true] {
+        let d = dir();
+        let keys = FixtureSeeds::fresh();
+        let mut sdk = community_sdk(&keys, &d.path().join("community-revoke.sqlite"));
+        let original = sdk
+            .issue_native_community_authorization(&keys, NOW)
+            .unwrap();
+        let author = sdk
+            .install_native_community_authorization(&original, NOW)
+            .unwrap();
+        let proposal = signed_voice_creation(&keys, &author);
+        let envelope = CoseSign1::from_tagged_slice(&original).unwrap();
+        let mut payload: Value =
+            coset::cbor::de::from_reader(envelope.payload.unwrap().as_slice()).unwrap();
+        let Value::Array(fields) = &mut payload else {
+            panic!("fixture")
+        };
+        fields[4] = Value::Integer(2.into());
+        if revoke_own {
+            let foreign_account = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+            let foreign_device = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+            let foreign = ed25519_dalek::SigningKey::from_bytes(&[53; 32]);
+            fields[7] = Value::Array(vec![Value::Array(vec![
+                Value::Text(foreign_account.into()),
+                Value::Text(foreign_device.into()),
+                Value::Bytes(format!("{foreign_account}.{foreign_device}").into_bytes()),
+                Value::Bytes(foreign.verifying_key().to_bytes().to_vec()),
+                Value::Text("voice-group-v1".into()),
+            ])]);
+        }
+        let mut encoded = Vec::new();
+        coset::cbor::ser::into_writer(&payload, &mut encoded).unwrap();
+        use ed25519_dalek::Signer;
+        let seed = keys.read_seed("issuer-root").unwrap();
+        let root = ed25519_dalek::SigningKey::from_bytes(&seed);
+        // Root-signed fixture update emulates a future separately qualified
+        // authority issuer update, not a server/admin role or renderer grant.
+        let newer = coset::CoseSign1Builder::new()
+            .protected(
+                coset::HeaderBuilder::new()
+                    .algorithm(coset::iana::Algorithm::Ed25519)
+                    .build(),
+            )
+            .payload(encoded)
+            .create_signature(b"MnemaTalk CommunityAuthorization/v1", |t| {
+                root.sign(t).to_bytes().to_vec()
+            })
+            .build()
+            .to_tagged_vec()
+            .unwrap();
+        let result = sdk.install_native_community_authorization(&newer, NOW + 1);
+        if revoke_own {
+            assert!(matches!(result, Err(Error::Unauthorized)));
+            assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        } else {
+            assert_eq!(result.unwrap().generation(), 2);
+            assert!(
+                sdk.verify_native_voice_creation(&author, &proposal, NOW + 1)
+                    .is_err()
+            );
+        }
+        let generation: Vec<u8> = sdk
+            .core
+            .connection
+            .query_row(
+                "SELECT generation FROM sdk_community_authorization WHERE id=1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(generation, 2u64.to_be_bytes());
+        let exact: bool = sdk
+            .core
+            .connection
+            .query_row(
+                "SELECT wire=? FROM sdk_community_authorization WHERE id=1",
+                [newer.as_slice()],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert!(exact);
+    }
+}

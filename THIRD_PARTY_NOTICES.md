@@ -153,3 +153,7 @@ texts; inventory generation alone is not redistribution compliance.
 The desktop UI bundles unchanged Inter Latin 400/500/600 fonts from the existing
 @fontsource/inter 5.3.0 dependency (OFL-1.1). Full original attribution and license
 are included in desktop/licenses/INTER-OFL.txt and the distribution bundle.
+
+The shared Vue client also bundles `@tauri-apps/api` 2.12.1 (MIT OR
+Apache-2.0) for the experimental desktop IPC adapter. Browser requests retain
+their same-origin transport. License texts ship in `web/dist/licenses/tauri-api/`.

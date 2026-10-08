@@ -29,6 +29,16 @@ pub enum NativeRequest {
         username: String,
         password: Password,
     },
+    Register {
+        username: String,
+        display_name: String,
+        password: Password,
+        invite_code: Zeroizing<String>,
+    },
+    Password {
+        current_password: Password,
+        new_password: Password,
+    },
     Me,
     Metadata {
         resource: MetadataResource,
@@ -39,8 +49,11 @@ pub enum NativeRequest {
     PersonalMetadata {
         operation: PersonalMetadataOperation,
     },
+    AdminMetadata {
+        operation: AdminMetadataOperation,
+    },
     OpaqueRelay {
-        scope: Box<NativeAuthenticatedScope>,
+        scope: Arc<NativeAuthenticatedScope>,
         operation: NativeOpaqueRelayOperation,
     },
     Refresh,
@@ -71,6 +84,9 @@ impl fmt::Debug for ConnectedPreview {
 enum Value {
     Connected(PublicationScope, ConnectedPreview),
     Login(LoginDelivery),
+    Password(LoginDelivery),
+    Register(RegistrationDelivery),
+    Admin(AdminDelivery),
     Me(MeDelivery),
     Metadata(MetadataDelivery),
     OpaqueRelay(NativeOpaqueDelivery),
@@ -109,6 +125,8 @@ impl fmt::Debug for NativeReply {
     }
 }
 struct Job {
+    request_id: Uuid,
+    broker: Option<Arc<Broker>>,
     lease: NativeWindowLease,
     intent: u64,
     request: NativeRequest,
@@ -120,12 +138,19 @@ struct Shared {
     window: Mutex<Option<NativeWindowLease>>,
     intent: AtomicU64,
     ready: AtomicU64,
-    requests: Mutex<HashMap<(Uuid, Uuid), CancellationToken>>,
+    requests: Mutex<HashMap<(Uuid, Uuid), SubmittedRequest>>,
     sockets: Mutex<HashMap<Uuid, SocketControl>>,
     #[cfg(test)]
     custody_before_drop: Mutex<Option<(std::sync::mpsc::Sender<()>, Arc<std::sync::Barrier>)>>,
     #[cfg(test)]
     connect_before_mutation: Mutex<Option<(std::sync::mpsc::Sender<()>, Arc<std::sync::Barrier>)>>,
+    #[cfg(test)]
+    before_prepare: Mutex<Option<(oneshot::Sender<()>, oneshot::Receiver<()>)>>,
+}
+struct SubmittedRequest {
+    cancel: CancellationToken,
+    profile: Option<Option<Uuid>>,
+    authentication: Option<Option<Uuid>>,
 }
 struct Submission {
     shared: Arc<Shared>,
@@ -181,15 +206,20 @@ impl NativeClient {
         scope: NativeAuthenticatedScope,
         operation: NativeOpaqueRelayOperation,
     ) -> Result<NativePublication, Error> {
+        self.request_opaque_relay_retained(lease, Arc::new(scope), operation)
+            .await
+    }
+    /// Exact admitted native scope allocation follows the job through actual
+    /// HTTP and the final receipt enqueue; no authority/deadline reminting.
+    pub async fn request_opaque_relay_retained(
+        &self,
+        lease: &NativeWindowLease,
+        scope: Arc<NativeAuthenticatedScope>,
+        operation: NativeOpaqueRelayOperation,
+    ) -> Result<NativePublication, Error> {
         self.check_authenticated_scope(lease, &scope)?;
-        self.request(
-            lease,
-            NativeRequest::OpaqueRelay {
-                scope: Box::new(scope),
-                operation,
-            },
-        )
-        .await
+        self.request(lease, NativeRequest::OpaqueRelay { scope, operation })
+            .await
     }
     /// Final native enqueue, after actual SDK proof/inner author verification.
     /// Outer Tauri registry must also keep its native window authority locked.
@@ -235,6 +265,13 @@ impl NativeClient {
     ) {
         *self.shared.custody_before_drop.lock().unwrap() = Some((start, barrier));
     }
+    #[cfg(test)]
+    pub(crate) fn hold_next_prepare(&self) -> (oneshot::Receiver<()>, oneshot::Sender<()>) {
+        let (started, observed) = oneshot::channel();
+        let (release, wait) = oneshot::channel();
+        *self.shared.before_prepare.lock().unwrap() = Some((started, wait));
+        (observed, release)
+    }
     pub fn ephemeral() -> Result<Self, Error> {
         Self::with_broker(Broker::ephemeral()?)
     }
@@ -265,6 +302,8 @@ impl NativeClient {
             custody_before_drop: Mutex::new(None),
             #[cfg(test)]
             connect_before_mutation: Mutex::new(None),
+            #[cfg(test)]
+            before_prepare: Mutex::new(None),
         });
         let (sender, mut receive) = mpsc::channel::<Job>(16);
         let worker = shared.clone();
@@ -276,7 +315,7 @@ impl NativeClient {
                     let Ok(permit)=budget.clone().try_acquire_owned() else{let _=job.answer.send(Err(Error::Busy));continue};
                     let worker=worker.clone();
                     tokio::task::spawn_local(async move{
-                        let result=tokio::select!{biased;_=job.lease.cancel.cancelled()=>Err(Error::Stale),_=job.cancel.cancelled()=>Err(Error::Cancelled),_=job.answer.closed()=>Err(Error::Cancelled),r=execute(&worker,job.lease.clone(),job.intent,job.request)=>r};
+                        let result=tokio::select!{biased;_=job.lease.cancel.cancelled()=>Err(Error::Stale),_=job.cancel.cancelled()=>Err(Error::Cancelled),_=job.answer.closed()=>Err(Error::Cancelled),r=execute(&worker,job.lease.clone(),job.intent,job.request_id,job.broker,job.request)=>r};
                         let _=job.answer.send(result);drop(permit);
                     });
                 }
@@ -396,7 +435,7 @@ impl NativeClient {
         request_id: Uuid,
         request: NativeRequest,
     ) -> Result<NativePublication, Error> {
-        self.request_inner(lease, request_id, None, request, || {})
+        self.request_inner(lease, request_id, None, None, None, request, || {})
             .await
     }
     /// Renderer-originated IPC must provide its captured native profile selector.
@@ -408,7 +447,7 @@ impl NativeClient {
         profile: Option<Uuid>,
         request: NativeRequest,
     ) -> Result<NativePublication, Error> {
-        self.request_inner(lease, request_id, Some(profile), request, || {})
+        self.request_inner(lease, request_id, Some(profile), None, None, request, || {})
             .await
     }
     /// Bounded native custody hook runs only after exact admission, under the
@@ -421,8 +460,92 @@ impl NativeClient {
         request: NativeRequest,
         admit: impl FnOnce(),
     ) -> Result<NativePublication, Error> {
-        self.request_inner(lease, request_id, Some(profile), request, admit)
+        self.request_inner(lease, request_id, Some(profile), None, None, request, admit)
             .await
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub async fn request_with_authentication_admission(
+        &self,
+        lease: &NativeWindowLease,
+        request_id: Uuid,
+        profile: Option<Uuid>,
+        authentication: Option<Uuid>,
+        request: NativeRequest,
+        admit: impl FnOnce(),
+    ) -> Result<NativePublication, Error> {
+        self.request_inner(
+            lease,
+            request_id,
+            Some(profile),
+            Some(authentication),
+            None,
+            request,
+            admit,
+        )
+        .await
+    }
+    /// Native Core metadata jobs retain the exact admitted allocation through
+    /// deep prepare, rather than sampling a replacement grant after queueing.
+    pub async fn request_retained_authenticated(
+        &self,
+        lease: &NativeWindowLease,
+        scope: Arc<NativeAuthenticatedScope>,
+        request_id: Uuid,
+        request: NativeRequest,
+    ) -> Result<NativePublication, Error> {
+        if !matches!(&request, NativeRequest::Me | NativeRequest::Metadata { .. }) {
+            return Err(Error::Denied);
+        }
+        self.request_inner(
+            lease,
+            request_id,
+            Some(Some(scope.native_profile_identity())),
+            Some(Some(scope.authentication_intent())),
+            Some(scope),
+            request,
+            || {},
+        )
+        .await
+    }
+    pub fn selected_intents(
+        &self,
+        lease: &NativeWindowLease,
+    ) -> Result<(Option<Uuid>, Option<Uuid>), Error> {
+        let windows = self.shared.window.lock().map_err(|_| Error::Internal)?;
+        if lease.cancel.is_cancelled()
+            || windows
+                .as_ref()
+                .is_none_or(|window| window.context != lease.context || window.owner != lease.owner)
+        {
+            return Err(Error::Stale);
+        }
+        let intent = self.shared.intent.load(Ordering::Acquire);
+        if intent == 0 || self.shared.ready.load(Ordering::Acquire) != intent {
+            return Ok((None, None));
+        }
+        self.shared.broker.selected_intents(lease.owner)
+    }
+    pub fn authentication_intent(&self, lease: &NativeWindowLease) -> Result<Option<Uuid>, Error> {
+        let windows = self.shared.window.lock().map_err(|_| Error::Internal)?;
+        if lease.cancel.is_cancelled()
+            || windows
+                .as_ref()
+                .is_none_or(|w| w.context != lease.context || w.owner != lease.owner)
+        {
+            return Err(Error::Stale);
+        }
+        self.shared.broker.authentication_intent(lease.owner)
+    }
+    pub fn authenticated_scope_with_intent(
+        &self,
+        lease: &NativeWindowLease,
+        authentication: Uuid,
+    ) -> Result<NativeAuthenticatedScope, Error> {
+        let scope = self.authenticated_scope(lease)?;
+        if scope.authentication_intent() != authentication {
+            return Err(Error::Stale);
+        }
+        Ok(scope)
     }
     pub fn profile_intent(&self, lease: &NativeWindowLease) -> Result<Option<Uuid>, Error> {
         let window = self.shared.window.lock().map_err(|_| Error::Internal)?;
@@ -464,18 +587,21 @@ impl NativeClient {
         }
         Ok(())
     }
+    #[allow(clippy::too_many_arguments)]
     async fn request_inner(
         &self,
         lease: &NativeWindowLease,
         request_id: Uuid,
         profile_fence: Option<Option<Uuid>>,
+        authentication_fence: Option<Option<Uuid>>,
+        retained_scope: Option<Arc<NativeAuthenticatedScope>>,
         request: NativeRequest,
         admit: impl FnOnce(),
     ) -> Result<NativePublication, Error> {
         if request_id.is_nil() {
             return Err(Error::InvalidInput);
         }
-        let (intent, cancel, _submission) = {
+        let (intent, bound_broker, cancel, _submission) = {
             // Window ownership validation and all synchronous Connect side effects
             // share the same native lifecycle lock. An old lease cannot clear a
             // recreated main window after a check/use gap.
@@ -486,6 +612,12 @@ impl NativeClient {
                     .is_none_or(|w| w.context != lease.context || w.owner != lease.owner)
             {
                 return Err(Error::Stale);
+            }
+            if let Some(scope) = retained_scope.as_ref()
+                && scope.client_binding
+                    != Some((lease.context, self.shared.intent.load(Ordering::Acquire)))
+            {
+                return Err(Error::Denied);
             }
             if let Some(expected) = profile_fence {
                 let intent = self.shared.intent.load(Ordering::Acquire);
@@ -512,10 +644,63 @@ impl NativeClient {
             if requests.len() >= 16 || requests.contains_key(&key) {
                 return Err(Error::Busy);
             }
-            admit();
-            let intent = if matches!(&request, NativeRequest::Connect { .. }) {
+            let connecting = matches!(&request, NativeRequest::Connect { .. });
+            let bound_broker = if let Some(expected) = authentication_fence {
+                if connecting {
+                    self.shared.broker.invalidate_with_authentication(
+                        lease.owner,
+                        expected,
+                        admit,
+                    )?;
+                    None
+                } else {
+                    let kind = match &request {
+                        NativeRequest::Login { .. } => InvocationKind::Login,
+                        NativeRequest::Logout => InvocationKind::Logout,
+                        NativeRequest::Password { .. } => InvocationKind::Password,
+                        NativeRequest::Register { .. } => InvocationKind::Register,
+                        _ => InvocationKind::Read,
+                    };
+                    let bound = if retained_scope.is_some() {
+                        self.shared.broker.bind_invocation_retained(
+                            lease.owner,
+                            expected,
+                            request_id,
+                            kind,
+                            retained_scope.clone(),
+                        )?
+                    } else {
+                        self.shared.broker.bind_invocation(
+                            lease.owner,
+                            expected,
+                            request_id,
+                            kind,
+                        )?
+                    };
+                    // Credential admission owns this native window lock. Seal
+                    // only the admitted old socket now, never from delayed worker
+                    // execution after its ticket could already be replaced.
+                    if matches!(
+                        kind,
+                        InvocationKind::Login
+                            | InvocationKind::Logout
+                            | InvocationKind::Password
+                            | InvocationKind::Register
+                    ) {
+                        actor_socket::cancel_sockets(&self.shared, lease.context);
+                    }
+                    admit();
+                    Some(Arc::new(bound))
+                }
+            } else {
+                admit();
+                None
+            };
+            let intent = if connecting {
                 self.shared.ready.store(0, Ordering::Release);
-                self.shared.broker.invalidate_native_context()?;
+                if authentication_fence.is_none() {
+                    self.shared.broker.invalidate_native_context()?;
+                }
                 self.shared
                     .intent
                     .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
@@ -529,9 +714,17 @@ impl NativeClient {
                 n
             };
             let cancel = CancellationToken::new();
-            requests.insert(key, cancel.clone());
+            requests.insert(
+                key,
+                SubmittedRequest {
+                    cancel: cancel.clone(),
+                    profile: profile_fence,
+                    authentication: authentication_fence,
+                },
+            );
             (
                 intent,
+                bound_broker,
                 cancel,
                 Submission {
                     shared: self.shared.clone(),
@@ -542,6 +735,8 @@ impl NativeClient {
         let (answer, receive) = oneshot::channel();
         self.sender
             .try_send(Job {
+                request_id,
+                broker: bound_broker,
                 lease: lease.clone(),
                 intent,
                 request,
@@ -569,12 +764,73 @@ impl NativeClient {
             .map_err(|_| Error::Internal)?
             .get(&(lease.context, request_id))
         {
-            cancel.cancel();
+            cancel.cancel.cancel();
         }
         Ok(())
     }
+    pub fn cancel_request_with_intents(
+        &self,
+        lease: &NativeWindowLease,
+        profile: Option<Uuid>,
+        authentication: Option<Uuid>,
+        request_id: Uuid,
+    ) -> Result<(), Error> {
+        let windows = self.shared.window.lock().map_err(|_| Error::Internal)?;
+        if lease.cancel.is_cancelled()
+            || windows
+                .as_ref()
+                .is_none_or(|w| w.context != lease.context || w.owner != lease.owner)
+        {
+            return Err(Error::Stale);
+        }
+        let requests = self.shared.requests.lock().map_err(|_| Error::Internal)?;
+        if let Some(entry) = requests.get(&(lease.context, request_id)) {
+            // Cancel the admitted original operation, including its pending
+            // transition; never recapture the current replacement family.
+            if entry.profile != Some(profile) || entry.authentication != Some(authentication) {
+                return Err(Error::Stale);
+            }
+            entry.cancel.cancel();
+        }
+        Ok(())
+    }
+    pub fn with_selected_authentication<T>(
+        &self,
+        lease: &NativeWindowLease,
+        profile: Uuid,
+        authentication: Option<Uuid>,
+        publish: impl FnOnce() -> T,
+    ) -> Result<T, Error> {
+        let windows = self.shared.window.lock().map_err(|_| Error::Internal)?;
+        if lease.cancel.is_cancelled()
+            || windows
+                .as_ref()
+                .is_none_or(|w| w.context != lease.context || w.owner != lease.owner)
+        {
+            return Err(Error::Stale);
+        }
+        let intent = self.shared.intent.load(Ordering::Acquire);
+        if intent == 0
+            || self.shared.ready.load(Ordering::Acquire) != intent
+            || self.shared.broker.selected_profile_identity(lease.owner)? != profile
+        {
+            return Err(Error::Stale);
+        }
+        self.shared
+            .broker
+            .with_expected_authentication(lease.owner, authentication, publish)
+    }
+    pub fn disconnect_with_authentication_admission(
+        &self,
+        lease: &NativeWindowLease,
+        profile: Option<Uuid>,
+        authentication: Option<Uuid>,
+        admit: impl FnOnce(),
+    ) -> Result<(), Error> {
+        self.disconnect_inner(lease, Some(profile), Some(authentication), admit)
+    }
     pub fn disconnect(&self, lease: &NativeWindowLease) -> Result<(), Error> {
-        self.disconnect_inner(lease, None, || {})
+        self.disconnect_inner(lease, None, None, || {})
     }
     pub fn disconnect_with_profile_admission(
         &self,
@@ -582,12 +838,13 @@ impl NativeClient {
         profile: Option<Uuid>,
         admit: impl FnOnce(),
     ) -> Result<(), Error> {
-        self.disconnect_inner(lease, Some(profile), admit)
+        self.disconnect_inner(lease, Some(profile), None, admit)
     }
     fn disconnect_inner(
         &self,
         lease: &NativeWindowLease,
         profile_fence: Option<Option<Uuid>>,
+        authentication_fence: Option<Option<Uuid>>,
         admit: impl FnOnce(),
     ) -> Result<(), Error> {
         let w = self.shared.window.lock().map_err(|_| Error::Internal)?;
@@ -609,9 +866,17 @@ impl NativeClient {
                 _ => return Err(Error::Stale),
             }
         }
-        admit();
+        if let Some(authentication) = authentication_fence {
+            self.shared.broker.invalidate_with_authentication(
+                lease.owner,
+                authentication,
+                admit,
+            )?;
+        } else {
+            admit();
+            self.shared.broker.invalidate_native_context()?;
+        }
         self.shared.ready.store(0, Ordering::Release);
-        self.shared.broker.invalidate_native_context()?;
         self.shared
             .intent
             .try_update(Ordering::AcqRel, Ordering::Acquire, |n| n.checked_add(1))
@@ -637,8 +902,28 @@ impl NativeClient {
                 )
             }
             Value::Login(delivery) => {
+                let authentication = delivery.authentication_identity;
                 let user = b.commit_login(lease.owner, delivery)?;
-                (200, serde_json::json!({"user":user_value(user)}))
+                (
+                    200,
+                    serde_json::json!({"user":user_value(user),"authentication_intent":authentication.to_string()}),
+                )
+            }
+            Value::Register(delivery) => (
+                201,
+                serde_json::json!({"user":user_value(b.commit_registration(lease.owner,delivery)?)}),
+            ),
+            Value::Password(delivery) => {
+                let authentication = delivery.authentication_identity;
+                b.commit_login(lease.owner, delivery)?;
+                (
+                    200,
+                    serde_json::json!({"authentication_intent":authentication.to_string()}),
+                )
+            }
+            Value::Admin(delivery) => {
+                let response = b.commit_admin(lease.owner, delivery)?;
+                (response.status, response.body)
             }
             Value::Me(delivery) => (200, user_value(b.commit_me(lease.owner, delivery)?)),
             Value::Metadata(delivery) => (200, b.commit_metadata(lease.owner, delivery)?),
@@ -706,13 +991,24 @@ async fn execute(
     shared: &Arc<Shared>,
     lease: NativeWindowLease,
     intent: u64,
+    request_id: Uuid,
+    bound_broker: Option<Arc<Broker>>,
     request: NativeRequest,
 ) -> Result<NativePublication, Error> {
     shared.current(&lease)?;
     if shared.intent.load(Ordering::Acquire) != intent {
         return Err(Error::Stale);
     }
-    let b = &shared.broker;
+    let b = bound_broker.as_ref().unwrap_or(&shared.broker);
+    b.check_invocation_job(request_id)?;
+    #[cfg(test)]
+    {
+        let gate = shared.before_prepare.lock().unwrap().take();
+        if let Some((started, wait)) = gate {
+            let _ = started.send(());
+            wait.await.map_err(|_| Error::Stale)?;
+        }
+    }
     let value = match request {
         NativeRequest::Connect { address } => {
             let origin = mnema_desktop_probe::discovery::normalize_address(&address)
@@ -803,11 +1099,34 @@ async fn execute(
             )
         }
         NativeRequest::OpenSocket { observer } => {
-            actor_socket::open(shared.clone(), lease.clone(), intent, observer).await?
+            actor_socket::open(shared.clone(), b.clone(), lease.clone(), intent, observer).await?
         }
         NativeRequest::Login { username, password } => {
-            actor_socket::cancel_sockets(shared, lease.context);
+            if bound_broker.is_none() {
+                actor_socket::cancel_sockets(shared, lease.context);
+            }
             Value::Login(b.login_delivery(lease.owner, &username, password).await?)
+        }
+        NativeRequest::Register {
+            username,
+            display_name,
+            password,
+            invite_code,
+        } => Value::Register(
+            b.registration_delivery(lease.owner, username, display_name, password, invite_code)
+                .await?,
+        ),
+        NativeRequest::Password {
+            current_password,
+            new_password,
+        } => {
+            if bound_broker.is_none() {
+                actor_socket::cancel_sockets(shared, lease.context);
+            }
+            Value::Password(
+                b.password_delivery(lease.owner, current_password, new_password)
+                    .await?,
+            )
         }
         NativeRequest::Me => Value::Me(b.execute_me(b.prepare_me(lease.owner)?).await?),
         NativeRequest::Metadata { resource } => {
@@ -816,11 +1135,17 @@ async fn execute(
         NativeRequest::PersonalMetadata { operation } => {
             Value::Me(b.personal_metadata(lease.owner, operation).await?)
         }
+        NativeRequest::AdminMetadata { operation } => {
+            Value::Admin(b.admin_metadata(lease.owner, operation).await?)
+        }
         NativeRequest::OpaqueRelay { scope, operation } => {
             if scope.client_binding != Some((lease.context, intent)) {
                 return Err(Error::Denied);
             }
-            Value::OpaqueRelay(b.opaque_relay(lease.owner, *scope, operation).await?)
+            Value::OpaqueRelay(
+                b.opaque_relay_retained(lease.owner, scope, operation)
+                    .await?,
+            )
         }
         NativeRequest::PublicMetadata { resource } => {
             Value::Metadata(b.public_metadata(lease.owner, resource).await?)
@@ -830,7 +1155,9 @@ async fn execute(
             Value::Refresh(b.selected_publication_scope(lease.owner)?)
         }
         NativeRequest::Logout => {
-            actor_socket::cancel_sockets(shared, lease.context);
+            if bound_broker.is_none() {
+                actor_socket::cancel_sockets(shared, lease.context);
+            }
             Value::Logout(b.logout_delivery(lease.owner).await?)
         }
     };

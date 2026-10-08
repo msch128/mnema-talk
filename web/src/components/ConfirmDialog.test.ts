@@ -15,6 +15,22 @@ afterEach(() => {
 const buttons = () => [...document.querySelectorAll<HTMLButtonElement>('[role="alertdialog"] button')].filter(b => !b.hasAttribute('data-dialog-close'))
 
 describe('confirm() + ConfirmDialog', () => {
+  it('cancels an old destructive approval and removes its excerpt before another host mounts', async () => {
+    wrapper = mount(ConfirmDialog, { attachTo: document.body })
+    const old = confirm({ title: 'Delete in instance A?', excerpt: 'Private A excerpt', danger: true })
+    await nextTick()
+    wrapper.unmount()
+    expect(await old).toBe(false)
+    expect(pendingConfirm.value).toBeNull()
+    wrapper = mount(ConfirmDialog, { attachTo: document.body })
+    await nextTick()
+    expect(document.body.textContent).not.toContain('Private A excerpt')
+    expect(document.querySelector('[role="alertdialog"]')).toBeNull()
+    const current = confirm({ title: 'Instance B action' })
+    await nextTick()
+    requireValue(buttons()[1]).click()
+    expect(await current).toBe(true)
+  })
   it('names the object, focuses Cancel by default and resolves false on Cancel', async () => {
     wrapper = mount(ConfirmDialog, { attachTo: document.body })
     const p = confirm({ title: '#musik löschen?', body: 'Weg ist weg.', confirmLabel: 'Löschen', danger: true })

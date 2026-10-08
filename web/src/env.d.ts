@@ -1,3 +1,4 @@
+/// <reference lib="esnext.disposable" />
 /// <reference types="vite/client" />
 import type { t, locale } from './i18n/index.ts'
 

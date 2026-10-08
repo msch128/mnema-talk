@@ -34,6 +34,8 @@ function precompress(): Plugin {
 // License and NOTICE texts of bundled packages whose builds drop their
 // license comments; shipped under /licenses/ (see THIRD_PARTY_NOTICES.md).
 const SHIPPED_LICENSES = {
+  'tauri-api/LICENSE-MIT': '@tauri-apps/api/LICENSE-MIT',
+  'tauri-api/LICENSE-APACHE-2.0': '@tauri-apps/api/LICENSE-APACHE-2.0',
   'swagger-ui/LICENSE': 'swagger-ui-dist/LICENSE',
   'swagger-ui/NOTICE': 'swagger-ui-dist/NOTICE',
   'swagger-ui/bundled-components.txt': 'swagger-ui-dist/swagger-ui-es-bundle.js.LICENSE.txt',

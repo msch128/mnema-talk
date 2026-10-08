@@ -85,5 +85,10 @@ export function createKeyedThrottle(fn: (key: string) => void | Promise<unknown>
     if (timer !== undefined) clearTimeout(timer)
     timers.delete(key)
   }
-  return { call, cancel }
+  function reset() {
+    for (const timer of timers.values()) clearTimeout(timer)
+    timers.clear()
+    lastAt.clear()
+  }
+  return { call, cancel, reset }
 }

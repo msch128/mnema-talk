@@ -82,6 +82,7 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
 	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh
 	python3 scripts/tests/test_backup_restore.py
+	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_coverage_summary.py
 
 # Packages counted in the Go coverage total: everything but test helpers and

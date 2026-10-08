@@ -42,6 +42,8 @@ pub enum Status {
     Empty,
     Selected,
     SigningIn,
+    ChangingCredentials,
+    Registering,
     Authenticated,
     Rotating,
     ReauthRequired,
@@ -53,6 +55,7 @@ struct Window {
     cancel: CancellationToken,
 }
 struct Session {
+    authentication_identity: Uuid,
     accepted_role: String,
     native_identity: Uuid,
     access_deadline: std::time::Instant,
@@ -61,6 +64,8 @@ struct Session {
 }
 struct Active {
     native_identity: Uuid,
+    last_authentication_identity: Option<Uuid>,
+    pending_invocation: Option<Uuid>,
     handle: ProfileHandle,
     epoch: u64,
     origin: Url,
@@ -185,6 +190,7 @@ impl fmt::Debug for PublicationScope {
     }
 }
 pub struct LoginDelivery {
+    authentication_identity: Uuid,
     scope: PublicationScope,
     value: User,
 }
@@ -221,7 +227,10 @@ impl Drop for LoginGuard {
             && state.profiles.is_current(self.profile)
             && let Some(active) = state.active.as_mut()
             && active.epoch == self.epoch
-            && active.status == Status::SigningIn
+            && matches!(
+                active.status,
+                Status::SigningIn | Status::ChangingCredentials | Status::Registering
+            )
         {
             active.status = Status::ReauthRequired;
             active.session = None;
@@ -261,7 +270,8 @@ impl Drop for RotationGuard {
 
 pub struct Broker {
     inner: Arc<Inner>,
-    journal: Vault<Ephemeral>,
+    journal: Arc<Vault<Ephemeral>>,
+    invocation: Option<Arc<InvocationTicket>>,
     memory: Ephemeral,
     #[cfg(any(test, feature = "synthetic-transport-fixture"))]
     root: Option<Vec<u8>>,
@@ -406,7 +416,8 @@ impl Broker {
                 }),
                 idle: Notify::new(),
             }),
-            journal: Vault::new(memory.clone()),
+            journal: Arc::new(Vault::new(memory.clone())),
+            invocation: None,
             memory,
             #[cfg(any(test, feature = "synthetic-transport-fixture"))]
             root: None,
@@ -603,6 +614,8 @@ impl Broker {
         let origin = selected.origin().clone();
         s.active = Some(Active {
             native_identity: Uuid::new_v4(),
+            last_authentication_identity: None,
+            pending_invocation: None,
             handle,
             epoch: 0,
             origin,
@@ -615,6 +628,15 @@ impl Broker {
         Ok(())
     }
     fn reserve(
+        &self,
+        s: &mut State,
+        owner: WindowOwner,
+        phase: RequestPhase,
+    ) -> Result<Operation, Error> {
+        self.consume_invocation(s, owner, InvocationKind::Read)?;
+        self.reserve_checked(s, owner, phase)
+    }
+    fn reserve_checked(
         &self,
         s: &mut State,
         owner: WindowOwner,
@@ -725,8 +747,11 @@ impl Broker {
         let (op, instance) = {
             let mut s = self.inner.state.lock().map_err(|_| Error::Internal)?;
             s.main(self.inner.owner, owner)?;
+            self.consume_invocation(&mut s, owner, InvocationKind::Login)?;
             let active = s.active.as_ref().ok_or(Error::NoProfile)?;
-            if !matches!(active.status, Status::Selected | Status::ReauthRequired) {
+            if !matches!(active.status, Status::Selected | Status::ReauthRequired)
+                && !(self.invocation.is_some() && active.status == Status::Authenticated)
+            {
                 return Err(Error::Busy);
             }
             s.cancel_requests(None);
@@ -736,7 +761,7 @@ impl Broker {
             active.status = Status::ReauthRequired;
             active.session = None;
             active.epoch = active.epoch.checked_add(1).ok_or(Error::Exhausted)?;
-            let op = self.reserve(&mut s, owner, RequestPhase::Running)?;
+            let op = self.reserve_checked(&mut s, owner, RequestPhase::Running)?;
             s.active.as_mut().unwrap().status = Status::SigningIn;
             (op, Uuid::new_v4())
         };
@@ -808,7 +833,10 @@ impl Broker {
             .install_new(record)
             .map_err(|_| Error::Vault)?;
         let active = s.active.as_mut().unwrap();
+        let authentication_identity = Uuid::new_v4();
+        active.last_authentication_identity = Some(authentication_identity);
         active.session = Some(Session {
+            authentication_identity,
             accepted_role: grant.user.role.clone(),
             native_identity: Uuid::new_v4(),
             access_deadline,
@@ -819,6 +847,7 @@ impl Broker {
         completion.armed = false;
         drop(s);
         Ok(LoginDelivery {
+            authentication_identity,
             scope: Self::scope_from_operation(&op),
             value: user,
         })
@@ -828,6 +857,9 @@ impl Broker {
         let s = self.inner.state.lock().map_err(|_| Error::Internal)?;
         let a = s.active.as_ref().ok_or(Error::Stale)?;
         if a.status != Status::Authenticated
+            || a.session.as_ref().is_none_or(|session| {
+                session.authentication_identity != delivery.authentication_identity
+            })
             || a.session.as_ref().is_none_or(|g| {
                 g.grant.user.id != delivery.value.id || g.grant.access_expires_at <= Utc::now()
             })
@@ -969,18 +1001,19 @@ impl Broker {
         self.commit_me(owner, delivery)
     }
     pub async fn refresh(&self, owner: WindowOwner) -> Result<(), Error> {
-        let (op, old, namespace, flight, leader) = {
+        let (op, old, authentication_identity, namespace, flight, leader) = {
             let mut s = self.inner.state.lock().map_err(|_| Error::Internal)?;
-            s.main(self.inner.owner, owner)?;
+            self.consume_invocation(&mut s, owner, InvocationKind::Read)?;
             let active = s.active.as_ref().ok_or(Error::NoProfile)?;
             if !matches!(active.status, Status::Authenticated | Status::Rotating) {
                 return Err(Error::ReauthRequired);
             }
             let session = active.session.as_ref().ok_or(Error::ReauthRequired)?;
             let old = session.grant.clone();
+            let authentication_identity = session.authentication_identity;
             let namespace = session.namespace.clone();
             let existing = active.flight.clone();
-            let op = self.reserve(&mut s, owner, RequestPhase::Running)?;
+            let op = self.reserve_checked(&mut s, owner, RequestPhase::Running)?;
             let leader = existing.is_none();
             let flight = existing.unwrap_or_else(|| Arc::new(Flight::new()));
             if leader {
@@ -988,7 +1021,7 @@ impl Broker {
                 active.status = Status::Rotating;
                 active.flight = Some(flight.clone());
             }
-            (op, old, namespace, flight, leader)
+            (op, old, authentication_identity, namespace, flight, leader)
         };
         if !leader {
             loop {
@@ -1088,6 +1121,7 @@ impl Broker {
         active.cancel = CancellationToken::new();
         active.epoch = next_epoch;
         active.session = Some(Session {
+            authentication_identity,
             accepted_role: successor.user.role.clone(),
             native_identity: Uuid::new_v4(),
             access_deadline,
@@ -1105,6 +1139,7 @@ impl Broker {
         let (op, old) = {
             let mut s = self.inner.state.lock().map_err(|_| Error::Internal)?;
             s.main(self.inner.owner, owner)?;
+            self.consume_invocation(&mut s, owner, InvocationKind::Logout)?;
             let active = s.active.as_ref().ok_or(Error::NoProfile)?;
             let old = active
                 .session
@@ -1122,7 +1157,7 @@ impl Broker {
                 f.finish(Err(Error::Stale))
             }
             active.epoch = active.epoch.checked_add(1).ok_or(Error::Exhausted)?;
-            let mut op = self.reserve(&mut s, owner, RequestPhase::Running)?;
+            let mut op = self.reserve_checked(&mut s, owner, RequestPhase::Running)?;
             op.grant = Some(old.clone());
             (op, old)
         };
@@ -1174,4 +1209,24 @@ mod opaque_relay;
 pub use opaque_relay::{
     NativeOpaqueDelivery, NativeOpaqueEvent, NativeOpaqueReceipt, NativeOpaqueRecord,
     NativeOpaqueRelayOperation,
+};
+
+#[path = "authentication_intent.rs"]
+mod authentication_intent;
+use authentication_intent::{InvocationKind, InvocationTicket};
+
+#[path = "password_change.rs"]
+mod password_change;
+
+#[path = "registration.rs"]
+mod registration;
+use registration::RegistrationDelivery;
+
+#[path = "admin_metadata.rs"]
+pub(crate) mod admin_metadata;
+#[path = "admin_wire.rs"]
+mod admin_wire;
+pub use admin_metadata::{
+    AdminCategoryOrder, AdminChannelKind, AdminChannelPlacement, AdminDelivery,
+    AdminMetadataOperation, AdminReply,
 };

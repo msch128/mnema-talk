@@ -1,9 +1,15 @@
 //! Native-only current authenticated owner composition. Not renderer authority.
 //! Default denies relay; `opaque-relay` requires the new canonical broker seam.
+#[cfg(feature = "opaque-relay")]
+mod chat_history;
 mod pending_root;
 #[cfg(feature = "opaque-relay")]
 mod relay;
+#[cfg(feature = "opaque-relay")]
+mod typed_relay;
 use mnema_crypto_adapter_candidate::Scope;
+#[cfg(feature = "opaque-relay")]
+pub use mnema_crypto_sdk_prototype::{ChatEventClaim, ChatKind, ChatOperation, ReactionAction};
 use mnema_crypto_sdk_prototype::{NativeBinding, Sdk};
 use mnema_private_native_client_broker::{
     NativeAuthenticatedScope, NativeClient, NativeWindowLease,
@@ -11,10 +17,18 @@ use mnema_private_native_client_broker::{
 pub use pending_root::{
     NativeFirstRootOwner, NativeRootPreview, PendingFirstRoot, PendingRootCancellation,
 };
+#[cfg(feature = "opaque-relay")]
+pub use relay::NativeChatDisplay;
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
+    sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
+};
+#[cfg(feature = "opaque-relay")]
+pub use typed_relay::{
+    NativeChatEventPublication, NativeChatEventReceipt, NativeChatHistoryPublication,
+    NativePreparedChatEvent, NativeTypedChatChange, NativeTypedChatMessage,
 };
 use uuid::Uuid;
 use zeroize::Zeroizing;
@@ -102,10 +116,16 @@ pub struct NativeChatOwner {
     retired: bool,
     serial: Uuid,
     cursor: i64,
+    #[cfg(feature = "opaque-relay")]
+    typed_events: HashMap<Uuid, mnema_crypto_sdk_prototype::NativeReservedChatEvent>,
+    #[cfg(feature = "opaque-relay")]
+    typed_history: chat_history::NativeChatHistory,
+    #[cfg(feature = "opaque-relay")]
+    chat_protocol: Option<bool>, // false=legacy, true=typed; never fallback across lanes.
 }
 /// Native transport job, never renderer JSON or arbitrary ciphertext input.
 pub struct NativePreparedChat {
-    auth: NativeAuthenticatedScope,
+    auth: Arc<NativeAuthenticatedScope>,
     event: Uuid,
     channel: Uuid,
     group: Vec<u8>,
@@ -172,6 +192,11 @@ impl NativeChatOwner {
             sdk.retire_native();
             return Err(Error::Auth);
         }
+        #[cfg(feature = "opaque-relay")]
+        let typed_history = chat_history::NativeChatHistory::for_current_native_owner(
+            sdk.native_protected_event_scope(now()?)
+                .map_err(|_| Error::Crypto)?,
+        )?;
         Ok(Self {
             client,
             lease,
@@ -181,12 +206,23 @@ impl NativeChatOwner {
             retired: false,
             serial: Uuid::new_v4(),
             cursor: 0,
+            #[cfg(feature = "opaque-relay")]
+            typed_events: HashMap::new(),
+            #[cfg(feature = "opaque-relay")]
+            typed_history,
+            #[cfg(feature = "opaque-relay")]
+            chat_protocol: None,
         })
     }
     pub fn retire(&mut self) {
         self.retired = true;
         self.sdk.retire_native();
         self.events.clear();
+        #[cfg(feature = "opaque-relay")]
+        {
+            self.typed_events.clear();
+            self.typed_history.retire();
+        }
     }
     fn scope(&mut self) -> Result<NativeAuthenticatedScope> {
         if self.retired {
@@ -196,7 +232,19 @@ impl NativeChatOwner {
             .client
             .authenticated_scope(&self.lease)
             .map_err(|_| Error::Auth)?;
-        let scope = canonical_scope(&auth)?;
+        self.check_admitted_scope(&auth)?;
+        Ok(auth)
+    }
+    /// Check the original admitted opaque native scope. This never samples a
+    /// replacement scope or extends the original admission/deadline.
+    fn check_admitted_scope(&mut self, auth: &NativeAuthenticatedScope) -> Result<()> {
+        if self.retired {
+            return Err(Error::Retired);
+        }
+        self.client
+            .check_authenticated_scope(&self.lease, auth)
+            .map_err(|_| Error::Auth)?;
+        let scope = canonical_scope(auth)?;
         if scope.origin() != self.owner.origin
             || scope.community() != self.owner.community
             || auth.account_id() != self.owner.account
@@ -209,7 +257,7 @@ impl NativeChatOwner {
             self.retire();
             return Err(Error::Binding);
         }
-        Ok(auth)
+        Ok(())
     }
     fn current(&mut self, when: u64) -> Result<(u64, u64)> {
         let facts = self
@@ -230,10 +278,23 @@ impl NativeChatOwner {
     /// Encrypt once for a fresh event; duplicate body uses only the same durable
     /// outbox. Different body is rejected and never re-encrypted.
     pub fn prepare_chat(&mut self, event: Uuid, body: &str) -> Result<NativePreparedChat> {
+        let admitted = Arc::new(self.scope()?);
+        self.prepare_chat_retained(admitted, event, body)
+    }
+    /// A host-queued operation must pass its ORIGINAL admitted scope. The same
+    /// private Arc travels through durable preparation, HTTP and final enqueue.
+    pub fn prepare_chat_retained(
+        &mut self,
+        auth: Arc<NativeAuthenticatedScope>,
+        event: Uuid,
+        body: &str,
+    ) -> Result<NativePreparedChat> {
+        self.check_admitted_scope(&auth)?;
         if event.is_nil() || body.is_empty() || body.len() > 24 * 1024 {
             return Err(Error::Invalid);
         }
-        let auth = self.scope()?;
+        #[cfg(feature = "opaque-relay")]
+        self.enter_chat_protocol(false)?;
         let when = now()?;
         let digest: [u8; 32] = Sha256::digest(body.as_bytes()).into();
         // Provider I/O stays outside broker locks. A concurrent auth retirement

@@ -78,7 +78,18 @@ echo '==> stopping the app and existing PostgreSQL service'
 # Do not open PGDATA in a second server while the old server still runs.
 # A failed stop must abort before cloning or starting any database.
 docker compose stop app postgres >/dev/null
-[ -z "$(docker ps -q --filter "volume=$old")" ] || backup_fail 'the PostgreSQL 17 volume is still mounted by a running container; stop it before retrying'
+# The container-list snapshot can lag behind a successful stop. List all
+# matching containers, then inspect their live state before cold-copying.
+# Running includes paused and restarting containers; uncertain state is unsafe.
+mounted=$(docker ps -aq --filter "volume=$old") || backup_fail 'could not list containers mounting the PostgreSQL 17 volume'
+for id in $mounted; do
+  running=$(docker inspect -f '{{.State.Running}}' "$id") || backup_fail "could not inspect a container mounting the PostgreSQL 17 volume: $id"
+  case "$running" in
+    false) ;;
+    true) backup_fail "the PostgreSQL 17 volume is still mounted by a running container ($id); stop it before retrying" ;;
+    *) backup_fail "could not establish whether a container mounting the PostgreSQL 17 volume is stopped: $id" ;;
+  esac
+done
 
 echo '==> copying the stopped PostgreSQL 17 volume for a read-only rollback'
 old_copy=$(docker volume create --label "mnema-talk.pg-upgrade-copy=$project")

@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "node ui/node_modules/@tauri-apps/cli/tauri.js dev --features shell",
-    "build": "node ui/node_modules/@tauri-apps/cli/tauri.js build --features shell --no-bundle"
+    "build": "node ui/node_modules/@tauri-apps/cli/tauri.js build --features shell --no-bundle",
+    "build:client:dev": "npm --prefix ../web run build && cargo build --locked --manifest-path experimental/app/Cargo.toml --features shell,native-crypto,custom-protocol"
   }
 }

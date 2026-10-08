@@ -68,6 +68,18 @@ describe('extractPreviewUrls', () => {
 })
 
 describe('createKeyedThrottle', () => {
+  it('retires every trailing callback and key history on community reset', () => {
+    vi.useFakeTimers()
+    const fn = vi.fn()
+    const th = createKeyedThrottle(fn, 2000)
+    th.call('a'); th.call('b'); th.call('a'); th.call('b')
+    th.reset()
+    vi.advanceTimersByTime(5000)
+    expect(fn).toHaveBeenCalledTimes(2)
+    th.call('a')
+    expect(fn).toHaveBeenCalledTimes(3)
+    th.reset()
+  })
   it('runs immediately, then at most once per interval with a trailing call', () => {
     vi.useFakeTimers()
     const fn = vi.fn()

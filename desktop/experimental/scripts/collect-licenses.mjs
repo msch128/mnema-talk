@@ -7,6 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const web = resolve(desktop, '../../web');
 const output = join(desktop, 'licenses');
 const check = process.argv.includes('--check');
 const args = process.argv.slice(2).filter((arg) => arg !== '--check');
@@ -73,12 +74,12 @@ for (const pkg of metadata.packages.filter((pkg) => pkg.source)) {
     source, texts });
 }
 
-const npmLock = JSON.parse(readFileSync(join(desktop, 'ui', 'package-lock.json'), 'utf8'));
+const npmLock = JSON.parse(readFileSync(join(web, 'package-lock.json'), 'utf8'));
 for (const [path, pkg] of Object.entries(npmLock.packages)) {
   // Include the entire production dependency closure, even compiler packages
   // brought in by Vue which need not be present in the final browser bundle.
   if (!path || pkg.dev) continue;
-  const root = join(desktop, 'ui', path);
+  const root = join(web, path);
   const actual = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   if (actual.version !== pkg.version) throw new Error('npm installation differs from lockfile');
   const source = `https://www.npmjs.com/package/${actual.name}/v/${pkg.version}`;
@@ -107,7 +108,7 @@ const manifest = {
   schema: 'mnema-desktop-license-bundle-v1',
   scope: 'Conservative locked Rust graph and production npm closure; not a claim that all packages are linked.',
   cargo_lock_sha256: hash(readFileSync(join(desktop, 'app', 'Cargo.lock'))),
-  npm_lock_sha256: hash(readFileSync(join(desktop, 'ui', 'package-lock.json'))),
+  npm_lock_sha256: hash(readFileSync(join(web, 'package-lock.json'))),
   supplemental: JSON.parse(readFileSync(join(output, 'supplemental.json'), 'utf8')),
   packages,
 };

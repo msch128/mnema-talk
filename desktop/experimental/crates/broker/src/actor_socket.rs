@@ -78,13 +78,28 @@ impl NativeClient {
         action: NativeSocketAction,
     ) -> Result<(), Error> {
         let (sender, cancel) = {
-            self.shared.current(lease)?;
+            // Native-only callers follow the same window -> socket lock order
+            // as renderer admission. Never reacquire window while holding the
+            // socket map: a credential transition holds window while sealing it.
+            let windows = self.shared.window.lock().map_err(|_| Error::Internal)?;
+            if lease.cancel.is_cancelled()
+                || windows.as_ref().is_none_or(|window| {
+                    window.context != lease.context || window.owner != lease.owner
+                })
+            {
+                return Err(Error::Stale);
+            }
             let sockets = self.shared.sockets.lock().map_err(|_| Error::Internal)?;
             let entry = sockets.get(&handle).ok_or(Error::Stale)?;
             if entry.lease.context != lease.context || entry.lease.owner != lease.owner {
                 return Err(Error::Denied);
             }
-            self.shared.ready(lease, entry.intent)?;
+            if entry.intent == 0
+                || self.shared.intent.load(Ordering::Acquire) != entry.intent
+                || self.shared.ready.load(Ordering::Acquire) != entry.intent
+            {
+                return Err(Error::Stale);
+            }
             (entry.sender.clone(), entry.cancel.clone())
         };
         let (answer, receive) = oneshot::channel();
@@ -92,6 +107,47 @@ impl NativeClient {
             .try_send(SocketCommand { action, answer })
             .map_err(|_| Error::Busy)?;
         tokio::select! {biased;_=lease.cancel.cancelled()=>Err(Error::Stale),_=cancel.cancelled()=>Err(Error::Cancelled),r=receive=>r.map_err(|_|Error::Cancelled)?}
+    }
+    pub async fn socket_send_with_intents(
+        &self,
+        lease: &NativeWindowLease,
+        profile: Uuid,
+        authentication: Uuid,
+        handle: Uuid,
+        action: NativeSocketAction,
+    ) -> Result<(), Error> {
+        let (answer, receive) = oneshot::channel();
+        let cancel =
+            self.with_selected_authentication(lease, profile, Some(authentication), || {
+                let sockets = self.shared.sockets.lock().map_err(|_| Error::Internal)?;
+                let entry = sockets.get(&handle).ok_or(Error::Stale)?;
+                if entry.lease.context != lease.context || entry.lease.owner != lease.owner {
+                    return Err(Error::Stale);
+                }
+                entry
+                    .sender
+                    .try_send(SocketCommand { action, answer })
+                    .map_err(|_| Error::Busy)?;
+                Ok::<_, Error>(entry.cancel.clone())
+            })??;
+        tokio::select! {biased;_=lease.cancel.cancelled()=>Err(Error::Stale),_=cancel.cancelled()=>Err(Error::Cancelled),r=receive=>r.map_err(|_|Error::Cancelled)?}
+    }
+    pub fn socket_close_with_intents(
+        &self,
+        lease: &NativeWindowLease,
+        profile: Uuid,
+        authentication: Uuid,
+        handle: Uuid,
+    ) -> Result<(), Error> {
+        self.with_selected_authentication(lease, profile, Some(authentication), || {
+            let sockets = self.shared.sockets.lock().map_err(|_| Error::Internal)?;
+            let entry = sockets.get(&handle).ok_or(Error::Stale)?;
+            if entry.lease.context != lease.context || entry.lease.owner != lease.owner {
+                return Err(Error::Stale);
+            }
+            entry.cancel.cancel();
+            Ok::<_, Error>(())
+        })?
     }
     pub fn socket_close(&self, lease: &NativeWindowLease, handle: Uuid) -> Result<(), Error> {
         self.shared.current(lease)?;
@@ -113,6 +169,7 @@ pub(super) fn cancel_sockets(shared: &Shared, context: Uuid) {
 }
 pub(super) async fn open(
     shared: Arc<Shared>,
+    broker: Arc<Broker>,
     lease: NativeWindowLease,
     intent: u64,
     observer: NativeSocketObserver,
@@ -128,7 +185,7 @@ pub(super) async fn open(
     {
         return Err(Error::Busy);
     }
-    let socket = shared.broker.open_native_socket(lease.owner).await?;
+    let socket = broker.open_native_socket(lease.owner).await?;
     let scope = shared.broker.selected_publication_scope(lease.owner)?;
     shared.ready(&lease, intent)?;
     shared.broker.check_publication_scope(lease.owner, scope)?;

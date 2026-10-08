@@ -21,7 +21,7 @@ beforeEach(() => {
   router.navigate('/', { replace: true })
   setActivePinia(createPinia())
 })
-afterEach(() => { wrapper?.unmount(); wrapper = undefined; vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => { wrapper?.unmount(); wrapper = undefined; vi.restoreAllMocks(); vi.useRealTimers(); vi.unstubAllGlobals() })
 
 async function mountApp({ authenticated = true, admin = false, path = '/c/ch1' } = {}) {
   router.navigate(path, { replace: true })
@@ -44,6 +44,28 @@ async function mountApp({ authenticated = true, admin = false, path = '/c/ch1' }
 async function go(path: string) { router.navigate(path); await flushPromises() }
 
  describe('App routing and session lifecycle', () => {
+  it.each([false, true])('keeps the shared ChatArea mounted in desktop for admin=%s and limits root setup to admins', async admin => {
+    vi.stubGlobal('isTauri', true)
+    const { w, chat } = await mountApp({ admin })
+    expect(w.findComponent({ name: 'ChatArea' }).exists()).toBe(true)
+    expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(false)
+    const control = w.findComponent({ name: 'NativeTrustControl' })
+    expect(control.exists()).toBe(admin)
+    if (admin) {
+      chat.fetchMessages = vi.fn(async () => true)
+      control.vm.$emit('saved'); await flushPromises()
+      expect(chat.fetchMessages).toHaveBeenCalledExactlyOnceWith('ch1')
+      chat.activeChannel = null; await flushPromises()
+      control.vm.$emit('saved'); await flushPromises()
+      expect(chat.fetchMessages).toHaveBeenCalledOnce()
+      expect(w.findComponent({ name: 'NativeTrustControl' }).exists()).toBe(false)
+    }
+  })
+  it('keeps the server reload banner available in the browser', async () => {
+    vi.stubGlobal('isTauri', false)
+    const { w } = await mountApp()
+    expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(true)
+  })
   it('selects text channels, opens/closes threads, and repairs dead message and thread links', async () => {
     const { chat, toasts } = await mountApp()
     await go('/c/ch2/t/root')
@@ -273,6 +295,45 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     const { chat, w } = await mountApp({ authenticated: false })
     expect(w.findComponent({ name: 'LoginModal' }).exists()).toBe(true)
     expect(chat.fetchChannels).not.toHaveBeenCalled()
+  })
+  it.each([false, true])('retires auth polling when App unmounts (pending response: %s)', async pending => {
+    vi.useFakeTimers()
+    const auth = useAuthStore()
+    let resolve!: (value: null) => void
+    auth.checkAuth = vi.fn(() => pending ? new Promise<null>(r => { resolve = r }) : Promise.resolve(null))
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+    wrapper.unmount(); wrapper = undefined
+    if (pending) resolve(null)
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(20000)
+    expect(auth.checkAuth).toHaveBeenCalledOnce()
+  })
+  it('does not reopen a socket or continue routing after pending initialization unmounts', async () => {
+    const auth = useAuthStore(), chat = useChatStore()
+    let resolve!: () => void
+    auth.checkAuth = vi.fn(async () => { auth.user = userFixture(); return true })
+    chat.fetchChannels = vi.fn(() => new Promise<void>(r => { resolve = r }))
+    chat.fetchMembers = vi.fn(async () => {})
+    chat.fetchReadState = vi.fn(async () => ({}))
+    chat.initWebSocket = vi.fn()
+    chat.jumpToMessage = vi.fn(async () => true)
+    router.navigate('/c/ch1/m/old')
+    wrapper = mount(App, { shallow: true })
+    await flushPromises()
+    wrapper.unmount(); wrapper = undefined
+    resolve(); await flushPromises()
+    expect(chat.initWebSocket).not.toHaveBeenCalled()
+    expect(chat.jumpToMessage).not.toHaveBeenCalled()
+    expect(chat.fetchChannels).toHaveBeenCalledOnce()
+  })
+  it('does not start a voice-message jump after the rendering tick outlives App', async () => {
+    const { chat, w } = await mountApp({ path: '/v/v1/chat' })
+    router.navigate('/v/v1/chat/m/old')
+    await Promise.resolve()
+    w.unmount(); wrapper = undefined
+    await flushPromises()
+    expect(chat.jumpToMessage).not.toHaveBeenCalled()
   })
   it('ignores old routes after newer channel, message and thread loads finish', async () => {
     const { chat } = await mountApp()

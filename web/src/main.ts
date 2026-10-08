@@ -9,6 +9,7 @@ import '@fontsource/inter/700.css'
 import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
+import { isDesktopRuntime } from './lib/desktopRuntime'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
@@ -16,7 +17,11 @@ import { tooltip } from './directives/tooltip'
 // Before login the browser decides; the account's language takes over after login.
 setLocale(browserLocale())
 
-createApp(App)
+const root = isDesktopRuntime()
+  ? (await import('./NativeBootstrap.vue')).default
+  : App
+
+createApp(root)
   .use(createPinia())
   .use(i18nPlugin)
   .directive('tooltip', tooltip)

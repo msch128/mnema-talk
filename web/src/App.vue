@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Route } from './lib/router'
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
@@ -10,6 +10,8 @@ import { t } from './i18n'
 import Sidebar from './components/Sidebar.vue'
 import UserBar from './components/UserBar.vue'
 import ChatArea from './components/ChatArea.vue'
+import NativeTrustControl from './components/NativeTrustControl.vue'
+import { isDesktopRuntime } from './lib/desktopRuntime'
 import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
@@ -37,6 +39,16 @@ const authStore = useAuthStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const toasts = useToastStore()
+let alive = true
+let authRetryTimer: ReturnType<typeof setTimeout> | undefined
+let cancelAuthRetry: (() => void) | undefined
+onBeforeUnmount(() => {
+  alive = false
+  ++routeGen
+  clearTimeout(authRetryTimer)
+  cancelAuthRetry?.()
+  cancelAuthRetry = undefined
+})
 const { resumeVoiceSession, resumeRemoteAudio, leaveVoiceChannel, rejoinAfterReconnect } = useWebRTC()
 
 // Column widths. Order = shrink priority on narrow windows
@@ -73,11 +85,13 @@ const authChecked = ref(false)
 let resumeAttempted = false
 
 async function initializeApp() {
+  if (!alive) return
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
     chatStore.fetchReadState()
   ])
+  if (!alive) return
   chatStore.initWebSocket()
 }
 
@@ -100,9 +114,9 @@ function currentStatePath() {
 let routeGen = 0
 
 async function applyRoute(route: Route) {
-  if (!authStore.isAuthenticated) return
+  if (!alive || !authStore.isAuthenticated) return
   const gen = ++routeGen
-  const superseded = () => gen !== routeGen
+  const superseded = () => !alive || gen !== routeGen
 
   // Admin console is checked before anything renders, so non-admins never see it.
   if (route.view === 'admin' && !authStore.isAdmin) {
@@ -181,6 +195,7 @@ async function applyRoute(route: Route) {
       if (route.messageId) {
         // The chat (and its scroll handling) renders before the jump.
         await nextTick()
+        if (superseded()) return
         const found = await chatStore.jumpToMessage(route.messageId)
         if (superseded()) return
         if (found === false) navigate(`/v/${targetChannel.id}/chat`, { replace: true })
@@ -260,19 +275,23 @@ function onVoiceJoin(channelId: string) {
 }
 
 async function onAuthSuccess() {
+  if (!alive) return
   resumeAttempted = false
   await initializeApp()
+  if (!alive) return
   const redirect = popRedirectRoute()
   if (redirect) {
     navigate(redirect, { replace: true })
   } else {
     await applyRoute(currentRoute.value)
+    if (!alive) return
     syncCurrentStateToRoute()
   }
 }
 
 // Single place that reacts to login, logout and expired sessions.
 watch(() => authStore.isAuthenticated, async (isAuthed) => {
+  if (!alive) return
   if (isAuthed) {
     if (authChecked.value) {
       await onAuthSuccess()
@@ -305,11 +324,19 @@ const AUTH_RETRY_MAX_MS = 15000
 
 async function checkAuthUntilKnown(delay = 1000) {
   let result = await authStore.checkAuth()
+  if (!alive) return null
   while (result === null) {
     authRetrying.value = true
-    await new Promise(resolve => setTimeout(resolve, delay))
+    await new Promise<void>(resolve => {
+      cancelAuthRetry = resolve
+      authRetryTimer = setTimeout(resolve, delay)
+    })
+    cancelAuthRetry = undefined
+    authRetryTimer = undefined
+    if (!alive) return null
     delay = Math.min(delay * 2, AUTH_RETRY_MAX_MS)
     result = await authStore.checkAuth()
+    if (!alive) return null
   }
   authRetrying.value = false
   return result
@@ -317,6 +344,7 @@ async function checkAuthUntilKnown(delay = 1000) {
 
 onMounted(async () => {
   const isAuthed = await checkAuthUntilKnown()
+  if (!alive) return
   authChecked.value = true
   if (isAuthed) {
     await onAuthSuccess()
@@ -359,7 +387,8 @@ onMounted(async () => {
       <!-- Center: connection banner, then the Talk or a text channel -->
       <div class="flex-1 min-w-0 h-full flex flex-col">
         <ConnectionBanner />
-        <UpdateBanner />
+        <!-- Reloading embedded assets cannot update the unsigned DEV application. -->
+        <UpdateBanner v-if="!isDesktopRuntime()" />
         <template v-if="voiceStore.activeView === 'voice'">
           <VoiceStage
             :channel-id="voiceChannelId"
@@ -375,7 +404,10 @@ onMounted(async () => {
             @close="voiceShowChat = false"
           />
         </template>
-        <ChatArea v-else class="min-h-0" />
+        <div v-else class="min-h-0 flex flex-1 flex-col">
+          <NativeTrustControl v-if="isDesktopRuntime() && authStore.isAdmin && chatStore.activeChannel" :key="authStore.user?.id + ':' + chatStore.activeChannel.id" :channel-id="chatStore.activeChannel.id" @saved="chatStore.activeChannel && chatStore.fetchMessages(chatStore.activeChannel.id)" />
+          <ChatArea class="min-h-0 flex-1" />
+        </div>
       </div>
 
       <!-- Thread panel -->

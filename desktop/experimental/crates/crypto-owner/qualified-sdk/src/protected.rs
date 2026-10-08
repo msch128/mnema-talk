@@ -14,6 +14,7 @@ use std::collections::{HashMap, HashSet};
 
 const CHAT_DOMAIN: &str = "MnemaTalk ProtectedChat";
 const SOURCE_DOMAIN: &str = "MnemaTalk ProtectedSource";
+const VOICE_SOURCE_DOMAIN: &str = "MnemaTalk ProtectedVoiceSource";
 const MAX_BODY: usize = 24 * 1024;
 /// Native actor policy input. Shape checks do not authenticate the actor or root.
 pub struct NativeBinding {
@@ -589,6 +590,31 @@ impl Sdk {
         kind: SourceKind,
         now: u64,
     ) -> Result<SourceLease> {
+        self.reserve_source_inner(event_id, source_id, kind, None, now)
+    }
+    /// Native cryptographic reservation, not Voice permission or RTC capability.
+    /// Actual Voice producer must own a separate per-Voice MLS group and current
+    /// native routing/member lease. A different channel is denied before mutation.
+    pub fn reserve_bound_voice_source(
+        &mut self,
+        event_id: &str,
+        source_id: &str,
+        claim: &SourceTransportClaim,
+        now: u64,
+    ) -> Result<SourceLease> {
+        if claim.voice_channel() != self.binding.channel {
+            return Err(Error::Unauthorized);
+        }
+        self.reserve_source_inner(event_id, source_id, claim.codec(), Some(claim), now)
+    }
+    fn reserve_source_inner(
+        &mut self,
+        event_id: &str,
+        source_id: &str,
+        kind: SourceKind,
+        claim: Option<&SourceTransportClaim>,
+        now: u64,
+    ) -> Result<SourceLease> {
         uuid(event_id)?;
         uuid(source_id)?;
         let (epoch, generation, sender, account, device) = self.current(now)?;
@@ -630,15 +656,21 @@ impl Sdk {
             self.core.revision = revision;
             #[cfg(test)]
             source_fixture_exit("after-context-commit");
-            let payload = Value::Array(vec![
+            let mut payload = vec![
                 Value::Integer(epoch.into()),
                 Value::Integer(sender.into()),
                 Value::Integer(context.into()),
                 Value::Text(source_id.into()),
                 Value::Text(kind.name().into()),
-            ]);
+            ];
+            let domain = if let Some(claim) = claim {
+                payload.extend(claim.payload_tail());
+                VOICE_SOURCE_DOMAIN
+            } else {
+                SOURCE_DOMAIN
+            };
             let inner =
-                encode(&self.envelope(SOURCE_DOMAIN, event_id, &account, &device, payload))?;
+                encode(&self.envelope(domain, event_id, &account, &device, Value::Array(payload)))?;
             let result = self.core.send_inner(
                 event_id,
                 &inner,
@@ -803,7 +835,7 @@ pub(super) fn uuid(v: &str) -> Result<()> {
         Ok(())
     }
 }
-/// Flat profile scanner: ten-element outer array plus at most one5-element source array.
+/// Flat profile scanner: at most ten-element outer plus one nested source5/voice11.
 /// Reject nesting/size bombs before recursive library parsing.
 pub(super) fn scan(wire: &[u8]) -> Result<()> {
     if wire.is_empty() || wire.len() > 32768 {
@@ -864,7 +896,7 @@ pub(super) fn scan(wire: &[u8]) -> Result<()> {
                     }
                 }
                 4 => {
-                    if depth >= 2 || n > 10 {
+                    if depth >= 2 || n > if depth == 0 { 10 } else { 11 } {
                         return Err(Error::Invalid);
                     }
                     pending.push((count, depth));
@@ -943,3 +975,62 @@ impl Sdk {
 
 #[path = "fresh_join.rs"]
 mod fresh_join;
+
+#[path = "dispatch.rs"]
+mod dispatch;
+pub use dispatch::{ProtectedReceived, VerifiedSource, VerifiedSourceFacts};
+
+#[path = "voice_binding.rs"]
+mod voice_binding;
+pub use voice_binding::{ProtectedSourceBinding, SourcePurpose, SourceTransportClaim};
+
+#[path = "chat_domain.rs"]
+mod chat_domain;
+#[path = "chat_event_projection.rs"]
+mod chat_event_projection;
+pub use chat_domain::{
+    CHAT_EVENT_DOMAIN, CHAT_EVENT_VERSION, ChatEventClaim, ChatKind, ChatOperation, ReactionAction,
+    VerifiedChatEvent,
+};
+pub use chat_event_projection::{NativeProtectedEventScope, NativeReservedChatEvent};
+impl Sdk {
+    /// Shape-checked typed event only. Native owner must authorize mutation from
+    /// actual verified history/current role BEFORE calling; no permission comes
+    /// from this producer claim. Metadata remains actual delivery evidence.
+    pub fn send_chat_event(
+        &mut self,
+        event: &str,
+        claim: &ChatEventClaim,
+        now: u64,
+    ) -> Result<Vec<u8>> {
+        uuid(event)?;
+        let (epoch, generation, _, account, device) = self.current(now)?;
+        let payload = claim.payload();
+        // Same parser enforces logical create/ref event identity before mutation.
+        let native_scope = self.native_protected_event_scope(now)?;
+        VerifiedChatEvent::from_authenticated_payload(
+            native_scope,
+            event,
+            &account,
+            &device,
+            &payload,
+        )?;
+        let inner = encode(&self.envelope(CHAT_EVENT_DOMAIN, event, &account, &device, payload))?;
+        let result = self.core.send_inner(
+            event,
+            &inner,
+            now,
+            |_| Ok(()),
+            Some((&self.binding.channel, epoch, generation)),
+        );
+        let result = self.core.quarantine(result);
+        if result.is_err() {
+            self.retire_native()
+        }
+        result
+    }
+}
+
+#[path = "community.rs"]
+mod community;
+pub use community::{NativeCommunityAnchor, VerifiedCommunityAuthorization, VerifiedVoiceCreation};

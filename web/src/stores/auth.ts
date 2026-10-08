@@ -231,6 +231,12 @@ export const useAuthStore = defineStore('auth', () => {
     })
   }
 
+  function resetLocalSession() {
+    advanceSession()
+    user.value = null
+    cookieAccountId = undefined
+  }
+
   async function logout() {
     advanceSession()
     user.value = null
@@ -254,6 +260,7 @@ export const useAuthStore = defineStore('auth', () => {
     uploadAvatar,
     updateProfile,
     changePassword,
-    logout
+    logout,
+    resetLocalSession
   }
 })
