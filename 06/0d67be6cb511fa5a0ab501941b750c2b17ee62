@@ -1,0 +1,97 @@
+desktop/tauri.conf.json
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 13-22,24-27,29-30,32-34
+desktop/src/gaming_fixture/runtime.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-355
+desktop/src/owned_d3d11/mod.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-141
+desktop/src/main.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 68-69,71-108,111,113-120
+desktop/src/native_input/native.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-646
+desktop/ui/public/fixtures/fixture.js
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-41
+desktop/src/gaming_fixture/lifecycle.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-84
+desktop/THIRD_PARTY_NOTICES.md
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 13-18
+desktop/src/native_window_owner/native.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-369
+desktop/src/native_input/mod.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-697
+desktop/ui/src/gaming-fixture/fixture.ts
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-42
+desktop/src/gaming_fixture/mod.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-708
+desktop/src/owned_d3d11/native.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-501
+desktop/src/gaming_fixture/observed.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-190
+desktop/ui/src/gamingFixtureRenderer.test.ts
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-82
+desktop/ui/public/fixtures/overlay.html
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1
+.github/workflows/desktop-gaming-fixture.yml
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-112
+desktop/src/gaming_fixture/fixture_session.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-209
+internal/server/native_public_preview_integration_test.go
+  s_0ae926f6f8634a::t_50f128778eec16 1-114
+desktop/OWNED-D3D11-FIXTURE.md
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-82
+desktop/src/owned_d3d11_main.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-11
+desktop/ui/public/fixtures/widget.html
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1
+desktop/ui/public/fixtures/style.css
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-3
+internal/server/native_public_preview_test.go
+  s_0ae926f6f8634a::t_50f128778eec16 1-58
+desktop/fixtures/tsconfig.json
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-19
+desktop/README.md
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 5,20-22,109-177
+desktop/src/gaming_fixture/options.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-108
+desktop/src/gaming_fixture/fixture_window.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-70
+desktop/src/gaming_fixture/fixture_child.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-557
+desktop/src/gaming_fixture/native_game.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-365
+desktop/ui/package.json
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 8,13-18
+desktop/Cargo.toml
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 12-17,27,37-41
+desktop/src/gaming_fixture/fixture_control.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-96
+desktop/licenses/manifest.json
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 4
+desktop/src/gaming_fixture/shell.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-288
+desktop/src/native_window_owner/mod.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-291
+internal/server/native_public_preview.go
+  s_0ae926f6f8634a::t_50f128778eec16 1-73
+desktop/capabilities/gaming-fixture.json
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 1-13
+desktop/src/lib.rs
+  s_0ae926f6f8634a::t_e7e7a7d2498c22 7-16
+desktop/Cargo.lock
+  s_0ae926f6f8634a::t_399d87f543af97 1849
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "060d67be6cb511fa5a0ab501941b750c2b17ee62",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
