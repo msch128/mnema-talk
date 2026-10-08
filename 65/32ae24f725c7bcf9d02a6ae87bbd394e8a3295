@@ -1,0 +1,25 @@
+internal/server/native_registration_preview_integration_test.go
+  s_0ae926f6f8634a::t_a921bae36d0a86 1-265
+internal/auth/native_registration.go
+  s_0ae926f6f8634a::t_a921bae36d0a86 1-57
+internal/server/native_registration_preview.go
+  s_0ae926f6f8634a::t_a921bae36d0a86 1-43
+internal/auth/native_registration_test.go
+  s_0ae926f6f8634a::t_a921bae36d0a86 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6532ae24f725c7bcf9d02a6ae87bbd394e8a3295",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
