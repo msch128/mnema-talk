@@ -8,10 +8,13 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 type nativeCommitObserver struct {
@@ -65,6 +68,9 @@ func TestNativeLeaseUsesExactAccessBindingAndExpiry(t *testing.T) {
 	if err != nil || !lease.Principal().SameNativeAccess(grant.Principal()) || lease.Deadline().After(time.Now().Add(NativeLeaseMaximum)) || !lease.Deadline().Before(lease.AccessDeadline()) {
 		t.Fatal("native lease binding/deadline invalid")
 	}
+	if !lease.Principal().FamilyExpiresAt().Equal(grant.FamilyExpiresAt()) {
+		t.Fatal("lease did not preserve the authenticated family expiry")
+	}
 	fresh, err := service.RevalidateNativeLease(context.Background(), lease.Principal())
 	if err != nil || !fresh.Principal().SameNativeAccess(lease.Principal()) {
 		t.Fatal("valid native lease revalidation failed")
@@ -106,6 +112,46 @@ func TestNativeLeaseUsesExactAccessBindingAndExpiry(t *testing.T) {
 	}
 	if _, err := service.RevalidateNativeLease(context.Background(), short.Principal()); err != ErrNativeUnauthorized {
 		t.Fatal("revoked family revalidated")
+	}
+}
+
+func TestNativeLeaseAdmissionRejectsBrowserTargets(t *testing.T) {
+	_, user, handler := nativeHTTPFixture(t)
+	grant := nativeHTTPLogin(t, handler, user)
+	for _, boundary := range []string{"origin", "cookie", "query", "userinfo", "fragment"} {
+		t.Run(boundary, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/native/socket", nil)
+			request.Header.Set("Authorization", "Bearer "+grant.Access)
+			switch boundary {
+			case "origin":
+				request.Header.Set("Origin", "https://community.example.invalid")
+			case "cookie":
+				request.AddCookie(&http.Cookie{Name: "mnema_session", Value: "synthetic-browser-cookie"})
+			case "query":
+				request.URL.RawQuery = "target=other"
+			case "userinfo":
+				request.URL.User = url.User("synthetic-user")
+			case "fragment":
+				request.URL.Fragment = "other-target"
+			}
+			lease, err := handler.AuthenticateNativeRequest(request)
+			var apiError *httpx.APIError
+			if !errors.As(err, &apiError) || apiError.Status != http.StatusForbidden || lease != (NativeLease{}) {
+				t.Fatal("browser-controlled target acquired native admission")
+			}
+		})
+	}
+	request := httptest.NewRequest(http.MethodGet, "/native/socket", nil)
+	request.Header.Set("Authorization", "Bearer "+grant.Access)
+	if lease, err := handler.AuthenticateNativeRequest(request); err != nil || lease.Principal().FamilyID() == uuid.Nil {
+		t.Fatal("rejected targets invalidated the original native family")
+	}
+	request = httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{"unterminated`))
+	request.Header.Set("Content-Type", "application/json")
+	values, err := decodeNativeStrings(httptest.NewRecorder(), request, "username")
+	var apiError *httpx.APIError
+	if !errors.As(err, &apiError) || apiError.Status != http.StatusBadRequest || values != nil {
+		t.Fatal("malformed JSON key was accepted as native credentials")
 	}
 }
 

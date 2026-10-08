@@ -8,8 +8,69 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+func TestNativeTransactionRejectsMissingScopeWithoutMutation(t *testing.T) {
+	_, _, service, proof := nativeFixture(t)
+	grant := nativeIssue(t, service, proof)
+	principal := grant.Principal()
+	if err := service.WithAuthorizedTransaction(context.Background(), principal, nil); !errors.Is(err, ErrNativeUnauthorized) {
+		t.Fatal("missing callback acquired transaction authority")
+	}
+	for _, boundary := range []string{"empty", "missing-user", "missing-family", "foreign-instance", "expired-access", "expired-family"} {
+		t.Run(boundary, func(t *testing.T) {
+			captured := principal
+			switch boundary {
+			case "empty":
+				captured = NativePrincipal{}
+			case "missing-user":
+				captured.user.ID = uuid.New()
+			case "missing-family":
+				captured.familyID = uuid.New()
+			case "foreign-instance":
+				captured.instanceID = uuid.New()
+			case "expired-access":
+				captured.accessExpiresAt = time.Now().Add(-time.Hour)
+			case "expired-family":
+				captured.familyExpiresAt = time.Now().Add(-time.Hour)
+			}
+			called := false
+			err := service.WithAuthorizedTransaction(context.Background(), captured, func(context.Context, pgx.Tx, User) error {
+				called = true
+				return nil
+			})
+			if !errors.Is(err, ErrNativeUnauthorized) || called {
+				t.Fatal("missing or expired captured scope reached a mutation")
+			}
+		})
+	}
+	if _, err := service.RevalidateNativeLease(context.Background(), principal); err != nil {
+		t.Fatal("scope rejection revoked the valid original family")
+	}
+}
+
+func TestNativeTransactionDatabaseFailuresNeverReachMutation(t *testing.T) {
+	pool, _, service, proof := nativeFixture(t)
+	grant := nativeIssue(t, service, proof)
+	for _, query := range []string{"FROM users WHERE id=$1 FOR UPDATE", "FROM native_session_families WHERE id=$1 AND user_id=$2 FOR UPDATE", "SELECT clock_timestamp()"} {
+		t.Run(query, func(t *testing.T) {
+			fault := nativeFaultService(t, pool, &authQueryHook{match: query, cancel: true})
+			called := false
+			err := fault.WithAuthorizedTransaction(context.Background(), grant.Principal(), func(context.Context, pgx.Tx, User) error {
+				called = true
+				return nil
+			})
+			if !errors.Is(err, context.Canceled) || called {
+				t.Fatal("failed database authorization reached a mutation or lost its cancellation cause")
+			}
+		})
+	}
+	if _, err := service.RevalidateNativeLease(context.Background(), grant.Principal()); err != nil {
+		t.Fatal("failed transaction invalidated the persistent family")
+	}
+}
 
 func TestNativeTransactionCurrentAccountAndRollback(t *testing.T) {
 	pool, user, service, proof := nativeFixture(t)

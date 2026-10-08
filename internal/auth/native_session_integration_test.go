@@ -328,6 +328,48 @@ func nativeFaultService(t *testing.T, pool *db.Pool, hook *authQueryHook) *Nativ
 	return service
 }
 
+func TestNativePasswordDisappearingCapturedAuthorityCannotReissue(t *testing.T) {
+	for _, boundary := range []string{"account-before-password-read", "access-before-locked-validation"} {
+		t.Run(boundary, func(t *testing.T) {
+			pool, user, service, proof := nativeFixture(t)
+			grant := nativeIssue(t, service, proof)
+			query := "SELECT password_hash FROM users WHERE id=$1 AND token_version=$2"
+			if boundary == "access-before-locked-validation" {
+				query = "FROM users WHERE id=$1 FOR UPDATE"
+			}
+			fault := nativeFaultService(t, pool, &authQueryHook{match: query, before: func() {
+				var err error
+				if boundary == "account-before-password-read" {
+					_, err = pool.Exec(context.Background(), `DELETE FROM users WHERE id=$1`, user.ID)
+				} else {
+					hash := grant.access.digest()
+					_, err = pool.Exec(context.Background(), `DELETE FROM native_access_tokens WHERE token_hash=$1`, hash[:])
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+			}})
+			control := &nativePasswordObserver{}
+			fresh, err := fault.changePasswordAndReissue(context.Background(), grant.Principal(), testPassword, nativeNextPassword, control)
+			if !errors.Is(err, ErrNativeUnauthorized) || fresh != (IssuedNative{}) || control.calls != 0 {
+				t.Fatal("disappeared captured authority exposed a replacement grant or advanced credential cutoff")
+			}
+			if boundary == "account-before-password-read" {
+				nativeCounts(t, pool, 0, 0, 0)
+			} else {
+				nativeCounts(t, pool, 1, 0, 1)
+				if _, version, err := Login(context.Background(), pool, user.Username, testPassword); err != nil || version != proof.tokenVersion {
+					t.Fatal("missing access row changed the password or token version")
+				}
+				var revoked bool
+				if err := pool.QueryRow(context.Background(), `SELECT revoked_at IS NOT NULL FROM native_session_families WHERE id=$1`, grant.Principal().FamilyID()).Scan(&revoked); err != nil || revoked {
+					t.Fatal("missing access row revoked the untouched family")
+				}
+			}
+		})
+	}
+}
+
 func TestNativeCredentialProofAndRefreshRevocationRaces(t *testing.T) {
 	for _, rotate := range []bool{false, true} {
 		for _, action := range []string{"revoke", "disable", "password"} {
