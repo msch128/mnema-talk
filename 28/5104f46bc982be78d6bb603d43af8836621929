@@ -1,0 +1,328 @@
+desktop/package.json
+  s_0a885d5f0c193a::t_3dc173c16744be 6-7
+web/src/i18n/en.json
+  s_0a885d5f0c193a::t_a5de57e0b3d648 975-977,979-981
+  s_0a885d5f0c193a::t_4e659f32deb450 965,982-1002
+  s_0a885d5f0c193a::t_c229a6ff319fa0 978
+  s_0a885d5f0c193a::t_d35f4d011563cc 501-502,966-974
+.github/workflows/desktop-client.yml
+  s_0a885d5f0c193a::t_10bdef3d502afc 1,5-6,16,74,126-224
+  s_0a885d5f0c193a::t_8f3401a142e90a 75-125,225-226
+  s_0a885d5f0c193a::t_81e4a502a2b6e0 2-4,7-15,17-73
+web/src/NativeBootstrap.test.ts
+  s_0a885d5f0c193a::t_ae6b8d00c99c6b 3,7-82
+  s_0a885d5f0c193a::t_eb8018a2c91558 84-93
+  s_0a885d5f0c193a::t_72a9c313dc387b 6
+  s_0a885d5f0c193a::t_d7c39bf4fe8289 83,94-101
+  s_0a885d5f0c193a::t_29848cdd2ef280 1-2
+  s_0a885d5f0c193a::t_83faeba727fa17 4-5
+web/src/lib/nativeTransport.ts
+  s_0a885d5f0c193a::t_a5de57e0b3d648 1-27,80,157,323
+  s_0a885d5f0c193a::t_a0bcb3e8717bd7 40
+  s_0a885d5f0c193a::t_6ffcc5f9d09ff5 34,44,93-116,162-209
+  s_0a885d5f0c193a::t_a6147e6df6aaf3 28-33
+  s_0a885d5f0c193a::t_597795858dd6f8 35-39
+  s_0a885d5f0c193a::t_32aa924166976f 41-43
+  s_0a885d5f0c193a::t_63d67d60810df7 45-47,77-79
+  s_0a885d5f0c193a::t_a20bae2234ae35 81-83,90-92
+  s_0a885d5f0c193a::t_fdda68a7173e89 117-119,154-156
+  s_0a885d5f0c193a::t_0b04ae36a8d03f 158-161
+  s_0a885d5f0c193a::t_22c96498707e2b 210-212,320-322
+  s_0a885d5f0c193a::t_cf3b2444b0b56d 324-326
+  s_0a885d5f0c193a::t_fdfb916f697ab4 48-76,84-89,120-153,213-319,327-347
+web/src/lib/chatLogic.test.ts
+  s_0a885d5f0c193a::t_4a2f8f860559ff 71-82
+desktop/experimental/crates/broker/tests/https_fixture.py
+  s_0a885d5f0c193a::t_4bf3dd4fa040c6 5,17-18,37-38,40,47-58,81-96,128,144-151,153
+web/src/lib/chatLogic.ts
+  s_0a885d5f0c193a::t_72a9c313dc387b 88-93
+web/src/components/ConfirmDialog.vue
+  s_0a885d5f0c193a::t_02f40474a38a82 3,16-17
+web/src/lib/nativeChatView.test.ts
+  s_0a885d5f0c193a::t_b152567b5601bb 1-78
+web/src/App.vue
+  s_0a885d5f0c193a::t_4e659f32deb450 13-14,407-410
+  s_0a885d5f0c193a::t_19e7cfc326fba6 198
+  s_0a885d5f0c193a::t_72a9c313dc387b 3,42-51,88,94,117,119,278,281,287,294,327,330-336,339,347
+  s_0a885d5f0c193a::t_e1484a432f967b 390-391
+web/src/composables/useWebRTC.ts
+  s_0a885d5f0c193a::t_c229a6ff319fa0 15,1253-1258,1326,1681-1684,1817-1820,1904
+web/src/stores/chatInstance.test.ts
+  s_0a885d5f0c193a::t_b0427343eae6db 6,41-42,44
+  s_0a885d5f0c193a::t_19e7cfc326fba6 7,69-83
+  s_0a885d5f0c193a::t_4a2f8f860559ff 1-5,8-40,43,45-68,84-110
+.gitignore
+  s_0a885d5f0c193a::t_3dc173c16744be 49
+desktop/experimental/scripts/collect-licenses.mjs
+  s_0a885d5f0c193a::t_72a89c16398159 10,77,82,111
+web/src/NativeBootstrap.vue
+  s_0a885d5f0c193a::t_eb8018a2c91558 2,19-23
+  s_0a885d5f0c193a::t_a5de57e0b3d648 69
+  s_0a885d5f0c193a::t_72a9c313dc387b 9,44-48
+  s_0a885d5f0c193a::t_77532bdbc31048 1
+  s_0a885d5f0c193a::t_e9c59eaf541912 3-8
+  s_0a885d5f0c193a::t_b1922ab2443b2e 10-12,16-18
+  s_0a885d5f0c193a::t_a890fd5a394070 24-26,41-43
+  s_0a885d5f0c193a::t_14f90ef6a3ce81 49-51,66-68
+  s_0a885d5f0c193a::t_efaa220f74699d 70-72
+  s_0a885d5f0c193a::t_b2a8269c601d31 13-15,27-40,52-65,73-95
+web/src/i18n/de.json
+  s_0a885d5f0c193a::t_c229a6ff319fa0 978
+  s_0a885d5f0c193a::t_4e659f32deb450 965,982-1002
+  s_0a885d5f0c193a::t_a5de57e0b3d648 975-977,979-981
+  s_0a885d5f0c193a::t_3452bb32fa5600 501-502,966-974
+web/src/components/LoginModal.desktop.test.ts
+  s_0a885d5f0c193a::t_1b02440d1456da 1-17,19-86
+  s_0a885d5f0c193a::t_a5de57e0b3d648 18
+web/src/stores/desktopSession.test.ts
+  s_0a885d5f0c193a::t_4754fd1c925d7a 1-36
+web/src/lib/nativeAdmin.test.ts
+  s_0a885d5f0c193a::t_be52b9ac6e4842 11,13
+  s_0a885d5f0c193a::t_cd1716c0842b3c 1-10,12,14-70
+web/src/lib/desktopApi.test.ts
+  s_0a885d5f0c193a::t_6f7984ecb8766d 1-34
+web/src/lib/nativeDefaultPort.test.ts
+  s_0a885d5f0c193a::t_7d707317f22300 2,28
+  s_0a885d5f0c193a::t_c06124aa9145ec 1,3-27,29-37
+web/src/lib/nativeAuthenticationIntent.test.ts
+  s_0a885d5f0c193a::t_6ffcc5f9d09ff5 2-54,58-59,77-78
+  s_0a885d5f0c193a::t_1179561c4a7be1 1,55-57,60-76,79-84
+desktop/experimental/app/Cargo.toml
+  s_0a885d5f0c193a::t_3dc173c16744be 10
+  s_0a885d5f0c193a::t_d7b7a9d770ac26 13,19
+web/src/lib/nativeProfileIntent.test.ts
+  s_0a885d5f0c193a::t_3f7060f0a2c66a 36
+  s_0a885d5f0c193a::t_6ffcc5f9d09ff5 2
+  s_0a885d5f0c193a::t_8538c9e1e3c12d 1,3-35,37-63
+desktop/experimental/README.md
+  s_0a885d5f0c193a::t_e4feb657397923 35-39
+  s_0a885d5f0c193a::t_d43f3ccc295d45 5,7-9,16-27,46-47,49-54
+  s_0a885d5f0c193a::t_4a2f8f860559ff 58-66
+  s_0a885d5f0c193a::t_f6a6e663efb7e8 40
+  s_0a885d5f0c193a::t_1dc6aa1eb30e5c 67
+web/src/composables/useWebRTC.desktop.test.ts
+  s_0a885d5f0c193a::t_c229a6ff319fa0 1-53
+web/src/lib/nativeTransport.test.ts
+  s_0a885d5f0c193a::t_30142f10082335 2-64,83,85,88,113,123,126,132,139,149-154,190,212,225
+  s_0a885d5f0c193a::t_d7c39bf4fe8289 65-78,86,92,99,112,124,130,137,142,146,155-188,197,210,216,223,229
+  s_0a885d5f0c193a::t_f2b65c43490f4c 1
+  s_0a885d5f0c193a::t_711707ddcddf33 79-82
+  s_0a885d5f0c193a::t_9230835d26a6dc 84
+  s_0a885d5f0c193a::t_24592eed5c23e6 87
+  s_0a885d5f0c193a::t_63f8fba033c6f6 89-91
+  s_0a885d5f0c193a::t_c23dea028c6dc4 93-98
+  s_0a885d5f0c193a::t_e8ab70be351067 100-102,109-111
+  s_0a885d5f0c193a::t_d5aff09c0da56e 114-116,120-122
+  s_0a885d5f0c193a::t_d042a3112d700d 125
+  s_0a885d5f0c193a::t_b20debf2097275 127-129
+  s_0a885d5f0c193a::t_c081aac109c2f5 131
+  s_0a885d5f0c193a::t_eb6f3b792b418e 133-136
+  s_0a885d5f0c193a::t_89904aca20886c 138
+  s_0a885d5f0c193a::t_1c1e8e5da6bf96 140-141
+  s_0a885d5f0c193a::t_70a180444e486e 143-145
+  s_0a885d5f0c193a::t_414977318fcf22 147-148
+  s_0a885d5f0c193a::t_d7b9d7175d6187 189
+  s_0a885d5f0c193a::t_1b650f8f8ac7e9 191-196
+  s_0a885d5f0c193a::t_ef7286d77cdfc7 198-200,207-209
+  s_0a885d5f0c193a::t_95efebc6616a32 211
+  s_0a885d5f0c193a::t_49a9ed1c08b40a 213-215
+  s_0a885d5f0c193a::t_8bccee2b26cc94 217-222
+  s_0a885d5f0c193a::t_e92d2544f46ac8 224
+  s_0a885d5f0c193a::t_f04dbf90ea56f4 226-228
+  s_0a885d5f0c193a::t_b44f2ff43c5398 230
+  s_0a885d5f0c193a::t_38c371d76dd19f 103-108,117-119,201-206
+web/src/App.test.ts
+  s_0a885d5f0c193a::t_4a2f8f860559ff 299-329,337
+  s_0a885d5f0c193a::t_b87f8444f9d26b 24,47-50,52-54,56-62,68
+  s_0a885d5f0c193a::t_02da13b4a05b7c 55
+  s_0a885d5f0c193a::t_97aae16e251a4f 330-336
+  s_0a885d5f0c193a::t_e1484a432f967b 51,63-67
+desktop/experimental/crates/broker/examples/support/transport_fixture.rs
+  s_0a885d5f0c193a::t_4bf3dd4fa040c6 6-7,11
+web/src/lib/trustPort.test.ts
+  s_0a885d5f0c193a::t_a0bcb3e8717bd7 87-125
+  s_0a885d5f0c193a::t_a1542700932192 1-86
+web/src/lib/nativeChatApi.test.ts
+  s_0a885d5f0c193a::t_72488a46298da9 1,12,96-190
+  s_0a885d5f0c193a::t_7d8fa3a56ed802 192-235
+  s_0a885d5f0c193a::t_85f2688f7f8d7e 2-11,13-95,191
+web/src/lib/nativeTrust.ts
+  s_0a885d5f0c193a::t_1b02440d1456da 26
+  s_0a885d5f0c193a::t_77b4c2e2e1d6c7 1-25,27-41
+web/src/stores/appVersion.test.ts
+  s_0a885d5f0c193a::t_b023b35479071d 16-25
+web/src/components/ConfirmDialog.test.ts
+  s_0a885d5f0c193a::t_d5ffee00c55319 18-33
+web/src/stores/chat.ts
+  s_0a885d5f0c193a::t_1ecbfae8a3699c 378,380
+  s_0a885d5f0c193a::t_b0427343eae6db 1466-1467
+  s_0a885d5f0c193a::t_fe17e73ebf6813 52-55,75,235,245,481,487,495,504,635-637,656,974,986,988,990,1006,1012,1026,1031,1033,1040,1042,1044,1049,1051,1055,1059,1061,1063,1068,1070,1073,1077,1082,1084,1089,1094,1096,1103,1106,1181,1195,1200,1353,1369,1387,1393,1400,1402,1410,1412,1417-1465,1468,1471
+  s_0a885d5f0c193a::t_e33c20e4f264d1 987,1054,1072,1193
+  s_0a885d5f0c193a::t_542898672d63aa 1-2,1469
+web/src/components/NativeTrustSetup.test.ts
+  s_0a885d5f0c193a::t_4e659f32deb450 1-57
+  s_0a885d5f0c193a::t_b177c751356e02 58-129
+  s_0a885d5f0c193a::t_eb8018a2c91558 130-142
+web/src/lib/nativeChatApi.ts
+  s_0a885d5f0c193a::t_72488a46298da9 45-50
+  s_0a885d5f0c193a::t_a5de57e0b3d648 1-14
+  s_0a885d5f0c193a::t_747f55dcc2879f 15-44,51-141
+desktop/experimental/app/UI-CONTRACT.md
+  s_0a885d5f0c193a::t_d43f3ccc295d45 67-97
+web/src/stores/appVersion.ts
+  s_0a885d5f0c193a::t_b023b35479071d 22,53,55-56,66
+web/src/main.test.ts
+  s_0a885d5f0c193a::t_3c1280f782cbbd 16,23-29
+desktop/experimental/THIRD_PARTY_NOTICES.md
+  s_0a885d5f0c193a::t_72a89c16398159 3
+web/src/lib/desktopRuntime.test.ts
+  s_0a885d5f0c193a::t_6f7984ecb8766d 1-20
+web/src/lib/nativeRegistration.test.ts
+  s_0a885d5f0c193a::t_eb8018a2c91558 57-62
+  s_0a885d5f0c193a::t_2549b4b8bc82fa 1-56
+web/src/components/NativeTrustControl.test.ts
+  s_0a885d5f0c193a::t_b177c751356e02 6,34-46
+  s_0a885d5f0c193a::t_4e659f32deb450 1-5,7-33,47-48
+web/src/components/NativeTrustSetup.vue
+  s_0a885d5f0c193a::t_4e659f32deb450 1-105
+web/src/components/NativeTrustControl.vue
+  s_0a885d5f0c193a::t_4e659f32deb450 1-31
+THIRD_PARTY_NOTICES.md
+  s_0a885d5f0c193a::t_e3f237b36670be 156-159
+desktop/experimental/app/build.rs
+  s_0a885d5f0c193a::t_7d343912c55467 12-14,32-34,49-50,60-62
+desktop/experimental/app/capabilities/main.json
+  s_0a885d5f0c193a::t_a1b546d6145285 3,21-24
+desktop/experimental/app/src/crypto_host.rs
+  s_0a885d5f0c193a::t_53d89d8d51ec58 18-20,39-45,48,77,255,258,384,390,422-425,457-487,547,557-558,584,602,715,732-736,750-763,766,785,796,805,811,820,836,842,860,882,890-896,901-903,921,926-939,953,961-967,972-974,1020,1026-1031
+desktop/experimental/app/src/main.rs
+  s_0a885d5f0c193a::t_0b1688bf513473 22-24,225,231,238-241,244-248,253-266,268-271,288,298-301,304-305,316,325,332,338,352,359-449,455,463,475,483,495,503,515,519-526,533-534,550,554-562,579,588,600,609,621,630,642,681,693,704-714,717-725,744,751-760,806-808,829,897-899,917-919,933-935,945-947
+desktop/experimental/app/src/typed_chat_host.rs
+  s_0a885d5f0c193a::t_23e122bd7ed824 1-531
+desktop/experimental/app/tauri.conf.json
+  s_0a885d5f0c193a::t_19e41a285ba7aa 3-4,7
+desktop/experimental/crates/broker/src/actor_socket.rs
+  s_0a885d5f0c193a::t_94bd001b847db3 81-91,97-102,111-151,172,188
+desktop/experimental/crates/broker/src/admin_metadata.rs
+  s_0a885d5f0c193a::t_d417f89e985e13 1-454
+desktop/experimental/crates/broker/src/admin_metadata_tests.rs
+  s_0a885d5f0c193a::t_12be80bdf56678 1-273
+desktop/experimental/crates/broker/src/admin_wire.rs
+  s_0a885d5f0c193a::t_b1df828d80724d 1-313
+desktop/experimental/crates/broker/src/authenticated_scope.rs
+  s_0a885d5f0c193a::t_02425a898c9918 33,74-76,112-115,151,201
+desktop/experimental/crates/broker/src/authentication_intent.rs
+  s_0a885d5f0c193a::t_2a15dcbe29a9a8 1-334
+desktop/experimental/crates/broker/src/broker.rs
+  s_0a885d5f0c193a::t_bc8973d7f16db0 45-46,58,67-68,193,230-233,273-274,419-420,617-618,635-643,750,752-754,764,836-837,839,850,860-862,1004,1006,1013,1016,1024,1124,1142,1160,1213-1232
+desktop/experimental/crates/broker/src/client.rs
+  s_0a885d5f0c193a::t_17021ffa76faba 32-41,52-54,56,87-89,128-129,141,147-153,208-218,221-222,268-274,305-306,318,438,450,463,466-549,590,596-597,604,616-621,647-699,701-703,717-724,727,738-739,767-793,797-831,833,841,847,869-878,905,907-926,994-995,1002-1011,1102,1105-1107,1110-1130,1138-1140,1145-1148,1158-1160
+desktop/experimental/crates/broker/src/http.rs
+  s_0a885d5f0c193a::t_ed83ad34966317 14-15,29,36,41-42,76,87,100,107-109,184,221-222,257-277,282-285,287-289,321
+desktop/experimental/crates/broker/src/lib.rs
+  s_0a885d5f0c193a::t_37a33660165c3c 60-64
+desktop/experimental/crates/broker/src/opaque_relay.rs
+  s_0a885d5f0c193a::t_7a38f72f3081da 133,216-224
+desktop/experimental/crates/broker/src/opaque_relay_tests.rs
+  s_0a885d5f0c193a::t_3c3a618f90b217 360-424
+desktop/experimental/crates/broker/src/password_change.rs
+  s_0a885d5f0c193a::t_71de02739755ff 1-161
+desktop/experimental/crates/broker/src/registration.rs
+  s_0a885d5f0c193a::t_54cdc1185a6a8b 1-129
+desktop/experimental/crates/broker/src/socket.rs
+  s_0a885d5f0c193a::t_945f1d6eb53816 249,263
+desktop/experimental/crates/broker/src/tests.rs
+  s_0a885d5f0c193a::t_a427fd9160dc4a 2115-3301
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_domain.rs
+  s_0a885d5f0c193a::t_4258ecd29d298e 1-728
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_event_projection.rs
+  s_0a885d5f0c193a::t_1b88b1ed48dfb7 1-242
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/community.rs
+  s_0a885d5f0c193a::t_5c54d5b67e8686 1-907
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/dispatch.rs
+  s_0a885d5f0c193a::t_4b18383629393c 1-223
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/host_tests.rs
+  s_0a885d5f0c193a::t_eb5f26a62e03c3 608-918
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/lib.rs
+  s_0a885d5f0c193a::t_4e4f948eb30397 24-29
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/protected.rs
+  s_0a885d5f0c193a::t_f0b76762f271d2 17,592-616,659,665-671,673,838,899,978-1036
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/tests.rs
+  s_0a885d5f0c193a::t_336c90aca70f66 1636-2200
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/voice_binding.rs
+  s_0a885d5f0c193a::t_d169321ca3e44f 1-342
+desktop/experimental/crates/crypto-owner/src/chat_history.rs
+  s_0a885d5f0c193a::t_95b02aa0df82d4 1-1458
+desktop/experimental/crates/crypto-owner/src/lib.rs
+  s_0a885d5f0c193a::t_49f3a1c63dfa59 3-4,8-9,11-12,20-21,25,28-32,119-124,128,195-199,209-214,221-225,235-247,260,281-292,296-297
+desktop/experimental/crates/crypto-owner/src/pending_root.rs
+  s_0a885d5f0c193a::t_75a8a30412a732 102,137-138,142-144,146,150-153,157,159-160,169,171-172,174,187-218,255,263,303,325
+desktop/experimental/crates/crypto-owner/src/relay.rs
+  s_0a885d5f0c193a::t_2a5b65d9fcaa64 45-49,52,97-106,113,115,123,185-194
+desktop/experimental/crates/crypto-owner/src/typed_relay.rs
+  s_0a885d5f0c193a::t_6b69686ef5f5a3 1-618
+web/package-lock.json
+  s_0a885d5f0c193a::t_683dc63862cb2b 15,775-784
+web/package.json
+  s_0a885d5f0c193a::t_6caebe8e996a77 26
+web/src/components/LoginModal.vue
+  s_0a885d5f0c193a::t_fb03ad8ce040ce 24-27,43-56,61,66,68,112,126,138,152
+web/src/env.d.ts
+  s_0a885d5f0c193a::t_626b99d74fbd7a 1
+web/src/lib/api.ts
+  s_0a885d5f0c193a::t_5cf8f1a3c090f1 1-2,178-183
+web/src/lib/desktopRuntime.ts
+  s_0a885d5f0c193a::t_4d89e41c93f777 1-6
+web/src/lib/nativeAccountFlows.test.ts
+  s_0a885d5f0c193a::t_ea78f1499ebea6 1-75
+web/src/lib/nativeAdmin.ts
+  s_0a885d5f0c193a::t_bb44f446cb073c 1-87
+web/src/lib/nativeChatView.ts
+  s_0a885d5f0c193a::t_7e243beb53ccc5 1-97
+web/src/lib/nativeRegistration.ts
+  s_0a885d5f0c193a::t_f216ca1d486f46 1-56
+web/src/lib/nativeTauriChannels.test.ts
+  s_0a885d5f0c193a::t_782d66bcf2127a 1-60
+web/src/lib/nativeTrustCapture.test.ts
+  s_0a885d5f0c193a::t_9231f72bdb6fbb 1-50
+web/src/lib/reviewPendingAuthentication.test.ts
+  s_0a885d5f0c193a::t_a9db162b3d60ec 1-19
+web/src/lib/securityLogoutAck.test.ts
+  s_0a885d5f0c193a::t_95c7621f61d438 1-51
+web/src/lib/thirdParty.ts
+  s_0a885d5f0c193a::t_1e881c028d92a6 25
+web/src/lib/trustPort.ts
+  s_0a885d5f0c193a::t_b923df937c994e 1-114
+web/src/main.ts
+  s_0a885d5f0c193a::t_cb7b6928262427 12,20-24
+web/src/stores/auth.ts
+  s_0a885d5f0c193a::t_d4a52b0d0e946e 234-239,263-264
+web/vite.config.ts
+  s_0a885d5f0c193a::t_5cd307e420595c 37-38
+desktop/experimental/app/permissions/autogenerated/native_admin_request.toml
+  s_0a885d5f0c193a::t_0bb0ece101e3ce 1-11
+desktop/experimental/app/permissions/autogenerated/native_auth_password.toml
+  s_0a885d5f0c193a::t_694d4b92e9fb30 1-11
+desktop/experimental/app/permissions/autogenerated/native_auth_register.toml
+  s_0a885d5f0c193a::t_98b5fa9dc245a6 1-11
+desktop/experimental/app/permissions/autogenerated/native_chat_mutate.toml
+  s_0a885d5f0c193a::t_5229b4430953fb 1-11
+desktop/experimental/app/permissions/autogenerated/native_chat_snapshot.toml
+  s_0a885d5f0c193a::t_10ec3ba80ff701 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "285104f46bc982be78d6bb603d43af8836621929",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
