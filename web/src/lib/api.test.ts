@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, assert } from 'vitest'
-import { api, ApiError, onUnauthorized, errorMessage, isApiError, caughtErrorMessage } from './api'
+import { api, ApiError, onUnauthorized, errorMessage, isApiError, caughtErrorMessage, createApiClient, type ApiReply } from './api'
 import { decodeUser } from '../types/domain'
 import { ContractError } from '../types/validation'
 import { userFixture } from '../test-fixtures.fixture'
@@ -182,5 +182,130 @@ describe('queued-session unauthorized effect guards', () => {
       await expect(api('/api/auth/password', { method: 'PUT', shouldNotifyUnauthorized: () => true })).rejects.toBeInstanceOf(ApiError)
       expect(listener).toHaveBeenCalledOnce()
     } finally { off() }
+  })
+})
+
+
+describe('separate browser and native API clients', () => {
+  it('uses only injected transport and keeps runtime decoders at the boundary', async () => {
+    const browserFetch = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', browserFetch)
+    const user = userFixture({ username: 'native-fixture' })
+    const transport = vi.fn().mockResolvedValue({ status: 200, body: user })
+    const client = createApiClient(transport)
+    const controller = new AbortController()
+    expect(await client.api('/api/auth/me', { decode: decodeUser, signal: controller.signal })).toEqual(user)
+    expect(transport).toHaveBeenCalledWith('/api/auth/me', { method: 'GET', signal: controller.signal })
+    expect(browserFetch).not.toHaveBeenCalled()
+    transport.mockResolvedValue({ status: 200, body: { id: 'malformed', content: 'PRIVATE_FIXTURE' } })
+    await expect(client.api('/api/auth/me', { decode: decodeUser })).rejects.toBeInstanceOf(ContractError)
+    expect(Object.isFrozen(client)).toBe(true)
+  })
+
+  it('does not leak unauthorized events across client owners or to browser listeners', async () => {
+    const failed = async (): Promise<ApiReply> => ({ status: 401, body: { error: { code: 'UNAUTHORIZED' } } })
+    const first = createApiClient(failed), second = createApiClient(failed)
+    const firstListener = vi.fn(), secondListener = vi.fn(), browserListener = vi.fn()
+    const offFirst = first.onUnauthorized(firstListener), offSecond = second.onUnauthorized(secondListener)
+    const offBrowser = onUnauthorized(browserListener)
+    try {
+      await expect(first.api('/api/members')).rejects.toBeInstanceOf(ApiError)
+      expect(firstListener).toHaveBeenCalledOnce()
+      expect(secondListener).not.toHaveBeenCalled()
+      expect(browserListener).not.toHaveBeenCalled()
+      await expect(second.api('/api/auth/login', { method: 'POST', json: {} })).rejects.toBeInstanceOf(ApiError)
+      expect(secondListener).not.toHaveBeenCalled()
+    } finally { offFirst(); offSecond(); offBrowser() }
+  })
+
+  it('suppresses stale owner effects while still rejecting a pending native request', async () => {
+    let resolveReply: ((reply: ApiReply) => void) | undefined
+    const client = createApiClient(() => new Promise(resolve => { resolveReply = resolve }))
+    const oldListener = vi.fn(), newListener = vi.fn()
+    const offOld = client.onUnauthorized(oldListener)
+    const pending = client.api('/api/members')
+    offOld()
+    const offNew = client.onUnauthorized(newListener)
+    try {
+      assert(resolveReply)
+      resolveReply({ status: 401, body: { error: { code: 'UNAUTHORIZED' } } })
+      await expect(pending).rejects.toBeInstanceOf(ApiError)
+      expect(oldListener).not.toHaveBeenCalled()
+      expect(newListener).not.toHaveBeenCalled()
+    } finally { offNew() }
+  })
+
+  it('passes cancellation and content without browser transport metadata', async () => {
+    const transport = vi.fn().mockResolvedValue({ status: 204, body: null })
+    const client = createApiClient(transport)
+    const signal = new AbortController().signal
+    const json = { content: 'SYNTHETIC' }
+    expect(await client.api('/api/messages', { method: 'POST', json, signal })).toBeNull()
+    expect(transport).toHaveBeenCalledWith('/api/messages', { method: 'POST', json, signal })
+    const form = new FormData()
+    form.set('file', new Blob(['SYNTHETIC']), 'fixture.txt')
+    await client.api('/api/upload', { method: 'POST', form })
+    expect(transport).toHaveBeenLastCalledWith('/api/upload', { method: 'POST', form })
+    const aborted = new DOMException('Canceled', 'AbortError')
+    transport.mockRejectedValue(aborted)
+    await expect(client.api('/api/members', { signal })).rejects.toBe(aborted)
+  })
+})
+
+
+describe('transport boundary failure classification', () => {
+  it('preserves local browser serialization errors without sending any request', async () => {
+    const browserFetch = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', browserFetch)
+    const circular: { self?: unknown } = {}
+    circular.self = circular
+    await expect(api('/api/messages', { method: 'POST', json: circular })).rejects.toBeInstanceOf(TypeError)
+    await expect(api('/api/messages', { method: 'POST', json: { value: 1n } })).rejects.toBeInstanceOf(TypeError)
+    expect(browserFetch).not.toHaveBeenCalled()
+  })
+
+  it.each([NaN, Infinity, 200.5, 0, 600])('rejects invalid native reply status %s without accepting its payload', async status => {
+    const client = createApiClient(async () => ({ status, body: { private: 'PRIVATE_FIXTURE' } }))
+    const decode = vi.fn((body: unknown) => body)
+    const error = await apiFailure(client.api('/api/members', { decode }))
+    expect(error.status).toBe(0)
+    expect(error.code).toBe('NETWORK')
+    expect(error.message).not.toContain('PRIVATE_FIXTURE')
+    expect(decode).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('transport reply and subscription incarnation guards', () => {
+  it.each([null, undefined, {}, { status: '200' }, { status: undefined }])('fails closed on malformed replies: %j', async reply => {
+    const client = createApiClient(async () => reply as unknown as ApiReply)
+    const decode = vi.fn((body: unknown) => body), listener = vi.fn()
+    const off = client.onUnauthorized(listener)
+    try {
+      expect((await apiFailure(client.api('/api/members', { decode }))).code).toBe('NETWORK')
+      expect(decode).not.toHaveBeenCalled()
+      expect(listener).not.toHaveBeenCalled()
+    } finally { off() }
+  })
+
+  it('does not deliver old401 or old unsubscribe to a new registration of the same callback', async () => {
+    let resolveReply: ((reply: ApiReply) => void) | undefined
+    const failed: ApiReply = { status: 401, body: { error: { code: 'UNAUTHORIZED' } } }
+    const transport = vi.fn(() => new Promise<ApiReply>(resolve => { resolveReply = resolve }))
+    const client = createApiClient(transport), listener = vi.fn()
+    const offOld = client.onUnauthorized(listener)
+    const pending = client.api('/api/members')
+    expect(offOld()).toBe(true)
+    const offNew = client.onUnauthorized(listener)
+    try {
+      assert(resolveReply)
+      resolveReply(failed)
+      await expect(pending).rejects.toBeInstanceOf(ApiError)
+      expect(listener).not.toHaveBeenCalled()
+      expect(offOld()).toBe(false)
+      transport.mockImplementation(async () => failed)
+      await expect(client.api('/api/members')).rejects.toBeInstanceOf(ApiError)
+      expect(listener).toHaveBeenCalledOnce()
+    } finally { offNew() }
   })
 })
