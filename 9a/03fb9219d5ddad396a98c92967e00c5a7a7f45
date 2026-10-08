@@ -1,0 +1,34 @@
+internal/ws/coverage_test.go
+  s_0ae926f6f8634a::t_6c256145ff7fcb 527-566
+internal/ws/native_credentials_integration_test.go
+  s_0ae926f6f8634a::t_b5176017330974 1-133
+internal/auth/native_password_handler.go
+  s_0ae926f6f8634a::t_b5176017330974 1-70
+internal/ws/native_credentials.go
+  s_0ae926f6f8634a::t_b5176017330974 1-53
+internal/auth/native_password.go
+  s_0ae926f6f8634a::t_b5176017330974 1-148
+internal/auth/native_password_test.go
+  s_0ae926f6f8634a::t_b5176017330974 1-63
+internal/auth/native_password_integration_test.go
+  s_0ae926f6f8634a::t_b5176017330974 1-423
+internal/ws/lifecycle.go
+  s_0ae926f6f8634a::t_6c256145ff7fcb 386,394-399
+  s_0ae926f6f8634a::t_0ada2c9a33d38d 400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9a03fb9219d5ddad396a98c92967e00c5a7a7f45",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
