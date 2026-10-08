@@ -101,6 +101,23 @@ window titles and unrelated process lists are not transmitted. Portable policy t
 exercise Voice/media/game/input/lock gating. The UI distinguishes API presence from
 actual capture or encryption support.
 
+The native-session foundation includes hash-only token persistence, bounded
+session families, single-use refresh rotation with committed replay revocation,
+and a shared browser/native credential and lockout policy. Its isolated HTTP
+handler rejects browser Origin/cookie traffic and provides explicit bearer
+authentication. These endpoints are not mounted in the server router; the probe
+still cannot log in. Migration 0015 adds the storage tables and runs through the
+normal forward-only migration mechanism when this server candidate starts.
+
+The portable game-window owner binds focus operations to its native owner,
+session, Voice and window generations. Stale operations and loss of context clear
+views and release push-to-talk. This policy does not create overlay windows or
+prove that OS events, game-window lifetime and media shutdown are wired correctly.
+
+Windows CI builds and packages the unsigned executable with dependency notices.
+Its checksum receipt identifies development artifact bytes and packaging inputs;
+it is not a publisher signature, updater authorization or runtime test result.
+
 A Windows CI build can establish compilation and unit-test results. It does not
 establish game compatibility, anti-cheat acceptance, input delivery or exclusive
 fullscreen operation. Tests must record OS, hardware, drivers, game/rendering mode,

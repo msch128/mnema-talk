@@ -91,18 +91,37 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	u, tv, retry, err := h.verifyLogin(r, req)
+	if retry > 0 {
+		httpx.WriteRateLimited(w, retry)
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if err := h.Sessions.Start(w, u, tv); err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: *u})
+	return nil
+}
+
+// verifyLogin is the shared browser/native credential and lockout policy.
+// Both transports must use this Handler's per-IP route limiter as well. It
+// returns the token version captured by password verification; callers must
+// never reload and substitute a newer version before issuing a session.
+func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, time.Duration, error) {
 	username := strings.TrimSpace(req.Username)
 	if !usernamePattern.MatchString(username) {
 		// No such account can exist. Answer like a wrong password, with the
 		// same bcrypt cost, but never let arbitrary input become a limiter key.
 		burnPasswordCheck(req.Password)
-		return ErrInvalidCredentials
+		return nil, 0, 0, ErrInvalidCredentials
 	}
 	account := strings.ToLower(username)
 	key := httpx.ClientIPKey(r) + "|" + account
 	if locked, retry := h.loginFailures.IsLockedOut(key); locked {
-		httpx.WriteRateLimited(w, retry)
-		return nil
+		return nil, 0, retry, nil
 	}
 
 	u, tv, err := h.verifyCredentials(r.Context(), username, req.Password)
@@ -118,21 +137,16 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 		h.loginFailures.RecordFailures(key, weight)
 		h.accountFailures.RecordFailure(account)
 		if accountLocked {
-			httpx.WriteRateLimited(w, retry)
-			return nil
+			return nil, 0, retry, nil
 		}
-		return err
+		return nil, 0, 0, err
 	}
 	if err != nil {
-		return err
+		return nil, 0, 0, err
 	}
 	h.loginFailures.ResetFailures(key)
 	h.accountFailures.ResetFailures(account)
-	if err := h.Sessions.Start(w, u, tv); err != nil {
-		return err
-	}
-	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: *u})
-	return nil
+	return u, tv, 0, nil
 }
 
 // verifyCredentials checks a login; tests replace it via h.verify.

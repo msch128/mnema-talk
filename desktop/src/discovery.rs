@@ -40,11 +40,13 @@ pub struct ServerCandidate {
 }
 
 pub fn normalize_address(input: &str) -> Result<Url, DiscoveryError> {
-    if input.chars().any(char::is_control) {
+    // Bound the original IPC input before scanning/trimming, so padding cannot
+    // bypass the same limit enforced by the UI and consume unbounded work.
+    if input.len() > 2048 || input.chars().any(char::is_control) {
         return Err(DiscoveryError::InvalidAddress);
     }
     let input = input.trim();
-    if input.is_empty() || input.len() > 2048 || input.chars().any(char::is_control) {
+    if input.is_empty() {
         return Err(DiscoveryError::InvalidAddress);
     }
     let raw = if input.contains("://") {
@@ -274,6 +276,24 @@ mod tests {
             "https://example.com/../api",
         ] {
             assert!(normalize_address(input).is_err(), "accepted {input:?}");
+        }
+    }
+
+    #[test]
+    fn address_limit_applies_to_original_utf8_bytes_before_trimming() {
+        let bounded = format!("{}example.com", " ".repeat(2037));
+        assert_eq!(bounded.len(), 2048);
+        assert!(normalize_address(&bounded).is_ok());
+        for oversized in [
+            format!(" {bounded}"),
+            format!("{}example.com", "\u{2003}".repeat(680)),
+            format!("example.com{}", " ".repeat(4096)),
+        ] {
+            assert!(oversized.len() > 2048);
+            assert_eq!(
+                normalize_address(&oversized),
+                Err(DiscoveryError::InvalidAddress)
+            );
         }
     }
 
