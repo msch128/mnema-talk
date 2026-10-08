@@ -1,0 +1,16 @@
+[package]
+name = "mnema-crypto-trust-candidate"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+coset = "=0.4.2"
+ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std", "zeroize"] }
+mnema-crypto-adapter-candidate = { path = "../crypto-adapter" }
+openmls = { path = "../../../vendor/openmls/openmls" }
+openmls_rust_crypto = { path = "../../../vendor/openmls/openmls_rust_crypto" }
+
+[dev-dependencies]
+openmls_basic_credential = { path = "../../../vendor/openmls/basic_credential" }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-chat-publish"
+description = "Enables the native_chat_publish command without any pre-configured scope."
+commands.allow = ["native_chat_publish"]
+
+[[permission]]
+identifier = "deny-native-chat-publish"
+description = "Denies the native_chat_publish command without any pre-configured scope."
+commands.deny = ["native_chat_publish"]

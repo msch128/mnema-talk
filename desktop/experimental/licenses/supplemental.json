@@ -1,0 +1,20 @@
+{
+  "rust_standard_library": {
+    "version": "1.99.0",
+    "commit": "b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+    "license": "MIT OR Apache-2.0; exceptions and dependency notices preserved in COPYRIGHT-library.html",
+    "file": "RUST-COPYRIGHT-library.html",
+    "sha256": "5647be074c8edf7339fd863055923a8fc80bc5610a8d4661ec3b767b9d392c27",
+    "source": "https://github.com/rust-lang/rust/tree/b940084d7eb6a299eb4bfeb8e34901bc051e7ac4/library",
+    "provenance": "verbatim copyright notice supplied in pinned official Rust toolchain"
+  },
+  "inter_fonts": {
+    "name": "@fontsource/inter",
+    "version": "5.3.0",
+    "license": "OFL-1.1",
+    "file": "INTER-OFL.txt",
+    "sha256": "3b0a5fca3d17942cde889069889dedbbbd075e9b599968c82a95f4d944e9b345",
+    "source": "https://www.npmjs.com/package/@fontsource/inter/v/5.3.0",
+    "provenance": "verbatim OFL text from locked @fontsource/inter production npm dependency; actual Vue CSS/font assets licensed through conservative npm archive closure, not prior three-file preview subset"
+  }
+}

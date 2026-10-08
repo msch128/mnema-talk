@@ -1,0 +1,27 @@
+[package]
+name = "mnema-private-checked-openmls-sqlite-storage"
+authors = ["OpenMLS Authors"]
+version = "0.3.0"
+edition = "2021"
+rust-version = "1.99"
+publish = false
+description = "Private noncryptographic affected-row checked copy of pinned official OpenMLS SQLite storage"
+license = "MIT"
+repository = "https://github.com/openmls/openmls/tree/main/sqlite_storage"
+
+[lib]
+name = "openmls_sqlite_storage"
+
+[dependencies]
+openmls_traits = { path = "../../../vendor/openmls/traits" }
+serde = { version = "=1.0.229", features = ["derive"] }
+rusqlite = { version = "=0.37.0", features = ["bundled"] }
+refinery = { version = "=0.9.2", features = ["rusqlite", "enums"] }
+
+[dev-dependencies]
+serde_json = "=1.0.151"
+
+[features]
+extensions-draft = ["openmls_traits/extensions-draft"]
+draft-ietf-mls-pq-ciphersuites = ["openmls_traits/draft-ietf-mls-pq-ciphersuites"]
+virtual-clients-draft = ["extensions-draft", "openmls_traits/virtual-clients-draft"]

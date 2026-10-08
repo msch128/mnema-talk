@@ -1,0 +1,18 @@
+[licenses]
+allow = ["MIT", "Apache-2.0", "OpenSSL", "ISC"]
+private = { ignore = true }
+
+[[licenses.exceptions]]
+name = "unicode-ident"
+allow = ["Unicode-3.0"]
+
+[[licenses.exceptions]]
+name = "subtle"
+allow = ["BSD-3-Clause"]
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]

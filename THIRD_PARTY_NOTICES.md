@@ -13,6 +13,13 @@ fails when a web dependency is missing from the in-app list.
 
 ## Web app (shipped to every browser)
 
+The experimental native desktop source checkpoint has a separate dependency
+inventory in [desktop/experimental/THIRD_PARTY_NOTICES.md](desktop/experimental/THIRD_PARTY_NOTICES.md).
+Its locked Rust and UI graph includes the pinned OpenMLS and SFrame providers;
+the corresponding full license texts are preserved under
+`desktop/experimental/licenses/`. This source checkpoint is not a desktop
+binary release.
+
 | Component | Version | License |
 |---|---|---|
 | [Vue](https://vuejs.org) (`vue`, incl. `@vue/*` runtime) | 3.5.43 | MIT |

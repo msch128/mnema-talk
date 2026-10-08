@@ -1,0 +1,15 @@
+[package]
+name="mnema-private-native-crypto-seeds"
+version="0.0.0"
+edition="2024"
+publish=false
+license="AGPL-3.0-only"
+[dependencies]
+mnema-private-native-client-broker={path="../broker"}
+uuid={version="=1.27.0",features=["v4"]}
+sha2="=0.10.9"
+zeroize="=1.9.1"
+getrandom="=0.3.4"
+ed25519-dalek={version="=2.2.0",default-features=false,features=["std","zeroize"]}
+[target.'cfg(windows)'.dependencies]
+windows-sys={version="=0.61.2",features=["Win32_Foundation","Win32_Security","Win32_Security_Credentials","Win32_Security_Authorization","Win32_System_Threading"]}

@@ -58,6 +58,7 @@ jobs:
       - name: gitleaks
         run: |
           set -euo pipefail
+          node scripts/check-native-test-vectors.mjs
           "$RUNNER_TEMP/gitleaks" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .
           "$RUNNER_TEMP/gitleaks" git --no-banner --redact --exit-code 1 --config .gitleaks.toml .
 

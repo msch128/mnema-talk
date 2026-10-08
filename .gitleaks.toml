@@ -23,3 +23,30 @@ regexes = [
   # Dummy JWT signing key in internal/auth/token_test.go.
   '''secret = "0123456789abcdef0123456789abcdef"''',
 ]
+
+# Only generic-api-key: exact public upstream known-answer vector fields.
+# The hash guard runs before CI and staged scans; changed vector bytes fail closed.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Pinned OpenMLS/SFrame public hexadecimal known-answer vectors"
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''^(?:desktop/experimental/vendor/openmls/openmls/test_vectors/crypto\-basics\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/kat_encryption_openmls\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/kat_tree_kem_openmls\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/key\-schedule\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/message\-protection\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/messages\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/passive\-client\-handling\-commit\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/passive\-client\-random\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/passive\-client\-welcome\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/psk_secret\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/secret\-tree\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/targeted\-messages\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/transcript\-hashes\.json|desktop/experimental/vendor/openmls/openmls/test_vectors/treekem\.json|desktop/experimental/vendor/sframe/src/test_vectors/test\-vectors\.json)$'''
+]
+regexes = [
+  '''^\s*"?(?:application_key|commit_secret|confirmation_key|encryption_secret|epoch_authenticator|exporter_secret|external_secret|group_secrets|handshake_key|init_secret|initial_epoch_authenticator|initial_init_secret|joiner_secret|key|key_package|membership_key|mls_key_package|my_leaf_secret|my_path_secret|path_secret|pre_shared_key_proposal|psk_secret|root_secret_after_add|root_secret_after_update|secret|sender_data_secret|sframe_key|sframe_secret|welcome_secret)"\s*:\s*"[0-9a-fA-F]+"?\s*,?\s*$'''
+]
+
+[[rules.allowlists]]
+description = "Cargo dependency names, not a credential"
+condition = "AND"
+regexTarget = "match"
+paths = [
+  '''^(?:desktop/experimental/app/Cargo\.lock|desktop/experimental/crates/crypto\-owner/Cargo\.lock|desktop/experimental/crates/crypto\-owner/qualified\-sdk/Cargo\.lock|desktop/experimental/vendor/openmls/Cargo\.lock|desktop/experimental/vendor/openmls/compat_tests/Cargo\.lock)$'''
+]
+regexes = [
+  '''^\s*"?libcrux-secrets",\s*"libcrux-sha3"[,]?\s*$'''
+]

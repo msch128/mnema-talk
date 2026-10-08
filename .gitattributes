@@ -2,6 +2,9 @@
 desktop/** text=auto eol=lf
 # These are verbatim upstream bytes bound by the distribution hash manifest.
 desktop/licenses/** -text
+desktop/experimental/licenses/** -text
+desktop/experimental/ui/src/assets/fonts/*.woff2 -text
+desktop/experimental/ui/src/assets/fonts/Inter-LICENSE.txt -text
 desktop/ui/src/assets/fonts/*.woff2 -text
 desktop/ui/src/assets/fonts/Inter-LICENSE.txt -text
 desktop/icons/** -text

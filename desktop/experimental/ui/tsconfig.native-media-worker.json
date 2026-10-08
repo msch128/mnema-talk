@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "WebWorker",
+      "ESNext.Disposable"
+    ],
+    "types": [],
+    "allowJs": false,
+    "skipLibCheck": false
+  },
+  "include": [
+    "src/nativeMedia/transform.worker.ts",
+    "src/nativeMedia/sframe-checks.ts"
+  ]
+}

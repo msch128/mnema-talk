@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-trust-request-confirmation"
+description = "Enables the native_trust_request_confirmation command without any pre-configured scope."
+commands.allow = ["native_trust_request_confirmation"]
+
+[[permission]]
+identifier = "deny-native-trust-request-confirmation"
+description = "Denies the native_trust_request_confirmation command without any pre-configured scope."
+commands.deny = ["native_trust_request_confirmation"]

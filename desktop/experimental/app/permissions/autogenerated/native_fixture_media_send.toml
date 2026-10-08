@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-native-fixture-media-send"
+description = "Enables the native_fixture_media_send command without any pre-configured scope."
+commands.allow = ["native_fixture_media_send"]
+
+[[permission]]
+identifier = "deny-native-fixture-media-send"
+description = "Denies the native_fixture_media_send command without any pre-configured scope."
+commands.deny = ["native_fixture_media_send"]

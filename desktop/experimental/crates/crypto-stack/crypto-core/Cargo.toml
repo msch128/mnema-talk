@@ -1,0 +1,28 @@
+[package]
+name = "mnema-crypto-core-prototype"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[dependencies]
+mnema-crypto-trust-candidate = { path = "../crypto-trust" }
+mnema-crypto-adapter-candidate = { path = "../crypto-adapter" }
+openmls = { path = "../../../vendor/openmls/openmls" }
+openmls_traits = { path = "../../../vendor/openmls/traits" }
+openmls_rust_crypto = { path = "../../../vendor/openmls/openmls_rust_crypto" }
+openmls_sqlite_storage = { path = "../../../vendor/openmls/sqlite_storage" }
+openmls_basic_credential = { path = "../../../vendor/openmls/basic_credential" }
+rusqlite = { version = "=0.37.0", features = ["bundled-sqlcipher-vendored-openssl"] }
+serde = "=1.0.229"
+serde_json = "=1.0.151"
+coset = "=0.4.2"
+ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std", "zeroize"] }
+zeroize = "=1.9.1"
+sha2 = "=0.10.9"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "=3.7.0"
+
+[dev-dependencies]
+tempfile = "=3.23.0"
