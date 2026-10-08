@@ -1,0 +1,27 @@
+web/src/lib/api.test.ts
+  s_0ae926f6f8634a::t_bbd1974a2656a8 254-276
+  s_0ae926f6f8634a::t_d68bb8309ab2d1 252-253,277-280,282-311
+  s_0ae926f6f8634a::t_0a208778b1d15d 2,187-251
+  s_0ae926f6f8634a::t_549ff0bbe43878 281
+web/src/lib/api.ts
+  s_0ae926f6f8634a::t_d68bb8309ab2d1 112,129,140-141,151-153
+  s_0ae926f6f8634a::t_7d33b3d3480df5 64-66
+  s_0ae926f6f8634a::t_a1c3c2d4bb86bb 1-3,62,67-71,74-80,94-98,104-111,113-124,126,130-139,142-150,154-158,172-173,175-178
+  s_0ae926f6f8634a::t_bbd1974a2656a8 99-103,125,127-128,164-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "023a2e5a1d1bfa6760945c7a1cb8064a78a58bef",
+  "prompts": {},
+  "sessions": {
+    "s_0ae926f6f8634a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1173f-c3a1-71b2-901c-33c5e4d89d40",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
