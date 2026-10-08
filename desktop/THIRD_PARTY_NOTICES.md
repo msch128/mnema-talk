@@ -10,6 +10,12 @@ directory and the project's root `LICENSE` with any probe binary. The probe is
 not an official release. Unmodified source for each crate is available through
 its exact version link below, including MPL-2.0-covered source.
 
+The optional owned D3D11 fixture uses pinned Microsoft `windows 0.62.2`
+(MIT OR Apache-2.0) COM/API bindings and `windows-sys 0.61.2` (MIT OR Apache-2.0),
+already included in this inventory and the full license bundle. All fixture
+bitmap glyphs are authored by this project; no third-party graphics-hook source
+or extra font is shipped. Direct3D/DXGI/User32 are system components.
+
 Frontend: Vue 3.5.43 (MIT), Tauri JavaScript API 2.12.1 (MIT OR Apache-2.0).
 The desktop UI also bundles unchanged Inter Latin normal font files at weights
 400, 500 and 600 from [@fontsource/inter 5.3.0](https://www.npmjs.com/package/@fontsource/inter/v/5.3.0),

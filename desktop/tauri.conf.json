@@ -10,11 +10,26 @@
     "frontendDist": "ui/dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "Mnema — Desktop-Machbarkeitsprüfung", "width": 1040, "height": 760, "minWidth": 720, "minHeight": 600 }],
+    "windows": [
+      {
+        "label": "main",
+        "title": "Mnema \u2014 Desktop-Machbarkeitspr\u00fcfung",
+        "width": 1040,
+        "height": 760,
+        "minWidth": 720,
+        "minHeight": 600
+      }
+    ],
     "security": {
-      "capabilities": ["main"],
+      "capabilities": [
+        "main",
+        "gaming-fixture"
+      ],
       "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'"
-    }
+    },
+    "withGlobalTauri": true
   },
-  "bundle": { "active": false }
+  "bundle": {
+    "active": false
+  }
 }

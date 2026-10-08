@@ -2,7 +2,7 @@
 
 This is the first implementation stage of the desktop roadmap. It is **not a
 released 0.7 client**: it does not log in, join Voice, capture media, create an
-overlay, or claim E2EE. Do not use it as a replacement for the current web app.
+production overlay, or claim E2EE. Do not use it as a replacement for the current web app.
 
 The Vue interface is bundled locally. Native Rust commands offer two operations:
 
@@ -17,6 +17,9 @@ gating and held-PTT release. A native shortcut adapter polls only explicitly
 configured keys and modifiers. It is not wired into Voice or the UI: short taps
 can be missed and input-availability failures need an independent media watchdog.
 These tests do not qualify runtime game input or GPU overlays.
+An optional native synthetic fixture now exercises an owned child window, raw
+configured input, session/watchdog gates and separate widget/overlay windows.
+It does not connect to a server, microphone, real Voice or third-party game.
 The probe reports Web API presence separately from actual media qualification.
 
 ## Build on Windows
@@ -103,3 +106,72 @@ graph). The latter blocks Linux distribution qualification pending a compatible
 fix or reviewed reachability assessment. Neither package appears in the inspected
 Windows or macOS graphs; this is not a clean cross-platform dependency claim.
 No advisory is ignored.
+
+
+## Explicit synthetic gaming fixture (Windows only)
+
+The `gaming-fixture` feature adds native modules sharing the same opaque Rust
+owner and shortcut types. A normal application launch keeps them inactive.
+Start the synthetic route explicitly:
+
+```powershell
+npm ci --prefix desktop/ui
+npm --prefix desktop/ui run check
+cargo test --locked --manifest-path desktop/Cargo.toml --features gaming-fixture,custom-protocol --lib
+cargo build --locked --manifest-path desktop/Cargo.toml --release --features gaming-fixture,custom-protocol
+desktop/target/release/mnema-desktop-probe.exe --cooperating-game-session
+```
+
+The app starts one owned native child as a **synthetic game window**. F8 joins or
+leaves its synthetic voice state. F9 toggles speaking, F10 muted, F11 sharing.
+Only the foreground owned child plus joined synthetic voice permits the local
+side widget. Alt+M requests the interactive overlay; a second Alt+M requests
+return to that exact owned child. The normal Main window and unrelated apps do
+not extend the game's foreground lease. Alt+Tab, minimize, close, lock, native
+input loss and watchdog expiry revoke the context and release the synthetic PTT
+latch. No actual microphone/session is created. Raw input is restricted to
+configured primary keys and modifier classes; physical-up reconciliation only
+releases retained state and never fabricates a press.
+
+Configurable examples (launch arguments, not web/native renderer authority):
+
+```powershell
+desktop/target/release/mnema-desktop-probe.exe --cooperating-game-session --overlay-key=CTRL+SHIFT+X --ptt-key=MOUSE4 --fixture-no-widget
+```
+
+The fixture child grants foreground permission only to its independently
+verified actual spawning parent, for the configured physical overlay chord while
+foreground and joined. Real external game focus remains a single direct,
+OS-permitted request, with no synthetic input, thread attachment or elevation.
+The fixture's pipe and retained process creation identity carry no real media
+proof. Its local widget uses bounded, sanitized synthetic names/statuses; its
+renderer has event listening only and cannot activate native input/media.
+
+The hosted **Windows desktop gaming fixture** workflow links an actual Windows
+EXE and uploads it with an unsigned receipt and dependency notices. It does not
+launch a GUI or promote the artifact to an updater/release. A successful build
+proves compilation/linking, not the following still-required runtime checks:
+
+- Widget present only in the owned game with joined synthetic voice; no widget
+  after leaving, opening Main, Alt+Tab, minimizing, locking or terminating child.
+- Repeated overlay/return, custom chords, held PTT and lost primary/modifier break;
+  no press rearmed when context returns.
+- WinEvent destruction/reuse, foreground changes while queued, monitor/DPI changes,
+  raw-input registration conflicts with WebView2, native focus denial and cleanup.
+- Renderer ordering/publication acknowledgement and hide failure; a GUI stall
+  must not be mistaken for a qualified guarantee that old pixels disappear.
+
+Double-checks, retained process handles and native events bound observed window
+ownership but do not provide an atomic OS HWND lease. This candidate makes no
+claim of real-game, anti-cheat, exclusive-fullscreen or production media/E2EE
+qualification. Production gaming rendering remains explicitly disabled.
+
+
+## Owned graphics mode fixture
+
+A separate optional binary draws a synthetic scene, HUD and overlay inside its
+own D3D11 swap chain. See [OWNED-D3D11-FIXTURE.md](OWNED-D3D11-FIXTURE.md) for
+explicit build/run and rollback controls. `GetFullscreenState` reports our actual
+DXGI state; Windows Fullscreen Optimizations can still change physical
+presentation. It does not qualify an external Tauri window over true exclusive
+fullscreen or a graphics companion inside third-party games.

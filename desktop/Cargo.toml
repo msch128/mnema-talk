@@ -9,6 +9,12 @@ description = "Windows-first feasibility probe; not a released Mnema client"
 [features]
 default = []
 shell = ["dep:tauri", "dep:tauri-build"]
+custom-protocol = ["shell", "tauri/custom-protocol"]
+# Draws only inside our own authored swapchain; no foreign-game overlay.
+owned-d3d11-fixture = ["dep:windows"]
+# Explicit synthetic test feature; normal launches never install native gaming.
+gaming-fixture = ["shell", "windows-sys/Win32_UI_Accessibility", "windows-sys/Win32_UI_HiDpi", "windows-sys/Win32_Graphics_Dwm", "windows-sys/Win32_UI_Shell", "windows-sys/Win32_System_LibraryLoader", "windows-sys/Win32_System_RemoteDesktop", "windows-sys/Win32_System_StationsAndDesktops", "windows-sys/Win32_UI_Input", "windows-sys/Win32_System_Diagnostics_ToolHelp", "windows-sys/Win32_System_Console", "windows-sys/Win32_Storage_FileSystem"]
+
 
 [dependencies]
 serde = { version = "=1.0.229", features = ["derive"] }
@@ -18,6 +24,7 @@ reqwest = { version = "=0.12.28", default-features = false, features = ["blockin
 tauri = { version = "=2.12.1", optional = true , features = [] }
 
 [target.'cfg(windows)'.dependencies]
+windows = { version = "=0.62.2", optional = true, features = ["Win32_Foundation", "Win32_Graphics_Direct3D", "Win32_Graphics_Direct3D11", "Win32_Graphics_Dxgi", "Win32_Graphics_Dxgi_Common"] }
 windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse"] }
 
 [build-dependencies]
@@ -27,3 +34,8 @@ tauri-build = { version = "=2.7.1", optional = true , features = [] }
 name = "mnema-desktop-probe"
 path = "src/main.rs"
 required-features = ["shell"]
+
+[[bin]]
+name = "mnema-owned-d3d11-fixture"
+path = "src/owned_d3d11_main.rs"
+required-features = ["owned-d3d11-fixture"]

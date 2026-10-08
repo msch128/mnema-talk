@@ -1,0 +1,112 @@
+name: Windows desktop gaming fixture
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - desktop/**
+      - .github/workflows/desktop-gaming-fixture.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-gaming-fixture-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-fixture:
+    runs-on: windows-2025
+    timeout-minutes: 35
+    env:
+      BUILD_REVISION: ${{ github.sha }}
+      RUST_VERSION: 1.99.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: desktop/ui/package-lock.json
+      - name: Select pinned Rust toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install $env:RUST_VERSION --profile minimal --component clippy --component rustfmt
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to install pinned Rust' }
+          rustup default $env:RUST_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to select pinned Rust' }
+          rustc --version
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to verify Rust' }
+      - name: Build the existing Mnema Vue UI and local fixture assets
+        working-directory: desktop/ui
+        shell: pwsh
+        run: |
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'UI dependencies failed' }
+          npm run check
+          if ($LASTEXITCODE -ne 0) { throw 'UI checks failed' }
+      - name: Native Windows controller, input, owner and fixture tests
+        working-directory: desktop
+        shell: pwsh
+        run: |
+          cargo test --locked --features gaming-fixture,custom-protocol,owned-d3d11-fixture --lib
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows tests failed' }
+          cargo clippy --locked --features gaming-fixture,custom-protocol,owned-d3d11-fixture --all-targets -- -D warnings
+          if ($LASTEXITCODE -ne 0) { throw 'Native Windows Clippy failed' }
+      - name: Verify the locked dependency notice bundle
+        shell: pwsh
+        run: |
+          node --test desktop/scripts/*.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop packaging tests failed' }
+          node desktop/scripts/collect-licenses.mjs --check
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop dependency notices failed' }
+      - name: Link the actual Windows application
+        working-directory: desktop
+        shell: pwsh
+        run: |
+          cargo build --locked --release --features gaming-fixture,custom-protocol,owned-d3d11-fixture
+          if ($LASTEXITCODE -ne 0) { throw 'Windows executable build failed' }
+      - name: Prepare explicitly unsigned synthetic fixture artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fixtureOutput = Join-Path $env:RUNNER_TEMP 'mnema-windows-gaming-fixture'
+          New-Item -ItemType Directory -Path $fixtureOutput -Force | Out-Null
+          $fixtureExe = Join-Path $fixtureOutput 'mnema-desktop-probe.exe'
+          Copy-Item 'desktop/target/release/mnema-desktop-probe.exe' $fixtureExe
+          Copy-Item 'desktop/licenses' (Join-Path $fixtureOutput 'licenses') -Recurse
+          Copy-Item 'desktop/THIRD_PARTY_NOTICES.md' $fixtureOutput
+          Copy-Item 'desktop/README.md' $fixtureOutput
+          Copy-Item 'desktop/OWNED-D3D11-FIXTURE.md' $fixtureOutput
+          $graphicsExe = Join-Path $fixtureOutput 'mnema-owned-d3d11-fixture.exe'
+          Copy-Item 'desktop/target/release/mnema-owned-d3d11-fixture.exe' $graphicsExe
+          node desktop/scripts/artifact-manifest.mjs $graphicsExe (Join-Path $fixtureOutput 'owned-graphics-development-receipt.json') x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { throw 'Owned graphics receipt failed' }
+          Copy-Item 'LICENSE' $fixtureOutput
+          node desktop/scripts/artifact-manifest.mjs $fixtureExe (Join-Path $fixtureOutput 'development-receipt.json') x86_64-pc-windows-msvc
+          if ($LASTEXITCODE -ne 0) { throw 'Development receipt failed' }
+          $fixtureHash = (Get-FileHash -Algorithm SHA256 $fixtureExe).Hash.ToLowerInvariant()
+          $fixtureInfo = [ordered]@{
+            kind = 'unsigned-development-synthetic-gaming-fixture'
+            revision = $env:BUILD_REVISION
+            executable_sha256 = $fixtureHash
+            owned_graphics_sha256 = (Get-FileHash -Algorithm SHA256 $graphicsExe).Hash.ToLowerInvariant()
+            owned_graphics_launch = 'mnema-owned-d3d11-fixture.exe --owned-d3d11-fixture'
+            windows_gui_runtime_qualified = $false
+            real_games_qualified = $false
+            production_media_authorized = $false
+            automatic_updater_package = $false
+            launch = 'mnema-desktop-probe.exe --cooperating-game-session'
+          }
+          $fixtureInfo | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $fixtureOutput 'fixture-build.json')
+          "Unsigned synthetic fixture: linked Windows EXE only. No GUI launch, real game, crypto/media or fullscreen qualification." | Out-File -Append $env:GITHUB_STEP_SUMMARY
+      - name: Upload unsigned development fixture
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mnema-windows-gaming-fixture-unsigned-${{ github.sha }}
+          path: ${{ runner.temp }}/mnema-windows-gaming-fixture/
+          if-no-files-found: error
+          retention-days: 7

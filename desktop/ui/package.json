@@ -5,14 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
-    "build": "vue-tsc --noEmit && vite build",
+    "build": "npm run fixtures:build && vue-tsc --noEmit && vite build",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint . --max-warnings 0",
     "check": "npm run lint && npm run test:coverage && npm run build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "fixtures:build": "tsc -p ../fixtures/tsconfig.json"
   },
-  "dependencies": { "@tauri-apps/api": "2.12.1", "vue": "3.5.43" },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.1",
+    "vue": "3.5.43"
+  },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@types/node": "24.19.1",

@@ -65,10 +65,57 @@ fn inspect_game(
     Ok(windows::inspect_foreground(&names))
 }
 
+#[cfg(all(windows, feature = "gaming-fixture"))]
+thread_local! { static GAMING_FIXTURE:std::cell::RefCell<Option<mnema_desktop_probe::gaming_fixture::runtime::Scheduler>>=const {std::cell::RefCell::new(None)}; }
 fn main() {
-    tauri::Builder::default()
+    #[cfg(all(windows, feature = "gaming-fixture"))]
+    if std::env::args().any(|arg| arg == "--cooperating-fixture-child") {
+        if mnema_desktop_probe::gaming_fixture::fixture_child::run_child().is_err() {
+            std::process::exit(1)
+        }
+        return;
+    }
+    let gaming_fixture = std::env::args().any(|arg| arg == "--cooperating-game-session");
+    #[cfg(not(all(windows, feature = "gaming-fixture")))]
+    if gaming_fixture {
+        std::process::exit(2)
+    }
+
+    let app = tauri::Builder::default()
+        .setup(move |app| {
+            #[cfg(all(windows, feature = "gaming-fixture"))]
+            if gaming_fixture {
+                let config = mnema_desktop_probe::gaming_fixture::options::fixture_config(
+                    std::env::args()
+                        .collect::<Vec<_>>()
+                        .iter()
+                        .map(String::as_str),
+                )
+                .map_err(|_| std::io::Error::other("Invalid synthetic fixture shortcuts"))?;
+                let scheduler = mnema_desktop_probe::gaming_fixture::runtime::start(
+                    app.handle(),
+                    !std::env::args().any(|arg| arg == "--fixture-no-widget"),
+                    config,
+                )
+                .map_err(|_| {
+                    std::io::Error::other("Unable to start explicit cooperating synthetic fixture")
+                })?;
+                GAMING_FIXTURE.with(|slot| *slot.borrow_mut() = Some(scheduler));
+            }
+            #[cfg(not(all(windows, feature = "gaming-fixture")))]
+            let _ = app;
+            Ok(())
+        })
         .manage(ProbeBudget::default())
         .invoke_handler(tauri::generate_handler![inspect_server, inspect_game])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("Unable to start the desktop feasibility probe");
+    app.run(|handle, event| {
+        #[cfg(all(windows, feature = "gaming-fixture"))]
+        GAMING_FIXTURE.with(|slot| {
+            mnema_desktop_probe::gaming_fixture::lifecycle::handle_event(handle, &event, slot);
+        });
+        #[cfg(not(all(windows, feature = "gaming-fixture")))]
+        let _ = (handle, event);
+    });
 }
