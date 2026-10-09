@@ -80,6 +80,7 @@ jobs:
           npm run build
           if ($LASTEXITCODE -ne 0) { throw 'Fixture web build failed' }
       - name: Test the published Windows release against an actual instance
+        timeout-minutes: 15
         # This dispatch-only setup uses the unchanged released web/backend tree.
         # Generated credentials, certificates and database files stay in runner.temp.
         if: inputs.acceptance_release != ''
