@@ -50,6 +50,7 @@ fn main() {
             "native_chat_receive",
             "native_chat_mutate",
             "native_chat_snapshot",
+            "native_device_remove",
         ];
         #[cfg(feature = "synthetic-media-fixture")]
         const COMMANDS: &[&str] = &[

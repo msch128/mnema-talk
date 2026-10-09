@@ -19,8 +19,8 @@ mod crypto_host;
 #[cfg(feature = "native-crypto")]
 use crypto_host::{
     native_chat_mutate, native_chat_publish, native_chat_receive, native_chat_snapshot,
-    native_trust_begin_first_root, native_trust_cancel, native_trust_read_status,
-    native_trust_request_confirmation,
+    native_device_remove, native_trust_begin_first_root, native_trust_cancel,
+    native_trust_read_status, native_trust_request_confirmation,
 };
 #[cfg(feature = "synthetic-media-fixture")]
 mod media_fixture;
@@ -804,7 +804,8 @@ fn main() {
                     .permission("allow-native-chat-publish")
                     .permission("allow-native-chat-receive")
                     .permission("allow-native-chat-mutate")
-                    .permission("allow-native-chat-snapshot"),
+                    .permission("allow-native-chat-snapshot")
+                    .permission("allow-native-device-remove"),
             )?;
             #[cfg(feature = "synthetic-media-fixture")]
             if handle.state::<RuntimeState>().media.is_some() {
@@ -924,6 +925,7 @@ fn main() {
         native_socket_open,
         native_socket_send,
         native_socket_close,
+        native_device_remove,
         native_trust_begin_first_root,
         native_trust_request_confirmation,
         native_trust_cancel,

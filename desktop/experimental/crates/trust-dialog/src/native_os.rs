@@ -16,6 +16,33 @@ struct Pending {
     cancelled: Arc<AtomicBool>,
     finished: Arc<AtomicBool>,
 }
+fn shutdown_dialogs(
+    closed: &AtomicBool,
+    active: &Mutex<Option<Arc<Pending>>>,
+) -> Result<(), DialogError> {
+    // Seal even when registration has not happened yet, or the lock is poisoned.
+    closed.store(true, Ordering::Release);
+    let active = active.lock().map_err(|_| DialogError::Unavailable)?;
+    if let Some(pending) = active.as_ref() {
+        pending.cancelled.store(true, Ordering::Release);
+    }
+    Ok(())
+}
+fn register_dialog(
+    closed: &AtomicBool,
+    active: &Mutex<Option<Arc<Pending>>>,
+    pending: Arc<Pending>,
+) -> Result<(), DialogError> {
+    let mut active = active.lock().map_err(|_| DialogError::Unavailable)?;
+    if closed.load(Ordering::Acquire) {
+        return Err(DialogError::Cancelled);
+    }
+    if active.is_some() {
+        return Err(DialogError::Unavailable);
+    }
+    *active = Some(pending);
+    Ok(())
+}
 #[derive(Clone)]
 pub struct TauriNativeTrustDialog {
     window: WebviewWindow,
@@ -23,8 +50,15 @@ pub struct TauriNativeTrustDialog {
     lease: NativeWindowLease,
     validator: NativeRegistryValidator,
     active: Arc<Mutex<Option<Arc<Pending>>>>,
+    closed: Arc<AtomicBool>,
 }
 impl TauriNativeTrustDialog {
+    /// Trusted native actor shutdown; cancels only this window service's
+    /// currently registered ceremony and seals future registrations. No renderer
+    /// command or approval value; a fresh native owner needs a new service.
+    pub fn cancel_active(&self) -> Result<(), DialogError> {
+        shutdown_dialogs(&self.closed, &self.active)
+    }
     pub fn from_native_window(
         window: WebviewWindow,
         client: NativeClient,
@@ -41,9 +75,13 @@ impl TauriNativeTrustDialog {
             lease,
             validator,
             active: Arc::new(Mutex::new(None)),
+            closed: Arc::new(AtomicBool::new(false)),
         })
     }
     fn check(&self, request: &NativeDialogRequest) -> Result<(), DialogError> {
+        if self.closed.load(Ordering::Acquire) {
+            return Err(DialogError::Cancelled);
+        }
         request.check_deadline()?;
         (self.validator)(&self.window, &self.lease)?;
         self.client
@@ -72,16 +110,7 @@ impl TauriNativeTrustDialog {
                 cancelled: Arc::new(AtomicBool::new(false)),
                 finished: Arc::new(AtomicBool::new(false)),
             });
-            {
-                let mut active = service
-                    .active
-                    .lock()
-                    .map_err(|_| DialogError::Unavailable)?;
-                if active.is_some() {
-                    return Err(DialogError::Unavailable);
-                }
-                *active = Some(pending.clone());
-            }
+            register_dialog(&service.closed, &service.active, pending.clone())?;
             let mut abort = AbortedFuture {
                 cancelled: pending.cancelled.clone(),
                 armed: true,
@@ -200,6 +229,38 @@ impl DialogInstance {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn pending() -> Arc<Pending> {
+        Arc::new(Pending {
+            operation: Uuid::new_v4(),
+            cancelled: Arc::new(AtomicBool::new(false)),
+            finished: Arc::new(AtomicBool::new(false)),
+        })
+    }
+    #[test]
+    fn shutdown_before_registration_denies_later_ceremony() {
+        let closed = AtomicBool::new(false);
+        let active = Mutex::new(None);
+        shutdown_dialogs(&closed, &active).unwrap();
+        assert!(matches!(
+            register_dialog(&closed, &active, pending()),
+            Err(DialogError::Cancelled)
+        ));
+        assert!(active.lock().unwrap().is_none());
+    }
+    #[test]
+    fn shutdown_cancels_registered_decision_and_cannot_be_reset_by_completion() {
+        let closed = AtomicBool::new(false);
+        let active = Mutex::new(None);
+        let registered = pending();
+        register_dialog(&closed, &active, registered.clone()).unwrap();
+        shutdown_dialogs(&closed, &active).unwrap();
+        assert!(registered.cancelled.load(Ordering::Acquire));
+        *active.lock().unwrap() = None;
+        assert!(matches!(
+            register_dialog(&closed, &active, pending()),
+            Err(DialogError::Cancelled)
+        ));
+    }
     #[test]
     fn normal_completion_disarms_abort_without_erasing_explicit_cancellation() {
         let flag = Arc::new(AtomicBool::new(false));
