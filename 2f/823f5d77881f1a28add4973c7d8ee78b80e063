@@ -1,0 +1,45 @@
+.gitignore
+  s_0a885d5f0c193a::t_17832b9df61b05 24
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_archive.rs
+  s_0a885d5f0c193a::t_ac6dc69a24a1b9 1-8,12,16-25,28-39,45-49,53-64,68,72,78-80,108
+  s_0a885d5f0c193a::t_13f2e278b8fac7 9-11,88-90
+  s_0a885d5f0c193a::t_1feb7863305d58 13-15,26-27,40-44,50-52,65-67,69-71,73-77,91-107
+  s_0a885d5f0c193a::t_da743a783912d4 81-87
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/tests.rs
+  s_0a885d5f0c193a::t_13e54ef3362f3c 2127,2129,2168-2169
+  s_0a885d5f0c193a::t_59c5337622bb42 2130-2167
+  s_0a885d5f0c193a::t_f55f4b7ffeb72c 1924,1932,1960,1982,2021-2022,2024-2026,2032-2033,2038-2044,2048-2051,2056-2071,2075-2078,2082-2086,2092-2099,2113-2115
+  s_0a885d5f0c193a::t_698ae3ec0366c6 6
+  s_0a885d5f0c193a::t_ed4a3b02942ff4 2116
+  s_0a885d5f0c193a::t_75aa6d30d5ccb8 1937-1942,2034-2037,2045-2047,2052-2055,2072-2074,2079-2081,2087-2091,2100-2112,2117-2126
+  s_0a885d5f0c193a::t_31eea6f463be2e 2128
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/dispatch.rs
+  s_0a885d5f0c193a::t_ac6dc69a24a1b9 103,105-107
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/protected.rs
+  s_0a885d5f0c193a::t_75aa6d30d5ccb8 1020-1032,1040-1042
+  s_0a885d5f0c193a::t_1a79e7726926b4 813
+  s_0a885d5f0c193a::t_bf57699e108274 1019,1033,1039
+desktop/scripts/test-glib-linux.sh
+  s_0a885d5f0c193a::t_a6cba331cf0cd4 16
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/lib.rs
+  s_0a885d5f0c193a::t_ac6dc69a24a1b9 691-698,736,741-748,1047
+  s_0a885d5f0c193a::t_ecd366ec79f2d3 579-589,665
+  s_0a885d5f0c193a::t_1feb7863305d58 18
+  s_0a885d5f0c193a::t_321f178322a84f 578
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f823f5d77881f1a28add4973c7d8ee78b80e063",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
