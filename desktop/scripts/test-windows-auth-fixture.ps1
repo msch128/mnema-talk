@@ -100,6 +100,9 @@ try {
   $env:MNEMA_DESKTOP_FIXTURE_REVISION = $backendRevision
   Write-Host 'Fixture phase: starting the normal backend'
   $server = Start-Process $goExecutable -ArgumentList '-test.run=^TestDesktopClientGUIFixture$','-test.timeout=12m' -PassThru -RedirectStandardOutput (Join-Path $directory 'server.log') -RedirectStandardError (Join-Path $directory 'server-error.log')
+  # PowerShell 5.1 redirected Start-Process needs a retained handle for ExitCode.
+  # https://github.com/PowerShell/PowerShell/issues/5421
+  $null = $server.Handle
   $readyFile = Join-Path $directory 'READY.json'
   for ($attempt = 0; $attempt -lt 120 -and !(Test-Path $readyFile); $attempt++) {
     $server.Refresh()
@@ -170,7 +173,14 @@ public static class MnemaFixtureCertificateImport {
   & desktop/scripts/test-windows-release.ps1 -Tag $Tag -InstanceUrl $ready.origin -FixtureDirectory $directory
   if (!$?) { throw 'Authenticated desktop UI probe failed' }
   [IO.File]::WriteAllText((Join-Path $directory 'STOP'), 'done')
-  if (!$server.WaitForExit(30000) -or $server.ExitCode -ne 0) { throw 'Normal router fixture verification failed' }
+  if (!$server.WaitForExit(30000)) { throw 'Normal router fixture exit timed out' }
+  $server.Refresh()
+  $exitCode = $server.ExitCode
+  if ($null -eq $exitCode) { throw 'Normal router fixture exit code unavailable' }
+  if ($exitCode -ne 0) {
+    $failureLabel = Get-FixtureFailureLabel $directory
+    throw ('Normal router fixture verification failed: ' + $failureLabel + ' (exit code ' + $exitCode + ')')
+  }
   $result = Get-Content (Join-Path $directory 'SERVER-RESULT.json') -Raw | ConvertFrom-Json
   if ($result.login_200 -ne $true -or $result.logout_204 -ne $true -or $result.outbound_message_persisted -ne $true -or $result.peer_message_sent -ne $true) { throw 'Backend evidence incomplete' }
   Copy-Item (Join-Path $directory 'SERVER-RESULT.json') (Join-Path $env:RUNNER_TEMP 'windows-release-acceptance/SERVER-RESULT.json')
