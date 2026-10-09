@@ -1,0 +1,28 @@
+.github/workflows/desktop-client.yml
+  s_0a885d5f0c193a::t_7c96b8d563f84c 27-31,98,100,102
+desktop/scripts/test-windows-release.ps1
+  s_0a885d5f0c193a::t_0d19813e9e0449 119-140,174-176,189,193
+  s_0a885d5f0c193a::t_d5b6772518d312 179-185
+  s_0a885d5f0c193a::t_d3d939dd068b5a 4-5,26,64-74,177-178,186-188,190-192,212-217,221-222
+internal/server/desktop_client_fixture_integration_test.go
+  s_0a885d5f0c193a::t_3e27499d14a996 25,30-31,36,38,94-103,193-197,203,215-218,236-239,284-428
+desktop/scripts/test-windows-auth-fixture.ps1
+  s_0a885d5f0c193a::t_7298464a52ae2c 16-19
+  s_0a885d5f0c193a::t_816f16a3ff2c34 1,103,176,220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ffcadc4e6933d01108729efd69caad94579bc799",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
