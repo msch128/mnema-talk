@@ -1,0 +1,50 @@
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_archive.rs
+  s_0a885d5f0c193a::t_eb1f5f2f3f205b 6,12-15,17-28,47-49,55-61,69-74,77,84-87,99,115-116,125,128-133,141-142
+  s_0a885d5f0c193a::t_92162f408de834 16,29-46,50-54,62-63,65-67,78-83,88-98,100-114,117-124,126-127,134-135,137-139
+  s_0a885d5f0c193a::t_c12b04da14fb85 64,68,75-76,136,140,148,156-157
+  s_0a885d5f0c193a::t_4eceaa15fe3b3b 143
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/lib.rs
+  s_0a885d5f0c193a::t_ef3feaed13c791 19
+desktop/experimental/crates/crypto-owner/src/typed_relay.rs
+  s_0a885d5f0c193a::t_91b2d10fbcb5ca 505-507,563,573-578
+  s_0a885d5f0c193a::t_338ca80d8dd98a 5-7,545-546,564-565,567-571,589-591
+  s_0a885d5f0c193a::t_71f3cc525e693e 9,66,477,484,572,609
+  s_0a885d5f0c193a::t_c12b04da14fb85 566
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_event_projection.rs
+  s_0a885d5f0c193a::t_2b67770d4fdeaa 23-25
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/tests.rs
+  s_0a885d5f0c193a::t_cd82a6cf9f38ab 2093-2094,2099-2103,2111-2112,2117,2122,2159-2172,2182-2183,2212,2217-2218,2222-2229
+  s_0a885d5f0c193a::t_c12b04da14fb85 2096,2108,2119,2174,2178,2214
+  s_0a885d5f0c193a::t_338ca80d8dd98a 2095,2097-2098,2107,2109-2110,2113-2116,2118,2120-2121,2123-2125,2173,2175-2177,2179-2181,2184-2195,2213,2215-2216,2219-2221
+  s_0a885d5f0c193a::t_ed443e444696bc 2196,2206,2211,2230-2239,2245,2249-2250,2256-2259,2268-2269,2284-2286
+  s_0a885d5f0c193a::t_432710be368f96 2197-2205,2207-2210,2240-2244,2246-2248,2251-2255,2260-2267,2270-2283
+  s_0a885d5f0c193a::t_1b80a72cfa4648 2287
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/chat_domain.rs
+  s_0a885d5f0c193a::t_549e0e606d8b0f 235,644-735
+  s_0a885d5f0c193a::t_36b8681d345209 736-737
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/host_tests.rs
+  s_0a885d5f0c193a::t_09c5adcaa1ba5c 405-411,415-419,422-425,432-439,441-446,448-453,455-457,460-466,470-477,481-484,486-489
+  s_0a885d5f0c193a::t_f653198d77aab2 400-404,412-414,420-421,426-431,440,447,454,458-459,467-469,478-480,485,490-491
+  s_0a885d5f0c193a::t_0c04516ae9c25e 399
+desktop/experimental/crates/crypto-owner/src/chat_history.rs
+  s_0a885d5f0c193a::t_a18b658a162fb8 26-32,57-64,290,293,305
+  s_0a885d5f0c193a::t_338ca80d8dd98a 9-10,33-56
+desktop/experimental/crates/crypto-owner/examples/two_native_peers.rs
+  s_0a885d5f0c193a::t_0be5427a7fac5c 10-11,196-259,262-267,272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1178321250e093a69638149ad98c24be0b1b20f",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
