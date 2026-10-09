@@ -1,0 +1,20 @@
+desktop/scripts/test-windows-release.ps1
+  s_0a885d5f0c193a::t_a049200357abc7 73-74,79,82,94,99-100
+  s_0a885d5f0c193a::t_cb67a122a5df0a 75-78,80-81,83,85,93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "370fd85a3baf096382de960f1a1d7c7754ab440c",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
