@@ -14,6 +14,14 @@ new releases. The desktop client requires Microsoft Edge WebView2 Runtime.
 The release workflow starts the actual Windows executable and checks that its
 instance-selector window appears before publishing. That startup check does not
 qualify login, physical media devices, screensharing, game overlays or E2EE.
+A separate [published v0.7.1 Windows acceptance](https://github.com/msch128/mnema-talk/actions/runs/37888635202)
+has since verified generated-account login, persisted chat, live peer receipt
+without history fallback, and logout against an isolated normal server.
+It used PostgreSQL 17.11 and in-memory test media storage. This does not qualify
+S3 uploads, media capture, E2EE or games. [Product status](../../doc/product-status.md)
+is the current evidence reference. The instance currently supplies executable
+web code; the protected locally bundled client boundary remains outstanding.
+
 Microphone/camera permission requests follow WebView2's browser permission flow.
 HTTPS chat links to other sites open in the default Windows browser after an
 explicit confirmation. Same-origin attachments open in a restricted child window sharing the app session;
@@ -98,15 +106,15 @@ This produces an unsigned DEV executable without configuring an automatic update
 Operating-system toolchains are required for native dependency compilation.
 The synthetic transport and media fixture features are disabled by default.
 
-The `Shared desktop client DEV builds` workflow runs on matching pushes to
-`main` and `codex/**`, and can also be started manually. It builds this same
-`web/dist` and tests and links `app/` on Windows first. Successful Windows
-checks are followed by macOS and Linux builds. Successful jobs upload explicitly
-unsigned DEV artifacts with source revision/hash receipts and dependency
-notices, retained for seven days. macOS and Linux tar archives preserve executable
-permissions. This creates no release or updater package. Linux native key
-custody remains unavailable. Linking alone does not qualify runtime behavior
-or games; the artifacts record the outstanding qualifications.
+The current `Shared desktop client DEV builds` workflow builds `web-client`
+mode on Windows, rather than this native-crypto research mode. Matching pushes
+to `main` and `codex/**` produce short-lived unsigned DEV artifacts with source
+revision/hash receipts and dependency notices. The managed release workflow
+also calls it for a release tag and publishes the complete Windows Desktop DEV
+ZIP and checksum file on GitHub Releases. Acceptance dispatches can instead
+exercise an existing published EXE. No automatic updater package is created.
+macOS/Linux distribution and native key custody remain separate outstanding
+qualification targets. Linking alone does not qualify runtime behavior or games.
 
 License and source-provenance records accompany the native graph. Existing
 vendored noise-filter assets retain their upstream notices; attribution of every
