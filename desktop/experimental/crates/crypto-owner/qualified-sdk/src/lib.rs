@@ -18,6 +18,8 @@ use zeroize::Zeroizing;
 mod chat_archive;
 pub use chat_archive::ArchivedChatObservation;
 mod host;
+mod membership;
+pub use membership::{ArchivedDeviceRemoval, encode_native_device_removal};
 #[cfg(test)]
 mod host_tests;
 mod protected;
@@ -1046,6 +1048,7 @@ fn require_one(changed: usize) -> Result<()> {
 }
 fn schema(conn: &Connection, p: &NativeBootstrap) -> Result<()> {
     chat_archive::schema(conn)?;
+    membership::schema(conn)?;
     conn.execute_batch("CREATE TABLE core_state(id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL CHECK(revision>=0),generation BLOB NOT NULL CHECK(length(generation)=8),observed_time INTEGER NOT NULL CHECK(observed_time>=0),roster BLOB CHECK(length(roster)<=131072),fresh_join_epoch BLOB);CREATE TABLE core_pin(origin TEXT NOT NULL,community TEXT NOT NULL,group_id BLOB NOT NULL,authority BLOB NOT NULL,peer_identity BLOB NOT NULL,peer_key BLOB NOT NULL);CREATE TABLE core_outbox(event_id TEXT PRIMARY KEY CHECK(length(event_id) BETWEEN 1 AND 128),revision INTEGER NOT NULL,kind TEXT NOT NULL,wire BLOB NOT NULL CHECK(length(wire) BETWEEN 1 AND 65536));CREATE TABLE core_stage(id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,wire BLOB NOT NULL CHECK(length(wire) BETWEEN 1 AND 65536),stage BLOB NOT NULL CHECK(length(stage) BETWEEN 1 AND 1048576));").map_err(|_|Error::Database)?;
     require_one(
         conn.execute(

@@ -331,6 +331,9 @@ fn fixture_fault(tx: &Connection, point: &str) -> Result<()> {
         ("remove", "remove-ignore-events") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON sdk_events BEGIN SELECT RAISE(IGNORE); END;"
         }
+        ("remove", "remove-ignore-control") => {
+            "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON core_device_removals BEGIN SELECT RAISE(IGNORE); END;"
+        }
         _ => return Ok(()),
     };
     tx.execute_batch(sql).map_err(|_| Error::Database)
@@ -344,7 +347,7 @@ fn fixture_exit(point: &str) {
 
 /// Check the merged MLS state through the ordinary persisted provider before
 /// publishing either admission or removal bytes. No resumed sender is created.
-fn verify_merged_host_state(
+pub(super) fn verify_merged_host_state(
     tx: &Connection,
     provider: &Provider<'_>,
     group: &MlsGroup,
@@ -564,11 +567,18 @@ impl Core {
         let provider = Provider::new(&tx, &self.crypto);
         let signer = self.signer.as_ref().ok_or(Error::Quarantined)?;
         let old_epoch = group.epoch().as_u64();
+        group.set_aad(super::membership::authenticated_context(
+            &self.pin,
+            &channel,
+            event,
+            signed_roster,
+        )?);
         let (commit, _, _) = group
             .remove_members(&provider, signer, &[target.index])
             .map_err(|_| Error::Provider)?;
         let wire = commit.to_bytes().map_err(|_| Error::Provider)?;
         bound_wire(&wire)?;
+        let control = super::membership::encode_native_device_removal(signed_roster, &wire)?;
         group
             .merge_pending_commit(&provider)
             .map_err(|_| Error::Provider)?;
@@ -593,6 +603,27 @@ impl Core {
             }
         }
         verify_merged_host_state(&tx, &provider, group, signer)?;
+        let own = group.own_leaf().ok_or(Error::Trust)?;
+        let approved = new_trust
+            .verify_device(
+                &new_roster,
+                &self.pin.group,
+                own.credential().serialized_content(),
+                own.signature_key().as_slice(),
+                now,
+            )
+            .map_err(|_| Error::Trust)?;
+        super::membership::record(
+            &tx,
+            approved.account(),
+            approved.device(),
+            event,
+            &channel,
+            group.epoch().as_u64(),
+            generation,
+            &control,
+            false,
+        )?;
         let next = advance(&tx, self.revision, now)?;
         require_one(
             tx.execute(

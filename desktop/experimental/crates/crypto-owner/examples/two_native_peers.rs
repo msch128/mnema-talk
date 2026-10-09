@@ -176,7 +176,7 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let device=q(Device::provision_native(&peer_keys.vault,native_pin.clone()))?;
         q(peer_keys.vault.create_seed("database-key"))?;
         let host_facts=q(host.native_owner_facts(when))?;
-        let pin=q(NativeBootstrap::from_native_pin(native_scope,host_facts.group(),native_pin.authority_key(),host_facts.identity(),host_facts.signature_key().try_into().map_err(|_|"native key bounds")?))?;
+        let pin=q(NativeBootstrap::from_native_pin(native_scope.clone(),host_facts.group(),native_pin.authority_key(),host_facts.identity(),host_facts.signature_key().try_into().map_err(|_|"native key bounds")?))?;
         let peer_identity=format!("{}.{}",peer_scope.account_id(),peer_device);
         let (mut peer,offer)=q(Core::begin_native_enrollment(&peerdir.path().join("peer.sqlite"),&peer_keys.vault,pin,peer_identity.as_bytes()))?;
         if offer.signature_key!=device.public_key(){return Err("native signer/MLS credential fusion mismatch".into())}
@@ -191,6 +191,79 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         q(peer.confirm_peer(&proof,when))?;
         let peer_binding=q(binding_for_current_native_scope(&peer_client,&peer_window,channel,peer_device))?;
         let peer=q(Sdk::bind_native(peer,peer_binding,when))?;
+        if std::env::var("MNEMA_NATIVE_OWNER_MIXED_PAGE_FIXTURE").ok().as_deref()==Some("1") {
+            // Existing real fixture, with a third independently held device.
+            // No synthetic proof or native UI approval is manufactured here.
+            let thirddir=tempfile::Builder::new().prefix("actual-owner-removed-").tempdir_in(&runroot)?;
+            let mut third_keys=q(native_fixture::OwnedFixture::create(thirddir.path()))?;
+            let third_device=Uuid::new_v4();
+            let device=q(Device::provision_native(&third_keys.vault,native_pin.clone()))?;
+            q(third_keys.vault.create_seed("database-key"))?;
+            let facts=q(host.native_owner_facts(when))?;
+            let pin=q(NativeBootstrap::from_native_pin(native_scope.clone(),facts.group(),native_pin.authority_key(),facts.identity(),facts.signature_key().try_into().map_err(|_|"native root key bounds")?))?;
+            let identity=format!("{}.{}",root_scope.account_id(),third_device);
+            let (mut third,offer)=q(Core::begin_native_enrollment(&thirddir.path().join("third.sqlite"),&third_keys.vault,pin,identity.as_bytes()))?;
+            assert_eq!(offer.signature_key,device.public_key());
+            let intent=|| q(NativeAdmissionIntent::from_native_out_of_band_pin(&root_scope.account_id().to_string(),&third_device.to_string(),&offer.identity,offer.signature_key.clone().try_into().map_err(|_|"native key bounds")?));
+            let invitation=q(issuer.invite_native_reviewed_device(intent()?,when))?;
+            let roster=q(issuer.admit_proven_device(&q(device.respond(&invitation,when))?,when))?;
+            q(host.install_native_roster(&roster,when))?;
+            let mut peer=peer;
+            q(peer.install_native_roster(&roster,when))?;
+            q(third.install_roster(&roster,when))?;
+            let add_event=Uuid::new_v4();
+            let added=q(host.add_root_approved_native_peer(&add_event.to_string(),&Uuid::new_v4().to_string(),&q(offer.key_package.tls_serialize_detached())?,when))?;
+            let staged=q(peer.stage_native_commit(&added.commit,when))?;
+            q(peer.inspect_native_commit(staged))?;
+            let approved=q(peer.authorize_native_commit(staged,when))?;
+            q(peer.merge_native_commit(approved,&add_event.to_string(),when))?;
+            q(third.accept_welcome(&added.welcome,when))?;
+            let challenge=q(third.peer_challenge_transcript())?;
+            let proof=q(host.answer_native_fresh_join(&Uuid::new_v4().to_string(),&offer.identity,&offer.signature_key,&challenge,when))?;
+            q(third.confirm_peer(&proof,when))?;
+            let old_event=Uuid::new_v4();
+            let new_event=Uuid::new_v4();
+            let removal=Uuid::new_v4();
+            let claim=|event:Uuid,body:&str| q(ChatEventClaim::claim(ChatOperation::Create{message_id:event.to_string(),parent_id:None,body:body.into()}));
+            let old_wire=q(host.send_chat_event(&old_event.to_string(),&claim(old_event,"unread chat before actual removal")?,when))?;
+            let roster=q(issuer.revoke_exact_native_device(intent()?,when))?;
+            q(host.remove_root_revoked_native_peer(&removal.to_string(),&offer.identity,&offer.signature_key,&roster,when))?;
+            let control=q(host.pending_native_device_removal(&removal.to_string(),when))?.ok_or("missing durable removal control")?;
+            let new_wire=q(host.send_chat_event(&new_event.to_string(),&claim(new_event,"new chat after actual removal")?,when))?;
+            let group=q(host.native_owner_facts(when))?.group().to_vec();
+            let auth=std::sync::Arc::new(q(root_client.authenticated_scope(&root_window))?);
+            let mut numbers=Vec::new();
+            for (event,wire) in [(old_event,old_wire),(removal,control),(new_event,new_wire)] {
+                use mnema_private_native_client_broker::{NativeOpaqueEvent,NativeOpaqueRelayOperation};
+                let input=q(NativeOpaqueEvent::from_native_outbox(channel,event,&group,&wire))?;
+                let response=q(root_client.request_opaque_relay_retained(&root_window,auth.clone(),NativeOpaqueRelayOperation::Publish(input)).await)?;
+                let number=q(root_client.with_opaque_relay_publication(&root_window,response,|receipt|{
+                    assert!(receipt.is_publish_ack());assert_eq!(receipt.records().len(),1);
+                    let record=&receipt.records()[0];
+                    assert_eq!(record.client_event_id(),event);assert_eq!(record.account_id(),root_scope.account_id());
+                    assert_eq!(record.ciphertext(),wire);record.number()
+                }))?;
+                numbers.push(number);
+            }
+            assert!(numbers.windows(2).all(|n|n[0]<n[1]));
+            let mut receiver=q(NativeChatOwner::from_proven_sdk(peer_client.clone(),peer_window.clone(),peer))?;
+            q(receiver.receive_chat_event_page(|publication|{
+                assert_eq!(publication.receipts.len(),2);
+                assert_eq!(publication.receipts[0].client_event_id,old_event);
+                assert_eq!(publication.receipts[1].client_event_id,new_event);
+                let bodies=publication.changes.iter().flat_map(|change|match change{NativeTypedChatChange::Created(rows)=>rows.iter().map(|r|r.body.as_str()).collect::<Vec<_>>(),_=>Vec::new()}).collect::<Vec<_>>();
+                assert_eq!(bodies,vec!["unread chat before actual removal","new chat after actual removal"]);
+                Ok(())
+            }).await)?;
+            assert_eq!(receiver.native_receive_cursor(),numbers[2]);
+            q(receiver.receive_chat_event_page(|publication|{assert!(publication.receipts.is_empty());assert!(publication.changes.is_empty());Ok(())}).await)?;
+            receiver.retire();host.retire_native();drop(receiver);drop(host);drop(third);drop(device);drop(issuer);
+            q(third_keys.delete())?;q(root_keys.delete())?;q(peer_keys.delete())?;
+            assert_eq!(q(native_fixture::snapshot())?,before);
+            for (client,window) in [(&root_client,&root_window),(&peer_client,&peer_window)] {let logout=q(client.request(window,NativeRequest::Logout).await)?;q(client.commit(window,logout))?;}
+            println!("PASS: actual verified Go TLS/auth/relay and three independent native device vaults; one real mixed page old typed chat / authenticated MLS removal / new typed chat; exact archived history and receipts across epochs, control excluded from chat, complete cursor and empty next page. Local fixture OOB, not OS root approval or recovery qualification.");
+            return Ok::<(),Box<dyn std::error::Error>>(());
+        }
         let mut root=q(NativeChatOwner::from_proven_sdk(root_client.clone(),root_window.clone(),host))?;
         let mut receiver=q(NativeChatOwner::from_proven_sdk(peer_client.clone(),peer_window.clone(),peer))?;
         let claim = |event: Uuid, body: &str| q(ChatEventClaim::claim(ChatOperation::Create {

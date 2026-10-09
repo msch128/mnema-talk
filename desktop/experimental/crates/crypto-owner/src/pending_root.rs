@@ -395,42 +395,31 @@ mod tests {
     use std::sync::Barrier;
 
     #[test]
-    fn removal_envelope_preserves_exact_bytes_and_rejects_oversize_before_reservation() {
-        let roster = vec![0x91; 32768];
-        let commit = vec![0x42; 32768];
-        // Each input independently fits the relay allowance, while their
-        // combined base64 control exceeds it. No capability may escape.
-        assert_eq!(device_removal_envelope(&roster, &commit), Err(Error::Limit));
-        assert_eq!(device_removal_envelope(&vec![1; 131072], &[2]), Err(Error::Limit));
-        assert_eq!(device_removal_envelope(&[], &[2]), Err(Error::Invalid));
-        let wire = device_removal_envelope(&roster[..1024], &commit[..2048]).unwrap();
-        let (domain, encoded_roster, encoded_commit): (String, String, String) =
-            serde_json::from_slice(&wire).unwrap();
-        assert_eq!(domain, "MnemaTalk NativeDeviceRemoval/v1");
-        assert_eq!(STANDARD.decode(encoded_roster).unwrap(), roster[..1024]);
-        assert_eq!(STANDARD.decode(encoded_commit).unwrap(), commit[..2048]);
-    }
-
-    #[test]
-    fn removal_envelope_maximum_encoding_fits_the_actual_broker_boundary() {
-        // Find the last representable base64 length below the actual fixed
-        // allowance, then exercise the real broker constructor with that wire.
-        let commit = [7];
-        let (mut max, mut rejected) = (1, 65536);
-        while rejected - max > 1 {
-            let candidate = max + (rejected - max) / 2;
-            if device_removal_envelope(&vec![3; candidate], &commit).is_ok() {
-                max = candidate;
-            } else {
-                rejected = candidate;
-            }
-        }
-        let wire = device_removal_envelope(&vec![3; max], &commit).unwrap();
-        assert!(wire.len() <= 65536 && wire.len() > 65532);
-        assert!(mnema_private_native_client_broker::NativeOpaqueEvent::from_native_outbox(
-            Uuid::new_v4(), Uuid::new_v4(), b"group", &wire,
-        ).is_ok());
-        assert_eq!(device_removal_envelope(&vec![3; max + 1], &commit), Err(Error::Limit));
+    fn binary_control_fits_actual_broker_allowance_without_raising_it() {
+        let wire = mnema_crypto_sdk_prototype::encode_native_device_removal(
+            &vec![3; 64000],
+            &vec![9; 1000],
+        )
+        .unwrap();
+        assert!(wire.len() > 65000 && wire.len() <= 65536);
+        assert!(
+            mnema_private_native_client_broker::NativeOpaqueEvent::from_native_outbox(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                b"group",
+                &wire
+            )
+            .is_ok()
+        );
+        assert!(
+            mnema_private_native_client_broker::NativeOpaqueEvent::from_native_outbox(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                b"group",
+                &vec![3; 65537]
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -506,28 +495,10 @@ pub struct NativePreparedDeviceRemoval {
     epoch: u64,
     generation: u64,
     deadline: Instant,
+    target_account: Uuid,
+    target_device: Uuid,
     wire: Vec<u8>,
     commit: Vec<u8>,
-}
-fn device_removal_envelope(roster: &[u8], commit: &[u8]) -> Result<Vec<u8>> {
-    // Bound allocation as well as the exact encoded envelope. Keep the existing
-    // relay allowance; membership changes do not grant a larger transport.
-    if roster.is_empty() || commit.is_empty() {
-        return Err(Error::Invalid);
-    }
-    if roster.len() > 65536 || commit.len() > 65536 {
-        return Err(Error::Limit);
-    }
-    let wire = serde_json::to_vec(&(
-        "MnemaTalk NativeDeviceRemoval/v1",
-        STANDARD.encode(roster),
-        STANDARD.encode(commit),
-    ))
-    .map_err(|_| Error::Invalid)?;
-    if wire.len() > 65536 {
-        return Err(Error::Limit);
-    }
-    Ok(wire)
 }
 impl NativePreparedDeviceRemoval {
     pub fn client_event_id(&self) -> Uuid {
@@ -658,7 +629,18 @@ impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
         // No prepared capability escapes for an unpublishable control. Issuer
         // and MLS transitions are already durable; failure retires this owner
         // rather than resuming chat or claiming transport completion.
-        let wire = device_removal_envelope(&roster, &commit)?;
+        let wire = self
+            .chat
+            .sdk
+            .pending_native_device_removal(&event.to_string(), now()?)
+            .map_err(|_| Error::Crypto)?
+            .ok_or(Error::Binding)?;
+        if wire
+            != mnema_crypto_sdk_prototype::encode_native_device_removal(&roster, &commit)
+                .map_err(|_| Error::Crypto)?
+        {
+            return Err(Error::Binding);
+        }
         let prepared = NativePreparedDeviceRemoval {
             serial: self.chat.serial,
             event,
@@ -666,6 +648,8 @@ impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
             epoch: current.epoch(),
             generation: current.generation(),
             deadline,
+            target_account: account,
+            target_device: device,
             wire,
             commit,
         };
@@ -718,7 +702,15 @@ impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
             .pending_native_host_publication(&prepared.event.to_string(), now()?)
             .map_err(|_| Error::Crypto)?
             .ok_or(Error::Binding)?;
-        if pending != prepared.commit {
+        if pending != prepared.commit
+            || self
+                .chat
+                .sdk
+                .pending_native_device_removal(&prepared.event.to_string(), now()?)
+                .map_err(|_| Error::Crypto)?
+                .as_deref()
+                != Some(prepared.wire.as_slice())
+        {
             return Err(Error::Binding);
         }
         self.chat
@@ -728,6 +720,124 @@ impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
                     return Err(Error::Auth);
                 }
                 Ok(prepared.wire.clone())
+            })
+            .map_err(|_| Error::Auth)?
+    }
+}
+
+/// View of an exact native relay acknowledgement. It is not a device grant,
+/// renderer decision or evidence that another member has processed the commit.
+#[cfg(feature = "opaque-relay")]
+#[derive(Serialize)]
+pub struct NativeDeviceRemovalPublication {
+    pub id: Uuid,
+    pub number: i64,
+    pub channel_id: Uuid,
+    pub client_event_id: Uuid,
+    pub removed_account_id: Uuid,
+    pub removed_device_id: Uuid,
+    pub created_at: String,
+}
+
+#[cfg(feature = "opaque-relay")]
+impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
+    /// Send the exact reserved bytes using the original admitted authentication.
+    /// The pending gate clears only after a matching real ACK, durable control
+    /// evidence and successful original-auth publication. No cursor is skipped.
+    pub async fn publish_device_removal<T>(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+        publish: impl FnOnce(&NativeDeviceRemovalPublication) -> Result<T>,
+    ) -> Result<T> {
+        let result = self.publish_device_removal_inner(prepared, publish).await;
+        if result.is_err() {
+            self.retire();
+        }
+        result
+    }
+
+    async fn publish_device_removal_inner<T>(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+        publish: impl FnOnce(&NativeDeviceRemovalPublication) -> Result<T>,
+    ) -> Result<T> {
+        use mnema_private_native_client_broker::{NativeOpaqueEvent, NativeOpaqueRelayOperation};
+        let wire = self.device_removal_wire_inner(prepared)?;
+        let client = self.chat.client.clone();
+        let lease = self.chat.lease.clone();
+        let input = NativeOpaqueEvent::from_native_outbox(
+            self.chat.owner.channel,
+            prepared.event,
+            &self.chat.owner.group,
+            &wire,
+        )
+        .map_err(|_| Error::Invalid)?;
+        let response = client
+            .request_opaque_relay_retained(
+                &lease,
+                prepared.auth.clone(),
+                NativeOpaqueRelayOperation::Publish(input),
+            )
+            .await
+            .map_err(|_| Error::Auth)?;
+        // Recheck the same capability after HTTP, rather than sampling a newer
+        // admission. Provider/storage checks stay outside broker locks.
+        if self.device_removal_wire_inner(prepared)? != wire {
+            return Err(Error::Binding);
+        }
+        let receipt = response.opaque_relay_receipt().ok_or(Error::Binding)?;
+        if !receipt.is_publish_ack() || receipt.records().len() != 1 {
+            return Err(Error::Binding);
+        }
+        let record = &receipt.records()[0];
+        if record.channel_id() != self.chat.owner.channel
+            || record.account_id() != self.chat.owner.account
+            || record.client_event_id() != prepared.event
+            || record.group_id() != self.chat.owner.group
+            || record.ciphertext() != wire
+            || receipt.next_after() != record.number()
+        {
+            return Err(Error::Binding);
+        }
+        let projection = NativeDeviceRemovalPublication {
+            id: record.id(),
+            number: record.number(),
+            channel_id: record.channel_id(),
+            client_event_id: record.client_event_id(),
+            removed_account_id: prepared.target_account,
+            removed_device_id: prepared.target_device,
+            created_at: record.created_at().to_rfc3339(),
+        };
+        let current = self
+            .chat
+            .sdk
+            .native_protected_event_scope(now()?)
+            .map_err(|_| Error::Crypto)?;
+        let observation = self
+            .chat
+            .sdk
+            .archived_device_removal(
+                &self.chat.owner.account.to_string(),
+                &prepared.event.to_string(),
+                &wire,
+            )
+            .map_err(|_| Error::Crypto)?
+            .ok_or(Error::Binding)?;
+        if !observation.belongs_to_native_owner(&current)
+            || observation.removed_self()
+            || observation.epoch() != prepared.epoch
+            || observation.generation() != prepared.generation
+        {
+            return Err(Error::Binding);
+        }
+        client
+            .with_opaque_relay_publication(&lease, response, |_| {
+                if Instant::now() >= prepared.deadline {
+                    return Err(Error::Auth);
+                }
+                let value = publish(&projection)?;
+                self.chat.membership_pending = None;
+                Ok(value)
             })
             .map_err(|_| Error::Auth)?
     }

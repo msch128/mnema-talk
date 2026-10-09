@@ -144,11 +144,127 @@ enum RemovalScenario {
     Valid,
     LongIdentity,
     ExpiredRoster,
+    RetainedPeer,
+    RelabeledControl,
+    WrongControlAccount,
+    WrongControlChannel,
+    TrailingControl,
+    ReceiverBackwardsTime,
+    SuppressedReceiverControl,
+    SuppressedReceiverState,
+    SuppressedRetainedControl,
+    SuppressedRetainedState,
     SelfTarget,
     WrongKey,
     OldRoster,
     SuppressedOutbox,
     BackwardsTime,
+}
+#[test]
+fn real_retained_peer_decrypts_future_content_after_atomic_removal() {
+    actual_pairing_and_removal(RemovalScenario::RetainedPeer);
+}
+#[test]
+fn actual_control_rejects_relabeling_wrong_account_channel_and_noncanonical_wire() {
+    for scenario in [
+        RemovalScenario::RelabeledControl,
+        RemovalScenario::WrongControlAccount,
+        RemovalScenario::WrongControlChannel,
+        RemovalScenario::TrailingControl,
+    ] {
+        actual_pairing_and_removal(scenario);
+    }
+}
+#[test]
+fn actual_control_rejects_time_behind_live_observation_before_durable_floor_advances() {
+    actual_pairing_and_removal(RemovalScenario::ReceiverBackwardsTime);
+}
+#[test]
+fn actual_receiving_removal_rolls_back_suppressed_journal_and_state_for_retained_and_removed_devices()
+ {
+    for scenario in [
+        RemovalScenario::SuppressedReceiverControl,
+        RemovalScenario::SuppressedReceiverState,
+        RemovalScenario::SuppressedRetainedControl,
+        RemovalScenario::SuppressedRetainedState,
+    ] {
+        actual_pairing_and_removal(scenario);
+    }
+}
+#[test]
+fn actual_receiver_process_crash_keeps_provider_roster_and_control_atomic() {
+    struct ChildKeys(u8);
+    impl NativeKeyProvider for ChildKeys {
+        fn database_key(&self) -> Result<Zeroizing<[u8; 32]>> {
+            Ok(Zeroizing::new([self.0; 32]))
+        }
+    }
+    for retained in [false, true] {
+        for boundary in ["before", "after"] {
+            let d = dir();
+            let test = if retained {
+                "host_tests::real_retained_peer_decrypts_future_content_after_atomic_removal"
+            } else {
+                "host_tests::actual_same_native_device_pairing_host_add_welcome_fresh_peer_and_protected_chat_both_directions"
+            };
+            let status = std::process::Command::new(std::env::current_exe().unwrap())
+                .args(["--exact", test, "--test-threads=1"])
+                .env("MNEMA_HOST_CHILD_DIR", d.path())
+                .env("MNEMA_CONTROL_RECEIVER_CRASH", boundary)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .unwrap();
+            assert_eq!(status.code(), Some(73), "retained={retained} {boundary}");
+            let path = d.path().join(if retained {
+                "retained.sqlite"
+            } else {
+                "peer.sqlite"
+            });
+            let c =
+                open_encrypted(&path, &ChildKeys(if retained { 222 } else { 212 }), false).unwrap();
+            let committed = boundary == "after";
+            let old_generation = if retained { 3 } else { 2 };
+            assert_eq!(
+                stored_floor(&c).unwrap().0,
+                old_generation + u64::from(committed)
+            );
+            let rows: i64 = c
+                .query_row("SELECT COUNT(*) FROM core_device_removals", [], |r| {
+                    r.get(0)
+                })
+                .unwrap();
+            assert_eq!(rows, i64::from(committed));
+            let group_id: Vec<u8> = c
+                .query_row("SELECT group_id FROM core_pin", [], |r| r.get(0))
+                .unwrap();
+            let crypto = RustCrypto::default();
+            let provider = Provider::new(&c, &crypto);
+            let group = MlsGroup::load(provider.storage(), &GroupId::from_slice(&group_id))
+                .unwrap()
+                .unwrap();
+            assert_eq!(group.is_active(), retained || !committed);
+            // The public epoch advances for both. Removed members must remain
+            // inactive; a newer public epoch does not grant its private secrets.
+            let old_epoch = if retained { 2 } else { 1 };
+            assert_eq!(
+                group.epoch().as_u64(),
+                old_epoch + u64::from(committed)
+            );
+            if committed {
+                let (epoch, generation, removed_self): (Vec<u8>, Vec<u8>, bool) = c
+                    .query_row(
+                        "SELECT epoch,generation,removed_self FROM core_device_removals",
+                        [],
+                        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+                    )
+                    .unwrap();
+                assert_eq!(epoch, (old_epoch + 1).to_be_bytes());
+                assert_eq!(generation, (old_generation + 1).to_be_bytes());
+                assert_eq!(removed_self, !retained);
+            }
+        }
+    }
 }
 #[test]
 fn actual_host_removes_long_identity_and_expired_historical_roster() {
@@ -399,6 +515,85 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
         host.native_peer_for_removal("outsider", "desktop", NOW)
             .is_err()
     );
+    let mut retained = if matches!(
+        scenario,
+        RemovalScenario::RetainedPeer
+            | RemovalScenario::SuppressedRetainedControl
+            | RemovalScenario::SuppressedRetainedState
+    ) {
+        let keys = if child.is_some() {
+            FixtureSeeds(Mutex::new(HashMap::new()), Some(220))
+        } else {
+            FixtureSeeds::fresh()
+        };
+        let device = Device::provision_native(&keys, native_pin.clone()).unwrap();
+        keys.create_seed("database-key").unwrap();
+        let root = host.native_owner_facts(NOW).unwrap();
+        let pin = NativeBootstrap::from_native_pin(
+            scope(),
+            root.group(),
+            native_pin.authority_key(),
+            root.identity(),
+            root.signature_key().try_into().unwrap(),
+        )
+        .unwrap();
+        let (mut third, offer) = Core::begin_native_enrollment(
+            &path.join("retained.sqlite"),
+            &keys,
+            pin,
+            b"carol-native",
+        )
+        .unwrap();
+        let invitation = issuer
+            .invite_native_reviewed_device(
+                NativeAdmissionIntent::from_native_out_of_band_pin(
+                    "carol",
+                    "desktop",
+                    &offer.identity,
+                    offer.signature_key.clone().try_into().unwrap(),
+                )
+                .unwrap(),
+                NOW,
+            )
+            .unwrap();
+        let roster = issuer
+            .admit_proven_device(&device.respond(&invitation, NOW).unwrap(), NOW)
+            .unwrap();
+        host.install_native_roster(&roster, NOW).unwrap();
+        peer.install_native_roster(&roster, NOW).unwrap();
+        let admitted = host
+            .add_root_approved_native_peer(
+                "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+                "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+                &offer.key_package.tls_serialize_detached().unwrap(),
+                NOW,
+            )
+            .unwrap();
+        let stage = peer.stage_native_commit(&admitted.commit, NOW).unwrap();
+        peer.inspect_native_commit(stage).unwrap();
+        let approval = peer.authorize_native_commit(stage, NOW).unwrap();
+        peer.merge_native_commit(approval, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", NOW)
+            .unwrap();
+        third.install_roster(&roster, NOW).unwrap();
+        third.accept_welcome(&admitted.welcome, NOW).unwrap();
+        let challenge = third.peer_challenge_transcript().unwrap();
+        let proof = host
+            .answer_native_fresh_join(
+                "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                &offer.identity,
+                &offer.signature_key,
+                &challenge,
+                NOW,
+            )
+            .unwrap();
+        third.confirm_peer(&proof, NOW).unwrap();
+        Some(Sdk::bind_native(third, binding("carol"), NOW).unwrap())
+    } else {
+        None
+    };
+    let old_epoch = if retained.is_some() { 2 } else { 1 };
+    let old_generation = if retained.is_some() { 3 } else { 2 };
+    let actual_target = host.native_peer_for_removal("bob", "desktop", NOW).unwrap();
     // Actual root-signed device withdrawal creates a fresh MLS epoch and its
     // genuine public Remove commit must retire the removed member's MLS state.
     let withdraw_when = if matches!(scenario, RemovalScenario::ExpiredRoster) {
@@ -529,12 +724,18 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
         host.check_native_peer_for_removal(&actual_target, withdraw_when),
         Err(Error::Stale)
     ));
-    assert_eq!(host.native_owner_facts(withdraw_when).unwrap().epoch(), 2);
+    assert_eq!(
+        host.native_owner_facts(withdraw_when).unwrap().epoch(),
+        old_epoch + 1
+    );
     assert_eq!(
         host.native_owner_facts(withdraw_when).unwrap().generation(),
-        3
+        old_generation + 1
     );
-    assert_eq!(host.core.group.as_ref().unwrap().members().count(), 1);
+    assert_eq!(
+        host.core.group.as_ref().unwrap().members().count(),
+        if retained.is_some() { 2 } else { 1 }
+    );
     assert_eq!(
         host.pending_native_host_publication(removal, withdraw_when)
             .unwrap()
@@ -554,18 +755,17 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
         peer.core.receive_inner(&new_wire, withdraw_when),
         Err(Error::Invalid)
     ));
-    assert_eq!(peer.core.group.as_ref().unwrap().epoch().as_u64(), 1);
-    // Now process the actual Remove commit. Unless the prior roster expired,
-    // retain and explicitly verify the roster that still approves this device:
-    // actual MLS removal must cause retirement, rather than a policy-only gate.
-    if matches!(scenario, RemovalScenario::ExpiredRoster) {
-        peer.install_native_roster(&withdrawn, withdraw_when)
-            .unwrap();
-    } else {
+    assert_eq!(
+        peer.core.group.as_ref().unwrap().epoch().as_u64(),
+        old_epoch
+    );
+    // Ordinary old membership still approves Bob. The one real atomic control
+    // receiver must verify the freshly signed root roster and genuine MLS Remove.
+    if !matches!(scenario, RemovalScenario::ExpiredRoster) {
         let (mut trust, roster, generation) =
             current_trust(&peer.core.connection, &peer.core.pin, withdraw_when).unwrap();
-        assert_eq!(generation, 2);
-        let still_approved = trust
+        assert_eq!(generation, old_generation);
+        let approved = trust
             .verify_device(
                 &roster,
                 &peer.core.pin.group,
@@ -574,17 +774,165 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
                 withdraw_when,
             )
             .unwrap();
-        assert_eq!(still_approved.account(), "bob");
-        assert_eq!(still_approved.device(), "desktop");
+        assert_eq!(approved.account(), "bob");
     }
-    let staged = peer.stage_native_commit(&commit, withdraw_when).unwrap();
-    let inspected = peer.inspect_native_commit(staged).unwrap();
-    assert_eq!(inspected.from_epoch, 1);
-    assert_eq!(inspected.to_epoch, 2);
-    assert_eq!(inspected.removals.len(), 1);
-    let authorized = peer.authorize_native_commit(staged, withdraw_when).unwrap();
-    peer.merge_native_commit(authorized, removal, withdraw_when)
+    let control = host
+        .pending_native_device_removal(removal, withdraw_when)
+        .unwrap()
         .unwrap();
+    let observed = host
+        .archived_device_removal("alice", removal, &control)
+        .unwrap()
+        .unwrap();
+    assert!(!observed.removed_self());
+    assert_eq!(observed.epoch(), old_epoch + 1);
+    if matches!(
+        scenario,
+        RemovalScenario::SuppressedReceiverControl
+            | RemovalScenario::SuppressedReceiverState
+            | RemovalScenario::SuppressedRetainedControl
+            | RemovalScenario::SuppressedRetainedState
+    ) {
+        let receiver = retained.as_mut().unwrap_or(&mut peer);
+        let group_id = receiver.core.group.as_ref().unwrap().group_id().clone();
+        let revision = receiver.core.revision;
+        let floor = stored_floor(&receiver.core.connection).unwrap();
+        let suppress_state = matches!(
+            scenario,
+            RemovalScenario::SuppressedReceiverState | RemovalScenario::SuppressedRetainedState
+        );
+        receiver.core.connection.execute_batch(if suppress_state {
+            "CREATE TRIGGER suppress_receiver BEFORE UPDATE ON core_state BEGIN SELECT RAISE(IGNORE);END;"
+        } else {
+            "CREATE TRIGGER suppress_receiver BEFORE INSERT ON core_device_removals BEGIN SELECT RAISE(IGNORE);END;"
+        }).unwrap();
+        assert!(
+            receiver
+                .receive_native_device_removal("alice", removal, &control, withdraw_when)
+                .is_err()
+        );
+        assert!(receiver.core.group.is_none());
+        assert_eq!(receiver.core.revision, revision);
+        assert_eq!(stored_floor(&receiver.core.connection).unwrap(), floor);
+        let rows: i64 = receiver
+            .core
+            .connection
+            .query_row("SELECT COUNT(*) FROM core_device_removals", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(rows, 0);
+        let provider = Provider::new(&receiver.core.connection, &receiver.core.crypto);
+        let persisted = MlsGroup::load(provider.storage(), &group_id)
+            .unwrap()
+            .unwrap();
+        assert!(persisted.is_active());
+        assert_eq!(persisted.epoch().as_u64(), old_epoch);
+        return;
+    }
+    if matches!(
+        scenario,
+        RemovalScenario::RelabeledControl
+            | RemovalScenario::WrongControlAccount
+            | RemovalScenario::WrongControlChannel
+            | RemovalScenario::TrailingControl
+            | RemovalScenario::ReceiverBackwardsTime
+    ) {
+        if matches!(scenario, RemovalScenario::WrongControlChannel) {
+            let wrong = NativeBinding::from_native_actor(
+                "ffffffff-ffff-4fff-8fff-ffffffffffff",
+                "profile",
+                "main",
+                "session",
+                "bob",
+                "desktop",
+            )
+            .unwrap();
+            peer = Sdk::bind_native(peer.core, wrong, NOW).unwrap();
+        }
+        let revision = peer.core.revision;
+        if matches!(scenario, RemovalScenario::ReceiverBackwardsTime) {
+            let durable_time = stored_floor(&peer.core.connection).unwrap().1;
+            peer.native_owner_facts(withdraw_when + 100).unwrap();
+            assert_eq!(stored_floor(&peer.core.connection).unwrap().1, durable_time);
+            assert!(durable_time < withdraw_when + 100);
+        }
+        let event = if matches!(scenario, RemovalScenario::RelabeledControl) {
+            future
+        } else {
+            removal
+        };
+        let account = if matches!(scenario, RemovalScenario::WrongControlAccount) {
+            "mallory"
+        } else {
+            "alice"
+        };
+        let mut bytes = control.clone();
+        if matches!(scenario, RemovalScenario::TrailingControl) {
+            bytes.push(0);
+        }
+        assert!(
+            peer.receive_native_device_removal(account, event, &bytes, withdraw_when)
+                .is_err()
+        );
+        assert!(peer.core.group.is_none());
+        assert_eq!(peer.core.revision, revision);
+        assert_eq!(
+            stored_floor(&peer.core.connection).unwrap().0,
+            old_generation
+        );
+        let rows: i64 = peer
+            .core
+            .connection
+            .query_row("SELECT COUNT(*) FROM core_device_removals", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(rows, 0);
+        return;
+    }
+    if let Some(retained) = retained.as_mut() {
+        let proof = retained
+            .receive_native_device_removal("alice", removal, &control, withdraw_when)
+            .unwrap();
+        assert!(!proof.removed_self());
+        assert_eq!(
+            retained.native_owner_facts(withdraw_when).unwrap().epoch(),
+            old_epoch + 1
+        );
+        let future_message = retained
+            .receive_chat(future, &new_wire, withdraw_when)
+            .unwrap();
+        assert_eq!(future_message.body, "future after actual MLS removal");
+        assert_eq!(future_message.account, "alice");
+        let saved = retained
+            .archived_device_removal("alice", removal, &control)
+            .unwrap()
+            .unwrap();
+        assert!(
+            saved.belongs_to_native_owner(
+                &retained
+                    .native_protected_event_scope(withdraw_when)
+                    .unwrap()
+            )
+        );
+    }
+    let proof = peer
+        .receive_native_device_removal("alice", removal, &control, withdraw_when)
+        .unwrap();
+    assert!(proof.removed_self());
+    assert_eq!(proof.account(), "alice");
+    assert_eq!(proof.epoch(), old_epoch + 1);
+    assert_eq!(proof.generation(), old_generation + 1);
+    let saved = peer
+        .archived_device_removal("alice", removal, &control)
+        .unwrap()
+        .unwrap();
+    assert!(saved.removed_self());
+    assert!(
+        peer.receive_protected(future, &new_wire, withdraw_when)
+            .is_err()
+    );
     assert_eq!(peer.core.phase(), Phase::Quarantined);
     assert!(peer.core.group.is_none());
     assert!(peer.core.signer.is_none());
@@ -1267,6 +1615,7 @@ fn actual_host_removal_crashes_and_suppressed_writes_are_atomic() {
         "remove-ignore-state",
         "remove-ignore-outbox",
         "remove-ignore-events",
+        "remove-ignore-control",
         "remove-ignore-context",
         "remove-ignore-private-epoch",
         "remove-ignore-resumption",
@@ -1296,7 +1645,11 @@ fn actual_host_removal_crashes_and_suppressed_writes_are_atomic() {
         let committed = fault == "remove-after";
         assert_eq!(stored_floor(&c).unwrap().0, if committed { 3 } else { 2 });
         let removal = "77777777-7777-4777-8777-777777777777";
-        for table_column in ["core_outbox WHERE event_id=?", "sdk_events WHERE event=?"] {
+        for table_column in [
+            "core_outbox WHERE event_id=?",
+            "sdk_events WHERE event=?",
+            "core_device_removals WHERE event=?",
+        ] {
             let count: i64 = c
                 .query_row(
                     &format!("SELECT COUNT(*) FROM {table_column}"),

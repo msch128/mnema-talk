@@ -14,6 +14,8 @@ use mnema_crypto_sdk_prototype::{NativeBinding, Sdk};
 use mnema_private_native_client_broker::{
     NativeAuthenticatedScope, NativeClient, NativeWindowLease,
 };
+#[cfg(feature = "opaque-relay")]
+pub use pending_root::NativeDeviceRemovalPublication;
 pub use pending_root::{
     NativeFirstRootOwner, NativePreparedDeviceRemoval, NativeRootPreview, PendingFirstRoot,
     PendingRootCancellation,

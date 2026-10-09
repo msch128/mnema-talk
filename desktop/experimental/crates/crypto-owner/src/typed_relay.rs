@@ -519,8 +519,12 @@ impl NativeChatOwner {
         publish: impl FnOnce(&NativeChatEventPublication) -> Result<T>,
     ) -> Result<T> {
         self.check_admitted_scope(&auth)?;
+        // Polling must not consume a ratchet or retire the prepared removal
+        // while its real relay acknowledgement is outstanding.
+        if self.membership_pending.is_some() {
+            return Err(Error::Conflict);
+        }
         self.enter_chat_protocol(true)?;
-        self.current(now()?)?;
         let client = self.client.clone();
         let lease = self.lease.clone();
         let after = self.cursor;
@@ -537,13 +541,14 @@ impl NativeChatOwner {
             .map_err(|_| Error::Auth)?;
         let result = (|| {
             self.check_admitted_scope(&auth)?;
-            self.current(now()?)?;
             let receipt = response.opaque_relay_receipt().ok_or(Error::Binding)?;
             if receipt.is_publish_ack() {
                 return Err(Error::Binding);
             }
             let mut verified: Vec<NativeHistoryObservation> =
                 Vec::with_capacity(receipt.records().len());
+            let mut chat_records = Vec::with_capacity(receipt.records().len());
+            let mut controls = Vec::new();
             let mut next = after;
             for record in receipt.records() {
                 if record.channel_id() != self.owner.channel
@@ -553,6 +558,36 @@ impl NativeChatOwner {
                     return Err(Error::Binding);
                 }
                 next = record.number();
+                let control = if let Some(saved) = self
+                    .sdk
+                    .archived_device_removal(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                {
+                    Some(saved)
+                } else {
+                    self.sdk
+                        .receive_native_device_removal_if_control(
+                            &record.account_id().to_string(),
+                            &record.client_event_id().to_string(),
+                            record.ciphertext(),
+                            now()?,
+                        )
+                        .map_err(|_| Error::Crypto)?
+                };
+                if let Some(control) = control {
+                    if control.removed_self()
+                        || control.account() != record.account_id().to_string()
+                        || control.event_id() != record.client_event_id().to_string()
+                    {
+                        return Err(Error::Crypto);
+                    }
+                    controls.push(control);
+                    continue;
+                }
                 let own = if record.account_id() == self.owner.account {
                     self.typed_events
                         .get(&record.client_event_id())
@@ -595,7 +630,20 @@ impl NativeChatOwner {
                 if proof.account() != record.account_id().to_string() {
                     return Err(Error::Binding);
                 }
-                verified.push(proof);
+                // A later authenticated control in this same page may change
+                // the live epoch. Use only the exact durable observation saved
+                // by the real receive, never weaken live/send scope matching.
+                let saved = self
+                    .sdk
+                    .archived_chat_observation(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                    .ok_or(Error::Crypto)?;
+                verified.push(NativeHistoryObservation::Archived(saved));
+                chat_records.push(record);
             }
             if receipt.next_after() != next {
                 return Err(Error::Binding);
@@ -604,12 +652,21 @@ impl NativeChatOwner {
                 .sdk
                 .native_protected_event_scope(now()?)
                 .map_err(|_| Error::Crypto)?;
+            if controls
+                .iter()
+                .any(|control| !control.belongs_to_native_owner(&scope))
+            {
+                return Err(Error::Binding);
+            }
+            // An authenticated fresh control may repair an expired historical
+            // roster, but no payload is admitted without current membership.
+            self.current(now()?)?;
             let staged = self
                 .typed_history
-                .stage_observed(scope, receipt.records().iter().zip(verified.iter()))?;
-            let acknowledgements = receipt
-                .records()
+                .stage_observed(scope, chat_records.iter().copied().zip(verified.iter()))?;
+            let acknowledgements = chat_records
                 .iter()
+                .copied()
                 .zip(verified.iter())
                 .map(|(record, proof)| project_receipt(record, proof))
                 .collect::<Result<Vec<_>>>()?;

@@ -219,6 +219,14 @@ func waitSignalingIdle(t *testing.T, peer *Peer) {
 		if peer.signalingMu.TryLock() {
 			idle := !peer.negotiationPending.Load()
 			peer.signalingMu.Unlock()
+			// A request can arrive while this observation holds the worker's
+			// admission mutex. Its TryLock then fails behind the test rather
+			// than a signaling task. Release that artificial obstruction with
+			// the same peer-only completion handoff; never wake the room.
+			if peer.PC.SignalingState() == webrtc.SignalingStateStable && peer.negotiationPending.Swap(false) {
+				peer.room.requestPeerSignal(peer)
+				idle = false
+			}
 			if idle {
 				return
 			}

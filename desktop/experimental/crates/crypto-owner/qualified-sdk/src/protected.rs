@@ -838,7 +838,13 @@ pub(super) fn uuid(v: &str) -> Result<()> {
 /// Flat profile scanner: at most ten-element outer plus one nested source5/voice11.
 /// Reject nesting/size bombs before recursive library parsing.
 pub(super) fn scan(wire: &[u8]) -> Result<()> {
-    if wire.is_empty() || wire.len() > 32768 {
+    scan_bounded(wire, 32768)
+}
+pub(super) fn scan_control(wire: &[u8]) -> Result<()> {
+    scan_bounded(wire, 65536)
+}
+fn scan_bounded(wire: &[u8], limit: usize) -> Result<()> {
+    if wire.is_empty() || wire.len() > limit {
         return Err(Error::Invalid);
     }
     let mut pos = 0;
@@ -1088,5 +1094,75 @@ impl Sdk {
             self.retire_native();
         }
         result
+    }
+}
+
+impl Sdk {
+    pub fn archived_device_removal(
+        &self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+    ) -> Result<Option<ArchivedDeviceRemoval>> {
+        self.core.archived_device_removal(account, event, wire)
+    }
+    pub fn receive_native_device_removal_if_control(
+        &mut self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+        now: u64,
+    ) -> Result<Option<ArchivedDeviceRemoval>> {
+        if !super::membership::is_control(wire) {
+            return Ok(None);
+        }
+        self.receive_native_device_removal(account, event, wire, now)
+            .map(Some)
+    }
+    pub fn receive_native_device_removal(
+        &mut self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+        now: u64,
+    ) -> Result<ArchivedDeviceRemoval> {
+        if self.retired {
+            return Err(Error::Stale);
+        }
+        // A live observation may advance this clock without writing the Core
+        // floor. Controls must obey both clocks, including roster repair.
+        if now < self.observed_native_time.get() {
+            self.retire_native();
+            return Err(Error::Replay);
+        }
+        self.observed_native_time.set(now);
+        let result = self
+            .core
+            .receive_device_removal_inner(account, event, &self.binding.channel, wire, now)
+            .and_then(|_| {
+                self.core
+                    .archived_device_removal(account, event, wire)?
+                    .ok_or(Error::Database)
+            });
+        self.bridges.clear();
+        if !matches!(result.as_ref(), Ok(proof) if !proof.removed_self()) {
+            self.retire_native();
+        }
+        result
+    }
+    /// Current own control only; history readers use the non-authorizing archive.
+    pub fn pending_native_device_removal(&self, event: &str, now: u64) -> Result<Option<Vec<u8>>> {
+        protected::uuid(event)?;
+        let (epoch, generation, _, account, _) = self.current(now)?;
+        let wire: Option<Vec<u8>> = self.core.connection.query_row("SELECT wire FROM core_device_removals WHERE account=? AND event=? AND epoch=? AND generation=? AND removed_self=0",params![account,event,epoch.to_be_bytes().as_slice(),generation.to_be_bytes().as_slice()],|r|r.get(0)).optional().map_err(|_|Error::Database)?;
+        if let Some(wire) = wire.as_ref() {
+            let (_, commit) = super::membership::decode(wire)?;
+            if self.pending_native_host_publication(event, now)?.as_deref()
+                != Some(commit.as_slice())
+            {
+                return Err(Error::Unauthorized);
+            }
+        }
+        Ok(wire)
     }
 }
