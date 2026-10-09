@@ -1,0 +1,21 @@
+internal/server/desktop_client_fixture_integration_test.go
+  s_0a885d5f0c193a::t_b48271807e5631 66
+internal/ws/native_failure_integration_test.go
+  s_0a885d5f0c193a::t_b42080e8da1dd0 231-238
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8ffcc1f7acbc52a4ab89b9308e329af5e805ae6",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
