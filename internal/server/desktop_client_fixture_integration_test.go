@@ -63,7 +63,7 @@ func TestDesktopClientGUIFixture(t *testing.T) {
 	}
 	var database, user, address, dataDir, pgVersion string
 	var tables int
-	err = probe.QueryRow(ctx, `SELECT current_database(), current_user, inet_server_addr()::text,
+	err = probe.QueryRow(ctx, `SELECT current_database(), current_user, host(inet_server_addr()),
 		current_setting('data_directory'), current_setting('server_version')`).Scan(&database, &user, &address, &dataDir, &pgVersion)
 	if err == nil {
 		err = probe.QueryRow(ctx, `SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public'`).Scan(&tables)
