@@ -1,5 +1,10 @@
 # Windows desktop feasibility probe
 
+This directory contains the historical feasibility probe. The published
+Windows Desktop DEV client is [experimental/app](experimental/README.md) in
+`web-client` mode. See [product status](../doc/product-status.md) for downloads
+and actual runtime evidence. The limits below apply to the probe.
+
 This is the first implementation stage of the desktop roadmap. It is **not a
 released 0.7 client**: it does not log in, join Voice, capture media, create an
 production overlay, or claim E2EE. Do not use it as a replacement for the current web app.

@@ -1,9 +1,16 @@
 # Desktop client roadmap
 
-Status: implementation started; **0.7 is not released or qualified**. The current
-[`desktop/`](../desktop/README.md) is an unsigned feasibility probe. It cannot
-log in, join Voice, capture media or display an overlay. Existing 0.6.1 browser
-sessions and transport encryption do not provide the proposed end-to-end encryption.
+Status: **v0.7.1 Windows Desktop DEV is released and experimentally testable**.
+The actual published EXE passed instance selection, login, persisted chat, live
+peer reception and logout. It is unsigned and has no automatic updater.
+Media, E2EE, gaming and full browser parity remain unqualified.
+
+The current client is [desktop/experimental/app](../desktop/experimental/README.md)
+in `web-client` mode. It opens the selected HTTPS instance's shared Vue app;
+the instance currently supplies executable web code. The locally bundled,
+protected communication boundary below remains a requirement. The older
+[feasibility probe](../desktop/README.md) is a historical foundation.
+See [product status and evidence](product-status.md) for the binding scope.
 
 ## Product requirements
 
@@ -93,7 +100,12 @@ Design and isolated implementation work can proceed while hardware access is
 pending. A missing hardware or security gate remains open; it cannot be replaced
 with a successful build or a development deadline.
 
-## Current evidence and limits
+## Historical foundation evidence and limits
+
+The following describes the earlier probe and native foundations, not the
+released web-client mode. Current runtime evidence is listed in
+[product status](product-status.md).
+
 
 The probe includes HTTPS-only discovery and foreground-only Windows executable
 inspection. Only explicitly selected executable basenames are returned; full paths,

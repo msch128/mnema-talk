@@ -4,6 +4,27 @@ A lightweight, private, single-server Discord alternative: text channels,
 instant-join voice hangouts and high-quality screen sharing. It is a
 single Go binary with the web app and a WebRTC SFU built in.
 
+## Product status
+
+A version number records development progress; it does not certify E2EE,
+capacity, gaming support or desktop feature parity.
+
+| Status | Meaning | Current product path |
+| --- | --- | --- |
+| Supported | The normal product path, with documented tests and limits. | Browser app and Linux Docker deployment for amd64/arm64. Chat and media are **not E2EE**. CI covers application regressions, image smoke tests and backup/restore drills; 100-person capacity is not qualified. |
+| Experimental | Available to run and test, without a production qualification. | Unsigned Windows **Desktop DEV** client: instance selection, login, persisted chat, live reception and logout are verified on the published v0.7.1 EXE. Media, E2EE, overlays and complete browser parity are not qualified. |
+| Planned | No qualified usable product path yet. | Mandatory multi-user/device E2EE, measured 100-person profiles, gaming integration and qualified macOS/Linux desktop clients. |
+
+For Windows, download the complete `Mnema-Desktop-DEV-…-windows-x64.zip`
+from [GitHub Releases](https://github.com/msch128/mnema-talk/releases), extract it,
+and start `Mnema Desktop DEV.exe`. Microsoft Edge WebView2 Runtime is required.
+The package is unsigned and has no automatic updater. Server distribution uses
+Linux Docker images; a server executable is not the desktop client.
+
+[Product status and acceptance evidence](doc/product-status.md) defines the
+current boundaries. [SECURITY.md](SECURITY.md) describes the server's actual
+security model.
+
 ## Features
 
 **Chat**
