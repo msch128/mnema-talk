@@ -230,94 +230,9 @@ impl VerifiedChatEvent {
         device: &str,
         payload: &Value,
     ) -> Result<Self> {
-        super::uuid(event_id)?;
         super::id(account)?;
         super::id(device)?;
-        let Value::Array(fields) = payload else {
-            return Err(Error::Invalid);
-        };
-        if !matches!(fields.first(), Some(Value::Integer(version))
-            if u64::try_from(*version) == Ok(CHAT_EVENT_VERSION))
-        {
-            return Err(Error::Invalid);
-        }
-        let operation = match fields.as_slice() {
-            [
-                _,
-                Value::Text(kind),
-                Value::Text(message),
-                Value::Text(parent),
-                Value::Text(body),
-            ] if kind == "create" => ChatOperation::Create {
-                message_id: message.clone(),
-                parent_id: checked_optional_reference(parent)?,
-                body: body.clone(),
-            },
-            [
-                _,
-                Value::Text(kind),
-                Value::Text(message),
-                Value::Text(parent),
-                Value::Text(reply),
-                Value::Text(body),
-            ] if kind == "reply" => ChatOperation::Reply {
-                message_id: message.clone(),
-                parent_id: checked_optional_reference(parent)?,
-                reply_to_id: reply.clone(),
-                body: body.clone(),
-            },
-            [
-                _,
-                Value::Text(kind),
-                Value::Text(message),
-                Value::Text(revision),
-                Value::Text(body),
-            ] if kind == "edit" => ChatOperation::Edit {
-                message_id: message.clone(),
-                expected_revision: revision.clone(),
-                body: body.clone(),
-            },
-            [
-                _,
-                Value::Text(kind),
-                Value::Text(message),
-                Value::Text(revision),
-            ] if kind == "delete" => ChatOperation::Delete {
-                message_id: message.clone(),
-                expected_revision: revision.clone(),
-            },
-            [
-                _,
-                Value::Text(kind),
-                Value::Text(message),
-                Value::Text(emoji),
-                Value::Text(action),
-            ] if kind == "reaction" => ChatOperation::Reaction {
-                message_id: message.clone(),
-                emoji: emoji.clone(),
-                action: match action.as_str() {
-                    "add" => ReactionAction::Add,
-                    "remove" => ReactionAction::Remove,
-                    _ => return Err(Error::Invalid),
-                },
-            },
-            _ => return Err(Error::Invalid),
-        };
-        let claim = ChatEventClaim::claim(operation)?;
-        match claim.operation().kind() {
-            ChatKind::Create | ChatKind::Reply if claim.operation().message_id() != event_id => {
-                return Err(Error::Unauthorized);
-            }
-            ChatKind::Edit | ChatKind::Delete | ChatKind::Reaction
-                if claim.operation().message_id() == event_id =>
-            {
-                return Err(Error::Unauthorized);
-            }
-            _ => {}
-        }
-        if claim.operation().expected_revision() == Some(event_id) {
-            return Err(Error::Unauthorized);
-        }
+        let claim = ChatEventClaim::from_authenticated_payload(event_id, payload)?;
         Ok(Self {
             scope,
             event_id: event_id.into(),
@@ -724,5 +639,99 @@ mod tests {
             )
             .is_err()
         );
+    }
+}
+
+impl ChatEventClaim {
+    // Shared shape/event parser. This returns a CLAIM, never a live SDK scope
+    // or authentication/permission. Callers must already own the evidence.
+    pub(crate) fn from_authenticated_payload(event_id: &str, payload: &Value) -> Result<Self> {
+        super::uuid(event_id)?;
+        let Value::Array(fields) = payload else {
+            return Err(Error::Invalid);
+        };
+        if !matches!(fields.first(), Some(Value::Integer(version))
+            if u64::try_from(*version) == Ok(CHAT_EVENT_VERSION))
+        {
+            return Err(Error::Invalid);
+        }
+        let operation = match fields.as_slice() {
+            [
+                _,
+                Value::Text(kind),
+                Value::Text(message),
+                Value::Text(parent),
+                Value::Text(body),
+            ] if kind == "create" => ChatOperation::Create {
+                message_id: message.clone(),
+                parent_id: checked_optional_reference(parent)?,
+                body: body.clone(),
+            },
+            [
+                _,
+                Value::Text(kind),
+                Value::Text(message),
+                Value::Text(parent),
+                Value::Text(reply),
+                Value::Text(body),
+            ] if kind == "reply" => ChatOperation::Reply {
+                message_id: message.clone(),
+                parent_id: checked_optional_reference(parent)?,
+                reply_to_id: reply.clone(),
+                body: body.clone(),
+            },
+            [
+                _,
+                Value::Text(kind),
+                Value::Text(message),
+                Value::Text(revision),
+                Value::Text(body),
+            ] if kind == "edit" => ChatOperation::Edit {
+                message_id: message.clone(),
+                expected_revision: revision.clone(),
+                body: body.clone(),
+            },
+            [
+                _,
+                Value::Text(kind),
+                Value::Text(message),
+                Value::Text(revision),
+            ] if kind == "delete" => ChatOperation::Delete {
+                message_id: message.clone(),
+                expected_revision: revision.clone(),
+            },
+            [
+                _,
+                Value::Text(kind),
+                Value::Text(message),
+                Value::Text(emoji),
+                Value::Text(action),
+            ] if kind == "reaction" => ChatOperation::Reaction {
+                message_id: message.clone(),
+                emoji: emoji.clone(),
+                action: match action.as_str() {
+                    "add" => ReactionAction::Add,
+                    "remove" => ReactionAction::Remove,
+                    _ => return Err(Error::Invalid),
+                },
+            },
+            _ => return Err(Error::Invalid),
+        };
+        let claim = ChatEventClaim::claim(operation)?;
+        match claim.operation().kind() {
+            ChatKind::Create | ChatKind::Reply if claim.operation().message_id() != event_id => {
+                return Err(Error::Unauthorized);
+            }
+            ChatKind::Edit | ChatKind::Delete | ChatKind::Reaction
+                if claim.operation().message_id() == event_id =>
+            {
+                return Err(Error::Unauthorized);
+            }
+            _ => {}
+        }
+        if claim.operation().expected_revision() == Some(event_id) {
+            return Err(Error::Unauthorized);
+        }
+        Ok(claim)
     }
 }

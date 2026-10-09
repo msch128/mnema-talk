@@ -397,6 +397,99 @@ fn actual_host_rejects_keypackage_without_signed_root_device_admission_before_me
 }
 
 #[test]
+fn archived_own_event_survives_actual_membership_advance_without_reviving_reservation() {
+    let d = dir();
+    let root_keys = FixtureSeeds::fresh();
+    let peer_keys = FixtureSeeds::fresh();
+    let fresh = FreshCommunity::provision_first_group(
+        &d.path().join("root.sqlite"),
+        &root_keys,
+        scope(),
+        subject(),
+        NOW,
+    )
+    .unwrap();
+    let (mut issuer, transfer) = fresh.into_native_host();
+    let mut host = Sdk::from_fresh_native_host(transfer, binding("alice"), NOW).unwrap();
+    let claim = ChatEventClaim::claim(ChatOperation::Create {
+        message_id: CHAT.into(),
+        parent_id: None,
+        body: "historical before native membership advance".into(),
+    })
+    .unwrap();
+    let reserved = host.reserve_native_chat_event(CHAT, &claim, NOW).unwrap();
+    let old_wire = reserved.wire_for_native_relay().to_vec();
+    let old = host
+        .archived_chat_observation("alice", CHAT, &old_wire)
+        .unwrap()
+        .unwrap();
+    assert_eq!(old.epoch(), 0);
+    assert_eq!(old.root_generation(), 1);
+    let native_pin = issuer.pin_for_native_out_of_band_transfer();
+    let device = Device::provision_native(&peer_keys, native_pin.clone()).unwrap();
+    peer_keys.create_seed("database-key").unwrap();
+    let own = host.native_owner_facts(NOW).unwrap();
+    let pin = NativeBootstrap::from_native_pin(
+        scope(),
+        own.group(),
+        native_pin.authority_key(),
+        own.identity(),
+        own.signature_key().try_into().unwrap(),
+    )
+    .unwrap();
+    let (mut peer, offer) = Core::begin_native_enrollment(
+        &d.path().join("peer.sqlite"),
+        &peer_keys,
+        pin,
+        b"bob-native",
+    )
+    .unwrap();
+    let intent = NativeAdmissionIntent::from_native_out_of_band_pin(
+        "bob",
+        "desktop",
+        &offer.identity,
+        offer.signature_key.clone().try_into().unwrap(),
+    )
+    .unwrap();
+    let invitation = issuer.invite_native_reviewed_device(intent, NOW).unwrap();
+    let roster = issuer
+        .admit_proven_device(&device.respond(&invitation, NOW).unwrap(), NOW)
+        .unwrap();
+    host.install_native_roster(&roster, NOW).unwrap();
+    peer.install_roster(&roster, NOW).unwrap();
+    host.add_root_approved_native_peer(
+        COMMIT,
+        WELCOME,
+        &offer.key_package.tls_serialize_detached().unwrap(),
+        NOW,
+    )
+    .unwrap();
+    let current = host.native_protected_event_scope(NOW).unwrap();
+    assert_eq!(current.epoch(), 1);
+    assert_eq!(current.root_generation(), 2);
+    assert!(matches!(
+        host.pending_native_chat_event_projection(&reserved, NOW),
+        Err(Error::Stale)
+    ));
+    let archive = host
+        .archived_chat_observation("alice", CHAT, &old_wire)
+        .unwrap()
+        .unwrap();
+    assert!(archive.matches_history_context(&current));
+    assert_eq!(archive.epoch(), 0);
+    assert_eq!(archive.root_generation(), 1);
+    assert!(
+        matches!(archive.operation(), ChatOperation::Create { body, .. }
+        if body == "historical before native membership advance")
+    );
+    // Reading history never changes the original reservation's send eligibility.
+    assert!(matches!(
+        host.pending_native_chat_event_projection(&reserved, NOW),
+        Err(Error::Stale)
+    ));
+}
+
+#[test]
 fn actual_host_transaction_crashes_and_suppressed_rows_never_publish_partial_owner_or_admission() {
     for fault in [
         "adopt-before",

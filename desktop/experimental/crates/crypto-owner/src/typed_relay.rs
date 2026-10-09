@@ -2,9 +2,11 @@
 //! This bounded RAM history is not persistent/recoverable application history.
 //! No raw ciphertext/verified-proof constructor or renderer authority is exposed.
 use super::*;
-use chat_history::{NativeHistoryChange, NativeHistoryMessage, StagedChatHistory};
+use chat_history::{
+    NativeHistoryChange, NativeHistoryMessage, NativeHistoryObservation, StagedChatHistory,
+};
 use mnema_crypto_sdk_prototype::{
-    ChatEventClaim, ChatOperation, NativeProtectedEventScope, ProtectedReceived, VerifiedChatEvent,
+    ChatEventClaim, ChatOperation, NativeProtectedEventScope, ProtectedReceived,
 };
 use mnema_private_native_client_broker::{NativeOpaqueEvent, NativeOpaqueRelayOperation};
 use serde::Serialize;
@@ -61,7 +63,7 @@ pub struct NativeChatEventReceipt {
 }
 fn project_receipt(
     record: &mnema_private_native_client_broker::NativeOpaqueRecord,
-    event: &VerifiedChatEvent,
+    event: &NativeHistoryObservation,
 ) -> Result<NativeChatEventReceipt> {
     let message_id = match event.operation() {
         ChatOperation::Create { .. } | ChatOperation::Reply { .. } => record.id(),
@@ -472,13 +474,14 @@ impl NativeChatOwner {
             if !proof.scope().matches_exact(&job.scope) {
                 return Err(Error::Binding);
             }
+            let proof = NativeHistoryObservation::Live(proof);
             let scope = self
                 .sdk
                 .native_protected_event_scope(now()?)
                 .map_err(|_| Error::Crypto)?;
             let staged = self
                 .typed_history
-                .stage_authenticated(scope, [(record, &proof)])?;
+                .stage_observed(scope, [(record, &proof)])?;
             let projection = project_changes(
                 self.owner.channel,
                 &staged,
@@ -499,9 +502,9 @@ impl NativeChatOwner {
         }
         result
     }
-    /// Every nonlocal wire is paired directly with its ONE actual SDK receive.
-    /// Locally reserved wire uses only exact byte-matching own projection. A
-    /// same-account other device never inherits the local bypass.
+    /// Exact saved observations are historical, never a live reservation grant.
+    /// Every unknown wire reaches ONE actual SDK receive. A same-account other
+    /// device never inherits an own reservation's projection bypass.
     pub async fn receive_chat_event_page<T>(
         &mut self,
         publish: impl FnOnce(&NativeChatEventPublication) -> Result<T>,
@@ -539,7 +542,8 @@ impl NativeChatOwner {
             if receipt.is_publish_ack() {
                 return Err(Error::Binding);
             }
-            let mut verified: Vec<VerifiedChatEvent> = Vec::with_capacity(receipt.records().len());
+            let mut verified: Vec<NativeHistoryObservation> =
+                Vec::with_capacity(receipt.records().len());
             let mut next = after;
             for record in receipt.records() {
                 if record.channel_id() != self.owner.channel
@@ -556,10 +560,22 @@ impl NativeChatOwner {
                 } else {
                     None
                 };
-                let proof = if let Some(own) = own {
-                    self.sdk
-                        .pending_native_chat_event_projection(own, now()?)
-                        .map_err(|_| Error::Crypto)?
+                let proof = if let Some(archived) = self
+                    .sdk
+                    .archived_chat_observation(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                {
+                    NativeHistoryObservation::Archived(archived)
+                } else if let Some(own) = own {
+                    NativeHistoryObservation::Live(
+                        self.sdk
+                            .pending_native_chat_event_projection(own, now()?)
+                            .map_err(|_| Error::Crypto)?,
+                    )
                 } else {
                     match self
                         .sdk
@@ -570,7 +586,9 @@ impl NativeChatOwner {
                         )
                         .map_err(|_| Error::Crypto)?
                     {
-                        ProtectedReceived::ChatEvent(event) => *event,
+                        ProtectedReceived::ChatEvent(event) => {
+                            NativeHistoryObservation::Live(*event)
+                        }
                         _ => return Err(Error::Binding), // no alternate domain/decrypt fallback.
                     }
                 };
@@ -588,7 +606,7 @@ impl NativeChatOwner {
                 .map_err(|_| Error::Crypto)?;
             let staged = self
                 .typed_history
-                .stage_authenticated(scope, receipt.records().iter().zip(verified.iter()))?;
+                .stage_observed(scope, receipt.records().iter().zip(verified.iter()))?;
             let acknowledgements = receipt
                 .records()
                 .iter()

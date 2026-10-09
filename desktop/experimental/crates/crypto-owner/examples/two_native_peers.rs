@@ -7,7 +7,8 @@ use mnema_crypto_sdk_prototype::{Core, Error, NativeBootstrap, Result, Sdk};
 use mnema_private_first_community_bootstrap::{FreshCommunity, NativeAdminSubject};
 use mnema_private_native_client_broker::{MetadataResource, NativeClient, NativeRequest, Password};
 use mnema_private_native_crypto_owner::{
-    NativeChatOwner, PendingFirstRoot, binding_for_current_native_scope,
+    ChatEventClaim, ChatOperation, NativeChatOwner, NativeTypedChatChange, PendingFirstRoot,
+    binding_for_current_native_scope,
 };
 use mnema_private_native_trust_dialog::DeniedNativeTrustDialog;
 use openmls::prelude::tls_codec::Serialize as _;
@@ -192,39 +193,83 @@ fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let peer=q(Sdk::bind_native(peer,peer_binding,when))?;
         let mut root=q(NativeChatOwner::from_proven_sdk(root_client.clone(),root_window.clone(),host))?;
         let mut receiver=q(NativeChatOwner::from_proven_sdk(peer_client.clone(),peer_window.clone(),peer))?;
-        let event=Uuid::new_v4();let body="actual native protected fixture body";
-        let job=q(root.prepare_chat(event,body))?;
-        if receiver.validate_prepared(&job).is_ok(){return Err("foreign native owner accepted pending job".into())}
-        q(root.publish_chat(job,|row|{assert_eq!(row.body,body);assert_eq!(row.account_id.to_string(),root_desc.user_id);Ok(())}).await)?;
-        let duplicate=q(root.prepare_chat(event,body))?;
-        q(root.publish_chat(duplicate,|row|{assert_eq!(row.client_event_id,event);Ok(())}).await)?;
-        if root.prepare_chat(event,"changed body").is_ok(){return Err("duplicate body replacement accepted".into())}
-        let received=q(receiver.receive_page(|rows|{assert_eq!(rows.len(),1);assert_eq!(rows[0].body,body);assert_eq!(rows[0].account_id.to_string(),root_desc.user_id);Ok(rows[0].number)}).await)?;
-        // Same UUID under a different account is valid backend namespace.
-        let reply_event=if same_account {Uuid::new_v4()}else{event};
-        let reply=q(receiver.prepare_chat(reply_event,"actual native peer reply"))?;
-        q(receiver.publish_chat(reply,|row|{assert_eq!(row.account_id.to_string(),peer_desc.user_id);Ok(())}).await)?;
-        q(root.receive_page(|rows|{assert_eq!(rows.len(),1);assert_eq!(rows[0].body,"actual native peer reply");assert_eq!(rows[0].account_id.to_string(),peer_desc.user_id);assert!(rows[0].number>received);Ok(())}).await)?;
-        let held=q(root.prepare_chat(Uuid::new_v4(),"cancelled native message"))?;
-        let before_cursor=root.native_receive_cursor();
-        let refused_event=Uuid::new_v4();
-        let refused=q(receiver.prepare_chat(refused_event,"actual sink refusal message"))?;
-        q(receiver.publish_chat(refused,|_|Ok(())).await)?;
-        let refusal=root.receive_page::<()>(|rows|{
-            assert_eq!(rows.len(),1);
-            assert_eq!(rows[0].body,"actual sink refusal message");
+        let claim = |event: Uuid, body: &str| q(ChatEventClaim::claim(ChatOperation::Create {
+            message_id: event.to_string(), parent_id: None, body: body.into(),
+        }));
+        let created = |publication: &mnema_private_native_crypto_owner::NativeChatEventPublication| {
+            publication.changes.iter().flat_map(|change| match change {
+                NativeTypedChatChange::Created(rows) => rows.iter().collect::<Vec<_>>(),
+                _ => Vec::new(),
+            }).map(|row| (row.body.clone(), row.account_id, row.number)).collect::<Vec<_>>()
+        };
+        let event = Uuid::new_v4();
+        let body = "actual native protected typed fixture body";
+        let input = claim(event, body)?;
+        let job = q(root.prepare_chat_event(event, &input))?;
+        if receiver.validate_prepared_chat_event(&job).is_ok() { return Err("foreign native owner accepted pending typed job".into()); }
+        q(root.publish_chat_event(job, |publication| {
+            let rows = created(publication);
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].0, body);
+            assert_eq!(rows[0].1.to_string(), root_desc.user_id);
+            Ok(())
+        }).await)?;
+        let duplicate = q(root.prepare_chat_event(event, &input))?;
+        q(root.publish_chat_event(duplicate, |publication| {
+            assert_eq!(publication.receipts.len(), 1);
+            assert_eq!(publication.receipts[0].client_event_id, event);
+            assert!(created(publication).is_empty());
+            Ok(())
+        }).await)?;
+        if root.prepare_chat_event(event, &claim(event, "changed body")?).is_ok() { return Err("duplicate body replacement accepted".into()); }
+        let received = q(receiver.receive_chat_event_page(|publication| {
+            let rows = created(publication);
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].0, body);
+            assert_eq!(rows[0].1.to_string(), root_desc.user_id);
+            Ok(rows[0].2)
+        }).await)?;
+        // Actual relay/account namespace: same event UUID across two accounts.
+        let reply_event = if same_account { Uuid::new_v4() } else { event };
+        let reply = q(receiver.prepare_chat_event(reply_event, &claim(reply_event, "actual native peer reply")?))?;
+        q(receiver.publish_chat_event(reply, |publication| {
+            assert_eq!(publication.receipts[0].account_id.to_string(), peer_desc.user_id);
+            Ok(())
+        }).await)?;
+        q(root.receive_chat_event_page(|publication| {
+            // The root's already-published event is re-associated using its
+            // encrypted archive, without consuming its own ciphertext in MLS.
+            assert_eq!(publication.receipts.len(), 2);
+            let rows = created(publication);
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].0, "actual native peer reply");
+            assert_eq!(rows[0].1.to_string(), peer_desc.user_id);
+            assert!(rows[0].2 > received);
+            Ok(())
+        }).await)?;
+        let held_event = Uuid::new_v4();
+        let held = q(root.prepare_chat_event(held_event, &claim(held_event, "cancelled native message")?))?;
+        let before_cursor = root.native_receive_cursor();
+        let refused_event = Uuid::new_v4();
+        let refused = q(receiver.prepare_chat_event(refused_event, &claim(refused_event, "actual sink refusal message")?))?;
+        q(receiver.publish_chat_event(refused, |_| Ok(())).await)?;
+        let refusal = root.receive_chat_event_page::<()>(|publication| {
+            let rows = created(publication);
+            assert_eq!(rows.len(), 1);
+            assert_eq!(rows[0].0, "actual sink refusal message");
             Err(mnema_private_native_crypto_owner::Error::Limit)
         }).await;
-        assert_eq!(refusal,Err(mnema_private_native_crypto_owner::Error::Limit));
-        assert_eq!(root.native_receive_cursor(),before_cursor);
-        assert!(root.prepare_chat(Uuid::new_v4(),"no retry after refusal").is_err());
-        root.retire();receiver.retire();
-        if root.validate_prepared(&held).is_ok(){return Err("retired native owner accepted job".into())}
+        assert_eq!(refusal, Err(mnema_private_native_crypto_owner::Error::Limit));
+        assert_eq!(root.native_receive_cursor(), before_cursor);
+        let retry = Uuid::new_v4();
+        assert!(root.prepare_chat_event(retry, &claim(retry, "no retry after refusal")?).is_err());
+        root.retire(); receiver.retire();
+        if root.validate_prepared_chat_event(&held).is_ok() { return Err("retired native owner accepted job".into()); }
         drop(root);drop(receiver);drop(peer_scope);drop(root_scope);drop(issuer);
         q(root_keys.delete())?;q(peer_keys.delete())?;
         if q(native_fixture::snapshot())?!=before{return Err("native Keychain metadata changed".into())}
         for (client,window) in [(&root_client,&root_window),(&peer_client,&peer_window)]{let logout=q(client.request(window,NativeRequest::Logout).await)?;q(client.commit(window,logout))?;}
-        println!("PASS: actual Go verifiedTLS/currentScope separate native families/windows (sameAccountMode={same_account}); actual Pending root denied/cancelled/invisible/nonadmin gates; two owned native Keychains/same-device signed proof; real checked-MLS Add/Welcome/fresh-peer; native exactoutbox POST/idempotent retry/peer receive/reply/accountEventNamespace/foreignjob/sinkRefusalCursorUnchanged+retire; keys neverJS. Local fixture OOB only: actual OS root modal remains separate.");
+        println!("PASS: actual Go verifiedTLS/currentScope separate native families/windows (sameAccountMode={same_account}); actual Pending root denied/cancelled/invisible/nonadmin gates; two owned native Keychains/same-device signed proof; real checked-MLS Add/Welcome/fresh-peer; native typed exactoutbox POST/idempotent retry/peer receive/reply/accountEventNamespace/archiveOwnHistory/foreignjob/sinkRefusalCursorUnchanged+retire; keys neverJS. Local fixture OOB only: actual OS root modal remains separate.");
         Ok::<(),Box<dyn std::error::Error>>(())
     })
 }

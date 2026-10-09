@@ -16,6 +16,7 @@ use std::{
 };
 use zeroize::Zeroizing;
 mod chat_archive;
+pub use chat_archive::ArchivedChatObservation;
 mod host;
 #[cfg(test)]
 mod host_tests;

@@ -2090,9 +2090,39 @@ fn typed_chat_archive_survives_sqlcipher_reopen_without_restoring_send_authority
     })
     .unwrap();
     let own_wire = sdk.send_chat_event(own_event, &own_claim, NOW).unwrap();
+    let before = secret(&sdk.core.connection);
+    let scope = sdk.native_protected_event_scope(NOW).unwrap();
+    let observation = sdk
+        .archived_chat_observation("alice", EVENT, &wire)
+        .unwrap()
+        .unwrap();
+    assert!(observation.matches_history_context(&scope));
+    assert_eq!(observation.account(), "alice");
+    assert_eq!(observation.device(), "desktop");
+    assert_eq!(observation.event_id(), EVENT);
+    assert_eq!(secret(&sdk.core.connection), before);
     drop(sdk);
     drop(peer);
     let mut restored = Core::restore_inspection_only(&path, &FixtureKeys, pin(&peer_key)).unwrap();
+    let observation = restored
+        .archived_chat_observation("alice", EVENT, &wire)
+        .unwrap()
+        .unwrap();
+    assert_eq!(observation.account(), "alice");
+    assert_eq!(observation.epoch().to_be_bytes(), expected_epoch);
+    assert_eq!(
+        observation.root_generation().to_be_bytes(),
+        expected_generation
+    );
+    assert!(!observation.matches_history_context(&scope)); // A reopened owner is never the live scope.
+    let own = restored
+        .archived_chat_observation("bob", own_event, &own_wire)
+        .unwrap()
+        .unwrap();
+    assert_eq!(own.account(), "bob");
+    assert!(
+        matches!(own.operation(), ChatOperation::Create { body, .. } if body == "own persistent encrypted history")
+    );
     let row: (String, String, String, u32, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) = restored.connection.query_row(
         "SELECT channel,account,device,sender,epoch,generation,wire_hash,plaintext FROM core_chat_archive WHERE event=?",
         [EVENT], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))
@@ -2124,6 +2154,135 @@ fn typed_chat_archive_survives_sqlcipher_reopen_without_restoring_send_authority
             .windows(b"native exact reserved fixture".len())
             .any(|part| part == b"native exact reserved fixture")
     );
+}
+
+#[test]
+fn archived_observation_requires_exact_wire_event_metadata_and_actual_core_owner() {
+    for corrupt in [None, Some("channel"), Some("account"), Some("device")] {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("archive-association.sqlite"));
+        let claim = projection_claim();
+        let wire = sdk.send_chat_event(EVENT, &claim, NOW).unwrap();
+        let plaintext = peer.decrypt(&wire);
+        let before = secret(&sdk.core.connection);
+        let revision = sdk.core.revision;
+        let scope = sdk.native_protected_event_scope(NOW).unwrap();
+        let mut changed = wire.clone();
+        let last = changed.len() - 1;
+        changed[last] ^= 1;
+        assert!(matches!(
+            sdk.archived_chat_observation("bob", EVENT, &changed),
+            Err(Error::Unauthorized)
+        ));
+        assert!(
+            sdk.archived_chat_observation("bob", SOURCE, &wire)
+                .unwrap()
+                .is_none()
+        );
+        if let Some(column) = corrupt {
+            // Local corruption fixture only; no production caller writes rows.
+            let value = if column == "channel" {
+                SOURCE
+            } else {
+                "wrong-owner"
+            };
+            sdk.core
+                .connection
+                .execute(
+                    &format!("UPDATE core_chat_archive SET {column}=? WHERE event=?"),
+                    params![value, EVENT],
+                )
+                .unwrap();
+            if column == "account" {
+                assert!(
+                    sdk.archived_chat_observation("bob", EVENT, &wire)
+                        .unwrap()
+                        .is_none()
+                );
+                assert!(matches!(
+                    sdk.archived_chat_observation("wrong-owner", EVENT, &wire),
+                    Err(Error::Unauthorized)
+                ));
+            } else {
+                assert!(matches!(
+                    sdk.archived_chat_observation("bob", EVENT, &wire),
+                    Err(Error::Unauthorized)
+                ));
+            }
+        } else {
+            let observed = sdk
+                .archived_chat_observation("bob", EVENT, &wire)
+                .unwrap()
+                .unwrap();
+            assert!(observed.matches_history_context(&scope));
+            assert_eq!(observed.account(), "bob");
+            assert!(
+                matches!(observed.operation(), ChatOperation::Create { body, .. } if body == "native exact reserved fixture")
+            );
+            let (other, _) = sdk_fixture(&dir.path().join("other-core.sqlite"));
+            let foreign = other.native_protected_event_scope(NOW).unwrap();
+            assert!(!observed.matches_history_context(&foreign));
+            assert!(!plaintext.is_empty());
+        }
+        assert_eq!(secret(&sdk.core.connection), before);
+        assert_eq!(sdk.core.revision, revision);
+    }
+}
+
+#[test]
+fn archive_preserves_real_account_event_namespace_without_cross_account_wire_reuse() {
+    let dir = run_dir();
+    let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("archive-account-event.sqlite"));
+    let own = projection_claim();
+    let own_wire = sdk.send_chat_event(EVENT, &own, NOW).unwrap();
+    peer.decrypt(&own_wire);
+    let incoming = ChatEventClaim::claim(ChatOperation::Create {
+        message_id: EVENT.into(),
+        parent_id: None,
+        body: "same event UUID, independent authenticated account".into(),
+    })
+    .unwrap();
+    let mut envelope = peer_envelope(CHAT_EVENT_DOMAIN, EVENT);
+    let Value::Array(fields) = &mut envelope else {
+        panic!("fixture envelope")
+    };
+    fields[9] = incoming.payload();
+    let incoming_wire = peer.peer_message(&encode(&envelope));
+    let ProtectedReceived::ChatEvent(received) =
+        sdk.receive_protected(EVENT, &incoming_wire, NOW).unwrap()
+    else {
+        panic!("wrong domain")
+    };
+    assert_eq!(received.account(), "alice");
+    assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 2);
+    let before = secret(&sdk.core.connection);
+    let revision = sdk.core.revision;
+    let bob = sdk
+        .archived_chat_observation("bob", EVENT, &own_wire)
+        .unwrap()
+        .unwrap();
+    let alice = sdk
+        .archived_chat_observation("alice", EVENT, &incoming_wire)
+        .unwrap()
+        .unwrap();
+    assert_eq!(bob.account(), "bob");
+    assert_eq!(alice.account(), "alice");
+    assert!(
+        matches!(bob.operation(), ChatOperation::Create { body, .. } if body == "native exact reserved fixture")
+    );
+    assert!(
+        matches!(alice.operation(), ChatOperation::Create { body, .. } if body == "same event UUID, independent authenticated account")
+    );
+    assert!(matches!(
+        sdk.archived_chat_observation("bob", EVENT, &incoming_wire),
+        Err(Error::Unauthorized)
+    ));
+    assert!(matches!(
+        sdk.archived_chat_observation("alice", EVENT, &own_wire),
+        Err(Error::Unauthorized)
+    ));
+    assert_eq!(secret(&sdk.core.connection), before);
+    assert_eq!(sdk.core.revision, revision);
 }
 
 #[test]
