@@ -74,6 +74,7 @@ function Get-FixtureFailureLabel([string]$Directory) {
 }
 $server = $null
 $rootThumbprint = $null
+$rootCertificate = $null
 $clusterInitialized = $false
 try {
   & (Join-Path $pgBin 'initdb.exe') -D $data -U desktop_fixture -A trust -E UTF8 --locale=C
@@ -82,6 +83,7 @@ try {
   [IO.File]::WriteAllText((Join-Path $data '.mnema-owner'), $nonce)
   & (Join-Path $pgBin 'pg_ctl.exe') -D $data -l (Join-Path $directory 'postgres.log') -o "-h 127.0.0.1 -p $port" -w -t 30 start
   if ($LASTEXITCODE -ne 0) { throw 'Owned PostgreSQL cluster startup failed' }
+  Write-Host 'Fixture phase: creating the owned database'
   & (Join-Path $pgBin 'createdb.exe') -h 127.0.0.1 -p $port -U desktop_fixture $dbName
   if ($LASTEXITCODE -ne 0) { throw 'Fresh fixture database creation failed' }
   $env:TEST_DATABASE_URL = "postgres://desktop_fixture@127.0.0.1:$port/${dbName}?sslmode=disable"
@@ -89,6 +91,7 @@ try {
   $env:MNEMA_DESKTOP_FIXTURE_NONCE = $nonce
   $env:MNEMA_DESKTOP_FIXTURE_VERSION = $Tag.Substring(1)
   $env:MNEMA_DESKTOP_FIXTURE_REVISION = $backendRevision
+  Write-Host 'Fixture phase: starting the normal backend'
   $server = Start-Process $goExecutable -ArgumentList '-test.run=^TestDesktopClientGUIFixture$','-test.timeout=12m' -PassThru -RedirectStandardOutput (Join-Path $directory 'server.log') -RedirectStandardError (Join-Path $directory 'server-error.log')
   $readyFile = Join-Path $directory 'READY.json'
   for ($attempt = 0; $attempt -lt 120 -and !(Test-Path $readyFile); $attempt++) {
@@ -103,8 +106,53 @@ try {
   try { $ready = Get-Content $readyFile -Raw | ConvertFrom-Json }
   catch { throw 'Fixture readiness document unavailable or invalid' }
   if ($ready.nonce -ne $nonce -or $ready.normal_router -ne $true) { throw 'Fixture receipt mismatch' }
-  $root = Import-Certificate -FilePath (Join-Path $directory 'root.crt') -CertStoreLocation Cert:\CurrentUser\Root
-  $rootThumbprint = $root.Thumbprint
+  Write-Host 'Fixture phase: backend ready, importing the owned test CA'
+  $rootBytes = [IO.File]::ReadAllBytes((Join-Path $directory 'root.crt'))
+  $rootCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($rootBytes)
+  $constraints = $rootCertificate.Extensions['2.5.29.19']
+  if ($rootCertificate.Subject -ne 'CN=Mnema disposable GUI fixture' -or $rootCertificate.Issuer -ne $rootCertificate.Subject -or $rootCertificate.HasPrivateKey -or $null -eq $constraints -or !$constraints.CertificateAuthority -or $rootCertificate.NotAfter -le [DateTime]::Now) { throw 'Invalid owned fixture CA' }
+  $candidateThumbprint = $rootCertificate.Thumbprint
+  if ($candidateThumbprint -notmatch '^[A-F0-9]{40}$' -or (Test-Path "Cert:\CurrentUser\Root\$candidateThumbprint")) { throw 'Refusing a pre-existing fixture CA' }
+  # Record cleanup ownership before any import, including partially failed imports.
+  $rootThumbprint = $candidateThumbprint
+  # Import only this public certificate into the same CurrentUser store without a
+  # native trust dialog. Real Schannel/WebView TLS verification remains enabled.
+  # https://learn.microsoft.com/windows/win32/api/cryptuiapi/nf-cryptuiapi-cryptuiwizimport
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
+public static class MnemaFixtureCertificateImport {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct Source {
+        public uint Size;
+        public uint Choice;
+        public IntPtr Certificate;
+        public uint Flags;
+        [MarshalAs(UnmanagedType.LPWStr)] public string Password;
+    }
+    [DllImport("cryptui.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CryptUIWizImport(uint flags, IntPtr parent, string title, ref Source source, IntPtr store);
+    public static bool Import(X509Certificate2 certificate, X509Store store) {
+        var source = new Source { Size = (uint)Marshal.SizeOf(typeof(Source)), Choice = 2,
+            Certificate = certificate.Handle, Flags = 0, Password = String.Empty };
+        // NO_UI | NO_CHANGE_DEST_STORE | ALLOW_CERT; explicit certificate context.
+        bool result = CryptUIWizImport(0x00030001, IntPtr.Zero, null, ref source, store.StoreHandle);
+        GC.KeepAlive(certificate);
+        GC.KeepAlive(store);
+        return result;
+    }
+}
+'@
+  $rootStore = [Security.Cryptography.X509Certificates.X509Store]::new('Root', 'CurrentUser')
+  try {
+    $rootStore.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    if (![MnemaFixtureCertificateImport]::Import($rootCertificate, $rootStore)) { throw 'Noninteractive owned fixture CA import failed' }
+  } finally { $rootStore.Close() }
+  $installed = Get-Item "Cert:\CurrentUser\Root\$rootThumbprint"
+  if ([Convert]::ToBase64String($installed.RawData) -ne [Convert]::ToBase64String($rootBytes)) { throw 'Owned fixture CA readback mismatch' }
+  Write-Host 'Fixture phase: test CA verified, starting the published client probe'
   $env:GH_TOKEN = $token
   & desktop/scripts/test-windows-release.ps1 -Tag $Tag -InstanceUrl $ready.origin -FixtureDirectory $directory
   if (!$?) { throw 'Authenticated desktop UI probe failed' }
@@ -117,7 +165,14 @@ try {
   $env:GH_TOKEN = $null
   $cleanupErrors = @()
   if ($rootThumbprint) {
-    try { Remove-Item "Cert:\CurrentUser\Root\$rootThumbprint" } catch { $cleanupErrors += 'owned certificate cleanup failed' }
+    try {
+      $ownedCertificatePath = "Cert:\CurrentUser\Root\$rootThumbprint"
+      if (Test-Path $ownedCertificatePath) { Remove-Item $ownedCertificatePath }
+      if (Test-Path $ownedCertificatePath) { throw 'Owned certificate remains installed' }
+    } catch { $cleanupErrors += 'owned certificate cleanup failed' }
+  }
+  if ($rootCertificate) {
+    try { $rootCertificate.Dispose() } catch { $cleanupErrors += 'owned certificate disposal failed' }
   }
   if ($server) {
     try {
