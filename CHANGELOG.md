@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.3](https://github.com/msch128/mnema-talk/compare/v0.7.2...v0.7.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* configure gaming overlays and expand game detection ([#85](https://github.com/msch128/mnema-talk/issues/85)) ([36e399a](https://github.com/msch128/mnema-talk/commit/36e399a9fc1285aa1e2de6388b802bc4642866fb))
+
 ## [0.7.2](https://github.com/msch128/mnema-talk/compare/v0.7.1...v0.7.2) (2026-10-09)
 
 
