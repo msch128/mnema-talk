@@ -8,7 +8,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Exact release tag fetch failed' }
 $backendRevision = git rev-parse "refs/tags/$Tag"
 if ($LASTEXITCODE -ne 0 -or $backendRevision -notmatch '^[a-f0-9]{40}$') { throw 'Exact release revision lookup failed' }
 # The backend and embedded app must still be the released product sources.
-git diff --exit-code $Tag -- . ':!desktop' ':!.github' ':!internal/server/desktop_client_fixture_integration_test.go' ':!web/dist'
+git diff --exit-code $Tag -- . ':!desktop' ':!.github' ':!internal/server/desktop_client_fixture_integration_test.go' ':!internal/ws/native_failure_integration_test.go' ':!web/dist'
 if ($LASTEXITCODE -ne 0) { throw 'Fixture backend differs from the requested released product' }
 $nonce = [Guid]::NewGuid().ToString('N')
 $directory = Join-Path $env:RUNNER_TEMP "mnema-auth-$nonce"
