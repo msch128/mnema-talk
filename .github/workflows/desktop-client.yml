@@ -19,6 +19,11 @@ on:
         description: 'Public HTTPS origin for unauthenticated release acceptance'
         required: false
         type: string
+      acceptance_fixture:
+        description: 'Use an isolated local normal-backend fixture for login/chat/logout'
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main, 'codex/**']
     paths:
@@ -52,20 +57,52 @@ jobs:
         id: source
         shell: bash
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: inputs.acceptance_fixture
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: inputs.acceptance_fixture
+        with:
+          node-version: 26
+      - name: Build released canonical web assets for the normal backend fixture
+        if: inputs.acceptance_fixture
+        working-directory: web
+        shell: powershell
+        env:
+          ACCEPTANCE_RELEASE: ${{ inputs.acceptance_release }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:ACCEPTANCE_RELEASE -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'An existing release tag is required' }
+          $env:MNEMA_VERSION = $env:ACCEPTANCE_RELEASE.Substring(1)
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture web dependencies failed' }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { throw 'Fixture web build failed' }
       - name: Test the published Windows release against an actual instance
+        # This dispatch-only setup uses the unchanged released web/backend tree.
+        # Generated credentials, certificates and database files stay in runner.temp.
         if: inputs.acceptance_release != ''
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
           ACCEPTANCE_RELEASE: ${{ inputs.acceptance_release }}
           ACCEPTANCE_INSTANCE: ${{ inputs.acceptance_instance }}
-        run: desktop/scripts/test-windows-release.ps1 -Tag $env:ACCEPTANCE_RELEASE -InstanceUrl $env:ACCEPTANCE_INSTANCE
+          ACCEPTANCE_FIXTURE: ${{ inputs.acceptance_fixture }}
+        run: |
+          if ($env:ACCEPTANCE_FIXTURE -eq 'true') {
+            desktop/scripts/test-windows-auth-fixture.ps1 -Tag $env:ACCEPTANCE_RELEASE
+          } else {
+            desktop/scripts/test-windows-release.ps1 -Tag $env:ACCEPTANCE_RELEASE -InstanceUrl $env:ACCEPTANCE_INSTANCE
+          }
       - name: Upload bounded Windows acceptance result
         if: inputs.acceptance_release != ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-published-release-acceptance
-          path: ${{ runner.temp }}/windows-release-acceptance/ACCEPTANCE.json
+          path: |
+            ${{ runner.temp }}/windows-release-acceptance/ACCEPTANCE.json
+            ${{ runner.temp }}/windows-release-acceptance/SERVER-RESULT.json
           if-no-files-found: error
           retention-days: 7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

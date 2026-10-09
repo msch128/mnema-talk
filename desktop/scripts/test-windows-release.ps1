@@ -1,15 +1,26 @@
 ﻿param(
   [Parameter(Mandatory)][string]$Tag,
-  [Parameter(Mandatory)][string]$InstanceUrl
+  [Parameter(Mandatory)][string]$InstanceUrl,
+  [string]$FixtureDirectory
 )
 $ErrorActionPreference = 'Stop'
 if ($Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Invalid release tag' }
 $uri = [Uri]$InstanceUrl
-if (!$uri.IsAbsoluteUri -or $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or $uri.AbsolutePath -ne '/' -or $uri.Host -notmatch '^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$' -or $InstanceUrl.Length -gt 2048) { throw 'A public HTTPS instance origin is required' }
+if (!$uri.IsAbsoluteUri -or $uri.Scheme -ne 'https' -or $uri.UserInfo -or $uri.Query -or $uri.Fragment -or $uri.AbsolutePath -ne '/' -or $InstanceUrl.Length -gt 2048) { throw 'An HTTPS instance origin is required' }
+$fixture = $null
+if ($FixtureDirectory) {
+  $temp = [IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd('\') + '\'
+  if ($env:GITHUB_ACTIONS -ne 'true' -or ![IO.Path]::GetFullPath($FixtureDirectory).StartsWith($temp, [StringComparison]::OrdinalIgnoreCase)) { throw 'Fixture must belong to this disposable runner' }
+  try { $fixture = Get-Content (Join-Path $FixtureDirectory 'READY.json') -Raw | ConvertFrom-Json }
+  catch { throw 'Fixture readiness document unavailable or invalid' }
+  if ($fixture.nonce -notmatch '^[a-f0-9]{32}$' -or [IO.Path]::GetFileName($FixtureDirectory) -ne "mnema-auth-$($fixture.nonce)" -or $fixture.origin -ne $InstanceUrl -or $uri.Host -ne '127.0.0.1' -or $uri.Port -lt 1024 -or $fixture.normal_router -ne $true -or $fixture.username -ne 'desktop-fixture-user' -or $fixture.password -notmatch '^[a-f0-9]{64}$' -or $fixture.channel -ne 'desktop-fixture-chat' -or $fixture.outbound -ne "Desktop fixture outbound $($fixture.nonce)" -or $fixture.inbound -ne "Desktop fixture inbound $($fixture.nonce)") { throw 'Invalid owned local fixture receipt' }
+} else {
+if ($uri.Host -notmatch '^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') { throw 'A public HTTPS instance origin is required' }
 foreach ($address in [Net.Dns]::GetHostAddresses($uri.Host)) {
   if ($address.IsIPv4MappedToIPv6) { $address = $address.MapToIPv4() }
   $bytes = $address.GetAddressBytes()
   if ([Net.IPAddress]::IsLoopback($address) -or $address.IsIPv6LinkLocal -or $address.IsIPv6SiteLocal -or $address.IsIPv6Multicast -or ($bytes.Length -eq 16 -and ($bytes[0] -band 254) -eq 252) -or ($bytes.Length -eq 4 -and ($bytes[0] -in 0,10,127 -or $bytes[0] -ge 224 -or ($bytes[0] -eq 172 -and $bytes[1] -ge 16 -and $bytes[1] -le 31) -or ($bytes[0] -eq 192 -and $bytes[1] -eq 168) -or ($bytes[0] -eq 169 -and $bytes[1] -eq 254) -or ($bytes[0] -eq 100 -and $bytes[1] -ge 64 -and $bytes[1] -le 127)))) { throw 'Private instance addresses are not accepted by this public CI test' }
+}
 }
 $directory = Join-Path $env:RUNNER_TEMP 'windows-release-acceptance'
 New-Item -ItemType Directory -Path $directory | Out-Null
@@ -43,6 +54,7 @@ $tagJson = gh api "repos/msch128/mnema-talk/git/ref/tags/$Tag"
 if ($LASTEXITCODE -ne 0) { throw 'Release tag lookup failed' }
 $env:GH_TOKEN = $null
 $tagObject = $tagJson | ConvertFrom-Json
+if ($fixture -and $fixture.backend_revision -ne $tagObject.object.sha) { throw 'Fixture backend and published client release revisions differ' }
 if ($tagObject.object.type -ne 'commit' -or $receipt.revision -ne $tagObject.object.sha -or $receipt.kind -ne 'unsigned-development-web-desktop-client' -or $receipt.target -ne 'x86_64-pc-windows-msvc' -or $receipt.signed -ne $false -or $receipt.automatic_updater_package -ne $false -or $receipt.windows_startup_checked -ne $true -or $receipt.instance_transport -ne 'same-origin-browser') { throw 'Release receipt mismatch' }
 $exe = Join-Path $package 'Mnema Desktop DEV.exe'
 if ((Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executable_sha256) { throw 'Executable checksum mismatch' }
@@ -81,6 +93,17 @@ function Activate-Control($Root, [string]$Name, [bool]$Toggle = $false) {
   } "Button not ready for invocation: $Name"
   if ($Toggle) { $pattern.Toggle() } else { $pattern.Invoke() }
 }
+function Focus-Control($Control) {
+  $Control.SetFocus()
+  $null = Wait-Ui {
+    if ([Windows.Automation.Automation]::Compare($Control, [Windows.Automation.AutomationElement]::FocusedElement)) { return $true }
+  } 'Owned control did not receive keyboard focus'
+}
+function Enter-Control($Root, $Type, [string]$Name) {
+  $control = Wait-Ui { Find-Control $Root $Type $Name } 'Expected keyboard control unavailable'
+  Focus-Control $control
+  [Windows.Forms.SendKeys]::SendWait('{ENTER}')
+}
 try {
   Write-Host 'Phase: published executable selector'
   $selector = Wait-Ui { Find-Window 'Mnema Desktop DEV — Instance' } 'Selector window did not appear'
@@ -96,20 +119,47 @@ try {
   $signin = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Sign in' } 'Canonical sign-in page did not appear'
   $username = Find-Control $instance ([Windows.Automation.ControlType]::Edit) 'USERNAME'
   if ($null -eq $username) { throw 'Canonical username control unavailable' }
-  Write-Host 'Phase: canonical sign-in page, toggling Deutsch'
-  Activate-Control $instance 'Deutsch' $true
-  $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Anmelden' } 'Canonical language interaction failed'
+  if ($fixture) {
+    Write-Host 'Phase: local fixture authentication'
+    Add-Type -AssemblyName System.Windows.Forms
+    $usernameValue = $username.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
+    $usernameValue.SetValue($fixture.username)
+    $null = Wait-Ui { if ($usernameValue.Current.Value -eq $fixture.username) { return $true } } 'Fixture username was not updated'
+    $password = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Edit) 'PASSWORD' } 'Password control unavailable'
+    Focus-Control $password
+    [Windows.Forms.SendKeys]::SendWait($fixture.password)
+    Activate-Control $instance 'Sign in'
+    $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) $fixture.channel } 'Authenticated channels unavailable'
+    Write-Host 'Phase: authenticated canonical chat'
+    Enter-Control $instance ([Windows.Automation.ControlType]::Button) $fixture.channel
+    $composer = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Edit) "Message #$($fixture.channel)" } 'Canonical chat composer unavailable'
+    Focus-Control $composer
+    [Windows.Forms.SendKeys]::SendWait($fixture.outbound)
+    [Windows.Forms.SendKeys]::SendWait('{ENTER}')
+    $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Text) $fixture.inbound } 'Live peer message did not arrive'
+    Write-Host 'Phase: live peer message received, logout'
+    Enter-Control $instance ([Windows.Automation.ControlType]::Button) 'Account menu'
+    Enter-Control $instance ([Windows.Automation.ControlType]::MenuItem) 'Sign out'
+    $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Sign in' } 'Logout did not restore canonical sign-in'
+  } else {
+    Write-Host 'Phase: canonical sign-in page, toggling Deutsch'
+    Activate-Control $instance 'Deutsch' $true
+    $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Anmelden' } 'Canonical language interaction failed'
+  }
   [ordered]@{
-    kind = 'windows-published-release-instance-entry'
+    kind = $(if ($fixture) { 'windows-published-release-authenticated-chat' } else { 'windows-published-release-instance-entry' })
     tag = $Tag
     revision = $receipt.revision
     executable_sha256 = $receipt.executable_sha256
     selector_to_canonical_signin = $true
-    language_interaction_checked = $true
-    credentials_used = $false
+    language_interaction_checked = ($null -eq $fixture)
+    credentials_used = ($null -ne $fixture)
+    production_credentials_used = $false
+    authenticated_chat_ui_checked = ($null -ne $fixture)
     authenticated_chat_media_and_games_qualified = $false
   } | ConvertTo-Json | Set-Content (Join-Path $directory 'ACCEPTANCE.json') -Encoding utf8
-  'Published Windows release: selector, actual instance sign-in page and language interaction PASS. No credentials or authenticated/media qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY
+  if ($fixture) { 'Published Windows release: local fixture login, chat send/receive and logout UI PASS. Generated fixture credentials only; no media, S3, E2EE or game qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+  else { 'Published Windows release: selector, actual instance sign-in page and language interaction PASS. No credentials or authenticated/media qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
 } finally {
   if (!$process.HasExited) { Stop-Process -Id $process.Id -Force }
 }
