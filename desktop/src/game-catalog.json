@@ -1,0 +1,2215 @@
+{
+  "schema": 1,
+  "selection": "300-title reference: requested games, Valve most-played snapshot, then SteamSpy CCU snapshot within its returned 1000 titles; not a global top-300 ranking",
+  "retrieved": "2026-10-09",
+  "popularity_sources": [
+    "https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/",
+    "https://steamspy.com/api.php?request=all&page=0"
+  ],
+  "games": [
+    {
+      "name": "World of Warcraft",
+      "executables": [
+        "wow-64.exe",
+        "wow.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Genshin Impact",
+      "executables": [
+        "genshinimpact.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Star Wars: Empire at War - Gold Pack",
+      "executables": [
+        "starwarsg.exe",
+        "sweaw.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PAYDAY: The Heist",
+      "executables": [
+        "payday_win32_release.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PAYDAY 2",
+      "executables": [
+        "payday2_win32_release.exe",
+        "payday2_win32_release_vr.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PAYDAY 3",
+      "executables": [
+        "payday3client-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Act of Aggression",
+      "executables": [
+        "actofaggression.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Minecraft",
+      "executables": [
+        "minecraft.exe",
+        "minecraft.windows.exe",
+        "javaw.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "League of Legends",
+      "executables": [
+        "league of legends.exe",
+        "lol.exe",
+        "lolex.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Elder Scrolls Online",
+      "executables": [
+        "eso.exe",
+        "eso64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Black Desert",
+      "executables": [
+        "blackdesert32.exe",
+        "blackdesert64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Call of Duty",
+      "executables": [
+        "cod.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Call of Duty: Modern Warfare II",
+      "executables": [
+        "cod22-cod.exe",
+        "sp22-cod.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "WARDOGS",
+      "executables": [
+        "wardogsclient-win64-shipping.exe"
+      ],
+      "source": "https://steamcommunity.com/app/1867240/discussions/3/562541966849738867/"
+    },
+    {
+      "name": "Beyond All Reason",
+      "executables": [
+        "spring.exe"
+      ],
+      "source": "https://www.beyondallreason.info/faq"
+    },
+    {
+      "name": "Counter-Strike 2",
+      "executables": [
+        "cs2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dota 2",
+      "executables": [
+        "dota2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PUBG: BATTLEGROUNDS",
+      "executables": [
+        "tslgame.exe",
+        "tslgame_be.exe",
+        "tslgame_uc.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Deadlock",
+      "executables": [
+        "deadlock.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Apex Legends",
+      "executables": [
+        "r5apex.exe",
+        "r5apex_dx12.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Overwatch",
+      "executables": [
+        "overwatch.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Grand Theft Auto V Enhanced",
+      "executables": [
+        "gta5_enhanced.exe",
+        "gta5_enhanced_be.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Valheim",
+      "executables": [
+        "valheim.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Slay the Spire II",
+      "executables": [
+        "slaythespire2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Outlast Trials",
+      "executables": [
+        "totclient-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Geometry Dash",
+      "executables": [
+        "geometrydash.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ARC Raiders",
+      "executables": [
+        "pioneergame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "War Thunder",
+      "executables": [
+        "aces.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Witcher 3: Wild Hunt",
+      "executables": [
+        "witcher3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Rainbow Six Siege",
+      "executables": [
+        "rainbowsix.exe",
+        "rainbowsix_be.exe",
+        "rainbowsix_vulkan.exe",
+        "rainbowsixgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Binding of Isaac: Rebirth",
+      "executables": [
+        "isaac-ng.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dead by Daylight",
+      "executables": [
+        "deadbydaylight-egs-shipping.exe",
+        "deadbydaylight-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Limbus Company",
+      "executables": [
+        "limbuscompany.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Marvel Rivals",
+      "executables": [
+        "marvel-win64-shipping.exe",
+        "marvel-win64-test.exe",
+        "marvel.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Left 4 Dead 2",
+      "executables": [
+        "l4d2_workshop_manager.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "HELLDIVERS 2",
+      "executables": [
+        "helldivers2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Stardew Valley",
+      "executables": [
+        "stardew valley.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Aniimo",
+      "executables": [
+        "aniimo.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Delta Force",
+      "executables": [
+        "deltaforceclient-win64-shipping.exe",
+        "deltaforceclient.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Warframe",
+      "executables": [
+        "warframe.exe",
+        "warframe.x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Rust",
+      "executables": [
+        "rustclient.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Terraria",
+      "executables": [
+        "terraria.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Project Zomboid",
+      "executables": [
+        "projectzomboid32.exe",
+        "projectzomboid64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Battlefield 6",
+      "executables": [
+        "bf6.exe",
+        "bf6event.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Euro Truck Simulator 2",
+      "executables": [
+        "eurotrucks2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cyberpunk 2077",
+      "executables": [
+        "cyberpunk2077.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "NARAKA: BLADEPOINT",
+      "executables": [
+        "narakabladepoint.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "VRChat",
+      "executables": [
+        "vrchat.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Total War: WARHAMMER III",
+      "executables": [
+        "warhammer3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Baldur's Gate III",
+      "executables": [
+        "bg3.exe",
+        "bg3_dx11.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Red Dead Redemption 2",
+      "executables": [
+        "rdr2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "EA Sports FC 26",
+      "executables": [
+        "fc26.exe",
+        "fc26_showcase.exe",
+        "fc26_trial.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Don't Starve Together",
+      "executables": [
+        "dontstarve.exe",
+        "dontstarve_steam.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hearts of Iron IV",
+      "executables": [
+        "hoi4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Elder Scrolls V: Skyrim - Special Edition",
+      "executables": [
+        "skyrimse.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Palworld",
+      "executables": [
+        "palworld-win64-shipping.exe",
+        "palworld-wingdk-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Yu-Gi-Oh! Master Duel",
+      "executables": [
+        "masterduel.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Rocket League",
+      "executables": [
+        "rocketleague.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "BeamNG.drive",
+      "executables": [
+        "beamng.drive.exe",
+        "beamng.drive.x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "R.E.P.O.",
+      "executables": [
+        "repo.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Street Fighter 6",
+      "executables": [
+        "streetfighter6.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Warhammer 40,000: Space Marine II",
+      "executables": [
+        "warhammer 40000 space marine 2 - retail.exe",
+        "warhammer 40000 space marine 2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Monster Hunter Wilds",
+      "executables": [
+        "monsterhunterwilds.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Garry's Mod",
+      "executables": [
+        "gmod.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ELDEN RING",
+      "executables": [
+        "eldenring.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PEAK",
+      "executables": [
+        "peak.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Destiny 2",
+      "executables": [
+        "destiny2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Bongo Cat",
+      "executables": [
+        "bongocat.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Wuthering Waves",
+      "executables": [
+        "client-win64-shipping.exe",
+        "wuthering waves.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Arena Breakout: Infinite",
+      "executables": [
+        "uagame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "tModLoader",
+      "executables": [
+        "busybox64.exe",
+        "dotnet.exe",
+        "tmodloader.exe",
+        "tmodloader64bit.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "eFootball",
+      "executables": [
+        "efootball.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Farming Simulator 25",
+      "executables": [
+        "farmingsimulator2025game.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Risk of Rain 2",
+      "executables": [
+        "risk of rain 2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Sims 4",
+      "executables": [
+        "ts4.exe",
+        "ts4_dx9_x64.exe",
+        "ts4_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Sid Meier's Civilization VI",
+      "executables": [
+        "civilizationvi.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Ori and the Will of the Wisps",
+      "executables": [
+        "oriwotw.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Brawlhalla",
+      "executables": [
+        "brawlhalla.exe",
+        "brawlhallagame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Phasmophobia",
+      "executables": [
+        "phasmophobia.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Assetto Corsa",
+      "executables": [
+        "acs.exe",
+        "acshowroom.exe",
+        "assettocorsa.exe",
+        "content manager.exe",
+        "jsgme.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Bloons TD 6",
+      "executables": [
+        "bloonstd6.exe",
+        "cleaner-btd6.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Mount & Blade II: Bannerlord",
+      "executables": [
+        "bannerlord.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DayZ",
+      "executables": [
+        "dayz.exe",
+        "dayz_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Crusader Kings III",
+      "executables": [
+        "ck3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Age of Empires II: Definitive Edition",
+      "executables": [
+        "aoe2de_s.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "7 Days to Die",
+      "executables": [
+        "7daystodie.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Escape from Tarkov",
+      "executables": [
+        "escapefromtarkov.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Aimlabs",
+      "executables": [
+        "aimlab_tb.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Monster Hunter: World",
+      "executables": [
+        "mhw_modmanager.exe",
+        "monsterhunterworld.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "No Man's Sky",
+      "executables": [
+        "nms.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Sons of the Forest",
+      "executables": [
+        "sonsoftheforest.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "RimWorld",
+      "executables": [
+        "rimworld914win.exe",
+        "rimworldwin.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Among Us",
+      "executables": [
+        "among us.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Resident Evil 4",
+      "executables": [
+        "re4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Path of Exile 2",
+      "executables": [
+        "pathofexile.exe",
+        "pathofexile_kg.exe",
+        "pathofexile_x64.exe",
+        "pathofexile_x64steam.exe",
+        "pathofexileegs.exe",
+        "pathofexilesteam.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "THE FINALS",
+      "executables": [
+        "discovery-d.exe",
+        "discovery-e.exe",
+        "discovery.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Monster Hunter Rise",
+      "executables": [
+        "monsterhunterrise.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Ready or Not",
+      "executables": [
+        "readyornot-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Balatro",
+      "executables": [
+        "balatro.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ELDEN RING NIGHTREIGN",
+      "executables": [
+        "nightreign.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "EA Sports FC 25",
+      "executables": [
+        "fc25.exe",
+        "fc25_trial.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Clair Obscur: Expedition 33",
+      "executables": [
+        "sandfall-win64-shipping.exe",
+        "sandfall-wingdk-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Schedule I",
+      "executables": [
+        "schedule i free sample.exe",
+        "schedule i.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ARK: Survival Evolved",
+      "executables": [
+        "shootergame.exe",
+        "shootergame_be.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "FINAL FANTASY XIV ONLINE",
+      "executables": [
+        "ffxiv.exe",
+        "ffxiv_dx11.exe",
+        "ffxivboot.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Lost Ark",
+      "executables": [
+        "lostark.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Factorio",
+      "executables": [
+        "factorio.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Slay the Spire",
+      "executables": [
+        "slaythespire.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Black Myth: Wukong",
+      "executables": [
+        "b1-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Russian Fishing 4",
+      "executables": [
+        "rf4_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Elder Scrolls IV: Oblivion Remastered",
+      "executables": [
+        "oblivionremastered-win64-shipping.exe",
+        "oblivionremastered-wingdk-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Stellaris",
+      "executables": [
+        "stellaris.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Satisfactory",
+      "executables": [
+        "factorygame-win64-shipping.exe",
+        "factorygameegs-win64-shipping.exe",
+        "factorygamesteam-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Europa Universalis IV",
+      "executables": [
+        "eu4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Eternal Return",
+      "executables": [
+        "eternalreturn.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Sid Meier's Civilization V",
+      "executables": [
+        "civilizationv_dx11.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ARK: Survival Ascended",
+      "executables": [
+        "arkascended_be.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Fallout 4",
+      "executables": [
+        "fallout4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "IdleOn",
+      "executables": [
+        "legendsofidleon.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "V Rising",
+      "executables": [
+        "vrising.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Enshrouded",
+      "executables": [
+        "enshrouded.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Unturned",
+      "executables": [
+        "unturned.exe",
+        "unturned_be.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Forza Horizon 5",
+      "executables": [
+        "forzahorizon5.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cookie Clicker",
+      "executables": [
+        "cookie clicker.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Squad",
+      "executables": [
+        "squadgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cities: Skylines",
+      "executables": [
+        "cities.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Diablo IV",
+      "executables": [
+        "diablo iv.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Fallout 76",
+      "executables": [
+        "fallout76.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Borderlands 2",
+      "executables": [
+        "borderlands2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "SCUM",
+      "executables": [
+        "scum.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "World of Warships",
+      "executables": [
+        "worldofwarships.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Albion Online",
+      "executables": [
+        "albion-online.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "MapleStory",
+      "executables": [
+        "maplestory.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Oxygen Not Included",
+      "executables": [
+        "oxygennotincluded.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Gray Zone Warfare",
+      "executables": [
+        "gzwclientsteam-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Planet Crafter",
+      "executables": [
+        "planet crafter.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Warhammer 40,000: Darktide",
+      "executables": [
+        "darktide.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Arma 3",
+      "executables": [
+        "arma3.exe",
+        "arma3_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Age of Empires IV",
+      "executables": [
+        "reliccardinal.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Kingdom Come: Deliverance II",
+      "executables": [
+        "kingdomcome.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "American Truck Simulator",
+      "executables": [
+        "amtrucks.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Star Wars: The Old Republic",
+      "executables": [
+        "swtor.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Brotato",
+      "executables": [
+        "brotato.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Lethal Company",
+      "executables": [
+        "lethal company.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Counter-Strike: Source",
+      "executables": [
+        "hl2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Last Epoch",
+      "executables": [
+        "last epoch.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hogwarts Legacy",
+      "executables": [
+        "hogwartslegacy.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "World of Tanks: Blitz",
+      "executables": [
+        "wotblitz.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Conan Exiles",
+      "executables": [
+        "conansandbox.exe",
+        "conansandbox_be.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Lossless Scaling",
+      "executables": [
+        "losslessscaling.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "New World: Aeternum",
+      "executables": [
+        "newworld.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Split Fiction",
+      "executables": [
+        "splitfiction.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Farming Simulator 22",
+      "executables": [
+        "farmingsimulator2022game.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Call of Duty: Black Ops III",
+      "executables": [
+        "blackops3.exe",
+        "boiii.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Kenshi",
+      "executables": [
+        "kenshi_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cities: Skylines II",
+      "executables": [
+        "cities2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Deep Rock Galactic",
+      "executables": [
+        "fsd-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "EA Sports FC 24",
+      "executables": [
+        "fc24.exe",
+        "fc24_trial.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Tabletop Simulator",
+      "executables": [
+        "tabletop simulator.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "It Takes Two",
+      "executables": [
+        "ittakestwo.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Persona 5 Royal",
+      "executables": [
+        "p5r.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dying Light",
+      "executables": [
+        "dyinglightgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hollow Knight",
+      "executables": [
+        "hollow_knight.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Forza Horizon 4",
+      "executables": [
+        "forzahorizon4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Elite: Dangerous",
+      "executables": [
+        "elitedangerous.exe",
+        "elitedangerous32.exe",
+        "elitedangerous64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "KARDS: The WWII Card Game",
+      "executables": [
+        "kards-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Supermarket Together",
+      "executables": [
+        "supermarket together.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Raft",
+      "executables": [
+        "raft.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "SCP: Secret Laboratory",
+      "executables": [
+        "scpsl.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Path of Exile",
+      "executables": [
+        "pathofexile.exe",
+        "pathofexile_x64.exe",
+        "pathofexile_x64steam.exe",
+        "pathofexileegs.exe",
+        "pathofexilesteam.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Victoria 3",
+      "executables": [
+        "victoria3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Aseprite",
+      "executables": [
+        "aseprite.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Killing Floor 2",
+      "executables": [
+        "kfgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Total War: Three Kingdoms",
+      "executables": [
+        "three_kingdoms.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "People Playground",
+      "executables": [
+        "people playground.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "TEKKEN 8",
+      "executables": [
+        "polaris-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DARK SOULS III",
+      "executables": [
+        "darksoulsiii.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Space Engineers",
+      "executables": [
+        "spaceengineers.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Football Manager 2023",
+      "executables": [
+        "fm.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Fallout: New Vegas",
+      "executables": [
+        "falloutnv.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Darkest Dungeon",
+      "executables": [
+        "darkest.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Starfield",
+      "executables": [
+        "starfield.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "EVE Online",
+      "executables": [
+        "exefile.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Core Keeper",
+      "executables": [
+        "corekeeper.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Warhammer 40,000: Rogue Trader",
+      "executables": [
+        "wh40krt.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Divinity: Original Sin II - Definitive Edition",
+      "executables": [
+        "eocapp.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hell Let Loose",
+      "executables": [
+        "hll-win64-shipping.exe",
+        "hllepicgamesstore-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dave the Diver",
+      "executables": [
+        "davethediver.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Halo: The Master Chief Collection",
+      "executables": [
+        "mcc-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "UNDERTALE",
+      "executables": [
+        "undertale.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Guild Wars 2",
+      "executables": [
+        "gw2-64.exe",
+        "gw2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Astral Party",
+      "executables": [
+        "astralparty.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Borderlands 3",
+      "executables": [
+        "borderlands3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "XCOM 2",
+      "executables": [
+        "xcom2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "ULTRAKILL",
+      "executables": [
+        "ultrakill.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Party Animals",
+      "executables": [
+        "partyanimals.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Mount & Blade: Warband",
+      "executables": [
+        "battlesizer.exe",
+        "binkplay.exe",
+        "mb_warband.exe",
+        "mb_warband_old.exe",
+        "wseloader.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Idle Champions of the Forgotten Realms",
+      "executables": [
+        "idledragons.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Age of Empires III: Definitive Edition",
+      "executables": [
+        "aoe3de_s.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Vampire Survivors",
+      "executables": [
+        "vampiresurvivors.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Stumble Guys",
+      "executables": [
+        "stumble guys.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Crab Game",
+      "executables": [
+        "crab game.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Forest",
+      "executables": [
+        "theforest.exe",
+        "theforestvr.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dark Souls: Remastered",
+      "executables": [
+        "darksouls.exe",
+        "darksoulsitemrandomizer.exe",
+        "darksoulsremastered.exe",
+        "enemyrandomizer.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Medieval II: Total War",
+      "executables": [
+        "large address aware.exe",
+        "medieval2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Fishing Planet",
+      "executables": [
+        "fishingplanet.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Battlefield 2042",
+      "executables": [
+        "bf2042.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "They Are Billions",
+      "executables": [
+        "theyarebillions.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Subnautica",
+      "executables": [
+        "subnautica.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dyson Sphere Program",
+      "executables": [
+        "dspgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DDraceNetwork",
+      "executables": [
+        "ddnet.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Plants vs. Zombies",
+      "executables": [
+        "plantsvszombies.exe",
+        "popcapgame1.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "HITMAN 3",
+      "executables": [
+        "hitman3.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Assassin's Creed Odyssey",
+      "executables": [
+        "acodyssey.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Long Dark",
+      "executables": [
+        "tld.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Dead Cells",
+      "executables": [
+        "deadcells.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "PowerWash Simulator",
+      "executables": [
+        "powerwashsimulator.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Kingdom Come: Deliverance",
+      "executables": [
+        "kingdomcome.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Planet Zoo",
+      "executables": [
+        "planetzoo.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "RuneScape",
+      "executables": [
+        "osbuddy.exe",
+        "osbuddy64.exe",
+        "runescape.exe",
+        "swiftkit-rs.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Supermarket Simulator",
+      "executables": [
+        "supermarket simulator.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Guilty Gear: Strive",
+      "executables": [
+        "ggst-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+      "executables": [
+        "stalker2-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Grounded",
+      "executables": [
+        "maine-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Grim Dawn",
+      "executables": [
+        "grim dawn.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Barotrauma",
+      "executables": [
+        "barotrauma.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Detroit: Become Human",
+      "executables": [
+        "detroitbecomehuman.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Company of Heroes 2",
+      "executables": [
+        "reliccoh2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Age of Empires II: HD Edition",
+      "executables": [
+        "age2_x1.exe",
+        "aok hd.exe",
+        "empires2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DOOM Eternal",
+      "executables": [
+        "doometernalx64vk.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hades",
+      "executables": [
+        "hades.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Devil May Cry 5",
+      "executables": [
+        "devilmaycry5.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Crossout",
+      "executables": [
+        "crossout-d3d9.exe",
+        "crossout.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "theHunter: Call of the Wild",
+      "executables": [
+        "thehuntercotw_f.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Red Dead Online",
+      "executables": [
+        "playrdr2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "For Honor",
+      "executables": [
+        "forhonor.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "X4: Foundations",
+      "executables": [
+        "x4.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Warhammer: Vermintide 2",
+      "executables": [
+        "vermintide2.exe",
+        "vermintide2_dx12.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Grand Theft Auto IV",
+      "executables": [
+        "gtaiv.exe",
+        "playgtaiv.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Overcooked! 2",
+      "executables": [
+        "overcooked2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cuphead",
+      "executables": [
+        "cuphead.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Empire: Total War - Gold Edition",
+      "executables": [
+        "empire.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Ghost of Tsushima: Director's Cut",
+      "executables": [
+        "ghostoftsushima.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Clicker Heroes",
+      "executables": [
+        "clicker heroes.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Noita",
+      "executables": [
+        "noita.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Teardown",
+      "executables": [
+        "teardown.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Manor Lords",
+      "executables": [
+        "manorlords-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Portal 2",
+      "executables": [
+        "portal2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Pathfinder: Wrath of the Righteous",
+      "executables": [
+        "wrath.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "A Dance of Fire and Ice",
+      "executables": [
+        "a dance of fire and ice.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Yu-Gi-Oh! Duel Links",
+      "executables": [
+        "dlpc.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "SMITE",
+      "executables": [
+        "smite.exe",
+        "smiteeac.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Kerbal Space Program",
+      "executables": [
+        "ksp.exe",
+        "ksp_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Hades II",
+      "executables": [
+        "hades2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Insurgency: Sandstorm",
+      "executables": [
+        "insurgencyclient-win64-shipping.exe",
+        "insurgencyclient-win64-test.exe",
+        "insurgencyeac.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Predecessor",
+      "executables": [
+        "predecessorclient-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Total War: Shogun 2",
+      "executables": [
+        "modmanager.exe",
+        "shogun2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Escape the Backrooms",
+      "executables": [
+        "backrooms-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Football Manager 2022",
+      "executables": [
+        "fm.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Frostpunk",
+      "executables": [
+        "frostpunk.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "TCG Card Shop Simulator",
+      "executables": [
+        "card shop simulator.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "CarX Drift Racing Online",
+      "executables": [
+        "drift racing online.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Green Hell",
+      "executables": [
+        "gh.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DARK SOULS II: Scholar of the First Sin",
+      "executables": [
+        "darksoulsii.exe",
+        "x360ce_x64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Assassin's Creed Origins",
+      "executables": [
+        "acorigins.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Death Stranding: Director's Cut",
+      "executables": [
+        "ds.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Days Gone",
+      "executables": [
+        "daysgone.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "God of War Ragnarök",
+      "executables": [
+        "gowr.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "DOOM",
+      "executables": [
+        "doomx64.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Batman: Arkham Knight",
+      "executables": [
+        "batmanak.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Remnant II",
+      "executables": [
+        "remnant2-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "FTL: Faster Than Light",
+      "executables": [
+        "ftlgame.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Chivalry 2",
+      "executables": [
+        "chivalry2-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Sniper Elite 5",
+      "executables": [
+        "sniperelite5.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Cult of the Lamb",
+      "executables": [
+        "cult of the lamb.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Lobotomy Corporation",
+      "executables": [
+        "lobotomycorp.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Rec Room",
+      "executables": [
+        "recroom.exe",
+        "recroom_release.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Plague Inc: Evolved",
+      "executables": [
+        "plagueincevolved.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Assetto Corsa Competizione",
+      "executables": [
+        "ac2-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Don't Starve",
+      "executables": [
+        "dontstarve.exe",
+        "dontstarve_steam.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Total War: Warhammer II",
+      "executables": [
+        "warhammer2.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "The Elder Scrolls V: Skyrim",
+      "executables": [
+        "tesv.exe",
+        "tesv_original.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "BATTLETECH",
+      "executables": [
+        "battletech.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Tom Clancy's Ghost Recon: Wildlands",
+      "executables": [
+        "grw.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Gunfire Reborn",
+      "executables": [
+        "gunfire reborn.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Total War: Attila",
+      "executables": [
+        "attila.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Knight Online",
+      "executables": [
+        "knightonline.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Middle-earth: Shadow of War",
+      "executables": [
+        "shadowofwar.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Shakes and Fidget",
+      "executables": [
+        "shakes and fidget.exe",
+        "shakesandfidget.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Need for Speed: Heat",
+      "executables": [
+        "needforspeedheat.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Sid Meier's Civilization III: Complete",
+      "executables": [
+        "civ3conquests.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "God of War",
+      "executables": [
+        "gow.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Crusader Kings II",
+      "executables": [
+        "ck2game.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Medieval Dynasty",
+      "executables": [
+        "medieval_dynasty-win64-shipping.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Star Wars Jedi: Fallen Order",
+      "executables": [
+        "starwarsjedifallenorder.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Car Mechanic Simulator 2021",
+      "executables": [
+        "car mechanic simulator 2021.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Metal Gear Solid V: The Phantom Pain",
+      "executables": [
+        "mgsvmgo.exe",
+        "mgsvtpp.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "FIFA 22",
+      "executables": [
+        "fifa22.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "House Flipper",
+      "executables": [
+        "houseflipper.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    },
+    {
+      "name": "Kingdom Two Crowns",
+      "executables": [
+        "kingdomtwocrowns.exe"
+      ],
+      "source": "https://discord.com/api/v9/applications/detectable"
+    }
+  ]
+}

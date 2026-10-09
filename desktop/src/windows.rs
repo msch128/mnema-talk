@@ -2,6 +2,24 @@
 //! executable paths, inject into games, or equate monitor coverage with exclusivity.
 //! A matching basename is a user-selected candidate, not authenticated executable identity.
 use serde::Serialize;
+#[cfg(any(windows, test))]
+#[path = "game_catalog.rs"]
+mod game_catalog;
+
+#[cfg(any(windows, test))]
+fn approved_game(names: &[String], name: &str, title: &str) -> Option<String> {
+    // Java is a shared runtime: it is only a Minecraft candidate with its title.
+    if matches!(name.to_ascii_lowercase().as_str(), "javaw.exe" | "java.exe")
+        && !title.to_ascii_lowercase().contains("minecraft")
+    {
+        return None;
+    }
+    names
+        .iter()
+        .chain(game_catalog::executables())
+        .find(|n| n.eq_ignore_ascii_case(name))
+        .cloned()
+}
 
 #[derive(Debug, Serialize)]
 pub struct GameProbe {
@@ -70,7 +88,8 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
         OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
     };
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        GetForegroundWindow, GetWindowRect, GetWindowThreadProcessId, IsIconic, IsWindowVisible,
+        GetForegroundWindow, GetWindowRect, GetWindowTextW, GetWindowThreadProcessId, IsIconic,
+        IsWindowVisible,
     };
 
     struct Process(HANDLE);
@@ -89,7 +108,7 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
         covers_monitor: false,
         exclusive_fullscreen_verified: false,
     };
-    if !valid_game_names(names) {
+    if !names.is_empty() && !valid_game_names(names) {
         return result;
     }
     // SAFETY: calls inspect OS-owned windows/handles; all output buffers are sized
@@ -122,7 +141,14 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
         let Some(name) = path.rsplit(['\\', '/']).next() else {
             return result;
         };
-        let Some(approved) = names.iter().find(|n| n.eq_ignore_ascii_case(name)) else {
+        let title = if matches!(name.to_ascii_lowercase().as_str(), "javaw.exe" | "java.exe") {
+            let mut text = [0u16; 512];
+            let len = GetWindowTextW(window, text.as_mut_ptr(), text.len() as i32);
+            String::from_utf16_lossy(&text[..len.max(0) as usize])
+        } else {
+            String::new()
+        };
+        let Some(approved) = approved_game(names, name, &title) else {
             return result;
         };
         let mut rect = RECT {
@@ -166,7 +192,7 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
             return result;
         }
         // Only the user-approved basename leaves this function; no full paths/titles.
-        result.game = Some(approved.clone());
+        result.game = Some(approved);
         result.native_identity = Some((window as usize, pid));
     }
     result
@@ -175,6 +201,47 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn catalog_covers_requested_games_without_generic_java_false_positives() {
+        let catalog: serde_json::Value =
+            serde_json::from_str(include_str!("game-catalog.json")).unwrap();
+        assert_eq!(catalog["games"].as_array().unwrap().len(), 300);
+        for name in game_catalog::executables() {
+            assert!(valid_game_names(std::slice::from_ref(name)));
+        }
+        for name in [
+            "sweaw.exe",
+            "payday2_win32_release.exe",
+            "actofaggression.exe",
+            "WardogsClient-Win64-Shipping.exe",
+            "spring.exe",
+            "league of legends.exe",
+            "eso64.exe",
+            "blackdesert64.exe",
+            "cod.exe",
+        ] {
+            assert!(approved_game(&[], name, "").is_some(), "{name}");
+        }
+        for helper in [
+            "isaacanimationeditor.exe",
+            "roomeditor.exe",
+            "itempooleditor.exe",
+            "gmad.exe",
+            "acservermanager.exe",
+            "kseditor.exe",
+            "shootergameserver.exe",
+            "supporttool.exe",
+            "ddnet-server.exe",
+            "dayzuninstaller.exe",
+            "ss_setup.exe",
+        ] {
+            assert!(approved_game(&[], helper, "").is_none(), "{helper}");
+        }
+        assert!(approved_game(&[], "javaw.exe", "Minecraft 1.21").is_some());
+        assert!(approved_game(&[], "javaw.exe", "Java editor").is_none());
+        assert!(approved_game(&[], "chrome.exe", "Minecraft website").is_none());
+        assert!(approved_game(&["Custom.exe".into()], "CUSTOM.EXE", "").is_some());
+    }
     #[test]
     fn allowlist_only_accepts_bounded_executable_names() {
         assert!(valid_game_names(&[

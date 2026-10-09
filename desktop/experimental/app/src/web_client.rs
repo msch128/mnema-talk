@@ -112,6 +112,7 @@ async fn desktop_open_instance(window: WebviewWindow, address: String) -> Result
     let popup_app = app.clone();
     let instance = WebviewWindowBuilder::new(&app, "instance", WebviewUrl::External(origin))
         .title("Mnema Desktop DEV")
+        .menu(super::web_gaming::menu(&app).map_err(|_| "Gaming settings unavailable.")?)
         .initialization_script(format!(
             "if(window===window.top&&window.location.origin==={})Object.defineProperty(window,'__MNEMA_GAMING_BRIDGE__',{{value:{}}});",
             serde_json::to_string(&allowed_origin.ascii_serialization()).map_err(|_| "Gaming setup failed.")?,
@@ -191,10 +192,16 @@ pub(super) fn run() {
             super::web_gaming::desktop_gaming_control,
             super::web_gaming::desktop_gaming_settings
         ])
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == "gaming-settings" {
+                let _ = super::web_gaming::open_settings(app);
+            }
+        })
         .setup(|app| {
             super::web_gaming::setup(app.handle());
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Mnema Desktop DEV — Instance")
+                .menu(super::web_gaming::menu(app.handle())?)
                 .inner_size(520.0, 520.0)
                 .initialization_script(
                     "Object.defineProperty(window, '__MNEMA_WEB_DESKTOP__', { value: true });",

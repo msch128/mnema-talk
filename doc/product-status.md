@@ -25,7 +25,8 @@ These paths are **not end-to-end encrypted**. See [SECURITY.md](../SECURITY.md).
 
 ## Experimental Windows desktop path
 
-The published v0.7.1 Windows package is an unsigned Tauri DEV client. Its local
+The current v0.7.2 Windows package is an unsigned Tauri DEV client, including
+the Gaming integration described in the [usage guide](desktop-app.md#windows-gaming-dev). Its local
 instance selector checks HTTPS and `web_client_api: 1`; it then opens the same
 Vue app served by the chosen instance. That remote page uses same-origin
 browser cookies, REST and WebSockets. The v0.7.1 remote page receives no native
@@ -42,7 +43,9 @@ file, and run `Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
 identify package bytes; they are not publisher signatures. No desktop automatic
 updater or signing setup exists.
 
-The actual published v0.7.1 EXE passed two hosted Windows runtime checks:
+The earlier published v0.7.1 EXE passed two hosted Windows runtime checks
+listed below. These are evidence for that version and flow; they do not
+independently qualify every later build or the Gaming integration:
 
 - [Instance selection and language interaction](https://github.com/msch128/mnema-talk/actions/runs/37874166418): the real EXE reached a compatible HTTPS instance's canonical sign-in page.
 - [Authenticated chat and logout](https://github.com/msch128/mnema-talk/actions/runs/37888635202): generated test accounts on an isolated normal server, login 200, a persisted outgoing message, a live peer message over the desktop's hub connection without history fallback, logout 204 and return to sign-in. The owned database was PostgreSQL 17.11; media storage was an in-memory test fixture.
@@ -55,11 +58,11 @@ foundations, not alternate supported clients.
 
 ## Remaining acceptance, in order
 
-The Windows-first 0.7.1 delivery precedes these requirements. Versions remain
-managed by the normal release pipeline; this list is an acceptance sequence,
-not a claim that later releases are available.
+The Windows-first client and v0.7.2 Gaming integration have been released.
+Versions remain managed by the normal release pipeline. Further runtime
+qualification and the remaining requirements below are still outstanding.
 
-For 0.7.2: integrate the Windows gaming surfaces with the existing client:
+The v0.7.2 Gaming integration connects these surfaces to the existing client:
 left-hand sidepeek with participants, speaking, mute and screen-share state;
 Alt+M interactive overlay; controls for the actual own Talk; persisted,
 configurable mute, deafen, push-to-talk and overlay bindings. Both surfaces

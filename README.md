@@ -1,35 +1,36 @@
 # Mnema Talk
 
-A lightweight, private, single-server Discord alternative: text channels,
-instant-join voice hangouts and high-quality screen sharing. It is a
-single Go binary with the web app and a WebRTC SFU built in.
+A self-hosted home for your community: chat in text channels, drop into Talk
+with one click, and share your screen while you hang out. Mnema brings your
+conversations together in one place, on a server you control.
 
-## Product status
+Use it in your browser or with the **Windows Desktop DEV client**. Both use
+the same Vue interface and connect to your community's instance. Members join
+by invitation; the administrator manages accounts, channels and storage.
 
-A version number records development progress; it does not certify E2EE,
-capacity, gaming support or desktop feature parity.
+## Get started
 
-| Status | Meaning | Current product path |
-| --- | --- | --- |
-| Supported | The normal product path, with documented tests and limits. | Browser app and Linux Docker deployment for amd64/arm64. Chat and media are **not E2EE**. CI covers application regressions, image smoke tests and backup/restore drills; 100-person capacity is not qualified. |
-| Experimental | Available to run and test, without a production qualification. | Unsigned Windows **Desktop DEV** client: instance selection, login, persisted chat, live reception and logout are verified on the published v0.7.1 EXE. Media, E2EE, overlays and complete browser parity are not qualified. |
-| Planned | No qualified usable product path yet. | Mandatory multi-user/device E2EE, measured 100-person profiles and qualified macOS/Linux desktop clients. |
+**Join a community:** open its Mnema address in your browser and sign in.
+Ask the administrator for an invite if you need an account. Choose a text
+channel to chat, or click a Talk channel to join the conversation.
 
-For Windows, download the complete `Mnema-Desktop-DEV-…-windows-x64.zip`
-from [GitHub Releases](https://github.com/msch128/mnema-talk/releases), extract it,
-and start `Mnema Desktop DEV.exe`. Microsoft Edge WebView2 Runtime is required.
-The package is unsigned and has no automatic updater. Server distribution uses
-Linux Docker images; a server executable is not the desktop client.
+**Use the Windows client:** download the complete
+`Mnema-Desktop-DEV-…-windows-x64.zip` from
+[the latest release](https://github.com/msch128/mnema-talk/releases/latest),
+extract it, and run `Mnema Desktop DEV.exe`. Enter your community's HTTPS
+address and sign in. Microsoft Edge WebView2 Runtime is required. Desktop
+packages are currently unsigned DEV builds; updates are installed manually.
 
-Windows Gaming DEV integrates a left-hand participant sidepeek and an **Alt+M**
-overlay with Talk controls and configurable shortcuts. Both require your own
-connected Talk and a detected foreground game. The selected instance must serve
-the updated shared Vue client. Read the [gaming instructions and limits](doc/desktop-app.md#windows-gaming-dev)
-before testing; real games and exclusive fullscreen remain acceptance work.
+**Stay in Talk while gaming:** the Windows client offers a left-hand sidepeek
+showing participants, who's speaking, mute and screen-share status. Press
+**Alt+M** for the interactive overlay and Talk controls. Both appear while
+you have your own connected Talk and a detected foreground game. Shortcuts
+are configurable; see the [Gaming guide](doc/desktop-app.md#windows-gaming-dev)
+for setup and game compatibility.
 
-[Product status and acceptance evidence](doc/product-status.md) defines the
-current boundaries. [SECURITY.md](SECURITY.md) describes the server's actual
-security model.
+**Host your own community:** the [Docker quickstart](#quickstart-docker-compose)
+gets you started. Linux images are published for amd64 and arm64, suitable
+for a server or NAS.
 
 ## Features
 
@@ -84,10 +85,16 @@ security model.
   env vars. The security model is summarised in [SECURITY.md](SECURITY.md).
 - UI in German and English (chosen per account).
 
-## Architecture
+## How it works
+
+Mnema runs on one community server. Chat updates arrive over WebSockets;
+voice, camera and screen sharing use WebRTC. The server forwards media to
+subscribed participants without transcoding it. The Go application contains
+the web interface, API and media relay in one binary; PostgreSQL stores
+community data and S3-compatible storage holds uploads and avatars.
 
 ```
-            Browser (Vue 3 SPA)
+            Browser / Windows client (Vue 3 SPA)
      HTTPS / WSS │        │ UDP (DTLS-SRTP)
                  ▼        ▼
    ┌───────────────────────────────────────┐
@@ -120,8 +127,8 @@ More documentation in [`doc/`](doc/):
   proxy, TURN, backups, monitoring, troubleshooting
 - [doc/upgrade.md](doc/upgrade.md): upgrade notes per version and the update
   procedure
-- [doc/desktop-app.md](doc/desktop-app.md): plan for a desktop app with global
-  push-to-talk
+- [doc/desktop-app.md](doc/desktop-app.md): Windows client, gaming setup and
+  desktop roadmap
 
 ## Quickstart (Docker Compose)
 
@@ -136,6 +143,25 @@ Open `PUBLIC_URL`, log in as the admin, and create invite codes for your users.
 `ADMIN_INITIAL_PASSWORD` is required for the first production start; it is only
 used to create the admin. Change it after the first login (and then remove it
 from `.env`). In development an empty value generates a password and logs it once.
+
+## Status and security
+
+The browser app and Linux Docker deployment are the normal maintained product
+path. The **v0.7.2 Windows Desktop DEV** release adds Gaming to the shared
+client: sidepeek, Alt+M, Talk controls and persisted shortcut settings.
+Windows gaming uses native topmost windows; game and fullscreen compatibility
+still need testing on the target machine. macOS and Linux desktop clients
+remain roadmap targets.
+
+Traffic is protected in transit by HTTPS and WebRTC's DTLS-SRTP. **Chat,
+attachments and media are not currently end-to-end encrypted**; mandatory
+E2EE remains a development requirement. Capacity testing for a 100-person
+profile is also outstanding. A release number describes development progress,
+not completion of those milestones.
+
+See [product status and acceptance evidence](doc/product-status.md) for test
+scope and [SECURITY.md](SECURITY.md) for the security model and vulnerability
+reporting.
 
 ## Development
 

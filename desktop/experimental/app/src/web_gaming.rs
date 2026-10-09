@@ -44,6 +44,16 @@ pub struct Settings {
     deafen: Chord,
     ptt: Chord,
     games: Vec<String>,
+    #[serde(default = "enabled_default")]
+    enabled: bool,
+    #[serde(default = "opacity_default")]
+    sidepeek_opacity: u8,
+}
+fn enabled_default() -> bool {
+    true
+}
+fn opacity_default() -> u8 {
+    55
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -54,6 +64,8 @@ impl Default for Settings {
             shift: false,
         };
         Self {
+            enabled: true,
+            sidepeek_opacity: opacity_default(),
             overlay: chord(0x4d, true),
             mute: chord(0x4e, true),
             deafen: chord(0x44, true),
@@ -70,7 +82,10 @@ impl Default for Settings {
 }
 impl Settings {
     fn validate(&self) -> Result<(), String> {
-        if !games::valid_game_names(&self.games) {
+        if self.sidepeek_opacity > 100 {
+            return Err("Opacity must be between 0 and 100.".into());
+        }
+        if !self.games.is_empty() && !games::valid_game_names(&self.games) {
             return Err("Enter game executable basenames only.".into());
         }
         let keys = [&self.overlay, &self.mute, &self.deafen, &self.ptt];
@@ -225,11 +240,19 @@ pub fn desktop_gaming_snapshot(
     window: WebviewWindow,
     state: tauri::State<'_, Mutex<Gaming>>,
 ) -> Result<Snapshot, String> {
-    if !matches!(window.label(), "sidepeek" | "gaming-overlay") || !local(&window) {
+    if !matches!(
+        window.label(),
+        "sidepeek" | "gaming-overlay" | "gaming-settings"
+    ) || !local(&window)
+    {
         return Err("Wrong gaming surface.".into());
     }
     let g = state.lock().map_err(|_| "Gaming unavailable.")?;
-    let active = g.active && g.updated.elapsed() < Duration::from_secs(2) && g.voice.connected;
+    let active = window.label() != "gaming-settings"
+        && g.settings.enabled
+        && g.active
+        && g.updated.elapsed() < Duration::from_secs(2)
+        && g.voice.connected;
     Ok(Snapshot {
         voice: if active {
             g.voice.clone()
@@ -312,6 +335,9 @@ pub fn desktop_gaming_control(
     state: tauri::State<'_, Mutex<Gaming>>,
     action: String,
 ) -> Result<(), String> {
+    if window.label() == "gaming-settings" && local(&window) && action == "close" {
+        return window.close().map_err(|_| "Cannot close settings.".into());
+    }
     if window.label() != "gaming-overlay" || !local(&window) {
         return Err("Wrong gaming surface.".into());
     }
@@ -340,7 +366,7 @@ pub fn desktop_gaming_settings(
     state: tauri::State<'_, Mutex<Gaming>>,
     settings: Settings,
 ) -> Result<(), String> {
-    if window.label() != "gaming-overlay" || !local(&window) {
+    if !matches!(window.label(), "gaming-overlay" | "gaming-settings") || !local(&window) {
         return Err("Wrong gaming surface.".into());
     }
     settings.validate()?;
@@ -357,6 +383,10 @@ pub fn desktop_gaming_settings(
     g.ptt_down = false;
     g.ptt_armed = false;
     g.previous = [true; 4];
+    if !settings.enabled {
+        g.active = false;
+        g.overlay = false;
+    }
     g.settings = settings;
     drop(g);
     command.dispatch(window.app_handle());
@@ -382,11 +412,21 @@ pub fn clear(app: &tauri::AppHandle) {
             ..Gaming::default()
         };
     }
-    for label in ["sidepeek", "gaming-overlay"] {
+    for label in ["sidepeek", "gaming-overlay", "gaming-settings"] {
         if let Some(w) = app.get_webview_window(label) {
             let _ = w.close();
         }
     }
+}
+pub fn menu(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    let item =
+        tauri::menu::MenuItem::with_id(app, "gaming-settings", "Gaming", true, None::<&str>)?;
+    tauri::menu::Menu::with_items(app, &[&item])
+}
+pub fn open_settings(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let window = surface(app, "gaming-settings", true)?;
+    window.show()?;
+    window.set_focus()
 }
 fn surface(
     app: &tauri::AppHandle,
@@ -410,6 +450,7 @@ fn surface(
             if interactive { 650.0 } else { 430.0 },
         )
         .decorations(false)
+        .shadow(false)
         .transparent(true)
         .always_on_top(true)
         .skip_taskbar(true)
@@ -420,6 +461,19 @@ fn surface(
         .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
         .on_permission_request(|_, _| tauri::webview::PermissionResponse::Deny)
         .build()?;
+    #[cfg(windows)]
+    if let Ok(hwnd) = w.hwnd() {
+        let color: u32 = 0xfffffffe; // DWMWA_COLOR_NONE, Windows 11 border only.
+        // SAFETY: a live owned HWND and a sized color buffer; unsupported OS errors are ignored.
+        unsafe {
+            windows_sys::Win32::Graphics::Dwm::DwmSetWindowAttribute(
+                hwnd.0 as _,
+                windows_sys::Win32::Graphics::Dwm::DWMWA_BORDER_COLOR as u32,
+                (&color as *const u32).cast(),
+                std::mem::size_of_val(&color) as u32,
+            );
+        }
+    }
     let owner = app.clone();
     w.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::CloseRequested { .. })
@@ -576,7 +630,8 @@ impl Gaming {
             self.ptt_armed = false;
         }
         self.last_tick = now;
-        let active = game
+        let active = self.settings.enabled
+            && game
             && self.origin.is_some()
             && self.voice.connected
             && self.updated.elapsed() < Duration::from_secs(2);
@@ -619,7 +674,8 @@ fn tick(app: &tauri::AppHandle) {
         return;
     };
     let now = Instant::now();
-    let fresh = g.voice.connected && g.updated.elapsed() < Duration::from_secs(2);
+    let fresh =
+        g.settings.enabled && g.voice.connected && g.updated.elapsed() < Duration::from_secs(2);
     let (game, keys, position) = if fresh {
         native_sample(&mut g, app)
     } else {
@@ -686,8 +742,49 @@ pub fn setup(app: &tauri::AppHandle) {
 mod tests {
     use super::*;
     #[test]
+    fn old_settings_keep_bindings_and_new_defaults() {
+        let mut value = serde_json::to_value(Settings::default()).unwrap();
+        value.as_object_mut().unwrap().remove("enabled");
+        value.as_object_mut().unwrap().remove("sidepeek_opacity");
+        value["overlay"]["key"] = 75.into();
+        let restored: Settings = serde_json::from_value(value).unwrap();
+        assert!(restored.enabled);
+        assert_eq!(restored.sidepeek_opacity, 55);
+        assert_eq!(restored.overlay.key, 75);
+        assert!(restored.validate().is_ok());
+        let mut invalid = restored;
+        invalid.sidepeek_opacity = 101;
+        assert!(invalid.validate().is_err());
+    }
+    #[test]
+    fn global_disable_hides_surfaces_and_releases_ptt_without_reopening_held_key() {
+        let mut g = Gaming {
+            origin: Some(url::Url::parse("https://example.invalid").unwrap().origin()),
+            ..Gaming::default()
+        };
+        g.voice.connected = true;
+        g.voice.ptt_mode = true;
+        let now = Instant::now();
+        g.advance(now, true, [false; 4]);
+        g.advance(now, true, [false, false, false, true]);
+        assert!(g.ptt_down);
+        g.overlay = true;
+        g.settings.enabled = false;
+        let commands = g.advance(now, true, [true; 4]);
+        assert_eq!(commands.len(), 1);
+        assert_eq!(commands[0].action, "ptt-release");
+        assert!(!g.active);
+        assert!(!g.overlay);
+        g.settings.enabled = true;
+        assert!(g.advance(now, true, [true; 4]).is_empty());
+        assert!(!g.ptt_down);
+        assert!(!g.overlay);
+    }
+    #[test]
     fn reject_conflicting_reserved_and_path_bindings() {
         let mut s = Settings::default();
+        assert!(s.validate().is_ok());
+        s.games.clear();
         assert!(s.validate().is_ok());
         s.mute = s.overlay.clone();
         assert!(s.validate().is_err());

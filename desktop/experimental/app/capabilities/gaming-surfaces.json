@@ -2,7 +2,8 @@
   "identifier": "gaming-surfaces",
   "windows": [
     "sidepeek",
-    "gaming-overlay"
+    "gaming-overlay",
+    "gaming-settings"
   ],
   "permissions": [
     "allow-desktop-gaming-snapshot"
