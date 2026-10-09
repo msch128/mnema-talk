@@ -1,7 +1,8 @@
 {
   "identifier": "gaming-controls",
   "windows": [
-    "gaming-overlay"
+    "gaming-overlay",
+    "gaming-settings"
   ],
   "permissions": [
     "allow-desktop-gaming-control",

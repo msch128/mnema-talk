@@ -9,13 +9,30 @@ let snapshot: GamingSnapshot
 const chord = (key: number, alt = false) => ({ key, alt, control: false, shift: false })
 beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks()
-  snapshot = { active: true, overlay: false, settings: { overlay: chord(77, true), mute: chord(78, true), deafen: chord(68, true), ptt: chord(32), games: ['Wow.exe'] }, voice: { clock: 0, scope: null, connected: true, account: null, channel: null, muted: false, deafened: false, sharing: false, ptt_mode: false, members: Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: `Player ${i}`, speaking: i === 0, muted: i === 1, sharing: i === 2 })) } }
+  snapshot = { active: true, overlay: false, settings: { enabled: true, sidepeek_opacity: 55, overlay: chord(77, true), mute: chord(78, true), deafen: chord(68, true), ptt: chord(32), games: ['Wow.exe'] }, voice: { clock: 0, scope: null, connected: true, account: null, channel: null, muted: false, deafened: false, sharing: false, ptt_mode: false, members: Array.from({ length: 14 }, (_, i) => ({ id: String(i), name: `Player ${i}`, speaking: i === 0, muted: i === 1, sharing: i === 2 })) } }
   ipc.invoke.mockImplementation((command: string) => Promise.resolve(command === 'desktop_gaming_snapshot' ? structuredClone(snapshot) : undefined))
   Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'sidepeek')
 })
 afterEach(() => { wrapper?.unmount(); wrapper = undefined; Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__'); vi.useRealTimers() })
 async function open(interactive = false) { Reflect.set(window, '__MNEMA_GAMING_SURFACE__', interactive ? 'gaming-overlay' : 'sidepeek'); wrapper = mount(DesktopGamingOverlay); await flushPromises(); return wrapper }
 describe('native gaming surfaces', () => {
+  it('uses persisted opacity and saves the global switch with the background setting', async () => {
+    const passive = await open(); expect(passive.get('section').attributes('style')).toContain('--sidepeek-opacity: 0.55'); passive.unmount(); wrapper = undefined
+    const w = await open(true); await w.findAll('button')[0]!.trigger('click')
+    await w.get('input[type="checkbox"]').setValue(false); await w.get('input[type="range"]').setValue('30'); await w.get('textarea').setValue('')
+    await w.get('form').trigger('submit'); await flushPromises()
+    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, enabled: false, sidepeek_opacity: 30, games: [] } })
+    expect(snapshot.settings.enabled).toBe(true)
+  })
+  it('allows reenabling without Talk or a game in the local configuration surface', async () => {
+    snapshot.active = false; snapshot.settings.enabled = false; snapshot.voice.members = []
+    Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-settings'); wrapper = mount(DesktopGamingOverlay); await flushPromises()
+    expect(wrapper.find('form').exists()).toBe(true); expect(wrapper.find('ul').exists()).toBe(false); expect(wrapper.find('[aria-pressed]').exists()).toBe(false)
+    await wrapper.get('input[type="checkbox"]').setValue(true); await wrapper.get('form').trigger('submit'); await flushPromises()
+    expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_settings', { settings: { ...snapshot.settings, enabled: true } })
+    expect(wrapper.find('form').exists()).toBe(true)
+    await wrapper.findAll('button')[0]!.trigger('click'); expect(ipc.invoke).toHaveBeenCalledWith('desktop_gaming_control', { action: 'close' })
+  })
   it('shows a bounded passive roster with speaking/mute/share and hides when inactive', async () => {
     const w = await open(); expect(w.findAll('li')).toHaveLength(12); expect(w.text()).toContain('14'); expect(w.text()).toContain('Alt+M')
     expect(w.findAll('.speaking')).toHaveLength(1); expect(w.findAll('.speaker-dot.live')).toHaveLength(1); expect(w.findAll('button')).toHaveLength(0)
@@ -32,7 +49,7 @@ describe('native gaming surfaces', () => {
   })
   it('edits an independent settings draft, captures chords and persists game basenames', async () => {
     const w = await open(true); await w.findAll('button')[0]!.trigger('click')
-    const inputs = w.findAll('input'); expect(inputs).toHaveLength(4)
+    const inputs = w.findAll<HTMLInputElement>('input[readonly]'); expect(inputs).toHaveLength(4)
     await inputs[0]!.trigger('keydown', { code: 'KeyK', ctrlKey: true }); expect(inputs[0]!.element.value).toBe('Ctrl+K')
     await inputs[1]!.trigger('keydown', { code: 'F4', altKey: true }); expect(inputs[1]!.element.value).toBe('Alt+N')
     await w.get('textarea').setValue(' Other.exe\n\nSecond.exe '); await w.get('form').trigger('submit'); await flushPromises()

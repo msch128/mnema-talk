@@ -1008,7 +1008,10 @@
     "mute": "Mute",
     "deafen": "Deafen",
     "ptt": "Push to talk",
-    "games": "Game executable names (one per line)",
-    "error": "Unable to apply. Check the connection and choose different supported shortcuts."
+    "games": "Additional game executables (one per line)",
+    "error": "Unable to apply. Check the connection and choose different supported shortcuts.",
+    "enabled": "Enable Gaming overlay and sidepeek",
+    "opacity": "Sidepeek background opacity",
+    "gamesHint": "300 games are included. Add executable names for other games or installation variants."
   }
 }

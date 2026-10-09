@@ -6,12 +6,12 @@ import { useVoiceStore } from '../stores/voice'
 import { useWebRTC, setGamingPttLease } from '../composables/useWebRTC'
 
 export interface GamingChord { key: number; alt: boolean; control: boolean; shift: boolean }
-export interface GamingSettings { overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }
+export interface GamingSettings { enabled: boolean; sidepeek_opacity: number; overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }
 export interface GamingMember { id: string; name: string; speaking: boolean; muted: boolean; sharing: boolean }
 export interface GamingVoice { clock: number; scope: string | null; connected: boolean; account: string | null; channel: string | null; muted: boolean; deafened: boolean; sharing: boolean; ptt_mode: boolean; members: GamingMember[] }
 export interface GamingSnapshot { active: boolean; overlay: boolean; settings: GamingSettings; voice: GamingVoice }
 export function gamingSurface(): boolean {
-  return ['sidepeek', 'gaming-overlay'].includes(String(Reflect.get(window, '__MNEMA_GAMING_SURFACE__')))
+  return ['sidepeek', 'gaming-overlay', 'gaming-settings'].includes(String(Reflect.get(window, '__MNEMA_GAMING_SURFACE__')))
 }
 export function startDesktopGaming(): () => void {
   const token: unknown = Reflect.get(window, '__MNEMA_GAMING_BRIDGE__')

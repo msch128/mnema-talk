@@ -1,9 +1,11 @@
 # Desktop client roadmap
 
-Status: **v0.7.1 Windows Desktop DEV is released and experimentally testable**.
-The actual published EXE passed instance selection, login, persisted chat, live
-peer reception and logout. It is unsigned and has no automatic updater.
-Media, E2EE, gaming and full browser parity remain unqualified.
+Status: **v0.7.2 Windows Desktop DEV is released and experimentally testable**,
+including the Gaming integration described below. The package is unsigned and
+has no automatic updater. Earlier published-client checks cover instance
+selection, login, persisted chat, live peer reception and logout. Physical media
+capture, real-game/fullscreen compatibility, E2EE and complete browser parity
+remain separate acceptance work.
 
 The current client is [desktop/experimental/app](../desktop/experimental/README.md)
 in `web-client` mode. It opens the selected HTTPS instance's shared Vue app;
@@ -24,9 +26,14 @@ an older web client without the gaming bridge cannot activate these surfaces.
   controls and push-to-talk mode. Starting a share returns to the existing
   capture chooser in the main client; stopping a share uses the active Talk.
 - Open the overlay settings to rebind overlay, mute, deafen and push-to-talk.
-  Defaults are Alt+M, Alt+N, Alt+D and Space. Bindings and game executable
-  basenames persist locally. The default candidates include World of Warcraft,
-  Genshin Impact and Wardogs; basenames can be adjusted for the installed game.
+  Defaults are Alt+M, Alt+N, Alt+D and Space. Bindings persist locally.
+- In the next client update, settings also include a global **Gaming overlay and
+  sidepeek** switch and a **background opacity** slider (default 55%). Use the
+  native **Gaming** menu in the main client or instance selector to open these
+  settings even without Talk or a game, including when the overlay is disabled.
+- The next client update includes a [300-game executable reference](game-detection.md).
+  Additional executable basenames can be configured for other games or installation
+  variants. Existing custom names and shortcuts are preserved.
 - Leaving Talk, losing the connection or moving to another application hides
   both surfaces. No own Talk connection means no sidepeek or voice overlay.
 - Gaming PTT grants short microphone leases on the audio rendering clock.

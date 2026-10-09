@@ -1008,7 +1008,10 @@
     "mute": "Stummschalten",
     "deafen": "Ton ausschalten",
     "ptt": "Push-to-talk",
-    "games": "Spiel-EXE-Namen (einer pro Zeile)",
-    "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen."
+    "games": "Zusätzliche Spiele-EXEs (eine pro Zeile)",
+    "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen.",
+    "enabled": "Gaming-Overlay und Sidepeek aktivieren",
+    "opacity": "Deckkraft des Sidepeek-Hintergrunds",
+    "gamesHint": "300 Spiele sind enthalten. Ergänze EXE-Namen für weitere Spiele oder Installationsvarianten."
   }
 }
