@@ -1,0 +1,28 @@
+doc/desktop-app.md
+  s_0a885d5f0c193a::t_8ca7b11c39a489 3-13,103-108
+README.md
+  s_0a885d5f0c193a::t_8ca7b11c39a489 7-27
+desktop/README.md
+  s_0a885d5f0c193a::t_8ca7b11c39a489 3-7
+doc/product-status.md
+  s_0a885d5f0c193a::t_8ca7b11c39a489 1-75
+desktop/experimental/README.md
+  s_0a885d5f0c193a::t_8ca7b11c39a489 17-24
+  s_0a885d5f0c193a::t_19ac6b0f162072 109-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ad5052daca9632a657af26d815079fe0169d54c",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
