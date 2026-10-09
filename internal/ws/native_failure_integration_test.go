@@ -228,6 +228,14 @@ func TestNativeWSSRenewDoesNotExtendOriginalHardDeadlines(t *testing.T) {
 	if client.nativeLive() {
 		t.Fatal("atomic terminal cutoff failed")
 	}
+	// A queued application frame after the seal must not consume typing state.
+	client.handle("typing", []byte(`{"channel_id":"`+uuid.NewString()+`"}`))
+	client.mu.Lock()
+	typingEntries := len(client.typing)
+	client.mu.Unlock()
+	if typingEntries != 0 {
+		t.Fatal("sealed client processed a queued typing frame")
+	}
 }
 
 func TestNativeWSSHandshakeIPBudgetNoStore(t *testing.T) {
