@@ -21,6 +21,7 @@
 *.db-shm
 *.db-wal
 *.sqlite
+*.sqlite-journal
 *.sqlite-shm
 *.sqlite-wal
 

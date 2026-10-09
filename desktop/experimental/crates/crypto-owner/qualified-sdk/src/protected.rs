@@ -810,7 +810,7 @@ fn source_fixture_exit(point: &str) {
         std::process::exit(73);
     }
 }
-fn encode(v: &Value) -> Result<Vec<u8>> {
+pub(super) fn encode(v: &Value) -> Result<Vec<u8>> {
     let mut bytes = Vec::new();
     coset::cbor::ser::into_writer(v, &mut bytes).map_err(|_| Error::Invalid)?;
     if bytes.len() > 32768 {
@@ -1016,12 +1016,30 @@ impl Sdk {
             &payload,
         )?;
         let inner = encode(&self.envelope(CHAT_EVENT_DOMAIN, event, &account, &device, payload))?;
-        let result = self.core.send_inner(
+        let archive_scope = self.native_protected_event_scope(now)?;
+        let sender = self
+            .core
+            .group
+            .as_ref()
+            .ok_or(Error::Quarantined)?
+            .own_leaf_index()
+            .u32();
+        let receipt = Receipt {
+            plaintext: inner.clone(),
+            account,
+            device,
+            sender,
+        };
+        let result = self.core.send_inner_checked(
             event,
             &inner,
             now,
             |_| Ok(()),
             Some((&self.binding.channel, epoch, generation)),
+            "application",
+            |wire, tx| {
+                crate::chat_archive::record_if_typed_chat(tx, archive_scope, event, wire, &receipt)
+            },
         );
         let result = self.core.quarantine(result);
         if result.is_err() {

@@ -3,6 +3,7 @@ use coset::{CoseSign1Builder, HeaderBuilder, iana};
 use ed25519_dalek::{Signer, SigningKey};
 use openmls::prelude::tls_codec::Serialize as _;
 use openmls_rust_crypto::OpenMlsRustCrypto;
+use sha2::Digest;
 use std::path::PathBuf;
 const GROUP: &[u8] = b"qualification-group";
 const NOW: u64 = 1000;
@@ -1920,6 +1921,7 @@ fn typed_chat_events_actual_private_mls_dispatch_all_actions_without_text_comman
         // verifies all operations including delete-before-reply, but never
         // applies any event to a display/history or claims mutation permission.
     }
+    assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 6);
     let event = "99999999-9999-4999-8999-999999999999";
     let wire = peer.peer_message(&encode(&peer_envelope("MnemaTalk ProtectedChat", event)));
     let ProtectedReceived::Chat(received) = sdk.receive_protected(event, &wire, NOW).unwrap()
@@ -1927,11 +1929,17 @@ fn typed_chat_events_actual_private_mls_dispatch_all_actions_without_text_comman
         panic!("wrong legacy domain")
     };
     assert_eq!(received.body, "authenticated peer chat");
+    assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 6);
 }
 
 #[test]
 fn typed_chat_actual_durable_outbox_and_suppressed_storage_never_return_ciphertext() {
-    for suppressed in [None, Some("core_outbox"), Some("sdk_events")] {
+    for suppressed in [
+        None,
+        Some("core_outbox"),
+        Some("sdk_events"),
+        Some("core_chat_archive"),
+    ] {
         let dir = run_dir();
         let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("typed-send.sqlite"));
         let claim = ChatEventClaim::claim(ChatOperation::Create {
@@ -1949,6 +1957,7 @@ fn typed_chat_actual_durable_outbox_and_suppressed_storage_never_return_cipherte
             );
             assert_eq!(secret(&sdk.core.connection), before);
             assert_eq!(count(&sdk.core.connection, "core_outbox"), 0);
+            assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 0);
             assert!(!sdk.matches_native_actor("profile", "main", "session"));
         } else {
             let wire = sdk.send_chat_event(EVENT, &claim, NOW).unwrap();
@@ -1970,6 +1979,7 @@ fn typed_chat_actual_durable_outbox_and_suppressed_storage_never_return_cipherte
             assert_eq!(fields[8], Value::Text(EVENT.into()));
             assert_eq!(fields[9], claim.payload());
             assert_ne!(secret(&sdk.core.connection), before);
+            assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 1);
         }
     }
 }
@@ -2008,9 +2018,152 @@ fn typed_chat_authenticated_bad_author_version_event_or_payload_retires_without_
             _ => fields[9] = Value::Text("/delete ordinary text cannot be typed command".into()),
         }
         let wire = peer.peer_message(&encode(&envelope));
+        let before = secret(&sdk.core.connection);
+        let revision = sdk.core.revision;
         assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+        assert_eq!(secret(&sdk.core.connection), before);
+        assert_eq!(sdk.core.revision, revision);
+        assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 0);
         assert!(!sdk.matches_native_actor("profile", "main", "session"));
         assert!(sdk.receive_chat(EVENT, &wire, NOW).is_err());
+    }
+}
+
+#[test]
+fn typed_chat_receive_archive_failure_rolls_back_and_retires_actual_receiver() {
+    for trigger in [
+        "SELECT RAISE(IGNORE)",
+        "SELECT RAISE(ABORT,'fixture failure')",
+    ] {
+        let dir = run_dir();
+        let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("archive-failure.sqlite"));
+        sdk.core.connection.execute_batch(&format!(
+            "CREATE TRIGGER suppress_archive BEFORE INSERT ON core_chat_archive BEGIN {trigger}; END;"
+        )).unwrap();
+        let claim = projection_claim();
+        let mut envelope = peer_envelope(CHAT_EVENT_DOMAIN, EVENT);
+        let Value::Array(fields) = &mut envelope else {
+            panic!("fixture envelope")
+        };
+        fields[9] = claim.payload();
+        let wire = peer.peer_message(&encode(&envelope));
+        let before = secret(&sdk.core.connection);
+        let revision = sdk.core.revision;
+        assert!(matches!(
+            sdk.receive_protected(EVENT, &wire, NOW),
+            Err(Error::Database)
+        ));
+        assert_eq!(secret(&sdk.core.connection), before);
+        assert_eq!(sdk.core.revision, revision);
+        assert_eq!(count(&sdk.core.connection, "core_chat_archive"), 0);
+        assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        assert!(sdk.receive_protected(EVENT, &wire, NOW).is_err());
+    }
+}
+
+#[test]
+fn typed_chat_archive_survives_sqlcipher_reopen_without_restoring_send_authority() {
+    let dir = run_dir();
+    let path = dir.path().join("archive-reopen.sqlite");
+    let (mut sdk, mut peer) = sdk_fixture(&path);
+    let peer_key = peer.alice_signer.public().to_vec();
+    let claim = projection_claim();
+    let mut envelope = peer_envelope(CHAT_EVENT_DOMAIN, EVENT);
+    let Value::Array(fields) = &mut envelope else {
+        panic!("fixture envelope")
+    };
+    fields[9] = claim.payload();
+    let plaintext = encode(&envelope);
+    let wire = peer.peer_message(&plaintext);
+    let ProtectedReceived::ChatEvent(received) = sdk.receive_protected(EVENT, &wire, NOW).unwrap()
+    else {
+        panic!("wrong domain")
+    };
+    let expected_sender = peer.alice_group.own_leaf_index().u32();
+    let expected_epoch = received.scope().epoch().to_be_bytes();
+    let expected_generation = received.scope().root_generation().to_be_bytes();
+    let own_event = "99999999-9999-4999-8999-999999999999";
+    let own_claim = ChatEventClaim::claim(ChatOperation::Create {
+        message_id: own_event.into(),
+        parent_id: None,
+        body: "own persistent encrypted history".into(),
+    })
+    .unwrap();
+    let own_wire = sdk.send_chat_event(own_event, &own_claim, NOW).unwrap();
+    drop(sdk);
+    drop(peer);
+    let mut restored = Core::restore_inspection_only(&path, &FixtureKeys, pin(&peer_key)).unwrap();
+    let row: (String, String, String, u32, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) = restored.connection.query_row(
+        "SELECT channel,account,device,sender,epoch,generation,wire_hash,plaintext FROM core_chat_archive WHERE event=?",
+        [EVENT], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))
+    ).unwrap();
+    assert_eq!(
+        row,
+        (
+            CHANNEL.into(),
+            "alice".into(),
+            "desktop".into(),
+            expected_sender,
+            expected_epoch.into(),
+            expected_generation.into(),
+            sha2::Sha256::digest(&wire).to_vec(),
+            plaintext
+        )
+    );
+    assert_eq!(count(&restored.connection, "core_chat_archive"), 2);
+    assert_eq!(restored.pending(own_event).unwrap(), Some(own_wire));
+    assert_eq!(restored.phase(), Phase::Restored);
+    assert_eq!(restored.send("denied", TEXT, NOW), Err(Error::Restored));
+    assert_eq!(
+        restored.receive_application(&wire, NOW),
+        Err(Error::Restored)
+    );
+    assert!(
+        !std::fs::read(&path)
+            .unwrap()
+            .windows(b"native exact reserved fixture".len())
+            .any(|part| part == b"native exact reserved fixture")
+    );
+}
+
+#[test]
+fn typed_chat_archive_budgets_reject_send_and_receive_without_consuming_state() {
+    for (rows, size) in [(512, 32768), (32768, 1)] {
+        for own_send in [false, true] {
+            let dir = run_dir();
+            let (mut sdk, mut peer) = sdk_fixture(&dir.path().join("archive-budget.sqlite"));
+            // Synthetic rows exercise real encrypted storage bounds only;
+            // they are never treated as authenticated historical facts.
+            sdk.core.connection.execute_batch(&format!(
+                "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<{rows})
+                 INSERT INTO core_chat_archive SELECT printf('%08x-0000-4000-8000-000000000000',i),
+                 '11111111-1111-4111-8111-111111111111',zeroblob(8),zeroblob(8),'fixture','fixture',0,
+                 zeroblob(32),zeroblob({size}) FROM n;"
+            )).unwrap();
+            let claim = projection_claim();
+            let mut envelope = peer_envelope(CHAT_EVENT_DOMAIN, EVENT);
+            let Value::Array(fields) = &mut envelope else {
+                panic!("fixture envelope")
+            };
+            fields[9] = claim.payload();
+            let wire = peer.peer_message(&encode(&envelope));
+            let before = secret(&sdk.core.connection);
+            let revision = sdk.core.revision;
+            if own_send {
+                assert_eq!(sdk.send_chat_event(EVENT, &claim, NOW), Err(Error::Limit));
+            } else {
+                assert!(matches!(
+                    sdk.receive_protected(EVENT, &wire, NOW),
+                    Err(Error::Limit)
+                ));
+            }
+            assert_eq!(secret(&sdk.core.connection), before);
+            assert_eq!(sdk.core.revision, revision);
+            assert_eq!(count(&sdk.core.connection, "core_chat_archive"), rows);
+            assert_eq!(count(&sdk.core.connection, "core_outbox"), 0);
+            assert_eq!(count(&sdk.core.connection, "sdk_events"), 0);
+            assert!(!sdk.matches_native_actor("profile", "main", "session"));
+        }
     }
 }
 

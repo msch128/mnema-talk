@@ -13,7 +13,7 @@ trap cleanup EXIT
 docker run --rm --name "$container_name" \
   --label mnema.fixture=glib-regression \
   --mount "type=bind,source=$desktop_root,target=/desktop,readonly" \
-  --mount "type=bind,source=$build_dir,target=/build" \
+  --mount "type=volume,target=/build" \
   --env CARGO_TARGET_DIR=/build/target \
   rust:1.99.0-bookworm@sha256:114c7a4425406451c2866b6aafe69fe29b1b298832db1277d411ac73c82d04d6 \
   bash /desktop/scripts/test-glib-in-container.sh
