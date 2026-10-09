@@ -1,0 +1,25 @@
+GEMINI.md
+  s_0a885d5f0c193a::t_422a0822cabc4b 1-192
+AGENTS.md
+  s_0a885d5f0c193a::t_505dad2ceba5ec 115
+CLAUDE.md
+  s_0a885d5f0c193a::t_422a0822cabc4b 1-192
+AGENT.md
+  s_0a885d5f0c193a::t_422a0822cabc4b 1-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dd8271cf400b386fd803cb35a6420d48d74f0cc8",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
