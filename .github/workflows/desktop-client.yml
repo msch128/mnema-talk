@@ -24,6 +24,11 @@ on:
         required: false
         default: false
         type: boolean
+      acceptance_voice:
+        description: 'Extend the owned fixture with SFU microphone RTP and voice controls (synthetic input)'
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main, 'codex/**']
     paths:
@@ -90,9 +95,11 @@ jobs:
           ACCEPTANCE_RELEASE: ${{ inputs.acceptance_release }}
           ACCEPTANCE_INSTANCE: ${{ inputs.acceptance_instance }}
           ACCEPTANCE_FIXTURE: ${{ inputs.acceptance_fixture }}
+          ACCEPTANCE_VOICE: ${{ inputs.acceptance_voice }}
         run: |
+          if ($env:ACCEPTANCE_VOICE -eq 'true' -and $env:ACCEPTANCE_FIXTURE -ne 'true') { throw 'Voice acceptance requires the owned fixture' }
           if ($env:ACCEPTANCE_FIXTURE -eq 'true') {
-            desktop/scripts/test-windows-auth-fixture.ps1 -Tag $env:ACCEPTANCE_RELEASE
+            desktop/scripts/test-windows-auth-fixture.ps1 -Tag $env:ACCEPTANCE_RELEASE -VoiceAcceptance:($env:ACCEPTANCE_VOICE -eq 'true')
           } else {
             desktop/scripts/test-windows-release.ps1 -Tag $env:ACCEPTANCE_RELEASE -InstanceUrl $env:ACCEPTANCE_INSTANCE
           }

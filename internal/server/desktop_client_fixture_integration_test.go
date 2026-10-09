@@ -22,15 +22,20 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/testutil"
+	"github.com/pion/webrtc/v4"
 )
 
 // This explicit opt-in fixture serves the normal router and embedded Vue app.
@@ -86,7 +91,16 @@ func TestDesktopClientGUIFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal("fixture configuration failed")
 	}
-	a.router, err = NewRouter(Deps{Config: cfg, DB: pool, Store: a.store, Version: fixtureVersion})
+	voiceEnabled := os.Getenv("MNEMA_DESKTOP_FIXTURE_VOICE") == "1"
+	var voice *sfu.SFU
+	if voiceEnabled {
+		voice, err = sfu.NewSFU(0, 0, []string{"127.0.0.1"}, nil)
+		if err != nil {
+			t.Fatal("fixture SFU failed")
+		}
+		t.Cleanup(func() { _ = voice.Close() })
+	}
+	a.router, err = NewRouter(Deps{Config: cfg, DB: pool, Store: a.store, Version: fixtureVersion, SFU: voice})
 	if err != nil {
 		t.Fatal("normal fixture router failed")
 	}
@@ -176,11 +190,17 @@ func TestDesktopClientGUIFixture(t *testing.T) {
 	}
 	var registered struct{ User auth.User }
 	registration.decode(t, &registered)
+	var voiceProbe *desktopVoiceProbe
+	if voiceEnabled {
+		voiceChannel := a.createChannel(admin, "desktop-fixture-voice", "voice")
+		voiceProbe = desktopFixtureVoiceObserver(t, admin, origin, voiceChannel, registered.User.ID)
+	}
 	outbound := "Desktop fixture outbound " + nonce
 	inbound = "Desktop fixture inbound " + nonce
 	ready.Store(true)
 	write("READY.json", map[string]any{"origin": origin, "username": registered.User.Username,
 		"password": memberPassword, "channel": "desktop-fixture-chat", "outbound": outbound, "inbound": inbound,
+		"voice_enabled": voiceEnabled, "voice_channel": "desktop-fixture-voice",
 		"postgres_version": pgVersion, "nonce": nonce, "backend_revision": fixtureRevision, "normal_router": true, "media_store": "memory-test-only"})
 	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
@@ -192,6 +212,10 @@ func TestDesktopClientGUIFixture(t *testing.T) {
 		case <-deadline.C:
 			t.Fatal("desktop fixture timed out")
 		case <-ticker.C:
+			if voiceProbe != nil {
+				write("VOICE-STATE.json", map[string]any{"nonce": nonce, "joins": voiceProbe.joins.Load(), "leaves": voiceProbe.leaves.Load(),
+					"audio_packets": voiceProbe.audio.Load(), "muted": voiceProbe.muted.Load(), "deafened": voiceProbe.deafened.Load(), "failed": voiceProbe.failed.Load()})
+			}
 			var count int
 			if err := pool.QueryRow(ctx, `SELECT count(*) FROM messages WHERE channel_id=$1 AND user_id=$2 AND content=$3`, channel, registered.User.ID, outbound).Scan(&count); err != nil {
 				t.Fatal("fixture message verification failed")
@@ -209,7 +233,10 @@ func TestDesktopClientGUIFixture(t *testing.T) {
 				if logins.Load() != 1 || logouts.Load() != 1 || count != 1 || !peerSent || historySuppliedInbound.Load() {
 					t.Fatal("desktop login/message/logout chain incomplete")
 				}
-				write("SERVER-RESULT.json", map[string]any{"normal_router": true, "login_200": true,
+				if voiceProbe != nil && (voiceProbe.failed.Load() || voiceProbe.joins.Load() != 2 || voiceProbe.leaves.Load() != 2 || voiceProbe.audio.Load() < 10) {
+					t.Fatal("desktop voice join/audio/leave/rejoin chain incomplete")
+				}
+				write("SERVER-RESULT.json", map[string]any{"desktop_voice_rtp_received": voiceEnabled, "desktop_voice_join_leave_rejoin": voiceEnabled, "normal_router": true, "login_200": true,
 					"logout_204": true, "outbound_message_persisted": true, "peer_message_sent": true,
 					"postgres_version": pgVersion, "backend_revision": fixtureRevision, "peer_history_fallback_absent": true,
 					"desktop_hub_connection_observed": true, "s3_persistence_qualified": false, "media_and_games_qualified": false})
@@ -253,4 +280,149 @@ func desktopFixtureCertificate(t *testing.T) (tls.Certificate, []byte) {
 		t.Fatal("fixture server certificate failed")
 	}
 	return tls.Certificate{Certificate: [][]byte{leafDER, rootDER}, PrivateKey: leafKey}, rootDER
+}
+
+// The second generated account uses the normal cookie/WSS/SFU path. Receiving
+// RTP proves transmission by the actual desktop renderer, not merely a Join UI.
+// It does not prove audible playback, reverse audio, screen capture or E2EE.
+type desktopVoiceProbe struct {
+	joins, leaves, audio    atomic.Int32
+	muted, deafened, failed atomic.Bool
+}
+
+func desktopFixtureVoiceObserver(t *testing.T, account *client, origin string, channel, publisher uuid.UUID) *desktopVoiceProbe {
+	t.Helper()
+	probe := &desktopVoiceProbe{}
+	dialer := *websocket.DefaultDialer
+	dialer.TLSClientConfig = account.http.Transport.(*http.Transport).TLSClientConfig.Clone()
+	headers := http.Header{"Origin": []string{origin}}
+	for _, cookie := range account.http.Jar.Cookies(mustURL(origin)) {
+		headers.Add("Cookie", cookie.Name+"="+cookie.Value)
+	}
+	conn, _, err := dialer.Dial("wss"+strings.TrimPrefix(origin, "https")+"/api/ws", headers)
+	if err != nil {
+		t.Fatal("fixture voice observer WSS failed")
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	settings := webrtc.SettingEngine{}
+	settings.SetIncludeLoopbackCandidate(true)
+	settings.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	pc, err := webrtc.NewAPI(webrtc.WithSettingEngine(settings)).NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		t.Fatal("fixture voice observer WebRTC failed")
+	}
+	t.Cleanup(func() { _ = pc.Close() })
+	var writes sync.Mutex
+	send := func(kind string, payload any) bool {
+		writes.Lock()
+		defer writes.Unlock()
+		_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		if conn.WriteJSON(map[string]any{"type": kind, "payload": payload}) != nil {
+			probe.failed.Store(true)
+			return false
+		}
+		return true
+	}
+	pc.OnICECandidate(func(candidate *webrtc.ICECandidate) {
+		if candidate != nil {
+			send("webrtc_candidate", candidate.ToJSON())
+		}
+	})
+	pc.OnTrack(func(track *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		if track.Kind() != webrtc.RTPCodecTypeAudio || track.StreamID() != publisher.String() {
+			return
+		}
+		go func() {
+			for {
+				packet, _, err := track.ReadRTP()
+				if err != nil {
+					return
+				}
+				if len(packet.Payload) > 0 {
+					probe.audio.Add(1)
+				}
+			}
+		}()
+	})
+	go func() {
+		pending := []webrtc.ICECandidateInit{}
+		for {
+			var event wsEvent
+			if conn.ReadJSON(&event) != nil {
+				return
+			}
+			switch event.Type {
+			case "webrtc_candidate":
+				var candidate webrtc.ICECandidateInit
+				if json.Unmarshal(event.Payload, &candidate) != nil {
+					probe.failed.Store(true)
+					return
+				}
+				if pc.RemoteDescription() == nil {
+					if len(pending) >= 64 {
+						probe.failed.Store(true)
+						return
+					}
+					pending = append(pending, candidate)
+				} else if pc.AddICECandidate(candidate) != nil {
+					probe.failed.Store(true)
+					return
+				}
+			case "webrtc_offer":
+				var offer webrtc.SessionDescription
+				if json.Unmarshal(event.Payload, &offer) != nil || pc.SetRemoteDescription(offer) != nil {
+					probe.failed.Store(true)
+					return
+				}
+				for _, candidate := range pending {
+					if pc.AddICECandidate(candidate) != nil {
+						probe.failed.Store(true)
+						return
+					}
+				}
+				pending = nil
+				answer, err := pc.CreateAnswer(nil)
+				if err != nil || pc.SetLocalDescription(answer) != nil || !send("webrtc_answer", answer) {
+					probe.failed.Store(true)
+					return
+				}
+			case "voice_state_update":
+				var state struct {
+					Action    string
+					ChannelID uuid.UUID `json:"channel_id"`
+					User      auth.User
+					UserID    uuid.UUID `json:"user_id"`
+				}
+				if json.Unmarshal(event.Payload, &state) != nil {
+					probe.failed.Store(true)
+					return
+				}
+				if state.ChannelID == channel && state.Action == "join" && state.User.ID == publisher {
+					probe.joins.Add(1)
+				}
+				if state.ChannelID == channel && state.Action == "leave" && state.UserID == publisher {
+					probe.leaves.Add(1)
+				}
+			case "voice_mute_state":
+				var state struct {
+					ChannelID       uuid.UUID `json:"channel_id"`
+					UserID          uuid.UUID `json:"user_id"`
+					Muted, Deafened bool
+				}
+				if json.Unmarshal(event.Payload, &state) != nil {
+					probe.failed.Store(true)
+					return
+				}
+				if state.ChannelID == channel && state.UserID == publisher {
+					probe.muted.Store(state.Muted)
+					probe.deafened.Store(state.Deafened)
+				}
+			}
+		}
+	}()
+	if !send("voice_join", map[string]any{"channel_id": channel}) {
+		t.Fatal("fixture observer voice join failed")
+	}
+	return probe
 }
