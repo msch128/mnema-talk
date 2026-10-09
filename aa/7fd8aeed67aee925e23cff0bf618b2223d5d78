@@ -1,0 +1,59 @@
+desktop/experimental/app/src/web_gaming.rs
+  s_0a885d5f0c193a::t_133d968e63150a 47-56,67-68,85-88,243-247,251-255,338-340,369,386-389,415,421-430,453,464-472,474-476,633-634,677-678,745-783
+  s_0a885d5f0c193a::t_870c64f6ffa1f1 473,787-788
+web/src/i18n/en.json
+  s_0a885d5f0c193a::t_0f571da3eff871 1011-1015
+desktop/experimental/app/capabilities/gaming-surfaces.json
+  s_0a885d5f0c193a::t_133d968e63150a 5-6
+desktop/experimental/app/src/web_client.rs
+  s_0a885d5f0c193a::t_133d968e63150a 115,195-199,204
+desktop/src/game-catalog.json
+  s_0a885d5f0c193a::t_16b496b53da911 1-630,632-1524,1526-2215
+  s_0a885d5f0c193a::t_40af6d6b2cd008 631,1525
+doc/product-status.md
+  s_0a885d5f0c193a::t_1e507f2849bfbc 28-29,46-48,61-63,65
+desktop/experimental/app/capabilities/gaming-controls.json
+  s_0a885d5f0c193a::t_133d968e63150a 4-5
+desktop/experimental/app/Cargo.toml
+  s_0a885d5f0c193a::t_133d968e63150a 57
+doc/desktop-app.md
+  s_0a885d5f0c193a::t_1e507f2849bfbc 3-8
+  s_0a885d5f0c193a::t_698762fb6a1f97 29-36
+desktop/src/game_catalog.rs
+  s_0a885d5f0c193a::t_133d968e63150a 1-5,7-9,11-25
+  s_0a885d5f0c193a::t_9c3eae9faad82d 6,10
+desktop/src/windows.rs
+  s_0a885d5f0c193a::t_133d968e63150a 5-22,92,111,144-151,195,205-220,222-224,237,239-244
+  s_0a885d5f0c193a::t_40af6d6b2cd008 235-236
+  s_0a885d5f0c193a::t_3451708c4ec7d5 91,221,225-234,238,245
+README.md
+  s_0a885d5f0c193a::t_1e507f2849bfbc 3-33,88-94,97,130-131,147-164
+  s_0a885d5f0c193a::t_3c26bb06724345 165
+web/src/components/DesktopGamingOverlay.test.ts
+  s_0a885d5f0c193a::t_0f571da3eff871 12,19-21,23,25-35
+  s_0a885d5f0c193a::t_df6a31398e22bb 22,24,52
+web/src/i18n/de.json
+  s_0a885d5f0c193a::t_0f571da3eff871 1011-1015
+web/src/lib/desktopGaming.ts
+  s_0a885d5f0c193a::t_0f571da3eff871 9,14
+web/src/components/DesktopGamingOverlay.vue
+  s_0a885d5f0c193a::t_0f571da3eff871 7-8,11,20,34,44,46-47,49,53,59,69-72,78,85-86
+doc/game-detection.md
+  s_0a885d5f0c193a::t_ea332155b788d7 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa7fd8aeed67aee925e23cff0bf618b2223d5d78",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
