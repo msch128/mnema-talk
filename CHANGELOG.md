@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/msch128/mnema-talk/compare/v0.7.0...v0.7.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* ship the full web app as the Windows desktop client ([8d7581b](https://github.com/msch128/mnema-talk/commit/8d7581b119d1787399d7856bf84dec6de8f1d310))
+
 ## [0.7.0](https://github.com/msch128/mnema-talk/compare/v0.6.1...v0.7.0) (2026-10-08)
 
 
