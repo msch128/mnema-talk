@@ -48,3 +48,7 @@ required-features = ["shell"]
 name = "metadata_fixture"
 path = "examples/metadata_fixture.rs"
 required-features = ["synthetic-transport-fixture"]
+
+# Reviewed GTK3-compatible RUSTSEC-2024-0429 backport; see scripts/checked-glib.mjs.
+[patch.crates-io]
+glib = { path = "../vendor/glib" }

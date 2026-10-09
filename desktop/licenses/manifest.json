@@ -1,7 +1,7 @@
 {
   "schema": "mnema-desktop-license-bundle-v1",
   "scope": "Conservative locked Rust graph and production npm closure; not a claim that all packages are linked.",
-  "cargo_lock_sha256": "a199fbdb54430652b65f1c1f29ad2b02e2697738d8987eb4e4e1e1e9043cda7e",
+  "cargo_lock_sha256": "8cd968438159814507ac6d260606ab1a1fbe8547b1b956af916e8c49de9d3fd1",
   "npm_lock_sha256": "f96548f9500bd7c11360660f9cb7883f79ae0b95bb9a3189f09a726d9bf8a696",
   "supplemental": {
     "rust_standard_library": {
@@ -2302,18 +2302,19 @@
       "version": "0.18.5",
       "license": "MIT",
       "source": "https://crates.io/crates/glib/0.18.5",
+      "local_patch": "https://github.com/gtk-rs/gtk-rs-core/commit/b5a4071e439bef2b5eea76c3aa25e5ae84839e34",
       "texts": [
         {
           "name": "COPYRIGHT",
           "sha256": "dae402989de65164815b7e2b6bc2b9576285434c3785934c8b6ece0fa055960d",
           "source": "https://crates.io/crates/glib/0.18.5",
-          "provenance": "crate-archive"
+          "provenance": "crate-archive+reviewed-upstream-backport"
         },
         {
           "name": "LICENSE",
           "sha256": "8cf56d10131ce201cf69ab74b111d3ebac1acca3833d7efb39ae357224b70edb",
           "source": "https://crates.io/crates/glib/0.18.5",
-          "provenance": "crate-archive"
+          "provenance": "crate-archive+reviewed-upstream-backport"
         }
       ]
     },

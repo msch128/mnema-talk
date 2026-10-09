@@ -8,3 +8,5 @@ desktop/experimental/ui/src/assets/fonts/Inter-LICENSE.txt -text
 desktop/ui/src/assets/fonts/*.woff2 -text
 desktop/ui/src/assets/fonts/Inter-LICENSE.txt -text
 desktop/icons/** -text
+# Preserve the original MIT notice, including its final blank line.
+desktop/experimental/vendor/glib/LICENSE whitespace=-blank-at-eof

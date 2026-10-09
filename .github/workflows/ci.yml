@@ -235,6 +235,19 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
   # -- Unsigned development probe; does not qualify gaming or E2EE -----------
+  desktop-glib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26'
+      - name: Verify reviewed backport against optimized real Linux GLib
+        run: bash desktop/scripts/test-glib-linux.sh
+
   desktop-probe:
     runs-on: windows-latest
     timeout-minutes: 30
@@ -258,6 +271,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node desktop/scripts/checked-glib.mjs
           cargo +1.99.0 fmt --manifest-path desktop/Cargo.toml --check
           cargo +1.99.0 test --locked --manifest-path desktop/Cargo.toml
           cargo +1.99.0 clippy --locked --manifest-path desktop/Cargo.toml --all-targets --features shell -- -D warnings
@@ -275,6 +289,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo +1.99.0 install cargo-audit --version "$CARGO_AUDIT_VERSION" --locked
+          node desktop/scripts/checked-glib.mjs --audit
           cargo audit --file desktop/Cargo.lock
       - name: Upload Windows probe for qualification
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

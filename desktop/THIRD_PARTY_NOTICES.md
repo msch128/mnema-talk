@@ -7,8 +7,15 @@ Full verbatim license and attribution texts accompany this inventory in
 [licenses/](licenses/README.md), with package-to-text mapping and SHA-256 hashes
 in [licenses/manifest.json](licenses/manifest.json). Distribute that complete
 directory and the project's root `LICENSE` with any probe binary. The probe is
-not an official release. Unmodified source for each crate is available through
+not an official release. Upstream source for each crate is available through
 its exact version link below, including MPL-2.0-covered source.
+
+GLib 0.18.5 retains its upstream MIT license and version. Its canonical source
+in [experimental/vendor/glib/](experimental/vendor/glib/) includes the two-line
+[upstream iterator fix](https://github.com/gtk-rs/gtk-rs-core/commit/b5a4071e439bef2b5eea76c3aa25e5ae84839e34)
+for RUSTSEC-2024-0429. [glib-source.json](experimental/vendor/glib-source.json)
+records the original archive checksum and every patched source file hash.
+The build checks this source and records the patch in the license inventory.
 
 The optional owned D3D11 fixture uses pinned Microsoft `windows 0.62.2`
 (MIT OR Apache-2.0) COM/API bindings and `windows-sys 0.61.2` (MIT OR Apache-2.0),

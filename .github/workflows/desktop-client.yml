@@ -140,6 +140,8 @@ jobs:
         if: inputs.acceptance_release == ''
         shell: pwsh
         run: |
+          node desktop/scripts/checked-glib.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Reviewed dependency source verification failed' }
           cargo test --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,web-client,custom-protocol
           if ($LASTEXITCODE -ne 0) { throw 'Shared host tests failed' }
           cargo clippy --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,web-client,custom-protocol --all-targets -- -D warnings
