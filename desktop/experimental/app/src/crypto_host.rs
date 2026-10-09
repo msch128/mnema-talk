@@ -36,6 +36,13 @@ pub(super) struct ChatDisplay {
     body: String,
 }
 enum Job {
+    RemoveDevice {
+        scope: Arc<NativeAuthenticatedScope>,
+        account: Uuid,
+        device: Uuid,
+        output: Channel<serde_json::Value>,
+        reply: oneshot::Sender<Result<(), Error>>,
+    },
     TypedChat {
         scope: Arc<NativeAuthenticatedScope>,
         event: Option<Uuid>,
@@ -62,7 +69,106 @@ struct Control {
     cancel: Mutex<Option<PendingRootCancellation>>,
     dialog: Mutex<Option<Arc<TauriNativeTrustDialog>>>,
     stop: AtomicBool,
+    stopped: tokio::sync::Notify,
     jobs: mpsc::Sender<Job>,
+}
+async fn until_stopped<T>(
+    stop: &AtomicBool,
+    stopped: &tokio::sync::Notify,
+    work: impl std::future::Future<Output = Result<T, Error>>,
+) -> Result<T, Error> {
+    let cancelled = async {
+        let notified = stopped.notified();
+        tokio::pin!(notified);
+        // Register before observing the latch, closing notify-before-await loss.
+        notified.as_mut().enable();
+        if !stop.load(Ordering::Acquire) {
+            notified.await;
+        }
+    };
+    tokio::select! {
+        biased;
+        _ = cancelled => Err(Error::Stale),
+        result = work => result,
+    }
+}
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct DeviceRemovalSelection {
+    account_id: String,
+    device_id: String,
+}
+
+/// Renderer values select a native membership lookup only. Actual target keys,
+/// OS approval, MLS transition and transport ACK belong to the existing actor.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub(super) async fn native_device_remove(
+    window: WebviewWindow,
+    state: tauri::State<'_, RuntimeState>,
+    context: String,
+    profile_intent: String,
+    authentication_intent: String,
+    channel_id: String,
+    input: DeviceRemovalSelection,
+    on_removed: Channel<serde_json::Value>,
+) -> Result<NativeReply, ()> {
+    let result = async {
+        let lease = require(&window, &state, Some(&context))?;
+        let profile = canonical(&profile_intent)?;
+        state.client.check_profile_intent(&lease, profile)?;
+        let channel = canonical(&channel_id)?;
+        let account = canonical(&input.account_id)?;
+        let device = canonical(&input.device_id)?;
+        let control = state.core.current_profile(&lease, None, profile)?;
+        let scope = Arc::new(
+            state
+                .client
+                .authenticated_scope_with_intent(&lease, canonical(&authentication_intent)?)?,
+        );
+        if control.stop.load(Ordering::Acquire)
+            || !control.same_family(&scope)
+            || control.channel != channel
+        {
+            return Err(Error::Stale);
+        }
+        if control
+            .status
+            .lock()
+            .map_err(|_| Error::Internal)?
+            .as_ref()
+            .is_none_or(|value| value.state != "root_saved")
+        {
+            return Err(Error::QualificationRequired);
+        }
+        let (reply, answer) = oneshot::channel();
+        state
+            .client
+            .with_authenticated_publication(&lease, &scope, || {
+                control
+                    .jobs
+                    .try_send(Job::RemoveDevice {
+                        scope: scope.clone(),
+                        account,
+                        device,
+                        output: on_removed,
+                        reply,
+                    })
+                    .map_err(|_| Error::Busy)
+            })??;
+        answer.await.map_err(|_| Error::Stale)??;
+        require(&window, &state, Some(&context))?;
+        state.client.check_authenticated_scope(&lease, &scope)?;
+        if control.stop.load(Ordering::Acquire) {
+            return Err(Error::Stale);
+        }
+        Ok::<_, Error>(serde_json::json!({"state":"completed"}))
+    }
+    .await;
+    Ok(match result {
+        Ok(body) => reply(context, body),
+        Err(error) => rejected(context, error),
+    })
 }
 impl Control {
     fn same_family(&self, scope: &NativeAuthenticatedScope) -> bool {
@@ -78,15 +184,16 @@ impl Control {
     }
     fn stop(&self) {
         self.stop.store(true, Ordering::Release);
+        self.stopped.notify_waiters();
         if let Ok(cancel) = self.cancel.lock()
             && let Some(cancel) = cancel.as_ref()
         {
             let _ = cancel.cancel();
         }
-        if let (Ok(dialog), Ok(operation)) = (self.dialog.lock(), self.operation.lock())
-            && let (Some(dialog), Some(op)) = (dialog.as_ref(), *operation)
+        if let Ok(dialog) = self.dialog.lock()
+            && let Some(dialog) = dialog.as_ref()
         {
-            let _ = dialog.cancel_first_root(op);
+            let _ = dialog.cancel_active();
         }
         let _ = self.jobs.try_send(Job::Stop);
     }
@@ -272,6 +379,7 @@ impl Host {
             cancel: Mutex::new(None),
             dialog: Mutex::new(None),
             stop: AtomicBool::new(false),
+            stopped: tokio::sync::Notify::new(),
             jobs,
         });
         // Tauri's dispatcher may synchronously wait for the UI thread. Never
@@ -454,6 +562,43 @@ async fn run_core(
         let Some(job) = job else { break };
         match job {
             Job::Stop => break,
+            Job::RemoveDevice {
+                scope: admitted,
+                account,
+                device,
+                output,
+                reply,
+            } => {
+                let dialog = control.dialog.lock().ok().and_then(|value| value.clone());
+                let result = until_stopped(&control.stop, &control.stopped, async {
+                    if control.stop.load(Ordering::Acquire) || !control.same_family(&admitted) {
+                        return Err(Error::Stale);
+                    }
+                    client.check_authenticated_scope(&lease, &admitted)?;
+                    let owner = owner.as_mut().ok_or(Error::QualificationRequired)?;
+                    let dialog = dialog.ok_or(Error::QualificationRequired)?;
+                    let prepared = owner.prepare_device_removal_retained(admitted, account, device, dialog.as_ref()).await.map_err(crypto_error)?;
+                    owner.publish_device_removal(&prepared, |publication| {
+                        let state = app.state::<RuntimeState>();
+                        let registry = state.registry.try_lock().map_err(|_| mnema_private_native_crypto_owner::Error::Retired)?;
+                        let entry = registry.as_ref().ok_or(mnema_private_native_crypto_owner::Error::Retired)?;
+                        if control.stop.load(Ordering::Acquire) || entry.document != NativeDocument::App || entry.lease.context_nonce() != lease.context_nonce() {
+                            return Err(mnema_private_native_crypto_owner::Error::Retired);
+                        }
+                        output.send(serde_json::json!({
+                            "state":"device_removed", "client_event_id": publication.client_event_id,
+                            "channel_id": publication.channel_id, "account_id": publication.removed_account_id,
+                            "device_id": publication.removed_device_id
+                        })).map_err(|_| mnema_private_native_crypto_owner::Error::Retired)
+                    }).await.map_err(crypto_error)
+                }).await;
+                let failed = result.is_err();
+                let _ = reply.send(result);
+                if failed {
+                    control.stop();
+                    break;
+                }
+            }
             Job::TypedChat {
                 scope,
                 event,
@@ -1047,6 +1192,64 @@ pub(super) fn native_trust_read_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn stopped_actor_never_starts_queued_removal_work() {
+        let stop = AtomicBool::new(true);
+        let signal = tokio::sync::Notify::new();
+        let entered = AtomicBool::new(false);
+        let result = until_stopped(&stop, &signal, async {
+            entered.store(true, Ordering::Release);
+            Ok(())
+        })
+        .await;
+        assert!(matches!(result, Err(Error::Stale)));
+        assert!(!entered.load(Ordering::Acquire));
+    }
+    #[tokio::test]
+    async fn stop_during_suspended_metadata_drops_work_before_mutation_or_post() {
+        struct Released<'a>(&'a AtomicBool);
+        impl Drop for Released<'_> {
+            fn drop(&mut self) {
+                self.0.store(true, Ordering::Release);
+            }
+        }
+        let stop = AtomicBool::new(false);
+        let signal = tokio::sync::Notify::new();
+        let released = AtomicBool::new(false);
+        let mutated = AtomicBool::new(false);
+        let (ready, started) = oneshot::channel();
+        let (finish, metadata) = oneshot::channel::<()>();
+        let work = until_stopped(&stop, &signal, async {
+            let _release = Released(&released);
+            let _ = ready.send(());
+            metadata.await.map_err(|_| Error::Stale)?;
+            mutated.store(true, Ordering::Release);
+            Ok(())
+        });
+        tokio::pin!(work);
+        tokio::select! { biased; _ = &mut work => panic!("metadata should remain suspended"), _ = started => {} }
+        stop.store(true, Ordering::Release);
+        signal.notify_waiters();
+        let _ = finish.send(());
+        assert!(matches!(work.await, Err(Error::Stale)));
+        assert!(released.load(Ordering::Acquire));
+        assert!(!mutated.load(Ordering::Acquire));
+    }
+    #[test]
+    fn renderer_device_selection_rejects_authority_and_key_claims() {
+        let selection = serde_json::json!({"account_id":Uuid::new_v4().to_string(),"device_id":Uuid::new_v4().to_string()});
+        assert!(serde_json::from_value::<DeviceRemovalSelection>(selection.clone()).is_ok());
+        for (field, value) in [
+            ("approved", serde_json::json!(true)),
+            ("signature_key", serde_json::json!("renderer-key")),
+            ("leaf_index", serde_json::json!(1)),
+            ("authentication_scope", serde_json::json!({})),
+        ] {
+            let mut wire = selection.clone();
+            wire.as_object_mut().unwrap().insert(field.into(), value);
+            assert!(serde_json::from_value::<DeviceRemovalSelection>(wire).is_err());
+        }
+    }
     #[test]
     fn shared_terminal_read_cannot_outrun_actual_successful_enqueue() {
         let statuses = Arc::new(Mutex::new(Some(Status {

@@ -23,7 +23,7 @@ impl Fixture {
         let path = dir.join("test-runtime").join(Uuid::new_v4().to_string());
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut child = Command::new("python3")
-            .arg(dir.join("../native-client-integration/broker/tests/https_fixture.py"))
+            .arg(dir.join("../broker/tests/https_fixture.py"))
             .arg(&path)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -284,4 +284,74 @@ async fn cancellation_after_native_result_before_consumption_denies_exact_decisi
         decision.consume(&request),
         Err(DialogError::Cancelled)
     ));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn device_removal_displays_exact_target_and_cannot_reuse_first_root_decision() {
+    let f = Fixture::start(true);
+    let (_client, _window, scope) = f.logged().await;
+    let operation = Uuid::new_v4();
+    let target = Uuid::new_v4();
+    let identity = b"target identity\nwith controls";
+    let request = NativeDialogRequest::device_removal(
+        operation,
+        scope.clone(),
+        facts(),
+        Instant::now() + Duration::from_secs(30),
+        target,
+        identity,
+    )
+    .unwrap();
+    assert!(request.is_device_removal());
+    assert_eq!(request.confirmation_action(), "Remove device");
+    assert_eq!(request.target_account(), Some(target));
+    assert_eq!(request.target_identity(), Some(identity.as_slice()));
+    let text = request.text().unwrap();
+    assert!(text.contains(&format!("Target account: {target}")));
+    assert!(text.contains(&format!("Administrator account: {}", scope.account_id())));
+    assert!(text.contains(&STANDARD.encode(identity)));
+    assert!(text.contains(&"03".repeat(32)));
+    assert!(!text.contains("target identity\nwith controls"));
+    assert!(!text.contains("Create a new Mnema community root?"));
+    assert!(!text.contains("public-fixture-password"));
+    let first =
+        NativeDialogRequest::first_root(operation, scope.clone(), facts(), request.deadline())
+            .unwrap();
+    let decision = NativeDialogDecision {
+        request: first,
+        approved: true,
+        cancelled: Arc::new(AtomicBool::new(false)),
+    };
+    assert!(matches!(
+        decision.consume(&request),
+        Err(DialogError::Denied)
+    ));
+    assert!(matches!(
+        DeniedNativeTrustDialog
+            .confirm_device_removal(request)
+            .await,
+        Err(DialogError::Unavailable)
+    ));
+    assert!(
+        NativeDialogRequest::device_removal(
+            operation,
+            scope.clone(),
+            facts(),
+            Instant::now() + Duration::from_secs(30),
+            Uuid::nil(),
+            identity
+        )
+        .is_err()
+    );
+    assert!(
+        NativeDialogRequest::device_removal(
+            operation,
+            scope,
+            facts(),
+            Instant::now() + Duration::from_secs(30),
+            target,
+            &[0; 257]
+        )
+        .is_err()
+    );
 }

@@ -1000,5 +1000,15 @@
     "statusError": "Der Sicherheitsstatus konnte nicht gelesen werden.",
     "beginError": "Die Einrichtung konnte nicht gestartet werden.",
     "confirmError": "Die native Bestätigung konnte nicht geöffnet werden."
+  },
+  "gaming": {
+    "title": "Talk · DEV",
+    "settings": "Gaming-Einstellungen",
+    "overlay": "Overlay",
+    "mute": "Stummschalten",
+    "deafen": "Ton ausschalten",
+    "ptt": "Push-to-talk",
+    "games": "Spiel-EXE-Namen (einer pro Zeile)",
+    "error": "Nicht übernommen. Verbindung prüfen und unterschiedliche unterstützte Tasten wählen."
   }
 }

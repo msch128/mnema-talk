@@ -51,8 +51,8 @@ pub(super) fn show(
             return;
         }
     };
-    let title = wide("Confirm a new Mnema root");
-    let label = wide("Create root");
+    let title = wide(request.confirmation_title());
+    let label = wide(request.confirmation_action());
     let button = TASKDIALOG_BUTTON {
         nButtonID: 1000,
         pszButtonText: label.as_ptr(),

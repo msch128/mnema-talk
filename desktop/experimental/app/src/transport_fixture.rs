@@ -83,7 +83,8 @@ pub fn client() -> Result<NativeClient, Error> {
         || d.content_authorization != "unavailable"
         || !matches!(
             (d.community_id.as_str(), d.username.as_str()),
-            ("native-preview-fixture", "preview-user") | ("native-relay-fixture", "relay-user")
+            ("native-preview-fixture", "preview-user")
+                | ("native-relay-fixture", "relay-user" | "relay-admin")
         )
         || d.password != "native-preview-fixture-password"
         || d.public_ca_pem.len() > 16384

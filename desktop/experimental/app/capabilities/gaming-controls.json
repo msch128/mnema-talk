@@ -1,0 +1,10 @@
+{
+  "identifier": "gaming-controls",
+  "windows": [
+    "gaming-overlay"
+  ],
+  "permissions": [
+    "allow-desktop-gaming-control",
+    "allow-desktop-gaming-settings"
+  ]
+}

@@ -77,9 +77,11 @@ flow. It does not qualify multi-device enrollment, persistent/restored history,
 native voice or complete E2EE. The combined integration still requires
 independent source review and the full repository checks before publication.
 
-Native voice, complete web feature parity, game detection and interactive gaming
-surfaces are being integrated separately. A Windows executable has not yet been
-linked and qualified. Development builds have no code-signing certificate or
+The protected native-crypto mode still lacks qualified native voice and complete
+web feature parity. The separate web-client mode uses the same Vue web app and
+provides the Windows Gaming DEV integration described in [desktop-app.md](../../doc/desktop-app.md#windows-gaming-dev).
+The published v0.7.1 Windows web-client executable has startup/login/chat/logout
+evidence; this does not qualify native-crypto mode or real-game overlays. Development builds have no code-signing certificate or
 approved automatic updater. This checkpoint does not activate experimental
 server routes or deploy an application.
 

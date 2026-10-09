@@ -100,8 +100,11 @@ impl Sdk {
         // Core receive verifies the private wire belongs to this current epoch;
         // caller labels or a second Core cannot supply this event context.
         let native_scope = self.native_protected_event_scope(now)?;
+        let archive_scope = self.native_protected_event_scope(now)?;
         let result = (|| {
-            let receipt = self.core.receive_inner(wire, now)?;
+            let receipt = self.core.receive_inner_checked(wire, now, |receipt, tx| {
+                crate::chat_archive::record_if_typed_chat(tx, archive_scope, event, wire, receipt)
+            })?;
             scan(&receipt.plaintext)?;
             let value: Value = coset::cbor::de::from_reader(receipt.plaintext.as_slice())
                 .map_err(|_| Error::Invalid)?;

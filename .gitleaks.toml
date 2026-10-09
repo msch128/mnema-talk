@@ -48,5 +48,5 @@ paths = [
   '''^(?:desktop/experimental/app/Cargo\.lock|desktop/experimental/crates/crypto\-owner/Cargo\.lock|desktop/experimental/crates/crypto\-owner/qualified\-sdk/Cargo\.lock|desktop/experimental/vendor/openmls/Cargo\.lock|desktop/experimental/vendor/openmls/compat_tests/Cargo\.lock)$'''
 ]
 regexes = [
-  '''^\s*"?libcrux-secrets",\s*"libcrux-sha3"[,]?\s*$'''
+  '''^\s*"?libcrux-secrets(?: 0\.0\.7)?",\s*"libcrux-sha3"[,]?\s*$'''
 ]

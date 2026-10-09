@@ -164,7 +164,25 @@
       "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
     }
   ],
+  "hpke-rs-crypto@0.8.0": [
+    {
+      "license_selection": "MPL-2.0",
+      "name": "MPL-2.0.txt (standard text)",
+      "provenance": "standard-mpl-text-selected-by-locked-crate-license-declaration; component archive/upstream tree omit full license file",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172",
+      "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
+    }
+  ],
   "hpke-rs-libcrux@0.7.0": [
+    {
+      "license_selection": "MPL-2.0",
+      "name": "MPL-2.0.txt (standard text)",
+      "provenance": "standard-mpl-text-selected-by-locked-crate-license-declaration; component archive/upstream tree omit full license file",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172",
+      "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
+    }
+  ],
+  "hpke-rs-libcrux@0.8.0": [
     {
       "license_selection": "MPL-2.0",
       "name": "MPL-2.0.txt (standard text)",
@@ -182,7 +200,25 @@
       "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
     }
   ],
+  "hpke-rs-rust-crypto@0.8.0": [
+    {
+      "license_selection": "MPL-2.0",
+      "name": "MPL-2.0.txt (standard text)",
+      "provenance": "standard-mpl-text-selected-by-locked-crate-license-declaration; component archive/upstream tree omit full license file",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172",
+      "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
+    }
+  ],
   "hpke-rs@0.7.0": [
+    {
+      "license_selection": "MPL-2.0",
+      "name": "MPL-2.0.txt (standard text)",
+      "provenance": "standard-mpl-text-selected-by-locked-crate-license-declaration; component archive/upstream tree omit full license file",
+      "sha256": "66a3107d5ad6a058aab753eaac2047ccb2ed0e39465dd0fe5844da3e300d5172",
+      "source": "https://raw.githubusercontent.com/spdx/license-list-data/v3.27.0/text/MPL-2.0.txt"
+    }
+  ],
+  "hpke-rs@0.8.0": [
     {
       "license_selection": "MPL-2.0",
       "name": "MPL-2.0.txt (standard text)",
@@ -219,6 +255,20 @@
       "source": "https://crates.io/crates/libappindicator/0.9.0"
     }
   ],
+  "libcrux-aead@0.0.10": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-aead@0.0.9": [
     {
       "name": "LICENSE",
@@ -233,6 +283,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-aes@0.0.10": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-aes@0.0.9": [
     {
       "name": "LICENSE",
@@ -245,6 +309,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-chacha20poly1305@0.0.10": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-chacha20poly1305@0.0.9": [
@@ -275,6 +353,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-curve25519@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-ecdh@0.0.8": [
     {
       "name": "LICENSE",
@@ -287,6 +379,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-ecdh@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-hacl-rs@0.0.5": [
@@ -303,6 +409,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE-MIT"
     }
   ],
+  "libcrux-hacl-rs@0.0.6": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-hkdf@0.0.8": [
     {
       "name": "LICENSE",
@@ -315,6 +435,34 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-hkdf@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
+  "libcrux-hmac-drbg@0.0.2": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-hmac@0.0.8": [
@@ -331,6 +479,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-hmac@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-intrinsics@0.0.8": [
     {
       "name": "LICENSE",
@@ -343,6 +505,34 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-intrinsics@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
+  "libcrux-kem@0.0.10": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-kem@0.0.9": [
@@ -373,6 +563,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/8ebe73237378c80b86a953ec8a77bdd3299918e7/LICENSE-MIT"
     }
   ],
+  "libcrux-macros@0.0.4": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-ml-kem@0.0.10": [
     {
       "name": "LICENSE",
@@ -385,6 +589,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-ml-kem@0.0.11": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-p256@0.0.8": [
@@ -401,6 +619,34 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-p256@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
+  "libcrux-p384@0.0.1": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-platform@0.0.3": [
     {
       "name": "LICENSE",
@@ -413,6 +659,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/316fcd6c19c2e33bd0429e1319b6557d91038512/LICENSE-MIT"
+    }
+  ],
+  "libcrux-platform@0.0.4": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-poly1305@0.0.6": [
@@ -429,6 +689,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE-MIT"
     }
   ],
+  "libcrux-poly1305@0.0.7": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-secrets@0.0.6": [
     {
       "name": "LICENSE",
@@ -441,6 +715,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-secrets@0.0.7": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "libcrux-sha2@0.0.8": [
@@ -457,6 +745,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-sha2@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-sha3@0.0.10": [
     {
       "name": "LICENSE",
@@ -471,6 +773,20 @@
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
     }
   ],
+  "libcrux-sha3@0.0.11": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+    }
+  ],
   "libcrux-traits@0.0.8": [
     {
       "name": "LICENSE",
@@ -483,6 +799,20 @@
       "provenance": "crate-vcs-commit-upstream-component",
       "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
       "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+    }
+  ],
+  "libcrux-traits@0.0.9": [
+    {
+      "name": "LICENSE",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+    },
+    {
+      "name": "LICENSE-MIT",
+      "provenance": "crate-vcs-commit-upstream-component",
+      "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+      "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
     }
   ],
   "ndk-context@0.1.1": [

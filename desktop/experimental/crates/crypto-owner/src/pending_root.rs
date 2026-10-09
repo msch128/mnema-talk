@@ -2,7 +2,9 @@
 //! server-selected authority key or restored-owner activation constructor.
 use super::*;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use mnema_crypto_enrollment_prototype::{Issuer, NativeRootPin, NativeSecrets};
+use mnema_crypto_enrollment_prototype::{
+    Issuer, NativeAdmissionIntent, NativeRootPin, NativeSecrets,
+};
 use mnema_private_first_community_bootstrap::{FreshCommunity, NativeAdminSubject};
 use mnema_private_native_client_broker::{MetadataResource, NativeRequest};
 use mnema_private_native_trust_dialog::{
@@ -393,6 +395,34 @@ mod tests {
     use std::sync::Barrier;
 
     #[test]
+    fn binary_control_fits_actual_broker_allowance_without_raising_it() {
+        let wire = mnema_crypto_sdk_prototype::encode_native_device_removal(
+            &vec![3; 64000],
+            &vec![9; 1000],
+        )
+        .unwrap();
+        assert!(wire.len() > 65000 && wire.len() <= 65536);
+        assert!(
+            mnema_private_native_client_broker::NativeOpaqueEvent::from_native_outbox(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                b"group",
+                &wire
+            )
+            .is_ok()
+        );
+        assert!(
+            mnema_private_native_client_broker::NativeOpaqueEvent::from_native_outbox(
+                Uuid::new_v4(),
+                Uuid::new_v4(),
+                b"group",
+                &vec![3; 65537]
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
     fn cancellation_between_validation_and_adoption_wins_no_usable_owner() {
         let gate = Arc::new(AdoptionGate::new());
         let validated = Arc::new(Barrier::new(2));
@@ -453,5 +483,362 @@ mod tests {
             Err(Error::Auth)
         );
         assert_eq!(gate.cancel(), Err(Error::Retired));
+    }
+}
+
+/// Native actor-owned control reservation. No Clone/Serde or renderer approval
+/// constructor. It is not a completed publication or a recovery capability.
+pub struct NativePreparedDeviceRemoval {
+    serial: Uuid,
+    event: Uuid,
+    auth: Arc<NativeAuthenticatedScope>,
+    epoch: u64,
+    generation: u64,
+    deadline: Instant,
+    target_account: Uuid,
+    target_device: Uuid,
+    wire: Vec<u8>,
+    commit: Vec<u8>,
+}
+impl NativePreparedDeviceRemoval {
+    pub fn client_event_id(&self) -> Uuid {
+        self.event
+    }
+}
+impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
+    /// The original native auth admission survives metadata, modal confirmation
+    /// and actual issuer/Core processing. Target facts come from real MLS and
+    /// signed membership; renderer account/device UUIDs select only a lookup.
+    pub async fn prepare_device_removal_retained(
+        &mut self,
+        auth: Arc<NativeAuthenticatedScope>,
+        account: Uuid,
+        device: Uuid,
+        dialog: &dyn NativeTrustDialog,
+    ) -> Result<NativePreparedDeviceRemoval> {
+        let result = self
+            .prepare_device_removal_inner(auth, account, device, dialog)
+            .await;
+        if result.is_err() {
+            self.retire();
+        }
+        result
+    }
+    async fn prepare_device_removal_inner(
+        &mut self,
+        auth: Arc<NativeAuthenticatedScope>,
+        account: Uuid,
+        device: Uuid,
+        dialog: &dyn NativeTrustDialog,
+    ) -> Result<NativePreparedDeviceRemoval> {
+        if account.is_nil() || device.is_nil() || self.chat.membership_pending.is_some() {
+            return Err(Error::Invalid);
+        }
+        self.chat.check_admitted_scope(&auth)?;
+        self.chat.current(now()?)?;
+        let client = self.chat.client.clone();
+        let lease = self.chat.lease.clone();
+        let channel = self.chat.owner.channel;
+        fresh_root_metadata(&client, &lease, channel, &auth).await?;
+        self.chat.check_admitted_scope(&auth)?;
+        let target = self
+            .chat
+            .sdk
+            .native_peer_for_removal(&account.to_string(), &device.to_string(), now()?)
+            .map_err(|_| Error::Crypto)?;
+        let pin = self.issuer.pin_for_native_out_of_band_transfer();
+        let facts = NativeTrustDisplayFacts::from_native_core(
+            channel,
+            device,
+            &self.chat.owner.group,
+            pin.authority_key(),
+            pin.fingerprint().map_err(|_| Error::Crypto)?,
+            target
+                .signature_key()
+                .try_into()
+                .map_err(|_| Error::Binding)?,
+        )
+        .map_err(|_| Error::Binding)?;
+        let deadline = Instant::now()
+            .checked_add(Duration::from_secs(120))
+            .ok_or(Error::Invalid)?
+            .min(auth.monotonic_access_deadline());
+        let event = Uuid::new_v4();
+        let request = NativeDialogRequest::device_removal(
+            event,
+            auth.clone(),
+            facts,
+            deadline,
+            account,
+            target.identity(),
+        )
+        .map_err(|_| Error::Auth)?;
+        client
+            .check_authenticated_scope(&lease, &auth)
+            .map_err(|_| Error::Auth)?;
+        let decision = dialog
+            .confirm_device_removal(request.clone())
+            .await
+            .map_err(|_| Error::Auth)?;
+        decision.consume(&request).map_err(|_| Error::Auth)?;
+        fresh_root_metadata(&client, &lease, channel, &auth).await?;
+        self.chat.check_admitted_scope(&auth)?;
+        self.chat
+            .sdk
+            .check_native_peer_for_removal(&target, now()?)
+            .map_err(|_| Error::Crypto)?;
+        let intent = NativeAdmissionIntent::from_native_out_of_band_pin(
+            target.account(),
+            target.device(),
+            target.identity(),
+            target
+                .signature_key()
+                .try_into()
+                .map_err(|_| Error::Binding)?,
+        )
+        .map_err(|_| Error::Binding)?;
+        request.check_deadline().map_err(|_| Error::Auth)?;
+        client
+            .check_authenticated_scope(&lease, &auth)
+            .map_err(|_| Error::Auth)?;
+        // Native storage I/O stays outside broker locks. Any loss of auth,
+        // deadline or partial issuer/Core failure retires before output.
+        let when = now()?;
+        let roster = self
+            .issuer
+            .revoke_exact_native_device(intent, when)
+            .map_err(|_| Error::Crypto)?;
+        let commit = self
+            .chat
+            .sdk
+            .remove_root_revoked_native_peer(
+                &event.to_string(),
+                target.identity(),
+                target.signature_key(),
+                &roster,
+                when,
+            )
+            .map_err(|_| Error::Crypto)?;
+        request.check_deadline().map_err(|_| Error::Auth)?;
+        self.chat.check_admitted_scope(&auth)?;
+        let current = self
+            .chat
+            .sdk
+            .native_owner_facts(now()?)
+            .map_err(|_| Error::Crypto)?;
+        // No prepared capability escapes for an unpublishable control. Issuer
+        // and MLS transitions are already durable; failure retires this owner
+        // rather than resuming chat or claiming transport completion.
+        let wire = self
+            .chat
+            .sdk
+            .pending_native_device_removal(&event.to_string(), now()?)
+            .map_err(|_| Error::Crypto)?
+            .ok_or(Error::Binding)?;
+        if wire
+            != mnema_crypto_sdk_prototype::encode_native_device_removal(&roster, &commit)
+                .map_err(|_| Error::Crypto)?
+        {
+            return Err(Error::Binding);
+        }
+        let prepared = NativePreparedDeviceRemoval {
+            serial: self.chat.serial,
+            event,
+            auth,
+            epoch: current.epoch(),
+            generation: current.generation(),
+            deadline,
+            target_account: account,
+            target_device: device,
+            wire,
+            commit,
+        };
+        // The typed chat path must not send the new epoch before real control
+        // transport acknowledges it. Only that future native ACK may clear this.
+        self.chat.membership_pending = Some(event);
+        client
+            .with_authenticated_publication(&lease, &prepared.auth.clone(), || {
+                request.check_deadline().map_err(|_| Error::Auth)?;
+                Ok(prepared)
+            })
+            .map_err(|_| Error::Auth)?
+    }
+    /// Build only the exact native reserved control for transport. This is not
+    /// an ACK or permission to clear the pending membership gate.
+    pub fn device_removal_wire_for_native_relay(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+    ) -> Result<Vec<u8>> {
+        let result = self.device_removal_wire_inner(prepared);
+        if result.is_err() {
+            self.retire();
+        }
+        result
+    }
+    fn device_removal_wire_inner(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+    ) -> Result<Vec<u8>> {
+        self.chat.check_admitted_scope(&prepared.auth)?;
+        if Instant::now() >= prepared.deadline {
+            return Err(Error::Auth);
+        }
+        if self.chat.serial != prepared.serial
+            || self.chat.membership_pending != Some(prepared.event)
+        {
+            return Err(Error::Binding);
+        }
+        let current = self
+            .chat
+            .sdk
+            .native_owner_facts(now()?)
+            .map_err(|_| Error::Crypto)?;
+        if current.epoch() != prepared.epoch || current.generation() != prepared.generation {
+            return Err(Error::Binding);
+        }
+        let pending = self
+            .chat
+            .sdk
+            .pending_native_host_publication(&prepared.event.to_string(), now()?)
+            .map_err(|_| Error::Crypto)?
+            .ok_or(Error::Binding)?;
+        if pending != prepared.commit
+            || self
+                .chat
+                .sdk
+                .pending_native_device_removal(&prepared.event.to_string(), now()?)
+                .map_err(|_| Error::Crypto)?
+                .as_deref()
+                != Some(prepared.wire.as_slice())
+        {
+            return Err(Error::Binding);
+        }
+        self.chat
+            .client
+            .with_authenticated_publication(&self.chat.lease, &prepared.auth, || {
+                if Instant::now() >= prepared.deadline {
+                    return Err(Error::Auth);
+                }
+                Ok(prepared.wire.clone())
+            })
+            .map_err(|_| Error::Auth)?
+    }
+}
+
+/// View of an exact native relay acknowledgement. It is not a device grant,
+/// renderer decision or evidence that another member has processed the commit.
+#[cfg(feature = "opaque-relay")]
+#[derive(Serialize)]
+pub struct NativeDeviceRemovalPublication {
+    pub id: Uuid,
+    pub number: i64,
+    pub channel_id: Uuid,
+    pub client_event_id: Uuid,
+    pub removed_account_id: Uuid,
+    pub removed_device_id: Uuid,
+    pub created_at: String,
+}
+
+#[cfg(feature = "opaque-relay")]
+impl<S: NativeSecrets> NativeFirstRootOwner<'_, S> {
+    /// Send the exact reserved bytes using the original admitted authentication.
+    /// The pending gate clears only after a matching real ACK, durable control
+    /// evidence and successful original-auth publication. No cursor is skipped.
+    pub async fn publish_device_removal<T>(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+        publish: impl FnOnce(&NativeDeviceRemovalPublication) -> Result<T>,
+    ) -> Result<T> {
+        let result = self.publish_device_removal_inner(prepared, publish).await;
+        if result.is_err() {
+            self.retire();
+        }
+        result
+    }
+
+    async fn publish_device_removal_inner<T>(
+        &mut self,
+        prepared: &NativePreparedDeviceRemoval,
+        publish: impl FnOnce(&NativeDeviceRemovalPublication) -> Result<T>,
+    ) -> Result<T> {
+        use mnema_private_native_client_broker::{NativeOpaqueEvent, NativeOpaqueRelayOperation};
+        let wire = self.device_removal_wire_inner(prepared)?;
+        let client = self.chat.client.clone();
+        let lease = self.chat.lease.clone();
+        let input = NativeOpaqueEvent::from_native_outbox(
+            self.chat.owner.channel,
+            prepared.event,
+            &self.chat.owner.group,
+            &wire,
+        )
+        .map_err(|_| Error::Invalid)?;
+        let response = client
+            .request_opaque_relay_retained(
+                &lease,
+                prepared.auth.clone(),
+                NativeOpaqueRelayOperation::Publish(input),
+            )
+            .await
+            .map_err(|_| Error::Auth)?;
+        // Recheck the same capability after HTTP, rather than sampling a newer
+        // admission. Provider/storage checks stay outside broker locks.
+        if self.device_removal_wire_inner(prepared)? != wire {
+            return Err(Error::Binding);
+        }
+        let receipt = response.opaque_relay_receipt().ok_or(Error::Binding)?;
+        if !receipt.is_publish_ack() || receipt.records().len() != 1 {
+            return Err(Error::Binding);
+        }
+        let record = &receipt.records()[0];
+        if record.channel_id() != self.chat.owner.channel
+            || record.account_id() != self.chat.owner.account
+            || record.client_event_id() != prepared.event
+            || record.group_id() != self.chat.owner.group
+            || record.ciphertext() != wire
+            || receipt.next_after() != record.number()
+        {
+            return Err(Error::Binding);
+        }
+        let projection = NativeDeviceRemovalPublication {
+            id: record.id(),
+            number: record.number(),
+            channel_id: record.channel_id(),
+            client_event_id: record.client_event_id(),
+            removed_account_id: prepared.target_account,
+            removed_device_id: prepared.target_device,
+            created_at: record.created_at().to_rfc3339(),
+        };
+        let current = self
+            .chat
+            .sdk
+            .native_protected_event_scope(now()?)
+            .map_err(|_| Error::Crypto)?;
+        let observation = self
+            .chat
+            .sdk
+            .archived_device_removal(
+                &self.chat.owner.account.to_string(),
+                &prepared.event.to_string(),
+                &wire,
+            )
+            .map_err(|_| Error::Crypto)?
+            .ok_or(Error::Binding)?;
+        if !observation.belongs_to_native_owner(&current)
+            || observation.removed_self()
+            || observation.epoch() != prepared.epoch
+            || observation.generation() != prepared.generation
+        {
+            return Err(Error::Binding);
+        }
+        client
+            .with_opaque_relay_publication(&lease, response, |_| {
+                if Instant::now() >= prepared.deadline {
+                    return Err(Error::Auth);
+                }
+                let value = publish(&projection)?;
+                self.chat.membership_pending = None;
+                Ok(value)
+            })
+            .map_err(|_| Error::Auth)?
     }
 }

@@ -30,6 +30,9 @@ windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Syst
 [build-dependencies]
 tauri-build = { version = "=2.7.1", optional = true , features = [] }
 
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+glib = "=0.18.5"
+
 [[bin]]
 name = "mnema-desktop-probe"
 path = "src/main.rs"
@@ -39,3 +42,7 @@ required-features = ["shell"]
 name = "mnema-owned-d3d11-fixture"
 path = "src/owned_d3d11_main.rs"
 required-features = ["owned-d3d11-fixture"]
+
+# Reviewed GTK3-compatible RUSTSEC-2024-0429 backport; see scripts/checked-glib.mjs.
+[patch.crates-io]
+glib = { path = "experimental/vendor/glib" }

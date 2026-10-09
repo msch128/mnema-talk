@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { reviewedGlibPackage } from './checked-glib.mjs';
 
 const desktop = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const output = join(desktop, 'licenses');
@@ -23,7 +24,7 @@ const metadata = args.length === 1
 const overrides = JSON.parse(readFileSync(join(output, 'upstream-overrides.json'), 'utf8'));
 const hash = (value) => createHash('sha256').update(value).digest('hex');
 const textFiles = new Map();
-const licenseName = /^(?:licen[cs]e|copying|copyright|notice)(?:[-._ ].*)?$/i;
+const licenseName = /^(?:(?:licen[cs]e|copying|copyright|notice)(?:[-._ ].*)?|.+[-._ ]licen[cs]e)$/i;
 const excludedSource = /\.(?:rs|c|cc|cpp|h|hpp|js|ts|py)$/i;
 const compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 
@@ -46,11 +47,12 @@ function storeNotice(bytes, name, source, provenance) {
 }
 
 const packages = [];
-for (const pkg of metadata.packages.filter((pkg) => pkg.source)) {
-  if (pkg.source !== 'registry+https://github.com/rust-lang/crates.io-index') {
+for (const pkg of metadata.packages.filter((pkg) => pkg.source || pkg.name === 'glib')) {
+  const patched = reviewedGlibPackage(pkg);
+  if (!patched && pkg.source !== 'registry+https://github.com/rust-lang/crates.io-index') {
     throw new Error(`Unreviewed source for ${pkg.name}`);
   }
-  const source = `https://crates.io/crates/${pkg.name}/${pkg.version}`;
+  const source = patched?.source ?? `https://crates.io/crates/${pkg.name}/${pkg.version}`;
   const root = dirname(pkg.manifest_path);
   const files = findNotices(root);
   if (pkg.license_file) {
@@ -58,7 +60,7 @@ for (const pkg of metadata.packages.filter((pkg) => pkg.source)) {
     if (relative(root, path).startsWith('..')) throw new Error(`License path escapes crate ${pkg.name}`);
     if (!files.some((file) => file.path === path)) files.push({ path, name: pkg.license_file });
   }
-  let texts = files.map((file) => storeNotice(readFileSync(file.path), file.name, source, 'crate-archive'));
+  let texts = files.map((file) => storeNotice(readFileSync(file.path), file.name, source, patched ? 'crate-archive+reviewed-upstream-backport' : 'crate-archive'));
   if (texts.length === 0) {
     texts = overrides[`${pkg.name}@${pkg.version}`];
     if (!texts?.length) throw new Error(`Missing license text for ${pkg.name}@${pkg.version}`);
@@ -70,7 +72,7 @@ for (const pkg of metadata.packages.filter((pkg) => pkg.source)) {
     }
   }
   packages.push({ ecosystem: 'cargo', name: pkg.name, version: pkg.version, license: pkg.license,
-    source, texts });
+    source, ...(patched ? { local_patch: patched.local_patch } : {}), texts });
 }
 
 const npmLock = JSON.parse(readFileSync(join(desktop, 'ui', 'package-lock.json'), 'utf8'));
@@ -92,7 +94,7 @@ for (const [path, pkg] of Object.entries(npmLock.packages)) {
 packages.sort((a, b) => compare(`${a.ecosystem}:${a.name}@${a.version}`, `${b.ecosystem}:${b.name}@${b.version}`));
 const cargoLock = readFileSync(join(desktop, 'Cargo.lock'), 'utf8');
 const lockedCrates = cargoLock.split('[[package]]').slice(1).flatMap((section) => {
-  if (!/^source = "registry\+https:\/\/github\.com\/rust-lang\/crates\.io-index"$/m.test(section)) return [];
+  if (!/^source = "registry\+https:\/\/github\.com\/rust-lang\/crates\.io-index"$/m.test(section) && !/^name = "glib"$/m.test(section)) return [];
   const name = section.match(/^name = "([^"]+)"$/m)?.[1];
   const version = section.match(/^version = "([^"]+)"$/m)?.[1];
   if (!name || !version) throw new Error('Unexpected Cargo.lock package syntax.');

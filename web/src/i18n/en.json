@@ -1000,5 +1000,15 @@
     "statusError": "The security status could not be read.",
     "beginError": "Setup could not be started.",
     "confirmError": "The native confirmation could not be opened."
+  },
+  "gaming": {
+    "title": "Talk · DEV",
+    "settings": "Gaming settings",
+    "overlay": "Overlay",
+    "mute": "Mute",
+    "deafen": "Deafen",
+    "ptt": "Push to talk",
+    "games": "Game executable names (one per line)",
+    "error": "Unable to apply. Check the connection and choose different supported shortcuts."
   }
 }

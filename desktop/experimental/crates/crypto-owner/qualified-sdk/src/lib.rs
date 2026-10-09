@@ -15,11 +15,15 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 use zeroize::Zeroizing;
+mod chat_archive;
+pub use chat_archive::ArchivedChatObservation;
 mod host;
+mod membership;
+pub use membership::{ArchivedDeviceRemoval, encode_native_device_removal};
 #[cfg(test)]
 mod host_tests;
 mod protected;
-pub use host::{HostAdmission, NativeOwnerFacts};
+pub use host::{HostAdmission, NativeOwnerFacts, NativePeerFacts};
 pub use protected::{
     CHAT_EVENT_DOMAIN, CHAT_EVENT_VERSION, ChatEventClaim, ChatKind, ChatMessage, ChatOperation,
     NativeBinding, NativeCommunityAnchor, NativeFrameGrant, NativeProtectedEventScope,
@@ -575,6 +579,18 @@ impl Core {
         metadata: Option<(&str, u64, u64)>,
         kind: &str,
     ) -> Result<Vec<u8>> {
+        self.send_inner_checked(event, plaintext, now, hook, metadata, kind, |_, _| Ok(()))
+    }
+    fn send_inner_checked(
+        &mut self,
+        event: &str,
+        plaintext: &[u8],
+        now: u64,
+        hook: impl Fn(FaultPoint) -> Result<()>,
+        metadata: Option<(&str, u64, u64)>,
+        kind: &str,
+        before_commit: impl FnOnce(&[u8], &rusqlite::Transaction<'_>) -> Result<()>,
+    ) -> Result<Vec<u8>> {
         id(event)?;
         if plaintext.is_empty() || plaintext.len() > 32768 {
             return Err(Error::Invalid);
@@ -649,6 +665,7 @@ impl Core {
                 .map_err(|_| Error::Database)?,
             )?;
         }
+        before_commit(&wire, &tx)?;
         hook(FaultPoint::AfterRecord)?;
         tx.commit().map_err(|_| Error::Database)?;
         hook(FaultPoint::AfterCommit)?;
@@ -674,6 +691,14 @@ impl Core {
         self.quarantine(result)
     }
     fn receive_inner(&mut self, wire: &[u8], now: u64) -> Result<protected::Receipt> {
+        self.receive_inner_checked(wire, now, |_, _| Ok(()))
+    }
+    fn receive_inner_checked(
+        &mut self,
+        wire: &[u8],
+        now: u64,
+        before_commit: impl FnOnce(&protected::Receipt, &rusqlite::Transaction<'_>) -> Result<()>,
+    ) -> Result<protected::Receipt> {
         let group = self.group.as_mut().ok_or(Error::Quarantined)?;
         let message = parse_for(group, wire, ContentType::Application)?;
         let tx = self
@@ -711,15 +736,19 @@ impl Core {
             return Err(Error::Invalid);
         };
         let plaintext = app.into_bytes();
-        let next = advance(&tx, self.revision, now)?;
-        tx.commit().map_err(|_| Error::Database)?;
-        self.revision = next;
-        Ok(protected::Receipt {
+        let receipt = protected::Receipt {
             plaintext,
             account,
             device: device_name,
             sender,
-        })
+        };
+        // Typed validation and its archive must succeed in the same transaction
+        // as the receiver ratchet. An archive failure cannot consume the message.
+        before_commit(&receipt, &tx)?;
+        let next = advance(&tx, self.revision, now)?;
+        tx.commit().map_err(|_| Error::Database)?;
+        self.revision = next;
+        Ok(receipt)
     }
     pub fn stage_commit(&mut self, wire: &[u8], now: u64) -> Result<StageHandle> {
         self.mutable()?;
@@ -1018,6 +1047,8 @@ fn require_one(changed: usize) -> Result<()> {
     }
 }
 fn schema(conn: &Connection, p: &NativeBootstrap) -> Result<()> {
+    chat_archive::schema(conn)?;
+    membership::schema(conn)?;
     conn.execute_batch("CREATE TABLE core_state(id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL CHECK(revision>=0),generation BLOB NOT NULL CHECK(length(generation)=8),observed_time INTEGER NOT NULL CHECK(observed_time>=0),roster BLOB CHECK(length(roster)<=131072),fresh_join_epoch BLOB);CREATE TABLE core_pin(origin TEXT NOT NULL,community TEXT NOT NULL,group_id BLOB NOT NULL,authority BLOB NOT NULL,peer_identity BLOB NOT NULL,peer_key BLOB NOT NULL);CREATE TABLE core_outbox(event_id TEXT PRIMARY KEY CHECK(length(event_id) BETWEEN 1 AND 128),revision INTEGER NOT NULL,kind TEXT NOT NULL,wire BLOB NOT NULL CHECK(length(wire) BETWEEN 1 AND 65536));CREATE TABLE core_stage(id INTEGER PRIMARY KEY CHECK(id=1),revision INTEGER NOT NULL,wire BLOB NOT NULL CHECK(length(wire) BETWEEN 1 AND 65536),stage BLOB NOT NULL CHECK(length(stage) BETWEEN 1 AND 1048576));").map_err(|_|Error::Database)?;
     require_one(
         conn.execute(

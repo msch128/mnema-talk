@@ -9,6 +9,7 @@ import '@fontsource/inter/700.css'
 import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
+import { gamingSurface } from './lib/desktopGaming'
 import { isDesktopRuntime } from './lib/desktopRuntime'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
@@ -17,7 +18,9 @@ import { tooltip } from './directives/tooltip'
 // Before login the browser decides; the account's language takes over after login.
 setLocale(browserLocale())
 
-const root = isDesktopRuntime()
+const root = gamingSurface()
+  ? (await import('./components/DesktopGamingOverlay.vue')).default
+  : isDesktopRuntime()
   ? (await import('./NativeBootstrap.vue')).default
   : App
 

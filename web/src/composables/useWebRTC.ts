@@ -1,3 +1,4 @@
+import { gamingMicLease } from '../lib/gamingMicLease'
 import { ref, watch, effectScope, toRaw } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
@@ -92,6 +93,10 @@ let qualityChain = Promise.resolve()
 let playbackContext: AudioContext | null = null
 // Input volume: a gain stage in the mic pipeline, only built when the input
 // volume is not 100 % (so the default path stays the plain microphone).
+let gamingGainNode: GainNode | null = null
+export function setGamingPttLease(pressed: boolean): void {
+  if (gamingGainNode && audioContext) gamingMicLease(gamingGainNode, audioContext, useVoiceStore().inputMode === 'ptt', pressed)
+}
 let inputGainNode: GainNode | null = null
 // The voice store, for the output device of a lazily created playback context.
 let outputDeviceStore: VoiceStore | null = null
@@ -788,6 +793,7 @@ function handlePttKeyDown(e: KeyboardEvent) {
   // Holding the key while typing in the composer must not open the mic.
   if (isTypingTarget(e.target)) return
   if ((e.code || e.key) === voiceStore.pttKey) {
+    setGamingPttLease(true)
     if (!voiceStore.isPttPressed) {
       voiceStore.isPttPressed = true
       if (voiceStore.isConnected || voiceStore.isMicTesting) {
@@ -803,6 +809,7 @@ function handlePttKeyUp(e: KeyboardEvent) {
   if ((e.code || e.key) === voiceStore.pttKey) {
     if (voiceStore.isPttPressed) {
       voiceStore.isPttPressed = false
+      setGamingPttLease(false)
       if (voiceStore.isConnected || voiceStore.isMicTesting) {
         playSoundEffect('ptt_stop')
       }
@@ -814,6 +821,7 @@ function handlePttKeyUp(e: KeyboardEvent) {
 // release the key so the mic does not stay open.
 function releasePtt() {
   if (pttStore) pttStore.isPttPressed = false
+  setGamingPttLease(false)
 }
 
 function onVisibilityChange() {
@@ -1415,6 +1423,7 @@ export function useWebRTC() {
       ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
     } catch (err) {
       console.warn('AudioContext setup error:', err)
+      if (typeof Reflect.get(window, '__MNEMA_GAMING_BRIDGE__') === 'string') { stream.getTracks().forEach(track => track.stop()); return null }
       return stream
     }
     audioContext = ctx
@@ -1467,6 +1476,26 @@ export function useWebRTC() {
       }
     }
 
+    // Only the desktop gaming bridge needs a native-key lease. The sent
+    // microphone passes this gain even at 100% volume and without an AI filter.
+    if (typeof Reflect.get(window, '__MNEMA_GAMING_BRIDGE__') === 'string' && window.location.protocol === 'https:') {
+      try {
+        const gain = ctx.createGain()
+        const destination = ctx.createMediaStreamDestination()
+        ctx.createMediaStreamSource(sendStream).connect(gain)
+        gain.connect(destination)
+        gamingMicLease(gain, ctx, voiceStore.inputMode === 'ptt', false)
+        gamingGainNode = gain
+        rawMicStream ??= stream
+        sendStream = destination.stream
+      } catch {
+        stream.getTracks().forEach(track => track.stop())
+        sendStream.getTracks().forEach(track => track.stop())
+        teardownMicPipeline()
+        return null // Never send an ungated desktop microphone after setup failure.
+      }
+    }
+
     try {
       analyser = ctx.createAnalyser()
       analyser.fftSize = 256
@@ -1490,6 +1519,10 @@ export function useWebRTC() {
   }
 
   function teardownMicPipeline() {
+    if (gamingGainNode) {
+      try { gamingGainNode.disconnect() } catch { /* already disconnected */ }
+      gamingGainNode = null
+    }
     micPipelineController?.abort()
     micPipelineController = null
     callBiquad = null
@@ -1530,8 +1563,17 @@ export function useWebRTC() {
     const buffer = new Uint8Array(analyser.fftSize)
     let wasSpeaking = false
     const gateOpen = createVoiceGate(voiceStore)
+    let lastGamingTick = performance.now()
 
     speakingInterval = setInterval(() => {
+      const now = performance.now()
+      if (gamingGainNode && voiceStore.inputMode === 'ptt' && now - lastGamingTick > 250) {
+        // An overdue callback cannot renew the pre-stall pressed state. A
+        // fresh native pulse or local key press must establish it again.
+        voiceStore.isPttPressed = false
+        setGamingPttLease(false)
+      }
+      lastGamingTick = now
       if (!analyser) return
 
       const level = calculateRMSLevel(analyser, buffer)
@@ -1588,6 +1630,7 @@ export function useWebRTC() {
       }
 
       // Noise gate: push-to-talk, or voice activity with hangover.
+      setGamingPttLease(voiceStore.isPttPressed)
       const shouldTransmit = gateOpen(level)
 
       // Physical audio track gate (muting track when below threshold to eliminate background bleed)
@@ -1934,6 +1977,7 @@ export function useWebRTC() {
 
       // Input volume: adjust the gain live; the first change away from 100 %
       // rebuilds the pipeline once to put the gain stage in.
+      watch(() => voiceStore.inputMode, () => { voiceStore.isPttPressed = false; setGamingPttLease(false) }, { flush: 'sync' })
       watch(() => voiceStore.inputVolume, (v) => {
         if (inputGainNode) {
           setNodeGain(inputGainNode, v / 100, audioContext?.currentTime ?? 0)

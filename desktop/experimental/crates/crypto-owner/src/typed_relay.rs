@@ -2,9 +2,11 @@
 //! This bounded RAM history is not persistent/recoverable application history.
 //! No raw ciphertext/verified-proof constructor or renderer authority is exposed.
 use super::*;
-use chat_history::{NativeHistoryChange, NativeHistoryMessage, StagedChatHistory};
+use chat_history::{
+    NativeHistoryChange, NativeHistoryMessage, NativeHistoryObservation, StagedChatHistory,
+};
 use mnema_crypto_sdk_prototype::{
-    ChatEventClaim, ChatOperation, NativeProtectedEventScope, ProtectedReceived, VerifiedChatEvent,
+    ChatEventClaim, ChatOperation, NativeProtectedEventScope, ProtectedReceived,
 };
 use mnema_private_native_client_broker::{NativeOpaqueEvent, NativeOpaqueRelayOperation};
 use serde::Serialize;
@@ -61,7 +63,7 @@ pub struct NativeChatEventReceipt {
 }
 fn project_receipt(
     record: &mnema_private_native_client_broker::NativeOpaqueRecord,
-    event: &VerifiedChatEvent,
+    event: &NativeHistoryObservation,
 ) -> Result<NativeChatEventReceipt> {
     let message_id = match event.operation() {
         ChatOperation::Create { .. } | ChatOperation::Reply { .. } => record.id(),
@@ -472,13 +474,14 @@ impl NativeChatOwner {
             if !proof.scope().matches_exact(&job.scope) {
                 return Err(Error::Binding);
             }
+            let proof = NativeHistoryObservation::Live(proof);
             let scope = self
                 .sdk
                 .native_protected_event_scope(now()?)
                 .map_err(|_| Error::Crypto)?;
             let staged = self
                 .typed_history
-                .stage_authenticated(scope, [(record, &proof)])?;
+                .stage_observed(scope, [(record, &proof)])?;
             let projection = project_changes(
                 self.owner.channel,
                 &staged,
@@ -499,9 +502,9 @@ impl NativeChatOwner {
         }
         result
     }
-    /// Every nonlocal wire is paired directly with its ONE actual SDK receive.
-    /// Locally reserved wire uses only exact byte-matching own projection. A
-    /// same-account other device never inherits the local bypass.
+    /// Exact saved observations are historical, never a live reservation grant.
+    /// Every unknown wire reaches ONE actual SDK receive. A same-account other
+    /// device never inherits an own reservation's projection bypass.
     pub async fn receive_chat_event_page<T>(
         &mut self,
         publish: impl FnOnce(&NativeChatEventPublication) -> Result<T>,
@@ -516,8 +519,12 @@ impl NativeChatOwner {
         publish: impl FnOnce(&NativeChatEventPublication) -> Result<T>,
     ) -> Result<T> {
         self.check_admitted_scope(&auth)?;
+        // Polling must not consume a ratchet or retire the prepared removal
+        // while its real relay acknowledgement is outstanding.
+        if self.membership_pending.is_some() {
+            return Err(Error::Conflict);
+        }
         self.enter_chat_protocol(true)?;
-        self.current(now()?)?;
         let client = self.client.clone();
         let lease = self.lease.clone();
         let after = self.cursor;
@@ -534,12 +541,14 @@ impl NativeChatOwner {
             .map_err(|_| Error::Auth)?;
         let result = (|| {
             self.check_admitted_scope(&auth)?;
-            self.current(now()?)?;
             let receipt = response.opaque_relay_receipt().ok_or(Error::Binding)?;
             if receipt.is_publish_ack() {
                 return Err(Error::Binding);
             }
-            let mut verified: Vec<VerifiedChatEvent> = Vec::with_capacity(receipt.records().len());
+            let mut verified: Vec<NativeHistoryObservation> =
+                Vec::with_capacity(receipt.records().len());
+            let mut chat_records = Vec::with_capacity(receipt.records().len());
+            let mut controls = Vec::new();
             let mut next = after;
             for record in receipt.records() {
                 if record.channel_id() != self.owner.channel
@@ -549,6 +558,36 @@ impl NativeChatOwner {
                     return Err(Error::Binding);
                 }
                 next = record.number();
+                let control = if let Some(saved) = self
+                    .sdk
+                    .archived_device_removal(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                {
+                    Some(saved)
+                } else {
+                    self.sdk
+                        .receive_native_device_removal_if_control(
+                            &record.account_id().to_string(),
+                            &record.client_event_id().to_string(),
+                            record.ciphertext(),
+                            now()?,
+                        )
+                        .map_err(|_| Error::Crypto)?
+                };
+                if let Some(control) = control {
+                    if control.removed_self()
+                        || control.account() != record.account_id().to_string()
+                        || control.event_id() != record.client_event_id().to_string()
+                    {
+                        return Err(Error::Crypto);
+                    }
+                    controls.push(control);
+                    continue;
+                }
                 let own = if record.account_id() == self.owner.account {
                     self.typed_events
                         .get(&record.client_event_id())
@@ -556,10 +595,22 @@ impl NativeChatOwner {
                 } else {
                     None
                 };
-                let proof = if let Some(own) = own {
-                    self.sdk
-                        .pending_native_chat_event_projection(own, now()?)
-                        .map_err(|_| Error::Crypto)?
+                let proof = if let Some(archived) = self
+                    .sdk
+                    .archived_chat_observation(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                {
+                    NativeHistoryObservation::Archived(archived)
+                } else if let Some(own) = own {
+                    NativeHistoryObservation::Live(
+                        self.sdk
+                            .pending_native_chat_event_projection(own, now()?)
+                            .map_err(|_| Error::Crypto)?,
+                    )
                 } else {
                     match self
                         .sdk
@@ -570,14 +621,29 @@ impl NativeChatOwner {
                         )
                         .map_err(|_| Error::Crypto)?
                     {
-                        ProtectedReceived::ChatEvent(event) => *event,
+                        ProtectedReceived::ChatEvent(event) => {
+                            NativeHistoryObservation::Live(*event)
+                        }
                         _ => return Err(Error::Binding), // no alternate domain/decrypt fallback.
                     }
                 };
                 if proof.account() != record.account_id().to_string() {
                     return Err(Error::Binding);
                 }
-                verified.push(proof);
+                // A later authenticated control in this same page may change
+                // the live epoch. Use only the exact durable observation saved
+                // by the real receive, never weaken live/send scope matching.
+                let saved = self
+                    .sdk
+                    .archived_chat_observation(
+                        &record.account_id().to_string(),
+                        &record.client_event_id().to_string(),
+                        record.ciphertext(),
+                    )
+                    .map_err(|_| Error::Crypto)?
+                    .ok_or(Error::Crypto)?;
+                verified.push(NativeHistoryObservation::Archived(saved));
+                chat_records.push(record);
             }
             if receipt.next_after() != next {
                 return Err(Error::Binding);
@@ -586,12 +652,21 @@ impl NativeChatOwner {
                 .sdk
                 .native_protected_event_scope(now()?)
                 .map_err(|_| Error::Crypto)?;
+            if controls
+                .iter()
+                .any(|control| !control.belongs_to_native_owner(&scope))
+            {
+                return Err(Error::Binding);
+            }
+            // An authenticated fresh control may repair an expired historical
+            // roster, but no payload is admitted without current membership.
+            self.current(now()?)?;
             let staged = self
                 .typed_history
-                .stage_authenticated(scope, receipt.records().iter().zip(verified.iter()))?;
-            let acknowledgements = receipt
-                .records()
+                .stage_observed(scope, chat_records.iter().copied().zip(verified.iter()))?;
+            let acknowledgements = chat_records
                 .iter()
+                .copied()
                 .zip(verified.iter())
                 .map(|(record, proof)| project_receipt(record, proof))
                 .collect::<Result<Vec<_>>>()?;

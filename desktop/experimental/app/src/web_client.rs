@@ -38,7 +38,7 @@ fn address(input: &str) -> Result<Url, String> {
     Ok(url)
 }
 
-fn bundled(url: &Url) -> bool {
+pub(super) fn bundled(url: &Url) -> bool {
     url.port().is_none()
         && url.username().is_empty()
         && url.password().is_none()
@@ -105,12 +105,18 @@ async fn desktop_open_instance(window: WebviewWindow, address: String) -> Result
     if window.app_handle().get_webview_window("instance").is_some() {
         return Err("Close the current instance before selecting another.".into());
     }
+    let gaming_token = super::web_gaming::bind(window.app_handle(), origin.origin());
     let allowed_origin = origin.origin();
     let popup_origin = allowed_origin.clone();
     let app = window.app_handle().clone();
     let popup_app = app.clone();
     let instance = WebviewWindowBuilder::new(&app, "instance", WebviewUrl::External(origin))
         .title("Mnema Desktop DEV")
+        .initialization_script(format!(
+            "if(window===window.top&&window.location.origin==={})Object.defineProperty(window,'__MNEMA_GAMING_BRIDGE__',{{value:{}}});",
+            serde_json::to_string(&allowed_origin.ascii_serialization()).map_err(|_| "Gaming setup failed.")?,
+            serde_json::to_string(&gaming_token).map_err(|_| "Gaming setup failed.")?
+        ))
         .inner_size(1200.0, 820.0)
         .on_navigation(move |url| {
             url.scheme() == "https"
@@ -162,6 +168,7 @@ async fn desktop_open_instance(window: WebviewWindow, address: String) -> Result
     let selector = window.clone();
     instance.on_window_event(move |event| {
         if matches!(event, tauri::WindowEvent::Destroyed) {
+            super::web_gaming::clear(selector.app_handle());
             if let Some(attachment) = selector.app_handle().get_webview_window("attachment") {
                 let _ = attachment.close();
             }
@@ -176,8 +183,16 @@ async fn desktop_open_instance(window: WebviewWindow, address: String) -> Result
 
 pub(super) fn run() {
     let result = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![desktop_open_instance])
+        .manage(std::sync::Mutex::new(super::web_gaming::Gaming::default()))
+        .invoke_handler(tauri::generate_handler![
+            desktop_open_instance,
+            super::web_gaming::desktop_gaming_sync,
+            super::web_gaming::desktop_gaming_snapshot,
+            super::web_gaming::desktop_gaming_control,
+            super::web_gaming::desktop_gaming_settings
+        ])
         .setup(|app| {
+            super::web_gaming::setup(app.handle());
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Mnema Desktop DEV — Instance")
                 .inner_size(520.0, 520.0)

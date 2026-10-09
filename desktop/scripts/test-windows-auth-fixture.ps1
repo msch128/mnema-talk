@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory)][string]$Tag)
+﻿param([Parameter(Mandatory)][string]$Tag, [switch]$VoiceAcceptance)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'This fixture requires a disposable Windows Actions runner and an existing release tag' }
 # This opt-in test owns a disposable Actions VM; never install trust on a user's PC.
@@ -13,8 +13,10 @@ git fetch --no-tags origin "refs/tags/${Tag}:refs/tags/${Tag}"
 if ($LASTEXITCODE -ne 0) { throw 'Exact release tag fetch failed' }
 $backendRevision = git rev-parse "refs/tags/$Tag"
 if ($LASTEXITCODE -ne 0 -or $backendRevision -notmatch '^[a-f0-9]{40}$') { throw 'Exact release revision lookup failed' }
-# The backend and embedded app must still be the released product sources.
-git diff --exit-code $Tag -- . ':!desktop' ':!.github' ':!internal/server/desktop_client_fixture_integration_test.go' ':!internal/ws/native_failure_integration_test.go' ':!web/dist'
+# The runtime Go sources, migrations, dependencies and embedded web app must
+# match the release. Documentation/build metadata may differ on the draft.
+# Only these exact integration/regression test changes are excluded.
+git diff --exit-code $Tag -- '*.go' go.mod go.sum go.work go.work.sum cmd internal api web ':!desktop' ':!internal/server/desktop_client_fixture_integration_test.go' ':!internal/ws/native_failure_integration_test.go' ':!internal/sfu/signaling_test.go' ':!web/dist'
 if ($LASTEXITCODE -ne 0) { throw 'Fixture backend differs from the requested released product' }
 $nonce = [Guid]::NewGuid().ToString('N')
 $directory = Join-Path $env:RUNNER_TEMP "mnema-auth-$nonce"
@@ -98,6 +100,7 @@ try {
   $env:MNEMA_DESKTOP_FIXTURE_NONCE = $nonce
   $env:MNEMA_DESKTOP_FIXTURE_VERSION = $Tag.Substring(1)
   $env:MNEMA_DESKTOP_FIXTURE_REVISION = $backendRevision
+  $env:MNEMA_DESKTOP_FIXTURE_VOICE = $(if ($VoiceAcceptance) { "1" } else { "0" })
   Write-Host 'Fixture phase: starting the normal backend'
   $server = Start-Process $goExecutable -ArgumentList '-test.run=^TestDesktopClientGUIFixture$','-test.timeout=12m' -PassThru -RedirectStandardOutput (Join-Path $directory 'server.log') -RedirectStandardError (Join-Path $directory 'server-error.log')
   # PowerShell 5.1 redirected Start-Process needs a retained handle for ExitCode.
@@ -170,7 +173,7 @@ public static class MnemaFixtureCertificateImport {
   if ([Convert]::ToBase64String($installed.RawData) -ne [Convert]::ToBase64String($rootBytes)) { throw 'Owned fixture CA readback mismatch' }
   Write-Host 'Fixture phase: test CA verified, starting the published client probe'
   $env:GH_TOKEN = $token
-  & desktop/scripts/test-windows-release.ps1 -Tag $Tag -InstanceUrl $ready.origin -FixtureDirectory $directory
+  & desktop/scripts/test-windows-release.ps1 -Tag $Tag -InstanceUrl $ready.origin -FixtureDirectory $directory -VoiceAcceptance:$VoiceAcceptance
   if (!$?) { throw 'Authenticated desktop UI probe failed' }
   [IO.File]::WriteAllText((Join-Path $directory 'STOP'), 'done')
   if (!$server.WaitForExit(30000)) { throw 'Normal router fixture exit timed out' }
@@ -214,5 +217,6 @@ public static class MnemaFixtureCertificateImport {
   $env:MNEMA_DESKTOP_FIXTURE_NONCE = $null
   $env:MNEMA_DESKTOP_FIXTURE_VERSION = $null
   $env:MNEMA_DESKTOP_FIXTURE_REVISION = $null
+  $env:MNEMA_DESKTOP_FIXTURE_VOICE = $null
   if ($cleanupErrors.Count) { throw ($cleanupErrors -join '; ') }
 }

@@ -1,0 +1,10 @@
+{
+  "identifier": "gaming-surfaces",
+  "windows": [
+    "sidepeek",
+    "gaming-overlay"
+  ],
+  "permissions": [
+    "allow-desktop-gaming-snapshot"
+  ]
+}

@@ -144,8 +144,9 @@
     {
       "path": "desktop/experimental/vendor/openmls/Cargo.lock",
       "frozen_sha256": "efd7f22361409c3d2a4a084693aca70df1fca8b969427bb70ec49663dd56d5db",
-      "checkpoint_sha256": "efd7f22361409c3d2a4a084693aca70df1fca8b969427bb70ec49663dd56d5db",
-      "relocated_or_configured": false
+      "checkpoint_sha256": "ffb2df54842a36ed4432429ad6d14f4458ada917765694634902671ccd109ebf",
+      "relocated_or_configured": true,
+      "local_modification": "Regenerated for reviewed HPKE/DRBG changes plus h2 and rustls security updates; original frozen source identity retained."
     },
     {
       "path": "desktop/experimental/vendor/openmls/Cargo.toml",
@@ -540,8 +541,9 @@
     {
       "path": "desktop/experimental/vendor/openmls/compat_tests/Cargo.lock",
       "frozen_sha256": "4a492f5026019509b3f48e557583d29dd6fdcf74981a0226c69c32baec9651d7",
-      "checkpoint_sha256": "4a492f5026019509b3f48e557583d29dd6fdcf74981a0226c69c32baec9651d7",
-      "relocated_or_configured": false
+      "checkpoint_sha256": "ee0096d7814f2a07e39eb761f18ad5d8fb201479cf03ebf31ca4e370000f64a3",
+      "relocated_or_configured": true,
+      "local_modification": "Regenerated for reviewed HPKE/DRBG dependency security updates; original frozen source identity retained."
     },
     {
       "path": "desktop/experimental/vendor/openmls/compat_tests/Cargo.toml",
@@ -798,8 +800,9 @@
     {
       "path": "desktop/experimental/vendor/openmls/libcrux_crypto/Cargo.toml",
       "frozen_sha256": "a73680f15b9e0f1beb55ea6fcaf20cdafe11746b6832ab6cfa202e83f61097a0",
-      "checkpoint_sha256": "a73680f15b9e0f1beb55ea6fcaf20cdafe11746b6832ab6cfa202e83f61097a0",
-      "relocated_or_configured": false
+      "checkpoint_sha256": "589ebd4f043188baa100c6ae1e6c4b6697d67f5a0b541217f6c17b5ffc52640d",
+      "relocated_or_configured": true,
+      "local_modification": "Mnema security dependency updates: HPKE0.7 to0.8 and libcrux-hmac-drbg0.0.1 to0.0.2; RUSTSEC-2026-0330/0331/0329."
     },
     {
       "path": "desktop/experimental/vendor/openmls/libcrux_crypto/src/crypto.rs",
@@ -2640,8 +2643,9 @@
     {
       "path": "desktop/experimental/vendor/openmls/openmls_rust_crypto/Cargo.toml",
       "frozen_sha256": "b31917cee3099249d0bf612be6100b2fd9cb61933c6131d0141a06b9edd0cc2d",
-      "checkpoint_sha256": "b31917cee3099249d0bf612be6100b2fd9cb61933c6131d0141a06b9edd0cc2d",
-      "relocated_or_configured": false
+      "checkpoint_sha256": "2818ca0f168d6fee5664744217f8b8bca3aa8c8fba081f2e48ca3ceac6f9c528",
+      "relocated_or_configured": true,
+      "local_modification": "Mnema security dependency update: HPKE0.7 to0.8; RUSTSEC-2026-0330/0331."
     },
     {
       "path": "desktop/experimental/vendor/openmls/openmls_rust_crypto/README.md",

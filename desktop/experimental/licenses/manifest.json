@@ -1,7 +1,7 @@
 {
   "schema": "mnema-desktop-license-bundle-v1",
   "scope": "Conservative locked Rust graph and production npm closure; not a claim that all packages are linked.",
-  "cargo_lock_sha256": "e74e8ccea38a063b59d9cf2e89df5b5b6a08e44f3d5053ffdeb6b196cd86d836",
+  "cargo_lock_sha256": "b6f8fb1059db49f7298eb20a05af22bf6343d3cfe4b52dd7610e340ce513bc9f",
   "npm_lock_sha256": "f61a286c237866fd5094ebfdca41eea19a7b39d7b5c33529f817c6dd1406d976",
   "supplemental": {
     "rust_standard_library": {
@@ -392,6 +392,27 @@
           "name": "LICENSE-MIT",
           "sha256": "0aa8963e105e8b6e02f634484145d4e5b0f42d0a6dd05c16f8148f033383adef",
           "source": "https://crates.io/crates/base16ct/0.2.0",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "base16ct",
+      "version": "1.0.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/base16ct/1.0.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/base16ct/1.0.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "54fb6dfe99a6906f862aa40282f0e8e9d9d0f22d57d99ab8acbaf4c8ceaa70e0",
+          "source": "https://crates.io/crates/base16ct/1.0.0",
           "provenance": "crate-archive"
         }
       ]
@@ -1128,6 +1149,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "chacha20poly1305",
+      "version": "0.11.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/chacha20poly1305/0.11.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/chacha20poly1305/0.11.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "b8c6939380a400f53e11923d50fcc4dd2fa1ba8339fd9d04cda38a0251b6c9b0",
+          "source": "https://crates.io/crates/chacha20poly1305/0.11.0",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "chrono",
       "version": "0.4.45",
       "license": "MIT OR Apache-2.0",
@@ -1534,57 +1576,57 @@
     {
       "ecosystem": "cargo",
       "name": "crabgrind",
-      "version": "0.2.6",
+      "version": "0.3.1",
       "license": "MIT",
-      "source": "https://crates.io/crates/crabgrind/0.2.6",
+      "source": "https://crates.io/crates/crabgrind/0.3.1",
       "texts": [
         {
           "name": "LICENSE/MIT.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "ac7ad2d98b077d386c467560708c2fad4bcc08022a8b0d5db28f5b6681a79743",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/MIT.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/cachegrind.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "6a60deb2168cc9d1cfd94f6449b22f724648352ddf823d5db79dea1144db9231",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/cachegrind.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/callgrind.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "8f80203a2206337f12864020560ce8415735cc9bd80481d36637c70025800d02",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/callgrind.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/dhat.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "1a136ab533f5e6fb3b660656a09fbd3ad00ecd7cc48ee58b97061765f836e3d0",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/dhat.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/drd.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "143d3ffc9da16f300ca1bc53fafc3cbcbbe71f38f12e9c7dfc4bf10400f1a10f",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/drd.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/helgrind.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "b78a7d46974cc262db8f79e54bf9d6f294fb7aa8ed2b12e12f876edcde943a1e",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/helgrind.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/memcheck.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "6e7645bb4d530a7a754a602a45043fdf91d68fd5206fa9a1924c55ab5943a457",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/memcheck.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         },
         {
           "name": "LICENSE/valgrind.h.LICENSE",
-          "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "1c133c302d38ebfda8a0c12b3ab6f011e3cb747d3de85a4c9c253a9e217de9c5",
-          "source": "https://raw.githubusercontent.com/2dav/crabgrind/30cf77b1ca50df3b940346000634e66ed1d5c259/LICENSE/valgrind.h.LICENSE"
+          "source": "https://crates.io/crates/crabgrind/0.3.1",
+          "provenance": "crate-archive"
         }
       ]
     },
@@ -1731,6 +1773,27 @@
           "name": "LICENSE-MIT",
           "sha256": "90c503b61dee04e1449c323ec34c229dfb68d7adcb96c7e140ee55f70fce2d8e",
           "source": "https://crates.io/crates/crypto-bigint/0.5.5",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "crypto-bigint",
+      "version": "0.7.5",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/crypto-bigint/0.7.5",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/crypto-bigint/0.7.5",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "57a4d75c1d095bb94754a478f3cd15e60ac66a5c5627d844be01a918eea5fe88",
+          "source": "https://crates.io/crates/crypto-bigint/0.7.5",
           "provenance": "crate-archive"
         }
       ]
@@ -2545,6 +2608,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "elliptic-curve",
+      "version": "0.14.1",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/elliptic-curve/0.14.1",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/elliptic-curve/0.14.1",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "d8c4ab431f20da8452c9a217084163822e5fd9d134e1343903c929f2859fc8fd",
+          "source": "https://crates.io/crates/elliptic-curve/0.14.1",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "embed-resource",
       "version": "3.0.12",
       "license": "MIT",
@@ -2743,6 +2827,27 @@
           "name": "LICENSE-MIT",
           "sha256": "8d0c1d1d4b2bebf5b9211f0e883d5a482b7808f3ed31320da14ddee95811f4ef",
           "source": "https://crates.io/crates/ff/0.13.1",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "ff",
+      "version": "0.14.0",
+      "license": "MIT/Apache-2.0",
+      "source": "https://crates.io/crates/ff/0.14.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "3708458dee7f359ac6c9c5558023ed481be87e5372c43ebd7f2ca7ad23c12026",
+          "source": "https://crates.io/crates/ff/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "8d0c1d1d4b2bebf5b9211f0e883d5a482b7808f3ed31320da14ddee95811f4ef",
+          "source": "https://crates.io/crates/ff/0.14.0",
           "provenance": "crate-archive"
         }
       ]
@@ -3542,18 +3647,19 @@
       "version": "0.18.5",
       "license": "MIT",
       "source": "https://crates.io/crates/glib/0.18.5",
+      "local_patch": "https://github.com/gtk-rs/gtk-rs-core/commit/b5a4071e439bef2b5eea76c3aa25e5ae84839e34",
       "texts": [
         {
           "name": "COPYRIGHT",
           "sha256": "dae402989de65164815b7e2b6bc2b9576285434c3785934c8b6ece0fa055960d",
           "source": "https://crates.io/crates/glib/0.18.5",
-          "provenance": "crate-archive"
+          "provenance": "crate-archive+reviewed-upstream-backport"
         },
         {
           "name": "LICENSE",
           "sha256": "8cf56d10131ce201cf69ab74b111d3ebac1acca3833d7efb39ae357224b70edb",
           "source": "https://crates.io/crates/glib/0.18.5",
-          "provenance": "crate-archive"
+          "provenance": "crate-archive+reviewed-upstream-backport"
         }
       ]
     },
@@ -3616,6 +3722,33 @@
           "name": "LICENSE-MIT",
           "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
           "source": "https://crates.io/crates/group/0.13.0",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "group",
+      "version": "0.14.0",
+      "license": "MIT/Apache-2.0",
+      "source": "https://crates.io/crates/group/0.14.0",
+      "texts": [
+        {
+          "name": "COPYRIGHT",
+          "sha256": "7429802d3e67e3308471b91fbea341e484c4e0a23d0fb230a8636c38184cec79",
+          "source": "https://crates.io/crates/group/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+          "source": "https://crates.io/crates/group/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+          "source": "https://crates.io/crates/group/0.14.0",
           "provenance": "crate-archive"
         }
       ]
@@ -3799,6 +3932,21 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "hax-lib-macros-types",
+      "version": "0.4.2",
+      "license": "Apache-2.0",
+      "source": "https://crates.io/crates/hax-lib-macros-types/0.4.2",
+      "texts": [
+        {
+          "name": "LICENSE",
+          "sha256": "9a50bad5a51e0ad726ea3a7f4b7b758e1b4d1784e6abefe1367f5bf01e972725",
+          "source": "https://crates.io/crates/hax-lib-macros-types/0.4.2",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "hax-lib-macros",
       "version": "0.3.7",
       "license": "Apache-2.0",
@@ -3814,6 +3962,21 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "hax-lib-macros",
+      "version": "0.4.2",
+      "license": "Apache-2.0",
+      "source": "https://crates.io/crates/hax-lib-macros/0.4.2",
+      "texts": [
+        {
+          "name": "LICENSE",
+          "sha256": "9a50bad5a51e0ad726ea3a7f4b7b758e1b4d1784e6abefe1367f5bf01e972725",
+          "source": "https://crates.io/crates/hax-lib-macros/0.4.2",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "hax-lib",
       "version": "0.3.7",
       "license": "Apache-2.0",
@@ -3824,6 +3987,27 @@
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "9a50bad5a51e0ad726ea3a7f4b7b758e1b4d1784e6abefe1367f5bf01e972725",
           "source": "https://raw.githubusercontent.com/cryspen/hax/d8b5b3d3b666fee8943a351445d2b680105e8ea3/LICENSE"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "hax-lib",
+      "version": "0.4.2",
+      "license": "Apache-2.0",
+      "source": "https://crates.io/crates/hax-lib/0.4.2",
+      "texts": [
+        {
+          "name": "LICENSE",
+          "sha256": "9a50bad5a51e0ad726ea3a7f4b7b758e1b4d1784e6abefe1367f5bf01e972725",
+          "source": "https://crates.io/crates/hax-lib/0.4.2",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "proof-libs/lean/LICENSE",
+          "sha256": "9a50bad5a51e0ad726ea3a7f4b7b758e1b4d1784e6abefe1367f5bf01e972725",
+          "source": "https://crates.io/crates/hax-lib/0.4.2",
+          "provenance": "crate-archive"
         }
       ]
     },
@@ -3977,9 +4161,9 @@
     {
       "ecosystem": "cargo",
       "name": "hpke-rs-crypto",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "license": "MPL-2.0",
-      "source": "https://crates.io/crates/hpke-rs-crypto/0.7.0",
+      "source": "https://crates.io/crates/hpke-rs-crypto/0.8.0",
       "texts": [
         {
           "license_selection": "MPL-2.0",
@@ -3993,9 +4177,9 @@
     {
       "ecosystem": "cargo",
       "name": "hpke-rs-libcrux",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "license": "MPL-2.0",
-      "source": "https://crates.io/crates/hpke-rs-libcrux/0.7.0",
+      "source": "https://crates.io/crates/hpke-rs-libcrux/0.8.0",
       "texts": [
         {
           "license_selection": "MPL-2.0",
@@ -4009,9 +4193,9 @@
     {
       "ecosystem": "cargo",
       "name": "hpke-rs-rust-crypto",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "license": "MPL-2.0",
-      "source": "https://crates.io/crates/hpke-rs-rust-crypto/0.7.0",
+      "source": "https://crates.io/crates/hpke-rs-rust-crypto/0.8.0",
       "texts": [
         {
           "license_selection": "MPL-2.0",
@@ -4025,9 +4209,9 @@
     {
       "ecosystem": "cargo",
       "name": "hpke-rs",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "license": "MPL-2.0",
-      "source": "https://crates.io/crates/hpke-rs/0.7.0",
+      "source": "https://crates.io/crates/hpke-rs/0.8.0",
       "texts": [
         {
           "license_selection": "MPL-2.0",
@@ -4869,20 +5053,20 @@
     {
       "ecosystem": "cargo",
       "name": "k256",
-      "version": "0.13.4",
+      "version": "0.14.0",
       "license": "Apache-2.0 OR MIT",
-      "source": "https://crates.io/crates/k256/0.13.4",
+      "source": "https://crates.io/crates/k256/0.14.0",
       "texts": [
         {
           "name": "LICENSE-APACHE",
           "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
-          "source": "https://crates.io/crates/k256/0.13.4",
+          "source": "https://crates.io/crates/k256/0.14.0",
           "provenance": "crate-archive"
         },
         {
           "name": "LICENSE-MIT",
           "sha256": "3b4f73047906835fba5005acdf68f25a460b9ee298dae710f22b435d335a6f7b",
-          "source": "https://crates.io/crates/k256/0.13.4",
+          "source": "https://crates.io/crates/k256/0.14.0",
           "provenance": "crate-archive"
         }
       ]
@@ -5016,399 +5200,441 @@
     {
       "ecosystem": "cargo",
       "name": "libcrux-aead",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-aead/0.0.9",
+      "source": "https://crates.io/crates/libcrux-aead/0.0.10",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-aes",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-aes/0.0.9",
+      "source": "https://crates.io/crates/libcrux-aes/0.0.10",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-chacha20poly1305",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-chacha20poly1305/0.0.9",
+      "source": "https://crates.io/crates/libcrux-chacha20poly1305/0.0.10",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-curve25519",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-curve25519/0.0.8",
+      "source": "https://crates.io/crates/libcrux-curve25519/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-ecdh",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-ecdh/0.0.8",
+      "source": "https://crates.io/crates/libcrux-ecdh/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-hacl-rs",
-      "version": "0.0.5",
+      "version": "0.0.6",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-hacl-rs/0.0.5",
+      "source": "https://crates.io/crates/libcrux-hacl-rs/0.0.6",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-hkdf",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-hkdf/0.0.8",
+      "source": "https://crates.io/crates/libcrux-hkdf/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "libcrux-hmac-drbg",
+      "version": "0.0.2",
+      "license": "Apache-2.0",
+      "source": "https://crates.io/crates/libcrux-hmac-drbg/0.0.2",
+      "texts": [
+        {
+          "name": "LICENSE",
+          "provenance": "crate-vcs-commit-upstream-component",
+          "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "provenance": "crate-vcs-commit-upstream-component",
+          "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-hmac",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-hmac/0.0.8",
+      "source": "https://crates.io/crates/libcrux-hmac/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-intrinsics",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-intrinsics/0.0.8",
+      "source": "https://crates.io/crates/libcrux-intrinsics/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-kem",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-kem/0.0.9",
+      "source": "https://crates.io/crates/libcrux-kem/0.0.10",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-macros",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-macros/0.0.3",
+      "source": "https://crates.io/crates/libcrux-macros/0.0.4",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/8ebe73237378c80b86a953ec8a77bdd3299918e7/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/8ebe73237378c80b86a953ec8a77bdd3299918e7/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-ml-kem",
-      "version": "0.0.10",
+      "version": "0.0.11",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-ml-kem/0.0.10",
+      "source": "https://crates.io/crates/libcrux-ml-kem/0.0.11",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-p256",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-p256/0.0.8",
+      "source": "https://crates.io/crates/libcrux-p256/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "libcrux-p384",
+      "version": "0.0.1",
+      "license": "Apache-2.0",
+      "source": "https://crates.io/crates/libcrux-p384/0.0.1",
+      "texts": [
+        {
+          "name": "LICENSE-aucurves",
+          "sha256": "5a2a86baa5fa5b69be64b293ac245848bb96c50191e10efd47e4ba72dcb4ed80",
+          "source": "https://crates.io/crates/libcrux-p384/0.0.1",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-fiat-crypto",
+          "sha256": "0034712d5e97a4f5b900a160a5c19d582b740d8e0638b4e44fd07e7b492dcd13",
+          "source": "https://crates.io/crates/libcrux-p384/0.0.1",
+          "provenance": "crate-archive"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-platform",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-platform/0.0.3",
+      "source": "https://crates.io/crates/libcrux-platform/0.0.4",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/316fcd6c19c2e33bd0429e1319b6557d91038512/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/316fcd6c19c2e33bd0429e1319b6557d91038512/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-poly1305",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-poly1305/0.0.6",
+      "source": "https://crates.io/crates/libcrux-poly1305/0.0.7",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/451259bb704d4a9dab8cd31ac68a97e766fbd2bc/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-secrets",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-secrets/0.0.6",
+      "source": "https://crates.io/crates/libcrux-secrets/0.0.7",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-sha2",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-sha2/0.0.8",
+      "source": "https://crates.io/crates/libcrux-sha2/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-sha3",
-      "version": "0.0.10",
+      "version": "0.0.11",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-sha3/0.0.10",
+      "source": "https://crates.io/crates/libcrux-sha3/0.0.11",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
     {
       "ecosystem": "cargo",
       "name": "libcrux-traits",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "license": "Apache-2.0",
-      "source": "https://crates.io/crates/libcrux-traits/0.0.8",
+      "source": "https://crates.io/crates/libcrux-traits/0.0.9",
       "texts": [
         {
           "name": "LICENSE",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "c517c468fc7f8d83319dd8b3743923f6891e0dfbaf7c57a874758c8f39b98564",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE"
         },
         {
           "name": "LICENSE-MIT",
           "provenance": "crate-vcs-commit-upstream-component",
           "sha256": "e40d41f94826514279cc7648088180e19621f7acd281dd394a0534d535da51fd",
-          "source": "https://raw.githubusercontent.com/celabshq/libcrux/c5fb80f37530ee9b2df9501ae5ff8cb4a973a4bd/LICENSE-MIT"
+          "source": "https://raw.githubusercontent.com/celabshq/libcrux/42d68bd49b244b09bd02626c6ffa95e54dc64f91/LICENSE-MIT"
         }
       ]
     },
@@ -6700,6 +6926,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "p256",
+      "version": "0.14.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/p256/0.14.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/p256/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "d8c4ab431f20da8452c9a217084163822e5fd9d134e1343903c929f2859fc8fd",
+          "source": "https://crates.io/crates/p256/0.14.0",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "p384",
       "version": "0.13.1",
       "license": "Apache-2.0 OR MIT",
@@ -6715,6 +6962,27 @@
           "name": "LICENSE-MIT",
           "sha256": "02168781a5b59970e3da1784d2eb69f432598a3757f283dbffdafd9d483a9113",
           "source": "https://crates.io/crates/p384/0.13.1",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "p384",
+      "version": "0.14.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/p384/0.14.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/p384/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "02168781a5b59970e3da1784d2eb69f432598a3757f283dbffdafd9d483a9113",
+          "source": "https://crates.io/crates/p384/0.14.0",
           "provenance": "crate-archive"
         }
       ]
@@ -7099,6 +7367,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "poly1305",
+      "version": "0.9.1",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/poly1305/0.9.1",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/poly1305/0.9.1",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "b67acfaaf787b346e1d3bf7654b4fabfd20360fdeb4351cc5e9d624147824527",
+          "source": "https://crates.io/crates/poly1305/0.9.1",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "polyval",
       "version": "0.6.2",
       "license": "Apache-2.0 OR MIT",
@@ -7276,6 +7565,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "primefield",
+      "version": "0.14.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/primefield/0.14.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/primefield/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "4621bda86773a67b5645bbd25cf1bf8b6820d4fcec3885b23b9ceec612007f63",
+          "source": "https://crates.io/crates/primefield/0.14.0",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "primeorder",
       "version": "0.13.6",
       "license": "Apache-2.0 OR MIT",
@@ -7291,6 +7601,27 @@
           "name": "LICENSE-MIT",
           "sha256": "233b95ccbf90dc67e32f3e8995c489f6312d9191ebd141a931c3b684f1e3be6d",
           "source": "https://crates.io/crates/primeorder/0.13.6",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "primeorder",
+      "version": "0.14.0",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/primeorder/0.14.0",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/primeorder/0.14.0",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "233b95ccbf90dc67e32f3e8995c489f6312d9191ebd141a931c3b684f1e3be6d",
+          "source": "https://crates.io/crates/primeorder/0.14.0",
           "provenance": "crate-archive"
         }
       ]
@@ -8271,6 +8602,27 @@
           "name": "LICENSE-MIT",
           "sha256": "4a883ecc3bb1010faed542bf63d53e530fea5e5e12cf676aed588784298ba929",
           "source": "https://crates.io/crates/sec1/0.7.3",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
+      "name": "sec1",
+      "version": "0.8.1",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/sec1/0.8.1",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/sec1/0.8.1",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "57a4d75c1d095bb94754a478f3cd15e60ac66a5c5627d844be01a918eea5fe88",
+          "source": "https://crates.io/crates/sec1/0.8.1",
           "provenance": "crate-archive"
         }
       ]
@@ -11578,6 +11930,27 @@
     },
     {
       "ecosystem": "cargo",
+      "name": "wnaf",
+      "version": "0.14.1",
+      "license": "Apache-2.0 OR MIT",
+      "source": "https://crates.io/crates/wnaf/0.14.1",
+      "texts": [
+        {
+          "name": "LICENSE-APACHE",
+          "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5",
+          "source": "https://crates.io/crates/wnaf/0.14.1",
+          "provenance": "crate-archive"
+        },
+        {
+          "name": "LICENSE-MIT",
+          "sha256": "c1c9d5ca65122bab96e368709f8cfe9b92b443a3c21306c3260fc98eaac7e5fc",
+          "source": "https://crates.io/crates/wnaf/0.14.1",
+          "provenance": "crate-archive"
+        }
+      ]
+    },
+    {
+      "ecosystem": "cargo",
       "name": "writeable",
       "version": "0.6.4",
       "license": "Unicode-3.0",
@@ -11665,21 +12038,6 @@
           "name": "LICENSE-MIT",
           "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
           "source": "https://crates.io/crates/x11/2.21.0",
-          "provenance": "crate-archive"
-        }
-      ]
-    },
-    {
-      "ecosystem": "cargo",
-      "name": "x25519-dalek",
-      "version": "2.0.1",
-      "license": "BSD-3-Clause",
-      "source": "https://crates.io/crates/x25519-dalek/2.0.1",
-      "texts": [
-        {
-          "name": "LICENSE",
-          "sha256": "bebc725b8cb1ba1ed1798cb505cf31bf9bce4cbe942baf358b642666ba8186bd",
-          "source": "https://crates.io/crates/x25519-dalek/2.0.1",
           "provenance": "crate-archive"
         }
       ]

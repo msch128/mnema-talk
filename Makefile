@@ -122,18 +122,23 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-.PHONY: check-desktop
+.PHONY: check-desktop check-desktop-glib
 DESKTOP_DEPS := desktop/ui/node_modules/.package-lock.json
 
 $(DESKTOP_DEPS): desktop/ui/package-lock.json
 	cd desktop/ui && npm ci --no-audit --no-fund
 
-check-desktop: $(DESKTOP_DEPS) ## Desktop probe: lint, coverage, types, Rust checks, advisories and native build (Rust + cargo-audit required)
+check-desktop-glib: ## Real GLib iterator regression in optimized Linux build (owned Docker fixture)
+	bash desktop/scripts/test-glib-linux.sh
+
+check-desktop: $(DESKTOP_DEPS) check-desktop-glib ## Desktop probe: lint, coverage, types, Rust checks, advisories and native build (Rust + cargo-audit required)
+	node desktop/scripts/checked-glib.mjs
 	npm --prefix desktop/ui run check
 	cargo fmt --manifest-path desktop/Cargo.toml --check
 	cargo test --locked --manifest-path desktop/Cargo.toml
 	cargo clippy --locked --manifest-path desktop/Cargo.toml --all-targets --features shell -- -D warnings
 	cargo-audit --version | grep -Fx 'cargo-audit $(CARGO_AUDIT_VERSION)'
+	node desktop/scripts/checked-glib.mjs --audit
 	cargo audit --file desktop/Cargo.lock
 	npm audit --prefix desktop/ui --omit=dev --audit-level=high
 	node --test desktop/scripts/*.test.mjs

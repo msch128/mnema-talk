@@ -14,6 +14,7 @@ beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+  Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__')
   boot.browserLocale.mockReturnValue('de')
   boot.app.mount.mockReturnValue(undefined)
   document.body.innerHTML = '<div id="app"></div>'
@@ -25,6 +26,13 @@ describe('browser application entry', () => {
     vi.stubGlobal('location', new URL('https://community.example/'))
     await import('./main')
     expect(boot.createApp).toHaveBeenCalledWith((await import('./App.vue')).default)
+  })
+  it('mounts the local gaming surface with the canonical plugins', async () => {
+    Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-overlay')
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopGamingOverlay.vue')).default)
+    expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
+    Reflect.deleteProperty(window, '__MNEMA_GAMING_SURFACE__')
   })
   it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))

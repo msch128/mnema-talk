@@ -1,7 +1,8 @@
 ﻿param(
   [Parameter(Mandatory)][string]$Tag,
   [Parameter(Mandatory)][string]$InstanceUrl,
-  [string]$FixtureDirectory
+  [string]$FixtureDirectory,
+  [switch]$VoiceAcceptance
 )
 $ErrorActionPreference = 'Stop'
 if ($Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'Invalid release tag' }
@@ -22,6 +23,7 @@ foreach ($address in [Net.Dns]::GetHostAddresses($uri.Host)) {
   if ([Net.IPAddress]::IsLoopback($address) -or $address.IsIPv6LinkLocal -or $address.IsIPv6SiteLocal -or $address.IsIPv6Multicast -or ($bytes.Length -eq 16 -and ($bytes[0] -band 254) -eq 252) -or ($bytes.Length -eq 4 -and ($bytes[0] -in 0,10,127 -or $bytes[0] -ge 224 -or ($bytes[0] -eq 172 -and $bytes[1] -ge 16 -and $bytes[1] -le 31) -or ($bytes[0] -eq 192 -and $bytes[1] -eq 168) -or ($bytes[0] -eq 169 -and $bytes[1] -eq 254) -or ($bytes[0] -eq 100 -and $bytes[1] -ge 64 -and $bytes[1] -le 127)))) { throw 'Private instance addresses are not accepted by this public CI test' }
 }
 }
+if ($VoiceAcceptance -and (!$fixture -or $fixture.voice_enabled -ne $true -or $fixture.voice_channel -ne 'desktop-fixture-voice')) { throw 'Voice acceptance requires the owned SFU fixture' }
 $directory = Join-Path $env:RUNNER_TEMP 'windows-release-acceptance'
 New-Item -ItemType Directory -Path $directory | Out-Null
 $zipName = "Mnema-Desktop-DEV-$Tag-windows-x64.zip"
@@ -59,7 +61,17 @@ if ($tagObject.object.type -ne 'commit' -or $receipt.revision -ne $tagObject.obj
 $exe = Join-Path $package 'Mnema Desktop DEV.exe'
 if ((Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $receipt.executable_sha256) { throw 'Executable checksum mismatch' }
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
-$process = Start-Process -FilePath $exe -PassThru
+$previousWebViewArguments = $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS
+try {
+  if ($VoiceAcceptance) {
+    if ($env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows' -or $env:GITHUB_ACTIONS -ne 'true') { throw 'Synthetic media is restricted to disposable hosted Windows runners' }
+    # No physical microphone is installed on this VM. These flags affect only
+    # the owned release process and are explicitly recorded as synthetic media.
+    $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--use-fake-device-for-media-stream --use-fake-ui-for-media-stream'
+  }
+  $process = Start-Process -FilePath $exe -PassThru
+} finally { $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = $previousWebViewArguments }
+
 function Wait-Ui([scriptblock]$Probe, [string]$Message) {
   for ($attempt = 0; $attempt -lt 120; $attempt++) {
     $process.Refresh()
@@ -104,6 +116,28 @@ function Enter-Control($Root, $Type, [string]$Name) {
   Focus-Control $control
   [Windows.Forms.SendKeys]::SendWait('{ENTER}')
 }
+function Enter-VoiceChannel($Root) {
+  # An occupied room includes its live timer in the accessible button name.
+  # Accept only this generated channel and its clock, not an arbitrary prefix.
+  $control = Wait-Ui {
+    $type = [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty, [Windows.Automation.ControlType]::Button)
+    $buttons = $Root.FindAll([Windows.Automation.TreeScope]::Descendants, $type)
+    foreach ($button in $buttons) {
+      if ($button.Current.Name -match '^desktop-fixture-voice(?:\s*\d+:\d{2}(?::\d{2})?)?$') { return $button }
+    }
+  } 'Owned voice channel control unavailable'
+  Focus-Control $control
+  [Windows.Forms.SendKeys]::SendWait('{ENTER}')
+}
+function Wait-VoiceState([scriptblock]$Predicate, [string]$Message) {
+  $null = Wait-Ui {
+    $path = Join-Path $FixtureDirectory 'VOICE-STATE.json'
+    if (!(Test-Path $path)) { return $null }
+    try { $state = Get-Content $path -Raw | ConvertFrom-Json } catch { return $null }
+    if ($state.nonce -ne $fixture.nonce -or $state.failed -eq $true) { throw 'Owned voice observer failed' }
+    if (& $Predicate $state) { return $true }
+  } $Message
+}
 try {
   Write-Host 'Phase: published executable selector'
   $selector = Wait-Ui { Find-Window 'Mnema Desktop DEV — Instance' } 'Selector window did not appear'
@@ -137,6 +171,26 @@ try {
     [Windows.Forms.SendKeys]::SendWait($fixture.outbound)
     [Windows.Forms.SendKeys]::SendWait('{ENTER}')
     $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Text) $fixture.inbound } 'Live peer message did not arrive'
+    if ($VoiceAcceptance) {
+      Write-Host 'Phase: real SFU join and synthetic desktop microphone transmission'
+      Enter-VoiceChannel $instance
+      $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Leave' } 'Voice controls did not appear'
+      Wait-VoiceState { param($s) $s.joins -eq 1 -and $s.audio_packets -ge 10 } 'Desktop microphone RTP did not reach the real SFU receiver'
+      Activate-Control $instance 'Mute' $true
+      Wait-VoiceState { param($s) $s.muted -eq $true } 'Mute state did not reach the other account'
+      Activate-Control $instance 'Unmute' $true
+      Wait-VoiceState { param($s) $s.muted -eq $false } 'Unmute state did not reach the other account'
+      Activate-Control $instance 'Turn sound off' $true
+      Wait-VoiceState { param($s) $s.deafened -eq $true } 'Deafen state did not reach the other account'
+      Activate-Control $instance 'Turn sound on' $true
+      Wait-VoiceState { param($s) $s.deafened -eq $false } 'Undeafen state did not reach the other account'
+      Activate-Control $instance 'Leave'
+      Wait-VoiceState { param($s) $s.leaves -eq 1 } 'First voice leave did not reach the other account'
+      Enter-VoiceChannel $instance
+      Wait-VoiceState { param($s) $s.joins -eq 2 } 'Voice rejoin did not reach the other account'
+      Activate-Control $instance 'Leave'
+      Wait-VoiceState { param($s) $s.leaves -eq 2 } 'Second voice leave did not reach the other account'
+    }
     Write-Host 'Phase: live peer message received, logout'
     Enter-Control $instance ([Windows.Automation.ControlType]::Button) 'Account menu'
     Enter-Control $instance ([Windows.Automation.ControlType]::MenuItem) 'Sign out'
@@ -155,10 +209,17 @@ try {
     language_interaction_checked = ($null -eq $fixture)
     credentials_used = ($null -ne $fixture)
     production_credentials_used = $false
+    desktop_voice_join_leave_rejoin_checked = [bool]$VoiceAcceptance
+    desktop_microphone_rtp_received_by_other_account = [bool]$VoiceAcceptance
+    microphone_source = $(if ($VoiceAcceptance) { 'webview2-synthetic-device' } else { 'not-tested' })
+    reverse_audio_and_audible_playback_qualified = $false
+    screen_capture_and_receiver_frames_qualified = $false
+    desktop_mute_deafen_peer_states_checked = [bool]$VoiceAcceptance
     authenticated_chat_ui_checked = ($null -ne $fixture)
     authenticated_chat_media_and_games_qualified = $false
   } | ConvertTo-Json | Set-Content (Join-Path $directory 'ACCEPTANCE.json') -Encoding utf8
-  if ($fixture) { 'Published Windows release: local fixture login, chat send/receive and logout UI PASS. Generated fixture credentials only; no media, S3, E2EE or game qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+  if ($VoiceAcceptance) { 'Published Windows EXE: generated accounts, normal WSS/SFU receiver, synthetic microphone RTP, peer-visible mute/deafen and leave/rejoin PASS. No audible/reverse audio, screen capture, E2EE or game qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
+  elseif ($fixture) { 'Published Windows release: local fixture login, chat send/receive and logout UI PASS. Generated fixture credentials only; no media, S3, E2EE or game qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
   else { 'Published Windows release: selector, actual instance sign-in page and language interaction PASS. No credentials or authenticated/media qualification.' | Out-File -Append $env:GITHUB_STEP_SUMMARY }
 } finally {
   if (!$process.HasExited) { Stop-Process -Id $process.Id -Force }

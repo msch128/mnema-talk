@@ -6,7 +6,8 @@
 //! this first bounded owner cache MUST NOT be presented as persistent history.
 use super::{Error, Result};
 use mnema_crypto_sdk_prototype::{
-    ChatEventClaim, ChatOperation, NativeProtectedEventScope, ReactionAction, VerifiedChatEvent,
+    ArchivedChatObservation, ChatEventClaim, ChatOperation, NativeProtectedEventScope,
+    ReactionAction, VerifiedChatEvent,
 };
 use mnema_private_native_client_broker::{NativeAuthenticatedScope, NativeOpaqueRecord};
 use sha2::{Digest, Sha256};
@@ -21,6 +22,45 @@ const MAX_PAGE: usize = 10; // actual canonical broker Page limit
 const MAX_SAFE_NUMBER: i64 = (1i64 << 53) - 1;
 const MAX_USER_REACTIONS: usize = 20;
 const MAX_MESSAGE_EMOJI: usize = 50;
+
+/// Live receive evidence and saved historical observations remain distinct.
+/// Neither supplies mutation permission; the owner checks current auth/SDK.
+pub(crate) enum NativeHistoryObservation {
+    Live(VerifiedChatEvent),
+    Archived(ArchivedChatObservation),
+}
+impl NativeHistoryObservation {
+    pub(crate) fn event_id(&self) -> &str {
+        match self {
+            Self::Live(v) => v.event_id(),
+            Self::Archived(v) => v.event_id(),
+        }
+    }
+    pub(crate) fn account(&self) -> &str {
+        match self {
+            Self::Live(v) => v.account(),
+            Self::Archived(v) => v.account(),
+        }
+    }
+    pub(crate) fn device(&self) -> &str {
+        match self {
+            Self::Live(v) => v.device(),
+            Self::Archived(v) => v.device(),
+        }
+    }
+    pub(crate) fn operation(&self) -> &ChatOperation {
+        match self {
+            Self::Live(v) => v.operation(),
+            Self::Archived(v) => v.operation(),
+        }
+    }
+    fn matches_context(&self, current: &NativeProtectedEventScope) -> bool {
+        match self {
+            Self::Live(v) => v.scope().matches_exact(current),
+            Self::Archived(v) => v.matches_history_context(current),
+        }
+    }
+}
 
 #[derive(Clone)]
 struct Reaction {
@@ -247,10 +287,10 @@ impl NativeChatHistory {
             },
         })
     }
-    pub(crate) fn stage_authenticated<'a>(
+    pub(crate) fn stage_observed<'a>(
         &self,
         current: NativeProtectedEventScope,
-        rows: impl IntoIterator<Item = (&'a NativeOpaqueRecord, &'a VerifiedChatEvent)>,
+        rows: impl IntoIterator<Item = (&'a NativeOpaqueRecord, &'a NativeHistoryObservation)>,
     ) -> Result<StagedChatHistory> {
         if self.retired {
             return Err(Error::Retired);
@@ -262,7 +302,7 @@ impl NativeChatHistory {
         let mut admitted = Vec::new();
         for (record, inner) in rows {
             if admitted.len() >= MAX_PAGE
-                || !inner.scope().matches_exact(&current)
+                || !inner.matches_context(&current)
                 || record.channel_id() != self.channel
                 || record.group_id() != self.group.as_slice()
                 || inner.account() != record.account_id().to_string()

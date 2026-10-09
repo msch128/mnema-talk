@@ -810,7 +810,7 @@ fn source_fixture_exit(point: &str) {
         std::process::exit(73);
     }
 }
-fn encode(v: &Value) -> Result<Vec<u8>> {
+pub(super) fn encode(v: &Value) -> Result<Vec<u8>> {
     let mut bytes = Vec::new();
     coset::cbor::ser::into_writer(v, &mut bytes).map_err(|_| Error::Invalid)?;
     if bytes.len() > 32768 {
@@ -838,7 +838,13 @@ pub(super) fn uuid(v: &str) -> Result<()> {
 /// Flat profile scanner: at most ten-element outer plus one nested source5/voice11.
 /// Reject nesting/size bombs before recursive library parsing.
 pub(super) fn scan(wire: &[u8]) -> Result<()> {
-    if wire.is_empty() || wire.len() > 32768 {
+    scan_bounded(wire, 32768)
+}
+pub(super) fn scan_control(wire: &[u8]) -> Result<()> {
+    scan_bounded(wire, 65536)
+}
+fn scan_bounded(wire: &[u8], limit: usize) -> Result<()> {
+    if wire.is_empty() || wire.len() > limit {
         return Err(Error::Invalid);
     }
     let mut pos = 0;
@@ -1016,12 +1022,30 @@ impl Sdk {
             &payload,
         )?;
         let inner = encode(&self.envelope(CHAT_EVENT_DOMAIN, event, &account, &device, payload))?;
-        let result = self.core.send_inner(
+        let archive_scope = self.native_protected_event_scope(now)?;
+        let sender = self
+            .core
+            .group
+            .as_ref()
+            .ok_or(Error::Quarantined)?
+            .own_leaf_index()
+            .u32();
+        let receipt = Receipt {
+            plaintext: inner.clone(),
+            account,
+            device,
+            sender,
+        };
+        let result = self.core.send_inner_checked(
             event,
             &inner,
             now,
             |_| Ok(()),
             Some((&self.binding.channel, epoch, generation)),
+            "application",
+            |wire, tx| {
+                crate::chat_archive::record_if_typed_chat(tx, archive_scope, event, wire, &receipt)
+            },
         );
         let result = self.core.quarantine(result);
         if result.is_err() {
@@ -1034,3 +1058,111 @@ impl Sdk {
 #[path = "community.rs"]
 mod community;
 pub use community::{NativeCommunityAnchor, VerifiedCommunityAuthorization, VerifiedVoiceCreation};
+
+impl Sdk {
+    /// Exact root-signed revocation plus actual MLS Remove. The native owner
+    /// must retain current authentication and explicit native device approval.
+    /// Failure retires this owner; it cannot keep using the old epoch.
+    pub fn remove_root_revoked_native_peer(
+        &mut self,
+        event: &str,
+        identity: &[u8],
+        signature_key: &[u8],
+        signed_roster: &[u8],
+        now: u64,
+    ) -> Result<Vec<u8>> {
+        if self.retired {
+            return Err(Error::Stale);
+        }
+        if now < self.observed_native_time.get() {
+            self.retire_native();
+            return Err(Error::Replay);
+        }
+        self.observed_native_time.set(now);
+        self.bridges.clear();
+        // The issuer already advanced, so ordinary old-epoch current() must
+        // stay blocked. Core verifies old membership and the new exact local
+        // issuer roster, then atomically removes the leaf before any output.
+        let result = self
+            .core
+            .remove_root_revoked_native_peer(event, identity, signature_key, signed_roster, now)
+            .and_then(|wire| {
+                self.current(now)?;
+                Ok(wire)
+            });
+        if result.is_err() {
+            self.retire_native();
+        }
+        result
+    }
+}
+
+impl Sdk {
+    pub fn archived_device_removal(
+        &self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+    ) -> Result<Option<ArchivedDeviceRemoval>> {
+        self.core.archived_device_removal(account, event, wire)
+    }
+    pub fn receive_native_device_removal_if_control(
+        &mut self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+        now: u64,
+    ) -> Result<Option<ArchivedDeviceRemoval>> {
+        if !super::membership::is_control(wire) {
+            return Ok(None);
+        }
+        self.receive_native_device_removal(account, event, wire, now)
+            .map(Some)
+    }
+    pub fn receive_native_device_removal(
+        &mut self,
+        account: &str,
+        event: &str,
+        wire: &[u8],
+        now: u64,
+    ) -> Result<ArchivedDeviceRemoval> {
+        if self.retired {
+            return Err(Error::Stale);
+        }
+        // A live observation may advance this clock without writing the Core
+        // floor. Controls must obey both clocks, including roster repair.
+        if now < self.observed_native_time.get() {
+            self.retire_native();
+            return Err(Error::Replay);
+        }
+        self.observed_native_time.set(now);
+        let result = self
+            .core
+            .receive_device_removal_inner(account, event, &self.binding.channel, wire, now)
+            .and_then(|_| {
+                self.core
+                    .archived_device_removal(account, event, wire)?
+                    .ok_or(Error::Database)
+            });
+        self.bridges.clear();
+        if !matches!(result.as_ref(), Ok(proof) if !proof.removed_self()) {
+            self.retire_native();
+        }
+        result
+    }
+    /// Current own control only; history readers use the non-authorizing archive.
+    pub fn pending_native_device_removal(&self, event: &str, now: u64) -> Result<Option<Vec<u8>>> {
+        protected::uuid(event)?;
+        let (epoch, generation, _, account, _) = self.current(now)?;
+        let wire: Option<Vec<u8>> = self.core.connection.query_row("SELECT wire FROM core_device_removals WHERE account=? AND event=? AND epoch=? AND generation=? AND removed_self=0",params![account,event,epoch.to_be_bytes().as_slice(),generation.to_be_bytes().as_slice()],|r|r.get(0)).optional().map_err(|_|Error::Database)?;
+        if let Some(wire) = wire.as_ref() {
+            let (_, commit) = super::membership::decode(wire)?;
+            if self.pending_native_host_publication(event, now)?.as_deref()
+                != Some(commit.as_slice())
+            {
+                return Err(Error::Unauthorized);
+            }
+        }
+        Ok(wire)
+    }
+}

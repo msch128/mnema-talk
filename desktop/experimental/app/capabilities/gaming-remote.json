@@ -1,0 +1,15 @@
+{
+  "identifier": "gaming-remote",
+  "windows": [
+    "instance"
+  ],
+  "permissions": [
+    "allow-desktop-gaming-sync"
+  ],
+  "local": false,
+  "remote": {
+    "urls": [
+      "https://*"
+    ]
+  }
+}

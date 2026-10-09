@@ -20,6 +20,9 @@ pub struct NativeProtectedEventScope {
     root_generation: u64,
 }
 impl NativeProtectedEventScope {
+    pub(crate) fn belongs_to_core(&self, owner: u64) -> bool {
+        self.core_owner == owner
+    }
     pub fn origin(&self) -> &str {
         &self.origin
     }
