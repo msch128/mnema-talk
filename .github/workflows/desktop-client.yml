@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: shared-desktop-${{ inputs.acceptance_release || inputs.tag || github.ref }}
+  group: shared-desktop-${{ inputs.acceptance_release && format('{0}-{1}', inputs.acceptance_release, github.sha) || inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
