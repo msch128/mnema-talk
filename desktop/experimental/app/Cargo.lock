@@ -3096,6 +3096,7 @@ dependencies = [
  "mnema-private-synthetic-media-actor",
  "mnema-private-synthetic-media-policy",
  "raw-window-handle",
+ "reqwest 0.12.28",
  "security-framework",
  "security-framework-sys",
  "serde",

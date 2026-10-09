@@ -20,8 +20,14 @@ beforeEach(() => {
 })
 
 describe('browser application entry', () => {
-  it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
+  it('mounts the complete App at a selected HTTPS instance even inside Tauri', async () => {
     vi.stubGlobal('isTauri', true)
+    vi.stubGlobal('location', new URL('https://community.example/'))
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./App.vue')).default)
+  })
+  it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
     await import('./main')
     expect(boot.createApp).toHaveBeenCalledWith((await import('./NativeBootstrap.vue')).default)
     expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])

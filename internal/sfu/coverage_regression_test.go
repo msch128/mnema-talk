@@ -65,7 +65,7 @@ func localAnnounceDNS(t *testing.T) *atomic.Int32 {
 	}()
 	old := net.DefaultResolver
 	net.DefaultResolver = &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
-		return (&net.Dialer{}).DialContext(ctx, "udp4", conn.LocalAddr().String())
+		return (&net.Dialer{Resolver: old}).DialContext(ctx, "udp4", conn.LocalAddr().String())
 	}}
 	t.Cleanup(func() {
 		net.DefaultResolver = old

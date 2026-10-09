@@ -45,7 +45,7 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
 
  describe('App routing and session lifecycle', () => {
   it.each([false, true])('keeps the shared ChatArea mounted in desktop for admin=%s and limits root setup to admins', async admin => {
-    vi.stubGlobal('isTauri', true)
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
     const { w, chat } = await mountApp({ admin })
     expect(w.findComponent({ name: 'ChatArea' }).exists()).toBe(true)
     expect(w.findComponent({ name: 'UpdateBanner' }).exists()).toBe(false)

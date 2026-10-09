@@ -73,7 +73,7 @@ describe('self-update in the System tab', () => {
     // The server restarts (503), then reports the new version.
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 503 })
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status: 'ok', version: '0.4.0' }) })
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ status: 'ok', version: '0.4.0', web_client_api: 1 }) })
     vi.stubGlobal('fetch', fetchMock)
     await vi.advanceTimersByTimeAsync(5000)
     await vi.advanceTimersByTimeAsync(5000)

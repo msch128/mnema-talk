@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
-import { beforeEach, expect, it, vi } from 'vitest'
-const calls = vi.hoisted(() => ({ initialize: vi.fn(), connect: vi.fn(), disconnect: vi.fn(), closeSocket: vi.fn(), leaveVoice: vi.fn(), resetSession: vi.fn() }))
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+const calls = vi.hoisted(() => ({ open: vi.fn(), initialize: vi.fn(), connect: vi.fn(), disconnect: vi.fn(), closeSocket: vi.fn(), leaveVoice: vi.fn(), resetSession: vi.fn() }))
+vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: calls.open }))
 vi.mock('./lib/nativeTransport', () => ({ initializeNativeContext: calls.initialize, connectNative: calls.connect, disconnectNative: calls.disconnect }))
 vi.mock('./App.vue', () => ({ default: { template: '<div data-testid="native-community-app">Community</div>' } }))
 vi.mock('./stores/chat', () => ({ useChatStore: () => ({ resetCommunityState: calls.closeSocket }) }))
@@ -98,4 +99,23 @@ it.each([false, true])('retires pending native context on unmount (native failur
   if (failure) reject(new Error('Native context retired')); else resolve()
   await flushPromises()
   expect(calls.connect).not.toHaveBeenCalled()
+})
+
+afterEach(() => vi.unstubAllGlobals())
+it.each([false, true])('opens the normal web instance without native-preview discovery (failure: %s)', async failure => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('http://tauri.localhost/'))
+  vi.stubGlobal('__MNEMA_WEB_DESKTOP__', true)
+  if (failure) calls.open.mockRejectedValue('This instance needs an update for the desktop client.')
+  else calls.open.mockResolvedValue(undefined)
+  const wrapper = mount(NativeBootstrap); await flushPromises()
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  expect(calls.initialize).not.toHaveBeenCalled()
+  expect(calls.connect).not.toHaveBeenCalled()
+  expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'community.example.invalid' })
+  expect(wrapper.find('[role="alert"]').exists()).toBe(failure)
+  if (failure) expect(wrapper.text()).toContain('This instance needs an update')
+  expect(wrapper.find('[data-testid="native-community-app"]').exists()).toBe(false)
+  wrapper.unmount()
 })

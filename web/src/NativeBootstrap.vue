@@ -7,6 +7,8 @@ import { useVoiceStore } from './stores/voice'
 import { useAuthStore } from './stores/auth'
 import { initializeNativeContext, connectNative, disconnectNative } from './lib/nativeTransport'
 import { navigate, popRedirectRoute } from './lib/router'
+import { isWebDesktopSelector } from './lib/desktopRuntime'
+import { invoke } from '@tauri-apps/api/core'
 
 const address = ref('')
 const addressInput = ref<HTMLInputElement | null>(null)
@@ -19,7 +21,7 @@ let attempt = 0
 let alive = true
 onBeforeUnmount(() => { alive = false; ++attempt })
 onMounted(async () => {
-  try { await initializeNativeContext(); if (alive) ready.value = true }
+  try { if (!isWebDesktopSelector()) await initializeNativeContext(); if (alive) ready.value = true }
   catch { if (alive) error.value = t('nativeDesktop.contextError') }
 })
 async function connect() {
@@ -28,6 +30,10 @@ async function connect() {
   address.value = submittedAddress
   const current = ++attempt; busy.value = true; error.value = ''
   try {
+    if (isWebDesktopSelector()) {
+      await invoke('desktop_open_instance', { address: submittedAddress })
+      return
+    }
     const reply = await connectNative(submittedAddress)
     if (current !== attempt) return
     const body = reply.body
@@ -35,8 +41,9 @@ async function connect() {
     const url = new URL(body.origin)
     if (url.protocol !== 'https:' || url.origin !== body.origin || url.username || url.password) throw new Error('Invalid origin')
     origin.value = body.origin; connected.value = true
-  } catch {
-    if (current === attempt) error.value = t('nativeDesktop.connectError')
+  } catch (cause) {
+    if (current === attempt) error.value = isWebDesktopSelector() && typeof cause === 'string'
+      ? cause.slice(0, 300) : t('nativeDesktop.connectError')
   } finally { if (current === attempt) busy.value = false }
 }
 async function changeServer() {

@@ -223,6 +223,14 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
    version into the web app, so the app can tell browsers when a newer
    version is running.
+4. The Windows desktop workflow builds the Tauri client, starts the actual EXE
+   to check its instance-selector window, and attaches a clearly named
+   `Mnema-Desktop-DEV-vX.Y.Z-windows-x64.zip` plus its checksum to the release.
+   Extract the ZIP and run `Mnema Desktop DEV.exe`, then enter your HTTPS
+   instance address. These are unsigned DEV packages with no automatic updater.
+   See [desktop client status](desktop/experimental/README.md) for verification
+   limits. The server ships through Docker; new releases do not publish standalone
+   server binaries for Windows or macOS.
 
 ## Configuration
 

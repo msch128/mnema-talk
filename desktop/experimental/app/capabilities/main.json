@@ -21,6 +21,7 @@
     "allow-native-personal-metadata-request",
     "allow-native-auth-password",
     "allow-native-auth-register",
-    "allow-native-admin-request"
+    "allow-native-admin-request",
+    "allow-desktop-open-instance"
   ]
 }

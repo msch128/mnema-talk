@@ -11,7 +11,8 @@ import (
 
 // Every WebSocket connection learns the server's version first, so browsers
 // can offer a reload after an update; /api/health tells anyone the version
-// string and nothing else about the build.
+// string and the public web-client API compatibility contract, without private
+// build or operational details.
 func TestServerVersionIsAnnounced(t *testing.T) {
 	a := newAppWithDeps(t, true, nil, func(d *Deps) { d.Version = "0.4.0" })
 	admin := a.seedAdmin()
@@ -38,8 +39,8 @@ func TestServerVersionIsAnnounced(t *testing.T) {
 	}
 	var health map[string]any
 	res.decode(t, &health)
-	if health["version"] != "0.4.0" || len(health) != 2 {
-		t.Fatalf("health = %v, want status and version only", health)
+	if health["status"] != "ok" || health["version"] != "0.4.0" || health["web_client_api"] != float64(1) || len(health) != 3 {
+		t.Fatalf("health = %v, want status, version and public web-client compatibility only", health)
 	}
 }
 

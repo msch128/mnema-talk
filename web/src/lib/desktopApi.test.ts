@@ -6,6 +6,16 @@ import { api } from './api'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks() })
 
+it('uses the normal authenticated API at the selected HTTPS instance inside Tauri', async () => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('https://community.example/'))
+  const fetch = vi.fn().mockResolvedValue({ status: 200, json: async () => ({ source: 'browser' }) })
+  vi.stubGlobal('fetch', fetch)
+  expect(await api('/api/auth/me')).toEqual({ source: 'browser' })
+  expect(fetch).toHaveBeenCalledWith('/api/auth/me', expect.objectContaining({ credentials: 'same-origin' }))
+  expect(native).not.toHaveBeenCalled()
+})
+
 it('uses same-origin cookies in a browser and never invokes native IPC', async () => {
   const fetch = vi.fn().mockResolvedValue({ status: 200, json: async () => ({ source: 'browser' }) })
   vi.stubGlobal('fetch', fetch)
@@ -15,7 +25,7 @@ it('uses same-origin cookies in a browser and never invokes native IPC', async (
 })
 
 it('routes the shared API through the native broker in Tauri without renderer HTTP', async () => {
-  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch)
   native.mockResolvedValue({ status: 200, body: { source: 'native' } })
@@ -25,7 +35,7 @@ it('routes the shared API through the native broker in Tauri without renderer HT
 })
 
 it('fails a rejected native operation without falling back to browser HTTP', async () => {
-  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch)
   native.mockRejectedValue(new Error('synthetic native failure'))

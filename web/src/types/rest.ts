@@ -790,12 +790,14 @@ export const decodeServerDatabaseHealth = decoder("server.DatabaseHealth", isSer
 export type ServerHealth = {
   status: "ok"
   version: string
+  web_client_api: number
 }
 
 export function isServerHealth(value: unknown): value is ServerHealth {
   return isRecord(value)
     && (hasOwn(value, "status") && (value["status"] === "ok"))
     && (hasOwn(value, "version") && isString(value["version"]))
+    && (hasOwn(value, "web_client_api") && isInteger(value["web_client_api"]))
 }
 
 export const decodeServerHealth = decoder("server.Health", isServerHealth)

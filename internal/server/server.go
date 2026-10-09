@@ -261,6 +261,8 @@ func refreshPreviewDeny(ctx context.Context, interval time.Duration, deny func()
 type Health struct {
 	Status  string `json:"status" enums:"ok"`
 	Version string `json:"version"`
+	// WebClientAPI identifies the HTTPS web-client desktop integration contract.
+	WebClientAPI int `json:"web_client_api"`
 }
 
 // healthCacheTTL is how long a health result is reused: the endpoint is
@@ -331,7 +333,7 @@ func health(hc *healthCheck, version string) http.HandlerFunc {
 			httpx.WriteError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: 1})
 	}
 }
 

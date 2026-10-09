@@ -12,7 +12,7 @@ const channelId = '00000000-0000-4000-8000-000000000001'
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.clearAllMocks()
-  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
   vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: capture, getDisplayMedia: display } })
   vi.stubGlobal('fetch', network)
   vi.stubGlobal('RTCPeerConnection', peer)

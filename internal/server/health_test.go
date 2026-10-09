@@ -45,7 +45,7 @@ func TestHealthCachesThePing(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
 	var body Health
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || body.Status != "ok" || body.Version != "1.2.3" {
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || body.Status != "ok" || body.Version != "1.2.3" || body.WebClientAPI != 1 {
 		t.Fatalf("body %s err %v", rec.Body, err)
 	}
 }

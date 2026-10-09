@@ -1,3 +1,46 @@
+# Mnema Desktop DEV
+
+The Windows client uses Tauri to open the full Vue web app supplied by the selected
+HTTPS Mnema instance. Enter the instance address at startup. Authentication,
+chat, uploads and WebSockets use the existing same-origin browser APIs and
+cookies. Normal production instances advertise `web_client_api: 1` in
+`/api/health`; experimental native-preview routes are not required.
+
+Download the clearly named Windows **Desktop DEV** ZIP from GitHub Releases,
+extract the entire archive and run `Mnema Desktop DEV.exe`. The server is supplied
+as a Linux Docker image for amd64 and arm64. There are no server EXE downloads in
+new releases. The desktop client requires Microsoft Edge WebView2 Runtime.
+
+The release workflow starts the actual Windows executable and checks that its
+instance-selector window appears before publishing. That startup check does not
+qualify login, physical media devices, screensharing, game overlays or E2EE.
+Microphone/camera permission requests follow WebView2's browser permission flow.
+HTTPS chat links to other sites open in the default Windows browser after an
+explicit confirmation. Same-origin attachments open in a restricted child window sharing the app session;
+the chat window remains open. Non-HTTPS
+external links and custom URI schemes are blocked in this DEV build.
+Browser voice transport remains DTLS-SRTP to the SFU, which is not E2EE.
+
+Build the production web-client mode from this repository:
+
+```sh
+npm --prefix web ci
+npm --prefix web run build
+cargo build --locked --release --manifest-path desktop/experimental/app/Cargo.toml --features shell,web-client,custom-protocol
+```
+
+All desktop packages are explicitly unsigned DEV builds. No desktop automatic
+updater is configured. The existing DeepFilterNet WASM transitive provenance
+inventory remains incomplete; this is not a claim of final license closure.
+Windows has priority; macOS/Linux runtime qualification remains separate.
+
+## Preserved native research checkpoint
+
+The material below describes the earlier experimental native-crypto transport,
+which is preserved for future work and is not selected by the shipped `web-client`
+build. Its preview-server requirements and feature restrictions do not describe
+the production web-client mode above.
+
 # Native desktop development checkpoint
 
 This directory preserves the current native desktop implementation while it is
