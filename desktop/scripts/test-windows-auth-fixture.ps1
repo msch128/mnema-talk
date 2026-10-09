@@ -26,6 +26,52 @@ $goExecutable = Join-Path $directory 'server-fixture.test.exe'
 $env:CGO_ENABLED = '0'
 go test -c -tags=integration -o $goExecutable ./internal/server
 if ($LASTEXITCODE -ne 0) { throw 'Normal Go router fixture compilation failed' }
+# Emit only exact, source-defined failure labels; redirected logs remain private.
+function Get-FixtureFailureLabel([string]$Directory) {
+  $labels = @(
+    'refusing a database without fixture ownership',
+    'fixture cluster ownership marker missing',
+    'cannot connect to fixture database',
+    'refusing a nonempty or unowned fixture database',
+    'fixture configuration failed',
+    'normal fixture router failed',
+    'fixture output failed',
+    'fixture CA output failed',
+    'fixture admin creation failed',
+    'fixture admin login failed',
+    'fixture invite creation failed',
+    'fixture member registration failed',
+    'desktop fixture timed out',
+    'fixture message verification failed',
+    'desktop login/message/logout chain incomplete',
+    'fixture randomness failed',
+    'fixture CA key failed',
+    'fixture CA failed',
+    'fixture server key failed',
+    'fixture server certificate failed'
+  )
+  foreach ($name in @('server.log', 'server-error.log')) {
+    $path = Join-Path $Directory $name
+    if (!(Test-Path $path)) { continue }
+    try { $contents = [IO.File]::ReadAllText($path) } catch { continue }
+    foreach ($label in $labels) {
+      $pattern = '(?m)^\s+desktop_client_fixture_integration_test\.go:[0-9]+: ' + [regex]::Escape($label) + '\r?$'
+      if ([regex]::IsMatch($contents, $pattern)) { return $label }
+    }
+    # Helpers may append response bodies or connection details. Return only labels.
+    $helperFailures = @(
+      @{ Prefix = 'start postgres:'; Label = 'fixture database migration failed' },
+      @{ Prefix = 'create channel:'; Label = 'fixture channel creation failed' },
+      @{ Prefix = 'decode '; Label = 'fixture response decode failed' },
+      @{ Prefix = 'POST /api/'; Label = 'fixture HTTPS request failed' }
+    )
+    foreach ($failure in $helperFailures) {
+      $pattern = '(?m)^\s+(desktop_client_fixture|helpers)_integration_test\.go:[0-9]+: ' + [regex]::Escape($failure.Prefix)
+      if ([regex]::IsMatch($contents, $pattern)) { return $failure.Label }
+    }
+  }
+  return 'unclassified fixture process failure'
+}
 $server = $null
 $rootThumbprint = $null
 $clusterInitialized = $false
@@ -47,7 +93,10 @@ try {
   $readyFile = Join-Path $directory 'READY.json'
   for ($attempt = 0; $attempt -lt 120 -and !(Test-Path $readyFile); $attempt++) {
     $server.Refresh()
-    if ($server.HasExited) { throw 'Normal router fixture exited before readiness' }
+    if ($server.HasExited) {
+      $failureLabel = Get-FixtureFailureLabel $directory
+      throw ('Normal router fixture exited before readiness: ' + $failureLabel + ' (exit code ' + $server.ExitCode + ')')
+    }
     Start-Sleep -Milliseconds 500
   }
   if (!(Test-Path $readyFile)) { throw 'Normal router fixture readiness timed out' }
