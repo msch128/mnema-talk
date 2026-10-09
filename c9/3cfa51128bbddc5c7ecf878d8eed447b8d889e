@@ -1,0 +1,20 @@
+.github/workflows/desktop-client.yml
+  s_0a885d5f0c193a::t_27f373f3535171 143-144
+  s_0a885d5f0c193a::t_edec8aabadf306 139-142,145-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c93cfa51128bbddc5c7ecf878d8eed447b8d889e",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
