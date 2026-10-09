@@ -62,8 +62,8 @@ impl Drop for AbortedFuture {
         }
     }
 }
-impl NativeTrustDialog for TauriNativeTrustDialog {
-    fn confirm_first_root(&self, request: NativeDialogRequest) -> NativeDialogFuture {
+impl TauriNativeTrustDialog {
+    fn confirm_request(&self, request: NativeDialogRequest) -> NativeDialogFuture {
         let service = self.clone();
         Box::pin(async move {
             service.check(&request)?;
@@ -149,7 +149,7 @@ impl NativeTrustDialog for TauriNativeTrustDialog {
             result
         })
     }
-    fn cancel_first_root(&self, operation: Uuid) -> Result<(), DialogError> {
+    fn cancel_request(&self, operation: Uuid) -> Result<(), DialogError> {
         let active = self.active.lock().map_err(|_| DialogError::Unavailable)?;
         let pending = active
             .as_ref()
@@ -157,6 +157,26 @@ impl NativeTrustDialog for TauriNativeTrustDialog {
             .ok_or(DialogError::Stale)?;
         pending.cancelled.store(true, Ordering::Release);
         Ok(())
+    }
+}
+impl NativeTrustDialog for TauriNativeTrustDialog {
+    fn confirm_first_root(&self, request: NativeDialogRequest) -> NativeDialogFuture {
+        if request.is_device_removal() {
+            return Box::pin(async { Err(DialogError::Denied) });
+        }
+        self.confirm_request(request)
+    }
+    fn confirm_device_removal(&self, request: NativeDialogRequest) -> NativeDialogFuture {
+        if !request.is_device_removal() {
+            return Box::pin(async { Err(DialogError::Denied) });
+        }
+        self.confirm_request(request)
+    }
+    fn cancel_first_root(&self, operation: Uuid) -> Result<(), DialogError> {
+        self.cancel_request(operation)
+    }
+    fn cancel_device_removal(&self, operation: Uuid) -> Result<(), DialogError> {
+        self.cancel_request(operation)
     }
 }
 type Finish = Box<dyn FnOnce(Result<bool, DialogError>) + Send + 'static>;

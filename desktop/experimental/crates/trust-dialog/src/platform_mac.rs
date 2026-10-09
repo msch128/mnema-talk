@@ -43,10 +43,10 @@ pub(super) fn show(
         }
     };
     let alert = NSAlert::new(mtm);
-    alert.setMessageText(&NSString::from_str("Confirm a new Mnema root"));
+    alert.setMessageText(&NSString::from_str(request.confirmation_title()));
     alert.setInformativeText(&NSString::from_str(&text));
     let _ = alert.addButtonWithTitle(&NSString::from_str("Cancel"));
-    let _ = alert.addButtonWithTitle(&NSString::from_str("Create root"));
+    let _ = alert.addButtonWithTitle(&NSString::from_str(request.confirmation_action()));
     let instance = DialogInstance::fresh();
     let callback_instance = instance.clone();
     let finish = RefCell::new(Some(finish));

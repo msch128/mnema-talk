@@ -380,6 +380,25 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
     assert_eq!(received.account, "bob");
     assert_eq!(received.body, "peer reply");
     assert_eq!(host.native_owner_facts(NOW).unwrap().epoch(), 1);
+    let actual_target = host.native_peer_for_removal("bob", "desktop", NOW).unwrap();
+    assert_eq!(actual_target.account(), "bob");
+    assert_eq!(actual_target.device(), "desktop");
+    assert_eq!(actual_target.identity(), offer.identity);
+    assert_eq!(actual_target.signature_key(), offer.signature_key);
+    host.check_native_peer_for_removal(&actual_target, NOW)
+        .unwrap();
+    assert!(matches!(
+        peer.check_native_peer_for_removal(&actual_target, NOW),
+        Err(Error::Stale)
+    ));
+    assert!(
+        host.native_peer_for_removal("alice", "desktop", NOW)
+            .is_err()
+    );
+    assert!(
+        host.native_peer_for_removal("outsider", "desktop", NOW)
+            .is_err()
+    );
     // Actual root-signed device withdrawal creates a fresh MLS epoch and its
     // genuine public Remove commit must retire the removed member's MLS state.
     let withdraw_when = if matches!(scenario, RemovalScenario::ExpiredRoster) {
@@ -506,6 +525,10 @@ fn actual_pairing_and_removal(scenario: RemovalScenario) {
         return;
     }
     let commit = result.unwrap();
+    assert!(matches!(
+        host.check_native_peer_for_removal(&actual_target, withdraw_when),
+        Err(Error::Stale)
+    ));
     assert_eq!(host.native_owner_facts(withdraw_when).unwrap().epoch(), 2);
     assert_eq!(
         host.native_owner_facts(withdraw_when).unwrap().generation(),

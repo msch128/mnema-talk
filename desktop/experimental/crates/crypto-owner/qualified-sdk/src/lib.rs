@@ -21,7 +21,7 @@ mod host;
 #[cfg(test)]
 mod host_tests;
 mod protected;
-pub use host::{HostAdmission, NativeOwnerFacts};
+pub use host::{HostAdmission, NativeOwnerFacts, NativePeerFacts};
 pub use protected::{
     CHAT_EVENT_DOMAIN, CHAT_EVENT_VERSION, ChatEventClaim, ChatKind, ChatMessage, ChatOperation,
     NativeBinding, NativeCommunityAnchor, NativeFrameGrant, NativeProtectedEventScope,

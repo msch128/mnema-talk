@@ -15,7 +15,8 @@ use mnema_private_native_client_broker::{
     NativeAuthenticatedScope, NativeClient, NativeWindowLease,
 };
 pub use pending_root::{
-    NativeFirstRootOwner, NativeRootPreview, PendingFirstRoot, PendingRootCancellation,
+    NativeFirstRootOwner, NativePreparedDeviceRemoval, NativeRootPreview, PendingFirstRoot,
+    PendingRootCancellation,
 };
 #[cfg(feature = "opaque-relay")]
 pub use relay::NativeChatDisplay;
@@ -116,6 +117,8 @@ pub struct NativeChatOwner {
     retired: bool,
     serial: Uuid,
     cursor: i64,
+    // After a native membership transition, chat must wait for control ACK.
+    membership_pending: Option<Uuid>,
     #[cfg(feature = "opaque-relay")]
     typed_events: HashMap<Uuid, mnema_crypto_sdk_prototype::NativeReservedChatEvent>,
     #[cfg(feature = "opaque-relay")]
@@ -206,6 +209,7 @@ impl NativeChatOwner {
             retired: false,
             serial: Uuid::new_v4(),
             cursor: 0,
+            membership_pending: None,
             #[cfg(feature = "opaque-relay")]
             typed_events: HashMap::new(),
             #[cfg(feature = "opaque-relay")]
@@ -218,6 +222,7 @@ impl NativeChatOwner {
         self.retired = true;
         self.sdk.retire_native();
         self.events.clear();
+        self.membership_pending = None;
         #[cfg(feature = "opaque-relay")]
         {
             self.typed_events.clear();
@@ -260,6 +265,9 @@ impl NativeChatOwner {
         Ok(())
     }
     fn current(&mut self, when: u64) -> Result<(u64, u64)> {
+        if self.membership_pending.is_some() {
+            return Err(Error::Conflict);
+        }
         let facts = self
             .sdk
             .native_owner_facts(when)

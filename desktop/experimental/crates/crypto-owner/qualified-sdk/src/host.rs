@@ -622,3 +622,90 @@ impl Core {
         Ok(wire)
     }
 }
+
+/// Actual current MLS leaf and root-verified identity for native device UI.
+/// This is display/selection evidence, not a removal or sending permission.
+/// No public constructor, Clone or renderer serialization.
+pub struct NativePeerFacts {
+    owner: u64,
+    epoch: u64,
+    generation: u64,
+    account: String,
+    device: String,
+    identity: Vec<u8>,
+    signature_key: Vec<u8>,
+    index: LeafNodeIndex,
+}
+impl NativePeerFacts {
+    pub fn account(&self) -> &str {
+        &self.account
+    }
+    pub fn device(&self) -> &str {
+        &self.device
+    }
+    pub fn identity(&self) -> &[u8] {
+        &self.identity
+    }
+    pub fn signature_key(&self) -> &[u8] {
+        &self.signature_key
+    }
+}
+impl Sdk {
+    /// Select by actual signed account/device and actual MLS membership. Labels
+    /// or public keys supplied by a renderer never populate the returned facts.
+    pub fn native_peer_for_removal(
+        &self,
+        account: &str,
+        device: &str,
+        now: u64,
+    ) -> Result<NativePeerFacts> {
+        id(account)?;
+        id(device)?;
+        let (epoch, generation, _, _, _) = self.current(now)?;
+        let (mut trust, roster, _) = current_trust(&self.core.connection, &self.core.pin, now)?;
+        let group = self.core.group.as_ref().ok_or(Error::WrongPhase)?;
+        for member in group.members() {
+            let approved = trust
+                .verify_device(
+                    &roster,
+                    &self.core.pin.group,
+                    member.credential.serialized_content(),
+                    &member.signature_key,
+                    now,
+                )
+                .map_err(|_| Error::Unauthorized)?;
+            if approved.account() == account && approved.device() == device {
+                if member.index == group.own_leaf_index() {
+                    return Err(Error::Unauthorized);
+                }
+                return Ok(NativePeerFacts {
+                    owner: self.core.owner,
+                    epoch,
+                    generation,
+                    account: approved.account().into(),
+                    device: approved.device().into(),
+                    identity: member.credential.serialized_content().into(),
+                    signature_key: member.signature_key,
+                    index: member.index,
+                });
+            }
+        }
+        Err(Error::Unauthorized)
+    }
+    /// Recheck a native selection after the OS dialog, before issuer mutation.
+    pub fn check_native_peer_for_removal(&self, facts: &NativePeerFacts, now: u64) -> Result<()> {
+        let (epoch, generation, _, _, _) = self.current(now)?;
+        if facts.owner != self.core.owner || facts.epoch != epoch || facts.generation != generation
+        {
+            return Err(Error::Stale);
+        }
+        let current = self.native_peer_for_removal(&facts.account, &facts.device, now)?;
+        if facts.identity != current.identity
+            || facts.signature_key != current.signature_key
+            || facts.index != current.index
+        {
+            return Err(Error::Stale);
+        }
+        Ok(())
+    }
+}

@@ -26,11 +26,11 @@ pub(super) fn show(
         .transient_for(&parent)
         .modal(true)
         .message_type(gtk::MessageType::Warning)
-        .text("Confirm a new Mnema root")
+        .text(request.confirmation_title())
         .secondary_text(&text)
         .build();
     dialog.add_button("Cancel", gtk::ResponseType::Cancel);
-    dialog.add_button("Create root", gtk::ResponseType::Accept);
+    dialog.add_button(request.confirmation_action(), gtk::ResponseType::Accept);
     dialog.set_default_response(gtk::ResponseType::Cancel);
     let callback = Rc::new(RefCell::new(Some(finish)));
     dialog.connect_response(move |dialog, response| {

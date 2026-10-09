@@ -92,7 +92,12 @@ impl NativeTrustDisplayFacts {
         self.device_key
     }
 }
+enum ConfirmationPurpose {
+    FirstRoot,
+    DeviceRemoval { account: Uuid, identity: Vec<u8> },
+}
 struct Request {
+    purpose: ConfirmationPurpose,
     operation: Uuid,
     scope: Arc<NativeAuthenticatedScope>,
     facts: NativeTrustDisplayFacts,
@@ -123,11 +128,62 @@ impl NativeDialogRequest {
             return Err(DialogError::Denied);
         }
         Ok(Self(Arc::new(Request {
+            purpose: ConfirmationPurpose::FirstRoot,
             operation,
             scope,
             facts,
             deadline,
         })))
+    }
+    /// Exact native Core-derived device selection. This does not authorize
+    /// removal: the caller must recheck current MLS, native auth and the issuer.
+    pub fn device_removal(
+        operation: Uuid,
+        scope: Arc<NativeAuthenticatedScope>,
+        facts: NativeTrustDisplayFacts,
+        deadline: Instant,
+        account: Uuid,
+        identity: &[u8],
+    ) -> Result<Self, DialogError> {
+        if account.is_nil() || identity.is_empty() || identity.len() > 256 {
+            return Err(DialogError::Denied);
+        }
+        let base = Self::first_root(operation, scope, facts, deadline)?;
+        let mut request = Arc::try_unwrap(base.0).map_err(|_| DialogError::Denied)?;
+        request.purpose = ConfirmationPurpose::DeviceRemoval {
+            account,
+            identity: identity.into(),
+        };
+        Ok(Self(Arc::new(request)))
+    }
+    pub fn target_account(&self) -> Option<Uuid> {
+        match &self.0.purpose {
+            ConfirmationPurpose::FirstRoot => None,
+            ConfirmationPurpose::DeviceRemoval { account, .. } => Some(*account),
+        }
+    }
+    pub fn target_identity(&self) -> Option<&[u8]> {
+        match &self.0.purpose {
+            ConfirmationPurpose::FirstRoot => None,
+            ConfirmationPurpose::DeviceRemoval { identity, .. } => Some(identity),
+        }
+    }
+    pub fn is_device_removal(&self) -> bool {
+        matches!(self.0.purpose, ConfirmationPurpose::DeviceRemoval { .. })
+    }
+    pub fn confirmation_title(&self) -> &'static str {
+        if self.is_device_removal() {
+            "Remove a Mnema device"
+        } else {
+            "Confirm a new Mnema root"
+        }
+    }
+    pub fn confirmation_action(&self) -> &'static str {
+        if self.is_device_removal() {
+            "Remove device"
+        } else {
+            "Create root"
+        }
     }
     pub fn operation_id(&self) -> Uuid {
         self.0.operation
@@ -166,6 +222,19 @@ impl NativeDialogRequest {
             .collect();
         // Origin uses canonical IDNA ASCII. Non-ASCII community/control text is
         // visibly escaped, so remote labels cannot hide identity with bidi text.
+        if let ConfirmationPurpose::DeviceRemoval { account, identity } = &self.0.purpose {
+            return Ok(format!(
+                "Remove this Mnema device from future protected communication?\n\nOrigin: {origin}\nCommunity: {community}\nAdministrator account: {}\nChannel: {}\nTarget account: {account}\nTarget device: {}\nDevice identity (base64): {}\nGroup: {}\n\nFull root fingerprint:\n{}\nRoot public key:\n{}\nFull target device public key:\n{}\n\nPreviously received content cannot be withdrawn. This confirms only this exact device removal; it does not create a root or admit another device.",
+                scope.account_id(),
+                self.facts().channel,
+                self.facts().device,
+                STANDARD.encode(identity),
+                STANDARD.encode(&self.facts().group),
+                hex(&self.facts().fingerprint),
+                hex(&self.facts().root),
+                hex(&self.facts().device_key)
+            ));
+        }
         Ok(format!(
             "Create a new Mnema community root?\n\nOrigin: {origin}\nCommunity: {community}\nAccount: {}\nChannel: {}\nDevice: {}\nGroup: {}\n\nFull root fingerprint:\n{}\nRoot public key:\n{}\nDevice public key:\n{}\n\nKeep the full root fingerprint for an independent comparison with other devices. This first-root confirmation does not approve another device or an existing remote root.",
             scope.account_id(),
@@ -222,6 +291,12 @@ pub type NativeDialogFuture =
     Pin<Box<dyn Future<Output = Result<NativeDialogDecision, DialogError>> + Send + 'static>>;
 pub trait NativeTrustDialog: Send + Sync {
     fn confirm_first_root(&self, request: NativeDialogRequest) -> NativeDialogFuture;
+    fn confirm_device_removal(&self, _request: NativeDialogRequest) -> NativeDialogFuture {
+        Box::pin(async { Err(DialogError::Unavailable) })
+    }
+    fn cancel_device_removal(&self, _operation: Uuid) -> Result<(), DialogError> {
+        Err(DialogError::Unavailable)
+    }
     fn cancel_first_root(&self, _operation: Uuid) -> Result<(), DialogError> {
         Err(DialogError::Unavailable)
     }
