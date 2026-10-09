@@ -1,0 +1,21 @@
+web/src/composables/useWebRTC.test.ts
+  s_0a885d5f0c193a::t_3de43faf764bc5 1962-1969
+web/src/composables/useWebRTC.ts
+  s_0a885d5f0c193a::t_4bb0cb231c70b2 1566,1569-1576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36742b4b35895ec99035f9622dc479d3045638ff",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
