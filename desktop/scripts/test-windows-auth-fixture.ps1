@@ -1,6 +1,12 @@
 ﻿param([Parameter(Mandatory)][string]$Tag)
 $ErrorActionPreference = 'Stop'
-if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or $Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'This fixture requires a disposable Windows Actions runner and an existing release tag' }
+if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $Tag -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+$') { throw 'This fixture requires a disposable Windows Actions runner and an existing release tag' }
+# This opt-in test owns a disposable Actions VM; never install trust on a user's PC.
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+try {
+  $principal = [Security.Principal.WindowsPrincipal]::new($identity)
+  if (!$principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Disposable fixture CA setup requires an elevated runner' }
+} finally { $identity.Dispose() }
 $token = $env:GH_TOKEN
 $env:GH_TOKEN = $null
 git fetch --no-tags origin "refs/tags/${Tag}:refs/tags/${Tag}"
@@ -75,6 +81,7 @@ function Get-FixtureFailureLabel([string]$Directory) {
 $server = $null
 $rootThumbprint = $null
 $rootCertificate = $null
+$rootStorePath = 'Cert:\LocalMachine\Root'
 $clusterInitialized = $false
 try {
   & (Join-Path $pgBin 'initdb.exe') -D $data -U desktop_fixture -A trust -E UTF8 --locale=C
@@ -112,12 +119,15 @@ try {
   $constraints = $rootCertificate.Extensions['2.5.29.19']
   if ($rootCertificate.Subject -ne 'CN=Mnema disposable GUI fixture' -or $rootCertificate.Issuer -ne $rootCertificate.Subject -or $rootCertificate.HasPrivateKey -or $null -eq $constraints -or !$constraints.CertificateAuthority -or $rootCertificate.NotAfter -le [DateTime]::Now) { throw 'Invalid owned fixture CA' }
   $candidateThumbprint = $rootCertificate.Thumbprint
-  if ($candidateThumbprint -notmatch '^[A-F0-9]{40}$' -or (Test-Path "Cert:\CurrentUser\Root\$candidateThumbprint")) { throw 'Refusing a pre-existing fixture CA' }
+  if ($candidateThumbprint -notmatch '^[A-F0-9]{40}$' -or (Test-Path "$rootStorePath\$candidateThumbprint")) { throw 'Refusing a pre-existing fixture CA' }
   # Record cleanup ownership before any import, including partially failed imports.
   $rootThumbprint = $candidateThumbprint
-  # Import only this public certificate into the same CurrentUser store without a
-  # native trust dialog. Real Schannel/WebView TLS verification remains enabled.
+  # Import only this public certificate into this disposable VM's Root store.
+  # The CurrentUser CA setup blocked the hosted fixture. The explicit
+  # elevated-runner guard and exact cleanup bound this temporary machine trust.
+  # Real Schannel/WebView TLS verification remains enabled.
   # https://learn.microsoft.com/windows/win32/api/cryptuiapi/nf-cryptuiapi-cryptuiwizimport
+  Write-Host 'Fixture phase: compiling the owned CA import helper'
   Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -145,12 +155,15 @@ public static class MnemaFixtureCertificateImport {
     }
 }
 '@
-  $rootStore = [Security.Cryptography.X509Certificates.X509Store]::new('Root', 'CurrentUser')
+  $rootStore = [Security.Cryptography.X509Certificates.X509Store]::new('Root', [Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine)
   try {
+    Write-Host 'Fixture phase: opening the owned machine CA store'
     $rootStore.Open([Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    Write-Host 'Fixture phase: importing the owned machine CA without a dialog'
     if (![MnemaFixtureCertificateImport]::Import($rootCertificate, $rootStore)) { throw 'Noninteractive owned fixture CA import failed' }
   } finally { $rootStore.Close() }
-  $installed = Get-Item "Cert:\CurrentUser\Root\$rootThumbprint"
+  Write-Host 'Fixture phase: verifying the owned machine CA readback'
+  $installed = Get-Item "$rootStorePath\$rootThumbprint"
   if ([Convert]::ToBase64String($installed.RawData) -ne [Convert]::ToBase64String($rootBytes)) { throw 'Owned fixture CA readback mismatch' }
   Write-Host 'Fixture phase: test CA verified, starting the published client probe'
   $env:GH_TOKEN = $token
@@ -166,7 +179,7 @@ public static class MnemaFixtureCertificateImport {
   $cleanupErrors = @()
   if ($rootThumbprint) {
     try {
-      $ownedCertificatePath = "Cert:\CurrentUser\Root\$rootThumbprint"
+      $ownedCertificatePath = "$rootStorePath\$rootThumbprint"
       if (Test-Path $ownedCertificatePath) { Remove-Item $ownedCertificatePath }
       if (Test-Path $ownedCertificatePath) { throw 'Owned certificate remains installed' }
     } catch { $cleanupErrors += 'owned certificate cleanup failed' }
