@@ -75,7 +75,9 @@ try {
   $addressInput = Wait-Ui { Find-Control $selector ([Windows.Automation.ControlType]::Edit) 'Server address' } 'Address input unavailable'
   $value = $addressInput.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
   $value.SetValue($uri.GetLeftPart([UriPartial]::Authority))
-  if ($value.Current.Value -ne $uri.GetLeftPart([UriPartial]::Authority)) { throw 'Address input was not updated' }
+  $null = Wait-Ui {
+    if ($value.Current.Value -eq $uri.GetLeftPart([UriPartial]::Authority)) { return $true }
+  } 'Address input was not updated'
   $connect = Find-Control $selector ([Windows.Automation.ControlType]::Button) 'Connect'
   if ($null -eq $connect) { throw 'Connect control unavailable' }
   $connect.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
