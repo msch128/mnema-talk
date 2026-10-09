@@ -1251,11 +1251,16 @@
           },
           "version": {
             "type": "string"
+          },
+          "web_client_api": {
+            "description": "WebClientAPI identifies the HTTPS web-client desktop integration contract.",
+            "type": "integer"
           }
         },
         "required": [
           "status",
-          "version"
+          "version",
+          "web_client_api"
         ],
         "type": "object"
       },

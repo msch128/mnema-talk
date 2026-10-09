@@ -7,11 +7,13 @@ license = "AGPL-3.0-only"
 [features]
 default = []
 shell = ["dep:tauri", "dep:tauri-build"]
+web-client = ["shell", "dep:reqwest"]
 custom-protocol = ["shell", "tauri/custom-protocol"]
 synthetic-media-fixture = ["dep:mnema-private-synthetic-media-actor","dep:mnema-private-synthetic-media-policy","tauri/dynamic-acl"]
 synthetic-transport-fixture=["mnema-private-native-client-broker/synthetic-transport-fixture","dep:libc"]
 native-crypto=["tauri/dynamic-acl","dep:libc","dep:mnema-private-native-crypto-owner","dep:mnema-private-native-trust-dialog","mnema-private-native-trust-dialog/os-modal","dep:mnema-private-native-crypto-seeds","dep:mnema-crypto-enrollment-prototype","dep:getrandom","dep:chrono","dep:security-framework","dep:security-framework-sys","dep:core-foundation"]
 [dependencies]
+reqwest = { version = "=0.12.28", optional = true, default-features = false, features = ["native-tls", "json"] }
 mnema-private-native-crypto-owner={path="../crates/crypto-owner",optional=true,features=["opaque-relay"]}
 mnema-private-native-trust-dialog={path="../crates/trust-dialog",optional=true}
 mnema-private-native-crypto-seeds={path="../crates/crypto-seeds",optional=true}

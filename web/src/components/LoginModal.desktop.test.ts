@@ -15,7 +15,7 @@ let expectedPassword = dummyPassword
 let capture: { usernameLength: number; passwordBytes: number; usernameMatches: boolean; passwordMatches: boolean; authenticationMatches: boolean } | null
 let wrapper: VueWrapper | null = null
 beforeEach(async () => {
-  vi.stubGlobal('isTauri', true); setActivePinia(createPinia()); setLocale('en'); capture = null
+  vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/')); setActivePinia(createPinia()); setLocale('en'); capture = null
   expectedUsername = dummyUsername; expectedPassword = dummyPassword
   installNativePort({
     channel: () => ({ onmessage: () => {} }),

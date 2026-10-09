@@ -4,6 +4,7 @@ fn main() {
         #[cfg(not(any(feature = "synthetic-media-fixture", feature = "native-crypto")))]
         const COMMANDS: &[&str] = &[
             "native_context",
+            "desktop_open_instance",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",
@@ -24,6 +25,7 @@ fn main() {
         #[cfg(feature = "native-crypto")]
         const COMMANDS: &[&str] = &[
             "native_context",
+            "desktop_open_instance",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",
@@ -52,6 +54,7 @@ fn main() {
         #[cfg(feature = "synthetic-media-fixture")]
         const COMMANDS: &[&str] = &[
             "native_context",
+            "desktop_open_instance",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",
