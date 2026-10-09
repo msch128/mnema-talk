@@ -262,59 +262,7 @@ impl Core {
         group
             .merge_pending_commit(&provider)
             .map_err(|_| Error::Provider)?;
-        // Precommit ordinary provider readback verifies actual merged epoch.
-        let restored = MlsGroup::load(provider.storage(), group.group_id())
-            .map_err(|_| Error::Database)?
-            .ok_or(Error::Database)?;
-        if restored.epoch() != group.epoch()
-            || restored.own_leaf_index() != group.own_leaf_index()
-            || restored.members().count() != group.members().count()
-            || !restored.is_active()
-        {
-            return Err(Error::Database);
-        }
-        let expected_info = group
-            .export_group_info(provider.crypto(), signer, true)
-            .map_err(|_| Error::Database)?
-            .to_bytes()
-            .map_err(|_| Error::Database)?;
-        let actual_info = restored
-            .export_group_info(provider.crypto(), signer, true)
-            .map_err(|_| Error::Database)?
-            .to_bytes()
-            .map_err(|_| Error::Database)?;
-        if expected_info != actual_info {
-            return Err(Error::Database);
-        }
-        let expected = Zeroizing::new(
-            group
-                .export_secret(
-                    provider.crypto(),
-                    "MnemaTalk host epoch persistence probe",
-                    b"",
-                    32,
-                )
-                .map_err(|_| Error::Database)?,
-        );
-        let actual = Zeroizing::new(
-            restored
-                .export_secret(
-                    provider.crypto(),
-                    "MnemaTalk host epoch persistence probe",
-                    b"",
-                    32,
-                )
-                .map_err(|_| Error::Database)?,
-        );
-        if expected.as_slice() != actual.as_slice() {
-            return Err(Error::Database);
-        }
-        let group_id = serde_json::to_vec(group.group_id()).map_err(|_| Error::Database)?;
-        let epoch = serde_json::to_vec(&group.epoch()).map_err(|_| Error::Database)?;
-        let private_epoch:i64=tx.query_row("SELECT COUNT(*) FROM openmls_epoch_keys_pairs WHERE group_id=? AND epoch_id=? AND leaf_index=? AND provider_version=1 AND length(key_pairs) BETWEEN 1 AND 131072",params![group_id,epoch,group.own_leaf_index().u32()],|r|r.get(0)).map_err(|_|Error::Database)?;
-        if private_epoch != 1 {
-            return Err(Error::Database);
-        }
+        verify_merged_host_state(&tx, &provider, group, signer)?;
         let next = advance(&tx, self.revision, now)?;
         for (event, kind, wire) in [
             (commit_event, "host_commit", &commit),
@@ -362,20 +310,26 @@ fn fixture_fault(tx: &Connection, point: &str) -> Result<()> {
         ("adopt", "adopt-ignore-state") => {
             "CREATE TEMP TRIGGER fault_host BEFORE UPDATE OF roster ON core_state BEGIN SELECT RAISE(IGNORE);END;"
         }
-        ("add", "add-ignore-outbox") => {
+        ("add", "add-ignore-outbox") | ("remove", "remove-ignore-outbox") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON core_outbox BEGIN SELECT RAISE(IGNORE);END;"
         }
-        ("add", "add-ignore-context") => {
+        ("add", "add-ignore-context") | ("remove", "remove-ignore-context") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON openmls_group_data WHEN NEW.data_type='context' BEGIN SELECT RAISE(IGNORE);END;"
         }
-        ("add", "add-ignore-private-epoch") => {
+        ("add", "add-ignore-private-epoch") | ("remove", "remove-ignore-private-epoch") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON openmls_epoch_keys_pairs BEGIN SELECT RAISE(IGNORE);END;"
         }
-        ("add", "add-ignore-resumption") => {
+        ("add", "add-ignore-resumption") | ("remove", "remove-ignore-resumption") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON openmls_group_data WHEN NEW.data_type='resumption_psk_store' BEGIN SELECT RAISE(IGNORE);END;"
         }
-        ("add", "add-ignore-message-secrets") => {
+        ("add", "add-ignore-message-secrets") | ("remove", "remove-ignore-message-secrets") => {
             "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON openmls_group_data WHEN NEW.data_type='message_secrets' BEGIN SELECT RAISE(IGNORE);END;"
+        }
+        ("remove", "remove-ignore-state") => {
+            "CREATE TEMP TRIGGER fault_host BEFORE UPDATE OF roster ON core_state BEGIN SELECT RAISE(IGNORE); END;"
+        }
+        ("remove", "remove-ignore-events") => {
+            "CREATE TEMP TRIGGER fault_host BEFORE INSERT ON sdk_events BEGIN SELECT RAISE(IGNORE); END;"
         }
         _ => return Ok(()),
     };
@@ -385,5 +339,286 @@ fn fixture_fault(tx: &Connection, point: &str) -> Result<()> {
 fn fixture_exit(point: &str) {
     if std::env::var("MNEMA_HOST_FAULT").as_deref() == Ok(point) {
         std::process::exit(73)
+    }
+}
+
+/// Check the merged MLS state through the ordinary persisted provider before
+/// publishing either admission or removal bytes. No resumed sender is created.
+fn verify_merged_host_state(
+    tx: &Connection,
+    provider: &Provider<'_>,
+    group: &MlsGroup,
+    signer: &SignatureKeyPair,
+) -> Result<()> {
+    let restored = MlsGroup::load(provider.storage(), group.group_id())
+        .map_err(|_| Error::Database)?
+        .ok_or(Error::Database)?;
+    if restored.epoch() != group.epoch()
+        || restored.own_leaf_index() != group.own_leaf_index()
+        || restored.members().count() != group.members().count()
+        || !restored.is_active()
+    {
+        return Err(Error::Database);
+    }
+    let expected_info = group
+        .export_group_info(provider.crypto(), signer, true)
+        .map_err(|_| Error::Database)?
+        .to_bytes()
+        .map_err(|_| Error::Database)?;
+    let actual_info = restored
+        .export_group_info(provider.crypto(), signer, true)
+        .map_err(|_| Error::Database)?
+        .to_bytes()
+        .map_err(|_| Error::Database)?;
+    if expected_info != actual_info {
+        return Err(Error::Database);
+    }
+    let expected = Zeroizing::new(
+        group
+            .export_secret(
+                provider.crypto(),
+                "MnemaTalk host epoch persistence probe",
+                b"",
+                32,
+            )
+            .map_err(|_| Error::Database)?,
+    );
+    let actual = Zeroizing::new(
+        restored
+            .export_secret(
+                provider.crypto(),
+                "MnemaTalk host epoch persistence probe",
+                b"",
+                32,
+            )
+            .map_err(|_| Error::Database)?,
+    );
+    if expected.as_slice() != actual.as_slice() {
+        return Err(Error::Database);
+    }
+    let group_id = serde_json::to_vec(group.group_id()).map_err(|_| Error::Database)?;
+    let epoch = serde_json::to_vec(&group.epoch()).map_err(|_| Error::Database)?;
+    let private_epoch:i64=tx.query_row("SELECT COUNT(*) FROM openmls_epoch_keys_pairs WHERE group_id=? AND epoch_id=? AND leaf_index=? AND provider_version=1 AND length(key_pairs) BETWEEN 1 AND 131072",params![group_id,epoch,group.own_leaf_index().u32()],|r|r.get(0)).map_err(|_|Error::Database)?;
+    if private_epoch != 1 {
+        return Err(Error::Database);
+    }
+    Ok(())
+}
+
+impl Core {
+    pub(super) fn remove_root_revoked_native_peer(
+        &mut self,
+        event: &str,
+        identity: &[u8],
+        signature_key: &[u8],
+        signed_roster: &[u8],
+        now: u64,
+    ) -> Result<Vec<u8>> {
+        self.mutable()?;
+        if self.phase != Phase::Live {
+            return Err(Error::WrongPhase);
+        }
+        let result =
+            self.remove_root_peer_inner(event, identity, signature_key, signed_roster, now);
+        self.quarantine(result)
+    }
+    fn remove_root_peer_inner(
+        &mut self,
+        event: &str,
+        identity: &[u8],
+        signature_key: &[u8],
+        signed_roster: &[u8],
+        now: u64,
+    ) -> Result<Vec<u8>> {
+        protected::uuid(event)?;
+        if identity.is_empty() || identity.len() > 256 || signature_key.len() != 32 {
+            return Err(Error::Invalid);
+        }
+        let group = self.group.as_mut().ok_or(Error::Quarantined)?;
+        if group.pending_commit().is_some() || self.staged.is_some() {
+            return Err(Error::Busy);
+        }
+        let tx = self
+            .connection
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(|_| Error::Database)?;
+        check_revision(&tx, self.revision)?;
+        budget(&tx)?;
+        let channel: String = tx
+            .query_row(
+                "SELECT channel FROM native_host_channel WHERE id=1",
+                [],
+                |r| r.get(0),
+            )
+            .map_err(|_| Error::Unauthorized)?;
+        let exists: bool = tx
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM core_outbox WHERE event_id=?)",
+                [event],
+                |r| r.get(0),
+            )
+            .map_err(|_| Error::Database)?;
+        if exists {
+            return Err(Error::Replay);
+        }
+        // The durable local issuer may already have advanced for this exact
+        // withdrawal. Reverify the old Core roster only to identify the old
+        // MLS members; it does not authorize sending or control publication.
+        let (old_generation, last) = stored_floor(&tx)?;
+        if old_generation == 0 || now < last {
+            return Err(Error::Trust);
+        }
+        let old_wire: Vec<u8> = tx
+            .query_row("SELECT roster FROM core_state WHERE id=1", [], |r| r.get(0))
+            .map_err(|_| Error::Database)?;
+        let mut old_trust = verifier(&self.pin, old_generation - 1, last)?;
+        let old_roster = old_trust
+            .verify_roster(&old_wire, last)
+            .map_err(|_| Error::Trust)?;
+        if verified_generation(&old_wire)? != old_generation {
+            return Err(Error::Trust);
+        }
+        // Only an exact, previously approved MLS leaf can be withdrawn. No leaf
+        // index or account label supplied by the renderer selects the target.
+        let members: Vec<_> = group.members().collect();
+        let target = members
+            .iter()
+            .find(|m| {
+                m.credential.serialized_content() == identity && m.signature_key == signature_key
+            })
+            .ok_or(Error::Unauthorized)?;
+        if target.index == group.own_leaf_index() {
+            return Err(Error::Unauthorized);
+        }
+        for member in &members {
+            approve(
+                &mut old_trust,
+                &old_roster,
+                &self.pin,
+                member.credential.serialized_content(),
+                &member.signature_key,
+                last,
+            )?;
+        }
+        // New signed root evidence and removal are committed together. Never
+        // install a revoked roster and continue with the old sending epoch.
+        let mut new_trust = verifier(&self.pin, old_generation, now)?;
+        let new_roster = new_trust
+            .verify_roster(signed_roster, now)
+            .map_err(|_| Error::Trust)?;
+        let generation = verified_generation(signed_roster)?;
+        if generation <= old_generation {
+            return Err(Error::Replay);
+        }
+        let issued: i64 = tx
+            .query_row(
+                "SELECT COUNT(*) FROM roster_outbox WHERE generation=? AND wire=?",
+                params![
+                    i64::try_from(generation).map_err(|_| Error::Trust)?,
+                    signed_roster
+                ],
+                |r| r.get(0),
+            )
+            .map_err(|_| Error::Database)?;
+        let withdrawn: bool = tx.query_row(
+            "SELECT NOT EXISTS(SELECT 1 FROM members WHERE identity=? OR key=?) AND EXISTS(SELECT 1 FROM issuer_state WHERE id=1 AND observed_time<=?)",
+            params![identity, signature_key, clock(now)?], |r| r.get(0)
+        ).map_err(|_| Error::Database)?;
+        if issued != 1 || !withdrawn {
+            return Err(Error::Unauthorized);
+        }
+        if new_trust
+            .verify_device(&new_roster, &self.pin.group, identity, signature_key, now)
+            .is_ok()
+        {
+            return Err(Error::Unauthorized);
+        }
+        for member in &members {
+            if member.index != target.index {
+                approve(
+                    &mut new_trust,
+                    &new_roster,
+                    &self.pin,
+                    member.credential.serialized_content(),
+                    &member.signature_key,
+                    now,
+                )?;
+            }
+        }
+        #[cfg(test)]
+        fixture_fault(&tx, "remove")?;
+        require_one(
+            tx.execute(
+                "UPDATE core_state SET roster=?,generation=?,observed_time=? WHERE id=1",
+                params![
+                    signed_roster,
+                    generation.to_be_bytes().as_slice(),
+                    clock(now)?
+                ],
+            )
+            .map_err(|_| Error::Database)?,
+        )?;
+        // Ordinary current trust now also checks the actual local issuer ledger.
+        // This tentative update rolls back with the MLS merge on every failure.
+        current_trust(&tx, &self.pin, now)?;
+        let provider = Provider::new(&tx, &self.crypto);
+        let signer = self.signer.as_ref().ok_or(Error::Quarantined)?;
+        let old_epoch = group.epoch().as_u64();
+        let (commit, _, _) = group
+            .remove_members(&provider, signer, &[target.index])
+            .map_err(|_| Error::Provider)?;
+        let wire = commit.to_bytes().map_err(|_| Error::Provider)?;
+        bound_wire(&wire)?;
+        group
+            .merge_pending_commit(&provider)
+            .map_err(|_| Error::Provider)?;
+        if group.epoch().as_u64() != old_epoch.checked_add(1).ok_or(Error::Limit)?
+            || group.members().count() != members.len() - 1
+            || group.members().any(|m| {
+                m.credential.serialized_content() == identity || m.signature_key == signature_key
+            })
+        {
+            return Err(Error::Database);
+        }
+        for member in &members {
+            if member.index != target.index
+                && !group.members().any(|remaining| {
+                    remaining.index == member.index
+                        && remaining.credential.serialized_content()
+                            == member.credential.serialized_content()
+                        && remaining.signature_key == member.signature_key
+                })
+            {
+                return Err(Error::Database);
+            }
+        }
+        verify_merged_host_state(&tx, &provider, group, signer)?;
+        let next = advance(&tx, self.revision, now)?;
+        require_one(
+            tx.execute(
+                "INSERT INTO core_outbox VALUES(?,?,?,?)",
+                params![event, next, "host_commit", wire],
+            )
+            .map_err(|_| Error::Database)?,
+        )?;
+        require_one(
+            tx.execute(
+                "INSERT INTO sdk_events VALUES(?,?,?,?)",
+                params![
+                    event,
+                    channel,
+                    group.epoch().as_u64().to_be_bytes().as_slice(),
+                    generation.to_be_bytes().as_slice()
+                ],
+            )
+            .map_err(|_| Error::Database)?,
+        )?;
+        #[cfg(test)]
+        fixture_exit("remove-before");
+        tx.commit().map_err(|_| Error::UnknownCommit)?;
+        #[cfg(test)]
+        fixture_exit("remove-after");
+        self.revision = next;
+        Ok(wire)
     }
 }

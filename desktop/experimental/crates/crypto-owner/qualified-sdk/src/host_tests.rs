@@ -137,6 +137,41 @@ fn actual_fresh_root_host_adoption_owner_facts_and_durable_channel_no_restored_a
 #[test]
 fn actual_same_native_device_pairing_host_add_welcome_fresh_peer_and_protected_chat_both_directions()
  {
+    actual_pairing_and_removal(RemovalScenario::Valid);
+}
+#[derive(Clone, Copy)]
+enum RemovalScenario {
+    Valid,
+    LongIdentity,
+    ExpiredRoster,
+    SelfTarget,
+    WrongKey,
+    OldRoster,
+    SuppressedOutbox,
+    BackwardsTime,
+}
+#[test]
+fn actual_host_removes_long_identity_and_expired_historical_roster() {
+    for scenario in [
+        RemovalScenario::LongIdentity,
+        RemovalScenario::ExpiredRoster,
+    ] {
+        actual_pairing_and_removal(scenario);
+    }
+}
+#[test]
+fn actual_host_rejects_wrong_removal_target_old_roster_and_suppressed_outbox() {
+    for scenario in [
+        RemovalScenario::SelfTarget,
+        RemovalScenario::WrongKey,
+        RemovalScenario::OldRoster,
+        RemovalScenario::SuppressedOutbox,
+        RemovalScenario::BackwardsTime,
+    ] {
+        actual_pairing_and_removal(scenario);
+    }
+}
+fn actual_pairing_and_removal(scenario: RemovalScenario) {
     let child = std::env::var("MNEMA_HOST_CHILD_DIR").ok();
     let d = if child.is_none() { Some(dir()) } else { None };
     let path = child
@@ -183,8 +218,13 @@ fn actual_same_native_device_pairing_host_add_welcome_fresh_peer_and_protected_c
         own.signature_key().try_into().unwrap(),
     )
     .unwrap();
+    let peer_identity = if matches!(scenario, RemovalScenario::LongIdentity) {
+        vec![b'b'; 256]
+    } else {
+        b"bob-native".to_vec()
+    };
     let (mut peer, offer) =
-        Core::begin_native_enrollment(&path.join("peer.sqlite"), &peer_keys, pin, b"bob-native")
+        Core::begin_native_enrollment(&path.join("peer.sqlite"), &peer_keys, pin, &peer_identity)
             .unwrap();
     assert_eq!(offer.signature_key, peer_device.public_key());
     let invitation = issuer
@@ -340,6 +380,192 @@ fn actual_same_native_device_pairing_host_add_welcome_fresh_peer_and_protected_c
     assert_eq!(received.account, "bob");
     assert_eq!(received.body, "peer reply");
     assert_eq!(host.native_owner_facts(NOW).unwrap().epoch(), 1);
+    // Actual root-signed device withdrawal creates a fresh MLS epoch and its
+    // genuine public Remove commit must retire the removed member's MLS state.
+    let withdraw_when = if matches!(scenario, RemovalScenario::ExpiredRoster) {
+        NOW + 2 * 86400
+    } else {
+        NOW + 1
+    };
+    let removal = "77777777-7777-4777-8777-777777777777";
+    let future = "88888888-8888-4888-8888-888888888888";
+    let old_frame = if matches!(scenario, RemovalScenario::BackwardsTime) {
+        let lease = host
+            .reserve_source(
+                "99999999-9999-4999-8999-999999999999",
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                SourceKind::Opus,
+                NOW,
+            )
+            .unwrap();
+        let grant = host.activate_native_frame_bridge(lease, NOW).unwrap();
+        assert!(
+            host.transform_native_frame(&grant, &[0xf8, 1, 2], NOW)
+                .is_ok()
+        );
+        Some(grant)
+    } else {
+        None
+    };
+    let withdrawn = issuer
+        .revoke_exact_native_device(
+            NativeAdmissionIntent::from_native_out_of_band_pin(
+                "bob",
+                "desktop",
+                &offer.identity,
+                offer.signature_key.clone().try_into().unwrap(),
+            )
+            .unwrap(),
+            withdraw_when,
+        )
+        .unwrap();
+    let before_revision = host.core.revision;
+    let before_outbox: i64 = host
+        .core
+        .connection
+        .query_row("SELECT COUNT(*) FROM core_outbox", [], |r| r.get(0))
+        .unwrap();
+    if matches!(scenario, RemovalScenario::SuppressedOutbox) {
+        host.core.connection.execute_batch("CREATE TEMP TRIGGER suppress_removal BEFORE INSERT ON core_outbox BEGIN SELECT RAISE(IGNORE); END;").unwrap();
+    }
+    let (target_identity, target_key) = if matches!(scenario, RemovalScenario::SelfTarget) {
+        (own.identity(), own.signature_key())
+    } else {
+        (offer.identity.as_slice(), offer.signature_key.as_slice())
+    };
+    let wrong_key = [0u8; 32];
+    let target_key = if matches!(scenario, RemovalScenario::WrongKey) {
+        wrong_key.as_slice()
+    } else {
+        target_key
+    };
+    let removal_roster = if matches!(scenario, RemovalScenario::OldRoster) {
+        roster.as_slice()
+    } else {
+        withdrawn.as_slice()
+    };
+    let result = host.remove_root_revoked_native_peer(
+        removal,
+        target_identity,
+        target_key,
+        removal_roster,
+        if matches!(scenario, RemovalScenario::BackwardsTime) {
+            NOW - 1
+        } else {
+            withdraw_when
+        },
+    );
+    if matches!(
+        scenario,
+        RemovalScenario::SelfTarget
+            | RemovalScenario::WrongKey
+            | RemovalScenario::OldRoster
+            | RemovalScenario::SuppressedOutbox
+            | RemovalScenario::BackwardsTime
+    ) {
+        assert!(result.is_err());
+        assert_eq!(host.core.phase(), Phase::Quarantined);
+        assert!(host.native_owner_facts(withdraw_when).is_err());
+        assert!(!host.matches_native_actor("profile", "main", "session"));
+        assert!(
+            host.pending_chat_for_native_publish(CHAT, withdraw_when)
+                .is_err()
+        );
+        if let Some(grant) = old_frame {
+            assert!(
+                host.check_native_frame_bridge(&grant, withdraw_when)
+                    .is_err()
+            );
+            assert!(
+                host.transform_native_frame(&grant, &[0xf8, 1, 2], withdraw_when)
+                    .is_err()
+            );
+        }
+
+        let (generation, _) = stored_floor(&host.core.connection).unwrap();
+        assert_eq!(generation, 2);
+        assert_eq!(host.core.revision, before_revision);
+        let after_outbox: i64 = host
+            .core
+            .connection
+            .query_row("SELECT COUNT(*) FROM core_outbox", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(after_outbox, before_outbox);
+        assert!(host.core.pending(removal).unwrap().is_none());
+        return;
+    }
+    if std::env::var("MNEMA_HOST_FAULT")
+        .as_deref()
+        .is_ok_and(|f| f.starts_with("remove-ignore-"))
+    {
+        assert!(result.is_err());
+        assert_eq!(host.core.phase(), Phase::Quarantined);
+        assert_eq!(stored_floor(&host.core.connection).unwrap().0, 2);
+        assert_eq!(host.core.revision, before_revision);
+        assert!(host.core.pending(removal).unwrap().is_none());
+        return;
+    }
+    let commit = result.unwrap();
+    assert_eq!(host.native_owner_facts(withdraw_when).unwrap().epoch(), 2);
+    assert_eq!(
+        host.native_owner_facts(withdraw_when).unwrap().generation(),
+        3
+    );
+    assert_eq!(host.core.group.as_ref().unwrap().members().count(), 1);
+    assert_eq!(
+        host.pending_native_host_publication(removal, withdraw_when)
+            .unwrap()
+            .unwrap(),
+        commit
+    );
+    assert!(matches!(
+        host.pending_native_host_publication(COMMIT, withdraw_when),
+        Err(Error::Stale)
+    ));
+    let new_wire = host
+        .send_chat(future, "future after actual MLS removal", withdraw_when)
+        .unwrap();
+    // Withholding control bytes yields only an epoch mismatch. This guard
+    // assertion alone does not demonstrate a decryption attempt or exclusion.
+    assert!(matches!(
+        peer.core.receive_inner(&new_wire, withdraw_when),
+        Err(Error::Invalid)
+    ));
+    assert_eq!(peer.core.group.as_ref().unwrap().epoch().as_u64(), 1);
+    // Now process the actual Remove commit. Unless the prior roster expired,
+    // retain and explicitly verify the roster that still approves this device:
+    // actual MLS removal must cause retirement, rather than a policy-only gate.
+    if matches!(scenario, RemovalScenario::ExpiredRoster) {
+        peer.install_native_roster(&withdrawn, withdraw_when)
+            .unwrap();
+    } else {
+        let (mut trust, roster, generation) =
+            current_trust(&peer.core.connection, &peer.core.pin, withdraw_when).unwrap();
+        assert_eq!(generation, 2);
+        let still_approved = trust
+            .verify_device(
+                &roster,
+                &peer.core.pin.group,
+                &offer.identity,
+                &offer.signature_key,
+                withdraw_when,
+            )
+            .unwrap();
+        assert_eq!(still_approved.account(), "bob");
+        assert_eq!(still_approved.device(), "desktop");
+    }
+    let staged = peer.stage_native_commit(&commit, withdraw_when).unwrap();
+    let inspected = peer.inspect_native_commit(staged).unwrap();
+    assert_eq!(inspected.from_epoch, 1);
+    assert_eq!(inspected.to_epoch, 2);
+    assert_eq!(inspected.removals.len(), 1);
+    let authorized = peer.authorize_native_commit(staged, withdraw_when).unwrap();
+    peer.merge_native_commit(authorized, removal, withdraw_when)
+        .unwrap();
+    assert_eq!(peer.core.phase(), Phase::Quarantined);
+    assert!(peer.core.group.is_none());
+    assert!(peer.core.signer.is_none());
+    assert!(peer.native_owner_facts(withdraw_when).is_err());
 }
 #[test]
 fn actual_host_rejects_keypackage_without_signed_root_device_admission_before_merge() {
@@ -1007,5 +1233,96 @@ fn community_new_generation_retires_old_approval_and_own_revocation_persists_bef
             )
             .unwrap();
         assert!(exact);
+    }
+}
+
+#[test]
+fn actual_host_removal_crashes_and_suppressed_writes_are_atomic() {
+    for fault in [
+        "remove-before",
+        "remove-after",
+        "remove-ignore-state",
+        "remove-ignore-outbox",
+        "remove-ignore-events",
+        "remove-ignore-context",
+        "remove-ignore-private-epoch",
+        "remove-ignore-resumption",
+        "remove-ignore-message-secrets",
+    ] {
+        let d = dir();
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "host_tests::actual_same_native_device_pairing_host_add_welcome_fresh_peer_and_protected_chat_both_directions", "--test-threads=1"])
+            .env("MNEMA_HOST_CHILD_DIR", d.path()).env("MNEMA_HOST_FAULT", fault)
+            .stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null()).status().unwrap();
+        assert_eq!(
+            status.code(),
+            Some(if fault.ends_with("before") || fault.ends_with("after") {
+                73
+            } else {
+                0
+            }),
+            "{fault}"
+        );
+        struct ChildKeys;
+        impl NativeKeyProvider for ChildKeys {
+            fn database_key(&self) -> Result<Zeroizing<[u8; 32]>> {
+                Ok(Zeroizing::new([202; 32]))
+            }
+        }
+        let c = open_encrypted(&d.path().join("root.sqlite"), &ChildKeys, false).unwrap();
+        let committed = fault == "remove-after";
+        assert_eq!(stored_floor(&c).unwrap().0, if committed { 3 } else { 2 });
+        let removal = "77777777-7777-4777-8777-777777777777";
+        for table_column in ["core_outbox WHERE event_id=?", "sdk_events WHERE event=?"] {
+            let count: i64 = c
+                .query_row(
+                    &format!("SELECT COUNT(*) FROM {table_column}"),
+                    [removal],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(count, i64::from(committed), "{fault}");
+        }
+        let (o, com, g, a, i, k): (String, String, Vec<u8>, Vec<u8>, Vec<u8>, Vec<u8>) = c
+            .query_row(
+                "SELECT origin,community,group_id,authority,peer_identity,peer_key FROM core_pin",
+                [],
+                |r| {
+                    Ok((
+                        r.get(0)?,
+                        r.get(1)?,
+                        r.get(2)?,
+                        r.get(3)?,
+                        r.get(4)?,
+                        r.get(5)?,
+                    ))
+                },
+            )
+            .unwrap();
+        let crypto = RustCrypto::default();
+        let provider = Provider::new(&c, &crypto);
+        let group = MlsGroup::load(provider.storage(), &GroupId::from_slice(&g))
+            .unwrap()
+            .unwrap();
+        assert_eq!(group.epoch().as_u64(), if committed { 2 } else { 1 });
+        assert_eq!(group.members().count(), if committed { 1 } else { 2 });
+        let issuer_generation: i64 = c
+            .query_row("SELECT generation FROM issuer_state WHERE id=1", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(issuer_generation, 3); // Root withdrawal remains durable.
+        let pin = NativeBootstrap::from_native_pin(
+            Scope::new(&o, &com).unwrap(),
+            &g,
+            a.try_into().unwrap(),
+            &i,
+            k.try_into().unwrap(),
+        )
+        .unwrap();
+        let restored =
+            Core::restore_inspection_only(&d.path().join("root.sqlite"), &ChildKeys, pin).unwrap();
+        assert_eq!(restored.phase(), Phase::Restored);
+        assert!(Sdk::bind_native(restored, binding("alice"), NOW + 1).is_err());
     }
 }

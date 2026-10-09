@@ -1052,3 +1052,41 @@ impl Sdk {
 #[path = "community.rs"]
 mod community;
 pub use community::{NativeCommunityAnchor, VerifiedCommunityAuthorization, VerifiedVoiceCreation};
+
+impl Sdk {
+    /// Exact root-signed revocation plus actual MLS Remove. The native owner
+    /// must retain current authentication and explicit native device approval.
+    /// Failure retires this owner; it cannot keep using the old epoch.
+    pub fn remove_root_revoked_native_peer(
+        &mut self,
+        event: &str,
+        identity: &[u8],
+        signature_key: &[u8],
+        signed_roster: &[u8],
+        now: u64,
+    ) -> Result<Vec<u8>> {
+        if self.retired {
+            return Err(Error::Stale);
+        }
+        if now < self.observed_native_time.get() {
+            self.retire_native();
+            return Err(Error::Replay);
+        }
+        self.observed_native_time.set(now);
+        self.bridges.clear();
+        // The issuer already advanced, so ordinary old-epoch current() must
+        // stay blocked. Core verifies old membership and the new exact local
+        // issuer roster, then atomically removes the leaf before any output.
+        let result = self
+            .core
+            .remove_root_revoked_native_peer(event, identity, signature_key, signed_roster, now)
+            .and_then(|wire| {
+                self.current(now)?;
+                Ok(wire)
+            });
+        if result.is_err() {
+            self.retire_native();
+        }
+        result
+    }
+}
