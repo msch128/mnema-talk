@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-gaming-control"
+description = "Enables the desktop_gaming_control command without any pre-configured scope."
+commands.allow = ["desktop_gaming_control"]
+
+[[permission]]
+identifier = "deny-desktop-gaming-control"
+description = "Denies the desktop_gaming_control command without any pre-configured scope."
+commands.deny = ["desktop_gaming_control"]

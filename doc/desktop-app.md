@@ -12,6 +12,34 @@ protected communication boundary below remains a requirement. The older
 [feasibility probe](../desktop/README.md) is a historical foundation.
 See [product status and evidence](product-status.md) for the binding scope.
 
+## Windows Gaming DEV
+
+The shared-client host now connects gaming surfaces to the selected instance's
+actual Vue Talk state. The instance must serve the updated shared web client;
+an older web client without the gaming bridge cannot activate these surfaces.
+
+- Join Talk, then focus a detected game. The passive left-hand sidepeek shows
+  participants, speaking, mute and screen sharing. It ignores mouse input.
+- **Alt+M** opens the interactive overlay. It offers mute, deafen, screen-share
+  controls and push-to-talk mode. Starting a share returns to the existing
+  capture chooser in the main client; stopping a share uses the active Talk.
+- Open the overlay settings to rebind overlay, mute, deafen and push-to-talk.
+  Defaults are Alt+M, Alt+N, Alt+D and Space. Bindings and game executable
+  basenames persist locally. The default candidates include World of Warcraft,
+  Genshin Impact and Wardogs; basenames can be adjusted for the installed game.
+- Leaving Talk, losing the connection or moving to another application hides
+  both surfaces. No own Talk connection means no sidepeek or voice overlay.
+- Gaming PTT grants short microphone leases on the audio rendering clock.
+  A renderer stall cannot extend the last granted lease.
+
+This is an unsigned Windows DEV integration using ordinary topmost windows,
+foreground process inspection and polling of configured keys. It does not inject
+into games or capture a keyboard history. A matching basename is a user-selected
+candidate, not a trusted executable identity. Exclusive fullscreen rendering,
+anti-cheat compatibility and real-game behavior require testing on the target
+machine. Windows behavior is not a macOS/Linux gaming qualification. Ordinary
+Talk still uses DTLS-SRTP to the SFU and is not E2EE.
+
 ## Product requirements
 
 The desktop app bundles the existing Vue/TypeScript interface locally and connects

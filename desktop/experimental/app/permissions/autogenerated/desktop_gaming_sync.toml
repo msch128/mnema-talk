@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-gaming-sync"
+description = "Enables the desktop_gaming_sync command without any pre-configured scope."
+commands.allow = ["desktop_gaming_sync"]
+
+[[permission]]
+identifier = "deny-desktop-gaming-sync"
+description = "Denies the desktop_gaming_sync command without any pre-configured scope."
+commands.deny = ["desktop_gaming_sync"]

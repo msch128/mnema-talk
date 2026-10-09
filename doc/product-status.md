@@ -28,7 +28,10 @@ These paths are **not end-to-end encrypted**. See [SECURITY.md](../SECURITY.md).
 The published v0.7.1 Windows package is an unsigned Tauri DEV client. Its local
 instance selector checks HTTPS and `web_client_api: 1`; it then opens the same
 Vue app served by the chosen instance. That remote page uses same-origin
-browser cookies, REST and WebSockets and receives no native IPC permissions.
+browser cookies, REST and WebSockets. The v0.7.1 remote page receives no native
+IPC permissions. The gaming integration adds only a session-bound, selected-origin
+Talk-state sync command; local gaming surfaces hold their separate display/control
+permissions. It does not grant the instance cryptographic or selector authority.
 The selected instance supplies executable web code as well as community data.
 A locally bundled protected communication client remains an outstanding target;
 the current web-client mode does not establish that boundary.
@@ -56,18 +59,20 @@ The Windows-first 0.7.1 delivery precedes these requirements. Versions remain
 managed by the normal release pipeline; this list is an acceptance sequence,
 not a claim that later releases are available.
 
-For 0.7.2:
+For 0.7.2: integrate the Windows gaming surfaces with the existing client:
+left-hand sidepeek with participants, speaking, mute and screen-share state;
+Alt+M interactive overlay; controls for the actual own Talk; persisted,
+configurable mute, deafen, push-to-talk and overlay bindings. Both surfaces
+require an own connected Talk and an active detected game. See the
+[Windows Gaming DEV usage and limits](desktop-app.md#windows-gaming-dev).
+Topmost windows do not establish exclusive fullscreen or anti-cheat support.
 
-1. Keep documentation, release downloads and reachable features consistent.
+For 0.7.3, the remaining fixes and acceptance work follow:
+
+1. Keep documentation, release downloads and reachable features consistent; address client defects and remaining platform parity.
 2. Complete a protected chat flow between independent users/devices: authorized device admission, device removal, restart and recovery. Removed devices receive no future content; the server receives neither content keys nor a plaintext fallback. Extend the reviewed boundary to attachments and every media source.
 3. Verify receiver-specific quality adaptation: degrading one viewer must not reduce other viewers' quality or disrupt audio. Then measure a reproducible one-publisher/99-viewer profile with real decrypting clients, difficult networks and long sessions. Other source/room profiles need separate results. The additional 250-endpoint target is deferred.
 4. Validate independent operation and enforce CI/review requirements. Dependency advisories remain part of release checks; a green build does not mean zero risk.
-
-For 0.7.3: connect gaming controls to the actual own Voice session, gate sidepeek
-and the interactive overlay on Voice plus a game, persist configurable mute,
-deafen, push-to-talk and overlay bindings, and qualify real Windows games.
-macOS/Linux clients and remaining browser parity require their own runtime
-results. A topmost window does not prove exclusive-fullscreen support.
 
 [Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
 and [the native research checkpoint](../desktop/experimental/README.md) describe

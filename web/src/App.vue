@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { startDesktopGaming } from './lib/desktopGaming'
 import type { Route } from './lib/router'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from './stores/auth'
@@ -342,6 +343,7 @@ async function checkAuthUntilKnown(delay = 1000) {
   return result
 }
 
+onBeforeUnmount(startDesktopGaming())
 onMounted(async () => {
   const isAuthed = await checkAuthUntilKnown()
   if (!alive) return

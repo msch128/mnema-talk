@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-desktop-gaming-snapshot"
+description = "Enables the desktop_gaming_snapshot command without any pre-configured scope."
+commands.allow = ["desktop_gaming_snapshot"]
+
+[[permission]]
+identifier = "deny-desktop-gaming-snapshot"
+description = "Denies the desktop_gaming_snapshot command without any pre-configured scope."
+commands.deny = ["desktop_gaming_snapshot"]

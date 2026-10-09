@@ -9,7 +9,7 @@ import { fixtureId } from '../test-fixtures.fixture'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
-import { publishMids, tuneScreenOffer, screenAudioConstraints, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -120,7 +120,7 @@ class FakePC {
 interface FakeNode { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }
 interface FakeDestination extends FakeNode { stream: TestStream }
 interface FakeSource extends FakeNode { stream: MediaStream }
-interface FakeGain extends FakeNode { gain: { value: number; setValueAtTime: ReturnType<typeof vi.fn> } }
+interface FakeGain extends FakeNode { gain: { value: number; cancelScheduledValues: ReturnType<typeof vi.fn>; setValueAtTime: ReturnType<typeof vi.fn> } }
 class FakeAudioContext {
   state: AudioContextState = 'running'
   currentTime = 0
@@ -152,6 +152,7 @@ class FakeAudioContext {
     const node = {
       gain: {
         value: 1,
+        cancelScheduledValues: vi.fn(),
         setValueAtTime: vi.fn(function (this: { value: number }, v: number) { this.value = v })
       },
       connect: vi.fn(),
@@ -1947,7 +1948,26 @@ describe('session restoration and playback permission', () => {
 describe('microphone pipeline fallbacks and filter cancellation', () => {
   function node(): SuppressorDouble { return { connect: vi.fn(), disconnect: vi.fn(), destroy: vi.fn() } }
 
-  it('falls back to the captured mic when AudioContext construction fails', async () => {
+  it('routes desktop PTT through an audio-clock lease and closes on pipeline failure', async () => {
+    Reflect.set(window, '__MNEMA_GAMING_BRIDGE__', 'owned-test')
+    vi.stubGlobal('location', { protocol: 'https:' })
+    try {
+      const { rtc, voice } = setup(); voice.inputMode = 'ptt'
+      const join = rtc.joinVoiceChannel('ch-1'); const raw = await grantMic(); await join
+      const gain = present(FakeAudioContext.gains.at(-1))
+      expect(toRaw(voice.localAudioStream)).toBe(present(FakeAudioContext.destinations.at(-1)).stream)
+      expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 0)
+      setGamingPttLease(true); expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 0.3)
+      voice.isPttPressed = true; await new Promise(resolve => setTimeout(resolve, 70))
+      voice.inputMode = 'activity'; await nextTick(); expect(gain.gain.value).toBe(1)
+      rtc.leaveVoiceChannel(); expect(gain.disconnect).toHaveBeenCalled(); expect(raw.getAudioTracks()[0]?.stop).toHaveBeenCalled()
+      vi.spyOn(FakeAudioContext.prototype, 'createGain').mockImplementation(() => { throw new Error('unavailable') })
+      const again = rtc.joinVoiceChannel('ch-1'); const failed = await grantMic(); await again
+      expect(voice.localAudioStream).toBeNull(); expect(failed.getAudioTracks()[0]?.stop).toHaveBeenCalled()
+    } finally { Reflect.deleteProperty(window, '__MNEMA_GAMING_BRIDGE__'); vi.unstubAllGlobals() }
+  })
+
+  it('falls back to the captured mic when AudioContext construction fails' , async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.stubGlobal('AudioContext', class { constructor() { throw new Error('unavailable') } })
     const { rtc, voice } = setup()

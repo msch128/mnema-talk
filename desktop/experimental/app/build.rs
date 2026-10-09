@@ -5,6 +5,10 @@ fn main() {
         const COMMANDS: &[&str] = &[
             "native_context",
             "desktop_open_instance",
+            "desktop_gaming_sync",
+            "desktop_gaming_snapshot",
+            "desktop_gaming_control",
+            "desktop_gaming_settings",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",
@@ -26,6 +30,10 @@ fn main() {
         const COMMANDS: &[&str] = &[
             "native_context",
             "desktop_open_instance",
+            "desktop_gaming_sync",
+            "desktop_gaming_snapshot",
+            "desktop_gaming_control",
+            "desktop_gaming_settings",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",
@@ -56,6 +64,10 @@ fn main() {
         const COMMANDS: &[&str] = &[
             "native_context",
             "desktop_open_instance",
+            "desktop_gaming_sync",
+            "desktop_gaming_snapshot",
+            "desktop_gaming_control",
+            "desktop_gaming_settings",
             "native_connect",
             "native_metadata_request",
             "native_personal_metadata_request",

@@ -52,3 +52,6 @@ required-features = ["synthetic-transport-fixture"]
 # Reviewed GTK3-compatible RUSTSEC-2024-0429 backport; see scripts/checked-glib.mjs.
 [patch.crates-io]
 glib = { path = "../vendor/glib" }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse"] }

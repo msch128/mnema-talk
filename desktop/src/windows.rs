@@ -5,6 +5,9 @@ use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub struct GameProbe {
+    /// Local identity of the exact validated foreground observation; never IPC data.
+    #[serde(skip)]
+    pub native_identity: Option<(usize, u32)>,
     pub platform: &'static str,
     pub game: Option<String>,
     pub covers_monitor: bool,
@@ -48,6 +51,7 @@ fn covers_monitor(window: [i32; 4], monitor: [i32; 4]) -> bool {
 #[cfg(not(windows))]
 pub fn inspect_foreground(_names: &[String]) -> GameProbe {
     GameProbe {
+        native_identity: None,
         platform: "unsupported_probe_host",
         game: None,
         covers_monitor: false,
@@ -79,6 +83,7 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
         }
     }
     let mut result = GameProbe {
+        native_identity: None,
         platform: "windows",
         game: None,
         covers_monitor: false,
@@ -162,6 +167,7 @@ pub fn inspect_foreground(names: &[String]) -> GameProbe {
         }
         // Only the user-approved basename leaves this function; no full paths/titles.
         result.game = Some(approved.clone());
+        result.native_identity = Some((window as usize, pid));
     }
     result
 }
