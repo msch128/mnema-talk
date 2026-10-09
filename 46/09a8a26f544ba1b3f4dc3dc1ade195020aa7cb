@@ -1,0 +1,21 @@
+desktop/scripts/test-windows-auth-fixture.ps1
+  s_0a885d5f0c193a::t_0e16dd4f590f05 29-59,71-74,96-99
+  s_0a885d5f0c193a::t_d24ed032785319 69
+  s_0a885d5f0c193a::t_f8e0714966bac0 60-68,70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4609a8a26f544ba1b3f4dc3dc1ade195020aa7cb",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
