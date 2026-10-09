@@ -1,0 +1,30 @@
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/host.rs
+  s_0a885d5f0c193a::t_4f540d88ca9470 265,313,316,319,322,325,328-333,344-347,349-433,435-450,452-457,459-463,481-485,487,489-543,545-547,564-576,578,580-599,601,603-611,613,615-624
+  s_0a885d5f0c193a::t_0fc6e52bb81ff2 464-475,477-480,550-556,558,560-563
+  s_0a885d5f0c193a::t_0bd8a3ad053490 348
+  s_0a885d5f0c193a::t_89255f82ffae94 434,451,458,476,486,488,544,548-549,557,559,577,579,600,602,612,614
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/host_tests.rs
+  s_0a885d5f0c193a::t_5f43f4a44dfac6 399,410-418,420-421,427,457,515,517-521,523-525,527,530,533,552,558-561,564-567,1300,1305,1321-1322
+  s_0a885d5f0c193a::t_0bd8a3ad053490 390-391,510,512-514
+  s_0a885d5f0c193a::t_0fc6e52bb81ff2 534
+  s_0a885d5f0c193a::t_073aef20b921c5 140-174,221-225,227,383-389,392-398,400-409,419,422-426,428-456,458-509,511,516,522,526,528-529,531-532,535-551,553-557,562-563,568,1238-1299,1301-1304,1306-1320,1323-1328
+desktop/experimental/crates/crypto-owner/qualified-sdk/src/protected.rs
+  s_0a885d5f0c193a::t_0fc6e52bb81ff2 1068-1075,1077-1086
+  s_0a885d5f0c193a::t_4f540d88ca9470 1055-1067,1076,1087-1092
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "697c659f176aed3efc4882d9d9ac568bf2dca071",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
