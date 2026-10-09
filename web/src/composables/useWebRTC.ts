@@ -1563,8 +1563,17 @@ export function useWebRTC() {
     const buffer = new Uint8Array(analyser.fftSize)
     let wasSpeaking = false
     const gateOpen = createVoiceGate(voiceStore)
+    let lastGamingTick = performance.now()
 
     speakingInterval = setInterval(() => {
+      const now = performance.now()
+      if (gamingGainNode && voiceStore.inputMode === 'ptt' && now - lastGamingTick > 250) {
+        // An overdue callback cannot renew the pre-stall pressed state. A
+        // fresh native pulse or local key press must establish it again.
+        voiceStore.isPttPressed = false
+        setGamingPttLease(false)
+      }
+      lastGamingTick = now
       if (!analyser) return
 
       const level = calculateRMSLevel(analyser, buffer)

@@ -1959,6 +1959,14 @@ describe('microphone pipeline fallbacks and filter cancellation', () => {
       expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 0)
       setGamingPttLease(true); expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0, 0.3)
       voice.isPttPressed = true; await new Promise(resolve => setTimeout(resolve, 70))
+      // The speaking callback runs while the release timer's old pressed state
+      // is still present: it must close instead of renewing after the stall.
+      const stalledClock = vi.spyOn(performance, 'now').mockReturnValue(performance.now() + 1000)
+      voice.isPttPressed = true
+      await new Promise(resolve => setTimeout(resolve, 70))
+      expect(voice.isPttPressed).toBe(false)
+      expect(gain.gain.setValueAtTime).toHaveBeenLastCalledWith(0, 0)
+      stalledClock.mockRestore()
       voice.inputMode = 'activity'; await nextTick(); expect(gain.gain.value).toBe(1)
       rtc.leaveVoiceChannel(); expect(gain.disconnect).toHaveBeenCalled(); expect(raw.getAudioTracks()[0]?.stop).toHaveBeenCalled()
       vi.spyOn(FakeAudioContext.prototype, 'createGain').mockImplementation(() => { throw new Error('unavailable') })
