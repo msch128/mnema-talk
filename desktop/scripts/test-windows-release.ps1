@@ -70,7 +70,19 @@ function Find-Control($Root, $Type, [string]$Name) {
     [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty, $Name, [Windows.Automation.PropertyConditionFlags]::IgnoreCase))
   return $Root.FindFirst([Windows.Automation.TreeScope]::Descendants, $condition)
 }
+function Activate-Control($Root, [string]$Name, [bool]$Toggle = $false) {
+  $requiredPattern = if ($Toggle) { [Windows.Automation.TogglePattern]::Pattern } else { [Windows.Automation.InvokePattern]::Pattern }
+  $pattern = Wait-Ui {
+    $control = Find-Control $Root ([Windows.Automation.ControlType]::Button) $Name
+    if ($null -ne $control -and $control.Current.IsEnabled) {
+      $candidate = $null
+      if ($control.TryGetCurrentPattern($requiredPattern, [ref]$candidate)) { return $candidate }
+    }
+  } "Button not ready for invocation: $Name"
+  if ($Toggle) { $pattern.Toggle() } else { $pattern.Invoke() }
+}
 try {
+  Write-Host 'Phase: published executable selector'
   $selector = Wait-Ui { Find-Window 'Mnema Desktop DEV — Instance' } 'Selector window did not appear'
   $addressInput = Wait-Ui { Find-Control $selector ([Windows.Automation.ControlType]::Edit) 'Server address' } 'Address input unavailable'
   $value = $addressInput.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
@@ -78,16 +90,14 @@ try {
   $null = Wait-Ui {
     if ($value.Current.Value -eq $uri.GetLeftPart([UriPartial]::Authority)) { return $true }
   } 'Address input was not updated'
-  $connect = Find-Control $selector ([Windows.Automation.ControlType]::Button) 'Connect'
-  if ($null -eq $connect) { throw 'Connect control unavailable' }
-  $connect.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+  Write-Host 'Phase: validated address readback, invoking Connect'
+  Activate-Control $selector 'Connect'
   $instance = Wait-Ui { Find-Window 'Mnema Desktop DEV' } 'Instance window did not appear'
   $signin = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Sign in' } 'Canonical sign-in page did not appear'
   $username = Find-Control $instance ([Windows.Automation.ControlType]::Edit) 'USERNAME'
   if ($null -eq $username) { throw 'Canonical username control unavailable' }
-  $german = Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Deutsch'
-  if ($null -eq $german) { throw 'Canonical language control unavailable' }
-  $german.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern).Invoke()
+  Write-Host 'Phase: canonical sign-in page, toggling Deutsch'
+  Activate-Control $instance 'Deutsch' $true
   $null = Wait-Ui { Find-Control $instance ([Windows.Automation.ControlType]::Button) 'Anmelden' } 'Canonical language interaction failed'
   [ordered]@{
     kind = 'windows-published-release-instance-entry'
