@@ -1,0 +1,24 @@
+desktop/experimental/crates/trust-dialog/src/lib.rs
+  s_0a885d5f0c193a::t_c46bfbc6a0cce2 97,163-164,170-171,174-202,207-210,214-217,257-269,339-344
+desktop/experimental/crates/trust-dialog/src/native_os.rs
+  s_0a885d5f0c193a::t_c46bfbc6a0cce2 193-199,216
+  s_0a885d5f0c193a::t_9a3763c307819b 217-218
+desktop/experimental/crates/trust-dialog/src/tests.rs
+  s_0a885d5f0c193a::t_8b13c094e53ab8 358-557
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8f04837b50b73ba0943015bf0c791c3b9fde24b8",
+  "prompts": {},
+  "sessions": {
+    "s_0a885d5f0c193a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11ccf-4779-7392-9cda-e9c72d774446",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
