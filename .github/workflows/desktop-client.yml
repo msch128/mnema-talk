@@ -10,6 +10,15 @@ on:
         required: true
         type: string
   workflow_dispatch:
+    inputs:
+      acceptance_release:
+        description: 'Optional existing release tag to test instead of building'
+        required: false
+        type: string
+      acceptance_instance:
+        description: 'Public HTTPS origin for unauthenticated release acceptance'
+        required: false
+        type: string
   push:
     branches: [main, 'codex/**']
     paths:
@@ -22,7 +31,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: shared-desktop-${{ inputs.tag || github.ref }}
+  group: shared-desktop-${{ inputs.acceptance_release || inputs.tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -43,12 +52,30 @@ jobs:
         id: source
         shell: bash
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Test the published Windows release against an actual instance
+        if: inputs.acceptance_release != ''
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACCEPTANCE_RELEASE: ${{ inputs.acceptance_release }}
+          ACCEPTANCE_INSTANCE: ${{ inputs.acceptance_instance }}
+        run: desktop/scripts/test-windows-release.ps1 -Tag $env:ACCEPTANCE_RELEASE -InstanceUrl $env:ACCEPTANCE_INSTANCE
+      - name: Upload bounded Windows acceptance result
+        if: inputs.acceptance_release != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: windows-published-release-acceptance
+          path: ${{ runner.temp }}/windows-release-acceptance/ACCEPTANCE.json
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: inputs.acceptance_release == ''
         with:
           node-version: 26
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Select pinned Rust toolchain
+        if: inputs.acceptance_release == ''
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -57,6 +84,7 @@ jobs:
           rustup default $env:RUST_VERSION
           if ($LASTEXITCODE -ne 0) { throw 'Rust selection failed' }
       - name: Check and build the canonical Vue client
+        if: inputs.acceptance_release == ''
         working-directory: web
         shell: pwsh
         run: |
@@ -71,6 +99,7 @@ jobs:
           npm run build
           if ($LASTEXITCODE -ne 0) { throw 'Web build failed' }
       - name: Check and link the actual shared-client Tauri host
+        if: inputs.acceptance_release == ''
         shell: pwsh
         run: |
           cargo test --locked --manifest-path desktop/experimental/app/Cargo.toml --features shell,web-client,custom-protocol
@@ -82,6 +111,7 @@ jobs:
           if (!(Test-Path 'desktop/experimental/app/target/release/mnema-native-client-preview.exe')) { throw 'Shared executable missing' }
           'Unsigned DEV web-client host linked from desktop/experimental/app with embedded web/dist. This job does not qualify GUI, multi-device E2EE, voice, games, fullscreen overlays or distribution licenses. No automatic update is configured.' | Out-File -Append $env:GITHUB_STEP_SUMMARY
       - name: Prepare unsigned Windows DEV artifact
+        if: inputs.acceptance_release == ''
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -144,6 +174,7 @@ jobs:
           this build does not claim final distribution-license qualification.
           '@ | Set-Content -Encoding utf8 (Join-Path $devOutput 'README-DEV.txt')
       - name: Upload explicitly unsigned Windows DEV artifact
+        if: inputs.acceptance_release == ''
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mnema-desktop-windows-DEV-UNSIGNED-${{ steps.source.outputs.sha }}
