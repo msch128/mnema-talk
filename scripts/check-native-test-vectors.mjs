@@ -2,7 +2,7 @@
 // Gitleaks allowances apply only to these byte-identical public known-answer vectors.
 // Changes require an explicit provenance/security review and new reviewed hashes.
 import { createHash } from 'node:crypto';
-import { readFileSync, lstatSync } from 'node:fs';
+import { readFileSync, lstatSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 const expected = Object.fromEntries([
   [
@@ -69,9 +69,25 @@ const expected = Object.fromEntries([
 const args = process.argv.slice(2);
 if (args.some(arg => arg !== '--staged') || args.length > 1) throw new Error('Usage: check-native-test-vectors.mjs [--staged]');
 const staged = args.includes('--staged');
+let present = 0;
 for (const [path, hash] of Object.entries(expected)) {
-  const bytes = staged ? execFileSync('git', ['show', `:${path}`], { maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
-    : (() => { if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) throw new Error(`Not a regular test-vector file: ${path}`); return readFileSync(path); })();
+  // The vectors moved to mnema-talk-desktop. Absent paths stay allowlisted for
+  // history; a path that comes back must still match the reviewed bytes.
+  let bytes;
+  if (staged) {
+    try {
+      bytes = execFileSync('git', ['show', `:${path}`], { maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+      if (error.status === 128) continue;
+      throw error;
+    }
+  } else if (!existsSync(path)) {
+    continue;
+  } else {
+    if (!lstatSync(path).isFile() || lstatSync(path).isSymbolicLink()) throw new Error(`Not a regular test-vector file: ${path}`);
+    bytes = readFileSync(path);
+  }
   if (createHash('sha256').update(bytes).digest('hex') !== hash) throw new Error(`Pinned public test-vector bytes changed: ${path}`);
+  present += 1;
 }
-console.log(`Verified ${Object.keys(expected).length} pinned public test-vector files (${staged ? 'index' : 'working tree'}).`);
+console.log(`Verified ${present} of ${Object.keys(expected).length} pinned public test-vector files (${staged ? 'index' : 'working tree'}).`);

@@ -7,11 +7,15 @@ selection, login, persisted chat, live peer reception and logout. Physical media
 capture, real-game/fullscreen compatibility, E2EE and complete browser parity
 remain separate acceptance work.
 
-The current client is [desktop/experimental/app](../desktop/experimental/README.md)
-in `web-client` mode. It opens the selected HTTPS instance's shared Vue app;
+The current client source is
+[experimental/app](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
+in `web-client` mode, in the
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository.
+It opens the selected HTTPS instance's shared Vue app;
 the instance currently supplies executable web code. The locally bundled,
 protected communication boundary below remains a requirement. The older
-[feasibility probe](../desktop/README.md) is a historical foundation.
+[feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
+is a historical foundation.
 See [product status and evidence](product-status.md) for the binding scope.
 
 ## Windows Gaming DEV
@@ -171,5 +175,5 @@ fullscreen operation. Tests must record OS, hardware, drivers, game/rendering mo
 display configuration and measured results. Process injection or anti-cheat
 circumvention is not an approved shortcut.
 
-See the [probe instructions](../desktop/README.md) for the current build and testing
+See the [probe instructions](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md) for the current build and testing
 scope, and [SECURITY.md](../SECURITY.md) for the released server security model.

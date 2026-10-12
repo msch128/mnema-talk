@@ -1,5 +1,0 @@
-{
-  "extends": "../../web/tsconfig.base.json",
-  "compilerOptions": { "lib": ["ES2022", "DOM", "DOM.Iterable"], "types": ["vite/client"], "allowJs": false },
-  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts"]
-}
