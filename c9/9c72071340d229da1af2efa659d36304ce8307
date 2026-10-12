@@ -1,0 +1,36 @@
+web/src/components/ChatArea.coverage100.test.ts
+  h_0ff4f4713441f4 120
+web/src/components/ChatArea.test.ts
+  h_0ff4f4713441f4 306,320
+web/src/components/ChatArea.vue
+  h_0ff4f4713441f4 418-419
+web/src/components/ThreadSidebar.test.ts
+  h_0ff4f4713441f4 144,157-161,166
+web/src/components/ThreadSidebar.vue
+  h_0ff4f4713441f4 151-152
+web/src/i18n/noHardcodedText.test.ts
+  h_0ff4f4713441f4 10-11,81
+web/src/lib/crypto/epoch.test.ts
+  h_0ff4f4713441f4 1-281
+web/src/lib/crypto/epoch.ts
+  h_0ff4f4713441f4 1-306
+web/src/stores/chat.ts
+  h_0ff4f4713441f4 21,313,343,363,415,429-455,457,511-517,520-522,525-527,561-564,797-837,908-910,912
+web/src/stores/chatCoverage.test.ts
+  h_0ff4f4713441f4 1-2,16-20,48-130,164-165,188-193,195-197,716-717,719-720,725-729,737-780
+web/src/stores/chatInstance.test.ts
+  h_0ff4f4713441f4 1,9-10,19-33,116-120
+web/src/stores/stores.test.ts
+  h_0ff4f4713441f4 1,4-6,203,205-265,268-280
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c99c72071340d229da1af2efa659d36304ce8307",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
