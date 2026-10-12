@@ -1,0 +1,20 @@
+api/openapi.json
+  h_0ff4f4713441f4 491-547,962-1013,5375-5589
+internal/chat/e2ee_epoch.go
+  h_0ff4f4713441f4 1-400
+internal/chat/e2ee_epoch_integration_test.go
+  h_0ff4f4713441f4 1-293
+internal/chat/handler.go
+  h_0ff4f4713441f4 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "483d6521469cc4266900060732482f8ef3483e5d",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
