@@ -1,0 +1,18 @@
+web/src/lib/crypto/envelope.test.ts
+  h_0ff4f4713441f4 1-177
+web/src/lib/crypto/envelope.ts
+  h_0ff4f4713441f4 1-321
+web/src/lib/crypto/vectors.json
+  h_0ff4f4713441f4 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f7a119335f55e3ed0e23105148e0dfa7c4c41fdf",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
