@@ -1,0 +1,18 @@
+README.md
+  h_0ff4f4713441f4 161-169
+doc/crypto-state.md
+  h_0ff4f4713441f4 3-8
+doc/product-status.md
+  h_0ff4f4713441f4 22-30,84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ed300d43d05d39710668c258651e47253d5db5c4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
