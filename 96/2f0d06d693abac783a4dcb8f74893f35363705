@@ -1,0 +1,36 @@
+web/src/App.vue
+  h_0ff4f4713441f4 8,25,44,453-457
+web/src/components/AccountMenu.behavior.test.ts
+  h_0ff4f4713441f4 13,33
+web/src/components/AccountMenu.vue
+  h_0ff4f4713441f4 5,7,10,23,138-140
+web/src/components/TextDevicesDialog.test.ts
+  h_0ff4f4713441f4 1-74
+web/src/components/TextDevicesDialog.vue
+  h_0ff4f4713441f4 1-58
+web/src/i18n/de.json
+  h_0ff4f4713441f4 63-75
+web/src/i18n/en.json
+  h_0ff4f4713441f4 63-75
+web/src/lib/crypto/epoch.test.ts
+  h_0ff4f4713441f4 4-6,8,12,14,18,288-720
+web/src/lib/crypto/epoch.ts
+  h_0ff4f4713441f4 4,9,13-14,20,23,31-48,52-69,115-126,149-164,175-233,257-260,387-588,640-645
+web/src/stores/chat.ts
+  h_0ff4f4713441f4 20-21,514-529,532-544
+web/src/stores/chatCoverage.test.ts
+  h_0ff4f4713441f4 28,112,782-837
+web/src/stores/cryptoDevices.ts
+  h_0ff4f4713441f4 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "962f0d06d693abac783a4dcb8f74893f35363705",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
