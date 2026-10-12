@@ -13,11 +13,13 @@ fails when a web dependency is missing from the in-app list.
 
 ## Web app (shipped to every browser)
 
-The experimental native desktop source checkpoint has a separate dependency
-inventory in [desktop/experimental/THIRD_PARTY_NOTICES.md](desktop/experimental/THIRD_PARTY_NOTICES.md).
+The experimental native desktop source checkpoint now lives in
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+Its dependency inventory is
+[experimental/THIRD_PARTY_NOTICES.md](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/THIRD_PARTY_NOTICES.md).
 Its locked Rust and UI graph includes the pinned OpenMLS and SFrame providers;
 the corresponding full license texts are preserved under
-`desktop/experimental/licenses/`. This source checkpoint is not a desktop
+`experimental/licenses/` in that repository. This source checkpoint is not a desktop
 binary release.
 
 | Component | Version | License |
@@ -145,14 +147,15 @@ The Windows-first probe additionally uses Tauri 2.12.1, its JavaScript API
 2.12.1, reqwest 0.12.28, serde 1.0.229, serde_json 1.0.151, url 2.5.8 and
 windows-sys 0.61.2 (MIT OR Apache-2.0). It reuses Vue under the MIT license.
 The locked Rust inventory, including optional platform and build dependencies,
-is in [desktop/THIRD_PARTY_NOTICES.md](desktop/THIRD_PARTY_NOTICES.md); the
-frontend lockfile is `desktop/ui/package-lock.json`. This prototype is not
+is in [THIRD_PARTY_NOTICES.md](https://github.com/msch128/mnema-talk-desktop/blob/main/THIRD_PARTY_NOTICES.md)
+in [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop); the
+frontend lockfile is `ui/package-lock.json` there. This prototype is not
 an official desktop release. Distribution must include the applicable license
 texts; inventory generation alone is not redistribution compliance.
 
 The desktop UI bundles unchanged Inter Latin 400/500/600 fonts from the existing
 @fontsource/inter 5.3.0 dependency (OFL-1.1). Full original attribution and license
-are included in desktop/licenses/INTER-OFL.txt and the distribution bundle.
+are included in `licenses/INTER-OFL.txt` in that repository and the distribution bundle.
 
 The shared Vue client also bundles `@tauri-apps/api` 2.12.1 (MIT OR
 Apache-2.0) for the experimental desktop IPC adapter. Browser requests retain

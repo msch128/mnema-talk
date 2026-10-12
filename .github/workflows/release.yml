@@ -18,11 +18,12 @@ name: Release
 #    GitHub Release + tag vX.Y.Z. (A merge made with GITHUB_TOKEN triggers
 #    no new workflow run, so the release has to happen in this same job.)
 #    The release commit only changes version.txt and CHANGELOG.md.
-# 2. Unsigned Desktop DEV clients are attached to the release. The server
-#    ships only as a Docker image for linux/amd64 and linux/arm64,
+# 2. The server ships only as a Docker image for linux/amd64 and linux/arm64,
 #    cross-compiled without QEMU and pushed to GHCR as
 #    :X.Y.Z, :X.Y and :latest, with OCI labels plus BuildKit provenance and
 #    SBOM attestations attached to the image.
+#    Windows Desktop DEV builds live in msch128/mnema-talk-desktop.
+#    Releases through v0.7.3 keep the ZIP that was attached here.
 #
 # Deploying to the self-hosted server stays manual/pull-based (see README).
 
@@ -152,16 +153,6 @@ jobs:
           manifest-file: .release-please-manifest.json
           target-branch: main
           skip-github-pull-request: true
-
-  desktop:
-    needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
-    permissions:
-      contents: write
-    uses: ./.github/workflows/desktop-client.yml
-    with:
-      ref: ${{ needs.release-please.outputs.tag_name }}
-      tag: ${{ needs.release-please.outputs.tag_name }}
 
   image:
     needs: release-please

@@ -25,7 +25,9 @@ regexes = [
 ]
 
 # Only generic-api-key: exact public upstream known-answer vector fields.
-# The hash guard runs before CI and staged scans; changed vector bytes fail closed.
+# The vectors moved to mnema-talk-desktop. These paths stay allowlisted so
+# `gitleaks git` can still read this repository's history. The hash guard
+# skips an absent path and rejects it if the bytes ever come back changed.
 [[rules]]
 id = "generic-api-key"
 

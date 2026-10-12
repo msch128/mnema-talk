@@ -4,9 +4,11 @@ A self-hosted home for your community: chat in text channels, drop into Talk
 with one click, and share your screen while you hang out. Mnema brings your
 conversations together in one place, on a server you control.
 
-Use it in your browser or with the **Windows Desktop DEV client**. Both use
-the same Vue interface and connect to your community's instance. Members join
-by invitation; the administrator manages accounts, channels and storage.
+**[Desktop clients](https://github.com/msch128/mnema-talk-desktop)**
+
+Use it in your browser or with a desktop client. Both use the same Vue
+interface and connect to your community's instance. Members join by
+invitation; the administrator manages accounts, channels and storage.
 
 ## Get started
 
@@ -14,12 +16,15 @@ by invitation; the administrator manages accounts, channels and storage.
 Ask the administrator for an invite if you need an account. Choose a text
 channel to chat, or click a Talk channel to join the conversation.
 
-**Use the Windows client:** download the complete
-`Mnema-Desktop-DEV-…-windows-x64.zip` from
-[the latest release](https://github.com/msch128/mnema-talk/releases/latest),
-extract it, and run `Mnema Desktop DEV.exe`. Enter your community's HTTPS
-address and sign in. Microsoft Edge WebView2 Runtime is required. Desktop
-packages are currently unsigned DEV builds; updates are installed manually.
+**[Desktop clients](https://github.com/msch128/mnema-talk-desktop):** the Windows
+Desktop DEV client.
+Releases through v0.7.3, including
+`Mnema-Desktop-DEV-…-windows-x64.zip`, remain on
+[this repository's releases](https://github.com/msch128/mnema-talk/releases).
+Later desktop builds are published from the desktop repository.
+Extract the archive and run `Mnema Desktop DEV.exe`. Enter your community's
+HTTPS address and sign in. Microsoft Edge WebView2 Runtime is required.
+Desktop packages are unsigned DEV builds; updates are installed manually.
 
 **Stay in Talk while gaming:** the Windows client offers a left-hand sidepeek
 showing participants, who's speaking, mute and screen-share status. Press
@@ -276,14 +281,15 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
    version into the web app, so the app can tell browsers when a newer
    version is running.
-4. The Windows desktop workflow builds the Tauri client, starts the actual EXE
-   to check its instance-selector window, and attaches a clearly named
-   `Mnema-Desktop-DEV-vX.Y.Z-windows-x64.zip` plus its checksum to the release.
-   Extract the ZIP and run `Mnema Desktop DEV.exe`, then enter your HTTPS
+4. Windows Desktop DEV builds are published from
+   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+   Releases through v0.7.3 still carry
+   `Mnema-Desktop-DEV-vX.Y.Z-windows-x64.zip` on this repository.
+   Extract that ZIP and run `Mnema Desktop DEV.exe`, then enter your HTTPS
    instance address. These are unsigned DEV packages with no automatic updater.
-   See [desktop client status](desktop/experimental/README.md) for verification
-   limits. The server ships through Docker; new releases do not publish standalone
-   server binaries for Windows or macOS.
+   See [desktop client status](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
+   for verification limits. The server ships through Docker; new releases do not
+   publish standalone server binaries for Windows or macOS.
 
 ## Configuration
 

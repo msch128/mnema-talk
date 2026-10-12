@@ -38,8 +38,10 @@ A locally bundled protected communication client remains an outstanding target;
 the current web-client mode does not establish that boundary.
 
 Download the complete Desktop DEV Windows ZIP and checksum file from
-[GitHub Releases](https://github.com/msch128/mnema-talk/releases), extract every
-file, and run `Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
+[GitHub Releases through v0.7.3](https://github.com/msch128/mnema-talk/releases).
+From 0.7.4, new desktop builds are published from
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+Extract every file and run `Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
 identify package bytes; they are not publisher signatures. No desktop automatic
 updater or signing setup exists.
 
@@ -78,6 +80,6 @@ For 0.7.3, the remaining fixes and acceptance work follow:
 4. Validate independent operation and enforce CI/review requirements. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
 [Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
-and [the native research checkpoint](../desktop/experimental/README.md) describe
+and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
 these boundaries in more detail. Existing coverage and security gates remain
 in force.

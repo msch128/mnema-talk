@@ -30,7 +30,7 @@ cannot add native detection or replace the bundled Gaming surfaces.
 
 ## Reference sources and scope
 
-The [bundled catalog](../desktop/src/game-catalog.json) records source URLs and
+The [bundled catalog](https://github.com/msch128/mnema-talk-desktop/blob/main/src/game-catalog.json) records source URLs and
 its retrieval date. It combines requested games, Valve's
 [most-played snapshot](https://api.steampowered.com/ISteamChartsService/GetMostPlayedGames/v1/)
 and a [SteamSpy snapshot](https://steamspy.com/api.php?request=all&page=0), using
