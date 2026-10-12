@@ -1,0 +1,58 @@
+web/src/lib/media/bounds.ts
+  s_5015e0b2866a2e::t_2ca2e73c9b05be 1-25
+web/src/lib/media/mediaFrameWorker.ts
+  s_5015e0b2866a2e::t_24d46cf0bdb4fe 1-96
+web/src/lib/media/browserCall.ts
+  s_5015e0b2866a2e::t_a528dc3fba105c 1-148
+  s_5015e0b2866a2e::t_4b404665380559 149-151
+web/src/lib/media/api.ts
+  s_5015e0b2866a2e::t_32a0cbc5779e34 1-41
+internal/ws/media.go
+  s_5015e0b2866a2e::t_16395389ea62ab 1-37
+web/src/lib/media/guard.ts
+  s_5015e0b2866a2e::t_62d610e16588d3 1-66
+  s_5015e0b2866a2e::t_a7578cbba46eb7 67-69
+web/src/lib/media/group.ts
+  s_5015e0b2866a2e::t_194582d9a64d7a 1-357,362,367-369
+  s_5015e0b2866a2e::t_7b9599af228eb7 358-361
+  s_5015e0b2866a2e::t_53de9c149b49cc 363-366
+  s_5015e0b2866a2e::t_088543e653e7a4 370-372
+internal/ws/media_test.go
+  s_5015e0b2866a2e::t_ea5175ca193267 1-93
+web/src/lib/media/frame.test.ts
+  s_5015e0b2866a2e::t_fedf53525ce33d 1-63
+  s_5015e0b2866a2e::t_d702c7ae623f13 64-66
+web/src/lib/media/guard.test.ts
+  s_5015e0b2866a2e::t_4478fe3b61e1f2 1-90
+  s_5015e0b2866a2e::t_363ff370f5bf56 91-93
+web/src/lib/media/browserCall.test.ts
+  s_5015e0b2866a2e::t_d7a24618dbe1e3 1-100
+  s_5015e0b2866a2e::t_5eaf1720cf9b93 101-103
+web/src/lib/media/api.test.ts
+  s_5015e0b2866a2e::t_9bd690beb740f0 1-34
+web/src/lib/media/group.test.ts
+  s_5015e0b2866a2e::t_0bc41e6529d228 1-111
+  s_5015e0b2866a2e::t_6409541079e038 112-114
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_5015e0b2866a2e::t_89bbddf1dd71af 1-103
+  s_5015e0b2866a2e::t_7fac79c6c80ddf 104-106
+web/src/lib/media/frame.ts
+  s_5015e0b2866a2e::t_1a2977d7eda13a 1-97
+  s_5015e0b2866a2e::t_927c9993a480ae 98-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "89017c3bdd750f7169a5c08b4b4e74106c398b23",
+  "prompts": {},
+  "sessions": {
+    "s_5015e0b2866a2e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a12ee9-febd-7920-bc24-d7fa40e88872",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
