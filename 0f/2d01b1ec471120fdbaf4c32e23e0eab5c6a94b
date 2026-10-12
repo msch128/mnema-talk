@@ -1,0 +1,30 @@
+README.md
+  h_0ff4f4713441f4 164-166
+api/openapi.json
+  h_0ff4f4713441f4 5683-5789
+doc/product-status.md
+  h_0ff4f4713441f4 84
+internal/chat/e2ee_epoch.go
+  h_0ff4f4713441f4 12,14,137-179,262-282
+internal/chat/e2ee_epoch_integration_test.go
+  h_0ff4f4713441f4 163-197
+internal/chat/e2ee_epoch_route_test.go
+  h_0ff4f4713441f4 1-40
+internal/chat/handler.go
+  h_0ff4f4713441f4 78
+web/src/lib/crypto/epoch.test.ts
+  h_0ff4f4713441f4 451-507
+web/src/lib/crypto/epoch.ts
+  h_0ff4f4713441f4 52,116-123,320-323,341-350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0f2d01b1ec471120fdbaf4c32e23e0eab5c6a94b",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
