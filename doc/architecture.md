@@ -170,8 +170,10 @@ the person's voice volume.
   arm64 without QEMU ([`Dockerfile`](../Dockerfile)).
 - **Forward, never transcode.** The SFU only copies RTP
   ([`internal/sfu`](../internal/sfu/sfu.go)); quality is decided by the
-  sender. Media is DTLS-SRTP between each client and the SFU, **not**
-  end-to-end encrypted ([SECURITY.md](../SECURITY.md#security-model-summary)).
+  sender. Transport is DTLS-SRTP. Microphone, camera, screen video and
+  screen-audio payloads are sealed in the browser; the SFU does not decrypt
+  them. Text and attachments stay readable by the server
+  ([SECURITY.md](../SECURITY.md#security-model-summary)).
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
 - **Invite-only, single admin.** No public registration; the admin is seeded

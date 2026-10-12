@@ -19,9 +19,10 @@ message and attachment checks, and an isolated PostgreSQL upgrade drill.
 These tests have different scopes: synthetic two-browser screen sharing does
 not establish real 4K/60 capture, system audio or 100-person capacity.
 
-HTTPS protects browser traffic in transit. Chat content and attachments remain
-accessible to the server; media uses DTLS-SRTP between each client and the SFU.
-These paths are **not end-to-end encrypted**. See [SECURITY.md](../SECURITY.md).
+HTTPS protects browser traffic in transit. Chat messages and attachments stay
+readable by the server. Microphone, camera, screen video and screen audio are
+sealed in the browser; the SFU forwards those payloads and does not decrypt
+them. The transport underneath is still DTLS-SRTP. See [SECURITY.md](../SECURITY.md).
 
 ## Experimental Windows desktop path
 
@@ -75,7 +76,7 @@ Topmost windows do not establish exclusive fullscreen or anti-cheat support.
 For 0.7.3, the remaining fixes and acceptance work follow:
 
 1. Keep documentation, release downloads and reachable features consistent; address client defects and remaining platform parity.
-2. Complete a protected chat flow between independent users/devices: authorized device admission, device removal, restart and recovery. Removed devices receive no future content; the server receives neither content keys nor a plaintext fallback. Extend the reviewed boundary to attachments and every media source.
+2. Chat messages and attachments stay readable by the server and are not deleted by age. Microphone, camera, screen video and screen audio are sealed in the browser. The desktop client still refuses that media path.
 3. Verify receiver-specific quality adaptation: degrading one viewer must not reduce other viewers' quality or disrupt audio. Then measure a reproducible one-publisher/99-viewer profile with real decrypting clients, difficult networks and long sessions. Other source/room profiles need separate results. The additional 250-endpoint target is deferred.
 4. Validate independent operation and enforce CI/review requirements. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 

@@ -10,6 +10,7 @@
   },
   "include": [
     "src/lib/dfnWorker.ts",
+    "src/lib/media/mediaFrameWorker.ts",
     "src/types/worker-env.d.ts"
   ]
 }

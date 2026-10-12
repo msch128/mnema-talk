@@ -499,10 +499,10 @@ describe('browser notifications', () => {
 describe('event routing and socket boundary', () => {
   it('forwards RTC/voice events and invokes kick handler or local disconnect', () => {
     const chat = setup(), voice = useVoiceStore()
-    const offer = vi.fn(), candidate = vi.fn(), kicked = vi.fn()
+    const offer = vi.fn(), candidate = vi.fn(), kicked = vi.fn(), handshake = vi.fn()
     const snapshot = vi.spyOn(voice, 'setVoiceSnapshot'), state = vi.spyOn(voice, 'handleVoiceStateUpdate'), rooms = vi.spyOn(voice, 'setVoiceRooms')
     const media = vi.spyOn(voice, 'handleMediaState'), viewers = vi.spyOn(voice, 'handleScreenViewers'), speaking = vi.spyOn(voice, 'handleSpeakingEvent'), mute = vi.spyOn(voice, 'handleMuteState'), disconnect = vi.spyOn(voice, 'disconnect')
-    chat.setWebRTCHandlers({ onOffer: offer, onCandidate: candidate, onKicked: kicked })
+    chat.setWebRTCHandlers({ onOffer: offer, onCandidate: candidate, onKicked: kicked, onMedia: handshake })
     chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: 'synthetic' } })
     chat.handleWSEvent({ type: 'webrtc_candidate', payload: { candidate: '' } })
     chat.handleWSEvent({ type: 'voice_snapshot', payload: {} })
@@ -513,8 +513,11 @@ describe('event routing and socket boundary', () => {
     chat.handleWSEvent({ type: 'voice_speaking', payload: { channel_id: ch.id, user_id: other.id, active: false } })
     chat.handleWSEvent({ type: 'voice_mute_state', payload: { channel_id: ch.id, user_id: other.id, muted: true, deafened: false } })
     chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: ch.id } })
-    for (const spy of [offer, candidate, kicked, snapshot, state, rooms, media, viewers, speaking, mute]) expect(spy).toHaveBeenCalledOnce()
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: ch.id, user_id: other.id, wire: 'a' } })
+    for (const spy of [offer, candidate, kicked, handshake, snapshot, state, rooms, media, viewers, speaking, mute]) expect(spy).toHaveBeenCalledOnce()
     chat.setWebRTCHandlers({ onOffer: offer, onCandidate: candidate })
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: ch.id, user_id: other.id, wire: 'a' } })
+    expect(handshake).toHaveBeenCalledOnce()
     chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: ch.id } })
     expect(disconnect).not.toHaveBeenCalled()
     voice.currentChannelId = ch.id

@@ -7,9 +7,10 @@ const (
 	// subscriptions, ...).
 	maxEventsPerSec = 40
 	// maxSignalingPerSec is a separate, larger budget for the events a media
-	// connection cannot do without: an answer or ICE candidate dropped by the
-	// flood guard would leave the connection half negotiated. A browser sends
-	// a burst of candidates per negotiation, far below this.
+	// connection cannot do without: an answer, ICE candidate, or media
+	// handshake dropped by the flood guard would leave the call half
+	// negotiated or silent. A browser sends a burst of candidates per
+	// negotiation, far below this.
 	maxSignalingPerSec = 200
 	// maxFramesPerSec bounds all frames before they are even parsed.
 	maxFramesPerSec = maxEventsPerSec + maxSignalingPerSec
@@ -21,6 +22,9 @@ const (
 var signalingEvents = map[string]int{
 	"webrtc_answer":    maxMessageBytes,
 	"webrtc_candidate": 2 << 10,
+	// One handshake is the only copy of a key package or welcome. It stays
+	// inside the socket frame limit; the voice room then caps the decoded body.
+	"media_handshake": maxMessageBytes,
 }
 
 // eventBudget is a connection's per-second flood guard. It is used only by

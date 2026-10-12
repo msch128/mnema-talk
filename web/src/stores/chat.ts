@@ -126,11 +126,18 @@ export const useChatStore = defineStore('chat', () => {
   let webrtcOfferHandler: ((payload: ServerEventPayloads['webrtc_offer']) => void | Promise<void>) | null = null
   let webrtcCandidateHandler: ((payload: ServerEventPayloads['webrtc_candidate']) => void | Promise<void>) | null = null
   let voiceKickedHandler: ((payload: ServerEventPayloads['voice_kicked']) => void | Promise<void>) | null = null
+  let mediaHandshakeHandler: ((payload: ServerEventPayloads['media_handshake']) => void | Promise<void>) | null = null
 
-  function setWebRTCHandlers({ onOffer, onCandidate, onKicked }: { onOffer: (payload: ServerEventPayloads['webrtc_offer']) => void | Promise<void>; onCandidate: (payload: ServerEventPayloads['webrtc_candidate']) => void | Promise<void>; onKicked?: (payload: ServerEventPayloads['voice_kicked']) => void | Promise<void> }) {
+  function setWebRTCHandlers({ onOffer, onCandidate, onKicked, onMedia }: {
+    onOffer: (payload: ServerEventPayloads['webrtc_offer']) => void | Promise<void>
+    onCandidate: (payload: ServerEventPayloads['webrtc_candidate']) => void | Promise<void>
+    onKicked?: (payload: ServerEventPayloads['voice_kicked']) => void | Promise<void>
+    onMedia?: (payload: ServerEventPayloads['media_handshake']) => void | Promise<void>
+  }) {
     webrtcOfferHandler = onOffer
     webrtcCandidateHandler = onCandidate
     voiceKickedHandler = onKicked || null
+    mediaHandshakeHandler = onMedia || null
   }
 
   const allChannels = computed(() => [
@@ -893,6 +900,10 @@ export const useChatStore = defineStore('chat', () => {
 
       case 'webrtc_candidate':
         webrtcCandidateHandler?.(p)
+        break
+
+      case 'media_handshake':
+        mediaHandshakeHandler?.(p)
         break
 
       case 'voice_snapshot':

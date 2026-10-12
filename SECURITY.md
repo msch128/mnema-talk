@@ -64,10 +64,12 @@ locally instead (`make up` or `make dev`).
   ranges: anyone who can connect from a trusted range can set their own
   `X-Forwarded-For` and evade the per-client limits. Publish only the reverse
   proxy.
-- **Voice and screenshare.** Media is encrypted with DTLS-SRTP between each client
-  and the SFU. This is **not end-to-end encryption**: the SFU decrypts packets in
-  memory to forward them to the other participants (it does not record or
-  transcode them). Whoever operates the server could in principle access the streams.
+- **Voice and screenshare.** The SFU transport is DTLS-SRTP. Microphone, camera,
+  screen video and screen-audio payloads are sealed in the browser before the
+  SFU forwards them. The server does not decrypt those payloads and does not
+  record them. A browser that cannot seal a track does not send it. Text
+  messages and attachments stay readable by the server. The desktop client
+  does not join the sealed media path.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.

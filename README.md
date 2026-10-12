@@ -158,9 +158,11 @@ Windows gaming uses native topmost windows; game and fullscreen compatibility
 still need testing on the target machine. macOS and Linux desktop clients
 remain roadmap targets.
 
-Traffic is protected in transit by HTTPS and WebRTC's DTLS-SRTP. **Chat,
-attachments and media are not currently end-to-end encrypted**; mandatory
-E2EE remains a development requirement. Capacity testing for a 100-person
+Traffic is protected in transit by HTTPS and WebRTC's DTLS-SRTP. Chat
+messages and attachments stay readable by the server. Microphone, camera,
+screen video and screen audio are sealed in the browser before the SFU sees
+them; the SFU forwards those payloads and does not decrypt them. The desktop
+client does not join that media path. Capacity testing for a 100-person
 profile is also outstanding. A release number describes development progress,
 not completion of those milestones.
 

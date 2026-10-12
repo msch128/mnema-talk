@@ -22,12 +22,16 @@
     "@fontsource/inter": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@lucide/vue": "^1.52.0",
+    "@noble/ciphers": "2.1.1",
+    "@noble/curves": "2.0.1",
+    "@noble/hashes": "2.3.0",
     "@sapphi-red/web-noise-suppressor": "^0.4.1",
     "@tauri-apps/api": "2.12.1",
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "pinia": "^4.0.3",
     "swagger-ui-dist": "^5.33.1",
+    "ts-mls": "1.6.4",
     "vue": "^3.5.12"
   },
   "devDependencies": {

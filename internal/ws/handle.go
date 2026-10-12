@@ -139,5 +139,8 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 				room.RemoveUserSource(c.User.ID, sfu.SourceCamera)
 			}
 		}
+
+	case "media_handshake":
+		c.handleMediaHandshake(payload)
 	}
 }

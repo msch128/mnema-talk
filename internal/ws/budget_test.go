@@ -18,7 +18,7 @@ func TestEventBudgetKeepsSignalingApart(t *testing.T) {
 	if b.allowFrame(now) && b.allowEvent("typing", 10, now) {
 		t.Fatal("ordinary event over budget was allowed")
 	}
-	for _, typ := range []string{"webrtc_answer", "webrtc_candidate"} {
+	for _, typ := range []string{"webrtc_answer", "webrtc_candidate", "media_handshake"} {
 		if !b.allowFrame(now) || !b.allowEvent(typ, 100, now) {
 			t.Fatalf("%s dropped after ordinary events used their budget", typ)
 		}

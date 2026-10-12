@@ -33,6 +33,12 @@ binary release.
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
 | [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.1 | Apache-2.0 |
 | [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
+| [ts-mls](https://github.com/LukaJCB/ts-mls) | 1.6.4 | MIT |
+| [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
+| [@noble/hashes](https://github.com/paulmillr/noble-hashes) | 2.3.0 | MIT |
+| [@noble/curves](https://github.com/paulmillr/noble-curves) | 2.0.1 | MIT |
+
+`ts-mls@1.6.4` depends on `@hpke/core@1.9.0` (MIT). That package is not a direct dependency.
 
 ### Bundled inside Swagger UI
 

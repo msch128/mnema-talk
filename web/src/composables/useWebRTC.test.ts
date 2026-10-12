@@ -5,7 +5,10 @@ import type { NoiseModel, FilterOptions } from '../lib/dfnTypes'
 type ClientSentEvent = { type: keyof ClientEventPayloads; payload: ClientEventPayloads[keyof ClientEventPayloads] }
 import type { ClientEventPayloads } from '../types/events'
 import { decodeServerEvent } from '../types/events'
-import { fixtureId } from '../test-fixtures.fixture'
+import { fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
+import { installMediaCall } from '../lib/media/api'
+import type { MediaCall } from '../lib/media/api'
+import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
@@ -225,7 +228,40 @@ beforeEach(() => {
   })
 })
 
+const permissiveMediaCall: MediaCall = {
+  start() {},
+  roster() {},
+  receive() {},
+  resume() {},
+  stop() {},
+  onKey() {},
+  onWire() {},
+  protectSender: () => true,
+  protectIncoming: () => true,
+}
+
+function installRecordingCall(allow = true) {
+  let onKeyListener: (() => void) | null = null
+  let onWireListener: ((channelId: string, wire: string) => void) | null = null
+  const call = {
+    start: vi.fn(),
+    roster: vi.fn(),
+    receive: vi.fn(),
+    resume: vi.fn(),
+    stop: vi.fn(),
+    onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
+    onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
+    protectSender: vi.fn(() => allow),
+    protectIncoming: vi.fn(() => allow),
+    fireKey() { onKeyListener?.() },
+    fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
+  }
+  installMediaCall(call)
+  return call
+}
+
 afterEach(() => {
+  installMediaCall(permissiveMediaCall)
   const { leaveVoiceChannel, stopMicTest } = useWebRTC()
   stopMicTest()
   leaveVoiceChannel()
@@ -1869,7 +1905,7 @@ describe('voice activity, loopback and window lifecycle', () => {
   it('resumes suspended microphone and paused remote audio on visibility return', async () => {
     const { rtc } = await timedCall()
     const pc = present(FakePC.instances.at(-1))
-    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
     const el = present(audioElements.at(-1))
     el.play = vi.fn().mockRejectedValue(new Error('gesture pending'))
     const audio = present(FakeAudioContext.instances.at(-1))
@@ -2395,28 +2431,18 @@ describe('capture lifecycle wrappers and statistics', () => {
 })
 
 describe('remote rendering and audio output robustness', () => {
-  it('plays unidentified audio at the master volume and ignores anonymous video for user maps', async () => {
+  it('drops remote media that names no sender', async () => {
     const { pc, voice } = await joined()
-    voice.outputVolume = 40
-    const track = fakeTrack()
-    present(pc.ontrack)({ track, streams: [] })
-    const el = present(audioElements.at(-1))
-    expect(el.volume).toBe(0.4)
-    expect(el.dataset.userId).toBeUndefined()
-    present(pc.ontrack)({ track, streams: [remoteStreamFor('screen:')] })
-    expect(el.dataset.userId).toBeUndefined()
-    expect(el.dataset.source).toBe('screen')
-    present(pc.ontrack)({ track, streams: [] })
-    expect(el.dataset.source).toBeUndefined()
-    const video = fakeTrack('video')
-    present(pc.ontrack)({ track: video, streams: [] })
-    present(video.onended).call(video, new Event('ended'))
+    const before = audioElements.length
+    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('screen:')] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('cam:')] })
+    expect(audioElements).toHaveLength(before)
     expect(voice.userVideoStreams).toEqual({})
     expect(voice.remoteScreenStream).toBeNull()
-    const camera = fakeTrack('video')
-    present(pc.ontrack)({ track: camera, streams: [remoteStreamFor('cam:')] })
-    present(camera.onended).call(camera, new Event('ended'))
-    expect(voice.userVideoStreams).toEqual({})
+    expect(useToastStore().toasts).toEqual([])
   })
 
   it('drops only the removed video and ignores unrelated removetrack callbacks', async () => {
@@ -3277,6 +3303,100 @@ describe('serialized settings after native source construction fails', () => {
     await retry
     expect(audio.track).toBe(replacement.getAudioTracks()[0])
     expect(voice.currentChannelId).toBe('ch-1')
+  })
+})
+
+describe('protected media', () => {
+  it('seals the call for the signed-in member and ignores another room', async () => {
+    const call = installRecordingCall()
+    const user = userFixture()
+    const { rtc, chat, voice, sent } = setup()
+    useAuthStore().user = user
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    expect(call.start).toHaveBeenCalledWith('ch-1', user.id)
+    const member = voiceUserFixture({ id: fixtureId(3) })
+    voice.channelUsers = { 'ch-1': { [member.id]: member } }
+    await nextTick()
+    expect(call.roster).toHaveBeenLastCalledWith([member.id])
+    const pc = await negotiate()
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
+    expect(call.protectIncoming).toHaveBeenCalledWith(undefined, 'alice')
+    expect(audioElements.length).toBeGreaterThan(0)
+    const keyframes = sent.filter(event => event.type === 'webrtc_request_keyframe').length
+    call.fireKey()
+    expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
+    call.fireWire('ch-1', 'abc')
+    call.fireWire('other-room', 'nope')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'abc' } },
+    ])
+    const sender = fixtureId(2)
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: 'ch-1', user_id: sender, wire: 'abc' } })
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: 'other-room', user_id: sender, wire: 'nope' } })
+    expect(call.receive).toHaveBeenCalledTimes(1)
+    expect(call.receive).toHaveBeenCalledWith(sender, 'abc')
+    rtc.leaveVoiceChannel()
+    expect(call.stop).toHaveBeenCalledOnce()
+    call.fireKey()
+    expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
+    expect(useToastStore().toasts).toEqual([])
+  })
+
+  it('does not publish or play when the call cannot be protected', async () => {
+    const call = installRecordingCall(false)
+    const { rtc, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = await negotiate()
+    for (const sender of pc.senders) expect(sender.replaceTrack).not.toHaveBeenCalled()
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('bob')] })
+    expect(audioElements).toEqual([])
+    expect(voice.remoteScreenStream).toBeNull()
+    expect(voice.userVideoStreams).toEqual({})
+    expect(call.protectSender).toHaveBeenCalled()
+    expect(call.protectIncoming).toHaveBeenCalled()
+    expect(voice.localAudioStream).toBeNull()
+    expect(voice.localCameraStream).toBeNull()
+    expect(voice.localScreenStream).toBeNull()
+    const captures = vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.length
+    await rtc.startCamera()
+    await rtc.startScreenShare()
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(captures)
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaUnprotected')])
+  })
+
+  it('stops a camera prompt that resolves after the call is unprotected', async () => {
+    installRecordingCall(false)
+    const { rtc, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBe(1))
+    const pendingCamera = rtc.startCamera()
+    await vi.waitFor(() => expect(micRequests.length).toBe(2))
+    present(micRequests.shift())()
+    await join
+    await negotiate()
+    const camera = present(micRequests.shift())
+    const track = present(camera.stream.getTracks()[0])
+    camera()
+    await pendingCamera
+    expect(voice.isCameraOn).toBe(false)
+    expect(voice.localCameraStream).toBeNull()
+    expect(track.stop).toHaveBeenCalled()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaUnprotected')])
+  })
+
+  it('sends the handshake again when the call reconnects', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    rtc.rejoinAfterReconnect()
+    expect(call.resume).toHaveBeenCalledOnce()
   })
 })
 

@@ -337,7 +337,8 @@
     "memberMuted": "Muted",
     "memberDeafened": "Deafened",
     "kicked": "An admin removed you from the voice channel.",
-    "roomFull": "This voice channel is full. Try again when someone leaves."
+    "roomFull": "This voice channel is full. Try again when someone leaves.",
+    "mediaUnprotected": "This browser cannot protect the call. Microphone, camera and screen stay off."
   },
   "audio": {
     "settings": "Audio settings",
@@ -436,7 +437,7 @@
     "remoteCandidate": "Server candidate",
     "encryption": "Transport encryption",
     "signalLatency": "Signal latency (WebSocket)",
-    "privacyNote": "Voice and screen are encrypted on the way to the server. The server (SFU) decrypts the packets to forward them to the other participants; there is no end-to-end encryption and nothing is recorded.",
+    "privacyNote": "Microphone, camera and screen are sealed in this browser. The server forwards those packets without decrypting them. The transport is not end-to-end encrypted, chat and attachments stay readable by the server, and nothing is recorded.",
     "channels": {
       "one": "{count} channel",
       "other": "{count} channels"

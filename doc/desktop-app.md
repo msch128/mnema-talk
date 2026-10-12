@@ -48,8 +48,10 @@ foreground process inspection and polling of configured keys. It does not inject
 into games or capture a keyboard history. A matching basename is a user-selected
 candidate, not a trusted executable identity. Exclusive fullscreen rendering,
 anti-cheat compatibility and real-game behavior require testing on the target
-machine. Windows behavior is not a macOS/Linux gaming qualification. Ordinary
-Talk still uses DTLS-SRTP to the SFU and is not E2EE.
+machine. Windows behavior is not a macOS/Linux gaming qualification. The
+desktop shell refuses microphone, camera and screen capture. In the browser
+those payloads are sealed before the SFU sees them; this client does not join
+that path. Chat and attachments stay readable by the server.
 
 ## Product requirements
 
@@ -92,17 +94,16 @@ and CSP protections. Local Tauri pages cannot reuse the browser transport by
 spoofing an Origin or enabling wildcard CORS. Renderer permissions are limited to
 specific commands; there is no generic filesystem, shell or arbitrary HTTP bridge.
 
-End-to-end encryption is required for chat, reactions, attachments, microphone,
-camera, screen sharing and system audio. The server must not receive content keys
-or plaintext content; there is no plaintext fallback or admin decryption bypass.
-Device admission, removal, recovery, persistent nonce safety and authenticated
-membership need a reviewed protocol and provider. Connection and routing metadata
-remain a separate documented disclosure boundary.
+Microphone, camera, screen sharing and system audio are sealed in the browser
+before the server sees them. The server forwards those payloads without
+decrypting them. There is no plaintext fallback for those tracks. Chat,
+reactions and attachments stay readable by the server and are not deleted by
+age. Connection and routing metadata remain visible to the server.
 
 A shared session and media owner coordinates the main window, widget and overlay.
 Opening the overlay must not create a second microphone, media connection or
 independent cryptographic sender context. Local search, previews and attachment
-validation must respect the encrypted-content boundary.
+validation stay on the client.
 
 ## Compatibility, development builds and updates
 

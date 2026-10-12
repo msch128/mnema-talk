@@ -7,6 +7,9 @@ import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 import { useToastStore } from '../stores/toast'
+import { useAuthStore } from '../stores/auth'
+import { browserMediaCall } from '../lib/media/browserCall'
+import { installMediaCallFactory, mediaCall } from '../lib/media/api'
 import { playSoundEffect } from '../lib/soundEffects'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
@@ -23,6 +26,9 @@ import type { AudioOutputTarget } from '../lib/audioOutput'
 import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
 import { decodeServerICEConfig } from '../types/rest'
 
+// Tests install a double first. This only supplies the call when none is installed.
+installMediaCallFactory(browserMediaCall)
+
 type VoiceStore = ReturnType<typeof useVoiceStore>
 type ChatStore = ReturnType<typeof useChatStore>
 type RemoteAudioElement = HTMLAudioElement & { srcObject: MediaStream | null }
@@ -36,6 +42,26 @@ interface SenderTuning { maxBitrate?: number; maxFramerate?: number; scaleResolu
 // share and voice use the plain user ID); see internal/sfu.
 const CAMERA_STREAM_PREFIX = 'cam:'
 const SCREEN_AUDIO_STREAM_PREFIX = 'screen:'
+
+function publisherId(streamId: string | undefined): string | null {
+  if (!streamId) return null
+  const id = streamId.startsWith(CAMERA_STREAM_PREFIX)
+    ? streamId.slice(CAMERA_STREAM_PREFIX.length)
+    : streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
+      ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length)
+      : streamId
+  return id || null
+}
+
+let mediaUnprotectedAnnounced = false
+let releaseUnprotectedCapture: () => void = () => {}
+
+function announceMediaUnprotected() {
+  if (mediaUnprotectedAnnounced) return
+  mediaUnprotectedAnnounced = true
+  releaseUnprotectedCapture()
+  useToastStore().error(t('voice.mediaUnprotected'))
+}
 
 // Module-level shared singletons across all components
 const localAudioStream = ref<MediaStream | null>(null)
@@ -87,6 +113,7 @@ let screenAudioSender: RTCRtpSender | null = null
 // launch several capture pipelines; stopping also invalidates its result.
 let screenCapturePending = false
 let screenCaptureGeneration = 0
+let cameraCaptureGeneration = 0
 // Quality changes are applied one after another.
 let qualityChain = Promise.resolve()
 // Playback above 100 % needs a gain stage: element.volume tops out at 1.
@@ -467,8 +494,14 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
 
   pc.ontrack = (event) => {
     if (pc !== conn) return
-    // The SFU names the publishing user in the stream ID.
+    // The SFU names the publishing user in the stream ID. No name, no playback.
     const streamId = event.streams?.[0]?.id
+    const senderId = publisherId(streamId)
+    if (!senderId) return
+    if (!mediaCall().protectIncoming(event.receiver, senderId)) {
+      announceMediaUnprotected()
+      return
+    }
     if (event.track.kind === 'audio') {
       attachRemoteAudio(voiceStore, event.track, event.streams?.[0])
     } else if (event.track.kind === 'video') {
@@ -631,6 +664,10 @@ function bindPublishSenders(conn: RTCPeerConnection, sdp: string) {
   const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined) => {
     const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
     if (!tr) return null
+    if (!mediaCall().protectSender(tr.sender)) {
+      announceMediaUnprotected()
+      return null
+    }
     tr.direction = 'sendrecv'
     if (track) tr.sender.replaceTrack(track).catch(() => {})
     return tr.sender
@@ -905,6 +942,11 @@ function setNodeGain(gainNode: GainNode | null, val: number, time = 0) {
 export function useWebRTC() {
   const voiceStore = useVoiceStore()
   const chatStore = useChatStore()
+  releaseUnprotectedCapture = () => {
+    stopScreenShare()
+    stopCamera()
+    cleanupVoiceAudio()
+  }
 
   async function refreshAudioDevices() {
     try {
@@ -1268,6 +1310,7 @@ export function useWebRTC() {
     if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
       return
     }
+    mediaUnprotectedAnnounced = false
 
     // Stop standalone mic test before joining voice
     stopMicTest()
@@ -1278,11 +1321,17 @@ export function useWebRTC() {
     chatStore.setWebRTCHandlers({
       onOffer: handleRemoteOffer,
       onCandidate: handleRemoteCandidate,
-      onKicked: handleKicked
+      onKicked: handleKicked,
+      onMedia(payload) {
+        if (payload.channel_id !== voiceStore.currentChannelId) return
+        mediaCall().receive(payload.user_id, payload.wire)
+      }
     })
 
     const gen = ++joinGeneration
     voiceStore.setChannel(channelId)
+    const mediaUser = useAuthStore().user?.id
+    if (mediaUser) mediaCall().start(channelId, mediaUser)
     voiceSession.track(channelId)
     await loadIceServers()
     if (gen !== joinGeneration) return
@@ -1334,6 +1383,9 @@ export function useWebRTC() {
     if (isDesktopRuntime()) return
     const channelId = voiceStore.currentChannelId
     if (!channelId) return
+    // The server keeps the roster across a short disconnect, so nobody else
+    // joins or leaves and a handshake that was dropped is not sent again.
+    mediaCall().resume()
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
     attachSubscriptions()
@@ -1725,6 +1777,10 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
+    if (mediaUnprotectedAnnounced) {
+      announceMediaUnprotected()
+      return
+    }
     if (screenCapturePending) return
     if (localScreenStream.value) {
       const ok = await confirm({
@@ -1861,8 +1917,13 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
+    if (mediaUnprotectedAnnounced) {
+      announceMediaUnprotected()
+      return
+    }
     if (!voiceStore.currentChannelId || localCameraStream.value) return
     const gen = joinGeneration
+    const captureGen = cameraCaptureGeneration
     let stream
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -1877,8 +1938,8 @@ export function useWebRTC() {
       useToastStore().error(t(cameraErrorKey(err)))
       return
     }
-    // Left the call (or toggled twice) while the browser was asking.
-    if (gen !== joinGeneration || localCameraStream.value) {
+    // Left the call, or the call became unprotected, while the browser was asking.
+    if (gen !== joinGeneration || captureGen !== cameraCaptureGeneration || localCameraStream.value) {
       stream.getTracks().forEach(tr => tr.stop())
       return
     }
@@ -1899,6 +1960,7 @@ export function useWebRTC() {
   }
 
   function stopCamera() {
+    cameraCaptureGeneration++
     const wasOn = !!localCameraStream.value
     if (cameraSender) cameraSender.replaceTrack(null).catch(() => {})
     if (localCameraStream.value) {
@@ -1918,6 +1980,8 @@ export function useWebRTC() {
   // unset, so neither a reload nor a reconnect rejoins it.
   function endCall({ notifyServer }: { notifyServer: boolean }) {
     joinGeneration++
+    mediaUnprotectedAnnounced = false
+    mediaCall().stop()
     voiceSession.forget()
     cleanupPeerConnection(voiceStore)
     cleanupVoiceAudio()
@@ -2010,6 +2074,23 @@ export function useWebRTC() {
 
       // Everyone sees whether I am muted or deafened.
       watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
+
+      const call = mediaCall()
+      call.onKey(() => {
+        if (!voiceStore.currentChannelId) return
+        chatStore.sendWSEvent('webrtc_request_keyframe', {})
+      })
+      call.onWire((channelId, wire) => {
+        if (voiceStore.currentChannelId !== channelId) return
+        chatStore.sendWSEvent('media_handshake', { channel_id: channelId, wire })
+      })
+      watch(() => {
+        const channelId = voiceStore.currentChannelId
+        if (!channelId) return ''
+        return Object.keys(voiceStore.channelUsers[channelId] || {}).sort().join('\0')
+      }, (packed) => {
+        mediaCall().roster(packed ? packed.split('\0') : [])
+      })
     })
   }
 
