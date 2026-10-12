@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.4](https://github.com/msch128/mnema-talk/compare/v0.7.3...v0.7.4) (2026-10-12)
+
+
+### Features
+
+* move the native desktop client to mnema-talk-desktop ([a2391df](https://github.com/msch128/mnema-talk/commit/a2391df387496b5e7caf381ebac210f412e69d4c))
+* move the native desktop client to mnema-talk-desktop ([2f5e306](https://github.com/msch128/mnema-talk/commit/2f5e3067d7f113c933905cc2ec82713c98202b34))
+
 ## [0.7.3](https://github.com/msch128/mnema-talk/compare/v0.7.2...v0.7.3) (2026-10-09)
 
 
