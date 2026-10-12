@@ -1,0 +1,14 @@
+web/src/types/rest.ts
+  h_0ff4f4713441f4 292-327,397-399,401-403,406-407,412-414,416-418,421-422,427-475,477-479,481-485,490-492,494-498,562,564-565,569-570,575,582-583,593,595-596,600-601,606,613-614,630-697
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f342494c6e213ede2386ce618bb2510fcd4265fb",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
