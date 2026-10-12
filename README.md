@@ -4,9 +4,11 @@ A self-hosted home for your community: chat in text channels, drop into Talk
 with one click, and share your screen while you hang out. Mnema brings your
 conversations together in one place, on a server you control.
 
-Use it in your browser or with the **Windows Desktop DEV client**. Both use
-the same Vue interface and connect to your community's instance. Members join
-by invitation; the administrator manages accounts, channels and storage.
+**[Desktop clients](https://github.com/msch128/mnema-talk-desktop)**
+
+Use it in your browser or with a desktop client. Both use the same Vue
+interface and connect to your community's instance. Members join by
+invitation; the administrator manages accounts, channels and storage.
 
 ## Get started
 
@@ -14,8 +16,8 @@ by invitation; the administrator manages accounts, channels and storage.
 Ask the administrator for an invite if you need an account. Choose a text
 channel to chat, or click a Talk channel to join the conversation.
 
-**Use the Windows client:** the Windows Desktop DEV client is developed in
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
+**[Desktop clients](https://github.com/msch128/mnema-talk-desktop):** the Windows
+Desktop DEV client.
 Releases through v0.7.3, including
 `Mnema-Desktop-DEV-…-windows-x64.zip`, remain on
 [this repository's releases](https://github.com/msch128/mnema-talk/releases).
