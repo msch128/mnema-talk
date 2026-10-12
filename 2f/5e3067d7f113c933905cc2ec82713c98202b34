@@ -1,0 +1,32 @@
+.github/workflows/release.yml
+  h_0ff4f4713441f4 21,25-26
+.gitleaks.toml
+  h_0ff4f4713441f4 28-30
+Makefile
+  h_0ff4f4713441f4 2,123
+README.md
+  h_0ff4f4713441f4 17-25,282-286,288-290
+THIRD_PARTY_NOTICES.md
+  h_0ff4f4713441f4 16-19,22,150-152,158
+doc/desktop-app.md
+  h_0ff4f4713441f4 10-14,17-18,178
+doc/game-detection.md
+  h_0ff4f4713441f4 33
+doc/product-status.md
+  h_0ff4f4713441f4 41-44,83
+scripts/check-native-test-vectors.mjs
+  h_0ff4f4713441f4 5,72,74-89,91,93
+web/src/lib/thirdParty.ts
+  h_0ff4f4713441f4 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2f5e3067d7f113c933905cc2ec82713c98202b34",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
