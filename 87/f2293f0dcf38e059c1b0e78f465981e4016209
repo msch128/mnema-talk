@@ -1,0 +1,26 @@
+api/openapi.json
+  h_0ff4f4713441f4 623-704,905-956,6260-6604
+internal/chat/e2ee_device.go
+  h_0ff4f4713441f4 1-750
+internal/chat/e2ee_device_integration_test.go
+  h_0ff4f4713441f4 1-294
+internal/chat/e2ee_device_test.go
+  h_0ff4f4713441f4 1-77
+internal/chat/handler.go
+  h_0ff4f4713441f4 76-79
+internal/db/migrations/0017_channel_e2ee.sql
+  h_0ff4f4713441f4 1-76
+internal/testutil/db.go
+  h_0ff4f4713441f4 118-119
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87f2293f0dcf38e059c1b0e78f465981e4016209",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
