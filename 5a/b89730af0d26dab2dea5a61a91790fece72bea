@@ -1,0 +1,26 @@
+internal/server/e2ee_message_integration_test.go
+  h_0ff4f4713441f4 143-185
+web/src/composables/useMessageActions.test.ts
+  h_0ff4f4713441f4 161,171-180
+web/src/composables/useMessageActions.ts
+  h_0ff4f4713441f4 80-84
+web/src/lib/crypto/epoch.test.ts
+  h_0ff4f4713441f4 178-188
+web/src/lib/crypto/epoch.ts
+  h_0ff4f4713441f4 169,173-174,257,273
+web/src/stores/chat.ts
+  h_0ff4f4713441f4 939-942,1457-1471,1474-1507,1510
+web/src/stores/chatCoverage.test.ts
+  h_0ff4f4713441f4 228-230,841-900
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ab89730af0d26dab2dea5a61a91790fece72bea",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
