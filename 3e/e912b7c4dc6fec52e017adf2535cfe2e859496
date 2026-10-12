@@ -1,0 +1,23 @@
+e2e/tests/crypto-device.spec.ts
+  s_5015e0b2866a2e::t_93e0c6cb3ec1ff 1-73
+web/src/lib/crypto/deviceKeys.ts
+  s_5015e0b2866a2e::t_4788b6ca8e3836 1-132
+web/src/lib/crypto/deviceKeys.test.ts
+  s_5015e0b2866a2e::t_bf63782c5883fe 1-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3ee912b7c4dc6fec52e017adf2535cfe2e859496",
+  "prompts": {},
+  "sessions": {
+    "s_5015e0b2866a2e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a12ee9-febd-7920-bc24-d7fa40e88872",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
