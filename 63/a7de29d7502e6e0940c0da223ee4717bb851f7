@@ -1,0 +1,22 @@
+internal/server/e2ee_message_integration_test.go
+  s_5015e0b2866a2e::t_12644999ce7978 1-300
+internal/chat/e2ee_message.go
+  s_5015e0b2866a2e::t_e48136b11dca17 1-392
+  s_5015e0b2866a2e::t_6970a018cee4f0 393
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "63a7de29d7502e6e0940c0da223ee4717bb851f7",
+  "prompts": {},
+  "sessions": {
+    "s_5015e0b2866a2e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a12ee9-febd-7920-bc24-d7fa40e88872",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
