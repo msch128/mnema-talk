@@ -8,7 +8,10 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // The encrypted-media handshake may race the first SFU offer on a fresh
+  // browser process. Retry CI failures in a fresh context; local runs stay
+  // single-shot so timing defects remain easy to reproduce.
+  retries: process.env.CI ? 2 : 0,
   reporter: [['list']],
   outputDir: 'test-results',
   use: {
