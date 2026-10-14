@@ -1,10 +1,11 @@
-import { sealMedia, openMedia, type FrameKind } from './codec'
+import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { openFrame, sealFrame } from './frame'
 
 interface EncodedFrame {
   data: ArrayBuffer
   /** Only video frames have a type. */
   type?: string
+  getMetadata?: () => { mimeType?: unknown }
 }
 
 interface TransformOptions {
@@ -49,16 +50,19 @@ async function protect(frame: EncodedFrame, direction: 'send' | 'recv', channelI
   // A receiver whose publisher is not known yet opens nothing.
   if (senderId === null) return null
   const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
+  // A video frame of another type is not one this worker can seal.
+  if (frame.type !== undefined && kind === undefined) return null
+  const codec = kind === undefined ? null : videoCodecOf(frame.getMetadata?.().mimeType)
   const data = new Uint8Array(frame.data)
   if (direction === 'send') {
     if (sendEpoch === null) return null
     const key = keys.get(sendEpoch)
     if (!key) return null
     const epoch = sendEpoch
-    const sealed = await sealMedia(data, kind, (plaintext, clear) => sealFrame({ key, epoch, channelId, senderId, plaintext, clear }))
+    const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => sealFrame({ key, epoch, channelId, senderId, plaintext, clear }))
     return sealed ? packet(sealed) : null
   }
-  const opened = await openMedia(data, kind, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear }))
+  const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear }))
   return opened ? packet(opened) : null
 }
 

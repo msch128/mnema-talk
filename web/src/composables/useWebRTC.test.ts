@@ -12,7 +12,7 @@ import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
-import { publishMids, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, restrictVideoCodecs, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -1577,6 +1577,45 @@ describe('publishMids', () => {
     // line, which then reads sendrecv. It is still our microphone line.
     expect(publishMids(offer.replace('a=mid:0\r\na=recvonly', 'a=mid:0\r\na=sendrecv'))).toEqual(ours)
     expect(publishMids('')).toEqual({ audio: null, screenAudio: null, video: [] })
+  })
+})
+
+describe('restrictVideoCodecs', () => {
+  const offer = [
+    'v=0',
+    'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:0', 'a=rtpmap:111 opus/48000/2',
+    'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 45 46', 'a=mid:1',
+    'a=rtcp-fb:* nack',
+    'a=rtpmap:96 VP8/90000', 'a=rtcp-fb:96 nack', 'a=rtpmap:97 rtx/90000', 'a=fmtp:97 apt=96',
+    'a=rtpmap:98 VP9/90000', 'a=fmtp:98 profile-id=0', 'a=rtpmap:99 rtx/90000', 'a=fmtp:99 apt=98',
+    'a=rtpmap:100 H264/90000', 'a=fmtp:100 packetization-mode=1;profile-level-id=42e01f', 'a=rtpmap:101 rtx/90000', 'a=fmtp:101 apt=100',
+    'a=rtpmap:102 H265/90000', 'a=rtpmap:45 AV1/90000', 'a=rtpmap:46 rtx/90000', 'a=fmtp:46 apt=45',
+    ''
+  ].join('\r\n')
+
+  it('keeps VP8, H.264 and their retransmissions only', () => {
+    const out = restrictVideoCodecs(offer)
+    expect(out).toContain('m=video 9 UDP/TLS/RTP/SAVPF 96 97 100 101\r\n')
+    for (const gone of ['VP9', 'H265', 'AV1', 'apt=98', 'apt=45', 'profile-id=0']) expect(out).not.toContain(gone)
+    for (const kept of ['VP8/90000', 'H264/90000', 'apt=96', 'apt=100', 'a=rtcp-fb:96 nack', 'a=rtcp-fb:* nack', 'opus/48000/2', 'm=audio 9 UDP/TLS/RTP/SAVPF 111']) expect(out).toContain(kept)
+  })
+
+  it('leaves a line alone when no codec on it can be sealed', () => {
+    const odd = ['v=0', 'm=video 9 UDP/TLS/RTP/SAVPF 98', 'a=rtpmap:98 VP9/90000', ''].join('\n')
+    expect(restrictVideoCodecs(odd)).toBe(odd)
+    expect(restrictVideoCodecs('')).toBe('')
+  })
+
+  it('is applied to the offer the browser receives', async () => {
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    expect(String(pc.remoteDescription?.sdp)).not.toContain('VP9')
+    expect(String(pc.remoteDescription?.sdp)).toContain('VP8/90000')
   })
 })
 

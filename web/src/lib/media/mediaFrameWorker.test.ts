@@ -15,7 +15,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type }: { named?: boolean, type?: 'key' | 'delta' } = {}) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264' }: { named?: boolean, type?: string, mime?: string } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null }
   vi.stubGlobal('self', scope)
@@ -26,9 +26,9 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     onmessage: null as ((event: { data: unknown }) => void) | null,
     postMessage(data: unknown) { port.onmessage?.({ data }) },
   }
-  let enqueueFrame: (frame: { data: ArrayBuffer, type?: string }) => void = () => {}
+  let enqueueFrame: (frame: { data: ArrayBuffer, type?: string, getMetadata?: () => unknown }) => void = () => {}
   let closeStream: () => void = () => {}
-  const readable = new ReadableStream<{ data: ArrayBuffer, type?: string }>({
+  const readable = new ReadableStream<{ data: ArrayBuffer, type?: string, getMetadata?: () => unknown }>({
     start(controller) {
       enqueueFrame = (frame) => { controller.enqueue(frame) }
       closeStream = () => { controller.close() }
@@ -43,7 +43,7 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
   scope.onrtctransform?.({})
   scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}) } } })
   for (const command of commands) port.postMessage(command)
-  for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type } : {}) })
+  for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type, getMetadata: () => ({ mimeType: mime }) } : {}) })
   closeStream()
   await done
   return received
@@ -152,6 +152,19 @@ describe('media frame worker', () => {
     expect([...written.subarray(0, 8)]).toEqual([0, 0, 0, 1, 0x61, 0xe0, 0x00, 0x7e])
     const opened = await frames('recv', [written.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
     expect(new Uint8Array((opened[0] as { data: ArrayBuffer }).data)).toEqual(frame)
+  })
+
+  it('drops video whose codec is unknown or whose type is not a picture', async () => {
+    const key = await importEpochKey(new Uint8Array(16).fill(2))
+    if (!key) throw new Error('expected an epoch key')
+    const frame = Uint8Array.from([0, 0, 0, 1, 0x61, 0xe0, 0x00, 0x7e, ...Array.from({ length: 32 }, (_, i) => i + 1)])
+    const keyed = [{ type: 'key', epoch: 1, key }]
+    expect(await frames('send', [frame.buffer], keyed, { type: 'delta', mime: 'video/AV1' })).toEqual([])
+    expect(await frames('send', [frame.buffer], keyed, { type: 'delta', mime: 'video/VP9' })).toEqual([])
+    expect(await frames('send', [frame.buffer], keyed, { type: 'empty' })).toEqual([])
+    expect(await frames('recv', [frame.buffer], keyed, { type: 'delta', mime: 'video/H265' })).toEqual([])
+    const vp8 = await frames('send', [frame.buffer], keyed, { type: 'delta', mime: 'video/VP8' })
+    expect([...new Uint8Array((vp8[0] as { data: ArrayBuffer }).data).subarray(0, 3)]).toEqual([0, 0, 0])
   })
 
   it('opens nothing on a receiver until it is told who publishes on it', async () => {

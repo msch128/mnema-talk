@@ -609,6 +609,51 @@ function h264Rank(name: string, fmtp: string) {
   return 2
 }
 
+// Sealed video needs framing that keeps what the network path parses readable,
+// which exists for these codecs only (see lib/media/codec.ts).
+const SEALABLE_VIDEO = new Set(['vp8', 'h264'])
+
+/**
+ * Drops every video codec that cannot be sealed from the offer's video lines
+ * (and the retransmission entries that point at them), so neither side ever
+ * sends or expects one. A line that would be left without a codec stays as it
+ * is: its frames are refused by the media worker instead.
+ */
+export function restrictVideoCodecs(sdp: string) {
+  if (!sdp) return sdp
+  const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
+  const lines = sdp.split(/\r?\n/)
+  const starts: number[] = []
+  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
+  for (let n = starts.length - 1; n >= 0; n--) {
+    const from = starts[n]
+    if (from === undefined) continue
+    const to = starts[n + 1] ?? lines.length
+    const section = lines.slice(from, to)
+    if (!section[0]?.startsWith('m=video')) continue
+    const names = new Map<string, string>()
+    const apt = new Map<string, string>()
+    for (const l of section) {
+      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
+      if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
+      m = /^a=fmtp:(\d+) .*\bapt=(\d+)/.exec(l)
+      if (m?.[1] && m[2]) apt.set(m[1], m[2])
+    }
+    const keep = new Set<string>()
+    for (const [pt, name] of names) if (SEALABLE_VIDEO.has(name)) keep.add(pt)
+    for (const [pt, name] of names) if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
+    const listed = section[0].split(' ').slice(3)
+    if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) continue
+    const out = section.flatMap((l) => {
+      if (l.startsWith('m=')) return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
+      const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
+      return m?.[1] && !keep.has(m[1]) ? [] : [l]
+    })
+    lines.splice(from, to - from, ...out)
+  }
+  return lines.join(eol)
+}
+
 /**
  * Tunes the screen line (mid) of the SFU's offer before it is applied: with
  * h264, H.264 moves to the front so the browser sends it (hardware encoded on
@@ -1277,7 +1322,7 @@ export function useWebRTC() {
     const isCurrent = () => pc === conn && generation === joinGeneration && voiceStore.currentChannelId === channelId
 
     try {
-      const sdp = tuneScreenOffer(offer.sdp || '', publishMids(offer.sdp).video[0], { h264: canSendH264() })
+      const sdp = tuneScreenOffer(restrictVideoCodecs(offer.sdp || ''), publishMids(offer.sdp).video[0], { h264: canSendH264() })
       await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
       if (!isCurrent()) return
       const bound = bindPublishSenders(conn, offer.sdp || '')

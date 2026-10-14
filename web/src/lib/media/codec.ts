@@ -8,6 +8,17 @@
 
 export type FrameKind = 'key' | 'delta' | undefined
 
+/** Video codecs this module knows how to seal. Anything else is refused. */
+export type VideoCodec = 'h264' | 'vp8'
+
+/** The codec of an encoded video frame, from its metadata mime type. */
+export function videoCodecOf(mimeType: unknown): VideoCodec | null {
+  const name = typeof mimeType === 'string' ? mimeType.toLowerCase() : ''
+  if (name === 'video/h264') return 'h264'
+  if (name === 'video/vp8') return 'vp8'
+  return null
+}
+
 /** Seals the bytes after `clear`. `clear` is bound as authenticated data. */
 export type SealBytes = (plaintext: Uint8Array, clear: Uint8Array) => Promise<Uint8Array | null>
 /** Opens what SealBytes produced for the same `clear`. */
@@ -29,8 +40,8 @@ const SLICE_CLEAR_BYTES = 3
 // with the next start code.
 const NAL_TRAILER = 0x80
 
-function isAnnexB(data: Uint8Array): boolean {
-  return (data.length > 3 && data[0] === 0 && data[1] === 0 && (data[2] === 1 || (data[2] === 0 && data[3] === 1)))
+function startsWithStartCode(data: Uint8Array): boolean {
+  return data.length > 3 && data[0] === 0 && data[1] === 0 && (data[2] === 1 || (data[2] === 0 && data[3] === 1))
 }
 
 interface Nal {
@@ -107,16 +118,25 @@ function join(parts: Uint8Array[]): Uint8Array {
   return out
 }
 
+/**
+ * Maps every NAL unit of an Annex B frame. A frame that is not Annex B, or has
+ * no picture NAL, is refused: it would otherwise pass through unsealed.
+ */
 async function mapNals(data: Uint8Array, one: (nal: Uint8Array) => Promise<Uint8Array | null>): Promise<Uint8Array | null> {
+  if (!startsWithStartCode(data)) return null
   const parts: Uint8Array[] = []
   let at = 0
+  let pictures = 0
   for (const nal of splitNals(data)) {
     parts.push(data.subarray(at, nal.start))
+    const header = data[nal.start]
+    if (header !== undefined && isPicture(header)) pictures++
     const mapped = await one(data.subarray(nal.start, nal.end))
     if (!mapped) return null
     parts.push(mapped)
     at = nal.end
   }
+  if (pictures === 0) return null
   parts.push(data.subarray(at))
   return join(parts)
 }
@@ -143,24 +163,32 @@ async function openNal(nal: Uint8Array, open: OpenBytes): Promise<Uint8Array | n
   return opened ? join([clear, opened]) : null
 }
 
-function clearBytes(kind: FrameKind): number {
+function vp8ClearBytes(kind: FrameKind): number | null {
   if (kind === 'key') return VP8_KEY_CLEAR
   if (kind === 'delta') return VP8_DELTA_CLEAR
-  return 0
+  return null
 }
 
-export async function sealMedia(data: Uint8Array, kind: FrameKind, seal: SealBytes): Promise<Uint8Array | null> {
-  if (kind !== undefined && isAnnexB(data)) return mapNals(data, nal => sealNal(nal, seal))
-  const clear = clearBytes(kind)
-  if (data.length < clear) return null
+/**
+ * Seals one encoded frame. Audio has no kind and no codec and is sealed whole.
+ * A video frame needs a known codec; an unknown one is refused, never guessed.
+ */
+export async function sealMedia(data: Uint8Array, kind: FrameKind, codec: VideoCodec | null, seal: SealBytes): Promise<Uint8Array | null> {
+  if (kind === undefined) return seal(data, new Uint8Array())
+  if (codec === 'h264') return mapNals(data, nal => sealNal(nal, seal))
+  if (codec !== 'vp8') return null
+  const clear = vp8ClearBytes(kind)
+  if (clear === null || data.length < clear) return null
   const sealed = await seal(data.subarray(clear), data.subarray(0, clear))
   return sealed ? join([data.subarray(0, clear), sealed]) : null
 }
 
-export async function openMedia(data: Uint8Array, kind: FrameKind, open: OpenBytes): Promise<Uint8Array | null> {
-  if (kind !== undefined && isAnnexB(data)) return mapNals(data, nal => openNal(nal, open))
-  const clear = clearBytes(kind)
-  if (data.length < clear) return null
+export async function openMedia(data: Uint8Array, kind: FrameKind, codec: VideoCodec | null, open: OpenBytes): Promise<Uint8Array | null> {
+  if (kind === undefined) return open(data, new Uint8Array())
+  if (codec === 'h264') return mapNals(data, nal => openNal(nal, open))
+  if (codec !== 'vp8') return null
+  const clear = vp8ClearBytes(kind)
+  if (clear === null || data.length < clear) return null
   const opened = await open(data.subarray(clear), data.subarray(0, clear))
   return opened ? join([data.subarray(0, clear), opened]) : null
 }
