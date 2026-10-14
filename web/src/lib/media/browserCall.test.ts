@@ -12,6 +12,7 @@ const previous = globalThis.crypto
 const aliceId = fixtureId(1)
 const bobId = fixtureId(2)
 const carolId = fixtureId(3)
+const lowIdFor = '00000000-0000-4000-8000-000000000001'
 const channelId = fixtureId(9)
 
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -311,6 +312,27 @@ describe('browser media call', () => {
       bob.stop()
     }, 30_000)
 
+    it('wants the committer on a newer epoch for the whole window, not one frame after a quiet spell', async () => {
+      const { guard, bob, wires } = await waitingJoiner([lowId, bobId])
+      await later(bob, 60_000)
+      guard.stats({ [lowId]: newer(4) })
+      await later(bob, 1000)
+      expect(wires).toHaveLength(1)
+      // A gap longer than the window starts the count again.
+      await later(bob, 6000)
+      guard.stats({ [lowId]: newer(4) })
+      await later(bob, 4000)
+      guard.stats({ [lowId]: newer(4) })
+      await later(bob, 1000)
+      expect(wires).toHaveLength(1)
+      for (let second = 0; second < 6; second++) {
+        guard.stats({ [lowId]: newer(4) })
+        await later(bob, 1000)
+      }
+      await vi.waitFor(() => expect(wires).toHaveLength(2))
+      bob.stop()
+    }, 30_000)
+
     it('believes the committer alone', async () => {
       const { guard, bob, wires } = await waitingJoiner([lowId, bobId])
       for (let second = 0; second < 6; second++) {
@@ -383,4 +405,127 @@ describe('browser media call', () => {
     call.stop()
     await mediaSettled(call)
   }, 30_000)
+
+  describe('a step that finishes after the call moved to another channel', () => {
+    const otherChannel = fixtureId(8)
+    const key = {} as CryptoKey
+
+    afterEach(() => { vi.restoreAllMocks() })
+
+    function held<T>() {
+      let release: (value: T) => void = () => {}
+      const promise = new Promise<T>((resolve) => { release = resolve })
+      return { promise, release: (value: T) => release(value) }
+    }
+
+    it('does not send its wires or install its key into the new call', async () => {
+      const guard = recordingGuard()
+      const call = browserMediaCall(guard)
+      const sent: string[] = []
+      call.onWire((channel, wire) => { sent.push(`${channel}:${wire}`) })
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const started = vi.fn()
+      vi.spyOn(MediaGroup.prototype, 'sync').mockImplementationOnce(() => { started(); return slow.promise })
+        .mockImplementation(() => Promise.resolve({ wires: [], epoch: null, key: null }))
+      call.start(channelId, aliceId)
+      await vi.waitFor(() => expect(started).toHaveBeenCalled())
+      call.start(otherChannel, aliceId)
+      slow.release({ wires: [new Uint8Array([1, 2, 3])], epoch: 7, key })
+      await mediaSettled(call)
+      expect(sent).toEqual([])
+      expect(guard.keys.map(item => item.epoch)).not.toContain(7)
+      call.stop()
+      await mediaSettled(call)
+    }, 30_000)
+
+    it('does not apply a handshake that was being processed', async () => {
+      const guard = recordingGuard()
+      const call = browserMediaCall(guard)
+      const sent: string[] = []
+      call.onWire((_channel, wire) => { sent.push(wire) })
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const started = vi.fn()
+      vi.spyOn(MediaGroup.prototype, 'receive').mockImplementationOnce(() => { started(); return slow.promise })
+      call.start(channelId, aliceId)
+      call.roster([aliceId])
+      await mediaSettled(call)
+      const own = guard.keys.length
+      const wire = btoa(String.fromCharCode(1, 2, 3, 4))
+      call.receive(bobId, wire)
+      await vi.waitFor(() => expect(started).toHaveBeenCalled())
+      call.start(otherChannel, aliceId)
+      slow.release({ wires: [new Uint8Array([9, 9, 9])], epoch: 9, key })
+      await mediaSettled(call)
+      expect(sent).not.toContain(btoa(String.fromCharCode(9, 9, 9)))
+      expect(guard.keys.map(item => item.epoch)).not.toContain(9)
+      expect(guard.keys.length).toBeLessThanOrEqual(own + 1)
+      call.stop()
+      await mediaSettled(call)
+    }, 30_000)
+
+    it('hands on what a timer in the group produced, unless the call moved on', async () => {
+      const guard = recordingGuard()
+      const call = browserMediaCall(guard)
+      const sent: string[] = []
+      call.onWire((_channel, wire) => { sent.push(wire) })
+      let listener: ((step: { wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }) => void) | null = null
+      vi.spyOn(MediaGroup.prototype, 'onStep').mockImplementation((next) => { listener = next })
+      call.start(channelId, aliceId)
+      await mediaSettled(call)
+      const step = { wires: [new Uint8Array([5, 5, 5])], epoch: null, key: null }
+      ;(listener as unknown as (value: typeof step) => void)(step)
+      expect(sent).toEqual([btoa(String.fromCharCode(5, 5, 5))])
+      call.start(otherChannel, aliceId)
+      ;(listener as unknown as (value: typeof step) => void)(step)
+      await mediaSettled(call)
+      expect(sent).toHaveLength(1)
+      call.stop()
+      await mediaSettled(call)
+    }, 30_000)
+
+    it('does nothing for a recovery whose call ended first', async () => {
+      const guard = recordingGuard()
+      const call = browserMediaCall(guard)
+      call.start(channelId, bobId)
+      call.roster([lowIdFor, bobId])
+      await mediaSettled(call)
+      const recover = vi.spyOn(MediaGroup.prototype, 'recover')
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      for (let second = 0; second < 6; second++) {
+        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5 } })
+        vi.setSystemTime(Date.now() + 1000)
+      }
+      call.stop()
+      await mediaSettled(call)
+      vi.useRealTimers()
+      expect(recover).not.toHaveBeenCalled()
+    }, 30_000)
+
+    it('does not apply a recovery that was being worked out', async () => {
+      const guard = recordingGuard()
+      const call = browserMediaCall(guard)
+      const sent: string[] = []
+      call.onWire((_channel, wire) => { sent.push(wire) })
+      call.start(channelId, bobId)
+      call.roster([lowIdFor, bobId])
+      await mediaSettled(call)
+      sent.length = 0
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const started = vi.fn()
+      vi.spyOn(MediaGroup.prototype, 'recover').mockImplementationOnce(() => { started(); return slow.promise })
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      for (let second = 0; second < 7; second++) {
+        guard.stats({ [lowIdFor]: { opened: 0, newer: 3, epoch: 5 } })
+        vi.setSystemTime(Date.now() + 1000)
+      }
+      await vi.waitFor(() => expect(started).toHaveBeenCalled())
+      call.start(otherChannel, bobId)
+      slow.release({ wires: [new Uint8Array([7, 7, 7])], epoch: null, key: null })
+      await mediaSettled(call)
+      vi.useRealTimers()
+      expect(sent).not.toContain(btoa(String.fromCharCode(7, 7, 7)))
+      call.stop()
+      await mediaSettled(call)
+    }, 30_000)
+  })
 })

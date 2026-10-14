@@ -44,6 +44,17 @@ describe('backoff', () => {
     expect(gate.allow('b')).toBe(true)
   })
 
+  it('says how long is left', () => {
+    let now = 0
+    const gate = new Backoff(10, 60, () => now)
+    expect(gate.waitMs('a')).toBe(0)
+    gate.allow('a')
+    now = 4
+    expect(gate.waitMs('a')).toBe(6)
+    now = 12
+    expect(gate.waitMs('a')).toBe(0)
+  })
+
   it('reads the clock when asked, so a test can move it', () => {
     const gate = new Backoff(1000, 2000)
     expect(gate.allow('a')).toBe(true)

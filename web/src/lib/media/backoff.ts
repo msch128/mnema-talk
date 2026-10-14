@@ -24,6 +24,12 @@ export class Backoff {
     return true
   }
 
+  /** How long until `key` may act again; 0 when it may now. */
+  waitMs(key: string): number {
+    const entry = this.entries.get(key)
+    return entry ? Math.max(0, entry.next - this.clock()) : 0
+  }
+
   reset(key?: string) {
     if (key === undefined) this.entries.clear()
     else this.entries.delete(key)

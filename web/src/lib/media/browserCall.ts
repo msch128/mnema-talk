@@ -66,7 +66,8 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   let keyListener: (() => void) | null = null
   let wireListener: ((channelId: string, wire: string) => void) | null = null
   let lastOpenedAt = Date.now()
-  const newerFrom = new Map<string, number>()
+  // When each publisher was first seen on a newer epoch, and last.
+  const newerFrom = new Map<string, { first: number, last: number }>()
   let noticeListener: ((notice: MediaNotice) => void) | null = null
 
   const call: MediaCall = {
@@ -93,6 +94,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
           return
         }
         opened?.onNotice(notice => noticeListener?.(notice))
+        opened?.onStep((step) => { if (current === generation) emit(step) })
         group = opened
       })
       track(flush(current))
@@ -147,8 +149,10 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
 
   async function recover(current: number): Promise<void> {
     await opening
-    if (current !== generation || !group) return
-    emit(await group.recover(roster))
+    const live = group
+    if (current !== generation || !live) return
+    const step = await live.recover(roster)
+    if (current === generation) emit(step)
   }
 
   guard.onStats((senders) => {
@@ -160,15 +164,19 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
         lastOpenedAt = now
         live.opened()
       }
-      if (stats.newer > 0 && stats.epoch > (appliedEpoch ?? -1)) newerFrom.set(sender, now)
+      if (stats.newer > 0 && stats.epoch > (appliedEpoch ?? -1)) {
+        const before = newerFrom.get(sender)
+        // A gap longer than the window starts the count again.
+        newerFrom.set(sender, { first: before && now - before.last <= EVIDENCE_MS ? before.first : now, last: now })
+      }
     }
     if (now - lastOpenedAt < EVIDENCE_MS) return
-    const fresh = [...newerFrom].filter(([, seen]) => now - seen <= EVIDENCE_MS).map(([id]) => id)
+    // Sustained: seen for the whole window and still seen within it.
+    const fresh = [...newerFrom].filter(([, seen]) => now - seen.last <= EVIDENCE_MS && now - seen.first >= EVIDENCE_MS).map(([id]) => id)
     // Two publishers agree, or the one who commits does.
-    const committer = lowest(userId ? [...roster, userId] : roster)
+    const committer = lowest([...roster, userId as string])
     if (fresh.length < 2 && !(committer && committer !== userId && fresh.includes(committer))) return
-    newerFrom.clear()
-    lastOpenedAt = now
+    // The group's own limit decides how often this may act.
     track(recover(generation))
   })
 
@@ -179,10 +187,11 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   }
 
   function emit(step: MediaStep) {
-    if (!channelId) return
+    // A group exists only for a valid channel, and steps are dropped once the call moved on.
+    const channel = channelId as string
     for (const wire of step.wires) {
       const text = encodeWire(wire)
-      if (text) wireListener?.(channelId, text)
+      if (text) wireListener?.(channel, text)
     }
     if (step.key && step.epoch !== null) {
       if (step.epoch !== appliedEpoch || step.key !== appliedKey) {
@@ -203,16 +212,20 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
 
   async function flush(current: number, resend = false): Promise<void> {
     await opening
-    if (current !== generation || !group) return
-    while (inbox.length && current === generation && group) {
+    const live = group
+    if (current !== generation || !live) return
+    // A step that finishes after the call moved on belongs to the old call.
+    while (inbox.length && current === generation) {
       const item = inbox.shift()
       if (!item) break
       const raw = decodeWire(item.wire)
       if (!raw) continue
-      emit(await group.receive(item.from, raw))
+      const step = await live.receive(item.from, raw)
+      if (current !== generation) return
+      emit(step)
     }
-    if (current !== generation || !group) return
-    emit(await group.sync(roster, resend))
+    const step = await live.sync(roster, resend)
+    if (current === generation) emit(step)
   }
 
   work.set(call, tail)

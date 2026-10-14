@@ -5,7 +5,7 @@ import type { Credential } from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES, mediaGroupId, mediaUserId } from './bounds'
 import { openFrame, sealFrame } from './frame'
-import { MediaGroup } from './group'
+import { MediaGroup, type MediaStep } from './group'
 
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
@@ -25,8 +25,9 @@ async function opened(userId: string) {
 
 // With a roster, a receiver also syncs to it after each wire: the call does the
 // same, since the roster arrives before the handshake that depends on it.
-async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster?: string[]) {
+async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster?: string[], tally?: { wires: number }) {
   const pending = wires.map(wire => ({ from, wire }))
+  if (tally) tally.wires += wires.length
   const seen = new Set<string>()
   while (pending.length) {
     const item = pending.shift()
@@ -38,7 +39,12 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
       if (id === item.from) continue
       const step = await group.receive(item.from, item.wire)
       for (const wire of step.wires) pending.push({ from: id, wire })
-      if (roster?.includes(id)) for (const wire of (await group.sync(roster)).wires) pending.push({ from: id, wire })
+      if (tally) tally.wires += step.wires.length
+      if (roster?.includes(id)) {
+        const synced = await group.sync(roster)
+        for (const wire of synced.wires) pending.push({ from: id, wire })
+        if (tally) tally.wires += synced.wires.length
+      }
     }
   }
 }
@@ -490,21 +496,17 @@ describe('a member who takes over as committer', () => {
     await alice.sync([aliceId, carolId])
     const first = await alice.receive(carolId, wireAt(carolOffer.wires, 0))
     for (const wire of first.wires) await carol.receive(aliceId, wire)
-    // Bob joins; being lower than Carol, he makes her start over. Only Alice
-    // hears Carol's second package, so Bob learns of Carol from a commit.
+    // Bob joins between them: only Alice hears him as a committer, and he
+    // learns of Carol from the welcome, not from her package.
     const bobOffer = await bob.sync(roster)
     await alice.sync(roster)
+    await carol.sync(roster)
     const second = await alice.receive(bobId, wireAt(bobOffer.wires, 0))
-    await carol.receive(bobId, wireAt(bobOffer.wires, 0))
-    const dropped = await carol.sync(roster)
-    expect(dropped.key).toBeNull()
-    for (const wire of second.wires) await bob.receive(aliceId, wire)
-    const third = await alice.receive(carolId, wireAt(dropped.wires, 0))
-    for (const wire of third.wires) {
+    for (const wire of second.wires) {
       await bob.receive(aliceId, wire)
       await carol.receive(aliceId, wire)
     }
-    expect((await bob.sync(roster)).epoch).toBe(third.epoch)
+    expect((await bob.sync(roster)).epoch).toBe(second.epoch)
     await alice.close()
     const lone = [bobId, carolId]
     const taken = await bob.sync(lone)
@@ -672,6 +674,156 @@ describe('what a flood or a forgery can reset', () => {
     expect((await bob.sync(roster)).epoch).not.toBeNull()
     vi.setSystemTime(Date.now() + 11_000)
     expect((await removal()).wires).toHaveLength(1)
+    await alice.close()
+    await bob.close()
+  }, 60_000)
+})
+
+describe('a room that grows, loses a welcome or has a silent lowest member', () => {
+  afterEach(() => { vi.useRealTimers() })
+  const timers = { toFake: ['Date', 'setTimeout', 'clearTimeout'] as ('Date' | 'setTimeout' | 'clearTimeout')[] }
+
+  async function form(ids: string[]) {
+    const groups = new Map<string, MediaGroup>()
+    for (const [index, id] of ids.entries()) {
+      const group = await opened(id)
+      groups.set(id, group)
+      const roster = ids.slice(0, index + 1)
+      for (const member of roster) await deliver(groups, member, (await (groups.get(member) as MediaGroup).sync(roster)).wires, roster)
+    }
+    return groups
+  }
+
+  async function epochs(groups: Map<string, MediaGroup>, roster: string[]) {
+    const seen = new Map<string, { epoch: number | null, key: CryptoKey | null }>()
+    for (const [id, group] of groups) {
+      const step = await group.sync(roster)
+      seen.set(id, { epoch: step.epoch, key: step.key })
+    }
+    return seen
+  }
+
+  it('adds a member between others without anyone starting over', async () => {
+    const ids = [1, 2, 3, 4, 6, 7, 8].map(n => fixtureId(n))
+    const groups = await form(ids)
+    const before = await epochs(groups, ids)
+    const everyone = [...ids, fixtureId(5)].sort()
+    const joiner = await opened(fixtureId(5))
+    groups.set(fixtureId(5), joiner)
+    const tally = { wires: 0 }
+    const offer = await joiner.sync(everyone)
+    // Everyone learns of the new roster first, as the call does.
+    for (const id of ids) {
+      const step = await (groups.get(id) as MediaGroup).sync(everyone)
+      await deliver(groups, id, step.wires, everyone, tally)
+    }
+    await deliver(groups, fixtureId(5), offer.wires, everyone, tally)
+    const after = await epochs(groups, everyone)
+    const epoch = after.get(ids[0] as string)?.epoch
+    expect(epoch).toBe((before.get(ids[0] as string)?.epoch ?? 0) + 1)
+    for (const [, value] of after) expect(value.epoch).toBe(epoch)
+    // The joiner's package, the welcome and the commit; nobody else has to speak.
+    expect(tally.wires).toBeLessThanOrEqual(5)
+    expect(await roundTrip(after.get(ids[0] as string)?.key ?? null, after.get(fixtureId(5))?.key ?? null, epoch ?? 0)).toEqual([9, 8, 7])
+    for (const group of groups.values()) await group.close()
+  }, 120_000)
+
+  it('offers again with a fresh package when the welcome never comes', async () => {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const roster = [aliceId, bobId]
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    await alice.sync([aliceId])
+    await alice.sync(roster)
+    const offer = await bob.sync(roster)
+    const lost = await alice.receive(bobId, wireAt(offer.wires, 0))
+    expect(lost.wires).toHaveLength(2)
+    const steps: MediaStep[] = []
+    bob.onStep(step => steps.push(step))
+    await vi.advanceTimersByTimeAsync(7000)
+    expect(steps).toEqual([])
+    await vi.advanceTimersByTimeAsync(1200)
+    await vi.waitFor(() => expect(steps).toHaveLength(1))
+    const again = wireAt(steps[0]?.wires ?? [], 0)
+    expect(again).not.toEqual(wireAt(offer.wires, 0))
+    vi.useRealTimers()
+    const healed = await alice.receive(bobId, again)
+    expect(healed.wires).toHaveLength(2)
+    await bob.receive(aliceId, wireAt(healed.wires, 0))
+    expect((await bob.receive(aliceId, wireAt(healed.wires, 1))).epoch).toBe(healed.epoch)
+    // With a group, it stops asking.
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(steps).toHaveLength(1)
+    await alice.close()
+    await bob.close()
+  }, 60_000)
+
+  it('retries a restart the limit held back, once the limit lets go', async () => {
+    const { alice, bob } = await joinedPair()
+    const roster = [aliceId, bobId]
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    // Use up the limit: Bob starts over once and is welcomed back.
+    const asked = await bob.recover(roster)
+    await alice.sync(roster)
+    const back = await alice.receive(bobId, wireAt(asked.wires, 0))
+    for (const wire of back.wires) await bob.receive(aliceId, wire)
+    expect((await bob.sync(roster)).epoch).toBe(back.epoch)
+    // Alice comes back from a reload and says so; Bob's limit holds him back.
+    await alice.close()
+    const reloaded = await opened(aliceId)
+    const steps: MediaStep[] = []
+    bob.onStep(step => steps.push(step))
+    const hello = await reloaded.sync(roster)
+    expect((await bob.receive(aliceId, wireAt(hello.wires, 0))).wires).toEqual([])
+    expect(steps).toEqual([])
+    await vi.advanceTimersByTimeAsync(11_000)
+    await vi.waitFor(() => expect(steps).toHaveLength(1))
+    expect(mls.decodeMlsMessage(wireAt(steps[0]?.wires ?? [], 0), 0)?.[0].wireformat).toBe('mls_key_package')
+    await reloaded.close()
+    await bob.close()
+  }, 60_000)
+
+  it('retries an offer after a removal the limit held back', async () => {
+    const { alice, bob } = await joinedPair()
+    const roster = [aliceId, bobId]
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    const removal = async () => {
+      const removed = await alice.sync([aliceId])
+      const commit = removed.wires.find(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat === 'mls_public_message')
+      const step = await bob.receive(aliceId, commit ?? new Uint8Array())
+      await alice.sync(roster)
+      return step
+    }
+    const first = await removal()
+    for (const wire of first.wires) for (const added of (await alice.receive(bobId, wire)).wires) await bob.receive(aliceId, added)
+    const steps: MediaStep[] = []
+    bob.onStep(step => steps.push(step))
+    expect((await removal()).wires).toEqual([])
+    await vi.advanceTimersByTimeAsync(11_000)
+    await vi.waitFor(() => expect(steps).toHaveLength(1))
+    expect(steps[0]?.wires).toHaveLength(1)
+    await alice.close()
+    await bob.close()
+  }, 60_000)
+
+  it('lets the next lowest member lead when the lowest never speaks', async () => {
+    const bob = await opened(bobId)
+    const roster = [aliceId, bobId, carolId]
+    vi.useFakeTimers({ ...timers, now: Date.now() })
+    const steps: MediaStep[] = []
+    bob.onStep(step => steps.push(step))
+    expect((await bob.sync(roster)).epoch).toBeNull()
+    await vi.advanceTimersByTimeAsync(14_000)
+    expect(steps).toEqual([])
+    await vi.advanceTimersByTimeAsync(1200)
+    await vi.waitFor(() => expect(steps.length).toBeGreaterThan(0))
+    expect(steps.at(-1)?.epoch).toBe(0)
+    // Heard from again, the lowest counts: Bob's own group no longer has it.
+    const alice = await opened(aliceId)
+    const hello = await alice.sync(roster)
+    await bob.receive(aliceId, wireAt(hello.wires, 0))
+    expect((await bob.sync(roster)).key).toBeNull()
     await alice.close()
     await bob.close()
   }, 60_000)

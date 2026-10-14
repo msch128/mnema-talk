@@ -1470,9 +1470,10 @@ export function useWebRTC() {
     if (!channelId) return
     // The server keeps the roster across a short disconnect, so nobody else
     // joins or leaves and a handshake that was dropped is not sent again.
-    mediaCall().resume()
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+    // After the join, so a package it produces is not dropped by the hub.
+    mediaCall().resume()
     attachSubscriptions()
   }
 

@@ -37,6 +37,11 @@ const SWAP_BASE_MS = 3000
 // at most once per this long, doubling while it keeps happening.
 const RESET_BASE_MS = 10_000
 const BACKOFF_MAX_MS = 60_000
+// A joiner whose offer got no welcome in this long offers again.
+const OFFER_WAIT_MS = 8000
+// A member lower than me that the room lists but never said a word in this
+// long cannot be speaking MLS (an old tab, a failed start): the next one acts.
+const TAKEOVER_MS = 15_000
 
 export interface MediaStep {
   wires: Uint8Array[]
@@ -146,6 +151,13 @@ export class MediaGroup {
   private readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
   private readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS)
   private notice: (notice: MediaNotice) => void = () => {}
+  private stepListener: (step: MediaStep) => void = () => {}
+  private deferTimer: ReturnType<typeof setTimeout> | null = null
+  private offerTimer: ReturnType<typeof setTimeout> | null = null
+  private takeoverTimer: ReturnType<typeof setTimeout> | null = null
+  private lastRoster: readonly string[] = []
+  private readonly heard = new Set<string>()
+  private readonly firstSeen = new Map<string, number>()
   private tail: Promise<void> = Promise.resolve()
 
   private constructor(
@@ -171,6 +183,11 @@ export class MediaGroup {
     this.notice = listener
   }
 
+  /** Called with what a timer produced: a retry, a new offer, a takeover. */
+  onStep(listener: (step: MediaStep) => void) {
+    this.stepListener = listener
+  }
+
   /** Frames of the current epoch open again: the wait before the next reset starts over. */
   opened() {
     this.resets.reset()
@@ -187,6 +204,8 @@ export class MediaGroup {
   close(): Promise<void> {
     return this.enqueue(async () => {
       this.closed = true
+      for (const timer of [this.deferTimer, this.offerTimer, this.takeoverTimer]) if (timer !== null) clearTimeout(timer)
+      this.deferTimer = this.offerTimer = this.takeoverTimer = null
       this.discard()
       wipeBytes(this.own.privatePackage.initPrivateKey)
       wipeBytes(this.own.privatePackage.hpkePrivateKey)
@@ -227,13 +246,73 @@ export class MediaGroup {
     return this.committer(others) === this.userId
   }
 
+  /**
+   * Leaves out lower ids the room lists but that have never been heard from
+   * after TAKEOVER_MS, so one client that cannot speak MLS does not wedge the
+   * room. They count again as soon as they say anything.
+   */
+  private reachable(others: string[]): string[] {
+    const now = Date.now()
+    const tree = this.state ? treeMembers(this.state) : null
+    for (const id of [...this.firstSeen.keys()]) if (!others.includes(id)) this.firstSeen.delete(id)
+    let wait = Infinity
+    const kept = others.filter((id) => {
+      if (id > this.userId || tree?.has(id) || this.heard.has(id)) return true
+      const since = this.firstSeen.get(id) ?? now
+      this.firstSeen.set(id, since)
+      const left = TAKEOVER_MS - (now - since)
+      if (left > 0) wait = Math.min(wait, left)
+      return left > 0
+    })
+    if (this.takeoverTimer !== null) clearTimeout(this.takeoverTimer)
+    this.takeoverTimer = null
+    if (wait !== Infinity) {
+      this.takeoverTimer = setTimeout(() => {
+        this.takeoverTimer = null
+        void this.enqueue(async () => (this.closed ? null : this.syncNow(this.lastRoster, false))).then(step => step && this.stepListener(step))
+      }, wait + 50)
+    }
+    return kept
+  }
+
+  private defer(action: () => Promise<MediaStep | null>) {
+    if (this.deferTimer !== null) return
+    this.deferTimer = setTimeout(() => {
+      this.deferTimer = null
+      void this.enqueue(async () => (this.closed ? null : action())).then(step => step && this.stepListener(step))
+    }, this.resets.waitMs('self') + 50)
+  }
+
+  /** Offers a fresh package again, if still without a group and the reset limit allows. */
+  private async reofferNow(): Promise<MediaStep | null> {
+    if (this.closed || this.state || !this.room.some(id => id < this.userId)) return null
+    if (!this.resets.allow('self')) {
+      this.defer(() => this.reofferNow())
+      return null
+    }
+    await this.rekey()
+    return { wires: this.offer(this.room), epoch: null, key: null }
+  }
+
+  private watchOffer() {
+    if (this.offerTimer !== null) clearTimeout(this.offerTimer)
+    this.offerTimer = setTimeout(() => {
+      this.offerTimer = null
+      void this.enqueue(() => this.reofferNow()).then(step => step && this.stepListener(step))
+    }, OFFER_WAIT_MS)
+  }
+
   private async syncNow(roster: readonly string[], resend: boolean): Promise<MediaStep> {
     if (this.closed) return this.step()
     const wires: Uint8Array[] = []
-    const others = this.others(roster)
+    this.lastRoster = roster
+    const others = this.reachable(this.others(roster))
     this.room = others
     const state = this.state
-    if (state && others.some(id => id < this.userId && !treeMembers(state).has(id))) {
+    // Only the lowest id of the room decides whether this group is the right
+    // one; someone in between is just added by the committer.
+    const lead = lowest(others)
+    if (state && lead !== null && lead < this.userId && !treeMembers(state).has(lead)) {
       await this.leave()
     }
     if (!this.state && !others.some(id => id < this.userId)) {
@@ -308,6 +387,7 @@ export class MediaGroup {
     const wire = this.hello()
     if (!wire) return []
     this.offeredFor = key
+    this.watchOffer()
     return [wire]
   }
 
@@ -340,6 +420,7 @@ export class MediaGroup {
     const decoded = decodeMlsMessage(wire, 0)
     if (!decoded) return this.step()
     const [message] = decoded
+    this.heard.add(from)
     const members = this.state ? treeMembers(this.state) : null
     const wires: Uint8Array[] = []
     if (message.wireformat === 'mls_key_package') {
@@ -351,8 +432,13 @@ export class MediaGroup {
       // its group is the one that counts now, so I join it again. Any other
       // member coming back is swapped in by the committer.
       const restarted = members?.has(from) === true && !same && from === this.committer(this.room)
-      // Only for someone the roster says is in the room, and not in a loop.
-      if (members && from < this.userId && this.room.includes(from) && restarted && this.resets.allow('self')) {
+      // Only for someone the roster says is in the room, and not in a loop;
+      // what the limit holds back is tried again when it lets go.
+      if (members && from < this.userId && this.room.includes(from) && restarted) {
+        if (!this.resets.allow('self')) {
+          this.defer(() => this.receiveNow(fromUserId, wire))
+          return this.step()
+        }
         await this.leave()
         wires.push(...this.offer(this.room))
       } else if (members?.has(from)) {
@@ -405,7 +491,10 @@ export class MediaGroup {
           this.wipeRejected(processed.newState)
           this.discard()
           this.notice('removed')
-          if (!this.resets.allow('self')) return this.step()
+          if (!this.resets.allow('self')) {
+            this.defer(() => this.reofferNow())
+            return this.step()
+          }
           await this.rekey()
           return { wires: this.offer(this.room), epoch: null, key: null }
         }
@@ -543,6 +632,8 @@ export class MediaGroup {
         return false
       }
       this.state = state
+      if (this.offerTimer !== null) clearTimeout(this.offerTimer)
+      this.offerTimer = null
       const epochNumber = Number(epoch)
       this.current = { epoch: epochNumber, key }
       this.keys.set(epochNumber, key)
