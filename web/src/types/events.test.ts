@@ -41,6 +41,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
   voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }],
+  media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
 }
 
 describe('WebSocket runtime event contracts', () => {

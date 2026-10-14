@@ -45,6 +45,7 @@ export interface ServerEventPayloads {
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
   voice_kicked: { channel_id: string; reason?: 'room_full' }
+  media_handshake: { channel_id: string; user_id: string; wire: string }
 }
 
 export type EventUnion<Payloads> = { [K in keyof Payloads]: { type: K; payload: Payloads[K] } }[keyof Payloads]
@@ -71,6 +72,7 @@ export interface ClientEventPayloads {
   webrtc_screenshare_start: Record<string, never>
   webrtc_screenshare_stop: Record<string, never>
   webrtc_camera_stop: Record<string, never>
+  media_handshake: { channel_id: string; wire: string }
 }
 export type ClientEvent = EventUnion<ClientEventPayloads>
 export type ClientEventType = keyof ClientEventPayloads
@@ -148,6 +150,8 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     case 'voice_mute_state': return roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'
     case 'voice_kicked': return isIdentifier(payload['channel_id'])
       && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full')
+    case 'media_handshake': return isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
+      && isString(payload['wire'], 48_000) && payload['wire'] !== ''
     default: return false
   }
 }
@@ -157,7 +161,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'user_update', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'voice_speaking', 'voice_mute_state', 'voice_kicked'
+  'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

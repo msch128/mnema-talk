@@ -38,7 +38,7 @@ Mnema Talk is a **lightweight, single-server Discord alternative** written in **
 
 ### 3. Voice & Screenshare
 - **Pion WebRTC** (`github.com/pion/webrtc/v4`) as a pure Go **Selective Forwarding Unit (SFU)**.
-- **No server-side transcoding**: the SFU forwards RTP packets in memory. Transport is DTLS-SRTP client-to-SFU, which is **not** end-to-end encrypted.
+- **No server-side transcoding**: the SFU forwards RTP packets in memory. Transport is DTLS-SRTP client-to-SFU. Microphone, camera, screen video and screen-audio payloads are encrypted in the browser with MLS-derived keys, so an honest SFU cannot read them; an active or compromised server (it serves the code and asserts membership) and metadata are out of scope. Text messages and attachments stay readable by the server.
 - Source-quality screen sharing (up to 4K at 60 FPS) with hardware encoding on the client.
 - **Hangout spots**: clicking a voice channel connects immediately, without ringing.
 

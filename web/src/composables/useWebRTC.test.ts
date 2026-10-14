@@ -5,11 +5,14 @@ import type { NoiseModel, FilterOptions } from '../lib/dfnTypes'
 type ClientSentEvent = { type: keyof ClientEventPayloads; payload: ClientEventPayloads[keyof ClientEventPayloads] }
 import type { ClientEventPayloads } from '../types/events'
 import { decodeServerEvent } from '../types/events'
-import { fixtureId } from '../test-fixtures.fixture'
+import { fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
+import { installMediaCall } from '../lib/media/api'
+import type { MediaCall } from '../lib/media/api'
+import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
-import { publishMids, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, restrictVideoCodecs, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -64,7 +67,7 @@ const SFU_OFFER = [
   ''
 ].join('\r\n')
 
-interface FakeTransceiver { mid: string; direction: RTCRtpTransceiverDirection; sender: ReturnType<typeof fakeSender> }
+interface FakeTransceiver { mid: string; direction: RTCRtpTransceiverDirection; sender: ReturnType<typeof fakeSender>; receiver: RTCRtpReceiver }
 class FakePC {
   transceivers: FakeTransceiver[] = []
   unmatched: ReturnType<typeof fakeSender>[] = []
@@ -106,7 +109,7 @@ class FakePC {
     this.remoteDescription = d
     for (const m of String(d.sdp).matchAll(/a=mid:(\S+)/g)) {
       if (!this.transceivers.some(t => t.mid === m[1])) {
-        this.transceivers.push({ mid: present(m[1]), direction: 'recvonly', sender: fakeSender(null) })
+        this.transceivers.push({ mid: present(m[1]), direction: 'recvonly', sender: fakeSender(null), receiver: {} as RTCRtpReceiver })
       }
     }
   }
@@ -225,7 +228,46 @@ beforeEach(() => {
   })
 })
 
+const permissiveMediaCall: MediaCall = {
+  start() {},
+  roster() {},
+  receive() {},
+  resume() {},
+  stop() {},
+  onKey() {},
+  onWire() {},
+  onNotice() {},
+  protectSender: () => true,
+  prepareIncoming: () => true,
+  protectIncoming: () => true,
+}
+
+function installRecordingCall(allow = true) {
+  let onKeyListener: (() => void) | null = null
+  let onWireListener: ((channelId: string, wire: string) => void) | null = null
+  let onNoticeListener: ((notice: 'removed') => void) | null = null
+  const call = {
+    start: vi.fn(),
+    roster: vi.fn(),
+    receive: vi.fn(),
+    resume: vi.fn(),
+    stop: vi.fn(),
+    onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
+    onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
+    onNotice: vi.fn((listener: (notice: 'removed') => void) => { onNoticeListener = listener }),
+    protectSender: vi.fn(() => allow),
+    prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
+    protectIncoming: vi.fn(() => allow),
+    fireKey() { onKeyListener?.() },
+    fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
+    fireNotice() { onNoticeListener?.('removed') },
+  }
+  installMediaCall(call)
+  return call
+}
+
 afterEach(() => {
+  installMediaCall(permissiveMediaCall)
   const { leaveVoiceChannel, stopMicTest } = useWebRTC()
   stopMicTest()
   leaveVoiceChannel()
@@ -1542,6 +1584,45 @@ describe('publishMids', () => {
   })
 })
 
+describe('restrictVideoCodecs', () => {
+  const offer = [
+    'v=0',
+    'm=audio 9 UDP/TLS/RTP/SAVPF 111', 'a=mid:0', 'a=rtpmap:111 opus/48000/2',
+    'm=video 9 UDP/TLS/RTP/SAVPF 96 97 98 99 100 101 102 45 46', 'a=mid:1',
+    'a=rtcp-fb:* nack',
+    'a=rtpmap:96 VP8/90000', 'a=rtcp-fb:96 nack', 'a=rtpmap:97 rtx/90000', 'a=fmtp:97 apt=96',
+    'a=rtpmap:98 VP9/90000', 'a=fmtp:98 profile-id=0', 'a=rtpmap:99 rtx/90000', 'a=fmtp:99 apt=98',
+    'a=rtpmap:100 H264/90000', 'a=fmtp:100 packetization-mode=1;profile-level-id=42e01f', 'a=rtpmap:101 rtx/90000', 'a=fmtp:101 apt=100',
+    'a=rtpmap:102 H265/90000', 'a=rtpmap:45 AV1/90000', 'a=rtpmap:46 rtx/90000', 'a=fmtp:46 apt=45',
+    ''
+  ].join('\r\n')
+
+  it('keeps VP8, H.264 and their retransmissions only', () => {
+    const out = restrictVideoCodecs(offer)
+    expect(out).toContain('m=video 9 UDP/TLS/RTP/SAVPF 96 97 100 101\r\n')
+    for (const gone of ['VP9', 'H265', 'AV1', 'apt=98', 'apt=45', 'profile-id=0']) expect(out).not.toContain(gone)
+    for (const kept of ['VP8/90000', 'H264/90000', 'apt=96', 'apt=100', 'a=rtcp-fb:96 nack', 'a=rtcp-fb:* nack', 'opus/48000/2', 'm=audio 9 UDP/TLS/RTP/SAVPF 111']) expect(out).toContain(kept)
+  })
+
+  it('leaves a line alone when no codec on it can be sealed', () => {
+    const odd = ['v=0', 'm=video 9 UDP/TLS/RTP/SAVPF 98', 'a=rtpmap:98 VP9/90000', ''].join('\n')
+    expect(restrictVideoCodecs(odd)).toBe(odd)
+    expect(restrictVideoCodecs('')).toBe('')
+  })
+
+  it('is applied to the offer the browser receives', async () => {
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: offer } })
+    await vi.waitFor(() => expect(pc.remoteDescription).not.toBeNull())
+    expect(String(pc.remoteDescription?.sdp)).not.toContain('VP9')
+    expect(String(pc.remoteDescription?.sdp)).toContain('VP8/90000')
+  })
+})
+
 describe('tuneScreenOffer', () => {
   // The video part of a Pion offer with its default codecs.
   const video = (mid: string) => [
@@ -1869,7 +1950,7 @@ describe('voice activity, loopback and window lifecycle', () => {
   it('resumes suspended microphone and paused remote audio on visibility return', async () => {
     const { rtc } = await timedCall()
     const pc = present(FakePC.instances.at(-1))
-    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
     const el = present(audioElements.at(-1))
     el.play = vi.fn().mockRejectedValue(new Error('gesture pending'))
     const audio = present(FakeAudioContext.instances.at(-1))
@@ -2395,28 +2476,18 @@ describe('capture lifecycle wrappers and statistics', () => {
 })
 
 describe('remote rendering and audio output robustness', () => {
-  it('plays unidentified audio at the master volume and ignores anonymous video for user maps', async () => {
+  it('drops remote media that names no sender', async () => {
     const { pc, voice } = await joined()
-    voice.outputVolume = 40
-    const track = fakeTrack()
-    present(pc.ontrack)({ track, streams: [] })
-    const el = present(audioElements.at(-1))
-    expect(el.volume).toBe(0.4)
-    expect(el.dataset.userId).toBeUndefined()
-    present(pc.ontrack)({ track, streams: [remoteStreamFor('screen:')] })
-    expect(el.dataset.userId).toBeUndefined()
-    expect(el.dataset.source).toBe('screen')
-    present(pc.ontrack)({ track, streams: [] })
-    expect(el.dataset.source).toBeUndefined()
-    const video = fakeTrack('video')
-    present(pc.ontrack)({ track: video, streams: [] })
-    present(video.onended).call(video, new Event('ended'))
+    const before = audioElements.length
+    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('screen:')] })
+    present(pc.ontrack)({ track: fakeTrack(), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('cam:')] })
+    expect(audioElements).toHaveLength(before)
     expect(voice.userVideoStreams).toEqual({})
     expect(voice.remoteScreenStream).toBeNull()
-    const camera = fakeTrack('video')
-    present(pc.ontrack)({ track: camera, streams: [remoteStreamFor('cam:')] })
-    present(camera.onended).call(camera, new Event('ended'))
-    expect(voice.userVideoStreams).toEqual({})
+    expect(useToastStore().toasts).toEqual([])
   })
 
   it('drops only the removed video and ignores unrelated removetrack callbacks', async () => {
@@ -3277,6 +3348,166 @@ describe('serialized settings after native source construction fails', () => {
     await retry
     expect(audio.track).toBe(replacement.getAudioTracks()[0])
     expect(voice.currentChannelId).toBe('ch-1')
+  })
+})
+
+describe('protected media', () => {
+  it('seals the call for the signed-in member and ignores another room', async () => {
+    const call = installRecordingCall()
+    const user = userFixture()
+    const { rtc, chat, voice, sent } = setup()
+    useAuthStore().user = user
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    expect(call.start).toHaveBeenCalledWith('ch-1', user.id)
+    const member = voiceUserFixture({ id: fixtureId(3) })
+    voice.channelUsers = { 'ch-1': { [member.id]: member } }
+    await nextTick()
+    expect(call.roster).toHaveBeenLastCalledWith([member.id])
+    const pc = await negotiate()
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
+    expect(call.protectIncoming).toHaveBeenCalledWith(undefined, 'alice')
+    expect(audioElements.length).toBeGreaterThan(0)
+    const keyframes = sent.filter(event => event.type === 'webrtc_request_keyframe').length
+    call.fireKey()
+    expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
+    call.fireWire('ch-1', 'abc')
+    call.fireWire('other-room', 'nope')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'abc' } },
+    ])
+    const sender = fixtureId(2)
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: 'ch-1', user_id: sender, wire: 'abc' } })
+    chat.handleWSEvent({ type: 'media_handshake', payload: { channel_id: 'other-room', user_id: sender, wire: 'nope' } })
+    expect(call.receive).toHaveBeenCalledTimes(1)
+    expect(call.receive).toHaveBeenCalledWith(sender, 'abc')
+    rtc.leaveVoiceChannel()
+    expect(call.stop).toHaveBeenCalledOnce()
+    call.fireKey()
+    expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
+    expect(useToastStore().toasts).toEqual([])
+  })
+
+  it('tells the member once per call that the group removed them', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    call.fireNotice()
+    call.fireNotice()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRekeyed')])
+    rtc.leaveVoiceChannel()
+    const again = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await again
+    call.fireNotice()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRekeyed'), t('voice.mediaRekeyed')])
+  })
+
+  it('arms every receiver before it answers the offer', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const order: string[] = []
+    call.prepareIncoming.mockImplementation(() => { order.push('prepare'); return true })
+    vi.spyOn(FakePC.prototype, 'setLocalDescription').mockImplementation(async () => { order.push('answer') })
+    const pc = await negotiate()
+    expect(call.prepareIncoming.mock.calls.map(([receiver]) => receiver)).toEqual(pc.transceivers.map(t => t.receiver))
+    expect(order).toEqual(['prepare', 'prepare', 'prepare', 'prepare', 'answer'])
+  })
+
+  it('holds a handshake until the voice join is sent', async () => {
+    const call = installRecordingCall()
+    const { rtc, sent } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBeGreaterThan(0))
+    call.fireWire('ch-1', 'early')
+    call.fireWire('other-room', 'nope')
+    expect(sent.some(event => event.type === 'media_handshake')).toBe(false)
+    await grantMic()
+    await join
+    const joinAt = sent.findIndex(event => event.type === 'voice_join')
+    const handshakeAt = sent.findIndex(event => event.type === 'media_handshake')
+    expect(handshakeAt).toBeGreaterThan(joinAt)
+    call.fireWire('ch-1', 'later')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'early' } },
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'later' } },
+    ])
+  })
+
+  it('drops a held handshake when the member has left the room', async () => {
+    const call = installRecordingCall()
+    const { rtc, sent, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBeGreaterThan(0))
+    call.fireWire('ch-1', 'early')
+    voice.currentChannelId = 'ch-2'
+    await grantMic()
+    await join
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([])
+    rtc.leaveVoiceChannel()
+    call.fireWire('ch-2', 'after')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([])
+  })
+
+  it('does not publish or play when the call cannot be protected', async () => {
+    const call = installRecordingCall(false)
+    const { rtc, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = await negotiate()
+    for (const sender of pc.senders) expect(sender.replaceTrack).not.toHaveBeenCalled()
+    present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('bob')] })
+    expect(audioElements).toEqual([])
+    expect(voice.remoteScreenStream).toBeNull()
+    expect(voice.userVideoStreams).toEqual({})
+    expect(call.protectSender).toHaveBeenCalled()
+    expect(call.protectIncoming).toHaveBeenCalled()
+    expect(voice.localAudioStream).toBeNull()
+    expect(voice.localCameraStream).toBeNull()
+    expect(voice.localScreenStream).toBeNull()
+    const captures = vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.length
+    await rtc.startCamera()
+    await rtc.startScreenShare()
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(captures)
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaUnprotected')])
+  })
+
+  it('stops a camera prompt that resolves after the call is unprotected', async () => {
+    installRecordingCall(false)
+    const { rtc, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBe(1))
+    const pendingCamera = rtc.startCamera()
+    await vi.waitFor(() => expect(micRequests.length).toBe(2))
+    present(micRequests.shift())()
+    await join
+    await negotiate()
+    const camera = present(micRequests.shift())
+    const track = present(camera.stream.getTracks()[0])
+    camera()
+    await pendingCamera
+    expect(voice.isCameraOn).toBe(false)
+    expect(voice.localCameraStream).toBeNull()
+    expect(track.stop).toHaveBeenCalled()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaUnprotected')])
+  })
+
+  it('sends the handshake again when the call reconnects', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    rtc.rejoinAfterReconnect()
+    expect(call.resume).toHaveBeenCalledOnce()
   })
 })
 

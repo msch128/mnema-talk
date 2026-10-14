@@ -480,6 +480,13 @@ func (h *Hub) takeUserGraces(userID uuid.UUID) []*graceLeave {
 
 // sendToVoiceRoom sends an event to the connections currently in chID's room.
 func (h *Hub) sendToVoiceRoom(chID uuid.UUID, eventType string, payload any) {
+	h.sendToVoiceRoomExcept(nil, chID, eventType, payload)
+}
+
+// sendToVoiceRoomExcept sends to every connection in chID's room except skip.
+// A nil skip delivers to the whole room. The sender's other connections stay
+// included: a second tab is another member of the same room.
+func (h *Hub) sendToVoiceRoomExcept(skip *Client, chID uuid.UUID, eventType string, payload any) {
 	data := encode(eventType, payload)
 	if data == nil {
 		return
@@ -487,6 +494,9 @@ func (h *Hub) sendToVoiceRoom(chID uuid.UUID, eventType string, payload any) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {
+		if c == skip {
+			continue
+		}
 		if cur := c.currentVoice(); cur != nil && *cur == chID {
 			c.deliver(data)
 		}

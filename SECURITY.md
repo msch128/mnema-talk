@@ -64,10 +64,27 @@ locally instead (`make up` or `make dev`).
   ranges: anyone who can connect from a trusted range can set their own
   `X-Forwarded-For` and evade the per-client limits. Publish only the reverse
   proxy.
-- **Voice and screenshare.** Media is encrypted with DTLS-SRTP between each client
-  and the SFU. This is **not end-to-end encryption**: the SFU decrypts packets in
-  memory to forward them to the other participants (it does not record or
-  transcode them). Whoever operates the server could in principle access the streams.
+- **Voice and screenshare.** The SFU transport is DTLS-SRTP. Microphone, camera,
+  screen video and screen-audio payloads are encrypted in the browser with
+  keys derived from an MLS group, so an honest SFU, and anyone who only sees
+  or stores the forwarded RTP, cannot read them. A browser that cannot seal a
+  track does not send it. This is not protection against an active or
+  compromised server: the server serves the web app's code, relays the MLS
+  handshakes, asserts who is in the room and stamps each sender, and
+  credentials are self-asserted user ids. Such a server can add a member,
+  impersonate the committer, or swap a present member's leaf for its own
+  (the member is told its media keys changed) and obtain the keys. It can also
+  force a group restart (rate-limited with backoff) or stop the call by
+  dropping messages. There is no safety number or
+  epoch authenticator to compare yet, senders are authenticated only as group
+  members, frames carry no replay counter within an epoch, and the previous
+  epoch's key is kept until the next rotation. Video stays decodable by the
+  browser's packetizer, so the codec headers it parses (H.264 parameter sets
+  and slice headers, the VP8 payload header) are readable but authenticated;
+  only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
+  when, frame sizes, timing) is visible to the server. Text messages and
+  attachments stay readable by the server. The desktop client does not join
+  the sealed media path.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
