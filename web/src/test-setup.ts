@@ -13,6 +13,7 @@ installMediaCall({
   stop() {},
   onKey() {},
   onWire() {},
+  onNotice() {},
   protectSender: () => true,
   prepareIncoming: () => true,
   protectIncoming: () => true,

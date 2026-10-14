@@ -62,22 +62,37 @@ async function protect(frame: EncodedFrame, direction: 'send' | 'recv', channelI
     const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => sealFrame({ key, epoch, channelId, senderId, plaintext, clear }))
     return sealed ? packet(sealed) : null
   }
-  const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear, onUnknownEpoch: reportUnknownEpoch }))
+  let unknown = -1
+  const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
+    keys, channelId, senderId, packet: sealed, clear, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
+  }))
+  count(senderId, opened !== null, unknown)
   return opened ? packet(opened) : null
 }
 
-// A frame of an epoch newer than every key held means a commit did not arrive.
-// The call decides what to do about it; this only says so, at most once a second.
-const MISS_REPORT_MS = 1000
-let lastMissReport = -Infinity
+// What the call needs to judge whether it fell behind: per publisher, how many
+// frames opened and how many came from an epoch newer than any key held. A
+// frame names its own epoch before it can be checked, so one frame proves
+// nothing; the call weighs this against the roster.
+interface SenderStats { opened: number, newer: number, epoch: number }
+const STATS_MS = 1000
+const stats = new Map<string, SenderStats>()
+let lastStats = -Infinity
 
-function reportUnknownEpoch(epoch: number) {
+function count(senderId: string, opened: boolean, unknownEpoch: number) {
   const newest = Math.max(-1, ...keys.keys())
-  if (epoch <= newest) return
+  const entry = stats.get(senderId) ?? { opened: 0, newer: 0, epoch: -1 }
+  if (opened) entry.opened++
+  else if (unknownEpoch > newest) {
+    entry.newer++
+    entry.epoch = Math.max(entry.epoch, unknownEpoch)
+  } else return
+  stats.set(senderId, entry)
   const now = Date.now()
-  if (now - lastMissReport < MISS_REPORT_MS) return
-  lastMissReport = now
-  self.postMessage({ type: 'epoch-miss', epoch })
+  if (now - lastStats < STATS_MS) return
+  lastStats = now
+  self.postMessage({ type: 'stats', senders: Object.fromEntries(stats) })
+  stats.clear()
 }
 
 function directionOf(value: unknown): 'send' | 'recv' | null {

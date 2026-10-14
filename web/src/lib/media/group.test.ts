@@ -1,5 +1,5 @@
 import { webcrypto } from 'node:crypto'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import * as mls from 'ts-mls'
 import type { Credential } from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
@@ -11,6 +11,7 @@ const previous = globalThis.crypto
 const aliceId = fixtureId(1)
 const bobId = fixtureId(2)
 const carolId = fixtureId(3)
+const daveId = fixtureId(4)
 const channelId = fixtureId(9)
 
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
@@ -22,7 +23,9 @@ async function opened(userId: string) {
   return group
 }
 
-async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[]) {
+// With a roster, a receiver also syncs to it after each wire: the call does the
+// same, since the roster arrives before the handshake that depends on it.
+async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster?: string[]) {
   const pending = wires.map(wire => ({ from, wire }))
   const seen = new Set<string>()
   while (pending.length) {
@@ -35,6 +38,7 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
       if (id === item.from) continue
       const step = await group.receive(item.from, item.wire)
       for (const wire of step.wires) pending.push({ from: id, wire })
+      if (roster?.includes(id)) for (const wire of (await group.sync(roster)).wires) pending.push({ from: id, wire })
     }
   }
 }
@@ -69,7 +73,7 @@ describe('media group', () => {
     expect(decoded?.[0].wireformat).toBe('mls_key_package')
     await alice.receive(carolId, offer.wires[0] ?? new Uint8Array())
     expect((await alice.sync([aliceId, bobId])).epoch).toBe(0)
-    await deliver(groups, bobId, offer.wires)
+    await deliver(groups, bobId, offer.wires, [aliceId, bobId])
     const aliceJoined = await alice.sync([aliceId, bobId])
     const bobJoined = await bob.sync([aliceId, bobId])
     expect(aliceJoined.epoch).toBe(1)
@@ -100,7 +104,7 @@ describe('media group', () => {
     const dropped = await bob.sync([aliceId, bobId])
     expect(dropped.key).toBeNull()
     expect(dropped.wires.length).toBeGreaterThan(0)
-    await deliver(groups, bobId, dropped.wires)
+    await deliver(groups, bobId, dropped.wires, [aliceId, bobId])
     const sealed = await alice.sync([aliceId, bobId])
     const joined = await bob.sync([aliceId, bobId])
     expect(sealed.epoch).toBe(1)
@@ -120,7 +124,7 @@ describe('media group', () => {
     const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
     const room = new Map([[bobId, bob], [carolId, carol]])
     expect((await bob.sync([bobId])).epoch).toBe(0)
-    await deliver(room, carolId, (await carol.sync([bobId, carolId])).wires)
+    await deliver(room, carolId, (await carol.sync([bobId, carolId])).wires, [bobId, carolId])
     expect((await bob.sync([bobId, carolId])).epoch).toBe(1)
     expect((await carol.sync([bobId, carolId])).epoch).toBe(1)
     const founded = await alice.sync([aliceId, bobId, carolId])
@@ -128,11 +132,11 @@ describe('media group', () => {
     // The new group announces itself, so the old members rejoin it at once.
     expect(founded.wires).toHaveLength(1)
     expect(mls.decodeMlsMessage(wireAt(founded.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
-    await deliver(groups, aliceId, founded.wires)
+    await deliver(groups, aliceId, founded.wires, [aliceId, bobId, carolId])
     const bobDropped = await bob.sync([aliceId, bobId, carolId])
     const carolDropped = await carol.sync([aliceId, bobId, carolId])
-    await deliver(groups, bobId, bobDropped.wires)
-    await deliver(groups, carolId, carolDropped.wires)
+    await deliver(groups, bobId, bobDropped.wires, [aliceId, bobId, carolId])
+    await deliver(groups, carolId, carolDropped.wires, [aliceId, bobId, carolId])
     const shared = await alice.sync([aliceId, bobId, carolId])
     const bobShared = await bob.sync([aliceId, bobId, carolId])
     const carolShared = await carol.sync([aliceId, bobId, carolId])
@@ -191,6 +195,7 @@ describe('media group', () => {
     await alice.sync([aliceId])
     const offer = await bob.sync([aliceId, bobId, carolId])
     const keyPackage = wireAt(offer.wires, 0)
+    await alice.sync([aliceId, bobId, carolId])
     const added = await alice.receive(bobId, keyPackage)
     expect(added.epoch).toBe(1)
     expect((await bob.sync([aliceId, bobId, carolId])).wires).toEqual([])
@@ -220,6 +225,7 @@ describe('media group', () => {
     const offer = await carol.sync([aliceId, bobId, carolId])
     const keyPackage = wireAt(offer.wires, 0)
     expect((await bob.receive(carolId, keyPackage)).wires).toEqual([])
+    await alice.sync([aliceId, bobId, carolId])
     const added = await alice.receive(carolId, keyPackage)
     expect((await bob.receive(aliceId, wireAt(added.wires, 1))).epoch).toBe(added.epoch)
     expect((await bob.receive(carolId, keyPackage)).wires).toEqual([])
@@ -227,21 +233,6 @@ describe('media group', () => {
     await alice.close()
     await bob.close()
     await carol.close()
-  }, 30_000)
-
-  it('drops its own group when a lower member sends a key package', async () => {
-    const alice = await opened(aliceId)
-    const bob = await opened(bobId)
-    expect((await bob.sync([bobId])).epoch).toBe(0)
-    const lower = '00000000-0000-4000-8000-000000000000'
-    const offer = await alice.sync([lower, aliceId])
-    const dropped = await bob.receive(aliceId, wireAt(offer.wires, 0))
-    expect(dropped.key).toBeNull()
-    const next = await bob.sync([aliceId, bobId])
-    expect(next.key).toBeNull()
-    expect(next.wires.length).toBeGreaterThan(0)
-    await alice.close()
-    await bob.close()
   }, 30_000)
 
   it('removes a committer who left and ignores a pending member who is gone', async () => {
@@ -276,6 +267,7 @@ describe('media group', () => {
     if (!otherChannel) throw new Error('expected a group id')
     expect((await bob.receive(aliceId, await welcomeFrom(aliceId, new Uint8Array([9, 9, 9, 9]), keyPackage))).key).toBeNull()
     expect((await bob.receive(aliceId, await welcomeFrom(aliceId, otherChannel, keyPackage))).key).toBeNull()
+    await alice.sync([aliceId, bobId])
     const committed = await alice.receive(bobId, keyPackage)
     const welcome = wireAt(committed.wires, 0)
     const joined = await bob.receive(aliceId, welcome)
@@ -325,7 +317,7 @@ async function joinedPair() {
   const groups = new Map([[aliceId, alice], [bobId, bob]])
   await alice.sync([aliceId])
   const offer = await bob.sync([aliceId, bobId])
-  await deliver(groups, bobId, offer.wires)
+  await deliver(groups, bobId, offer.wires, [aliceId, bobId])
   const aliceStep = await alice.sync([aliceId, bobId])
   const bobStep = await bob.sync([aliceId, bobId])
   if (aliceStep.epoch !== 1 || bobStep.epoch !== 1) throw new Error('expected the pair to share epoch 1')
@@ -436,19 +428,27 @@ describe('a member who starts over inside the grace period', () => {
     const firstOffer = wireAt((await first.sync(roster)).wires, 0)
     await groups.get(bobId)?.close()
     groups.set(bobId, first)
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
     const swapped = await alice.receive(bobId, firstOffer)
     expect(swapped.wires).toHaveLength(2)
     expect((await alice.receive(bobId, firstOffer)).wires).toEqual([])
     await deliver(groups, aliceId, swapped.wires)
     const second = await opened(bobId)
-    const secondOffer = wireAt((await second.sync(roster)).wires, 0)
+    // Another swap of the same member so soon is held back.
+    const tooSoon = await alice.receive(bobId, wireAt((await second.sync(roster)).wires, 0))
+    expect(tooSoon.wires).toEqual([])
+    vi.setSystemTime(Date.now() + 4000)
+    await second.close()
+    const third = await opened(bobId)
+    const secondOffer = wireAt((await third.sync(roster)).wires, 0)
     const again = await alice.receive(bobId, secondOffer)
     expect(again.wires).toHaveLength(2)
     expect((await alice.receive(bobId, firstOffer)).wires).toEqual([])
     expect(again.epoch).toBe((swapped.epoch ?? 0) + 1)
+    vi.useRealTimers()
     await alice.close()
     await first.close()
-    await second.close()
+    await third.close()
   }, 60_000)
 
   it('does not swap a leaf when this client is not the committer', async () => {
@@ -495,11 +495,11 @@ describe('a member who takes over as committer', () => {
     const bobOffer = await bob.sync(roster)
     await alice.sync(roster)
     const second = await alice.receive(bobId, wireAt(bobOffer.wires, 0))
-    const dropped = await carol.receive(bobId, wireAt(bobOffer.wires, 0))
+    await carol.receive(bobId, wireAt(bobOffer.wires, 0))
+    const dropped = await carol.sync(roster)
     expect(dropped.key).toBeNull()
     for (const wire of second.wires) await bob.receive(aliceId, wire)
-    const again = await carol.sync(roster)
-    const third = await alice.receive(carolId, wireAt(again.wires.length ? again.wires : dropped.wires, 0))
+    const third = await alice.receive(carolId, wireAt(dropped.wires, 0))
     for (const wire of third.wires) {
       await bob.receive(aliceId, wire)
       await carol.receive(aliceId, wire)
@@ -545,18 +545,20 @@ describe('a member who missed a commit', () => {
     const carol = await opened(carolId)
     const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
     await alice.sync([aliceId])
-    await deliver(groups, bobId, (await bob.sync([aliceId, bobId])).wires)
+    await deliver(groups, bobId, (await bob.sync([aliceId, bobId])).wires, [aliceId, bobId])
     await alice.sync([aliceId, bobId])
     await bob.sync([aliceId, bobId])
     // Carol joins; Bob's socket was down, so he misses the commit.
     const offer = await carol.sync(roster)
+    await alice.sync(roster)
     const added = await alice.receive(carolId, wireAt(offer.wires, 0))
     await carol.receive(aliceId, wireAt(added.wires, 0))
     await carol.receive(aliceId, wireAt(added.wires, 1))
     // Dave leaves: the next commit is for an epoch Bob has not reached.
     const rotated = await alice.sync([aliceId, bobId])
-    expect(rotated.wires).toHaveLength(1)
-    const lost = await bob.receive(aliceId, wireAt(rotated.wires, 0))
+    // The founder's announcement, then the commit.
+    expect(rotated.wires).toHaveLength(2)
+    const lost = await bob.receive(aliceId, wireAt(rotated.wires, 1))
     expect(lost.key).toBeNull()
     expect(lost.wires).toHaveLength(1)
     expect(mls.decodeMlsMessage(wireAt(lost.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
@@ -575,6 +577,7 @@ describe('a member who missed a commit', () => {
     const { alice, bob } = await joinedPair()
     const carol = await opened(carolId)
     const offer = await carol.sync([aliceId, bobId, carolId])
+    await alice.sync([aliceId, bobId, carolId])
     const added = await alice.receive(carolId, wireAt(offer.wires, 0))
     const commit = wireAt(added.wires, 1)
     await bob.receive(aliceId, commit)
@@ -586,12 +589,90 @@ describe('a member who missed a commit', () => {
     const asked = await bob.recover([aliceId, bobId, carolId])
     expect(asked.key).toBeNull()
     expect(asked.wires).toHaveLength(1)
-    // Asking again is a new request with a new package.
+    // Asking again right away changes nothing; later it is a new request with a new package.
+    expect((await bob.recover([aliceId, bobId, carolId])).wires).toEqual([])
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    expect((await bob.recover([aliceId, bobId, carolId])).wires).toEqual([])
+    vi.setSystemTime(Date.now() + 11_000)
     const again = await bob.recover([aliceId, bobId, carolId])
     expect(again.wires).toHaveLength(1)
     expect(wireAt(again.wires, 0)).not.toEqual(wireAt(asked.wires, 0))
+    vi.useRealTimers()
     await alice.close()
     await bob.close()
     await carol.close()
+  }, 60_000)
+})
+
+describe('what a flood or a forgery can reset', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  async function ahead() {
+    const { alice, bob } = await joinedPair()
+    const roster = [aliceId, bobId, carolId, daveId]
+    await alice.sync(roster)
+    const carol = await opened(carolId)
+    const dave = await opened(daveId)
+    await alice.receive(carolId, wireAt((await carol.sync(roster)).wires, 0))
+    // Bob misses the commit that adds Carol and sees only the one that adds Dave.
+    const second = await alice.receive(daveId, wireAt((await dave.sync(roster)).wires, 0))
+    return { alice, bob, carol, dave, roster, future: wireAt(second.wires, 1) }
+  }
+
+  it('ignores a commit for a later epoch from someone who is not in the group', async () => {
+    const { alice, bob, carol, dave, future } = await ahead()
+    const before = await bob.sync([aliceId, bobId])
+    const forged = await bob.receive(carolId, future)
+    expect(forged.wires).toEqual([])
+    expect(forged.epoch).toBe(before.epoch)
+    expect(forged.key).toBe(before.key)
+    const real = await bob.receive(aliceId, future)
+    expect(real.key).toBeNull()
+    expect(real.wires).toHaveLength(1)
+    for (const group of [alice, bob, carol, dave]) await group.close()
+  }, 60_000)
+
+  it('resets at most once per window and then waits longer', async () => {
+    const { alice, bob, roster, carol, dave } = await ahead()
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    const resets: number[] = []
+    for (let second = 0; second < 100; second++) {
+      if ((await bob.recover(roster)).wires.length) resets.push(second)
+      vi.setSystemTime(Date.now() + 1000)
+    }
+    expect(resets).toEqual([0, 10, 30, 70])
+    bob.opened()
+    expect((await bob.recover(roster)).wires).toHaveLength(1)
+    for (const group of [alice, bob, carol, dave]) await group.close()
+  }, 60_000)
+
+  it('tells a member who was removed while still here, and offers again only now and then', async () => {
+    const { alice, bob } = await joinedPair()
+    const notices: string[] = []
+    bob.onNotice(notice => notices.push(notice))
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+    const roster = [aliceId, bobId]
+    const removal = async () => {
+      const removed = await alice.sync([aliceId])
+      const commit = removed.wires.find(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat === 'mls_public_message')
+      const step = await bob.receive(aliceId, commit ?? new Uint8Array())
+      // Back in the room: Alice adds whoever offers.
+      await alice.sync(roster)
+      for (const wire of step.wires) for (const added of (await alice.receive(bobId, wire)).wires) await bob.receive(aliceId, added)
+      return step
+    }
+    expect((await removal()).wires).toHaveLength(1)
+    expect(notices).toEqual(['removed'])
+    expect((await bob.sync(roster)).epoch).not.toBeNull()
+    expect((await removal()).wires).toEqual([])
+    expect(notices).toEqual(['removed', 'removed'])
+    // The roster still says Bob is here, so he asks the ordinary way and is taken back.
+    await alice.sync(roster)
+    for (const wire of (await bob.sync(roster)).wires) for (const added of (await alice.receive(bobId, wire)).wires) await bob.receive(aliceId, added)
+    expect((await bob.sync(roster)).epoch).not.toBeNull()
+    vi.setSystemTime(Date.now() + 11_000)
+    expect((await removal()).wires).toHaveLength(1)
+    await alice.close()
+    await bob.close()
   }, 60_000)
 })

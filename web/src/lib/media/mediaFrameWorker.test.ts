@@ -6,6 +6,7 @@ const previous = globalThis.crypto
 
 interface WorkerScope {
   onrtctransform: ((event: { transformer?: unknown }) => void) | null
+  postMessage?: (data: unknown) => void
 }
 
 function asBuffer(data: ArrayBufferLike): ArrayBuffer {
@@ -17,7 +18,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
 
 async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264' }: { named?: boolean, type?: string, mime?: string } = {}) {
   vi.resetModules()
-  const scope: WorkerScope = { onrtctransform: null }
+  const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
   vi.stubGlobal('self', scope)
   vi.stubGlobal('crypto', webcrypto)
   await import('./mediaFrameWorker')
@@ -154,12 +155,12 @@ describe('media frame worker', () => {
     expect(new Uint8Array((opened[0] as { data: ArrayBuffer }).data)).toEqual(frame)
   })
 
-  it('tells the call about frames from a newer epoch than any key, at most once a second', async () => {
+  it('counts, per publisher, frames it opened and frames from an epoch newer than any key', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     const key = await importEpochKey(new Uint8Array(16).fill(5))
     if (!key) throw new Error('expected an epoch key')
-    const sealedAt = async (epoch: number) => {
-      const packet = await sealFrame({ key, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    const sealedAt = async (epoch: number, senderId = 'alice') => {
+      const packet = await sealFrame({ key, epoch, channelId: 'channel', senderId, plaintext: new Uint8Array([4]) })
       if (!packet) throw new Error('expected a sealed frame')
       return packet.buffer
     }
@@ -177,15 +178,18 @@ describe('media frame worker', () => {
     const finished = new Promise<void>((resolve) => { done = resolve })
     scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ close() { done() } }), options: { port, direction: 'recv', channelId: 'channel', senderId: 'alice' } } })
     port.onmessage?.({ data: { type: 'key', epoch: 2, key } })
+    // An old epoch counts for nothing; a newer one and an opened one count, once a second.
     enqueue({ data: asBuffer(await sealedAt(1)) })
     enqueue({ data: asBuffer(await sealedAt(3)) })
-    await vi.waitFor(() => expect(posted).toEqual([{ type: 'epoch-miss', epoch: 3 }]))
-    enqueue({ data: asBuffer(await sealedAt(4)) })
+    await vi.waitFor(() => expect(posted).toEqual([{ type: 'stats', senders: { alice: { opened: 0, newer: 1, epoch: 3 } } }]))
+    enqueue({ data: asBuffer(await sealedAt(2)) })
+    enqueue({ data: asBuffer(await sealedAt(5)) })
     await new Promise(resolve => setTimeout(resolve, 10))
     expect(posted).toHaveLength(1)
     vi.setSystemTime(Date.now() + 1500)
-    enqueue({ data: asBuffer(await sealedAt(5)) })
+    enqueue({ data: asBuffer(await sealedAt(2)) })
     await vi.waitFor(() => expect(posted).toHaveLength(2))
+    expect(posted[1]).toEqual({ type: 'stats', senders: { alice: { opened: 2, newer: 1, epoch: 5 } } })
     close()
     await finished
     vi.useRealTimers()

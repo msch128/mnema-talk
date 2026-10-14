@@ -27,7 +27,16 @@ import {
   type Proposal,
 } from 'ts-mls'
 import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGroupId, mediaUserId } from './bounds'
+import type { MediaNotice } from './api'
+import { Backoff } from './backoff'
 import { importEpochKey } from './frame'
+
+// A member's leaf is swapped at most once per this long, doubling while it keeps happening.
+const SWAP_BASE_MS = 3000
+// A group is thrown away (a missed commit, a restarted committer, a removal)
+// at most once per this long, doubling while it keeps happening.
+const RESET_BASE_MS = 10_000
+const BACKOFF_MAX_MS = 60_000
 
 export interface MediaStep {
   wires: Uint8Array[]
@@ -134,6 +143,9 @@ export class MediaGroup {
   /** Key-package wires seen from each member, newest last, to ignore a repeat or an old one. */
   private readonly accepted = new Map<string, Uint8Array[]>()
   private closed = false
+  private readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
+  private readonly resets = new Backoff(RESET_BASE_MS, BACKOFF_MAX_MS)
+  private notice: (notice: MediaNotice) => void = () => {}
   private tail: Promise<void> = Promise.resolve()
 
   private constructor(
@@ -152,6 +164,16 @@ export class MediaGroup {
     const credential: Credential = { credentialType: 'basic', identity: new TextEncoder().encode(id) }
     const own = await generateKeyPackage(credential, defaultCapabilities(), defaultLifetime, [], cs)
     return new MediaGroup(id, groupId, own, cs, credential)
+  }
+
+  /** Called when keys changed in a way the member did not ask for. */
+  onNotice(listener: (notice: MediaNotice) => void) {
+    this.notice = listener
+  }
+
+  /** Frames of the current epoch open again: the wait before the next reset starts over. */
+  opened() {
+    this.resets.reset()
   }
 
   sync(roster: readonly string[], resend = false): Promise<MediaStep> {
@@ -254,7 +276,7 @@ export class MediaGroup {
   }
 
   private async recoverNow(): Promise<MediaStep> {
-    if (!this.room.some(id => id < this.userId)) return this.step()
+    if (!this.room.some(id => id < this.userId) || !this.resets.allow('self')) return this.step()
     await this.leave()
     return { wires: this.offer(this.room), epoch: null, key: null }
   }
@@ -329,20 +351,24 @@ export class MediaGroup {
       // its group is the one that counts now, so I join it again. Any other
       // member coming back is swapped in by the committer.
       const restarted = members?.has(from) === true && !same && from === this.committer(this.room)
-      if (members && from < this.userId && (!members.has(from) || restarted)) {
+      // Only for someone the roster says is in the room, and not in a loop.
+      if (members && from < this.userId && this.room.includes(from) && restarted && this.resets.allow('self')) {
         await this.leave()
         wires.push(...this.offer(this.room))
       } else if (members?.has(from)) {
         // The same package again is a duplicate. Another one is the member
         // coming back: swap the old leaf for the new one in a single commit.
-        if (same || !this.canCommit(this.room) || this.seen(from, wire)) return this.step()
+        // Only a member the roster says is still here, and not again and again.
+        if (same || !this.room.includes(from) || !this.canCommit(this.room) || this.seen(from, wire)) return this.step()
+        if (!this.swaps.allow(from)) return this.step()
         this.remember(from, wire)
         wires.push(...await this.replaceMember(from, message.keyPackage))
         return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
       }
       this.remember(from, wire)
       this.pending.set(from, message.keyPackage)
-      if (this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
+      // A package from someone the roster does not list waits until it does.
+      if (this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
       return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
     }
     if (members && from < this.userId && !members.has(from)) this.discard()
@@ -364,18 +390,24 @@ export class MediaGroup {
       const framed = message.publicMessage.content
       // A commit for an epoch I have not reached means I missed one: nothing
       // that follows can be processed, so start over instead of waiting.
+      // It counts only from a member of this group, for this group, and ahead.
       if (framed.contentType === 'commit' && framed.sender.senderType === 'member'
-        && sameBytes(framed.groupId, this.groupId) && framed.epoch > previous.groupContext.epoch) {
+        && sameBytes(framed.groupId, this.groupId) && framed.epoch > previous.groupContext.epoch
+        && members?.has(from) && [...(members?.values() ?? [])].includes(framed.sender.leafIndex)) {
         return this.recoverNow()
       }
       try {
         const processed = await processPublicMessage(previous, message.publicMessage, emptyPskIndex, this.cs, acceptAll)
         wipeConsumed(processed.consumed)
-        // A commit that removes us is the signal to take the welcome that follows.
+        // A commit that removes a member who is still here was not asked for:
+        // say so, and offer again, but not in a loop.
         if (!treeMembers(processed.newState).has(this.userId)) {
           this.wipeRejected(processed.newState)
           this.discard()
-          return this.step()
+          this.notice('removed')
+          if (!this.resets.allow('self')) return this.step()
+          await this.rekey()
+          return { wires: this.offer(this.room), epoch: null, key: null }
         }
         await this.adopt(processed.newState)
       } catch {

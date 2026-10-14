@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES } from './bounds'
-import type { MediaGuard } from './guard'
+import type { FrameStats, MediaGuard } from './guard'
 import { browserMediaCall, mediaSettled } from './browserCall'
 import { MediaGroup } from './group'
 import { openFrame, sealFrame } from './frame'
@@ -11,19 +11,20 @@ import type { MediaCall } from './api'
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
 const bobId = fixtureId(2)
+const carolId = fixtureId(3)
 const channelId = fixtureId(9)
 
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: CryptoKey, replace: boolean }[], sends: string[], receives: string[], miss(epoch: number): void } {
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: CryptoKey, replace: boolean }[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
   const keys: { epoch: number, key: CryptoKey, replace: boolean }[] = []
   const sends: string[] = []
   const receives: string[] = []
-  let missListener: (epoch: number) => void = () => {}
+  let statsListener: (senders: Record<string, FrameStats>) => void = () => {}
   return {
-    miss: epoch => missListener(epoch),
-    onEpochMiss(listener) { missListener = listener },
+    stats: senders => statsListener(senders),
+    onStats(listener) { statsListener = listener },
     keys,
     sends,
     receives,
@@ -252,88 +253,134 @@ describe('browser media call', () => {
     expect(call.protectSender(sender)).toBe(false)
   }, 30_000)
 
-  describe('frames of an epoch that never arrives', () => {
+  describe('frames of an epoch the call has no key for', () => {
     afterEach(() => { vi.useRealTimers() })
+    const newer = (epoch: number): FrameStats => ({ opened: 0, newer: 5, epoch })
+    const opens: FrameStats = { opened: 5, newer: 0, epoch: -1 }
+    const lowId = '00000000-0000-4000-8000-000000000001'
 
-    async function waitingJoiner() {
+    async function waitingJoiner(roster: string[]) {
       const guard = recordingGuard()
       const bob = browserMediaCall(guard)
       const wires: string[] = []
       bob.onWire((_channel, wire) => { wires.push(wire) })
       bob.start(channelId, bobId)
-      bob.roster([aliceId, bobId])
+      bob.roster(roster)
       await mediaSettled(bob)
       expect(wires).toHaveLength(1)
-      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
       return { guard, bob, wires }
     }
 
-    it('asks again with a fresh key package once the epoch stays missing', async () => {
-      const { guard, bob, wires } = await waitingJoiner()
-      guard.miss(3)
-      guard.miss(2)
-      await vi.advanceTimersByTimeAsync(3999)
+    async function later(bob: MediaCall, ms: number) {
+      vi.setSystemTime(Date.now() + ms)
+      await mediaSettled(bob)
+    }
+
+    it('does nothing for one publisher with a made-up epoch while another opens', async () => {
+      const { guard, bob, wires } = await waitingJoiner([aliceId, bobId, carolId])
+      for (let second = 0; second < 12; second++) {
+        guard.stats({ [carolId]: newer(9), [aliceId]: opens })
+        await later(bob, 1000)
+      }
       expect(wires).toHaveLength(1)
-      await vi.advanceTimersByTimeAsync(2)
+      bob.stop()
+    }, 30_000)
+
+    it('does nothing for a single publisher that is not the committer', async () => {
+      const { guard, bob, wires } = await waitingJoiner([aliceId, bobId, carolId])
+      for (let second = 0; second < 12; second++) {
+        guard.stats({ [carolId]: newer(9) })
+        await later(bob, 1000)
+      }
+      expect(wires).toHaveLength(1)
+      bob.stop()
+    }, 30_000)
+
+    it('starts over after five seconds when every publisher is on a newer epoch', async () => {
+      const { guard, bob, wires } = await waitingJoiner([aliceId, bobId, carolId])
+      for (let second = 0; second < 5; second++) {
+        guard.stats({ [carolId]: newer(9), [aliceId]: newer(9) })
+        await later(bob, 1000)
+      }
+      expect(wires).toHaveLength(1)
+      guard.stats({ [carolId]: newer(9), [aliceId]: newer(9) })
+      await later(bob, 1000)
       await vi.waitFor(() => expect(wires).toHaveLength(2))
       expect(wires[1]).not.toBe(wires[0])
-      // Not again right away.
-      guard.miss(3)
-      await vi.advanceTimersByTimeAsync(5000)
-      await mediaSettled(bob)
-      expect(wires).toHaveLength(2)
-      await vi.advanceTimersByTimeAsync(2000)
-      guard.miss(3)
-      await vi.advanceTimersByTimeAsync(11_000)
-      await vi.waitFor(() => expect(wires).toHaveLength(3))
       bob.stop()
     }, 30_000)
 
-    it('does not start over when the key arrives while it waits', async () => {
-      const guard = recordingGuard()
-      const alice = browserMediaCall(guard)
-      const bob = browserMediaCall(recordingGuard())
-      alice.onWire((_channel, wire) => { bob.receive(aliceId, wire) })
-      bob.onWire((_channel, wire) => { alice.receive(bobId, wire) })
-      alice.start(channelId, aliceId)
-      alice.roster([aliceId])
-      await mediaSettled(alice)
-      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
-      const recover = vi.spyOn(MediaGroup.prototype, 'recover')
-      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
-      guard.miss(1)
-      bob.start(channelId, bobId)
-      alice.roster([aliceId, bobId])
-      bob.roster([aliceId, bobId])
-      for (let turn = 0; turn < 8; turn++) {
-        await mediaSettled(alice)
-        await mediaSettled(bob)
+    it('believes the committer alone', async () => {
+      const { guard, bob, wires } = await waitingJoiner([lowId, bobId])
+      for (let second = 0; second < 6; second++) {
+        guard.stats({ [lowId]: newer(4) })
+        await later(bob, 1000)
       }
-      expect(guard.keys.at(-1)?.epoch).toBe(1)
-      await vi.advanceTimersByTimeAsync(5000)
-      expect(recover).not.toHaveBeenCalled()
-      recover.mockRestore()
-      alice.stop()
+      await vi.waitFor(() => expect(wires).toHaveLength(2))
       bob.stop()
     }, 30_000)
 
-    it('does nothing for an epoch it already has, after stop, or when the key shows up', async () => {
-      const { guard, bob, wires } = await waitingJoiner()
-      guard.miss(3)
+    it('backs off when it keeps happening and starts over once frames open again', async () => {
+      const { guard, bob, wires } = await waitingJoiner([lowId, bobId])
+      const at: number[] = []
+      let seconds = 0
+      const run = async (count: number, stats: Record<string, FrameStats>) => {
+        for (let i = 0; i < count; i++) {
+          const before = wires.length
+          guard.stats(stats)
+          await later(bob, 1000)
+          seconds++
+          if (wires.length > before) at.push(seconds)
+        }
+      }
+      await run(90, { [lowId]: newer(4) })
+      // Five seconds of evidence, then ten, twenty and forty seconds apart.
+      expect(at).toHaveLength(4)
+      expect(at[0]).toBeLessThanOrEqual(6)
+      expect([at[1]! - at[0]!, at[2]! - at[1]!, at[3]! - at[2]!]).toEqual([10, 20, 40])
+      // Frames open again: the wait is the first one again.
+      guard.stats({ [lowId]: opens })
+      await later(bob, 1000)
+      const count = wires.length
+      await run(7, { [lowId]: newer(7) })
+      expect(wires.length).toBe(count + 1)
       bob.stop()
-      await vi.advanceTimersByTimeAsync(5000)
-      expect(wires).toHaveLength(1)
+    }, 60_000)
+
+    it('does nothing after the call ended or for an epoch it already holds', async () => {
+      const guard = recordingGuard()
       const alice = browserMediaCall(guard)
       alice.start(channelId, aliceId)
       alice.roster([aliceId])
       await mediaSettled(alice)
       expect(guard.keys.map(item => item.epoch)).toEqual([0])
-      guard.miss(0)
-      await vi.advanceTimersByTimeAsync(5000)
-      guard.miss(5)
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      const recover = vi.spyOn(MediaGroup.prototype, 'recover')
+      for (let second = 0; second < 8; second++) {
+        guard.stats({ [bobId]: newer(0), [carolId]: newer(0) })
+        vi.setSystemTime(Date.now() + 1000)
+      }
+      expect(recover).not.toHaveBeenCalled()
       alice.stop()
-      await vi.advanceTimersByTimeAsync(5000)
-      await mediaSettled(alice)
+      guard.stats({ [bobId]: newer(5), [carolId]: newer(5) })
+      expect(recover).not.toHaveBeenCalled()
+      recover.mockRestore()
     }, 30_000)
   })
+
+  it('passes on what the group says about this member', async () => {
+    let listener: ((notice: 'removed') => void) | null = null
+    const spy = vi.spyOn(MediaGroup.prototype, 'onNotice').mockImplementation((next) => { listener = next })
+    const call = browserMediaCall(recordingGuard())
+    const seen: string[] = []
+    call.onNotice(notice => seen.push(notice))
+    call.start(channelId, bobId)
+    await mediaSettled(call)
+    ;(listener as ((notice: 'removed') => void) | null)?.('removed')
+    expect(seen).toEqual(['removed'])
+    spy.mockRestore()
+    call.stop()
+    await mediaSettled(call)
+  }, 30_000)
 })

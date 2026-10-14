@@ -54,6 +54,7 @@ function publisherId(streamId: string | undefined): string | null {
 }
 
 let mediaUnprotectedAnnounced = false
+let mediaRekeyAnnounced = false
 // The hub relays a handshake only to members of the voice room, and drops one
 // that arrives before voice_join. The call starts while the microphone is still
 // opening, so its first wires wait here until voice_join is sent.
@@ -80,6 +81,14 @@ function queueMediaWire(channelId: string, wire: string) {
   else heldMediaWires.push({ channelId, wire })
 }
 let releaseUnprotectedCapture: () => void = () => {}
+
+// The group dropped this member without being asked: whoever relays the call
+// can do that, so say so once per call.
+function announceMediaRekeyed() {
+  if (mediaRekeyAnnounced) return
+  mediaRekeyAnnounced = true
+  useToastStore().info(t('voice.mediaRekeyed'))
+}
 
 function announceMediaUnprotected() {
   if (mediaUnprotectedAnnounced) return
@@ -1384,6 +1393,7 @@ export function useWebRTC() {
       return
     }
     mediaUnprotectedAnnounced = false
+    mediaRekeyAnnounced = false
     closeMediaRoom()
 
     // Stop standalone mic test before joining voice
@@ -2159,6 +2169,7 @@ export function useWebRTC() {
       call.onWire((channelId, wire) => {
         queueMediaWire(channelId, wire)
       })
+      call.onNotice(announceMediaRekeyed)
       watch(() => {
         const channelId = voiceStore.currentChannelId
         if (!channelId) return ''

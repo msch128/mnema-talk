@@ -116,16 +116,16 @@ describe('media transform guard', () => {
     expect(created.transforms).toHaveLength(2)
   })
 
-  it('passes on a report of frames from an epoch the worker has no key for', () => {
+  it('passes on what the worker counted, ignoring anything malformed', () => {
     installBrowser()
     const guard = createMediaGuard()
-    const seen: number[] = []
-    guard.onEpochMiss(epoch => seen.push(epoch))
+    const seen: unknown[] = []
+    guard.onStats(senders => seen.push(senders))
     expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob')).toBe(true)
     const worker = created.workers[0] as unknown as { onmessage: (event: { data: unknown }) => void }
-    worker.onmessage({ data: { type: 'epoch-miss', epoch: 6 } })
-    for (const data of [null, 'epoch-miss', { type: 'other', epoch: 1 }, { type: 'epoch-miss', epoch: -1 }, { type: 'epoch-miss', epoch: 1.5 }, { type: 'epoch-miss', epoch: '3' }]) worker.onmessage({ data })
-    expect(seen).toEqual([6])
+    worker.onmessage({ data: { type: 'stats', senders: { bob: { opened: 3, newer: 1, epoch: 6 }, eve: { opened: -1, newer: 0, epoch: 1 }, mallory: { opened: 1 }, odd: 7 } } })
+    for (const data of [null, 'stats', { type: 'other' }, { type: 'stats' }, { type: 'stats', senders: 3 }]) worker.onmessage({ data })
+    expect(seen).toEqual([{ bob: { opened: 3, newer: 1, epoch: 6 } }])
     guard.reset()
   })
 })

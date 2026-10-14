@@ -236,6 +236,7 @@ const permissiveMediaCall: MediaCall = {
   stop() {},
   onKey() {},
   onWire() {},
+  onNotice() {},
   protectSender: () => true,
   prepareIncoming: () => true,
   protectIncoming: () => true,
@@ -244,6 +245,7 @@ const permissiveMediaCall: MediaCall = {
 function installRecordingCall(allow = true) {
   let onKeyListener: (() => void) | null = null
   let onWireListener: ((channelId: string, wire: string) => void) | null = null
+  let onNoticeListener: ((notice: 'removed') => void) | null = null
   const call = {
     start: vi.fn(),
     roster: vi.fn(),
@@ -252,11 +254,13 @@ function installRecordingCall(allow = true) {
     stop: vi.fn(),
     onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
+    onNotice: vi.fn((listener: (notice: 'removed') => void) => { onNoticeListener = listener }),
     protectSender: vi.fn(() => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn(() => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
+    fireNotice() { onNoticeListener?.('removed') },
   }
   installMediaCall(call)
   return call
@@ -3383,6 +3387,23 @@ describe('protected media', () => {
     call.fireKey()
     expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
     expect(useToastStore().toasts).toEqual([])
+  })
+
+  it('tells the member once per call that the group removed them', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    call.fireNotice()
+    call.fireNotice()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRekeyed')])
+    rtc.leaveVoiceChannel()
+    const again = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await again
+    call.fireNotice()
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRekeyed'), t('voice.mediaRekeyed')])
   })
 
   it('arms every receiver before it answers the offer', async () => {

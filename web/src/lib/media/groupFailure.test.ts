@@ -101,6 +101,7 @@ describe('media group failures', () => {
     const offer = await bob.sync([aliceId, bobId])
     expect(offer.wires.length).toBeGreaterThan(0)
 
+    await alice.sync([aliceId, bobId])
     faults.createCommit = true
     expect((await alice.receive(bobId, wireAt(offer.wires, 0))).wires).toEqual([])
     faults.createCommit = false

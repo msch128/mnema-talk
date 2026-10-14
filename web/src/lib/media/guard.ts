@@ -1,3 +1,5 @@
+export interface FrameStats { opened: number, newer: number, epoch: number }
+
 interface KeyedPort {
   postMessage(data: unknown): void
   close(): void
@@ -12,13 +14,30 @@ export interface MediaGuard {
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
   setKey(epoch: number, key: CryptoKey, replace?: boolean): void
   clearKeys(): void
-  /** The worker saw frames of an epoch newer than any key it holds. */
-  onEpochMiss(listener: (epoch: number) => void): void
+  /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
+  onStats(listener: (senders: Record<string, FrameStats>) => void): void
   reset(): void
 }
 
 interface TransformTarget {
   transform: RTCRtpScriptTransform | null
+}
+
+function count(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0
+}
+
+function readStats(data: unknown): Record<string, FrameStats> | null {
+  if (!data || typeof data !== 'object' || !('type' in data) || data.type !== 'stats' || !('senders' in data)) return null
+  const raw = data.senders
+  if (!raw || typeof raw !== 'object') return null
+  const out: Record<string, FrameStats> = {}
+  for (const [id, entry] of Object.entries(raw)) {
+    if (!entry || typeof entry !== 'object' || !('opened' in entry) || !('newer' in entry) || !('epoch' in entry)) continue
+    const { opened, newer, epoch } = entry
+    if (count(opened) && count(newer) && typeof epoch === 'number' && Number.isInteger(epoch)) out[id] = { opened, newer, epoch }
+  }
+  return out
 }
 
 function canArm(): boolean {
@@ -31,16 +50,15 @@ export function createMediaGuard(): MediaGuard {
   const ports: KeyedPort[] = []
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
   let current: { epoch: number, key: CryptoKey } | null = null
-  let missListener: ((epoch: number) => void) | null = null
+  let statsListener: ((senders: Record<string, FrameStats>) => void) | null = null
 
   function sharedWorker(): Worker | null {
     if (!canArm()) return null
     if (!worker) {
       worker = new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
       worker.onmessage = (event: MessageEvent<unknown>) => {
-        const data = event.data
-        if (data && typeof data === 'object' && 'type' in data && data.type === 'epoch-miss' && 'epoch' in data
-          && typeof data.epoch === 'number' && Number.isInteger(data.epoch) && data.epoch >= 0) missListener?.(data.epoch)
+        const senders = readStats(event.data)
+        if (senders) statsListener?.(senders)
       }
     }
     return worker
@@ -86,7 +104,7 @@ export function createMediaGuard(): MediaGuard {
         : { type: 'key', epoch, key }
       for (const port of ports) port.postMessage(message)
     },
-    onEpochMiss(listener) { missListener = listener },
+    onStats(listener) { statsListener = listener },
     clearKeys() {
       current = null
       for (const port of ports) port.postMessage({ type: 'drop' })
