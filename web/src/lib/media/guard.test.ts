@@ -115,4 +115,17 @@ describe('media transform guard', () => {
     expect(guard.armReceiver(receiver, 'channel', 'bob')).toBe(true)
     expect(created.transforms).toHaveLength(2)
   })
+
+  it('passes on a report of frames from an epoch the worker has no key for', () => {
+    installBrowser()
+    const guard = createMediaGuard()
+    const seen: number[] = []
+    guard.onEpochMiss(epoch => seen.push(epoch))
+    expect(guard.armReceiver({ transform: null } as RTCRtpReceiver, 'channel', 'bob')).toBe(true)
+    const worker = created.workers[0] as unknown as { onmessage: (event: { data: unknown }) => void }
+    worker.onmessage({ data: { type: 'epoch-miss', epoch: 6 } })
+    for (const data of [null, 'epoch-miss', { type: 'other', epoch: 1 }, { type: 'epoch-miss', epoch: -1 }, { type: 'epoch-miss', epoch: 1.5 }, { type: 'epoch-miss', epoch: '3' }]) worker.onmessage({ data })
+    expect(seen).toEqual([6])
+    guard.reset()
+  })
 })

@@ -221,8 +221,7 @@ export class MediaGroup {
       // Asking again with the same package would change nothing: the
       // committer ignores a package it has seen.
       if (resend && this.offeredFor !== null) await this.rekey()
-      const wire = this.offer(others)
-      if (wire) wires.push(wire)
+      wires.push(...this.offer(others))
     }
     // Anyone already holding a group that has me in it must hear that this one
     // is new: I may be the lowest id coming back after a reload. Said again
@@ -257,8 +256,7 @@ export class MediaGroup {
   private async recoverNow(): Promise<MediaStep> {
     if (!this.room.some(id => id < this.userId)) return this.step()
     await this.leave()
-    const wire = this.offer(this.room)
-    return { wires: wire ? [wire] : [], epoch: null, key: null }
+    return { wires: this.offer(this.room), epoch: null, key: null }
   }
 
   /** Drops the group and the package it was joined with. */
@@ -269,14 +267,8 @@ export class MediaGroup {
 
   private async rekey() {
     const old = this.own
-    const fresh = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
-    if (this.closed) {
-      wipeBytes(fresh.privatePackage.initPrivateKey)
-      wipeBytes(fresh.privatePackage.hpkePrivateKey)
-      wipeBytes(fresh.privatePackage.signaturePrivateKey)
-      return
-    }
-    this.own = fresh
+    // Jobs run one at a time, so the group cannot be closed meanwhile.
+    this.own = await generateKeyPackage(this.credential, defaultCapabilities(), defaultLifetime, [], this.cs)
     this.offeredFor = null
     wipeBytes(old.privatePackage.initPrivateKey)
     wipeBytes(old.privatePackage.hpkePrivateKey)
@@ -287,13 +279,14 @@ export class MediaGroup {
     return encodeWire({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: this.own.publicPackage })
   }
 
-  private offer(others: readonly string[]): Uint8Array | null {
+  /** The key package for the room, unless this room already has it. */
+  private offer(others: readonly string[]): Uint8Array[] {
     const key = others.slice().sort().join(',')
-    if (this.offeredFor === key) return null
-    const wire = encodeWire({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: this.own.publicPackage })
-    if (!wire) return null
+    if (this.offeredFor === key) return []
+    const wire = this.hello()
+    if (!wire) return []
     this.offeredFor = key
-    return wire
+    return [wire]
   }
 
   private async createOwn(): Promise<Uint8Array[] | null> {
@@ -338,15 +331,13 @@ export class MediaGroup {
       const restarted = members?.has(from) === true && !same && from === this.committer(this.room)
       if (members && from < this.userId && (!members.has(from) || restarted)) {
         await this.leave()
-        const offer = this.offer(this.room)
-        if (offer) wires.push(offer)
+        wires.push(...this.offer(this.room))
       } else if (members?.has(from)) {
         // The same package again is a duplicate. Another one is the member
         // coming back: swap the old leaf for the new one in a single commit.
         if (same || !this.canCommit(this.room) || this.seen(from, wire)) return this.step()
         this.remember(from, wire)
-        this.pending.set(from, message.keyPackage)
-        wires.push(...await this.replaceMember(from))
+        wires.push(...await this.replaceMember(from, message.keyPackage))
         return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
       }
       this.remember(from, wire)
@@ -405,10 +396,8 @@ export class MediaGroup {
   }
 
   /** One commit that swaps a member's old leaf for the new package. */
-  private async replaceMember(id: string): Promise<Uint8Array[]> {
-    const state = this.state
-    const keyPackage = this.pending.get(id)
-    if (!state || !keyPackage) return []
+  private async replaceMember(id: string, keyPackage: KeyPackage): Promise<Uint8Array[]> {
+    const state = this.state as ClientState
     const present = new Set(this.room)
     present.add(this.userId)
     present.delete(id)
@@ -417,9 +406,7 @@ export class MediaGroup {
       if (!present.has(member)) proposals.push({ proposalType: 'remove', remove: { removed: leaf } })
     }
     proposals.push({ proposalType: 'add', add: { keyPackage } })
-    const wires = await this.commit(proposals)
-    if (wires.length) this.pending.delete(id)
-    return wires
+    return this.commit(proposals)
   }
 
   private async commitRemoves(others: readonly string[]): Promise<Uint8Array[]> {

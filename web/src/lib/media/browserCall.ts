@@ -3,6 +3,12 @@ import { createMediaGuard, type MediaGuard } from './guard'
 import { MediaGroup, type MediaStep } from './group'
 import type { MediaCall } from './api'
 
+// Frames of an epoch that never arrives as a key mean a commit was missed.
+// Commits can trail the frames that use them, so wait before acting, and do
+// not start over more than once in a while.
+const MISS_GRACE_MS = 4000
+const RECOVER_GAP_MS = 10_000
+
 const work = new WeakMap<MediaCall, Promise<void>>()
 
 export function mediaSettled(call: MediaCall): Promise<void> {
@@ -54,6 +60,9 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   const inbox: { from: string, wire: string }[] = []
   let keyListener: (() => void) | null = null
   let wireListener: ((channelId: string, wire: string) => void) | null = null
+  let missed = -1
+  let missTimer: ReturnType<typeof setTimeout> | null = null
+  let lastRecover = -Infinity
 
   const call: MediaCall = {
     start(nextChannel, nextUser) {
@@ -68,6 +77,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       appliedEpoch = null
       appliedKey = null
       inbox.length = 0
+      stopWatching()
       guard.reset()
       group = null
       if (previous) track(previous.close())
@@ -102,6 +112,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       appliedEpoch = null
       appliedKey = null
       inbox.length = 0
+      stopWatching()
       guard.reset()
       track(closing ? closing.close() : Promise.resolve())
     },
@@ -121,6 +132,36 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       return guard.armReceiver(receiver, channelId, id)
     },
   }
+
+  function stopWatching() {
+    if (missTimer) clearTimeout(missTimer)
+    missTimer = null
+    missed = -1
+  }
+
+  async function recover(current: number): Promise<void> {
+    await opening
+    if (current !== generation || !group) return
+    emit(await group.recover(roster))
+  }
+
+  guard.onEpochMiss((epoch) => {
+    if (!group || (appliedEpoch !== null && epoch <= appliedEpoch)) return
+    missed = Math.max(missed, epoch)
+    if (missTimer) return
+    const current = generation
+    // start() and stop() clear this timer, so it only fires for this call.
+    missTimer = setTimeout(() => {
+      missTimer = null
+      const seen = missed
+      missed = -1
+      if (appliedEpoch !== null && appliedEpoch >= seen) return
+      const now = Date.now()
+      if (now - lastRecover < RECOVER_GAP_MS) return
+      lastRecover = now
+      track(recover(current))
+    }, MISS_GRACE_MS)
+  })
 
   function track(pending: Promise<void>) {
     const next = tail.then(() => pending)

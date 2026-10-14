@@ -12,6 +12,8 @@ export interface MediaGuard {
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
   setKey(epoch: number, key: CryptoKey, replace?: boolean): void
   clearKeys(): void
+  /** The worker saw frames of an epoch newer than any key it holds. */
+  onEpochMiss(listener: (epoch: number) => void): void
   reset(): void
 }
 
@@ -29,10 +31,18 @@ export function createMediaGuard(): MediaGuard {
   const ports: KeyedPort[] = []
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
   let current: { epoch: number, key: CryptoKey } | null = null
+  let missListener: ((epoch: number) => void) | null = null
 
   function sharedWorker(): Worker | null {
     if (!canArm()) return null
-    worker ??= new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
+    if (!worker) {
+      worker = new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
+      worker.onmessage = (event: MessageEvent<unknown>) => {
+        const data = event.data
+        if (data && typeof data === 'object' && 'type' in data && data.type === 'epoch-miss' && 'epoch' in data
+          && typeof data.epoch === 'number' && Number.isInteger(data.epoch) && data.epoch >= 0) missListener?.(data.epoch)
+      }
+    }
     return worker
   }
 
@@ -76,6 +86,7 @@ export function createMediaGuard(): MediaGuard {
         : { type: 'key', epoch, key }
       for (const port of ports) port.postMessage(message)
     },
+    onEpochMiss(listener) { missListener = listener },
     clearKeys() {
       current = null
       for (const port of ports) port.postMessage({ type: 'drop' })

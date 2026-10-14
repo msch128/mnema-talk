@@ -26,6 +26,9 @@ describe('media frames', () => {
     await expect(openFrame({ keys, channelId: 'other', senderId: 'alice', packet })).resolves.toBeNull()
     await expect(openFrame({ keys, channelId: 'channel', senderId: 'bob', packet })).resolves.toBeNull()
     await expect(openFrame({ keys: new Map([[4, await keyFrom(8)]]), channelId: 'channel', senderId: 'alice', packet })).resolves.toBeNull()
+    const missed: number[] = []
+    await expect(openFrame({ keys: new Map(), channelId: 'channel', senderId: 'alice', packet, onUnknownEpoch: epoch => missed.push(epoch) })).resolves.toBeNull()
+    expect(missed).toEqual([4])
     await expect(openFrame({ keys: new Map(), channelId: 'channel', senderId: 'alice', packet })).resolves.toBeNull()
   })
 

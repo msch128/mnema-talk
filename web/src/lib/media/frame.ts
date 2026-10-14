@@ -24,6 +24,8 @@ export interface FrameOpen {
   senderId: string
   packet: Uint8Array
   clear?: Uint8Array
+  /** Called with the epoch of a frame whose key is not held. */
+  onUnknownEpoch?: (epoch: number) => void
 }
 
 function copyBytes(bytes: Uint8Array): ArrayBuffer {
@@ -81,7 +83,10 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
   if (frame.packet[0] !== MAGIC_0 || frame.packet[1] !== MAGIC_1) return null
   const epoch = new DataView(frame.packet.buffer, frame.packet.byteOffset, frame.packet.byteLength).getUint32(EPOCH_OFFSET)
   const key = frame.keys.get(epoch)
-  if (!key) return null
+  if (!key) {
+    frame.onUnknownEpoch?.(epoch)
+    return null
+  }
   const nonce = frame.packet.subarray(NONCE_OFFSET, HEADER_BYTES)
   const cipher = frame.packet.subarray(HEADER_BYTES)
   try {

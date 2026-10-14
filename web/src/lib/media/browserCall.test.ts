@@ -1,5 +1,5 @@
 import { webcrypto } from 'node:crypto'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES } from './bounds'
 import type { MediaGuard } from './guard'
@@ -16,11 +16,14 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: CryptoKey, replace: boolean }[], sends: string[], receives: string[] } {
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: CryptoKey, replace: boolean }[], sends: string[], receives: string[], miss(epoch: number): void } {
   const keys: { epoch: number, key: CryptoKey, replace: boolean }[] = []
   const sends: string[] = []
   const receives: string[] = []
+  let missListener: (epoch: number) => void = () => {}
   return {
+    miss: epoch => missListener(epoch),
+    onEpochMiss(listener) { missListener = listener },
     keys,
     sends,
     receives,
@@ -248,4 +251,89 @@ describe('browser media call', () => {
     await mediaSettled(call)
     expect(call.protectSender(sender)).toBe(false)
   }, 30_000)
+
+  describe('frames of an epoch that never arrives', () => {
+    afterEach(() => { vi.useRealTimers() })
+
+    async function waitingJoiner() {
+      const guard = recordingGuard()
+      const bob = browserMediaCall(guard)
+      const wires: string[] = []
+      bob.onWire((_channel, wire) => { wires.push(wire) })
+      bob.start(channelId, bobId)
+      bob.roster([aliceId, bobId])
+      await mediaSettled(bob)
+      expect(wires).toHaveLength(1)
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      return { guard, bob, wires }
+    }
+
+    it('asks again with a fresh key package once the epoch stays missing', async () => {
+      const { guard, bob, wires } = await waitingJoiner()
+      guard.miss(3)
+      guard.miss(2)
+      await vi.advanceTimersByTimeAsync(3999)
+      expect(wires).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(2)
+      await vi.waitFor(() => expect(wires).toHaveLength(2))
+      expect(wires[1]).not.toBe(wires[0])
+      // Not again right away.
+      guard.miss(3)
+      await vi.advanceTimersByTimeAsync(5000)
+      await mediaSettled(bob)
+      expect(wires).toHaveLength(2)
+      await vi.advanceTimersByTimeAsync(2000)
+      guard.miss(3)
+      await vi.advanceTimersByTimeAsync(11_000)
+      await vi.waitFor(() => expect(wires).toHaveLength(3))
+      bob.stop()
+    }, 30_000)
+
+    it('does not start over when the key arrives while it waits', async () => {
+      const guard = recordingGuard()
+      const alice = browserMediaCall(guard)
+      const bob = browserMediaCall(recordingGuard())
+      alice.onWire((_channel, wire) => { bob.receive(aliceId, wire) })
+      bob.onWire((_channel, wire) => { alice.receive(bobId, wire) })
+      alice.start(channelId, aliceId)
+      alice.roster([aliceId])
+      await mediaSettled(alice)
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      const recover = vi.spyOn(MediaGroup.prototype, 'recover')
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+      guard.miss(1)
+      bob.start(channelId, bobId)
+      alice.roster([aliceId, bobId])
+      bob.roster([aliceId, bobId])
+      for (let turn = 0; turn < 8; turn++) {
+        await mediaSettled(alice)
+        await mediaSettled(bob)
+      }
+      expect(guard.keys.at(-1)?.epoch).toBe(1)
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(recover).not.toHaveBeenCalled()
+      recover.mockRestore()
+      alice.stop()
+      bob.stop()
+    }, 30_000)
+
+    it('does nothing for an epoch it already has, after stop, or when the key shows up', async () => {
+      const { guard, bob, wires } = await waitingJoiner()
+      guard.miss(3)
+      bob.stop()
+      await vi.advanceTimersByTimeAsync(5000)
+      expect(wires).toHaveLength(1)
+      const alice = browserMediaCall(guard)
+      alice.start(channelId, aliceId)
+      alice.roster([aliceId])
+      await mediaSettled(alice)
+      expect(guard.keys.map(item => item.epoch)).toEqual([0])
+      guard.miss(0)
+      await vi.advanceTimersByTimeAsync(5000)
+      guard.miss(5)
+      alice.stop()
+      await vi.advanceTimersByTimeAsync(5000)
+      await mediaSettled(alice)
+    }, 30_000)
+  })
 })

@@ -154,6 +154,43 @@ describe('media frame worker', () => {
     expect(new Uint8Array((opened[0] as { data: ArrayBuffer }).data)).toEqual(frame)
   })
 
+  it('tells the call about frames from a newer epoch than any key, at most once a second', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    const key = await importEpochKey(new Uint8Array(16).fill(5))
+    if (!key) throw new Error('expected an epoch key')
+    const sealedAt = async (epoch: number) => {
+      const packet = await sealFrame({ key, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+      if (!packet) throw new Error('expected a sealed frame')
+      return packet.buffer
+    }
+    const posted: unknown[] = []
+    vi.resetModules()
+    const scope = { onrtctransform: null, postMessage: (data: unknown) => { posted.push(data) } } as unknown as WorkerScope
+    vi.stubGlobal('self', scope)
+    vi.stubGlobal('crypto', webcrypto)
+    await import('./mediaFrameWorker')
+    const port = { onmessage: null as ((event: { data: unknown }) => void) | null }
+    let enqueue: (frame: { data: ArrayBuffer }) => void = () => {}
+    let close: () => void = () => {}
+    const readable = new ReadableStream<{ data: ArrayBuffer }>({ start(controller) { enqueue = frame => controller.enqueue(frame); close = () => controller.close() } })
+    let done: () => void = () => {}
+    const finished = new Promise<void>((resolve) => { done = resolve })
+    scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ close() { done() } }), options: { port, direction: 'recv', channelId: 'channel', senderId: 'alice' } } })
+    port.onmessage?.({ data: { type: 'key', epoch: 2, key } })
+    enqueue({ data: asBuffer(await sealedAt(1)) })
+    enqueue({ data: asBuffer(await sealedAt(3)) })
+    await vi.waitFor(() => expect(posted).toEqual([{ type: 'epoch-miss', epoch: 3 }]))
+    enqueue({ data: asBuffer(await sealedAt(4)) })
+    await new Promise(resolve => setTimeout(resolve, 10))
+    expect(posted).toHaveLength(1)
+    vi.setSystemTime(Date.now() + 1500)
+    enqueue({ data: asBuffer(await sealedAt(5)) })
+    await vi.waitFor(() => expect(posted).toHaveLength(2))
+    close()
+    await finished
+    vi.useRealTimers()
+  })
+
   it('drops video whose codec is unknown or whose type is not a picture', async () => {
     const key = await importEpochKey(new Uint8Array(16).fill(2))
     if (!key) throw new Error('expected an epoch key')

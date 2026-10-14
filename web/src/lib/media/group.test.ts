@@ -206,8 +206,8 @@ describe('media group', () => {
     expect(healed.epoch).toBe(2)
     expect((await alice.receive(bobId, wireAt(resent.wires, 0))).wires).toEqual([])
     expect((await alice.receive(bobId, keyPackage)).wires).toEqual([])
-    let joined = await bob.receive(aliceId, wireAt(healed.wires, 0))
-    joined = await bob.receive(aliceId, wireAt(healed.wires, 1))
+    await bob.receive(aliceId, wireAt(healed.wires, 0))
+    const joined = await bob.receive(aliceId, wireAt(healed.wires, 1))
     expect(joined.epoch).toBe(2)
     expect(await roundTrip(healed.key, joined.key, 2)).toEqual([9, 8, 7])
     await alice.close()
@@ -479,7 +479,65 @@ describe('a founder announcing a new group', () => {
   }, 30_000)
 })
 
+describe('a member who takes over as committer', () => {
+  it('swaps in a member whose first key package it never saw', async () => {
+    const roster = [aliceId, bobId, carolId]
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const carol = await opened(carolId)
+    await alice.sync([aliceId])
+    const carolOffer = await carol.sync([aliceId, carolId])
+    await alice.sync([aliceId, carolId])
+    const first = await alice.receive(carolId, wireAt(carolOffer.wires, 0))
+    for (const wire of first.wires) await carol.receive(aliceId, wire)
+    // Bob joins; being lower than Carol, he makes her start over. Only Alice
+    // hears Carol's second package, so Bob learns of Carol from a commit.
+    const bobOffer = await bob.sync(roster)
+    await alice.sync(roster)
+    const second = await alice.receive(bobId, wireAt(bobOffer.wires, 0))
+    const dropped = await carol.receive(bobId, wireAt(bobOffer.wires, 0))
+    expect(dropped.key).toBeNull()
+    for (const wire of second.wires) await bob.receive(aliceId, wire)
+    const again = await carol.sync(roster)
+    const third = await alice.receive(carolId, wireAt(again.wires.length ? again.wires : dropped.wires, 0))
+    for (const wire of third.wires) {
+      await bob.receive(aliceId, wire)
+      await carol.receive(aliceId, wire)
+    }
+    expect((await bob.sync(roster)).epoch).toBe(third.epoch)
+    await alice.close()
+    const lone = [bobId, carolId]
+    const taken = await bob.sync(lone)
+    for (const wire of taken.wires) await carol.receive(bobId, wire)
+    const reloaded = await opened(carolId)
+    const offer = await reloaded.sync(lone)
+    const swapped = await bob.receive(carolId, wireAt(offer.wires, 0))
+    expect(swapped.wires).toHaveLength(2)
+    await bob.close()
+    await carol.close()
+    await reloaded.close()
+  }, 60_000)
+})
+
 describe('a member who missed a commit', () => {
+  it('has nothing to recover after it closed', async () => {
+    const alice = await opened(aliceId)
+    await alice.close()
+    expect((await alice.recover([bobId, aliceId])).wires).toEqual([])
+  }, 30_000)
+
+  it('drops its own group when a lower member it does not hold sends a welcome', async () => {
+    const bob = await opened(bobId)
+    expect((await bob.sync([bobId])).epoch).toBe(0)
+    const carol = await opened(carolId)
+    const offer = await carol.sync([aliceId, carolId])
+    const welcome = await welcomeFrom(aliceId, mediaGroupId(channelId) as Uint8Array, wireAt(offer.wires, 0))
+    const step = await bob.receive(aliceId, welcome)
+    expect(step.key).toBeNull()
+    await bob.close()
+    await carol.close()
+  }, 30_000)
+
   it('starts over when a commit for a later epoch arrives', async () => {
     const roster = [aliceId, bobId, carolId]
     const alice = await opened(aliceId)
@@ -504,8 +562,8 @@ describe('a member who missed a commit', () => {
     expect(mls.decodeMlsMessage(wireAt(lost.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
     const healed = await alice.receive(bobId, wireAt(lost.wires, 0))
     expect(healed.wires).toHaveLength(2)
-    let joined = await bob.receive(aliceId, wireAt(healed.wires, 0))
-    joined = await bob.receive(aliceId, wireAt(healed.wires, 1))
+    await bob.receive(aliceId, wireAt(healed.wires, 0))
+    const joined = await bob.receive(aliceId, wireAt(healed.wires, 1))
     expect(joined.epoch).toBe(healed.epoch)
     expect(await roundTrip(healed.key, joined.key, healed.epoch ?? 0)).toEqual([9, 8, 7])
     await alice.close()

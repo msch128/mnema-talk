@@ -62,8 +62,22 @@ async function protect(frame: EncodedFrame, direction: 'send' | 'recv', channelI
     const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => sealFrame({ key, epoch, channelId, senderId, plaintext, clear }))
     return sealed ? packet(sealed) : null
   }
-  const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear }))
+  const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear, onUnknownEpoch: reportUnknownEpoch }))
   return opened ? packet(opened) : null
+}
+
+// A frame of an epoch newer than every key held means a commit did not arrive.
+// The call decides what to do about it; this only says so, at most once a second.
+const MISS_REPORT_MS = 1000
+let lastMissReport = -Infinity
+
+function reportUnknownEpoch(epoch: number) {
+  const newest = Math.max(-1, ...keys.keys())
+  if (epoch <= newest) return
+  const now = Date.now()
+  if (now - lastMissReport < MISS_REPORT_MS) return
+  lastMissReport = now
+  self.postMessage({ type: 'epoch-miss', epoch })
 }
 
 function directionOf(value: unknown): 'send' | 'recv' | null {
