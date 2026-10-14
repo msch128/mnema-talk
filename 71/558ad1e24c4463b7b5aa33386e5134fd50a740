@@ -1,0 +1,31 @@
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_22338811f993a9 1475-1476
+web/src/lib/media/backoff.test.ts
+  s_06fcde5dbef956::t_ef20c2d342a2d2 47-57
+web/src/lib/media/backoff.ts
+  s_06fcde5dbef956::t_baa5e2824e270b 27-32
+web/src/lib/media/browserCall.test.ts
+  s_06fcde5dbef956::t_9602b16a2761cb 15,315-335,408-530
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_4fcaa628fec1e2 69-70,97,152-155,167-171,174-175,177,179,190-191,194,215-218,223-225,227-228
+web/src/lib/media/group.test.ts
+  s_06fcde5dbef956::t_9a6b0a0fecbe8f 8,28,30,42-47,499-500,503,505,509,681-830
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_c209f55cc71cc0 40-44,154-160,186-190,207-208,249-304,308-309,312-315,390,423,435-441,494-497,635-636
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71558ad1e24c4463b7b5aa33386e5134fd50a740",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
