@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.5](https://github.com/msch128/mnema-talk/compare/v0.7.4...v0.7.5) (2026-10-14)
+
+
+### Features
+
+* seal microphone, camera and screen before the SFU ([#89](https://github.com/msch128/mnema-talk/issues/89)) ([783f30b](https://github.com/msch128/mnema-talk/commit/783f30b4214b44d4480ba872a2bbccafc6141580))
+
 ## [0.7.4](https://github.com/msch128/mnema-talk/compare/v0.7.3...v0.7.4) (2026-10-12)
 
 
