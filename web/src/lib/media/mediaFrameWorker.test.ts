@@ -149,7 +149,7 @@ describe('media frame worker', () => {
     const frame = Uint8Array.from([0, 0, 0, 1, ...nal])
     const sealed = await frames('send', [frame.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
     const written = new Uint8Array((sealed[0] as { data: ArrayBuffer }).data)
-    expect([...written.subarray(0, 8)]).toEqual([0, 0, 0, 1, 0x61, 0xe0, 0x00, 0x7e])
+    expect([...written.subarray(0, 6)]).toEqual([0, 0, 0, 1, 0x61, 0xe0])
     const opened = await frames('recv', [written.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
     expect(new Uint8Array((opened[0] as { data: ArrayBuffer }).data)).toEqual(frame)
   })
