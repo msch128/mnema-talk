@@ -160,8 +160,10 @@ remain roadmap targets.
 
 Traffic is protected in transit by HTTPS and WebRTC's DTLS-SRTP. Chat
 messages and attachments stay readable by the server. Microphone, camera,
-screen video and screen audio are sealed in the browser before the SFU sees
-them; the SFU forwards those payloads and does not decrypt them. The desktop
+screen video and screen audio are encrypted in the browser with MLS-derived
+keys, so an honest SFU cannot read them. A compromised server could still
+subvert group membership, since it serves the code and relays the handshakes,
+and metadata such as who speaks when stays visible. The desktop
 client does not join that media path. Capacity testing for a 100-person
 profile is also outstanding. A release number describes development progress,
 not completion of those milestones.

@@ -438,7 +438,7 @@
     "remoteCandidate": "Server-Kandidat",
     "encryption": "Transportverschlüsselung",
     "signalLatency": "Signal-Latenz (WebSocket)",
-    "privacyNote": "Mikrofon, Kamera und Bildschirm werden in diesem Browser versiegelt. Der Server leitet diese Pakete weiter, ohne sie zu entschlüsseln. Der Transport ist nicht ende-zu-ende-verschlüsselt, Chat und Anhänge bleiben für den Server lesbar, und es wird nichts aufgezeichnet.",
+    "privacyNote": "Mikrofon, Kamera und Bildschirm werden in diesem Browser verschlüsselt, bevor sie den Server erreichen; er leitet sie weiter, ohne sie lesen zu können. Ein kompromittierter Server könnte aber beeinflussen, wer die Schlüssel erhält, und wer wann spricht, bleibt für ihn sichtbar. Chat und Anhänge bleiben für den Server lesbar, und es wird nichts aufgezeichnet.",
     "channels": {
       "one": "{count} Kanal",
       "other": "{count} Kanäle"

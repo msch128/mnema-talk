@@ -171,8 +171,10 @@ the person's voice volume.
 - **Forward, never transcode.** The SFU only copies RTP
   ([`internal/sfu`](../internal/sfu/sfu.go)); quality is decided by the
   sender. Transport is DTLS-SRTP. Microphone, camera, screen video and
-  screen-audio payloads are sealed in the browser; the SFU does not decrypt
-  them. Text and attachments stay readable by the server
+  screen-audio payloads are encrypted in the browser with MLS-derived keys,
+  so the SFU cannot read them; an active or compromised server can still
+  subvert group membership and serves the code, and metadata stays visible.
+  Text and attachments stay readable by the server
   ([SECURITY.md](../SECURITY.md#security-model-summary)).
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
