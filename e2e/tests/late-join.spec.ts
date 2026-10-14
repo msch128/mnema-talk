@@ -65,6 +65,30 @@ const audioBytesIn = (page: Page) => page.evaluate(async () => {
 })
 
 
+// Decoded audio from the other members on the current connection. Packets the
+// browser could not open never decode, so the energy stays zero for them; the
+// byte count would not.
+const audioEnergyIn = (page: Page) => page.evaluate(async () => {
+  const pc = window.__pcs.at(-1)
+  if (!pc) return 0
+  let energy = 0
+  ;(await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'audio') energy += s.totalAudioEnergy || 0 })
+  return energy
+})
+
+async function signIn(page: Page, username: string, password: string) {
+  await page.goto('/')
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Benutzername').fill(username)
+  await dialog.getByLabel('Passwort').fill(password)
+  await dialog.getByRole('button', { name: 'Anmelden' }).click()
+  await expect(dialog).toBeHidden()
+}
+
+// The invite-only registration allows ten sign-ups an hour from one address,
+// which the whole suite shares, so the second test reuses the first one's member.
+test.describe.configure({ mode: 'serial' })
+
 // Someone joins a Talk where another member is already talking: both must
 // hear each other (regression: the late joiner's microphone was never sent).
 test('a member joining an occupied Talk is heard and hears', async ({ browser }) => {
@@ -113,4 +137,46 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
 
   await firstCtx.close()
   await lateCtx.close()
+})
+
+// Either member may have the lowest id, which the group treats differently, so
+// both reload in turn: the group must take each of them back inside the grace
+// period, and they must hear each other again.
+test('a member who reloads inside the grace period is heard again and hears again', async ({ browser }) => {
+  const firstCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  const secondCtx = await browser.newContext({ permissions: ['microphone', 'camera'] })
+  await firstCtx.addInitScript(trackPeerConnections)
+  await secondCtx.addInitScript(trackPeerConnections)
+  const first = await firstCtx.newPage()
+  const second = await secondCtx.newPage()
+  await signIn(first, ADMIN_USER, ADMIN_PASSWORD)
+  await signIn(second, USER, USER_PASSWORD)
+  const channel = `Reload ${suffix}`
+  expect((await apiFetch(first, 'POST', '/api/admin/channels', { name: channel, type: 'voice' })).status).toBe(201)
+  await first.reload()
+  await second.reload()
+
+  const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
+  await sidebarVoice(first).click()
+  await sidebarVoice(second).click()
+  const connected = (page: Page) => expect.poll(() => page.evaluate(() => window.__pcs.at(-1)?.connectionState), { timeout: 20_000 }).toBe('connected')
+  const hearEachOther = async () => {
+    for (const page of [first, second]) await expect.poll(() => audioEnergyIn(page), { timeout: 20_000 }).toBeGreaterThan(0)
+  }
+  await connected(first)
+  await connected(second)
+  await hearEachOther()
+
+  for (const reloading of [first, second]) {
+    const other = reloading === first ? second : first
+    const before = await other.evaluate(() => window.__pcs.length)
+    await reloading.reload()
+    // The reload rejoins the Talk by itself, well inside the grace period.
+    await connected(reloading)
+    expect(await other.evaluate(() => window.__pcs.length)).toBe(before)
+    await hearEachOther()
+  }
+
+  await firstCtx.close()
+  await secondCtx.close()
 })

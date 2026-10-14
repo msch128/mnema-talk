@@ -1,5 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, responseString, responseUserId } from './helpers'
+import { apiFetch, responseString, responseUserId, trackPeerConnections } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 
@@ -56,6 +56,7 @@ const stageSize = (page: Page) => page.evaluate(() => {
 async function twoMembers(browser: Browser, tag: string) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  await aCtx.addInitScript(trackPeerConnections)
   await aCtx.addInitScript(fakeDisplayMedia, [640, 360] as [number, number])
   await bCtx.addInitScript(fakeDisplayMedia, [800, 450] as [number, number])
   const a = await aCtx.newPage()
@@ -143,6 +144,16 @@ test('a camera goes on the stage, switches with a screen share and back to the g
   // B turns on their (fake) camera; A receives it on B's tile.
   await b.getByRole('button', { name: 'Kamera einschalten' }).first().click()
   await expect(bTile.locator('video')).toBeVisible({ timeout: 20_000 })
+  // The camera really decodes for A, and keeps decoding: the browser counts a
+  // frame only once it opened and decoded it.
+  const decoded = () => a.evaluate(async () => {
+    let frames = 0
+    for (const pc of window.__pcs) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'video') frames += s.framesDecoded || 0 })
+    return frames
+  })
+  await expect.poll(decoded, { timeout: 20_000 }).toBeGreaterThan(0)
+  const framesSoFar = await decoded()
+  await expect.poll(decoded, { timeout: 10_000 }).toBeGreaterThan(framesSoFar + 10)
   await expect(bTile).toHaveAttribute('aria-label', `Kamera von ${bName} vergrößern`)
 
   // A click puts it on the stage, a second click takes it off: the grid again.
