@@ -1,0 +1,20 @@
+SECURITY.md
+  s_06fcde5dbef956::t_f5bfa7dfca4694 74-78
+  s_06fcde5dbef956::t_35ceba0141d007 81-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "425bed73be8c727b31d39536105a44e432ee34a5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
