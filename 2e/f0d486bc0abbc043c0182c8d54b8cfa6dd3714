@@ -1,0 +1,23 @@
+web/src/lib/media/codec.test.ts
+  s_06fcde5dbef956::t_00cabfc69ddd6a 63-64,72,74,76,80-81,95,99,117,176-293
+web/src/lib/media/codec.ts
+  s_06fcde5dbef956::t_990b8d1f3b477c 33-39,42-48,52-54,84-88,92-127,173-181,183-185,187,189,192-209,211-223,227-265,268-269,284,288,294,298
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_06fcde5dbef956::t_16f203b0167f6b 152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ef0d486bc0abbc043c0182c8d54b8cfa6dd3714",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
