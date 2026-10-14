@@ -11,6 +11,7 @@ describe('media call seam', () => {
     const installed = api.mediaCall()
     expect(installed.protectSender({} as RTCRtpSender)).toBe(false)
     expect(installed.protectIncoming(undefined, 'alice')).toBe(false)
+    expect(installed.prepareIncoming({} as RTCRtpReceiver)).toBe(false)
     installed.start('channel', 'alice')
     installed.roster([])
     installed.receive('bob', '')

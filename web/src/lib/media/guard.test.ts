@@ -91,4 +91,28 @@ describe('media transform guard', () => {
     expect(guard.armSender(sender, 'channel', 'alice')).toBe(true)
     expect(created.workers).toHaveLength(2)
   })
+
+  it('arms a receiver before its publisher is known and names the publisher later', () => {
+    installBrowser()
+    const guard = createMediaGuard()
+    const receiver = { transform: null } as RTCRtpReceiver
+    const key = {} as CryptoKey
+    guard.setKey(2, key)
+    expect(guard.armReceiver(receiver, 'channel', null)).toBe(true)
+    expect(receiver.transform).toBe(created.transforms[0])
+    expect(created.transforms[0]?.options).toEqual({ port: created.channels[0]?.port2, direction: 'recv', channelId: 'channel' })
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 2, key })
+    const first = receiver.transform
+    expect(guard.armReceiver(receiver, 'channel', null)).toBe(true)
+    expect(guard.armReceiver(receiver, 'channel', 'bob')).toBe(true)
+    // A browser ignores a transform set after the line started, so the one
+    // that was set first stays and is told the publisher.
+    expect(receiver.transform).toBe(first)
+    expect(created.transforms).toHaveLength(1)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenLastCalledWith({ type: 'sender', senderId: 'bob' })
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', null as unknown as string)).toBe(false)
+    guard.reset()
+    expect(guard.armReceiver(receiver, 'channel', 'bob')).toBe(true)
+    expect(created.transforms).toHaveLength(2)
+  })
 })

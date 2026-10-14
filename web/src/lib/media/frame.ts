@@ -14,6 +14,8 @@ export interface FrameSeal {
   channelId: string
   senderId: string
   plaintext: Uint8Array
+  /** Bytes that stay readable beside the sealed ones. They are authenticated. */
+  clear?: Uint8Array
 }
 
 export interface FrameOpen {
@@ -21,6 +23,7 @@ export interface FrameOpen {
   channelId: string
   senderId: string
   packet: Uint8Array
+  clear?: Uint8Array
 }
 
 function copyBytes(bytes: Uint8Array): ArrayBuffer {
@@ -36,14 +39,15 @@ export async function importEpochKey(raw: Uint8Array): Promise<CryptoKey | null>
   }
 }
 
-export function bindFrameAad(channelId: string, senderId: string, epoch: number): Uint8Array {
+export function bindFrameAad(channelId: string, senderId: string, epoch: number, clear: Uint8Array = new Uint8Array()): Uint8Array {
   const channel = new TextEncoder().encode(channelId)
   const sender = new TextEncoder().encode(senderId)
-  const out = new Uint8Array(channel.length + 1 + sender.length + 4)
+  const out = new Uint8Array(channel.length + 1 + sender.length + 4 + clear.length)
   out.set(channel, 0)
   out.set(sender, channel.length + 1)
   const view = new DataView(out.buffer)
-  view.setUint32(out.length - 4, epoch)
+  view.setUint32(channel.length + 1 + sender.length, epoch)
+  out.set(clear, channel.length + 1 + sender.length + 4)
   return out
 }
 
@@ -54,7 +58,7 @@ export async function sealFrame(frame: FrameSeal): Promise<Uint8Array | null> {
   let sealed: ArrayBuffer
   try {
     sealed = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(bindFrameAad(frame.channelId, frame.senderId, frame.epoch)) },
+      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(bindFrameAad(frame.channelId, frame.senderId, frame.epoch, frame.clear)) },
       frame.key,
       copyBytes(frame.plaintext),
     )
@@ -82,7 +86,7 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
   const cipher = frame.packet.subarray(HEADER_BYTES)
   try {
     const opened = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(bindFrameAad(frame.channelId, frame.senderId, epoch)) },
+      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(bindFrameAad(frame.channelId, frame.senderId, epoch, frame.clear)) },
       key,
       copyBytes(cipher),
     )

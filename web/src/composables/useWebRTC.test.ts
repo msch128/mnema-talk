@@ -67,7 +67,7 @@ const SFU_OFFER = [
   ''
 ].join('\r\n')
 
-interface FakeTransceiver { mid: string; direction: RTCRtpTransceiverDirection; sender: ReturnType<typeof fakeSender> }
+interface FakeTransceiver { mid: string; direction: RTCRtpTransceiverDirection; sender: ReturnType<typeof fakeSender>; receiver: RTCRtpReceiver }
 class FakePC {
   transceivers: FakeTransceiver[] = []
   unmatched: ReturnType<typeof fakeSender>[] = []
@@ -109,7 +109,7 @@ class FakePC {
     this.remoteDescription = d
     for (const m of String(d.sdp).matchAll(/a=mid:(\S+)/g)) {
       if (!this.transceivers.some(t => t.mid === m[1])) {
-        this.transceivers.push({ mid: present(m[1]), direction: 'recvonly', sender: fakeSender(null) })
+        this.transceivers.push({ mid: present(m[1]), direction: 'recvonly', sender: fakeSender(null), receiver: {} as RTCRtpReceiver })
       }
     }
   }
@@ -237,6 +237,7 @@ const permissiveMediaCall: MediaCall = {
   onKey() {},
   onWire() {},
   protectSender: () => true,
+  prepareIncoming: () => true,
   protectIncoming: () => true,
 }
 
@@ -252,6 +253,7 @@ function installRecordingCall(allow = true) {
     onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
     protectSender: vi.fn(() => allow),
+    prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn(() => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
@@ -3342,6 +3344,55 @@ describe('protected media', () => {
     call.fireKey()
     expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
     expect(useToastStore().toasts).toEqual([])
+  })
+
+  it('arms every receiver before it answers the offer', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const order: string[] = []
+    call.prepareIncoming.mockImplementation(() => { order.push('prepare'); return true })
+    vi.spyOn(FakePC.prototype, 'setLocalDescription').mockImplementation(async () => { order.push('answer') })
+    const pc = await negotiate()
+    expect(call.prepareIncoming.mock.calls.map(([receiver]) => receiver)).toEqual(pc.transceivers.map(t => t.receiver))
+    expect(order).toEqual(['prepare', 'prepare', 'prepare', 'prepare', 'answer'])
+  })
+
+  it('holds a handshake until the voice join is sent', async () => {
+    const call = installRecordingCall()
+    const { rtc, sent } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBeGreaterThan(0))
+    call.fireWire('ch-1', 'early')
+    call.fireWire('other-room', 'nope')
+    expect(sent.some(event => event.type === 'media_handshake')).toBe(false)
+    await grantMic()
+    await join
+    const joinAt = sent.findIndex(event => event.type === 'voice_join')
+    const handshakeAt = sent.findIndex(event => event.type === 'media_handshake')
+    expect(handshakeAt).toBeGreaterThan(joinAt)
+    call.fireWire('ch-1', 'later')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'early' } },
+      { type: 'media_handshake', payload: { channel_id: 'ch-1', wire: 'later' } },
+    ])
+  })
+
+  it('drops a held handshake when the member has left the room', async () => {
+    const call = installRecordingCall()
+    const { rtc, sent, voice } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await vi.waitFor(() => expect(micRequests.length).toBeGreaterThan(0))
+    call.fireWire('ch-1', 'early')
+    voice.currentChannelId = 'ch-2'
+    await grantMic()
+    await join
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([])
+    rtc.leaveVoiceChannel()
+    call.fireWire('ch-2', 'after')
+    expect(sent.filter(event => event.type === 'media_handshake')).toEqual([])
   })
 
   it('does not publish or play when the call cannot be protected', async () => {

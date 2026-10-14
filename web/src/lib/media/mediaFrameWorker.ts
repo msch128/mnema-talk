@@ -1,7 +1,10 @@
+import { sealMedia, openMedia, type FrameKind } from './codec'
 import { openFrame, sealFrame } from './frame'
 
 interface EncodedFrame {
   data: ArrayBuffer
+  /** Only video frames have a type. */
+  type?: string
 }
 
 interface TransformOptions {
@@ -42,15 +45,20 @@ function packet(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
 
-async function protect(frame: EncodedFrame, direction: 'send' | 'recv', channelId: string, senderId: string): Promise<ArrayBuffer | null> {
+async function protect(frame: EncodedFrame, direction: 'send' | 'recv', channelId: string, senderId: string | null): Promise<ArrayBuffer | null> {
+  // A receiver whose publisher is not known yet opens nothing.
+  if (senderId === null) return null
+  const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
+  const data = new Uint8Array(frame.data)
   if (direction === 'send') {
     if (sendEpoch === null) return null
     const key = keys.get(sendEpoch)
     if (!key) return null
-    const sealed = await sealFrame({ key, epoch: sendEpoch, channelId, senderId, plaintext: new Uint8Array(frame.data) })
+    const epoch = sendEpoch
+    const sealed = await sealMedia(data, kind, (plaintext, clear) => sealFrame({ key, epoch, channelId, senderId, plaintext, clear }))
     return sealed ? packet(sealed) : null
   }
-  const opened = await openFrame({ keys, channelId, senderId, packet: new Uint8Array(frame.data) })
+  const opened = await openMedia(data, kind, (sealed, clear) => openFrame({ keys, channelId, senderId, packet: sealed, clear }))
   return opened ? packet(opened) : null
 }
 
@@ -68,13 +76,18 @@ scope.onrtctransform = (event) => {
   const port = options?.port
   const direction = directionOf(options?.direction)
   const channelId = options?.channelId
-  const senderId = options?.senderId
-  if (!transformer || !port || !direction || typeof channelId !== 'string' || !channelId || typeof senderId !== 'string' || !senderId) return
+  // A receiver may be armed before the SFU says who publishes on its line.
+  let senderId = typeof options?.senderId === 'string' && options.senderId ? options.senderId : null
+  if (!transformer || !port || !direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return
   port.onmessage = (message: MessageEvent<unknown>) => {
     const data = message.data
     if (!data || typeof data !== 'object') return
     if ('type' in data && data.type === 'drop') {
       forget()
+      return
+    }
+    if (direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
+      senderId = data.senderId
       return
     }
     if ('type' in data && data.type === 'key' && 'epoch' in data && 'key' in data && isEpoch(data.epoch) && data.key) {

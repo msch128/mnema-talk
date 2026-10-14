@@ -52,8 +52,21 @@ describe('browser media call', () => {
     expect(call.protectSender(sender)).toBe(false)
     expect(call.protectIncoming(undefined, aliceId)).toBe(false)
     expect(call.protectIncoming(receiver, 'alice')).toBe(false)
+    expect(call.prepareIncoming(undefined as unknown as RTCRtpReceiver)).toBe(false)
     call.stop()
+    expect(call.prepareIncoming(receiver)).toBe(false)
     expect(guard.sends).toEqual([])
+  })
+
+  it('arms a receiver for the channel before any publisher is named', () => {
+    const guard = recordingGuard()
+    const call = browserMediaCall(guard)
+    const receiver = { transform: null } as RTCRtpReceiver
+    call.start(channelId, aliceId)
+    expect(call.prepareIncoming(receiver)).toBe(true)
+    expect(call.protectIncoming(receiver, bobId)).toBe(true)
+    expect(guard.receives).toEqual([`${channelId}:null`, `${channelId}:${bobId}`])
+    call.stop()
   })
 
   it('closes the previous group when the channel changes', async () => {

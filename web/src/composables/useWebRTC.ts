@@ -54,6 +54,31 @@ function publisherId(streamId: string | undefined): string | null {
 }
 
 let mediaUnprotectedAnnounced = false
+// The hub relays a handshake only to members of the voice room, and drops one
+// that arrives before voice_join. The call starts while the microphone is still
+// opening, so its first wires wait here until voice_join is sent.
+let mediaRoomOpen = false
+const heldMediaWires: { channelId: string, wire: string }[] = []
+
+function closeMediaRoom() {
+  mediaRoomOpen = false
+  heldMediaWires.length = 0
+}
+
+function sendMediaWire(channelId: string, wire: string) {
+  if (useVoiceStore().currentChannelId !== channelId) return
+  useChatStore().sendWSEvent('media_handshake', { channel_id: channelId, wire })
+}
+
+function openMediaRoom() {
+  mediaRoomOpen = true
+  for (const held of heldMediaWires.splice(0)) sendMediaWire(held.channelId, held.wire)
+}
+
+function queueMediaWire(channelId: string, wire: string) {
+  if (mediaRoomOpen) sendMediaWire(channelId, wire)
+  else heldMediaWires.push({ channelId, wire })
+}
 let releaseUnprotectedCapture: () => void = () => {}
 
 function announceMediaUnprotected() {
@@ -1256,6 +1281,9 @@ export function useWebRTC() {
       await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
       if (!isCurrent()) return
       const bound = bindPublishSenders(conn, offer.sdp || '')
+      // Before the answer: a browser ignores a receiver transform that is set
+      // after its line was set up, so the track event comes too late.
+      for (const transceiver of conn.getTransceivers()) mediaCall().prepareIncoming(transceiver.receiver)
       const queued = pendingCandidates
       pendingCandidates = []
       for (const candidate of queued) {
@@ -1311,6 +1339,7 @@ export function useWebRTC() {
       return
     }
     mediaUnprotectedAnnounced = false
+    closeMediaRoom()
 
     // Stop standalone mic test before joining voice
     stopMicTest()
@@ -1362,6 +1391,7 @@ export function useWebRTC() {
     voiceStore.localAudioStream = sendStream
     setupPeerConnection(voiceStore, chatStore)
     chatStore.sendWSEvent('voice_join', { channel_id: channelId })
+    openMediaRoom()
     attachSubscriptions()
 
     if (sendStream) {
@@ -1981,6 +2011,7 @@ export function useWebRTC() {
   function endCall({ notifyServer }: { notifyServer: boolean }) {
     joinGeneration++
     mediaUnprotectedAnnounced = false
+    closeMediaRoom()
     mediaCall().stop()
     voiceSession.forget()
     cleanupPeerConnection(voiceStore)
@@ -2081,8 +2112,7 @@ export function useWebRTC() {
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       })
       call.onWire((channelId, wire) => {
-        if (voiceStore.currentChannelId !== channelId) return
-        chatStore.sendWSEvent('media_handshake', { channel_id: channelId, wire })
+        queueMediaWire(channelId, wire)
       })
       watch(() => {
         const channelId = voiceStore.currentChannelId

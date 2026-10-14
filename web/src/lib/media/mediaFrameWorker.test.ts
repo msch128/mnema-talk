@@ -15,7 +15,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[]) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type }: { named?: boolean, type?: 'key' | 'delta' } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null }
   vi.stubGlobal('self', scope)
@@ -26,9 +26,9 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     onmessage: null as ((event: { data: unknown }) => void) | null,
     postMessage(data: unknown) { port.onmessage?.({ data }) },
   }
-  let enqueueFrame: (frame: { data: ArrayBuffer }) => void = () => {}
+  let enqueueFrame: (frame: { data: ArrayBuffer, type?: string }) => void = () => {}
   let closeStream: () => void = () => {}
-  const readable = new ReadableStream<{ data: ArrayBuffer }>({
+  const readable = new ReadableStream<{ data: ArrayBuffer, type?: string }>({
     start(controller) {
       enqueueFrame = (frame) => { controller.enqueue(frame) }
       closeStream = () => { controller.close() }
@@ -41,9 +41,9 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     close() { resolveDone() },
   })
   scope.onrtctransform?.({})
-  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', senderId: 'alice' } } })
+  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}) } } })
   for (const command of commands) port.postMessage(command)
-  for (const data of packets) enqueueFrame({ data: asBuffer(data) })
+  for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type } : {}) })
   closeStream()
   await done
   return received
@@ -140,6 +140,41 @@ describe('media frame worker', () => {
     await import('./mediaFrameWorker')
     scope.onrtctransform?.({ transformer: { readable: new ReadableStream(), writable: new WritableStream(), options: { direction: 'send', channelId: '', senderId: 'alice' } } })
     scope.onrtctransform?.({ transformer: { readable: new ReadableStream(), writable: new WritableStream(), options: { port: { onmessage: null }, direction: 'sideways', channelId: 'channel', senderId: 'alice' } } })
+  })
+
+  it('keeps a video frame parseable and opens it again', async () => {
+    const key = await importEpochKey(new Uint8Array(16).fill(2))
+    if (!key) throw new Error('expected an epoch key')
+    const nal = [0x61, 0xe0, 0x00, 0x7e, ...Array.from({ length: 64 }, (_, i) => i + 1)]
+    const frame = Uint8Array.from([0, 0, 0, 1, ...nal])
+    const sealed = await frames('send', [frame.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
+    const written = new Uint8Array((sealed[0] as { data: ArrayBuffer }).data)
+    expect([...written.subarray(0, 8)]).toEqual([0, 0, 0, 1, 0x61, 0xe0, 0x00, 0x7e])
+    const opened = await frames('recv', [written.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
+    expect(new Uint8Array((opened[0] as { data: ArrayBuffer }).data)).toEqual(frame)
+  })
+
+  it('opens nothing on a receiver until it is told who publishes on it', async () => {
+    const key = await importEpochKey(new Uint8Array(16).fill(5))
+    if (!key) throw new Error('expected an epoch key')
+    const packet = await sealFrame({ key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    if (!packet) throw new Error('expected a sealed frame')
+    const keyed = { type: 'key', epoch: 1, key }
+    expect(await frames('recv', [packet.buffer], [keyed], { named: false })).toEqual([])
+    const named = await frames('recv', [packet.buffer], [keyed, { type: 'sender', senderId: 'alice' }], { named: false })
+    expect(new Uint8Array((named[0] as { data: ArrayBuffer }).data)).toEqual(new Uint8Array([4]))
+    const other = await frames('recv', [packet.buffer], [keyed, { type: 'sender', senderId: 'bob' }], { named: false })
+    expect(other).toEqual([])
+    const ignored = await frames('recv', [packet.buffer], [keyed, { type: 'sender', senderId: '' }], { named: false })
+    expect(ignored).toEqual([])
+    // A sender is always named at the start; a message cannot rename it.
+    const renamed = await frames('send', [new Uint8Array([1]).buffer], [keyed, { type: 'sender', senderId: 'mallory' }])
+    expect(await openFrame({
+      keys: new Map([[1, key]]),
+      channelId: 'channel',
+      senderId: 'alice',
+      packet: new Uint8Array((renamed[0] as { data: ArrayBuffer }).data),
+    })).toEqual(new Uint8Array([1]))
   })
 
   it('drops a frame the key cannot seal and a stream that fails', async () => {

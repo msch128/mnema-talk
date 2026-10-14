@@ -111,6 +111,10 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       if (!channelId || !userId) return false
       return guard.armSender(sender, channelId, userId)
     },
+    prepareIncoming(receiver) {
+      if (!receiver || !channelId) return false
+      return guard.armReceiver(receiver, channelId, null)
+    },
     protectIncoming(receiver, senderId) {
       const id = mediaUserId(senderId)
       if (!receiver || !channelId || !id) return false

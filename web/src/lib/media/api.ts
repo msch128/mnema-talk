@@ -8,6 +8,13 @@ export interface MediaCall {
   onKey(listener: () => void): void
   onWire(listener: (channelId: string, wire: string) => void): void
   protectSender(sender: RTCRtpSender): boolean
+  /**
+   * Arms a receiver before its line receives anything. A browser applies a
+   * receiver transform only if it was set before then, and the publisher of a
+   * line is not known until the track event, so a prepared receiver opens
+   * nothing until protectIncoming names it.
+   */
+  prepareIncoming(receiver: RTCRtpReceiver): boolean
   protectIncoming(receiver: RTCRtpReceiver | undefined, senderId: string): boolean
 }
 
@@ -20,6 +27,7 @@ const disabled: MediaCall = {
   onKey() {},
   onWire() {},
   protectSender: () => false,
+  prepareIncoming: () => false,
   protectIncoming: () => false,
 }
 
