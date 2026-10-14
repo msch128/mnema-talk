@@ -1,0 +1,37 @@
+web/src/lib/media/browserCall.test.ts
+  s_06fcde5dbef956::t_ad63fe6aefceb1 2,19,23,25-26,254-338
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_0ad41495e53a9b 6-11,63-65,80,115,136-165
+web/src/lib/media/frame.test.ts
+  s_06fcde5dbef956::t_b637a2a3fc9cfa 29-31
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_829ebe1fb299bd 27-28,86-89
+web/src/lib/media/group.test.ts
+  s_06fcde5dbef956::t_777e8b3bd73c69 209-210,482-521,523-540,565-566
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_44722138da01e8 224,259,270-271,282-283,285-287,289,334,340,399-400,409
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_f401d7d1c2d42e 118-130
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_674c4a1982c1a2 15-16,34,38-45,89
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_06fcde5dbef956::t_05f61a97824ebe 157-193
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_d58bbaa81817a5 65,69-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f2ca2f17c7e633ac93ac69dc42c27fe681cec61c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
