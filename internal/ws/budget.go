@@ -12,6 +12,15 @@ const (
 	// negotiated or silent. A browser sends a burst of candidates per
 	// negotiation, far below this.
 	maxSignalingPerSec = 200
+	// maxHandshakesPerSec and maxHandshakeBytesPerSec are the media_handshake
+	// budget. A relayed handshake fans out to every other connection in the
+	// room, so it is metered apart from the signaling budget and by bytes as
+	// well. A join, leave or rekey is a handful of messages (key package,
+	// commit, welcome; the last two up to ~44 KiB of base64 each), so a full
+	// room still passes while one member cannot push megabytes per second
+	// at everyone else.
+	maxHandshakesPerSec     = 10
+	maxHandshakeBytesPerSec = 256 << 10
 	// maxFramesPerSec bounds all frames before they are even parsed.
 	maxFramesPerSec = maxEventsPerSec + maxSignalingPerSec
 )
@@ -22,10 +31,10 @@ const (
 var signalingEvents = map[string]int{
 	"webrtc_answer":    maxMessageBytes,
 	"webrtc_candidate": 2 << 10,
-	// One handshake is the only copy of a key package or welcome. It stays
-	// inside the socket frame limit; the voice room then caps the decoded body.
-	"media_handshake": maxMessageBytes,
 }
+
+// handshakeEvent is metered by handleHandshake, not by signalingEvents.
+const handshakeEvent = "media_handshake"
 
 // eventBudget is a connection's per-second flood guard. It is used only by
 // the connection's read loop, so it needs no lock.
@@ -34,11 +43,15 @@ type eventBudget struct {
 	frames    int
 	events    int
 	signaling int
+
+	handshakes     int
+	handshakeBytes int
 }
 
 func (b *eventBudget) roll(now time.Time) {
 	if now.Sub(b.window) >= time.Second {
 		b.window, b.frames, b.events, b.signaling = now, 0, 0, 0
+		b.handshakes, b.handshakeBytes = 0, 0
 	}
 }
 
@@ -53,6 +66,16 @@ func (b *eventBudget) allowFrame(now time.Time) bool {
 // oversized signaling payload is dropped (and still counted).
 func (b *eventBudget) allowEvent(eventType string, payloadLen int, now time.Time) bool {
 	b.roll(now)
+	if eventType == handshakeEvent {
+		// One handshake is the only copy of a key package or welcome. It
+		// stays inside the socket frame limit; the voice room then caps the
+		// decoded body. Dropped attempts still count.
+		b.handshakes++
+		b.handshakeBytes += payloadLen
+		return b.handshakes <= maxHandshakesPerSec &&
+			b.handshakeBytes <= maxHandshakeBytesPerSec &&
+			payloadLen <= maxMessageBytes
+	}
 	if maxLen, ok := signalingEvents[eventType]; ok {
 		b.signaling++
 		return b.signaling <= maxSignalingPerSec && payloadLen <= maxLen
