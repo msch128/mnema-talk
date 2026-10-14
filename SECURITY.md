@@ -71,12 +71,18 @@ locally instead (`make up` or `make dev`).
   track does not send it. This is not protection against an active or
   compromised server: the server serves the web app's code, relays the MLS
   handshakes, asserts who is in the room and stamps each sender, and
-  credentials are self-asserted user ids. Such a server can add a member or
-  impersonate the committer and obtain the keys. There is no safety number or
+  credentials are self-asserted user ids. Such a server can add a member,
+  impersonate the committer, or swap a present member's leaf for its own
+  (the member is told its media keys changed) and obtain the keys. It can also
+  force a group restart (rate-limited with backoff) or stop the call by
+  dropping messages. There is no safety number or
   epoch authenticator to compare yet, senders are authenticated only as group
   members, frames carry no replay counter within an epoch, and the previous
-  epoch's key is kept until the next rotation. Metadata (who speaks when,
-  frame sizes, timing) is visible to the server. Text messages and
+  epoch's key is kept until the next rotation. Video stays decodable by the
+  browser's packetizer, so the codec headers it parses (H.264 parameter sets
+  and slice headers, the VP8 payload header) are readable but authenticated;
+  only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
+  when, frame sizes, timing) is visible to the server. Text messages and
   attachments stay readable by the server. The desktop client does not join
   the sealed media path.
 - **Data retention.** Nothing is deleted automatically by default
