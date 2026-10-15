@@ -43,6 +43,8 @@ updates:
       # Types follow the Node major of the build image (node:24 in Dockerfile).
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # ts-mls pins its @noble peers exactly; they move only with ts-mls.
+      - dependency-name: "@noble/*"
 
   - package-ecosystem: github-actions
     directory: /
