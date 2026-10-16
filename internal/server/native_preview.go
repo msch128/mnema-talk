@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -39,6 +40,8 @@ type nativePreviewDependencies struct {
 	chat     *chat.Handler
 	system   *systemHandler
 	perUser  *httpx.RateLimiter
+	// trusted are the parsed TRUSTED_PROXIES NewRouter already validated.
+	trusted []*net.IPNet
 }
 
 type NativePreviewRouter struct {
@@ -111,18 +114,8 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 	}
 	result := &NativePreviewRouter{Router: browser, Native: native, Sessions: sessions, options: options}
 	nativeRoutes := chi.NewRouter()
-	trusted, err := httpx.ParseCIDRs(deps.Config.TrustedProxies)
-	if err != nil {
-		browser.Close()
-		return nil, err
-	}
+	trusted := browser.preview.trusted
 	nativeRoutes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), result.boundary)
-	nativeRoutes.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteError(w, httpx.ErrNotFound("native route not found"))
-	})
-	nativeRoutes.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
-		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
-	})
 	nativeRoutes.Get("/ws", browser.Hub.NativeMetadataWebSocketHandler(native).ServeHTTP)
 	nativeAuth := native.Handler()
 	authDispatch := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

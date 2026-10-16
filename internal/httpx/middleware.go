@@ -274,11 +274,7 @@ func IPKey(ip string) string {
 	if addr.Is4() {
 		return addr.String()
 	}
-	prefix, err := addr.WithZone("").Prefix(64)
-	if err != nil {
-		return ip
-	}
-	return prefix.String()
+	return netip.PrefixFrom(addr.WithZone(""), 64).Masked().String()
 }
 
 // normalizeOrigin reduces an Origin/Referer/allowlist URL to scheme://host.

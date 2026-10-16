@@ -67,11 +67,7 @@ func Connect(ctx context.Context, databaseURL string) (*Pool, error) {
 // Each applied migration's SHA-256 is recorded; startup fails when an already
 // applied file was changed afterwards (migrations must never be edited).
 func (p *Pool) Migrate(ctx context.Context) error {
-	sub, err := fs.Sub(migrationFS, "migrations")
-	if err != nil {
-		return err
-	}
-	return p.MigrateFS(ctx, sub)
+	return p.MigrateFS(ctx, embeddedMigrations())
 }
 
 // MigrateFS applies the *.sql files at the root of fsys like Migrate does.
@@ -211,13 +207,16 @@ func verifyChecksums(applied, files map[string]string) ([]string, error) {
 	return backfill, nil
 }
 
+// embeddedMigrations is the migrations directory of the embedded files;
+// fs.Sub only fails for an invalid constant path.
+func embeddedMigrations() fs.FS {
+	sub, _ := fs.Sub(migrationFS, "migrations")
+	return sub
+}
+
 // MigrationFiles lists the embedded migrations in apply order.
 func MigrationFiles() ([]string, error) {
-	sub, err := fs.Sub(migrationFS, "migrations")
-	if err != nil {
-		return nil, err
-	}
-	return listMigrations(sub)
+	return listMigrations(embeddedMigrations())
 }
 
 func listMigrations(fsys fs.FS) ([]string, error) {

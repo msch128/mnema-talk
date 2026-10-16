@@ -383,9 +383,7 @@ func (c *Config) SecureCookies() bool { return strings.HasPrefix(c.PublicURL, "h
 // RandomHex returns a cryptographically random hex string of n bytes.
 func RandomHex(n int) string {
 	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic(fmt.Sprintf("crypto/rand failed: %v", err))
-	}
+	_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
 	return hex.EncodeToString(b)
 }
 

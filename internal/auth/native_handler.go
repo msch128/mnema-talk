@@ -155,10 +155,7 @@ func decodeNativeStrings(w http.ResponseWriter, r *http.Request, fields ...strin
 		if err != nil {
 			return nil, invalid(err)
 		}
-		key, ok := token.(string)
-		if !ok {
-			return nil, invalid(nil)
-		}
+		key, _ := token.(string) // a decoder always yields a string where an object key is due
 		known := false
 		for _, allowed := range fields {
 			if key == allowed {
