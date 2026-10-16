@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.7](https://github.com/msch128/mnema-talk/compare/v0.7.6...v0.7.7) (2026-10-16)
+
+
+### Performance Improvements
+
+* shrink the retransmission history as the SFU fills up ([#107](https://github.com/msch128/mnema-talk/issues/107)) ([2c6d9c3](https://github.com/msch128/mnema-talk/commit/2c6d9c3ce49954b9c5d298e4321725be4fd71c53))
+
 ## [0.7.6](https://github.com/msch128/mnema-talk/compare/v0.7.5...v0.7.6) (2026-10-16)
 
 
