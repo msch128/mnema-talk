@@ -2171,6 +2171,7 @@ export function useWebRTC() {
         queueMediaWire(channelId, wire)
       })
       call.onNotice(announceMediaRekeyed)
+      call.onVerification((verification) => { voiceStore.mediaVerification = verification })
       watch(() => {
         const channelId = voiceStore.currentChannelId
         if (!channelId) return ''

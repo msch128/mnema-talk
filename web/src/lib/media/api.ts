@@ -1,3 +1,5 @@
+import type { MediaVerification } from './verify'
+
 /** Keys changed in a way the member did not ask for. */
 export type MediaNotice = 'removed'
 
@@ -11,6 +13,8 @@ export interface MediaCall {
   onKey(listener: () => void): void
   onWire(listener: (channelId: string, wire: string) => void): void
   onNotice(listener: (notice: MediaNotice) => void): void
+  /** The safety code of the keys in use, or null while there are none. */
+  onVerification(listener: (verification: MediaVerification | null) => void): void
   protectSender(sender: RTCRtpSender): boolean
   /**
    * Arms a receiver before its line receives anything. A browser applies a
@@ -31,6 +35,7 @@ const disabled: MediaCall = {
   onKey() {},
   onWire() {},
   onNotice() {},
+  onVerification() {},
   protectSender: () => false,
   prepareIncoming: () => false,
   protectIncoming: () => false,

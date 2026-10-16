@@ -19,6 +19,7 @@ describe('media call seam', () => {
     installed.onKey(() => {})
     installed.onWire(() => {})
     installed.onNotice(() => {})
+    installed.onVerification(() => {})
     installed.stop()
 
     const replacement = await load()

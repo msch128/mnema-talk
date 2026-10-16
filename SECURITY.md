@@ -75,9 +75,12 @@ locally instead (`make up` or `make dev`).
   impersonate the committer, or swap a present member's leaf for its own
   (the member is told its media keys changed) and obtain the keys. It can also
   force a group restart (rate-limited with backoff) or stop the call by
-  dropping messages. There is no safety number or
-  epoch authenticator to compare yet, senders are authenticated only as group
-  members, frames carry no replay counter within an epoch, and the previous
+  dropping messages. The connection details show a safety code for the current
+  key epoch (derived from the MLS epoch authenticator) and who holds its keys.
+  Members who compare it in person or over a channel they trust notice an
+  added member, a swapped leaf or a split call; this cannot help against a
+  server that also serves a modified web app. Senders are authenticated only
+  as group members, frames carry no replay counter within an epoch, and the previous
   epoch's key is kept until the next rotation. Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;

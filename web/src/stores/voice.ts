@@ -8,6 +8,7 @@ import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } 
 import type { UserUpdate } from '../types/domain'
 import type { MediaState, ScreenViewers, VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState, SubscribeRequest } from '../types/events'
 import type { RTCConnectionStats } from '../lib/rtcStats'
+import type { MediaVerification } from '../lib/media/verify'
 import type { ScreenQuality } from '../lib/streamQuality'
 export type { RTCConnectionStats } from '../lib/rtcStats'
 export type { ScreenQuality } from '../lib/streamQuality'
@@ -110,6 +111,8 @@ export const useVoiceStore = defineStore('voice', () => {
   const isConnected = ref(false)
   const activeView = ref<'chat' | 'voice'>('chat') // 'chat' | 'voice'
   const showStatsModal = ref(false)
+  // The safety code of the call's current media keys (null without keys).
+  const mediaVerification = ref<MediaVerification | null>(null)
   const showAudioSettings = ref(false)
 
   // Measured connection metrics. `ping` is the WebSocket round trip to the
@@ -887,6 +890,7 @@ export const useVoiceStore = defineStore('voice', () => {
     audioBlocked,
     recordPing,
     showStatsModal,
+    mediaVerification,
     showAudioSettings,
     // Voice activity & Sensitivity settings
     inputMode,

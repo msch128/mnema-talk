@@ -135,6 +135,20 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   // own filter; counts reflect accepted PCM replies from the actual Worker.
   await expect.poll(async () => (await filterState(first)).processed, { timeout: 15_000 }).toBeGreaterThan(beforeLateJoin)
 
+  // Both see the same safety code for the keys they share, naming both of them.
+  const safetyCode = async (page: Page) => {
+    await page.getByTestId('voice-panel-ping').click()
+    const code = page.getByTestId('media-safety-code')
+    await expect(code).toHaveText(/^\d{5} \d{5} \d{5} \d{5}$/, { timeout: 15_000 })
+    await expect(page.getByTestId('media-verification').locator('[data-in-room="true"]')).toHaveCount(2)
+    return code.textContent()
+  }
+  await expect.poll(async () => {
+    const codes = [await safetyCode(first), await safetyCode(late)]
+    for (const page of [first, late]) await page.keyboard.press('Escape')
+    return codes[0] === codes[1]
+  }, { timeout: 30_000 }).toBe(true)
+
   await firstCtx.close()
   await lateCtx.close()
 })

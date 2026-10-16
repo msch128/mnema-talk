@@ -30,6 +30,21 @@ const sparklinePoints = computed(() => {
     .join(' ')
 })
 
+// Everyone in the call reads out this code: the same code on every screen
+// means everyone holds the same keys with the same members.
+const verification = computed(() => voiceStore.mediaVerification)
+// A holder outside the Talk, or one id holding two leaves, is flagged.
+function keyMembers(ids: string[]) {
+  const room = voiceStore.channelUsers[voiceStore.currentChannelId ?? ''] ?? {}
+  const seen = new Set<string>()
+  return ids.map((id, index) => {
+    const user = id ? room[id] : undefined
+    const inRoom = !!user && !seen.has(id)
+    seen.add(id)
+    return { key: `${index}:${id}`, name: user ? user.display_name || user.username : t('stats.unknownKeyMember'), inRoom }
+  })
+}
+
 const rows = computed(() => {
   const s = stats.value
   return [
@@ -137,6 +152,25 @@ const rows = computed(() => {
         <p class="text-xs text-mnema-tertiary leading-relaxed">
           {{ $t('stats.privacyNote') }}
         </p>
+      </div>
+
+      <div class="space-y-1.5" data-testid="media-verification">
+        <h3 class="text-xs uppercase font-mono tracking-wider text-mnema-tertiary font-semibold">{{ $t('stats.safetyCode') }}</h3>
+        <div class="rounded-lg bg-mnema-surface border border-mnema-hairline p-3 space-y-2 text-sm">
+          <template v-if="verification">
+            <div class="font-mono text-base text-mnema-text tracking-wide select-text" data-testid="media-safety-code">{{ verification.code }}</div>
+            <ul class="flex flex-wrap gap-1.5" :aria-label="$t('stats.keyMembers')">
+              <li
+                v-for="member in keyMembers(verification.members)"
+                :key="member.key"
+                :class="['rounded px-1.5 py-0.5 text-xs', member.inRoom ? 'bg-mnema-canvas text-mnema-muted' : 'bg-mnema-danger/[0.12] text-mnema-danger']"
+                :data-in-room="member.inRoom ? 'true' : 'false'"
+              >{{ member.name }}</li>
+            </ul>
+          </template>
+          <span v-else class="text-xs text-mnema-tertiary">{{ $t('stats.noSafetyCode') }}</span>
+        </div>
+        <p class="text-xs text-mnema-tertiary leading-relaxed">{{ $t('stats.safetyCodeHint') }}</p>
       </div>
     </div>
 
