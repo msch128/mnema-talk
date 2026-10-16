@@ -1,0 +1,46 @@
+internal/ws/native_metadata_admission.go
+  s_06fcde5dbef956::t_bf46e1f0a16360 132,175
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_48f4a8945f71ac 73
+internal/server/native_ciphertext_schema.go
+  s_06fcde5dbef956::t_173ad5e2062020 84
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_48f4a8945f71ac 91
+internal/linkpreview/linkpreview.go
+  s_06fcde5dbef956::t_810b3d86280e9b 322-324
+internal/server/public.go
+  s_06fcde5dbef956::t_a7839e0e836b52 166
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_173ad5e2062020 277
+internal/db/db.go
+  s_06fcde5dbef956::t_319b3256f58019 70,210-216,219
+internal/server/server.go
+  s_06fcde5dbef956::t_a7839e0e836b52 194
+  s_06fcde5dbef956::t_fae9a27362cc2f 242
+internal/server/native_preview.go
+  s_06fcde5dbef956::t_fae9a27362cc2f 6,43-44,117
+internal/auth/native_handler.go
+  s_06fcde5dbef956::t_173ad5e2062020 158
+internal/config/config.go
+  s_06fcde5dbef956::t_48f4a8945f71ac 386
+web/web.go
+  s_06fcde5dbef956::t_319b3256f58019 22
+internal/server/native_registration_preview.go
+  s_06fcde5dbef956::t_fae9a27362cc2f 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e3c6a86f09c96703f092d644aea3594306f5c29c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
