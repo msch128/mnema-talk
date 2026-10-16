@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.8](https://github.com/msch128/mnema-talk/compare/v0.7.7...v0.7.8) (2026-10-16)
+
+
+### Features
+
+* authenticate media frames per sender and reject replays ([#109](https://github.com/msch128/mnema-talk/issues/109)) ([436ced8](https://github.com/msch128/mnema-talk/commit/436ced80d68930e8c49d37223e21a82cfaffb204))
+
 ## [0.7.7](https://github.com/msch128/mnema-talk/compare/v0.7.6...v0.7.7) (2026-10-16)
 
 
