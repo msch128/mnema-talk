@@ -10,9 +10,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
 
 func corePoolWithConfig(t *testing.T, original *Pool, configure func(*pgxpool.Config)) *Pool {
@@ -26,39 +26,6 @@ func corePoolWithConfig(t *testing.T, original *Pool, configure func(*pgxpool.Co
 	}
 	t.Cleanup(pool.Close)
 	return &Pool{pool}
-}
-
-// Use pgx's supported tracing hooks to place a real request cancellation at
-// a database operation boundary, without replacing the pool or its methods.
-type migrationCancellationTracer struct {
-	query           string
-	afterPrepare    bool
-	preparingTarget bool
-	cancel          context.CancelFunc
-}
-
-func (tracer *migrationCancellationTracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
-	if strings.Contains(data.SQL, tracer.query) {
-		ctx, tracer.cancel = context.WithCancel(ctx)
-		if !tracer.afterPrepare {
-			tracer.cancel()
-		}
-	}
-	return ctx
-}
-
-func (*migrationCancellationTracer) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {
-}
-
-func (tracer *migrationCancellationTracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, data pgx.TracePrepareStartData) context.Context {
-	tracer.preparingTarget = strings.Contains(data.SQL, tracer.query)
-	return ctx
-}
-
-func (tracer *migrationCancellationTracer) TracePrepareEnd(_ context.Context, _ *pgx.Conn, _ pgx.TracePrepareEndData) {
-	if tracer.afterPrepare && tracer.cancel != nil && tracer.preparingTarget {
-		tracer.cancel()
-	}
 }
 
 func TestMigrateReportsClosedPoolAndCanceledDatabaseOperations(t *testing.T) {
@@ -75,7 +42,7 @@ func TestMigrateReportsClosedPoolAndCanceledDatabaseOperations(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			original := scratchPool(t)
-			tracer := &migrationCancellationTracer{query: target}
+			tracer := &pgfault.Tracer{Query: target}
 			p := corePoolWithConfig(t, original, func(config *pgxpool.Config) {
 				config.ConnConfig.Tracer = tracer
 			})
@@ -127,7 +94,7 @@ func TestMigrateRejectsMalformedMetadataAndCanceledRowStream(t *testing.T) {
 	}
 	t.Run("canceled after prepare before row stream", func(t *testing.T) {
 		original := scratchPool(t)
-		tracer := &migrationCancellationTracer{query: "SELECT filename, COALESCE", afterPrepare: true}
+		tracer := &pgfault.Tracer{Query: "SELECT filename, COALESCE", AfterPrepare: true}
 		p := corePoolWithConfig(t, original, func(config *pgxpool.Config) {
 			config.ConnConfig.Tracer = tracer
 		})
