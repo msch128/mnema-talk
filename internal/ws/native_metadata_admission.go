@@ -129,7 +129,7 @@ func nativeMetadataEventAllowed(raw []byte) bool {
 	}
 }
 func (c *Client) nativeMetadataWritePump() {
-	ping := time.NewTicker(pingInterval)
+	ping := time.NewTicker(c.hub.pingEvery())
 	defer func() { ping.Stop(); c.close() }()
 	write := func(kind int, payload []byte) bool {
 		if !c.nativeLive() {
@@ -172,10 +172,7 @@ func nativeMetadataObject(raw []byte) (map[string]json.RawMessage, bool) {
 		if err != nil {
 			return nil, false
 		}
-		key, ok := token.(string)
-		if !ok {
-			return nil, false
-		}
+		key, _ := token.(string) // a decoder always yields a string where an object key is due
 		if _, duplicate := values[key]; duplicate {
 			return nil, false
 		}

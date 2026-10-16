@@ -54,7 +54,7 @@ func TestHealthRechecksAfterTTL(t *testing.T) {
 	var pings atomic.Int32
 	fail := atomic.Bool{}
 	fail.Store(true)
-	hc := &healthCheck{ttl: 10 * time.Millisecond, ping: func(context.Context) error {
+	hc := &healthCheck{ttl: 250 * time.Millisecond, ping: func(context.Context) error {
 		pings.Add(1)
 		if fail.Load() {
 			return errors.New("down")
@@ -74,8 +74,14 @@ func TestHealthRechecksAfterTTL(t *testing.T) {
 	if c := get(); c != http.StatusServiceUnavailable {
 		t.Fatalf("cached failure expected within the TTL, got %d", c)
 	}
-	time.Sleep(20 * time.Millisecond)
-	if c := get(); c != http.StatusOK {
+	// Once the TTL is over the next request pings again.
+	deadline := time.Now().Add(5 * time.Second)
+	c := get()
+	for c != http.StatusOK && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+		c = get()
+	}
+	if c != http.StatusOK {
 		t.Fatalf("db back: status %d", c)
 	}
 	if pings.Load() != 2 {

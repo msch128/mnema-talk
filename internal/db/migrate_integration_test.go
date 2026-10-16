@@ -12,16 +12,25 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
 )
 
-// scratchPool connects to TEST_DATABASE_URL with search_path set to a fresh
+// TestMain removes the Postgres container pgtest may have started.
+func TestMain(m *testing.M) {
+	code := m.Run()
+	pgtest.Stop()
+	os.Exit(code)
+}
+
+// scratchPool connects to the shared test database with search_path set to a fresh
 // schema (then public), so these tests never touch the shared tables other
 // packages use.
 func scratchPool(t *testing.T) *Pool {
 	t.Helper()
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set")
+	dsn, err := pgtest.DSN()
+	if err != nil {
+		t.Fatalf("start postgres: %v", err)
 	}
 	ctx := context.Background()
 	b := make([]byte, 6)
@@ -98,9 +107,9 @@ func TestMigrateRecordsAndVerifiesChecksums(t *testing.T) {
 // Usernames differing only in case are rejected by the database (0011). Runs
 // in a rolled-back transaction, so the shared test database stays untouched.
 func TestUsernamesAreUniqueIgnoringCase(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL not set")
+	dsn, err := pgtest.DSN()
+	if err != nil {
+		t.Fatalf("start postgres: %v", err)
 	}
 	ctx := context.Background()
 	p, err := Connect(ctx, dsn)

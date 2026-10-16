@@ -25,11 +25,7 @@ func NewNativeRegistrationPreviewRouter(deps Deps, options NativePreviewOptions)
 		ctx := context.WithValue(request.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
 		registration.ServeHTTP(w, request.WithContext(ctx))
 	})
-	trusted, err := httpx.ParseCIDRs(deps.Config.TrustedProxies)
-	if err != nil {
-		preview.Close()
-		return nil, err
-	}
+	trusted := preview.preview.trusted
 	handler := httpx.RequestID(httpx.ClientIPMiddleware(trusted)(httpx.Logger(httpx.Recover(deps.Config.IsProduction())(httpx.SecurityHeaders(trusted, deps.Config.IsProduction())(preview.boundary(http.StripPrefix(NativePreviewPrefix, dispatch)))))))
 	base := preview.Router.Handler
 	preview.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {

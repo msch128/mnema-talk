@@ -28,6 +28,10 @@ func TestNativeMetadataClosedFrames(t *testing.T) {
 		{`{"type":"native_unknown","payload":{}}`, false},
 		{`{"type":"ping","payload":{"t":1}}{}`, false},
 		{`[]`, false}, {`{`, false},
+		{`{"type":}`, false},                        // value missing after a key
+		{`{"type":"ping","payload":{"t":1}`, false}, // object never closed
+		{`{"type":7,"payload":{"t":1}}`, false},     // type is not a string
+		{`{"type":"ping","extra":{"t":1}}`, false},  // two members, none is the payload
 		{strings.Repeat(" ", 1025), false},
 	}
 	for i, c := range cases {

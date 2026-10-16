@@ -191,7 +191,7 @@ func NewRouter(d Deps) (*Router, error) {
 		api.Get("/legal", legal(cfg))
 		if cfg.APIDocs {
 			// A page, not JSON: without a session it sends the browser to sign in.
-			api.Get("/docs", apiDocs(sessions))
+			api.Get("/docs", apiDocs(sessions, web.APIDocsPage()))
 		}
 		api.Get("/ws", hub.HandleWebSocket)
 
@@ -239,7 +239,7 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser}}, nil
+	return &Router{Handler: r, Hub: hub, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from

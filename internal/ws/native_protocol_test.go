@@ -5,6 +5,16 @@ import (
 	"testing"
 )
 
+func TestBrowserSocketsSwallowNativeControlFrames(t *testing.T) {
+	browser := &Client{}
+	if !browser.handleNativeControl("native_access_renew", []byte(`{}`)) {
+		t.Fatal("a browser socket let a native control frame through to the event handlers")
+	}
+	if browser.handleNativeControl("ping", nil) {
+		t.Fatal("an ordinary event was taken for a native control frame")
+	}
+}
+
 func TestNativeRenewStrictEnvelope(t *testing.T) {
 	token := strings.Repeat("A", 43)
 	good := `{"type":"native_access_renew","payload":{"access_token":"` + token + `"}}`

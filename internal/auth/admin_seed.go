@@ -70,9 +70,7 @@ func EnsureAdminUser(ctx context.Context, p *db.Pool, username, password string,
 	var generated string
 	if password == "" {
 		b := make([]byte, 18)
-		if _, err := rand.Read(b); err != nil {
-			return fmt.Errorf("generate admin password: %w", err)
-		}
+		_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
 		generated = base64.RawURLEncoding.EncodeToString(b)
 		password = generated
 	}

@@ -318,11 +318,10 @@ func (f *Fetcher) Preview(ctx context.Context, raw string) (*Preview, error) {
 		return nil, err
 	}
 	key := u.String()
-	if p, err, ok := f.cached(key); ok {
-		return p, err
-	}
 	// Many members open the same link at once: fetch it once. The fetch is
-	// shared, so one caller going away must not cancel it for the others.
+	// shared, so one caller going away must not cancel it for the others. The
+	// cache is read inside the shared call, so a caller arriving just after
+	// another one finished never fetches a second time.
 	return f.previews.do(key, func() (*Preview, error) {
 		if p, err, ok := f.cached(key); ok {
 			return p, err

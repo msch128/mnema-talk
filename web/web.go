@@ -19,10 +19,7 @@ var distFS embed.FS
 // routes. Hashed assets are cached forever; index.html is always revalidated
 // so a deploy reaches browsers immediately.
 func Handler() http.Handler {
-	sub, err := fs.Sub(distFS, "dist")
-	if err != nil {
-		panic(err)
-	}
+	sub, _ := fs.Sub(distFS, "dist") // only fails for an invalid constant path
 	return newHandler(sub)
 }
 

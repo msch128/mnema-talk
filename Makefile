@@ -83,11 +83,12 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_coverage_summary.py
 
+# Minimum total Go coverage (%, decimals allowed, compared on the exact
+# statement counts); frontend enforces all four metrics at 95% through
+# web/scripts/check-coverage.ts and its reviewed per-module policy.
+COVERAGE_MIN ?= 99.1
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
-# Minimum total Go coverage (%); frontend enforces all four metrics at 95%
-# through web/scripts/check-coverage.ts and its reviewed per-module policy.
-COVERAGE_MIN ?= 98
 COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
 
 coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, web/coverage/)

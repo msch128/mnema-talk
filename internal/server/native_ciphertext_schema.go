@@ -81,10 +81,7 @@ func decodeNativeCiphertext(w http.ResponseWriter, r *http.Request, channel uuid
 		if err != nil {
 			return invalid(err)
 		}
-		key, ok := token.(string)
-		if !ok {
-			return invalid(nil)
-		}
+		key, _ := token.(string) // a decoder always yields a string where an object key is due
 		if key != "client_event_id" && key != "group_id" && key != "ciphertext" {
 			return invalid(nil)
 		}

@@ -218,6 +218,22 @@ func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	return true
 }
 
+// pingEvery and revalidatePeriod resolve the pacing overrides (a nil hub, as
+// in writer unit tests, uses the defaults).
+func (h *Hub) pingEvery() time.Duration {
+	if h != nil && h.PingInterval > 0 {
+		return h.PingInterval
+	}
+	return pingInterval
+}
+
+func (h *Hub) revalidatePeriod() time.Duration {
+	if h != nil && h.RevalidateInterval > 0 {
+		return h.RevalidateInterval
+	}
+	return revalidateEvery
+}
+
 func (h *Hub) isClosed() bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -339,8 +355,8 @@ func (c *Client) readPump() {
 }
 
 func (c *Client) writePump() {
-	ping := time.NewTicker(pingInterval)
-	revalidate := time.NewTicker(revalidateEvery)
+	ping := time.NewTicker(c.hub.pingEvery())
+	revalidate := time.NewTicker(c.hub.revalidatePeriod())
 	defer func() {
 		ping.Stop()
 		revalidate.Stop()

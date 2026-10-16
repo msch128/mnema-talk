@@ -210,7 +210,7 @@ drain:
 
 func TestHubVoiceGracePeriod(t *testing.T) {
 	h := NewHub(nil, nil, nil, nil)
-	h.VoiceGrace = 50 * time.Millisecond
+	h.VoiceGrace = 200 * time.Millisecond
 	chID := uuid.New()
 	user := auth.User{ID: uuid.New(), Username: "reloader"}
 
@@ -239,16 +239,19 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 		t.Fatalf("user should remain in room during grace period")
 	}
 
-	// Wait for grace period to expire
-	time.Sleep(70 * time.Millisecond)
-
-	h.mu.RLock()
-	inRoomAfterGrace := false
-	if m, ok := h.voice[chID]; ok {
-		_, inRoomAfterGrace = m[user.ID]
+	// Wait for the grace period to expire; poll instead of sleeping a fixed
+	// time so a loaded -race run cannot beat the timer.
+	inRoom := func() bool {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		_, ok := h.voice[chID][user.ID]
+		return ok
 	}
-	h.mu.RUnlock()
-	if inRoomAfterGrace {
+	deadline := time.Now().Add(5 * time.Second)
+	for inRoom() && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if inRoom() {
 		t.Fatalf("user should be removed from room after grace period expires")
 	}
 }
@@ -337,5 +340,29 @@ func TestHubUserUpdateRefreshesVoiceUsers(t *testing.T) {
 	h.Broadcast("user_update", map[string]any{"id": user.ID, "disabled": true})
 	if h.voiceSnapshot()[chID][user.ID].DisplayName != "New" {
 		t.Fatal("disable notice must not reset the profile")
+	}
+}
+
+func TestHubPacingDefaultsToTheProductionIntervals(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	if h.pingEvery() != pingInterval || h.revalidatePeriod() != revalidateEvery {
+		t.Fatalf("default pacing = %v / %v", h.pingEvery(), h.revalidatePeriod())
+	}
+	h.PingInterval, h.RevalidateInterval = time.Second, 2*time.Second
+	if h.pingEvery() != time.Second || h.revalidatePeriod() != 2*time.Second {
+		t.Fatalf("overridden pacing = %v / %v", h.pingEvery(), h.revalidatePeriod())
+	}
+}
+
+func TestStatsIgnoresEmptyVoiceRooms(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	occupied, empty := uuid.New(), uuid.New()
+	user := auth.User{ID: uuid.New(), Username: "talker"}
+	h.mu.Lock()
+	h.voice[occupied] = map[uuid.UUID]auth.User{user.ID: user}
+	h.voice[empty] = map[uuid.UUID]auth.User{}
+	h.mu.Unlock()
+	if st := h.Stats(); st.VoiceRooms != 1 || st.VoiceParticipants != 1 {
+		t.Fatalf("stats = %+v, want one room with one participant", st)
 	}
 }

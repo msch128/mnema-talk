@@ -13,7 +13,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/web"
 )
 
 // turnCredentialTTL is how long a TURN credential handed to a client is valid.
@@ -164,8 +163,7 @@ func openAPISpec(w http.ResponseWriter, _ *http.Request) {
 // @Success 200 {string} string "The API reference page."
 // @Success 302 "No session: redirect to /."
 // @Router /api/docs [get]
-func apiDocs(sessions *auth.Sessions) http.HandlerFunc {
-	page := web.APIDocsPage()
+func apiDocs(sessions *auth.Sessions, page []byte) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := sessions.Authenticate(r); err != nil {
 			http.Redirect(w, r, "/", http.StatusFound)
