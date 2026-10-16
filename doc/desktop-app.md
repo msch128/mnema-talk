@@ -1,10 +1,11 @@
 # Desktop client roadmap
 
-Status: **v0.7.2 Windows Desktop DEV is released and experimentally testable**,
-including the Gaming integration described below. The package is unsigned and
-has no automatic updater. Earlier published-client checks cover instance
+Status: **the Windows Desktop DEV client is experimentally testable**
+(releases of this repository through v0.7.3 attach its ZIP; later builds come
+from the desktop repository), including the Gaming integration described below.
+The package is unsigned and has no automatic updater. Earlier published-client checks cover instance
 selection, login, persisted chat, live peer reception and logout. Physical media
-capture, real-game/fullscreen compatibility, E2EE and complete browser parity
+capture, real-game/fullscreen compatibility, sealed media in WebView2 and complete browser parity
 remain separate acceptance work.
 
 The current client source is
@@ -49,9 +50,10 @@ into games or capture a keyboard history. A matching basename is a user-selected
 candidate, not a trusted executable identity. Exclusive fullscreen rendering,
 anti-cheat compatibility and real-game behavior require testing on the target
 machine. Windows behavior is not a macOS/Linux gaming qualification. The
-desktop shell refuses microphone, camera and screen capture. In the browser
-those payloads are sealed before the SFU sees them; this client does not join
-that path. Chat and attachments stay readable by the server.
+web-client mode loads the instance's web app in WebView2, so voice uses the
+same browser path: microphone, camera and screen payloads are sealed in the
+page before the SFU sees them. This is not yet qualified on real Windows
+hardware. Chat and attachments stay readable by the server.
 
 ## Product requirements
 

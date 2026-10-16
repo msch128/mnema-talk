@@ -30,7 +30,7 @@ Mnema Talk is a **lightweight, single-server Discord alternative** written in **
 ### 1. Single-Binary Architecture
 - Backend (REST API), WebSocket hub, WebRTC SFU and the built web app (`web/dist`, via `//go:embed`) are compiled into **one standalone Go binary**.
 - Data lives in **PostgreSQL 18**; uploads and avatars in **S3-compatible object storage** (SeaweedFS by default).
-- Deployment: `docker compose` with three containers (`app`, `postgres`, `seaweedfs`). Keep the app lean (low idle RAM, no extra services).
+- Deployment: `docker compose` with three always-on containers (`app`, `postgres`, `seaweedfs`) plus two opt-in profiles: `coturn` (TURN relay, profile `turn`) and the `updater` self-update sidecar (profile `autoupdate`). Keep the app lean (low idle RAM, no extra services).
 
 ### 2. Single-Server Model
 - There are **no multiple guilds/servers** to discover or federate.
@@ -84,7 +84,7 @@ mnema-talk/
 ├── release-please-config.json, .release-please-manifest.json, version.txt, CHANGELOG.md
 │                            # Managed by release-please; don't edit version/changelog by hand
 ├── Dockerfile               # Multi-stage build, non-root runtime
-├── docker-compose.yml       # app + postgres + seaweedfs (production)
+├── docker-compose.yml       # app + postgres + seaweedfs (production); optional coturn, updater
 ├── docker-compose.dev.yml   # Dev override: publishes postgres/seaweedfs on 127.0.0.1
 ├── Makefile                 # `make help` lists all targets
 ├── .env.example             # Every config variable, placeholder values only
@@ -106,9 +106,10 @@ mnema-talk/
 5. **Configuration**: every new env variable is read in `internal/config`, documented in `.env.example` with a placeholder, and passed through in `docker-compose.yml` when needed.
 6. **Pure Go preferred**: keep CGO out of the build (`CGO_ENABLED=0`) so cross-compilation for Linux (Unraid/Docker) stays trivial.
 7. **Dependencies**: pin GitHub Actions to full commit SHAs; commit `go.sum` / `package-lock.json`; don't run `go mod tidy` in the Docker build.
-   New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.js`.
+   New or removed shipped dependencies (Go modules in the binary, web `dependencies`, vendored code in `web/src/third_party/`) go into `THIRD_PARTY_NOTICES.md` and the in-app list `web/src/lib/thirdParty.ts`.
 8. **Never rewrite `main`**: no force push, no history rewrite, no moving or deleting release tags (a ruleset blocks it). release-please finds the last release by its tag commit in `main`'s history; once that commit is gone it re-releases old versions. Rebase your own unpushed commits onto `origin/main` instead.
-9. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major). Use descriptive conventional commits:
+9. **Pull requests, CI and merging**: `main` is protected by a ruleset. Changes land only through a pull request (no approvals required) with the checks `secret-scan`, `backend`, `frontend`, `govulncheck`, `docker`, `e2e` and CodeQL `analyze (go)`, `analyze (javascript-typescript)`, `analyze (actions)` green; squash merge only. Agents may merge their own PRs once green. Release PRs are opened with `GITHUB_TOKEN` and start no workflows, so `release.yml` reports the tested CI run's result as commit statuses on the release commit (after checking that it only touches `version.txt`, `CHANGELOG.md` and the manifest and sits directly on the tested commit) and then merges it.
+10. **Structured commits**: release-please derives versions and the changelog from them (`feat:` minor, `fix:` patch, `!`/`BREAKING CHANGE:` major). Use descriptive conventional commits:
    - `feat: add webrtc sfu audio track routing`
    - `fix: resolve websocket presence disconnect leak`
    - `docs: update deployment and caddy proxy guide`

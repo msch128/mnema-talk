@@ -28,23 +28,29 @@ as who speaks when stays visible. The transport underneath is DTLS-SRTP. See [SE
 
 ## Experimental Windows desktop path
 
-The current v0.7.2 Windows package is an unsigned Tauri DEV client, including
-the Gaming integration described in the [usage guide](desktop-app.md#windows-gaming-dev). Its local
-instance selector checks HTTPS and `web_client_api: 1`; it then opens the same
-Vue app served by the chosen instance. That remote page uses same-origin
-browser cookies, REST and WebSockets. The v0.7.1 remote page receives no native
-IPC permissions. The gaming integration adds only a session-bound, selected-origin
-Talk-state sync command; local gaming surfaces hold their separate display/control
-permissions. It does not grant the instance cryptographic or selector authority.
+The Windows desktop app lives in the separate
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository
+and is an unsigned Tauri DEV client, including the Gaming integration described
+in the [usage guide](desktop-app.md#windows-gaming-dev). Its local instance
+selector checks HTTPS and `web_client_api: 1`; it then opens the same Vue app
+served by the chosen instance inside WebView2. That remote page uses same-origin
+browser cookies, REST and WebSockets and receives no native IPC permissions
+beyond the gaming integration's session-bound, selected-origin Talk-state sync
+command; local gaming surfaces hold their separate display/control permissions.
+It does not grant the instance cryptographic or selector authority.
 The selected instance supplies executable web code as well as community data.
 A locally bundled protected communication client remains an outstanding target;
 the current web-client mode does not establish that boundary.
 
-Download the complete Desktop DEV Windows ZIP and checksum file from
-[GitHub Releases through v0.7.3](https://github.com/msch128/mnema-talk/releases).
-From 0.7.4, new desktop builds are published from
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
-Extract every file and run `Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
+Voice in the desktop client uses the instance's browser path, so microphone,
+camera and screen payloads are sealed in WebView2 by the same code as in a
+browser. This is not yet qualified on real Windows hardware.
+
+Releases of this repository through
+[v0.7.3](https://github.com/msch128/mnema-talk/releases) attach the Desktop DEV
+Windows ZIP and checksum file; later releases do not, and new desktop builds
+come from mnema-talk-desktop. Extract every file and run
+`Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
 identify package bytes; they are not publisher signatures. No desktop automatic
 updater or signing setup exists.
 
@@ -63,11 +69,11 @@ foundations, not alternate supported clients.
 
 ## Remaining acceptance, in order
 
-The Windows-first client and v0.7.2 Gaming integration have been released.
+The Windows-first client and its Gaming integration have been released.
 Versions remain managed by the normal release pipeline. Further runtime
 qualification and the remaining requirements below are still outstanding.
 
-The v0.7.2 Gaming integration connects these surfaces to the existing client:
+The Gaming integration (first released with v0.7.2) connects these surfaces to the existing client:
 left-hand sidepeek with participants, speaking, mute and screen-share state;
 Alt+M interactive overlay; controls for the actual own Talk; persisted,
 configurable mute, deafen, push-to-talk and overlay bindings. Both surfaces
@@ -75,12 +81,12 @@ require an own connected Talk and an active detected game. See the
 [Windows Gaming DEV usage and limits](desktop-app.md#windows-gaming-dev).
 Topmost windows do not establish exclusive fullscreen or anti-cheat support.
 
-For 0.7.3, the remaining fixes and acceptance work follow:
+The remaining fixes and acceptance work follow:
 
 1. Keep documentation, release downloads and reachable features consistent; address client defects and remaining platform parity.
-2. Chat messages and attachments stay readable by the server and are not deleted by age. Microphone, camera, screen video and screen audio are encrypted in the browser against an honest server, not an active one. The desktop client still refuses that media path.
-3. Verify receiver-specific quality adaptation: degrading one viewer must not reduce other viewers' quality or disrupt audio. Then measure a reproducible one-publisher/99-viewer profile with real decrypting clients, difficult networks and long sessions. Other source/room profiles need separate results. The additional 250-endpoint target is deferred.
-4. Validate independent operation and enforce CI/review requirements. Dependency advisories remain part of release checks; a green build does not mean zero risk.
+2. Chat messages and attachments stay readable by the server and are not deleted by age. Microphone, camera, screen video and screen audio are encrypted in the browser against an honest server, not an active one; the safety code in the connection details lets members compare keys. The desktop client reuses the browser path in WebView2, which is not yet qualified on real Windows hardware.
+3. Verify receiver-specific quality adaptation: degrading one viewer must not reduce other viewers' quality or disrupt audio. Then extend the first load tests ([capacity notes](architecture.md#capacity): one publisher to 99 members, real decrypting clients up to 24 viewers) to a reproducible one-publisher/99-viewer profile with real decrypting clients, difficult networks and long sessions. Other source/room profiles need separate results. The additional 250-endpoint target is deferred.
+4. Validate independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
 [Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
 and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
