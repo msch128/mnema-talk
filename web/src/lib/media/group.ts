@@ -141,10 +141,15 @@ export async function frameVerifiers(state: ClientState): Promise<Map<string, Cr
   return verifiers
 }
 
-function treeLeafKey(state: ClientState, id: string): Uint8Array | null {
+/**
+ * The signature key of a member's leaf. Unlike the leaf's HPKE key it stays the
+ * same when that member commits, so it tells a fresh client (a reload) apart
+ * from a member repeating the package it joined or founded the group with.
+ */
+function treeLeafSigner(state: ClientState, id: string): Uint8Array | null {
   const index = treeMembers(state).get(id)
   const node = index === undefined ? undefined : state.ratchetTree[index * 2]
-  return node && node.nodeType === 'leaf' ? node.leaf.hpkePublicKey : null
+  return node && node.nodeType === 'leaf' ? node.leaf.signaturePublicKey : null
 }
 
 function lowest(ids: Iterable<string>): string | null {
@@ -460,8 +465,8 @@ export class MediaGroup {
     if (message.wireformat === 'mls_key_package') {
       const id = credentialIdentity(message.keyPackage.leafNode.credential)
       if (id !== from) return this.step()
-      const known = this.state ? treeLeafKey(this.state, from) : null
-      const same = known !== null && sameBytes(known, message.keyPackage.leafNode.hpkePublicKey)
+      const known = this.state ? treeLeafSigner(this.state, from) : null
+      const same = known !== null && sameBytes(known, message.keyPackage.leafNode.signaturePublicKey)
       // The committer I know with another leaf has started over (a reload):
       // its group is the one that counts now, so I join it again. Any other
       // member coming back is swapped in by the committer.

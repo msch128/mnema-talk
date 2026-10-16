@@ -1,6 +1,7 @@
 import { HANDSHAKE_MAX_BYTES, HANDSHAKE_MAX_CHARS, mediaUserId } from './bounds'
 import { createMediaGuard, type MediaGuard } from './guard'
 import { MediaGroup, type MediaStep } from './group'
+import { WirePacer } from './pacer'
 import type { MediaCall, MediaNotice } from './api'
 import type { MediaVerification } from './verify'
 import type { EpochKeys } from './frame'
@@ -71,6 +72,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   // When each publisher was first seen on a newer epoch, and last.
   const newerFrom = new Map<string, { first: number, last: number }>()
   let noticeListener: ((notice: MediaNotice) => void) | null = null
+  const pacer = new WirePacer()
   let verificationListener: ((verification: MediaVerification | null) => void) | null = null
   let appliedCode: string | null = null
 
@@ -89,6 +91,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       inbox.length = 0
       resetEvidence()
       guard.reset()
+      pacer.clear()
       verify(null)
       group = null
       if (previous) track(previous.close())
@@ -127,6 +130,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       inbox.length = 0
       resetEvidence()
       guard.reset()
+      pacer.clear()
       verify(null)
       track(closing ? closing.close() : Promise.resolve())
     },
@@ -198,7 +202,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     const channel = channelId as string
     for (const wire of step.wires) {
       const text = encodeWire(wire)
-      if (text) wireListener?.(channel, text)
+      if (text) pacer.push(text, () => wireListener?.(channel, text))
     }
     if (step.key && step.epoch !== null) {
       if (step.epoch !== appliedEpoch || step.key !== appliedKey) {
