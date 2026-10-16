@@ -462,6 +462,30 @@ describe('a member who starts over inside the grace period', () => {
     for (const group of groups.values()) await group.close()
   }, 60_000)
 
+  it('stays in the group when the founder announces itself again after committing', async () => {
+    const roster = [aliceId, bobId, carolId]
+    const groups = await room([...roster, daveId])
+    await settle(groups, [...roster, daveId])
+    // Removing a member commits with a path, which replaces the founder's leaf
+    // HPKE key; its signature key stays.
+    await groups.get(daveId)?.close()
+    groups.delete(daveId)
+    const settled = await settle(groups, roster)
+    expect(await agree(settled)).toEqual([[9, 8, 7], [9, 8, 7], [9, 8, 7]])
+    const before = settled.get(bobId)?.epoch
+    // The room changes, so the founder repeats the package it founded with.
+    const alice = groups.get(aliceId) as MediaGroup
+    const announced = await alice.sync([...roster, fixtureId(6)])
+    expect(announced.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).toContain('mls_key_package')
+    await deliver(groups, aliceId, announced.wires)
+    for (const id of [bobId, carolId]) {
+      const step = await (groups.get(id) as MediaGroup).sync(roster)
+      expect(step.epoch).toBe(before)
+      expect(step.key).not.toBeNull()
+    }
+    for (const group of groups.values()) await group.close()
+  }, 60_000)
+
   it('treats a repeated or an old key package as nothing', async () => {
     const roster = [aliceId, bobId]
     const groups = await room(roster)
