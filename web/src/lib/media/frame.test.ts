@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
-  FRAME_OVERHEAD_BYTES, FrameStream, ReplayWindow, SIGNATURE_BYTES, importEpochKey, importFrameSigner, importFrameVerifier,
+  FRAME_OVERHEAD_BYTES, FrameStream, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, importEpochKey, importFrameSigner, importFrameVerifier,
   openFrame, rememberEpochKey, sealFrame, type EpochKeys,
 } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
@@ -139,19 +139,31 @@ describe('media frames', () => {
     expect(Number.isInteger(new FrameStream().id)).toBe(true)
   })
 
-  it('keeps at most sixteen streams and forgets those of dropped epochs', () => {
+  it('refuses new streams past the cap instead of forgetting old ones, and forgets dropped epochs', async () => {
     const replay = new ReplayWindow()
-    for (let stream = 0; stream < 17; stream++) expect(replay.mark(1, stream, 5)).toBe(true)
-    // The oldest stream fell out, so its unit counts as new again.
-    expect(replay.fresh(1, 0, 5)).toBe(true)
-    expect(replay.fresh(1, 16, 5)).toBe(false)
-    expect(replay.mark(1, 16, 5)).toBe(false)
-    replay.mark(2, 1, 5)
+    for (let stream = 0; stream < REPLAY_STREAMS; stream++) expect(replay.mark(1, stream, 5)).toBe(true)
+    // Nothing was evicted: every stream still refuses its seen unit.
+    for (let stream = 0; stream < REPLAY_STREAMS; stream++) expect(replay.fresh(1, stream, 5)).toBe(false)
+    expect(replay.fresh(1, REPLAY_STREAMS, 0)).toBe(false)
+    expect(replay.mark(1, REPLAY_STREAMS, 0)).toBe(false)
+    // Known streams go on; another epoch has its own room.
+    expect(replay.mark(1, 0, 6)).toBe(true)
+    expect(replay.mark(2, 1, 5)).toBe(true)
     replay.retain([2])
-    expect(replay.fresh(1, 16, 5)).toBe(true)
+    expect(replay.fresh(1, 0, 5)).toBe(true)
     expect(replay.fresh(2, 1, 5)).toBe(false)
     expect(replay.mark(2, 1, 1000)).toBe(true)
     expect(replay.fresh(2, 1, 5)).toBe(false)
+  })
+
+  it('keeps refusing the frame of an old stream after the sender used up its streams', async () => {
+    const keys = await aliceKeys()
+    const replay = new ReplayWindow()
+    const first = await sealed(keys, { stream: 0 })
+    await expect(open(keys, first, { replay })).resolves.not.toBeNull()
+    for (let stream = 1; stream <= REPLAY_STREAMS; stream++) await open(keys, await sealed(keys, { stream }), { replay })
+    await expect(open(keys, first, { replay })).resolves.toBeNull()
+    await expect(open(keys, await sealed(keys, { stream: REPLAY_STREAMS + 1 }), { replay })).resolves.toBeNull()
   })
 
   it('imports MLS signing keys as a seed or PKCS#8, and verifying keys raw', async () => {

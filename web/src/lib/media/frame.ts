@@ -230,19 +230,25 @@ export class FrameStream {
 
 const REPLAY_WINDOW = 64n
 const REPLAY_MASK = (1n << REPLAY_WINDOW) - 1n
-const REPLAY_STREAMS = 16
+// Streams one sender may open per epoch. Only a verified unit starts a stream,
+// so only the sender itself can use them up; a new epoch starts afresh.
+export const REPLAY_STREAMS = 64
 
 /**
- * Units seen per (epoch, stream): the highest counter and a 64-unit bitmap
- * below it, as SRTP does. A unit older than the window, or one already seen,
- * is refused. Holds the most recently used streams only.
+ * One sender's units seen per (epoch, stream): the highest counter and a
+ * 64-unit bitmap below it, as SRTP does. A unit older than the window, or one
+ * already seen, is refused. A stream is never forgotten while its epoch is
+ * kept: once a sender has REPLAY_STREAMS streams in an epoch, further new
+ * streams are refused instead of evicting an old one, which would let its
+ * frames open again.
  */
 export class ReplayWindow {
   private readonly streams = new Map<string, { top: number, seen: bigint }>()
 
   fresh(epoch: number, stream: number, counter: number): boolean {
     const entry = this.streams.get(`${epoch}:${stream}`)
-    if (!entry || counter > entry.top) return true
+    if (!entry) return this.room(epoch)
+    if (counter > entry.top) return true
     const behind = BigInt(entry.top - counter)
     return behind < REPLAY_WINDOW && ((entry.seen >> behind) & 1n) === 0n
   }
@@ -252,7 +258,6 @@ export class ReplayWindow {
     if (!this.fresh(epoch, stream, counter)) return false
     const id = `${epoch}:${stream}`
     const entry = this.streams.get(id)
-    this.streams.delete(id)
     if (!entry) {
       this.streams.set(id, { top: counter, seen: 1n })
     } else if (counter > entry.top) {
@@ -262,12 +267,14 @@ export class ReplayWindow {
     } else {
       this.streams.set(id, { top: entry.top, seen: entry.seen | (1n << BigInt(entry.top - counter)) })
     }
-    // Oldest first: a stream is moved to the end whenever it is used.
-    for (const oldest of this.streams.keys()) {
-      if (this.streams.size <= REPLAY_STREAMS) break
-      this.streams.delete(oldest)
-    }
     return true
+  }
+
+  private room(epoch: number): boolean {
+    const prefix = `${epoch}:`
+    let used = 0
+    for (const id of this.streams.keys()) if (id.startsWith(prefix)) used++
+    return used < REPLAY_STREAMS
   }
 
   /** Forgets streams of epochs whose keys are gone. */

@@ -22,8 +22,19 @@ interface RtpTransformer {
 }
 
 const keys = new Map<number, EpochKeys>()
-// One per receiving transform, so a unit replayed onto any line is refused there.
-const windows = new Set<ReplayWindow>()
+// Per publisher, shared by every receiving line of this worker (one worker
+// serves the whole call): a unit opens once, whichever line or recreated
+// receiver it is played into.
+const replays = new Map<string, ReplayWindow>()
+
+function replayOf(senderId: string): ReplayWindow {
+  let window = replays.get(senderId)
+  if (!window) {
+    window = new ReplayWindow()
+    replays.set(senderId, window)
+  }
+  return window
+}
 let sendEpoch: number | null = null
 
 function remember(epoch: number, key: EpochKeys, replace: boolean) {
@@ -33,13 +44,13 @@ function remember(epoch: number, key: EpochKeys, replace: boolean) {
   for (const drop of ordered.slice(0, -2)) keys.delete(drop)
   // A key was just stored, so the newest epoch is present.
   sendEpoch = ordered[ordered.length - 1] as number
-  for (const window of windows) window.retain(keys.keys())
+  for (const window of replays.values()) window.retain(keys.keys())
 }
 
 function forget() {
   keys.clear()
   sendEpoch = null
-  for (const window of windows) window.retain([])
+  replays.clear()
 }
 
 function isEpochKeys(value: unknown): value is EpochKeys {
@@ -60,11 +71,10 @@ interface Line {
   channelId: string
   senderId: string | null
   stream: FrameStream | null
-  replay: ReplayWindow | null
 }
 
 async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | null> {
-  const { direction, channelId, senderId, replay } = line
+  const { direction, channelId, senderId } = line
   // A receiver whose publisher is not known yet opens nothing.
   if (senderId === null) return null
   const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
@@ -86,7 +96,7 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
     })
     return sealed ? packet(sealed) : null
   }
-  if (!replay) return null
+  const replay = replayOf(senderId)
   let unknown = -1
   const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
     keys, channelId, senderId, packet: sealed, clear, replay, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
@@ -137,9 +147,8 @@ scope.onrtctransform = (event) => {
   // A receiver may be armed before the SFU says who publishes on its line.
   const senderId = typeof options?.senderId === 'string' && options.senderId ? options.senderId : null
   if (!transformer || !port || !direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return
-  // Every sending transform starts a fresh stream; every receiving one its own window.
-  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream() : null, replay: direction === 'recv' ? new ReplayWindow() : null }
-  if (line.replay) windows.add(line.replay)
+  // Every sending transform starts a fresh stream.
+  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream() : null }
   port.onmessage = (message: MessageEvent<unknown>) => {
     const data = message.data
     if (!data || typeof data !== 'object') return
@@ -166,5 +175,5 @@ scope.onrtctransform = (event) => {
         // A failed seal or open never becomes a plaintext frame.
       }
     },
-  })).pipeTo(transformer.writable).catch(() => {}).finally(() => { if (line.replay) windows.delete(line.replay) })
+  })).pipeTo(transformer.writable).catch(() => {})
 }

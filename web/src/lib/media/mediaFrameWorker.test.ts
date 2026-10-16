@@ -259,6 +259,37 @@ describe('media frame worker', () => {
     expect(opened).toHaveLength(3)
   })
 
+  it('opens a unit once per publisher, across lines and recreated receivers', async () => {
+    const key = await epochKeys(5)
+    const packet = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    if (!packet) throw new Error('expected a sealed frame')
+    vi.resetModules()
+    const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
+    vi.stubGlobal('self', scope)
+    await import('./mediaFrameWorker')
+    // One worker serves every line of the call, as the guard sets it up.
+    const line = async (packets: ArrayBuffer[], first = false) => {
+      const written: unknown[] = []
+      const port = { onmessage: null as ((event: { data: unknown }) => void) | null }
+      let done: () => void = () => {}
+      const finished = new Promise<void>((resolve) => { done = resolve })
+      let push: (data: ArrayBuffer) => void = () => {}
+      let end: () => void = () => {}
+      const readable = new ReadableStream({ start(controller) { push = data => controller.enqueue({ data }); end = () => controller.close() } })
+      scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ write(chunk) { written.push(chunk) }, close() { done() } }), options: { port, direction: 'recv', channelId: 'channel', senderId: 'alice' } } })
+      if (first) port.onmessage?.({ data: { type: 'key', epoch: 1, key } })
+      for (const data of packets) push(data)
+      end()
+      await finished
+      return written
+    }
+    expect(await line([asBuffer(packet.buffer)], true)).toHaveLength(1)
+    // The same unit on the publisher's other line, or on a receiver created
+    // again for the same line, is a replay.
+    expect(await line([asBuffer(packet.buffer)])).toEqual([])
+    expect(await line([asBuffer(packet.buffer)])).toEqual([])
+  })
+
   it('stops sealing when a stream runs out of counters', async () => {
     vi.resetModules()
     const frame = await import('./frame')
