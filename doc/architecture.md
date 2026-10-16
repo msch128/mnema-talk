@@ -120,11 +120,14 @@ the person's voice volume.
 Measured on a 4-core home NAS with the default `APP_MEM_LIMIT=1g`: one browser
 sharing a 640x360 screen at 20 fps to 99 members in one Talk used about 28 %
 of one core and about 500 MB of app memory, each receiver getting about
-320 kbit/s. App memory grows with receivers x forwarded video sources, because
-Pion's NACK responder keeps up to 1024 packets (about 1.5 MB) per outgoing
-video track. It is bounded and returned after the call (about 100 MB again some
-20 minutes later), but 100 receivers x 10 cameras would need roughly 1.5 GB, so
-raise `APP_MEM_LIMIT` for very large calls. With about 16 real browsers plus 84
+320 kbit/s (0.7.5). App memory grows with receivers x forwarded video sources,
+because Pion keeps a retransmission history of about 1.5 KB per packet for every
+outgoing video track. Since 0.7.7 that history shrinks with the number of
+connected members (1024 packets up to 16, halving as the count doubles, at
+least 128 from 65 on; see `internal/sfu/nack.go`), so 100 receivers x 10
+cameras stay around 200 MB instead of 1.5 GB. The price in large calls is that
+a late retransmission request goes unanswered and the picture shows an artifact
+until the next keyframe. Memory is returned after the call. With about 16 real browsers plus 84
 lightweight members (100 total) the app used about 1.6 cores. Real E2EE browser
 clients were verified with up to 24 viewers in one call; beyond that the single
 test machine, not the server, was the limit. These are single runs, not a

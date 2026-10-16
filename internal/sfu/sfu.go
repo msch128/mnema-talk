@@ -107,6 +107,7 @@ type Peer struct {
 
 type Room struct {
 	nativeAPI           func(func() bool) (*webrtc.API, error)
+	load                *peerLoad
 	sourceAuthorization *sourceAuthorizationRegistry
 	ID                  uuid.UUID
 	// peers maps user → their current connection; a rejoin replaces it.
@@ -135,6 +136,7 @@ type Room struct {
 
 type SFU struct {
 	sourceAuthorization *sourceAuthorizationRegistry
+	load                *peerLoad
 	apiMu               sync.RWMutex
 	api                 *webrtc.API
 	// announced are the addresses offered to browsers (see SetAnnouncedIPs).
@@ -183,7 +185,8 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 		return nil, err
 	}
 	sources := &sourceAuthorizationRegistry{}
-	api, err := buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, sources)
+	load := &peerLoad{}
+	api, err := buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, sources, load)
 	if err != nil {
 		if mux != nil {
 			_ = mux.Close()
@@ -199,6 +202,7 @@ func NewSFU(portMin, portMax uint16, announceIPs []string, stunURLs []string, op
 	return &SFU{
 		api:                 api,
 		sourceAuthorization: sources,
+		load:                load,
 		announced:           append([]string(nil), announceIPs...),
 		portMin:             portMin,
 		portMax:             portMax,
@@ -229,7 +233,7 @@ func (s *SFU) SetAnnouncedIPs(ips []string) error {
 	if s.udpMux != nil && onlyLoopbackAnnouncements(s.announced) != onlyLoopbackAnnouncements(ips) {
 		return fmt.Errorf("changing UDP mux loopback interface mode requires restart")
 	}
-	api, err := buildAPIWithAuthorization(s.portMin, s.portMax, ips, s.udpMux, nil, s.sourceAuthorization)
+	api, err := buildAPIWithAuthorization(s.portMin, s.portMax, ips, s.udpMux, nil, s.sourceAuthorization, s.load)
 	if err != nil {
 		return err
 	}
@@ -244,7 +248,7 @@ func (s *SFU) nativeAPI(authorize func() bool) (*webrtc.API, error) {
 	if s.closed.Load() || authorize == nil {
 		return nil, errSFUClosed
 	}
-	return buildAPIWithAuthorization(s.portMin, s.portMax, s.announced, s.udpMux, authorize, s.sourceAuthorization)
+	return buildAPIWithAuthorization(s.portMin, s.portMax, s.announced, s.udpMux, authorize, s.sourceAuthorization, s.load)
 }
 
 func (s *SFU) currentAPI() *webrtc.API {
@@ -258,10 +262,10 @@ func buildAPI(portMin, portMax uint16, announceIPs []string) (*webrtc.API, error
 }
 
 func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (*webrtc.API, error) {
-	return buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, nil)
+	return buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, nil, nil)
 }
 
-func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry) (*webrtc.API, error) {
+func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry, load *peerLoad) (*webrtc.API, error) {
 	settingEngine := webrtc.SettingEngine{}
 	if onlyLoopbackAnnouncements(announceIPs) {
 		settingEngine.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
@@ -303,7 +307,11 @@ func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mu
 		// First is the innermost writer, beneath retransmission caches.
 		registry.Add(mediaAuthorizationFactory{authorize: authorize, sources: sources})
 	}
-	if err := webrtc.RegisterDefaultInterceptors(mediaEngine, registry); err != nil {
+	var options []webrtc.InterceptorOption
+	if load != nil {
+		options = append(options, webrtc.WithNackResponderOptions(load.responderOption()))
+	}
+	if err := webrtc.RegisterDefaultInterceptorsWithOptions(mediaEngine, registry, options...); err != nil {
 		return nil, fmt.Errorf("failed to register WebRTC interceptors: %w", err)
 	}
 
@@ -363,6 +371,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 		r = &Room{
 			ID:                  channelID,
 			nativeAPI:           s.nativeAPI,
+			load:                s.load,
 			sourceAuthorization: s.sourceAuthorization,
 			peers:               make(map[uuid.UUID]*Peer),
 			trackLocals:         make(map[string]*TrackInfo),
@@ -458,6 +467,7 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 
 	if existing, ok := r.peers[userID]; ok {
 		delete(r.peers, userID)
+		r.load.add(-1)
 		r.removePeerTracksLocked(userID)
 		// Closing fires the old connection's state callback; removePeer
 		// ignores it because the user's entry is no longer that peer.
@@ -567,6 +577,7 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	})
 
 	r.peers[userID] = peer
+	r.load.add(1)
 
 	go r.SignalPeerConnections()
 
@@ -983,6 +994,7 @@ func (r *Room) detachPeer(peer *Peer) bool {
 	current := r.peers[peer.ID] == peer
 	if current {
 		delete(r.peers, peer.ID)
+		r.load.add(-1)
 		delete(r.subs, peer.ID)
 		r.removePeerTracksLocked(peer.ID)
 	}
