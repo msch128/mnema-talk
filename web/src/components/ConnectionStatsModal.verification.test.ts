@@ -16,20 +16,22 @@ describe('ConnectionStatsModal safety code', () => {
     expect(wrapper.get('[data-testid="media-verification"]').text()).toContain(t('stats.noSafetyCode'))
   })
 
-  it('shows the code and who holds the keys, flagging anyone not in the Talk', () => {
+  it('shows the code and who holds the keys, flagging anyone not in the Talk or holding two leaves', () => {
     const voice = useVoiceStore()
     const channel = fixtureId(9)
     const alice = voiceUserFixture({ id: fixtureId(1), username: 'alice', display_name: 'Alice' })
     const bob = voiceUserFixture({ id: fixtureId(2), username: 'bob', display_name: '' })
     voice.currentChannelId = channel
     voice.channelUsers = { [channel]: { [alice.id]: alice, [bob.id]: bob } }
-    voice.mediaVerification = { epoch: 4, code: '01234 56789 01234 56789', members: [alice.id, bob.id, fixtureId(3)] }
+    voice.mediaVerification = { epoch: 4, code: '01234 56789 01234 56789', members: ['', alice.id, bob.id, bob.id, fixtureId(3)] }
     const wrapper = mount(ConnectionStatsModal)
     expect(wrapper.get('[data-testid="media-safety-code"]').text()).toBe('01234 56789 01234 56789')
     const members = wrapper.findAll('[data-in-room]')
     expect(members.map(member => [member.text(), member.attributes('data-in-room')])).toEqual([
+      [t('stats.unknownKeyMember'), 'false'],
       ['Alice', 'true'],
       ['bob', 'true'],
+      ['bob', 'false'],
       [t('stats.unknownKeyMember'), 'false'],
     ])
   })

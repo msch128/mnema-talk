@@ -14,7 +14,7 @@ export interface MediaVerification {
   epoch: number
   /** Digits in groups of five, e.g. "01234 56789 01234 56789". */
   code: string
-  /** User ids holding this epoch's keys, sorted. */
+  /** The identity of every leaf holding this epoch's keys, sorted; '' for one that is not a member id. */
   members: string[]
 }
 

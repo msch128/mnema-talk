@@ -443,7 +443,7 @@
     "keyMembers": "Halten diese Schlüssel",
     "unknownKeyMember": "Nicht in diesem Talk",
     "noSafetyCode": "Noch keine Medienschlüssel",
-    "safetyCodeHint": "Vergleicht diesen Code mit den anderen im Gespräch, persönlich oder über einen anderen Weg, dem ihr vertraut. Stimmt er überall überein, halten alle dieselben Schlüssel mit genau den aufgeführten Mitgliedern. Er ändert sich, sobald jemand kommt oder geht. Ein rot markierter Name hält die Schlüssel, ohne in diesem Talk zu sein.",
+    "safetyCodeHint": "Vergleicht diesen Code mit den anderen im Gespräch, persönlich oder über einen anderen Weg, dem ihr vertraut. Stimmt er überall überein, halten alle dieselben Schlüssel mit genau den aufgeführten Mitgliedern. Er ändert sich, sobald jemand kommt oder geht. Ein rot markierter Name hält die Schlüssel, ohne in diesem Talk zu sein, oder hält sie doppelt. Nur der Code ist Ende-zu-Ende geschützt: Die Namen kommen vom Server.",
     "channels": {
       "one": "{count} Kanal",
       "other": "{count} Kanäle"

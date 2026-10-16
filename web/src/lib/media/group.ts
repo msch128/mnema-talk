@@ -109,6 +109,15 @@ function treeMembers(state: ClientState): Map<string, number> {
   return members
 }
 
+/** Every leaf's identity, in tree order: a repeated or unreadable one stays visible ('' for unreadable). */
+function leafIdentities(state: ClientState): string[] {
+  const ids: string[] = []
+  state.ratchetTree.forEach((node, index) => {
+    if (node && node.nodeType === 'leaf' && index % 2 === 0) ids.push(credentialIdentity(node.leaf.credential) ?? '')
+  })
+  return ids
+}
+
 function treeLeafKey(state: ClientState, id: string): Uint8Array | null {
   const index = treeMembers(state).get(id)
   const node = index === undefined ? undefined : state.ratchetTree[index * 2]
@@ -629,9 +638,8 @@ export class MediaGroup {
     const raw = await mlsExporter(state.keySchedule.exporterSecret, MEDIA_EXPORTER_LABEL, this.groupId, FRAME_EPOCH_BYTES, this.cs)
     try {
       const key = await importEpochKey(raw)
-      const members = treeMembers(state)
       const code = await safetyCode(state.keySchedule.epochAuthenticator)
-      if (!key || !code || !members.has(this.userId)) {
+      if (!key || !code || !treeMembers(state).has(this.userId)) {
         this.wipeRejected(state)
         return false
       }
@@ -639,7 +647,7 @@ export class MediaGroup {
       if (this.offerTimer !== null) clearTimeout(this.offerTimer)
       this.offerTimer = null
       const epochNumber = Number(epoch)
-      this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: [...members.keys()].sort() } }
+      this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
       this.keys.set(epochNumber, key)
       const ordered = [...this.keys.keys()].sort((a, b) => a - b)
       for (const drop of ordered.slice(0, -2)) this.keys.delete(drop)

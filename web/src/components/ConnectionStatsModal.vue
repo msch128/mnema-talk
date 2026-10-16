@@ -33,11 +33,15 @@ const sparklinePoints = computed(() => {
 // Everyone in the call reads out this code: the same code on every screen
 // means everyone holds the same keys with the same members.
 const verification = computed(() => voiceStore.mediaVerification)
+// A holder outside the Talk, or one id holding two leaves, is flagged.
 function keyMembers(ids: string[]) {
   const room = voiceStore.channelUsers[voiceStore.currentChannelId ?? ''] ?? {}
-  return ids.map((id) => {
-    const user = room[id]
-    return { id, name: user ? user.display_name || user.username : t('stats.unknownKeyMember'), inRoom: !!user }
+  const seen = new Set<string>()
+  return ids.map((id, index) => {
+    const user = id ? room[id] : undefined
+    const inRoom = !!user && !seen.has(id)
+    seen.add(id)
+    return { key: `${index}:${id}`, name: user ? user.display_name || user.username : t('stats.unknownKeyMember'), inRoom }
   })
 }
 
@@ -158,7 +162,7 @@ const rows = computed(() => {
             <ul class="flex flex-wrap gap-1.5" :aria-label="$t('stats.keyMembers')">
               <li
                 v-for="member in keyMembers(verification.members)"
-                :key="member.id"
+                :key="member.key"
                 :class="['rounded px-1.5 py-0.5 text-xs', member.inRoom ? 'bg-mnema-canvas text-mnema-muted' : 'bg-mnema-danger/[0.12] text-mnema-danger']"
                 :data-in-room="member.inRoom ? 'true' : 'false'"
               >{{ member.name }}</li>

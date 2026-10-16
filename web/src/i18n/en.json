@@ -443,7 +443,7 @@
     "keyMembers": "Holding these keys",
     "unknownKeyMember": "Not in this Talk",
     "noSafetyCode": "No media keys yet",
-    "safetyCodeHint": "Compare this code with the others in the call, in person or over another channel you trust. If it matches everywhere, everyone holds the same keys with exactly the members listed. It changes whenever someone joins or leaves. A name in red holds the keys without being in this Talk.",
+    "safetyCodeHint": "Compare this code with the others in the call, in person or over another channel you trust. If it matches everywhere, everyone holds the same keys with exactly the members listed. It changes whenever someone joins or leaves. A name in red holds the keys without being in this Talk, or holds them twice. Only the code is end-to-end: the names come from the server.",
     "channels": {
       "one": "{count} channel",
       "other": "{count} channels"
