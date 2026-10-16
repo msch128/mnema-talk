@@ -1,0 +1,35 @@
+README.md
+  s_06fcde5dbef956::t_ffbec552215357 25,155-158,168-172,201-204,288-293
+doc/desktop-app.md
+  s_06fcde5dbef956::t_ffbec552215357 3-6,8,53-56
+doc/product-status.md
+  s_06fcde5dbef956::t_ffbec552215357 31-40,45-53,72,76,84,87-89
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_97e70feac373e0 11-16
+SECURITY.md
+  s_06fcde5dbef956::t_ffbec552215357 89-92
+doc/architecture.md
+  s_06fcde5dbef956::t_ffbec552215357 118-132,184
+  s_06fcde5dbef956::t_4f601189a79b12 56,109,135-136,138-139,141,143-145,147-156,171-175,213
+AGENTS.md
+  s_06fcde5dbef956::t_254b524dadce0e 33,87,111-112
+  s_06fcde5dbef956::t_4f601189a79b12 109
+doc/crypto-state.md
+  s_06fcde5dbef956::t_254b524dadce0e 4-7,127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "211d46ee455f42c3ed511ce41073d332b272a401",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
