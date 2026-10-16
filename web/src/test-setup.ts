@@ -14,6 +14,7 @@ installMediaCall({
   onKey() {},
   onWire() {},
   onNotice() {},
+  onVerification() {},
   protectSender: () => true,
   prepareIncoming: () => true,
   protectIncoming: () => true,

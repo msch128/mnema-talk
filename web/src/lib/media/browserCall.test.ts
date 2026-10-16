@@ -7,6 +7,7 @@ import { browserMediaCall, mediaSettled } from './browserCall'
 import { MediaGroup } from './group'
 import { openFrame, sealFrame } from './frame'
 import type { MediaCall } from './api'
+import type { MediaVerification } from './verify'
 
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
@@ -99,6 +100,10 @@ describe('browser media call', () => {
     const bob = browserMediaCall(bobGuard)
     const seen: number[] = []
     alice.onKey(() => { seen.push(aliceGuard.keys.at(-1)?.epoch ?? -1) })
+    const aliceCodes: (MediaVerification | null)[] = []
+    const bobCodes: (MediaVerification | null)[] = []
+    alice.onVerification(verification => aliceCodes.push(verification))
+    bob.onVerification(verification => bobCodes.push(verification))
     alice.onWire((_channel, wire) => { bob.receive(aliceId, wire) })
     bob.onWire((_channel, wire) => { alice.receive(bobId, wire) })
     alice.start(channelId, aliceId)
@@ -116,6 +121,10 @@ describe('browser media call', () => {
     if (!aliceKey || !bobKey) throw new Error('expected both epoch keys')
     expect(aliceKey.epoch).toBe(bobKey.epoch)
     expect(seen).toContain(aliceKey.epoch)
+    // Each code is reported once, and both ends end up on the same one.
+    expect(aliceCodes.at(-1)).toEqual(bobCodes.at(-1))
+    expect(aliceCodes.at(-1)).toMatchObject({ epoch: aliceKey.epoch, members: [aliceId, bobId] })
+    expect(new Set(aliceCodes.map(code => code?.code ?? null)).size).toBe(aliceCodes.length)
     const packet = await sealFrame({
       key: aliceKey.key, epoch: aliceKey.epoch, channelId, senderId: aliceId, plaintext: new Uint8Array([1, 2]),
     })
@@ -136,6 +145,7 @@ describe('browser media call', () => {
     await mediaSettled(bob)
     expect(alice.protectSender(sender)).toBe(false)
     expect(aliceGuard.keys).toEqual([])
+    expect(aliceCodes.at(-1)).toBeNull()
   }, 30_000)
 
   it('forgets a discarded epoch before a later group installs its own', async () => {

@@ -439,6 +439,11 @@
     "encryption": "Transport encryption",
     "signalLatency": "Signal latency (WebSocket)",
     "privacyNote": "Microphone, camera and screen are encrypted in this browser before they reach the server, which forwards them without being able to read them. A compromised server could still interfere with who holds the keys, and who speaks when stays visible to it. Chat and attachments stay readable by the server, and nothing is recorded.",
+    "safetyCode": "Safety code",
+    "keyMembers": "Holding these keys",
+    "unknownKeyMember": "Not in this Talk",
+    "noSafetyCode": "No media keys yet",
+    "safetyCodeHint": "Compare this code with the others in the call, in person or over another channel you trust. If it matches everywhere, everyone holds the same keys with exactly the members listed. It changes whenever someone joins or leaves. A name in red holds the keys without being in this Talk.",
     "channels": {
       "one": "{count} channel",
       "other": "{count} channels"

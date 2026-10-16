@@ -439,6 +439,11 @@
     "encryption": "Transportverschlüsselung",
     "signalLatency": "Signal-Latenz (WebSocket)",
     "privacyNote": "Mikrofon, Kamera und Bildschirm werden in diesem Browser verschlüsselt, bevor sie den Server erreichen; er leitet sie weiter, ohne sie lesen zu können. Ein kompromittierter Server könnte aber beeinflussen, wer die Schlüssel erhält, und wer wann spricht, bleibt für ihn sichtbar. Chat und Anhänge bleiben für den Server lesbar, und es wird nichts aufgezeichnet.",
+    "safetyCode": "Sicherheitscode",
+    "keyMembers": "Halten diese Schlüssel",
+    "unknownKeyMember": "Nicht in diesem Talk",
+    "noSafetyCode": "Noch keine Medienschlüssel",
+    "safetyCodeHint": "Vergleicht diesen Code mit den anderen im Gespräch, persönlich oder über einen anderen Weg, dem ihr vertraut. Stimmt er überall überein, halten alle dieselben Schlüssel mit genau den aufgeführten Mitgliedern. Er ändert sich, sobald jemand kommt oder geht. Ein rot markierter Name hält die Schlüssel, ohne in diesem Talk zu sein.",
     "channels": {
       "one": "{count} Kanal",
       "other": "{count} Kanäle"

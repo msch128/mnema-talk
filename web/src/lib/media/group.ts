@@ -30,6 +30,7 @@ import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGrou
 import type { MediaNotice } from './api'
 import { Backoff } from './backoff'
 import { importEpochKey } from './frame'
+import { safetyCode, type MediaVerification } from './verify'
 
 // A member's leaf is swapped at most once per this long, doubling while it keeps happening.
 const SWAP_BASE_MS = 3000
@@ -47,6 +48,8 @@ export interface MediaStep {
   wires: Uint8Array[]
   epoch: number | null
   key: CryptoKey | null
+  /** What members compare to know they hold the same keys; set with the key. */
+  verification?: MediaVerification | null
 }
 
 interface OwnPackage {
@@ -54,7 +57,6 @@ interface OwnPackage {
   privatePackage: PrivateKeyPackage
 }
 
-const emptyStep = (epoch: number | null, key: CryptoKey | null): MediaStep => ({ wires: [], epoch, key })
 
 let suitePromise: Promise<CiphersuiteImpl> | null = null
 
@@ -139,7 +141,7 @@ export class MediaGroup {
   private state: ClientState | null = null
   private readonly pending = new Map<string, KeyPackage>()
   private readonly keys = new Map<number, CryptoKey>()
-  private current: { epoch: number, key: CryptoKey } | null = null
+  private current: { epoch: number, key: CryptoKey, verification: MediaVerification } | null = null
   private room: readonly string[] = []
   private offeredFor: string | null = null
   /** This client created its group, and told this room about it. */
@@ -219,8 +221,8 @@ export class MediaGroup {
     return run
   }
 
-  private step(): MediaStep {
-    return emptyStep(this.current?.epoch ?? null, this.current?.key ?? null)
+  private step(wires: Uint8Array[] = []): MediaStep {
+    return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null, verification: this.current?.verification ?? null }
   }
 
   private others(roster: readonly string[]): string[] {
@@ -291,7 +293,7 @@ export class MediaGroup {
       return null
     }
     await this.rekey()
-    return { wires: this.offer(this.room), epoch: null, key: null }
+    return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
   }
 
   private watchOffer() {
@@ -339,7 +341,7 @@ export class MediaGroup {
       wires.push(...await this.commitRemoves(others))
       wires.push(...await this.commitAdds(others))
     }
-    return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
+    return this.step(wires)
   }
 
   /**
@@ -357,7 +359,7 @@ export class MediaGroup {
   private async recoverNow(): Promise<MediaStep> {
     if (!this.room.some(id => id < this.userId) || !this.resets.allow('self')) return this.step()
     await this.leave()
-    return { wires: this.offer(this.room), epoch: null, key: null }
+    return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
   }
 
   /** Drops the group and the package it was joined with. */
@@ -449,13 +451,13 @@ export class MediaGroup {
         if (!this.swaps.allow(from)) return this.step()
         this.remember(from, wire)
         wires.push(...await this.replaceMember(from, message.keyPackage))
-        return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
+        return this.step(wires)
       }
       this.remember(from, wire)
       this.pending.set(from, message.keyPackage)
       // A package from someone the roster does not list waits until it does.
       if (this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
-      return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null }
+      return this.step(wires)
     }
     if (members && from < this.userId && !members.has(from)) this.discard()
     if (message.wireformat === 'mls_welcome') {
@@ -496,7 +498,7 @@ export class MediaGroup {
             return this.step()
           }
           await this.rekey()
-          return { wires: this.offer(this.room), epoch: null, key: null }
+          return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
         }
         await this.adopt(processed.newState)
       } catch {
@@ -627,7 +629,9 @@ export class MediaGroup {
     const raw = await mlsExporter(state.keySchedule.exporterSecret, MEDIA_EXPORTER_LABEL, this.groupId, FRAME_EPOCH_BYTES, this.cs)
     try {
       const key = await importEpochKey(raw)
-      if (!key || !treeMembers(state).has(this.userId)) {
+      const members = treeMembers(state)
+      const code = await safetyCode(state.keySchedule.epochAuthenticator)
+      if (!key || !code || !members.has(this.userId)) {
         this.wipeRejected(state)
         return false
       }
@@ -635,7 +639,7 @@ export class MediaGroup {
       if (this.offerTimer !== null) clearTimeout(this.offerTimer)
       this.offerTimer = null
       const epochNumber = Number(epoch)
-      this.current = { epoch: epochNumber, key }
+      this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: [...members.keys()].sort() } }
       this.keys.set(epochNumber, key)
       const ordered = [...this.keys.keys()].sort((a, b) => a - b)
       for (const drop of ordered.slice(0, -2)) this.keys.delete(drop)

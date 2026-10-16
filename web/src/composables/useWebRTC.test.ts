@@ -8,6 +8,7 @@ import { decodeServerEvent } from '../types/events'
 import { fixtureId, userFixture, voiceUserFixture } from '../test-fixtures.fixture'
 import { installMediaCall } from '../lib/media/api'
 import type { MediaCall } from '../lib/media/api'
+import type { MediaVerification } from '../lib/media/verify'
 import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
@@ -237,6 +238,7 @@ const permissiveMediaCall: MediaCall = {
   onKey() {},
   onWire() {},
   onNotice() {},
+  onVerification() {},
   protectSender: () => true,
   prepareIncoming: () => true,
   protectIncoming: () => true,
@@ -246,6 +248,7 @@ function installRecordingCall(allow = true) {
   let onKeyListener: (() => void) | null = null
   let onWireListener: ((channelId: string, wire: string) => void) | null = null
   let onNoticeListener: ((notice: 'removed') => void) | null = null
+  let onVerificationListener: ((verification: MediaVerification | null) => void) | null = null
   const call = {
     start: vi.fn(),
     roster: vi.fn(),
@@ -255,12 +258,14 @@ function installRecordingCall(allow = true) {
     onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
     onNotice: vi.fn((listener: (notice: 'removed') => void) => { onNoticeListener = listener }),
+    onVerification: vi.fn((listener: (verification: MediaVerification | null) => void) => { onVerificationListener = listener }),
     protectSender: vi.fn(() => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn(() => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
     fireNotice() { onNoticeListener?.('removed') },
+    fireVerification(verification: MediaVerification | null) { onVerificationListener?.(verification) },
   }
   installMediaCall(call)
   return call
@@ -3387,6 +3392,19 @@ describe('protected media', () => {
     call.fireKey()
     expect(sent.filter(event => event.type === 'webrtc_request_keyframe')).toHaveLength(keyframes + 1)
     expect(useToastStore().toasts).toEqual([])
+  })
+
+  it('keeps the safety code of the current keys in the voice store', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const verification = { epoch: 3, code: '01234 56789 01234 56789', members: [fixtureId(1)] }
+    call.fireVerification(verification)
+    expect(useVoiceStore().mediaVerification).toEqual(verification)
+    call.fireVerification(null)
+    expect(useVoiceStore().mediaVerification).toBeNull()
   })
 
   it('tells the member once per call that the group removed them', async () => {

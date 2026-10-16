@@ -2,6 +2,7 @@ import { HANDSHAKE_MAX_BYTES, HANDSHAKE_MAX_CHARS, mediaUserId } from './bounds'
 import { createMediaGuard, type MediaGuard } from './guard'
 import { MediaGroup, type MediaStep } from './group'
 import type { MediaCall, MediaNotice } from './api'
+import type { MediaVerification } from './verify'
 
 // Nothing could be opened for this long while frames of a newer epoch keep
 // arriving: the call is behind. A frame names its own epoch before it can be
@@ -69,6 +70,8 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   // When each publisher was first seen on a newer epoch, and last.
   const newerFrom = new Map<string, { first: number, last: number }>()
   let noticeListener: ((notice: MediaNotice) => void) | null = null
+  let verificationListener: ((verification: MediaVerification | null) => void) | null = null
+  let appliedCode: string | null = null
 
   const call: MediaCall = {
     start(nextChannel, nextUser) {
@@ -85,6 +88,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       inbox.length = 0
       resetEvidence()
       guard.reset()
+      verify(null)
       group = null
       if (previous) track(previous.close())
       if (!channel || !user) return
@@ -122,11 +126,13 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       inbox.length = 0
       resetEvidence()
       guard.reset()
+      verify(null)
       track(closing ? closing.close() : Promise.resolve())
     },
     onKey(listener) { keyListener = listener },
     onWire(listener) { wireListener = listener },
     onNotice(listener) { noticeListener = listener },
+    onVerification(listener) { verificationListener = listener },
     protectSender(sender) {
       if (!channelId || !userId) return false
       return guard.armSender(sender, channelId, userId)
@@ -201,6 +207,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
         guard.setKey(step.epoch, step.key, replace)
         keyListener?.()
       }
+      verify(step.verification ?? null)
       return
     }
     if (appliedEpoch !== null) {
@@ -208,6 +215,14 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       appliedKey = null
       guard.clearKeys()
     }
+    verify(null)
+  }
+
+  function verify(verification: MediaVerification | null) {
+    const code = verification ? `${verification.epoch}:${verification.code}` : null
+    if (code === appliedCode) return
+    appliedCode = code
+    verificationListener?.(verification)
   }
 
   async function flush(current: number, resend = false): Promise<void> {
