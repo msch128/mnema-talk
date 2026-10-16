@@ -3,6 +3,7 @@ import { createMediaGuard, type MediaGuard } from './guard'
 import { MediaGroup, type MediaStep } from './group'
 import type { MediaCall, MediaNotice } from './api'
 import type { MediaVerification } from './verify'
+import type { EpochKeys } from './frame'
 
 // Nothing could be opened for this long while frames of a newer epoch keep
 // arriving: the call is behind. A frame names its own epoch before it can be
@@ -59,7 +60,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   let userId: string | null = null
   let roster: string[] = []
   let appliedEpoch: number | null = null
-  let appliedKey: CryptoKey | null = null
+  let appliedKey: EpochKeys | null = null
   let generation = 0
   let opening: Promise<void> = Promise.resolve()
   let tail: Promise<void> = Promise.resolve()

@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES } from './bounds'
-import { openFrame, sealFrame } from './frame'
+import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import { MediaGroup } from './group'
 
 const faults = vi.hoisted(() => ({
@@ -14,6 +14,8 @@ const faults = vi.hoisted(() => ({
   hugeEpoch: false,
   privateCommit: false,
   blankTag: false,
+  signer: false,
+  verifier: false,
 }))
 
 vi.mock('ts-mls', async importOriginal => {
@@ -50,6 +52,8 @@ vi.mock('./frame', async importOriginal => {
   return {
     ...actual,
     importEpochKey: (raw: Uint8Array) => faults.epochKey ? Promise.resolve(null) : actual.importEpochKey(raw),
+    importFrameSigner: (raw: Uint8Array) => faults.signer ? Promise.resolve(null) : actual.importFrameSigner(raw),
+    importFrameVerifier: (raw: Uint8Array) => faults.verifier ? Promise.resolve(null) : actual.importFrameVerifier(raw),
   }
 })
 
@@ -73,11 +77,12 @@ function wireAt(wires: Uint8Array[], index: number): Uint8Array {
   return wire
 }
 
-async function roundTrip(left: CryptoKey | null, right: CryptoKey | null, epoch: number) {
+/** Seals as `sender` with its keys `left` and opens with `right`. */
+async function roundTrip(left: EpochKeys | null, right: EpochKeys | null, epoch: number, sender = aliceId) {
   if (!left || !right) throw new Error('expected epoch keys')
-  const packet = await sealFrame({ key: left, epoch, channelId, senderId: aliceId, plaintext: new Uint8Array([9, 8, 7]) })
+  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]) })
   if (!packet) throw new Error('expected a sealed frame')
-  const openedFrame = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: aliceId, packet })
+  const openedFrame = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow() })
   return openedFrame ? [...openedFrame] : null
 }
 
@@ -136,5 +141,18 @@ describe('media group failures', () => {
     expect((await carol.sync([fixtureId(3)])).epoch).toBe(0)
     faults.blankTag = false
     await carol.close()
+  }, 30_000)
+
+  it('holds no keys in a browser that cannot sign or verify frames with Ed25519', async () => {
+    for (const fault of ['signer', 'verifier'] as const) {
+      const alone = await opened(aliceId)
+      faults[fault] = true
+      const step = await alone.sync([aliceId])
+      faults[fault] = false
+      expect(step.key).toBeNull()
+      expect(step.verification).toBeNull()
+      expect((await alone.sync([aliceId])).key).not.toBeNull()
+      await alone.close()
+    }
   }, 30_000)
 })

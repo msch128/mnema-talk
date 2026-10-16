@@ -29,7 +29,7 @@ import {
 import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGroupId, mediaUserId } from './bounds'
 import type { MediaNotice } from './api'
 import { Backoff } from './backoff'
-import { importEpochKey } from './frame'
+import { importEpochKey, importFrameSigner, importFrameVerifier, type EpochKeys } from './frame'
 import { safetyCode, type MediaVerification } from './verify'
 
 // A member's leaf is swapped at most once per this long, doubling while it keeps happening.
@@ -47,7 +47,7 @@ const TAKEOVER_MS = 15_000
 export interface MediaStep {
   wires: Uint8Array[]
   epoch: number | null
-  key: CryptoKey | null
+  key: EpochKeys | null
   /** What members compare to know they hold the same keys; set with the key. */
   verification?: MediaVerification | null
 }
@@ -118,6 +118,29 @@ function leafIdentities(state: ClientState): string[] {
   return ids
 }
 
+/**
+ * Each member's frame verifying key, from its leaf's signature key. An id that
+ * holds more than one leaf gets none: which of its leaves signed a frame could
+ * not be told apart.
+ */
+export async function frameVerifiers(state: ClientState): Promise<Map<string, CryptoKey> | null> {
+  const leaves = new Map<string, Uint8Array[]>()
+  state.ratchetTree.forEach((node, index) => {
+    if (!node || node.nodeType !== 'leaf' || index % 2 !== 0) return
+    const id = credentialIdentity(node.leaf.credential)
+    if (id) leaves.set(id, [...(leaves.get(id) ?? []), node.leaf.signaturePublicKey])
+  })
+  const verifiers = new Map<string, CryptoKey>()
+  for (const [id, keys] of leaves) {
+    const only = keys.length === 1 ? keys[0] : undefined
+    if (!only) continue
+    const key = await importFrameVerifier(only)
+    if (!key) return null
+    verifiers.set(id, key)
+  }
+  return verifiers
+}
+
 function treeLeafKey(state: ClientState, id: string): Uint8Array | null {
   const index = treeMembers(state).get(id)
   const node = index === undefined ? undefined : state.ratchetTree[index * 2]
@@ -149,8 +172,8 @@ function encodeWire(message: Parameters<typeof encodeMlsMessage>[0]): Uint8Array
 export class MediaGroup {
   private state: ClientState | null = null
   private readonly pending = new Map<string, KeyPackage>()
-  private readonly keys = new Map<number, CryptoKey>()
-  private current: { epoch: number, key: CryptoKey, verification: MediaVerification } | null = null
+  private readonly keys = new Map<number, EpochKeys>()
+  private current: { epoch: number, key: EpochKeys, verification: MediaVerification } | null = null
   private room: readonly string[] = []
   private offeredFor: string | null = null
   /** This client created its group, and told this room about it. */
@@ -637,9 +660,12 @@ export class MediaGroup {
     }
     const raw = await mlsExporter(state.keySchedule.exporterSecret, MEDIA_EXPORTER_LABEL, this.groupId, FRAME_EPOCH_BYTES, this.cs)
     try {
-      const key = await importEpochKey(raw)
+      const aes = await importEpochKey(raw)
       const code = await safetyCode(state.keySchedule.epochAuthenticator)
-      if (!key || !code || !treeMembers(state).has(this.userId)) {
+      // Without Ed25519 in this browser there is no signer, so no keys and no media.
+      const signer = await importFrameSigner(state.signaturePrivateKey)
+      const verifiers = await frameVerifiers(state)
+      if (!aes || !code || !signer || !verifiers || !verifiers.has(this.userId)) {
         this.wipeRejected(state)
         return false
       }
@@ -647,6 +673,7 @@ export class MediaGroup {
       if (this.offerTimer !== null) clearTimeout(this.offerTimer)
       this.offerTimer = null
       const epochNumber = Number(epoch)
+      const key: EpochKeys = { key: aes, signer, verifiers }
       this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
       this.keys.set(epochNumber, key)
       const ordered = [...this.keys.keys()].sort((a, b) => a - b)

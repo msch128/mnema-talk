@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMediaGuard } from './guard'
+import type { EpochKeys } from './frame'
 
 interface Port {
   postMessage: ReturnType<typeof vi.fn>
@@ -53,7 +54,7 @@ describe('media transform guard', () => {
     const sender = { transform: null } as RTCRtpSender
     expect(guard.armSender(sender, 'channel', 'alice')).toBe(false)
     expect(sender.transform).toBeNull()
-    guard.setKey(1, {} as CryptoKey)
+    guard.setKey(1, {} as EpochKeys)
     guard.reset()
   })
 
@@ -62,7 +63,7 @@ describe('media transform guard', () => {
     const guard = createMediaGuard()
     const sender = { transform: null } as RTCRtpSender
     const receiver = { transform: null } as RTCRtpReceiver
-    const key = {} as CryptoKey
+    const key = {} as EpochKeys
     expect(guard.armSender(sender, '', 'alice')).toBe(false)
     expect(guard.armReceiver(receiver, 'channel', '')).toBe(false)
     expect(created.workers).toHaveLength(0)
@@ -76,7 +77,7 @@ describe('media transform guard', () => {
     expect(created.transforms[0]?.transfer).toEqual([created.channels[0]?.port2])
     expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 4, key })
     expect(created.channels[1]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 4, key })
-    const next = {} as CryptoKey
+    const next = {} as EpochKeys
     guard.setKey(5, next)
     expect(created.channels[1]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 5, key: next })
     guard.clearKeys()
@@ -96,7 +97,7 @@ describe('media transform guard', () => {
     installBrowser()
     const guard = createMediaGuard()
     const receiver = { transform: null } as RTCRtpReceiver
-    const key = {} as CryptoKey
+    const key = {} as EpochKeys
     guard.setKey(2, key)
     expect(guard.armReceiver(receiver, 'channel', null)).toBe(true)
     expect(receiver.transform).toBe(created.transforms[0])
