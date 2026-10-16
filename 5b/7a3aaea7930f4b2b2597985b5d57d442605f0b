@@ -1,0 +1,21 @@
+Makefile
+  s_06fcde5dbef956::t_133c88e61f5635 86-89
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_133c88e61f5635 134,138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5b7a3aaea7930f4b2b2597985b5d57d442605f0b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
