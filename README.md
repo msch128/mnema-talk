@@ -22,7 +22,7 @@ Releases through v0.7.3, including
 `Mnema-Desktop-DEV-…-windows-x64.zip`, remain on
 [this repository's releases](https://github.com/msch128/mnema-talk/releases).
 Later desktop builds are published from the desktop repository.
-Extract the archive and run `Mnema Desktop DEV.exe`. Enter your community's
+Extract the ZIP and run `Mnema Desktop DEV.exe`. Enter your community's
 HTTPS address and sign in. Microsoft Edge WebView2 Runtime is required.
 Desktop packages are unsigned DEV builds; updates are installed manually.
 
@@ -152,8 +152,10 @@ from `.env`). In development an empty value generates a password and logs it onc
 ## Status and security
 
 The browser app and Linux Docker deployment are the normal maintained product
-path. The **v0.7.2 Windows Desktop DEV** release adds Gaming to the shared
-client: sidepeek, Alt+M, Talk controls and persisted shortcut settings.
+path. The Windows Desktop DEV client (separate
+[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository)
+loads the instance's own web app in WebView2 and includes the Gaming
+integration (sidepeek, Alt+M, Talk controls and persisted shortcut settings).
 Windows gaming uses native topmost windows; game and fullscreen compatibility
 still need testing on the target machine. macOS and Linux desktop clients
 remain roadmap targets.
@@ -163,9 +165,11 @@ messages and attachments stay readable by the server. Microphone, camera,
 screen video and screen audio are encrypted in the browser with MLS-derived
 keys, so an honest SFU cannot read them. A compromised server could still
 subvert group membership, since it serves the code and relays the handshakes,
-and metadata such as who speaks when stays visible. The desktop
-client does not join that media path. Capacity testing for a 100-person
-profile is also outstanding. A release number describes development progress,
+and metadata such as who speaks when stays visible. The connection details
+show a safety code and the key holders so members can compare them. The
+Windows client uses the same browser path inside WebView2; that combination
+is not yet qualified on real Windows hardware. Capacity: see
+[doc/architecture.md](doc/architecture.md#capacity). A release number describes development progress,
 not completion of those milestones.
 
 See [product status and acceptance evidence](doc/product-status.md) for test
@@ -193,6 +197,10 @@ DATABASE_URL=postgres://mnema:<password>@localhost:5432/mnema_talk?sslmode=disab
 
 `make build` produces `bin/mnema-talk` with the web app embedded (`make web`
 builds only `web/dist`).
+
+`main` is protected: changes land through a pull request (no approvals
+required) once the `secret-scan`, `backend`, `frontend`, `govulncheck`,
+`docker`, `e2e` and CodeQL `analyze` checks are green; squash merge only.
 
 Frontend source uses strict TypeScript, including Vue scripts, media workers,
 browser tests and build tools. See [the TypeScript contract](doc/typescript.md)
@@ -277,7 +285,12 @@ breaking changes bump the minor version. 1.0.0 is released deliberately with a
    run for the newer commit decides.
 2. The release workflow merges that PR right away and publishes the GitHub
    Release and tag `vX.Y.Z`, so every green push to
-   `main` that contains a `feat:` or `fix:` becomes a release.
+   `main` that contains a `feat:` or `fix:` becomes a release. A PR opened
+   with `GITHUB_TOKEN` starts no workflows, so the workflow reports the tested
+   CI run's result as commit statuses on the release commit (only after
+   checking that it touches nothing but `version.txt`, `CHANGELOG.md` and the
+   manifest and sits directly on the tested commit); that satisfies the
+   required checks on `main`.
 3. The same workflow then builds the image and pushes it to GHCR:
    `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
    linux/arm64), with OCI labels,

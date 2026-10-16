@@ -53,7 +53,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 3. [`chat.PublishMessage`](../internal/chat/post.go) loads the stored message,
    broadcasts `message_create` through the `events.Publisher` and answers 201.
 4. The hub writes the event to every open WebSocket; the
-   [chat store](../web/src/stores/chat.js) inserts it, updates unread and
+   [chat store](../web/src/stores/chat.ts) inserts it, updates unread and
    mention counters and plays the notification according to the channel's
    notification setting.
 
@@ -106,7 +106,7 @@ web client puts H.264 first; a browser would then switch a running camera
 from VP8 to H.264 at the next renegotiation while the forwarded track keeps
 the first codec, and viewers could not decode it. The client still reorders
 its own screen line so screen shares prefer H.264 (hardware encoding) and get
-a higher start bitrate ([`tuneScreenOffer`](../web/src/composables/useWebRTC.js)).
+a higher start bitrate ([`tuneScreenOffer`](../web/src/composables/useWebRTC.ts)).
 
 **Stream quality and volume (0.4.0).** The sharer chooses mode, resolution
 and frame rate; the client applies them as capture constraints and sender
@@ -115,30 +115,45 @@ SFU still forwards whatever arrives. Viewers play the screen's sound in its
 own element with a per-sharer volume (0–100 %, default 50 %), independent of
 the person's voice volume.
 
+## Capacity
+
+Measured on a 4-core home NAS with the default `APP_MEM_LIMIT=1g`: one browser
+sharing a 640x360 screen at 20 fps to 99 members in one Talk used about 28 %
+of one core and about 500 MB of app memory, each receiver getting about
+320 kbit/s. App memory grows with receivers x forwarded video sources, because
+Pion's NACK responder keeps up to 1024 packets (about 1.5 MB) per outgoing
+video track. It is bounded and returned after the call (about 100 MB again some
+20 minutes later), but 100 receivers x 10 cameras would need roughly 1.5 GB, so
+raise `APP_MEM_LIMIT` for very large calls. With about 16 real browsers plus 84
+lightweight members (100 total) the app used about 1.6 cores. Real E2EE browser
+clients were verified with up to 24 viewers in one call; beyond that the single
+test machine, not the server, was the limit. These are single runs, not a
+qualified capacity guarantee.
+
 ## Frontend structure (`web/src`)
 
-- **Entry**: [`main.js`](../web/src/main.js), [`App.vue`](../web/src/App.vue)
-  (routing via [`lib/router.js`](../web/src/lib/router.js), layout, dialogs).
+- **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)
+  (routing via [`lib/router.ts`](../web/src/lib/router.ts), layout, dialogs).
 - **Stores (Pinia)**:
-  [`auth`](../web/src/stores/auth.js) (current user; the session itself is an
-  HttpOnly cookie), [`chat`](../web/src/stores/chat.js) (channels, messages,
+  [`auth`](../web/src/stores/auth.ts) (current user; the session itself is an
+  HttpOnly cookie), [`chat`](../web/src/stores/chat.ts) (channels, messages,
   WebSocket events, unread state, presence),
-  [`voice`](../web/src/stores/voice.js) (call state, devices, input mode and
+  [`voice`](../web/src/stores/voice.ts) (call state, devices, input mode and
   push-to-talk key, per-person volumes, camera and stage choices),
-  [`appVersion`](../web/src/stores/appVersion.js) (reload banner on version
-  mismatch), [`toast`](../web/src/stores/toast.js).
-- **Composables**: [`useWebRTC`](../web/src/composables/useWebRTC.js) (peer
+  [`appVersion`](../web/src/stores/appVersion.ts) (reload banner on version
+  mismatch), [`toast`](../web/src/stores/toast.ts).
+- **Composables**: [`useWebRTC`](../web/src/composables/useWebRTC.ts) (peer
   connection, publishing mic/screen/camera, push-to-talk keys, screen offer
-  tuning, stats), [`useTalkStage`](../web/src/composables/useTalkStage.js) and
-  [`useVideoGrid`](../web/src/composables/useVideoGrid.js) (stage and grid
-  layout), [`usePictureInPicture`](../web/src/composables/usePictureInPicture.js),
-  [`useSidebarReorder`](../web/src/composables/useSidebarReorder.js),
-  [`useSortableDrag`](../web/src/composables/useSortableDrag.js) and
-  [`useChannelLayout`](../web/src/composables/useChannelLayout.js) (drag and
-  drop with immediate save and undo), [`useNavMenus`](../web/src/composables/useNavMenus.js)
-  (context menus), [`useMessageActions`](../web/src/composables/useMessageActions.js),
-  [`useMessageKeyboard`](../web/src/composables/useMessageKeyboard.js),
-  [`useResizable`](../web/src/composables/useResizable.js), [`useDialog`](../web/src/composables/useDialog.js).
+  tuning, stats), [`useTalkStage`](../web/src/composables/useTalkStage.ts) and
+  [`useVideoGrid`](../web/src/composables/useVideoGrid.ts) (stage and grid
+  layout), [`usePictureInPicture`](../web/src/composables/usePictureInPicture.ts),
+  [`useSidebarReorder`](../web/src/composables/useSidebarReorder.ts),
+  [`useSortableDrag`](../web/src/composables/useSortableDrag.ts) and
+  [`useChannelLayout`](../web/src/composables/useChannelLayout.ts) (drag and
+  drop with immediate save and undo), [`useNavMenus`](../web/src/composables/useNavMenus.ts)
+  (context menus), [`useMessageActions`](../web/src/composables/useMessageActions.ts),
+  [`useMessageKeyboard`](../web/src/composables/useMessageKeyboard.ts),
+  [`useResizable`](../web/src/composables/useResizable.ts), [`useDialog`](../web/src/composables/useDialog.ts).
 - **Components**: [`Sidebar.vue`](../web/src/components/Sidebar.vue),
   [`ChatArea.vue`](../web/src/components/ChatArea.vue),
   [`ThreadSidebar.vue`](../web/src/components/ThreadSidebar.vue),
@@ -153,11 +168,11 @@ the person's voice volume.
   [system](../web/src/components/AdminSystemTab.vue)),
   [`UpdateBanner.vue`](../web/src/components/UpdateBanner.vue).
 - **Libraries** (`lib/`): pure, unit-tested logic such as
-  [`api.js`](../web/src/lib/api.js) (fetch wrapper), [`markdown.js`](../web/src/lib/markdown.js),
-  [`channelLayout.js`](../web/src/lib/channelLayout.js),
-  [`voiceSession.js`](../web/src/lib/voiceSession.js) (rejoin within 30 s),
-  [`noiseSuppressor.js`](../web/src/lib/noiseSuppressor.js),
-  [`thirdParty.js`](../web/src/lib/thirdParty.js) (in-app license list).
+  [`api.ts`](../web/src/lib/api.ts) (fetch wrapper), [`markdown.ts`](../web/src/lib/markdown.ts),
+  [`channelLayout.ts`](../web/src/lib/channelLayout.ts),
+  [`voiceSession.ts`](../web/src/lib/voiceSession.ts) (rejoin within 30 s),
+  [`noiseSuppressor.ts`](../web/src/lib/noiseSuppressor.ts),
+  [`thirdParty.ts`](../web/src/lib/thirdParty.ts) (in-app license list).
 - **i18n**: [`i18n/de.json`](../web/src/i18n/de.json) and
   [`i18n/en.json`](../web/src/i18n/en.json); tests fail on hard-coded UI text
   and unused keys.
@@ -166,7 +181,7 @@ the person's voice volume.
 
 - **One binary, three containers.** API, hub, SFU and web app ship together
   ([`web/web.go`](../web/web.go)); `docker compose` adds only PostgreSQL and
-  SeaweedFS. Pure Go (`CGO_ENABLED=0`), so images cross-compile for amd64 and
+  SeaweedFS (optional profiles add `coturn` and the update sidecar). Pure Go (`CGO_ENABLED=0`), so images cross-compile for amd64 and
   arm64 without QEMU ([`Dockerfile`](../Dockerfile)).
 - **Forward, never transcode.** The SFU only copies RTP
   ([`internal/sfu`](../internal/sfu/sfu.go)); quality is decided by the
@@ -195,4 +210,4 @@ the person's voice volume.
   [SECURITY.md](../SECURITY.md#self-update-sidecar)).
 - **Reload, never auto-reload.** The server sends its version on every
   WebSocket connection; a page built for another version shows a reload
-  banner ([`appVersion.js`](../web/src/stores/appVersion.js)).
+  banner ([`appVersion.ts`](../web/src/stores/appVersion.ts)).

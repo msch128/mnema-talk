@@ -1,9 +1,10 @@
 # Cryptographic state and outbox persistence
 
 Status: implemented persistence foundation for the E2EE integration. It does not
-encrypt messages, authenticate devices, provide recovery, or make the current
-application end-to-end encrypted. No existing chat or media path uses this module
-yet. The production cryptographic provider and its admission/freshness contract
+encrypt messages, authenticate devices, provide recovery, or make chat
+end-to-end encrypted. The shipped voice and screen-share E2EE (MLS via `ts-mls`,
+in-memory group state per call) does not use this module, and no chat path does
+either. The production cryptographic provider and its admission/freshness contract
 remain release gates.
 
 The implementation is `web/src/lib/crypto/stateStore.ts`. Runtime dependencies
@@ -123,7 +124,7 @@ events. Browser/OS compromise and malicious same-origin client code remain
 outside this storage boundary. Origin trust and independently delivered client
 code remain product requirements.
 
-The current experimental OpenMLS browser binding has an in-memory provider and
+The browser's MLS provider used for sealed voice media is in-memory and
 does not expose a reviewed transactional storage adapter. Wiring it to this
 module requires a production wrapper covering all provider records, atomic
 serialization, bounded decoding, device credentials, authorized freshness,

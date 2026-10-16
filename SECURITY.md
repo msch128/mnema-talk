@@ -86,8 +86,10 @@ locally instead (`make up` or `make dev`).
   and slice headers, the VP8 payload header) are readable but authenticated;
   only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
   when, frame sizes, timing) is visible to the server. Text messages and
-  attachments stay readable by the server. The desktop client does not join
-  the sealed media path.
+  attachments stay readable by the server. The Windows desktop client
+  loads the instance's web app in WebView2 and therefore uses the same
+  browser path (payloads are sealed there); this is not yet qualified on real
+  Windows hardware.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
