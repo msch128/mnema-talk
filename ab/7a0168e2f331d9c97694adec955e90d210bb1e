@@ -1,0 +1,31 @@
+internal/testutil/pgtest/pgtest.go
+  s_06fcde5dbef956::t_de7d58d5536e42 12,88-90
+  s_06fcde5dbef956::t_a73f81ed3f7a9d 16,63-66,68-71,74-77,79-80
+  s_06fcde5dbef956::t_6b6e3672105ebc 1-11,13-15,17-62,72-73,78,81-87,91-93
+  s_06fcde5dbef956::t_1956bf9caed020 67
+internal/testutil/db.go
+  s_06fcde5dbef956::t_ade29f7ca42f74 6-7,20,24-26,40,42,44-45,48,62
+  s_06fcde5dbef956::t_a73f81ed3f7a9d 46
+internal/testutil/pgfault/pgfault.go
+  s_06fcde5dbef956::t_16086d9dd94ffc 3-8,11-13,15-17,20-43,45-50,52-68,70-83,86-92
+internal/db/migrate_integration_test.go
+  s_06fcde5dbef956::t_91e5c28163e966 15-16,19-26,31-33,110-112
+internal/db/core_coverage_integration_test.go
+  s_06fcde5dbef956::t_5fe8706b33e5c9 15,45,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab7a0168e2f331d9c97694adec955e90d210bb1e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
