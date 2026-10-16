@@ -104,8 +104,9 @@ func TestWSDatabaseBookkeepingAndChannelChecks(t *testing.T) {
 	}
 }
 
-// Run the fixed production heartbeat and revalidation intervals on real
-// sockets. Parallel cases keep the complete check to one two-minute window.
+// Run the writer's heartbeat and revalidation timers on real sockets with
+// shortened intervals (the production values are covered by
+// TestHubPacingDefaultsToTheProductionIntervals).
 func TestWSWriterPeriodicLifecycle(t *testing.T) {
 	p := testutil.DB(t)
 	for _, mode := range []string{"revoked", "deleted", "database-unavailable", "valid", "ping-write-failure"} {
@@ -114,6 +115,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 			u := wsFixtureUser(t, p)
 			server, remote := websocketPair(t)
 			h := NewHub(p, nil, nil, nil)
+			h.PingInterval, h.RevalidateInterval = 20*time.Millisecond, 300*time.Millisecond
 			c := newClient(h, server, u, 0)
 			if mode == "database-unavailable" {
 				h.DB = closedWSFixturePool(t, p)
@@ -143,7 +145,7 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 				server.Close()
 				select {
 				case <-done:
-				case <-time.After(pingInterval + 5*time.Second):
+				case <-time.After(h.PingInterval + 5*time.Second):
 					t.Fatal("failed heartbeat write did not stop writer")
 				}
 				return
@@ -153,9 +155,9 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 				heartbeats.Add(1)
 				return remote.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
 			})
-			remote.SetReadDeadline(time.Now().Add(revalidateEvery + 10*time.Second))
+			remote.SetReadDeadline(time.Now().Add(h.RevalidateInterval + 10*time.Second))
 			if mode == "valid" || mode == "database-unavailable" {
-				timer := time.AfterFunc(revalidateEvery+time.Second, func() { c.SendEvent("after-revalidation", nil) })
+				timer := time.AfterFunc(h.RevalidateInterval+time.Second, func() { c.SendEvent("after-revalidation", nil) })
 				defer timer.Stop()
 				_, body, err := remote.ReadMessage()
 				if err != nil {

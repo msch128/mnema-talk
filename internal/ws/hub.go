@@ -51,6 +51,12 @@ type Hub struct {
 	// VoiceGrace is how long a dropped voice user stays in the room.
 	VoiceGrace time.Duration
 
+	// PingInterval and RevalidateInterval pace the keep-alive ping and the
+	// session re-check of every connection. Zero means the defaults
+	// (pingInterval, revalidateEvery); tests shorten them.
+	PingInterval       time.Duration
+	RevalidateInterval time.Duration
+
 	// Version is the server's release version, sent to every new connection
 	// (server_info) so browsers can offer a reload after an update. Only the
 	// version string: no commit or build details.
