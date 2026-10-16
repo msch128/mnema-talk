@@ -4,8 +4,8 @@ import * as mls from 'ts-mls'
 import type { Credential } from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES, mediaGroupId, mediaUserId } from './bounds'
-import { openFrame, sealFrame } from './frame'
-import { MediaGroup, type MediaStep } from './group'
+import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
+import { MediaGroup, frameVerifiers, type MediaStep } from './group'
 
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
@@ -49,13 +49,42 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
   }
 }
 
-async function roundTrip(left: CryptoKey | null, right: CryptoKey | null, epoch: number) {
+/** Seals as `sender` with its keys `left` and opens with `right`. */
+async function roundTrip(left: EpochKeys | null, right: EpochKeys | null, epoch: number, sender = aliceId) {
   if (!left || !right) throw new Error('expected epoch keys')
-  const packet = await sealFrame({ key: left, epoch, channelId, senderId: aliceId, plaintext: new Uint8Array([9, 8, 7]) })
+  const packet = await sealFrame({ keys: left, epoch, stream: 1, counter: 0, channelId, senderId: sender, plaintext: new Uint8Array([9, 8, 7]) })
   if (!packet) throw new Error('expected a sealed frame')
-  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: aliceId, packet })
+  const opened = await openFrame({ keys: new Map([[epoch, right]]), channelId, senderId: sender, packet, replay: new ReplayWindow() })
   return opened ? [...opened] : null
 }
+
+describe('frame verifiers', () => {
+  function leaf(id: string, key: Uint8Array) {
+    return { nodeType: 'leaf', leaf: { credential: { credentialType: 'basic', identity: new TextEncoder().encode(id) }, signaturePublicKey: key } }
+  }
+
+  it('gives every member with exactly one leaf its leaf key, and nobody else', async () => {
+    const raw = async () => {
+      const pair = await webcrypto.subtle.generateKey('Ed25519', true, ['sign', 'verify']) as CryptoKeyPair
+      return new Uint8Array(await webcrypto.subtle.exportKey('raw', pair.publicKey))
+    }
+    const tree = [leaf(aliceId, await raw()), null, leaf(bobId, await raw()), null, leaf(bobId, await raw()), null, leaf('not-a-member', await raw())]
+    const verifiers = await frameVerifiers({ ratchetTree: tree } as unknown as mls.ClientState)
+    expect([...verifiers?.keys() ?? []]).toEqual([aliceId])
+    expect(await frameVerifiers({ ratchetTree: [leaf(aliceId, new Uint8Array(3))] } as unknown as mls.ClientState)).toBeNull()
+  })
+
+  it('hands each epoch the verifying keys of the members in it', async () => {
+    const { alice, bob, aliceStep, bobStep } = await joinedPair()
+    for (const step of [aliceStep, bobStep]) expect([...step.key?.verifiers.keys() ?? []].sort()).toEqual([aliceId, bobId])
+    expect(await roundTrip(aliceStep.key, bobStep.key, 1)).toEqual([9, 8, 7])
+    expect(await roundTrip(bobStep.key, aliceStep.key, 1, bobId)).toEqual([9, 8, 7])
+    // Bob's own signer does not make a frame alice's.
+    expect(await roundTrip(bobStep.key, aliceStep.key, 1, aliceId)).toBeNull()
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+})
 
 describe('media group', () => {
   it('rejects an id that is not a member id', async () => {
@@ -260,8 +289,8 @@ describe('media group', () => {
     expect(rotated.wires).toHaveLength(1)
     expect(mls.decodeMlsMessage(wireAt(rotated.wires, 0), 0)?.[0].wireformat).toBe('mls_public_message')
     expect(rotated.epoch).toBe((bobStep.epoch ?? 0) + 1)
-    expect(await roundTrip(rotated.key, bobStep.key, rotated.epoch ?? 0)).toBeNull()
-    expect(await roundTrip(rotated.key, rotated.key, rotated.epoch ?? 0)).toEqual([9, 8, 7])
+    expect(await roundTrip(rotated.key, bobStep.key, rotated.epoch ?? 0, bobId)).toBeNull()
+    expect(await roundTrip(rotated.key, rotated.key, rotated.epoch ?? 0, bobId)).toEqual([9, 8, 7])
     await bob.close()
     await carol.close()
   }, 30_000)
@@ -384,7 +413,7 @@ describe('a member who starts over inside the grace period', () => {
   }
 
   async function settle(groups: Map<string, MediaGroup>, roster: string[]) {
-    const keys = new Map<string, { epoch: number | null, key: CryptoKey | null }>()
+    const keys = new Map<string, { epoch: number | null, key: EpochKeys | null }>()
     for (let round = 0; round < 3; round++) {
       for (const [id, group] of groups) {
         const step = await group.sync(roster)
@@ -399,12 +428,13 @@ describe('a member who starts over inside the grace period', () => {
     return keys
   }
 
-  function agree(keys: Map<string, { epoch: number | null, key: CryptoKey | null }>) {
+  function agree(keys: Map<string, { epoch: number | null, key: EpochKeys | null }>) {
     const values = [...keys.values()]
     const epoch = values[0]?.epoch ?? null
     expect(epoch).not.toBeNull()
     for (const value of values) expect(value.epoch).toBe(epoch)
-    return Promise.all(values.map(value => roundTrip(values[0]?.key ?? null, value.key, epoch ?? 0)))
+    const first = [...keys.keys()][0] ?? aliceId
+    return Promise.all(values.map(value => roundTrip(values[0]?.key ?? null, value.key, epoch ?? 0, first)))
   }
 
   it('is swapped in by the committer when a higher id reloads', async () => {
@@ -702,7 +732,7 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
   }
 
   async function epochs(groups: Map<string, MediaGroup>, roster: string[]) {
-    const seen = new Map<string, { epoch: number | null, key: CryptoKey | null }>()
+    const seen = new Map<string, { epoch: number | null, key: EpochKeys | null }>()
     for (const [id, group] of groups) {
       const step = await group.sync(roster)
       seen.set(id, { epoch: step.epoch, key: step.key })
@@ -731,7 +761,7 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
     for (const [, value] of after) expect(value.epoch).toBe(epoch)
     // The joiner's package, the welcome and the commit; nobody else has to speak.
     expect(tally.wires).toBeLessThanOrEqual(5)
-    expect(await roundTrip(after.get(ids[0] as string)?.key ?? null, after.get(fixtureId(5))?.key ?? null, epoch ?? 0)).toEqual([9, 8, 7])
+    expect(await roundTrip(after.get(ids[0] as string)?.key ?? null, after.get(fixtureId(5))?.key ?? null, epoch ?? 0, ids[0])).toEqual([9, 8, 7])
     for (const group of groups.values()) await group.close()
   }, 120_000)
 

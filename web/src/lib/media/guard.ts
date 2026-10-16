@@ -1,3 +1,5 @@
+import type { EpochKeys } from './frame'
+
 export interface FrameStats { opened: number, newer: number, epoch: number }
 
 interface KeyedPort {
@@ -12,7 +14,7 @@ export interface MediaGuard {
    * names the publisher. Arming an armed receiver only names the publisher.
    */
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
-  setKey(epoch: number, key: CryptoKey, replace?: boolean): void
+  setKey(epoch: number, key: EpochKeys, replace?: boolean): void
   clearKeys(): void
   /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
   onStats(listener: (senders: Record<string, FrameStats>) => void): void
@@ -49,7 +51,7 @@ export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
   const ports: KeyedPort[] = []
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
-  let current: { epoch: number, key: CryptoKey } | null = null
+  let current: { epoch: number, key: EpochKeys } | null = null
   let statsListener: ((senders: Record<string, FrameStats>) => void) | null = null
 
   function sharedWorker(): Worker | null {

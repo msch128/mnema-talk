@@ -5,7 +5,7 @@ import { HANDSHAKE_MAX_BYTES } from './bounds'
 import type { FrameStats, MediaGuard } from './guard'
 import { browserMediaCall, mediaSettled } from './browserCall'
 import { MediaGroup } from './group'
-import { openFrame, sealFrame } from './frame'
+import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import type { MediaCall } from './api'
 import type { MediaVerification } from './verify'
 
@@ -19,8 +19,8 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: CryptoKey, replace: boolean }[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
-  const keys: { epoch: number, key: CryptoKey, replace: boolean }[] = []
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean }[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
+  const keys: { epoch: number, key: EpochKeys, replace: boolean }[] = []
   const sends: string[] = []
   const receives: string[] = []
   let statsListener: (senders: Record<string, FrameStats>) => void = () => {}
@@ -126,12 +126,18 @@ describe('browser media call', () => {
     expect(aliceCodes.at(-1)).toMatchObject({ epoch: aliceKey.epoch, members: [aliceId, bobId] })
     expect(new Set(aliceCodes.map(code => code?.code ?? null)).size).toBe(aliceCodes.length)
     const packet = await sealFrame({
-      key: aliceKey.key, epoch: aliceKey.epoch, channelId, senderId: aliceId, plaintext: new Uint8Array([1, 2]),
+      keys: aliceKey.key, epoch: aliceKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([1, 2]),
     })
     if (!packet) throw new Error('expected a sealed frame')
-    await expect(openFrame({
-      keys: new Map([[bobKey.epoch, bobKey.key]]), channelId, senderId: aliceId, packet,
-    })).resolves.toEqual(new Uint8Array([1, 2]))
+    const bobKeys = new Map([[bobKey.epoch, bobKey.key]])
+    await expect(openFrame({ keys: bobKeys, channelId, senderId: aliceId, packet, replay: new ReplayWindow() })).resolves.toEqual(new Uint8Array([1, 2]))
+    // Alice's MLS leaf key signed it: bob cannot pass it off as his, nor alice as bob.
+    await expect(openFrame({ keys: bobKeys, channelId, senderId: bobId, packet, replay: new ReplayWindow() })).resolves.toBeNull()
+    const forged = await sealFrame({
+      keys: bobKey.key, epoch: bobKey.epoch, stream: 1, counter: 0, channelId, senderId: aliceId, plaintext: new Uint8Array([6]),
+    })
+    if (!forged) throw new Error('expected a sealed frame')
+    await expect(openFrame({ keys: new Map([[aliceKey.epoch, aliceKey.key]]), channelId, senderId: aliceId, packet: forged, replay: new ReplayWindow() })).resolves.toBeNull()
     const sender = { transform: null } as RTCRtpSender
     const receiver = { transform: null } as RTCRtpReceiver
     expect(alice.protectSender(sender)).toBe(true)
@@ -191,7 +197,7 @@ describe('browser media call', () => {
     await mediaSettled(call)
     const current = guard.keys.at(-1)
     if (!current) throw new Error('expected an epoch key')
-    const replacement = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 128 }, false, ['encrypt', 'decrypt'])
+    const replacement = { ...current.key, key: await crypto.subtle.generateKey({ name: 'AES-GCM', length: 128 }, false, ['encrypt', 'decrypt']) }
     const receive = vi.spyOn(MediaGroup.prototype, 'receive')
     receive.mockResolvedValueOnce({ wires: [], epoch: current.epoch, key: current.key })
     call.receive(bobId, btoa('same'))
@@ -418,7 +424,7 @@ describe('browser media call', () => {
 
   describe('a step that finishes after the call moved to another channel', () => {
     const otherChannel = fixtureId(8)
-    const key = {} as CryptoKey
+    const key = {} as EpochKeys
 
     afterEach(() => { vi.restoreAllMocks() })
 
@@ -433,7 +439,7 @@ describe('browser media call', () => {
       const call = browserMediaCall(guard)
       const sent: string[] = []
       call.onWire((channel, wire) => { sent.push(`${channel}:${wire}`) })
-      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }>()
       const started = vi.fn()
       vi.spyOn(MediaGroup.prototype, 'sync').mockImplementationOnce(() => { started(); return slow.promise })
         .mockImplementation(() => Promise.resolve({ wires: [], epoch: null, key: null }))
@@ -453,7 +459,7 @@ describe('browser media call', () => {
       const call = browserMediaCall(guard)
       const sent: string[] = []
       call.onWire((_channel, wire) => { sent.push(wire) })
-      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }>()
       const started = vi.fn()
       vi.spyOn(MediaGroup.prototype, 'receive').mockImplementationOnce(() => { started(); return slow.promise })
       call.start(channelId, aliceId)
@@ -478,7 +484,7 @@ describe('browser media call', () => {
       const call = browserMediaCall(guard)
       const sent: string[] = []
       call.onWire((_channel, wire) => { sent.push(wire) })
-      let listener: ((step: { wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }) => void) | null = null
+      let listener: ((step: { wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }) => void) | null = null
       vi.spyOn(MediaGroup.prototype, 'onStep').mockImplementation((next) => { listener = next })
       call.start(channelId, aliceId)
       await mediaSettled(call)
@@ -520,7 +526,7 @@ describe('browser media call', () => {
       call.roster([lowIdFor, bobId])
       await mediaSettled(call)
       sent.length = 0
-      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: CryptoKey | null }>()
+      const slow = held<{ wires: Uint8Array[], epoch: number | null, key: EpochKeys | null }>()
       const started = vi.fn()
       vi.spyOn(MediaGroup.prototype, 'recover').mockImplementationOnce(() => { started(); return slow.promise })
       vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })

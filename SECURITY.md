@@ -79,9 +79,13 @@ locally instead (`make up` or `make dev`).
   key epoch (derived from the MLS epoch authenticator) and who holds its keys.
   Members who compare it in person or over a channel they trust notice an
   added member, a swapped leaf or a split call; this cannot help against a
-  server that also serves a modified web app. Senders are authenticated only
-  as group members, frames carry no replay counter within an epoch, and the previous
-  epoch's key is kept until the next rotation. Video stays decodable by the
+  server that also serves a modified web app. Every sealed frame is signed
+  with its sender's MLS leaf key (Ed25519) and checked against the publisher
+  the line belongs to, so neither the server nor another member can pass off
+  media as someone else's; an id that holds two leaves verifies nothing. Each
+  sending transform numbers its frames, and a receiver opens a frame only once
+  (64-frame window per stream). The previous epoch's key is kept until the
+  next rotation. Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
   only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks

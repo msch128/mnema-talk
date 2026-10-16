@@ -1,8 +1,31 @@
 import { webcrypto } from 'node:crypto'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { importEpochKey, openFrame, sealFrame } from './frame'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
+import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
 
 const previous = globalThis.crypto
+let alice: TestMember
+let bob: TestMember
+let counter = 0
+
+beforeAll(async () => {
+  alice = await testMember()
+  bob = await testMember()
+})
+
+/** Epoch keys as alice holds them, with bob as the other member. */
+async function epochKeys(byte: number): Promise<EpochKeys> {
+  return testEpochKeys(await testAesKey(byte), alice, { alice, bob })
+}
+
+/** Seals as a sending transform would: one stream, counting up. */
+function seal(frame: Omit<FrameSeal, 'stream' | 'counter'>) {
+  return sealFrame({ ...frame, stream: 7, counter: counter++ })
+}
+
+function open(keys: ReadonlyMap<number, EpochKeys>, packet: Uint8Array) {
+  return openFrame({ keys, channelId: 'channel', senderId: 'alice', packet, replay: new ReplayWindow() })
+}
 
 interface WorkerScope {
   onrtctransform: ((event: { transformer?: unknown }) => void) | null
@@ -60,8 +83,7 @@ describe('media frame worker', () => {
   it('drops frames until a key exists and then seals them', async () => {
     const early = await frames('send', [new Uint8Array([1, 2, 3]).buffer], [])
     expect(early).toEqual([])
-    const key = await importEpochKey(new Uint8Array(16).fill(3))
-    if (!key) throw new Error('expected an epoch key')
+    const key = await epochKeys(3)
     const written = await frames('send', [new Uint8Array([1, 2, 3]).buffer], [
       null,
       { type: 'nope' },
@@ -71,21 +93,15 @@ describe('media frame worker', () => {
     ])
     expect(written).toHaveLength(1)
     const frame = written[0] as { data: ArrayBuffer }
-    const opened = await openFrame({
-      keys: new Map([[2, key]]),
-      channelId: 'channel',
-      senderId: 'alice',
-      packet: new Uint8Array(frame.data),
-    })
+    const opened = await open(new Map([[2, key]]), new Uint8Array(frame.data))
     expect(opened).toEqual(new Uint8Array([1, 2, 3]))
   })
 
   it('opens a matching frame and drops a foreign or forgotten one', async () => {
-    const key = await importEpochKey(new Uint8Array(16).fill(5))
-    const older = await importEpochKey(new Uint8Array(16).fill(4))
-    const newest = await importEpochKey(new Uint8Array(16).fill(6))
-    if (!key || !older || !newest) throw new Error('expected epoch keys')
-    const packet = await sealFrame({ key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    const key = await epochKeys(5)
+    const older = await epochKeys(4)
+    const newest = await epochKeys(6)
+    const packet = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
     if (!packet) throw new Error('expected a sealed frame')
     const opened = await frames('recv', [packet.buffer, new Uint8Array([9]).buffer], [{ type: 'key', epoch: 1, key }])
     expect(opened).toHaveLength(1)
@@ -101,38 +117,22 @@ describe('media frame worker', () => {
       { type: 'key', epoch: 3, key: newest },
     ])
     expect(rotated).toHaveLength(1)
-    const sealed = await openFrame({
-      keys: new Map([[3, newest]]),
-      channelId: 'channel',
-      senderId: 'alice',
-      packet: new Uint8Array((rotated[0] as { data: ArrayBuffer }).data),
-    })
+    const sealed = await open(new Map([[3, newest]]), new Uint8Array((rotated[0] as { data: ArrayBuffer }).data))
     expect(sealed).toEqual(new Uint8Array([1]))
-    const replacedKey = await importEpochKey(new Uint8Array(16).fill(9))
-    if (!replacedKey) throw new Error('expected an epoch key')
+    const replacedKey = await epochKeys(9)
     const replaced = await frames('send', [new Uint8Array([8]).buffer], [
       { type: 'key', epoch: 5, key: older },
       { type: 'key', epoch: 6, key: newest },
       { type: 'key', epoch: 0, key: replacedKey, replace: true },
     ])
     expect(replaced).toHaveLength(1)
-    expect(await openFrame({
-      keys: new Map([[0, replacedKey]]),
-      channelId: 'channel',
-      senderId: 'alice',
-      packet: new Uint8Array((replaced[0] as { data: ArrayBuffer }).data),
-    })).toEqual(new Uint8Array([8]))
+    expect(await open(new Map([[0, replacedKey]]), new Uint8Array((replaced[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([8]))
     const rewound = await frames('send', [new Uint8Array([7]).buffer], [
       { type: 'key', epoch: 5, key: newest },
       { type: 'key', epoch: 1, key: replacedKey },
     ])
     expect(rewound).toHaveLength(1)
-    expect(await openFrame({
-      keys: new Map([[1, replacedKey]]),
-      channelId: 'channel',
-      senderId: 'alice',
-      packet: new Uint8Array((rewound[0] as { data: ArrayBuffer }).data),
-    })).toEqual(new Uint8Array([7]))
+    expect(await open(new Map([[1, replacedKey]]), new Uint8Array((rewound[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([7]))
     const ignored = await frames('send', [], [])
     expect(ignored).toEqual([])
     vi.resetModules()
@@ -144,8 +144,7 @@ describe('media frame worker', () => {
   })
 
   it('keeps a video frame parseable and opens it again', async () => {
-    const key = await importEpochKey(new Uint8Array(16).fill(2))
-    if (!key) throw new Error('expected an epoch key')
+    const key = await epochKeys(2)
     const nal = [0x61, 0xe0, 0x00, 0x7e, ...Array.from({ length: 64 }, (_, i) => i + 1)]
     const frame = Uint8Array.from([0, 0, 0, 1, ...nal])
     const sealed = await frames('send', [frame.buffer], [{ type: 'key', epoch: 1, key }], { type: 'delta' })
@@ -157,10 +156,9 @@ describe('media frame worker', () => {
 
   it('counts, per publisher, frames it opened and frames from an epoch newer than any key', async () => {
     vi.useFakeTimers({ toFake: ['Date'] })
-    const key = await importEpochKey(new Uint8Array(16).fill(5))
-    if (!key) throw new Error('expected an epoch key')
+    const key = await epochKeys(5)
     const sealedAt = async (epoch: number, senderId = 'alice') => {
-      const packet = await sealFrame({ key, epoch, channelId: 'channel', senderId, plaintext: new Uint8Array([4]) })
+      const packet = await seal({ keys: key, epoch, channelId: 'channel', senderId, plaintext: new Uint8Array([4]) })
       if (!packet) throw new Error('expected a sealed frame')
       return packet.buffer
     }
@@ -196,8 +194,7 @@ describe('media frame worker', () => {
   })
 
   it('drops video whose codec is unknown or whose type is not a picture', async () => {
-    const key = await importEpochKey(new Uint8Array(16).fill(2))
-    if (!key) throw new Error('expected an epoch key')
+    const key = await epochKeys(2)
     const frame = Uint8Array.from([0, 0, 0, 1, 0x61, 0xe0, 0x00, 0x7e, ...Array.from({ length: 32 }, (_, i) => i + 1)])
     const keyed = [{ type: 'key', epoch: 1, key }]
     expect(await frames('send', [frame.buffer], keyed, { type: 'delta', mime: 'video/AV1' })).toEqual([])
@@ -209,9 +206,8 @@ describe('media frame worker', () => {
   })
 
   it('opens nothing on a receiver until it is told who publishes on it', async () => {
-    const key = await importEpochKey(new Uint8Array(16).fill(5))
-    if (!key) throw new Error('expected an epoch key')
-    const packet = await sealFrame({ key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    const key = await epochKeys(5)
+    const packet = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
     if (!packet) throw new Error('expected a sealed frame')
     const keyed = { type: 'key', epoch: 1, key }
     expect(await frames('recv', [packet.buffer], [keyed], { named: false })).toEqual([])
@@ -223,17 +219,100 @@ describe('media frame worker', () => {
     expect(ignored).toEqual([])
     // A sender is always named at the start; a message cannot rename it.
     const renamed = await frames('send', [new Uint8Array([1]).buffer], [keyed, { type: 'sender', senderId: 'mallory' }])
-    expect(await openFrame({
-      keys: new Map([[1, key]]),
-      channelId: 'channel',
-      senderId: 'alice',
-      packet: new Uint8Array((renamed[0] as { data: ArrayBuffer }).data),
-    })).toEqual(new Uint8Array([1]))
+    expect(await open(new Map([[1, key]]), new Uint8Array((renamed[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([1]))
+  })
+
+  it('opens a unit once per line and only from the line’s publisher', async () => {
+    const key = await epochKeys(5)
+    const packet = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    const later = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([5]) })
+    if (!packet || !later) throw new Error('expected sealed frames')
+    const keyed = [{ type: 'key', epoch: 1, key }]
+    // A replayed unit opens once; an earlier one still opens inside the window.
+    const opened = await frames('recv', [later.buffer, packet.buffer, later.buffer, packet.buffer], keyed)
+    expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[5], [4]])
+    // Bob shares the AES key but signs with his own leaf key.
+    const fromBob = await sealFrame({
+      keys: testEpochKeys(key.key, bob, { alice, bob }), epoch: 1, stream: 3, counter: 0, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([6]),
+    })
+    if (!fromBob) throw new Error('expected a sealed frame')
+    expect(await frames('recv', [fromBob.buffer], keyed)).toEqual([])
+    expect(await frames('recv', [packet.buffer], [{ type: 'key', epoch: 1, key: { ...key, verifiers: new Map() } }])).toEqual([])
+    expect(await frames('recv', [packet.buffer], [{ type: 'key', epoch: 1, key: { key: key.key } }])).toEqual([])
+  })
+
+  it('numbers the units of each sending transform as its own stream', async () => {
+    const key = await epochKeys(5)
+    const keyed = [{ type: 'key', epoch: 1, key }]
+    const first = await frames('send', [new Uint8Array([1]).buffer, new Uint8Array([2]).buffer], keyed)
+    const second = await frames('send', [new Uint8Array([3]).buffer], keyed)
+    const header = (frame: unknown) => {
+      const view = new DataView((frame as { data: ArrayBuffer }).data)
+      return { stream: view.getUint32(6), counter: view.getUint32(10) }
+    }
+    const [a, b] = first.map(header)
+    const [c] = second.map(header)
+    expect([a?.counter, b?.counter, c?.counter]).toEqual([0, 1, 0])
+    expect(a?.stream).toBe(b?.stream)
+    // Both open on one line: a restarted sender is a new stream, not a replay.
+    const opened = await frames('recv', [...first, ...second].map(frame => (frame as { data: ArrayBuffer }).data), keyed)
+    expect(opened).toHaveLength(3)
+  })
+
+  it('opens a unit once per publisher, across lines and recreated receivers', async () => {
+    const key = await epochKeys(5)
+    const packet = await seal({ keys: key, epoch: 1, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([4]) })
+    if (!packet) throw new Error('expected a sealed frame')
+    vi.resetModules()
+    const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
+    vi.stubGlobal('self', scope)
+    await import('./mediaFrameWorker')
+    // One worker serves every line of the call, as the guard sets it up.
+    const line = async (packets: ArrayBuffer[], first = false) => {
+      const written: unknown[] = []
+      const port = { onmessage: null as ((event: { data: unknown }) => void) | null }
+      let done: () => void = () => {}
+      const finished = new Promise<void>((resolve) => { done = resolve })
+      let push: (data: ArrayBuffer) => void = () => {}
+      let end: () => void = () => {}
+      const readable = new ReadableStream({ start(controller) { push = data => controller.enqueue({ data }); end = () => controller.close() } })
+      scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ write(chunk) { written.push(chunk) }, close() { done() } }), options: { port, direction: 'recv', channelId: 'channel', senderId: 'alice' } } })
+      if (first) port.onmessage?.({ data: { type: 'key', epoch: 1, key } })
+      for (const data of packets) push(data)
+      end()
+      await finished
+      return written
+    }
+    expect(await line([asBuffer(packet.buffer)], true)).toHaveLength(1)
+    // The same unit on the publisher's other line, or on a receiver created
+    // again for the same line, is a replay.
+    expect(await line([asBuffer(packet.buffer)])).toEqual([])
+    expect(await line([asBuffer(packet.buffer)])).toEqual([])
+  })
+
+  it('stops sealing when a stream runs out of counters', async () => {
+    vi.resetModules()
+    const frame = await import('./frame')
+    const spent = vi.spyOn(frame.FrameStream.prototype, 'next').mockReturnValue(null)
+    const key = await epochKeys(5)
+    const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
+    vi.stubGlobal('self', scope)
+    await import('./mediaFrameWorker')
+    const written: unknown[] = []
+    const port = { onmessage: null as ((event: { data: unknown }) => void) | null }
+    let done: () => void = () => {}
+    const finished = new Promise<void>((resolve) => { done = resolve })
+    const readable = new ReadableStream({ start(controller) { controller.enqueue({ data: new Uint8Array([1]).buffer }); controller.close() } })
+    scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ write(chunk) { written.push(chunk) }, close() { done() } }), options: { port, direction: 'send', channelId: 'channel', senderId: 'alice' } } })
+    port.onmessage?.({ data: { type: 'key', epoch: 1, key } })
+    await finished
+    expect(written).toEqual([])
+    spent.mockRestore()
   })
 
   it('drops a frame the key cannot seal and a stream that fails', async () => {
     const decryptOnly = await crypto.subtle.importKey('raw', new Uint8Array(16), 'AES-GCM', false, ['decrypt'])
-    const dropped = await frames('send', [new Uint8Array([1]).buffer], [{ type: 'key', epoch: 4, key: decryptOnly }])
+    const dropped = await frames('send', [new Uint8Array([1]).buffer], [{ type: 'key', epoch: 4, key: { ...await epochKeys(1), key: decryptOnly } }])
     expect(dropped).toEqual([])
     vi.resetModules()
     const scope: WorkerScope = { onrtctransform: null }
