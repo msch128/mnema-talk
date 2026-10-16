@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.9](https://github.com/msch128/mnema-talk/compare/v0.7.8...v0.7.9) (2026-10-16)
+
+
+### Bug Fixes
+
+* stop video freezing when several members join a Talk at once ([#111](https://github.com/msch128/mnema-talk/issues/111)) ([9c90856](https://github.com/msch128/mnema-talk/commit/9c908563c34448ceba85f01f3f6f5e1efe797aed))
+
 ## [0.7.8](https://github.com/msch128/mnema-talk/compare/v0.7.7...v0.7.8) (2026-10-16)
 
 
