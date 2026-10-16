@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.6](https://github.com/msch128/mnema-talk/compare/v0.7.5...v0.7.6) (2026-10-16)
+
+
+### Features
+
+* show a safety code for the media keys of a call ([#103](https://github.com/msch128/mnema-talk/issues/103)) ([86dd884](https://github.com/msch128/mnema-talk/commit/86dd884baf1387c0df0aa401e26c8857e5879bcc))
+
 ## [0.7.5](https://github.com/msch128/mnema-talk/compare/v0.7.4...v0.7.5) (2026-10-14)
 
 
