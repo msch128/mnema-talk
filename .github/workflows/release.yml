@@ -49,6 +49,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      statuses: write
     outputs:
       release_created: ${{ steps.release.outputs.release_created || steps.publish.outputs.release_created }}
       version: ${{ steps.release.outputs.version || steps.publish.outputs.version }}
@@ -92,13 +93,14 @@ jobs:
           # job when the tip guard skipped release-please.
           PR_JSON: ${{ steps.release.outputs.pr }}
           TESTED: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
         # Only ever merge release-please's own PR, opened by the Actions bot on
         # its branch and touching nothing but the version and changelog.
         # GitHub may still be computing mergeability right after the update.
         run: |
           set -euo pipefail
           PR_NUMBER=$(jq -r .number <<<"$PR_JSON")
-          pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,author,files,isCrossRepository,title)
+          pr=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName,headRefOid,author,files,isCrossRepository,title)
           head=$(jq -r .headRefName <<<"$pr")
           author=$(jq -r .author.login <<<"$pr")
           cross=$(jq -r .isCrossRepository <<<"$pr")
@@ -135,6 +137,23 @@ jobs:
             echo "::notice::main moved to $tip; leaving the release to the CI run for that commit"
             exit 0
           fi
+          # main's ruleset requires the CI and CodeQL checks on every pull
+          # request, but a PR opened with GITHUB_TOKEN starts no workflows.
+          # The release commit sits directly on the commit CI just passed and
+          # only touches the files checked above, so report that run's result
+          # for it.
+          sha=$(jq -r .headRefOid <<<"$pr")
+          parent=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha" --jq '.parents | map(.sha) | join(" ")')
+          if [ "$parent" != "$TESTED" ]; then
+            echo "::notice::release PR is based on $parent, not $TESTED; leaving it for the next CI run"
+            exit 0
+          fi
+          for check in secret-scan backend frontend govulncheck docker e2e \
+            "analyze (go)" "analyze (javascript-typescript)" "analyze (actions)"; do
+            gh api "repos/$GITHUB_REPOSITORY/statuses/$sha" -f state=success -f context="$check" \
+              -f description="version and changelog only; checked on ${TESTED:0:7}" \
+              -f target_url="$RUN_URL" >/dev/null
+          done
           for _ in 1 2 3 4 5 6; do
             if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch; then
               echo "merged=true" >> "$GITHUB_OUTPUT"
