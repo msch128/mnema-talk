@@ -1,0 +1,54 @@
+web/src/composables/useSlashCommands.ts
+  s_06fcde5dbef956::t_6925abfc56729f 1-118
+web/src/components/SlashSuggestions.vue
+  s_06fcde5dbef956::t_ed49b962a953dd 1-45
+web/src/components/EphemeralNotes.vue
+  s_06fcde5dbef956::t_234cf37a8cd3ad 1-45
+web/src/lib/slashCommands.test.ts
+  s_06fcde5dbef956::t_61d4743860aff9 1-25,27-63
+  s_06fcde5dbef956::t_a12daf5e8f6e72 26
+web/src/components/SlashParts.test.ts
+  s_06fcde5dbef956::t_03d43c4000dd9d 1-52,57-136
+  s_06fcde5dbef956::t_e27d171b2d6823 53-56
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a5176a39e69ffe 1065-1080
+web/src/lib/slashCommands.ts
+  s_06fcde5dbef956::t_56a9f8ef505208 4
+  s_06fcde5dbef956::t_70b34796e36502 1-3,5-63
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a5176a39e69ffe 1065-1080
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_4a42074dff3611 34-37
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_e27d171b2d6823 696
+  s_06fcde5dbef956::t_b06a97385563f5 17-19,22,61,443,687-688,691-695,697-699,707-714,749,753
+web/src/types/events.ts
+  s_06fcde5dbef956::t_4a42074dff3611 28-38,57,181-183,210-213,217
+web/src/composables/useSlashCommands.test.ts
+  s_06fcde5dbef956::t_8db4349e4a6011 1-79,81-83,85-86,88-190
+  s_06fcde5dbef956::t_a12daf5e8f6e72 80,84,87
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_9701d0be53189c 54-61,91-93,942-945,1490-1493,1495,1557-1558
+  s_06fcde5dbef956::t_b06a97385563f5 12
+web/src/components/ChatAreaSlash.test.ts
+  s_06fcde5dbef956::t_013c167da5b921 1-93
+web/src/components/SlashCommandBar.vue
+  s_06fcde5dbef956::t_e27d171b2d6823 12,17,30
+  s_06fcde5dbef956::t_6f9a9a01ad7bfd 1-11,13-16,18-29,31-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9bd4c162f78f9cda71a4331ada32bd6b8269a70d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
