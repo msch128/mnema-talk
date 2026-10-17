@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.25](https://github.com/msch128/mnema-talk/compare/v0.7.24...v0.7.25) (2026-10-17)
+
+
+### Bug Fixes
+
+* supply-chain hardening and a security floor that rises with security fixes ([#164](https://github.com/msch128/mnema-talk/issues/164)) ([4c06083](https://github.com/msch128/mnema-talk/commit/4c060836c572912574d369faf06f4d262b6fcd20))
+
 ## [0.7.24](https://github.com/msch128/mnema-talk/compare/v0.7.23...v0.7.24) (2026-10-17)
 
 
