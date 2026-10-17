@@ -8,22 +8,19 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 // Known devices decide who may keep guessing once an account's guess cap has
 // tripped. A device is known for an account when it carries a signed cookie
-// set by an earlier successful login (browsers), or when its address (IPv6
-// /64) signed in to that account recently (native clients, no cookie jar).
-// Everyone else is turned away with 429 without a password check, so a botnet
-// cannot keep testing guesses against the Owner while the cap is on.
+// set by an earlier successful login. The cookie is an HMAC under a key
+// derived from JWT_SECRET, so it survives restarts and address changes and
+// nothing about it is stored on the server. Unknown devices get one password
+// check per minute per client address while the cap is on (see verifyLogin),
+// so a botnet learns next to nothing and the owner on a new phone still gets in.
 const (
 	knownDeviceTTL     = 365 * 24 * time.Hour
-	knownIPTTL         = 30 * 24 * time.Hour
-	knownIPMax         = 10000
 	knownDeviceContext = "mnema-known-device|"
 )
 
@@ -32,8 +29,16 @@ func (s *Sessions) deviceCookieName(account string) string {
 	return "mnema_dev_" + hex.EncodeToString(sum[:6])
 }
 
-func (s *Sessions) deviceMAC(account string, exp int64) string {
+// deviceKey derives the cookie key from the session secret, so the secret
+// itself is never used directly as an HMAC key for a second purpose.
+func (s *Sessions) deviceKey() []byte {
 	m := hmac.New(sha256.New, []byte(s.Secret))
+	m.Write([]byte("mnema-known-device-key-v1"))
+	return m.Sum(nil)
+}
+
+func (s *Sessions) deviceMAC(account string, exp int64) string {
+	m := hmac.New(sha256.New, s.deviceKey())
 	m.Write([]byte(knownDeviceContext + account + "|" + strconv.FormatInt(exp, 10)))
 	return base64.RawURLEncoding.EncodeToString(m.Sum(nil))
 }
@@ -69,48 +74,7 @@ func (s *Sessions) markDevice(w http.ResponseWriter, account string) {
 	})
 }
 
-// knownAddrs remembers which client addresses signed in to which account.
-type knownAddrs struct {
-	mu sync.Mutex
-	m  map[string]time.Time
-}
-
-func (k *knownAddrs) has(account, ip string) bool {
-	if k == nil {
-		return false
-	}
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	t, ok := k.m[account+"|"+ip]
-	return ok && time.Since(t) < knownIPTTL
-}
-
-func (k *knownAddrs) add(account, ip string) {
-	if k == nil {
-		return
-	}
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	if k.m == nil {
-		k.m = map[string]time.Time{}
-	}
-	if len(k.m) >= knownIPMax {
-		for key, t := range k.m {
-			if time.Since(t) >= knownIPTTL {
-				delete(k.m, key)
-			}
-		}
-		if len(k.m) >= knownIPMax { // still full: forget an arbitrary entry
-			for key := range k.m {
-				delete(k.m, key)
-				break
-			}
-		}
-	}
-	k.m[account+"|"+ip] = time.Now()
-}
-
-// isKnownDevice reports whether r comes from a device that signed in to account before.
+// isKnownDevice reports whether r carries a valid known-device cookie for account.
 func (h *Handler) isKnownDevice(r *http.Request, account string) bool {
-	return h.Sessions.hasDeviceCookie(r, account) || h.knownIPs.has(account, httpx.ClientIPKey(r))
+	return h.Sessions.hasDeviceCookie(r, account)
 }

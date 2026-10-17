@@ -63,19 +63,21 @@ func postLoginWith(h *Handler, ip, username, password string, cookies ...*http.C
 	return rec
 }
 
-func tripAccountCap(t *testing.T, h *Handler) {
+func tripAccountCap(t *testing.T, h *Handler) { t.Helper(); tripAccountCapFrom(t, h, "198.51.100") }
+
+func tripAccountCapFrom(t *testing.T, h *Handler, prefix string) {
 	t.Helper()
 	// 100 wrong guesses spread over 20 addresses: below every per-address
 	// limit, but enough to trip the account-wide cap.
 	for i := 0; i < 100; i++ {
-		postLogin(h, fmt.Sprintf("198.51.100.%d", i%20), "Herzog", "wrong-guess")
+		postLogin(h, fmt.Sprintf("%s.%d", prefix, i%20), "Herzog", "wrong-guess")
 	}
 	if locked, _ := h.accountFailures.IsLockedOut("herzog"); !locked {
 		t.Fatal("account lockout did not trigger")
 	}
 }
 
-func TestAccountCapOnlyEvaluatesPasswordsOfKnownDevices(t *testing.T) {
+func TestAccountCapTricklesUnknownDevicesAndKeepsKnownOnes(t *testing.T) {
 	h := newLoginHandler()
 	// The owner signed in from a browser (cookie) before the attack.
 	first := postLoginWith(h, "192.0.2.50", "Herzog", testPassword)
@@ -94,32 +96,38 @@ func TestAccountCapOnlyEvaluatesPasswordsOfKnownDevices(t *testing.T) {
 
 	tripAccountCap(t, h)
 
-	// A stranger with the right password is not even evaluated.
-	verified := false
+	evaluated := 0
 	inner := h.verify
-	h.verify = func(ctx context.Context, u, p string) (*User, int, error) { verified = true; return inner(ctx, u, p) }
+	h.verify = func(ctx context.Context, u, p string) (*User, int, error) { evaluated++; return inner(ctx, u, p) }
+
+	// A stranger gets one password check per minute, then 429 without a check.
+	if code := postLoginWith(h, "203.0.113.9", "Herzog", "guess-one").Code; code != http.StatusTooManyRequests {
+		t.Fatalf("wrong guess of an unknown device during the cap: got %d, want 429", code)
+	}
 	if code := postLoginWith(h, "203.0.113.9", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
-		t.Fatalf("unknown device during account cap: got %d, want 429", code)
+		t.Fatalf("second attempt within the minute: got %d, want 429", code)
 	}
-	if verified {
-		t.Fatal("password was evaluated for an unknown device")
+	if evaluated != 1 {
+		t.Fatalf("password evaluated %d times for an unknown device, want 1", evaluated)
 	}
-	// A forged or foreign cookie does not make a device known.
+	// Another address has its own trickle: the owner on a new phone is not
+	// starved by an attacker elsewhere.
+	if code := postLoginWith(h, "203.0.113.77", "Herzog", testPassword).Code; code != http.StatusOK {
+		t.Fatalf("owner on a new address: got %d, want 200", code)
+	}
+	tripAccountCapFrom(t, h, "198.51.101")
+	// A forged cookie does not make a device known.
 	forged := &http.Cookie{Name: device.Name, Value: "9999999999.AAAA"}
-	if code := postLoginWith(h, "203.0.113.9", "Herzog", testPassword, forged).Code; code != http.StatusTooManyRequests {
+	postLoginWith(h, "198.18.0.1", "Herzog", "guess-two", forged)
+	if code := postLoginWith(h, "198.18.0.1", "Herzog", testPassword, forged).Code; code != http.StatusTooManyRequests {
 		t.Fatalf("forged cookie: got %d, want 429", code)
 	}
-	// The cookie of the same account is honoured from a new address ...
-	if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword, device).Code; code != http.StatusOK {
-		t.Fatalf("known browser during account cap: got %d, want 200", code)
-	}
-	if locked, _ := h.accountFailures.IsLockedOut("herzog"); locked {
-		t.Fatal("successful login did not reset the account cap")
-	}
-	// ... and so is a recently seen address (native clients have no cookies).
-	tripAccountCap(t, h)
-	if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword).Code; code != http.StatusOK {
-		t.Fatalf("recently seen address during account cap: got %d, want 200", code)
+	// The real cookie is honoured from any address, any number of times.
+	for i := 0; i < 3; i++ {
+		tripAccountCapFrom(t, h, fmt.Sprintf("198.51.%d", 110+i))
+		if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword, device).Code; code != http.StatusOK {
+			t.Fatalf("known browser during account cap: got %d, want 200", code)
+		}
 	}
 }
 
@@ -148,28 +156,6 @@ func TestKnownDeviceCookieExpiresAndIsPerAccount(t *testing.T) {
 	r.AddCookie(&http.Cookie{Name: c.Name, Value: "x.y"})
 	if s.hasDeviceCookie(r, "herzog") {
 		t.Fatal("non-numeric expiry accepted")
-	}
-}
-
-func TestKnownAddrsAreBounded(t *testing.T) {
-	k := &knownAddrs{}
-	for i := 0; i < knownIPMax+5; i++ {
-		k.add("a", fmt.Sprint(i))
-	}
-	if len(k.m) > knownIPMax {
-		t.Fatalf("known addresses grew to %d", len(k.m))
-	}
-	for key := range k.m {
-		k.m[key] = time.Now().Add(-2 * knownIPTTL)
-	}
-	k.add("a", "fresh")
-	if len(k.m) != 1 || !k.has("a", "fresh") || k.has("a", "0") {
-		t.Fatalf("expired entries not pruned: %d", len(k.m))
-	}
-	var nilK *knownAddrs
-	nilK.add("a", "b")
-	if nilK.has("a", "b") {
-		t.Fatal("nil set knows nothing")
 	}
 }
 

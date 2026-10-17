@@ -31,7 +31,10 @@ type Handler struct {
 	loginFailures   *httpx.LoginFailureLimiter
 	accountFailures *httpx.LoginFailureLimiter
 	passwordFails   *httpx.LoginFailureLimiter
-	knownIPs        *knownAddrs
+	// unknownDevice allows one password check per minute per client address
+	// and account for devices without a known-device cookie while the
+	// account-wide cap is on.
+	unknownDevice *httpx.RateLimiter
 	// verify replaces Login in unit tests.
 	verify func(ctx context.Context, username, password string) (*User, int, error)
 }
@@ -41,7 +44,7 @@ type Handler struct {
 const accountAttackWeight = 3
 
 func NewHandler(s *Sessions, pub events.Publisher) *Handler {
-	return &Handler{
+	h := &Handler{
 		Sessions: s,
 		Events:   pub,
 		// Generous per address: a household or office shares one public IP.
@@ -52,9 +55,15 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		loginFailures:   httpx.NewLoginFailureLimiter(10, time.Minute),
 		accountFailures: httpx.NewLoginFailureLimiter(100, time.Minute),
 		passwordFails:   httpx.NewLoginFailureLimiter(5, time.Minute),
-		knownIPs:        &knownAddrs{},
+		unknownDevice:   httpx.NewRateLimiter(1, time.Minute),
 	}
+	// An attacker cannot keep the owner out for long by tripping the cap again.
+	h.accountFailures.CapLockout(accountLockoutMax)
+	return h
 }
+
+// accountLockoutMax bounds how long the account-wide guess cap stays on.
+const accountLockoutMax = 15 * time.Minute
 
 // MountPublic registers the unauthenticated auth routes.
 func (h *Handler) MountPublic(r chi.Router) {
@@ -78,7 +87,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 // login handles POST /api/auth/login.
 //
 // @Summary Sign in
-// @Description Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, only devices that signed in to the account before (known-device cookie or recent address) get their password checked; everyone else is answered 429 without a check. Limited requests answer 429 with Retry-After.
+// @Description Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, devices without the known-device cookie get one password check per minute per address; everything else is answered 429 without a check. The cap lasts at most 15 minutes. Limited requests answer 429 with Retry-After.
 // @ID login
 // @Tags Auth
 // @Accept json
@@ -138,7 +147,9 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	// being useful while the real owner keeps signing in from their devices.
 	if !h.isKnownDevice(r, account) {
 		if locked, retry := h.accountFailures.IsLockedOut(account); locked {
-			return nil, 0, retry, nil
+			if ok, _ := h.unknownDevice.Allow(key); !ok {
+				return nil, 0, retry, nil
+			}
 		}
 	}
 
@@ -163,7 +174,6 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	}
 	h.loginFailures.ResetFailures(key)
 	h.accountFailures.ResetFailures(account)
-	h.knownIPs.add(account, httpx.ClientIPKey(r))
 	return u, tv, 0, nil
 }
 

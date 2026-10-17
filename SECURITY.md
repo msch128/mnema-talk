@@ -103,13 +103,14 @@ locally instead (`make up` or `make dev`).
   lockout per client address and username after repeated failures (1, 5, then
   30 minutes; the tier is forgotten after an hour without failures). A much
   higher per-account cap guards against guessing from many addresses: once it
-  trips, only devices that signed in to that account before get their
-  password checked (a signed, long-lived known-device cookie set at login, or
-  a client address that signed in within 30 days); everyone else is answered
-  429 without any password check, so a distributed guesser stops learning
-  anything. Known devices still count wrong guesses triple. The cost: while
-  the cap is on, the owner can only sign in from a known device, or has to
-  wait for the cap to expire (a minute, rising with repeated trips). Password
+  trips, devices that signed in to that account before (a signed HttpOnly
+  cookie set at login, valid a year, an HMAC under a key derived from the
+  session secret, so it survives restarts and address changes) are checked as
+  usual, while every other device gets one password check per minute per
+  client address and is answered 429 otherwise, so a distributed guesser
+  learns next to nothing and the owner on a new phone still gets in. Wrong
+  guesses count triple against their address. The cap lasts at most 15
+  minutes, and a restart clears all lockouts (they are held in memory). Password
   hashing for login, registration, re-authentication and password changes
   shares one concurrency limit, so a flood of attempts cannot starve the
   server. Passwords need at least 10 characters, 14 for the Owner account.
