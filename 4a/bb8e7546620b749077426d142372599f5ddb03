@@ -1,0 +1,61 @@
+web/src/components/AdminCoverage.test.ts
+  s_06fcde5dbef956::t_3ce66e313440ef 32-34
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_adce4550244eaa 793-832
+web/src/components/SelfUpdate.test.ts
+  s_06fcde5dbef956::t_3ce66e313440ef 16-18
+Makefile
+  s_06fcde5dbef956::t_1d898cdcadd116 132
+  s_06fcde5dbef956::t_5a564d3b9677e1 151-152
+  s_06fcde5dbef956::t_605f9cb01288ea 6,125,153
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_2d238c0d4f5111 20,33
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_f5d01f84b09d2a 311-341
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_45daba80696f60 793-832
+web/src/components/AdminSystemTab.test.ts
+  s_06fcde5dbef956::t_f57c614b2b7a6c 20-22
+  s_06fcde5dbef956::t_01e378d2fcd35d 44
+web/src/components/AdminOpsPanel.test.ts
+  s_06fcde5dbef956::t_a9bccbaf4542ce 45
+  s_06fcde5dbef956::t_d6f9d1eb3357fc 42
+  s_06fcde5dbef956::t_8b5013f7ac44f8 1-41,43-44,46-150
+web/src/components/opsStatus.fixture.ts
+  s_06fcde5dbef956::t_f79fd3e91feca8 1-5,7,9-22,24-26
+  s_06fcde5dbef956::t_9854cbb7c90e33 6,8,23
+AGENTS.md
+  s_06fcde5dbef956::t_4db56d6aee96f5 77
+web/src/components/AdminOpsPanel.vue
+  s_06fcde5dbef956::t_4617a987a2b723 147
+  s_06fcde5dbef956::t_f3417640aedc97 88
+  s_06fcde5dbef956::t_8f734737f20f3f 13-28,30,34,37
+  s_06fcde5dbef956::t_9acc3257c668c3 49
+  s_06fcde5dbef956::t_e317de19209faf 1-12,29,31-33,35-36,38-48,50-78,80-87,89-93,96-134,136-146,148,150-175
+  s_06fcde5dbef956::t_c3ea51a2dd8f7b 149
+  s_06fcde5dbef956::t_9854cbb7c90e33 79,135
+  s_06fcde5dbef956::t_28fe2b1d48c5d0 94-95
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_34fed23e965ca3 342-343
+  s_06fcde5dbef956::t_726fecd7f6364e 12
+web/src/components/Sparkline.vue
+  s_06fcde5dbef956::t_866dd0cad5755c 1-52
+scripts/upgrade-drill.sh
+  s_06fcde5dbef956::t_cd35b0a16ba883 1-218
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4abb8e7546620b749077426d142372599f5ddb03",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
