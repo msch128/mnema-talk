@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/opwarn"
 )
 
 type ctxKey int
@@ -295,6 +296,7 @@ func warnUntrustedForwarded(r *http.Request, peer string, last *atomic.Int64) {
 	}
 	slog.Warn("requests arrive through a proxy but this peer is not in TRUSTED_PROXY_CIDRS (empty = loopback only): all clients share one rate-limit identity; add the reverse proxy's address to TRUSTED_PROXY_CIDRS",
 		"peer", peer)
+	opwarn.Raise(opwarn.ProxyNotTrusted, 0)
 }
 
 // ClientIP returns the IP resolved by ClientIPMiddleware (or the raw peer).

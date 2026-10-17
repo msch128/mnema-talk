@@ -15,6 +15,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/s3"
 	"github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -32,6 +33,9 @@ func main() {
 func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	if len(os.Args) > 1 && os.Args[1] == "unlock" {
+		return unlockCommand(ctx, os.Args[2:], os.Stdout)
+	}
 	return runWithContext(ctx)
 }
 
@@ -52,6 +56,7 @@ func runWithContext(ctx context.Context) error {
 	if broad := cfg.BroadTrustedProxies(); len(broad) > 0 && !config.IsLoopbackAddr(cfg.BindAddr) {
 		slog.Warn("TRUSTED_PROXY_CIDRS contains broad ranges and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only your reverse proxy's address",
 			"ranges", broad)
+		opwarn.Raise(opwarn.TrustedProxyBroad, len(broad))
 	}
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
@@ -86,6 +91,7 @@ func runWithContext(ctx context.Context) error {
 	if err != nil {
 		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
 		voice = nil
+		opwarn.Raise(opwarn.VoiceUnavailable, 0)
 	} else {
 		defer func() {
 			if err := voice.Close(); err != nil {
@@ -95,12 +101,14 @@ func runWithContext(ctx context.Context) error {
 		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
 		if w := cfg.WebRTCReachabilityWarning(); w != "" {
 			slog.Warn(w)
+			opwarn.Raise(opwarn.WebRTCReachability, 0)
 		}
 		if cfg.WebRTCUDPMuxPort == 0 {
 			// Each peer takes its own port(s) from the range, so the range
 			// bounds how many people can be in calls at once.
 			slog.Warn("WEBRTC_UDP_MUX_PORT=0: every media peer takes its own UDP port(s) from the range, which caps how many people can be in calls at once; leave it empty to share one port",
 				"ports", int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
+			opwarn.Raise(opwarn.WebRTCUDPMuxDisabled, int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
 		}
 		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
 	}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: accounts (disable, password reset, sessions, voice kick).
 import { ref, computed, onMounted } from 'vue'
-import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield } from '@lucide/vue'
+import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, LockOpen } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { VoiceSnapshot } from '../types/events'
 import type { AdminUser } from '../types/domain'
@@ -159,6 +159,16 @@ async function revokeSessions(u: AdminUser) {
   }
 }
 
+async function clearLoginLockout(u: AdminUser) {
+  try {
+    await api(`/api/admin/users/${u.id}/login-lockout/clear`, { method: 'POST' })
+    toasts.success(t('admin.loginLockoutCleared'))
+    await refreshUsers()
+  } catch (e) {
+    showError(e)
+  }
+}
+
 async function kickUserFromVoice(u: AdminUser) {
   const ok = await confirm({
     title: t('admin.kickFromVoiceTitle', { name: u.display_name || u.username }),
@@ -308,6 +318,14 @@ onMounted(async () => {
                     {{ $t('admin.userActive') }}
                   </span>
 
+                  <span
+                    v-if="u.login_locked"
+                    data-testid="user-login-locked"
+                    class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-warning/10 text-mnema-warning border border-mnema-warning/25"
+                  >
+                    {{ $t('admin.loginLocked') }}
+                  </span>
+
                   <!-- In Voice indicator -->
                   <span
                     v-if="isUserInVoice(u.id)"
@@ -334,6 +352,19 @@ onMounted(async () => {
                     @click="kickUserFromVoice(u)"
                   >
                     <PhoneOff class="w-4 h-4" />
+                  </button>
+
+                  <!-- Clear login lockout: Owner only, shown while locked -->
+                  <button
+                    v-if="permissions.isOwner && u.login_locked"
+                    data-testid="action-clear-lockout"
+                    type="button"
+                    class="p-1.5 rounded text-mnema-warning hover:bg-mnema-warning/15 transition"
+                    :title="$t('admin.clearLoginLockout')"
+                    :aria-label="$t('admin.clearLoginLockout')"
+                    @click="clearLoginLockout(u)"
+                  >
+                    <LockOpen class="w-4 h-4" />
                   </button>
 
                   <button

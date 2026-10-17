@@ -22,6 +22,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/sfu"
@@ -114,6 +115,8 @@ func NewRouter(d Deps) (*Router, error) {
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
 	authH.Perms = permSvc
+	// `mnema-talk unlock` runs in another process and queues requests here.
+	go authH.RunUnlockWorker(ctx, auth.UnlockPollInterval)
 	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc}
 	rolesH := &roles.Handler{Perms: permSvc, Events: pub}
 	if d.Store != nil {
@@ -152,6 +155,7 @@ func NewRouter(d Deps) (*Router, error) {
 		systemH.version = "dev"
 	}
 	systemH.events = pub
+	systemH.warnings = opwarn.Default
 	opsSrc := &opsSource{db: d.DB, hub: hub, sfu: d.SFU, storage: d.StorageReady, hasStore: d.Store != nil, version: systemH.version}
 	systemH.ops = newOpsSampler(opsSrc)
 	go systemH.ops.run(ctx)
