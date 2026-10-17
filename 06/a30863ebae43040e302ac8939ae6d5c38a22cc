@@ -1,0 +1,23 @@
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_9e9f87b834fff7 356,754-755
+  s_06fcde5dbef956::t_9afa30363e1219 170-182,644
+web/src/lib/media/lifecycle.test.ts
+  s_06fcde5dbef956::t_9e9f87b834fff7 510-525
+  s_06fcde5dbef956::t_4bfec904bb986c 487-509
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "06a30863ebae43040e302ac8939ae6d5c38a22cc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
