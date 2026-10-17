@@ -320,6 +320,40 @@ jobs:
           "$RUNNER_TEMP/trivy" image --scanners vuln --severity HIGH,CRITICAL \
             --ignore-unfixed --exit-code 1 --no-progress mnema-talk:ci
 
+  # -- Upgrade drill: previous release -> this build, with data in between ----
+  # Installs the latest released image from GHCR, seeds users, channels,
+  # messages and an upload through the API, switches the stack to the image
+  # built here and checks migrations, data, sessions and health. Not a
+  # required check: the ruleset lists its checks by name. continue-on-error keeps
+  # a registry outage from failing the workflow run, which release.yml waits
+  # for; a real failure still shows red on the job. Waits for the docker
+  # job so the image layers come from its build cache.
+  upgrade-drill:
+    needs: docker
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Load the amd64 image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: mnema-talk:ci
+          build-args: |
+            REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=image
+
+      - name: Upgrade drill (previous release -> this build)
+        run: scripts/upgrade-drill.sh mnema-talk:ci
+
   # -- Browser smoke test: login, chat message, talk, against the real binary -
   e2e:
     runs-on: ubuntu-latest

@@ -74,6 +74,7 @@ mnema-talk/
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
 ├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`)
+├── scripts/upgrade-drill.sh # Previous release (GHCR) -> this build with seeded data (`make upgrade-drill`)
 ├── scripts/upgrade-postgres.sh # One-time PostgreSQL 17 -> 18 move (0.4 -> 0.5)
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
 ├── .github/workflows/
