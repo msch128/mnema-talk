@@ -35,6 +35,8 @@ type Handler struct {
 	// ACCOUNT, shared by every device without a known-device cookie, while the
 	// account-wide cap is on. The number of addresses does not matter.
 	unknownDevice *httpx.RateLimiter
+	// generation replaces the database lookup behind the known-device check in unit tests.
+	generation func(ctx context.Context, account string) (uuid.UUID, int, error)
 	// verify replaces Login in unit tests.
 	verify func(ctx context.Context, username, password string) (*User, int, error)
 }
@@ -118,7 +120,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
 	}
-	h.Sessions.markDevice(w, strings.ToLower(strings.TrimSpace(req.Username)))
+	h.Sessions.markDevice(w, strings.ToLower(strings.TrimSpace(req.Username)), u.ID, tv)
 	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: *u})
 	return nil
 }
@@ -145,11 +147,9 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	// devices that signed in to this account before; anyone else is turned
 	// away without a password check, so guessing from many addresses stops
 	// being useful while the real owner keeps signing in from their devices.
-	if !h.isKnownDevice(r, account) {
-		if locked, retry := h.accountFailures.IsLockedOut(account); locked {
-			if ok, _ := h.unknownDevice.Allow(account); !ok {
-				return nil, 0, retry, nil
-			}
+	if locked, retry := h.accountFailures.IsLockedOut(account); locked && !h.isKnownDevice(r, account) {
+		if ok, _ := h.unknownDevice.Allow(account); !ok {
+			return nil, 0, retry, nil
 		}
 	}
 
@@ -363,6 +363,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err
 	}
+	h.Sessions.markDevice(w, strings.ToLower(u.Username), u.ID, tv)
 	// Close every open WebSocket, other devices' included; this client
 	// reconnects with the fresh cookie set above.
 	if h.Live != nil {
