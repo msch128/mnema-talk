@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.12](https://github.com/msch128/mnema-talk/compare/v0.7.11...v0.7.12) (2026-10-17)
+
+
+### Features
+
+* rotate media keys every 30 minutes and drop absent members after 20 ([#117](https://github.com/msch128/mnema-talk/issues/117)) ([26c9408](https://github.com/msch128/mnema-talk/commit/26c94086a74675d787f34b1087cc732105eba6d0))
+
 ## [0.7.11](https://github.com/msch128/mnema-talk/compare/v0.7.10...v0.7.11) (2026-10-17)
 
 
