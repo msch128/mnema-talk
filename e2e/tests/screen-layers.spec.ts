@@ -103,11 +103,21 @@ async function chooseLayer(page: Page, id: 'auto' | 0 | 1 | 2) {
   await page.keyboard.press('Escape')
 }
 
+// Whatever the test did, the channel it made and the browsers it opened go:
+// a failed run must not leave a live 720p share encoding (it starves the specs
+// that follow) or an extra channel in the sidebar (the drag specs need the
+// whole list on screen).
+const cleanups: Array<() => Promise<unknown>> = []
+test.afterEach(async () => {
+  for (const cleanup of cleanups.splice(0).reverse()) await cleanup().catch(() => {})
+})
+
 test('viewers pick their own layer of a shared screen and switch mid-stream', async ({ browser }) => {
   test.setTimeout(240_000)
   const sharerCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
+  cleanups.push(() => sharerCtx.close(), () => aCtx.close(), () => bCtx.close())
   await sharerCtx.addInitScript(fakeScreen)
   const sharer = await sharerCtx.newPage()
   const a = await aCtx.newPage()
@@ -120,6 +130,7 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   await signIn(sharer, ADMIN_USER, ADMIN_PASSWORD)
   const created = await apiFetch(sharer, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })
   expect(created.status).toBe(201)
+  cleanups.push(() => apiFetch(sharer, 'DELETE', `/api/admin/channels/${responseString(created, 'id')}`))
   await a.goto('/')
   if (suiteMember.registered) {
     expect((await apiFetch(a, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
@@ -158,6 +169,13 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   expect(sealed.length).toBeGreaterThanOrEqual(3)
   expect(sealed.every(Boolean)).toBe(true)
 
+  // B pins the best layer. Auto may step down on a starved machine (that is
+  // what it is for), which would make B's size depend on the load rather than
+  // on A; a chosen layer is never adapted.
+  await chooseLayer(b, 0)
+  await expect(b.getByTestId('screen-layer-label')).toHaveText('Quelle')
+  await expect.poll(() => videoSize(b), { timeout: 30_000 }).toBe('1280x720')
+
   // A moves to the smallest layer; B stays. Both keep decoding, and the
   // sharer only sends the two layers somebody receives.
   await chooseLayer(a, 2)
@@ -168,11 +186,14 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
 
   // Switching while the stream runs never stalls it for long.
   await watchFrames(a)
-  const sizes: Array<['auto' | 0 | 1 | 2, string]> = [[1, '852x480'], [0, '1280x720'], [2, '640x360'], ['auto', '1280x720'], [1, '852x480']]
+  // Auto after a pick carries on from the picked layer (the server only moves
+  // it up after a quiet stretch, see adaptCleanFor), so it still shows 360p.
+  const sizes: Array<['auto' | 0 | 1 | 2, string]> = [[1, '852x480'], [0, '1280x720'], [2, '640x360'], ['auto', '640x360'], [1, '852x480']]
   for (const [layer, size] of sizes) {
     await chooseLayer(a, layer)
     await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe(size)
     await a.waitForTimeout(1500)
+    if (layer === 'auto') await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch')
   }
   const seen = await frames(a)
   console.log(`[layers] ${seen.frames} frames while switching, longest gap ${Math.round(seen.maxGap)} ms`)
@@ -184,7 +205,4 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   // Leave the sidebar as it was: other specs drag channels around by position.
   for (const page of [a, b, sharer]) await page.getByRole('button', { name: 'Verlassen' }).first().click()
   expect((await apiFetch(sharer, 'DELETE', `/api/admin/channels/${responseString(created, 'id')}`)).status).toBe(204)
-  await sharerCtx.close()
-  await aCtx.close()
-  await bCtx.close()
 })
