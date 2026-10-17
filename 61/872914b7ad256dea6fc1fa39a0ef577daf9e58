@@ -6,6 +6,8 @@ web/src/lib/bots.ts
 web/src/i18n/de.json
   s_06fcde5dbef956::t_6fc9c873d82759 754,756,1484,1536-1643
   s_06fcde5dbef956::t_cc27f49a563f51 1644
+  s_06fcde5dbef956::t_a14b49008ad5b8 755
+  s_06fcde5dbef956::t_3288fffe708626 1535
 web/src/components/BotRolesPanel.vue
   s_06fcde5dbef956::t_c4ca029b6d36b0 1-78
 web/src/lib/bots.test.ts
@@ -15,8 +17,11 @@ web/src/components/BotCommandsPanel.vue
 web/src/i18n/en.json
   s_06fcde5dbef956::t_6fc9c873d82759 754,756,1484,1536-1643
   s_06fcde5dbef956::t_702029b2d8dd10 1644
+  s_06fcde5dbef956::t_3288fffe708626 1535
+  s_06fcde5dbef956::t_a14b49008ad5b8 755
 web/src/components/AdminDashboard.vue
   s_06fcde5dbef956::t_6fc9c873d82759 18,40,53,97
+  s_06fcde5dbef956::t_a14b49008ad5b8 5,31-32
 web/src/components/BotAccessPanel.vue
   s_06fcde5dbef956::t_313838edce2ed1 1-64
 web/src/components/BotTokensPanel.vue
