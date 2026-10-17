@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -97,7 +98,9 @@ func (c *Client) deliver(data []byte) {
 	}
 	select {
 	case c.send <- data:
+		metrics.WSEventsSent.Inc()
 	default:
+		metrics.WSDropped.With("slow_client").Inc()
 		if c.closing.CompareAndSwap(false, true) {
 			go c.close()
 		}

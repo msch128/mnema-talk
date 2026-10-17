@@ -233,3 +233,24 @@ func listMigrations(fsys fs.FS) ([]string, error) {
 	sort.Strings(names)
 	return names, nil
 }
+
+// PoolStats is a point-in-time view of the connection pool.
+type PoolStats struct {
+	Total, Idle, Acquired, Max int32
+	// AcquireCount counts connection acquisitions, EmptyAcquireCount those
+	// that had to wait for a free connection and CanceledAcquireCount those
+	// abandoned by the caller.
+	AcquireCount, EmptyAcquireCount, CanceledAcquireCount int64
+	// AcquireSeconds is the cumulative time spent acquiring.
+	AcquireSeconds float64
+}
+
+// Snapshot reads the pool counters.
+func (p *Pool) Snapshot() PoolStats {
+	s := p.Stat()
+	return PoolStats{
+		Total: s.TotalConns(), Idle: s.IdleConns(), Acquired: s.AcquiredConns(), Max: s.MaxConns(),
+		AcquireCount: s.AcquireCount(), EmptyAcquireCount: s.EmptyAcquireCount(),
+		CanceledAcquireCount: s.CanceledAcquireCount(), AcquireSeconds: s.AcquireDuration().Seconds(),
+	}
+}

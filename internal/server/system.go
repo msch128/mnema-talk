@@ -33,6 +33,7 @@ type systemHandler struct {
 	started  time.Time
 	updates  *update.Checker // nil: update check disabled
 	events   events.Publisher
+	ops      *opsSampler
 
 	selfMu sync.Mutex
 	self   selfUpdate
@@ -118,6 +119,7 @@ type RuntimeHealth struct {
 
 func (h *systemHandler) mountAdmin(r chi.Router) {
 	r.Get("/system", httpx.Handle(h.status))
+	r.Get("/system/ops", httpx.Handle(h.opsStatus))
 	r.Get("/system/update", httpx.Handle(h.getUpdate))
 	r.Post("/system/check", httpx.Handle(h.checkNow))
 	r.Post("/system/update", httpx.Handle(h.startSelfUpdate))

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
 const (
@@ -128,6 +129,7 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		h.cancelPending(c)
 		return
 	}
+	metrics.WSConnections.Inc()
 	go c.writePump()
 	go c.readPump()
 }

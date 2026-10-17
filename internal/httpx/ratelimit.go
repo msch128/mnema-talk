@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
 const (
@@ -30,6 +32,13 @@ type RateLimiter struct {
 	entries    map[string]*rateEntry
 	maxEntries int
 	lastSweep  time.Time
+	name       string
+}
+
+// Named labels the limiter's refusals in the metrics and returns it.
+func (rl *RateLimiter) Named(name string) *RateLimiter {
+	rl.name = name
+	return rl
 }
 
 type rateEntry struct {
@@ -113,7 +122,12 @@ func (rl *RateLimiter) By(keyFn func(*http.Request) string) func(http.Handler) h
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if key := keyFn(r); key != "" {
 				if ok, retry := rl.Allow(key); !ok {
-					WriteRateLimited(w, retry)
+					name := rl.name
+					if name == "" {
+						name = "other"
+					}
+					metrics.RateLimitHits.With(name).Inc()
+					writeRateLimited(w, retry)
 					return
 				}
 			}
@@ -123,7 +137,13 @@ func (rl *RateLimiter) By(keyFn func(*http.Request) string) func(http.Handler) h
 }
 
 // WriteRateLimited answers 429 with Retry-After.
+// It counts as a hit of the unnamed "other" limiter; By counts its own.
 func WriteRateLimited(w http.ResponseWriter, retry time.Duration) {
+	metrics.RateLimitHits.With("other").Inc()
+	writeRateLimited(w, retry)
+}
+
+func writeRateLimited(w http.ResponseWriter, retry time.Duration) {
 	w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds())+1))
 	WriteError(w, ErrRateLimited())
 }

@@ -857,6 +857,149 @@ export function isServerLegal(value: unknown): value is ServerLegal {
 
 export const decodeServerLegal = decoder("server.Legal", isServerLegal)
 
+export type ServerOpsPool = {
+  acquired: number
+  idle: number
+  max: number
+  total: number
+  waited: number
+}
+
+export function isServerOpsPool(value: unknown): value is ServerOpsPool {
+  return isRecord(value)
+    && (hasOwn(value, "acquired") && isInteger(value["acquired"]))
+    && (hasOwn(value, "idle") && isInteger(value["idle"]))
+    && (hasOwn(value, "max") && isInteger(value["max"]))
+    && (hasOwn(value, "total") && isInteger(value["total"]))
+    && (hasOwn(value, "waited") && isInteger(value["waited"]))
+}
+
+export const decodeServerOpsPool = decoder("server.OpsPool", isServerOpsPool)
+
+export type ServerOpsProcess = {
+  cpu_ms: number
+  gc_cycles: number
+  gc_pause_ms: number
+  goroutines: number
+  heap_bytes: number
+  rss_bytes: number
+}
+
+export function isServerOpsProcess(value: unknown): value is ServerOpsProcess {
+  return isRecord(value)
+    && (hasOwn(value, "cpu_ms") && isInteger(value["cpu_ms"]))
+    && (hasOwn(value, "gc_cycles") && isInteger(value["gc_cycles"]))
+    && (hasOwn(value, "gc_pause_ms") && isInteger(value["gc_pause_ms"]))
+    && (hasOwn(value, "goroutines") && isInteger(value["goroutines"]))
+    && (hasOwn(value, "heap_bytes") && isInteger(value["heap_bytes"]))
+    && (hasOwn(value, "rss_bytes") && isInteger(value["rss_bytes"]))
+}
+
+export const decodeServerOpsProcess = decoder("server.OpsProcess", isServerOpsProcess)
+
+export type ServerOpsSample = {
+  cpu_millicores: number
+  db_connections_acquired: number
+  egress_bps: number
+  errors_5xx: number
+  goroutines: number
+  heap_bytes: number
+  ice_failures: number
+  ingress_bps: number
+  online_users: number
+  peers: number
+  requests: number
+  rss_bytes: number
+  screen_shares: number
+  t: number
+  ws_connections: number
+}
+
+export function isServerOpsSample(value: unknown): value is ServerOpsSample {
+  return isRecord(value)
+    && (hasOwn(value, "cpu_millicores") && isInteger(value["cpu_millicores"]))
+    && (hasOwn(value, "db_connections_acquired") && isInteger(value["db_connections_acquired"]))
+    && (hasOwn(value, "egress_bps") && isInteger(value["egress_bps"]))
+    && (hasOwn(value, "errors_5xx") && isInteger(value["errors_5xx"]))
+    && (hasOwn(value, "goroutines") && isInteger(value["goroutines"]))
+    && (hasOwn(value, "heap_bytes") && isInteger(value["heap_bytes"]))
+    && (hasOwn(value, "ice_failures") && isInteger(value["ice_failures"]))
+    && (hasOwn(value, "ingress_bps") && isInteger(value["ingress_bps"]))
+    && (hasOwn(value, "online_users") && isInteger(value["online_users"]))
+    && (hasOwn(value, "peers") && isInteger(value["peers"]))
+    && (hasOwn(value, "requests") && isInteger(value["requests"]))
+    && (hasOwn(value, "rss_bytes") && isInteger(value["rss_bytes"]))
+    && (hasOwn(value, "screen_shares") && isInteger(value["screen_shares"]))
+    && (hasOwn(value, "t") && isInteger(value["t"]))
+    && (hasOwn(value, "ws_connections") && isInteger(value["ws_connections"]))
+}
+
+export const decodeServerOpsSample = decoder("server.OpsSample", isServerOpsSample)
+
+export type ServerOpsStatus = {
+  db_pool: ServerOpsPool
+  history: Array<ServerOpsSample>
+  interval_seconds: number
+  process: ServerOpsProcess
+  totals: ServerOpsTotals
+}
+
+export function isServerOpsStatus(value: unknown): value is ServerOpsStatus {
+  return isRecord(value)
+    && (hasOwn(value, "db_pool") && isServerOpsPool(value["db_pool"]))
+    && (hasOwn(value, "history") && isArrayOf(value["history"], item => isServerOpsSample(item)))
+    && (hasOwn(value, "interval_seconds") && isInteger(value["interval_seconds"]))
+    && (hasOwn(value, "process") && isServerOpsProcess(value["process"]))
+    && (hasOwn(value, "totals") && isServerOpsTotals(value["totals"]))
+}
+
+export const decodeServerOpsStatus = decoder("server.OpsStatus", isServerOpsStatus)
+
+export type ServerOpsTotals = {
+  egress_bytes: number
+  errors_4xx: number
+  errors_5xx: number
+  ice_connected: number
+  ice_disconnected: number
+  ice_failed: number
+  ingress_bytes: number
+  keyframe_requests: number
+  layer_switches: number
+  mls_handshakes_rejected: number
+  mls_handshakes_relayed: number
+  nack_requests: number
+  rate_limited: number
+  requests: number
+  storage_errors: number
+  storage_operations: number
+  ws_connections: number
+  ws_dropped: number
+}
+
+export function isServerOpsTotals(value: unknown): value is ServerOpsTotals {
+  return isRecord(value)
+    && (hasOwn(value, "egress_bytes") && isInteger(value["egress_bytes"]))
+    && (hasOwn(value, "errors_4xx") && isInteger(value["errors_4xx"]))
+    && (hasOwn(value, "errors_5xx") && isInteger(value["errors_5xx"]))
+    && (hasOwn(value, "ice_connected") && isInteger(value["ice_connected"]))
+    && (hasOwn(value, "ice_disconnected") && isInteger(value["ice_disconnected"]))
+    && (hasOwn(value, "ice_failed") && isInteger(value["ice_failed"]))
+    && (hasOwn(value, "ingress_bytes") && isInteger(value["ingress_bytes"]))
+    && (hasOwn(value, "keyframe_requests") && isInteger(value["keyframe_requests"]))
+    && (hasOwn(value, "layer_switches") && isInteger(value["layer_switches"]))
+    && (hasOwn(value, "mls_handshakes_rejected") && isInteger(value["mls_handshakes_rejected"]))
+    && (hasOwn(value, "mls_handshakes_relayed") && isInteger(value["mls_handshakes_relayed"]))
+    && (hasOwn(value, "nack_requests") && isInteger(value["nack_requests"]))
+    && (hasOwn(value, "rate_limited") && isInteger(value["rate_limited"]))
+    && (hasOwn(value, "requests") && isInteger(value["requests"]))
+    && (hasOwn(value, "storage_errors") && isInteger(value["storage_errors"]))
+    && (hasOwn(value, "storage_operations") && isInteger(value["storage_operations"]))
+    && (hasOwn(value, "ws_connections") && isInteger(value["ws_connections"]))
+    && (hasOwn(value, "ws_dropped") && isInteger(value["ws_dropped"]))
+}
+
+export const decodeServerOpsTotals = decoder("server.OpsTotals", isServerOpsTotals)
+
 export type ServerRuntimeHealth = {
   go_version: string
   goroutines: number

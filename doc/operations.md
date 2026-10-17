@@ -301,23 +301,201 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   healthcheck and [`scripts/health-check.sh`](../scripts/health-check.sh)
   (cron, Unraid notification, optional webhook) use it.
 - **`GET /api/metrics`** (Prometheus text format), only when `METRICS_TOKEN`
-  is set:
-  `mnema_up`, `mnema_db_connections_total|acquired|idle|max`,
-  `mnema_ws_online_users`, `mnema_sfu_video_rooms`,
-  `mnema_sfu_screen_shares`, `mnema_sfu_cameras`.
-
-  ```yaml
-  scrape_configs:
-    - job_name: mnema-talk
-      metrics_path: /api/metrics
-      scheme: https
-      authorization:
-        credentials: <METRICS_TOKEN>
-      static_configs:
-        - targets: ["chat.example.com"]
-  ```
+  is set. Every metric is listed under [Monitoring and
+  alerts](#monitoring-and-alerts) below, with scrape config and alert rules.
 - **Admin → System** shows version and commit, database and migration state,
-  storage, voice/SFU and server resources, and the update check.
+  storage, voice/SFU and server resources, the update check and a live
+  operator view (uptime, CPU, memory, traffic, errors, ICE failures, charts
+  of the last hour). It reads `GET /api/admin/system/ops` (admin session
+  only), not the bearer endpoint.
+
+## Monitoring and alerts
+
+### Scrape it
+
+Set `METRICS_TOKEN` (24+ characters, `openssl rand -hex 24`) in `.env` and
+restart. Without it the endpoint answers 404.
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: mnema-talk
+    metrics_path: /api/metrics
+    scheme: https
+    scrape_interval: 15s
+    authorization:
+      credentials: <METRICS_TOKEN>      # or credentials_file: /etc/prometheus/mnema-token
+    static_configs:
+      - targets: ["chat.example.com"]
+rule_files:
+  - mnema-alerts.yml
+```
+
+Quick check by hand: `curl -H "Authorization: Bearer $METRICS_TOKEN" https://chat.example.com/api/metrics`.
+Keep the token out of the reverse proxy's access logs and do not expose
+`/api/metrics` to the internet more than needed: allow only your Prometheus
+host at the proxy if you can. All series are bounded: labels are route
+patterns, status classes, fixed reasons and states, never user or channel ids,
+and each labelled family stops at 256 series.
+
+### Minimal setup without Grafana
+
+One Prometheus container is enough: it has an expression browser, graphs and
+the alert list.
+
+```yaml
+# docker-compose.monitoring.yml (separate stack, start with docker compose -f ... up -d)
+services:
+  prometheus:
+    image: prom/prometheus:latest   # pin a version or digest in real use
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=30d"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./mnema-alerts.yml:/etc/prometheus/mnema-alerts.yml:ro
+      - ./mnema-token:/etc/prometheus/mnema-token:ro
+      - prometheus-data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+volumes:
+  prometheus-data:
+```
+
+Use `credentials_file: /etc/prometheus/mnema-token` in the scrape config and
+put the token in `./mnema-token` (mode 600). Open `http://127.0.0.1:9090/graph`
+and `/alerts` over an SSH tunnel. To get notified, add Alertmanager or any
+receiver that speaks its webhook format (ntfy, Gotify, email); without one,
+[`scripts/health-check.sh`](../scripts/health-check.sh) from cron still covers
+"is it up" with Unraid or webhook notifications.
+
+### Example alert rules
+
+```yaml
+# mnema-alerts.yml
+groups:
+  - name: mnema-talk
+    rules:
+      - alert: MnemaDown
+        expr: up{job="mnema-talk"} == 0
+        for: 2m
+        labels: {severity: page}
+        annotations: {summary: "Mnema Talk does not answer the scrape (or the token is wrong)"}
+
+      # /api/health is public and the metrics endpoint is up while the
+      # database or storage is not, so check those through their metrics too.
+      - alert: MnemaStorageDown
+        expr: mnema_storage_up == 0
+        for: 5m
+        labels: {severity: page}
+        annotations: {summary: "Object storage is unreachable: uploads fail and /api/health answers 503"}
+
+      - alert: MnemaHealthFailing
+        # needs blackbox_exporter probing https://chat.example.com/api/health
+        expr: probe_success{instance="https://chat.example.com/api/health"} == 0
+        for: 3m
+        labels: {severity: page}
+        annotations: {summary: "/api/health fails (database or storage)"}
+
+      - alert: MnemaDatabasePoolExhausted
+        expr: mnema_db_connections_acquired >= mnema_db_connections_max
+        for: 5m
+        labels: {severity: warn}
+        annotations: {summary: "All database connections are busy: requests queue"}
+
+      - alert: MnemaMemoryHigh
+        # process_resident_memory_bytes is reported on Linux; the compose
+        # limit is APP_MEM_LIMIT (see Container resources).
+        expr: process_resident_memory_bytes > 800e6
+        for: 15m
+        labels: {severity: warn}
+        annotations: {summary: "Resident memory above 800 MB (80% of the default 1g container limit) for 15 minutes"}
+
+      - alert: MnemaGoroutineLeak
+        expr: go_goroutines > 5000
+        for: 15m
+        labels: {severity: warn}
+        annotations: {summary: "Unusually many goroutines: possible leak"}
+
+      - alert: MnemaServerErrors
+        expr: sum(rate(mnema_http_requests_total{class="5xx"}[10m])) > 0.1
+        for: 10m
+        labels: {severity: warn}
+        annotations: {summary: "More than one 5xx every 10 seconds"}
+
+      - alert: MnemaSlowRequests
+        expr: histogram_quantile(0.95, sum by (le) (rate(mnema_http_request_duration_seconds_bucket{route!~"/api/channels/.*/upload|/api/media/.*"}[10m]))) > 1
+        for: 15m
+        labels: {severity: warn}
+        annotations: {summary: "95th percentile API latency above one second"}
+
+      - alert: MnemaIceFailures
+        # failed ICE transitions relative to successful ones
+        expr: |
+          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m])) > 3
+          and
+          sum(increase(mnema_sfu_ice_transitions_total{state="failed"}[30m]))
+            / clamp_min(sum(increase(mnema_sfu_ice_transitions_total{state="connected"}[30m])), 1) > 0.2
+        for: 10m
+        labels: {severity: warn}
+        annotations: {summary: "Many voice connections fail: check UDP port range, WEBRTC_ANNOUNCE_IP and TURN"}
+
+      - alert: MnemaStorageErrors
+        expr: sum(increase(mnema_s3_operations_total{result="error"}[15m])) > 5
+        labels: {severity: warn}
+        annotations: {summary: "Object storage calls fail"}
+
+      - alert: MnemaBackupTooOld
+        # see "Backup age" below: the app cannot know when you last backed up
+        expr: time() - mnema_backup_last_success_timestamp_seconds > 36 * 3600
+        labels: {severity: warn}
+        annotations: {summary: "No successful backup for 36 hours"}
+```
+
+**Backup age.** The server does not know about your backups (they run on the
+host), so it exports nothing for it. Let the backup job report instead, with
+node_exporter's textfile collector (`--collector.textfile.directory=/var/lib/node_exporter`):
+
+```sh
+scripts/backup.sh && cat > /var/lib/node_exporter/mnema_backup.prom <<EOF
+# TYPE mnema_backup_last_success_timestamp_seconds gauge
+mnema_backup_last_success_timestamp_seconds $(date +%s)
+EOF
+```
+
+### What each metric means
+
+Counters only go up (use `rate()` or `increase()`); gauges are current values.
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `mnema_up` | gauge | Always 1 while the process answers. |
+| `mnema_build_info{version,revision,go_version}` | gauge | Always 1; the labels identify the running build. |
+| `process_start_time_seconds` | gauge | Process start, for uptime (`time() - ...`) and restart detection. |
+| `process_cpu_seconds_total` | counter | User plus system CPU. `rate()` of it = cores in use. |
+| `process_resident_memory_bytes` | gauge | Resident memory (Linux only; absent elsewhere). |
+| `go_goroutines`, `go_memstats_alloc_bytes`, `go_memstats_sys_bytes`, `go_memstats_heap_inuse_bytes`, `go_memstats_heap_objects` | gauge | Go runtime: goroutines and heap. |
+| `go_gc_cycles_total`, `go_gc_pause_seconds_total` | counter | Garbage collections and their total stop-the-world time. |
+| `mnema_http_requests_total{route,class}` | counter | Requests by chi route pattern (`/api/channels/{channelID}/messages`) and status class `1xx`..`5xx`. Unknown paths are `unmatched`. |
+| `mnema_http_request_duration_seconds{route}` | histogram | Latency per route pattern (WebSocket upgrades are counted but not timed). |
+| `mnema_http_requests_in_flight` | gauge | Requests being served now. |
+| `mnema_ratelimit_hits_total{limiter}` | counter | Requests refused with 429: `api_user`, `upload`, `link_preview`, `other` (login, native clients and the rest). |
+| `mnema_ws_online_users`, `mnema_ws_connections` | gauge | Distinct online users and open WebSockets. |
+| `mnema_ws_connections_total` | counter | Accepted realtime connections (reconnect churn). |
+| `mnema_ws_events_sent_total`, `mnema_ws_events_received_total` | counter | Event throughput to and from clients. |
+| `mnema_ws_dropped_total{reason}` | counter | `slow_client` (connection cut because its buffer was full), `flood_frame`, `flood_event` (per-connection budget exceeded). |
+| `mnema_mls_handshakes_total{result}` | counter | Voice-room encryption handshakes: `relayed`, `rejected` (malformed or wrong room), `rate_limited`. `mnema_mls_handshake_bytes_total` is the relayed size. |
+| `mnema_voice_rooms`, `mnema_voice_participants` | gauge | Calls as members see them (including the reconnect grace period). |
+| `mnema_sfu_rooms`, `mnema_sfu_peers` | gauge | Rooms with media and media connections. |
+| `mnema_sfu_tracks{kind}` | gauge | Published tracks, `audio` and `video`. |
+| `mnema_sfu_video_rooms`, `mnema_sfu_screen_shares`, `mnema_sfu_cameras` | gauge | Rooms with video and the screen shares and cameras forwarded. |
+| `mnema_sfu_ingress_bytes_total`, `..._packets_total` | counter | RTP received from publishers. |
+| `mnema_sfu_egress_bytes_total`, `..._packets_total` | counter | RTP sent to viewers (each viewer counts), retransmissions included. `rate(...)*8` = bits per second. |
+| `mnema_sfu_nack_requests_total`, `mnema_sfu_nack_packets_total` | counter | Retransmission requests from viewers and the packets they asked for: a measure of packet loss on the downlinks. |
+| `mnema_sfu_keyframe_requests_total` | counter | PLI and FIR feedback from viewers. |
+| `mnema_sfu_layer_switches_total` | counter | Simulcast layer changes of screen share viewers. |
+| `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
+| `mnema_sfu_peer_joins_total` | counter | Media connections created. |
+| `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |
+| `mnema_storage_up` | gauge | 1 when object storage answers (the same check as `/api/health`), else 0. |
+| `mnema_s3_operations_total{op,result}` | counter | Object storage calls (`upload`, `get`, `delete`, `list`) by `ok`/`error`. |
 
 ## Orphaned media
 

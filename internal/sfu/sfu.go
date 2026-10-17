@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/pion/ice/v4"
 	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
@@ -395,6 +396,7 @@ func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mu
 	// NACK (retransmissions both ways), RTCP sender/receiver reports and
 	// transport-wide congestion control feedback to the publishers.
 	registry := &interceptor.Registry{}
+	registry.Add(telemetryFactory{})
 	if authorize != nil || sources != nil {
 		// First is the innermost writer, beneath retransmission caches.
 		registry.Add(mediaAuthorizationFactory{authorize: authorize, sources: sources})
@@ -675,8 +677,10 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 				attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
 			}
 			slog.Info("sfu ice connected", attrs...)
+			metrics.SFUICE.With("connected").Inc()
 		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
 			slog.Warn("sfu ice "+state.String(), "user", userID)
+			metrics.SFUICE.With(state.String()).Inc()
 		}
 	})
 
@@ -689,6 +693,7 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 
 	r.peers[userID] = peer
 	r.load.add(1)
+	metrics.SFUPeerJoins.Inc()
 
 	go r.SignalPeerConnections()
 
@@ -742,6 +747,8 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
 			continue
 		}
+		metrics.SFUIngressPackets.Inc()
+		metrics.SFUIngressBytes.Add(uint64(n))
 		if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 			return
 		}
