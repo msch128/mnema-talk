@@ -1,6 +1,85 @@
 {
   "components": {
     "schemas": {
+      "audit.Item": {
+        "properties": {
+          "action": {
+            "example": "role.update",
+            "type": "string"
+          },
+          "actor_id": {
+            "description": "ActorID is null for entries the server wrote itself.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "actor_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {},
+            "description": "Details holds the sanitized request, a before snapshot and the changed\nfields; its shape depends on the action.",
+            "type": "object"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "target_name": {
+            "type": "string"
+          },
+          "target_type": {
+            "example": "role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "actor_id",
+          "actor_name",
+          "created_at",
+          "details",
+          "id",
+          "request_id",
+          "target_id",
+          "target_name",
+          "target_type"
+        ],
+        "type": "object"
+      },
+      "audit.Page": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/audit.Item"
+            },
+            "type": "array"
+          },
+          "next_before": {
+            "description": "NextBefore is the value of the before parameter that fetches the next\npage; null on the last page.",
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "entries",
+          "next_before"
+        ],
+        "type": "object"
+      },
       "auth.AdminUser": {
         "properties": {
           "avatar_url": {
@@ -3148,6 +3227,161 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/admin/audit-log": {
+      "get": {
+        "description": "Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.",
+        "operationId": "listAuditLog",
+        "parameters": [
+          {
+            "description": "Actor user id.",
+            "in": "query",
+            "name": "actor",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exact action (role.update) or a group (role matches every role.*).",
+            "in": "query",
+            "name": "action",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Target type, e.g. user, role, channel.",
+            "in": "query",
+            "name": "target_type",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Target id.",
+            "in": "query",
+            "name": "target_id",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only entries at or after this time (RFC 3339 or YYYY-MM-DD).",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only entries before this time (RFC 3339 or YYYY-MM-DD, end of day).",
+            "in": "query",
+            "name": "to",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entries with a smaller id only (the previous page's next_before).",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page size, 1-200.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/audit.Page"
+                }
+              }
+            },
+            "description": "Entries."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed filter."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List audit log entries",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/categories": {
       "post": {
         "description": "Requires the Manage channels permission (403 otherwise).",

@@ -341,6 +341,16 @@ details and the limits.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
+- **Audit log.** Administrative actions (roles, permissions, channels,
+  invites, members, webhooks, settings, updates) and, in later entries,
+  moderation actions, logins, Talk joins and leaves and message deletions and
+  edits are recorded in an append-only table (doc/moderation.md). It never
+  stores passwords, tokens, secrets, hashes, invite codes or session ids, and
+  strips credentials and queries from URLs. It **does** keep the text of
+  deleted and edited messages and a history of who was in which Talk when, so
+  operators must name it in their privacy notice. Only the Owner and holders
+  of *View audit log* can read it; the database refuses updates, and nothing
+  is deleted unless `AUDIT_RETENTION_DAYS` is set (default `0`: keep forever).
 - **Outbound connections.** Besides link previews (`LINK_PREVIEWS_ENABLED`)
   and optional STUN/TURN, the server only asks GitHub for the latest release
   (`UPDATE_CHECK_ENABLED`, default on): an unauthenticated `GET` to

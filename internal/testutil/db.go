@@ -103,6 +103,9 @@ func reset(p *db.Pool) error {
 	}
 	// Roles are not user data: @everyone stays (back at its defaults), the
 	// custom roles of the previous test go.
+	if _, err := p.Exec(ctx, `DELETE FROM audit_log`); err != nil {
+		return err
+	}
 	if _, err := p.Exec(ctx, `DELETE FROM roles WHERE NOT is_everyone`); err != nil {
 		return err
 	}

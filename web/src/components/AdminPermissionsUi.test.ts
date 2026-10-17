@@ -110,11 +110,14 @@ describe('AdminUsersTab roles and rank', () => {
 
 describe('AdminDashboard tabs', () => {
   const tabs = (w: ReturnType<typeof mount>) => w.findAll('[data-testid^="tab-"]').map(t => t.attributes('data-testid')!.slice(4))
-  const stubs = { AdminUsersTab: true, AdminRolesTab: true, AdminLayoutTab: true, AdminInvitesTab: true, AdminMediaTab: true, AdminSystemTab: true }
+  const stubs = { AdminUsersTab: true, AdminRolesTab: true, AdminLayoutTab: true, AdminInvitesTab: true, AdminMediaTab: true, AdminAuditTab: true, AdminSystemTab: true }
 
   it('shows a tab only to those it is for, and the storage and system tabs to the Owner alone', () => {
     useAuthStore().user = userFixture({ role: 'admin' })
-    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'media', 'system'])
+    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'media', 'audit', 'system'])
+    setActivePinia(createPinia())
+    asModerator(PERMISSION_BITS.view_audit_log)
+    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['audit'])
     setActivePinia(createPinia())
     asModerator(PERMISSION_BITS.manage_roles | PERMISSION_BITS.create_invites)
     expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'invites'])

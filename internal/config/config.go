@@ -41,7 +41,10 @@ type Config struct {
 	S3SecretKey          string
 	S3ForcePathStyle     bool
 	MediaRetentionDays   int
-	MaxUploadMB          int
+	// AuditRetentionDays > 0 deletes audit log entries older than that many
+	// days; 0 (default) keeps them forever.
+	AuditRetentionDays int
+	MaxUploadMB        int
 	// TURN relay for clients behind restrictive NATs (coturn with
 	// use-auth-secret / static-auth-secret = WebRTCTURNSecret).
 	WebRTCTURNURLs   []string
@@ -211,6 +214,10 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	auditRetention, err := getInt("AUDIT_RETENTION_DAYS", 0)
+	if err != nil {
+		return nil, err
+	}
 	maxUpload, err := getInt("MAX_UPLOAD_SIZE_MB", 50)
 	if err != nil {
 		return nil, err
@@ -274,6 +281,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 		S3SecretKey:                get("S3_SECRET_KEY", ""),
 		S3ForcePathStyle:           forcePathStyle,
 		MediaRetentionDays:         retentionDays,
+		AuditRetentionDays:         auditRetention,
 		MaxUploadMB:                maxUpload,
 		LinkPreviews:               linkPreviews,
 		WebhookAllowPrivateTargets: webhookAllow,
@@ -329,6 +337,9 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	}
 	if !validLogLevels[c.LogLevel] {
 		return fmt.Errorf("LOG_LEVEL must be debug, info, warn or error (or empty), got %q", c.LogLevel)
+	}
+	if c.AuditRetentionDays < 0 {
+		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
 	}
 	if c.MediaRetentionDays < 0 {
 		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
