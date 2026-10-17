@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.23](https://github.com/msch128/mnema-talk/compare/v0.7.22...v0.7.23) (2026-10-17)
+
+
+### Features
+
+* outgoing webhooks, and webhook settings managed by administrators ([#154](https://github.com/msch128/mnema-talk/issues/154)) ([0a46331](https://github.com/msch128/mnema-talk/commit/0a46331f86bd91e647b63e808b84a79c0f2c93ee))
+
 ## [0.7.22](https://github.com/msch128/mnema-talk/compare/v0.7.21...v0.7.22) (2026-10-17)
 
 
