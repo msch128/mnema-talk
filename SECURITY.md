@@ -225,9 +225,14 @@ locally instead (`make up` or `make dev`).
   receiver's replay window is per (epoch, stream), so when the SFU switches a
   viewer from one layer to another, or back, the counters of the other layers
   (which kept counting while not forwarded) never look like replays of each
-  other and nothing is opened twice. A sender may use up to 256 streams per
-  epoch (a share takes three, each reconnect re-arms all of its lines); further
-  new streams are refused rather than evicting an old one. The SFU reads only
+  other and nothing is opened twice. A sender may have up to 256 live streams per
+  epoch (a share takes three, each reconnect re-arms all of its lines). When
+  they are used up, streams silent for more than a minute are retired to their
+  highest counter (up to 1024 retired per epoch): a retired stream ID reopens
+  only for a counter above that, and then treats everything below as seen, so
+  no unit it opened can open again. If none is idle or the retired list is
+  full, new streams are refused until the next epoch; nothing is ever evicted
+  without keeping its high-water counter. The SFU reads only
   what the transform leaves readable (the RTP descriptor, the VP8 frame tag,
   H.264 NAL types) to find keyframes and renumber packets; it never decodes or
   alters sealed bytes. Which layers exist, which one a viewer receives and
@@ -240,6 +245,14 @@ locally instead (`make up` or `make dev`).
   compromised SFU can feed a viewer old recorded frames of a layer it has not
   received yet (previously the same was true for newly joined viewers); this
   falls under the active-server limits above, not under an honest SFU.
+  The line a unit belongs to (microphone, camera, screen, screen audio, layer)
+  is not part of the authenticated data; the sender, epoch, stream and counter
+  are. A sender's lines share one replay window per sender, so a unit still
+  opens only once, but an active SFU can move a sealed unit from one of a
+  sender's lines to another (the receiver then fails to decode it, or decodes
+  audio as video). Binding the line would change the frame format and the
+  receiver's arming on a live rollout for a disruption an active server already
+  has, so it is a known limit, not a fixed one.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
