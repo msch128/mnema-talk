@@ -419,9 +419,9 @@ func TestWantedLayersFollowViewers(t *testing.T) {
 	if l := next(); len(l) != 1 || l[0] != 2 {
 		t.Fatalf("after the hold: %v", l)
 	}
-	vt.setPref(-1) // automatic starts at the best layer
+	vt.setPref(0)
 	if l := next(); len(l) != 2 || l[0] != 0 || l[1] != 2 {
-		t.Fatalf("viewer back to auto: %v", l)
+		t.Fatalf("viewer back to the best layer: %v", l)
 	}
 	g.removeViewer(vt)
 	quiet() // layers are held, nothing changes yet
@@ -514,7 +514,7 @@ func TestQualityIsReportedToTheViewer(t *testing.T) {
 	}
 	// Without a notifier nothing breaks.
 	g := newLayerGroup("n", uuid.New(), uuid.New(), nil, rig.group.codec)
-	g.notifyQuality(uuid.New(), QualityState{})
+	g.notifyQuality(&viewerTrack{}, QualityState{})
 	g.notifyWanted(1)
 }
 

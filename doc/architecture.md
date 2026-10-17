@@ -129,6 +129,19 @@ announced as `screen_layers`), a viewer picks one with `quality` on
 sender is told which layers anyone needs (`screen_layers_wanted`) so it can
 stop encoding the others. A layer nobody needs any more stays wanted for eight
 seconds, so switching back and forth does not restart an encoder each time.
+**Auto.** A viewer who leaves the choice to the server starts on layer 0 and is
+moved by what its browser reports ([`adapt.go`](../internal/sfu/adapt.go)):
+the loss fraction and round trip time of its RTCP receiver reports (about
+every second) and how often it asks for a keyframe. Lasting loss (5 % twice in
+a row, 15 % at once), a round trip time 250 ms above its recent minimum or
+three keyframe requests in five seconds move it down one layer; the reports of
+the three seconds after any move are ignored (a keyframe burst loses packets on
+its own). After 12 seconds without trouble it tries one layer up, and a try
+that fails within eight seconds makes the next one wait twice as long (up to
+two minutes), so a link that carries the lower layer but not the higher one
+does not flap. A viewer who picked a layer is never moved. The SFU cannot read
+the media and does not estimate bandwidth; it judges by these reports only.
+
 Cameras and audio are not layered (small pictures, and every layer costs the
 sender an encoder).
 

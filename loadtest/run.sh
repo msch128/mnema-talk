@@ -8,6 +8,8 @@
 #   SKIP_BUILD=1               reuse web/dist and bin/mnema-talk-loadtest
 #   LOADTEST_INSTALL_BROWSER=1 also run `playwright install --with-deps chromium`
 #   KEEP=1                     leave the throwaway stack running afterwards
+#   LOADTEST_UDP_PORT=50200    the server's media port (+50 allowed); LOADTEST_APP_PORT,
+#                              LOADTEST_PG_PORT and LOADTEST_S3_PORT move the other ports
 # Remote mode (no infrastructure, no seeding; see the README for how to prepare
 # an instance): BASE_URL, TOKENS (json file [{id, token}]), CHANNEL_ID,
 # optionally CHANNEL_NAME (default Loadtest) and METRICS_TOKEN.
@@ -45,6 +47,8 @@ REMOTE=0
 PG_PORT="${LOADTEST_PG_PORT:-56432}"
 S3_PORT="${LOADTEST_S3_PORT:-59333}"
 APP_PORT="${LOADTEST_APP_PORT:-58090}"
+# The server's media port (a range of 50 above it is allowed); move it when another stack uses 50200.
+UDP_PORT="${LOADTEST_UDP_PORT:-50200}"
 BIN="$ROOT/bin/mnema-talk-loadtest"
 VIEWER_BIN="$ROOT/bin/loadtest-viewer"
 SERVER_LOG="$RESULT_DIR/server.log"
@@ -127,7 +131,7 @@ if [ "$REMOTE" = 0 ]; then
     S3_ENDPOINT="http://127.0.0.1:$S3_PORT" S3_BUCKET=mnema-loadtest \
     S3_ACCESS_KEY="$S3_KEY" S3_SECRET_KEY="$S3_SECRET" S3_FORCE_PATH_STYLE=true \
     LINK_PREVIEWS_ENABLED=false UPDATE_CHECK_ENABLED=false LOG_LEVEL="${LOADTEST_LOG_LEVEL:-info}" \
-    WEBRTC_UDP_PORT_MIN=50200 WEBRTC_UDP_PORT_MAX=50250 WEBRTC_UDP_MUX_PORT=50200 WEBRTC_NAT_1TO1_IP=127.0.0.1 \
+    WEBRTC_UDP_PORT_MIN="$UDP_PORT" WEBRTC_UDP_PORT_MAX="$((UDP_PORT + 50))" WEBRTC_UDP_MUX_PORT="$UDP_PORT" WEBRTC_NAT_1TO1_IP=127.0.0.1 \
     "$BIN" >"$SERVER_LOG" 2>&1 &
   SERVER_PID=$!
   for _ in $(seq 1 60); do

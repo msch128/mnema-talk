@@ -902,10 +902,10 @@ func (r *Room) signalPeer(peer *Peer) {
 			// The new viewer waits for a keyframe of its layer, which
 			// addViewer asks for.
 			info.group.addViewer(vt)
-			go r.forwardRTCP(sender, vt.requestKeyframe)
+			go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReport)
 			continue
 		}
-		go r.forwardRTCP(sender, info.requestKeyframe)
+		go r.forwardRTCP(sender, info.requestKeyframe, nil)
 		if info.Kind == webrtc.RTPCodecTypeVideo {
 			// A new viewer needs a keyframe to start decoding.
 			info.requestKeyframe()
@@ -966,16 +966,29 @@ func (p *Peer) watchOffer(gen uint64, attempt int) {
 
 // forwardRTCP reads a subscriber's feedback for one forwarded track. Keyframe
 // requests go to the publisher; NACKs and reports are handled by interceptors.
-func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func()) {
+func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration)) {
+	var ssrc uint32
+	if report != nil {
+		if encodings := sender.GetParameters().Encodings; len(encodings) > 0 {
+			ssrc = uint32(encodings[0].SSRC)
+		}
+	}
 	for {
 		pkts, _, err := sender.ReadRTCP()
 		if err != nil {
 			return
 		}
 		for _, p := range pkts {
-			switch p.(type) {
+			switch p := p.(type) {
 			case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
 				keyframe()
+			case *rtcp.ReceiverReport:
+				if report == nil {
+					continue
+				}
+				if loss, rtt, ok := receiverReportOf(p, ssrc, layerNow()); ok {
+					report(loss, rtt)
+				}
 			}
 		}
 	}
