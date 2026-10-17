@@ -133,6 +133,12 @@ clients were verified with up to 24 viewers in one call; beyond that the single
 test machine, not the server, was the limit. These are single runs, not a
 qualified capacity guarantee.
 
+The measurements are reproducible with `make load-test` (see
+[`loadtest/README.md`](../loadtest/README.md)): one sharer, real browsers and
+lightweight Pion viewers, with join/reload stall checks, optional packet loss
+and jitter, server heap and goroutine sampling, and thresholds that fail the
+run. It can also run against a remote instance.
+
 ## Frontend structure (`web/src`)
 
 - **Entry**: [`main.ts`](../web/src/main.ts), [`App.vue`](../web/src/App.vue)

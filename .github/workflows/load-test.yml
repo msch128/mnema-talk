@@ -1,0 +1,54 @@
+name: Load test
+
+# Manual only: not a required check and never run automatically.
+# See loadtest/README.md.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Load test profile
+        type: choice
+        options: [smoke, join, reload]
+        default: smoke
+
+permissions:
+  contents: read
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Run load test
+        env:
+          PROFILE: ${{ inputs.profile }}
+          LOADTEST_INSTALL_BROWSER: "1"
+        run: loadtest/run.sh
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: load-test-results
+          path: |
+            loadtest/results/*/summary.json
+            loadtest/results/*/*.log
+            loadtest/results/*/metrics.tsv
+          if-no-files-found: ignore
+          retention-days: 7

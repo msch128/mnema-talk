@@ -90,3 +90,6 @@ docs/
 
 # Python fault-test bytecode
 scripts/tests/__pycache__/
+
+# Load test results and tokens
+/loadtest/results/

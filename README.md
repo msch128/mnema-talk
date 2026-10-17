@@ -221,6 +221,7 @@ make contracts-check   # generated frontend REST contract drift check
 make check             # everything CI runs: lint, tests, govulncheck, builds,
                        # npm audit, docker build
 make e2e               # Playwright (Chromium) against the real binary, see below
+make load-test         # voice/screen-share load test, see loadtest/README.md
 ```
 
 ### Browser tests (e2e)
