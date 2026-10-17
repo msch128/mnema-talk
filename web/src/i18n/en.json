@@ -752,7 +752,8 @@
       "system": "System",
       "roles": "Roles",
       "audit": "Audit log",
-      "bans": "Bans"
+      "bans": "Bans",
+      "bots": "Bots"
     },
     "system": {
       "heading": "System & version",
@@ -1530,6 +1531,116 @@
       "minutes": "Minutes",
       "hours": "Hours",
       "days": "Days"
+    }
+  },
+  "bots": {
+    "title": "Bots",
+    "intro": "Bots are accounts for programs: they post messages, answer slash commands and react to events through the bot API (see doc/bots.md). A new bot can do nothing until you give it a role, allow its intents and issue a token. Every change here lands in the audit log.",
+    "badge": "Bot",
+    "new": "New bot",
+    "name": "Name",
+    "namePlaceholder": "Name of the new bot",
+    "nameRequired": "A bot needs a name.",
+    "list": "Bots",
+    "empty": "No bots yet.",
+    "select": "Pick a bot to manage it.",
+    "created": "Bot created. It has no access yet.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enabledLabel": "Enabled",
+    "disabledHint": "A disabled bot is rejected at once, with all its tokens and connections. Its messages stay.",
+    "lastActive": "active {when}",
+    "neverActive": "never active",
+    "noRoles": "No role: cannot do anything",
+    "detail": "Settings of {name}",
+    "avatar": "Avatar",
+    "avatarFor": "Upload avatar for {name}",
+    "delete": "Delete bot",
+    "deleteTitle": "Delete bot {name}?",
+    "deleteBody": "All its tokens stop working at once and its commands disappear. Messages it posted stay.",
+    "deleted": "Bot deleted.",
+    "intents": {
+      "title": "Allowed intents",
+      "hint": "What the bot is allowed to ask for when it connects to the gateway. Without an intent it receives no such events.",
+      "guilds": {
+        "name": "Channel changes",
+        "desc": "Channels and categories being created, changed or deleted."
+      },
+      "members": {
+        "name": "Members",
+        "desc": "The member list and new members joining."
+      },
+      "messages": {
+        "name": "Messages",
+        "desc": "New, edited and deleted messages in channels the bot can view."
+      },
+      "reactions": {
+        "name": "Reactions",
+        "desc": "Reactions added to or removed from messages."
+      }
+    },
+    "roles": {
+      "title": "Roles",
+      "hint": "A bot does not get @everyone, so it starts with no access at all. Give it roles for what it may do server-wide, and set channel access in each channel's permissions dialog by allowing one of the bot's roles there.",
+      "empty": "There are no roles yet. Create one in the Roles tab.",
+      "power": "Gives the bot administrator power. Only the Owner may assign this role.",
+      "powerSelected": "A selected role gives the bot administrator power. Only hand this to a program you fully trust.",
+      "save": "Save roles",
+      "saved": "Roles saved."
+    },
+    "access": {
+      "title": "Effective access",
+      "server": "Server-wide permissions",
+      "none": "No permissions",
+      "noChannels": "No channel overrides apply.",
+      "elevated": "This bot holds Administrator or admin-area permission. It can change the server far beyond messaging."
+    },
+    "tokens": {
+      "title": "Tokens",
+      "hint": "The bot sends a token as Authorization: Bot <token>. Only the last four characters are kept here.",
+      "name": "Name (optional)",
+      "namePlaceholder": "e.g. production",
+      "expiry": "Expires (optional)",
+      "issue": "Issue token",
+      "empty": "No tokens yet.",
+      "colName": "Name",
+      "colToken": "Token",
+      "colState": "State",
+      "colExpires": "Expires",
+      "colLastUsed": "Last used",
+      "colActions": "Actions",
+      "never": "Never",
+      "state": {
+        "active": "Active",
+        "expired": "Expired",
+        "revoked": "Revoked"
+      },
+      "regenerate": "Regenerate",
+      "regenerateFor": "Regenerate token {name}",
+      "regenerateTitle": "Regenerate token {name}?",
+      "regenerateBody": "The old token stops working at once. A new secret is shown once.",
+      "revoke": "Revoke",
+      "revokeFor": "Revoke token {name}",
+      "revokeTitle": "Revoke token {name}?",
+      "revokeBody": "Programs using this token are rejected from now on. This cannot be undone."
+    },
+    "secret": {
+      "title": "Token for {name}",
+      "once": "Copy this token now. It cannot be shown again.",
+      "copy": "Copy token",
+      "copied": "Token copied.",
+      "try": "Try it",
+      "done": "I have copied it"
+    },
+    "commands": {
+      "title": "Slash commands",
+      "hint": "Members see a command in the channels where the bot can view and send. Switch one off to hide it without deleting it.",
+      "empty": "This bot has not registered any commands.",
+      "options": "{count} options",
+      "enabledFor": "Command {name} enabled",
+      "deleteFor": "Delete command {name}",
+      "deleteTitle": "Delete command /{name}?",
+      "deleteBody": "The bot can register it again."
     }
   }
 }
