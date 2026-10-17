@@ -1,0 +1,43 @@
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_e9416a66366461 181
+e2e/tests/helpers.ts
+  s_06fcde5dbef956::t_7e058e02b960ba 43-52
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_65365019e4cbac 94-95
+web/src/lib/api.test.ts
+  s_06fcde5dbef956::t_9b1fd8271703f2 139
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_65365019e4cbac 94-95
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_e9416a66366461 504
+e2e/tests/smoke.spec.ts
+  s_06fcde5dbef956::t_7e058e02b960ba 49,51,55
+  s_06fcde5dbef956::t_868868e85ef693 2
+  s_06fcde5dbef956::t_e9416a66366461 45-46
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_65365019e4cbac 47
+e2e/tests/message-moderation.spec.ts
+  s_06fcde5dbef956::t_9b1fd8271703f2 53
+api/openapi.json
+  s_06fcde5dbef956::t_dda1e8ae46c2b9 1246-1281,1356-1361,1385,1525-1534,2247-2252,14971-15088,15091,15115-15124,15335-15566
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_7254da43f6d09c 43
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_1a69f405aa48aa 736-761,800,814,906-916,1357,1365
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1a27497d21ae8f4d3b3ddc1e63aa303fe052c07c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
