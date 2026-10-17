@@ -12,9 +12,10 @@ The current client source is
 [experimental/app](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
 in `web-client` mode, in the
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository.
-It opens the selected HTTPS instance's shared Vue app;
-the instance currently supplies executable web code. The locally bundled,
-protected communication boundary below remains a requirement. The older
+It runs the shared Vue app from a signed bundle that the client verifies and
+reaches the selected instance through its own proxy; the instance supplies data,
+never executable code ([doc/desktop-trusted-client.md](desktop-trusted-client.md)).
+The native-crypto boundary below remains a separate requirement. The older
 [feasibility probe](https://github.com/msch128/mnema-talk-desktop/blob/main/README.md)
 is a historical foundation.
 See [product status and evidence](product-status.md) for the binding scope.
