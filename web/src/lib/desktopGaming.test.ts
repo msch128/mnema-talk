@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
-const mocks = vi.hoisted(() => ({ invoke: vi.fn(), mute: vi.fn(), deafen: vi.fn(), save: vi.fn(), stop: vi.fn(), lease: vi.fn() }))
+const mocks = vi.hoisted(() => ({ invoke: vi.fn(), mute: vi.fn(), deafen: vi.fn(), save: vi.fn(), stop: vi.fn(), lease: vi.fn(), trusted: vi.fn() }))
 vi.mock('@tauri-apps/api/core', () => ({ invoke: mocks.invoke }))
+vi.mock('./trustedDesktop', () => ({ trustedApp: mocks.trusted }))
 const account = '11111111-1111-4111-8111-111111111111'
 const channel = '22222222-2222-4222-8222-222222222222'
 const auth = reactive({ user: { id: account } as { id: string } | null })
@@ -17,7 +18,7 @@ function event(action: string, scope: unknown, token = 'test-window') { const is
 async function flush() { await Promise.resolve(); await Promise.resolve() }
 beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks(); mocks.invoke.mockResolvedValue(undefined)
-  vi.stubGlobal('location', { protocol: 'https:' })
+  mocks.trusted.mockReturnValue({ version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
   Reflect.set(window, '__MNEMA_GAMING_BRIDGE__', 'test-window')
   auth.user = { id: account }; chat.isConnected = true; voice.isConnected = true; voice.currentChannelId = channel; voice.rtcStats.connected = true; voice.isPttPressed = false; voice.isScreenSharing = false; voice.inputMode = 'ptt'; voice.showScreenShareModal = false
 })
@@ -25,7 +26,8 @@ afterEach(() => { stop(); stop = () => {}; vi.unstubAllGlobals(); Reflect.delete
 describe('desktop gaming session bridge', () => {
   it('stays inactive in browsers and recognizes only its local surfaces', () => {
     Reflect.deleteProperty(window, '__MNEMA_GAMING_BRIDGE__'); startDesktopGaming()(); expect(mocks.invoke).not.toHaveBeenCalled()
-    Reflect.set(window, '__MNEMA_GAMING_BRIDGE__', 'test-window'); vi.stubGlobal('location', { protocol: 'http:' }); startDesktopGaming()(); expect(mocks.invoke).not.toHaveBeenCalled()
+    Reflect.set(window, '__MNEMA_GAMING_BRIDGE__', 'test-window'); mocks.trusted.mockReturnValue(null); startDesktopGaming()(); expect(mocks.invoke).not.toHaveBeenCalled()
+    mocks.trusted.mockReturnValue({ version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'surface' }); startDesktopGaming()(); expect(mocks.invoke).not.toHaveBeenCalled()
     expect(gamingSurface()).toBe(false); Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'sidepeek'); expect(gamingSurface()).toBe(true)
   })
   it('reports actual own membership and clears it on disconnect', async () => {

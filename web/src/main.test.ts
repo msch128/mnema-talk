@@ -41,6 +41,18 @@ describe('browser application entry', () => {
     expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
     expect(boot.app.mount).toHaveBeenCalledWith('#app')
   })
+  it('mounts the instance selector for the verified bundle in the trusted desktop client', async () => {
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativeBootstrap.vue')).default)
+  })
+  it('mounts the complete App for the verified bundle once an instance is selected', async () => {
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./App.vue')).default)
+  })
   it('selects browser language and mounts App with Pinia, translations and accessible tooltips', async () => {
     await import('./main')
     expect(boot.setLocale).toHaveBeenCalledWith('de')

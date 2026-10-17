@@ -1,4 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core'
+import { trustedApp } from './trustedDesktop'
 
 /** Only a local Tauri host selects native IPC. Browser requests stay same-origin. */
 export function isDesktopRuntime(): boolean {
@@ -8,7 +9,11 @@ export function isDesktopRuntime(): boolean {
     || !port && hostname === 'tauri.localhost' && protocol === 'http:'
 }
 
-/** The bundled selector has IPC; a selected HTTPS instance uses browser APIs. */
+/**
+ * The instance selector of the desktop client: either the legacy page on the
+ * Tauri origin or the verified bundle in its selector role. A selected
+ * instance runs the app with browser APIs.
+ */
 export function isWebDesktopSelector(): boolean {
-  return isDesktopRuntime() && Reflect.get(window, '__MNEMA_WEB_DESKTOP__') === true
+  return isDesktopRuntime() && Reflect.get(window, '__MNEMA_WEB_DESKTOP__') === true || trustedApp()?.role === 'selector'
 }

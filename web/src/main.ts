@@ -10,7 +10,7 @@ import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/500.css'
 import App from './App.vue'
 import { gamingSurface } from './lib/desktopGaming'
-import { isDesktopRuntime } from './lib/desktopRuntime'
+import { isDesktopRuntime, isWebDesktopSelector } from './lib/desktopRuntime'
 import './style.css'
 import { i18nPlugin, setLocale, browserLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
@@ -20,7 +20,7 @@ setLocale(browserLocale())
 
 const root = gamingSurface()
   ? (await import('./components/DesktopGamingOverlay.vue')).default
-  : isDesktopRuntime()
+  : isDesktopRuntime() || isWebDesktopSelector()
   ? (await import('./NativeBootstrap.vue')).default
   : App
 

@@ -49,6 +49,20 @@ describe('UpdateBanner', () => {
     expect(reload).toHaveBeenCalledTimes(1)
   })
 
+  it('only says that the server moved on in the trusted desktop client, where a reload changes nothing', async () => {
+    vi.stubGlobal('isTauri', true)
+    vi.stubGlobal('location', new URL('mnema://localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
+    useAppVersionStore().setServerVersion('99.0.0')
+    const w = mount(UpdateBanner)
+    await nextTick()
+    expect(w.find('[data-testid="update-trusted"]').text()).toContain('Der Server läuft mit Version 99.0.0')
+    expect(w.find('[data-testid="update-reload"]').exists()).toBe(false)
+    await w.find('[data-testid="update-dismiss"]').trigger('click')
+    expect(w.find('[data-testid="update-banner"]').exists()).toBe(false)
+    vi.unstubAllGlobals()
+  })
+
   it('tells callers that the call reconnects after the reload', async () => {
     useVoiceStore().currentChannelId = "00000000-0000-4000-8000-0000000003ee"
     useAppVersionStore().setServerVersion('99.0.0')

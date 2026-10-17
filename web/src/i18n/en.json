@@ -111,7 +111,14 @@
     "reloadInCall": "Your call drops for a moment and reconnects automatically.",
     "dismiss": "Later",
     "badge": "Update {version}",
-    "updating": "The server is being updated to version {version} – a short interruption follows."
+    "updating": "The server is being updated to version {version} – a short interruption follows.",
+    "trustedBanner": "The server runs version {version}. Restart the desktop app to look for the matching verified app."
+  },
+  "trustedApp": {
+    "verified": "Verified app v{version}",
+    "builtin": "built into the installer",
+    "cache": "verified update",
+    "explain": "This app was checked against a signature pinned in the desktop client. The server cannot change it."
   },
   "login": {
     "subtitleLogin": "Sign in to Mnema Talk",

@@ -28,6 +28,27 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
+describe('verified app line', () => {
+  async function openMenu() {
+    const auth = useAuthStore()
+    auth.user = userFixture({ bio: '', status_text: '', created_at: '2026-01-01T00:00:00Z', username: 'member', id: "00000000-0000-4000-8000-0000000003e8", display_name: 'Herzog', role: 'user', locale: 'de' })
+    w = mount(UserBar, { attachTo: document.body })
+    await w.find('[data-testid="account-menu-button"]')!.trigger('click')
+  }
+  it('is absent in a browser', async () => {
+    await openMenu()
+    expect(w.find('[role="menu"]').exists()).toBe(true)
+    expect(w.find('[data-testid="verified-app"]').exists()).toBe(false)
+  })
+  it('names the verified bundle in the trusted desktop client', async () => {
+    vi.stubGlobal('isTauri', true)
+    vi.stubGlobal('location', new URL('https://mnema.localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
+    await openMenu()
+    expect(w.find('[data-testid="verified-app"]').text()).toBe('Geprüfte App v0.8.0 · im Installer enthalten')
+  })
+})
+
 describe('account menu language switcher', () => {
   it('switches the language, stores it and confirms with a toast', async () => {
     const auth = useAuthStore()

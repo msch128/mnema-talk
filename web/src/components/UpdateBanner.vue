@@ -6,11 +6,15 @@ import { computed } from 'vue'
 import { Sparkles, X } from '@lucide/vue'
 import { useAppVersionStore } from '../stores/appVersion'
 import { useVoiceStore } from '../stores/voice'
+import { isTrustedDesktop } from '../lib/trustedDesktop'
 
 const versionStore = useAppVersionStore()
 const voiceStore = useVoiceStore()
 
 const inCall = computed(() => !!voiceStore.currentChannelId)
+// The trusted desktop client runs a bundle it verified; reloading cannot
+// install a different one, so the banner only says the server moved on.
+const trusted = isTrustedDesktop()
 
 function reload() {
   window.location.reload()
@@ -34,7 +38,9 @@ function reload() {
     class="flex min-h-10 flex-shrink-0 items-center gap-2.5 border-b border-mnema-accent/35 bg-mnema-accent/10 py-1.5 pl-4 pr-2 text-sm"
   >
     <Sparkles class="h-4 w-4 flex-shrink-0 text-mnema-accent" />
+    <span v-if="trusted" data-testid="update-trusted" class="min-w-0 flex-1 text-mnema-text">{{ $t('update.trustedBanner', { version: versionStore.serverVersion }) }}</span>
     <button
+      v-else
       type="button"
       data-testid="update-reload"
       class="min-w-0 flex-1 text-left text-mnema-text hover:underline"

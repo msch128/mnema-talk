@@ -119,3 +119,16 @@ it.each([false, true])('opens the normal web instance without native-preview dis
   expect(wrapper.find('[data-testid="native-community-app"]').exists()).toBe(false)
   wrapper.unmount()
 })
+it('shows the verified bundle in the selector of the trusted desktop client', async () => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('mnema://localhost/'))
+  vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'cache', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
+  calls.open.mockResolvedValue(undefined)
+  const wrapper = mount(NativeBootstrap); await flushPromises()
+  expect(wrapper.get('[data-testid="verified-app"]').text()).toBe('Geprüfte App v0.8.0 · geprüftes Update')
+  wrapper.get('input').element.value = 'community.example.invalid'
+  await wrapper.get('form').trigger('submit'); await flushPromises()
+  expect(calls.initialize).not.toHaveBeenCalled()
+  expect(calls.open).toHaveBeenCalledExactlyOnceWith('desktop_open_instance', { address: 'community.example.invalid' })
+  wrapper.unmount()
+})
