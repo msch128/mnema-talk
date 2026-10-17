@@ -1,0 +1,27 @@
+internal/chat/botapi.go
+  s_06fcde5dbef956::t_e25fc72c4ebb5c 1-482
+internal/bot/authn.go
+  s_06fcde5dbef956::t_c61a37a55dd4d2 134-135,149
+  s_06fcde5dbef956::t_9695901e8d5031 1-133,136-148,150-190
+internal/auth/bot.go
+  s_06fcde5dbef956::t_029da1385b80a2 1-4,6-33,35-39
+  s_06fcde5dbef956::t_c62b19f005b2b4 5,34
+internal/httpx/discord.go
+  s_06fcde5dbef956::t_103c48d0c463c3 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b64c2ccb51956cf60394c03060339b3aa3e2f0df",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
