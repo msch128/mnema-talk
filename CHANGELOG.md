@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.17](https://github.com/msch128/mnema-talk/compare/v0.7.16...v0.7.17) (2026-10-17)
+
+
+### Bug Fixes
+
+* bound keyframe-request accounting and harden screen layer restarts ([#136](https://github.com/msch128/mnema-talk/issues/136)) ([f2dd4c6](https://github.com/msch128/mnema-talk/commit/f2dd4c6b2d81d0c04753a73420c5155c1d01d724))
+* hold trickle ICE candidates for their offer or answer, and diagnose failing load-test viewers ([#135](https://github.com/msch128/mnema-talk/issues/135)) ([6d2d9f0](https://github.com/msch128/mnema-talk/commit/6d2d9f01a082a97ec379b1e2e60abf356c89bd37))
+
 ## [0.7.16](https://github.com/msch128/mnema-talk/compare/v0.7.15...v0.7.16) (2026-10-17)
 
 
