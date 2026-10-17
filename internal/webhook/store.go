@@ -65,8 +65,8 @@ type record struct {
 	Webhook
 	// creatorActive is false once the creator's account is gone or disabled.
 	creatorActive bool
-	botUserID uuid.UUID
-	tokenHash []byte
+	botUserID     uuid.UUID
+	tokenHash     []byte
 }
 
 const recordSelect = `
