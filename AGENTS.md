@@ -43,8 +43,9 @@ Mnema Talk is a **lightweight, single-server Discord alternative** written in **
 - **Hangout spots**: clicking a voice channel connects immediately, without ringing.
 
 ### 4. Admin & Security Model
-- **Single administrator**: username configurable via `ADMIN_USERNAME`, default **`Herzog`**.
-- **Invite-only registration**: public self-registration is permanently disabled. Only the admin can create invite codes.
+- **One Owner**: the account named by `ADMIN_USERNAME` (default **`Herzog`**; `users.role = 'admin'` in the database and API, "Owner" in the UI). The Owner has every permission without exception and **nobody** can edit, restrict, demote, disable, kick, rename or overwrite the Owner, or change their roles, not even a role with *Administrator*. Ownership is not transferable through the UI. System, storage and other accounts' passwords are Owner-only.
+- **Roles below the Owner**: custom roles (name, colour, position, permission bits) plus an implicit `@everyone`, with per-category and per-channel overwrites, Discord-style. The model, resolution order and hierarchy rules are in `doc/roles-and-permissions.md`; the code is `internal/perm`. Enforcement is server-side everywhere (REST, WebSocket hub, SFU, media serving); the UI only hides what a member cannot do. `@everyone`'s defaults must keep matching what members could always do; a new permission needs enforcement, a test, i18n (en + de) and a decision on its default.
+- **Invite-only registration**: public self-registration is permanently disabled. Only the Owner, or members holding *Manage invites*, can create invite codes.
 - Security model summary: see `SECURITY.md`. Don't weaken it (cookie flags, CSRF origin check, CSP, upload sniffing, rate limits) without an explicit decision.
 - **Media retention must stay default-off**: `MEDIA_RETENTION_DAYS=0` means nothing is deleted automatically. Never change that default.
 
@@ -59,7 +60,9 @@ mnema-talk/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
 │   ├── httpx/               # Middleware: security headers, CSRF origin check, rate limits, client IP
-│   ├── auth/                # Password hashing, sessions (token_version), invites, admin logic
+│   ├── auth/                # Password hashing, sessions (token_version), invites, admin logic, permission guards
+│   ├── perm/                # Roles and permissions: bits, resolver (Snapshot), cache, hierarchy rules, role/overwrite store
+│   ├── roles/               # HTTP API for roles, member roles and channel overwrites; GET /api/permissions
 │   ├── chat/                # Channels, categories, messages, replies, members
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client

@@ -51,6 +51,8 @@ func NewNativeCiphertextPreviewRouter(deps Deps, options NativePreviewOptions) (
 		preview.Close()
 		return nil, errors.New("native relay store unavailable")
 	}
+	// The relay follows the same channel permissions as the chat handlers.
+	store.WithPermissions(preview.preview.chat.Perms)
 	result := &NativeCiphertextPreviewRouter{NativePreviewRouter: preview, Store: store}
 	routes := chi.NewRouter()
 	// Bound forged-bearer DB lookups before authentication as well as admitted

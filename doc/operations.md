@@ -43,7 +43,7 @@ General rules:
 |---|---|---|
 | `JWT_SECRET` | none | Signs session cookies. In production/staging at least 32 characters and not a placeholder (`openssl rand -hex 32`). In development an empty value means a random per-process secret (sessions reset on restart). Changing it logs everyone out. |
 | `SESSION_EXPIRY_HOURS` | `720` | Session lifetime, 1–8760. |
-| `ADMIN_USERNAME` | `Herzog` | The administrator account, created on first start when no admin exists. |
+| `ADMIN_USERNAME` | `Herzog` | The Owner account (all-powerful, cannot be restricted by anyone; see [roles-and-permissions.md](roles-and-permissions.md)), created on first start when none exists. |
 | `ADMIN_INITIAL_PASSWORD` | empty | Only used for that first start, and required then in production. In development, empty = a random password is generated and logged **once**. A placeholder value is rejected. |
 
 ### Database
@@ -574,3 +574,12 @@ to `TRUSTED_PROXY_CIDRS`.
 `docker compose logs app` shows the validation message, e.g. a placeholder
 secret, `TRUSTED_PROXY_CIDRS contains an invalid entry`, or a migration
 failure (see [upgrade.md](upgrade.md)).
+
+## Downgrading
+
+> **Do not roll back below this release once roles or private channels exist.**
+> Migration 0017 adds the tables that restrict access. A binary that does not
+> know them (0.7.x before roles, or older) would ignore them and show every
+> private channel to everyone. This release and later ones refuse to start on a
+> database migrated by a newer version, but binaries from before that guard
+> existed cannot. To go back, restore a backup taken before the update.

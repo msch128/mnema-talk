@@ -64,7 +64,7 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
 	if before != after {
-		c.emitApplicationEvent("presence_update", map[string]any{"user_id": c.User.ID, "status": after}, false, nil)
+		c.emitApplicationEvent("presence_update", map[string]any{"user_id": c.User.ID, "status": after}, false, nil, uuid.Nil)
 	}
 }
 

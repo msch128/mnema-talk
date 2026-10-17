@@ -82,17 +82,6 @@ func (s *Sessions) RequireUser(next http.Handler) http.Handler {
 	})
 }
 
-// RequireAdmin must run after RequireUser.
-func RequireAdmin(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if u := UserFrom(r.Context()); u == nil || !u.IsAdmin() {
-			httpx.WriteError(w, httpx.ErrForbidden("admin access required"))
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 // UserKey returns the authenticated user's ID as a rate-limit key.
 func UserKey(r *http.Request) string {
 	if u := UserFrom(r.Context()); u != nil {

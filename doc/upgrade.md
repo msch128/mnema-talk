@@ -72,6 +72,14 @@ replaces steps 3–5.
 
 ### Rollback
 
+> **Do not roll back below this release once roles or private channels exist.**
+> Migration 0017 adds the tables that restrict access. A binary that does not
+> know them (0.7.x before roles, or older) would ignore them and show every
+> private channel to everyone. This release and later ones refuse to start on a
+> database migrated by a newer version, but binaries from before that guard
+> existed cannot. To go back, restore a backup taken before the update.
+
+
 Stop the app before changing its image or database. If the new version applied
 migrations (`migration applied` in its log), restore the pre-update database
 and media before starting the old app. **Released 0.4.x binaries, including

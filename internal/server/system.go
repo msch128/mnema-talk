@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -118,6 +119,8 @@ type RuntimeHealth struct {
 }
 
 func (h *systemHandler) mountAdmin(r chi.Router) {
+	// No role grants the system area: it is the Owner's.
+	r = r.With(auth.RequireOwner)
 	r.Get("/system", httpx.Handle(h.status))
 	r.Get("/system/ops", httpx.Handle(h.opsStatus))
 	r.Get("/system/update", httpx.Handle(h.getUpdate))
@@ -128,7 +131,7 @@ func (h *systemHandler) mountAdmin(r chi.Router) {
 // status handles GET /api/admin/system.
 //
 // @Summary System status
-// @Description Version, health and load of the server for the admin System tab. Contains no secrets. Requires role admin (403 otherwise).
+// @Description Version, health and load of the server for the admin System tab. Contains no secrets. Owner only (403 otherwise).
 // @ID getSystemStatus
 // @Tags Admin
 // @Produce json

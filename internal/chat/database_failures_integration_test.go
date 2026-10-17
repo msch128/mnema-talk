@@ -383,6 +383,13 @@ func TestChatCancellationBetweenDatabaseStages(t *testing.T) {
 			t.Fatalf("group lock cancellation=%v", err)
 		}
 	})
+	t.Run("duplicate permissions", func(t *testing.T) {
+		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "INSERT INTO permission_overwrites") }, false)
+		_, err := DuplicateChannel(ctx, p, f.c.ID)
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("permission copy cancellation=%v", err)
+		}
+	})
 	t.Run("around newer half", func(t *testing.T) {
 		p, ctx := cancelQueryPool(t, f.p, func(sql string) bool { return strings.Contains(sql, "AND (m.created_at, m.id) >") }, false)
 		_, err := GetChannelMessages(ctx, p, f.c.ID, HistoryQuery{Limit: 10, Around: &f.m})

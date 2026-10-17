@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 type Invite struct {
@@ -111,18 +112,20 @@ func DeleteInvite(ctx context.Context, p *db.Pool, id uuid.UUID) error {
 	return nil
 }
 
-// MountAdmin registers invite management (RequireAdmin must already apply).
+// MountAdmin registers invite and account management; each route checks its
+// own permission (RequireUser must already apply).
 func (h *Handler) MountAdmin(r chi.Router) {
-	r.Get("/invites", httpx.Handle(h.listInvites))
-	r.Post("/invites", httpx.Handle(h.createInvite))
-	r.Delete("/invites/{id}", httpx.Handle(h.deleteInvite))
+	invites := r.With(RequirePerm(h.Perms, perm.CreateInvites))
+	invites.Get("/invites", httpx.Handle(h.listInvites))
+	invites.Post("/invites", httpx.Handle(h.createInvite))
+	invites.Delete("/invites/{id}", httpx.Handle(h.deleteInvite))
 	h.mountUserAdmin(r)
 }
 
 // listInvites handles GET /api/admin/invites.
 //
 // @Summary List invites
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage invites permission (403 otherwise).
 // @ID listInvites
 // @Tags Admin
 // @Produce json
@@ -146,7 +149,7 @@ func (h *Handler) listInvites(w http.ResponseWriter, r *http.Request) error {
 // createInvite handles POST /api/admin/invites.
 //
 // @Summary Create an invite
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage invites permission (403 otherwise).
 // @ID createInvite
 // @Tags Admin
 // @Accept json
@@ -178,7 +181,7 @@ func (h *Handler) createInvite(w http.ResponseWriter, r *http.Request) error {
 // deleteInvite handles DELETE /api/admin/invites/{id}.
 //
 // @Summary Delete an invite
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage invites permission (403 otherwise).
 // @ID deleteInvite
 // @Tags Admin
 // @Produce json

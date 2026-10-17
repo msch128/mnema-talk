@@ -12,11 +12,13 @@ package testutil
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
 )
 
@@ -75,13 +77,35 @@ func connectAndMigrate(ctx context.Context, dsn string) (*db.Pool, error) {
 	return p, nil
 }
 
-// Reset empties every application table (schema and migrations stay).
+// Reset empties every application table (schema and migrations stay). The
+// previous test's router may still be reading the permission tables in a
+// background goroutine, which can deadlock with the TRUNCATE; that is retried.
 func Reset(t testing.TB, p *db.Pool) {
 	t.Helper()
-	_, err := p.Exec(context.Background(), `
-		TRUNCATE message_reactions, media, messages, channels, categories, invites, users
-		RESTART IDENTITY CASCADE`)
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		if err = reset(p); err == nil || !strings.Contains(err.Error(), "deadlock") {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 	if err != nil {
 		t.Fatalf("reset database: %v", err)
 	}
+}
+
+func reset(p *db.Pool) error {
+	ctx := context.Background()
+	if _, err := p.Exec(ctx, `
+		TRUNCATE message_reactions, media, messages, channels, categories, invites, users
+		RESTART IDENTITY CASCADE`); err != nil {
+		return err
+	}
+	// Roles are not user data: @everyone stays (back at its defaults), the
+	// custom roles of the previous test go.
+	if _, err := p.Exec(ctx, `DELETE FROM roles WHERE NOT is_everyone`); err != nil {
+		return err
+	}
+	_, err := p.Exec(ctx, `UPDATE roles SET permissions = $1 WHERE is_everyone`, int64(perm.DefaultEveryone))
+	return err
 }

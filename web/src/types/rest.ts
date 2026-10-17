@@ -14,6 +14,7 @@ export type AuthAdminUser = {
   message_count?: number
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
+  role_ids?: Array<string>
   status_text: string
   username: string
   voice_seconds?: number
@@ -32,6 +33,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (!hasOwn(value, "message_count") || isInteger(value["message_count"]))
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
+    && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
@@ -439,6 +441,41 @@ export function isChatMediaAttachment(value: unknown): value is ChatMediaAttachm
 
 export const decodeChatMediaAttachment = decoder("chat.MediaAttachment", isChatMediaAttachment)
 
+export type ChatMember = {
+  avatar_url?: string
+  bio: string
+  created_at: string
+  display_name: string
+  id: string
+  locale: string
+  message_count?: number
+  presence?: "online" | "away" | "dnd" | "focus"
+  role: "admin" | "user"
+  role_ids?: Array<string>
+  status_text: string
+  username: string
+  voice_seconds?: number
+}
+
+export function isChatMember(value: unknown): value is ChatMember {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "bio") && isString(value["bio"], 250))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"], 24))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "locale") && isString(value["locale"]))
+    && (!hasOwn(value, "message_count") || isInteger(value["message_count"]))
+    && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
+    && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
+    && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
+    && (hasOwn(value, "username") && isString(value["username"]))
+    && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
+}
+
+export const decodeChatMember = decoder("chat.Member", isChatMember)
+
 export type ChatMessage = {
   attachments: Array<ChatMediaAttachment>
   avatar_url?: string
@@ -506,12 +543,14 @@ export function isChatReactionRequest(value: unknown): value is ChatReactionRequ
 export const decodeChatReactionRequest = decoder("chat.ReactionRequest", isChatReactionRequest)
 
 export type ChatReactionResult = {
+  channel_id: string
   message_id: string
   reactions: Array<ChatReactionSummary>
 }
 
 export function isChatReactionResult(value: unknown): value is ChatReactionResult {
   return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
     && (hasOwn(value, "reactions") && isArrayOf(value["reactions"], item => isChatReactionSummary(item)))
 }
@@ -769,6 +808,149 @@ export function isMediaStats(value: unknown): value is MediaStats {
 }
 
 export const decodeMediaStats = decoder("media.Stats", isMediaStats)
+
+export type PermInfo = {
+  bit: number
+  channel: boolean
+  key: string
+}
+
+export function isPermInfo(value: unknown): value is PermInfo {
+  return isRecord(value)
+    && (hasOwn(value, "bit") && (isInteger(value["bit"]) && value["bit"] >= 1))
+    && (hasOwn(value, "channel") && typeof value["channel"] === 'boolean')
+    && (hasOwn(value, "key") && isString(value["key"]))
+}
+
+export const decodePermInfo = decoder("perm.Info", isPermInfo)
+
+export type PermOverwrite = {
+  allow: number
+  deny: number
+  id: string
+  type: "role" | "member"
+}
+
+export function isPermOverwrite(value: unknown): value is PermOverwrite {
+  return isRecord(value)
+    && (hasOwn(value, "allow") && (isInteger(value["allow"]) && value["allow"] >= 0))
+    && (hasOwn(value, "deny") && (isInteger(value["deny"]) && value["deny"] >= 0))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "type") && (value["type"] === "role" || value["type"] === "member"))
+}
+
+export const decodePermOverwrite = decoder("perm.Overwrite", isPermOverwrite)
+
+export type PermRole = {
+  color: number
+  hoist: boolean
+  id: string
+  is_everyone: boolean
+  mentionable: boolean
+  name: string
+  permissions: number
+  position: number
+}
+
+export function isPermRole(value: unknown): value is PermRole {
+  return isRecord(value)
+    && (hasOwn(value, "color") && (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "is_everyone") && typeof value["is_everyone"] === 'boolean')
+    && (hasOwn(value, "mentionable") && typeof value["mentionable"] === 'boolean')
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (hasOwn(value, "position") && (isInteger(value["position"]) && value["position"] >= 0))
+}
+
+export const decodePermRole = decoder("perm.Role", isPermRole)
+
+export type PermRoleInput = {
+  color?: number
+  hoist?: boolean
+  mentionable?: boolean
+  name?: string
+  permissions?: number
+}
+
+export function isPermRoleInput(value: unknown): value is PermRoleInput {
+  return isRecord(value)
+    && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (!hasOwn(value, "hoist") || typeof value["hoist"] === 'boolean')
+    && (!hasOwn(value, "mentionable") || typeof value["mentionable"] === 'boolean')
+    && (!hasOwn(value, "name") || isString(value["name"], 32))
+    && (!hasOwn(value, "permissions") || (isInteger(value["permissions"]) && value["permissions"] >= 0))
+}
+
+export const decodePermRoleInput = decoder("perm.RoleInput", isPermRoleInput)
+
+export type RolesChannelPermissions = {
+  channel_id: string
+  permissions: number
+}
+
+export function isRolesChannelPermissions(value: unknown): value is RolesChannelPermissions {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+}
+
+export const decodeRolesChannelPermissions = decoder("roles.ChannelPermissions", isRolesChannelPermissions)
+
+export type RolesMemberRolesRequest = {
+  role_ids: Array<string>
+}
+
+export function isRolesMemberRolesRequest(value: unknown): value is RolesMemberRolesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+}
+
+export const decodeRolesMemberRolesRequest = decoder("roles.MemberRolesRequest", isRolesMemberRolesRequest)
+
+export type RolesOverwritesBody = {
+  overwrites: Array<PermOverwrite>
+}
+
+export function isRolesOverwritesBody(value: unknown): value is RolesOverwritesBody {
+  return isRecord(value)
+    && (hasOwn(value, "overwrites") && isArrayOf(value["overwrites"], item => isPermOverwrite(item)))
+}
+
+export const decodeRolesOverwritesBody = decoder("roles.OverwritesBody", isRolesOverwritesBody)
+
+export type RolesPermissionsInfo = {
+  catalog: Array<PermInfo>
+  channels: Array<RolesChannelPermissions>
+  owner: boolean
+  permissions: number
+  role_ids: Array<string>
+  top_position: number
+}
+
+export function isRolesPermissionsInfo(value: unknown): value is RolesPermissionsInfo {
+  return isRecord(value)
+    && (hasOwn(value, "catalog") && isArrayOf(value["catalog"], item => isPermInfo(item)))
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isRolesChannelPermissions(item)))
+    && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+    && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (hasOwn(value, "top_position") && (isInteger(value["top_position"]) && value["top_position"] >= 0))
+}
+
+export const decodeRolesPermissionsInfo = decoder("roles.PermissionsInfo", isRolesPermissionsInfo)
+
+export type RolesReorderRequest = {
+  role_ids: Array<string>
+}
+
+export function isRolesReorderRequest(value: unknown): value is RolesReorderRequest {
+  return isRecord(value)
+    && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+}
+
+export const decodeRolesReorderRequest = decoder("roles.ReorderRequest", isRolesReorderRequest)
 
 export type ServerDatabaseHealth = {
   applied_migrations: number

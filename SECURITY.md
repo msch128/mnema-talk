@@ -25,8 +25,25 @@ locally instead (`make up` or `make dev`).
 
 ## Security model (summary)
 
-- **Invite-only.** There is no public registration. Only the administrator
-  (configurable, default `Herzog`) can create invite codes.
+- **Invite-only.** There is no public registration. Only the Owner
+  (configurable, default `Herzog`) and members whose role holds *Manage
+  invites* can create invite codes.
+- **Owner and roles.** The Owner (the one `ADMIN_USERNAME` account) holds every
+  permission and nobody can edit, restrict, disable, kick, rename or overwrite
+  them or change their roles, not even a role with *Administrator*. The
+  System tab, the storage dashboard and other accounts' passwords are
+  Owner-only. Below the Owner, members get permissions from `@everyone` and
+  their roles, refined per category and channel; a member can only manage
+  roles and members strictly below their highest role and cannot grant
+  permissions they lack. Everything is enforced on the server: REST, media
+  downloads (a file is only served to those who can view its channel, with a
+  404 otherwise), the WebSocket hub (events of channels a member cannot view are
+  never delivered, nor who sits in a Talk they cannot see), joining a Talk and,
+  in the SFU, sending audio, camera or screen without *Speak* or *Video*.
+  Permission changes take effect live: connections are told to refresh and
+  members who may no longer join their Talk are removed from it. A permission
+  state that cannot be loaded denies access. Details and the resolution
+  order are in [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
 - **Sessions.** A signed session token in an `HttpOnly` cookie (`__Host-` prefix
   and `Secure` on HTTPS, `SameSite=Lax`). Each token carries the user's
   `token_version`; changing the password or "log out everywhere"

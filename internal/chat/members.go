@@ -4,9 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 )
+
+// Member is a member as the member list shows them.
+type Member struct {
+	auth.User
+	// RoleIDs are the member's custom roles, highest first.
+	RoleIDs []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
+}
 
 // GetAllMembers lists active accounts, admins first, then by display name.
 // message_count is maintained by triggers (migration 0012), so this does not

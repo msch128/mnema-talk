@@ -281,21 +281,21 @@ func TestNativeApplicationEventAudience(t *testing.T) {
 	listenerFeed.quiet(100 * time.Millisecond)
 	client := a.client(t, first.Family)
 
-	client.emitApplicationEvent("audience_unencodable", make(chan int), false, nil)
+	client.emitApplicationEvent("audience_unencodable", make(chan int), false, nil, uuid.Nil)
 	listenerFeed.requireNone(t, "audience_unencodable")
 
-	client.emitApplicationEvent("audience_excluded", map[string]any{}, true, nil)
+	client.emitApplicationEvent("audience_excluded", map[string]any{}, true, nil, uuid.Nil)
 	listenerFeed.requireNone(t, "audience_excluded") // same account as the sender
 
 	room := uuid.New()
-	client.emitApplicationEvent("audience_room", map[string]any{}, false, &room)
+	client.emitApplicationEvent("audience_room", map[string]any{}, false, &room, uuid.Nil)
 	listenerFeed.requireNone(t, "audience_room") // the listener is not in that room
 
-	client.emitApplicationEvent("audience_everyone", map[string]any{}, false, nil)
+	client.emitApplicationEvent("audience_everyone", map[string]any{}, false, nil, uuid.Nil)
 	listenerFeed.await(t, "audience_everyone")
 
 	client.native.securityClosed.Store(true)
-	client.emitApplicationEvent("audience_sealed", map[string]any{}, false, nil)
+	client.emitApplicationEvent("audience_sealed", map[string]any{}, false, nil, uuid.Nil)
 	listenerFeed.requireNone(t, "audience_sealed")
 }
 

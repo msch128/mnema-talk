@@ -21,6 +21,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 const (
@@ -41,6 +42,9 @@ type Handler struct {
 	RetentionDays int
 	// Online resolves @here in an upload's caption; nil means nobody is online.
 	Online chat.OnlineSource
+	// Perms decides who may upload to and download from which channel; nil
+	// imposes no channel limits (tests; the router always sets it).
+	Perms *perm.Service
 }
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap
@@ -65,6 +69,7 @@ func (h *Handler) Mount(r chi.Router) {
 // opt-in: the manual prune needs an explicit day count unless
 // MEDIA_RETENTION_DAYS is configured.
 func (h *Handler) MountAdmin(r chi.Router) {
+	r = r.With(auth.RequireOwner)
 	r.Get("/media/stats", httpx.Handle(h.stats))
 	r.Get("/media", httpx.Handle(h.list))
 	r.Post("/media/prune", httpx.Handle(h.prune))
@@ -166,7 +171,11 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := chat.ChannelForMessages(r.Context(), h.DB, chID); err != nil {
+	ctx, err := chat.UploadContext(h.Perms, r, chID)
+	if err != nil {
+		return err
+	}
+	if _, err := chat.ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
 
@@ -175,7 +184,7 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	msgID, err := chat.InsertMessage(r.Context(), h.DB, h.Online, chat.NewMessage{
+	msgID, err := chat.InsertMessage(ctx, h.DB, h.Online, chat.NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
 	}, func(tx pgx.Tx, msgID uuid.UUID) error {
 		_, err := tx.Exec(r.Context(), `
@@ -299,14 +308,25 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	var key, mimeType, filename string
 	var size int64
 	var deleted bool
+	var channelID *uuid.UUID
 	err = h.DB.QueryRow(r.Context(), `
-		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted FROM media WHERE id = $1`, id).
-		Scan(&key, &mimeType, &filename, &size, &deleted)
+		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id FROM media WHERE id = $1`, id).
+		Scan(&key, &mimeType, &filename, &size, &deleted, &channelID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return httpx.ErrNotFound("media not found")
 	}
 	if err != nil {
 		return err
+	}
+	// An attachment belongs to its channel: whoever cannot view the channel
+	// cannot fetch the file either. Avatars have no channel.
+	if channelID != nil {
+		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *channelID, perm.ViewChannel); err != nil {
+			if _, denied := httpx.AsAPIError(err); denied {
+				return httpx.ErrNotFound("media not found")
+			}
+			return err
+		}
 	}
 	if deleted {
 		return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media has expired or was deleted")
@@ -348,7 +368,7 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 // stats handles GET /api/admin/media/stats.
 //
 // @Summary Storage totals
-// @Description Requires role admin (403 otherwise).
+// @Description Owner only (403 otherwise).
 // @ID getMediaStats
 // @Tags Admin
 // @Produce json
@@ -372,7 +392,7 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) error {
 // list handles GET /api/admin/media.
 //
 // @Summary List all media, newest first
-// @Description Requires role admin (403 otherwise).
+// @Description Owner only (403 otherwise).
 // @ID listMedia
 // @Tags Admin
 // @Produce json
@@ -402,7 +422,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // prune handles POST /api/admin/media/prune.
 //
 // @Summary Delete old chat attachments
-// @Description Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Requires role admin (403 otherwise).
+// @Description Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Owner only (403 otherwise).
 // @ID pruneMedia
 // @Tags Admin
 // @Produce json
@@ -443,7 +463,7 @@ func (h *Handler) prune(w http.ResponseWriter, r *http.Request) error {
 // delete handles DELETE /api/admin/media/{id}.
 //
 // @Summary Delete a media object
-// @Description Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Requires role admin (403 otherwise).
+// @Description Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Owner only (403 otherwise).
 // @ID deleteMedia
 // @Tags Admin
 // @Produce json
@@ -483,7 +503,7 @@ type PruneResult struct {
 // orphans handles GET /api/admin/media/orphans.
 //
 // @Summary Count orphaned media objects
-// @Description Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Requires role admin (403 otherwise).
+// @Description Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).
 // @ID getMediaOrphans
 // @Tags Admin
 // @Produce json
@@ -511,7 +531,7 @@ func (h *Handler) orphans(w http.ResponseWriter, r *http.Request) error {
 // cleanupOrphans handles POST /api/admin/media/orphans/cleanup.
 //
 // @Summary Delete orphaned media objects
-// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Requires role admin (403 otherwise).
+// @Description Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Owner only (403 otherwise).
 // @ID cleanupMediaOrphans
 // @Tags Admin
 // @Produce json

@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
@@ -22,6 +23,10 @@ type Hub struct {
 	Sessions Authenticator
 	SFU      *sfu.SFU
 	Origins  []string
+	// Perms decides who may view, join and speak in which channel. nil
+	// imposes no limits and exists for tests that do not exercise
+	// permissions; the router always sets it (see SetPermissions).
+	Perms *perm.Service
 
 	mu      sync.RWMutex
 	closed  bool // guarded by mu; shutdown rejects further registrations
@@ -61,6 +66,12 @@ type Hub struct {
 	// (server_info) so browsers can offer a reload after an update. Only the
 	// version string: no commit or build details.
 	Version string
+
+	// afterSeat, when set, runs in joinVoice right after the seat is taken
+	// (tests only).
+	afterSeat func()
+	// afterPeer is the same right after the media peer is attached.
+	afterPeer func()
 
 	upgrader websocket.Upgrader
 }
@@ -115,4 +126,13 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		voiceSFU.SetLayersWantedHandler(h.announceLayersWanted)
 	}
 	return h
+}
+
+// SetPermissions makes s decide channel access and has the hub re-check live
+// connections whenever permissions change.
+func (h *Hub) SetPermissions(s *perm.Service) {
+	h.Perms = s
+	if s != nil {
+		s.SetNotifier(h)
+	}
 }

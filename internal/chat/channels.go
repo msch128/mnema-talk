@@ -176,12 +176,45 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 
 // DeleteCategory removes a category; its channels become uncategorized.
 func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
-	tag, err := p.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID)
-	if err != nil {
-		return fmt.Errorf("delete category: %w", err)
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return DeleteCategoryTx(ctx, tx, categoryID) })
+}
+
+// DeleteCategoryTx is DeleteCategory inside a transaction. The category's
+// permission overwrites do not vanish for its channels: they are copied to
+// each channel first, so deleting a private category never makes its channels
+// public. That copy is only exact when the channels have no overwrites of
+// their own (two layers do not always flatten into one); otherwise the
+// deletion is refused with 409 until one side is cleared.
+func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errCategoryNotFound
 	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrNotFound("category not found")
+	if err != nil {
+		return fmt.Errorf("lock category: %w", err)
+	}
+	var inexact bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM permission_overwrites WHERE category_id = $1)
+		   AND EXISTS (SELECT 1 FROM permission_overwrites o JOIN channels ch ON ch.id = o.channel_id WHERE ch.category_id = $1)`,
+		categoryID).Scan(&inexact); err != nil {
+		return fmt.Errorf("check category permissions: %w", err)
+	}
+	if inexact {
+		return httpx.ErrConflict("clear the permissions of the channels in this category, or of the category, first: they cannot be merged exactly")
+	}
+	for _, subject := range []string{"role_id", "user_id"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO permission_overwrites (channel_id, `+subject+`, allow, deny)
+			SELECT ch.id, co.`+subject+`, co.allow, co.deny
+			FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
+			WHERE ch.category_id = $1 AND co.`+subject+` IS NOT NULL`, categoryID); err != nil {
+			return fmt.Errorf("keep category permissions: %w", err)
+		}
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
+		return fmt.Errorf("delete category: %w", err)
 	}
 	return nil
 }
@@ -263,33 +296,36 @@ type ChannelPlacement struct {
 // ApplyLayout stores category order and channel placement in one
 // transaction; an unknown category or channel rejects the whole change.
 func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []ChannelPlacement) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockChannelLayout(ctx, tx); err != nil {
-			return err
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return ApplyLayoutTx(ctx, tx, cats, chans) })
+}
+
+// ApplyLayoutTx is ApplyLayout inside a transaction.
+func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans []ChannelPlacement) error {
+	if err := lockChannelLayout(ctx, tx); err != nil {
+		return err
+	}
+	for _, c := range cats {
+		tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
+		if err != nil {
+			return fmt.Errorf("order category: %w", err)
 		}
-		for _, c := range cats {
-			tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
-			if err != nil {
-				return fmt.Errorf("order category: %w", err)
-			}
-			if tag.RowsAffected() == 0 {
-				return errCategoryNotFound
-			}
+		if tag.RowsAffected() == 0 {
+			return errCategoryNotFound
 		}
-		for _, c := range chans {
-			tag, err := tx.Exec(ctx, `
-				UPDATE channels SET category_id = $2, sort_order = $3
-				WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
-				c.ID, c.CategoryID, c.SortOrder)
-			if err != nil {
-				return fmt.Errorf("place channel: %w", err)
-			}
-			if tag.RowsAffected() == 0 {
-				return httpx.ErrNotFound("channel or category not found")
-			}
+	}
+	for _, c := range chans {
+		tag, err := tx.Exec(ctx, `
+			UPDATE channels SET category_id = $2, sort_order = $3
+			WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
+			c.ID, c.CategoryID, c.SortOrder)
+		if err != nil {
+			return fmt.Errorf("place channel: %w", err)
 		}
-		return nil
-	})
+		if tag.RowsAffected() == 0 {
+			return httpx.ErrNotFound("channel or category not found")
+		}
+	}
+	return nil
 }
 
 // channelLayoutLockID is the transaction-scoped advisory lock that serialises
@@ -361,6 +397,13 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
 		if err != nil {
 			return fmt.Errorf("duplicate channel: %w", err)
+		}
+		// A copy of a private channel stays private.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
+			SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,
+			ch.ID, src.ID); err != nil {
+			return fmt.Errorf("copy permissions: %w", err)
 		}
 		return nil
 	})

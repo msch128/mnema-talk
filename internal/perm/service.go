@@ -1,0 +1,205 @@
+package perm
+
+import (
+	"context"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
+)
+
+const (
+	// snapshotTTL is the backstop for a change that bypassed Invalidate (an
+	// operator editing the database); every API change invalidates at once.
+	snapshotTTL = time.Minute
+	// missReload is the shortest gap between reloads forced by a channel the
+	// snapshot has not seen yet, so unknown IDs cannot hammer the database.
+	missReload = time.Second
+)
+
+// Notifier reacts to permission changes (implemented by the WebSocket hub):
+// it re-checks live connections. nil userIDs means everybody.
+type Notifier interface {
+	PermissionsChanged(userIDs []uuid.UUID)
+}
+
+// Service answers permission questions from an in-memory Snapshot of the
+// database that is rebuilt after every change. A database failure fails the
+// question (and so the request) closed.
+type Service struct {
+	db  *db.Pool
+	now func() time.Time
+
+	mu         sync.Mutex // serializes loads
+	lastForced time.Time  // guarded by mu
+	cur        atomic.Pointer[Snapshot]
+	gen        atomic.Uint64
+
+	notifierMu sync.RWMutex
+	notifier   Notifier
+}
+
+// NewService returns a Service reading from p.
+func NewService(p *db.Pool) *Service { return &Service{db: p, now: time.Now} }
+
+// SetNotifier registers who learns about permission changes.
+func (s *Service) SetNotifier(n Notifier) {
+	s.notifierMu.Lock()
+	s.notifier = n
+	s.notifierMu.Unlock()
+}
+
+// Snapshot returns the current permission state, loading it when it is
+// missing or older than the TTL.
+func (s *Service) Snapshot(ctx context.Context) (*Snapshot, error) {
+	if cur := s.cur.Load(); cur != nil && cur.age(s.now()) < snapshotTTL {
+		return cur, nil
+	}
+	return s.reload(ctx, false)
+}
+
+func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := s.now()
+	if s.db == nil {
+		// A fixture state: nothing to reload from.
+		if cur := s.cur.Load(); cur != nil {
+			return cur, nil
+		}
+		return nil, errNoDatabase
+	}
+	if cur := s.cur.Load(); cur != nil && cur.age(now) < snapshotTTL {
+		// Another caller loaded while this one waited; a forced reload only
+		// repeats it once the rate limit allows.
+		if !forced || now.Sub(s.lastForced) < missReload {
+			return cur, nil
+		}
+	}
+	if forced {
+		s.lastForced = now
+	}
+	gen := s.gen.Load()
+	snap, err := loadSnapshot(ctx, s.db, now)
+	if err != nil {
+		return nil, err
+	}
+	// A change that happened while loading may not be in snap: serve it to
+	// this caller but do not keep it.
+	if s.gen.Load() == gen {
+		s.cur.Store(snap)
+	}
+	return snap, nil
+}
+
+// Invalidate drops the snapshot; the next question reloads it.
+func (s *Service) Invalidate() {
+	if s == nil {
+		return
+	}
+	s.gen.Add(1)
+	s.cur.Store(nil)
+}
+
+// Changed invalidates the snapshot and tells the notifier that the given
+// users' permissions (everybody's when nil) may have changed.
+func (s *Service) Changed(userIDs []uuid.UUID) {
+	if s == nil {
+		return
+	}
+	s.Invalidate()
+	s.notifierMu.RLock()
+	n := s.notifier
+	s.notifierMu.RUnlock()
+	if n != nil {
+		n.PermissionsChanged(userIDs)
+	}
+}
+
+// ForChannel returns a snapshot that knows ch, reloading once (rate-limited)
+// when the channel is new to the cached one. A channel that still is not
+// known does not exist.
+func (s *Service) ForChannel(ctx context.Context, ch uuid.UUID) (*Snapshot, error) {
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !snap.KnowsChannel(ch) {
+		return s.reload(ctx, true)
+	}
+	return snap, nil
+}
+
+// Global is what sub may do server-wide. A nil Service imposes no limits (for
+// code paths and tests that run without the permission model; the router
+// always builds one).
+func (s *Service) Global(ctx context.Context, sub Subject) (Set, error) {
+	if s == nil {
+		return All, nil
+	}
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return snap.Global(sub), nil
+}
+
+// Channel is what sub may do in channel ch.
+func (s *Service) Channel(ctx context.Context, sub Subject, ch uuid.UUID) (Set, error) {
+	if s == nil {
+		return All, nil
+	}
+	snap, err := s.ForChannel(ctx, ch)
+	if err != nil {
+		return 0, err
+	}
+	return snap.Channel(sub, ch), nil
+}
+
+// ErrChannelHidden is what a channel the caller may not view answers: the
+// same 404 as a channel that does not exist, so hidden channels stay hidden.
+var ErrChannelHidden = httpx.ErrNotFound("channel not found")
+
+// RequireChannel checks that sub holds need in ch. Without ViewChannel the
+// channel looks nonexistent (404); a missing permission otherwise is a 403.
+func (s *Service) RequireChannel(ctx context.Context, sub Subject, ch uuid.UUID, need Set) error {
+	p, err := s.Channel(ctx, sub, ch)
+	if err != nil {
+		return err
+	}
+	return CheckChannel(p, need)
+}
+
+// CheckChannel is RequireChannel for an already resolved Set.
+func CheckChannel(p, need Set) error {
+	if !p.Has(ViewChannel) {
+		return ErrChannelHidden
+	}
+	if name := p.MissingName(need); name != "" {
+		return httpx.ErrForbidden("missing permission: " + name)
+	}
+	return nil
+}
+
+// RequireGlobal checks that sub holds need server-wide.
+func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) error {
+	p, err := s.Global(ctx, sub)
+	if err != nil {
+		return err
+	}
+	if name := p.MissingName(need); name != "" {
+		return httpx.ErrForbidden("missing permission: " + name)
+	}
+	return nil
+}
+
+// RequireOwner is for the Owner-only powers that no permission grants.
+func RequireOwner(sub Subject) error {
+	if !sub.Owner {
+		return httpx.ErrForbidden("only the Owner can do this")
+	}
+	return nil
+}

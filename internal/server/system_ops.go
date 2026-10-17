@@ -67,7 +67,7 @@ type OpsProcess struct {
 // opsStatus handles GET /api/admin/system/ops.
 //
 // @Summary Operator metrics
-// @Description Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Requires role admin (403 otherwise).
+// @Description Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Owner only (403 otherwise).
 // @ID getSystemOps
 // @Tags Admin
 // @Produce json

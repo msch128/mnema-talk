@@ -56,7 +56,10 @@ type User struct {
 	Username    string    `json:"username"`
 	DisplayName string    `json:"display_name" maxLength:"24"`
 	Bio         string    `json:"bio" maxLength:"250"`
-	Role        string    `json:"role" enums:"admin,user"`
+	// Role is "admin" for the Owner (the one account named by ADMIN_USERNAME,
+	// all-powerful and untouchable) and "user" for everybody else; what a user
+	// may do beyond the defaults comes from roles (see GET /api/permissions).
+	Role string `json:"role" enums:"admin,user"`
 	// AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
 	// StatusText is a free-text status line; empty when unset.
@@ -190,7 +193,7 @@ func scanUser(row pgx.Row, extra ...any) (*User, error) {
 }
 
 // GetUser loads a user by ID; it returns a 404 APIError if absent.
-func GetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
+func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+` FROM users WHERE id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound("user not found")
@@ -341,7 +344,7 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 }
 
 // RevokeSessions invalidates every session of userID ("log out everywhere").
-func RevokeSessions(ctx context.Context, p *db.Pool, userID uuid.UUID) error {
+func RevokeSessions(ctx context.Context, p db.Querier, userID uuid.UUID) error {
 	_, err := p.Exec(ctx, `UPDATE users SET token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, userID)
 	return err
 }
@@ -387,7 +390,7 @@ func SetPresence(ctx context.Context, p *db.Pool, userID uuid.UUID, presence str
 }
 
 // SetStatusText stores userID's status line; an empty text clears it.
-func SetStatusText(ctx context.Context, p *db.Pool, userID uuid.UUID, text string) (*User, error) {
+func SetStatusText(ctx context.Context, p db.Querier, userID uuid.UUID, text string) (*User, error) {
 	text, err := httpx.CleanText("status_text", text, MaxStatusTextLen, false)
 	if err != nil {
 		return nil, err
