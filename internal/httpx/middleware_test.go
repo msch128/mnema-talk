@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -264,7 +265,15 @@ func TestClientIPWarnsOnceForUntrustedPrivatePeer(t *testing.T) {
 	}
 	send("172.18.0.1:1", "198.51.100.7")
 	send("172.18.0.1:1", "198.51.100.7")
-	if n := strings.Count(buf.String(), "TRUSTED_PROXY_CIDRS"); n != 1 {
+	if n := strings.Count(buf.String(), "level=WARN"); n != 1 {
 		t.Fatalf("want exactly one warning, got %d: %s", n, buf.String())
+	}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "172.18.0.9:1"
+	r.Header.Set("X-Real-IP", "198.51.100.7")
+	var lastWarn atomic.Int64
+	warnUntrustedForwarded(r, "172.18.0.9", &lastWarn)
+	if lastWarn.Load() == 0 {
+		t.Fatal("X-Real-IP from a private untrusted peer must warn")
 	}
 }

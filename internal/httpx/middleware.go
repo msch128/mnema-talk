@@ -267,7 +267,7 @@ func ClientIPMiddleware(trusted []*net.IPNet) func(http.Handler) http.Handler {
 // is right for a stranger but means a legitimate reverse proxy is missing
 // from TRUSTED_PROXY_CIDRS and all clients share its address.
 func warnUntrustedForwarded(r *http.Request, peer string, last *atomic.Int64) {
-	if r.Header.Get("X-Forwarded-For") == "" {
+	if r.Header.Get("X-Forwarded-For") == "" && r.Header.Get("X-Real-IP") == "" {
 		return
 	}
 	addr, err := netip.ParseAddr(peer)
@@ -279,7 +279,7 @@ func warnUntrustedForwarded(r *http.Request, peer string, last *atomic.Int64) {
 	if now-prev < 3600 || !last.CompareAndSwap(prev, now) {
 		return
 	}
-	slog.Warn("ignoring X-Forwarded-For from a peer that is not in TRUSTED_PROXY_CIDRS; if this is your reverse proxy, add its address, otherwise all clients share one rate-limit identity",
+	slog.Warn("requests arrive through a proxy but this peer is not in TRUSTED_PROXY_CIDRS (empty = loopback only): all clients share one rate-limit identity; add the reverse proxy's address to TRUSTED_PROXY_CIDRS",
 		"peer", peer)
 }
 
