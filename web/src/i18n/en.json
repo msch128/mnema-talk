@@ -254,6 +254,9 @@
     "reaction": "Reaction {emoji}",
     "edit": "Edit message",
     "delete": "Delete message",
+    "bot": "Webhook",
+    "embedImage": "Image",
+    "embedThumbnail": "Thumbnail",
     "edited": "(edited)",
     "editHint": "Enter saves · Esc cancels",
     "replies": {

@@ -43,7 +43,7 @@ type AdminUser struct {
 // ListUsersForAdmin returns every account, admins first, then by name.
 func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 	rows, err := p.Query(ctx, `SELECT `+userColumns+`, disabled_at IS NOT NULL, last_seen_at
-		FROM users ORDER BY role = 'admin' DESC, LOWER(username)`)
+		FROM users WHERE NOT is_bot ORDER BY role = 'admin' DESC, LOWER(username)`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
 	}

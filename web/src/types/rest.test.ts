@@ -36,6 +36,7 @@ function wireExample(input: Schema): unknown {
     case 'array': return [wireExample(schema.items ?? {})]
     case 'string': return schema.format === 'uuid' ? fixtureId(1) : schema.format === 'date-time' ? FIXTURE_TIMESTAMP : 'synthetic'
     case 'integer': return 7
+    case 'number': return 1.5
     case 'boolean': return false
     default: throw new Error(`Unsupported OpenAPI example type ${type}`)
   }
@@ -56,7 +57,8 @@ function validVariants(input: Schema): unknown[] {
 
 function invalidVariants(input: Schema): unknown[] {
   const schema = resolve(input)
-  const variants: unknown[] = [undefined, 1.5, {}, []]
+  const variants: unknown[] = [undefined, {}, []]
+  if (schema.type !== 'number') variants.push(1.5)
   if (!(Array.isArray(schema.type) && schema.type.includes('null'))) variants.push(null)
   if (schema.enum) variants.push('not-an-enum-value')
   if (schema.format === 'uuid') variants.push('bad-id', FIXTURE_TIMESTAMP)

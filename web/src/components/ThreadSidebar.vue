@@ -19,6 +19,8 @@ import ReactionPalette from './ReactionPalette.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import MessageAttachments from './MessageAttachments.vue'
+import MessageEmbeds from './MessageEmbeds.vue'
+import BotBadge from './BotBadge.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
@@ -259,6 +261,7 @@ function formatDate(dateStr?: string) {
             >
               {{ chatStore.activeThread.display_name || chatStore.activeThread.username }}
             </button>
+            <BotBadge v-if="chatStore.activeThread.is_bot" />
             <span class="text-xs text-mnema-tertiary font-mono">
               {{ formatDate(chatStore.activeThread.created_at) }}
             </span>
@@ -266,6 +269,7 @@ function formatDate(dateStr?: string) {
         </div>
 
         <MarkdownContent v-if="chatStore.activeThread.content" :content="chatStore.activeThread.content" />
+        <MessageEmbeds :embeds="chatStore.activeThread.embeds ?? []" />
 
         <!-- Root Message Attachments -->
         <MessageAttachments
@@ -404,6 +408,7 @@ function formatDate(dateStr?: string) {
             >
               {{ reply.display_name || reply.username }}
             </button>
+            <BotBadge v-if="reply.is_bot" />
             <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
             <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
           </div>
@@ -420,6 +425,7 @@ function formatDate(dateStr?: string) {
           />
 
           <MarkdownContent v-else-if="reply.content" :content="reply.content" class="mt-0.5" />
+          <MessageEmbeds v-if="editingReplyId !== reply.id" :embeds="reply.embeds ?? []" />
 
           <!-- Reply Attachments -->
           <MessageAttachments :attachments="reply.attachments" variant="reply" @open-image="selectedImage = $event" />

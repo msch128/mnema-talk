@@ -227,6 +227,25 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
 	user := auth.UserFrom(r.Context())
+	if err := h.ReplaceAvatar(r, user.ID); err != nil {
+		return err
+	}
+	updated, err := auth.GetUser(r.Context(), h.DB, user.ID)
+	if err != nil {
+		return err
+	}
+	h.Events.Broadcast("user_update", updated.Public())
+	httpx.WriteJSON(w, http.StatusOK, updated)
+	return nil
+}
+
+// ReplaceAvatar reads the 'avatar' image of a multipart request (at most
+// MaxAvatarBytes, image types only), makes it userID's avatar and deletes the
+// previous one. Webhooks use it for their bot account.
+func (h *Handler) ReplaceAvatar(r *http.Request, userID uuid.UUID) error {
+	if h.Store == nil {
+		return httpx.ErrUnavailable("file storage is not configured")
+	}
 	in, err := readFile(r, "avatar", MaxAvatarBytes, avatarMIME, true)
 	if err != nil {
 		return err
@@ -241,16 +260,16 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 
 	var previous *string
 	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(r.Context(), `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, user.ID).Scan(&previous); err != nil {
+		if err := tx.QueryRow(r.Context(), `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(r.Context(), `
 			INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			mediaID, user.ID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
+			mediaID, userID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
 			return err
 		}
-		_, err := tx.Exec(r.Context(), `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), user.ID)
+		_, err := tx.Exec(r.Context(), `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
 		return err
 	})
 	if err != nil {
@@ -266,13 +285,6 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-
-	updated, err := auth.GetUser(r.Context(), h.DB, user.ID)
-	if err != nil {
-		return err
-	}
-	h.Events.Broadcast("user_update", updated.Public())
-	httpx.WriteJSON(w, http.StatusOK, updated)
 	return nil
 }
 

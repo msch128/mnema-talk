@@ -12,6 +12,8 @@ import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
 import ReactionPalette from './ReactionPalette.vue'
 import MessageAttachments from './MessageAttachments.vue'
+import MessageEmbeds from './MessageEmbeds.vue'
+import BotBadge from './BotBadge.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
@@ -149,6 +151,7 @@ defineExpose({ el: row })
         >
           {{ msg.display_name || msg.username }}
         </button>
+        <BotBadge v-if="msg.is_bot" />
         <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
         <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
       </div>
@@ -165,6 +168,9 @@ defineExpose({ el: row })
 
       <!-- Markdown Message Content -->
       <MarkdownContent v-else-if="msg.content" :content="msg.content" />
+
+      <!-- Webhook cards -->
+      <MessageEmbeds :embeds="msg.embeds ?? []" />
 
       <!-- Grouped messages have no header line, so the edit marker follows the body -->
       <span

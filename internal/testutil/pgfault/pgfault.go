@@ -24,6 +24,8 @@ import (
 type Tracer struct {
 	Query        string
 	AfterPrepare bool
+	// Skip lets this many matching statements pass before the next one fails.
+	Skip int
 
 	mu        sync.Mutex
 	cancel    context.CancelFunc
@@ -44,6 +46,10 @@ func (t *Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Trac
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if t.Skip > 0 {
+		t.Skip--
+		return ctx
+	}
 	t.hit = true
 	ctx, t.cancel = context.WithCancel(ctx)
 	if !t.AfterPrepare {

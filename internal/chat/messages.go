@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -59,6 +60,50 @@ type Message struct {
 	Mentions  []uuid.UUID `json:"mentions" format:"uuid"`
 	CreatedAt time.Time   `json:"created_at" format:"date-time"`
 	UpdatedAt time.Time   `json:"updated_at" format:"date-time"`
+	// IsBot is true for messages posted by a webhook. Their author is a
+	// hidden bot account; DisplayName is the webhook's name or the username
+	// the sender gave for this message.
+	IsBot bool `json:"is_bot,omitempty" binding:"optional"`
+	// Embeds are the rich cards of a webhook message (Discord-style subset).
+	Embeds []Embed `json:"embeds,omitempty" binding:"optional"`
+}
+
+// Embed is a rich card on a webhook message: the Discord embed fields Mnema
+// Talk renders. Images are shown as links, never loaded from their host.
+type Embed struct {
+	Title       string       `json:"title,omitempty" binding:"optional" maxLength:"256"`
+	Description string       `json:"description,omitempty" binding:"optional" maxLength:"4096"`
+	URL         string       `json:"url,omitempty" binding:"optional" maxLength:"2048"`
+	Color       *int         `json:"color,omitempty" binding:"optional" minimum:"0" maximum:"16777215"`
+	Timestamp   string       `json:"timestamp,omitempty" binding:"optional"`
+	Footer      *EmbedFooter `json:"footer,omitempty" binding:"optional"`
+	Image       *EmbedMedia  `json:"image,omitempty" binding:"optional"`
+	Thumbnail   *EmbedMedia  `json:"thumbnail,omitempty" binding:"optional"`
+	Author      *EmbedAuthor `json:"author,omitempty" binding:"optional"`
+	Fields      []EmbedField `json:"fields,omitempty" binding:"optional"`
+}
+
+// EmbedFooter is the small text at the bottom of an embed.
+type EmbedFooter struct {
+	Text string `json:"text" maxLength:"2048"`
+}
+
+// EmbedMedia is the link of an embed's image or thumbnail.
+type EmbedMedia struct {
+	URL string `json:"url" maxLength:"2048"`
+}
+
+// EmbedAuthor is the line above an embed's title.
+type EmbedAuthor struct {
+	Name string `json:"name" maxLength:"256"`
+	URL  string `json:"url,omitempty" binding:"optional" maxLength:"2048"`
+}
+
+// EmbedField is one name/value pair of an embed.
+type EmbedField struct {
+	Name   string `json:"name" maxLength:"256"`
+	Value  string `json:"value" maxLength:"1024"`
+	Inline bool   `json:"inline,omitempty" binding:"optional"`
 }
 
 // ReplyPreview is the quoted header of a reply. Deleted is true when the
@@ -98,14 +143,15 @@ func ValidateEmoji(emoji string) (string, error) {
 // preview in one round trip. rm/ru are the replied-to message and its author;
 // the quoted snippet sent with every reply is bounded to 200 characters.
 const messageSelect = `
-	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, u.display_name, u.avatar_s3_key,
+	SELECT m.id, m.number, m.channel_id, m.user_id, m.parent_id, u.username, COALESCE(m.author_name, u.display_name), u.avatar_s3_key,
 	       m.content, m.is_pinned, m.is_edited,
 	       (SELECT COUNT(*) FROM messages r WHERE r.parent_id = m.id),
 	       m.created_at, m.updated_at,
 	       m.reply_to_id, rm.id, rm.user_id, ru.username, ru.display_name, ru.avatar_s3_key,
 	       LEFT(rm.content, 200),
 	       CASE WHEN rm.id IS NULL THEN FALSE
-	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END
+	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
+	       u.is_bot, m.embeds
 	FROM messages m
 	JOIN users u ON u.id = m.user_id
 	LEFT JOIN messages rm ON rm.id = m.reply_to_id
@@ -119,10 +165,16 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		var avatar, rUsername, rDisplay, rAvatar, rContent *string
 		var rID, rUser *uuid.UUID
 		var rHasMedia bool
+		var embeds []byte
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia); err != nil {
+			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia, &m.IsBot, &embeds); err != nil {
 			return nil, err
+		}
+		if len(embeds) > 2 { // anything but the empty array
+			if err := json.Unmarshal(embeds, &m.Embeds); err != nil {
+				return nil, fmt.Errorf("decode embeds: %w", err)
+			}
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)
 		if m.ReplyToID != nil {
@@ -386,14 +438,27 @@ type NewMessage struct {
 	Content   string
 	ParentID  *uuid.UUID // thread root, for thread replies
 	ReplyToID *uuid.UUID // quoted message, for Discord-style replies
+	// WebhookID, AuthorName and Embeds are set for webhook messages only.
+	WebhookID  *uuid.UUID
+	AuthorName string
+	Embeds     []Embed
 }
 
 // CreateMessage inserts a message and returns its ID.
 func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID, error) {
 	var id uuid.UUID
+	embeds := []byte("[]")
+	if len(nm.Embeds) > 0 {
+		embeds, _ = json.Marshal(nm.Embeds) // plain strings, ints and bools: cannot fail
+	}
+	var authorName *string
+	if nm.AuthorName != "" {
+		authorName = &nm.AuthorName
+	}
 	err := q.QueryRow(ctx, `
-		INSERT INTO messages (channel_id, user_id, content, parent_id, reply_to_id) VALUES ($1, $2, $3, $4, $5)
-		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID).Scan(&id)
+		INSERT INTO messages (channel_id, user_id, content, parent_id, reply_to_id, webhook_id, author_name, embeds)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id`, nm.ChannelID, nm.UserID, nm.Content, nm.ParentID, nm.ReplyToID, nm.WebhookID, authorName, embeds).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("insert message: %w", err)
 	}
