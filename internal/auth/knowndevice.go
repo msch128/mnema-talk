@@ -24,8 +24,9 @@ const (
 )
 
 func (s *Sessions) deviceCookieName(account string) string {
-	sum := sha256.Sum256([]byte(account))
-	return "mnema_dev_" + hex.EncodeToString(sum[:6])
+	m := hmac.New(sha256.New, s.deviceKey())
+	m.Write([]byte("name|" + account))
+	return "mnema_dev_" + hex.EncodeToString(m.Sum(nil)[:6])
 }
 
 // deviceKey derives the cookie key from the session secret, so the secret
