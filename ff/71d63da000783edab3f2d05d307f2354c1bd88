@@ -1,0 +1,26 @@
+web/src/composables/useWebRTC.test.ts
+  s_06fcde5dbef956::t_2d923416dd38a0 3407,3409-3412
+  s_06fcde5dbef956::t_a2820d8928a3d0 262,264
+web/src/lib/media/api.test.ts
+  s_06fcde5dbef956::t_a2820d8928a3d0 12-13,35
+web/src/lib/media/frameV3.test.ts
+  s_06fcde5dbef956::t_a2820d8928a3d0 24
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_8c71f0bdb35dfe 80-81,83,104,106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff71d63da000783edab3f2d05d307f2354c1bd88",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
