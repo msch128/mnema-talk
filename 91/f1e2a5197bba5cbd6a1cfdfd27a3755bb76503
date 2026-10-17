@@ -1,0 +1,33 @@
+internal/auth/handler.go
+  s_06fcde5dbef956::t_d40874b9ca079b 34-37,47,58,60-62,65-67,90,150-152
+internal/httpx/lockout_cap_test.go
+  s_06fcde5dbef956::t_3268faebedd79b 1-26
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_4b0ea7b94cd2c6 104-105
+  s_06fcde5dbef956::t_28db6219a8ac76 66-68,73,118,127
+  s_06fcde5dbef956::t_d40874b9ca079b 80,99,101-103,106,108-111,113-116,119,121-122,125-126,128-130
+SECURITY.md
+  s_06fcde5dbef956::t_c6d2f873828581 106-113
+doc/operations.md
+  s_06fcde5dbef956::t_451bb72daa82d4 537-547
+internal/auth/knowndevice.go
+  s_06fcde5dbef956::t_76ce8f86a706af 17-21,32-34,36-41,77,79
+internal/httpx/ratelimit.go
+  s_06fcde5dbef956::t_da53c5f2d3ca49 186-197
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91f1e2a5197bba5cbd6a1cfdfd27a3755bb76503",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

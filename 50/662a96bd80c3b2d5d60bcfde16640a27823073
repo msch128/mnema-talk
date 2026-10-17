@@ -1,0 +1,56 @@
+api/openapi.json
+  s_06fcde5dbef956::t_dde5d5395f8c44 8448,8548
+internal/auth/native_password.go
+  s_06fcde5dbef956::t_3cabc9a61ade19 29
+internal/auth/session.go
+  s_06fcde5dbef956::t_52af06c97692ab 46-65
+internal/auth/admin_seed.go
+  s_06fcde5dbef956::t_3cabc9a61ade19 16,23
+internal/webhook/store.go
+  s_06fcde5dbef956::t_3cabc9a61ade19 214-215
+internal/auth/owner_policy_test.go
+  s_06fcde5dbef956::t_487e948b58580c 1-74
+internal/auth/handler.go
+  s_06fcde5dbef956::t_c8608ba8603306 34
+  s_06fcde5dbef956::t_e0c54a7095e7b7 55
+  s_06fcde5dbef956::t_52af06c97692ab 81,112,135-144,147-148,166,216,226-228
+internal/auth/token.go
+  s_06fcde5dbef956::t_b89e0f463fbcd2 31
+internal/db/migrations/0021_revoked_sessions.sql
+  s_06fcde5dbef956::t_b89e0f463fbcd2 1-10
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_691ae5a4956bc3 53-67,69,76,78-110,112-114,117-179,181-183
+internal/auth/session_revocation_integration_test.go
+  s_06fcde5dbef956::t_bc0bc6a1bf6138 1-134
+SECURITY.md
+  s_06fcde5dbef956::t_d2439b69283cac 53-56,106-115
+internal/auth/reauth.go
+  s_06fcde5dbef956::t_b89e0f463fbcd2 20
+internal/auth/service.go
+  s_06fcde5dbef956::t_3cabc9a61ade19 10
+  s_06fcde5dbef956::t_41db7a035eba85 364-365
+  s_06fcde5dbef956::t_b89e0f463fbcd2 24-25,137-146,154,166,172,176,178-192,234-235,237-239,249,360,366-369
+internal/auth/knowndevice.go
+  s_06fcde5dbef956::t_e0c54a7095e7b7 79-81,89-91
+  s_06fcde5dbef956::t_dbae0a46448569 1-78,82-88,92-116
+internal/testutil/db.go
+  s_06fcde5dbef956::t_41db7a035eba85 100
+internal/auth/claims_version.go
+  s_06fcde5dbef956::t_b89e0f463fbcd2 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50662a96bd80c3b2d5d60bcfde16640a27823073",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
