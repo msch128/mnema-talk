@@ -33,6 +33,8 @@ async function open(userId: string, over: Partial<MediaTiming> = {}) {
 
 async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster: string[]) {
   const pending = wires.map(wire => ({ from, wire }))
+  // The roster reaches everyone before the handshakes that depend on it.
+  for (const group of groups.values()) group.hint(roster)
   while (pending.length) {
     const item = pending.shift()
     if (!item) break
@@ -233,15 +235,15 @@ describe('absence', () => {
     await bob.close()
   }, 30_000)
 
-  it('counts any handshake from a member as a sign of life', async () => {
+  it('does not count a handshake nobody signed as a sign of life', async () => {
     const { alice, bob } = await pair({ rotateMs: 1e9 })
     vi.setSystemTime(START + 3000)
-    // A member that is in the group and says anything (here: a reloaded tab's new package) is there.
+    // A key package from a member in the group (a reloaded tab's) says nothing about the member's leaf.
     const reloaded = await open(bobId)
     await alice.receive(bobId, (await reloaded.sync([aliceId, bobId])).wires[0] as Uint8Array)
     await reloaded.close()
     vi.setSystemTime(START + 6000)
-    expect((await alice.maintain()).wires.filter(w => w[0] !== 0x4d)).toEqual([])
+    expect(kinds(await alice.maintain())).toContain('mls_public_message')
     await alice.close()
     await bob.close()
   }, 30_000)
@@ -499,7 +501,9 @@ describe('review fixes', () => {
     for (const group of groups.values()) await group.sync(roster)
     // Bob reloads: Alice swaps his old leaf for the new one in one commit.
     const reloaded = await open(bobId, small)
-    const swap = await alice.receive(bobId, (await reloaded.sync(roster)).wires[0] as Uint8Array)
+    const offer = (await reloaded.sync(roster)).wires[0] as Uint8Array
+    await carol.receive(bobId, offer)
+    const swap = await alice.receive(bobId, offer)
     expect(kinds(swap)).toEqual(['mls_welcome', 'mls_public_message'])
     expect(swap.soft).toBeUndefined()
     const seen = await carol.receive(aliceId, swap.wires[1] as Uint8Array)

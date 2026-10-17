@@ -139,6 +139,33 @@ locally instead (`make up` or `make dev`).
   sending transform numbers its frames, and a receiver opens a frame only once
   (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept until the
   next rotation.
+  **What a member can do.** A member of the call is inside the trust
+  boundary for the media it can read, but the group's rules limit what it can
+  do to the others. Every receiver checks a commit after its signature has
+  verified and before it takes effect, and ignores one that breaks the rules
+  (without discarding anything, as for an untrusted rival): it must come from
+  the member who commits now (the lowest id in the group and the room, with the
+  hung-tab skip); it may only add or remove; an add must be of an identity that
+  is in the room and sent that very key package through the relay, and never
+  of an identity that already holds a leaf, unless the same commit removes the
+  old leaf (a member who came back); a remove must be of a member the roster no
+  longer lists, one silent for about the absence limit by the receiver's own
+  clock, or one the commit replaces. A browser that slept, and the member being
+  removed itself, take a removal on the committer's word, since neither can
+  judge silence. So another member cannot remove a present member or give
+  someone a second leaf (an epoch where an identity holds two leaves is
+  refused and the member starts over). A malicious committer (the lowest id)
+  keeps the powers the rules give the role: it can remove a member that looks
+  silent to it, delay joins or stop the call, as above. Only authenticated input discards a
+  group: a handshake that merely parses, a key package, or a public message from
+  an id outside the group never does. A welcome from a lower id outside my
+  group replaces it only if it opens with the key package I offered and passes
+  the committer rule, at most once per minute per sender (doubling to ten
+  minutes); a member who holds a key package I offered can therefore still pull
+  me into a group of its own, as noted above. A commit for an epoch I have not
+  reached makes me start over only from one of the two lowest live members and
+  naming that member's own leaf. A member counts as alive only for a verified
+  heartbeat or a verified commit, never for a message that merely parses.
   **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
   two-minute jitter per epoch, so Talks do not rotate in step): once the
   epoch is that old, the committer (the lowest member id in the group and the
