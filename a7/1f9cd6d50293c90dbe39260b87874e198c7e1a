@@ -1,0 +1,71 @@
+internal/chat/handler.go
+  s_06fcde5dbef956::t_fe5f2a1d4cf1e1 11,594-603,605,1048-1058,1060
+  s_06fcde5dbef956::t_7c4f2d259dc55c 124-127,130-133
+  s_06fcde5dbef956::t_d51b9c8c7ca56e 608,648,683,723,1063
+internal/chat/channels.go
+  s_06fcde5dbef956::t_784110a0689ba7 179-213,215-219,299-303
+  s_06fcde5dbef956::t_202a17f66c7cea 304-310,312-313,315-322,324-328
+internal/auth/service.go
+  s_06fcde5dbef956::t_4067bc81db6b7a 196,347,393
+internal/server/bypass_owner_integration_test.go
+  s_06fcde5dbef956::t_bb756cfd7a8c42 1-97
+internal/ws/perms.go
+  s_06fcde5dbef956::t_b9ce780644d540 117-147,174
+  s_06fcde5dbef956::t_7c4f2d259dc55c 82-83
+internal/chat/messages.go
+  s_06fcde5dbef956::t_7c4f2d259dc55c 452-460,470-471
+  s_06fcde5dbef956::t_3e84d4c27d7a28 472
+internal/perm/store.go
+  s_06fcde5dbef956::t_784110a0689ba7 35-44,52-61,457
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_d51b9c8c7ca56e 254
+  s_06fcde5dbef956::t_fe5f2a1d4cf1e1 203-209,211,214-216,220-222,224-225,229-230,232,234-236,239-245
+  s_06fcde5dbef956::t_7c4f2d259dc55c 5,9,87-112,251-252,255,258-261
+  s_06fcde5dbef956::t_25ac460d5a806c 253
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_4067bc81db6b7a 68,80,147-187,251,286,317,479
+internal/ws/voice.go
+  s_06fcde5dbef956::t_7c4f2d259dc55c 438,445,459-461
+  s_06fcde5dbef956::t_b9ce780644d540 187-196
+  s_06fcde5dbef956::t_599b1cbcb81aad 184-186
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_784110a0689ba7 337-352
+internal/ws/hub.go
+  s_06fcde5dbef956::t_599b1cbcb81aad 70-73
+internal/ws/coverage_integration_test.go
+  s_06fcde5dbef956::t_7c4f2d259dc55c 85,100
+internal/ws/perms_test.go
+  s_06fcde5dbef956::t_dba4ea0a83972a 174-176,179-184
+  s_06fcde5dbef956::t_599b1cbcb81aad 185,221,271-283
+  s_06fcde5dbef956::t_b5cf32de0a558b 284
+internal/ws/client.go
+  s_06fcde5dbef956::t_b9ce780644d540 60-62
+internal/db/downgrade_integration_test.go
+  s_06fcde5dbef956::t_bdf6ffe4d40583 1-37
+internal/auth/handler.go
+  s_06fcde5dbef956::t_4067bc81db6b7a 11,474,477-479,484-493
+doc/operations.md
+  s_06fcde5dbef956::t_279bab5748db57 577-585
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_ff09f948a4493e 154-162
+doc/upgrade.md
+  s_06fcde5dbef956::t_1028e927d7beee 75-82
+internal/server/bypass_category_integration_test.go
+  s_06fcde5dbef956::t_d4e1c5d4d9b483 62-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a71f9cd6d50293c90dbe39260b87874e198c7e1a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
