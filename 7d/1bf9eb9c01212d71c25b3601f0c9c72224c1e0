@@ -1,0 +1,23 @@
+web/src/lib/media/insider.test.ts
+  s_06fcde5dbef956::t_1d53dc0b1a72b6 178,180-182,187,193-197,199,220-230,239,245-251
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_1aef2e32daf8a3 180-185,187,189,191-193,259-260,739-745,814,884,906,912,928
+SECURITY.md
+  s_06fcde5dbef956::t_a719d39b2374ca 185-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7d1bf9eb9c01212d71c25b3601f0c9c72224c1e0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
