@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.10](https://github.com/msch128/mnema-talk/compare/v0.7.9...v0.7.10) (2026-10-17)
+
+
+### Bug Fixes
+
+* keep a Talk's media group when members join or reload ([#113](https://github.com/msch128/mnema-talk/issues/113)) ([cfe64dc](https://github.com/msch128/mnema-talk/commit/cfe64dc2d7da6bb213babe29eb4256ec049f6558))
+
 ## [0.7.9](https://github.com/msch128/mnema-talk/compare/v0.7.8...v0.7.9) (2026-10-16)
 
 
