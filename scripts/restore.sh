@@ -81,5 +81,5 @@ if [ "$seaweed_resume" = true ]; then docker compose stop -t 60 seaweedfs >/dev/
 mutated=true
 docker compose exec -T postgres sh -c 'dropdb -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB" && createdb -U "$POSTGRES_USER" "$POSTGRES_DB"' </dev/null
 gunzip -c "$src/postgres.sql.gz" | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q' >/dev/null
-docker run --rm --network none --volumes-from "$seaweed" -v "$src":/in:ro alpine:3.24 sh -c 'find /data -mindepth 1 -delete && tar xzf /in/seaweedfs.tar.gz -C /data'
+docker run --rm --network none --volumes-from "$seaweed" -v "$src":/in:ro alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 sh -c 'find /data -mindepth 1 -delete && tar xzf /in/seaweedfs.tar.gz -C /data'
 echo 'data restore complete; current .env and compose configuration were preserved. Review backed-up env/compose.yaml manually before changing secrets, endpoints or service definitions.'

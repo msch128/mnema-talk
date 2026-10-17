@@ -294,6 +294,26 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   recovery remains separate from a server backup.
 - Nightly via cron, see the [README](../README.md#backups).
 
+## Verifying a release image
+
+Release images on GHCR (`ghcr.io/msch128/mnema-talk`, every tag of a release)
+are signed keylessly with [cosign](https://github.com/sigstore/cosign) by the
+release workflow, using its GitHub OIDC identity; no long-lived key exists.
+The image also carries BuildKit provenance and an SBOM. To check a pulled
+image before running it:
+
+```sh
+cosign verify ghcr.io/msch128/mnema-talk:0.7 \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github\.com/msch128/mnema-talk/\.github/workflows/release\.yml@'
+```
+
+A passing check shows that this repository's release workflow produced the
+digest; it says nothing about the code in it beyond that. Pinning the digest in
+`MNEMA_IMAGE` (`ghcr.io/msch128/mnema-talk@sha256:...`) keeps a verified image
+from changing under a tag. Images released before signing was added carry no
+signature.
+
 ## Health and metrics
 
 - **`GET /api/health`** (public): `200 {"status":"ok","version":"X.Y.Z"}`

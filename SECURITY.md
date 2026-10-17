@@ -222,14 +222,15 @@ locally instead (`make up` or `make dev`).
   client does not run the server's JavaScript. It runs a signed bundle of the
   web app that it verifies (Ed25519, a key pinned in the client; built into
   the installer or downloaded from this repository's GitHub releases; refused
-  below a signed security floor), and reaches the instance only through its own
+  below a signed security floor, or below any bundle version it already
+  verified for the server's contract), and reaches the instance only through its own
   proxy, which keeps the session cookie out of the page and hands over anything
   that could render as a document as a download. An active or compromised
   server therefore cannot inject or replace code in the desktop client; it can
   still do everything else described above (metadata, membership assertions,
   steering newcomers, denial of service, hostile data). Whoever holds the
   bundle signing key, which is not on any server, can still ship a malicious
-  app, and the installer itself is not yet code-signed. Browsers are
+  app, and the Windows `.exe` has no Authenticode signature (a known gap: it needs a code-signing certificate that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). Browsers are
   unchanged: the server serves the code. See
   [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md). Sealed media
   in the desktop client is not yet qualified on real Windows hardware.

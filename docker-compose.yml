@@ -143,6 +143,22 @@ services:
     volumes:
       - postgres18-data:/var/lib/postgresql
       - postgres-data:/var/lib/postgresql/17-data:ro
+    # The entrypoint starts as root to fix ownership of the data directory,
+    # then drops to the postgres user: only the capabilities for that.
+    # Everything but the data volume is read-only; the socket directory and
+    # /tmp are small RAM-backed scratch areas.
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m
+      - /run/postgresql:size=8m
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
     security_opt:
       - "no-new-privileges:true"
     mem_limit: ${POSTGRES_MEM_LIMIT:-1g}
@@ -199,6 +215,16 @@ services:
         exec weed server -s3 -s3.port=8333 -s3.config=/tmp/s3.json -dir=/data
     volumes:
       - seaweedfs-data:/data
+    # Writes only to /data and /tmp (the S3 identity file). It runs as root
+    # (existing volumes hold root-owned files) and needs DAC_OVERRIDE only
+    # because the image's /data directory belongs to another user.
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
     security_opt:
       - "no-new-privileges:true"
     mem_limit: ${SEAWEEDFS_MEM_LIMIT:-1g}

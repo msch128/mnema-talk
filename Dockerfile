@@ -20,7 +20,7 @@ WORKDIR /web
 
 COPY web/package.json web/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund
+    npm ci --ignore-scripts --no-audit --no-fund
 
 COPY web/ ./
 # The web app embeds the same version as the binary (vite define
