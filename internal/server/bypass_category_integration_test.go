@@ -59,5 +59,9 @@ func TestCategoryChangesNeedSightOfEveryChannelInIt(t *testing.T) {
 	if len(back.Overwrites) != 1 {
 		t.Fatalf("category overwrites changed: %+v", back)
 	}
+	// Category and channel both carry overwrites: folding them into one layer
+	// would not be exact, so the deletion is refused until one side is clear.
+	wantStatus(t, "inexact fold", owner.delete("/api/admin/categories/"+cat.ID.String()), http.StatusConflict)
+	wantStatus(t, "clear the channel", putOverwrites(owner, "channels", secret), http.StatusNoContent)
 	wantStatus(t, "owner deletes", owner.delete("/api/admin/categories/"+cat.ID.String()), http.StatusNoContent)
 }

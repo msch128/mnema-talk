@@ -171,8 +171,17 @@ func TestPermissionsChangedRemovesWhoMayNoLongerConnect(t *testing.T) {
 	if inRoom(w.h, w.privateVoice.ID, w.insider.User.ID) {
 		t.Fatal("the insider kept their seat in a Talk they can no longer view")
 	}
-	if p := drainTypes(t, w.insider); count(p, "voice_kicked") != 1 || count(p, "permissions_changed") != 1 {
+	// The removal is immediate; the second refresh notice within a second is
+	// held back and sent once when the second is over.
+	if p := drainTypes(t, w.insider); count(p, "voice_kicked") != 1 || count(p, "permissions_changed") != 0 {
 		t.Fatalf("the insider's events: %v", p)
+	}
+	time.Sleep(permNotifyEvery + 300*time.Millisecond)
+	w.h.PermissionsChanged([]uuid.UUID{w.insider.User.ID})
+	w.h.PermissionsChanged([]uuid.UUID{w.insider.User.ID})
+	time.Sleep(permNotifyEvery + 300*time.Millisecond)
+	if p := drainTypes(t, w.insider); count(p, "permissions_changed") != 2 {
+		t.Fatalf("one immediate and one coalesced notice expected: %v", p)
 	}
 	if got := drainTypes(t, w.outsider); len(got) != 0 {
 		t.Fatalf("an unnamed user was disturbed: %v", got)
@@ -209,7 +218,7 @@ func TestMediaPolicyFollowsSpeakAndVideo(t *testing.T) {
 	if got := denied(perm.DefaultEveryone); got != 0 {
 		t.Fatalf("defaults deny nothing: %b", got)
 	}
-	if got := denied(perm.DefaultEveryone &^ perm.Speak); !got.Has(sfu.SourceAudio) || got.Has(sfu.SourceCamera) {
+	if got := denied(perm.DefaultEveryone &^ perm.Speak); !got.Has(sfu.SourceAudio) || !got.Has(sfu.SourceScreenAudio) || got.Has(sfu.SourceCamera) || got.Has(sfu.SourceScreen) {
 		t.Fatalf("no Speak: %b", got)
 	}
 	if got := denied(perm.DefaultEveryone &^ perm.Video); got.Has(sfu.SourceAudio) || !got.Has(sfu.SourceCamera) || !got.Has(sfu.SourceScreen) || !got.Has(sfu.SourceScreenAudio) {
@@ -258,4 +267,18 @@ func mustSnapshot(t *testing.T, h *Hub) *perm.Snapshot {
 		t.Fatal(err)
 	}
 	return snap
+}
+
+// A change that lands between the first check and the seat is caught by the
+// check after it.
+func TestJoinIsRevokedWhenPermissionsChangeMeanwhile(t *testing.T) {
+	w := newPermWorld(t)
+	w.h.afterSeat = func() { w.f.RoleOverwrite(true, w.public.ID, w.f.EveryoneID(), 0, perm.Connect) }
+	w.h.joinVoice(w.outsider, w.public)
+	if inRoom(w.h, w.public.ID, w.outsider.User.ID) {
+		t.Fatal("the seat survived the revocation")
+	}
+	if got := drainTypes(t, w.outsider); count(got, "voice_kicked") != 1 || count(got, "webrtc_offer") != 0 {
+		t.Fatalf("events: %v", got)
+	}
 }

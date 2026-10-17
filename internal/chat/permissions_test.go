@@ -28,9 +28,6 @@ func TestHandlerWithoutPermissionsLimitsNothing(t *testing.T) {
 	if err := h.requireCategory(r, uuid.New()); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.requireLayout(r, LayoutRequest{Channels: []ChannelPlacement{{ID: uuid.New()}}}); err != nil {
-		t.Fatal(err)
-	}
 	if err := h.require(r, uuid.New(), 1); err != nil {
 		t.Fatal(err)
 	}

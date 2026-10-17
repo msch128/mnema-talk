@@ -151,6 +151,15 @@ minute is only a backstop for edits made directly in the database) and then:
 
 The OpenAPI document ([`api/openapi.json`](../api/openapi.json)) has the details.
 
+## Downgrades
+
+> **Do not roll back below this release once roles or private channels exist.**
+> Migration 0017 adds the tables that restrict access. A binary that does not
+> know them (0.7.x before roles, or older) would ignore them and show every
+> private channel to everyone. This release and later ones refuse to start on a
+> database migrated by a newer version, but binaries from before that guard
+> existed cannot. To go back, restore a backup taken before the update.
+
 ## Adding a permission
 
 1. Append a bit to `internal/perm/perm.go` (never reorder), add it to

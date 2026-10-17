@@ -32,12 +32,16 @@ type RoleInput struct {
 	Mentionable *bool   `json:"mentionable" binding:"optional"`
 }
 
-// mutate runs fn under the permission lock with the state as it is inside the
-// transaction, then publishes the change for the users fn reports (nil =
-// everybody).
-func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error)) error {
-	var affected []uuid.UUID
-	err := pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
+// Locked runs fn in a transaction that holds the permission lock, with the
+// permission state as it is inside that transaction. Anything whose decision
+// depends on roles or overwrites (moderating a member, moving a channel,
+// deleting a category) decides and writes here, so a concurrent permission
+// change cannot slip in between the check and the write.
+func (s *Service) Locked(ctx context.Context, fn func(tx pgx.Tx, snap *Snapshot) error) error {
+	if s.db == nil {
+		return errNoDatabase
+	}
+	return pgx.BeginFunc(ctx, s.db, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, int64(lockKey)); err != nil {
 			return fmt.Errorf("lock permissions: %w", err)
 		}
@@ -45,6 +49,16 @@ func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(t
 		if err := snap.read(ctx, tx); err != nil {
 			return fmt.Errorf("load permissions: %w", err)
 		}
+		return fn(tx, snap)
+	})
+}
+
+// mutate runs fn under the permission lock with the state as it is inside the
+// transaction, then publishes the change for the users fn reports (nil =
+// everybody).
+func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error)) error {
+	var affected []uuid.UUID
+	err := s.Locked(ctx, func(tx pgx.Tx, snap *Snapshot) error {
 		if name := snap.Global(actor).MissingName(need); name != "" {
 			return httpx.ErrForbidden("missing permission: " + name)
 		}
@@ -440,7 +454,7 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			if !snap.CategoryVisible(actor, id) || !snap.CanSeeAllChannelsIn(actor, id) {
 				return nil, httpx.ErrNotFound("category not found")
 			}
-			held = snap.CategoryPerms(actor, id)
+			held = snap.CategoryHeld(actor, id)
 			existing = snap.categoryOv[id]
 		}
 		type key struct {

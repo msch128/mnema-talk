@@ -67,6 +67,10 @@ type Hub struct {
 	// version string: no commit or build details.
 	Version string
 
+	// afterSeat, when set, runs in joinVoice right after the seat is taken
+	// (tests only).
+	afterSeat func()
+
 	upgrader websocket.Upgrader
 }
 

@@ -2,9 +2,11 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -80,6 +82,32 @@ func (h *Handler) viewableChannels(r *http.Request) ([]uuid.UUID, error) {
 		return nil, err
 	}
 	return snap.ViewableChannels(auth.UserFrom(r.Context()).Subject()), nil
+}
+
+// visibleMessageCounts counts messages per author over the channels the caller
+// may view; nil when they may view all of them (the stored totals apply).
+func (h *Handler) visibleMessageCounts(r *http.Request) (map[uuid.UUID]int64, error) {
+	visible, err := h.viewableChannels(r)
+	if err != nil || visible == nil {
+		return nil, err
+	}
+	rows, err := h.DB.Query(r.Context(), `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, visible)
+	if err != nil {
+		return nil, fmt.Errorf("count visible messages: %w", err)
+	}
+	type count struct {
+		User uuid.UUID
+		N    int64
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[count])
+	if err != nil {
+		return nil, fmt.Errorf("count visible messages: %w", err)
+	}
+	out := make(map[uuid.UUID]int64, len(found))
+	for _, c := range found {
+		out[c.User] = c.N
+	}
+	return out, nil
 }
 
 // visibleHierarchy drops the channels the caller may not view, and the
@@ -172,76 +200,65 @@ func (h *Handler) requireCategory(r *http.Request, id uuid.UUID) error {
 	return nil
 }
 
-// requireWholeCategory is requireCategory for what affects every channel in
-// it (deleting the category): the caller must see all of them.
-func (h *Handler) requireWholeCategory(r *http.Request, id uuid.UUID) error {
-	if err := h.requireCategory(r, id); err != nil || h.Perms == nil {
-		return err
+// checkWholeCategory is the check for deleting a category on a state read
+// under the permission lock: the caller must see the category and every
+// channel in it, and when it carries overwrites (deleting it copies them into
+// its channels) must be an Administrator or the Owner.
+func checkWholeCategory(snap *perm.Snapshot, sub perm.Subject, id uuid.UUID) error {
+	if !snap.KnowsCategory(id) {
+		return nil // the deletion itself reports a missing category
 	}
-	snap, err := h.Perms.Snapshot(r.Context())
-	if err != nil {
-		return err
-	}
-	if !snap.CanSeeAllChannelsIn(auth.UserFrom(r.Context()).Subject(), id) {
+	if !snap.CategoryVisible(sub, id) || !snap.CanSeeAllChannelsIn(sub, id) {
 		return errCategoryNotFound
+	}
+	if snap.HasCategoryOverwrites(id) && !snap.Global(sub).Has(perm.Administrator) {
+		return httpx.ErrForbidden("deleting a category with permissions needs the Administrator permission")
 	}
 	return nil
 }
 
-// requireLayout checks that the caller sees everything a layout change names.
-func (h *Handler) requireLayout(r *http.Request, req LayoutRequest) error {
+// checkLayout checks, on a state read under the permission lock, that the
+// caller sees everything a layout change names and may make its moves.
+func checkLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error {
 	for _, c := range req.Categories {
-		if err := h.requireCategory(r, c.ID); err != nil {
-			return err
+		if snap.KnowsCategory(c.ID) && !snap.CategoryVisible(sub, c.ID) {
+			return errCategoryNotFound
 		}
 	}
 	for _, c := range req.Channels {
-		if err := h.require(r, c.ID, perm.ViewChannel); err != nil {
-			return err
+		if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+			return perm.ErrChannelHidden
 		}
+		to := uuid.Nil
 		if c.CategoryID != nil {
-			if err := h.requireCategory(r, *c.CategoryID); err != nil {
-				return err
+			to = *c.CategoryID
+			if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
+				return errCategoryNotFound
 			}
 		}
-		if err := h.requireMoveAllowed(r, c); err != nil {
-			return err
+		// Moving a channel takes on the permissions of its new category and
+		// drops those of the old one, which could undo a restriction the
+		// caller may not lift: with overwrites on either side, only an
+		// Administrator (or the Owner) moves it.
+		from, _ := snap.CategoryOf(c.ID)
+		if from != to && (snap.HasCategoryOverwrites(from) || snap.HasCategoryOverwrites(to)) && !snap.Global(sub).Has(perm.Administrator) {
+			return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 		}
 	}
 	return nil
 }
 
-// requireMoveAllowed guards the side effect of moving a channel between
-// categories: it takes on the permissions of its new category and drops those
-// of the old one, which could undo a restriction the caller may not lift.
-// Only an Administrator (or the Owner) moves a channel across categories when
-// either has permission overwrites.
-func (h *Handler) requireMoveAllowed(r *http.Request, c ChannelPlacement) error {
-	if h.Perms == nil {
-		return nil
-	}
-	snap, err := h.Perms.ForChannel(r.Context(), c.ID)
-	if err != nil {
-		return err
-	}
-	from, known := snap.CategoryOf(c.ID)
-	to := uuid.Nil
-	if c.CategoryID != nil {
-		to = *c.CategoryID
-	}
-	if !known || from == to || !snap.HasCategoryOverwrites(from) && !snap.HasCategoryOverwrites(to) {
-		return nil
-	}
-	if !snap.Global(auth.UserFrom(r.Context()).Subject()).Has(perm.Administrator) {
-		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
-	}
-	return nil
+// channelsChanged tells everyone that a name, topic or limit changed: the list
+// is refetched, the permission state is untouched.
+func (h *Handler) channelsChanged() {
+	h.Perms.Invalidate() // new categories and the like must be known
+	h.Events.Broadcast("channels_changed", nil)
 }
 
-// channelsChanged tells everyone that categories or channels changed. They
-// can also change who sees what (a channel moved into a private category), so
-// the permission state is rebuilt and live connections are re-checked.
-func (h *Handler) channelsChanged() {
+// structureChanged is channelsChanged for changes that can alter who sees what
+// (a channel or category was created, deleted, duplicated or moved): the
+// permission state is rebuilt and live connections are re-checked.
+func (h *Handler) structureChanged() {
 	h.Perms.Changed(nil)
 	h.Events.Broadcast("channels_changed", nil)
 }

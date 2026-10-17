@@ -79,7 +79,8 @@ func (c *Client) mediaDenied(snap *perm.Snapshot, ch uuid.UUID) sfu.SourceSet {
 	p := snap.Channel(c.subject(), ch)
 	var denied sfu.SourceSet
 	if !p.Has(perm.Speak) {
-		denied = denied.With(sfu.SourceAudio)
+		// The screen's sound is a voice too: no talking over the share.
+		denied = denied.With(sfu.SourceAudio).With(sfu.SourceScreenAudio)
 	}
 	if !p.Has(perm.Video) {
 		denied = denied.With(sfu.SourceScreen).With(sfu.SourceScreenAudio).With(sfu.SourceCamera)
@@ -113,6 +114,37 @@ func (h *Hub) applyMediaPolicy(c *Client, snap *perm.Snapshot) {
 	}
 }
 
+// permNotifyEvery is the least gap between two permissions_changed events to
+// one connection; changes in between are sent once, when the gap is over.
+const permNotifyEvery = time.Second
+
+// notifyPermissions tells c to refresh its permissions: at once, unless one
+// went out less than permNotifyEvery ago, then once when that time is up.
+// The checks themselves (removing members from Talks) are never delayed.
+func (c *Client) notifyPermissions() {
+	c.mu.Lock()
+	wait := permNotifyEvery - time.Since(c.permSent)
+	if wait <= 0 {
+		c.permSent = time.Now()
+		c.mu.Unlock()
+		c.SendEvent("permissions_changed", nil)
+		return
+	}
+	if c.permPending {
+		c.mu.Unlock()
+		return
+	}
+	c.permPending = true
+	c.mu.Unlock()
+	time.AfterFunc(wait, func() {
+		c.mu.Lock()
+		c.permPending = false
+		c.permSent = time.Now()
+		c.mu.Unlock()
+		c.SendEvent("permissions_changed", nil)
+	})
+}
+
 // PermissionsChanged re-checks live connections after a role, assignment,
 // overwrite or channel change (perm.Notifier). Everyone concerned is told to
 // refresh (permissions_changed: channels, permissions and roles), a member who may no longer connect to or view their Talk is
@@ -139,7 +171,7 @@ func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	}
 	h.mu.RUnlock()
 	for _, c := range clients {
-		c.SendEvent("permissions_changed", nil)
+		c.notifyPermissions()
 	}
 	if h.Perms == nil {
 		return

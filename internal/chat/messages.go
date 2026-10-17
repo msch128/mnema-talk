@@ -449,7 +449,15 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		// upload (their foreign keys need a share lock on it) until we are
 		// done, so every attachment the cascade removes is in keys.
 		var author uuid.UUID
-		err := tx.QueryRow(ctx, `SELECT user_id FROM messages WHERE id = $1 FOR UPDATE`, messageID).Scan(&author)
+		var ownerContent bool
+		// The Owner's words (the message or a reply of theirs in its thread)
+		// are only the Owner's to remove.
+		err := tx.QueryRow(ctx, `
+			SELECT m.user_id,
+			       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
+			    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
+			               WHERE r.parent_id = m.id AND ru.role = 'admin')
+			FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&author, &ownerContent)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errMessageNotFound
 		}
@@ -458,6 +466,9 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		}
 		if author != user.ID && !canManage {
 			return httpx.ErrForbidden("only the author or a moderator can delete this message")
+		}
+		if ownerContent && !user.IsAdmin() && author != user.ID {
+			return httpx.ErrForbidden("the Owner's messages can only be deleted by the Owner")
 		}
 		if err := collectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN

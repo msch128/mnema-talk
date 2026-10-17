@@ -181,6 +181,19 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	id := ch.ID
 	c.setVoice(&id)
 
+	if h.afterSeat != nil {
+		h.afterSeat() // tests change permissions exactly here
+	}
+	// A permission change may have run its sweep before this seat existed:
+	// check again, on the state as it is now, now that the seat can be found.
+	snap, ok = h.permSnapshot(ch.ID)
+	if !ok || !c.can(snap, ch.ID, perm.ViewChannel|perm.Connect) {
+		slog.Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", ch.ID)
+		h.leaveVoiceLocked(c, ch.ID)
+		c.SendEvent("voice_kicked", map[string]any{"channel_id": ch.ID, "reason": "missing_permission"})
+		return
+	}
+
 	if h.SFU != nil {
 		sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) }
 		sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) }
@@ -422,14 +435,14 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 		slog.Info("voice leave", "user", userID, "channel", chID)
 		h.BroadcastChannel(chID, "voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
-			h.addVoiceTime(userID, time.Since(since))
+			h.addVoiceTime(userID, chID, time.Since(since))
 		}
 	}
 }
 
 // addVoiceTime adds one finished stay in a voice room to the user's total and
 // tells everyone the new total.
-func (h *Hub) addVoiceTime(userID uuid.UUID, d time.Duration) {
+func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
 	secs := int64(d / time.Second)
 	if h.DB == nil || secs <= 0 {
 		return
@@ -443,7 +456,9 @@ func (h *Hub) addVoiceTime(userID uuid.UUID, d time.Duration) {
 		slog.Warn("record voice time", "user", userID, "err", err)
 		return
 	}
-	h.Broadcast("user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
+	// A total that just grew by a stay in a Talk reveals that stay, so only
+	// those who can view that Talk learn it.
+	h.BroadcastChannel(chID, "user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
 }
 
 // startGrace keeps a user listed in a room for VoiceGrace, then removes them

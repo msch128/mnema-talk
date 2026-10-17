@@ -175,37 +175,48 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 }
 
 // DeleteCategory removes a category; its channels become uncategorized.
-// The category's permission overwrites do not vanish for them: they are
-// folded into each channel's own overwrites first (the channel's own entries
-// win), so deleting a private category never makes its channels public.
 func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		var one int
-		err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errCategoryNotFound
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return DeleteCategoryTx(ctx, tx, categoryID) })
+}
+
+// DeleteCategoryTx is DeleteCategory inside a transaction. The category's
+// permission overwrites do not vanish for its channels: they are copied to
+// each channel first, so deleting a private category never makes its channels
+// public. That copy is only exact when the channels have no overwrites of
+// their own (two layers do not always flatten into one); otherwise the
+// deletion is refused with 409 until one side is cleared.
+func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
+	var one int
+	err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errCategoryNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("lock category: %w", err)
+	}
+	var inexact bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM permission_overwrites WHERE category_id = $1)
+		   AND EXISTS (SELECT 1 FROM permission_overwrites o JOIN channels ch ON ch.id = o.channel_id WHERE ch.category_id = $1)`,
+		categoryID).Scan(&inexact); err != nil {
+		return fmt.Errorf("check category permissions: %w", err)
+	}
+	if inexact {
+		return httpx.ErrConflict("clear the permissions of the channels in this category, or of the category, first: they cannot be merged exactly")
+	}
+	for _, subject := range []string{"role_id", "user_id"} {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO permission_overwrites (channel_id, `+subject+`, allow, deny)
+			SELECT ch.id, co.`+subject+`, co.allow, co.deny
+			FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
+			WHERE ch.category_id = $1 AND co.`+subject+` IS NOT NULL`, categoryID); err != nil {
+			return fmt.Errorf("keep category permissions: %w", err)
 		}
-		if err != nil {
-			return fmt.Errorf("lock category: %w", err)
-		}
-		for _, subject := range []string{"role_id", "user_id"} {
-			_, err := tx.Exec(ctx, `
-				INSERT INTO permission_overwrites (channel_id, `+subject+`, allow, deny)
-				SELECT ch.id, co.`+subject+`, co.allow, co.deny
-				FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-				WHERE ch.category_id = $1 AND co.`+subject+` IS NOT NULL
-				ON CONFLICT (channel_id, `+subject+`) WHERE channel_id IS NOT NULL AND `+subject+` IS NOT NULL
-				DO UPDATE SET allow = (EXCLUDED.allow & ~permission_overwrites.deny) | permission_overwrites.allow,
-				              deny = (EXCLUDED.deny & ~permission_overwrites.allow) | permission_overwrites.deny`, categoryID)
-			if err != nil {
-				return fmt.Errorf("keep category permissions: %w", err)
-			}
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
-			return fmt.Errorf("delete category: %w", err)
-		}
-		return nil
-	})
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
+		return fmt.Errorf("delete category: %w", err)
+	}
+	return nil
 }
 
 var errCategoryNotFound = httpx.ErrNotFound("category not found")
@@ -285,33 +296,36 @@ type ChannelPlacement struct {
 // ApplyLayout stores category order and channel placement in one
 // transaction; an unknown category or channel rejects the whole change.
 func ApplyLayout(ctx context.Context, p *db.Pool, cats []CategoryOrder, chans []ChannelPlacement) error {
-	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockChannelLayout(ctx, tx); err != nil {
-			return err
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return ApplyLayoutTx(ctx, tx, cats, chans) })
+}
+
+// ApplyLayoutTx is ApplyLayout inside a transaction.
+func ApplyLayoutTx(ctx context.Context, tx pgx.Tx, cats []CategoryOrder, chans []ChannelPlacement) error {
+	if err := lockChannelLayout(ctx, tx); err != nil {
+		return err
+	}
+	for _, c := range cats {
+		tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
+		if err != nil {
+			return fmt.Errorf("order category: %w", err)
 		}
-		for _, c := range cats {
-			tag, err := tx.Exec(ctx, `UPDATE categories SET sort_order = $2 WHERE id = $1`, c.ID, c.SortOrder)
-			if err != nil {
-				return fmt.Errorf("order category: %w", err)
-			}
-			if tag.RowsAffected() == 0 {
-				return errCategoryNotFound
-			}
+		if tag.RowsAffected() == 0 {
+			return errCategoryNotFound
 		}
-		for _, c := range chans {
-			tag, err := tx.Exec(ctx, `
-				UPDATE channels SET category_id = $2, sort_order = $3
-				WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
-				c.ID, c.CategoryID, c.SortOrder)
-			if err != nil {
-				return fmt.Errorf("place channel: %w", err)
-			}
-			if tag.RowsAffected() == 0 {
-				return httpx.ErrNotFound("channel or category not found")
-			}
+	}
+	for _, c := range chans {
+		tag, err := tx.Exec(ctx, `
+			UPDATE channels SET category_id = $2, sort_order = $3
+			WHERE id = $1 AND ($2::uuid IS NULL OR EXISTS (SELECT 1 FROM categories WHERE id = $2))`,
+			c.ID, c.CategoryID, c.SortOrder)
+		if err != nil {
+			return fmt.Errorf("place channel: %w", err)
 		}
-		return nil
-	})
+		if tag.RowsAffected() == 0 {
+			return httpx.ErrNotFound("channel or category not found")
+		}
+	}
+	return nil
 }
 
 // channelLayoutLockID is the transaction-scoped advisory lock that serialises

@@ -334,6 +334,22 @@ func (s *Snapshot) CategoryPerms(sub Subject, cat uuid.UUID) Set {
 	return s.categoryOv[cat].apply(base, s, sub.ID)
 }
 
+// CategoryHeld is what sub holds under a category's overwrites and in every
+// channel of it: the most they may allow or deny for the category, since the
+// change reaches all of its channels.
+func (s *Snapshot) CategoryHeld(sub Subject, cat uuid.UUID) Set {
+	held := s.CategoryPerms(sub, cat)
+	if s.IsOwner(sub) {
+		return held
+	}
+	for ch, c := range s.channelCat {
+		if c == cat {
+			held &= s.Channel(sub, ch)
+		}
+	}
+	return held
+}
+
 // CategoryVisible reports whether sub may see the category itself: its own
 // overwrites leave ViewChannel in place.
 func (s *Snapshot) CategoryVisible(sub Subject, cat uuid.UUID) bool {

@@ -65,7 +65,7 @@ var errOwnerAction = httpx.ErrInvalidInput("this action is not available for the
 
 // targetUser loads the user an admin action applies to. Admin accounts are
 // never targets: the single administrator cannot lock themselves out.
-func targetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
+func targetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 	u, err := GetUser(ctx, p, id)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func targetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
 }
 
 // SetDisabled disables (and logs out) or re-enables a member.
-func SetDisabled(ctx context.Context, p *db.Pool, id uuid.UUID, disabled bool) error {
+func SetDisabled(ctx context.Context, p db.Querier, id uuid.UUID, disabled bool) error {
 	if _, err := targetUser(ctx, p, id); err != nil {
 		return err
 	}
@@ -144,6 +144,47 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
 }
 
+// moderated runs fn on the member a moderation action aims at, after checking
+// that the caller may act on them. With a permission service the check and fn
+// run in one transaction under the permission lock, on the state as it is
+// inside it: a concurrent role change cannot move the target out of reach (or
+// the caller down) between the check and the write.
+func (h *Handler) moderated(r *http.Request, id uuid.UUID, fn func(q db.Querier) error) error {
+	ctx := r.Context()
+	actor := UserFrom(ctx)
+	if h.Perms == nil {
+		target, err := GetUser(ctx, h.Sessions.DB, id)
+		if err != nil {
+			return err
+		}
+		if err := checkTarget(nil, actor, target); err != nil {
+			return err
+		}
+		return fn(h.Sessions.DB)
+	}
+	return h.Perms.Locked(ctx, func(tx pgx.Tx, snap *perm.Snapshot) error {
+		target, err := GetUser(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+		if err := checkTarget(snap, actor, target); err != nil {
+			return err
+		}
+		return fn(tx)
+	})
+}
+
+// checkTarget: never the Owner, only members below the caller's highest role.
+func checkTarget(snap *perm.Snapshot, actor, target *User) error {
+	if target.IsAdmin() {
+		return errOwnerAction
+	}
+	if snap == nil || actor == nil || actor.IsAdmin() {
+		return nil
+	}
+	return snap.CanModerate(actor.Subject(), target.Subject())
+}
+
 // moderate loads the member a moderation action aims at and checks that the
 // caller may act on them: never the Owner, only members below the caller.
 func (h *Handler) moderate(r *http.Request, id uuid.UUID) (*User, error) {
@@ -207,10 +248,7 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.moderate(r, id); err != nil {
-		return err
-	}
-	if err := SetDisabled(r.Context(), h.Sessions.DB, id, true); err != nil {
+	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, true) }); err != nil {
 		return err
 	}
 	if h.Live != nil {
@@ -245,10 +283,7 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.moderate(r, id); err != nil {
-		return err
-	}
-	if err := SetDisabled(r.Context(), h.Sessions.DB, id, false); err != nil {
+	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err
 	}
 	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
@@ -279,13 +314,7 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {
-		return err
-	}
-	if _, err := h.moderate(r, id); err != nil {
-		return err
-	}
-	if err := RevokeSessions(r.Context(), h.Sessions.DB, id); err != nil {
+	if err := h.moderated(r, id, func(q db.Querier) error { return RevokeSessions(r.Context(), q, id) }); err != nil {
 		return err
 	}
 	if h.Live != nil {
@@ -447,10 +476,7 @@ func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.moderate(r, id); err != nil {
-		return err
-	}
-	return h.writeStatus(w, r, id)
+	return h.writeStatus(w, r, id, true)
 }
 
 // SetPasswordRequest is the body of POST /api/admin/users/{id}/password.

@@ -57,6 +57,9 @@ type Client struct {
 	speaking    bool
 	speakWindow time.Time
 	speakCount  int
+	// permSent/permPending coalesce permissions_changed (see notifyPermissions).
+	permSent    time.Time
+	permPending bool
 	// diagWindow/diagCount rate-limit logged client diagnostics.
 	diagWindow time.Time
 	diagCount  int

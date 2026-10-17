@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -120,8 +121,16 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
+	counts, err := h.visibleMessageCounts(r)
+	if err != nil {
+		return err
+	}
 	for i, m := range members {
 		out[i] = Member{User: m, RoleIDs: roles[m.ID]}
+		if counts != nil {
+			// Totals must not reveal activity in channels the viewer cannot see.
+			out[i].MessageCount = counts[m.ID]
+		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
@@ -582,13 +591,21 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := h.requireWholeCategory(r, id); err != nil {
+	if h.Perms == nil {
+		err = DeleteCategory(r.Context(), h.DB, id)
+	} else {
+		sub := auth.UserFrom(r.Context()).Subject()
+		err = h.Perms.Locked(r.Context(), func(tx pgx.Tx, snap *perm.Snapshot) error {
+			if err := checkWholeCategory(snap, sub, id); err != nil {
+				return err
+			}
+			return DeleteCategoryTx(r.Context(), tx, id)
+		})
+	}
+	if err != nil {
 		return err
 	}
-	if err := DeleteCategory(r.Context(), h.DB, id); err != nil {
-		return err
-	}
-	h.channelsChanged()
+	h.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -628,7 +645,7 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.channelsChanged()
+	h.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -663,7 +680,7 @@ func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	h.channelsChanged()
+	h.structureChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -703,7 +720,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 		v.CloseVoiceChannel(id)
 	}
 	h.deleteObjects(r.Context(), keys)
-	h.channelsChanged()
+	h.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -1028,13 +1045,22 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 	if len(req.Categories)+len(req.Channels) > 500 {
 		return httpx.ErrInvalidInput("too many entries")
 	}
-	if err := h.requireLayout(r, req); err != nil {
+	var err error
+	if h.Perms == nil {
+		err = ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels)
+	} else {
+		sub := auth.UserFrom(r.Context()).Subject()
+		err = h.Perms.Locked(r.Context(), func(tx pgx.Tx, snap *perm.Snapshot) error {
+			if err := checkLayout(snap, sub, req); err != nil {
+				return err
+			}
+			return ApplyLayoutTx(r.Context(), tx, req.Categories, req.Channels)
+		})
+	}
+	if err != nil {
 		return err
 	}
-	if err := ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels); err != nil {
-		return err
-	}
-	h.channelsChanged()
+	h.structureChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

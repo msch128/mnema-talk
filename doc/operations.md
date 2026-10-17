@@ -574,3 +574,12 @@ to `TRUSTED_PROXY_CIDRS`.
 `docker compose logs app` shows the validation message, e.g. a placeholder
 secret, `TRUSTED_PROXY_CIDRS contains an invalid entry`, or a migration
 failure (see [upgrade.md](upgrade.md)).
+
+## Downgrading
+
+> **Do not roll back below this release once roles or private channels exist.**
+> Migration 0017 adds the tables that restrict access. A binary that does not
+> know them (0.7.x before roles, or older) would ignore them and show every
+> private channel to everyone. This release and later ones refuse to start on a
+> database migrated by a newer version, but binaries from before that guard
+> existed cannot. To go back, restore a backup taken before the update.
