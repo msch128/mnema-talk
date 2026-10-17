@@ -25,6 +25,15 @@ locally instead (`make up` or `make dev`).
 
 ## Security model (summary)
 
+In short: members join by invitation only. Microphone, camera, screen video
+and screen audio are end-to-end encrypted in the browser (MLS, keys rotate every
+30 minutes, signed frames, a safety code to compare), so an honest server
+cannot read them; an active or compromised server is out of scope because it
+serves the web app's code. Text messages and attachments are readable by the
+server. The desktop client removes server-served JavaScript by running a signed
+web bundle. Release images are signed with cosign. The sections below give the
+details and the limits.
+
 - **Invite-only.** There is no public registration. Only the Owner
   (configurable, default `Herzog`) and members whose role holds *Manage
   invites* can create invite codes.
