@@ -124,15 +124,17 @@ func NewRouter(d Deps) (*Router, error) {
 		pub = d.Events
 	}
 
-	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Privileged: auditPrivileged(permSvc)}
+	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Viewer: auditViewer(permSvc)}
 	go auditLog.RunRetention(ctx, cfg.AuditRetentionDays, 6*time.Hour)
 
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
 	authH.Perms = permSvc
+	authH.Audit = auditLog
+	authH.Audit = auditLog
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go authH.RunUnlockWorker(ctx, auth.UnlockPollInterval)
-	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc}
+	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc, Audit: auditLog}
 	rolesH := &roles.Handler{Perms: permSvc, Events: pub}
 	if d.Store != nil {
 		chatH.Objects = d.Store
@@ -152,6 +154,7 @@ func NewRouter(d Deps) (*Router, error) {
 	ssrfPolicy := &ssrf.Policy{Allow: cfg.WebhookAllowPrivateTargets}
 	outgoing := webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	hub.Tap = outgoing.Observe
+	hub.Presence = auditPresence(ctx, auditLog, d.DB)
 	go outgoing.Run(ctx)
 	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})
 
@@ -301,16 +304,24 @@ func auditActor(ctx context.Context) (uuid.UUID, string, bool) {
 	return uuid.Nil, "", false
 }
 
-// auditPrivileged says whether the signed-in user is the Owner or holds
-// Administrator, which the sensitive audit entries require.
-func auditPrivileged(svc *perm.Service) func(context.Context) (bool, error) {
-	return func(ctx context.Context) (bool, error) {
+// auditViewer says what the signed-in user may read in the audit log: the
+// Owner and Administrators everything, others the entries of the channels
+// they can view (audit.Classes).
+func auditViewer(svc *perm.Service) func(context.Context) (audit.Viewer, error) {
+	return func(ctx context.Context) (audit.Viewer, error) {
 		u := auth.UserFrom(ctx)
 		if u == nil {
-			return false, nil
+			return audit.Viewer{}, nil
 		}
-		p, err := svc.Global(ctx, u.Subject())
-		return p.Has(perm.Administrator), err
+		snap, err := svc.Snapshot(ctx)
+		if err != nil {
+			return audit.Viewer{}, err
+		}
+		sub := u.Subject()
+		if snap.Global(sub).Has(perm.Administrator) {
+			return audit.Viewer{Privileged: true}, nil
+		}
+		return audit.Viewer{Channels: snap.ViewableChannels(sub)}, nil
 	}
 }
 

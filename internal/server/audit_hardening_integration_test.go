@@ -70,10 +70,8 @@ func TestAuditHidesSensitiveEntriesFromPlainAuditors(t *testing.T) {
 	}
 
 	for _, e := range auditEntries(t, auditor, "limit=200").Entries {
-		for _, p := range audit.Sensitive {
-			if strings.HasSuffix(p, "%") && strings.HasPrefix(e.Action, strings.TrimSuffix(p, "%")) {
-				t.Errorf("auditor sees %s", e.Action)
-			}
+		if audit.ClassOf(e.Action) == audit.VisPrivileged {
+			t.Errorf("auditor sees %s", e.Action)
 		}
 	}
 	if got := auditEntries(t, auditor, "action=role"); len(got.Entries) == 0 {

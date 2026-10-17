@@ -84,12 +84,12 @@ func TestMiddlewareMarksBodiesItCannotParse(t *testing.T) {
 	rec(`{}`, "multipart/form-data; boundary=x")
 }
 
-func TestPrivilegedErrorsAndMissing(t *testing.T) {
-	l := &Log{DB: &fakeDB{queryErr: errors.New("unused")}, Privileged: func(context.Context) (bool, error) { return false, errors.New("perm down") }}
+func TestViewerErrorsAndMissing(t *testing.T) {
+	l := &Log{DB: &fakeDB{queryErr: errors.New("unused")}, Viewer: func(context.Context) (Viewer, error) { return Viewer{}, errors.New("perm down") }}
 	if err := l.list(httptest.NewRecorder(), httptest.NewRequest("GET", "/x", nil)); err == nil || err.Error() != "perm down" {
 		t.Fatalf("err = %v", err)
 	}
-	// Without a Privileged hook the query still runs (sensitive rows filtered).
+	// Without a Viewer hook the query still runs (sensitive rows filtered).
 	l = &Log{DB: &fakeDB{queryErr: errors.New("db down")}}
 	if err := l.list(httptest.NewRecorder(), httptest.NewRequest("GET", "/x", nil)); err == nil || err.Error() != "db down" {
 		t.Fatalf("err = %v", err)

@@ -33,6 +33,9 @@ type Entry struct {
 	TargetType string
 	TargetID   string
 	TargetName string
+	// ChannelID is the channel the entry is about, if any; readers need to
+	// be able to view it (VisChannel entries).
+	ChannelID *uuid.UUID
 	// Details is sanitized before it is stored.
 	Details map[string]any
 	// RequestID defaults to the id of the request in the context.
@@ -45,19 +48,18 @@ type Log struct {
 	DB db.Querier
 	// Actor names the signed-in user of a context.
 	Actor func(ctx context.Context) (id uuid.UUID, name string, ok bool)
-	// Privileged says whether the signed-in user is the Owner or an
-	// Administrator; only they read the sensitive entries (see Sensitive).
-	// Without it nobody does.
-	Privileged func(ctx context.Context) (bool, error)
+	// Viewer says what the signed-in reader may see (see Classes). Without
+	// it nobody sees anything restricted.
+	Viewer func(ctx context.Context) (Viewer, error)
 }
 
-// Sensitive lists the action patterns (SQL LIKE) that only the Owner and
-// Administrators may read, even with the View audit log permission: webhooks
-// (their addresses are credentials), bots, system and media administration,
-// settings, and the Owner-only account takeovers.
-var Sensitive = []string{
-	"webhook.%", "outgoing_webhook.%", "bot.%", "system.%", "settings.%", "media.%", "admin.%",
-	"user.password_set", "user.password_reset", "user.lockout_clear",
+// Viewer is what one reader of the log may see.
+type Viewer struct {
+	// Privileged: the Owner or an Administrator, who see every entry.
+	Privileged bool
+	// Channels are the channels the reader may view; used when not
+	// Privileged, for the entries of class VisChannel.
+	Channels []uuid.UUID
 }
 
 // Record stores e. It returns the database error; callers that already did
@@ -86,9 +88,9 @@ func (l *Log) RecordTx(ctx context.Context, q db.Querier, e Entry) error {
 	// SanitizeDetails returns only JSON-safe values, so this cannot fail.
 	details, _ := json.Marshal(SanitizeDetails(e.Details))
 	_, err := q.Exec(ctx, `
-		INSERT INTO audit_log (actor_id, actor_name, action, target_type, target_id, target_name, details, request_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		e.ActorID, clip(e.ActorName, 64), e.Action, e.TargetType, clip(e.TargetID, 64), clip(e.TargetName, 120), details, clip(e.RequestID, 64))
+		INSERT INTO audit_log (actor_id, actor_name, action, target_type, target_id, target_name, details, request_id, channel_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		e.ActorID, clip(e.ActorName, 64), e.Action, e.TargetType, clip(e.TargetID, 64), clip(e.TargetName, 120), details, clip(e.RequestID, 64), e.ChannelID)
 	return err
 }
 

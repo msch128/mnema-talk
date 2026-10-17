@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -23,6 +25,10 @@ type Handler struct {
 	// Perms decides who may use the admin routes beyond the Owner. nil means
 	// only the Owner may.
 	Perms *perm.Service
+	// Audit records sign-ins, failures, registrations and password changes;
+	// nil records nothing.
+	Audit       *audit.Log
+	failureSeen *sync.Map
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
@@ -47,8 +53,9 @@ const accountAttackWeight = 3
 
 func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 	h := &Handler{
-		Sessions: s,
-		Events:   pub,
+		Sessions:    s,
+		Events:      pub,
+		failureSeen: &sync.Map{},
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:    httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP: httpx.NewRateLimiter(10, time.Hour),
@@ -140,6 +147,7 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	account := strings.ToLower(username)
 	key := httpx.ClientIPKey(r) + "|" + account
 	if locked, retry := h.loginFailures.IsLockedOut(key); locked {
+		h.auditLoginFailure(r.Context(), account, "auth.login_locked")
 		return nil, 0, retry, nil
 	}
 
@@ -165,8 +173,10 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 		h.loginFailures.RecordFailures(key, weight)
 		h.accountFailures.RecordFailure(account)
 		if accountLocked {
+			h.auditLoginFailure(r.Context(), account, "auth.login_locked")
 			return nil, 0, retry, nil
 		}
+		h.auditLoginFailure(r.Context(), account, "auth.login_failed")
 		return nil, 0, 0, err
 	}
 	if err != nil {
@@ -174,6 +184,7 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	}
 	h.loginFailures.ResetFailures(key)
 	h.accountFailures.ResetFailures(account)
+	h.auditUser(r.Context(), u, "auth.login")
 	return u, tv, 0, nil
 }
 
@@ -215,6 +226,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	if err := h.Sessions.Start(w, u, 0); err != nil {
 		return err
 	}
+	h.auditUser(r.Context(), u, "auth.register")
 	h.Events.Broadcast("member_joined", u.Public())
 	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: *u})
 	return nil
@@ -262,6 +274,7 @@ func (h *Handler) logoutAll(w http.ResponseWriter, r *http.Request) error {
 	if err := RevokeSessions(r.Context(), h.Sessions.DB, u.ID); err != nil {
 		return err
 	}
+	h.auditUser(r.Context(), u, "auth.logout_all")
 	// Open WebSockets were authenticated with the old version; close them.
 	if h.Live != nil {
 		h.Live.DisconnectUser(u.ID)
@@ -359,6 +372,7 @@ func (h *Handler) changePassword(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.passwordFails.ResetFailures(key)
+	h.auditUser(r.Context(), u, "auth.password_change")
 	// All other sessions are revoked by the version bump; keep this one alive.
 	if err := h.Sessions.Start(w, u, tv); err != nil {
 		return err

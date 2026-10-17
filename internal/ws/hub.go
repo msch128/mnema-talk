@@ -31,6 +31,9 @@ type Hub struct {
 	// for events to everybody), before delivery. Outgoing webhooks listen
 	// here. It must not block.
 	Tap func(channel uuid.UUID, eventType string, payload any)
+	// Presence, when set, hears every join and leave of a Talk (a quick
+	// rejoin is neither). The audit log listens here. It must not block.
+	Presence func(userID, channelID uuid.UUID, joined bool)
 
 	mu      sync.RWMutex
 	closed  bool // guarded by mu; shutdown rejects further registrations

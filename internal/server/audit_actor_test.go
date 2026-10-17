@@ -11,8 +11,9 @@ func TestAuditActorNeedsASignedInUser(t *testing.T) {
 	}
 }
 
-func TestAuditPrivilegedNeedsASignedInUser(t *testing.T) {
-	if ok, err := auditPrivileged(nil)(context.Background()); ok || err != nil {
-		t.Fatalf("%v %v", ok, err)
+func TestAuditViewerNeedsASignedInUser(t *testing.T) {
+	v, err := auditViewer(nil)(context.Background())
+	if err != nil || v.Privileged || len(v.Channels) != 0 {
+		t.Fatalf("%+v %v", v, err)
 	}
 }

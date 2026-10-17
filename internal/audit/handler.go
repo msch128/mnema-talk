@@ -46,7 +46,7 @@ func (l *Log) Mount(r chi.Router) {
 // list handles GET /api/admin/audit-log.
 //
 // @Summary List audit log entries
-// @Description Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). Entries about webhooks, system and media administration, settings and Owner-only account actions are only returned to the Owner and Administrators. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.
+// @Description Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). What a reader sees depends on the entry's class (doc/moderation.md): sign-in events, webhooks, system, media, settings and Owner-only account actions are only returned to the Owner and Administrators, and message and Talk entries only for channels the caller can view. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.
 // @ID listAuditLog
 // @Tags Admin
 // @Produce json
@@ -118,15 +118,23 @@ func (l *Log) list(w http.ResponseWriter, r *http.Request) error {
 		}
 		add("id < ?", n)
 	}
-	privileged := false
-	if l.Privileged != nil {
+	var viewer Viewer
+	if l.Viewer != nil {
 		var err error
-		if privileged, err = l.Privileged(r.Context()); err != nil {
+		if viewer, err = l.Viewer(r.Context()); err != nil {
 			return err
 		}
 	}
-	if !privileged {
-		add("action NOT LIKE ALL(?)", Sensitive)
+	if !viewer.Privileged {
+		// Class VisPrivileged is hidden; VisChannel only for channels the
+		// reader may view right now.
+		add("action NOT LIKE ALL(?)", patterns(VisPrivileged))
+		ids := make([]string, len(viewer.Channels))
+		for i, c := range viewer.Channels {
+			ids[i] = c.String()
+		}
+		args = append(args, patterns(VisChannel), ids)
+		where = append(where, "(action NOT LIKE ALL($"+strconv.Itoa(len(args)-1)+") OR channel_id::text = ANY($"+strconv.Itoa(len(args))+"))")
 	}
 	limit := httpx.QueryLimit(r, "limit", 50, 200)
 	sql := `SELECT id, created_at, actor_id, actor_name, action, target_type, target_id, target_name, details, request_id FROM audit_log`
