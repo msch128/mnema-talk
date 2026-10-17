@@ -158,7 +158,7 @@ jobs:
               -f target_url="$RUN_URL" >/dev/null
           done
           for _ in 1 2 3 4 5 6; do
-            if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch; then
+            if gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --squash --delete-branch --match-head-commit "$sha"; then
               echo "merged=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -184,6 +184,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write # keyless cosign signature (Sigstore), this job only
     env:
       IMAGE: ghcr.io/msch128/mnema-talk
     steps:
@@ -219,6 +220,7 @@ jobs:
             org.opencontainers.image.revision=${{ steps.rev.outputs.sha }}
 
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        id: build
         with:
           context: .
           # Keep in sync with ci.yml's docker job. linux/arm/v7 is left out:
@@ -236,6 +238,15 @@ jobs:
           # module download come from the CI build of this commit on main.
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
+
+      # Signs the digest that was just pushed (all tags point at it) with the
+      # workflow's OIDC identity; verification is in doc/operations.md.
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign the image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
 
   # The desktop client runs a signed bundle of the web app instead of the
   # server's JavaScript (doc/desktop-trusted-client.md). Two jobs, so that
@@ -314,6 +325,7 @@ jobs:
         if: steps.key.outputs.present == 'true'
         with:
           persist-credentials: false
+          fetch-depth: 0
           ref: ${{ needs.release-please.outputs.tag_name }}
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -328,16 +340,45 @@ jobs:
           name: web-dist
           path: web/dist
 
-      - name: Sign and verify the bundle
+      # Built from the tag's Go source here, never from the artifact, and
+      # without the signing key in the environment.
+      - name: Build the bundle tool
+        if: steps.key.outputs.present == 'true'
+        run: go build -o "$RUNNER_TEMP/webbundle" ./cmd/webbundle
+
+      # A release that contains a security fix raises the floor to itself, so
+      # desktop clients stop running every older bundle. A fix says so with
+      # the `security` scope in its title (`fix(security): ...`) or a
+      # `Security-Floor: raise` trailer in the commit message.
+      - name: Decide the security floor
+        if: steps.key.outputs.present == 'true'
+        id: floor
+        run: |
+          set -euo pipefail
+          prev=$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)
+          range=${prev:+$prev..}$TAG
+          raise=false
+          subjects=$(git log --format=%s "$range")
+          trailers=$(git log --format=%H -E --grep='^Security-Floor: *raise' "$range")
+          if grep -qE '^[a-z]+\([^)]*security[^)]*\)!?: ' <<<"$subjects" || [ -n "$trailers" ]; then raise=true; fi
+          if [ "$raise" = true ]; then floor="$VERSION"; else floor=""; fi
+          echo "floor=$floor" >> "$GITHUB_OUTPUT"
+          echo "Security floor raised to: ${floor:-not raised (web/desktop-compat.json applies)} (range $range)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Sign the bundle
         if: steps.key.outputs.present == 'true'
         env:
+          FLOOR: ${{ steps.floor.outputs.floor }}
           WEB_BUNDLE_SIGNING_KEY: ${{ secrets.WEB_BUNDLE_SIGNING_KEY }}
         run: |
           set -euo pipefail
-          # Built from the tag's Go source here, never from the artifact.
-          go build -o "$RUNNER_TEMP/webbundle" ./cmd/webbundle
           "$RUNNER_TEMP/webbundle" build -dir web/dist -compat web/desktop-compat.json \
-            -version "$VERSION" -commit "$(git rev-parse HEAD)" -out bundle
+            -version "$VERSION" -commit "$(git rev-parse HEAD)" -security-floor "$FLOOR" -out bundle
+
+      - name: Verify the bundle
+        if: steps.key.outputs.present == 'true'
+        run: |
+          set -euo pipefail
           "$RUNNER_TEMP/webbundle" verify -zip "bundle/mnema-web-$VERSION.zip" -pub web/desktop-signing.pub
           {
             echo "### Desktop bundle $VERSION"

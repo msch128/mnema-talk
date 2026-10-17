@@ -84,6 +84,33 @@ func TestCLIBuildVerifyKeyID(t *testing.T) {
 		t.Fatalf("keyid: %d %q", code, stdout)
 	}
 
+	// -security-floor raises the compat floor, never lowers it, and may not
+	// exceed the bundle's own version.
+	floorOut := filepath.Join(dir, "floor")
+	code, _, stderr = run(append(append([]string{}, build...), "-out", floorOut, "-security-floor", "0.8.0", "-key-file", keyFile), nil)
+	if code != 0 {
+		t.Fatalf("build with a floor: %d %q", code, stderr)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(floorOut, "manifest.json")); !strings.Contains(string(raw), `"security_floor": "0.8.0"`) {
+		t.Fatalf("floor not raised: %s", raw)
+	}
+	lowerCompat := filepath.Join(dir, "compat-high.json")
+	_ = os.WriteFile(lowerCompat, []byte(`{"web_client_api":1,"min_server_version":"0.7.16","security_floor":"0.7.5"}`), 0o600)
+	lowOut := filepath.Join(dir, "low")
+	code, _, stderr = run([]string{"build", "-dir", tree, "-compat", lowerCompat, "-version", "0.8.0", "-out", lowOut, "-security-floor", "0.7.1", "-key-file", keyFile}, nil)
+	if code != 0 {
+		t.Fatalf("build with a lower floor: %d %q", code, stderr)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(lowOut, "manifest.json")); !strings.Contains(string(raw), `"security_floor": "0.7.5"`) {
+		t.Fatalf("floor lowered: %s", raw)
+	}
+	if code, _, _ = run(append(append([]string{}, build...), "-out", floorOut, "-security-floor", "0.9.0", "-key-file", keyFile), nil); code == 0 {
+		t.Fatal("a floor above the bundle version was accepted")
+	}
+	if code, _, _ = run(append(append([]string{}, build...), "-out", floorOut, "-security-floor", "x", "-key-file", keyFile), nil); code == 0 {
+		t.Fatal("a malformed floor was accepted")
+	}
+
 	// Failures.
 	_, otherPub := otherAlgorithmKeys(t)
 	badPub := filepath.Join(dir, "bad.pem")

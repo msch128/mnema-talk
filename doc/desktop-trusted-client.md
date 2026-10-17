@@ -26,8 +26,8 @@ instance supplies data, never code. Browser users are unchanged.
 | Where does the app come from? | A signed **bundle** (a zip of `web/dist` plus a manifest). One is **built into the installer**; newer ones are **downloaded from the GitHub release assets** of this repository, verified, and cached. |
 | How is it signed? | Ed25519 over `manifest.json`, which lists the SHA-256 and size of every file plus `version`, `web_client_api`, `min_server_version` and `security_floor`. Signed in the release workflow with a key kept as an Actions secret. |
 | What does the desktop trust? | Public keys **pinned in the desktop build** (a list, for rotation). TLS and GitHub are transport only: a bundle is accepted because of its signature, never because of where it came from. |
-| Rollback? | Monotonic semver `version`, a persisted high-water mark, and a signed `security_floor`: bundles below the highest floor ever seen are refused, however the server answers. |
-| Server API newer or older than the bundles? | Exact `web_client_api` match, `server.version >= min_server_version`, `bundle.version >= floor`. If none of the verified bundles qualifies the client checks for an update, and otherwise **refuses to connect with an explanation**. It never falls back to server JavaScript. |
+| Rollback? | Monotonic semver `version`; a persisted **high-water mark** per `web_client_api` (the highest bundle version ever verified), below which no bundle is run, and a signed `security_floor`: bundles below the highest floor ever seen are refused. However the server answers. There is deliberately no "older server" override (see [Rollback protection](#rollback-protection)). |
+| Server API newer or older than the bundles? | Exact `web_client_api` match, `server.version >= min_server_version`, `bundle.version >= floor`, `bundle.version >= high-water mark` of that contract. If none of the verified bundles qualifies the client checks for an update, and otherwise **refuses to connect with an explanation**. It never falls back to server JavaScript. |
 | Can the instance's JavaScript still be loaded? | **No.** Not as an opt-in either: a malicious server could trigger the prompt on purpose and ask for consent in its own words. A developer-only build feature is not shipped in releases. |
 | How does the local app reach the server? | A **native proxy** in the Tauri host behind a custom protocol, so the WebView still sees one origin and the web app's code (relative URLs, `fetch`, cookies in the browser model) works unchanged. The session cookie lives in the host, never in the page. WebSockets go through three IPC commands. |
 | Server changes | **None to the request path or the browser security model.** The server already advertises `version` and `web_client_api` in `/api/health`. This repository adds the signing tooling, a contract file and tests that keep the two numbers in step. |
@@ -80,8 +80,10 @@ app/<path>        every file of web/dist (index.html, assets/..., wasm, fonts)
   with. It lives in `web/desktop-compat.json` and is bumped by hand when the
   web app starts to require something new from the server.
 * `security_floor` is the oldest bundle version that is still acceptable.
-  Release engineering raises it when a bundle is withdrawn for a security
-  reason. It also lives in `web/desktop-compat.json`.
+  It lives in `web/desktop-compat.json` and only ever rises. The release
+  workflow raises it to the release's own version when the release contains a
+  security fix (see "Security floor" below); it can also be raised by hand in
+  that file. A bundle's floor never exceeds its own version.
 * `key_id` is the first 8 bytes of SHA-256 over the raw public key. It only
   selects a pinned key; the signature check decides.
 * No timestamp: bundles are reproducible from the tag.
@@ -110,6 +112,24 @@ builds `cmd/webbundle` from the tag's own Go source and signs the downloaded
 a poisoned npm dependency that reaches the build output would be signed. The
 lockfile pins every dependency and the manifest hash is printed in the job
 summary for comparison with the image's build.
+
+#### Security floor
+
+`web/desktop-compat.json` carries the baseline floor. Because only the three
+release-please files may change in a release PR, the floor is raised **at
+signing time**: the `web-bundle` job lists the commits since the previous tag
+and, if any of them has the scope `security` in its title
+(`fix(security): ...`) or a `Security-Floor: raise` trailer in its message,
+passes `-security-floor <release version>` to `webbundle build`. The flag only
+raises, never lowers, the value from the compat file. So a vulnerability fix in
+anything the bundle ships (the web app: markdown, media, auth, message
+rendering, crypto) must carry one of those two marks; the maintainer
+checklist in `AGENTS.md` repeats this. A fix without a mark leaves the floor
+where it was, and old clients keep accepting older bundles until the next
+release that raises it.
+
+The job builds the bundle tool in its own step without the key and passes
+the key only to the single `webbundle build` step.
 
 The private key is generated once with `openssl genpkey -algorithm ed25519`,
 stored only as the environment secret and in the owner's backup directory
@@ -159,21 +179,44 @@ limit).
 ### Rollback protection
 
 The host keeps `state.json` next to the cache:
-`{ "security_floor", "last_check" }`. The floor is recomputed from the held
-bundles if the file is lost.
+`{ "security_floor", "high_water", "last_check" }`. `high_water` maps each
+`web_client_api` to the highest bundle version that ever verified on this
+machine (built-in, cached or downloaded). The floor and the marks are rebuilt
+from the held bundles if the file is lost, and never lowered.
 
 * A bundle is refused when `version < security_floor`, where the floor is the
   maximum of every `security_floor` of every manifest that has verified so
-  far (built-in, cached, downloaded).
+  far.
+* **Strict high-water rule.** A bundle is never selected when its version is
+  below the high-water mark of its contract, even if it is validly signed,
+  above the floor and the only one the server's version fits. The rule is "never
+  run a bundle older than one that was already verified here". Marks are kept
+  per `web_client_api`, because bundles of different contracts cannot replace
+  one another; a client that talks to servers of two generations keeps both.
 * An update is installed only if its version is greater than the highest
   verified version held. Old but validly signed bundles that an attacker
   replays cannot replace newer ones, and `latest` metadata that moves
   backwards is ignored.
 * A server cannot influence these numbers. What a server can do is claim an
-  old `version` in `/api/health` so the client picks an older bundle. That
-  is why selection never goes below the floor: any bundle at or above the
-  floor was declared acceptable by the project, and the choice among them is
-  data about compatibility, not about trust.
+  old `version` in `/api/health` so the client would pick an older bundle.
+  The floor alone did not stop that, because the floor (currently only raised
+  for security fixes) can lag far behind. The high-water mark does: a
+  server that claims an old version now gets the refusal "needs X or newer",
+  not an old bundle.
+
+Trade-off against older servers: once the client has verified a bundle with
+`min_server_version` N, a server older than N is refused even if an older
+signed bundle that supports it is still in the cache. Older servers are
+exactly where known-vulnerable bundles are most useful to an attacker, and the
+alternatives (a per-instance opt-out, or a "compatibility mode" that runs the
+older bundle) make the attacker's claim a user prompt, which the server can
+word itself. The remedy is to update the server; the message names the version
+needed. A reinstall of the desktop client does not lower the marks either as long as its
+application data directory survives; a fresh data directory starts from the
+built-in bundle of that installer, which is the newest the installer knows.
+If the newest verified bundle is deleted from the cache (and a newer one is not
+downloaded), the client refuses with "newest verified app no longer
+available" instead of running an older one, and an update restores it.
 
 State is not signed. An attacker who can write the user's application data
 can replace the executable as well; that is outside this model.
@@ -185,7 +228,7 @@ At connect time the host reads `version` and `web_client_api` from
 
 | Situation | Behaviour |
 | --- | --- |
-| A verified bundle has `web_client_api == server` and `server.version >= min_server_version` and `bundle.version >= floor` | Use the highest such version. |
+| A verified bundle has `web_client_api == server` and `server.version >= min_server_version` and `bundle.version >= floor` and `bundle.version >= high-water mark` | Use the highest such version. |
 | Server version is not a release (`dev`) | Only `web_client_api` must match. (For local development.) |
 | Server `web_client_api` is **newer** than every bundle | Check for an update now. If a matching bundle arrives, use it; else stop with: "This server needs a newer Mnema app than this client has. Update the desktop client." |
 | Server is **older** than every usable bundle (below every `min_server_version`, or older bundles are gone or below the floor) | Stop with: "This server runs vX; this desktop client needs at least vY. Ask the administrator to update." |
@@ -234,7 +277,7 @@ host:
   'wasm-unsafe-eval'`, `connect-src 'self' ipc: ...`) and the same hardening
   headers.
 * **`/api/...`**: forwarded to the instance origin with a fixed `reqwest`
-  client (system TLS, no redirects, no proxy, bounded body sizes, timeouts).
+  client (system TLS, no redirects, no proxy, timeouts, and bodies buffered in memory up to 128 MiB: the webview protocol cannot stream, so a larger answer is refused up front from its declared length; audio and video arrive in `Range` pieces).
   Only `/api/` paths, no dot segments, are forwarded. The host sets `Origin`
   to the instance origin itself, so the server's CSRF check sees exactly
   what a browser on that instance would send. It drops any `Origin`,
@@ -245,8 +288,14 @@ host:
   is parsed, `Secure`/expiry honoured, `Set-Cookie` removed from what the
   page receives). The session token **never enters the page**, so even a
   cross-site-scripting bug in the web app cannot read or exfiltrate it. The
-  jar is persisted in the application data directory (mode 600) so the user
-  stays signed in; protecting it with the OS keychain/DPAPI is a follow-up.
+  jar is persisted so the user stays signed in: in the macOS Keychain or
+  Windows Credential Manager (service `mnema-desktop-session`, one entry per
+  instance). Only where no keychain exists, or it refuses the write, the
+  host falls back to a mode-600 file `sessions/<hash>.json` in the application
+  data directory; a file written by an earlier version moves into the keychain
+  at the next start and is deleted. A program running as the same user can
+  still ask the keychain; what changes is that copies of the profile, backups
+  and file listings no longer carry a live session.
 * **WebSocket**: custom protocols cannot carry upgrades, so the page uses a
   `TrustedSocket` class with the browser `WebSocket` surface (`onopen`,
   `onmessage`, `onclose`, `send`, `close`) over three IPC commands:
@@ -265,7 +314,11 @@ host:
   app origin, with access to IndexedDB (the MLS state) and IPC. The same
   rule protects the child window used for attachments.
 * **Navigation** is limited to the app origin; HTTPS links elsewhere go to the
-  system browser after a confirmation, as today. The attachment child window
+  system browser after a confirmation, as today. The instance window may also
+  navigate to same-origin `/api/` URLs (download and attachment links), and a
+  link opened in a new window goes to the attachment child window. Both are
+  answered by the proxy, so what arrives is forced into a sandboxed download
+  or inline-safe media, never a document of the app origin. The attachment child window
   and the gaming surfaces use the same protocol and the same bundle.
 
 ### Why this keeps the browser model intact
@@ -305,12 +358,25 @@ session cookie and the jar are per instance.
 
 | | Active or compromised server |
 | --- | --- |
-| **No longer possible** | Injecting or replacing JavaScript, WebAssembly, CSS or HTML of the app. Reading the session cookie from the page. Turning an attachment or API answer into code in the app origin. Downgrading to an older, vulnerable app below the `security_floor`. Serving a bundle with another key. |
+| **No longer possible** | Injecting or replacing JavaScript, WebAssembly, CSS or HTML of the app. Reading the session cookie from the page. Turning an attachment or API answer into code in the app origin. Downgrading to an older, vulnerable app: below the `security_floor`, or below the highest bundle this client already verified for the server's contract. Serving a bundle with another key. |
 | **Still possible (unchanged)** | Seeing metadata (who talks when, frame sizes, layers, quality choices, connection timing). Reading text messages and attachments. Asserting group membership and relaying MLS handshakes: adding a member, swapping a leaf, steering a newcomer into its own group, forcing group restarts, withholding heartbeats (see [SECURITY.md](../SECURITY.md)). Denial of service: dropping messages, refusing connections, lying in `/api/health` so that the client refuses to connect. Sending hostile *data* (messages, link previews, ICE servers) that the unchanged app code must handle. |
-| **Still possible for the supply chain** | Whoever holds the signing key, or the GitHub account that publishes desktop installers, can ship a malicious app. The key is separate from the server; compromise of a community server does not give it. The installer itself is not signed yet (no Windows code-signing certificate), so how the user obtained it still matters. |
-| **Freeze** | A network attacker can withhold updates; the client keeps what it has. The `security_floor` only moves when a newer bundle is seen. |
+| **Still possible for the supply chain** | Whoever holds the signing key, or the GitHub account that publishes desktop installers, can ship a malicious app. The key is separate from the server; compromise of a community server does not give it. The installer itself is not Authenticode-signed yet (see "Known gap" below), so how the user obtained it still matters. |
+| **Freeze** | A network attacker can withhold updates; the client keeps what it has. The `security_floor` and the high-water marks only move when a newer bundle is seen. |
 
 Browser users remain exactly as in SECURITY.md: the server serves the code.
+
+### Known gap: the `.exe` has no Authenticode signature
+
+The signed bundle protects the web app, not the executable around it. The
+Windows build is not code-signed, because that needs a certificate that has to
+be bought for the project's publisher. Consequences: SmartScreen warns on first
+run, and nothing ties the executable to the publisher on the user's machine.
+The release carries a `SHA256SUMS` file next to the ZIP, which is only
+protection against a corrupted download: it is published by the same account in
+the same release, so whoever can replace the ZIP can replace the checksums.
+It does not prove who built the file. Anyone who needs more than that builds the client from source. The bundle key pinned in the
+executable is what makes the rest of the client trustworthy after install; the
+executable itself is trusted as far as its download was.
 
 ## Verification plan
 

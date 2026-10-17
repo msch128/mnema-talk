@@ -13,7 +13,7 @@ import (
 
 const usage = `usage: webbundle <command> [flags]
 
-  build   -dir web/dist -compat web/desktop-compat.json -version X.Y.Z -commit SHA -out DIR
+  build   -dir web/dist -compat web/desktop-compat.json -version X.Y.Z -commit SHA -out DIR [-security-floor X.Y.Z]
           [-key-env NAME | -key-file PATH] [-exclude .br,.gz,.map]
           signs the web app and writes mnema-web-<version>.zip, manifest.json, manifest.sig
   verify  -zip FILE -pub web/desktop-signing.pub
@@ -63,6 +63,7 @@ func runBuild(args []string, getenv func(string) string, stdout, stderr io.Write
 	out := fs.String("out", "", "output directory")
 	keyEnv := fs.String("key-env", "WEB_BUNDLE_SIGNING_KEY", "environment variable holding the PKCS#8 PEM private key")
 	keyFile := fs.String("key-file", "", "file holding the PKCS#8 PEM private key (instead of -key-env)")
+	floor := fs.String("security-floor", "", "raise the compat file's security_floor to this version (never lowers it)")
 	exclude := fs.String("exclude", ".br,.gz,.map", "comma-separated path suffixes to leave out")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -88,6 +89,15 @@ func runBuild(args []string, getenv func(string) string, stdout, stderr io.Write
 	c, err := LoadCompat(*compat)
 	if err != nil {
 		return err
+	}
+	if *floor != "" {
+		n, err := CompareVersions(*floor, c.SecurityFloor)
+		if err != nil {
+			return fmt.Errorf("-security-floor: %w", err)
+		}
+		if n > 0 {
+			c.SecurityFloor = *floor
+		}
 	}
 	var suffixes []string
 	for _, s := range strings.Split(*exclude, ",") {

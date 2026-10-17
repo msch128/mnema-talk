@@ -24,7 +24,10 @@ Releases through v0.7.3, including
 Later desktop builds are published from the desktop repository.
 Extract the ZIP and run `Mnema Desktop DEV.exe`. Enter your community's
 HTTPS address and sign in. Microsoft Edge WebView2 Runtime is required.
-Desktop packages are unsigned DEV builds; updates are installed manually.
+Desktop packages are unsigned DEV builds (no Authenticode signature yet:
+Windows SmartScreen warns, and the checksum file in the same release only
+detects a damaged download, it does not prove who built it); updates are
+installed manually.
 
 **Stay in Talk while gaming:** the Windows client offers a left-hand sidepeek
 showing participants, who's speaking, mute and screen-share status. Press
