@@ -3357,6 +3357,21 @@ describe('serialized settings after native source construction fails', () => {
 })
 
 describe('protected media', () => {
+  it('hands the call the members the Talk already lists as soon as it starts', async () => {
+    const call = installRecordingCall()
+    const user = userFixture()
+    const { rtc, voice } = setup()
+    useAuthStore().user = user
+    const reloading = voiceUserFixture({ id: fixtureId(3) })
+    voice.channelUsers = { 'ch-1': { [reloading.id]: reloading } }
+    const join = rtc.joinVoiceChannel('ch-1')
+    expect(call.start).toHaveBeenCalledWith('ch-1', user.id)
+    expect(call.roster).toHaveBeenCalledWith([reloading.id])
+    expect(call.start.mock.invocationCallOrder[0]).toBeLessThan(call.roster.mock.invocationCallOrder[0] ?? 0)
+    await grantMic()
+    await join
+  })
+
   it('seals the call for the signed-in member and ignores another room', async () => {
     const call = installRecordingCall()
     const user = userFixture()

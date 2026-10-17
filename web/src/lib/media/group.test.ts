@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import * as mls from 'ts-mls'
-import type { Credential } from 'ts-mls'
+import type { Credential, KeyPackage } from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES, mediaGroupId, mediaUserId } from './bounds'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
@@ -137,6 +137,29 @@ describe('media group', () => {
     await bob.close()
   }, 30_000)
 
+  it('adds members whose packages arrived together in one commit when the call batches', async () => {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const carol = await opened(carolId)
+    const roster = [aliceId, bobId, carolId]
+    await alice.sync([aliceId])
+    const bobOffer = await bob.sync(roster)
+    const carolOffer = await carol.sync(roster)
+    expect((await alice.receive(bobId, wireAt(bobOffer.wires, 0), true)).wires).toEqual([])
+    expect((await alice.receive(carolId, wireAt(carolOffer.wires, 0), true)).wires).toEqual([])
+    const committed = await alice.sync(roster)
+    expect(committed.epoch).toBe(1)
+    // One commit and one welcome for both (beside the founder's announcement).
+    const kinds = committed.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat).filter(kind => kind !== 'mls_key_package')
+    expect(kinds.sort()).toEqual(['mls_public_message', 'mls_welcome'])
+    const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
+    await deliver(groups, aliceId, committed.wires, roster)
+    const keys = await Promise.all([bob, carol].map(group => group.sync(roster)))
+    for (const step of keys) expect(step.epoch).toBe(1)
+    expect(await roundTrip(committed.key, keys[0]?.key ?? null, 1)).toEqual([9, 8, 7])
+    for (const group of groups.values()) await group.close()
+  }, 30_000)
+
   it('drops a solo group when a lower id is already in the room', async () => {
     const alice = await opened(aliceId)
     const bob = await opened(bobId)
@@ -159,40 +182,55 @@ describe('media group', () => {
     await bob.close()
   }, 30_000)
 
-  it('builds a group for the lowest id already looking at a full room', async () => {
+  it('lets the lowest id into a full room\'s group instead of rebuilding it', async () => {
     const alice = await opened(aliceId)
     const bob = await opened(bobId)
     const carol = await opened(carolId)
     const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
     const room = new Map([[bobId, bob], [carolId, carol]])
+    const roster = [aliceId, bobId, carolId]
     expect((await bob.sync([bobId])).epoch).toBe(0)
     await deliver(room, carolId, (await carol.sync([bobId, carolId])).wires, [bobId, carolId])
     expect((await bob.sync([bobId, carolId])).epoch).toBe(1)
-    expect((await carol.sync([bobId, carolId])).epoch).toBe(1)
-    const founded = await alice.sync([aliceId, bobId, carolId])
-    expect(founded.epoch).toBe(0)
-    // The new group announces itself, so the old members rejoin it at once.
-    expect(founded.wires).toHaveLength(1)
-    expect(mls.decodeMlsMessage(wireAt(founded.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
-    await deliver(groups, aliceId, founded.wires, [aliceId, bobId, carolId])
-    const bobDropped = await bob.sync([aliceId, bobId, carolId])
-    const carolDropped = await carol.sync([aliceId, bobId, carolId])
-    await deliver(groups, bobId, bobDropped.wires, [aliceId, bobId, carolId])
-    await deliver(groups, carolId, carolDropped.wires, [aliceId, bobId, carolId])
-    const shared = await alice.sync([aliceId, bobId, carolId])
-    const bobShared = await bob.sync([aliceId, bobId, carolId])
-    const carolShared = await carol.sync([aliceId, bobId, carolId])
-    expect(shared.epoch).toBeGreaterThan(0)
-    expect(bobShared.epoch).toBe(shared.epoch)
-    expect(carolShared.epoch).toBe(shared.epoch)
-    expect(await roundTrip(shared.key, bobShared.key, shared.epoch ?? 0)).toEqual([9, 8, 7])
-    expect(await roundTrip(shared.key, carolShared.key, shared.epoch ?? 0)).toEqual([9, 8, 7])
+    // Others are here, so Alice offers instead of founding her own group.
+    const offered = await alice.sync(roster)
+    expect(offered.epoch).toBeNull()
+    expect(offered.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).toEqual(['mls_key_package'])
+    // Bob and Carol keep their group, and Bob lets her in.
+    expect((await bob.sync(roster)).epoch).toBe(1)
+    await deliver(groups, aliceId, offered.wires, roster)
+    const shared = await alice.sync(roster)
+    const bobShared = await bob.sync(roster)
+    const carolShared = await carol.sync(roster)
+    expect(shared.epoch).toBe(2)
+    expect(bobShared.epoch).toBe(2)
+    expect(carolShared.epoch).toBe(2)
+    expect(await roundTrip(shared.key, bobShared.key, 2)).toEqual([9, 8, 7])
+    expect(await roundTrip(shared.key, carolShared.key, 2)).toEqual([9, 8, 7])
+    // Now the lowest, Alice commits: Bob leaving is her commit.
+    const removed = await alice.sync([aliceId, carolId])
+    expect(removed.epoch).toBe(3)
+    for (const group of groups.values()) await group.close()
+  }, 30_000)
+
+  it('founds at once when everyone else here is offering too', async () => {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const roster = [aliceId, bobId]
+    // Both arrive at the same moment: nobody holds a group yet.
+    const aliceOffer = await alice.sync(roster)
+    const bobOffer = await bob.sync(roster)
+    expect(aliceOffer.epoch).toBeNull()
+    await alice.receive(bobId, wireAt(bobOffer.wires, 0), true)
+    const founded = await alice.sync(roster)
+    expect(founded.epoch).toBe(1)
+    const groups = new Map([[aliceId, alice], [bobId, bob]])
+    await deliver(groups, aliceId, founded.wires, roster)
+    const joined = await bob.sync(roster)
+    expect(joined.epoch).toBe(1)
+    expect(await roundTrip(founded.key, joined.key, 1)).toEqual([9, 8, 7])
     await alice.close()
-    const removed = await bob.sync([bobId, carolId])
-    expect(removed.wires.length).toBeGreaterThan(0)
-    expect(removed.epoch).toBe((shared.epoch ?? 0) + 1)
     await bob.close()
-    await carol.close()
   }, 30_000)
 
   it('rejects a welcome before the roster is known', async () => {
@@ -451,18 +489,20 @@ describe('a member who starts over inside the grace period', () => {
     for (const group of groups.values()) await group.close()
   }, 60_000)
 
-  it('is rejoined by the others when the lowest id reloads', async () => {
+  it('is swapped back in by the next lowest when the lowest id reloads', async () => {
     const roster = [aliceId, bobId, carolId]
     const groups = await room(roster)
-    await settle(groups, roster)
+    const before = (await settle(groups, roster)).get(bobId)?.epoch ?? 0
     await groups.get(aliceId)?.close()
     groups.set(aliceId, await opened(aliceId))
     const keys = await settle(groups, roster)
+    // One swap, not a new group.
+    expect(keys.get(bobId)?.epoch).toBe(before + 1)
     expect(await agree(keys)).toEqual([[9, 8, 7], [9, 8, 7], [9, 8, 7]])
     for (const group of groups.values()) await group.close()
   }, 60_000)
 
-  it('stays in the group when the founder announces itself again after committing', async () => {
+  it('ignores a member repeating the package it founded with after its leaf changed', async () => {
     const roster = [aliceId, bobId, carolId]
     const groups = await room([...roster, daveId])
     await settle(groups, [...roster, daveId])
@@ -473,11 +513,10 @@ describe('a member who starts over inside the grace period', () => {
     const settled = await settle(groups, roster)
     expect(await agree(settled)).toEqual([[9, 8, 7], [9, 8, 7], [9, 8, 7]])
     const before = settled.get(bobId)?.epoch
-    // The room changes, so the founder repeats the package it founded with.
+    // The package Alice founded with arrives again (a late copy, a resend).
     const alice = groups.get(aliceId) as MediaGroup
-    const announced = await alice.sync([...roster, fixtureId(6)])
-    expect(announced.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).toContain('mls_key_package')
-    await deliver(groups, aliceId, announced.wires)
+    const founding = mls.encodeMlsMessage({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: (alice as unknown as { own: { publicPackage: KeyPackage } }).own.publicPackage })
+    await deliver(groups, aliceId, [founding])
     for (const id of [bobId, carolId]) {
       const step = await (groups.get(id) as MediaGroup).sync(roster)
       expect(step.epoch).toBe(before)
@@ -533,16 +572,39 @@ describe('a member who starts over inside the grace period', () => {
   }, 60_000)
 })
 
-describe('a founder announcing a new group', () => {
-  it('says so once per room, also when the roster arrives after the group', async () => {
+describe('a group of one', () => {
+  it('announces itself once per room, and no longer once someone is in', async () => {
     const alice = await opened(aliceId)
+    const bob = await opened(bobId)
     expect((await alice.sync([aliceId])).wires).toEqual([])
     const hello = await alice.sync([aliceId, bobId])
-    expect(hello.wires).toHaveLength(1)
-    expect(mls.decodeMlsMessage(wireAt(hello.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
+    expect(hello.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).toEqual(['mls_key_package'])
     expect((await alice.sync([aliceId, bobId])).wires).toEqual([])
     expect((await alice.sync([aliceId, bobId, carolId])).wires).toHaveLength(1)
+    const offer = await bob.sync([aliceId, bobId])
+    const added = await alice.receive(bobId, wireAt(offer.wires, 0))
+    expect(added.epoch).toBe(1)
+    expect((await alice.sync([aliceId, bobId, daveId])).wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).not.toContain('mls_key_package')
     await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('steps aside and offers itself when a lower id is in the room', async () => {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const roster = [aliceId, bobId]
+    expect((await bob.sync([bobId])).epoch).toBe(0)
+    const offer = await alice.sync(roster)
+    await bob.receive(aliceId, wireAt(offer.wires, 0), true)
+    const aside = await bob.sync(roster)
+    expect(aside.key).toBeNull()
+    expect(aside.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat)).toEqual(['mls_key_package'])
+    // Alice now has everyone's offer and founds at once.
+    await alice.receive(bobId, wireAt(aside.wires, 0), true)
+    const founded = await alice.sync(roster)
+    expect(founded.epoch).toBe(1)
+    await alice.close()
+    await bob.close()
   }, 30_000)
 })
 
@@ -619,9 +681,8 @@ describe('a member who missed a commit', () => {
     await carol.receive(aliceId, wireAt(added.wires, 1))
     // Dave leaves: the next commit is for an epoch Bob has not reached.
     const rotated = await alice.sync([aliceId, bobId])
-    // The founder's announcement, then the commit.
-    expect(rotated.wires).toHaveLength(2)
-    const lost = await bob.receive(aliceId, wireAt(rotated.wires, 1))
+    expect(rotated.wires).toHaveLength(1)
+    const lost = await bob.receive(aliceId, wireAt(rotated.wires, 0))
     expect(lost.key).toBeNull()
     expect(lost.wires).toHaveLength(1)
     expect(mls.decodeMlsMessage(wireAt(lost.wires, 0), 0)?.[0].wireformat).toBe('mls_key_package')
@@ -740,6 +801,64 @@ describe('what a flood or a forgery can reset', () => {
   }, 60_000)
 })
 
+describe('a welcome to a member that already holds a group', () => {
+  it('is taken by a group of one founded while the welcome was on its way', async () => {
+    const alice = await opened(aliceId)
+    const bob = await opened(bobId)
+    const roster = [aliceId, bobId]
+    await alice.sync([aliceId])
+    const offer = await bob.sync(roster)
+    await alice.sync(roster)
+    const added = await alice.receive(bobId, wireAt(offer.wires, 0))
+    // Bob gave up waiting and founded with the package he had offered.
+    const founded = await (bob as unknown as { foundNow(): Promise<MediaStep | null> }).foundNow()
+    expect(founded?.epoch).toBe(0)
+    for (const wire of added.wires) await bob.receive(aliceId, wire)
+    const joined = await bob.sync(roster)
+    expect(joined.epoch).toBe(added.epoch)
+    expect(joined.verification?.members).toEqual([aliceId, bobId])
+    expect(await roundTrip(added.key, joined.key, added.epoch ?? 0)).toEqual([9, 8, 7])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('is taken only from the welcomed group\'s committer', async () => {
+    const { alice, bob } = await joinedPair()
+    const dave = await opened(daveId)
+    const roster = [aliceId, bobId, daveId]
+    const offer = await dave.sync(roster)
+    await bob.sync(roster)
+    // Bob is no committer: Alice, the group's lowest, is. A welcome from him
+    // into that group is refused.
+    const decoded = mls.decodeMlsMessage(wireAt(offer.wires, 0), 0)
+    if (decoded?.[0].wireformat !== 'mls_key_package') throw new Error('expected a key package')
+    const bySideDoor = await (bob as unknown as { commit(p: unknown[]): Promise<Uint8Array[]> }).commit([{ proposalType: 'add', add: { keyPackage: decoded[0].keyPackage } }])
+    const welcome = bySideDoor.find(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat === 'mls_welcome')
+    expect(welcome).toBeDefined()
+    expect((await dave.receive(bobId, welcome ?? new Uint8Array())).key).toBeNull()
+    for (const group of [alice, bob, dave]) await group.close()
+  }, 30_000)
+
+  it('is refused by a group others are in, and from someone outside the group it welcomes to', async () => {
+    const { alice, bob, bobStep } = await joinedPair()
+    const carol = await opened(carolId)
+    const channel = mediaGroupId(channelId)
+    if (!channel) throw new Error('expected a group id')
+    const roster = [aliceId, bobId, carolId]
+    await bob.sync(roster)
+    // Carol tries to pull Bob out of the group he shares with Alice.
+    const bobPackage = mls.encodeMlsMessage({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: (bob as unknown as { own: { publicPackage: KeyPackage } }).own.publicPackage })
+    const hijack = await welcomeFrom(carolId, channel, bobPackage)
+    expect((await bob.receive(carolId, hijack)).epoch).toBe(bobStep.epoch)
+    // A newcomer takes no welcome claimed by Alice for a group she is not in.
+    const fresh = await opened(daveId)
+    const freshOffer = await fresh.sync([...roster, daveId])
+    const forged = await welcomeFrom(carolId, channel, wireAt(freshOffer.wires, 0))
+    expect((await fresh.receive(aliceId, forged)).key).toBeNull()
+    for (const group of [alice, bob, carol, fresh]) await group.close()
+  }, 30_000)
+})
+
 describe('a room that grows, loses a welcome or has a silent lowest member', () => {
   afterEach(() => { vi.useRealTimers() })
   const timers = { toFake: ['Date', 'setTimeout', 'clearTimeout'] as ('Date' | 'setTimeout' | 'clearTimeout')[] }
@@ -801,7 +920,7 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
     expect(lost.wires).toHaveLength(2)
     const steps: MediaStep[] = []
     bob.onStep(step => steps.push(step))
-    await vi.advanceTimersByTimeAsync(7000)
+    await vi.advanceTimersByTimeAsync(3000)
     expect(steps).toEqual([])
     await vi.advanceTimersByTimeAsync(1200)
     await vi.waitFor(() => expect(steps).toHaveLength(1))
@@ -820,28 +939,28 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
     await bob.close()
   }, 60_000)
 
-  it('retries a restart the limit held back, once the limit lets go', async () => {
+  it('swaps a reloaded committer in at once and only now and then', async () => {
     const { alice, bob } = await joinedPair()
     const roster = [aliceId, bobId]
-    vi.useFakeTimers({ ...timers, now: Date.now() })
-    // Use up the limit: Bob starts over once and is welcomed back.
-    const asked = await bob.recover(roster)
-    await alice.sync(roster)
-    const back = await alice.receive(bobId, wireAt(asked.wires, 0))
-    for (const wire of back.wires) await bob.receive(aliceId, wire)
-    expect((await bob.sync(roster)).epoch).toBe(back.epoch)
-    // Alice comes back from a reload and says so; Bob's limit holds him back.
+    // Alice reloads: Bob, the next lowest, swaps her new leaf in himself.
     await alice.close()
     const reloaded = await opened(aliceId)
-    const steps: MediaStep[] = []
-    bob.onStep(step => steps.push(step))
-    const hello = await reloaded.sync(roster)
-    expect((await bob.receive(aliceId, wireAt(hello.wires, 0))).wires).toEqual([])
-    expect(steps).toEqual([])
-    await vi.advanceTimersByTimeAsync(11_000)
-    await vi.waitFor(() => expect(steps).toHaveLength(1))
-    expect(mls.decodeMlsMessage(wireAt(steps[0]?.wires ?? [], 0), 0)?.[0].wireformat).toBe('mls_key_package')
+    const offer = await reloaded.sync(roster)
+    expect(offer.epoch).toBeNull()
+    const swapped = await bob.receive(aliceId, wireAt(offer.wires, 0))
+    expect(swapped.wires.map(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat).sort()).toEqual(['mls_public_message', 'mls_welcome'])
+    for (const wire of swapped.wires) await reloaded.receive(bobId, wire)
+    const back = await reloaded.sync(roster)
+    expect(back.epoch).toBe(swapped.epoch)
+    expect(await roundTrip(back.key, swapped.key, back.epoch ?? 0)).toEqual([9, 8, 7])
+    // Back in, Alice is the committer again.
+    expect((await reloaded.sync([aliceId])).epoch).toBe((back.epoch ?? 0) + 1)
+    // Another reload right away is held back by the swap limit.
     await reloaded.close()
+    const again = await opened(aliceId)
+    const next = await again.sync(roster)
+    expect((await bob.receive(aliceId, wireAt(next.wires, 0))).wires).toEqual([])
+    await again.close()
     await bob.close()
   }, 60_000)
 
@@ -876,15 +995,21 @@ describe('a room that grows, loses a welcome or has a silent lowest member', () 
     bob.onStep(step => steps.push(step))
     expect((await bob.sync(roster)).epoch).toBeNull()
     await vi.advanceTimersByTimeAsync(14_000)
-    expect(steps).toEqual([])
-    await vi.advanceTimersByTimeAsync(1200)
-    await vi.waitFor(() => expect(steps.length).toBeGreaterThan(0))
-    expect(steps.at(-1)?.epoch).toBe(0)
-    // Heard from again, the lowest counts: Bob's own group no longer has it.
+    expect(steps.every(step => step.epoch === null)).toBe(true)
+    // Alice is left out after 15 s; once nobody let him in for the offer's
+    // wait, Bob is the lowest who is here and founds.
+    // Key packages are made in real time, so the clock moves in steps.
+    await vi.waitFor(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(steps.at(-1)?.epoch).toBe(0)
+    }, { timeout: 20_000, interval: 20 })
+    // When Alice does arrive, she offers.
     const alice = await opened(aliceId)
-    const hello = await alice.sync(roster)
-    await bob.receive(aliceId, wireAt(hello.wires, 0))
-    expect((await bob.sync(roster)).key).toBeNull()
+    const offer = await alice.sync(roster)
+    // Heard from again, she counts: Bob's group of one steps aside for her.
+    await bob.receive(aliceId, wireAt(offer.wires, 0))
+    const aside = await bob.sync(roster)
+    expect(aside.key).toBeNull()
     await alice.close()
     await bob.close()
   }, 60_000)

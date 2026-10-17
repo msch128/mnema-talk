@@ -47,6 +47,11 @@ export interface FrameSeal {
 
 export interface FrameOpen {
   keys: ReadonlyMap<number, EpochKeys>
+  /**
+   * Keys of the group this member held before the call regrouped. The same
+   * epoch number can exist in both; the sender's signature tells which.
+   */
+  previous?: ReadonlyMap<number, EpochKeys>
   channelId: string
   senderId: string
   packet: Uint8Array
@@ -180,31 +185,34 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
   const epoch = view.getUint32(EPOCH_OFFSET)
   const stream = view.getUint32(STREAM_OFFSET)
   const counter = view.getUint32(COUNTER_OFFSET)
-  const keys = frame.keys.get(epoch)
-  if (!keys) {
-    frame.onUnknownEpoch?.(epoch)
+  const candidates = [frame.keys.get(epoch), frame.previous?.get(epoch)]
+    .filter((keys): keys is EpochKeys => keys !== undefined && keys.verifiers.has(frame.senderId))
+  if (!candidates.length) {
+    if (!frame.keys.has(epoch) && !frame.previous?.has(epoch)) frame.onUnknownEpoch?.(epoch)
     return null
   }
-  const verifier = keys.verifiers.get(frame.senderId)
-  if (!verifier) return null
   if (!frame.replay.fresh(epoch, stream, counter)) return null
   const aad = bindFrameAad(frame.channelId, frame.senderId, epoch, stream, counter, frame.clear)
   const bodyEnd = packet.byteLength - SIGNATURE_BYTES
   const body = packet.subarray(0, bodyEnd)
-  try {
-    const signed = await crypto.subtle.verify('Ed25519', verifier, copyBytes(packet.subarray(bodyEnd)), copyBytes(signedBytes(aad, body)))
-    if (!signed) return null
-    const opened = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: copyBytes(packet.subarray(NONCE_OFFSET, HEADER_BYTES)), additionalData: copyBytes(aad) },
-      keys.key,
-      copyBytes(packet.subarray(HEADER_BYTES, bodyEnd)),
-    )
-    // Checked again: another unit of the same stream may have opened meanwhile.
-    if (!frame.replay.mark(epoch, stream, counter)) return null
-    return new Uint8Array(opened)
-  } catch {
-    return null
+  for (const keys of candidates) {
+    try {
+      const verifier = keys.verifiers.get(frame.senderId) as CryptoKey
+      const signed = await crypto.subtle.verify('Ed25519', verifier, copyBytes(packet.subarray(bodyEnd)), copyBytes(signedBytes(aad, body)))
+      if (!signed) continue
+      const opened = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: copyBytes(packet.subarray(NONCE_OFFSET, HEADER_BYTES)), additionalData: copyBytes(aad) },
+        keys.key,
+        copyBytes(packet.subarray(HEADER_BYTES, bodyEnd)),
+      )
+      // Checked again: another unit of the same stream may have opened meanwhile.
+      if (!frame.replay.mark(epoch, stream, counter)) return null
+      return new Uint8Array(opened)
+    } catch {
+      // A tag that does not match under this key: try the other one, if any.
+    }
   }
+  return null
 }
 
 /** Numbers the units one sending transform seals. It stops at the end of the counter. */

@@ -19,8 +19,9 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean }[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
   const keys: { epoch: number, key: EpochKeys, replace: boolean }[] = []
+  const stale: number[] = []
   const sends: string[] = []
   const receives: string[] = []
   let statsListener: (senders: Record<string, FrameStats>) => void = () => {}
@@ -28,6 +29,7 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
     stats: senders => statsListener(senders),
     onStats(listener) { statsListener = listener },
     keys,
+    stale,
     sends,
     receives,
     armSender(_sender, channelId, senderId) {
@@ -39,7 +41,7 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
       return true
     },
     setKey(epoch, key, replace = false) { keys.push({ epoch, key, replace }) },
-    clearKeys() { keys.length = 0 },
+    staleKeys() { stale.push(keys.length) },
     reset() { keys.length = 0 },
   }
 }
@@ -154,7 +156,7 @@ describe('browser media call', () => {
     expect(aliceCodes.at(-1)).toBeNull()
   }, 30_000)
 
-  it('forgets a discarded epoch before a later group installs its own', async () => {
+  it('keeps the last key while regrouping and installs the next group as a new one', async () => {
     const guard = recordingGuard()
     const bob = browserMediaCall(guard)
     bob.start(channelId, bobId)
@@ -164,9 +166,16 @@ describe('browser media call', () => {
     bob.roster([bobId])
     await mediaSettled(bob)
     expect(guard.keys.map(item => item.epoch)).toEqual([0])
+    // A lower id arrives: bob leaves his group but the worker keeps sealing
+    // with its key until the next group's key comes.
     bob.roster([aliceId, bobId])
     await mediaSettled(bob)
-    expect(guard.keys).toEqual([])
+    expect(guard.keys.map(item => item.epoch)).toEqual([0])
+    // ...but only for a while: the worker is told the keys went stale, once.
+    expect(guard.stale).toEqual([1])
+    bob.roster([bobId])
+    await mediaSettled(bob)
+    expect(guard.keys.map(item => [item.epoch, item.replace])).toEqual([[0, true], [0, true]])
     bob.stop()
     await mediaSettled(bob)
   }, 30_000)

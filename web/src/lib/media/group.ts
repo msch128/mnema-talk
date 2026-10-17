@@ -39,10 +39,17 @@ const SWAP_BASE_MS = 3000
 const RESET_BASE_MS = 10_000
 const BACKOFF_MAX_MS = 60_000
 // A joiner whose offer got no welcome in this long offers again.
-const OFFER_WAIT_MS = 8000
+const OFFER_WAIT_MS = 4000
+// The lowest joiner whose offer got no welcome in this long founds the group:
+// nobody here holds one. A welcome that was still on its way is taken anyway
+// (see the welcome below), so founding early costs nothing.
+const FOUND_WAIT_MS = 4000
 // A member lower than me that the room lists but never said a word in this
-// long cannot be speaking MLS (an old tab, a failed start): the next one acts.
-const TAKEOVER_MS = 15_000
+// long cannot be speaking MLS (an old tab, a failed start, someone whose
+// reload is still under way): the next one acts. Coming back, it offers and
+// is let in. It stays longer than OFFER_WAIT_MS, so a lost welcome is asked
+// for again before the member who sent it is written off.
+const TAKEOVER_MS = 2 * OFFER_WAIT_MS
 
 export interface MediaStep {
   wires: Uint8Array[]
@@ -169,10 +176,13 @@ function encodeWire(message: Parameters<typeof encodeMlsMessage>[0]): Uint8Array
 
 /**
  * One browser's membership in one voice channel.
- * The lowest user id in the room creates the group and publishes commits.
- * Anyone higher only offers a key package. A group that does not yet contain
- * a lower id is dropped, and that lower id creates the replacement. A member
- * who leaves is removed by whoever remains.
+ * Whoever finds the room empty founds the group; everyone who arrives later
+ * offers a key package and is let in. The lowest user id in the group (and
+ * still in the room) publishes the commits, so a newcomer with a lower id
+ * takes that over once it is in, and the group itself goes on: nobody's media
+ * stops because someone joined. A reload is a new package for the same id: the
+ * committer, or the next one if it was the committer who reloaded, swaps the
+ * old leaf. A member who leaves is removed by whoever remains.
  */
 export class MediaGroup {
   private state: ClientState | null = null
@@ -182,7 +192,9 @@ export class MediaGroup {
   private room: readonly string[] = []
   private offeredFor: string | null = null
   /** This client created its group, and told this room about it. */
-  private founded = false
+  /** Members whose fresh package says they reloaded: the next committer swaps them in. */
+  private readonly restarting = new Set<string>()
+  /** The room my group of one last announced itself to. */
   private announcedFor: string | null = null
   /** Key-package wires seen from each member, newest last, to ignore a repeat or an old one. */
   private readonly accepted = new Map<string, Uint8Array[]>()
@@ -236,8 +248,13 @@ export class MediaGroup {
     return this.enqueue(() => this.syncNow(roster, resend))
   }
 
-  receive(fromUserId: string, wire: Uint8Array): Promise<MediaStep> {
-    return this.enqueue(() => this.receiveNow(fromUserId, wire))
+  /**
+   * With batch, a key package only waits for the next sync instead of being
+   * committed at once: the call syncs after the handshakes that arrived
+   * together, so members who joined together are added in one commit.
+   */
+  receive(fromUserId: string, wire: Uint8Array, batch = false): Promise<MediaStep> {
+    return this.enqueue(() => this.receiveNow(fromUserId, wire, batch))
   }
 
   close(): Promise<void> {
@@ -277,7 +294,7 @@ export class MediaGroup {
     const room = new Set(others)
     room.add(this.userId)
     const active: string[] = []
-    for (const id of treeMembers(this.state).keys()) if (room.has(id)) active.push(id)
+    for (const id of treeMembers(this.state).keys()) if (room.has(id) && !this.restarting.has(id)) active.push(id)
     return lowest(active)
   }
 
@@ -324,7 +341,9 @@ export class MediaGroup {
 
   /** Offers a fresh package again, if still without a group and the reset limit allows. */
   private async reofferNow(): Promise<MediaStep | null> {
-    if (this.closed || this.state || !this.room.some(id => id < this.userId)) return null
+    if (this.closed || this.state) return null
+    // Nobody let me in although I am the lowest: nobody here holds a group.
+    if (!this.room.some(id => id < this.userId)) return this.foundNow()
     if (!this.resets.allow('self')) {
       this.defer(() => this.reofferNow())
       return null
@@ -333,12 +352,12 @@ export class MediaGroup {
     return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
   }
 
-  private watchOffer() {
+  private watchOffer(wait = this.room.some(id => id < this.userId) ? OFFER_WAIT_MS : FOUND_WAIT_MS) {
     if (this.offerTimer !== null) clearTimeout(this.offerTimer)
     this.offerTimer = setTimeout(() => {
       this.offerTimer = null
       void this.enqueue(() => this.reofferNow()).then(step => step && this.stepListener(step))
-    }, OFFER_WAIT_MS)
+    }, wait)
   }
 
   private async syncNow(roster: readonly string[], resend: boolean): Promise<MediaStep> {
@@ -348,13 +367,15 @@ export class MediaGroup {
     const others = this.reachable(this.others(roster))
     this.room = others
     const state = this.state
-    // Only the lowest id of the room decides whether this group is the right
-    // one; someone in between is just added by the committer.
+    // A group is never given up because a lower id arrives: the newcomer
+    // offers its package and is let in. Only a group of one, which nobody
+    // else depends on, steps aside for a lower id, so that two members who
+    // each found an empty room end up in one group.
     const lead = lowest(others)
-    if (state && lead !== null && lead < this.userId && !treeMembers(state).has(lead)) {
+    if (state && lead !== null && lead < this.userId && treeMembers(state).size === 1) {
       await this.leave()
     }
-    if (!this.state && !others.some(id => id < this.userId)) {
+    if (!this.state && (others.length === 0 || this.allOffered(others))) {
       const created = await this.createOwn()
       if (created) wires.push(...created)
     } else if (!this.state) {
@@ -363,10 +384,10 @@ export class MediaGroup {
       if (resend && this.offeredFor !== null) await this.rekey()
       wires.push(...this.offer(others))
     }
-    // Anyone already holding a group that has me in it must hear that this one
-    // is new: I may be the lowest id coming back after a reload. Said again
-    // whenever the room changes, since the roster can lag behind the join.
-    if (this.founded && others.length) {
+    // A group of one tells the room about itself: I may be someone the others
+    // still hold an old leaf of (a reload that found the room empty for a
+    // moment). They swap me in, and I take that welcome.
+    if (this.state && treeMembers(this.state).size === 1 && others.length) {
       const key = others.slice().sort().join(',')
       const hello = this.announcedFor === key ? null : this.hello()
       if (hello) {
@@ -434,9 +455,21 @@ export class MediaGroup {
     const state = await createGroup(this.groupId, this.own.publicPackage, this.own.privatePackage, [], this.cs, clientConfig())
     if (!await this.adopt(state)) return null
     this.offeredFor = null
-    this.founded = true
-    this.announcedFor = null
     return []
+  }
+
+  /**
+   * Everyone else here offered a package and nobody is lower: nobody holds a
+   * group, so the lowest of us founds one at once instead of waiting.
+   */
+  private allOffered(others: readonly string[]): boolean {
+    return !others.some(id => id < this.userId) && others.every(id => this.pending.has(id))
+  }
+
+  private async foundNow(): Promise<MediaStep | null> {
+    const created = await this.createOwn()
+    if (!created) return null
+    return this.step([...created, ...await this.commitAdds(this.room)])
   }
 
   private discard() {
@@ -447,12 +480,12 @@ export class MediaGroup {
     this.pending.clear()
     this.accepted.clear()
     this.offeredFor = null
-    this.founded = false
+    this.restarting.clear()
     this.announcedFor = null
     if (state) this.wipeRejected(state)
   }
 
-  private async receiveNow(fromUserId: string, wire: Uint8Array): Promise<MediaStep> {
+  private async receiveNow(fromUserId: string, wire: Uint8Array, batch = false): Promise<MediaStep> {
     if (this.closed || wire.byteLength === 0 || wire.byteLength > HANDSHAKE_MAX_BYTES) return this.step()
     const from = mediaUserId(fromUserId)
     if (!from || from === this.userId) return this.step()
@@ -467,25 +500,14 @@ export class MediaGroup {
       if (id !== from) return this.step()
       const known = this.state ? treeLeafSigner(this.state, from) : null
       const same = known !== null && sameBytes(known, message.keyPackage.leafNode.signaturePublicKey)
-      // The committer I know with another leaf has started over (a reload):
-      // its group is the one that counts now, so I join it again. Any other
-      // member coming back is swapped in by the committer.
-      const restarted = members?.has(from) === true && !same && from === this.committer(this.room)
-      // Only for someone the roster says is in the room, and not in a loop;
-      // what the limit holds back is tried again when it lets go.
-      if (members && from < this.userId && this.room.includes(from) && restarted) {
-        if (!this.resets.allow('self')) {
-          this.defer(() => this.receiveNow(fromUserId, wire))
-          return this.step()
-        }
-        await this.leave()
-        wires.push(...this.offer(this.room))
-      } else if (members?.has(from)) {
+      if (members?.has(from)) {
         // The same package again is a duplicate. Another one is the member
-        // coming back: swap the old leaf for the new one in a single commit.
-        // Only a member the roster says is still here, and not again and again.
-        if (same || !this.room.includes(from) || !this.canCommit(this.room) || this.seen(from, wire)) return this.step()
-        if (!this.swaps.allow(from)) return this.step()
+        // coming back (a reload): swap the old leaf for the new one in a single
+        // commit. If it was the committer, the next one does it. Only a member
+        // the roster says is still here, and not again and again.
+        if (same || !this.room.includes(from) || this.seen(from, wire)) return this.step()
+        if (from === this.committer(this.room)) this.restarting.add(from)
+        if (!this.canCommit(this.room) || !this.swaps.allow(from)) return this.step()
         this.remember(from, wire)
         wires.push(...await this.replaceMember(from, message.keyPackage))
         return this.step(wires)
@@ -493,18 +515,31 @@ export class MediaGroup {
       this.remember(from, wire)
       this.pending.set(from, message.keyPackage)
       // A package from someone the roster does not list waits until it does.
-      if (this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
+      if (!batch && this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
       return this.step(wires)
     }
     if (members && from < this.userId && !members.has(from)) this.discard()
     if (message.wireformat === 'mls_welcome') {
-      if (this.state) return this.step()
-      // My view of the room may be a step behind the welcome; what matters is
-      // that it comes from the lowest id I know of.
-      if (from >= this.userId || from !== lowest([...this.room, from])) return this.step()
+      // Without a group, or with one of my own that nobody joined yet (I
+      // founded while this welcome was on its way): the group that lets me in
+      // is the one everybody else is in.
+      const previous = this.state
+      if (previous && treeMembers(previous).size > 1) return this.step()
+      // Whoever commits for the group I offered to lets me in.
+      if (!this.room.includes(from)) return this.step()
       try {
         const joined = await joinGroup(message.welcome, this.own.publicPackage, this.own.privatePackage, emptyPskIndex, this.cs)
-        if (await this.adopt(joined)) this.offeredFor = null
+        // Only the group's committer welcomes: the lowest of its members the
+        // roster lists, leaving me out (I may be the committer coming back).
+        const committer = lowest([...treeMembers(joined).keys()].filter(id => id !== this.userId && this.room.includes(id)))
+        if (committer !== from) {
+          this.wipeRejected(joined)
+          return this.step()
+        }
+        if (await this.adopt(joined)) {
+          this.offeredFor = null
+          if (previous) this.wipeRejected(previous)
+        }
       } catch {
         return this.step()
       }
@@ -675,6 +710,8 @@ export class MediaGroup {
         return false
       }
       this.state = state
+      // A swap has landed (or the group changed): everyone counts again.
+      this.restarting.clear()
       if (this.offerTimer !== null) clearTimeout(this.offerTimer)
       this.offerTimer = null
       const epochNumber = Number(epoch)

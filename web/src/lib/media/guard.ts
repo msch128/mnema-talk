@@ -15,7 +15,8 @@ export interface MediaGuard {
    */
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
   setKey(epoch: number, key: EpochKeys, replace?: boolean): void
-  clearKeys(): void
+  /** The call lost its group: the last keys may seal only a little longer. */
+  staleKeys(): void
   /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
   onStats(listener: (senders: Record<string, FrameStats>) => void): void
   reset(): void
@@ -51,7 +52,10 @@ export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
   const ports: KeyedPort[] = []
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
-  let current: { epoch: number, key: EpochKeys } | null = null
+  // The last key message, given to a line armed later; seq lets the shared
+  // worker apply a message once however many lines deliver it.
+  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, seq: number } | null = null
+  let seq = 0
   let statsListener: ((senders: Record<string, FrameStats>) => void) | null = null
 
   function sharedWorker(): Worker | null {
@@ -77,7 +81,7 @@ export function createMediaGuard(): MediaGuard {
       channelId,
       ...(senderId === null ? {} : { senderId }),
     }, [channel.port2])
-    if (current) channel.port1.postMessage({ type: 'key', epoch: current.epoch, key: current.key })
+    if (current) channel.port1.postMessage(current)
     ports.push(channel.port1)
     if (direction === 'recv') armed.set(target as RTCRtpReceiver, channel.port1)
     return true
@@ -100,17 +104,17 @@ export function createMediaGuard(): MediaGuard {
     armSender: (sender, channelId, senderId) => arm(sender, 'send', channelId, senderId),
     armReceiver: armIncoming,
     setKey(epoch, key, replace = false) {
-      current = { epoch, key }
+      seq += 1
       const message = replace
-        ? { type: 'key', epoch, key, replace: true }
-        : { type: 'key', epoch, key }
+        ? { type: 'key' as const, epoch, key, replace: true as const, seq }
+        : { type: 'key' as const, epoch, key, seq }
+      current = message
       for (const port of ports) port.postMessage(message)
     },
-    onStats(listener) { statsListener = listener },
-    clearKeys() {
-      current = null
-      for (const port of ports) port.postMessage({ type: 'drop' })
+    staleKeys() {
+      for (const port of ports) port.postMessage({ type: 'stale' })
     },
+    onStats(listener) { statsListener = listener },
     reset() {
       current = null
       for (const port of ports) {
