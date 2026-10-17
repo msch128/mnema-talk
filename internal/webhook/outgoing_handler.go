@@ -40,25 +40,17 @@ type UpdateOutgoingRequest struct {
 	Enabled *bool     `json:"enabled,omitempty" binding:"optional"`
 }
 
-// loadOutgoing finds the webhook of the path and checks the caller may manage
-// it: Manage webhooks and View channel in its channel, or the Owner. It
-// belongs to its channel, not to whoever made it.
+// loadOutgoing finds the webhook of the path for an administrator. It belongs
+// to its channel; who made it and who last set its URL are only recorded.
 func (h *Handler) loadOutgoing(r *http.Request) (*outgoingRec, error) {
+	if err := h.requireAdmin(r); err != nil {
+		return nil, err
+	}
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	rec, err := getOutgoing(r.Context(), h.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := h.authorize(r, rec.ChannelID); err != nil {
-		if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusNotFound {
-			return nil, errOutgoingNotFound
-		}
-		return nil, err
-	}
-	return rec, nil
+	return getOutgoing(r.Context(), h.DB, id)
 }
 
 func (h *Handler) reload(ctx context.Context) {
@@ -83,7 +75,7 @@ func (h *Handler) writeOutgoingList(w http.ResponseWriter, r *http.Request, chan
 // listOutgoing handles GET /api/admin/channels/{id}/outgoing-webhooks.
 //
 // @Summary List a channel's outgoing webhooks
-// @Description Needs Manage webhooks and View channel in that channel (or the Owner). Secrets are never listed.
+// @Description Owner or Administrator only. Secrets are never listed.
 // @ID listOutgoingWebhooks
 // @Tags Webhooks
 // @Produce json
@@ -103,7 +95,7 @@ func (h *Handler) listOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	return h.writeOutgoingList(w, r, ch)
@@ -138,7 +130,7 @@ func (h *Handler) createIn(w http.ResponseWriter, r *http.Request, channel uuid.
 // createOutgoing handles POST /api/admin/channels/{id}/outgoing-webhooks.
 //
 // @Summary Create an outgoing webhook
-// @Description Needs Manage webhooks and View channel in that channel. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.
+// @Description Owner or Administrator only. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.
 // @ID createOutgoingWebhook
 // @Tags Webhooks
 // @Accept json
@@ -161,7 +153,7 @@ func (h *Handler) createOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	return h.createIn(w, r, ch)
@@ -170,7 +162,7 @@ func (h *Handler) createOutgoing(w http.ResponseWriter, r *http.Request) error {
 // updateOutgoing handles PATCH /api/admin/outgoing-webhooks/{id}.
 //
 // @Summary Change an outgoing webhook
-// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel.
+// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Records who set the URL and when (url_set_by, url_set_at).
 // @ID updateOutgoingWebhook
 // @Tags Webhooks
 // @Accept json
@@ -211,6 +203,8 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 		}
 		s := u.String()
 		change.url = &s
+		editor := auth.UserFrom(r.Context()).ID
+		change.urlBy = &editor
 	}
 	if req.Events != nil {
 		if change.events, err = validEvents(*req.Events); err != nil {

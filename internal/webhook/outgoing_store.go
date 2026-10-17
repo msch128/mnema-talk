@@ -69,6 +69,11 @@ type Outgoing struct {
 	// that account is gone). It grants nothing.
 	CreatedBy *uuid.UUID `json:"created_by" format:"uuid" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
+	// URLSetBy and URLSetAt record who last set the URL and when, so stale
+	// webhooks are easy to spot. The URL receives the channel's events until an
+	// administrator changes or deletes the webhook.
+	URLSetBy *uuid.UUID `json:"url_set_by" format:"uuid" extensions:"x-nullable"`
+	URLSetAt time.Time  `json:"url_set_at" format:"date-time"`
 }
 
 // CreatedOutgoing is the answer to creating a webhook or rotating its secret:
@@ -103,13 +108,13 @@ type outgoingRec struct {
 
 const outgoingSelect = `
 	SELECT id, channel_id, created_by, name, url, secret, events, enabled, auto_disabled, consecutive_failures,
-	       last_status, last_error, last_attempt_at, last_success_at, created_at
+	       last_status, last_error, last_attempt_at, last_success_at, created_at, url_set_by, url_set_at
 	FROM outgoing_webhooks`
 
 func scanOutgoing(row pgx.Row) (*outgoingRec, error) {
 	var rec outgoingRec
 	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.CreatedBy, &rec.Name, &rec.URL, &rec.secret, &rec.Events, &rec.enabled, &rec.autoOff,
-		&rec.ConsecutiveFailures, &rec.LastStatus, &rec.LastError, &rec.LastAttemptAt, &rec.LastSuccessAt, &rec.CreatedAt)
+		&rec.ConsecutiveFailures, &rec.LastStatus, &rec.LastError, &rec.LastAttemptAt, &rec.LastSuccessAt, &rec.CreatedAt, &rec.URLSetBy, &rec.URLSetAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errOutgoingNotFound
 	}
@@ -179,8 +184,8 @@ func createOutgoing(ctx context.Context, p *db.Pool, channel, creator uuid.UUID,
 			return httpx.ErrConflict(fmt.Sprintf("at most %d outgoing webhooks are allowed here", maxOutgoingPerChannel))
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO outgoing_webhooks (channel_id, created_by, name, url, secret, events)
-			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, channel, creator, name, url, secret, events).Scan(&id)
+			INSERT INTO outgoing_webhooks (channel_id, created_by, url_set_by, name, url, secret, events)
+			VALUES ($1, $2, $2, $3, $4, $5, $6) RETURNING id`, channel, creator, name, url, secret, events).Scan(&id)
 	})
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); ok {
@@ -198,6 +203,8 @@ type outgoingChange struct {
 	url     *string
 	events  []string
 	enabled *bool
+	// urlBy is who changes the URL, recorded with the change.
+	urlBy *uuid.UUID
 }
 
 func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingChange) error {
@@ -207,12 +214,14 @@ func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingCha
 		UPDATE outgoing_webhooks SET
 		    name = COALESCE($2, name),
 		    url = COALESCE($3, url),
+		    url_set_by = CASE WHEN $3::text IS NULL THEN url_set_by ELSE $6 END,
+		    url_set_at = CASE WHEN $3::text IS NULL THEN url_set_at ELSE NOW() END,
 		    events = COALESCE($4, events),
 		    enabled = COALESCE($5, enabled),
 		    auto_disabled = CASE WHEN $5 IS NULL THEN auto_disabled ELSE FALSE END,
 		    consecutive_failures = CASE WHEN $5 IS TRUE THEN 0 ELSE consecutive_failures END,
 		    updated_at = NOW()
-		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled)
+		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled, c.urlBy)
 	if err != nil {
 		return fmt.Errorf("update outgoing webhook: %w", err)
 	}

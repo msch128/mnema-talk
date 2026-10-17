@@ -389,10 +389,17 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 		return nil, chat.MentionPolicy{}, formError(err.Error())
 	}
 	name := rec.Name
-	if strings.TrimSpace(p.Username) != "" {
+	// Without the setting the sender's username is ignored, like avatar_url.
+	if rec.AllowIdentityOverride && strings.TrimSpace(p.Username) != "" {
 		if name, err = cleanName("username", p.Username); err != nil {
 			return nil, chat.MentionPolicy{}, formError(err.Error())
 		}
+	}
+	if !rec.AllowEmbeds && len(p.Embeds) > 0 {
+		return nil, chat.MentionPolicy{}, formError("embeds are not allowed for this webhook")
+	}
+	if !rec.AllowAttachments && len(req.files) > 0 {
+		return nil, chat.MentionPolicy{}, formError("attachments are not allowed for this webhook")
 	}
 	embeds, err := sanitizeEmbeds(p.Embeds)
 	if err != nil {
@@ -432,19 +439,20 @@ type unknownThread struct{}
 
 func (unknownThread) Error() string { return "Unknown Channel" }
 
-// mentionPolicy turns allowed_mentions into the policy for the message. The
-// default notifies mentioned members but never @all and @here. Those need
-// "everyone" in parse and the webhook's stored flag: the member who made or
-// last changed it held Mention everyone in the channel.
+// mentionPolicy turns the webhook's settings and allowed_mentions into the
+// policy for the message. The settings limit what a sender can ask for: with
+// the defaults @username notifies members and @all and @here do not. The
+// request can only narrow that, never widen it. Nobody who cannot view the
+// channel is notified, whatever the settings say.
 func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
-	policy := chat.MentionPolicy{NoEveryone: true}
+	policy := chat.MentionPolicy{NoEveryone: true, NoUsers: !rec.AllowUserMentions}
 	if am != nil {
 		wantUsers := slices.Contains(am.Parse, "users")
 		wantEveryone := slices.Contains(am.Parse, "everyone")
 		if wantUsers && len(am.Users) > 0 {
 			return policy, formError("allowed_mentions: users cannot be in parse and listed at once")
 		}
-		if !wantUsers {
+		if !wantUsers && rec.AllowUserMentions {
 			policy.NoUsers = true
 			for _, raw := range am.Users {
 				if id, err := uuid.Parse(raw); err == nil {
@@ -454,9 +462,8 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 		}
 		policy.NoEveryone = !wantEveryone
 	}
-	// @all and @here also need the flag stored with the webhook: the member
-	// who made or last changed it held Mention everyone here.
-	policy.NoEveryone = policy.NoEveryone || !rec.mentionEveryone
+	// @all and @here need both the sender's request and the webhook's setting.
+	policy.NoEveryone = policy.NoEveryone || !rec.AllowEveryone
 	if h.Perms == nil {
 		return policy, nil
 	}

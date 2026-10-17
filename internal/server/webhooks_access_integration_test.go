@@ -31,62 +31,55 @@ func (l *lockedBuffer) String() string {
 	return l.b.String()
 }
 
-// A webhook belongs to its channel, like in Discord: it posts as itself, whoever
-// made it. Only @all and @here depend on the maker, through a flag stored when
-// they made or last changed it.
-func TestWebhookBelongsToItsChannel(t *testing.T) {
+// A webhook is an admin tool that then stands on its own: it posts with its
+// settings and nothing else, whoever made it and whatever became of them.
+func TestWebhookStandsOnItsOwn(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	ch := a.createChannel(admin, "alerts", "text")
 	a.router.Webhooks.SetLimits(1000, 1000)
 
-	// Manage webhooks and View channel are all it takes to make one.
-	role := createRole(t, admin, "hooks", perm.ManageWebhooks)
-	mod := a.register(admin, "mod")
-	assignRoles(t, admin, mod, role)
+	role := createRole(t, admin, "admins", perm.Administrator)
+	boss := a.register(admin, "boss")
+	assignRoles(t, admin, boss, role)
+	// Nobody needs Send messages, Attach files or View channel for it to post.
 	everyone := everyoneID(t, admin)
-	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.SendMessages|perm.AttachFiles|perm.MentionEveryone)); res.status != 204 {
+	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.SendMessages|perm.AttachFiles|perm.MentionEveryone|perm.ViewChannel)); res.status != 204 {
 		t.Fatalf("overwrite: %d %s", res.status, res.body)
 	}
-	h := makeHook(t, mod, ch, "modbot")
-	// It posts although its maker may not post here, files included.
-	if res := a.exec(h.path, map[string]any{"content": "ok"}, nil); res.status != http.StatusNoContent {
-		t.Fatalf("post: %d %s", res.status, res.body)
+	var h hook
+	res := boss.post("/api/admin/channels/"+ch.String()+"/webhooks", map[string]any{"name": "bossbot", "allow_everyone": true})
+	res.decode(t, &h.CreatedWebhook)
+	h.path = "/api/webhooks/" + h.ID.String() + "/" + h.Token
+	if res.status != http.StatusCreated {
+		t.Fatalf("create: %d %s", res.status, res.body)
 	}
-	body, ct := multipartBody(t, map[string]any{"content": "chart"}, map[string][]byte{"c.png": png1x1})
-	if res := a.exec(h.path, body, map[string]string{"Content-Type": ct}); res.status != http.StatusNoContent {
-		t.Fatalf("file post: %d %s", res.status, res.body)
-	}
-	// Nor does it matter if the maker is disabled or loses the role.
-	assignRoles(t, admin, mod)
-	if res := admin.post("/api/admin/users/"+mod.user.ID.String()+"/disable", nil); res.status >= 300 {
-		t.Fatalf("disable: %d", res.status)
-	}
-	if res := a.exec(h.path, map[string]any{"content": "still ok"}, nil); res.status != http.StatusNoContent {
-		t.Fatalf("post after the maker is gone: %d %s", res.status, res.body)
-	}
-	// But it cannot notify everyone: its maker could not.
-	res := a.exec(h.path+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
+	body, ct := multipartBody(t, map[string]any{"content": "chart", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, map[string][]byte{"c.png": png1x1})
 	var m chat.Message
+	res = a.exec(h.path+"?wait=true", body, map[string]string{"Content-Type": ct})
 	res.decode(t, &m)
-	if res.status != 200 || len(m.Mentions) != 0 {
-		t.Fatalf("mass mention by a webhook whose maker could not: %d %s", res.status, res.body)
+	if res.status != http.StatusOK || len(m.Attachments) != 1 {
+		t.Fatalf("post with a file: %d %s", res.status, res.body)
 	}
-	// When somebody who may changes it, it can.
-	if r := admin.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "by owner"}); r.status != 200 {
-		t.Fatalf("rename: %d", r.status)
+	// The maker losing the role or being disabled changes nothing.
+	assignRoles(t, admin, boss)
+	if res := admin.post("/api/admin/users/"+boss.user.ID.String()+"/disable", nil); res.status >= 300 {
+		t.Fatalf("disable: %d", res.status)
 	}
 	res = a.exec(h.path+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
 	res.decode(t, &m)
-	if res.status != 200 || len(m.Mentions) == 0 {
-		t.Fatalf("mass mention after the Owner changed it: %d %s", res.status, res.body)
+	if res.status != http.StatusOK || len(m.Mentions) == 0 {
+		t.Fatalf("post after the maker is gone: %d %s", res.status, res.body)
 	}
-	// And without "everyone" in allowed_mentions it still does not.
-	res = a.exec(h.path+"?wait=true", map[string]any{"content": "@all"}, nil)
-	var plain chat.Message
-	res.decode(t, &plain)
-	if len(plain.Mentions) != 0 {
-		t.Fatalf("@all by default: %v", plain.Mentions)
+	// Whoever holds the URL gets exactly the webhook's settings: the maker's
+	// own rights never entered into it. Turning the setting off turns it off.
+	if r := admin.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"allow_everyone": false}); r.status != http.StatusOK {
+		t.Fatalf("patch: %d", r.status)
+	}
+	res = a.exec(h.path+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
+	res.decode(t, &m)
+	if len(m.Mentions) != 0 {
+		t.Fatalf("mass mention with the setting off: %v", m.Mentions)
 	}
 }
 

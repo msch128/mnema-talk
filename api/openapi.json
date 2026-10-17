@@ -2445,6 +2445,21 @@
       },
       "webhook.CreateRequest": {
         "properties": {
+          "allow_attachments": {
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 80,
             "type": "string"
@@ -2537,6 +2552,18 @@
           "url": {
             "maxLength": 2048,
             "type": "string"
+          },
+          "url_set_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url_set_by": {
+            "description": "URLSetBy and URLSetAt record who last set the URL and when, so stale\nwebhooks are easy to spot. The URL receives the channel's events until an\nadministrator changes or deletes the webhook.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -2553,12 +2580,34 @@
           "name",
           "secret",
           "status",
-          "url"
+          "url",
+          "url_set_at",
+          "url_set_by"
         ],
         "type": "object"
       },
       "webhook.CreatedWebhook": {
         "properties": {
+          "allow_attachments": {
+            "description": "AllowAttachments lets a post carry files (default on).",
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "description": "AllowEmbeds lets a post carry embeds (default on).",
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "description": "AllowEveryone lets @all and @here notify people (default off). It also\ntakes \"everyone\" in the sender's allowed_mentions.",
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "description": "AllowIdentityOverride lets a post set its own username (default on).\nAvatars from other hosts are never used.",
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "description": "AllowUserMentions lets @username notify members (default on, as Discord\ndoes with allowed_mentions.parse = users).",
+            "type": "boolean"
+          },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
             "type": "string"
@@ -2572,7 +2621,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing: the webhook belongs to its channel.",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null\nonce that account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2601,6 +2650,11 @@
           }
         },
         "required": [
+          "allow_attachments",
+          "allow_embeds",
+          "allow_everyone",
+          "allow_identity_override",
+          "allow_user_mentions",
           "channel_id",
           "created_at",
           "created_by",
@@ -2822,6 +2876,18 @@
           "url": {
             "maxLength": 2048,
             "type": "string"
+          },
+          "url_set_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url_set_by": {
+            "description": "URLSetBy and URLSetAt record who last set the URL and when, so stale\nwebhooks are easy to spot. The URL receives the channel's events until an\nadministrator changes or deletes the webhook.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -2837,7 +2903,9 @@
           "last_success_at",
           "name",
           "status",
-          "url"
+          "url",
+          "url_set_at",
+          "url_set_by"
         ],
         "type": "object"
       },
@@ -2865,18 +2933,50 @@
       },
       "webhook.UpdateRequest": {
         "properties": {
+          "allow_attachments": {
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 80,
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
         "type": "object"
       },
       "webhook.Webhook": {
         "properties": {
+          "allow_attachments": {
+            "description": "AllowAttachments lets a post carry files (default on).",
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "description": "AllowEmbeds lets a post carry embeds (default on).",
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "description": "AllowEveryone lets @all and @here notify people (default off). It also\ntakes \"everyone\" in the sender's allowed_mentions.",
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "description": "AllowIdentityOverride lets a post set its own username (default on).\nAvatars from other hosts are never used.",
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "description": "AllowUserMentions lets @username notify members (default on, as Discord\ndoes with allowed_mentions.parse = users).",
+            "type": "boolean"
+          },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
             "type": "string"
@@ -2890,7 +2990,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing: the webhook belongs to its channel.",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null\nonce that account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2911,6 +3011,11 @@
           }
         },
         "required": [
+          "allow_attachments",
+          "allow_embeds",
+          "allow_everyone",
+          "allow_identity_override",
+          "allow_user_mentions",
           "channel_id",
           "created_at",
           "created_by",
@@ -3895,7 +4000,7 @@
     },
     "/api/admin/channels/{id}/outgoing-webhooks": {
       "get": {
-        "description": "Needs Manage webhooks and View channel in that channel (or the Owner). Secrets are never listed.",
+        "description": "Owner or Administrator only. Secrets are never listed.",
         "operationId": "listOutgoingWebhooks",
         "parameters": [
           {
@@ -4003,7 +4108,7 @@
         ]
       },
       "post": {
-        "description": "Needs Manage webhooks and View channel in that channel. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.",
+        "description": "Owner or Administrator only. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.",
         "operationId": "createOutgoingWebhook",
         "parameters": [
           {
@@ -4347,7 +4452,7 @@
     },
     "/api/admin/channels/{id}/webhooks": {
       "get": {
-        "description": "Needs Manage webhooks and View channel in that channel. The tokens are never listed.",
+        "description": "Owner or Administrator only. The tokens are never listed.",
         "operationId": "listWebhooks",
         "parameters": [
           {
@@ -4455,7 +4560,7 @@
         ]
       },
       "post": {
-        "description": "Needs Manage webhooks and View channel in that channel (or the Owner). The webhook belongs to the channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel. @all and @here in its messages only notify if the caller holds Mention everyone here.",
+        "description": "Owner or Administrator only. The webhook belongs to the channel and posts with exactly its settings (see the allow_* fields; defaults: everyone-mentions off, the rest on), whoever holds the URL. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
         "operationId": "createWebhook",
         "parameters": [
           {
@@ -4477,7 +4582,7 @@
               }
             }
           },
-          "description": "Name.",
+          "description": "Name and optional settings.",
           "required": true
         },
         "responses": {
@@ -5625,7 +5730,7 @@
         ]
       },
       "patch": {
-        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel.",
+        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Records who set the URL and when (url_set_by, url_set_at).",
         "operationId": "updateOutgoingWebhook",
         "parameters": [
           {
@@ -7957,7 +8062,7 @@
         ]
       },
       "patch": {
-        "description": "Needs Manage webhooks and View channel in the webhook's channel. Earlier messages keep the name they were posted under. Whether @all and @here may notify is set again from the caller's Mention everyone right.",
+        "description": "Owner or Administrator only. Rename it and change its allow_* settings; omitted fields stay. Earlier messages keep the name they were posted under.",
         "operationId": "updateWebhook",
         "parameters": [
           {
@@ -7979,7 +8084,7 @@
               }
             }
           },
-          "description": "New name.",
+          "description": "Fields to change.",
           "required": true
         },
         "responses": {
@@ -8067,7 +8172,7 @@
             "cookieAuth": []
           }
         ],
-        "summary": "Rename a webhook",
+        "summary": "Change a webhook",
         "tags": [
           "Webhooks"
         ]

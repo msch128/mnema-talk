@@ -108,7 +108,7 @@ func (f *fixture) json(h *Handler, method, path, body string) *httptest.Response
 
 func (f *fixture) newHook(name string) (*record, string) {
 	f.t.Helper()
-	rec, token, err := create(context.Background(), f.p, f.ch, f.owner.ID, name, false)
+	rec, token, err := create(context.Background(), f.p, f.ch, f.owner.ID, name, DefaultSettings)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -331,24 +331,105 @@ func TestExecuteWithPermissionModel(t *testing.T) {
 	rec, token := f.newHook("hook")
 	path := "/webhooks/" + rec.ID.String() + "/" + token
 	wantStatus(t, f.json(f.h, "POST", path, `{"content":"fine"}`), 204, "webhook")
-	// The webhook belongs to its channel: whoever made it, or whether that
-	// account still exists, changes nothing.
+	// The webhook stands on its own: the account that made it does not matter.
 	if _, err := f.p.Exec(context.Background(), `UPDATE users SET disabled_at = NOW() WHERE id = $1`, f.owner.ID); err != nil {
 		t.Fatal(err)
 	}
-	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "creator disabled")
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "maker disabled")
 	if _, err := f.p.Exec(context.Background(), `UPDATE webhooks SET created_by = NULL`); err != nil {
 		t.Fatal(err)
 	}
-	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "creator gone")
-	// Mass mentions need the flag stored with the webhook.
-	w := f.json(f.h, "POST", path+"?wait=true", `{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`)
-	wantStatus(t, w, 200, "flag off")
-	if _, err := f.p.Exec(context.Background(), `UPDATE webhooks SET mention_everyone = TRUE`); err != nil {
-		t.Fatal(err)
-	}
-	wantStatus(t, f.json(f.h, "POST", path, `{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`), 204, "flag on")
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "maker gone")
 	// An unreadable permission model refuses the post instead of guessing.
 	f.h.Perms = perm.NewService(nil)
 	wantStatus(t, f.json(f.h, "POST", path, `{"content":"hi"}`), 500, "no permission state")
+}
+
+// Each post is judged by the webhook's own settings.
+func TestExecuteAppliesTheWebhooksSettings(t *testing.T) {
+	f := newFixture(t)
+	rec, token := f.newHook("Hook")
+	path := "/webhooks/" + rec.ID.String() + "/" + token + "?wait=true"
+	var other uuid.UUID
+	if err := f.p.QueryRow(context.Background(), `INSERT INTO users (username, display_name, password_hash) VALUES ('bob', 'bob', 'x') RETURNING id`).Scan(&other); err != nil {
+		t.Fatal(err)
+	}
+	post := func(body string) *httptest.ResponseRecorder { return f.json(f.h, "POST", path, body) }
+	set := func(patch string) {
+		t.Helper()
+		wantStatus(t, f.json(f.h, "PATCH", "/admin/webhooks/"+rec.ID.String(), patch), 200, "patch "+patch)
+	}
+	mentions := func(body string) int {
+		t.Helper()
+		w := post(body)
+		wantStatus(t, w, 200, body)
+		return strings.Count(w.Body.String(), other.String())
+	}
+
+	// Defaults: members can be mentioned, @all not, even when asked for.
+	if mentions(`{"content":"@bob"}`) != 1 || mentions(`{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`) != 0 {
+		t.Fatal("default mention rules")
+	}
+	// Everyone-mentions on: the sender still has to ask.
+	set(`{"allow_everyone":true}`)
+	if mentions(`{"content":"@all"}`) != 0 || mentions(`{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`) != 1 {
+		t.Fatal("allow_everyone rules")
+	}
+	// User mentions off: not even by an explicit list.
+	set(`{"allow_user_mentions":false,"allow_everyone":false}`)
+	if mentions(`{"content":"@bob","allowed_mentions":{"parse":["users"]}}`) != 0 || mentions(`{"content":"@bob","allowed_mentions":{"users":["`+other.String()+`"]}}`) != 0 {
+		t.Fatal("allow_user_mentions off")
+	}
+	set(`{"allow_user_mentions":true}`)
+
+	// Identity override.
+	if w := post(`{"content":"x","username":"Custom"}`); !strings.Contains(w.Body.String(), `"display_name":"Custom"`) {
+		t.Fatalf("override allowed: %s", w.Body)
+	}
+	set(`{"allow_identity_override":false}`)
+	if w := post(`{"content":"x","username":"Custom"}`); !strings.Contains(w.Body.String(), `"display_name":"Hook"`) {
+		t.Fatalf("override ignored: %s", w.Body)
+	}
+
+	// Embeds and attachments.
+	embed := `{"content":"x","embeds":[{"title":"t"}]}`
+	wantStatus(t, post(embed), 200, "embeds on")
+	set(`{"allow_embeds":false}`)
+	wantStatus(t, post(embed), 400, "embeds off")
+	wantStatus(t, post(`{"content":"plain"}`), 200, "plain with embeds off")
+	form, ct := avatarForm()
+	_ = form
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	_ = mw.WriteField("payload_json", `{"content":"x"}`)
+	hd := textproto.MIMEHeader{}
+	hd.Set("Content-Disposition", `form-data; name="files[0]"; filename="a.png"`)
+	hd.Set("Content-Type", "image/png")
+	part, _ := mw.CreatePart(hd)
+	_, _ = part.Write(png)
+	_ = mw.Close()
+	_ = ct
+	file := func() *httptest.ResponseRecorder {
+		return f.serve(f.h, "POST", path, bytes.NewReader(buf.Bytes()), map[string]string{"Content-Type": mw.FormDataContentType()})
+	}
+	wantStatus(t, file(), 200, "attachments on")
+	set(`{"allow_attachments":false}`)
+	before := f.store.Len()
+	wantStatus(t, file(), 400, "attachments off")
+	if f.store.Len() != before {
+		t.Fatal("a refused file was kept")
+	}
+	// Settings can be set when creating, and unknown ones are refused.
+	w := f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/webhooks", `{"name":"quiet","allow_embeds":false,"allow_everyone":true}`)
+	wantStatus(t, w, 201, "create with settings")
+	if !strings.Contains(w.Body.String(), `"allow_embeds":false`) || !strings.Contains(w.Body.String(), `"allow_everyone":true`) || !strings.Contains(w.Body.String(), `"allow_attachments":true`) {
+		t.Fatalf("created settings: %s", w.Body)
+	}
+	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/webhooks", `{"name":"x","allow_nothing":true}`), 400, "unknown setting")
+	// Regenerating the token touches nothing else.
+	wantStatus(t, f.serve(f.h, "POST", "/admin/webhooks/"+rec.ID.String()+"/token", nil, nil), 200, "regenerate")
+	cur, _ := get(context.Background(), f.p, rec.ID)
+	if cur.AllowEmbeds || cur.AllowAttachments || cur.AllowIdentityOverride {
+		t.Fatalf("regenerating changed the settings: %+v", cur.Settings)
+	}
 }

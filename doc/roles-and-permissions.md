@@ -57,7 +57,7 @@ mentions; stored, not used yet).
 | Manage channels | Create, edit, order, delete channels and categories; edit their overwrites | no |
 | Manage roles | Create, edit, order, delete and assign roles below your own highest role | no |
 | Manage invites | Create, list, revoke invite codes | no |
-| Manage webhooks | Manage a channel's incoming and outgoing webhooks (see [webhooks](webhooks.md)); needs *View channels* there too | no |
+| Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 
 The bit values are stored in the database and sent over the API; they never
@@ -121,7 +121,7 @@ cannot do.
 | Messages, threads, reactions, search, by-number, read state, notifications | *View channels*; posting *Send messages*; reacting *Add reactions*; deleting others' *Manage messages* |
 | Uploads and `GET /api/media/{id}` | *Send messages* + *Attach files* to upload; *View channels* of the message's channel to download (404 otherwise) |
 | Mentions | `@all`/`@here` need *Mention everyone*; nobody who cannot view the channel is notified |
-| `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage webhooks* (plus *View channels* in the webhook's channel), *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
+| `/api/admin/*` | Per route: *Manage channels*, *Manage roles*, *Manage invites*, *Manage members*, *Disconnect members*; system, storage and passwords are Owner-only |
 | WebSocket | Channel events (messages, reactions, typing, who is in a Talk, media state) only reach viewers; the connect snapshot lists only viewable Talks |
 | Talks | *View channels* + *Connect* to join; the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |

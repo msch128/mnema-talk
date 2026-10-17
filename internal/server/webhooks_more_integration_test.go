@@ -145,29 +145,23 @@ func TestWebhookMentionsAndThreads(t *testing.T) {
 	if got := mentions(map[string]any{"content": "@alice", "allowed_mentions": map[string]any{"users": []string{alice.user.ID.String(), "junk"}}}); len(got) != 1 {
 		t.Fatalf("users list: %v", got)
 	}
-	// "everyone" works for a creator who may mention everyone (the Owner).
+	// "everyone" needs the webhook's own setting (off by default) as well.
+	if got := mentions(map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}); len(got) != 0 {
+		t.Fatalf("@all with the setting off: %v", got)
+	}
+	if res := admin.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"allow_everyone": true}); res.status != 200 {
+		t.Fatalf("setting: %d %s", res.status, res.body)
+	}
 	if got := mentions(map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}); len(got) != 2 {
 		t.Fatalf("@all allowed: %v", got)
 	}
-	// ... but not when the creator may not.
-	mod := a.register(admin, "mod")
-	role := createRole(t, admin, "hooks", perm.ManageWebhooks|perm.ViewChannel)
-	assignRoles(t, admin, mod, role)
-	ownerOnly := putOverwrites(admin, "channels", ch, overwrite("role", everyoneID(t, admin), 0, perm.MentionEveryone))
-	if ownerOnly.status != http.StatusNoContent {
-		t.Fatalf("overwrite: %d %s", ownerOnly.status, ownerOnly.body)
-	}
-	mh := makeHook(t, mod, ch, "modbot")
-	res := a.exec(mh.path+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
-	var m chat.Message
-	res.decode(t, &m)
-	if res.status != 200 || len(m.Mentions) != 0 {
-		t.Fatalf("creator without Mention everyone: %d %s", res.status, res.body)
+	if got := mentions(map[string]any{"content": "@all"}); len(got) != 0 {
+		t.Fatalf("@all without asking: %v", got)
 	}
 
 	// Threads: thread_id is a root message of the channel.
 	root := a.send(admin, ch, "root")
-	res = a.exec(h.path+"?wait=true&thread_id="+root.String(), map[string]any{"content": "in thread"}, nil)
+	res := a.exec(h.path+"?wait=true&thread_id="+root.String(), map[string]any{"content": "in thread"}, nil)
 	var reply chat.Message
 	res.decode(t, &reply)
 	if res.status != 200 || reply.ParentID == nil || *reply.ParentID != root {
@@ -247,75 +241,77 @@ func TestWebhookBodyLimits(t *testing.T) {
 	}
 }
 
-func TestWebhookManagementPermissions(t *testing.T) {
+func TestWebhookManagementIsForAdministrators(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
-	alice := a.register(admin, "alice") // no ManageWebhooks
 	ch := a.createChannel(admin, "alerts", "text")
 	list := "/api/admin/channels/" + ch.String() + "/webhooks"
-
-	if res := alice.get(list); res.status != 403 {
-		t.Fatalf("member list: %d", res.status)
-	}
-	if res := alice.post(list, map[string]any{"name": "x"}); res.status != 403 {
-		t.Fatalf("member create: %d", res.status)
-	}
 	h := makeHook(t, admin, ch, "owner hook")
 
-	// A role with Manage webhooks manages them in channels it can view.
-	// New roles are created at the bottom: the one made first ranks higher.
-	high := createRole(t, admin, "higher", perm.ManageWebhooks|perm.ManageRoles)
-	hooks := createRole(t, admin, "hooks", perm.ManageWebhooks)
+	// Webhooks are decoupled from the other permissions: not even Manage
+	// webhooks, Manage channels or Manage roles opens them.
+	almost := createRole(t, admin, "almost", perm.ManageWebhooks|perm.ManageChannels|perm.ManageRoles|perm.ManageMessages)
 	bob := a.register(admin, "bob")
-	carol := a.register(admin, "carol")
-	assignRoles(t, admin, bob, hooks)
-	assignRoles(t, admin, carol, high)
+	assignRoles(t, admin, bob, almost)
+	alice := a.register(admin, "alice")
+	for _, c := range []*client{alice, bob} {
+		for _, r := range []response{
+			c.get(list), c.post(list, map[string]any{"name": "x"}),
+			c.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "x"}),
+			c.post("/api/admin/webhooks/"+h.ID.String()+"/token", nil),
+			c.delete("/api/admin/webhooks/" + h.ID.String()),
+			c.get("/api/admin/channels/" + ch.String() + "/outgoing-webhooks"),
+		} {
+			if r.status != http.StatusForbidden {
+				t.Fatalf("%s: %d %s", c.user.Username, r.status, r.body)
+			}
+		}
+	}
 
+	// An Administrator manages every webhook, whoever made it.
+	adminRole := createRole(t, admin, "admins", perm.Administrator)
+	carol := a.register(admin, "carol")
+	assignRoles(t, admin, carol, adminRole)
 	var got []webhook.Webhook
-	res := bob.get(list)
+	res := carol.get(list)
 	res.decode(t, &got)
 	if res.status != 200 || len(got) != 1 || got[0].Name != "owner hook" {
-		t.Fatalf("bob list: %d %s", res.status, res.body)
+		t.Fatalf("administrator list: %d %s", res.status, res.body)
 	}
 	if strings.Contains(string(res.body), h.Token) {
 		t.Fatal("list leaks the token")
 	}
-	// A webhook belongs to its channel: whoever may manage the channel's
-	// webhooks may manage it, whoever made it and whatever role they have.
-	if res := bob.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "renamed by bob"}); res.status != 200 {
-		t.Fatalf("member renames the Owner's webhook: %d %s", res.status, res.body)
+	if res := carol.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "renamed", "allow_embeds": false}); res.status != 200 {
+		t.Fatalf("administrator edits the Owner's webhook: %d %s", res.status, res.body)
 	}
 	if res := carol.post("/api/admin/webhooks/"+h.ID.String()+"/token", nil); res.status != 200 {
-		t.Fatalf("member regenerates the Owner's webhook: %d %s", res.status, res.body)
+		t.Fatalf("administrator regenerates: %d %s", res.status, res.body)
 	}
-	ch2 := carol.post(list, map[string]any{"name": "carol hook"})
-	if ch2.status != 201 {
-		t.Fatalf("carol create: %d %s", ch2.status, ch2.body)
+	mine := carol.post(list, map[string]any{"name": "carol hook"})
+	if mine.status != 201 {
+		t.Fatalf("administrator creates: %d %s", mine.status, mine.body)
 	}
-	var carolHook webhook.CreatedWebhook
-	ch2.decode(t, &carolHook)
-	if res := bob.patch("/api/admin/webhooks/"+carolHook.ID.String(), map[string]any{"name": "x"}); res.status != 200 {
-		t.Fatalf("lower role edits a higher member's hook: %d %s", res.status, res.body)
+	var created webhook.CreatedWebhook
+	mine.decode(t, &created)
+	if created.CreatedBy == nil || *created.CreatedBy != carol.user.ID || !created.AllowAttachments || created.AllowEveryone {
+		t.Fatalf("created: %+v", created)
 	}
-	if res := bob.delete("/api/admin/webhooks/" + carolHook.ID.String()); res.status != 204 {
-		t.Fatalf("lower role deletes a higher member's hook: %d", res.status)
+	if res := admin.delete("/api/admin/webhooks/" + created.ID.String()); res.status != 204 {
+		t.Fatalf("Owner deletes an administrator's webhook: %d", res.status)
 	}
-	if res := bob.delete("/api/admin/webhooks/" + h.ID.String()); res.status != 204 {
-		t.Fatalf("member deletes the Owner's hook: %d", res.status)
-	}
-	// A channel the member cannot view does not exist for them.
+	// Administrators see every channel, private ones included.
 	private := a.createChannel(admin, "private", "text")
 	if res := putOverwrites(admin, "channels", private, overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)); res.status != 204 {
 		t.Fatalf("private: %d %s", res.status, res.body)
 	}
-	ph := makeHook(t, admin, private, "hidden")
-	if res := bob.get("/api/admin/channels/" + private.String() + "/webhooks"); res.status != 404 {
-		t.Fatalf("hidden list: %d", res.status)
-	}
-	if res := bob.delete("/api/admin/webhooks/" + ph.ID.String()); res.status != 404 {
-		t.Fatalf("hidden webhook: %d", res.status)
+	ph := makeHook(t, carol, private, "hidden")
+	if res := carol.delete("/api/admin/webhooks/" + ph.ID.String()); res.status != 204 {
+		t.Fatalf("administrator in a private channel: %d", res.status)
 	}
 	// Validation and limits.
+	if res := admin.get("/api/admin/channels/" + uuid.NewString() + "/webhooks"); res.status != 404 {
+		t.Fatalf("unknown channel: %d", res.status)
+	}
 	if res := admin.post(list, map[string]any{"name": "  "}); res.status != 400 {
 		t.Fatalf("empty name: %d", res.status)
 	}

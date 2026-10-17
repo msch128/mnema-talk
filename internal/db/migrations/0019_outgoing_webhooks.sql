@@ -10,6 +10,9 @@ CREATE TABLE outgoing_webhooks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    -- who last set the URL and when: audit information for stale webhooks
+    url_set_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    url_set_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     name VARCHAR(80) NOT NULL CHECK (char_length(btrim(name)) > 0),
     url TEXT NOT NULL CHECK (char_length(url) <= 2048),
     secret TEXT NOT NULL,

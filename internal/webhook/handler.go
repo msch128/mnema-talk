@@ -1,6 +1,7 @@
 package webhook
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -66,7 +67,7 @@ func (h *Handler) MountPublic(r chi.Router) {
 }
 
 // MountAdmin registers the management routes (RequireUser and the admin area
-// gate apply; each route checks Manage webhooks in the channel itself).
+// gate apply; each route requires the Owner or an Administrator itself).
 func (h *Handler) MountAdmin(r chi.Router) {
 	r.Get("/channels/{id}/webhooks", httpx.Handle(h.list))
 	r.Post("/channels/{id}/webhooks", httpx.Handle(h.create))
@@ -81,67 +82,64 @@ func (h *Handler) url(rec *record, token string) string {
 	return strings.TrimRight(h.PublicURL, "/") + "/api/webhooks/" + rec.ID.String() + "/" + token
 }
 
-// authorize checks the caller may manage webhooks in the channel and returns
-// the permission state it decided on (nil without a permission model). A
-// channel they cannot view looks like a missing one.
-func (h *Handler) authorize(r *http.Request, ch uuid.UUID) (*perm.Snapshot, error) {
+// requireAdmin checks the caller is the Owner or an Administrator: webhooks
+// are an admin tool, decoupled from the other permissions.
+func (h *Handler) requireAdmin(r *http.Request) error {
 	if h.Perms == nil {
-		return nil, nil
+		return nil
 	}
-	snap, err := h.Perms.ForChannel(r.Context(), ch)
-	if err != nil {
-		return nil, err
-	}
-	return snap, perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ManageWebhooks)
+	return h.Perms.RequireGlobal(r.Context(), auth.UserFrom(r.Context()).Subject(), perm.Administrator)
 }
 
-// load finds the webhook of the path and checks the caller may manage it:
-// Manage webhooks and View channel in its channel, or the Owner. A webhook
-// belongs to its channel, not to whoever made it, so anyone who may manage the
-// channel's webhooks may manage this one. A channel hidden from the caller
-// hides its webhooks.
+// authorize checks the caller may manage webhooks of the channel: an
+// administrator, and the channel exists.
+func (h *Handler) authorize(r *http.Request, ch uuid.UUID) error {
+	if err := h.requireAdmin(r); err != nil {
+		return err
+	}
+	var exists bool
+	if err := h.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM channels WHERE id = $1)`, ch).Scan(&exists); err != nil {
+		return fmt.Errorf("check channel: %w", err)
+	}
+	if !exists {
+		return errChannelNotFound
+	}
+	return nil
+}
+
+var errChannelNotFound = httpx.ErrNotFound("channel not found")
+
+// load finds the webhook of the path for an administrator. A webhook belongs
+// to its channel; who made it is only recorded.
 func (h *Handler) load(r *http.Request) (*record, error) {
+	if err := h.requireAdmin(r); err != nil {
+		return nil, err
+	}
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	rec, err := get(r.Context(), h.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := h.authorize(r, rec.ChannelID); err != nil {
-		if ae, ok := httpx.AsAPIError(err); ok && ae == perm.ErrChannelHidden {
-			return nil, errNotFound
-		}
-		return nil, err
-	}
-	return rec, nil
-}
-
-// mayMentionEveryone is whether the caller may let a webhook notify everyone:
-// they hold Mention everyone in the channel (the Owner always does).
-func (h *Handler) mayMentionEveryone(r *http.Request, ch uuid.UUID) (bool, error) {
-	if h.Perms == nil {
-		return true, nil
-	}
-	p, err := h.Perms.Channel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch)
-	return p.Has(perm.MentionEveryone), err
+	return get(r.Context(), h.DB, id)
 }
 
 // CreateRequest is the body of creating a webhook.
 type CreateRequest struct {
 	Name string `json:"name" maxLength:"80"`
+	// The settings default to DefaultSettings: everyone-mentions off,
+	// everything else on.
+	SettingsPatch
 }
 
 // UpdateRequest is the body of renaming a webhook.
 type UpdateRequest struct {
-	Name string `json:"name" maxLength:"80"`
+	Name *string `json:"name,omitempty" binding:"optional" maxLength:"80"`
+	SettingsPatch
 }
 
 // list handles GET /api/admin/channels/{id}/webhooks.
 //
 // @Summary List a channel's webhooks
-// @Description Needs Manage webhooks and View channel in that channel. The tokens are never listed.
+// @Description Owner or Administrator only. The tokens are never listed.
 // @ID listWebhooks
 // @Tags Webhooks
 // @Produce json
@@ -161,7 +159,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	hooks, err := list(r.Context(), h.DB, ch)
@@ -175,14 +173,14 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // create handles POST /api/admin/channels/{id}/webhooks.
 //
 // @Summary Create a webhook
-// @Description Needs Manage webhooks and View channel in that channel (or the Owner). The webhook belongs to the channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel. @all and @here in its messages only notify if the caller holds Mention everyone here.
+// @Description Owner or Administrator only. The webhook belongs to the channel and posts with exactly its settings (see the allow_* fields; defaults: everyone-mentions off, the rest on), whoever holds the URL. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.
 // @ID createWebhook
 // @Tags Webhooks
 // @Accept json
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Channel ID." Format(uuid)
-// @Param body body CreateRequest true "Name."
+// @Param body body CreateRequest true "Name and optional settings."
 // @Success 201 {object} CreatedWebhook "Created."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
@@ -198,7 +196,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	var req CreateRequest
@@ -209,11 +207,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	mention, err := h.mayMentionEveryone(r, ch)
-	if err != nil {
-		return err
-	}
-	rec, token, err := create(r.Context(), h.DB, ch, auth.UserFrom(r.Context()).ID, name, mention)
+	rec, token, err := create(r.Context(), h.DB, ch, auth.UserFrom(r.Context()).ID, name, req.apply(DefaultSettings))
 	if err != nil {
 		return err
 	}
@@ -223,15 +217,15 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 
 // update handles PATCH /api/admin/webhooks/{id}.
 //
-// @Summary Rename a webhook
-// @Description Needs Manage webhooks and View channel in the webhook's channel. Earlier messages keep the name they were posted under. Whether @all and @here may notify is set again from the caller's Mention everyone right.
+// @Summary Change a webhook
+// @Description Owner or Administrator only. Rename it and change its allow_* settings; omitted fields stay. Earlier messages keep the name they were posted under.
 // @ID updateWebhook
 // @Tags Webhooks
 // @Accept json
 // @Produce json
 // @Security cookieAuth
 // @Param id path string true "Webhook ID." Format(uuid)
-// @Param body body UpdateRequest true "New name."
+// @Param body body UpdateRequest true "Fields to change."
 // @Success 200 {object} Webhook "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
@@ -250,15 +244,15 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	name, err := cleanName("name", req.Name)
-	if err != nil {
-		return err
+	var name *string
+	if req.Name != nil {
+		n, err := cleanName("name", *req.Name)
+		if err != nil {
+			return err
+		}
+		name = &n
 	}
-	mention, err := h.mayMentionEveryone(r, rec.ChannelID)
-	if err != nil {
-		return err
-	}
-	if err := rename(r.Context(), h.DB, rec, name, mention); err != nil {
+	if err := update(r.Context(), h.DB, rec, name, req.apply(rec.Settings)); err != nil {
 		return err
 	}
 	return h.writeCurrent(w, r, rec.ID)

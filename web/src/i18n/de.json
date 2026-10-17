@@ -1149,7 +1149,7 @@
     },
     "manage_webhooks": {
       "name": "Webhooks verwalten",
-      "desc": "Für die kommenden Webhooks reserviert."
+      "desc": "Reserviert. Webhooks verwalten die Inhaberin oder der Inhaber und Administratoren."
     },
     "manage_members": {
       "name": "Mitglieder verwalten",
