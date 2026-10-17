@@ -439,6 +439,13 @@ func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mu
 	// NACK (retransmissions both ways), RTCP sender/receiver reports and
 	// transport-wide congestion control feedback to the publishers.
 	registry := &interceptor.Registry{}
+	// The bandwidth estimator is innermost, and the transport-cc stamp it
+	// reads is just outside it (beneath the authorization gate, so a refused
+	// packet never takes a sequence number the browser would report as lost).
+	registry.Add(bweFactory{})
+	if err := webrtc.ConfigureTWCCHeaderExtensionSender(mediaEngine, registry); err != nil {
+		return nil, fmt.Errorf("failed to register the transport-cc stamp: %w", err)
+	}
 	registry.Add(telemetryFactory{})
 	if authorize != nil || sources != nil {
 		// First is the innermost writer, beneath retransmission caches.
@@ -1020,7 +1027,7 @@ func (r *Room) signalPeer(peer *Peer) {
 			// The new viewer waits for a keyframe of its layer, which
 			// addViewer asks for.
 			info.group.addViewer(vt)
-			go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReport)
+			go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
 			continue
 		}
 		go r.forwardRTCP(sender, info.requestKeyframe, nil)
@@ -1087,7 +1094,7 @@ func (p *Peer) watchOffer(gen uint64, attempt int) {
 
 // forwardRTCP reads a subscriber's feedback for one forwarded track. Keyframe
 // requests go to the publisher; NACKs and reports are handled by interceptors.
-func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration)) {
+func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) {
 	var ssrc uint32
 	if report != nil {
 		if encodings := sender.GetParameters().Encodings; len(encodings) > 0 {
@@ -1095,7 +1102,7 @@ func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report fun
 		}
 	}
 	for {
-		pkts, _, err := sender.ReadRTCP()
+		pkts, attrs, err := sender.ReadRTCP()
 		if err != nil {
 			return
 		}
@@ -1108,7 +1115,11 @@ func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report fun
 					continue
 				}
 				if loss, rtt, ok := receiverReportOf(p, ssrc, layerNow()); ok {
-					report(loss, rtt)
+					bandwidth := 0
+					if src, ok := attrs.Get(bweKey{}).(bandwidthSource); ok {
+						bandwidth = src.bandwidth()
+					}
+					report(loss, rtt, bandwidth)
 				}
 			}
 		}

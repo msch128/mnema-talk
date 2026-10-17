@@ -17,6 +17,15 @@ import (
 // trouble, and a move up that goes wrong makes the next one wait twice as
 // long, so a link that can carry the lower layer but not the higher one does
 // not flap. Nothing here applies to a viewer who chose a layer.
+//
+// A link that is too slow for a layer but loses nothing (the sender's queue
+// absorbs it) shows in none of those reports for a long time, so the viewer's
+// bandwidth estimate (bwe.go, from the transport-wide feedback the browser
+// sends) is compared with the bitrate the layers have at the SFU: an estimate
+// that stays below the current layer's bitrate times adaptBWDown moves the
+// viewer down, and a viewer that was moved down this way goes up again only
+// when the estimate is above the better layer's bitrate times adaptBWUp, or
+// after adaptCapHold, when it may try once more as usual.
 const (
 	// adaptGrace is how long after a layer change the reports are ignored: a
 	// keyframe is several times the size of an ordinary frame and loses packets
@@ -53,6 +62,21 @@ const (
 	// adaptStall is how long nothing may reach a viewer, while another layer
 	// delivers, before the viewer is moved to that layer.
 	adaptStall = 2 * time.Second
+	// adaptBWDown: an estimate below the current layer's bitrate times this
+	// counts as trouble once it lasts adaptBWSamples reports. A delivery that
+	// keeps up makes the estimate about 1.5 times the layer's bitrate, so
+	// this only fires when the link carries clearly less than the layer.
+	adaptBWDown = 1.2
+	// adaptBWUp: the estimate must stay above the better layer's bitrate
+	// times this for adaptBWSamples reports before a viewer that hit the
+	// bandwidth limit goes up.
+	adaptBWUp      = 1.5
+	adaptBWSamples = 4
+	// adaptCapHold is how long a bandwidth limit that moved a viewer down is
+	// remembered. The estimate cannot rise above 1.5 times what is being sent,
+	// so it never proves that a better layer fits; after this time the
+	// viewer tries it once more (a failed try backs off as any other).
+	adaptCapHold = time.Minute
 )
 
 // adapter decides the layer of one automatic viewer from its reports. It has no
@@ -71,6 +95,16 @@ type adapter struct {
 	cleanSince time.Time
 	highStreak int
 
+	// bw is the latest bandwidth sample, consumed by observe.
+	bw bwSample
+	// bwLow and bwHigh count consecutive reports with the estimate below the
+	// layer's bitrate times adaptBWDown / above the better layer's times adaptBWUp.
+	bwLow, bwHigh int
+	// capUntil: until then a bandwidth limit that moved the viewer down is remembered.
+	capUntil time.Time
+	// narrowed is set when the last move down was caused by the estimate.
+	narrowed bool
+
 	rtts [adaptRTTSamples]time.Duration
 	nRTT int
 	// plis is a ring of the last adaptPLIs counted keyframe requests, so
@@ -82,6 +116,47 @@ type adapter struct {
 
 func newAdapter(now time.Time, floor int) *adapter {
 	return &adapter{floor: floor, cleanSince: now, graceUntil: now.Add(adaptGrace), backoff: adaptCleanFor}
+}
+
+// bwSample is what is known about bandwidth at the time of a report, in bits
+// per second. Zero means unknown.
+type bwSample struct {
+	// est is the estimate for the viewer's connection, cur the bitrate of the
+	// layer it receives and next the one of the next better layer.
+	est, cur, next int
+}
+
+// setBandwidth records the sample the next observe takes into account.
+func (a *adapter) setBandwidth(est, cur, next int) {
+	a.bw = bwSample{est: est, cur: cur, next: next}
+}
+
+// bandwidthTrouble counts the report in the streaks and reports whether the
+// estimate has been below the current layer's bitrate for long enough.
+func (a *adapter) bandwidthTrouble() bool {
+	bw := a.bw
+	a.bw = bwSample{}
+	if bw.est <= 0 || bw.cur <= 0 {
+		a.bwLow, a.bwHigh = 0, 0
+		return false
+	}
+	if float64(bw.est) < float64(bw.cur)*adaptBWDown {
+		a.bwLow++
+	} else {
+		a.bwLow = 0
+	}
+	if bw.next > 0 && float64(bw.est) > float64(bw.next)*adaptBWUp {
+		a.bwHigh++
+	} else {
+		a.bwHigh = 0
+	}
+	return a.bwLow >= adaptBWSamples
+}
+
+// bandwidthAllowsUp reports whether a move up is not held back by a remembered
+// bandwidth limit.
+func (a *adapter) bandwidthAllowsUp(now time.Time) bool {
+	return !now.Before(a.capUntil) || a.bwHigh >= adaptBWSamples
 }
 
 // setFloor changes the worst layer allowed; the layer follows if it is below it.
@@ -133,6 +208,7 @@ func (a *adapter) stalledTo(now time.Time, to int) bool {
 	a.cleanSince = now
 	a.probeEnd = time.Time{}
 	a.highStreak = 0
+	a.bwLow, a.bwHigh = 0, 0
 	a.resetPLIs()
 	return true
 }
@@ -148,6 +224,13 @@ func (a *adapter) resetPLIs() {
 // and whether that changed.
 func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, bool) {
 	rise := a.recordRTT(rtt)
+	narrow := false
+	if now.Before(a.graceUntil) {
+		a.bw = bwSample{}
+	} else {
+		narrow = a.bandwidthTrouble()
+	}
+	a.narrowed = false
 	recent := a.recentPLIs(now)
 	flooded := a.flooded
 	a.flooded = false
@@ -160,7 +243,7 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 	} else {
 		a.highStreak = 0
 	}
-	trouble := severe || a.highStreak >= 2 || rise || flooded || recent >= adaptPLIs
+	trouble := severe || a.highStreak >= 2 || rise || flooded || recent >= adaptPLIs || narrow
 	if trouble {
 		a.cleanSince = now
 		if a.layer >= a.floor {
@@ -172,6 +255,11 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 		a.layer++
 		a.graceUntil = now.Add(adaptGrace)
 		a.highStreak = 0
+		a.bwLow, a.bwHigh = 0, 0
+		if narrow {
+			a.capUntil = now.Add(adaptCapHold)
+			a.narrowed = true
+		}
 		a.resetPLIs()
 		if failedProbe {
 			a.backoff = min(a.backoff*2, adaptBackoffMax)
@@ -190,8 +278,9 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 		a.backoff = adaptCleanFor
 		a.probeEnd = time.Time{}
 	}
-	if a.layer > 0 && !now.Before(a.holdUntil) && now.Sub(a.cleanSince) >= adaptCleanFor {
+	if a.layer > 0 && !now.Before(a.holdUntil) && now.Sub(a.cleanSince) >= adaptCleanFor && a.bandwidthAllowsUp(now) {
 		a.layer--
+		a.bwLow, a.bwHigh = 0, 0
 		a.graceUntil = now.Add(adaptGrace)
 		a.probeEnd = now.Add(adaptProbe)
 		a.holdUntil = now.Add(a.backoff)
