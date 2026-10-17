@@ -87,8 +87,8 @@ for a server or NAS.
   See [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
 - **Webhooks**: incoming ones per channel in Discord's execute format
   (content, embeds, `allowed_mentions`, files) with a Webhook badge, and
-  outgoing ones that POST signed events (messages, reactions, Talk joins and
-  leaves) to your own service, with retries, a delivery log and a guard that
+  outgoing ones per channel that POST signed events (messages, reactions, Talk
+  joins and leaves) to your own service, with retries, a delivery log and a guard that
   keeps them away from your internal network. See
   [doc/webhooks.md](doc/webhooks.md).
 - **Sidebar management** for admins: drag and drop channels and categories

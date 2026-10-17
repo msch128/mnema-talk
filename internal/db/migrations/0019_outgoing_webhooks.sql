@@ -1,14 +1,15 @@
 -- Outgoing webhooks: a member-configured URL that receives signed events.
 --
--- channel_id NULL means the whole server (Owner only). The HMAC secret has to
--- be readable to sign, so it is stored as is; it is shown once. Deliveries
+-- An outgoing webhook belongs to its channel and receives that channel's
+-- events only; created_by is audit information. The HMAC secret has to be
+-- readable to sign, so it is stored as is; it is shown once. Deliveries
 -- are queued in memory (lost on restart, see doc/webhooks.md); this table only
 -- keeps a short log per webhook, pruned on insert.
 
 CREATE TABLE outgoing_webhooks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    channel_id UUID REFERENCES channels(id) ON DELETE CASCADE,
-    created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    channel_id UUID NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     name VARCHAR(80) NOT NULL CHECK (char_length(btrim(name)) > 0),
     url TEXT NOT NULL CHECK (char_length(url) <= 2048),
     secret TEXT NOT NULL,

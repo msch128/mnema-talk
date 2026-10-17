@@ -11,67 +11,51 @@ import (
 	"github.com/msch128/mnema-talk/internal/webhook"
 )
 
-// A new token is a key to post with the creator's rights, so only someone who
-// could have created the webhook may get one, and they become its creator.
-func TestRegeneratingATokenTransfersTheWebhookToTheCaller(t *testing.T) {
+// Regenerating a token changes the token and nothing else: not who made the
+// webhook, not what it may mention.
+func TestRegeneratingATokenChangesOnlyTheToken(t *testing.T) {
 	a := newApp(t, false)
 	admin := a.seedAdmin()
 	ch := a.createChannel(admin, "alerts", "text")
 	a.router.Webhooks.SetLimits(1000, 1000)
-	h := makeHook(t, admin, ch, "owner's")
-	everyone := everyoneID(t, admin)
-
 	role := createRole(t, admin, "hooks", perm.ManageWebhooks)
 	mod := a.register(admin, "mod")
 	assignRoles(t, admin, mod, role)
-	// Make the Owner's webhook the mod's to manage: peers of the Owner's
-	// hook cannot touch it, so the mod gets a webhook of their own first.
-	own := makeHook(t, mod, ch, "mods")
-	regen := "/api/admin/webhooks/" + own.ID.String() + "/token"
 
-	// Without Send messages the mod gets no new URL (and the old one stops
-	// working only if the call succeeded).
-	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.SendMessages)); res.status != 204 {
+	// The Owner's webhook may mention everyone (the Owner holds the right).
+	h := makeHook(t, admin, ch, "owner's")
+	post := func(path string) chat.Message {
+		t.Helper()
+		res := a.exec(path+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
+		var m chat.Message
+		res.decode(t, &m)
+		if res.status != http.StatusOK {
+			t.Fatalf("post: %d %s", res.status, res.body)
+		}
+		return m
+	}
+	if len(post(h.path).Mentions) == 0 {
+		t.Fatal("the Owner's webhook cannot mention everyone")
+	}
+
+	// A member without Mention everyone regenerates it: a new URL, the old one
+	// dead, the same creator, the same abilities.
+	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyoneID(t, admin), 0, perm.MentionEveryone|perm.SendMessages)); res.status != 204 {
 		t.Fatalf("overwrite: %d %s", res.status, res.body)
 	}
-	if res := mod.post(regen, nil); res.status != http.StatusForbidden {
-		t.Fatalf("regenerate without Send messages: %d %s", res.status, res.body)
-	}
-	// The Owner's own regeneration of the mod's webhook still works and
-	// makes the Owner its creator; the mod's rights no longer matter to it.
 	var fresh webhook.CreatedWebhook
-	res := admin.post(regen, nil)
+	res := mod.post("/api/admin/webhooks/"+h.ID.String()+"/token", nil)
 	res.decode(t, &fresh)
-	if res.status != http.StatusOK {
-		t.Fatalf("owner regenerates: %d %s", res.status, res.body)
+	if res.status != http.StatusOK || fresh.Token == h.Token {
+		t.Fatalf("regenerate: %d %s", res.status, res.body)
 	}
 	if fresh.CreatedBy == nil || *fresh.CreatedBy != admin.user.ID {
-		t.Fatalf("creator after regeneration: %+v", fresh.CreatedBy)
+		t.Fatalf("regenerating moved the webhook: %+v", fresh.CreatedBy)
 	}
-	if r := a.exec("/api/webhooks/"+own.ID.String()+"/"+fresh.Token, map[string]any{"content": "ok"}, nil); r.status != http.StatusNoContent {
-		t.Fatalf("post with the Owner's rights: %d %s", r.status, r.body)
+	if r := a.exec(h.path, map[string]any{"content": "x"}, nil); r.status != http.StatusUnauthorized {
+		t.Fatalf("old URL: %d", r.status)
 	}
-
-	// With Send messages back, the mod may regenerate and then holds the
-	// webhook: mass mentions are checked against the mod, who lacks them.
-	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.MentionEveryone)); res.status != 204 {
-		t.Fatalf("overwrite: %d %s", res.status, res.body)
+	if len(post("/api/webhooks/"+h.ID.String()+"/"+fresh.Token).Mentions) == 0 {
+		t.Fatal("regenerating changed what the webhook may do")
 	}
-	own2 := makeHook(t, mod, ch, "mods again")
-	var fresh2 webhook.CreatedWebhook
-	if r := mod.post("/api/admin/webhooks/"+own2.ID.String()+"/token", nil); r.status != http.StatusOK {
-		t.Fatalf("mod regenerates: %d %s", r.status, r.body)
-	} else {
-		r.decode(t, &fresh2)
-	}
-	if fresh2.CreatedBy == nil || *fresh2.CreatedBy != mod.user.ID {
-		t.Fatalf("creator after regeneration: %+v", fresh2.CreatedBy)
-	}
-	r := a.exec("/api/webhooks/"+own2.ID.String()+"/"+fresh2.Token+"?wait=true", map[string]any{"content": "@all", "allowed_mentions": map[string]any{"parse": []string{"everyone"}}}, nil)
-	var m chat.Message
-	r.decode(t, &m)
-	if r.status != 200 || len(m.Mentions) != 0 {
-		t.Fatalf("mass mention by a creator without the right: %d %s", r.status, r.body)
-	}
-	_ = h
 }

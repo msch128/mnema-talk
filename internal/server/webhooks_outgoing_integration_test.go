@@ -144,7 +144,7 @@ func TestOutgoingDeliversSignedEvents(t *testing.T) {
 	other := a.createChannel(admin, "other", "text")
 	rc := newReceiver(t, nil)
 	o := makeOutgoing(t, admin, ch, rc.srv.URL+"/hook", "MESSAGE_CREATE", "MESSAGE_DELETE", "MESSAGE_CREATE")
-	if !strings.HasPrefix(o.Secret, "whsec_") || len(o.Events) != 2 || o.Status != "active" || !o.AccessOK {
+	if !strings.HasPrefix(o.Secret, "whsec_") || len(o.Events) != 2 || o.Status != "active" {
 		t.Fatalf("created %+v", o)
 	}
 	if strings.Contains(string(admin.get("/api/admin/channels/"+ch.String()+"/outgoing-webhooks").body), o.Secret) {
@@ -297,10 +297,14 @@ func TestOutgoingDoesNotRetryClientErrorsOrRedirects(t *testing.T) {
 	}
 }
 
-func TestOutgoingStopsWhenTheCreatorLosesAccess(t *testing.T) {
+// An outgoing webhook belongs to its channel and sends that channel's events:
+// it does not depend on who made it, and members who cannot see the channel
+// cannot see or manage it.
+func TestOutgoingBelongsToItsChannel(t *testing.T) {
 	a := outgoingApp(t)
 	admin := a.seedAdmin()
 	ch := a.createChannel(admin, "alerts", "text")
+	other := a.createChannel(admin, "other", "text")
 	rc := newReceiver(t, nil)
 
 	role := createRole(t, admin, "hooks", perm.ManageWebhooks)
@@ -309,98 +313,59 @@ func TestOutgoingStopsWhenTheCreatorLosesAccess(t *testing.T) {
 	o := makeOutgoing(t, mod, ch, rc.srv.URL, "MESSAGE_CREATE")
 	a.send(admin, ch, "one")
 	rc.next(t)
-
-	// Without View channel the member no longer sees what the webhook sends.
-	everyone := everyoneID(t, admin)
-	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.ViewChannel)); res.status != 204 {
-		t.Fatalf("overwrite: %d %s", res.status, res.body)
-	}
-	a.send(admin, ch, "secret")
+	a.send(admin, other, "elsewhere")
 	rc.none(t)
-	if cur := getOutgoing(t, admin, ch, o.ID); cur.AccessOK {
-		t.Fatalf("access_ok after losing View: %+v", cur)
-	}
-	if res := admin.post("/api/admin/outgoing-webhooks/"+o.ID.String()+"/test", nil); res.status != http.StatusForbidden {
-		t.Fatalf("test without access: %d %s", res.status, res.body)
-	}
-	// A channel hidden from a member hides its outgoing webhooks too.
-	other := a.register(admin, "bystander")
-	assignRoles(t, admin, other, role)
-	if r := other.get("/api/admin/channels/" + ch.String() + "/outgoing-webhooks"); r.status != http.StatusNotFound {
-		t.Fatalf("list in a hidden channel: %d", r.status)
-	}
-	if r := other.delete("/api/admin/outgoing-webhooks/" + o.ID.String()); r.status != http.StatusNotFound {
-		t.Fatalf("delete in a hidden channel: %d", r.status)
-	}
-	// Access back: it delivers again.
-	if res := putOverwrites(admin, "channels", ch); res.status != 204 {
-		t.Fatalf("clear overwrite: %d", res.status)
-	}
-	a.send(admin, ch, "visible again")
-	rc.next(t)
 
-	// Losing Manage webhooks stops it, and so does a disabled account.
+	// Whoever made it losing the role, or the account, changes nothing.
 	assignRoles(t, admin, mod)
 	a.send(admin, ch, "two")
-	rc.none(t)
-	assignRoles(t, admin, mod, role)
-	a.send(admin, ch, "three")
 	rc.next(t)
 	if res := admin.post("/api/admin/users/"+mod.user.ID.String()+"/disable", nil); res.status >= 300 {
 		t.Fatalf("disable: %d", res.status)
 	}
-	a.send(admin, ch, "four")
-	rc.none(t)
-}
+	a.send(admin, ch, "three")
+	rc.next(t)
 
-func TestOutgoingServerWideIsOwnerOnly(t *testing.T) {
-	a := outgoingApp(t)
-	admin := a.seedAdmin()
-	ch := a.createChannel(admin, "alerts", "text")
-	rc := newReceiver(t, nil)
+	// Another manager of the channel's webhooks may manage it, whatever their
+	// rank, including the Owner's.
+	peer := a.register(admin, "peer")
+	assignRoles(t, admin, peer, role)
+	if r := peer.patch("/api/admin/outgoing-webhooks/"+o.ID.String(), map[string]any{"name": "taken over"}); r.status != http.StatusOK {
+		t.Fatalf("peer edits: %d %s", r.status, r.body)
+	}
+	var rot webhook.CreatedOutgoing
+	if r := peer.post("/api/admin/outgoing-webhooks/"+o.ID.String()+"/secret", nil); r.status != http.StatusOK {
+		t.Fatalf("peer rotates: %d %s", r.status, r.body)
+	} else {
+		r.decode(t, &rot)
+	}
+	if rot.CreatedBy == nil || *rot.CreatedBy != mod.user.ID {
+		t.Fatalf("rotating the secret changed the record of who made it: %v", rot.CreatedBy)
+	}
+	owners := makeOutgoing(t, admin, ch, rc.srv.URL, "MESSAGE_DELETE")
+	if r := peer.delete("/api/admin/outgoing-webhooks/" + owners.ID.String()); r.status != http.StatusNoContent {
+		t.Fatalf("peer deletes the Owner's: %d", r.status)
+	}
 
-	role := createRole(t, admin, "hooks", perm.ManageWebhooks|perm.ManageRoles)
-	mod := a.register(admin, "mod")
-	assignRoles(t, admin, mod, role)
-	body := map[string]any{"name": "all", "url": rc.srv.URL, "events": []string{"MESSAGE_CREATE", "MEMBER_ADD"}}
-	if res := mod.post("/api/admin/outgoing-webhooks", body); res.status != 403 {
-		t.Fatalf("member creates server-wide: %d", res.status)
+	// A private channel hides its webhooks from those who cannot view it.
+	everyone := everyoneID(t, admin)
+	if res := putOverwrites(admin, "channels", ch, overwrite("role", everyone, 0, perm.ViewChannel)); res.status != 204 {
+		t.Fatalf("overwrite: %d %s", res.status, res.body)
 	}
-	if res := mod.get("/api/admin/outgoing-webhooks"); res.status != 403 {
-		t.Fatalf("member lists server-wide: %d", res.status)
+	bystander := a.register(admin, "bystander")
+	assignRoles(t, admin, bystander, role)
+	if r := bystander.get("/api/admin/channels/" + ch.String() + "/outgoing-webhooks"); r.status != http.StatusNotFound {
+		t.Fatalf("list in a hidden channel: %d", r.status)
 	}
-	res := admin.post("/api/admin/outgoing-webhooks", body)
-	var o webhook.CreatedOutgoing
-	res.decode(t, &o)
-	if res.status != 201 || o.ChannelID != nil {
-		t.Fatalf("owner creates: %d %s", res.status, res.body)
+	if r := bystander.delete("/api/admin/outgoing-webhooks/" + o.ID.String()); r.status != http.StatusNotFound {
+		t.Fatalf("delete in a hidden channel: %d", r.status)
 	}
-	for _, r := range []response{
-		mod.patch("/api/admin/outgoing-webhooks/"+o.ID.String(), map[string]any{"enabled": false}),
-		mod.delete("/api/admin/outgoing-webhooks/" + o.ID.String()),
-		mod.post("/api/admin/outgoing-webhooks/"+o.ID.String()+"/test", nil),
-	} {
-		if r.status != 403 {
-			t.Fatalf("member touches a server-wide webhook: %d %s", r.status, r.body)
-		}
+	// There is no server-wide scope.
+	if r := admin.post("/api/admin/outgoing-webhooks", map[string]any{"name": "x", "url": rc.srv.URL, "events": []string{"MESSAGE_CREATE"}}); r.status < 400 {
+		t.Fatalf("server-wide webhook created: %d", r.status)
 	}
-	// Channel events from every channel, and new members.
-	a.send(admin, ch, "x")
-	if got := rc.next(t); got.header.Get("X-Mnema-Event") != "MESSAGE_CREATE" {
-		t.Fatalf("event %s", got.header.Get("X-Mnema-Event"))
-	}
-	a.register(admin, "newcomer")
-	if got := rc.next(t); got.header.Get("X-Mnema-Event") != "MEMBER_ADD" {
-		t.Fatalf("event %s", got.header.Get("X-Mnema-Event"))
-	}
-	var list []webhook.Outgoing
-	admin.get("/api/admin/outgoing-webhooks").decode(t, &list)
-	if len(list) != 1 || list[0].ID != o.ID {
-		t.Fatalf("list %+v", list)
-	}
-	// A channel webhook cannot subscribe to server events.
 	if r := admin.post("/api/admin/channels/"+ch.String()+"/outgoing-webhooks", map[string]any{"name": "x", "url": rc.srv.URL, "events": []string{"MEMBER_ADD"}}); r.status != 400 {
-		t.Fatalf("channel webhook with MEMBER_ADD: %d", r.status)
+		t.Fatalf("member events are not offered: %d", r.status)
 	}
 }
 

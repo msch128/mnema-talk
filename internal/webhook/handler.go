@@ -84,7 +84,7 @@ func (h *Handler) url(rec *record, token string) string {
 // authorize checks the caller may manage webhooks in the channel and returns
 // the permission state it decided on (nil without a permission model). A
 // channel they cannot view looks like a missing one.
-func (h *Handler) authorize(r *http.Request, ch uuid.UUID, need perm.Set) (*perm.Snapshot, error) {
+func (h *Handler) authorize(r *http.Request, ch uuid.UUID) (*perm.Snapshot, error) {
 	if h.Perms == nil {
 		return nil, nil
 	}
@@ -92,13 +92,14 @@ func (h *Handler) authorize(r *http.Request, ch uuid.UUID, need perm.Set) (*perm
 	if err != nil {
 		return nil, err
 	}
-	return snap, perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ManageWebhooks|need)
+	return snap, perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ManageWebhooks)
 }
 
 // load finds the webhook of the path and checks the caller may manage it:
-// Manage webhooks in its channel and, when somebody else created it, a
-// highest role not below the creator's. Nobody but the Owner touches a
-// webhook of the Owner.
+// Manage webhooks and View channel in its channel, or the Owner. A webhook
+// belongs to its channel, not to whoever made it, so anyone who may manage the
+// channel's webhooks may manage this one. A channel hidden from the caller
+// hides its webhooks.
 func (h *Handler) load(r *http.Request) (*record, error) {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -108,36 +109,23 @@ func (h *Handler) load(r *http.Request) (*record, error) {
 	if err != nil {
 		return nil, err
 	}
-	snap, err := h.authorize(r, rec.ChannelID, 0)
-	if err != nil {
-		// A hidden channel hides its webhooks; a plain missing permission
-		// stays a 403.
+	if _, err := h.authorize(r, rec.ChannelID); err != nil {
 		if ae, ok := httpx.AsAPIError(err); ok && ae == perm.ErrChannelHidden {
 			return nil, errNotFound
 		}
 		return nil, err
 	}
-	if snap == nil || rec.CreatedBy == nil {
-		return rec, nil
-	}
-	return rec, hierarchy(r, snap, *rec.CreatedBy)
+	return rec, nil
 }
 
-// hierarchy checks the caller may change something its creator made: their
-// own, anything of a creator whose highest role is not above theirs, and
-// everything as the Owner; nothing of the Owner's.
-func hierarchy(r *http.Request, snap *perm.Snapshot, creatorID uuid.UUID) error {
-	user := auth.UserFrom(r.Context())
-	actor, creator := user.Subject(), perm.Subject{ID: creatorID}
-	switch {
-	case snap.IsOwner(actor) || creatorID == user.ID:
-		return nil
-	case snap.IsOwner(creator):
-		return httpx.ErrForbidden("only the Owner can change a webhook of the Owner")
-	case snap.TopPosition(actor) < snap.TopPosition(creator):
-		return httpx.ErrForbidden("that webhook was created by a member with a higher role than yours")
+// mayMentionEveryone is whether the caller may let a webhook notify everyone:
+// they hold Mention everyone in the channel (the Owner always does).
+func (h *Handler) mayMentionEveryone(r *http.Request, ch uuid.UUID) (bool, error) {
+	if h.Perms == nil {
+		return true, nil
 	}
-	return nil
+	p, err := h.Perms.Channel(r.Context(), auth.UserFrom(r.Context()).Subject(), ch)
+	return p.Has(perm.MentionEveryone), err
 }
 
 // CreateRequest is the body of creating a webhook.
@@ -173,7 +161,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch, 0); err != nil {
+	if _, err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	hooks, err := list(r.Context(), h.DB, ch)
@@ -187,7 +175,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // create handles POST /api/admin/channels/{id}/webhooks.
 //
 // @Summary Create a webhook
-// @Description Needs Manage webhooks, View channel and Send messages in that channel, since the webhook posts there. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.
+// @Description Needs Manage webhooks and View channel in that channel (or the Owner). The webhook belongs to the channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel. @all and @here in its messages only notify if the caller holds Mention everyone here.
 // @ID createWebhook
 // @Tags Webhooks
 // @Accept json
@@ -210,7 +198,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch, perm.SendMessages); err != nil {
+	if _, err := h.authorize(r, ch); err != nil {
 		return err
 	}
 	var req CreateRequest
@@ -221,7 +209,11 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	rec, token, err := create(r.Context(), h.DB, ch, auth.UserFrom(r.Context()).ID, name)
+	mention, err := h.mayMentionEveryone(r, ch)
+	if err != nil {
+		return err
+	}
+	rec, token, err := create(r.Context(), h.DB, ch, auth.UserFrom(r.Context()).ID, name, mention)
 	if err != nil {
 		return err
 	}
@@ -232,7 +224,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // update handles PATCH /api/admin/webhooks/{id}.
 //
 // @Summary Rename a webhook
-// @Description Needs Manage webhooks in the webhook's channel, and a highest role not below the creator's. Earlier messages keep the name they were posted under.
+// @Description Needs Manage webhooks and View channel in the webhook's channel. Earlier messages keep the name they were posted under. Whether @all and @here may notify is set again from the caller's Mention everyone right.
 // @ID updateWebhook
 // @Tags Webhooks
 // @Accept json
@@ -243,7 +235,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Webhook "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -262,7 +254,11 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := rename(r.Context(), h.DB, rec, name); err != nil {
+	mention, err := h.mayMentionEveryone(r, rec.ChannelID)
+	if err != nil {
+		return err
+	}
+	if err := rename(r.Context(), h.DB, rec, name, mention); err != nil {
 		return err
 	}
 	return h.writeCurrent(w, r, rec.ID)
@@ -280,7 +276,7 @@ func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.U
 // regenerate handles POST /api/admin/webhooks/{id}/token.
 //
 // @Summary Regenerate a webhook's token
-// @Description The old URL stops working at once. The answer carries the new secret URL; it is shown only once. Needs the same rights as creating a webhook (Manage webhooks, View channel and Send messages in the channel); the caller becomes the webhook's creator, so later posts are checked against their rights.
+// @Description The old URL stops working at once. The answer carries the new secret URL; it is shown only once. Nothing else about the webhook changes.
 // @ID regenerateWebhookToken
 // @Tags Webhooks
 // @Produce json
@@ -289,7 +285,7 @@ func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.U
 // @Success 200 {object} CreatedWebhook "New token and URL."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -300,17 +296,10 @@ func (h *Handler) regenerate(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	// The new URL is a key to post with the creator's rights, so it goes to
-	// someone who could create the webhook, and they become its creator.
-	if _, err := h.authorize(r, rec.ChannelID, perm.SendMessages); err != nil {
-		return err
-	}
-	actor := auth.UserFrom(r.Context()).ID
-	token, err := regenerate(r.Context(), h.DB, rec, actor)
+	token, err := regenerate(r.Context(), h.DB, rec)
 	if err != nil {
 		return err
 	}
-	rec.CreatedBy = &actor
 	httpx.WriteJSON(w, http.StatusOK, CreatedWebhook{Webhook: rec.Webhook, Token: token, URL: h.url(rec, token)})
 	return nil
 }
@@ -329,7 +318,7 @@ func (h *Handler) regenerate(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} Webhook "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such webhook."
 // @Failure 413 {object} httpx.ErrorResponse "PAYLOAD_TOO_LARGE: file exceeds the limit."
 // @Failure 415 {object} httpx.ErrorResponse "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
@@ -360,7 +349,7 @@ func (h *Handler) avatar(w http.ResponseWriter, r *http.Request) error {
 // @Success 204 "Deleted."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."

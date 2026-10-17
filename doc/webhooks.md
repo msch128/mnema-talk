@@ -16,26 +16,18 @@ The Owner always. Everybody else needs the permission **Manage webhooks** and
 you, so neither do its webhooks). Because the webhook is an admin-area
 feature, the API lives under `/api/admin`.
 
-Creating a webhook also needs **Send messages** in the channel, because the
-webhook posts there. A webhook acts with its creator's rights, checked again
-at every post: it needs the creator to hold *Send messages* (and *Attach
-files* when files are sent) in the channel right now, and the creator's
-account to exist and be enabled; otherwise the post is refused with `403`
-(code 50013). The Owner's webhooks always pass.
+A webhook belongs to its **channel**, as in Discord, not to the member who made
+it. Whoever may manage the channel's webhooks may create, rename, regenerate,
+test and delete any of them, whoever made it and whatever their role. The
+member who made it is kept as a record (`created_by`) and grants nothing: the
+webhook keeps working if that member loses their role, is disabled or is gone.
+Private channels are respected: only members who can *see* the channel can
+manage its webhooks, so a channel hidden by roles hides its webhooks too.
 
-Regenerating a token gives the new URL to the caller, so it needs the same
-rights as creating (including *Send messages*), and the caller becomes the
-webhook's creator: posts are always checked against whoever holds the URL.
-
-Hierarchy follows [roles and permissions](roles-and-permissions.md):
-
-- A webhook created by the Owner can only be changed by the Owner.
-- Otherwise a member may change, regenerate or delete a webhook of someone
-  whose highest role is **not above** theirs (peers may look after each
-  other's webhooks), and always their own.
-- A webhook can mention `@all` and `@here` only if its **creator** holds
-  *Mention everyone* in that channel at the moment of the post, so a webhook
-  never gives anyone more power than its creator has.
+The one thing that depends on a person is `@all` and `@here`. A webhook may
+notify everyone only if the member who created it, or who last renamed it,
+held *Mention everyone* in the channel at that moment; this is stored as a flag
+on the webhook. Regenerating the token changes the token and nothing else.
 
 ## Create one
 
@@ -96,7 +88,7 @@ posted.
 | `username` | Supported (1 to 80 characters, no control characters) |
 | `avatar_url` | **Ignored.** Mnema Talk never loads pictures from other hosts; set the avatar on the webhook |
 | `embeds` | Subset: `title`, `description`, `url`, `color`, `timestamp`, `fields`, `footer.text`, `author.name`/`url`, `image.url`, `thumbnail.url`. Discord's limits apply (10 embeds, 25 fields, 6000 characters in total). Pictures are shown as links, not loaded. `type`, `video`, `provider` and icon URLs are accepted and dropped |
-| `allowed_mentions` | `parse` with `users` and `everyone`, and `users` (member IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the creator may mention everyone. `roles` is accepted and ignored |
+| `allowed_mentions` | `parse` with `users` and `everyone`, and `users` (member IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the member who made or last renamed the webhook held *Mention everyone*. `roles` is accepted and ignored |
 | `?wait` | Supported |
 | `?thread_id` | Supported, as the ID of a root message |
 | `multipart/form-data`, `payload_json`, files | Supported (`files[n]`; any part with a file name counts) |
@@ -142,9 +134,8 @@ POST /api/admin/channels/{channelId}/outgoing-webhooks
 
 The answer carries the **signing secret, shown once** (`whsec_...`); rotate
 it with `POST /api/admin/outgoing-webhooks/{id}/secret`. Up to 10 per channel.
-The Owner can also create **server-wide** ones
-(`POST /api/admin/outgoing-webhooks`) that receive the subscribed events of
-every channel and `MEMBER_ADD`; only the Owner manages those.
+An outgoing webhook belongs to its channel and receives that channel's events
+only; there are no server-wide webhooks. Deleting the channel deletes them.
 
 ### Events
 
@@ -155,7 +146,6 @@ every channel and `MEMBER_ADD`; only the Owner manages those.
 | `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
 | `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
 | `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |
-| `MEMBER_ADD` | a member registers (server-wide webhooks only) | the member's public profile |
 | `PING` | the "send test event" button; cannot be subscribed to | `{message}` |
 
 `d` is exactly the object the WebSocket sends for that event, so the
@@ -241,17 +231,12 @@ export function verify(secret, header, rawBody, toleranceSeconds = 300) {
 
 ### Who sees what
 
-Changing a webhook's URL makes the editor its creator, because they decide
-where the events go and so who may see them. Rotating the secret, renaming it
-and switching it on or off never change the creator.
-
-A webhook delivers with its creator's rights. Before **every** attempt
-(retries included) the server checks that the creator's account is enabled
-and that they still hold *Manage webhooks* and *View channels* in the
-webhook's channel (the Owner for server-wide ones). If not, nothing is
-delivered, the list shows `access_ok: false`, and delivery resumes when the
-rights return. Events of channels the creator cannot see are never sent, and
-a channel's webhook only gets that channel's events.
+An outgoing webhook only receives events of its own channel, and only members
+who can see that channel (and hold *Manage webhooks*) can create, change, rotate
+the secret of or delete it, so no event can reach a URL chosen by someone who
+could not read it. Rotating the secret, renaming and switching on or off change
+only that. Nothing is re-checked per delivery beyond the webhook still
+existing: it belongs to the channel, not to a member.
 
 ### Target addresses (SSRF protection)
 
@@ -289,5 +274,5 @@ ranges cannot be opened this way.
 See the *Webhooks* paragraph in [SECURITY.md](../SECURITY.md). In short: the
 URL is a bearer secret, treat it like a password; tokens are stored hashed and
 compared in constant time; a webhook cannot sign in, appear as a member, or
-mention beyond what its creator may; embeds are rendered as sanitized text
+notify everyone unless its maker could; embeds are rendered as sanitized text
 and links, nothing is fetched from the senders' hosts.

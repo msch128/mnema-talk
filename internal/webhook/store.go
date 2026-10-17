@@ -43,7 +43,8 @@ type Webhook struct {
 	Name      string    `json:"name" maxLength:"80"`
 	// AvatarURL is the API URL of the avatar; omitted when none is set.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
-	// CreatedBy is the member who created it (null once that account is gone).
+	// CreatedBy is the member who created it, kept for the record (null once
+	// that account is gone). It grants nothing: the webhook belongs to its channel.
 	CreatedBy *uuid.UUID `json:"created_by" format:"uuid" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
 	UpdatedAt time.Time  `json:"updated_at" format:"date-time"`
@@ -63,22 +64,20 @@ type CreatedWebhook struct {
 // record is a webhook with what only the server needs.
 type record struct {
 	Webhook
-	// creatorActive is false once the creator's account is gone or disabled.
-	creatorActive bool
-	botUserID     uuid.UUID
-	tokenHash     []byte
+	botUserID uuid.UUID
+	tokenHash []byte
+	// mentionEveryone: @all and @here may notify (see migration 0020).
+	mentionEveryone bool
 }
 
 const recordSelect = `
-	SELECT w.id, w.channel_id, w.name, u.avatar_s3_key, w.created_by, w.created_at, w.updated_at, w.bot_user_id, w.token_hash,
-	       (c.id IS NOT NULL AND c.disabled_at IS NULL)
-	FROM webhooks w JOIN users u ON u.id = w.bot_user_id
-	LEFT JOIN users c ON c.id = w.created_by`
+	SELECT w.id, w.channel_id, w.name, u.avatar_s3_key, w.created_by, w.created_at, w.updated_at, w.bot_user_id, w.token_hash, w.mention_everyone
+	FROM webhooks w JOIN users u ON u.id = w.bot_user_id`
 
 func scanRecord(row pgx.Row) (*record, error) {
 	var rec record
 	var avatar *string
-	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash, &rec.creatorActive)
+	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash, &rec.mentionEveryone)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errNotFound
 	}
@@ -152,7 +151,7 @@ func botDisplayName(name string) string {
 
 // create stores a webhook with its bot account and returns it with the
 // secret token.
-func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name string) (*record, string, error) {
+func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name string, mentionEveryone bool) (*record, string, error) {
 	token, hash := newToken()
 	suffix := make([]byte, 8)
 	_, _ = rand.Read(suffix)
@@ -175,8 +174,8 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 			return err
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by)
-			VALUES ($1, $2, $3, $4, $5) RETURNING id`, channel, bot, name, hash, creator).Scan(&id)
+			INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by, mention_everyone)
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`, channel, bot, name, hash, creator, mentionEveryone).Scan(&id)
 	})
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); ok {
@@ -188,9 +187,11 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 	return rec, token, err
 }
 
-func rename(ctx context.Context, p *db.Pool, rec *record, name string) error {
+// rename changes the name and records whether the editor may let the webhook
+// notify everyone.
+func rename(ctx context.Context, p *db.Pool, rec *record, name string, mentionEveryone bool) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE webhooks SET name = $1, updated_at = NOW() WHERE id = $2`, name, rec.ID); err != nil {
+		if _, err := tx.Exec(ctx, `UPDATE webhooks SET name = $1, mention_everyone = $3, updated_at = NOW() WHERE id = $2`, name, rec.ID, mentionEveryone); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `UPDATE users SET display_name = $1, updated_at = NOW() WHERE id = $2`, botDisplayName(name), rec.botUserID)
@@ -198,11 +199,10 @@ func rename(ctx context.Context, p *db.Pool, rec *record, name string) error {
 	})
 }
 
-// regenerate makes a new token and makes actor the webhook's creator: whoever
-// holds the secret URL is whose rights every later post is checked against.
-func regenerate(ctx context.Context, p *db.Pool, rec *record, actor uuid.UUID) (string, error) {
+// regenerate makes a new token and changes nothing else.
+func regenerate(ctx context.Context, p *db.Pool, rec *record) (string, error) {
 	token, hash := newToken()
-	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, created_by = $3, updated_at = NOW() WHERE id = $2`, hash, rec.ID, actor); err != nil {
+	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, updated_at = NOW() WHERE id = $2`, hash, rec.ID); err != nil {
 		return "", fmt.Errorf("regenerate webhook token: %w", err)
 	}
 	return token, nil

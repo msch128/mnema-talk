@@ -23,22 +23,16 @@ const (
 	EventMessageDelete    = "MESSAGE_DELETE"
 	EventReactionsUpdate  = "MESSAGE_REACTIONS_UPDATE"
 	EventVoiceStateUpdate = "VOICE_STATE_UPDATE"
-	EventMemberAdd        = "MEMBER_ADD"
 	// EventPing is the test event; it cannot be subscribed to.
 	EventPing = "PING"
 )
 
-// channelEvents can be subscribed to per channel; serverEvents only by a
-// server-wide webhook (they do not belong to a channel).
-var (
-	channelEvents = []string{EventMessageCreate, EventMessageUpdate, EventMessageDelete, EventReactionsUpdate, EventVoiceStateUpdate}
-	serverEvents  = []string{EventMemberAdd}
-)
+// channelEvents are the events a channel's webhook can subscribe to.
+var channelEvents = []string{EventMessageCreate, EventMessageUpdate, EventMessageDelete, EventReactionsUpdate, EventVoiceStateUpdate}
 
 const (
-	// maxOutgoingPerScope bounds the outgoing webhooks of one channel (and of
-	// the server-wide scope).
-	maxOutgoingPerScope = 10
+	// maxOutgoingPerChannel bounds the outgoing webhooks of one channel.
+	maxOutgoingPerChannel = 10
 	// deliveryLogSize is how many deliveries are kept per webhook.
 	deliveryLogSize = 50
 	// disableAfter is the number of events in a row that failed for good
@@ -52,10 +46,11 @@ var errOutgoingNotFound = httpx.ErrNotFound("outgoing webhook not found")
 // is only ever shown once, in CreatedOutgoing.
 type Outgoing struct {
 	ID uuid.UUID `json:"id" format:"uuid"`
-	// ChannelID is null for a server-wide webhook (Owner only).
-	ChannelID *uuid.UUID `json:"channel_id" format:"uuid" extensions:"x-nullable"`
-	Name      string     `json:"name" maxLength:"80"`
-	URL       string     `json:"url" maxLength:"2048"`
+	// ChannelID is the channel the webhook belongs to; it receives that
+	// channel's events only.
+	ChannelID uuid.UUID `json:"channel_id" format:"uuid"`
+	Name      string    `json:"name" maxLength:"80"`
+	URL       string    `json:"url" maxLength:"2048"`
 	// Events are the subscribed event types (see doc/webhooks.md).
 	Events []string `json:"events"`
 	// Status is "active", "disabled" (switched off by a member) or
@@ -70,12 +65,10 @@ type Outgoing struct {
 	LastError     *string    `json:"last_error" extensions:"x-nullable"`
 	LastAttemptAt *time.Time `json:"last_attempt_at" format:"date-time" extensions:"x-nullable"`
 	LastSuccessAt *time.Time `json:"last_success_at" format:"date-time" extensions:"x-nullable"`
-	// CreatedBy is the member whose rights the webhook delivers with.
+	// CreatedBy is the member who created it, kept for the record (null once
+	// that account is gone). It grants nothing.
 	CreatedBy *uuid.UUID `json:"created_by" format:"uuid" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
-	// AccessOK is false while the creator no longer holds the rights the
-	// webhook needs; nothing is delivered then.
-	AccessOK bool `json:"access_ok"`
 }
 
 // CreatedOutgoing is the answer to creating a webhook or rotating its secret:
@@ -103,10 +96,9 @@ type Delivery struct {
 // outgoingRec is an outgoing webhook with what only the server needs.
 type outgoingRec struct {
 	Outgoing
-	secret    string
-	enabled   bool
-	autoOff   bool
-	createdBy uuid.UUID
+	secret  string
+	enabled bool
+	autoOff bool
 }
 
 const outgoingSelect = `
@@ -116,7 +108,7 @@ const outgoingSelect = `
 
 func scanOutgoing(row pgx.Row) (*outgoingRec, error) {
 	var rec outgoingRec
-	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.createdBy, &rec.Name, &rec.URL, &rec.secret, &rec.Events, &rec.enabled, &rec.autoOff,
+	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.CreatedBy, &rec.Name, &rec.URL, &rec.secret, &rec.Events, &rec.enabled, &rec.autoOff,
 		&rec.ConsecutiveFailures, &rec.LastStatus, &rec.LastError, &rec.LastAttemptAt, &rec.LastSuccessAt, &rec.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errOutgoingNotFound
@@ -124,7 +116,6 @@ func scanOutgoing(row pgx.Row) (*outgoingRec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load outgoing webhook: %w", err)
 	}
-	rec.CreatedBy = &rec.createdBy
 	switch {
 	case rec.enabled:
 		rec.Status = "active"
@@ -140,10 +131,9 @@ func getOutgoing(ctx context.Context, q db.Querier, id uuid.UUID) (*outgoingRec,
 	return scanOutgoing(q.QueryRow(ctx, outgoingSelect+` WHERE id = $1`, id))
 }
 
-// listOutgoing lists the webhooks of a channel, or the server-wide ones when
-// channel is nil.
-func listOutgoing(ctx context.Context, p *db.Pool, channel *uuid.UUID) ([]*outgoingRec, error) {
-	rows, err := p.Query(ctx, outgoingSelect+` WHERE channel_id IS NOT DISTINCT FROM $1 ORDER BY created_at, id`, channel)
+// listOutgoing lists the webhooks of a channel.
+func listOutgoing(ctx context.Context, p *db.Pool, channel uuid.UUID) ([]*outgoingRec, error) {
+	rows, err := p.Query(ctx, outgoingSelect+` WHERE channel_id = $1 ORDER BY created_at, id`, channel)
 	if err != nil {
 		return nil, fmt.Errorf("list outgoing webhooks: %w", err)
 	}
@@ -157,16 +147,13 @@ func newSecret() string {
 	return "whsec_" + base64.RawURLEncoding.EncodeToString(raw)
 }
 
-// validEvents checks a subscription list against the scope's event types and
-// returns it sorted and without duplicates.
-func validEvents(events []string, serverWide bool) ([]string, error) {
+// validEvents checks a subscription list against the event types and returns
+// it sorted and without duplicates.
+func validEvents(events []string) ([]string, error) {
 	if len(events) == 0 {
 		return nil, httpx.ErrInvalidInput("events must name at least one event")
 	}
-	allowed := slices.Clone(channelEvents)
-	if serverWide {
-		allowed = append(allowed, serverEvents...)
-	}
+	allowed := channelEvents
 	out := make([]string, 0, len(events))
 	for _, e := range events {
 		if !slices.Contains(allowed, e) {
@@ -180,16 +167,16 @@ func validEvents(events []string, serverWide bool) ([]string, error) {
 	return out, nil
 }
 
-func createOutgoing(ctx context.Context, p *db.Pool, channel *uuid.UUID, creator uuid.UUID, name, url string, events []string) (*outgoingRec, string, error) {
+func createOutgoing(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name, url string, events []string) (*outgoingRec, string, error) {
 	secret := newSecret()
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var n int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM outgoing_webhooks WHERE channel_id IS NOT DISTINCT FROM $1`, channel).Scan(&n); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM outgoing_webhooks WHERE channel_id = $1`, channel).Scan(&n); err != nil {
 			return err
 		}
-		if n >= maxOutgoingPerScope {
-			return httpx.ErrConflict(fmt.Sprintf("at most %d outgoing webhooks are allowed here", maxOutgoingPerScope))
+		if n >= maxOutgoingPerChannel {
+			return httpx.ErrConflict(fmt.Sprintf("at most %d outgoing webhooks are allowed here", maxOutgoingPerChannel))
 		}
 		return tx.QueryRow(ctx, `
 			INSERT INTO outgoing_webhooks (channel_id, created_by, name, url, secret, events)
@@ -211,9 +198,6 @@ type outgoingChange struct {
 	url     *string
 	events  []string
 	enabled *bool
-	// owner, set when the URL changes, makes the editor the creator: the
-	// events go where they chose, so they are filtered by their rights.
-	owner *uuid.UUID
 }
 
 func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingChange) error {
@@ -225,19 +209,17 @@ func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingCha
 		    url = COALESCE($3, url),
 		    events = COALESCE($4, events),
 		    enabled = COALESCE($5, enabled),
-		    created_by = COALESCE($6, created_by),
 		    auto_disabled = CASE WHEN $5 IS NULL THEN auto_disabled ELSE FALSE END,
 		    consecutive_failures = CASE WHEN $5 IS TRUE THEN 0 ELSE consecutive_failures END,
 		    updated_at = NOW()
-		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled, c.owner)
+		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled)
 	if err != nil {
 		return fmt.Errorf("update outgoing webhook: %w", err)
 	}
 	return nil
 }
 
-// rotateSecret makes a new secret. It never changes the creator: the URL was
-// chosen by them, and the events sent there follow their rights.
+// rotateSecret makes a new secret and changes nothing else.
 func rotateSecret(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error) {
 	secret := newSecret()
 	if _, err := p.Exec(ctx, `UPDATE outgoing_webhooks SET secret = $2, updated_at = NOW() WHERE id = $1`, id, secret); err != nil {

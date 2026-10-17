@@ -57,7 +57,7 @@ mentions; stored, not used yet).
 | Manage channels | Create, edit, order, delete channels and categories; edit their overwrites | no |
 | Manage roles | Create, edit, order, delete and assign roles below your own highest role | no |
 | Manage invites | Create, list, revoke invite codes | no |
-| Manage webhooks | Create, list, rename, regenerate and delete a channel's incoming webhooks (see [webhooks](webhooks.md)) | no |
+| Manage webhooks | Manage a channel's incoming and outgoing webhooks (see [webhooks](webhooks.md)); needs *View channels* there too | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 
 The bit values are stored in the database and sent over the API; they never

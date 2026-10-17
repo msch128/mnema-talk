@@ -56,19 +56,22 @@ locally instead (`make up` or `make dev`).
   The one exception is the webhook execute route
   (`POST /api/webhooks/{id}/{token}`): it never reads the session cookie and is
   authenticated by its secret alone, so there is nothing to forge.
-- **Webhooks.** Managing them needs *Manage webhooks* and *View channels* (creating also *Send messages*) in
-  the channel (hierarchy as in roles). The execute URL is a bearer secret: 256
-  random bits, stored as a SHA-256 hash, compared in constant time and shown
-  once; wrong ids and tokens are rate limited per client address, and valid
-  ones per webhook and per channel. A webhook posts as a hidden bot account
-  that cannot sign in and is no member, and it posts with its creator's rights
-  (*Send messages*, *Attach files*, checked at every post; refused once the
-  creator's account is gone or disabled); mass mentions need the creator's
-  *Mention everyone* at the time of the post; files go through the same size
-  and type checks as uploads; embeds are validated, shown as sanitized text and
-  links and never fetched from their hosts. The token is redacted from access
-  and error logs (`/api/webhooks/{id}/[redacted]`). Details and the Discord
-  compatibility table: [doc/webhooks.md](doc/webhooks.md).
+- **Webhooks.** A webhook belongs to its channel, as in Discord. Managing
+  (creating, renaming, regenerating, testing, deleting) needs *Manage webhooks*
+  and *View channels* in that channel, or the Owner; the maker is only recorded
+  (`created_by`) and grants nothing. Private channels are respected: members who
+  cannot see a channel cannot see or manage its webhooks. The execute URL is a
+  bearer secret: 256 random bits, stored as a SHA-256 hash, compared in constant
+  time and shown once; wrong ids and tokens are rate limited per client
+  address, and valid ones per webhook and per channel. A webhook posts as a
+  hidden bot account that cannot sign in and is no member; `@all` and `@here`
+  only notify if `allowed_mentions` asks for them and the member who made or
+  last renamed the webhook held *Mention everyone* then (a flag stored on the
+  webhook); files go through the same size and type checks as uploads; embeds
+  are validated, shown as sanitized text and links and never fetched from their
+  hosts. The token is redacted from access and error logs
+  (`/api/webhooks/{id}/[redacted]`). Details and the Discord compatibility
+  table: [doc/webhooks.md](doc/webhooks.md).
 - **Outgoing webhooks and SSRF.** A webhook URL chosen by a member makes the
   server send requests, so `internal/ssrf` guards them: http(s) only, names
   resolved by the server, every answer must be a public unicast address
@@ -80,8 +83,9 @@ locally instead (`make up` or `make dev`).
   delivery logs carry short codes instead of network errors. Operators can
   open specific local addresses with `WEBHOOK_ALLOW_PRIVATE_TARGETS` (off by
   default; metadata and reserved ranges stay closed). Deliveries are signed
-  (`X-Mnema-Signature`, HMAC-SHA256 over `t.body`), run with the creator's
-  rights checked before every attempt, and are rate and concurrency limited.
+  (`X-Mnema-Signature`, HMAC-SHA256 over `t.body`), belong to one channel and
+  send only its events to a URL that only members who can see the channel can
+  set, and are rate and concurrency limited.
 - **Security headers.** Strict Content-Security-Policy (no inline scripts or
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),

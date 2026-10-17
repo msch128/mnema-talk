@@ -69,7 +69,7 @@ func (f *fixture) handler(p *db.Pool) *Handler {
 	policy := &ssrf.Policy{}
 	h := New(Handler{
 		DB: p, Events: &events.Recorder{}, Media: m, PublicURL: "http://example.test/", Policy: policy,
-		Outgoing: NewDispatcher(p, nil, ssrf.NewClient(ssrf.NewDialer(policy), time.Second), "test"),
+		Outgoing: NewDispatcher(p, ssrf.NewClient(ssrf.NewDialer(policy), time.Second), "test"),
 	})
 	h.SetLimits(10000, 10000)
 	return h
@@ -108,7 +108,7 @@ func (f *fixture) json(h *Handler, method, path, body string) *httptest.Response
 
 func (f *fixture) newHook(name string) (*record, string) {
 	f.t.Helper()
-	rec, token, err := create(context.Background(), f.p, f.ch, f.owner.ID, name)
+	rec, token, err := create(context.Background(), f.p, f.ch, f.owner.ID, name, false)
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -330,26 +330,24 @@ func TestExecuteWithPermissionModel(t *testing.T) {
 	f.h.Perms = perm.NewService(f.p)
 	rec, token := f.newHook("hook")
 	path := "/webhooks/" + rec.ID.String() + "/" + token
-	wantStatus(t, f.json(f.h, "POST", path, `{"content":"fine"}`), 204, "owner's webhook")
-	// A webhook whose creator is gone, or whose account is disabled, is refused.
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"fine"}`), 204, "webhook")
+	// The webhook belongs to its channel: whoever made it, or whether that
+	// account still exists, changes nothing.
 	if _, err := f.p.Exec(context.Background(), `UPDATE users SET disabled_at = NOW() WHERE id = $1`, f.owner.ID); err != nil {
 		t.Fatal(err)
 	}
-	wantStatus(t, f.json(f.h, "POST", path, `{"content":"x"}`), 403, "creator disabled")
-	if _, err := f.p.Exec(context.Background(), `UPDATE users SET disabled_at = NULL WHERE id = $1`, f.owner.ID); err != nil {
-		t.Fatal(err)
-	}
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "creator disabled")
 	if _, err := f.p.Exec(context.Background(), `UPDATE webhooks SET created_by = NULL`); err != nil {
 		t.Fatal(err)
 	}
-	w := f.json(f.h, "POST", path+"?wait=true", `{"content":"@all"}`)
-	wantStatus(t, w, 403, "creator gone")
-	if !strings.Contains(w.Body.String(), "50013") {
-		t.Fatalf("body %s", w.Body)
-	}
-	if _, err := f.p.Exec(context.Background(), `UPDATE webhooks SET created_by = $1`, f.owner.ID); err != nil {
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"still fine"}`), 204, "creator gone")
+	// Mass mentions need the flag stored with the webhook.
+	w := f.json(f.h, "POST", path+"?wait=true", `{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`)
+	wantStatus(t, w, 200, "flag off")
+	if _, err := f.p.Exec(context.Background(), `UPDATE webhooks SET mention_everyone = TRUE`); err != nil {
 		t.Fatal(err)
 	}
+	wantStatus(t, f.json(f.h, "POST", path, `{"content":"@all","allowed_mentions":{"parse":["everyone"]}}`), 204, "flag on")
 	// An unreadable permission model refuses the post instead of guessing.
 	f.h.Perms = perm.NewService(nil)
 	wantStatus(t, f.json(f.h, "POST", path, `{"content":"hi"}`), 500, "no permission state")

@@ -52,7 +52,7 @@ func TestTranslate(t *testing.T) {
 		{"delete", "message_delete", map[string]any{"id": 1}, EventMessageDelete},
 		{"reactions", "message_reaction", chat.ReactionResult{}, EventReactionsUpdate},
 		{"voice", "voice_state_update", map[string]any{"action": "join"}, EventVoiceStateUpdate},
-		{"member", "member_joined", map[string]any{"id": 1}, EventMemberAdd},
+		{"a new member is not offered", "member_joined", map[string]any{"id": 1}, ""},
 		{"typing", "typing", nil, ""},
 		{"presence", "presence_update", nil, ""},
 	}
@@ -120,7 +120,7 @@ func (timeoutErr) Temporary() bool { return true }
 var _ net.Error = timeoutErr{}
 
 func TestBackoff(t *testing.T) {
-	d := NewDispatcher(nil, nil, nil, "t")
+	d := NewDispatcher(nil, nil, "t")
 	for i := 1; i <= len(defaultBackoff); i++ {
 		w := d.backoff(i)
 		base := defaultBackoff[i-1]
@@ -141,15 +141,14 @@ func TestBackoff(t *testing.T) {
 }
 
 func TestObserveRoutesByChannelAndEvent(t *testing.T) {
-	d := NewDispatcher(nil, nil, nil, "t")
+	d := NewDispatcher(nil, nil, "t")
 	chA, chB := uuid.New(), uuid.New()
-	a, b, all, members, off := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	a, b, both, off := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	routes := []route{
-		{id: a, channel: &chA, events: []string{EventMessageCreate}},
-		{id: b, channel: &chB, events: []string{EventMessageCreate, EventMessageDelete}},
-		{id: all, events: []string{EventMessageCreate}},
-		{id: members, events: []string{EventMemberAdd}},
-		{id: off, channel: &chA, events: []string{EventMessageUpdate}},
+		{id: a, channel: chA, events: []string{EventMessageCreate}},
+		{id: b, channel: chB, events: []string{EventMessageCreate, EventMessageDelete}},
+		{id: both, channel: chA, events: []string{EventMessageCreate, EventMessageDelete}},
+		{id: off, channel: chA, events: []string{EventMessageUpdate}},
 	}
 	d.routes.Store(&routes)
 	msg := chat.Message{ID: uuid.New(), ChannelID: chA}
@@ -160,7 +159,7 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 			select {
 			case j := <-d.queue:
 				out[j.webhook] = true
-				if j.attempt != 1 || j.event.Type == "" || j.event.ID == uuid.Nil {
+				if j.attempt != 1 || j.event.Type == "" || j.event.ID == uuid.Nil || j.event.Channel == uuid.Nil {
 					t.Errorf("job %+v", j)
 				}
 			default:
@@ -169,12 +168,8 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 		}
 	}
 	d.Observe(chA, "message_create", &msg)
-	if g := got(); len(g) != 2 || !g[a] || !g[all] {
+	if g := got(); len(g) != 2 || !g[a] || !g[both] {
 		t.Fatalf("message in A reached %v", g)
-	}
-	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})
-	if g := got(); len(g) != 1 || !g[members] {
-		t.Fatalf("member reached %v", g)
 	}
 	d.Observe(chB, "message_delete", map[string]any{"id": 1})
 	if g := got(); len(g) != 1 || !g[b] {
@@ -182,6 +177,9 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	}
 	d.Observe(chA, "typing", nil)
 	d.Observe(chA, "message_reaction", chat.ReactionResult{})
+	// Events to everybody (no channel) belong to no webhook.
+	d.Observe(uuid.Nil, "message_create", &msg)
+	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})
 	if g := got(); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
 	}
@@ -201,7 +199,7 @@ func TestPostSignsAndBoundsTheExchange(t *testing.T) {
 	}))
 	defer srv.Close()
 	allow, _ := ssrf.ParseAllow("127.0.0.0/8")
-	d := NewDispatcher(nil, nil, ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{Allow: allow}), time.Second), "9.9")
+	d := NewDispatcher(nil, ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{Allow: allow}), time.Second), "9.9")
 	rec := &outgoingRec{Outgoing: Outgoing{ID: uuid.New(), URL: srv.URL}, secret: "whsec_s"}
 	ev := Event{ID: uuid.New(), Type: EventMessageCreate, Time: time.Now(), Data: []byte(`{}`)}
 
@@ -234,25 +232,15 @@ func TestPostSignsAndBoundsTheExchange(t *testing.T) {
 	}
 }
 
-func TestCreatorHoldsWithoutAPermissionModel(t *testing.T) {
-	d := NewDispatcher(nil, nil, nil, "t")
-	if !d.creatorHolds(context.Background(), &outgoingRec{}) {
-		t.Fatal("no model, no limits")
-	}
-}
-
 func TestValidEvents(t *testing.T) {
-	got, err := validEvents([]string{"MESSAGE_DELETE", "MESSAGE_CREATE", "MESSAGE_CREATE"}, false)
+	got, err := validEvents([]string{"MESSAGE_DELETE", "MESSAGE_CREATE", "MESSAGE_CREATE"})
 	if err != nil || len(got) != 2 || got[0] != "MESSAGE_CREATE" {
 		t.Fatalf("%v %v", got, err)
 	}
 	for _, bad := range [][]string{nil, {}, {"PING"}, {"NOPE"}, {"MEMBER_ADD"}} {
-		if _, err := validEvents(bad, false); err == nil {
-			t.Errorf("%v accepted for a channel", bad)
+		if _, err := validEvents(bad); err == nil {
+			t.Errorf("%v accepted", bad)
 		}
-	}
-	if _, err := validEvents([]string{"MEMBER_ADD"}, true); err != nil {
-		t.Errorf("server-wide MEMBER_ADD: %v", err)
 	}
 	if s := newSecret(); len(s) < 40 || s == newSecret() {
 		t.Errorf("secret %q", s)

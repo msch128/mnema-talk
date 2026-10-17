@@ -280,43 +280,29 @@ func TestWebhookManagementPermissions(t *testing.T) {
 	if strings.Contains(string(res.body), h.Token) {
 		t.Fatal("list leaks the token")
 	}
-	// ... but nobody touches the Owner's webhook except the Owner.
-	for _, req := range []response{
-		bob.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "mine"}),
-		bob.post("/api/admin/webhooks/"+h.ID.String()+"/token", nil),
-		bob.delete("/api/admin/webhooks/" + h.ID.String()),
-		carol.delete("/api/admin/webhooks/" + h.ID.String()),
-	} {
-		if req.status != 403 {
-			t.Fatalf("owner's webhook: %d %s", req.status, req.body)
-		}
+	// A webhook belongs to its channel: whoever may manage the channel's
+	// webhooks may manage it, whoever made it and whatever role they have.
+	if res := bob.patch("/api/admin/webhooks/"+h.ID.String(), map[string]any{"name": "renamed by bob"}); res.status != 200 {
+		t.Fatalf("member renames the Owner's webhook: %d %s", res.status, res.body)
 	}
-	// Hierarchy among members: a lower role cannot change a higher member's hook.
+	if res := carol.post("/api/admin/webhooks/"+h.ID.String()+"/token", nil); res.status != 200 {
+		t.Fatalf("member regenerates the Owner's webhook: %d %s", res.status, res.body)
+	}
 	ch2 := carol.post(list, map[string]any{"name": "carol hook"})
 	if ch2.status != 201 {
 		t.Fatalf("carol create: %d %s", ch2.status, ch2.body)
 	}
 	var carolHook webhook.CreatedWebhook
 	ch2.decode(t, &carolHook)
-	if res := bob.patch("/api/admin/webhooks/"+carolHook.ID.String(), map[string]any{"name": "x"}); res.status != 403 {
-		t.Fatalf("lower role edits higher: %d", res.status)
+	if res := bob.patch("/api/admin/webhooks/"+carolHook.ID.String(), map[string]any{"name": "x"}); res.status != 200 {
+		t.Fatalf("lower role edits a higher member's hook: %d %s", res.status, res.body)
 	}
-	if res := carol.patch("/api/admin/webhooks/"+carolHook.ID.String(), map[string]any{"name": "renamed"}); res.status != 200 {
-		t.Fatalf("creator edits own: %d %s", res.status, res.body)
+	if res := bob.delete("/api/admin/webhooks/" + carolHook.ID.String()); res.status != 204 {
+		t.Fatalf("lower role deletes a higher member's hook: %d", res.status)
 	}
-	if res := admin.patch("/api/admin/webhooks/"+carolHook.ID.String(), map[string]any{"name": "by owner"}); res.status != 200 {
-		t.Fatalf("owner edits: %d %s", res.status, res.body)
+	if res := bob.delete("/api/admin/webhooks/" + h.ID.String()); res.status != 204 {
+		t.Fatalf("member deletes the Owner's hook: %d", res.status)
 	}
-	// Peers of equal rank may manage each other's webhooks.
-	dave := a.register(admin, "dave")
-	assignRoles(t, admin, dave, hooks)
-	bobHook := bob.post(list, map[string]any{"name": "bob hook"})
-	var bh webhook.CreatedWebhook
-	bobHook.decode(t, &bh)
-	if res := dave.delete("/api/admin/webhooks/" + bh.ID.String()); res.status != 204 {
-		t.Fatalf("peer delete: %d %s", res.status, res.body)
-	}
-
 	// A channel the member cannot view does not exist for them.
 	private := a.createChannel(admin, "private", "text")
 	if res := putOverwrites(admin, "channels", private, overwrite("role", everyoneID(t, admin), 0, perm.ViewChannel)); res.status != 204 {

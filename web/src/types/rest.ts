@@ -1479,14 +1479,14 @@ export function isWebhookAllowedMentions(value: unknown): value is WebhookAllowe
 export const decodeWebhookAllowedMentions = decoder("webhook.AllowedMentions", isWebhookAllowedMentions)
 
 export type WebhookCreateOutgoingRequest = {
-  events: Array<"MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" | "MESSAGE_REACTIONS_UPDATE" | "VOICE_STATE_UPDATE" | "MEMBER_ADD">
+  events: Array<"MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" | "MESSAGE_REACTIONS_UPDATE" | "VOICE_STATE_UPDATE">
   name: string
   url: string
 }
 
 export function isWebhookCreateOutgoingRequest(value: unknown): value is WebhookCreateOutgoingRequest {
   return isRecord(value)
-    && (hasOwn(value, "events") && isArrayOf(value["events"], item => (item === "MESSAGE_CREATE" || item === "MESSAGE_UPDATE" || item === "MESSAGE_DELETE" || item === "MESSAGE_REACTIONS_UPDATE" || item === "VOICE_STATE_UPDATE" || item === "MEMBER_ADD")))
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => (item === "MESSAGE_CREATE" || item === "MESSAGE_UPDATE" || item === "MESSAGE_DELETE" || item === "MESSAGE_REACTIONS_UPDATE" || item === "VOICE_STATE_UPDATE")))
     && (hasOwn(value, "name") && isString(value["name"], 80))
     && (hasOwn(value, "url") && isString(value["url"], 2048))
 }
@@ -1505,8 +1505,7 @@ export function isWebhookCreateRequest(value: unknown): value is WebhookCreateRe
 export const decodeWebhookCreateRequest = decoder("webhook.CreateRequest", isWebhookCreateRequest)
 
 export type WebhookCreatedOutgoing = {
-  access_ok: boolean
-  channel_id: string | null
+  channel_id: string
   consecutive_failures: number
   created_at: string
   created_by: string | null
@@ -1524,8 +1523,7 @@ export type WebhookCreatedOutgoing = {
 
 export function isWebhookCreatedOutgoing(value: unknown): value is WebhookCreatedOutgoing {
   return isRecord(value)
-    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
-    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
@@ -1645,8 +1643,7 @@ export function isWebhookExecutePayload(value: unknown): value is WebhookExecute
 export const decodeWebhookExecutePayload = decoder("webhook.ExecutePayload", isWebhookExecutePayload)
 
 export type WebhookOutgoing = {
-  access_ok: boolean
-  channel_id: string | null
+  channel_id: string
   consecutive_failures: number
   created_at: string
   created_by: string | null
@@ -1663,8 +1660,7 @@ export type WebhookOutgoing = {
 
 export function isWebhookOutgoing(value: unknown): value is WebhookOutgoing {
   return isRecord(value)
-    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
-    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))

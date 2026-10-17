@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
-	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
@@ -94,7 +93,7 @@ type job struct {
 // concerns it.
 type route struct {
 	id      uuid.UUID
-	channel *uuid.UUID
+	channel uuid.UUID
 	events  []string
 }
 
@@ -102,7 +101,6 @@ type route struct {
 // works the queue.
 type Dispatcher struct {
 	DB      *db.Pool
-	Perms   *perm.Service
 	Client  *http.Client
 	Version string
 	// ReloadEvery replaces reloadEvery (tests); set it before Run.
@@ -120,8 +118,8 @@ type Dispatcher struct {
 }
 
 // NewDispatcher returns a Dispatcher; call Run to start it.
-func NewDispatcher(p *db.Pool, perms *perm.Service, client *http.Client, version string) *Dispatcher {
-	d := &Dispatcher{DB: p, Perms: perms, Client: client, Version: version, queue: make(chan job, queueSize), ctx: context.Background(), ReloadEvery: reloadEvery}
+func NewDispatcher(p *db.Pool, client *http.Client, version string) *Dispatcher {
+	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), ctx: context.Background(), ReloadEvery: reloadEvery}
 	empty := []route{}
 	d.routes.Store(&empty)
 	return d
@@ -198,11 +196,12 @@ func (d *Dispatcher) Run(ctx context.Context) {
 }
 
 // Observe is the hook for the event hub: it receives every event the hub
-// publishes (channel is uuid.Nil for events to everybody) and queues it for
-// the webhooks that subscribed to it. It never blocks.
+// publishes (channel is uuid.Nil for events to everybody) and queues the
+// events of a channel for the webhooks of that channel that subscribed to
+// them. It never blocks.
 func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
 	name, data, ok := translate(eventType, payload)
-	if !ok {
+	if !ok || channel == uuid.Nil {
 		return
 	}
 	var targets []uuid.UUID
@@ -210,9 +209,7 @@ func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
 		if !slices.Contains(r.events, name) {
 			continue
 		}
-		// A server-wide webhook hears everything it subscribed to (only it
-		// can subscribe to server events); a channel's webhook its channel.
-		if r.channel != nil && *r.channel != channel {
+		if r.channel != channel {
 			continue
 		}
 		targets = append(targets, r.id)
@@ -263,8 +260,6 @@ func translate(eventType string, payload any) (name string, data any, ok bool) {
 		return EventReactionsUpdate, payload, true
 	case "voice_state_update":
 		return EventVoiceStateUpdate, payload, true
-	case "member_joined":
-		return EventMemberAdd, payload, true
 	}
 	return "", nil, false
 }
@@ -297,35 +292,6 @@ func isTimeout(err error) bool {
 	return errors.As(err, &t) && t.Timeout()
 }
 
-// mayDeliver re-checks, at delivery time, that the webhook's creator still
-// holds what it takes: an enabled account, and Manage webhooks and View
-// channel in the webhook's channel (the Owner for a server-wide webhook,
-// View channel in the event's channel). Nothing is delivered without it.
-func (d *Dispatcher) mayDeliver(ctx context.Context, rec *outgoingRec) bool {
-	var active bool
-	if err := d.DB.QueryRow(ctx, `SELECT disabled_at IS NULL FROM users WHERE id = $1`, rec.createdBy).Scan(&active); err != nil || !active {
-		return false
-	}
-	return d.creatorHolds(ctx, rec)
-}
-
-// creatorHolds is the permission half of mayDeliver.
-func (d *Dispatcher) creatorHolds(ctx context.Context, rec *outgoingRec) bool {
-	if d.Perms == nil {
-		return true
-	}
-	sub := perm.Subject{ID: rec.createdBy}
-	if rec.ChannelID == nil {
-		snap, err := d.Perms.Snapshot(ctx)
-		return err == nil && snap.IsOwner(sub)
-	}
-	snap, err := d.Perms.ForChannel(ctx, *rec.ChannelID)
-	if err != nil {
-		return false
-	}
-	return perm.CheckChannel(snap.Channel(sub, *rec.ChannelID), perm.ManageWebhooks) == nil
-}
-
 func (d *Dispatcher) backoff(attempt int) time.Duration {
 	d.mu.Lock()
 	steps := d.waits
@@ -344,7 +310,7 @@ func (d *Dispatcher) backoff(attempt int) time.Duration {
 // the event.
 func (d *Dispatcher) process(ctx context.Context, j job) {
 	rec, err := getOutgoing(ctx, d.DB, j.webhook)
-	if err != nil || !rec.enabled || !d.mayDeliver(ctx, rec) {
+	if err != nil || !rec.enabled {
 		return
 	}
 	del, retryAfter := d.attempt(ctx, rec, j.event, j.attempt)
