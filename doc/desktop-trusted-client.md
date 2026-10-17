@@ -102,8 +102,17 @@ committed in this repository (`web/desktop-signing.pub`) and attaches
 auditing) to the GitHub release. **Without the secret the job signs nothing
 and succeeds** (forks). Pull requests never see the secret.
 
+The release workflow builds and signs in separate jobs: `web-build` has no
+secrets and installs with `--ignore-scripts`; `web-bundle` holds the key in the
+GitHub environment `web-bundle-signing` (limited to `main`), never runs npm,
+builds `cmd/webbundle` from the tag's own Go source and signs the downloaded
+`web/dist`. Residual risk: the signed files are what the build job produced, so
+a poisoned npm dependency that reaches the build output would be signed. The
+lockfile pins every dependency and the manifest hash is printed in the job
+summary for comparison with the image's build.
+
 The private key is generated once with `openssl genpkey -algorithm ed25519`,
-stored only as the Actions secret and in the owner's backup directory
+stored only as the environment secret and in the owner's backup directory
 `~/.mnema-signing/` (mode 700/600). Only the public key is committed.
 
 ### Pinning and rotation
