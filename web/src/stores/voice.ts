@@ -4,9 +4,10 @@ import { syncServerClock } from '../lib/clock'
 import { playSoundEffect } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
 import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
+import { layersKey } from '../lib/screenLayers'
 
 import type { UserUpdate } from '../types/domain'
-import type { MediaState, ScreenViewers, VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState, SubscribeRequest } from '../types/events'
+import type { MediaState, ScreenLayer, ScreenLayers, ScreenLayersWanted, ScreenReception, ScreenViewers, VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState, SubscribeRequest } from '../types/events'
 import type { RTCConnectionStats } from '../lib/rtcStats'
 import type { MediaVerification } from '../lib/media/verify'
 import type { ScreenQuality } from '../lib/streamQuality'
@@ -237,6 +238,21 @@ export const useVoiceStore = defineStore('voice', () => {
   // sharer userId -> user IDs watching their screen share (the server's
   // screen_viewers event; only for the room I am in).
   const screenViewers = ref<Record<string, string[]>>({})
+  // sharer userId -> the layers of their live screen share, best first (the
+  // server's screen_layers event). Without layers there is nothing to choose.
+  const screenLayers = ref<Record<string, ScreenLayer[]>>({})
+  // sharer userId -> the layer of their share I receive now, and whether the
+  // server picked it (screen_quality).
+  const receivedLayer = ref<Record<string, { layer: number, auto: boolean }>>({})
+  // sharer userId -> my choice: 'auto' or the index of a layer. Not persisted:
+  // it lasts for one share and one call.
+  const screenChoice = ref<Record<string, number | 'auto'>>({})
+  // How many layers of a screen share the server takes (server_info); 0 for a
+  // server that does not know layers, which then gets the screen as one.
+  const serverScreenLayers = ref(0)
+  // Which of my own screen share's layers some viewer needs (screen_layers_wanted);
+  // null until the server says, then my share sends only these.
+  const layersWanted = ref<number[] | null>(null)
   const localCameraStream = shallowRef<MediaStream | null>(null)
   // userId -> MediaStream of that participant's camera (replaced, never mutated).
   const userVideoStreams = shallowRef<Record<string, MediaStream>>({})
@@ -416,8 +432,14 @@ export const useVoiceStore = defineStore('voice', () => {
       emitSubscription({ kind: 'camera', user_id: id, on: false })
     }
     for (const id of Object.keys(watchedScreens.value)) {
-      emitSubscription({ kind: 'screen', user_id: id, on: true })
+      emitSubscription(screenRequest(id, true))
     }
+  }
+
+  // A subscription to a screen share carries the layer I chose, if I did.
+  function screenRequest(userId: string, on: boolean): SubscribeRequest {
+    const choice = screenChoice.value[userId]
+    return choice === undefined ? { kind: 'screen', user_id: userId, on } : { kind: 'screen', user_id: userId, on, quality: choice }
   }
 
   function syncScreenFocus(preferred: string | null) {
@@ -438,7 +460,7 @@ export const useVoiceStore = defineStore('voice', () => {
     focusedCamera.value = null
     watchedScreens.value = { ...watchedScreens.value, [userId]: true }
     syncScreenFocus(userId)
-    emitSubscription({ kind: 'screen', user_id: userId, on: true })
+    emitSubscription(screenRequest(userId, true))
   }
 
   function unwatchScreen(userId: string | null) {
@@ -446,6 +468,7 @@ export const useVoiceStore = defineStore('voice', () => {
     const next = { ...watchedScreens.value }
     delete next[userId]
     watchedScreens.value = next
+    forgetScreenQuality(userId, false)
     const streams = { ...remoteScreenStreams.value }
     delete streams[userId]
     remoteScreenStreams.value = streams
@@ -549,6 +572,7 @@ export const useVoiceStore = defineStore('voice', () => {
       delete v[user_id]
       screenViewers.value = v
     }
+    if (!screen) forgetScreenQuality(user_id)
     // The share ended: the opt-in ended with it.
     if (!screen && watchedScreens.value[user_id]) {
       const w = { ...watchedScreens.value }
@@ -572,6 +596,61 @@ export const useVoiceStore = defineStore('voice', () => {
     screenViewers.value = next
   }
 
+  // What I chose and receive of a share ends with my watching it; the layers it
+  // has stay known until it ends.
+  function forgetScreenQuality(userId: string, withLayers = true) {
+    for (const ref of withLayers ? [screenLayers, receivedLayer, screenChoice] as const : [receivedLayer, screenChoice] as const) {
+      if (!(userId in ref.value)) continue
+      const next = { ...ref.value }
+      delete next[userId]
+      ref.value = next as never
+    }
+  }
+
+  function sameRoom(channelId: string | undefined): boolean {
+    // Late events of a room I left (or before I joined one) are not mine.
+    return !!currentChannelId.value && (!channelId || channelId === currentChannelId.value)
+  }
+
+  /** screen_layers: the layers of userId's live screen share ([] once it ended). */
+  function handleScreenLayers(event: ScreenLayers) {
+    const { channel_id, user_id, layers } = event || {}
+    if (!user_id || !sameRoom(channel_id)) return
+    const before = screenLayers.value[user_id]
+    if (!layers?.length) {
+      forgetScreenQuality(user_id)
+      return
+    }
+    screenLayers.value = { ...screenLayers.value, [user_id]: layers }
+    // A choice means the layers it was made for; for others the server's pick stands again.
+    if (before && layersKey(before) !== layersKey(layers) && user_id in screenChoice.value) {
+      const next = { ...screenChoice.value }
+      delete next[user_id]
+      screenChoice.value = next
+      if (watchedScreens.value[user_id]) emitSubscription({ kind: 'screen', user_id, on: true, quality: 'auto' })
+    }
+  }
+
+  /** screen_quality: the layer of userId's share I receive now. */
+  function handleScreenQuality(event: ScreenReception) {
+    const { channel_id, user_id, layer, auto } = event || {}
+    if (!user_id || !sameRoom(channel_id) || !watchedScreens.value[user_id]) return
+    receivedLayer.value = { ...receivedLayer.value, [user_id]: { layer, auto } }
+  }
+
+  /** screen_layers_wanted: the layers of my own share that someone receives. */
+  function handleLayersWanted(event: ScreenLayersWanted) {
+    if (!event || !Array.isArray(event.layers) || !sameRoom(event.channel_id)) return
+    layersWanted.value = [...event.layers]
+  }
+
+  /** Chooses which layer of userId's screen share I receive: 'auto' or a layer index. */
+  function setScreenChoice(userId: string | null, choice: number | 'auto') {
+    if (!userId || !watchedScreens.value[userId]) return
+    screenChoice.value = { ...screenChoice.value, [userId]: choice }
+    emitSubscription({ kind: 'screen', user_id: userId, on: true, quality: choice })
+  }
+
   /** Who watches userId's screen share (my own too): user IDs, [] for nobody. */
   function viewersOf(userId: string | null) {
     return userId ? screenViewers.value[userId] || [] : []
@@ -589,6 +668,9 @@ export const useVoiceStore = defineStore('voice', () => {
     mediaState.value = {}
     // The server sends who watches what again after the join.
     screenViewers.value = {}
+    screenLayers.value = {}
+    receivedLayer.value = {}
+    layersWanted.value = null
     userVideoStreams.value = {}
     syncScreenFocus(null)
   }
@@ -751,7 +833,13 @@ export const useVoiceStore = defineStore('voice', () => {
     currentChannelId.value = channelId
     isConnected.value = !!channelId
     // Viewers belong to one room.
-    if (prev !== channelId) screenViewers.value = {}
+    if (prev !== channelId) {
+      screenViewers.value = {}
+      screenLayers.value = {}
+      receivedLayer.value = {}
+      screenChoice.value = {}
+      layersWanted.value = null
+    }
     if (channelId) {
       if (prev !== channelId) {
         playSoundEffect('join')
@@ -808,6 +896,10 @@ export const useVoiceStore = defineStore('voice', () => {
     focusedCamera.value = null
     mediaState.value = {}
     screenViewers.value = {}
+    screenLayers.value = {}
+    receivedLayer.value = {}
+    screenChoice.value = {}
+    layersWanted.value = null
     userVideoStreams.value = {}
     subscriptionSink = null
     activeView.value = 'chat'
@@ -861,6 +953,15 @@ export const useVoiceStore = defineStore('voice', () => {
     handleMediaState,
     screenViewers,
     handleScreenViewers,
+    screenLayers,
+    receivedLayer,
+    screenChoice,
+    layersWanted,
+    serverScreenLayers,
+    handleScreenLayers,
+    handleScreenQuality,
+    handleLayersWanted,
+    setScreenChoice,
     viewersOf,
     resetRemoteMedia,
     userVideoStreams,

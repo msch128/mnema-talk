@@ -129,7 +129,21 @@ announced as `screen_layers`), a viewer picks one with `quality` on
 sender is told which layers anyone needs (`screen_layers_wanted`) so it can
 stop encoding the others. A layer nobody needs any more stays wanted for eight
 seconds, so switching back and forth does not restart an encoder each time.
-Cameras and audio are not layered.
+Cameras and audio are not layered (small pictures, and every layer costs the
+sender an encoder).
+
+The web client ([`lib/screenLayers.ts`](../web/src/lib/screenLayers.ts),
+`syncLayers` in [`useWebRTC.ts`](../web/src/composables/useWebRTC.ts)) sends
+the share as the streamer chose it on layer 0 and up to two smaller ones
+(1080p, 720p, 480p or 360p, at most 30 fps, at least a quarter smaller than the
+layer above) from the same capture with `scaleResolutionDownBy` on the extra
+lines. The lower layers stay switched off (`active=false`) until the server
+says a viewer needs them, and layer 0 is switched off when everybody watches
+a lower one. It uses these lines only when `server_info.screen_layers` says the
+server has them. Viewers pick Auto or a layer in a menu on the stage, labelled
+with the sizes the sender declared. Each layer's frames are sealed in a stream
+of their own (see SECURITY.md), so a switch needs no coordination between
+sender and receiver.
 
 **Stream quality and volume (0.4.0).** The sharer chooses mode, resolution
 and frame rate; the client applies them as capture constraints and sender

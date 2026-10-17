@@ -1,5 +1,5 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
-import { FrameStream, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
+import { FrameStream, LAYER_STREAM_MASK, layerStreamId, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
 import { clock } from './clock'
 
@@ -15,6 +15,8 @@ interface TransformOptions {
   direction?: unknown
   channelId?: unknown
   senderId?: unknown
+  /** The layer of a screen share this line sends (0..3); absent for every other line. */
+  layer?: unknown
 }
 
 interface RtpTransformer {
@@ -230,8 +232,11 @@ scope.onrtctransform = (event) => {
   // A receiver may be armed before the SFU says who publishes on its line.
   const senderId = typeof options?.senderId === 'string' && options.senderId ? options.senderId : null
   if (!transformer || !port || !direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return
-  // Every sending transform starts a fresh stream.
-  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream() : null }
+  // Every sending transform starts a fresh stream; a screen share's layers
+  // carry their layer in the stream ID, so they cannot share one.
+  const layer = options?.layer
+  const layerId = typeof layer === 'number' && Number.isInteger(layer) && layer >= 0 && layer <= LAYER_STREAM_MASK ? layerStreamId(layer) : undefined
+  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null }
   port.onmessage = (message: MessageEvent<unknown>) => {
     const data = message.data
     if (!data || typeof data !== 'object') return

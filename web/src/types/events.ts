@@ -7,6 +7,12 @@ import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue | undefined }
 export interface MediaState { channel_id: string; user_id: string; screen: boolean; camera: boolean }
 export interface ScreenViewers { channel_id: string; user_id: string; viewers: string[] }
+/** One encoding of a screen share as its sender declares it. */
+export interface ScreenLayer { width: number; height: number; fps: number }
+export interface ScreenLayers { channel_id: string; user_id: string; layers: ScreenLayer[] }
+/** The layer of a screen share this connection receives (-1 before the first picture) and whether the server chose it. */
+export interface ScreenReception { channel_id: string; user_id: string; layer: number; auto: boolean }
+export interface ScreenLayersWanted { channel_id: string; layers: number[] }
 export interface SpeakingState { channel_id: string; user_id: string; active: boolean }
 export interface MuteState { channel_id: string; user_id: string; muted: boolean; deafened: boolean }
 export interface VoiceRooms { started: Record<string, string>; now: string }
@@ -21,7 +27,7 @@ export type ReadStateUpdate =
 
 export interface ServerEventPayloads {
   pong: { t: number }
-  server_info: { version: string }
+  server_info: { version: string; screen_layers?: number }
   system_update: { version: string }
   presence_snapshot: Record<string, Presence> | string[]
   presence_update: { user_id: string; status: Presence }
@@ -42,6 +48,9 @@ export interface ServerEventPayloads {
   user_stats: { user_id: string; voice_seconds: number }
   webrtc_media_state: MediaState
   screen_viewers: ScreenViewers
+  screen_layers: ScreenLayers
+  screen_quality: ScreenReception
+  screen_layers_wanted: ScreenLayersWanted
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
   voice_kicked: { channel_id: string; reason?: 'room_full' }
@@ -53,8 +62,9 @@ export type ServerEvent = EventUnion<ServerEventPayloads>
 export type ServerEventType = keyof ServerEventPayloads
 
 export type SubscribeRequest =
-  | { kind: 'screen' | 'camera'; user_id: string; on: boolean; all?: false }
-  | { kind: 'camera'; all: true; on: boolean; user_id?: never }
+  | { kind: 'camera'; user_id: string; on: boolean; all?: false; quality?: never }
+  | { kind: 'screen'; user_id: string; on: boolean; all?: false; quality?: 'auto' | number }
+  | { kind: 'camera'; all: true; on: boolean; user_id?: never; quality?: never }
 
 export interface ClientEventPayloads {
   ping: { t: number }
@@ -69,6 +79,7 @@ export interface ClientEventPayloads {
   webrtc_diag: { [key: string]: JsonValue | undefined }
   webrtc_request_keyframe: Record<string, never>
   webrtc_subscribe: SubscribeRequest
+  webrtc_layers: { layers: ScreenLayer[] }
   webrtc_screenshare_start: Record<string, never>
   webrtc_screenshare_stop: Record<string, never>
   webrtc_camera_stop: Record<string, never>
@@ -100,6 +111,19 @@ function onlyFields(value: Record<string, unknown>, fields: readonly string[]): 
   return Object.keys(value).every(key => fields.includes(key))
 }
 
+/** A screen share has at most this many layers (internal/sfu MaxLayers). */
+export const MAX_SCREEN_LAYERS = 3
+
+function isLayerIndex(value: unknown): value is number {
+  return isInteger(value) && value >= 0 && value < MAX_SCREEN_LAYERS
+}
+
+function isScreenLayer(value: unknown): value is ScreenLayer {
+  return isRecord(value) && isInteger(value['width']) && isInteger(value['height']) && isInteger(value['fps'])
+    && value['width'] > 0 && value['height'] > 0 && value['fps'] > 0
+    && onlyFields(value, ['width', 'height', 'fps'])
+}
+
 function roomUser(value: Record<string, unknown>): boolean {
   return isIdentifier(value['channel_id']) && isIdentifier(value['user_id'])
 }
@@ -118,7 +142,8 @@ export function isServerEvent(value: unknown): value is ServerEvent {
   if (!isRecord(payload)) return false
   switch (value['type']) {
     case 'pong': return typeof payload['t'] === 'number' && Number.isFinite(payload['t'])
-    case 'server_info':
+    case 'server_info': return isString(payload['version'], 64)
+      && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))
     case 'system_update': return isString(payload['version'], 64)
     case 'presence_update': return isIdentifier(payload['user_id']) && isPresence(payload['status'])
     case 'typing': return roomUser(payload)
@@ -146,6 +171,10 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     case 'user_stats': return isIdentifier(payload['user_id']) && isInteger(payload['voice_seconds'])
     case 'webrtc_media_state': return roomUser(payload) && typeof payload['screen'] === 'boolean' && typeof payload['camera'] === 'boolean'
     case 'screen_viewers': return roomUser(payload) && isArrayOf(payload['viewers'], isIdentifier)
+    case 'screen_layers': return roomUser(payload) && isArrayOf(payload['layers'], isScreenLayer) && (payload['layers'] as unknown[]).length <= MAX_SCREEN_LAYERS
+    case 'screen_quality': return roomUser(payload) && isInteger(payload['layer']) && payload['layer'] >= -1 && payload['layer'] < MAX_SCREEN_LAYERS
+      && typeof payload['auto'] === 'boolean'
+    case 'screen_layers_wanted': return isIdentifier(payload['channel_id']) && isArrayOf(payload['layers'], isLayerIndex)
     case 'voice_speaking': return roomUser(payload) && typeof payload['active'] === 'boolean'
     case 'voice_mute_state': return roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'
     case 'voice_kicked': return isIdentifier(payload['channel_id'])
@@ -161,7 +190,7 @@ const SERVER_EVENT_TYPES = new Set<string>([
   'channels_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'user_update', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
-  'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
+  'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])
 
 /** Unknown event names stay ignorable for forward compatibility; malformed

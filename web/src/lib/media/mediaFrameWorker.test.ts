@@ -40,7 +40,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands }: { named?: boolean, type?: string, mime?: string, afterCommands?: () => void } = {}) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands, layer }: { named?: boolean, type?: string, mime?: string, afterCommands?: () => void, layer?: unknown } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
   vi.stubGlobal('self', scope)
@@ -66,7 +66,7 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     close() { resolveDone() },
   })
   scope.onrtctransform?.({})
-  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}) } } })
+  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}), ...(layer === undefined ? {} : { layer }) } } })
   for (const command of commands) port.postMessage(command)
   afterCommands?.()
   for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type, getMetadata: () => ({ mimeType: mime }) } : {}) })
@@ -456,5 +456,47 @@ describe('media frame worker', () => {
       expect(await frames('send', [new Uint8Array([1]).buffer], [...keyed, { type: 'key', epoch: 0, key: fresh, replace: true, seq: 2 }], { afterCommands: () => { clock += STALE_SEAL_MS + 1 } })).toHaveLength(1)
       now.mockRestore()
     })
+  })
+})
+
+describe('media frame worker, layers of a screen share', () => {
+  const streamOf = (written: unknown[]) => written.map(frame => new DataView((frame as { data: ArrayBuffer }).data).getUint32(6))
+  const payloads = [new Uint8Array([1]).buffer, new Uint8Array([2]).buffer, new Uint8Array([3]).buffer]
+
+  it('seals each layer’s line in a stream that carries the layer', async () => {
+    const key = await epochKeys(40)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    const streams: number[][] = []
+    for (const layer of [0, 1, 2]) {
+      streams.push(streamOf(await frames('send', payloads, keyed, { layer })))
+    }
+    for (const [layer, ids] of streams.entries()) {
+      // One stream per line, and its low bits name the layer.
+      expect(new Set(ids).size).toBe(1)
+      expect((ids[0] ?? 0) & 3).toBe(layer)
+    }
+    expect(new Set(streams.map(ids => ids[0])).size).toBe(3)
+  })
+
+  it('treats anything but a layer number as no layer', async () => {
+    const key = await epochKeys(41)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    for (const layer of [4, -1, 1.5, '1', null, Number.NaN]) {
+      expect(streamOf(await frames('send', payloads.slice(0, 1), keyed, { layer }))).toHaveLength(1)
+    }
+    // Layers 0 to 3 fit the two bits.
+    expect((streamOf(await frames('send', payloads.slice(0, 1), keyed, { layer: 3 }))[0] ?? 0) & 3).toBe(3)
+  })
+
+  it('opens frames of different layers of one sender as they come', async () => {
+    const key = await epochKeys(42)
+    const keyed = [{ type: 'key', epoch: 2, key, seq: 1 }]
+    const sealedBy = async (layer: number) => {
+      const out = await frames('send', [new Uint8Array([layer, 9]).buffer], keyed, { layer })
+      return new Uint8Array((out[0] as { data: ArrayBuffer }).data)
+    }
+    const packets = [await sealedBy(0), await sealedBy(2), await sealedBy(1), await sealedBy(2)]
+    const opened = await frames('recv', packets.map(packet => asBuffer(packet.buffer)), keyed)
+    expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[0, 9], [2, 9], [1, 9], [2, 9]])
   })
 })

@@ -139,9 +139,9 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     onWire(listener) { wireListener = listener },
     onNotice(listener) { noticeListener = listener },
     onVerification(listener) { verificationListener = listener },
-    protectSender(sender) {
+    protectSender(sender, layer) {
       if (!channelId || !userId) return false
-      return guard.armSender(sender, channelId, userId)
+      return guard.armSender(sender, channelId, userId, layer)
     },
     prepareIncoming(receiver) {
       if (!receiver || !channelId) return false

@@ -86,7 +86,7 @@ locally instead (`make up` or `make dev`).
   the line belongs to, so neither the server nor another member can pass off
   media as someone else's; an id that holds two leaves verifies nothing. Each
   sending transform numbers its frames, and a receiver opens a frame only once
-  (64-frame window per stream). The previous epoch's key is kept until the
+  (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept until the
   next rotation.
   **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
   two-minute jitter per epoch, so Talks do not rotate in step): once the
@@ -128,7 +128,33 @@ locally instead (`make up` or `make dev`).
   costs at most one removal per 20 minutes. This stays inside the server's
   handshake budget. The server can still withhold heartbeats to get a member
   removed; that is the same denial-of-service it already has by dropping
-  messages. Video stays decodable by the
+  messages.
+  **Layers of a screen share.** A screen share may go out as up to three
+  encodings (layers), each on a sending line of its own and so each sealed by
+  its own transform, and the SFU hands a viewer one layer at a time, switching
+  at a keyframe. Nothing about the sealing changes. Every frame's AES-GCM
+  nonce is 96 fresh random bits from the browser (never derived from the layer,
+  stream or counter), so layers add no way to repeat a nonce under the epoch
+  key; at most a few million frames are sealed per key and sender in one
+  30-minute epoch, far below the 2^32 messages NIST allows for random 96-bit
+  nonces, and the tests seal thousands of frames across layers and check that
+  every nonce is a distinct draw. Each layer's transform starts a stream of its
+  own whose ID carries the layer in its low two bits, so two layers of a share
+  never share a stream, whatever the random rest of the ID is; the counter,
+  the stream and the epoch are authenticated and signed with the frame. The
+  receiver's replay window is per (epoch, stream), so when the SFU switches a
+  viewer from one layer to another, or back, the counters of the other layers
+  (which kept counting while not forwarded) never look like replays of each
+  other and nothing is opened twice. A sender may use up to 256 streams per
+  epoch (a share takes three, each reconnect re-arms all of its lines); further
+  new streams are refused rather than evicting an old one. The SFU reads only
+  what the transform leaves readable (the RTP descriptor, the VP8 frame tag,
+  H.264 NAL types) to find keyframes and renumber packets; it never decodes or
+  alters sealed bytes. Which layers exist, which one a viewer receives and
+  which a sender is asked to encode are metadata the server sees, like frame
+  sizes. A viewer can only change its own layer, a sender only declares its
+  own share, and a sender is asked to encode at most its three layers.
+  Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
   only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks

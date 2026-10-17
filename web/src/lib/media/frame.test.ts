@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
-  FRAME_OVERHEAD_BYTES, FrameStream, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, importEpochKey, importFrameSigner, importFrameVerifier,
+  FRAME_OVERHEAD_BYTES, FrameStream, LAYER_STREAM_MASK, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, layerStreamId, importEpochKey, importFrameSigner, importFrameVerifier,
   openFrame, rememberEpochKey, sealFrame, type EpochKeys,
 } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
@@ -194,5 +194,123 @@ describe('media frames', () => {
     rememberEpochKey(keys, 3, 'third')
     rememberEpochKey(keys, 2, 'second')
     expect([...keys.entries()].sort((a, b) => a[0] - b[0])).toEqual([[2, 'second'], [3, 'third']])
+  })
+})
+
+// A screen share goes out as up to three layers, each sealed by a transform
+// of its own; the SFU hands a viewer one of them at a time and switches
+// between them. The AES-GCM nonce of a frame is 96 fresh random bits, so it
+// does not depend on the layer at all; the stream ID and counter only drive
+// the replay window and are bound into the authenticated data.
+describe('layers of a screen share', () => {
+  const NONCE_OFFSET = 14
+  const NONCE_BYTES = 12
+
+  it('puts the layer in the stream ID, so two layers can never share a stream', () => {
+    for (const random of [0, 1, 3, 4, 0x7fffffff, 0x80000000, 0xfffffffc, 0xffffffff, 0x12345678]) {
+      const ids = [0, 1, 2, 3].map(layer => layerStreamId(layer, random))
+      expect(new Set(ids).size).toBe(4)
+      ids.forEach((id, layer) => {
+        expect(id & LAYER_STREAM_MASK).toBe(layer)
+        expect(Number.isInteger(id) && id >= 0 && id <= 0xffffffff).toBe(true)
+      })
+    }
+    // Without a given random part it is random: two draws differ almost surely.
+    expect(new Set(Array.from({ length: 8 }, () => layerStreamId(1))).size).toBeGreaterThan(1)
+  })
+
+  it('opens every frame whichever layer the SFU forwards, and still refuses replays', async () => {
+    const keys = await aliceKeys()
+    const replay = new ReplayWindow()
+    const layers = [0, 1, 2].map(layer => ({ layer, stream: new FrameStream(layerStreamId(layer, 0xabcdef00)) }))
+    const forwarded: Array<{ layer: number, counter: number, packet: Uint8Array }> = []
+    // All layers number their frames from zero and keep sealing while only one is forwarded.
+    const sealNext = async (layer: number) => {
+      const entry = layers[layer]
+      const counter = entry?.stream.next()
+      if (!entry || counter === null || counter === undefined) throw new Error('no counter')
+      const packet = await sealed(keys, { stream: entry.stream.id, counter, plaintext: Uint8Array.of(layer, counter & 0xff) })
+      return { layer, counter, packet }
+    }
+    // The viewer sees: layer 0 for a while, layer 2 (its counter ran meanwhile), layer 0 again (jumped forward), layer 1.
+    const plan = [0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 1, 1, 2, 2, 0]
+    const skipped = new Map<number, number>([[2, 40], [0, 25], [1, 90]])
+    const seen = new Set<number>()
+    for (const layer of plan) {
+      if (!seen.has(layer) && seen.size) {
+        // Frames sealed while this layer was not forwarded: the counter moves on.
+        for (let i = 0; i < (skipped.get(layer) ?? 0); i++) await sealNext(layer)
+      }
+      seen.add(layer)
+      forwarded.push(await sealNext(layer))
+    }
+    for (const frame of forwarded) {
+      const opened = await open(keys, frame.packet, { replay })
+      expect(opened, `layer ${frame.layer} counter ${frame.counter}`).toEqual(Uint8Array.of(frame.layer, frame.counter & 0xff))
+    }
+    // Nothing opens twice, in any layer, even right after a switch.
+    for (const frame of forwarded) await expect(open(keys, frame.packet, { replay })).resolves.toBeNull()
+    // Reordering across a switch within the window still works once.
+    const late = await sealNext(1)
+    const later = await sealNext(1)
+    await expect(open(keys, later.packet, { replay })).resolves.not.toBeNull()
+    await expect(open(keys, late.packet, { replay })).resolves.not.toBeNull()
+    await expect(open(keys, late.packet, { replay })).resolves.toBeNull()
+  })
+
+  it('does not mistake one layer’s counter for another’s', async () => {
+    const keys = await aliceKeys()
+    const replay = new ReplayWindow()
+    // Both layers send their counter 0: different streams, so both are fresh.
+    const first = await sealed(keys, { stream: layerStreamId(0, 0x1000), counter: 0 })
+    const second = await sealed(keys, { stream: layerStreamId(2, 0x1000), counter: 0 })
+    await expect(open(keys, first, { replay })).resolves.not.toBeNull()
+    await expect(open(keys, second, { replay })).resolves.not.toBeNull()
+    // A frame moved into the other layer's stream no longer verifies (stream is authenticated).
+    const view = new DataView(first.buffer, first.byteOffset, first.byteLength)
+    view.setUint32(6, layerStreamId(1, 0x1000))
+    await expect(open(keys, first, { replay: new ReplayWindow() })).resolves.toBeNull()
+  })
+
+  it('never repeats a nonce under one key across layers and frames', async () => {
+    const keys = await aliceKeys()
+    const nonces = new Set<string>()
+    const drawn: string[] = []
+    const real = crypto.getRandomValues.bind(crypto)
+    const draw = vi.spyOn(crypto, 'getRandomValues').mockImplementation(((array: Uint8Array<ArrayBuffer>) => {
+      const out = real(array)
+      if (out.byteLength === NONCE_BYTES) drawn.push(Buffer.from(out).toString('hex'))
+      return out
+    }) as typeof crypto.getRandomValues)
+    try {
+      const streams = [0, 1, 2].map(layer => new FrameStream(layerStreamId(layer)))
+      let frames = 0
+      for (let counter = 0; counter < 400; counter++) {
+        for (const stream of streams) {
+          // The same (epoch, stream, counter) twice must not repeat its nonce either.
+          for (let again = 0; again < 2; again++) {
+            const packet = await sealed(keys, { stream: stream.id, counter })
+            nonces.add(Buffer.from(packet.subarray(NONCE_OFFSET, NONCE_OFFSET + NONCE_BYTES)).toString('hex'))
+            frames++
+          }
+        }
+      }
+      expect(frames).toBe(2400)
+      expect(nonces.size).toBe(frames)
+      // Every nonce is a fresh draw of the browser's random source, nothing derived.
+      expect(drawn).toHaveLength(frames)
+      expect(new Set(drawn).size).toBe(frames)
+      expect([...nonces].every(n => drawn.includes(n))).toBe(true)
+    } finally {
+      draw.mockRestore()
+    }
+  })
+
+  it('keeps room for the streams of reconnects and restarted shares', async () => {
+    // A share takes three streams, a reconnect all of the sender's lines again.
+    expect(REPLAY_STREAMS).toBeGreaterThanOrEqual(6 * 32)
+    const replay = new ReplayWindow()
+    for (let i = 0; i < 64; i++) expect(replay.mark(1, i, 0)).toBe(true)
+    expect(replay.mark(1, 64, 0)).toBe(true)
   })
 })

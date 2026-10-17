@@ -10,7 +10,7 @@ const voiceUser = { ...userFixture(), joined_at: FIXTURE_TIMESTAMP, muted: false
 const reaction = { emoji: '👍', count: 1, users: [id] }
 const examples: Record<ServerEventType, unknown[]> = {
   pong: [{ t: 0 }, { t: 0.5 }],
-  server_info: [{ version: '0.4.4' }],
+  server_info: [{ version: '0.4.4' }, { version: '0.8.0', screen_layers: 3 }, { version: '0.8.0', screen_layers: 0 }],
   system_update: [{ version: '0.5.0' }],
   presence_snapshot: [[], [id], {}, { [id]: 'online' }, { [id]: 'offline' }],
   presence_update: [{ user_id: id, status: 'focus' }],
@@ -38,6 +38,9 @@ const examples: Record<ServerEventType, unknown[]> = {
   user_stats: [{ user_id: id, voice_seconds: 123 }],
   webrtc_media_state: [{ ...room, screen: true, camera: false }],
   screen_viewers: [{ ...room, viewers: [] }, { ...room, viewers: [id] }],
+  screen_layers: [{ ...room, layers: [] }, { ...room, layers: [{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }] }],
+  screen_quality: [{ ...room, layer: -1, auto: true }, { ...room, layer: 2, auto: false }],
+  screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
   voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }],
@@ -148,5 +151,31 @@ describe('ICE, voice-user and presence leaf contracts', () => {
   it('requires a complete user plus joined-at and both boolean mute flags', () => {
     expect(isVoiceUser(voiceUser)).toBe(true)
     for (const value of [null, { ...voiceUser, joined_at: null }, { ...voiceUser, muted: 0 }, { ...voiceUser, deafened: null }, { ...voiceUser, id: 'invalid' }]) expect(isVoiceUser(value)).toBe(false)
+  })
+})
+
+describe('screen layer events', () => {
+  const layer = { width: 1280, height: 720, fps: 30 }
+  const valid = (type: string, payload: unknown) => isServerEvent({ type, payload })
+
+  it('limits layers to what the server takes', () => {
+    expect(valid('screen_layers', { ...room, layers: [layer, layer, layer] })).toBe(true)
+    expect(valid('screen_layers', { ...room, layers: [layer, layer, layer, layer] })).toBe(false)
+    for (const bad of [{ ...layer, width: 0 }, { ...layer, height: -1 }, { ...layer, fps: 1.5 }, { ...layer, extra: 1 }, { width: 1, height: 1 }, null, 'x']) {
+      expect(valid('screen_layers', { ...room, layers: [bad] })).toBe(false)
+    }
+    expect(valid('screen_layers', { ...room, layers: 'none' })).toBe(false)
+  })
+
+  it('accepts only a layer the share can have', () => {
+    for (const layerIndex of [-1, 0, 1, 2]) expect(valid('screen_quality', { ...room, layer: layerIndex, auto: false })).toBe(true)
+    for (const layerIndex of [-2, 3, 0.5, '1', null]) expect(valid('screen_quality', { ...room, layer: layerIndex, auto: false })).toBe(false)
+    for (const index of [-1, 3, 1.5, '0']) expect(valid('screen_layers_wanted', { channel_id: id, layers: [index] })).toBe(false)
+    expect(valid('screen_layers_wanted', { layers: [0] })).toBe(false)
+  })
+
+  it('takes the layer count of a server_info within bounds', () => {
+    for (const count of [0, 1, 3]) expect(valid('server_info', { version: '1', screen_layers: count })).toBe(true)
+    for (const count of [-1, 4, 1.5, '3', null]) expect(valid('server_info', { version: '1', screen_layers: count })).toBe(false)
   })
 })

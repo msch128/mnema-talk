@@ -39,9 +39,17 @@ own compose project `mnema-loadtest` and ports, so it does not collide with
 | `long` | `watch` | like `full`, hold 2 h (`HOLD_S=7200`): memory and goroutine trend |
 
 Every knob can be overridden from the environment: `BROWSERS`, `PION`, `HOLD_S`,
-`MEMBERS`, `SCENARIOS` (space separated: `watch join reload`), `WIDTH`, `FPS`,
+`MEMBERS`, `SCENARIOS` (space separated: `watch join reload`), `WIDTH`, `FPS`, `QUALITY`,
 `BATCH`, `BATCH_MS`, `PER_BROWSER`, `SPACING_MS` (pause between two viewer
 joins), `GAP_MS`.
+
+**Layers.** A screen share is sent in up to three layers when the sharer's
+capture is larger than 480p, so `WIDTH=1280` (a 720p share, layers 720p, 480p,
+360p) exercises the SFU's layer switching. `QUALITY=2 make load-test` makes
+every Pion viewer ask for the smallest layer, `QUALITY=spread` spreads them over
+the layers by index (`avgKbps` of the viewers then shows the different
+bitrates), and the default `auto` takes the best layer. The browsers decode
+whichever layer the server gives them.
 
 **Bad networks.** `LOSS=0.05 JITTER_MS=20 make load-test` makes the Pion viewers
 drop 5 % of incoming RTP packets before Pion's NACK generator (so NACK and

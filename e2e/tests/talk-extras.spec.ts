@@ -1,6 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, bounds } from './helpers'
-import { randomBytes } from 'node:crypto'
+import { apiFetch, responseString, responseUserId, bounds, suiteMember } from './helpers'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -8,8 +7,6 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const USER = `extra_${suffix}`
-const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const VOICE_CHANNEL = `Extras ${suffix}`
 const TEXT_CHANNEL = `extras-text-${suffix}`
 
@@ -105,8 +102,6 @@ async function shot(page: Page, name: string) {
   if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: `${process.env.E2E_SHOT_DIR}/${name}.png` })
 }
 
-let memberRegistered = false
-
 // Two members (A: the admin, B: the file's member) in a new Talk.
 async function twoMembers(browser: Browser, tag: string, { pip = false, sound = false } = {}) {
   const aCtx = await browser.newContext({ permissions: ['microphone', 'camera'], viewport: { width: 1400, height: 900 } })
@@ -126,13 +121,13 @@ async function twoMembers(browser: Browser, tag: string, { pip = false, sound = 
   await b.goto('/')
   // One member for all tests of this file: registrations are rate-limited
   // per IP (10 per hour) and the whole suite runs from one address.
-  const bName = USER
-  if (!memberRegistered) {
+  const bName = suiteMember.username
+  if (!suiteMember.registered) {
     const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
-    expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: USER_PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
-    memberRegistered = true
+    expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    suiteMember.registered = true
   } else {
-    expect((await apiFetch(b, 'POST', '/api/auth/login', { username: bName, password: USER_PASSWORD })).status).toBe(200)
+    expect((await apiFetch(b, 'POST', '/api/auth/login', { username: bName, password: suiteMember.password })).status).toBe(200)
   }
   await b.reload()
   const me = await apiFetch(b, 'GET', '/api/auth/me')

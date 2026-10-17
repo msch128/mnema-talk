@@ -215,6 +215,20 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
   return null
 }
 
+// A screen share's layers are sealed by transforms of their own (one per
+// sending line), so each numbers its units from zero. Their stream IDs differ
+// in the low LAYER_STREAM_BITS bits, which carry the layer, so no two layers
+// of a share ever share a stream and a receiver's replay window can never
+// mistake one layer's counter for another's, however the SFU switches between
+// them. The other bits are random.
+export const LAYER_STREAM_BITS = 2
+export const LAYER_STREAM_MASK = (1 << LAYER_STREAM_BITS) - 1
+
+/** A random stream ID that carries `layer` (0..3) in its low bits. */
+export function layerStreamId(layer: number, random = new DataView(crypto.getRandomValues(new Uint8Array(4)).buffer).getUint32(0)): number {
+  return ((random & ~LAYER_STREAM_MASK) | (layer & LAYER_STREAM_MASK)) >>> 0
+}
+
 /** Numbers the units one sending transform seals. It stops at the end of the counter. */
 export class FrameStream {
   readonly id: number
@@ -240,7 +254,7 @@ const REPLAY_WINDOW = 64n
 const REPLAY_MASK = (1n << REPLAY_WINDOW) - 1n
 // Streams one sender may open per epoch. Only a verified unit starts a stream,
 // so only the sender itself can use them up; a new epoch starts afresh.
-export const REPLAY_STREAMS = 64
+export const REPLAY_STREAMS = 256
 
 /**
  * One sender's units seen per (epoch, stream): the highest counter and a

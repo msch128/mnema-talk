@@ -4,6 +4,7 @@ import { t } from '../i18n'
 import type { MediaStat } from './mediaStats'
 
 export interface RTCStatsSample { timestamp: number; bytesSent: number; bytesReceived: number }
+export interface ReceivedVideo { width: number; height: number; fps: number }
 interface AudioCounters { packetsReceived: number; packetsLost: number; jitter: number; bytesReceived: number; codecId: string | undefined }
 
 /**
@@ -53,6 +54,14 @@ export function summarizeStats(stats: Iterable<MediaStat>, prev: RTCStatsSample 
     }
   }
 
+  // The pictures received now (screens and cameras), largest first.
+  const videoIn: ReceivedVideo[] = []
+  for (const s of byId.values()) {
+    if (s.kind !== 'video' || s.type !== 'inbound-rtp' || !s.frameWidth || !s.frameHeight) continue
+    videoIn.push({ width: s.frameWidth, height: s.frameHeight, fps: Math.round(s.framesPerSecond || 0) })
+  }
+  videoIn.sort((a, b) => b.width * b.height - a.width * a.height)
+
   const codecStat = byId.get(outAudio?.codecId || '') || byId.get(inAudio?.codecId || '')
   const transport = [...byId.values()].find(s => s.type === 'transport')
   const local = pair && byId.get(pair.localCandidateId || '')
@@ -88,6 +97,7 @@ export function summarizeStats(stats: Iterable<MediaStat>, prev: RTCStatsSample 
       : null,
     localCandidate: local ? `${local.candidateType} / ${local.protocol}` : null,
     remoteCandidate: remote ? `${remote.candidateType} / ${remote.protocol}` : null,
+    videoIn,
     dtlsCipher: transport?.dtlsCipher || null,
     srtpCipher: transport?.srtpCipher || null,
     sample: { timestamp, bytesSent, bytesReceived }

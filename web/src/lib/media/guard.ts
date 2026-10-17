@@ -8,7 +8,7 @@ interface KeyedPort {
 }
 
 export interface MediaGuard {
-  armSender(sender: RTCRtpSender, channelId: string, senderId: string): boolean
+  armSender(sender: RTCRtpSender, channelId: string, senderId: string, layer?: number): boolean
   /**
    * Arms a receiver. With no sender yet it opens nothing until bindReceiver
    * names the publisher. Arming an armed receiver only names the publisher.
@@ -71,7 +71,7 @@ export function createMediaGuard(): MediaGuard {
     return worker
   }
 
-  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null): boolean {
+  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, layer?: number): boolean {
     if (!channelId || senderId === '' || (senderId === null && direction === 'send')) return false
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
@@ -81,6 +81,7 @@ export function createMediaGuard(): MediaGuard {
       direction,
       channelId,
       ...(senderId === null ? {} : { senderId }),
+      ...(layer === undefined ? {} : { layer }),
     }, [channel.port2])
     if (current) channel.port1.postMessage(current)
     ports.push(channel.port1)
@@ -102,7 +103,7 @@ export function createMediaGuard(): MediaGuard {
   }
 
   return {
-    armSender: (sender, channelId, senderId) => arm(sender, 'send', channelId, senderId),
+    armSender: (sender, channelId, senderId, layer) => arm(sender, 'send', channelId, senderId, layer),
     armReceiver: armIncoming,
     setKey(epoch, key, replace = false, soft = false) {
       seq += 1

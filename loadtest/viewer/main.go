@@ -19,6 +19,9 @@
 //	LEGACY_SIGNALLING=1  diagnostic: send candidates before the answer and
 //	              apply remote ones without a remote description (the
 //	              pre-0.8 scratch client), to reproduce ICE failures
+//	QUALITY       layer of the screen share to watch: "auto" (default), a
+//	              layer index 0..2 (0 is the best), or "spread" to give each
+//	              viewer layer index%3, so a run exercises all layers
 //	STOP_FILE     optional path; the run ends early once the file exists
 //	OUT           optional path of the JSON result
 package main
@@ -45,6 +48,22 @@ import (
 type token struct {
 	ID    string `json:"id"`
 	Token string `json:"token"`
+}
+
+// quality is the layer this member asks for (QUALITY), nil to leave it to the
+// server.
+func (m *member) quality() any {
+	switch q := os.Getenv("QUALITY"); q {
+	case "", "auto":
+		return nil
+	case "spread":
+		return m.index % 3
+	default:
+		if n, err := strconv.Atoi(q); err == nil && n >= 0 && n < 3 {
+			return n
+		}
+		return nil
+	}
 }
 
 // member is one simulated Talk participant.
@@ -278,7 +297,11 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 		t := time.NewTicker(5 * time.Second)
 		defer t.Stop()
 		for {
-			m.send("webrtc_subscribe", map[string]any{"kind": "screen", "user_id": sharer, "on": true})
+			sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
+			if q := m.quality(); q != nil {
+				sub["quality"] = q
+			}
+			m.send("webrtc_subscribe", sub)
 			select {
 			case <-t.C:
 			case <-m.stop:

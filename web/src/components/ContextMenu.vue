@@ -22,7 +22,9 @@ const props = defineProps({
   anchor: { type: Object as PropType<MenuAnchor | null>, default: null },
   items: { type: Array as PropType<ContextMenuItem[]>, default: () => [] },
   minWidth: { type: Number, default: 180 },
-  ariaLabel: { type: String, default: '' }
+  ariaLabel: { type: String, default: '' },
+  // Where the menu is attached: the page, or the element in full screen.
+  teleportTo: { type: [String, Object] as PropType<string | HTMLElement>, default: 'body' }
 })
 
 const emit = defineEmits<{ 'update:modelValue': [value: boolean]; close: []; select: [item: ContextMenuItem] }>()
@@ -290,7 +292,7 @@ const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-borde
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport :to="teleportTo">
     <div
       v-if="modelValue"
       ref="menuEl"
