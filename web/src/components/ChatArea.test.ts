@@ -495,6 +495,26 @@ describe('ChatArea notification settings and presentation', () => {
     expect(w.findComponent(ContextMenu).props('modelValue')).toBe(false)
   })
 
+  it('marks pinned messages, in the header and under a grouped message', async () => {
+    const chat = setup()
+    expect(w.find('[data-testid="pinned"]').exists()).toBe(false)
+    chat.messages = [{ ...msg('a', 'u2', 0), is_pinned: true }, { ...msg('b', 'u2', 1), is_pinned: true }]
+    await nextTick()
+    expect(rowComponent('b').props('grouped')).toBe(true)
+    expect(w.findAll('[data-testid="pinned"]')).toHaveLength(2)
+    expect(rowComponent('b').text()).toContain(t('moderation.pinned'))
+  })
+
+  it('shows the slow mode of the channel next to its name', async () => {
+    const chat = setup()
+    chat.activeChannel = channelFixture({ id: 'ch1', name: 'general', slow_mode_seconds: 0 })
+    await nextTick()
+    expect(w.find('[data-testid="slow-mode-chip"]').exists()).toBe(false)
+    chat.activeChannel = channelFixture({ id: 'ch1', name: 'general', slow_mode_seconds: 300 })
+    await nextTick()
+    expect(w.get('[data-testid="slow-mode-chip"]').text()).toBe(t('moderation.slowModeChip', { time: '5 Min.' }))
+  })
+
   it('renders text and voice empty/loading states, channel topic, member toggle and close', async () => {
     const chat = setup()
     chat.activeChannel = channelFixture({ id: 'ch1', name: 'general', topic: 'topic' })

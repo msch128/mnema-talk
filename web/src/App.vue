@@ -31,6 +31,7 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
+import MessageModerationDialog from './components/MessageModerationDialog.vue'
 import UpdateBanner from './components/UpdateBanner.vue'
 import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
@@ -501,5 +502,6 @@ onMounted(async () => {
     <ToastHost />
     <ConfirmDialog />
     <ModerationDialog />
+    <MessageModerationDialog />
   </div>
 </template>

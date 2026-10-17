@@ -91,7 +91,8 @@
       "usernameFormat": "Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, _ . oder -",
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
-      "missingPermission": "Dafür fehlt dir die Berechtigung."
+      "missingPermission": "Dafür fehlt dir die Berechtigung.",
+      "slowMode": "Langsammodus: bitte warte noch {seconds} s"
     },
     "field": {
       "content": "Nachricht",
@@ -1328,7 +1329,9 @@
       },
       "message": {
         "delete": "Nachricht gelöscht",
-        "edit": "Nachricht bearbeitet"
+        "edit": "Nachricht bearbeitet",
+        "pin": "Nachricht angeheftet",
+        "unpin": "Nachricht gelöst"
       },
       "voice": {
         "join": "Talk betreten",
@@ -1350,7 +1353,8 @@
         "timeout_remove": "Timeout aufgehoben",
         "ban": "Mitglied gesperrt",
         "unban": "Mitglied entsperrt",
-        "ban_expired": "Sperre abgelaufen"
+        "ban_expired": "Sperre abgelaufen",
+        "bulk_delete": "Nachrichten gesammelt gelöscht"
       }
     }
   },
@@ -1547,7 +1551,25 @@
       "minutes": "Minuten",
       "hours": "Stunden",
       "days": "Tage"
-    }
+    },
+    "noticeMessageDeleted": "Ein Moderator hat deine Nachricht in {channel} entfernt",
+    "noticeMessagesDeleted": "Ein Moderator hat {count} deiner Nachrichten in {channel} entfernt",
+    "bulkDeleted": "{count} Nachrichten von {name} gelöscht.",
+    "deleteTitle": "Nachricht löschen",
+    "deleteBody": "Die Person erfährt es samt Grund. Das Audit-Log behält den Text.",
+    "bulkTitle": "Letzte Nachrichten von {name} löschen",
+    "bulkBody": "Entfernt ihre letzten Nachrichten in diesem Kanal samt Antworten und Anhängen. Das Audit-Log behält jeden Text.",
+    "bulkCount": "Wie viele Nachrichten",
+    "bulkRange": "Zwischen 1 und {max}.",
+    "pinMessage": "Nachricht anheften",
+    "unpinMessage": "Nachricht lösen",
+    "pinned": "Angeheftet",
+    "deleteWithReason": "Mit Grund löschen…",
+    "deleteLatest": "Letzte Nachrichten dieser Person löschen…",
+    "slowMode": "Langsammodus",
+    "slowModeOff": "Aus",
+    "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Moderatoren sind ausgenommen.",
+    "slowModeChip": "Langsammodus {time}"
   },
   "bots": {
     "title": "Bots",

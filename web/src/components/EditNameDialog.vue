@@ -8,6 +8,7 @@ import { ref, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { nextSortOrder } from '../lib/channelLayout'
+import { durationLabel } from '../lib/moderation'
 import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
@@ -23,6 +24,14 @@ const isCreate = computed(() => !props.entity)
 const isChannel = computed(() => !isCreate.value && props.kind === 'channel')
 const name = ref(props.entity?.name || '')
 const topic = ref((props.entity && 'topic' in props.entity ? props.entity.topic : '') || '')
+// Slow mode (seconds between two messages of a member); 0 = off.
+const SLOW_MODE_CHOICES = [0, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 21600] as const
+const slowMode = ref(props.entity && 'slow_mode_seconds' in props.entity ? props.entity.slow_mode_seconds : 0)
+const slowModeChoices = computed(() => (SLOW_MODE_CHOICES as readonly number[]).includes(slowMode.value) ? SLOW_MODE_CHOICES : [...SLOW_MODE_CHOICES, slowMode.value].sort((a, b) => a - b))
+function slowModeLabel(seconds: number): string {
+  if (seconds === 0) return t('moderation.slowModeOff')
+  return durationLabel(seconds)
+}
 const error = ref('')
 const saving = ref(false)
 
@@ -46,7 +55,7 @@ async function submit() {
       toasts.success(t('sidebar.categoryCreated'))
       emit('created', created)
     } else if (entity && isChannel.value) {
-      await chatStore.updateChannel(entity.id, { name: trimmed, topic: topic.value.trim() })
+      await chatStore.updateChannel(entity.id, { name: trimmed, topic: topic.value.trim(), slow_mode_seconds: slowMode.value })
       toasts.success(t('sidebar.channelUpdated'))
     } else if (entity) {
       await chatStore.updateCategory(entity.id, { name: trimmed })
@@ -94,6 +103,21 @@ async function submit() {
           :placeholder="$t('admin.channelTopicPlaceholder')"
           class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary focus:outline-none focus:border-mnema-accent"
         />
+      </div>
+
+      <div v-if="isChannel" class="space-y-1.5">
+        <label for="edit-slow-mode" class="text-xs font-medium text-mnema-tertiary uppercase tracking-wider font-mono">
+          {{ $t('moderation.slowMode') }}
+        </label>
+        <select
+          id="edit-slow-mode"
+          v-model.number="slowMode"
+          data-testid="slow-mode"
+          class="w-full bg-mnema-canvas border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text focus:outline-none focus:border-mnema-accent"
+        >
+          <option v-for="s in slowModeChoices" :key="s" :value="s">{{ slowModeLabel(s) }}</option>
+        </select>
+        <p class="text-xs text-mnema-tertiary">{{ $t('moderation.slowModeHint') }}</p>
       </div>
 
       <div class="pt-3 flex items-center justify-end gap-2 border-t border-mnema-hairline">

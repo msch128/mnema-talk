@@ -1163,11 +1163,11 @@ export const useChatStore = defineStore('chat', () => {
 
   }
 
-  async function updateChannel(channelId: string, { name, topic }: { name: string; topic: string }) {
+  async function updateChannel(channelId: string, { name, topic, slow_mode_seconds }: { name: string; topic: string; slow_mode_seconds?: number }) {
     const community = communityGeneration
     const updated = await api(`/api/admin/channels/${channelId}`, {
       method: 'PATCH',
-      json: { name, topic }, decode: decodeChannel
+      json: slow_mode_seconds === undefined ? { name, topic } : { name, topic, slow_mode_seconds }, decode: decodeChannel
     })
     assertCommunity(community)
     await fetchChannels()
@@ -1486,14 +1486,23 @@ export const useChatStore = defineStore('chat', () => {
     return updated
   }
 
-  async function deleteMessage(channelId: string, messageId: string) {
+  async function deleteMessage(channelId: string, messageId: string, reason?: string) {
     const community = communityGeneration
-    await api(`/api/channels/${channelId}/messages/${messageId}`, { method: 'DELETE' })
+    await api(`/api/channels/${channelId}/messages/${messageId}`, reason ? { method: 'DELETE', json: { reason } } : { method: 'DELETE' })
     assertCommunity(community)
     removeFromWindow(messageId)
     threadReplies.value = threadReplies.value.filter(m => m.id !== messageId)
     onOriginalDeleted(messageId)
     if (activeThread.value?.id === messageId) closeThread()
+  }
+
+  /** Pins or unpins a message (Manage messages); the server's message_update keeps every client in step. */
+  async function setPinned(channelId: string, messageId: string, pinned: boolean) {
+    const community = communityGeneration
+    const message = await api(`/api/channels/${channelId}/messages/${messageId}/pin`, { method: pinned ? 'PUT' : 'DELETE', decode: decodeMessage })
+    assertCommunity(community)
+    applyToMessage(messageId, m => Object.assign(m, message))
+    return message
   }
 
   async function toggleReaction(messageId: string, emoji: string) {
@@ -1614,7 +1623,7 @@ export const useChatStore = defineStore('chat', () => {
     fetchMessages,
     sendMessage,
     editMessage,
-    deleteMessage,
+    deleteMessage, setPinned,
     toggleReaction,
     uploadMedia,
     createChannel,

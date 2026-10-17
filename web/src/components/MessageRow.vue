@@ -6,7 +6,7 @@ import type { Message } from '../types/domain'
 // and reactions. Keyboard and context-menu handling stay with the list
 // (bound on this component, they land on the row element).
 import { ref } from 'vue'
-import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal } from '@lucide/vue'
+import { MessageSquare, Pencil, Smile, Reply, MoreHorizontal, Pin } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
@@ -154,6 +154,7 @@ defineExpose({ el: row })
         <BotBadge v-if="msg.is_bot" />
         <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
         <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
+        <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />
       </div>
 
       <!-- Inline Message Editor -->
@@ -177,6 +178,9 @@ defineExpose({ el: row })
         v-if="grouped && msg.is_edited && !editing"
         class="block text-xs text-mnema-tertiary italic"
       >{{ $t('chat.edited') }}</span>
+      <span v-if="grouped && msg.is_pinned && !editing" data-testid="pinned" class="flex items-center gap-1 text-xs text-mnema-accent">
+        <Pin class="w-3.5 h-3.5" />{{ $t('moderation.pinned') }}
+      </span>
 
       <!-- Media Attachments (Images, Clips, Documents) -->
       <MessageAttachments :attachments="msg.attachments" @open-image="emit('open-image', $event)" />

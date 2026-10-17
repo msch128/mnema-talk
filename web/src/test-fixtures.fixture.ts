@@ -36,7 +36,7 @@ export function userFixture(overrides: Partial<User> = {}): User {
 
 export function channelFixture(overrides: Partial<Channel> = {}): Channel {
   return {
-    id: fixtureId(2), number: 2, user_limit: 0, name: 'general', type: 'text', topic: '',
+    id: fixtureId(2), number: 2, user_limit: 0, slow_mode_seconds: 0, name: 'general', type: 'text', topic: '',
     category_id: null, sort_order: 0, created_at: FIXTURE_TIMESTAMP,
     ...overrides,
   }

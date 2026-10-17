@@ -6,10 +6,13 @@ import type { ContextMenuItem } from '../components/menuTypes'
 import type { useMessageActions } from './useMessageActions'
 import {
   MessageSquare, Pencil, Trash2, SmilePlus, Reply,
-  Link as LinkIcon, Copy, Bookmark
+  Link as LinkIcon, Copy, Bookmark, Pin, PinOff, Eraser
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
+import { moderateMessages } from '../lib/messageModeration'
+import { previewText } from '../lib/replies'
 import { t } from '../i18n'
 
 /**
@@ -19,6 +22,7 @@ import { t } from '../i18n'
 export function useMessageMenu({ actions, reply }: { actions: ReturnType<typeof useMessageActions>; reply: (message: Message) => void }) {
   const chatStore = useChatStore()
   const toasts = useToastStore()
+  const permissions = usePermissionsStore()
 
   // Bound to <ContextMenu>; also used for other menus of the view.
   const state = ref<{ open: boolean; x: number; y: number; items: ContextMenuItem[] }>({ open: false, x: 0, y: 0, items: [] })
@@ -72,9 +76,40 @@ export function useMessageMenu({ actions, reply }: { actions: ReturnType<typeof 
         }
       }
     })
+    const channelId = chatStore.activeChannel?.id ?? msg.channel_id
+    const moderator = permissions.canIn(channelId, 'manage_messages')
+    if (moderator) {
+      items.push({ type: 'separator' })
+      items.push({
+        label: t(msg.is_pinned ? 'moderation.unpinMessage' : 'moderation.pinMessage'),
+        icon: msg.is_pinned ? PinOff : Pin,
+        action: async () => {
+          try {
+            await chatStore.setPinned(channelId, msg.id, !msg.is_pinned)
+          } catch (err) {
+            toasts.error(err instanceof Error && err.message ? err.message : t('moderation.failed'))
+          }
+        }
+      })
+    }
     if (actions.canDelete(msg)) {
       items.push({ type: 'separator' })
       items.push({ label: t('chat.delete'), icon: Trash2, danger: true, action: () => actions.deleteMessage(msg) })
+      if (moderator && !actions.isOwn(msg)) {
+        const excerpt = previewText(msg.content).slice(0, 160)
+        items.push({
+          label: t('moderation.deleteWithReason'), icon: Trash2, danger: true,
+          action: () => { void moderateMessages({ kind: 'delete', channelId, messageId: msg.id, excerpt }) }
+        })
+      }
+    }
+    // Clearing a member's latest messages needs rank over them; the Owner and bots are out.
+    const author = chatStore.members.find(m => m.id === msg.user_id)
+    if (moderator && !actions.isOwn(msg) && !msg.is_bot && author && author.role !== 'admin' && permissions.outranksMember(msg.user_id)) {
+      items.push({
+        label: t('moderation.deleteLatest'), icon: Eraser, danger: true,
+        action: () => { void moderateMessages({ kind: 'bulk', channelId, userId: msg.user_id, name: msg.display_name || msg.username }) }
+      })
     }
     return items
   }

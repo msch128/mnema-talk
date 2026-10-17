@@ -141,6 +141,7 @@ func NewRouter(d Deps) (*Router, error) {
 	authH.Audit = auditLog
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go authH.RunUnlockWorker(ctx, auth.UnlockPollInterval)
+	go chat.RunSlowModePrune(ctx, d.DB, time.Hour)
 	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc, Audit: auditLog}
 	rolesH := &roles.Handler{Perms: permSvc, Events: pub}
 	if d.Store != nil {

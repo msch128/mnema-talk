@@ -38,6 +38,7 @@ var Classes = []Class{
 	{"user.lockout_clear", VisPrivileged, "Owner-only, reveals account attacks"},
 	{"auth.%", VisPrivileged, "sign-ins, failures and lockouts are other members' security events"},
 	{"message.%", VisChannel, "holds message text of one channel"},
+	{"moderation.bulk_delete", VisChannel, "names a channel and a reason that may concern a private channel"},
 	{"voice.%", VisChannel, "who was in which Talk"},
 	{"channel.%", VisChannel, "names, topics and overwrites of a possibly private channel"},
 	{"%", VisAuditors, "administration and moderation"},
@@ -56,12 +57,14 @@ func patterns(v Visibility) []string {
 
 // ClassOf returns the visibility of an action (the first row that matches).
 func ClassOf(action string) Visibility {
+	vis := VisAuditors
 	for _, c := range Classes {
 		if matchLike(c.Pattern, action) {
-			return c.Vis
+			vis = c.Vis
+			break
 		}
 	}
-	return VisAuditors
+	return vis
 }
 
 // matchLike matches the simple LIKE patterns used in Classes: a literal or a

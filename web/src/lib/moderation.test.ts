@@ -59,3 +59,12 @@ describe('moderation helpers', () => {
     expect(pendingModeration.value?.target.id).toBe('d')
   })
 })
+
+describe('notices about messages', () => {
+  it('words the removal of one or several messages', () => {
+    expect(noticeText({ kind: 'message_deleted', reason: 'rude', channel_name: 'general' })).toBe('A moderator removed your message in general: rude')
+    expect(noticeText({ kind: 'message_deleted', reason: '' })).toBe('A moderator removed your message in ')
+    expect(noticeText({ kind: 'messages_deleted', reason: '', channel_name: 'general', count: 3 })).toBe('A moderator removed 3 of your messages in general')
+    expect(noticeText({ kind: 'messages_deleted', reason: '' })).toBe('A moderator removed 0 of your messages in ')
+  })
+})

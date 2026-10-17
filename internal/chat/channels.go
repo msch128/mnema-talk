@@ -35,6 +35,10 @@ type Channel struct {
 	// UserLimit is the most members a voice channel admits at once; 0 = no
 	// limit.
 	UserLimit int `json:"user_limit" minimum:"0" maximum:"999"`
+	// SlowModeSeconds is the least time between two messages of one member
+	// in this channel; 0 = off. Members who may manage messages here are
+	// exempt.
+	SlowModeSeconds int `json:"slow_mode_seconds" minimum:"0" maximum:"21600"`
 }
 
 type Category struct {
@@ -69,7 +73,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	}
 
 	chanRows, err := p.Query(ctx, `
-		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit
+		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds
 		FROM channels ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query channels: %w", err)
@@ -79,7 +83,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	uncategorized := make([]Channel, 0)
 	for chanRows.Next() {
 		var ch Channel
-		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit); err != nil {
+		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
 			return nil, nil, err
 		}
 		if ch.CategoryID != nil {
@@ -133,9 +137,9 @@ func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name 
 	var ch Channel
 	err = p.QueryRow(ctx, `
 		INSERT INTO channels (category_id, name, type, topic, sort_order) VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`,
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
 		categoryID, name, chType, topic, sortOrder).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
 	if err != nil {
 		return nil, fmt.Errorf("create channel: %w", err)
 	}
@@ -224,9 +228,16 @@ var errCategoryNotFound = httpx.ErrNotFound("category not found")
 // MaxUserLimit is the highest member limit a voice channel can have.
 const MaxUserLimit = 999
 
-// UpdateChannel renames a channel, changes its topic and/or its member limit
-// (voice channels only; 0 removes it); nil keeps a field.
-func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit *int) (*Channel, error) {
+// MaxSlowModeSeconds is the longest slow mode: six hours.
+const MaxSlowModeSeconds = 21600
+
+// UpdateChannel renames a channel, changes its topic, its member limit
+// (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);
+// nil keeps a field.
+func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int) (*Channel, error) {
+	if slowMode != nil && (*slowMode < 0 || *slowMode > MaxSlowModeSeconds) {
+		return nil, httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
+	}
 	if userLimit != nil && (*userLimit < 0 || *userLimit > MaxUserLimit) {
 		return nil, httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
 	}
@@ -247,10 +258,10 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 	var ch Channel
 	err := p.QueryRow(ctx, `
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
-			user_limit = COALESCE($4, user_limit)
+			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
-		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`, id, name, topic, userLimit).
-		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`, id, name, topic, userLimit, slowMode).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
 	if errors.Is(err, pgx.ErrNoRows) {
 		if userLimit != nil && *userLimit > 0 {
 			if _, lerr := LoadChannel(ctx, p, id); lerr == nil {
@@ -353,9 +364,9 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		}
 		var src Channel
 		err := tx.QueryRow(ctx, `
-			SELECT id, category_id, name, type, topic, sort_order, user_limit
+			SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
 			FROM channels WHERE id = $1 FOR UPDATE`, sourceID).
-			Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit)
+			Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errChannelNotFound
 		}
@@ -391,10 +402,10 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 		}
 
 		err = tx.QueryRow(ctx, `
-			INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit) VALUES ($1, $2, $3, $4, $5, $6)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit`,
-			src.CategoryID, src.Name, src.Type, src.Topic, newOrder, src.UserLimit).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
+			INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+			src.CategoryID, src.Name, src.Type, src.Topic, newOrder, src.UserLimit, src.SlowModeSeconds).
+			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
 		if err != nil {
 			return fmt.Errorf("duplicate channel: %w", err)
 		}

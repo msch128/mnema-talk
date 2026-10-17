@@ -1243,6 +1243,42 @@
         ],
         "type": "object"
       },
+      "chat.BulkDeleteRequest": {
+        "properties": {
+          "count": {
+            "description": "Count is how many of their latest messages (replies included), 1 to 100.",
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Reason is kept in the audit log. Optional.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "user_id": {
+            "description": "UserID is the member whose latest messages in the channel go.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "chat.BulkDeleteResult": {
+        "properties": {
+          "deleted": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "type": "object"
+      },
       "chat.Category": {
         "properties": {
           "channels": {
@@ -1317,6 +1353,12 @@
             "description": "Number is the channel's short, stable link number (/c/12-general).",
             "type": "integer"
           },
+          "slow_mode_seconds": {
+            "description": "SlowModeSeconds is the least time between two messages of one member\nin this channel; 0 = off. Members who may manage messages here are\nexempt.",
+            "maximum": 21600,
+            "minimum": 0,
+            "type": "integer"
+          },
           "sort_order": {
             "type": "integer"
           },
@@ -1340,6 +1382,7 @@
           "id",
           "name",
           "number",
+          "slow_mode_seconds",
           "sort_order",
           "topic",
           "type",
@@ -1477,6 +1520,16 @@
         "required": [
           "content"
         ],
+        "type": "object"
+      },
+      "chat.DeleteMessageRequest": {
+        "properties": {
+          "reason": {
+            "description": "Reason is shown to the author when a moderator deletes their message,\nand kept in the audit log. Up to 200 characters.",
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
         "type": "object"
       },
       "chat.EditMessageRequest": {
@@ -2190,6 +2243,12 @@
             "maxLength": 64,
             "minLength": 1,
             "type": "string"
+          },
+          "slow_mode_seconds": {
+            "description": "SlowModeSeconds sets the least time between two messages of one member\nin the channel (0 turns slow mode off). Members who may manage messages\nin the channel are exempt.",
+            "maximum": 21600,
+            "minimum": 0,
+            "type": "integer"
           },
           "topic": {
             "maxLength": 255,
@@ -14909,9 +14968,127 @@
         ]
       }
     },
+    "/api/channels/{channelID}/messages/bulk-delete": {
+      "post": {
+        "description": "Deletes up to 100 of the member's latest messages in the channel, their thread replies and attachments included, in one step. Needs the Manage messages permission in the channel and a higher role than the member; the Owner's messages can only go by the Owner's hand. Every message gets its own audit entry with its text, plus one summary entry. The member is told through a moderation_notice event. Broadcasts message_delete per message.",
+        "operationId": "bulkDeleteMessages",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.BulkDeleteRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.BulkDeleteResult"
+                }
+              }
+            },
+            "description": "How many messages went."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a member's latest messages in a channel",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/channels/{channelID}/messages/{messageID}": {
       "delete": {
-        "description": "The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. Broadcasts message_delete.",
+        "description": "The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. A moderator may send a JSON body {\"reason\": \"...\"} (up to 200 characters); the reason goes to the audit log and to the author, who is told through a moderation_notice event. Broadcasts message_delete.",
         "operationId": "deleteMessage",
         "parameters": [
           {
@@ -14935,6 +15112,16 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.DeleteMessageRequest"
+              }
+            }
+          },
+          "description": "Optional body with a reason."
+        },
         "responses": {
           "204": {
             "description": "Success, no content."
@@ -15140,6 +15327,238 @@
           }
         ],
         "summary": "Edit own message",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/messages/{messageID}/pin": {
+      "delete": {
+        "description": "Needs the Manage messages permission in the channel. Broadcasts message_update.",
+        "operationId": "unpinMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Unpin a message",
+        "tags": [
+          "Messages"
+        ]
+      },
+      "put": {
+        "description": "Needs the Manage messages permission in the channel. Broadcasts message_update.",
+        "operationId": "pinMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Pin a message",
         "tags": [
           "Messages"
         ]

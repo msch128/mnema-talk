@@ -7,8 +7,9 @@ import "testing"
 func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 	want := map[string]Visibility{
 		// Events written by handlers.
-		"message.delete": VisChannel, "message.edit": VisChannel,
-		"voice.join": VisChannel, "voice.leave": VisChannel,
+		"message.delete": VisChannel, "message.edit": VisChannel, "message.pin": VisChannel, "message.unpin": VisChannel,
+		"moderation.bulk_delete": VisChannel,
+		"voice.join":             VisChannel, "voice.leave": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
 		"auth.register": VisPrivileged, "auth.password_change": VisPrivileged, "auth.logout_all": VisPrivileged,
 		// Admin routes.

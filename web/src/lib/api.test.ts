@@ -136,6 +136,7 @@ describe('API boundary edge cases', () => {
     expect(errorMessage('INVALID_INPUT', 'password must be at most 100 characters')).toMatch(/Passwort/)
     expect(errorMessage('INVALID_INPUT', 'username must be valid')).toMatch(/Benutzername/)
     expect(errorMessage('INVALID_INPUT', 'file exceeds the 10 MB limit')).toContain('10')
+    expect(errorMessage('RATE_LIMITED', 'slow mode: wait 7 s before posting again')).toContain('7')
     expect(errorMessage('INVALID_INPUT', 'synthetic input')).toBe('synthetic input')
     expect(errorMessage(null, null)).toBeTruthy()
     expect(errorMessage('unknown', 'x'.repeat(1500))).toHaveLength(1024)

@@ -733,6 +733,32 @@ export function isChatBotMessageReference(value: unknown): value is ChatBotMessa
 
 export const decodeChatBotMessageReference = decoder("chat.BotMessageReference", isChatBotMessageReference)
 
+export type ChatBulkDeleteRequest = {
+  count: number
+  reason?: string
+  user_id: string
+}
+
+export function isChatBulkDeleteRequest(value: unknown): value is ChatBulkDeleteRequest {
+  return isRecord(value)
+    && (hasOwn(value, "count") && (isInteger(value["count"]) && value["count"] >= 1 && value["count"] <= 100))
+    && (!hasOwn(value, "reason") || isString(value["reason"], 200))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeChatBulkDeleteRequest = decoder("chat.BulkDeleteRequest", isChatBulkDeleteRequest)
+
+export type ChatBulkDeleteResult = {
+  deleted: number
+}
+
+export function isChatBulkDeleteResult(value: unknown): value is ChatBulkDeleteResult {
+  return isRecord(value)
+    && (hasOwn(value, "deleted") && isInteger(value["deleted"]))
+}
+
+export const decodeChatBulkDeleteResult = decoder("chat.BulkDeleteResult", isChatBulkDeleteResult)
+
 export type ChatCategory = {
   channels: Array<ChatChannel>
   created_at: string
@@ -771,6 +797,7 @@ export type ChatChannel = {
   id: string
   name: string
   number: number
+  slow_mode_seconds: number
   sort_order: number
   topic: string
   type: ChatChannelType
@@ -784,6 +811,7 @@ export function isChatChannel(value: unknown): value is ChatChannel {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "name") && isString(value["name"], 64))
     && (hasOwn(value, "number") && isInteger(value["number"]))
+    && (hasOwn(value, "slow_mode_seconds") && (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
     && (hasOwn(value, "sort_order") && isInteger(value["sort_order"]))
     && (hasOwn(value, "topic") && isString(value["topic"], 255))
     && (hasOwn(value, "type") && isChatChannelType(value["type"]))
@@ -874,6 +902,17 @@ export function isChatCreateMessageRequest(value: unknown): value is ChatCreateM
 }
 
 export const decodeChatCreateMessageRequest = decoder("chat.CreateMessageRequest", isChatCreateMessageRequest)
+
+export type ChatDeleteMessageRequest = {
+  reason?: string
+}
+
+export function isChatDeleteMessageRequest(value: unknown): value is ChatDeleteMessageRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "reason") || isString(value["reason"], 200))
+}
+
+export const decodeChatDeleteMessageRequest = decoder("chat.DeleteMessageRequest", isChatDeleteMessageRequest)
 
 export type ChatEditMessageRequest = {
   content: string
@@ -1315,6 +1354,7 @@ export const decodeChatThread = decoder("chat.Thread", isChatThread)
 
 export type ChatUpdateChannelRequest = {
   name?: string
+  slow_mode_seconds?: number
   topic?: string
   user_limit?: number
 }
@@ -1322,6 +1362,7 @@ export type ChatUpdateChannelRequest = {
 export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateChannelRequest {
   return isRecord(value)
     && (!hasOwn(value, "name") || isString(value["name"], 64))
+    && (!hasOwn(value, "slow_mode_seconds") || (isInteger(value["slow_mode_seconds"]) && value["slow_mode_seconds"] >= 0 && value["slow_mode_seconds"] <= 21600))
     && (!hasOwn(value, "topic") || isString(value["topic"], 255))
     && (!hasOwn(value, "user_limit") || (isInteger(value["user_limit"]) && value["user_limit"] >= 0 && value["user_limit"] <= 999))
 }
