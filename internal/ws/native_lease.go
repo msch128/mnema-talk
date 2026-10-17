@@ -241,6 +241,9 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 		}
 		return
 	}
+	if view != uuid.Nil {
+		h.tapped(view, eventType, payload)
+	}
 	data := encode(eventType, payload)
 	if data == nil {
 		return

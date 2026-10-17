@@ -387,7 +387,8 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 // build validates a parsed request into a message and the mention policy.
 func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*chat.NewMessage, chat.MentionPolicy, error) {
 	p := req.payload
-	if err := h.creatorMayPost(ctx, rec, len(req.files) > 0); err != nil {
+	snap, err := h.creatorMayPost(ctx, rec, len(req.files) > 0)
+	if err != nil {
 		return nil, chat.MentionPolicy{}, err
 	}
 	content, err := chat.ValidateContent(p.Content, true)
@@ -418,7 +419,7 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 		}
 		parent = &id
 	}
-	policy, err := h.mentionPolicy(ctx, rec, p.AllowedMentions)
+	policy, err := mentionPolicy(snap, rec, p.AllowedMentions)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, err
 	}
@@ -442,25 +443,25 @@ func (unknownThread) Error() string { return "Unknown Channel" }
 // a webhook never outlives its creator's right to post (Send messages, and
 // Attach files with files). It is refused once the creator's account is gone
 // or disabled. The Owner always passes.
-func (h *Handler) creatorMayPost(ctx context.Context, rec *record, files bool) error {
+func (h *Handler) creatorMayPost(ctx context.Context, rec *record, files bool) (*perm.Snapshot, error) {
 	if !rec.creatorActive || rec.CreatedBy == nil {
-		return httpx.ErrForbidden("the webhook's creator can no longer post here")
+		return nil, httpx.ErrForbidden("the webhook's creator can no longer post here")
 	}
 	if h.Perms == nil {
-		return nil
+		return nil, nil
 	}
 	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	need := perm.SendMessages
 	if files {
 		need |= perm.AttachFiles
 	}
 	if perm.CheckChannel(snap.Channel(perm.Subject{ID: *rec.CreatedBy}, rec.ChannelID), need) != nil {
-		return httpx.ErrForbidden("the webhook's creator can no longer post here")
+		return nil, httpx.ErrForbidden("the webhook's creator can no longer post here")
 	}
-	return nil
+	return snap, nil
 }
 
 // mentionPolicy turns allowed_mentions into the policy for the message. The
@@ -468,7 +469,7 @@ func (h *Handler) creatorMayPost(ctx context.Context, rec *record, files bool) e
 // "everyone" in parse and the webhook's creator to hold Mention everyone in
 // the channel right now: a webhook cannot give anyone more power than its
 // creator has.
-func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
+func mentionPolicy(snap *perm.Snapshot, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
 	policy := chat.MentionPolicy{NoEveryone: true}
 	if am != nil {
 		wantUsers := slices.Contains(am.Parse, "users")
@@ -486,12 +487,8 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 		}
 		policy.NoEveryone = !wantEveryone
 	}
-	if h.Perms == nil {
+	if snap == nil {
 		return policy, nil
-	}
-	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
-	if err != nil {
-		return policy, err
 	}
 	if !policy.NoEveryone {
 		policy.NoEveryone = rec.CreatedBy == nil || !snap.Channel(perm.Subject{ID: *rec.CreatedBy}, rec.ChannelID).Has(perm.MentionEveryone)

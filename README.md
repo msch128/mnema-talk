@@ -85,9 +85,12 @@ for a server or NAS.
   and channels can allow or deny permissions per role or member, which makes
   private channels and Talks. Changes apply live, also to members in a call.
   See [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
-- **Incoming webhooks** per channel in Discord's execute format (content,
-  embeds, `allowed_mentions`, files), with a Webhook badge, a secret URL that
-  is stored hashed and rate limits. See [doc/webhooks.md](doc/webhooks.md).
+- **Webhooks**: incoming ones per channel in Discord's execute format
+  (content, embeds, `allowed_mentions`, files) with a Webhook badge, and
+  outgoing ones that POST signed events (messages, reactions, Talk joins and
+  leaves) to your own service, with retries, a delivery log and a guard that
+  keeps them away from your internal network. See
+  [doc/webhooks.md](doc/webhooks.md).
 - **Sidebar management** for admins: drag and drop channels and categories
   (mouse, pen, touch) or move them with `Alt+↑/↓`; every move is saved at
   once and can be undone from a toast. Context menus create, duplicate and
@@ -340,6 +343,12 @@ or, in production, on a placeholder secret. Notable ones:
 - `LOG_LEVEL`: `debug`, `info`, `warn` or `error` (empty = by `APP_ENV`).
 - `MEDIA_RETENTION_DAYS`: `0` (default) = never delete media automatically.
 - `API_DOCS_ENABLED`: `true` serves the API reference (Swagger UI) at `/api/docs` and the OpenAPI document at `/api/openapi.json` to signed-in members; off by default.
+- `WEBHOOK_ALLOW_PRIVATE_TARGETS`: empty (default) = outgoing webhooks may only
+  contact public addresses. A comma-separated list of addresses and CIDR
+  ranges (for example `192.168.1.20,10.0.0.0/24`) lets them reach services
+  on your own network; read the SSRF notes in
+  [doc/webhooks.md](doc/webhooks.md) first. Cloud metadata addresses stay
+  blocked either way.
 - `WEBRTC_UDP_PORT_MIN/MAX`, `WEBRTC_NAT_1TO1_IP`, `WEBRTC_STUN_URLS`: voice networking.
 - `LEGAL_*`: operator details shown in the privacy policy.
 - `UPDATE_CHECK_ENABLED`: `true` (default) lets the server ask GitHub every 30

@@ -1,0 +1,226 @@
+// Package ssrf is the guard for outbound requests to addresses a member
+// chose (outgoing webhooks). It resolves names itself, refuses every address
+// that is not a public unicast one, and then connects to exactly the address
+// it vetted, so a DNS answer that changes between the check and the connection
+// (rebinding) does not matter. Redirects are not followed, no proxy from the
+// environment is used and responses are never kept.
+package ssrf
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"net/netip"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// Refusal reasons. Callers show only these to members, never the raw network
+// error, so a delivery log cannot be used to probe a network.
+var (
+	ErrBlocked  = errors.New("address is not allowed")
+	ErrResolve  = errors.New("name could not be resolved")
+	ErrConnect  = errors.New("could not connect")
+	ErrBadURL   = errors.New("not a valid http or https URL")
+	ErrRedirect = errors.New("redirects are not followed")
+)
+
+// maxURLLen bounds a target URL.
+const maxURLLen = 2048
+
+// never are addresses no allowlist can open: metadata services and the
+// special-purpose ranges that are never a legitimate webhook target.
+var never = []netip.Prefix{
+	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata (AWS, GCP, Azure, ...)
+	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata
+	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata
+	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata
+	netip.MustParsePrefix("0.0.0.0/8"),          // "this network", unspecified
+	netip.MustParsePrefix("::/96"),              // unspecified, IPv4-compatible
+	netip.MustParsePrefix("224.0.0.0/3"),        // multicast, reserved, broadcast
+	netip.MustParsePrefix("ff00::/8"),           // multicast
+	netip.MustParsePrefix("192.0.0.0/24"),       // IETF protocol assignments
+	netip.MustParsePrefix("192.0.2.0/24"),       // documentation
+	netip.MustParsePrefix("192.88.99.0/24"),     // 6to4 relay anycast
+	netip.MustParsePrefix("198.18.0.0/15"),      // benchmarking
+	netip.MustParsePrefix("198.51.100.0/24"),    // documentation
+	netip.MustParsePrefix("203.0.113.0/24"),     // documentation
+	netip.MustParsePrefix("64:ff9b::/96"),       // NAT64: carries an IPv4 address
+	netip.MustParsePrefix("64:ff9b:1::/48"),     // local-use NAT64
+	netip.MustParsePrefix("2001::/32"),          // Teredo
+	netip.MustParsePrefix("2001:db8::/32"),      // documentation
+	netip.MustParsePrefix("2002::/16"),          // 6to4: carries an IPv4 address
+	netip.MustParsePrefix("100::/64"),           // discard-only
+}
+
+// private are the ranges for the local network: refused unless the operator
+// allows them (WEBHOOK_ALLOW_PRIVATE_TARGETS).
+var private = []netip.Prefix{
+	netip.MustParsePrefix("127.0.0.0/8"),
+	netip.MustParsePrefix("10.0.0.0/8"),
+	netip.MustParsePrefix("172.16.0.0/12"),
+	netip.MustParsePrefix("192.168.0.0/16"),
+	netip.MustParsePrefix("169.254.0.0/16"), // link-local
+	netip.MustParsePrefix("100.64.0.0/10"),  // carrier-grade NAT
+	netip.MustParsePrefix("::1/128"),
+	netip.MustParsePrefix("fc00::/7"),  // unique local
+	netip.MustParsePrefix("fe80::/10"), // link-local
+	netip.MustParsePrefix("fec0::/10"), // deprecated site-local
+}
+
+// Policy decides which addresses may be contacted.
+type Policy struct {
+	// Allow lists local-network ranges that may be contacted. Empty (the
+	// default) allows public addresses only. It cannot open the metadata
+	// addresses or the reserved ranges.
+	Allow []netip.Prefix
+}
+
+// ParseAllow parses a comma-separated list of addresses and CIDR ranges.
+func ParseAllow(list string) ([]netip.Prefix, error) {
+	var out []netip.Prefix
+	for _, item := range strings.Split(list, ",") {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if p, err := netip.ParsePrefix(item); err == nil {
+			out = append(out, p.Masked())
+			continue
+		}
+		a, err := netip.ParseAddr(item)
+		if err != nil {
+			return nil, fmt.Errorf("%q is neither an address nor a CIDR range", item)
+		}
+		out = append(out, netip.PrefixFrom(a.Unmap(), a.Unmap().BitLen()))
+	}
+	return out, nil
+}
+
+func contains(list []netip.Prefix, a netip.Addr) bool {
+	for _, p := range list {
+		if p.Contains(a) {
+			return true
+		}
+	}
+	return false
+}
+
+// Check reports whether addr may be contacted. IPv4-mapped IPv6 addresses
+// count as the IPv4 address they carry.
+func (p *Policy) Check(addr netip.Addr) error {
+	addr = addr.WithZone("").Unmap()
+	if !addr.IsValid() || addr.IsUnspecified() || addr.IsMulticast() || contains(never, addr) {
+		return ErrBlocked
+	}
+	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() || addr.IsInterfaceLocalMulticast() || contains(private, addr) {
+		if p != nil && contains(p.Allow, addr) {
+			return nil
+		}
+		return ErrBlocked
+	}
+	return nil
+}
+
+// ValidateURL parses a target URL: absolute http or https with a host, no
+// credentials, a literal IP only if its address is allowed.
+func (p *Policy) ValidateURL(raw string) (*url.URL, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || len(raw) > maxURLLen {
+		return nil, ErrBadURL
+	}
+	for _, r := range raw {
+		if r <= 0x20 || r == 0x7f {
+			return nil, ErrBadURL
+		}
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.Opaque != "" {
+		return nil, ErrBadURL
+	}
+	if a, err := netip.ParseAddr(u.Hostname()); err == nil {
+		if err := p.Check(a); err != nil {
+			return nil, err
+		}
+	}
+	return u, nil
+}
+
+// Resolver looks names up (net.DefaultResolver in production).
+type Resolver interface {
+	LookupNetIP(ctx context.Context, network, host string) ([]netip.Addr, error)
+}
+
+// Dialer connects to vetted addresses only.
+type Dialer struct {
+	Policy   *Policy
+	Resolver Resolver
+	// Timeout bounds one connection attempt.
+	Timeout time.Duration
+	// dial connects to a literal address; tests replace it.
+	dial func(ctx context.Context, network, address string) (net.Conn, error)
+}
+
+// NewDialer returns a Dialer using the system resolver.
+func NewDialer(policy *Policy) *Dialer {
+	return &Dialer{Policy: policy, Resolver: net.DefaultResolver, Timeout: 5 * time.Second}
+}
+
+// DialContext resolves the host itself. Every address it resolves to must be
+// allowed (one blocked answer refuses the host, so a record set mixing public
+// and local addresses cannot be used), then it connects to the vetted
+// addresses by number, never by name again.
+func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, ErrBadURL
+	}
+	var addrs []netip.Addr
+	if a, err := netip.ParseAddr(host); err == nil {
+		addrs = []netip.Addr{a}
+	} else {
+		if addrs, err = d.Resolver.LookupNetIP(ctx, "ip", host); err != nil || len(addrs) == 0 {
+			return nil, ErrResolve
+		}
+	}
+	for _, a := range addrs {
+		if err := d.Policy.Check(a); err != nil {
+			return nil, err
+		}
+	}
+	dial := d.dial
+	if dial == nil {
+		nd := &net.Dialer{Timeout: d.Timeout}
+		dial = nd.DialContext
+	}
+	for _, a := range addrs {
+		conn, err := dial(ctx, network, net.JoinHostPort(a.Unmap().String(), port))
+		if err == nil {
+			return conn, nil
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return nil, ErrConnect
+}
+
+// NewClient returns an HTTP client that connects through d, ignores proxy
+// environment variables, never follows redirects and gives up after timeout.
+func NewClient(d *Dialer, timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy:                  nil,
+			DialContext:            d.DialContext,
+			TLSHandshakeTimeout:    10 * time.Second,
+			ResponseHeaderTimeout:  timeout,
+			DisableKeepAlives:      true,
+			MaxResponseHeaderBytes: 16 << 10,
+		},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+}

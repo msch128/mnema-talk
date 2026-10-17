@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
 	"os"
 	"regexp"
@@ -15,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
 type Config struct {
@@ -47,6 +49,12 @@ type Config struct {
 	// MetricsToken enables GET /api/metrics for Prometheus (Bearer token);
 	// empty keeps the endpoint off.
 	MetricsToken string
+	// WebhookAllowPrivateTargets are local-network address ranges outgoing
+	// webhooks may contact (WEBHOOK_ALLOW_PRIVATE_TARGETS, comma-separated
+	// addresses and CIDR ranges). Empty (the default) allows public addresses
+	// only, which is what keeps a member-supplied URL from reaching the
+	// server's own network.
+	WebhookAllowPrivateTargets []netip.Prefix
 	// LinkPreviews lets the server fetch public web pages for link cards.
 	LinkPreviews bool
 	// APIDocs serves the API reference (/api/docs, /api/openapi.json) to
@@ -186,6 +194,10 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	webhookAllow, err := ssrf.ParseAllow(get("WEBHOOK_ALLOW_PRIVATE_TARGETS", ""))
+	if err != nil {
+		return nil, fmt.Errorf("WEBHOOK_ALLOW_PRIVATE_TARGETS: %w", err)
+	}
 	apiDocs, err := getBool("API_DOCS_ENABLED", false)
 	if err != nil {
 		return nil, err
@@ -196,41 +208,42 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:                 strconv.Itoa(int(httpPort)),
-		BindAddr:             get("BIND_ADDR", "0.0.0.0"),
-		AppEnv:               strings.ToLower(get("APP_ENV", "development")),
-		LogLevel:             strings.ToLower(get("LOG_LEVEL", "")),
-		PublicURL:            normalizeURL(get("PUBLIC_URL", "http://localhost:8080")),
-		TrustedProxies:       SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
-		JWTSecret:            get("JWT_SECRET", ""),
-		SessionExpiryHours:   expiryHours,
-		AdminUsername:        get("ADMIN_USERNAME", "Herzog"),
-		AdminInitialPassword: get("ADMIN_INITIAL_PASSWORD", ""),
-		DatabaseURL:          get("DATABASE_URL", ""),
-		S3Endpoint:           get("S3_ENDPOINT", "http://localhost:8333"),
-		S3Region:             get("S3_REGION", "us-east-1"),
-		S3Bucket:             get("S3_BUCKET", "mnema-media"),
-		S3AccessKey:          get("S3_ACCESS_KEY", ""),
-		S3SecretKey:          get("S3_SECRET_KEY", ""),
-		S3ForcePathStyle:     forcePathStyle,
-		MediaRetentionDays:   retentionDays,
-		MaxUploadMB:          maxUpload,
-		LinkPreviews:         linkPreviews,
-		APIDocs:              apiDocs,
-		UpdateCheck:          updateCheck,
-		UpdaterURL:           get("UPDATER_URL", ""),
-		UpdaterToken:         get("UPDATER_TOKEN", ""),
-		AppImage:             get("MNEMA_IMAGE", ""),
-		WebRTCTURNURLs:       SplitList(get("WEBRTC_TURN_URLS", "")),
-		WebRTCTURNSecret:     get("WEBRTC_TURN_SECRET", ""),
-		WebRTCUDPMuxPort:     muxPort,
-		MetricsToken:         get("METRICS_TOKEN", ""),
-		WebRTCAnnounce:       SplitList(get("WEBRTC_NAT_1TO1_IP", "")),
-		WebRTCSTUNURLs:       SplitList(get("WEBRTC_STUN_URLS", "")),
-		LegalOperatorName:    get("LEGAL_OPERATOR_NAME", "Community Operator"),
-		LegalOperatorEmail:   get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
-		LegalOperatorCountry: get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
-		LegalProjectNotice:   get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
+		Port:                       strconv.Itoa(int(httpPort)),
+		BindAddr:                   get("BIND_ADDR", "0.0.0.0"),
+		AppEnv:                     strings.ToLower(get("APP_ENV", "development")),
+		LogLevel:                   strings.ToLower(get("LOG_LEVEL", "")),
+		PublicURL:                  normalizeURL(get("PUBLIC_URL", "http://localhost:8080")),
+		TrustedProxies:             SplitList(get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
+		JWTSecret:                  get("JWT_SECRET", ""),
+		SessionExpiryHours:         expiryHours,
+		AdminUsername:              get("ADMIN_USERNAME", "Herzog"),
+		AdminInitialPassword:       get("ADMIN_INITIAL_PASSWORD", ""),
+		DatabaseURL:                get("DATABASE_URL", ""),
+		S3Endpoint:                 get("S3_ENDPOINT", "http://localhost:8333"),
+		S3Region:                   get("S3_REGION", "us-east-1"),
+		S3Bucket:                   get("S3_BUCKET", "mnema-media"),
+		S3AccessKey:                get("S3_ACCESS_KEY", ""),
+		S3SecretKey:                get("S3_SECRET_KEY", ""),
+		S3ForcePathStyle:           forcePathStyle,
+		MediaRetentionDays:         retentionDays,
+		MaxUploadMB:                maxUpload,
+		LinkPreviews:               linkPreviews,
+		WebhookAllowPrivateTargets: webhookAllow,
+		APIDocs:                    apiDocs,
+		UpdateCheck:                updateCheck,
+		UpdaterURL:                 get("UPDATER_URL", ""),
+		UpdaterToken:               get("UPDATER_TOKEN", ""),
+		AppImage:                   get("MNEMA_IMAGE", ""),
+		WebRTCTURNURLs:             SplitList(get("WEBRTC_TURN_URLS", "")),
+		WebRTCTURNSecret:           get("WEBRTC_TURN_SECRET", ""),
+		WebRTCUDPMuxPort:           muxPort,
+		MetricsToken:               get("METRICS_TOKEN", ""),
+		WebRTCAnnounce:             SplitList(get("WEBRTC_NAT_1TO1_IP", "")),
+		WebRTCSTUNURLs:             SplitList(get("WEBRTC_STUN_URLS", "")),
+		LegalOperatorName:          get("LEGAL_OPERATOR_NAME", "Community Operator"),
+		LegalOperatorEmail:         get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
+		LegalOperatorCountry:       get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
+		LegalProjectNotice:         get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
 	}
 	for _, o := range SplitList(get("CORS_ALLOWED_ORIGINS", cfg.PublicURL)) {
 		cfg.AllowedOrigins = append(cfg.AllowedOrigins, normalizeURL(o))

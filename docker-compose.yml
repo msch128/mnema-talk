@@ -55,6 +55,7 @@ services:
       - MAX_UPLOAD_SIZE_MB=${MAX_UPLOAD_SIZE_MB:-50}
       - LINK_PREVIEWS_ENABLED=${LINK_PREVIEWS_ENABLED:-true}
       - API_DOCS_ENABLED=${API_DOCS_ENABLED:-false}
+      - WEBHOOK_ALLOW_PRIVATE_TARGETS=${WEBHOOK_ALLOW_PRIVATE_TARGETS:-}
       # Release check against api.github.com every 30 min; false = no request.
       - UPDATE_CHECK_ENABLED=${UPDATE_CHECK_ENABLED:-true}
       # Self-update through the updater sidecar (profile autoupdate). Empty

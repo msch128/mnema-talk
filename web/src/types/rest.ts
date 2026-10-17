@@ -1478,6 +1478,21 @@ export function isWebhookAllowedMentions(value: unknown): value is WebhookAllowe
 
 export const decodeWebhookAllowedMentions = decoder("webhook.AllowedMentions", isWebhookAllowedMentions)
 
+export type WebhookCreateOutgoingRequest = {
+  events: Array<"MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" | "MESSAGE_REACTIONS_UPDATE" | "VOICE_STATE_UPDATE" | "MEMBER_ADD">
+  name: string
+  url: string
+}
+
+export function isWebhookCreateOutgoingRequest(value: unknown): value is WebhookCreateOutgoingRequest {
+  return isRecord(value)
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => (item === "MESSAGE_CREATE" || item === "MESSAGE_UPDATE" || item === "MESSAGE_DELETE" || item === "MESSAGE_REACTIONS_UPDATE" || item === "VOICE_STATE_UPDATE" || item === "MEMBER_ADD")))
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (hasOwn(value, "url") && isString(value["url"], 2048))
+}
+
+export const decodeWebhookCreateOutgoingRequest = decoder("webhook.CreateOutgoingRequest", isWebhookCreateOutgoingRequest)
+
 export type WebhookCreateRequest = {
   name: string
 }
@@ -1488,6 +1503,45 @@ export function isWebhookCreateRequest(value: unknown): value is WebhookCreateRe
 }
 
 export const decodeWebhookCreateRequest = decoder("webhook.CreateRequest", isWebhookCreateRequest)
+
+export type WebhookCreatedOutgoing = {
+  access_ok: boolean
+  channel_id: string | null
+  consecutive_failures: number
+  created_at: string
+  created_by: string | null
+  events: Array<string>
+  id: string
+  last_attempt_at: string | null
+  last_error: string | null
+  last_status: number | null
+  last_success_at: string | null
+  name: string
+  secret: string
+  status: "active" | "disabled" | "auto_disabled"
+  url: string
+}
+
+export function isWebhookCreatedOutgoing(value: unknown): value is WebhookCreatedOutgoing {
+  return isRecord(value)
+    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
+    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => isString(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "last_attempt_at") && (isTimestamp(value["last_attempt_at"]) || value["last_attempt_at"] === null))
+    && (hasOwn(value, "last_error") && (isString(value["last_error"]) || value["last_error"] === null))
+    && (hasOwn(value, "last_status") && (isInteger(value["last_status"]) || value["last_status"] === null))
+    && (hasOwn(value, "last_success_at") && (isTimestamp(value["last_success_at"]) || value["last_success_at"] === null))
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (hasOwn(value, "secret") && isString(value["secret"]))
+    && (hasOwn(value, "status") && (value["status"] === "active" || value["status"] === "disabled" || value["status"] === "auto_disabled"))
+    && (hasOwn(value, "url") && isString(value["url"], 2048))
+}
+
+export const decodeWebhookCreatedOutgoing = decoder("webhook.CreatedOutgoing", isWebhookCreatedOutgoing)
 
 export type WebhookCreatedWebhook = {
   avatar_url?: string
@@ -1515,6 +1569,33 @@ export function isWebhookCreatedWebhook(value: unknown): value is WebhookCreated
 }
 
 export const decodeWebhookCreatedWebhook = decoder("webhook.CreatedWebhook", isWebhookCreatedWebhook)
+
+export type WebhookDelivery = {
+  attempt: number
+  created_at: string
+  duration_ms: number
+  error: string | null
+  event_id: string
+  event_type: string
+  id: string
+  status_code: number | null
+  success: boolean
+}
+
+export function isWebhookDelivery(value: unknown): value is WebhookDelivery {
+  return isRecord(value)
+    && (hasOwn(value, "attempt") && (isInteger(value["attempt"]) && value["attempt"] >= 1))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "duration_ms") && (isInteger(value["duration_ms"]) && value["duration_ms"] >= 0))
+    && (hasOwn(value, "error") && (isString(value["error"]) || value["error"] === null))
+    && (hasOwn(value, "event_id") && isIdentifier(value["event_id"]))
+    && (hasOwn(value, "event_type") && isString(value["event_type"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "status_code") && (isInteger(value["status_code"]) || value["status_code"] === null))
+    && (hasOwn(value, "success") && typeof value["success"] === 'boolean')
+}
+
+export const decodeWebhookDelivery = decoder("webhook.Delivery", isWebhookDelivery)
 
 export type WebhookDiscordError = {
   code: number
@@ -1562,6 +1643,60 @@ export function isWebhookExecutePayload(value: unknown): value is WebhookExecute
 }
 
 export const decodeWebhookExecutePayload = decoder("webhook.ExecutePayload", isWebhookExecutePayload)
+
+export type WebhookOutgoing = {
+  access_ok: boolean
+  channel_id: string | null
+  consecutive_failures: number
+  created_at: string
+  created_by: string | null
+  events: Array<string>
+  id: string
+  last_attempt_at: string | null
+  last_error: string | null
+  last_status: number | null
+  last_success_at: string | null
+  name: string
+  status: "active" | "disabled" | "auto_disabled"
+  url: string
+}
+
+export function isWebhookOutgoing(value: unknown): value is WebhookOutgoing {
+  return isRecord(value)
+    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
+    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => isString(item)))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "last_attempt_at") && (isTimestamp(value["last_attempt_at"]) || value["last_attempt_at"] === null))
+    && (hasOwn(value, "last_error") && (isString(value["last_error"]) || value["last_error"] === null))
+    && (hasOwn(value, "last_status") && (isInteger(value["last_status"]) || value["last_status"] === null))
+    && (hasOwn(value, "last_success_at") && (isTimestamp(value["last_success_at"]) || value["last_success_at"] === null))
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (hasOwn(value, "status") && (value["status"] === "active" || value["status"] === "disabled" || value["status"] === "auto_disabled"))
+    && (hasOwn(value, "url") && isString(value["url"], 2048))
+}
+
+export const decodeWebhookOutgoing = decoder("webhook.Outgoing", isWebhookOutgoing)
+
+export type WebhookUpdateOutgoingRequest = {
+  enabled?: boolean
+  events?: Array<string>
+  name?: string
+  url?: string
+}
+
+export function isWebhookUpdateOutgoingRequest(value: unknown): value is WebhookUpdateOutgoingRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "enabled") || typeof value["enabled"] === 'boolean')
+    && (!hasOwn(value, "events") || isArrayOf(value["events"], item => isString(item)))
+    && (!hasOwn(value, "name") || isString(value["name"], 80))
+    && (!hasOwn(value, "url") || isString(value["url"], 2048))
+}
+
+export const decodeWebhookUpdateOutgoingRequest = decoder("webhook.UpdateOutgoingRequest", isWebhookUpdateOutgoingRequest)
 
 export type WebhookUpdateRequest = {
   name: string

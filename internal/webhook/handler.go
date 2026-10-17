@@ -3,6 +3,7 @@ package webhook
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
 // Handler serves the webhook management API (under /api/admin) and the
@@ -28,10 +30,17 @@ type Handler struct {
 	Online chat.OnlineSource
 	// PublicURL is the address in the URLs shown to the creator.
 	PublicURL string
+	// Outgoing delivers events to outgoing webhooks; Policy is the address
+	// guard for their URLs.
+	Outgoing *Dispatcher
+	Policy   *ssrf.Policy
 
 	perWebhook *httpx.RateLimiter
 	perChannel *httpx.RateLimiter
 	failures   *httpx.RateLimiter
+	// testLimiter bounds the test button, which makes this server send a
+	// request on demand.
+	testLimiter *httpx.RateLimiter
 }
 
 // New returns a Handler with its rate limiters.
@@ -39,6 +48,7 @@ func New(h Handler) *Handler {
 	h.perWebhook = httpx.NewRateLimiter(perWebhookLimit, perWebhookWindow).Named("webhook")
 	h.perChannel = httpx.NewRateLimiter(perChannelLimit, perChannelWindow).Named("webhook_channel")
 	h.failures = httpx.NewRateLimiter(failedAuthLimit, failedAuthWindow).Named("webhook_auth")
+	h.testLimiter = httpx.NewRateLimiter(6, time.Minute).Named("webhook_test")
 	return &h
 }
 
@@ -64,6 +74,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	r.Post("/webhooks/{id}/token", httpx.Handle(h.regenerate))
 	r.Post("/webhooks/{id}/avatar", httpx.Handle(h.avatar))
 	r.Delete("/webhooks/{id}", httpx.Handle(h.delete))
+	h.mountOutgoing(r)
 }
 
 func (h *Handler) url(rec *record, token string) string {
@@ -109,17 +120,24 @@ func (h *Handler) load(r *http.Request) (*record, error) {
 	if snap == nil || rec.CreatedBy == nil {
 		return rec, nil
 	}
+	return rec, hierarchy(r, snap, *rec.CreatedBy)
+}
+
+// hierarchy checks the caller may change something its creator made: their
+// own, anything of a creator whose highest role is not above theirs, and
+// everything as the Owner; nothing of the Owner's.
+func hierarchy(r *http.Request, snap *perm.Snapshot, creatorID uuid.UUID) error {
 	user := auth.UserFrom(r.Context())
-	actor, creator := user.Subject(), perm.Subject{ID: *rec.CreatedBy}
+	actor, creator := user.Subject(), perm.Subject{ID: creatorID}
 	switch {
-	case snap.IsOwner(actor) || *rec.CreatedBy == user.ID:
-		return rec, nil
+	case snap.IsOwner(actor) || creatorID == user.ID:
+		return nil
 	case snap.IsOwner(creator):
-		return nil, httpx.ErrForbidden("only the Owner can change a webhook of the Owner")
+		return httpx.ErrForbidden("only the Owner can change a webhook of the Owner")
 	case snap.TopPosition(actor) < snap.TopPosition(creator):
-		return nil, httpx.ErrForbidden("that webhook was created by a member with a higher role than yours")
+		return httpx.ErrForbidden("that webhook was created by a member with a higher role than yours")
 	}
-	return rec, nil
+	return nil
 }
 
 // CreateRequest is the body of creating a webhook.

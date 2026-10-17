@@ -25,6 +25,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -127,7 +128,12 @@ func NewRouter(d Deps) (*Router, error) {
 		Perms:          permSvc,
 	}
 
-	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL})
+	// Outgoing webhooks may only reach public addresses (see internal/ssrf).
+	ssrfPolicy := &ssrf.Policy{Allow: cfg.WebhookAllowPrivateTargets}
+	outgoing := webhook.NewDispatcher(d.DB, permSvc, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
+	hub.Tap = outgoing.Observe
+	go outgoing.Run(ctx)
+	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})
 
 	systemH := &systemHandler{
 		cfg:      cfg,

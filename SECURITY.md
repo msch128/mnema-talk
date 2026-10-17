@@ -69,6 +69,19 @@ locally instead (`make up` or `make dev`).
   links and never fetched from their hosts. The token is redacted from access
   and error logs (`/api/webhooks/{id}/[redacted]`). Details and the Discord
   compatibility table: [doc/webhooks.md](doc/webhooks.md).
+- **Outgoing webhooks and SSRF.** A webhook URL chosen by a member makes the
+  server send requests, so `internal/ssrf` guards them: http(s) only, names
+  resolved by the server, every answer must be a public unicast address
+  (loopback, RFC 1918, link-local, CGNAT, multicast, unspecified, ULA,
+  reserved, tunnel ranges and the cloud metadata addresses are refused, also
+  as IPv4-mapped IPv6), the connection goes to the vetted address by number
+  (DNS rebinding cannot swap it), redirects are not followed, no proxy
+  variables are honoured, responses are read to a cap and never stored, and
+  delivery logs carry short codes instead of network errors. Operators can
+  open specific local addresses with `WEBHOOK_ALLOW_PRIVATE_TARGETS` (off by
+  default; metadata and reserved ranges stay closed). Deliveries are signed
+  (`X-Mnema-Signature`, HMAC-SHA256 over `t.body`), run with the creator's
+  rights checked before every attempt, and are rate and concurrency limited.
 - **Security headers.** Strict Content-Security-Policy (no inline scripts or
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),

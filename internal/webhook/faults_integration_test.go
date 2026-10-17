@@ -14,6 +14,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -22,6 +23,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/ssrf"
 	"github.com/msch128/mnema-talk/internal/testutil"
 	"github.com/msch128/mnema-talk/internal/testutil/pgfault"
 )
@@ -64,7 +66,11 @@ func newFixture(t *testing.T) *fixture {
 // handler builds a Handler (no permission model) on pool.
 func (f *fixture) handler(p *db.Pool) *Handler {
 	m := &media.Handler{DB: p, Store: f.store, Bucket: "b", MaxUploadBytes: 1 << 20, Events: &events.Recorder{}}
-	h := New(Handler{DB: p, Events: &events.Recorder{}, Media: m, PublicURL: "http://example.test/"})
+	policy := &ssrf.Policy{}
+	h := New(Handler{
+		DB: p, Events: &events.Recorder{}, Media: m, PublicURL: "http://example.test/", Policy: policy,
+		Outgoing: NewDispatcher(p, nil, ssrf.NewClient(ssrf.NewDialer(policy), time.Second), "test"),
+	})
 	h.SetLimits(10000, 10000)
 	return h
 }
