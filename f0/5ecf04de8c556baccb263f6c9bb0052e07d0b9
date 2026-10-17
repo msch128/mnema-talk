@@ -1,0 +1,41 @@
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_2ef01d67e23caf 63-64,113-115
+SECURITY.md
+  s_06fcde5dbef956::t_2ef01d67e23caf 368-374
+e2e/tests/moderation.spec.ts
+  s_06fcde5dbef956::t_a2e66ab9a36de6 1-101
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_33dcea8e56a4e3 141,236,243,303,446
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_d1b7a0d4c6a0de 399-401
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_c6b9e4bce86d51 2,69
+README.md
+  s_06fcde5dbef956::t_2ef01d67e23caf 76
+doc/moderation.md
+  s_06fcde5dbef956::t_2ef01d67e23caf 57
+  s_06fcde5dbef956::t_c652c5ba57e1d1 3-5,8-56,58-69
+  s_06fcde5dbef956::t_0e80f882981fdc 70
+internal/auth/moderation_test.go
+  s_06fcde5dbef956::t_7ba760e31d2290 1-43
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_33dcea8e56a4e3 79,84
+internal/auth/moderation_paths_integration_test.go
+  s_06fcde5dbef956::t_49758306ddad12 1-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f05ecf04de8c556baccb263f6c9bb0052e07d0b9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
