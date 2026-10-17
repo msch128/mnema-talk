@@ -1,0 +1,19 @@
+internal/testutil/db.go
+  s_06fcde5dbef956::t_58a283c7d5ebce 15,80-82,85-91,95-103,106-107,109-110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "22ea5d884d9063c1c933b9c2c9a20449d526cd10",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
