@@ -369,8 +369,16 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	hdr.Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": filename}))
 	hdr.Set("X-Content-Type-Options", "nosniff")
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	// Content behind an ID never changes; private keeps shared caches out.
-	hdr.Set("Cache-Control", "private, max-age=86400, immutable")
+	// Attachments are revalidated on every use (the ETag answers 304 after the
+	// permission and deletion checks above), so a removed file or a revoked
+	// channel stops working at once instead of living on in the browser cache.
+	// Avatars belong to no channel and are replaced under a new ID, so they
+	// may be cached; private keeps shared caches out in both cases.
+	if channelID == nil {
+		hdr.Set("Cache-Control", "private, max-age=86400, immutable")
+	} else {
+		hdr.Set("Cache-Control", "private, no-cache")
+	}
 	hdr.Set("ETag", etag)
 	// ServeContent answers Range (206, video seeking), If-None-Match and HEAD.
 	http.ServeContent(w, r, "", time.Time{}, obj)

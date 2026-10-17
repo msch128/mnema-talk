@@ -256,6 +256,7 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request,
 	req := &request{}
 	switch mt {
 	case "application/json":
+		httpx.SetJSONReadDeadline(w)
 		r.Body = http.MaxBytesReader(w, r.Body, httpx.DefaultMaxBody)
 		if err := decodeLenient(r.Body, &req.payload); err != nil {
 			return nil, h.bodyError(err)

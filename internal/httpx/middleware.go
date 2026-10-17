@@ -112,6 +112,17 @@ func Logger(next http.Handler) http.Handler {
 	})
 }
 
+// jsonReadTimeout is how long a client gets to send a small (JSON) request
+// body. The server-wide ReadTimeout is long for uploads and would otherwise
+// let a slow sender hold a connection for ten minutes.
+var jsonReadTimeout = 30 * time.Second
+
+// SetJSONReadDeadline shortens the read deadline of this request to
+// jsonReadTimeout. Servers without deadline support (tests) are unaffected.
+func SetJSONReadDeadline(w http.ResponseWriter) {
+	_ = http.NewResponseController(w).SetReadDeadline(time.Now().Add(jsonReadTimeout))
+}
+
 // MaxBody caps request bodies at limit bytes, rejecting a declared oversize
 // Content-Length before any byte is read.
 func MaxBody(limit int64) func(http.Handler) http.Handler {
@@ -120,6 +131,9 @@ func MaxBody(limit int64) func(http.Handler) http.Handler {
 			if r.ContentLength > limit {
 				WriteError(w, ErrPayloadTooLarge("request body too large"))
 				return
+			}
+			if limit <= DefaultMaxBody {
+				SetJSONReadDeadline(w)
 			}
 			if r.Body != nil {
 				r.Body = http.MaxBytesReader(w, r.Body, limit)
