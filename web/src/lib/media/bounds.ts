@@ -6,6 +6,9 @@ export const HANDSHAKE_MAX_CHARS = 48_000
 // How long the keys of the group a member held before the call regrouped
 // still open frames (see mediaFrameWorker).
 export const PREVIOUS_GROUP_MS = 30_000
+// How long a member without a group (regrouping, or removed and waiting to be
+// let in again) goes on sealing with its last keys before it sends nothing.
+export const STALE_SEAL_MS = 10_000
 
 export const MEDIA_EXPORTER_LABEL = 'mnema-media-v1'
 export const FRAME_EPOCH_BYTES = 16

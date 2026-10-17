@@ -15,6 +15,8 @@ export interface MediaGuard {
    */
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
   setKey(epoch: number, key: EpochKeys, replace?: boolean): void
+  /** The call lost its group: the last keys may seal only a little longer. */
+  staleKeys(): void
   /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
   onStats(listener: (senders: Record<string, FrameStats>) => void): void
   reset(): void
@@ -108,6 +110,9 @@ export function createMediaGuard(): MediaGuard {
         : { type: 'key' as const, epoch, key, seq }
       current = message
       for (const port of ports) port.postMessage(message)
+    },
+    staleKeys() {
+      for (const port of ports) port.postMessage({ type: 'stale' })
     },
     onStats(listener) { statsListener = listener },
     reset() {

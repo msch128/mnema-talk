@@ -216,8 +216,9 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       return
     }
     // Without a group (regrouping, or waiting to be let in again) the worker
-    // keeps the last keys: it goes on sealing and opening with them until the
-    // next group's key arrives, which then counts as a new group.
+    // keeps the last keys: it goes on opening with them, and sealing for a
+    // short while, until the next group's key arrives as a new group.
+    if (appliedEpoch !== null) guard.staleKeys()
     appliedEpoch = null
     appliedKey = null
     verify(null)

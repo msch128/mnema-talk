@@ -525,12 +525,14 @@ export class MediaGroup {
       // is the one everybody else is in.
       const previous = this.state
       if (previous && treeMembers(previous).size > 1) return this.step()
-      // Whoever commits for the group I offered to lets me in: any member the
-      // roster lists, who must be in the group it welcomes me to.
+      // Whoever commits for the group I offered to lets me in.
       if (!this.room.includes(from)) return this.step()
       try {
         const joined = await joinGroup(message.welcome, this.own.publicPackage, this.own.privatePackage, emptyPskIndex, this.cs)
-        if (!treeMembers(joined).has(from)) {
+        // Only the group's committer welcomes: the lowest of its members the
+        // roster lists, leaving me out (I may be the committer coming back).
+        const committer = lowest([...treeMembers(joined).keys()].filter(id => id !== this.userId && this.room.includes(id)))
+        if (committer !== from) {
           this.wipeRejected(joined)
           return this.step()
         }

@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
-import { PREVIOUS_GROUP_MS } from './bounds'
+import { PREVIOUS_GROUP_MS, STALE_SEAL_MS } from './bounds'
 
 const previous = globalThis.crypto
 let alice: TestMember
@@ -376,6 +376,19 @@ describe('media frame worker', () => {
       ], { afterCommands: () => { clock += PREVIOUS_GROUP_MS + 1 } })
       now.mockRestore()
       expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[6]])
+    })
+
+    it('seals with the last keys only a little while after the group is gone, until a new key comes', async () => {
+      const old = await epochKeys(27)
+      const now = vi.spyOn(Date, 'now')
+      let clock = 2_000_000
+      now.mockImplementation(() => clock)
+      const keyed = [{ type: 'key', epoch: 3, key: old, seq: 1 }, { type: 'stale' }]
+      expect(await frames('send', [new Uint8Array([1]).buffer], keyed)).toHaveLength(1)
+      expect(await frames('send', [new Uint8Array([1]).buffer], keyed, { afterCommands: () => { clock += STALE_SEAL_MS + 1 } })).toEqual([])
+      const fresh = await epochKeys(28)
+      expect(await frames('send', [new Uint8Array([1]).buffer], [...keyed, { type: 'key', epoch: 0, key: fresh, replace: true, seq: 2 }], { afterCommands: () => { clock += STALE_SEAL_MS + 1 } })).toHaveLength(1)
+      now.mockRestore()
     })
   })
 })

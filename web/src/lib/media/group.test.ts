@@ -822,6 +822,23 @@ describe('a welcome to a member that already holds a group', () => {
     await bob.close()
   }, 30_000)
 
+  it('is taken only from the welcomed group\'s committer', async () => {
+    const { alice, bob } = await joinedPair()
+    const dave = await opened(daveId)
+    const roster = [aliceId, bobId, daveId]
+    const offer = await dave.sync(roster)
+    await bob.sync(roster)
+    // Bob is no committer: Alice, the group's lowest, is. A welcome from him
+    // into that group is refused.
+    const decoded = mls.decodeMlsMessage(wireAt(offer.wires, 0), 0)
+    if (decoded?.[0].wireformat !== 'mls_key_package') throw new Error('expected a key package')
+    const bySideDoor = await (bob as unknown as { commit(p: unknown[]): Promise<Uint8Array[]> }).commit([{ proposalType: 'add', add: { keyPackage: decoded[0].keyPackage } }])
+    const welcome = bySideDoor.find(wire => mls.decodeMlsMessage(wire, 0)?.[0].wireformat === 'mls_welcome')
+    expect(welcome).toBeDefined()
+    expect((await dave.receive(bobId, welcome ?? new Uint8Array())).key).toBeNull()
+    for (const group of [alice, bob, dave]) await group.close()
+  }, 30_000)
+
   it('is refused by a group others are in, and from someone outside the group it welcomes to', async () => {
     const { alice, bob, bobStep } = await joinedPair()
     const carol = await opened(carolId)

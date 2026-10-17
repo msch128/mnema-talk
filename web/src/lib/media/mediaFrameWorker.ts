@@ -1,6 +1,6 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { FrameStream, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
-import { PREVIOUS_GROUP_MS } from './bounds'
+import { PREVIOUS_GROUP_MS, STALE_SEAL_MS } from './bounds'
 
 interface EncodedFrame {
   data: ArrayBuffer
@@ -46,6 +46,8 @@ function replayOf(senderId: string): ReplayWindow {
   return window
 }
 let sendEpoch: number | null = null
+// Since when the call has no group (the keys are the last ones it had).
+let staleSince: number | null = null
 
 function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
   return map.size ? Math.max(...map.keys()) : null
@@ -68,6 +70,7 @@ function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number |
   const ordered = [...keys.keys()].sort((a, b) => a - b)
   for (const drop of ordered.slice(0, -2)) keys.delete(drop)
   sendEpoch = newest(keys)
+  staleSince = null
   retainReplays()
 }
 
@@ -87,6 +90,7 @@ function previousKeys(): ReadonlyMap<number, EpochKeys> {
 
 function forget() {
   lastSeq = -1
+  staleSince = null
   keys = new Map()
   previous = new Map()
   regroupedAt = -Infinity
@@ -125,6 +129,7 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
   const data = new Uint8Array(frame.data)
   if (direction === 'send') {
     if (sendEpoch === null) return null
+    if (staleSince !== null && Date.now() - staleSince > STALE_SEAL_MS) return null
     const epochKeys = keys.get(sendEpoch)
     const stream = line.stream
     if (!epochKeys || !stream) return null
@@ -196,6 +201,10 @@ scope.onrtctransform = (event) => {
     if (!data || typeof data !== 'object') return
     if ('type' in data && data.type === 'drop') {
       forget()
+      return
+    }
+    if ('type' in data && data.type === 'stale') {
+      staleSince ??= Date.now()
       return
     }
     if (direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
