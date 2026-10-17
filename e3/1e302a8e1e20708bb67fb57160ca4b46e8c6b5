@@ -1,0 +1,90 @@
+internal/server/login_lockout_edges_integration_test.go
+  s_06fcde5dbef956::t_0edb03edb709b4 1-45
+internal/httpx/middleware_test.go
+  s_06fcde5dbef956::t_231f1bcfce908e 11-12,281-288
+doc/operations.md
+  s_06fcde5dbef956::t_fd2635c26170ee 551-556,570-591
+cmd/server/unlock_connect_integration_test.go
+  s_06fcde5dbef956::t_ecad06950126cd 1-19
+internal/auth/lockout_test.go
+  s_06fcde5dbef956::t_af318a8fa57966 1-63
+internal/opwarn/opwarn_test.go
+  s_06fcde5dbef956::t_db39c1e22f5bb2 1-56
+api/openapi.json
+  s_06fcde5dbef956::t_cf2b84710abe5b 40-43,1433-1459,2268-2274,2281-2282,7449-7543
+  s_06fcde5dbef956::t_73b1a8b74160fe 7544-7548
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_d8027fa0fc8022 860-887,997-1000
+web/src/components/AdminUsersTab.vue
+  s_06fcde5dbef956::t_d8027fa0fc8022 4,162-171,321-328,357-367
+  s_06fcde5dbef956::t_f099e2d7477068 368-369
+internal/server/server.go
+  s_06fcde5dbef956::t_b3edcf59b16b8c 158
+  s_06fcde5dbef956::t_d9a7489cd3eaa6 25,118-119
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_4a65461be46ff0 229
+  s_06fcde5dbef956::t_d9a7489cd3eaa6 10,42-44,148,230-233
+  s_06fcde5dbef956::t_aac532aa61545f 234
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_d8027fa0fc8022 860-887,997-1000
+cmd/server/unlock.go
+  s_06fcde5dbef956::t_1e17af1e6340d9 1-92
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_cf2b84710abe5b 14,34,897-913,1400,1409
+internal/httpx/ratelimit_clear_test.go
+  s_06fcde5dbef956::t_9ab30fb9f77195 1-41
+internal/server/login_lockout_integration_test.go
+  s_06fcde5dbef956::t_0a1a11d9f98735 1-117
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_b3edcf59b16b8c 19
+  s_06fcde5dbef956::t_65351653accfc2 299
+doc/upgrade.md
+  s_06fcde5dbef956::t_fd2635c26170ee 158-159
+cmd/server/unlock_integration_test.go
+  s_06fcde5dbef956::t_12f9e4cd5f0330 1-57
+cmd/server/main.go
+  s_06fcde5dbef956::t_65351653accfc2 18,59,94,104,111
+  s_06fcde5dbef956::t_910b333018b391 36-38
+internal/db/migrations/0023_login_unlock_requests.sql
+  s_06fcde5dbef956::t_0d540ec75c64c5 1-9
+web/src/components/systemStatus.fixture.ts
+  s_06fcde5dbef956::t_30a4a98f555fcc 20
+internal/server/system.go
+  s_06fcde5dbef956::t_b3edcf59b16b8c 16,39-40,52-54,166
+internal/server/system_warnings_test.go
+  s_06fcde5dbef956::t_95287233851677 1-43
+internal/opwarn/opwarn.go
+  s_06fcde5dbef956::t_63a1fbe1e723c4 1-99
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_d8027fa0fc8022 4,11,122-145,186-198
+  s_06fcde5dbef956::t_5cc76de2a91bca 199-200
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_2bb8d55c477578 98
+  s_06fcde5dbef956::t_d6c4d0f85b37d4 1-97,99-123
+cmd/server/unlock_test.go
+  s_06fcde5dbef956::t_2d0a97c403fb5e 6-7,11-14,37-92
+  s_06fcde5dbef956::t_89a65b40f9ec0a 1-5,8-10,15-36,93-94
+internal/httpx/ratelimit.go
+  s_06fcde5dbef956::t_341f0f00c7fc90 79-92,293-320
+  s_06fcde5dbef956::t_a6c1c09d152ce5 321
+internal/auth/lockout.go
+  s_06fcde5dbef956::t_d9a7489cd3eaa6 91
+  s_06fcde5dbef956::t_73cc2dc7104ca2 179-181
+  s_06fcde5dbef956::t_cfedb7e2185602 1-90,92-178,182-194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e31e302a8e1e20708bb67fb57160ca4b46e8c6b5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
