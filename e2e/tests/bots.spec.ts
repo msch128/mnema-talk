@@ -167,7 +167,9 @@ test('a bot connects to the gateway, hears only its channel and answers a slash 
         w.__events.push({ t: f.t, d: f.d })
         if (f.t === 'INTERACTION_CREATE') {
           const i = f.d as { id: string; token: string; data: { options: { value: string }[] } }
-          void fetch(`/api/bot/v1/interactions/${i.id}/${i.token}/callback`, {
+          // Only well-formed ids go into the path.
+          if (!/^[0-9a-f-]{36}$/.test(i.id) || !/^[A-Za-z0-9_-]+$/.test(i.token)) return
+          void fetch(`/api/bot/v1/interactions/${encodeURIComponent(i.id)}/${encodeURIComponent(i.token)}/callback`, {
             method: 'POST', headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ type: 4, data: { content: `echo: ${i.data.options[0]?.value}` } }),
           })
