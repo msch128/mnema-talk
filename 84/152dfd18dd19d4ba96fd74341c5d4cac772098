@@ -1,0 +1,29 @@
+desktop-trust/trust.json
+  s_06fcde5dbef956::t_68c61b79ffe912 3-5
+desktop-trust/trust.json.sig
+  s_06fcde5dbef956::t_8f1262fb9f55fb 1
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_5fda1dccdccd8d 155-156,179-191,213-224,246-247
+internal/webbundle/cli.go
+  s_06fcde5dbef956::t_f52674302bf220 187,189-190,257-258,278-283,299-302,374-377
+internal/webbundle/trust.go
+  s_06fcde5dbef956::t_1c6747941e8ddc 23-37,51-56,133-142,236-241
+internal/webbundle/trust_test.go
+  s_06fcde5dbef956::t_0cc3eab2441cd4 12,32,105-108,328-377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "84152dfd18dd19d4ba96fd74341c5d4cac772098",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
