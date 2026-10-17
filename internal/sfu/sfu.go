@@ -826,11 +826,19 @@ type rtpWriter interface {
 func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *TrackInfo) {
 	buf := make([]byte, 1500)
 	rtpPkt := &rtp.Packet{}
+	limit := newIngressBucket(info.Kind)
 	for {
 		n, _, err := remote.Read(buf)
 		if err != nil {
 			r.removeTrack(key, info)
 			return
+		}
+		if verdict := limit.admit(n, time.Now()); verdict != ingressOK {
+			metrics.SFUIngressDropped.With("rate").Inc()
+			if verdict == ingressAbusive {
+				ingressAbuse(info)
+			}
+			continue
 		}
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
 			continue
