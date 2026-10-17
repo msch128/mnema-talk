@@ -1,0 +1,45 @@
+internal/ws/voicegate.go
+  s_06fcde5dbef956::t_1d7cbd3aa5189d 1-153
+internal/ws/limits_test.go
+  s_06fcde5dbef956::t_957cd0c86d50aa 14,135-160
+  s_06fcde5dbef956::t_b4ffef35723b4a 161
+internal/ws/hub.go
+  s_06fcde5dbef956::t_cd59b872e0d6ed 88-92
+internal/sfu/sfu.go
+  s_06fcde5dbef956::t_48a8c7da7a52b9 1322-1335
+  s_06fcde5dbef956::t_9d073011bdf2ef 496-513,517,532,544,611,613,624-633,638-640,642,667-673,675-687,788
+  s_06fcde5dbef956::t_7b1f3eb4adb413 634-637,666,674
+internal/webhook/fairness_test.go
+  s_06fcde5dbef956::t_6131d9f9daf1f4 15,25
+  s_06fcde5dbef956::t_f065b58e2b5fe6 1-14,16-24,26-38
+internal/ws/voicegate_test.go
+  s_06fcde5dbef956::t_b8f9afb323d495 1-67
+internal/webhook/outgoing_integration_test.go
+  s_06fcde5dbef956::t_f065b58e2b5fe6 242-249
+internal/ws/voicetime_integration_test.go
+  s_06fcde5dbef956::t_0882b011bd464f 1-54
+internal/webhook/dispatch.go
+  s_06fcde5dbef956::t_5ec378c9891ebf 32-38,115-119,128,179,235-242,248-263,265
+internal/ws/handle.go
+  s_06fcde5dbef956::t_cd59b872e0d6ed 11,45-51,57-59
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_cd59b872e0d6ed 322,368
+internal/ws/voice.go
+  s_06fcde5dbef956::t_cd59b872e0d6ed 142-147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "10ad1b9d63dee7a9e4adc55877955c41971b46fe",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
