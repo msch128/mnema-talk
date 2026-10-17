@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.1](https://github.com/msch128/mnema-talk/compare/v0.8.0...v0.8.1) (2026-10-17)
+
+
+### Features
+
+* bandwidth-aware Auto layers and live layer labels ([#176](https://github.com/msch128/mnema-talk/issues/176)) ([81ca29a](https://github.com/msch128/mnema-talk/commit/81ca29a06e3f320e39b635879fa5bdf2bda91618))
+* clear login lockouts without a restart and show operator warnings in the System tab ([#173](https://github.com/msch128/mnema-talk/issues/173)) ([dd6c18f](https://github.com/msch128/mnema-talk/commit/dd6c18f1460a7d6ad73a67a18cfe4b78fe0d5766))
+* outgoing webhook deliveries survive restarts ([#172](https://github.com/msch128/mnema-talk/issues/172)) ([a61f4d6](https://github.com/msch128/mnema-talk/commit/a61f4d6909059b4a974f5dee4729905a2f33cacc))
+
+
+### Bug Fixes
+
+* give the login unlock migration its own number ([#177](https://github.com/msch128/mnema-talk/issues/177)) ([7cad3ea](https://github.com/msch128/mnema-talk/commit/7cad3eab6f0ece430ab76b93d2913432dd71dd2b))
+* **web:** point the updater hint at the deployment doc ([#178](https://github.com/msch128/mnema-talk/issues/178)) ([9c7bf5f](https://github.com/msch128/mnema-talk/commit/9c7bf5f7a2da40809ba1e545191341c68f8c0a4f))
+
 ## [0.8.0](https://github.com/msch128/mnema-talk/compare/v0.7.25...v0.8.0) (2026-10-17)
 
 
