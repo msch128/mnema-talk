@@ -2391,7 +2391,7 @@
     },
     "/api/admin/categories/{id}": {
       "delete": {
-        "description": "Its channels become uncategorized. Requires the Manage channels permission (403 otherwise).",
+        "description": "Its channels become uncategorized and keep its permission overwrites. A category with overwrites needs the Administrator permission and sight of every channel in it (404 otherwise); 409 when the category and its channels both have overwrites (they cannot be merged exactly). Requires the Manage channels permission (403 otherwise).",
         "operationId": "deleteCategory",
         "parameters": [
           {

@@ -571,7 +571,7 @@ func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 // deleteCategory handles DELETE /api/admin/categories/{id}.
 //
 // @Summary Delete a category
-// @Description Its channels become uncategorized. Requires the Manage channels permission (403 otherwise).
+// @Description Its channels become uncategorized and keep its permission overwrites. A category with overwrites needs the Administrator permission and sight of every channel in it (404 otherwise); 409 when the category and its channels both have overwrites (they cannot be merged exactly). Requires the Manage channels permission (403 otherwise).
 // @ID deleteCategory
 // @Tags Admin
 // @Produce json
