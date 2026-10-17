@@ -20,6 +20,21 @@ const TrustSchema = 1
 
 const maxTrustSize = 64 << 10
 
+const (
+	// DefaultTrustValidity is how long a statement signed by the CLI is valid.
+	DefaultTrustValidity = 180 * 24 * time.Hour
+	// MaxTrustValidity bounds ExpiresAt-IssuedAt.
+	MaxTrustValidity = 400 * 24 * time.Hour
+)
+
+func parseUTC(s string) (time.Time, error) {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil || t.UTC().Format(time.RFC3339) != s {
+		return time.Time{}, errors.New("not a UTC time like 2026-10-17T10:00:00Z")
+	}
+	return t, nil
+}
+
 // Trust is the statement signed by the offline root key (see
 // doc/desktop-trusted-client.md, "Key revocation"). The desktop client pins
 // only the root public key; which web bundle and updater keys it accepts is
@@ -33,8 +48,12 @@ type Trust struct {
 	Schema int `json:"schema"`
 	// Serial grows with every statement. Clients refuse a lower one than the
 	// highest they have seen.
-	Serial   uint64 `json:"serial"`
-	IssuedAt string `json:"issued_at"`
+	Serial uint64 `json:"serial"`
+	// IssuedAt and ExpiresAt are UTC times in the form 2006-01-02T15:04:05Z.
+	// Clients refuse an expired statement and install nothing new while the one
+	// in force has expired, so a blocked fetch cannot freeze them forever.
+	IssuedAt  string `json:"issued_at"`
+	ExpiresAt string `json:"expires_at"`
 	// BundleKeys are the allowed web bundle public keys, raw Ed25519, hex.
 	BundleKeys []string `json:"bundle_keys"`
 	// RevokedBundleKeys are bundle key ids (see KeyID).
@@ -111,8 +130,16 @@ func (t *Trust) Validate() error {
 	if t.Serial < 1 {
 		return errors.New("serial must be at least 1")
 	}
-	if _, err := time.Parse(time.RFC3339, t.IssuedAt); err != nil {
-		return errors.New("issued_at is not an RFC 3339 time")
+	issued, err := parseUTC(t.IssuedAt)
+	if err != nil {
+		return fmt.Errorf("issued_at: %w", err)
+	}
+	expires, err := parseUTC(t.ExpiresAt)
+	if err != nil {
+		return fmt.Errorf("expires_at: %w", err)
+	}
+	if !expires.After(issued) || expires.Sub(issued) > MaxTrustValidity {
+		return errors.New("expires_at must be after issued_at, within 400 days")
 	}
 	revokedBundle := map[string]bool{}
 	for _, id := range t.RevokedBundleKeys {
@@ -205,4 +232,10 @@ func (t *Trust) AllowsBundleKey(pub ed25519.PublicKey) bool {
 		}
 	}
 	return false
+}
+
+// Expired reports whether the statement is no longer valid at now.
+func (t *Trust) Expired(now time.Time) bool {
+	expires, err := parseUTC(t.ExpiresAt)
+	return err != nil || !now.Before(expires)
 }
