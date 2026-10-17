@@ -182,7 +182,7 @@ onMounted(load)
       </label>
       <label class="block text-sm text-mnema-text">
         <span class="mb-1 block text-xs font-medium text-mnema-muted">{{ $t('webhooks.url') }}</span>
-        <input v-model="form.url" type="url" maxlength="2048" required placeholder="https://" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 font-mono text-sm text-mnema-text" />
+        <input v-model="form.url" type="url" maxlength="2048" required :placeholder="'https://example.org/hook'" class="w-full rounded-md border border-mnema-border-field bg-mnema-elevated px-3 py-1.5 font-mono text-sm text-mnema-text" />
       </label>
       <fieldset>
         <legend class="mb-1 text-xs font-medium text-mnema-muted">{{ $t('webhooks.eventsLabel') }}</legend>

@@ -12,7 +12,7 @@ interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onWebhoo
 interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
