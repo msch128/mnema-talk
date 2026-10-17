@@ -232,9 +232,11 @@ func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingCha
 	return nil
 }
 
-func rotateSecret(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error) {
+// rotateSecret makes a new secret and makes actor the webhook's creator: the
+// holder of the secret is whose rights every later delivery is checked against.
+func rotateSecret(ctx context.Context, p *db.Pool, id, actor uuid.UUID) (string, error) {
 	secret := newSecret()
-	if _, err := p.Exec(ctx, `UPDATE outgoing_webhooks SET secret = $2, updated_at = NOW() WHERE id = $1`, id, secret); err != nil {
+	if _, err := p.Exec(ctx, `UPDATE outgoing_webhooks SET secret = $2, created_by = $3, updated_at = NOW() WHERE id = $1`, id, secret, actor); err != nil {
 		return "", fmt.Errorf("rotate secret: %w", err)
 	}
 	return secret, nil

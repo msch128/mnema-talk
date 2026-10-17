@@ -6052,7 +6052,7 @@
     },
     "/api/admin/outgoing-webhooks/{id}/secret": {
       "post": {
-        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once.",
+        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once. The caller becomes the webhook's creator, so deliveries are checked against their rights from now on.",
         "operationId": "rotateOutgoingWebhookSecret",
         "parameters": [
           {

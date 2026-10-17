@@ -302,7 +302,7 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 // rotateOutgoingSecret handles POST /api/admin/outgoing-webhooks/{id}/secret.
 //
 // @Summary Rotate an outgoing webhook's secret
-// @Description The old secret stops signing at once. The answer carries the new secret, shown only once.
+// @Description The old secret stops signing at once. The answer carries the new secret, shown only once. The caller becomes the webhook's creator, so deliveries are checked against their rights from now on.
 // @ID rotateOutgoingWebhookSecret
 // @Tags Webhooks
 // @Produce json
@@ -322,10 +322,13 @@ func (h *Handler) rotateOutgoingSecret(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
-	secret, err := rotateSecret(r.Context(), h.DB, rec.ID)
+	actor := auth.UserFrom(r.Context()).ID
+	secret, err := rotateSecret(r.Context(), h.DB, rec.ID, actor)
 	if err != nil {
 		return err
 	}
+	rec.createdBy = actor
+	rec.CreatedBy = &actor
 	httpx.WriteJSON(w, http.StatusOK, CreatedOutgoing{Outgoing: h.present(r.Context(), rec), Secret: secret})
 	return nil
 }
