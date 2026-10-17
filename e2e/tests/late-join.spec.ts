@@ -1,6 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, trackPeerConnections } from './helpers'
-import { randomBytes } from 'node:crypto'
+import { apiFetch, responseString, suiteMember, trackPeerConnections } from './helpers'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -8,8 +7,8 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const USER = `late_${suffix}`
-const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
+const USER = suiteMember.username
+const USER_PASSWORD = suiteMember.password
 const VOICE_CHANNEL = `Late ${suffix}`
 
 
@@ -108,9 +107,14 @@ test('a member joining an occupied Talk is heard and hears', async ({ browser })
   await dialog.getByRole('button', { name: 'Anmelden' }).click()
   await expect(dialog).toBeHidden()
   expect((await apiFetch(first, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })).status).toBe(201)
-  const invite = await apiFetch(first, 'POST', '/api/admin/invites', { max_uses: 1 })
-  await late.goto('/')
-  expect((await apiFetch(late, 'POST', '/api/auth/register', { username: USER, password: USER_PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
+  if (suiteMember.registered) {
+    await signIn(late, USER, USER_PASSWORD)
+  } else {
+    const invite = await apiFetch(first, 'POST', '/api/admin/invites', { max_uses: 1 })
+    await late.goto('/')
+    expect((await apiFetch(late, 'POST', '/api/auth/register', { username: USER, password: USER_PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    suiteMember.registered = true
+  }
   await first.reload()
   await late.reload()
 

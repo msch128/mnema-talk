@@ -87,7 +87,31 @@ locally instead (`make up` or `make dev`).
   media as someone else's; an id that holds two leaves verifies nothing. Each
   sending transform numbers its frames, and a receiver opens a frame only once
   (64-frame window per stream). The previous epoch's key is kept until the
-  next rotation. Video stays decodable by the
+  next rotation.
+  **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
+  two-minute jitter per epoch, so Talks do not rotate in step): once the
+  epoch is that old, the committer (the lowest member id in the group and the
+  room) advances it with a commit that carries an update path, so even with
+  no joins or leaves every member gets a new exporter key, and the committer's
+  own leaf secrets are replaced (post-compromise security for it). The
+  schedule is the epoch's age, which every member knows, not a timer that
+  restarts when the committer changes. Receivers hold the previous epoch's
+  key, so media keeps playing across the switch; the cost is one small commit
+  per 30 minutes per Talk and nothing per frame. A member that showed no sign
+  of life for 20 minutes is removed from the group (rekeyed out, so what it
+  held no longer opens anything new) and must be let in again with a fresh
+  key package when it returns. Liveness is not media (listeners are muted): every
+  member signs a 78-byte heartbeat (group, id, epoch, increasing time) with its
+  MLS leaf key about every 5 minutes over the existing handshake channel, and
+  any other handshake it sends counts too. An older copy of a heartbeat, one
+  for another epoch or one signed by another leaf counts for nothing. The
+  committer whose browser itself slept starts everyone's clock over instead of
+  removing people for silence it could not hear, and a returning member is
+  re-admitted by the existing offer path (rate-limited with backoff), so it
+  costs at most one removal per 20 minutes. This stays inside the server's
+  handshake budget. The server can still withhold heartbeats to get a member
+  removed; that is the same denial-of-service it already has by dropping
+  messages. Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
   only VP8 and H.264 are negotiated while media is sealed. Metadata (who speaks
