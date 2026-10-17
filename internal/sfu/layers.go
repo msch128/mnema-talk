@@ -59,6 +59,10 @@ const (
 // ErrInvalidLayers is returned for a layer list the SFU refuses.
 var ErrInvalidLayers = errors.New("invalid layers")
 
+// ErrNotInRoom is returned when a user who is not a peer of the room tries to
+// change what it receives.
+var ErrNotInRoom = errors.New("not a member of the room")
+
 // validLayers accepts one to maxLayers layers whose pictures get smaller from
 // one to the next.
 func validLayers(layers []Layer) bool {

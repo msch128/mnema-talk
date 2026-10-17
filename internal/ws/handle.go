@@ -63,12 +63,24 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if !c.allowTyping(p.ChannelID, time.Now()) {
 			return
 		}
-		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil && c.nativeLive() {
-			// Only someone who could send a message shows as typing, and
-			// only to those who can see the channel.
-			if snap, ok := h.permSnapshot(ch.ID); ok && c.can(snap, ch.ID, perm.ViewChannel|perm.SendMessages) {
-				c.emitApplicationEvent("typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID}, true, nil, ch.ID)
+		// The permission snapshot knows which channels exist, so no query is
+		// needed per notice; without a permission model (tests) the database
+		// is asked.
+		snap, ok := h.permSnapshot(p.ChannelID)
+		if !ok || !c.nativeLive() {
+			return
+		}
+		if snap == nil {
+			if _, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err != nil {
+				return
 			}
+		} else if !snap.KnowsChannel(p.ChannelID) {
+			return
+		}
+		// Only someone who could send a message shows as typing, and only to
+		// those who can see the channel.
+		if c.can(snap, p.ChannelID, perm.ViewChannel|perm.SendMessages) {
+			c.emitApplicationEvent("typing", map[string]any{"channel_id": p.ChannelID, "user_id": c.User.ID}, true, nil, p.ChannelID)
 		}
 
 	case "voice_speaking":
