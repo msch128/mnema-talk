@@ -115,6 +115,7 @@ func NewRouter(d Deps) (*Router, error) {
 	wsPerIP := httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
 	hub.Version = d.Version
 	permSvc := perm.NewService(d.DB)
+	permSvc.SetUploadCeiling(cfg.MaxUploadMB)
 	hub.SetPermissions(permSvc)
 	var pub events.Publisher = hub
 	if d.Events != nil {

@@ -21,7 +21,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
 
 const channel = { id: fixtureId(2), name: 'general' }
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
-  id: fixtureId(20 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(20 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const everyone = role(0, { id: fixtureId(19), name: '@everyone', is_everyone: true })
 const max = userFixture({ id: fixtureId(7), username: 'max', display_name: 'Max' })
@@ -33,7 +33,7 @@ function setup(props: { kind: 'channel' | 'category' } = { kind: 'channel' }, ex
   useAuthStore().user = userFixture({ id: fixtureId(1), role: isOwner ? 'admin' : 'user' })
   const permissions = usePermissionsStore()
   permissions.info = {
-    owner: isOwner, permissions: PERMISSION_BITS.manage_channels | PERMISSION_BITS.view_channel | PERMISSION_BITS.speak, role_ids: [], top_position: 3, catalog: [],
+    owner: isOwner, permissions: PERMISSION_BITS.manage_channels | PERMISSION_BITS.view_channel | PERMISSION_BITS.speak, max_upload_mb: 50, role_ids: [], top_position: 3, catalog: [],
     channels: [{ channel_id: channel.id, permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.speak | PERMISSION_BITS.manage_channels }]
   }
   permissions.roles = [role(5, { name: 'Above' }), role(2, { name: 'Staff' }), everyone]

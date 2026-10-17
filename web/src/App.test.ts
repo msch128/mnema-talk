@@ -124,7 +124,7 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
   it('opens the console for a member whose role allows it, without asking again', async () => {
     const { w } = await mountApp()
     const permissions = usePermissionsStore()
-    permissions.info = { owner: false, permissions: PERMISSION_BITS.manage_roles, role_ids: [], top_position: 1, catalog: [], channels: [] }
+    permissions.info = { owner: false, permissions: PERMISSION_BITS.manage_roles, max_upload_mb: 50, role_ids: [], top_position: 1, catalog: [], channels: [] }
     const load = vi.spyOn(permissions, 'load').mockResolvedValue(undefined)
     await go('/admin/roles')
     await flushPromises()

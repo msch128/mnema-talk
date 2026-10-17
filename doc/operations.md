@@ -71,7 +71,7 @@ General rules:
 
 | Variable | Default | Meaning and validation |
 |---|---|---|
-| `MAX_UPLOAD_SIZE_MB` | `50` | Largest single upload, 1–2048. Your reverse proxy must allow at least this body size. |
+| `MAX_UPLOAD_SIZE_MB` | `50` | The hard ceiling for a single upload, 1–2048, and the initial limit. The Owner can lower it in the System tab and per role (see [roles](roles-and-permissions.md#upload-size)), never raise it above this value. Your reverse proxy must allow at least this body size. |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `LINK_PREVIEWS_ENABLED` | `true` | The server fetches public pages for link cards (never private addresses); linked sites see the server's IP. |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
@@ -161,7 +161,7 @@ server {
     server_name chat.example.com;
     # ssl_certificate ...;
 
-    client_max_body_size 60m;          # >= MAX_UPLOAD_SIZE_MB
+    client_max_body_size 60m;          # >= MAX_UPLOAD_SIZE_MB (the ceiling), plus framing
 
     location / {
         proxy_pass http://app-host:8080;

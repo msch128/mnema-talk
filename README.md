@@ -47,6 +47,8 @@ webhooks and a call you can join with one click.
   per-channel notification settings and presence with a status line.
 - One community with categories, text channels and Talks. Every Talk has its
   own text chat.
+- Upload size is up to the Owner: a global limit and an optional limit per
+  role, within the `MAX_UPLOAD_SIZE_MB` ceiling.
 - German and English, chosen per account.
 
 ### Security and privacy

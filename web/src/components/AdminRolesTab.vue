@@ -22,6 +22,8 @@ const name = ref('')
 const color = ref(0)
 const hex = ref('')
 const hoist = ref(false)
+// Upload limit override in MB as typed; '' inherits the global limit.
+const uploadMb = ref<string | number>('')
 const allow = ref(0)
 const busy = ref(false)
 const dragging = ref<string | null>(null)
@@ -39,8 +41,15 @@ const lockedBits = computed(() => {
   const all = Object.values(PERMISSION_BITS).reduce((a, b) => a | b, 0)
   return all & ~(permissions.info?.permissions ?? 0)
 })
+const uploadValue = computed<number | null | undefined>(() => {
+  const raw = String(uploadMb.value ?? '').trim()
+  if (raw === '') return null
+  const n = Number(raw)
+  return Number.isInteger(n) && n >= 1 ? n : undefined
+})
 function isDirty(role: Role) {
   return allow.value !== role.permissions
+    || (permissions.isOwner && uploadValue.value !== undefined && uploadValue.value !== role.max_upload_mb)
     || (!role.is_everyone && (name.value.trim() !== role.name || color.value !== role.color || hoist.value !== role.hoist))
 }
 
@@ -56,6 +65,7 @@ function select(id: string | null) {
   hex.value = roleColorCss(color.value)
   hoist.value = role?.hoist ?? false
   allow.value = role?.permissions ?? 0
+  uploadMb.value = role?.max_upload_mb == null ? '' : String(role.max_upload_mb)
 }
 
 // A reload keeps the open role and its draft, unless the role is gone.
@@ -96,9 +106,17 @@ async function save() {
   }
   busy.value = true
   try {
+    if (permissions.isOwner && uploadValue.value === undefined) {
+      toasts.error(t('roles.uploadInvalid'))
+      busy.value = false
+      return
+    }
+    // Only the Owner may send the upload limit; it is the one field the
+    // server refuses from role managers.
+    const upload = permissions.isOwner && uploadValue.value !== role.max_upload_mb ? { max_upload_mb: uploadValue.value } : {}
     const json = role.is_everyone
-      ? { permissions: allow.value }
-      : { name: trimmed, color: color.value, hoist: hoist.value, permissions: allow.value }
+      ? { permissions: allow.value, ...upload }
+      : { name: trimmed, color: color.value, hoist: hoist.value, permissions: allow.value, ...upload }
     await api(`/api/admin/roles/${role.id}`, { method: 'PATCH', json, decode: decodeRole })
     await permissions.loadRoles()
     select(role.id)
@@ -260,6 +278,15 @@ onMounted(async () => {
             <span>{{ $t('roles.hoist') }}</span>
           </label>
         </template>
+
+        <label v-if="permissions.isOwner" class="block space-y-1">
+          <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.uploadLimit') }}</span>
+          <span class="flex items-center gap-2">
+            <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-none focus:border-mnema-accent" />
+            <span class="text-sm text-mnema-tertiary">MB</span>
+          </span>
+          <span class="block text-xs text-mnema-tertiary">{{ $t('roles.uploadHint') }}</span>
+        </label>
 
         <div class="space-y-2">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.permissions') }}</span>

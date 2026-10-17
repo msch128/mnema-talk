@@ -17,10 +17,10 @@ vi.mock('../lib/api', async (importOriginal) => ({
 const channel = fixtureId(2)
 const other = fixtureId(3)
 const role = (overrides: Partial<Role>): Role => ({
-  id: fixtureId(10), name: 'Role', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(10), name: 'Role', color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const info = (overrides: Record<string, unknown> = {}) => ({
-  owner: false, permissions: DEFAULT_EVERYONE, role_ids: [], top_position: 0, catalog: [],
+  owner: false, permissions: DEFAULT_EVERYONE, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [],
   channels: [{ channel_id: channel, permissions: PERMISSION_BITS.view_channel | PERMISSION_BITS.send_messages }], ...overrides
 })
 
@@ -65,6 +65,14 @@ describe('permissions store', () => {
     expect(store.canIn(channel, 'attach_files')).toBe(false)
     expect(store.canIn(other, 'view_channel')).toBe(false) // a channel they cannot view is not listed
     expect(store.topPosition).toBe(3)
+  })
+
+  it('reports the effective upload limit once loaded', async () => {
+    const store = usePermissionsStore()
+    expect(store.maxUploadMb).toBeNull()
+    apiMock.mockResolvedValue(info({ max_upload_mb: 7 }))
+    await store.load()
+    expect(store.maxUploadMb).toBe(7)
   })
 
   it('compares ranks of roles and members', async () => {

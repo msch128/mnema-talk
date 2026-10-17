@@ -2,11 +2,13 @@ package perm
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -38,6 +40,8 @@ type Service struct {
 	cur        atomic.Pointer[Snapshot]
 	gen        atomic.Uint64
 
+	uploadCeilingMB atomic.Int64
+
 	notifierMu sync.RWMutex
 	notifier   Notifier
 }
@@ -50,6 +54,76 @@ func (s *Service) SetNotifier(n Notifier) {
 	s.notifierMu.Lock()
 	s.notifier = n
 	s.notifierMu.Unlock()
+}
+
+// SetUploadCeiling sets the operator's hard upload ceiling (MAX_UPLOAD_SIZE_MB).
+func (s *Service) SetUploadCeiling(mb int) { s.uploadCeilingMB.Store(int64(mb)) }
+
+// UploadCeilingMB is the operator's upload ceiling in MB (50 when unset).
+func (s *Service) UploadCeilingMB() int {
+	if v := int(s.uploadCeilingMB.Load()); v > 0 {
+		return v
+	}
+	return 50
+}
+
+// UploadLimitBytes is the largest file sub may upload: the Owner gets the
+// ceiling, others the highest override of their roles or the global limit,
+// never above the ceiling.
+func (s *Service) UploadLimitBytes(ctx context.Context, sub Subject) (int64, error) {
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return int64(snap.UploadMB(sub, s.UploadCeilingMB())) << 20, nil
+}
+
+// GlobalUploadLimitBytes is the limit for requests without a member behind
+// them (webhooks).
+func (s *Service) GlobalUploadLimitBytes(ctx context.Context) (int64, error) {
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return int64(snap.GlobalUploadMB(s.UploadCeilingMB())) << 20, nil
+}
+
+// UploadSettings is the global upload limit as the Owner sees it.
+type UploadSettings struct {
+	// MaxUploadMB is the effective global limit.
+	MaxUploadMB int `json:"max_upload_mb" minimum:"1"`
+	// CeilingMB is the operator's hard ceiling (MAX_UPLOAD_SIZE_MB).
+	CeilingMB int `json:"ceiling_mb" minimum:"1"`
+}
+
+// UploadSettings returns the effective global limit and the ceiling.
+func (s *Service) UploadSettings(ctx context.Context) (UploadSettings, error) {
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return UploadSettings{}, err
+	}
+	c := s.UploadCeilingMB()
+	return UploadSettings{MaxUploadMB: snap.GlobalUploadMB(c), CeilingMB: c}, nil
+}
+
+// SetGlobalUploadMB stores the global upload limit (nil = back to the
+// ceiling). Owner only; everybody's effective limit may change.
+func (s *Service) SetGlobalUploadMB(ctx context.Context, actor Subject, mb *int) (UploadSettings, error) {
+	if err := RequireOwner(actor); err != nil {
+		return UploadSettings{}, err
+	}
+	if mb != nil && (*mb < 1 || *mb > s.UploadCeilingMB()) {
+		return UploadSettings{}, httpx.ErrInvalidInput(fmt.Sprintf("max_upload_mb must be between 1 and %d", s.UploadCeilingMB()))
+	}
+	err := s.Locked(ctx, func(tx pgx.Tx, _ *Snapshot) error {
+		_, err := tx.Exec(ctx, `UPDATE instance_settings SET max_upload_mb = $1, updated_at = NOW()`, mb)
+		return err
+	})
+	if err != nil {
+		return UploadSettings{}, err
+	}
+	s.Changed(nil)
+	return s.UploadSettings(ctx)
 }
 
 // Snapshot returns the current permission state, loading it when it is

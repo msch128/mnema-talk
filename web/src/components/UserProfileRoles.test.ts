@@ -19,7 +19,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
 }))
 
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
-  id: fixtureId(40 + n), name: `Role ${n}`, color: 0xff0000, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(40 + n), name: `Role ${n}`, color: 0xff0000, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const other = userFixture({ id: fixtureId(9), username: 'max', display_name: 'Max', role: 'user' })
 
@@ -34,7 +34,7 @@ beforeEach(() => {
   useAuthStore().user = userFixture({ id: fixtureId(1), username: 'mod', role: 'user' })
   chat = useChatStore()
   permissions = usePermissionsStore()
-  permissions.info = { owner: false, permissions: PERMISSION_BITS.manage_roles | PERMISSION_BITS.manage_members, role_ids: [], top_position: 5, catalog: [], channels: [] }
+  permissions.info = { owner: false, permissions: PERMISSION_BITS.manage_roles | PERMISSION_BITS.manage_members, max_upload_mb: 50, role_ids: [], top_position: 5, catalog: [], channels: [] }
   permissions.roles = [role(1), role(2, { color: 0 })]
   permissions.setMemberRoles([{ id: other.id, role_ids: [role(1).id, role(2).id] }])
 })

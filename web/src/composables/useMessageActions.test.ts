@@ -7,6 +7,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useMessageActions, formatTime } from './useMessageActions'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { pendingConfirm } from '../lib/confirm'
 import { setLocale } from '../i18n'
@@ -40,6 +41,24 @@ afterEach(() => {
 })
 
 describe('useMessageActions upload', () => {
+  it('refuses a file above the member limit before sending anything', async () => {
+    const perms = usePermissionsStore()
+    perms.info = { owner: false, permissions: 0, max_upload_mb: 1, role_ids: [], top_position: 0, catalog: [], channels: [] }
+    const a = setup()
+    const big = new File([new Uint8Array(2 * 1024 * 1024)], 'big.mov')
+    const input = fileInput(big)
+    const send = vi.fn()
+    expect(await a.upload(input, send)).toBe(false)
+    expect(send).not.toHaveBeenCalled()
+    expect(input.value).toBe('')
+    const toast = required(useToastStore().toasts.at(-1))
+    expect(toast.text).toBe('File is too large (max. 1 MB).')
+    expect(toast.detail).toBe('big.mov is 2 MB.')
+    // At the limit it goes through.
+    const ok = fileInput(new File([new Uint8Array(1024 * 1024)], 'ok.mov'))
+    expect(await a.upload(ok, vi.fn())).toBe(true)
+  })
+
   it('clears the file input after a failed upload so the same file can be picked again', async () => {
     const a = setup()
     const input = fileInput()

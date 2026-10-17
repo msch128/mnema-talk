@@ -78,7 +78,7 @@ curl -X POST "$WEBHOOK_URL?wait=true" \
   ID, not a channel ID).
 - Send JSON, or `multipart/form-data` with the JSON in a `payload_json` part
   and up to 10 files in further parts. Files take the same path as member
-  uploads: size limit `MAX_UPLOAD_MB`, type sniffed and checked against the
+  uploads: size limit the global upload limit (webhooks have no role; at most `MAX_UPLOAD_SIZE_MB`), type sniffed and checked against the
   allowlist (a disguised file is refused with `415`). Plain form fields
   `content` and `username` work too when there is no `payload_json`.
 
@@ -129,7 +129,7 @@ the rest of the API:
 
 Limits: about **5 requests per 2 seconds per webhook** and **30 per minute per
 channel** (Discord's numbers), JSON bodies up to 1 MiB, multipart up to
-`MAX_UPLOAD_MB` plus framing. Wrong ids and tokens are counted per client
+the global upload limit plus framing. Wrong ids and tokens are counted per client
 address (30 a minute) and then answered with `429`, so a token cannot be
 guessed by hammering the route (it has 256 random bits anyway).
 

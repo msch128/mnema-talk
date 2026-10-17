@@ -2,6 +2,7 @@ package perm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -30,6 +31,30 @@ type RoleInput struct {
 	Permissions *Set    `json:"permissions" swaggertype:"integer" minimum:"0" binding:"optional"`
 	Hoist       *bool   `json:"hoist" binding:"optional"`
 	Mentionable *bool   `json:"mentionable" binding:"optional"`
+	// MaxUploadMB: absent leaves it alone, null inherits the global limit, a
+	// number sets the role's limit. Only the Owner may send it.
+	MaxUploadMB OptionalInt `json:"max_upload_mb" swaggertype:"integer" minimum:"1" binding:"optional" extensions:"x-nullable"`
+}
+
+// OptionalInt distinguishes an absent JSON field from an explicit null.
+type OptionalInt struct {
+	Present bool
+	Value   *int
+}
+
+// UnmarshalJSON records that the field was sent, and its value (nil for null).
+func (o *OptionalInt) UnmarshalJSON(b []byte) error {
+	o.Present = true
+	if string(b) == "null" {
+		o.Value = nil
+		return nil
+	}
+	var v int
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	o.Value = &v
+	return nil
 }
 
 // Locked runs fn in a transaction that holds the permission lock, with the
@@ -82,6 +107,22 @@ func checkGrant(snap *Snapshot, actor Subject, changed Set) error {
 	return nil
 }
 
+// checkRoleUpload validates a role's upload override. Only the Owner sets it:
+// it is a resource limit, not a permission a role manager may hand out.
+// current is kept when the field is absent.
+func (s *Service) checkRoleUpload(actor Subject, in OptionalInt, current *int) (*int, error) {
+	if !in.Present {
+		return current, nil
+	}
+	if !actor.Owner {
+		return nil, httpx.ErrForbidden("only the Owner can set a role's upload limit")
+	}
+	if in.Value != nil && (*in.Value < 1 || *in.Value > s.UploadCeilingMB()) {
+		return nil, httpx.ErrInvalidInput(fmt.Sprintf("max_upload_mb must be between 1 and %d", s.UploadCeilingMB()))
+	}
+	return in.Value, nil
+}
+
 func cleanRoleName(name string) (string, error) {
 	name, err := httpx.CleanText("name", name, maxRoleName, true)
 	if err != nil {
@@ -103,12 +144,12 @@ func checkColor(c int) error {
 func scanRole(row pgx.Row) (Role, error) {
 	var r Role
 	var perms int64
-	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone)
+	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.MaxUploadMB)
 	r.Permissions = Set(perms)
 	return r, err
 }
 
-const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone`
+const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, max_upload_mb`
 
 // CreateRole adds a role at the bottom of the hierarchy (just above
 // @everyone), so it is always below the actor's own highest role.
@@ -143,13 +184,17 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 		if err := checkGrant(snap, actor, perms); err != nil {
 			return nil, err
 		}
+		maxUpload, err := s.checkRoleUpload(actor, in.MaxUploadMB, nil)
+		if err != nil {
+			return nil, err
+		}
 		if _, err := tx.Exec(ctx, `UPDATE roles SET position = position + 1 WHERE NOT is_everyone`); err != nil {
 			return nil, fmt.Errorf("shift roles: %w", err)
 		}
 		created, err = scanRole(tx.QueryRow(ctx, `
-			INSERT INTO roles (name, color, position, permissions, hoist, mentionable)
-			VALUES ($1, $2, 1, $3, $4, $5) RETURNING `+roleColumns,
-			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable))
+			INSERT INTO roles (name, color, position, permissions, hoist, mentionable, max_upload_mb)
+			VALUES ($1, $2, 1, $3, $4, $5, $6) RETURNING `+roleColumns,
+			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable, maxUpload))
 		if err != nil {
 			return nil, fmt.Errorf("insert role: %w", err)
 		}
@@ -206,10 +251,14 @@ func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, i
 			return nil, err
 		}
 		var err error
+		next.MaxUploadMB, err = s.checkRoleUpload(actor, in.MaxUploadMB, role.MaxUploadMB)
+		if err != nil {
+			return nil, err
+		}
 		updated, err = scanRole(tx.QueryRow(ctx, `
-			UPDATE roles SET name = $2, color = $3, permissions = $4, hoist = $5, mentionable = $6, updated_at = NOW()
+			UPDATE roles SET name = $2, color = $3, permissions = $4, hoist = $5, mentionable = $6, max_upload_mb = $7, updated_at = NOW()
 			WHERE id = $1 RETURNING `+roleColumns,
-			id, next.Name, next.Color, int64(next.Permissions), next.Hoist, next.Mentionable))
+			id, next.Name, next.Color, int64(next.Permissions), next.Hoist, next.Mentionable, next.MaxUploadMB))
 		if err != nil {
 			return nil, fmt.Errorf("update role: %w", err)
 		}

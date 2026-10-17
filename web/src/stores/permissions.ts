@@ -31,6 +31,8 @@ export const usePermissionsStore = defineStore('permissions', () => {
   const channelPermissions = computed(() => new Map((info.value?.channels ?? []).map(c => [c.channel_id, c.permissions])))
   const topPosition = computed(() => info.value?.top_position ?? 0)
   const myRoleIds = computed(() => info.value?.role_ids ?? [])
+  /** The largest file the member may upload, in MB; null until known. */
+  const maxUploadMb = computed(() => info.value?.max_upload_mb ?? null)
 
   /** Does the member hold a server-wide permission? */
   function can(key: PermissionKey): boolean {
@@ -107,7 +109,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
   }
 
   return {
-    info, roles, memberRoles, isOwner, loaded, topPosition, myRoleIds, canOpenAdmin,
+    info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, canOpenAdmin,
     can, canIn, outranks, outranksMember, roleById, rolesOf, nameColor, setMemberRoles, load, loadRoles, reset
   }
 })

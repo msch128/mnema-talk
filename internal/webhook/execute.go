@@ -263,7 +263,12 @@ func (h *Handler) readRequest(w http.ResponseWriter, r *http.Request) (*request,
 		}
 		return req, nil
 	case "multipart/form-data":
-		r.Body = http.MaxBytesReader(w, r.Body, h.Media.UploadBodyLimit())
+		ctx, body, err := h.Media.GlobalLimit(r.Context())
+		if err != nil {
+			return nil, err
+		}
+		r = r.WithContext(ctx)
+		r.Body = http.MaxBytesReader(w, r.Body, body)
 		return req, h.readMultipart(r, req)
 	}
 	return nil, formError("Content-Type must be application/json or multipart/form-data")
@@ -309,7 +314,7 @@ func (h *Handler) readMultipart(r *http.Request, req *request) error {
 			break
 		}
 		if err != nil {
-			return fail(h.Media.FormError(err))
+			return fail(h.Media.FormError(ctx, err))
 		}
 		switch {
 		case part.FileName() != "":
@@ -324,7 +329,7 @@ func (h *Handler) readMultipart(r *http.Request, req *request) error {
 		case part.FormName() == "payload_json":
 			b, err := io.ReadAll(io.LimitReader(part, maxPayloadJSON+1))
 			if err != nil {
-				return fail(h.Media.FormError(err))
+				return fail(h.Media.FormError(ctx, err))
 			}
 			if len(b) > maxPayloadJSON {
 				return fail(httpx.ErrPayloadTooLarge("payload_json too large"))
@@ -336,7 +341,7 @@ func (h *Handler) readMultipart(r *http.Request, req *request) error {
 		case part.FormName() == "content" || part.FormName() == "username":
 			b, err := io.ReadAll(io.LimitReader(part, chat.MaxMessageLen*4+1))
 			if err != nil {
-				return fail(h.Media.FormError(err))
+				return fail(h.Media.FormError(ctx, err))
 			}
 			form[part.FormName()] = string(b)
 		}

@@ -136,7 +136,14 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   // Resolves to whether the upload went through.
   async function upload(input: HTMLInputElement | null, send: (file: File) => unknown | Promise<unknown>) {
     const file = input?.files?.[0]
-    if (!file) return false
+    if (!input || !file) return false
+    const max = permissions.maxUploadMb
+    if (max !== null && file.size > max * 1024 * 1024) {
+      // Refuse early: the server would only read and drop the body.
+      toasts.error(t('chat.uploadTooLarge', { max }), { detail: t('chat.uploadTooLargeDetail', { name: file.name, size: Math.ceil(file.size / (1024 * 1024)) }) })
+      input.value = ''
+      return false
+    }
     isUploading.value = true
     try {
       await send(file)
@@ -146,7 +153,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
       return false
     } finally {
       isUploading.value = false
-      if (input) input.value = ''
+      input.value = ''
     }
   }
 

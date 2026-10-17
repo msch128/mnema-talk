@@ -116,6 +116,23 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 0.8.x → next
+
+- **Upload limits are now editable by the Owner.** `MAX_UPLOAD_SIZE_MB`
+  (default `50`, unchanged) stays the hard ceiling and the initial limit, so
+  nothing changes until the Owner acts. In the System tab the Owner can lower
+  the global limit; in the role editor a role can set its own limit (empty
+  inherits). A member gets the highest limit among their roles, otherwise the
+  global one, never above the ceiling; the Owner always gets the ceiling.
+  Migration 0025 adds the `instance_settings` table and `roles.max_upload_mb`.
+- **To allow bigger files, raise `MAX_UPLOAD_SIZE_MB` and your reverse proxy.**
+  The proxy must accept at least that body size plus a little for multipart
+  framing: nginx `client_max_body_size` (for example `client_max_body_size
+  140m;` for 128 MB), Caddy `request_body { max_size 140MB }`. The default
+  of nginx is 1 MB, so large uploads fail with `413` there first. Then raise
+  the global limit in the System tab (it does not follow the env value upward
+  once the Owner has set one).
+
 ### 0.7.x → 0.8.0
 
 - **The compose file publishes the app port on loopback only**

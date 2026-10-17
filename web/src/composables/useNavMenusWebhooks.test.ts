@@ -15,7 +15,7 @@ const ids = (items: ReturnType<typeof buildChannelItems>) => items.map(i => i.id
 function asMember(bits: number, owner = false) {
   useAuthStore().user = userFixture({ id: 'me', role: owner ? 'admin' : 'user' })
   usePermissionsStore().info = {
-    owner, permissions: bits, role_ids: [], top_position: 1, catalog: [],
+    owner, permissions: bits, max_upload_mb: 50, role_ids: [], top_position: 1, catalog: [],
     channels: [{ channel_id: 'c1', permissions: bits | PERMISSION_BITS.view_channel }]
   }
 }

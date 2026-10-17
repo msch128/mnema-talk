@@ -49,7 +49,38 @@ type Handler struct {
 
 // UploadBodyLimit is the transport ceiling for upload routes: the file cap
 // plus headroom for multipart framing and form fields.
-func (h *Handler) UploadBodyLimit() int64 { return h.MaxUploadBytes + 1<<20 }
+func (h *Handler) UploadBodyLimit() int64 { return bodyLimit(h.MaxUploadBytes) }
+
+func bodyLimit(fileLimit int64) int64 { return fileLimit + 1<<20 }
+
+type limitKey struct{}
+
+// WithUploadLimit returns ctx carrying the file size limit of one request.
+func WithUploadLimit(ctx context.Context, bytes int64) context.Context {
+	return context.WithValue(ctx, limitKey{}, bytes)
+}
+
+// limit is the file size limit of the request behind ctx, never above the
+// operator's ceiling (MaxUploadBytes).
+func (h *Handler) limit(ctx context.Context) int64 {
+	if v, ok := ctx.Value(limitKey{}).(int64); ok && v < h.MaxUploadBytes {
+		return v
+	}
+	return h.MaxUploadBytes
+}
+
+// memberLimit resolves what the signed-in member may upload: the Owner the
+// ceiling, others the highest role override or the global limit.
+func (h *Handler) memberLimit(ctx context.Context, sub perm.Subject) (int64, error) {
+	if h.Perms == nil {
+		return h.MaxUploadBytes, nil
+	}
+	v, err := h.Perms.UploadLimitBytes(ctx, sub)
+	if err != nil {
+		return 0, err
+	}
+	return min(v, h.MaxUploadBytes), nil
+}
 
 // MountUploads registers the multipart routes; the caller wraps them in a
 // larger MaxBody than the JSON default.
@@ -178,6 +209,17 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if _, err := chat.ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
+
+	limit, err := h.memberLimit(r.Context(), user.Subject())
+	if err != nil {
+		return err
+	}
+	// The route's body cap is the ceiling's; this request gets its own.
+	if r.ContentLength > bodyLimit(limit) {
+		return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", limit>>20))
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(limit))
+	r = r.WithContext(WithUploadLimit(r.Context(), limit))
 
 	in, target, err := h.readUpload(r, chID)
 	if err != nil {

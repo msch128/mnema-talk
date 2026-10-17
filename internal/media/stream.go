@@ -68,7 +68,7 @@ func (h *Handler) readUpload(r *http.Request, chID uuid.UUID) (*storedUpload, *u
 			break
 		}
 		if err != nil {
-			return fail(h.formError(err))
+			return fail(h.formError(ctx, err))
 		}
 		name := part.FormName()
 		switch {
@@ -85,7 +85,7 @@ func (h *Handler) readUpload(r *http.Request, chID uuid.UUID) (*storedUpload, *u
 		case uploadFields[name]:
 			b, err := io.ReadAll(io.LimitReader(part, maxFieldBytes+1))
 			if err != nil {
-				return fail(h.formError(err))
+				return fail(h.formError(ctx, err))
 			}
 			if len(b) > maxFieldBytes {
 				return fail(httpx.ErrInvalidInput(name + " is too long"))
@@ -129,7 +129,7 @@ func (h *Handler) validateTarget(ctx context.Context, chID uuid.UUID, fields map
 }
 
 // storePart sniffs the file's type from its first bytes, then streams it to
-// object storage, stopping at MaxUploadBytes.
+// object storage, stopping at the request's upload limit (see WithUploadLimit).
 func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedUpload, error) {
 	head := make([]byte, 512)
 	n, err := io.ReadFull(part, head)
@@ -137,7 +137,7 @@ func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedU
 		return nil, httpx.ErrInvalidInput("file is empty")
 	}
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
-		return nil, h.formError(err)
+		return nil, h.formError(ctx, err)
 	}
 
 	filename := httpx.SanitizeFilename(part.FileName(), maxFilenameLen)
@@ -149,18 +149,18 @@ func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedU
 		return nil, httpx.ErrUnsupportedMediaType(err.Error())
 	}
 
-	body := &cappedReader{r: io.MultiReader(bytes.NewReader(head[:n]), part), max: h.MaxUploadBytes}
+	body := &cappedReader{r: io.MultiReader(bytes.NewReader(head[:n]), part), max: h.limit(ctx)}
 	id := uuid.New()
 	key := storageKey("uploads", id, mimeType)
 	if err := h.Store.Upload(ctx, key, body, mimeType, -1); err != nil {
 		// A failed streamed upload stores nothing (multipart is aborted).
 		if errors.Is(err, errFileTooLarge) {
-			return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", h.MaxUploadBytes>>20))
+			return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", h.limit(ctx)>>20))
 		}
 		if body.readErr != nil {
 			// The client's body failed (limit, disconnect, broken framing),
 			// not the storage.
-			return nil, h.formError(body.readErr)
+			return nil, h.formError(ctx, body.readErr)
 		}
 		return nil, fmt.Errorf("store upload: %w", err)
 	}
@@ -169,10 +169,10 @@ func (h *Handler) storePart(ctx context.Context, part *multipart.Part) (*storedU
 
 // formError maps a failure reading the request body: the transport limit is
 // a 413, anything else a malformed form.
-func (h *Handler) formError(err error) error {
+func (h *Handler) formError(ctx context.Context, err error) error {
 	var maxErr *http.MaxBytesError
 	if errors.As(err, &maxErr) {
-		return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", h.MaxUploadBytes>>20))
+		return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", h.limit(ctx)>>20))
 	}
 	return httpx.ErrInvalidInput("invalid multipart form")
 }
