@@ -1,9 +1,12 @@
 package httpx
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -236,5 +239,41 @@ func TestRecoverReturnsJSON500(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "boom") {
 		t.Fatal("panic value leaked to the client")
+	}
+}
+
+func TestClientIPWarnsOnceForUntrustedPrivatePeer(t *testing.T) {
+	var buf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	defer slog.SetDefault(old)
+
+	h := ClientIPMiddleware(nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	send := func(remote, xff string) {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.RemoteAddr = remote
+		if xff != "" {
+			r.Header.Set("X-Forwarded-For", xff)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+	}
+	send("172.18.0.1:1", "")          // no header: silent
+	send("203.0.113.5:1", "1.2.3.4")  // public peer: silent
+	send("not-an-address", "1.2.3.4") // unparsable: silent
+	if buf.Len() != 0 {
+		t.Fatalf("unexpected warning: %s", buf.String())
+	}
+	send("172.18.0.1:1", "198.51.100.7")
+	send("172.18.0.1:1", "198.51.100.7")
+	if n := strings.Count(buf.String(), "level=WARN"); n != 1 {
+		t.Fatalf("want exactly one warning, got %d: %s", n, buf.String())
+	}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "172.18.0.9:1"
+	r.Header.Set("X-Real-IP", "198.51.100.7")
+	var lastWarn atomic.Int64
+	warnUntrustedForwarded(r, "172.18.0.9", &lastWarn)
+	if lastWarn.Load() == 0 {
+		t.Fatal("X-Real-IP from a private untrusted peer must warn")
 	}
 }

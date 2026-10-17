@@ -109,12 +109,12 @@ locally instead (`make up` or `make dev`).
   hashing.
 - **Client addresses.** Client IPs are taken from `X-Forwarded-For` (every
   header line, right-most untrusted hop) only when the request comes from
-  loopback or `TRUSTED_PROXY_CIDRS`. When private ranges are trusted (as with
-  the Docker network behind a reverse proxy), the app port (8080) must not be
-  reachable directly from the internet or from untrusted hosts in those
-  ranges: anyone who can connect from a trusted range can set their own
-  `X-Forwarded-For` and evade the per-client limits. Publish only the reverse
-  proxy.
+  loopback or `TRUSTED_PROXY_CIDRS`. The compose file trusts only loopback
+  and publishes the app port on `127.0.0.1` by default. List your reverse
+  proxy's address, not a whole private range: anyone who can connect from a
+  trusted range can set their own `X-Forwarded-For` and evade the per-client
+  limits (startup warns about broad ranges). `APP_ENV=development` only
+  listens on loopback, since it logs the generated admin password.
 - **Voice and screenshare.** The SFU transport is DTLS-SRTP. Microphone, camera,
   screen video and screen-audio payloads are encrypted in the browser with
   keys derived from an MLS group, so an honest SFU, and anyone who only sees

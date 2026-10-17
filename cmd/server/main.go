@@ -49,6 +49,10 @@ func runWithContext(ctx context.Context) error {
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
 	slog.Info("starting mnema-talk", "version", version.Current(), "revision", version.Commit(), "env", cfg.AppEnv)
+	if broad := cfg.BroadTrustedProxies(); len(broad) > 0 && !config.IsLoopbackAddr(cfg.BindAddr) {
+		slog.Warn("TRUSTED_PROXY_CIDRS contains broad ranges and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only your reverse proxy's address",
+			"ranges", broad)
+	}
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
