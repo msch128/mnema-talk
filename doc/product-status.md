@@ -76,8 +76,9 @@ Releases of this repository through
 Windows ZIP and checksum file; later releases do not, and new desktop builds
 come from mnema-talk-desktop. Extract every file and run
 `Mnema Desktop DEV.exe`. WebView2 Runtime is required. Checksums
-identify package bytes; they are not publisher signatures. No desktop automatic
-updater or signing setup exists.
+identify package bytes; they are not publisher signatures. The desktop installer of a
+release updates itself with signature-verified, newer-only updates; no
+Authenticode signing exists.
 
 The earlier published v0.7.1 EXE passed two hosted Windows runtime checks
 listed below. These are evidence for that version and flow; they do not

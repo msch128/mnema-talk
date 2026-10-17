@@ -325,7 +325,15 @@ details and the limits.
   still do everything else described above (metadata, membership assertions,
   steering newcomers, denial of service, hostile data). Whoever holds the
   bundle signing key, which is not on any server, can still ship a malicious
-  app, and the Windows `.exe` has no Authenticode signature (a known gap: it needs a code-signing certificate that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). Browsers are
+  app, and the Windows `.exe` has no Authenticode signature (a known gap: it needs a code-signing certificate that must be bought; the `SHA256SUMS` file in the same release detects a damaged download but is no proof of origin, because whoever can replace the ZIP can replace the checksums). **Desktop self-update.** The client replaces itself through the official Tauri
+  updater: the installer runs only if its minisign signature verifies against a
+  public key pinned in the client (not the bundle key), the signed version equals the
+  announced one, the version is newer than the installed one, and the download is HTTPS from
+  github.com. The private key lives in a protected GitHub environment (tags
+  `v*` only) and an offline backup. Rotation: ship a release that pins the new
+  key, signed with the old key; there is no remote revocation, and a client that
+  missed that release needs a manual install. Whoever holds that key can ship
+  malicious code to every installed client. Browsers are
   unchanged: the server serves the code. See
   [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md). Sealed media
   in the desktop client is not yet qualified on real Windows hardware.

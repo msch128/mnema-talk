@@ -354,6 +354,54 @@ per-instance origin is not possible on Windows with Tauri's custom-protocol
 mapping (it filters `https://<scheme>.localhost`, no sub-domains). The
 session cookie and the jar are per instance.
 
+## Updating the client itself
+
+The signed web bundle covers the web app. The program around it (the shell) is
+replaced by its own, separate mechanism, so that users never have to download
+an installer by hand after the first time.
+
+* **Feed and key.** The installer is a per-user NSIS package built by the
+  [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) release
+  workflow on a `vX.Y.Z` tag. Installed clients read
+  `https://github.com/msch128/mnema-talk-desktop/releases/latest/download/latest.json`
+  at every start and every six hours (the interval of the bundle check). The
+  feed is not trusted: it only names an installer and a minisign signature.
+  The updater key (Ed25519, minisign format; the official Tauri updater) is a
+  **different key from the bundle key** and its public half is pinned in
+  `tauri.conf.json` of the client.
+* **What is verified.** The installer runs only if its signature verifies
+  against the pinned key, the version recorded inside the signature equals the
+  version the feed announces (`requireSignedVersion`: an old signed installer
+  cannot be passed off under a new version number), the version is strictly
+  newer than the installed one (no downgrade), and the download URL is HTTPS on
+  `github.com`. Where the bytes came from decides nothing. "On next start"
+  keeps the verified installer on disk and verifies it again against a freshly
+  fetched feed before it runs; an installer that changed on disk, or that a newer
+  release replaced, is deleted.
+* **Install.** Per user (`currentUser`), passive mode: no administrator prompt,
+  the app restarts afterwards. This does not depend on Authenticode.
+* **User control.** Update now, On next start, Skip this version (a newer
+  version is offered again), retry after a failure.
+  `MNEMA_DESKTOP_NO_UPDATE_CHECK=1` turns the check off.
+* **Key custody.** The private key is a secret of the protected
+  `desktop-updater-signing` environment of the desktop repository (usable by
+  tags `v*` only) and in the owner's offline backup. It is separate from the
+  bundle key and from every server.
+* **Rotation and revocation.** Clients trust exactly the key in their own
+  config. To rotate, publish a release that carries the new public key but is
+  signed with the **old** key, and only then switch to the new key. A client that
+  never received that release cannot install releases of the new key and needs a
+  manual install; if the old key is compromised, clients cannot be protected
+  remotely (there is no revocation channel, by design), so the fix is a new
+  release signed with the old key that pins the new one, and a manual install for
+  everyone else. A bad release is replaced by a higher version, never by
+  lowering.
+* **Residual risk.** Whoever holds the updater key, or both the GitHub account
+  and a way around the protected environment, can ship malicious code to every
+  installed client. A network attacker can withhold updates (freeze) but not
+  forge them. The first installer download still relies on how the user got it
+  (see the Authenticode gap below). macOS and Linux have no builds yet.
+
 ## Threat model for desktop users
 
 | | Active or compromised server |
