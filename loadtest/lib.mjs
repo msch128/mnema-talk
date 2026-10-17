@@ -82,7 +82,7 @@ export async function newMember(browser, token, { sharer = false, width = 640, f
     permissions: ['microphone', 'camera'],
     locale: 'de-DE',
     viewport: { width: 1280, height: 800 },
-    ignoreHTTPSErrors: true,
+    ignoreHTTPSErrors: process.env.LOADTEST_INSECURE_TLS === '1',
   })
   await ctx.addCookies([
     { name: secure ? '__Host-mnema_session' : 'mnema_session', value: token, domain: host, path: '/', secure, httpOnly: true, sameSite: 'Lax' },

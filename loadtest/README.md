@@ -81,6 +81,12 @@ BASE_URL=https://talk.example.org TOKENS=./tokens.json CHANNEL_ID=<uuid> \
   METRICS_TOKEN=<token> PROFILE=full make load-test
 ```
 
+Certificates are verified (browsers and the Pion viewers). For an instance with a
+self-signed certificate, `LOADTEST_INSECURE_TLS=1` makes the browsers accept it;
+the tokens are session cookies, so only use it on networks you trust. The Pion
+viewers always verify, so use a trusted certificate or plain `http://` on a
+trusted network for them.
+
 Preparing, and afterwards cleaning up, an instance:
 
 1. Take a snapshot or backup first (`scripts/backup.sh`), and note a per-table
