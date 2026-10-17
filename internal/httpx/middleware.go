@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
@@ -236,9 +237,12 @@ func remoteTrusted(host string, trusted []*net.IPNet) bool {
 // were supplied by the client and cannot be trusted for rate limiting.
 func ClientIPMiddleware(trusted []*net.IPNet) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
+		var lastWarn atomic.Int64
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			client := peerHost(r)
-			if remoteTrusted(client, trusted) {
+			if !remoteTrusted(client, trusted) {
+				warnUntrustedForwarded(r, client, &lastWarn)
+			} else {
 				// A proxy may append its hop as a separate header line instead
 				// of extending the first one; all lines form one list (RFC 9110).
 				hops := strings.Split(strings.Join(r.Header.Values("X-Forwarded-For"), ","), ",")
@@ -256,6 +260,27 @@ func ClientIPMiddleware(trusted []*net.IPNet) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), clientIPKey, client)))
 		})
 	}
+}
+
+// warnUntrustedForwarded logs (at most hourly) that a private-range peer sent
+// X-Forwarded-For but is not a trusted proxy: the header is ignored, which
+// is right for a stranger but means a legitimate reverse proxy is missing
+// from TRUSTED_PROXY_CIDRS and all clients share its address.
+func warnUntrustedForwarded(r *http.Request, peer string, last *atomic.Int64) {
+	if r.Header.Get("X-Forwarded-For") == "" {
+		return
+	}
+	addr, err := netip.ParseAddr(peer)
+	if err != nil || !(addr.IsPrivate() || addr.IsLinkLocalUnicast()) {
+		return
+	}
+	now := time.Now().Unix()
+	prev := last.Load()
+	if now-prev < 3600 || !last.CompareAndSwap(prev, now) {
+		return
+	}
+	slog.Warn("ignoring X-Forwarded-For from a peer that is not in TRUSTED_PROXY_CIDRS; if this is your reverse proxy, add its address, otherwise all clients share one rate-limit identity",
+		"peer", peer)
 }
 
 // ClientIP returns the IP resolved by ClientIPMiddleware (or the raw peer).

@@ -391,3 +391,41 @@ func TestWebRTCReachabilityWarning(t *testing.T) {
 		}
 	}
 }
+
+func TestBindAddrDefaultsAndDevelopmentRule(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil || cfg.BindAddr != "127.0.0.1" {
+		t.Fatalf("development default must be loopback, got %q err=%v", cfg.BindAddr, err)
+	}
+	for _, addr := range []string{"0.0.0.0", "192.168.1.5", "::"} {
+		m := base()
+		m["BIND_ADDR"] = addr
+		if _, err := FromEnv(lookup(m)); err == nil || !strings.Contains(err.Error(), "BIND_ADDR") {
+			t.Errorf("development must refuse BIND_ADDR=%s, got %v", addr, err)
+		}
+	}
+	for _, addr := range []string{"localhost", "127.0.0.2", "::1", "[::1]"} {
+		m := base()
+		m["BIND_ADDR"] = addr
+		if _, err := FromEnv(lookup(m)); err != nil {
+			t.Errorf("development must accept BIND_ADDR=%s: %v", addr, err)
+		}
+	}
+	m := base()
+	m["APP_ENV"] = "test"
+	if cfg, err := FromEnv(lookup(m)); err != nil || cfg.BindAddr != "0.0.0.0" {
+		t.Errorf("non-development default must be 0.0.0.0, got %q %v", cfg.BindAddr, err)
+	}
+	m["BIND_ADDR"] = "0.0.0.0"
+	if _, err := FromEnv(lookup(m)); err != nil {
+		t.Errorf("explicit wildcard is fine outside development: %v", err)
+	}
+}
+
+func TestBroadTrustedProxies(t *testing.T) {
+	c := &Config{TrustedProxies: []string{"127.0.0.0/8", "::1/128", "172.16.0.0/12", "192.168.0.20", "10.0.0.0/24", "fc00::/7", "fd00::/64", "bad"}}
+	got := strings.Join(c.BroadTrustedProxies(), ",")
+	if got != "172.16.0.0/12,fc00::/7" {
+		t.Fatalf("broad = %q", got)
+	}
+}

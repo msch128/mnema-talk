@@ -1,6 +1,8 @@
 package httpx
 
 import (
+	"bytes"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -236,5 +238,33 @@ func TestRecoverReturnsJSON500(t *testing.T) {
 	}
 	if strings.Contains(rec.Body.String(), "boom") {
 		t.Fatal("panic value leaked to the client")
+	}
+}
+
+func TestClientIPWarnsOnceForUntrustedPrivatePeer(t *testing.T) {
+	var buf bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	defer slog.SetDefault(old)
+
+	h := ClientIPMiddleware(nil)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	send := func(remote, xff string) {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		r.RemoteAddr = remote
+		if xff != "" {
+			r.Header.Set("X-Forwarded-For", xff)
+		}
+		h.ServeHTTP(httptest.NewRecorder(), r)
+	}
+	send("172.18.0.1:1", "")          // no header: silent
+	send("203.0.113.5:1", "1.2.3.4")  // public peer: silent
+	send("not-an-address", "1.2.3.4") // unparsable: silent
+	if buf.Len() != 0 {
+		t.Fatalf("unexpected warning: %s", buf.String())
+	}
+	send("172.18.0.1:1", "198.51.100.7")
+	send("172.18.0.1:1", "198.51.100.7")
+	if n := strings.Count(buf.String(), "TRUSTED_PROXY_CIDRS"); n != 1 {
+		t.Fatalf("want exactly one warning, got %d: %s", n, buf.String())
 	}
 }
