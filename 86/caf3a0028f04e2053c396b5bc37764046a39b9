@@ -1,0 +1,41 @@
+internal/httpx/logpath_test.go
+  s_06fcde5dbef956::t_78ad901b1e7094 1-19
+internal/httpx/response.go
+  s_06fcde5dbef956::t_6d445dbfcb7871 143
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_6d445dbfcb7871 81-91,105
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_83dad0d29535d9 76,84,100,158,172,195
+internal/server/webhooks_access_integration_test.go
+  s_06fcde5dbef956::t_8414d01d07331b 1-114
+internal/webhook/faults_integration_test.go
+  s_06fcde5dbef956::t_13e0e48fc2f8d2 327-335,339-342
+  s_06fcde5dbef956::t_f4bd5b93f0f120 343-346
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_83dad0d29535d9 29,103-104,390-392,441-464
+  s_06fcde5dbef956::t_98ae8f5bc4cfbf 465
+SECURITY.md
+  s_06fcde5dbef956::t_3df07af125a420 59,64-66,69-70
+api/openapi.json
+  s_06fcde5dbef956::t_d04c91f8bd4f64 3914
+doc/webhooks.md
+  s_06fcde5dbef956::t_d8ae1dd11af6f5 18-24
+internal/webhook/store.go
+  s_06fcde5dbef956::t_cdec7ef2af23ca 66-67,73-76,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "86caf3a0028f04e2053c396b5bc37764046a39b9",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
