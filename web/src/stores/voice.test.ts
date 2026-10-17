@@ -781,6 +781,21 @@ describe('layers of a screen share I watch', () => {
     expect(sent).toEqual([])
   })
 
+  it('keeps my choice when only the sizes change, as for a resized window, and shows the new labels', () => {
+    const { voice, sent } = watching()
+    voice.handleScreenLayers({ channel_id: 'v1', user_id: 'anna', layers })
+    voice.setScreenChoice('anna', 1)
+    sent.length = 0
+    const resized = layers.map(l => ({ ...l, width: l.width - 320, height: l.height - 180 }))
+    voice.handleScreenLayers({ channel_id: 'v1', user_id: 'anna', layers: resized })
+    expect(voice.screenChoice).toEqual({ anna: 1 })
+    expect(voice.screenLayers.anna).toEqual(resized)
+    expect(sent).toEqual([])
+    // Another frame rate is another offer.
+    voice.handleScreenLayers({ channel_id: 'v1', user_id: 'anna', layers: resized.map(l => ({ ...l, fps: 24 })) })
+    expect(voice.screenChoice).toEqual({})
+  })
+
   it('keeps the layers when I stop watching but drops choice and reception', () => {
     const { voice } = watching()
     voice.handleScreenLayers({ channel_id: 'v1', user_id: 'anna', layers })

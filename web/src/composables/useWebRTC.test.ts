@@ -13,7 +13,7 @@ import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
-import { publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS, CAPTURE_POLL_MS, CAPTURE_SETTLE_MS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -3632,6 +3632,7 @@ function display(width: number, height: number) {
 // merge of everything set, latest last.
 const encodingOf = (sender: ReturnType<typeof fakeSender>) => Object.assign({}, ...sender.setParameters.mock.calls.map(c => present(present(c)[0]).encodings[0])) as RTCRtpEncodingParameters
 const declared = (sent: ClientSentEvent[]) => sent.filter(e => e.type === 'webrtc_layers').map(e => e.payload)
+const declaredLayersOf = (sent: ClientSentEvent[], n: number) => (declared(sent)[n] as { layers: { width: number; height: number; fps: number }[] }).layers
 
 describe('layers of my screen share', () => {
   it('binds the lower layers on the lines the server offers, with their layer in the seal', async () => {
@@ -3743,6 +3744,80 @@ describe('layers of my screen share', () => {
     await rtc.startScreenShare()
     expect(declared(sent)).toEqual([])
     expect(low1.track).toBeNull()
+  })
+
+  describe('when the captured window changes size', () => {
+    async function sharing() {
+      const ctx = await joinedWithLayers()
+      vi.useFakeTimers()
+      const shown = display(1920, 1080)
+      stubDisplayMedia(shown.stream)
+      await ctx.rtc.startScreenShare()
+      expect(declared(ctx.sent)).toHaveLength(1)
+      const resize = (width: number, height: number, frameRate = 30) => {
+        shown.track.getSettings = () => ({ width, height, frameRate })
+      }
+      return { ...ctx, resize }
+    }
+
+    it('declares the layers again, and sizes the best layer for the new picture', async () => {
+      const { sent, screen, resize } = await sharing()
+      expect(encodingOf(screen)).toMatchObject({ scaleResolutionDownBy: 1 })
+      resize(1280, 720)
+      // Nothing happens before the change has held.
+      await vi.advanceTimersByTimeAsync(CAPTURE_SETTLE_MS - 100)
+      expect(declared(sent)).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(CAPTURE_POLL_MS + CAPTURE_SETTLE_MS)
+      expect(declared(sent)).toHaveLength(2)
+      expect(declaredLayersOf(sent, 1).map(l => l.height)).toEqual([720, 480, 360])
+      // A bigger picture is scaled down to the chosen quality again.
+      resize(3840, 2160)
+      await vi.advanceTimersByTimeAsync(CAPTURE_POLL_MS + CAPTURE_SETTLE_MS)
+      expect(declared(sent)).toHaveLength(3)
+      expect(encodingOf(screen)).toMatchObject({ scaleResolutionDownBy: 2 })
+    })
+
+    it('waits until the size stops changing', async () => {
+      const { sent, resize } = await sharing()
+      for (const [w, h] of [[1700, 1000], [1500, 900], [1280, 720]] as const) {
+        resize(w, h)
+        await vi.advanceTimersByTimeAsync(CAPTURE_POLL_MS + 100)
+      }
+      expect(declared(sent)).toHaveLength(1)
+      await vi.advanceTimersByTimeAsync(CAPTURE_SETTLE_MS + CAPTURE_POLL_MS)
+      expect(declared(sent)).toHaveLength(2)
+      expect(declaredLayersOf(sent, 1)[0]).toMatchObject({ width: 1280, height: 720 })
+    })
+
+    it('re-tunes for a change of the frame rate and ignores noise below a whole frame', async () => {
+      const { sent, screen, resize } = await sharing()
+      const tuned = screen.setParameters.mock.calls.length
+      resize(1920, 1080, 30.4)
+      await vi.advanceTimersByTimeAsync(3 * CAPTURE_SETTLE_MS)
+      expect(screen.setParameters.mock.calls.length).toBe(tuned)
+      resize(1920, 1080, 24)
+      await vi.advanceTimersByTimeAsync(3 * CAPTURE_SETTLE_MS)
+      expect(screen.setParameters.mock.calls.length).toBeGreaterThan(tuned)
+      // The declared layers are the chosen quality's, which did not change.
+      expect(declared(sent)).toHaveLength(1)
+    })
+
+    it('stops watching when the share stops', async () => {
+      const { rtc, sent, resize } = await sharing()
+      rtc.stopScreenShare()
+      resize(1280, 720)
+      await vi.advanceTimersByTimeAsync(5 * CAPTURE_SETTLE_MS)
+      expect(declared(sent)).toHaveLength(1)
+      // A change that was waiting to settle is dropped with the share.
+      const again = display(1920, 1080)
+      stubDisplayMedia(again.stream)
+      await rtc.startScreenShare()
+      again.track.getSettings = () => ({ width: 800, height: 600, frameRate: 30 })
+      await vi.advanceTimersByTimeAsync(CAPTURE_POLL_MS + 100)
+      rtc.stopScreenShare()
+      await vi.advanceTimersByTimeAsync(5 * CAPTURE_SETTLE_MS)
+      expect(declared(sent)).toHaveLength(2)
+    })
   })
 
   it('a reconnect restores the layers on the new connection', async () => {

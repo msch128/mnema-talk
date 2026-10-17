@@ -152,6 +152,14 @@ let screenAudioSender: RTCRtpSender | null = null
 let layerSenders: (RTCRtpSender | null)[] = [null, null]
 // The layers last declared to the server (lib/screenLayers.layersKey).
 let declaredKey = ''
+// The size and rate a capture delivers change under a running share (a resized
+// window, a new display mode), and a track fires no event for it, so they are
+// read regularly. A change that has held for CAPTURE_SETTLE_MS counts, so
+// dragging a window edge is one change, not hundreds.
+export const CAPTURE_POLL_MS = 500
+export const CAPTURE_SETTLE_MS = 1000
+let captureWatch: ReturnType<typeof setInterval> | null = null
+let captureSettle: ReturnType<typeof setTimeout> | null = null
 // A browser picker may stay open for a long time. Repeated clicks must not
 // launch several capture pipelines; stopping also invalidates its result.
 let screenCapturePending = false
@@ -367,7 +375,36 @@ function updateRemoteVolume(voiceStore: VoiceStore) {
   remoteAudioElements.forEach(el => applyRemoteGain(voiceStore, el))
 }
 
+function captureKey(track: MediaStreamTrack): string {
+  const settings = track.getSettings?.()
+  return `${settings?.width}x${settings?.height}@${Math.round(settings?.frameRate ?? 0)}`
+}
+
+/** Calls onChange once the capture's width, height or frame rate has changed and stayed so. */
+function watchCapture(track: MediaStreamTrack, onChange: () => void) {
+  stopCaptureWatch()
+  let seen = captureKey(track)
+  captureWatch = setInterval(() => {
+    const key = captureKey(track)
+    if (key === seen) return
+    seen = key
+    if (captureSettle) clearTimeout(captureSettle)
+    captureSettle = setTimeout(() => {
+      captureSettle = null
+      onChange()
+    }, CAPTURE_SETTLE_MS)
+  }, CAPTURE_POLL_MS)
+}
+
+function stopCaptureWatch() {
+  if (captureWatch) clearInterval(captureWatch)
+  if (captureSettle) clearTimeout(captureSettle)
+  captureWatch = null
+  captureSettle = null
+}
+
 function cleanupPeerConnection(voiceStore: VoiceStore) {
+  stopCaptureWatch()
   stopStatsPolling(voiceStore)
   signalingChain = Promise.resolve()
   pendingCandidates = []
@@ -1893,6 +1930,7 @@ export function useWebRTC() {
       chatStore.sendWSEvent('webrtc_screenshare_start', {})
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
       await syncLayers()
+      watchCapture(videoTrack, () => void retuneForCapture(videoTrack))
     }
     if (screenAudioSender) await screenAudioSender.replaceTrack(screenAudio).catch(() => {})
     if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
@@ -2028,7 +2066,18 @@ export function useWebRTC() {
     })
   }
 
+  // The capture changed size or rate: the best layer is sized for the new
+  // picture, the lower ones are re-planned and the layers declared again (the
+  // server and the viewers' pickers only hear of it if the sizes differ).
+  async function retuneForCapture(track: MediaStreamTrack) {
+    qualityChain = qualityChain.then(async () => {
+      if (screenSender) await tuneSender(screenSender, screenSenderParams(voiceStore, track))
+    }).catch(() => {})
+    await syncLayers()
+  }
+
   function stopScreenShare() {
+    stopCaptureWatch()
     screenCaptureGeneration++
     const wasSharing = !!localScreenStream.value
     if (screenSender) screenSender.replaceTrack(null).catch(() => {})

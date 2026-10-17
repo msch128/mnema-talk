@@ -4,7 +4,7 @@ import { syncServerClock } from '../lib/clock'
 import { playSoundEffect } from '../lib/soundEffects'
 import { useAuthStore } from './auth'
 import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
-import { layersKey } from '../lib/screenLayers'
+import { layersShape } from '../lib/screenLayers'
 
 import type { UserUpdate } from '../types/domain'
 import type { MediaState, ScreenLayer, ScreenLayers, ScreenLayersWanted, ScreenReception, ScreenViewers, VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState, SubscribeRequest } from '../types/events'
@@ -622,8 +622,9 @@ export const useVoiceStore = defineStore('voice', () => {
       return
     }
     screenLayers.value = { ...screenLayers.value, [user_id]: layers }
-    // A choice means the layers it was made for; for others the server's pick stands again.
-    if (before && layersKey(before) !== layersKey(layers) && user_id in screenChoice.value) {
+    // A choice is a position among the layers: it survives new sizes (a resized
+    // window) but not other layers, where the server's pick stands again.
+    if (before && layersShape(before) !== layersShape(layers) && user_id in screenChoice.value) {
       const next = { ...screenChoice.value }
       delete next[user_id]
       screenChoice.value = next
