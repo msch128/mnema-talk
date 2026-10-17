@@ -1,0 +1,27 @@
+internal/webhook/outgoing_store.go
+  s_06fcde5dbef956::t_3450c994bef891 214-216,228,232,239-241,243
+internal/server/webhooks_outgoing_rotate_integration_test.go
+  s_06fcde5dbef956::t_542c0ddae94b98 13-15,20,25-32,35-37,39,41,44-52,56-72
+internal/webhook/outgoing_handler.go
+  s_06fcde5dbef956::t_3450c994bef891 243,284-287,309,329
+api/openapi.json
+  s_06fcde5dbef956::t_3450c994bef891 5827,6055
+doc/webhooks.md
+  s_06fcde5dbef956::t_3450c994bef891 244-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "46b00d23fecb0fd8a3d3817fa4922b04392556ca",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
