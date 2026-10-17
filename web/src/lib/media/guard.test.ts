@@ -95,6 +95,20 @@ describe('media transform guard', () => {
     expect(created.workers).toHaveLength(2)
   })
 
+  it('names the layer of a screen share line in the transform, and only then', () => {
+    installBrowser()
+    const guard = createMediaGuard()
+    const plain = { transform: null } as RTCRtpSender
+    const layered = { transform: null } as RTCRtpSender
+    expect(guard.armSender(plain, 'channel', 'alice')).toBe(true)
+    expect(guard.armSender(layered, 'channel', 'alice', 2)).toBe(true)
+    expect(created.transforms[0]?.options).toEqual({ port: created.channels[0]?.port2, direction: 'send', channelId: 'channel', senderId: 'alice' })
+    expect(created.transforms[1]?.options).toEqual({ port: created.channels[1]?.port2, direction: 'send', channelId: 'channel', senderId: 'alice', layer: 2 })
+    // Layer 0 is a layer too.
+    expect(guard.armSender({ transform: null } as RTCRtpSender, 'channel', 'alice', 0)).toBe(true)
+    expect(created.transforms[2]?.options).toMatchObject({ layer: 0 })
+  })
+
   it('arms a receiver before its publisher is known and names the publisher later', () => {
     installBrowser()
     const guard = createMediaGuard()

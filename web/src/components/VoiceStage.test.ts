@@ -337,6 +337,33 @@ describe('VoiceStage screen share opt-in', () => {
     expect(slider.element.value).toBe('30')
   })
 
+  it('offers the quality of someone’s screen share once it has layers, not for my own share', async () => {
+    const voice = connected()
+    voice.handleMediaState({ channel_id: 'v1', user_id: 'a', screen: true })
+    const w = mountStage({ channelId: 'v1' })
+    voice.watchScreen('a')
+    voice.setRemoteScreen('a', new MediaStream())
+    await nextTick()
+    // One encoding: nothing to choose.
+    expect(w.find('[data-testid="screen-layer-button"]').exists()).toBe(false)
+    voice.handleScreenLayers({ channel_id: 'v1', user_id: 'a', layers: [{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }] })
+    await nextTick()
+    const button = w.get('[data-testid="stage"] [data-testid="screen-layer-button"]')
+    expect(button.text()).toBe(t('talk.layers.auto'))
+    const sink = vi.fn()
+    voice.setSubscriptionSink(sink)
+    voice.setScreenChoice('a', 1)
+    await nextTick()
+    expect(sink).toHaveBeenLastCalledWith({ kind: 'screen', user_id: 'a', on: true, quality: 1 })
+    expect(button.text()).toBe('720p')
+    // My own share has the streamer's gear instead.
+    voice.unwatchScreen('a')
+    voice.localScreenStream = new MediaStream()
+    voice.isScreenSharing = true
+    await nextTick()
+    expect(w.find('[data-testid="stage"] [data-testid="screen-layer-button"]').exists()).toBe(false)
+  })
+
   it('provides streamer audio toggle when sharing own screen', async () => {
     const voice = connected()
     voice.localScreenStream = new MediaStream()

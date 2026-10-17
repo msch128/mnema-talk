@@ -51,6 +51,7 @@ const rows = computed(() => {
     [t('stats.codec'), dash(s?.codec)],
     [t('stats.sendRecv'), s?.sendKbps != null ? `${s.sendKbps} / ${s.recvKbps} kbit/s` : '–'],
     [t('stats.packets'), s ? `${s.packetsSent} / ${s.packetsReceived}` : '–'],
+    [t('stats.receivedVideo'), s?.videoIn.length ? s.videoIn.map(v => `${v.width}×${v.height} · ${t('talk.quality.fps', { fps: v.fps })}`).join(', ') : '–'],
     [t('stats.localCandidate'), dash(s?.localCandidate)],
     [t('stats.remoteCandidate'), dash(s?.remoteCandidate)],
     [t('stats.encryption'), s?.srtpCipher ? `DTLS-SRTP (${s.srtpCipher})` : 'DTLS-SRTP'],

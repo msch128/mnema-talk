@@ -435,6 +435,7 @@
     "codec": "Audio-Codec",
     "sendRecv": "Senden / Empfangen",
     "packets": "Pakete gesendet / empfangen",
+    "receivedVideo": "Empfangenes Video",
     "localCandidate": "Lokaler Kandidat",
     "remoteCandidate": "Server-Kandidat",
     "encryption": "Transportverschlüsselung",
@@ -662,6 +663,14 @@
     "replaceShareTitle": "Bildschirmübertragung ersetzen?",
     "replaceShareBody": "Du teilst bereits deinen Bildschirm. Pro Person läuft nur eine Übertragung: die neue ersetzt die laufende.",
     "replaceShareConfirm": "Ersetzen",
+    "layers": {
+      "title": "Wiedergabequalität",
+      "auto": "Automatisch",
+      "autoHint": "Die beste verfügbare Qualität",
+      "autoNow": "Gerade {name}",
+      "source": "Quelle",
+      "switching": "Wechsle …"
+    },
     "quality": {
       "title": "Stream-Qualität",
       "streamModalTitle": "Bildschirmübertragung",

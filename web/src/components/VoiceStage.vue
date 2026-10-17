@@ -16,6 +16,7 @@ import TalkControlBar from './TalkControlBar.vue'
 import TalkParticipants from './TalkParticipants.vue'
 import ScreenViewers from './ScreenViewers.vue'
 import StreamQualityMenu from './StreamQualityMenu.vue'
+import ScreenLayerMenu from './ScreenLayerMenu.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
 import VoiceTimer from './VoiceTimer.vue'
@@ -639,6 +640,14 @@ const overlayButton = 'w-8 h-8 flex items-center justify-center rounded-lg text-
                   <VolumeX v-if="voiceStore.isScreenAudioMuted" class="w-4 h-4" />
                   <Volume2 v-else class="w-4 h-4" />
                 </button>
+                <!-- The layer of someone's share I receive -->
+                <ScreenLayerMenu
+                  v-if="!ownOnStage && !cameraOnStage && stageUserId"
+                  :user-id="stageUserId"
+                  :host="isFullscreen ? videoContainer : null"
+                  :show-label="!stageTiny"
+                  @open-change="qualityMenuOpen = $event"
+                />
                 <!-- Stream quality of my own share (its menu cannot show in full screen) -->
                 <StreamQualityMenu v-if="ownOnStage && !isFullscreen" @open-change="qualityMenuOpen = $event" />
 

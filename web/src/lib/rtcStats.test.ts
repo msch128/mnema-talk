@@ -108,3 +108,26 @@ it('ignores audio media-source records that carry no RTP counters', () => {
   expect(summary.packetsSent).toBe(0)
   expect(summary.codec).toBeNull()
 })
+
+describe('received video', () => {
+  const video = (id: string, frameWidth: number | undefined, frameHeight: number | undefined, framesPerSecond?: number) => ({
+    id, type: 'inbound-rtp', kind: 'video', ...(frameWidth === undefined ? {} : { frameWidth }), ...(frameHeight === undefined ? {} : { frameHeight }),
+    ...(framesPerSecond === undefined ? {} : { framesPerSecond })
+  })
+
+  it('lists the pictures that arrive, largest first, with their frame rate', () => {
+    const s = summarizeStats([
+      video('cam', 640, 360, 29.6),
+      video('screen', 1920, 1080, 30),
+      video('still', 1280, 720),
+      { id: 'out', type: 'outbound-rtp', kind: 'video', frameWidth: 3840, frameHeight: 2160 },
+      { id: 'a', type: 'inbound-rtp', kind: 'audio', frameWidth: 99, frameHeight: 99 },
+    ])
+    expect(s.videoIn).toEqual([{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 0 }, { width: 640, height: 360, fps: 30 }])
+  })
+
+  it('leaves out streams that have not shown a picture yet', () => {
+    expect(summarizeStats([video('a', undefined, undefined), video('b', 640, undefined), video('c', undefined, 360)]).videoIn).toEqual([])
+    expect(summarizeStats([]).videoIn).toEqual([])
+  })
+})

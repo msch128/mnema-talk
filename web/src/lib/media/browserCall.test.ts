@@ -32,8 +32,8 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
     stale,
     sends,
     receives,
-    armSender(_sender, channelId, senderId) {
-      sends.push(`${channelId}:${senderId}`)
+    armSender(_sender, channelId, senderId, layer) {
+      sends.push(`${channelId}:${senderId}${layer === undefined ? '' : `#${layer}`}`)
       return true
     },
     armReceiver(_receiver, channelId, senderId) {
@@ -89,7 +89,8 @@ describe('browser media call', () => {
     expect(close).toHaveBeenCalled()
     const sender = { transform: null } as RTCRtpSender
     expect(call.protectSender(sender)).toBe(true)
-    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}`])
+    expect(call.protectSender(sender, 1)).toBe(true)
+    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}`, `${nextChannel}:${aliceId}#1`])
     close.mockRestore()
     call.stop()
     await mediaSettled(call)

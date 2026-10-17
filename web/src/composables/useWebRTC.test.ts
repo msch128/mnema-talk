@@ -13,7 +13,7 @@ import { useAuthStore } from '../stores/auth'
 import { toRaw, nextTick } from 'vue'
 import * as voiceSession from '../lib/voiceSession'
 import { t } from '../i18n'
-import { publishMids, restrictVideoCodecs, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
+import { publishMids, restrictVideoCodecs, tuneScreenLines, tuneScreenOffer, screenAudioConstraints, setGamingPttLease, useWebRTC, SCREEN_MAX_BITRATE, CAMERA_MAX_BITRATE, SCREEN_START_KBPS, SCREEN_MIN_KBPS } from './useWebRTC'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
@@ -3569,5 +3569,230 @@ describe('standalone meter on the WebKit constructor fallback', () => {
     expect(present(capture.getTracks()[0]).stop).toHaveBeenCalled()
     expect(present(FakeAudioContext.instances.at(-1)).closed).toBe(true)
     expect(voice.currentInputLevel).toBe(0)
+  })
+})
+
+// --- Layers of my screen share ----------------------------------------------
+
+// The SFU's offer from 0.8 on: the lines for the screen's two lower layers
+// follow the four fixed ones.
+const SFU_LAYER_OFFER = SFU_OFFER.replace(/\r\n$/, '\r\n') + [
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:4', 'a=recvonly',
+  'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:5', 'a=recvonly',
+  ''
+].join('\r\n')
+
+async function joinedWithLayers({ announce = 3 } = {}) {
+  const ctx = setup()
+  ctx.voice.serverScreenLayers = announce
+  const join = ctx.rtc.joinVoiceChannel('ch-1')
+  const mic = await grantMic()
+  await join
+  const pc = present(FakePC.instances.at(-1))
+  ctx.chat.handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_LAYER_OFFER } })
+  await vi.waitFor(() => expect(pc.transceivers.length).toBe(6))
+  await new Promise(r => setTimeout(r, 0))
+  const senders = pc.senders
+  return { ...ctx, mic, pc, screen: present(senders[1]), low1: present(senders[4]), low2: present(senders[5]) }
+}
+
+function display(width: number, height: number) {
+  const stream = fakeStream(['video'])
+  const track = present(stream.getVideoTracks()[0])
+  track.getSettings = () => ({ width, height, frameRate: 30 })
+  track.applyConstraints = vi.fn(async () => {})
+  return { stream, track }
+}
+
+// The fake sender keeps no parameters between calls, so what was set is the
+// merge of everything set, latest last.
+const encodingOf = (sender: ReturnType<typeof fakeSender>) => Object.assign({}, ...sender.setParameters.mock.calls.map(c => present(present(c)[0]).encodings[0])) as RTCRtpEncodingParameters
+const declared = (sent: ClientSentEvent[]) => sent.filter(e => e.type === 'webrtc_layers').map(e => e.payload)
+
+describe('layers of my screen share', () => {
+  it('binds the lower layers on the lines the server offers, with their layer in the seal', async () => {
+    const call = installRecordingCall()
+    const { pc } = await joinedWithLayers()
+    expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv', 'sendrecv', 'sendrecv', 'sendrecv'])
+    // Mic, screen (layer 0), camera, screen sound, then layers 1 and 2.
+    expect(call.protectSender.mock.calls.map(c => (c as unknown[])[1])).toEqual([undefined, 0, undefined, undefined, 1, 2])
+  })
+
+  it('leaves the lines alone when the server does not take layers', async () => {
+    const call = installRecordingCall()
+    const { pc, rtc, sent } = await joinedWithLayers({ announce: 0 })
+    expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv', 'sendrecv', 'recvonly', 'recvonly'])
+    expect(call.protectSender).toHaveBeenCalledTimes(4)
+    const { stream } = display(1920, 1080)
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(declared(sent)).toEqual([])
+    expect(present(pc.senders[4]).track).toBeNull()
+  })
+
+  it('sends a 4K share as three layers and declares them, only the best sent until viewers need more', async () => {
+    const { rtc, sent, low1, low2, screen } = await joinedWithLayers()
+    const { stream, track } = display(3840, 2160)
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+
+    expect(low1.track).toBe(track)
+    expect(low2.track).toBe(track)
+    expect(declared(sent)).toEqual([{ layers: [{ width: 1920, height: 1080, fps: 30 }, { width: 1280, height: 720, fps: 30 }, { width: 852, height: 480, fps: 30 }] }])
+    // The best layer is the share as chosen (1080p30 of a 4K capture, scaled by the encoder).
+    expect(encodingOf(screen)).toMatchObject({ active: true, scaleResolutionDownBy: 2, maxFramerate: 30 })
+    // The lower layers scale the same capture further and wait until they are wanted.
+    expect(encodingOf(low1)).toMatchObject({ active: false, scaleResolutionDownBy: 3, maxFramerate: 30 })
+    expect(encodingOf(low2)).toMatchObject({ active: false, scaleResolutionDownBy: 4.5, maxFramerate: 30 })
+    expect(present(encodingOf(low1).maxBitrate)).toBeLessThan(present(encodingOf(screen).maxBitrate))
+    expect(present(encodingOf(low2).maxBitrate)).toBeLessThan(present(encodingOf(low1).maxBitrate))
+  })
+
+  it('sends only the layers some viewer needs', async () => {
+    const { rtc, voice, low1, low2, screen } = await joinedWithLayers()
+    stubDisplayMedia(display(3840, 2160).stream)
+    await rtc.startScreenShare()
+
+    voice.layersWanted = [0, 2]
+    await vi.waitFor(() => expect(encodingOf(low2).active).toBe(true))
+    expect(encodingOf(screen).active).toBe(true)
+    expect(encodingOf(low1).active).toBe(false)
+
+    // Everybody moved to the lower layers: the best one is not encoded at all.
+    voice.layersWanted = [1, 2]
+    await vi.waitFor(() => expect(encodingOf(screen).active).toBe(false))
+    expect(encodingOf(low1).active).toBe(true)
+    expect(encodingOf(low2).active).toBe(true)
+  })
+
+  it('stopping the share empties the layers, forgets what was wanted and declares again next time', async () => {
+    const { rtc, voice, sent, low1, low2, screen } = await joinedWithLayers()
+    stubDisplayMedia(display(1920, 1080).stream)
+    await rtc.startScreenShare()
+    voice.layersWanted = [1]
+    await vi.waitFor(() => expect(encodingOf(low1).active).toBe(true))
+    expect(encodingOf(screen).active).toBe(false)
+
+    rtc.stopScreenShare()
+    await vi.waitFor(() => expect(low1.track).toBeNull())
+    expect(low2.track).toBeNull()
+    expect(voice.layersWanted).toBeNull()
+    // The next share starts on its best layer.
+    await vi.waitFor(() => expect(encodingOf(screen).active).toBe(true))
+
+    const { stream, track } = display(1920, 1080)
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(low1.track).toBe(track)
+    expect(declared(sent)).toHaveLength(2)
+    expect(encodingOf(low1).active).toBe(false)
+  })
+
+  it('re-declares and re-tunes when the quality changes, and drops layers that are no longer worth sending', async () => {
+    const { rtc, voice, sent, low1, low2 } = await joinedWithLayers()
+    const { stream, track } = display(1920, 1080)
+    track.applyConstraints = vi.fn(async () => {})
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(declared(sent)).toHaveLength(1)
+    expect(low2.track).toBe(track)
+
+    // The capture is 360p now: nothing smaller to send.
+    track.getSettings = () => ({ width: 640, height: 360, frameRate: 30 })
+    voice.setScreenQuality({ resolution: 720, fps: 30 })
+    await vi.waitFor(() => expect(declared(sent)).toHaveLength(2))
+    expect(declared(sent)[1]).toEqual({ layers: [{ width: 640, height: 360, fps: 30 }] })
+    expect(low1.track).toBeNull()
+    expect(low2.track).toBeNull()
+
+    // Unchanged layers are not declared twice.
+    voice.setScreenQuality({ resolution: 720, fps: 30, custom: true })
+    await new Promise(r => setTimeout(r, 10))
+    expect(declared(sent)).toHaveLength(2)
+  })
+
+  it('does not declare layers while the capture size is unknown', async () => {
+    const { rtc, sent, low1 } = await joinedWithLayers()
+    const { stream, track } = display(1920, 1080)
+    track.getSettings = () => ({})
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(declared(sent)).toEqual([])
+    expect(low1.track).toBeNull()
+  })
+
+  it('a reconnect restores the layers on the new connection', async () => {
+    const { rtc, voice, sent } = await joinedWithLayers()
+    stubDisplayMedia(display(1920, 1080).stream)
+    await rtc.startScreenShare()
+    voice.serverScreenLayers = 3
+    rtc.rejoinAfterReconnect()
+    const pc = present(FakePC.instances.at(-1))
+    useChatStore().handleWSEvent({ type: 'webrtc_offer', payload: { type: 'offer', sdp: SFU_LAYER_OFFER } })
+    await vi.waitFor(() => expect(pc.transceivers.length).toBe(6))
+    const low1 = present(pc.senders[4])
+    await vi.waitFor(() => expect(low1.track).not.toBeNull())
+    expect(encodingOf(low1)).toMatchObject({ active: false })
+    expect(declared(sent)).toHaveLength(2)
+  })
+
+  it('sends only the layer lines the server announced', async () => {
+    const { rtc, low1, low2, sent } = await joinedWithLayers({ announce: 2 })
+    const { stream, track } = display(1920, 1080)
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    // One layer line: the second layer of the plan has no sender.
+    expect(low1.track).toBe(track)
+    expect(low2.track).toBeNull()
+    expect(declared(sent)).toHaveLength(1)
+  })
+
+  it('a share that is stopped while its layers are being set up is not resumed', async () => {
+    const { rtc, low1, low2 } = await joinedWithLayers()
+    const { stream } = display(1920, 1080)
+    stubDisplayMedia(stream)
+    low1.setParameters.mockImplementation(async () => { rtc.stopScreenShare() })
+    await rtc.startScreenShare()
+    await vi.waitFor(() => expect(low1.track).toBeNull())
+    expect(low2.track).toBeNull()
+  })
+
+  it('does not plan layers for a track that cannot tell its size', async () => {
+    const { rtc, low1, sent } = await joinedWithLayers()
+    const { stream, track } = display(1920, 1080)
+    Reflect.deleteProperty(track, 'getSettings')
+    stubDisplayMedia(stream)
+    await rtc.startScreenShare()
+    expect(declared(sent)).toEqual([])
+    expect(low1.track).toBeNull()
+  })
+
+  it('leaving the call during a layer update leaves the lower senders alone', async () => {
+    const { rtc, low1 } = await joinedWithLayers()
+    stubDisplayMedia(display(1920, 1080).stream)
+    const sharing = rtc.startScreenShare()
+    rtc.leaveVoiceChannel()
+    await sharing
+    expect(low1.track).toBeNull()
+  })
+})
+
+describe('screen lines of an SFU offer', () => {
+  it('publishMids takes the lower layer lines only where the server has them', () => {
+    const offer = SFU_LAYER_OFFER
+    expect(publishMids(offer)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2'] })
+    expect(publishMids(offer, 2)).toEqual({ audio: '0', screenAudio: '3', video: ['1', '2', '4', '5'] })
+    expect(publishMids(offer, 1).video).toEqual(['1', '2', '4'])
+  })
+
+  it('tuneScreenLines gives every layer line the screen line tuning', () => {
+    const line = (mid: string) => ['m=video 9 UDP/TLS/RTP/SAVPF 96 102', `a=mid:${mid}`, 'a=rtpmap:96 VP8/90000', 'a=rtpmap:102 H264/90000', 'a=fmtp:102 packetization-mode=1;profile-level-id=42e01f']
+    const sdp = ['v=0', ...line('1'), ...line('2'), ...line('4'), ...line('5'), ''].join('\r\n')
+    const out = tuneScreenLines(sdp, { video: ['1', '2', '4', '5'] }, true)
+    const sections = out.split('m=video').slice(1)
+    // Screen and both layer lines now start with H.264; the camera line does not.
+    expect(sections.map(s => s.split('\r\n')[0])).toEqual([' 9 UDP/TLS/RTP/SAVPF 102 96', ' 9 UDP/TLS/RTP/SAVPF 96 102', ' 9 UDP/TLS/RTP/SAVPF 102 96', ' 9 UDP/TLS/RTP/SAVPF 102 96'])
+    expect(out).toContain(`x-google-start-bitrate=${SCREEN_START_KBPS}`)
+    expect(tuneScreenLines(sdp, { video: ['1'] }, false).split('m=video')[1]).toContain('x-google-start-bitrate')
   })
 })

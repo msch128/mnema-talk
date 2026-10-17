@@ -484,6 +484,7 @@ describe('member activity and connection summaries', () => {
       remoteCandidate: 'relay',
       srtpCipher: 'AES',
       dtlsCipher: null,
+      videoIn: [],
       sample: { timestamp: 1, bytesSent: 0, bytesReceived: 0 },
       rttMs: 0,
       jitterMs: 0,

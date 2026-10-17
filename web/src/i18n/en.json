@@ -435,6 +435,7 @@
     "codec": "Audio codec",
     "sendRecv": "Send / receive",
     "packets": "Packets sent / received",
+    "receivedVideo": "Video received",
     "localCandidate": "Local candidate",
     "remoteCandidate": "Server candidate",
     "encryption": "Transport encryption",
@@ -662,6 +663,14 @@
     "replaceShareTitle": "Replace your screen share?",
     "replaceShareBody": "You are already sharing your screen. One share per person: the new one replaces the running one.",
     "replaceShareConfirm": "Replace",
+    "layers": {
+      "title": "Viewing quality",
+      "auto": "Auto",
+      "autoHint": "The best quality available",
+      "autoNow": "Currently {name}",
+      "source": "Source",
+      "switching": "Switching…"
+    },
     "quality": {
       "title": "Stream quality",
       "streamModalTitle": "Screen Share",

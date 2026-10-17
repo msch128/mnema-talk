@@ -773,6 +773,7 @@ export const useChatStore = defineStore('chat', () => {
       case 'server_info': {
         const versions = useAppVersionStore()
         versions.setServerVersion(p?.version)
+        voiceStore.serverScreenLayers = p?.screen_layers ?? 0
         versions.followAdminUpdates(() => authStore.isAdmin)
         break
       }
@@ -931,6 +932,18 @@ export const useChatStore = defineStore('chat', () => {
 
       case 'screen_viewers':
         voiceStore.handleScreenViewers(p)
+        break
+
+      case 'screen_layers':
+        voiceStore.handleScreenLayers(p)
+        break
+
+      case 'screen_quality':
+        voiceStore.handleScreenQuality(p)
+        break
+
+      case 'screen_layers_wanted':
+        voiceStore.handleLayersWanted(p)
         break
 
       case 'voice_speaking':

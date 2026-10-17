@@ -18,7 +18,11 @@ export interface MediaCall {
   onNotice(listener: (notice: MediaNotice) => void): void
   /** The safety code of the keys in use, or null while there are none. */
   onVerification(listener: (verification: MediaVerification | null) => void): void
-  protectSender(sender: RTCRtpSender): boolean
+  /**
+   * Seals what a sender sends. `layer` (0..3) marks a line of a screen share's
+   * layers, whose frames then carry that layer in their stream ID.
+   */
+  protectSender(sender: RTCRtpSender, layer?: number): boolean
   /**
    * Arms a receiver before its line receives anything. A browser applies a
    * receiver transform only if it was set before then, and the publisher of a

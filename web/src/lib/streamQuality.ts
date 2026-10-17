@@ -80,7 +80,7 @@ export function trackConstraints(q: unknown): MediaTrackConstraints {
 }
 
 // The size that goes out: the capture, scaled down to the chosen height.
-function sentSize(q: unknown, settings: MediaTrackSettings = {}) {
+export function sentSize(q: unknown, settings: MediaTrackSettings = {}) {
   const { resolution } = normalizeQuality(q)
   const w = Number(settings.width) || 0
   const h = Number(settings.height) || 0
@@ -92,14 +92,19 @@ function sentSize(q: unknown, settings: MediaTrackSettings = {}) {
   return { width: Math.round(resolution * 16 / 9), height: resolution }
 }
 
+/** Bitrate cap (bit/s) for pictures of this size and frame rate. */
+export function bitrateFor(width: number, height: number, fps: number) {
+  const bits = width * height * BITS_PER_PIXEL * Math.pow(fps / 30, 0.7)
+  const rounded = Math.round(bits / 100_000) * 100_000
+  return Math.min(STREAM_MAX_BITRATE, Math.max(STREAM_MIN_BITRATE, rounded))
+}
+
 /** Bitrate cap (bit/s) for a choice at the size the capture delivers. */
 export function streamBitrate(q: unknown, settings: MediaTrackSettings = {}) {
   const { fps } = normalizeQuality(q)
   const size = sentSize(q, settings)
   if (!size) return STREAM_MAX_BITRATE
-  const bits = size.width * size.height * BITS_PER_PIXEL * Math.pow(fps / 30, 0.7)
-  const rounded = Math.round(bits / 100_000) * 100_000
-  return Math.min(STREAM_MAX_BITRATE, Math.max(STREAM_MIN_BITRATE, rounded))
+  return bitrateFor(size.width, size.height, fps)
 }
 
 /**

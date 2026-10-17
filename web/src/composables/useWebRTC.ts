@@ -22,6 +22,7 @@ import type { NoiseModel } from '../lib/dfnTypes'
 import type { MediaStat } from '../lib/mediaStats'
 import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
+import { declaredLayers, layersKey, planScreenLayers } from '../lib/screenLayers'
 import type { AudioOutputTarget } from '../lib/audioOutput'
 import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
 import { decodeServerICEConfig } from '../types/rest'
@@ -33,8 +34,8 @@ type VoiceStore = ReturnType<typeof useVoiceStore>
 type ChatStore = ReturnType<typeof useChatStore>
 type RemoteAudioElement = HTMLAudioElement & { srcObject: MediaStream | null }
 type AudioGuard = 'restricted' | 'echo-cancel' | 'none'
-interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender }
-interface SenderTuning { maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number; degradationPreference?: RTCDegradationPreference; priority?: RTCPriorityType; networkPriority?: RTCPriorityType }
+interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender; layers?: RTCRtpSender[] }
+interface SenderTuning { active?: boolean; maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number; degradationPreference?: RTCDegradationPreference; priority?: RTCPriorityType; networkPriority?: RTCPriorityType }
 
 
 // The SFU publishes a camera under this prefix plus the user ID as stream ID,
@@ -144,6 +145,12 @@ let audioSender: RTCRtpSender | null = null
 let screenSender: RTCRtpSender | null = null
 let cameraSender: RTCRtpSender | null = null
 let screenAudioSender: RTCRtpSender | null = null
+// Senders of the screen's lower layers (see lib/screenLayers), on the SFU's
+// third and fourth video line; null where the server offers none. Each sends
+// the same capture as the screen sender, smaller.
+let layerSenders: (RTCRtpSender | null)[] = [null, null]
+// The layers last declared to the server (lib/screenLayers.layersKey).
+let declaredKey = ''
 // A browser picker may stay open for a long time. Repeated clicks must not
 // launch several capture pipelines; stopping also invalidates its result.
 let screenCapturePending = false
@@ -386,6 +393,8 @@ function cleanupPeerConnection(voiceStore: VoiceStore) {
   screenSender = null
   cameraSender = null
   screenAudioSender = null
+  layerSenders = [null, null]
+  declaredKey = ''
   voiceStore?.resetRemoteMedia()
 }
 
@@ -574,7 +583,7 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
  * SFU may reuse them to forward other members' media (then they read
  * sendrecv/sendonly).
  */
-export function publishMids(sdp: string | null | undefined) {
+export function publishMids(sdp: string | null | undefined, layerLines = 0) {
   const out: { audio: string | null; screenAudio: string | null; video: string[] } = { audio: null, screenAudio: null, video: [] }
   let kind: string | undefined | null = null
   let mid: string | null = null
@@ -582,7 +591,7 @@ export function publishMids(sdp: string | null | undefined) {
     if (!kind || mid === null) return
     if (kind === 'audio' && out.audio === null) out.audio = mid
     else if (kind === 'audio' && out.screenAudio === null) out.screenAudio = mid
-    else if (kind === 'video' && out.video.length < 2) out.video.push(mid)
+    else if (kind === 'video' && out.video.length < 2 + layerLines) out.video.push(mid)
   }
   for (const line of String(sdp || '').split(/\r?\n/)) {
     if (line.startsWith('m=')) {
@@ -722,6 +731,13 @@ export function tuneScreenOffer(sdp: string, mid: string | null | undefined, { h
   return lines.join(eol)
 }
 
+/** tuneScreenOffer for the screen line and the lines of its lower layers. */
+export function tuneScreenLines(sdp: string, mids: { video: string[] }, h264: boolean) {
+  let tuned = sdp
+  for (const mid of [mids.video[0], ...mids.video.slice(2)]) tuned = tuneScreenOffer(tuned, mid, { h264 })
+  return tuned
+}
+
 // Whether this browser can send H.264 at all (not whether in hardware; the
 // stream diagnostics report that).
 function canSendH264() {
@@ -739,12 +755,12 @@ function canSendH264() {
  * on them would never reach the server; the offer's own transceivers are
  * switched to send instead, once, right after the offer is applied.
  */
-function bindPublishSenders(conn: RTCPeerConnection, sdp: string) {
-  const mids = publishMids(sdp)
-  const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined) => {
+function bindPublishSenders(conn: RTCPeerConnection, sdp: string, layerLines = 0) {
+  const mids = publishMids(sdp, layerLines)
+  const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined, layer?: number) => {
     const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
     if (!tr) return null
-    if (!mediaCall().protectSender(tr.sender)) {
+    if (!mediaCall().protectSender(tr.sender, layer)) {
       announceMediaUnprotected()
       return null
     }
@@ -759,7 +775,7 @@ function bindPublishSenders(conn: RTCPeerConnection, sdp: string) {
     if (audioSender) bound.fresh.audio = audioSender
   }
   if (!screenSender) {
-    screenSender = bind(mids.video[0], null)
+    screenSender = bind(mids.video[0], null, 0)
     bound.screen = !!screenSender && !!localScreenStream.value
     if (screenSender) bound.fresh.screen = screenSender
   }
@@ -772,6 +788,13 @@ function bindPublishSenders(conn: RTCPeerConnection, sdp: string) {
     screenAudioSender = bind(mids.screenAudio, liveScreenAudioTrack())
     if (screenAudioSender) bound.fresh.screenAudio = screenAudioSender
   }
+  // The lower layers of the screen share: lines an older server does not offer.
+  for (let i = 0; i < Math.min(layerSenders.length, layerLines); i++) {
+    if (layerSenders[i]) continue
+    const sender = bind(mids.video[2 + i], null, i + 1)
+    layerSenders[i] = sender
+    if (sender) (bound.fresh.layers ??= []).push(sender)
+  }
   return bound
 }
 
@@ -783,6 +806,7 @@ async function tuneBoundSenders(fresh: BoundSenders, voiceStore: VoiceStore) {
   if (fresh.screen) await tuneSender(fresh.screen, screenSenderParams(voiceStore))
   if (fresh.camera) await tuneSender(fresh.camera, cameraSenderParams(voiceStore))
   if (fresh.screenAudio) await applyQosToSender(fresh.screenAudio, voiceStore)
+  // The lower layers are tuned by syncLayers once the share's size is known.
 }
 
 // Sender limits (bits per second). The browser's own congestion control still
@@ -829,13 +853,14 @@ async function ensureScreenAudioGuard(track: MediaStreamTrack | null | undefined
   return ownAudioGuard(track)
 }
 
-async function tuneSender(sender: RTCRtpSender, { maxBitrate, maxFramerate, scaleResolutionDownBy, degradationPreference, priority, networkPriority }: SenderTuning = {}) {
+async function tuneSender(sender: RTCRtpSender, { active, maxBitrate, maxFramerate, scaleResolutionDownBy, degradationPreference, priority, networkPriority }: SenderTuning = {}) {
   try {
     const params = sender.getParameters?.()
     if (!params) return
     if (!params.encodings?.length) params.encodings = [{}]
     const encoding = params.encodings[0]
     if (!encoding) return
+    if (active !== undefined) encoding.active = active
     if (maxBitrate !== undefined) encoding.maxBitrate = maxBitrate
     if (maxFramerate !== undefined) encoding.maxFramerate = maxFramerate
     if (scaleResolutionDownBy !== undefined) encoding.scaleResolutionDownBy = scaleResolutionDownBy
@@ -1332,10 +1357,12 @@ export function useWebRTC() {
     const isCurrent = () => pc === conn && generation === joinGeneration && voiceStore.currentChannelId === channelId
 
     try {
-      const sdp = tuneScreenOffer(restrictVideoCodecs(offer.sdp || ''), publishMids(offer.sdp).video[0], { h264: canSendH264() })
+      // The screen's lower layers get the screen line's tuning, so every layer sends the same codec.
+      const layerLines = Math.max(0, voiceStore.serverScreenLayers - 1)
+      const sdp = tuneScreenLines(restrictVideoCodecs(offer.sdp || ''), publishMids(offer.sdp, layerLines), canSendH264())
       await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
       if (!isCurrent()) return
-      const bound = bindPublishSenders(conn, offer.sdp || '')
+      const bound = bindPublishSenders(conn, offer.sdp || '', layerLines)
       // Before the answer: a browser ignores a receiver transform that is set
       // after its line was set up, so the track event comes too late.
       for (const transceiver of conn.getTransceivers()) mediaCall().prepareIncoming(transceiver.receiver)
@@ -1361,6 +1388,7 @@ export function useWebRTC() {
         chatStore.sendWSEvent('webrtc_screenshare_start', {})
         chatStore.sendWSEvent('webrtc_request_keyframe', {})
       }
+      if (bound.fresh.layers?.length) await syncLayers()
     } catch (err) {
       if (!isCurrent()) return
       console.warn('[WebRTC] Offer/Answer negotiation error:', err)
@@ -1858,6 +1886,7 @@ export function useWebRTC() {
       if (!current()) return
       chatStore.sendWSEvent('webrtc_screenshare_start', {})
       chatStore.sendWSEvent('webrtc_request_keyframe', {})
+      await syncLayers()
     }
     if (screenAudioSender) await screenAudioSender.replaceTrack(screenAudio).catch(() => {})
     if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
@@ -1865,6 +1894,55 @@ export function useWebRTC() {
 
   // One screen share per person: starting another while sharing asks first;
   // the new screen then replaces the running one (see replaceScreenShare).
+  // The lower layers of my screen share: sending the captured track smaller,
+  // only the layers viewers need (until the server says, only the best), and
+  // declaring them to the room. Runs one after another with quality changes.
+  function syncLayers() {
+    qualityChain = qualityChain.then(runSyncLayers).catch(() => {})
+    return qualityChain
+  }
+
+  async function runSyncLayers() {
+    if (!layerSenders.some(Boolean)) return
+    const track = localScreenStream.value?.getVideoTracks()[0]
+    const gen = joinGeneration
+    const senders = [...layerSenders]
+    if (!track || !screenSender) {
+      for (const sender of senders) if (sender?.track) await sender.replaceTrack(null).catch(() => {})
+      // The next share starts on its best layer alone, whatever this one was asked for.
+      if (screenSender) await tuneSender(screenSender, { active: true })
+      declaredKey = ''
+      return
+    }
+    const plans = planScreenLayers(voiceStore.screenQuality, track.getSettings?.() || {})
+    const wanted = voiceStore.layersWanted
+    const active = (layer: number) => (wanted === null ? layer === 0 : wanted.includes(layer))
+    const prio = qosPriority(voiceStore)
+    const { degradationPreference } = streamTuning(voiceStore.screenQuality)
+    await tuneSender(screenSender, { active: active(0) })
+    for (let i = 0; i < senders.length; i++) {
+      const sender = senders[i]
+      const plan = plans[i + 1]
+      if (!sender) continue
+      if (!plan) {
+        if (sender.track) await sender.replaceTrack(null).catch(() => {})
+        continue
+      }
+      await tuneSender(sender, {
+        active: active(i + 1), maxBitrate: plan.maxBitrate, maxFramerate: plan.maxFramerate, scaleResolutionDownBy: plan.scale,
+        degradationPreference, priority: prio, networkPriority: prio
+      })
+      if (gen !== joinGeneration || toRaw(localScreenStream.value)?.getVideoTracks()[0] !== track) return
+      if (sender.track !== track) await sender.replaceTrack(track).catch(() => {})
+    }
+    if (gen !== joinGeneration || !plans.length) return
+    const declared = declaredLayers(plans)
+    const key = layersKey(declared)
+    if (key === declaredKey) return
+    declaredKey = key
+    chatStore.sendWSEvent('webrtc_layers', { layers: declared })
+  }
+
   async function startScreenShare(quality?: StreamQuality): Promise<void> {
     if (isDesktopRuntime()) {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
@@ -1949,6 +2027,9 @@ export function useWebRTC() {
     const wasSharing = !!localScreenStream.value
     if (screenSender) screenSender.replaceTrack(null).catch(() => {})
     detachScreenAudio()
+    // The next share starts again with its best layer only.
+    voiceStore.layersWanted = null
+    declaredKey = ''
 
     if (localScreenStream.value) {
       localScreenStream.value.getTracks().forEach(tr => tr.stop())
@@ -1960,6 +2041,7 @@ export function useWebRTC() {
     voiceStore.isScreenAudioMuted = false
     voiceStore.resetScreenQuality()
     if (wasSharing) chatStore.sendWSEvent('webrtc_screenshare_stop', {})
+    void syncLayers()
   }
 
   // What the screen sender sends right now (RTCRtpSender.getStats), for the
@@ -2164,7 +2246,9 @@ export function useWebRTC() {
       })
 
       // The chosen stream quality, applied to the running share.
-      watch(() => voiceStore.screenQuality, () => applyScreenQuality(voiceStore))
+      watch(() => voiceStore.screenQuality, () => { void applyScreenQuality(voiceStore).then(syncLayers) })
+      // The layers viewers need: the others stop being encoded and sent.
+      watch(() => voiceStore.layersWanted, () => { void syncLayers() })
 
       // Everyone sees whether I am muted or deafened.
       watch(() => [voiceStore.isMuted, voiceStore.isDeafened], sendMuteState)
