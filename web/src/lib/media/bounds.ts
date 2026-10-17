@@ -6,6 +6,15 @@ export const HANDSHAKE_MAX_CHARS = 48_000
 // How long the keys of the group a member held before the call regrouped
 // still open frames (see mediaFrameWorker).
 export const PREVIOUS_GROUP_MS = 30_000
+// How long the previous epoch of the same group still opens frames after the
+// group moved on (a commit in flight to the slowest member), then its key and
+// verifier set are dropped. A member removed by that commit cannot inject
+// frames sealed under the epoch it was in any longer.
+export const PREVIOUS_EPOCH_MS = PREVIOUS_GROUP_MS
+// After a commit that only adds or rotates, a member goes on sealing under the
+// epoch it left for this long, so receivers have the commit before the first
+// frame of the new epoch reaches them. Never after a removal.
+export const SEND_GRACE_MS = 1500
 // How long a member without a group (regrouping, or removed and waiting to be
 // let in again) goes on sealing with its last keys before it sends nothing.
 export const STALE_SEAL_MS = 10_000

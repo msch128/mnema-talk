@@ -52,7 +52,8 @@ $(WEB_DEPS): web/package-lock.json
 	cd web && npm ci --no-audit --no-fund
 
 web: $(WEB_DEPS) ## Install frontend deps (npm ci) and build web/dist
-	cd web && MNEMA_VERSION=$(VERSION) npm run build
+	# `web` is phony, so this always rebuilds; env -u keeps a leftover MNEMA_E2E (test hook) out of a release binary.
+	cd web && env -u MNEMA_E2E MNEMA_VERSION=$(VERSION) npm run build
 
 build: web ## Build the web app, then the Go binary to bin/mnema-talk
 	@mkdir -p $(dir $(BIN))

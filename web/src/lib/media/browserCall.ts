@@ -1,4 +1,5 @@
 import { HANDSHAKE_MAX_BYTES, HANDSHAKE_MAX_CHARS, mediaUserId } from './bounds'
+import { clock } from './clock'
 import { createMediaGuard, type MediaGuard } from './guard'
 import { MediaGroup, type MediaStep } from './group'
 import { WirePacer } from './pacer'
@@ -68,7 +69,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   const inbox: { from: string, wire: string }[] = []
   let keyListener: (() => void) | null = null
   let wireListener: ((channelId: string, wire: string) => void) | null = null
-  let lastOpenedAt = Date.now()
+  let lastOpenedAt = clock.now()
   // When each publisher was first seen on a newer epoch, and last.
   const newerFrom = new Map<string, { first: number, last: number }>()
   let noticeListener: ((notice: MediaNotice) => void) | null = null
@@ -154,7 +155,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   }
 
   function resetEvidence() {
-    lastOpenedAt = Date.now()
+    lastOpenedAt = clock.now()
     newerFrom.clear()
   }
 
@@ -169,7 +170,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   guard.onStats((senders) => {
     const live = group
     if (!live) return
-    const now = Date.now()
+    const now = clock.now()
     for (const [sender, stats] of Object.entries(senders)) {
       if (stats.opened > 0) {
         lastOpenedAt = now
@@ -209,7 +210,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
         const replace = appliedEpoch === null || step.epoch <= appliedEpoch
         appliedEpoch = step.epoch
         appliedKey = step.key
-        guard.setKey(step.epoch, step.key, replace)
+        guard.setKey(step.epoch, step.key, replace, step.soft === true)
         keyListener?.()
       }
       verify(step.verification ?? null)

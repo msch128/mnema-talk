@@ -1,6 +1,7 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { FrameStream, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
-import { PREVIOUS_GROUP_MS, STALE_SEAL_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
+import { clock } from './clock'
 
 interface EncodedFrame {
   data: ArrayBuffer
@@ -46,6 +47,12 @@ function replayOf(senderId: string): ReplayWindow {
   return window
 }
 let sendEpoch: number | null = null
+// When each epoch that is no longer the newest of its group was left, so its
+// key stops opening frames PREVIOUS_EPOCH_MS later.
+let retiredAt = new Map<number, number>()
+// After a commit that removed nobody, sealing goes on under the epoch left
+// until this time, so receivers have the commit when the first frame arrives.
+let sendHold: { epoch: number, until: number } | null = null
 // Since when the call has no group (the keys are the last ones it had).
 let staleSince: number | null = null
 
@@ -53,7 +60,7 @@ function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
   return map.size ? Math.max(...map.keys()) : null
 }
 
-function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null) {
+function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null, soft = false) {
   if (seq !== null) {
     if (seq <= lastSeq) return
     lastSeq = seq
@@ -62,16 +69,38 @@ function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number |
     // A new group: what this member held so far is now the previous group.
     if (keys.size) {
       previous = keys
-      regroupedAt = Date.now()
+      regroupedAt = clock.now()
     }
     keys = new Map()
+    retiredAt = new Map()
+    sendHold = null
   }
+  const left = sendEpoch
+  const now = clock.now()
   keys.set(epoch, key)
+  retiredAt.delete(epoch)
+  for (const held of keys.keys()) if (held < epoch && !retiredAt.has(held)) retiredAt.set(held, now)
   const ordered = [...keys.keys()].sort((a, b) => a - b)
   for (const drop of ordered.slice(0, -2)) keys.delete(drop)
   sendEpoch = newest(keys)
+  sendHold = soft && !replace && left !== null && sendEpoch !== null && left < sendEpoch && keys.has(left)
+    ? { epoch: left, until: now + Math.min(SEND_GRACE_MS, PREVIOUS_EPOCH_MS) }
+    : null
+  dropExpired()
   staleSince = null
   retainReplays()
+}
+
+/** The epoch before the newest opens frames only briefly (PREVIOUS_EPOCH_MS); then its key and verifiers are gone. */
+function dropExpired() {
+  const now = clock.now()
+  let dropped = false
+  for (const [epoch, since] of retiredAt) {
+    if (now - since < PREVIOUS_EPOCH_MS && keys.has(epoch)) continue
+    retiredAt.delete(epoch)
+    if (keys.delete(epoch)) dropped = true
+  }
+  if (dropped) retainReplays()
 }
 
 function retainReplays() {
@@ -81,7 +110,7 @@ function retainReplays() {
 
 /** The previous group's keys, while they may still open frames. */
 function previousKeys(): ReadonlyMap<number, EpochKeys> {
-  if (previous.size && Date.now() - regroupedAt > PREVIOUS_GROUP_MS) {
+  if (previous.size && clock.now() - regroupedAt > PREVIOUS_GROUP_MS) {
     previous = new Map()
     retainReplays()
   }
@@ -93,6 +122,8 @@ function forget() {
   staleSince = null
   keys = new Map()
   previous = new Map()
+  retiredAt = new Map()
+  sendHold = null
   regroupedAt = -Infinity
   sendEpoch = null
   replays.clear()
@@ -129,11 +160,15 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
   const data = new Uint8Array(frame.data)
   if (direction === 'send') {
     if (sendEpoch === null) return null
-    if (staleSince !== null && Date.now() - staleSince > STALE_SEAL_MS) return null
-    const epochKeys = keys.get(sendEpoch)
+    const now = clock.now()
+    if (staleSince !== null && now - staleSince > STALE_SEAL_MS) return null
+    dropExpired()
+    const hold = sendHold
+    if (hold && now >= hold.until) sendHold = null
+    const epoch = hold && now < hold.until && keys.has(hold.epoch) ? hold.epoch : sendEpoch
+    const epochKeys = keys.get(epoch)
     const stream = line.stream
     if (!epochKeys || !stream) return null
-    const epoch = sendEpoch
     const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => {
       const counter = stream.next()
       return counter === null
@@ -143,6 +178,7 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
     return sealed ? packet(sealed) : null
   }
   const replay = replayOf(senderId)
+  dropExpired()
   let unknown = -1
   const before = previousKeys()
   const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
@@ -170,7 +206,7 @@ function count(senderId: string, opened: boolean, unknownEpoch: number) {
     entry.epoch = Math.max(entry.epoch, unknownEpoch)
   } else return
   stats.set(senderId, entry)
-  const now = Date.now()
+  const now = clock.now()
   if (now - lastStats < STATS_MS) return
   lastStats = now
   self.postMessage({ type: 'stats', senders: Object.fromEntries(stats) })
@@ -204,7 +240,7 @@ scope.onrtctransform = (event) => {
       return
     }
     if ('type' in data && data.type === 'stale') {
-      staleSince ??= Date.now()
+      staleSince ??= clock.now()
       return
     }
     if (direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
@@ -213,7 +249,7 @@ scope.onrtctransform = (event) => {
     }
     if ('type' in data && data.type === 'key' && 'epoch' in data && 'key' in data && isEpoch(data.epoch) && isEpochKeys(data.key)) {
       const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq)
+      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true)
     }
   }
   transformer.readable.pipeThrough(new TransformStream<EncodedFrame, EncodedFrame>({

@@ -26,7 +26,8 @@ import {
   type PrivateKeyPackage,
   type Proposal,
 } from 'ts-mls'
-import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
+import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, PREVIOUS_EPOCH_MS, mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
+import { clock } from './clock'
 import { mediaTiming } from './lifetime'
 import type { MediaNotice } from './api'
 import { Backoff } from './backoff'
@@ -59,6 +60,11 @@ export interface MediaStep {
   key: EpochKeys | null
   /** What members compare to know they hold the same keys; set with the key. */
   verification?: MediaVerification | null
+  /**
+   * The epoch was reached by a commit that removed nobody: the sender may go on
+   * sealing under the epoch it left for a moment (SEND_GRACE_MS).
+   */
+  soft?: boolean
 }
 
 interface OwnPackage {
@@ -161,6 +167,19 @@ function treeLeafSigner(state: ClientState, id: string): Uint8Array | null {
   return node && node.nodeType === 'leaf' ? node.leaf.signaturePublicKey : null
 }
 
+/**
+ * No leaf of `before` is gone or swapped in `after` (same position, same
+ * signature key): the commit removed nobody. A leaf replaced by a new one of
+ * the same user id is a removal.
+ */
+export function keepsEveryLeaf(before: ClientState, after: ClientState): boolean {
+  return before.ratchetTree.every((node, index) => {
+    if (!node || node.nodeType !== 'leaf' || index % 2 !== 0) return true
+    const next = after.ratchetTree[index]
+    return !!next && next.nodeType === 'leaf' && sameBytes(node.leaf.signaturePublicKey, next.leaf.signaturePublicKey)
+  })
+}
+
 function lowest(ids: Iterable<string>): string | null {
   let best: string | null = null
   for (const id of ids) if (best === null || id < best) best = id
@@ -189,8 +208,9 @@ function encodeWire(message: Parameters<typeof encodeMlsMessage>[0]): Uint8Array
 export class MediaGroup {
   private state: ClientState | null = null
   private readonly pending = new Map<string, KeyPackage>()
-  private readonly keys = new Map<number, EpochKeys>()
-  private current: { epoch: number, key: EpochKeys, verification: MediaVerification } | null = null
+  /** The epoch before the current one: it opens frames only until `until` (PREVIOUS_EPOCH_MS after the switch). */
+  private previousEpoch: { epoch: number, key: EpochKeys, until: number } | null = null
+  private current: { epoch: number, key: EpochKeys, verification: MediaVerification, soft: boolean } | null = null
   private room: readonly string[] = []
   private offeredFor: string | null = null
   /** This client created its group, and told this room about it. */
@@ -214,8 +234,11 @@ export class MediaGroup {
   private tail: Promise<void> = Promise.resolve()
   /** When each member of the group last showed a sign of life (any handshake, or a heartbeat). */
   private readonly alive = new Map<string, number>()
-  /** Newest heartbeat time accepted from each member, so an older copy counts for nothing. */
-  private readonly beats = new Map<string, number>()
+  /** Newest heartbeat time accepted from each member (and the leaf key that signed it), so an older copy counts for nothing. */
+  private readonly beats = new Map<string, { at: number, signer: Uint8Array }>()
+  /** Since when this browser noticed that it slept, if it did. */
+  private sleptAt: number | null = null
+  private lastTickWall = 0
   private epochAt = 0
   private rotateAfter = 0
   private lastBeat = 0
@@ -289,7 +312,23 @@ export class MediaGroup {
   }
 
   private step(wires: Uint8Array[] = []): MediaStep {
-    return { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null, verification: this.current?.verification ?? null }
+    const step: MediaStep = { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null, verification: this.current?.verification ?? null }
+    if (this.current?.soft) step.soft = true
+    return step
+  }
+
+  /**
+   * The keys that may open frames now: the current epoch's and, for
+   * PREVIOUS_EPOCH_MS after the switch, the one before it. After that the
+   * previous epoch's key and verifier set are gone.
+   */
+  openKeys(): Map<number, EpochKeys> {
+    const out = new Map<number, EpochKeys>()
+    const previous = this.previousEpoch
+    if (previous && clock.now() >= previous.until) this.previousEpoch = null
+    if (this.previousEpoch) out.set(this.previousEpoch.epoch, this.previousEpoch.key)
+    if (this.current) out.set(this.current.epoch, this.current.key)
+    return out
   }
 
   private others(roster: readonly string[]): string[] {
@@ -307,7 +346,16 @@ export class MediaGroup {
     const room = new Set(others)
     room.add(this.userId)
     const active: string[] = []
-    for (const id of treeMembers(this.state).keys()) if (room.has(id) && !this.restarting.has(id)) active.push(id)
+    // A member that is connected but silent for longer than it takes to be
+    // removed (a hung tab) must not hold the role: the next one takes over and
+    // removes it. Everyone derives this from the same signs of life.
+    const now = clock.now()
+    const patience = this.timing.absentMs + 2 * Math.max(10, this.timing.maintenanceMs)
+    for (const id of treeMembers(this.state).keys()) {
+      if (!room.has(id) || this.restarting.has(id)) continue
+      if (id !== this.userId && now - (this.alive.get(id) as number) > patience) continue
+      active.push(id)
+    }
     return lowest(active)
   }
 
@@ -321,7 +369,7 @@ export class MediaGroup {
    * room. They count again as soon as they say anything.
    */
   private reachable(others: string[]): string[] {
-    const now = Date.now()
+    const now = clock.now()
     const tree = this.state ? treeMembers(this.state) : null
     for (const id of [...this.firstSeen.keys()]) if (!others.includes(id)) this.firstSeen.delete(id)
     let wait = Infinity
@@ -489,7 +537,8 @@ export class MediaGroup {
     const state = this.state
     this.state = null
     this.current = null
-    this.keys.clear()
+    this.previousEpoch = null
+    this.sleptAt = null
     this.pending.clear()
     this.accepted.clear()
     this.offeredFor = null
@@ -512,7 +561,7 @@ export class MediaGroup {
     const [message] = decoded
     this.heard.add(from)
     const members = this.state ? treeMembers(this.state) : null
-    if (members?.has(from)) this.alive.set(from, Date.now())
+    if (members?.has(from)) this.alive.set(from, clock.now())
     const wires: Uint8Array[] = []
     if (message.wireformat === 'mls_key_package') {
       const id = credentialIdentity(message.keyPackage.leafNode.credential)
@@ -582,8 +631,9 @@ export class MediaGroup {
         // say so, and offer again, but not in a loop.
         if (!treeMembers(processed.newState).has(this.userId)) {
           this.wipeRejected(processed.newState)
+          const absent = this.sleptRecently()
           this.discard()
-          this.notice('removed')
+          this.notice(absent ? 'absent' : 'removed')
           if (!this.resets.allow('self')) {
             this.defer(() => this.reofferNow())
             return this.step()
@@ -591,7 +641,7 @@ export class MediaGroup {
           await this.rekey()
           return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
         }
-        await this.adopt(processed.newState)
+        await this.adopt(processed.newState, keepsEveryLeaf(previous, processed.newState) ? 'soft' : 'commit')
       } catch {
         return this.step()
       }
@@ -601,7 +651,7 @@ export class MediaGroup {
 
   /** A new epoch begins: its age starts, and so does the delay before it is rotated. */
   private startEpoch(state: ClientState) {
-    const now = Date.now()
+    const now = clock.now()
     this.epochAt = now
     const { rotateMs, rotateJitterMs } = this.timing
     this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
@@ -612,6 +662,7 @@ export class MediaGroup {
     for (const id of members.keys()) if (!this.alive.has(id)) this.alive.set(id, now)
     if (this.tickTimer === null) {
       this.lastTick = now
+      this.lastTickWall = clock.wall()
       this.lastBeat = now
       this.scheduleTick()
     }
@@ -643,12 +694,16 @@ export class MediaGroup {
     // Callers hold a group: a state and the keys of its epoch go together.
     const state = this.state as ClientState
     const current = this.current as NonNullable<typeof this.current>
-    const now = Date.now()
+    const now = clock.now()
     // This browser slept (a frozen tab, a closed lid): it heard nothing, so it
     // cannot tell who is absent. Everyone starts over, and says it is here.
-    const slept = now - this.lastTick > 2 * Math.max(10, this.timing.maintenanceMs) + 60_000
+    const slept = this.sleepGap(now) > this.sleepLimit()
     this.lastTick = now
-    if (slept) for (const id of this.alive.keys()) this.alive.set(id, now)
+    this.lastTickWall = clock.wall()
+    if (slept) {
+      this.sleptAt = now
+      for (const id of this.alive.keys()) this.alive.set(id, now)
+    }
     const members = treeMembers(state)
     if (members.size > 1 && (slept || now - this.lastBeat >= this.timing.heartbeatMs)) {
       this.lastBeat = now
@@ -656,7 +711,10 @@ export class MediaGroup {
       const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
       if (beat) wires.push(beat)
     }
-    if (this.canCommit(this.room)) {
+    // Right after waking up this view is the stalest it will ever be: the
+    // messages that arrived meanwhile are still queued behind this tick. The
+    // next tick, one maintenance interval later, decides.
+    if (!slept && this.canCommit(this.room)) {
       const absent: Proposal[] = []
       for (const [id, leaf] of members) {
         if (id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs) {
@@ -669,6 +727,22 @@ export class MediaGroup {
     return this.step(wires)
   }
 
+  /** How long this browser was away since the last tick: the larger of what the monotonic and the wall clock saw (a monotonic clock may stand still in sleep). */
+  private sleepGap(now: number): number {
+    return Math.max(now - this.lastTick, clock.wall() - this.lastTickWall)
+  }
+
+  private sleepLimit(): number {
+    return 2 * Math.max(10, this.timing.maintenanceMs) + 60_000
+  }
+
+  /** This browser was asleep just now: a removal that follows is for its silence, not a hostile relay. */
+  private sleptRecently(): boolean {
+    const now = clock.now()
+    if (this.sleepGap(now) > this.sleepLimit()) return true
+    return this.sleptAt !== null && now - this.sleptAt <= this.sleepLimit()
+  }
+
   /** A heartbeat counts when this epoch's member signed it, and it is newer than the last. */
   private async beatNow(from: string, wire: Uint8Array): Promise<MediaStep> {
     const current = this.current
@@ -677,9 +751,12 @@ export class MediaGroup {
     const beat = await openHeartbeat(verifier, this.groupId, from, wire)
     if (!beat || beat.epoch !== current.epoch) return this.step()
     const last = this.beats.get(from)
-    if (last !== undefined && beat.at <= last) return this.step()
-    this.beats.set(from, beat.at)
-    this.alive.set(from, Date.now())
+    // A verifier exists only for a member with exactly one leaf.
+    const signer = treeLeafSigner(this.state as ClientState, from) as Uint8Array
+    // A reloaded member signs with a new leaf key and starts its clock anew.
+    if (last !== undefined && sameBytes(last.signer, signer) && beat.at <= last.at) return this.step()
+    this.beats.set(from, { at: beat.at, signer: new Uint8Array(signer) })
+    this.alive.set(from, clock.now())
     return this.step()
   }
 
@@ -704,6 +781,8 @@ export class MediaGroup {
       if (!present.has(member)) proposals.push({ proposalType: 'remove', remove: { removed: leaf } })
     }
     proposals.push({ proposalType: 'add', add: { keyPackage } })
+    // The reloaded member's heartbeats start over with its new leaf.
+    this.beats.delete(id)
     return this.commit(proposals)
   }
 
@@ -761,7 +840,8 @@ export class MediaGroup {
       this.wipeRejected(result.newState)
       return []
     }
-    if (!await this.adopt(result.newState)) return []
+    const soft = !extraProposals.some(proposal => proposal.proposalType === 'remove')
+    if (!await this.adopt(result.newState, soft ? 'soft' : 'commit')) return []
     return welcome ? [welcome, commit] : [commit]
   }
 
@@ -791,7 +871,11 @@ export class MediaGroup {
     for (const secret of Object.values(state.privatePath.privateKeys)) wipe(secret)
   }
 
-  private async adopt(state: ClientState): Promise<boolean> {
+  /**
+   * 'new' is a group of its own or one joined by a welcome. A 'commit' moves the
+   * group I am in to its next epoch; a 'soft' one removed nobody.
+   */
+  private async adopt(state: ClientState, via: 'new' | 'commit' | 'soft' = 'new'): Promise<boolean> {
     if (this.closed || !sameBytes(state.groupContext.groupId, this.groupId)) {
       this.wipeRejected(state)
       return false
@@ -819,11 +903,13 @@ export class MediaGroup {
       this.offerTimer = null
       const epochNumber = Number(epoch)
       const key: EpochKeys = { key: aes, signer, verifiers }
-      this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
-      this.keys.set(epochNumber, key)
+      const before = this.current
+      this.current = { epoch: epochNumber, key, soft: via === 'soft', verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
+      // Only the epoch right before this one, of this group, stays readable, and briefly.
+      this.previousEpoch = via !== 'new' && before && before.epoch < epochNumber
+        ? { epoch: before.epoch, key: before.key, until: clock.now() + PREVIOUS_EPOCH_MS }
+        : null
       this.startEpoch(state)
-      const ordered = [...this.keys.keys()].sort((a, b) => a - b)
-      for (const drop of ordered.slice(0, -2)) this.keys.delete(drop)
       return true
     } finally {
       zeroOutUint8Array(raw)

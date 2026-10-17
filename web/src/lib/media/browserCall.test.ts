@@ -4,7 +4,7 @@ import { fixtureId } from '../../test-fixtures.fixture'
 import { HANDSHAKE_MAX_BYTES } from './bounds'
 import type { FrameStats, MediaGuard } from './guard'
 import { browserMediaCall, mediaSettled } from './browserCall'
-import { MediaGroup } from './group'
+import { MediaGroup, type MediaStep } from './group'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import type { MediaCall } from './api'
 import type { MediaVerification } from './verify'
@@ -19,8 +19,8 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
-  const keys: { epoch: number, key: EpochKeys, replace: boolean }[] = []
+function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
+  const keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[] = []
   const stale: number[] = []
   const sends: string[] = []
   const receives: string[] = []
@@ -40,7 +40,7 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
       receives.push(`${channelId}:${senderId}`)
       return true
     },
-    setKey(epoch, key, replace = false) { keys.push({ epoch, key, replace }) },
+    setKey(epoch, key, replace = false, soft = false) { keys.push({ epoch, key, replace, ...(soft ? { soft } : {}) }) },
     staleKeys() { stale.push(keys.length) },
     reset() { keys.length = 0 },
   }
@@ -217,6 +217,29 @@ describe('browser media call', () => {
     await mediaSettled(call)
     receive.mockRestore()
     expect(guard.keys.at(-1)).toEqual({ epoch: current.epoch, key: replacement, replace: true })
+    call.stop()
+    await mediaSettled(call)
+  }, 30_000)
+
+  it('tells the guard when a new epoch removed nobody, so sealing may stay on the old one a moment', async () => {
+    const guard = recordingGuard()
+    const call = browserMediaCall(guard)
+    call.start(channelId, aliceId)
+    call.roster([aliceId])
+    await mediaSettled(call)
+    const current = guard.keys.at(-1)
+    if (!current) throw new Error('expected an epoch key')
+    let step: MediaStep = { wires: [], epoch: current.epoch + 1, key: { ...current.key }, soft: true }
+    const receive = vi.spyOn(MediaGroup.prototype, 'receive').mockImplementation(() => Promise.resolve(step))
+    const sync = vi.spyOn(MediaGroup.prototype, 'sync').mockImplementation(() => Promise.resolve(step))
+    call.receive(bobId, btoa('rotated'))
+    await mediaSettled(call)
+    step = { wires: [], epoch: current.epoch + 2, key: { ...current.key } }
+    call.receive(bobId, btoa('removed'))
+    await mediaSettled(call)
+    receive.mockRestore()
+    sync.mockRestore()
+    expect(guard.keys.slice(-2).map(item => [item.epoch - current.epoch, item.replace, item.soft ?? false])).toEqual([[1, false, true], [2, false, false]])
     call.stop()
     await mediaSettled(call)
   }, 30_000)
