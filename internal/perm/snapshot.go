@@ -323,6 +323,17 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	return p
 }
 
+// CategoryPerms is what sub holds under a category's own overwrites: the
+// server-wide permissions with those overwrites applied, so a bit the category
+// denies them does not count as held.
+func (s *Snapshot) CategoryPerms(sub Subject, cat uuid.UUID) Set {
+	base := s.Global(sub)
+	if s.IsOwner(sub) || base.Has(Administrator) {
+		return base
+	}
+	return s.categoryOv[cat].apply(base, s, sub.ID)
+}
+
 // CategoryVisible reports whether sub may see the category itself: its own
 // overwrites leave ViewChannel in place.
 func (s *Snapshot) CategoryVisible(sub Subject, cat uuid.UUID) bool {

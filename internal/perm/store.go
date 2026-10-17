@@ -440,7 +440,7 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			if !snap.CategoryVisible(actor, id) || !snap.CanSeeAllChannelsIn(actor, id) {
 				return nil, httpx.ErrNotFound("category not found")
 			}
-			held = snap.Global(actor)
+			held = snap.CategoryPerms(actor, id)
 			existing = snap.categoryOv[id]
 		}
 		type key struct {
@@ -517,8 +517,15 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 						return nil, err
 					}
 				}
-			} else if err := snap.CanModerate(actor, Subject{ID: k.id}); err != nil {
-				return nil, err
+			} else {
+				// Nobody lifts a restriction from themselves (or sets one up
+				// to bargain with); that is for someone above them.
+				if k.id == actor.ID && !snap.IsOwner(actor) {
+					return nil, httpx.ErrForbidden("you cannot change your own overwrite")
+				}
+				if err := snap.CanModerate(actor, Subject{ID: k.id}); err != nil {
+					return nil, err
+				}
 			}
 			if name := held.MissingName(bits); name != "" {
 				return nil, httpx.ErrForbidden("cannot change a permission you do not have: " + name)
