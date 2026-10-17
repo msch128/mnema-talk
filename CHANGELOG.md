@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.14](https://github.com/msch128/mnema-talk/compare/v0.7.13...v0.7.14) (2026-10-17)
+
+
+### Features
+
+* forward a screen share's layers per viewer in the SFU ([#129](https://github.com/msch128/mnema-talk/issues/129)) ([2c151bf](https://github.com/msch128/mnema-talk/commit/2c151bf936cba7d8bd3d78d1d9489f215fa6ec7e))
+
 ## [0.7.13](https://github.com/msch128/mnema-talk/compare/v0.7.12...v0.7.13) (2026-10-17)
 
 
