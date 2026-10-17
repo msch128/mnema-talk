@@ -1,0 +1,51 @@
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_367fde60100f53 7,19,35,54,57-64,67,76-79,81-86,90,94
+internal/audit/audit.go
+  s_06fcde5dbef956::t_8d743c88659645 48-60
+e2e/tests/audit.spec.ts
+  s_06fcde5dbef956::t_a63be17555bcb3 1-66
+internal/server/server.go
+  s_06fcde5dbef956::t_2a2dcb2b74120b 127,304-314
+  s_06fcde5dbef956::t_8220a75e2cab04 315-316
+internal/audit/handler.go
+  s_06fcde5dbef956::t_8d743c88659645 49,121-130
+internal/server/audit_hardening_integration_test.go
+  s_06fcde5dbef956::t_f59bd809a3b9fc 23,45,48
+  s_06fcde5dbef956::t_7a98a47e371a0a 1-22,24-44,46-47,49-89
+api/openapi.json
+  s_06fcde5dbef956::t_0408c4fa95cc58 3232
+internal/audit/sanitize.go
+  s_06fcde5dbef956::t_12132df2f939f7 8,112-115,117,119,121-123
+  s_06fcde5dbef956::t_ac844e2656f362 4-5,39-41,47-57,63-70,108-110,118
+internal/server/audit_actor_test.go
+  s_06fcde5dbef956::t_2a2dcb2b74120b 13-18
+internal/audit/middleware.go
+  s_06fcde5dbef956::t_b6268811c1605a 51-54,56-57,63-68,74,98-100,106-112
+  s_06fcde5dbef956::t_129e6e0c1ffd32 113
+internal/audit/hardening_test.go
+  s_06fcde5dbef956::t_dfd2306cc6b5cc 6-7,60,98-107
+  s_06fcde5dbef956::t_115d92e0b6fd05 1-5,8-59,61-97
+internal/audit/routes.go
+  s_06fcde5dbef956::t_367fde60100f53 25,91
+  s_06fcde5dbef956::t_e1a28c12c439d4 92
+doc/moderation.md
+  s_06fcde5dbef956::t_d92aced6b65982 38-42,60-69,74-78
+internal/audit/audit_test.go
+  s_06fcde5dbef956::t_65bf45608b0eea 30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f4616ae5a6bcf308fc35758dc5c3ffe2c86a33a7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
