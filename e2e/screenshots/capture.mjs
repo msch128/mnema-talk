@@ -1,9 +1,10 @@
+/* global process */
 // Captures the README screenshots from a seeded throwaway instance.
 // Usage: see e2e/screenshots/run.sh. Output: SHOTS_OUT (default doc/images).
 // The app has one (dark) theme, so every picture is 1440x900 at 1x.
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
-import { BASE, ADMIN_USER, ADMIN_PASSWORD, MEMBER_PASSWORD, api, login } from './seed.mjs'
+import { BASE, ADMIN_USER, ADMIN_PASSWORD, MEMBER_PASSWORD, login } from './seed.mjs'
 
 const OUT = process.env.SHOTS_OUT || new URL('../../doc/images/', import.meta.url).pathname
 mkdirSync(OUT, { recursive: true })

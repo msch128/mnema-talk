@@ -1,3 +1,4 @@
+/* global process */
 // Seeds a throwaway Mnema Talk instance with neutral demo data (invented
 // people, channels and messages) for the README screenshots. See capture.mjs.
 import { chromium } from '@playwright/test'
@@ -73,8 +74,8 @@ export async function seed(browser) {
   // Roles: Moderator, Builder, Guest; the maintainers' channel is private.
   const role = async (name, color, permissions, hoist) =>
     must(await api(admin, 'POST', '/api/admin/roles', { name, color, permissions, hoist }), `role ${name}`)
-  const moderator = await role('Moderator', 0xe0a458, bit(5) + bit(10) + bit(15), true)
-  const builder = await role('Builder', 0x2da771, bit(11) + bit(13), true)
+  await role('Moderator', 0xe0a458, bit(5) + bit(10) + bit(15), true)
+  await role('Builder', 0x2da771, bit(11) + bit(13), true)
   await role('Guest', 0x7d8a84, 0, false)
   const rolesList = must(await api(admin, 'GET', '/api/roles'), 'roles')
   const all = rolesList.roles ?? rolesList
