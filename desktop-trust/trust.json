@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "serial": 2,
-  "issued_at": "2026-10-17T21:28:34Z",
-  "expires_at": "2027-04-15T21:28:34Z",
+  "serial": 3,
+  "issued_at": "2026-10-17T22:00:57Z",
+  "expires_at": "2027-04-15T22:00:57Z",
   "bundle_keys": [
     "7815c02fddb14038cf3641036ba2e4e20ffdd0e42d00be3477671ca4628de06d"
   ],
@@ -10,5 +10,6 @@
   "updater_keys": [
     "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg3MUUyOTlDQUVCRjZCMkYKUldRdmE3K3VuQ2tlaDdOajlZaG9vbENvRFBXQmtQd1pKUjZmK1hwRW8rSCt4b04rZzhwWVY3SkEK"
   ],
-  "revoked_updater_keys": []
+  "revoked_updater_keys": [],
+  "max_version": {}
 }

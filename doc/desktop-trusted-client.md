@@ -156,7 +156,8 @@ desktop client. It signs one small statement:
   default is 180 days), `bundle_keys` (allowed web bundle public keys, raw Ed25519 in
   hex), `revoked_bundle_keys` (key ids), `updater_keys` (allowed Tauri updater
   public keys, in the text form of `tauri.conf.json`) and
-  `revoked_updater_keys` (minisign key ids, hex in file order).
+  `revoked_updater_keys` (minisign key ids, hex in file order) and `max_version`
+  (optional caps, see below).
 * `desktop-trust/trust.json.sig`: base64 Ed25519 signature over the exact bytes
   of `trust.json`.
 
@@ -177,12 +178,21 @@ Rust):
   only from keys listed in `bundle_keys` and not in `revoked_bundle_keys`. The
   compiled-in keys no longer count. Bundles already held (built-in or cached)
   are checked again; those signed by a withdrawn key are dropped (and their
-  cache files removed). The rollback high-water mark and the security floor are
-  **never lowered**: revoking a key does not make older versions safe. If the
-  newest bundle the client has accepted was signed by a revoked key, the client
-  refuses to run older ones, says so, and waits for a bundle from an allowed key
-  whose version is not below that mark. After a leak, release the replacement
-  bundle with a version above anything the attacker could have published.
+  cache files removed).
+* **Rollback marks are per key.** The client records which key raised each
+  rollback mark (highest bundle version per contract, and the security floor).
+  The marks in force are the highest ones raised by keys that are still
+  trusted. Revoking a key therefore clears the marks a forged high-version
+  bundle raised, but never drops below what a still-trusted key reached or
+  declared. Until a bundle from an allowed key at or above the mark exists, an
+  older one is refused with a clear message.
+* **Explicit caps.** A statement may carry `max_version` (for example
+  `{"1": "0.9.0"}`, web client API number to version; sign with
+  `-max-version 1=0.9.0`). When a client first takes that statement, it lowers
+  its recorded marks for that API to at most the cap and drops held bundles
+  above it, even if no trusted bundle exists yet. Caps are not carried over to
+  later statements and a cap above the legitimate versions does nothing, so use
+  it only to clear a forged mark.
 * **Freshness (freeze protection).** An attacker who blocks the fetch must not
   keep a stale statement in force. A statement past `expires_at` is never
   accepted, and while the one in force has expired, or this round's fetch
@@ -219,6 +229,12 @@ that holds the root key, with one command, then merge the result:
       -out desktop-trust -prev desktop-trust/trust.json -renew
 
 `-renew` keeps the allowed keys and all revocations and raises the serial.
+The previous statement must carry a valid signature (`trust.json.sig`, or
+`-prev-sig`) from this root key; the tool refuses an unsigned or altered file, so
+nobody can get a key root-signed by editing `desktop-trust/` in a pull request.
+Before signing it prints the full result, allowed and revoked keys with short ids
+and `+`/`-` against the previous statement, and asks for confirmation. Read it:
+every allowed key must be one you recognise.
 `go run ./cmd/webbundle trust verify` prints the expiry. A client that cannot
 get a fresh statement keeps working but stops installing updates.
 
@@ -243,8 +259,7 @@ updater key works the same with `-updater-key` and `-revoke-updater-key`.
 4. Open a pull request with `desktop-trust/` and `web/desktop-signing.pub`
    and merge it. Clients pick the statement up at their next start or
    six-hourly check and stop accepting the old key at once.
-5. Cut a release so a bundle signed with the new key exists, with a version
-   above anything the old key could have signed
+5. Cut a release so a bundle signed with the new key exists
    (raise `security_floor` in `web/desktop-compat.json` if the old key's
    bundles were vulnerable). Clients whose only bundle was signed by the
    revoked key show a message and fetch the new bundle on that check.

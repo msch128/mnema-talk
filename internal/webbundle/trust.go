@@ -11,6 +11,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -63,6 +64,11 @@ type Trust struct {
 	UpdaterKeys []string `json:"updater_keys"`
 	// RevokedUpdaterKeys are minisign key ids (see UpdaterKeyID).
 	RevokedUpdaterKeys []string `json:"revoked_updater_keys"`
+	// MaxVersion optionally caps, per web client API number, the rollback
+	// marks (highest bundle version, security floor) a client keeps when it
+	// takes this statement, so the owner can clear a mark raised by a forged
+	// bundle. It applies once, when the statement is first taken.
+	MaxVersion map[string]string `json:"max_version"`
 }
 
 // GenerateRootKey creates a key pair for signing trust statements.
@@ -171,6 +177,14 @@ func (t *Trust) Validate() error {
 		}
 		if revokedUpdater[id] {
 			return fmt.Errorf("updater key %s is both allowed and revoked", id)
+		}
+	}
+	for api, v := range t.MaxVersion {
+		if n, err := strconv.ParseUint(api, 10, 32); err != nil || n < 1 || api != strconv.FormatUint(n, 10) {
+			return fmt.Errorf("max_version key %q is not a web client API number", api)
+		}
+		if _, err := ParseVersion(v); err != nil {
+			return fmt.Errorf("max_version %s: %w", api, err)
 		}
 	}
 	if len(t.BundleKeys) == 0 {

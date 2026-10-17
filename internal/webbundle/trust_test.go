@@ -147,11 +147,11 @@ func TestCLITrustFlow(t *testing.T) {
 	oldPub, _ := testKey(t)
 	newPub, _ := testKey(t)
 	out1 := filepath.Join(dir, "1")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", keyFile, "-out", out1, "-bundle-key", hex.EncodeToString(oldPub)}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", keyFile, "-out", out1, "-bundle-key", hex.EncodeToString(oldPub)}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	out2 := filepath.Join(dir, "2")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", keyFile, "-out", out2, "-prev", filepath.Join(out1, "trust.json"),
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", keyFile, "-out", out2, "-prev", filepath.Join(out1, "trust.json"),
 		"-bundle-key", hex.EncodeToString(newPub), "-revoke-bundle-key", KeyID(oldPub)}, nil); code != 0 {
 		t.Fatal(e)
 	}
@@ -161,7 +161,7 @@ func TestCLITrustFlow(t *testing.T) {
 	}
 	// A third statement carries the revocation forward even if not repeated.
 	out3 := filepath.Join(dir, "3")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", keyFile, "-out", out3, "-prev", filepath.Join(out2, "trust.json"), "-bundle-key", hex.EncodeToString(newPub)}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", keyFile, "-out", out3, "-prev", filepath.Join(out2, "trust.json"), "-bundle-key", hex.EncodeToString(newPub)}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	b, _ := os.ReadFile(filepath.Join(out3, "trust.json"))
@@ -169,7 +169,7 @@ func TestCLITrustFlow(t *testing.T) {
 		t.Fatal("revocation was not carried forward")
 	}
 	// Serial may not go back.
-	if code, _, _ := run([]string{"trust", "sign", "-key-file", keyFile, "-out", filepath.Join(dir, "4"), "-prev", filepath.Join(out3, "trust.json"), "-serial", "2", "-bundle-key", hex.EncodeToString(newPub)}, nil); code == 0 {
+	if code, _, _ := run([]string{"trust", "sign", "-yes", "-key-file", keyFile, "-out", filepath.Join(dir, "4"), "-prev", filepath.Join(out3, "trust.json"), "-serial", "2", "-bundle-key", hex.EncodeToString(newPub)}, nil); code == 0 {
 		t.Fatal("a lower serial was signed")
 	}
 }
@@ -275,7 +275,7 @@ func TestCLITrustErrors(t *testing.T) {
 	pub := filepath.Join(good, "offline-root.pub")
 	bundle := hex.EncodeToString(bytes.Repeat([]byte{3}, 32))
 	signed := filepath.Join(dir, "signed")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", signed, "-bundle-key", bundle}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", signed, "-bundle-key", bundle}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	trustFile, sigFile := filepath.Join(signed, "trust.json"), filepath.Join(signed, "trust.json.sig")
@@ -301,16 +301,16 @@ func TestCLITrustErrors(t *testing.T) {
 		"keygen existing key":    {"trust", "keygen", "-out", good},
 		"keygen under a file":    {"trust", "keygen", "-out", filepath.Join(file, "sub")},
 		"keygen unwritable pub":  {"trust", "keygen", "-out", blockedPub},
-		"sign flag":              {"trust", "sign", "-nope"},
-		"sign no key":            {"trust", "sign", "-out", dir},
-		"sign missing key file":  {"trust", "sign", "-key-file", filepath.Join(dir, "none"), "-out", dir},
-		"sign bad key file":      {"trust", "sign", "-key-file", file, "-out", dir},
-		"sign missing prev":      {"trust", "sign", "-key-file", key, "-out", dir, "-prev", filepath.Join(dir, "none")},
-		"sign bad prev":          {"trust", "sign", "-key-file", key, "-out", dir, "-prev", garbage},
-		"sign bad bundle key":    {"trust", "sign", "-key-file", key, "-out", dir, "-bundle-key", file},
-		"sign no bundle key":     {"trust", "sign", "-key-file", key, "-out", filepath.Join(dir, "x")},
-		"sign out under a file":  {"trust", "sign", "-key-file", key, "-out", filepath.Join(file, "sub"), "-bundle-key", bundle},
-		"sign unwritable sig":    {"trust", "sign", "-key-file", key, "-out", blockedSig, "-bundle-key", bundle},
+		"sign flag":              {"trust", "sign", "-yes", "-nope"},
+		"sign no key":            {"trust", "sign", "-yes", "-out", dir},
+		"sign missing key file":  {"trust", "sign", "-yes", "-key-file", filepath.Join(dir, "none"), "-out", dir},
+		"sign bad key file":      {"trust", "sign", "-yes", "-key-file", file, "-out", dir},
+		"sign missing prev":      {"trust", "sign", "-yes", "-key-file", key, "-out", dir, "-prev", filepath.Join(dir, "none")},
+		"sign bad prev":          {"trust", "sign", "-yes", "-key-file", key, "-out", dir, "-prev", garbage},
+		"sign bad bundle key":    {"trust", "sign", "-yes", "-key-file", key, "-out", dir, "-bundle-key", file},
+		"sign no bundle key":     {"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "x")},
+		"sign out under a file":  {"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(file, "sub"), "-bundle-key", bundle},
+		"sign unwritable sig":    {"trust", "sign", "-yes", "-key-file", key, "-out", blockedSig, "-bundle-key", bundle},
 		"verify flag":            {"trust", "verify", "-nope"},
 		"verify missing pub":     {"trust", "verify", "-pub", filepath.Join(dir, "none"), "-trust", trustFile, "-sig", sigFile},
 		"verify missing trust":   {"trust", "verify", "-pub", pub, "-trust", filepath.Join(dir, "none"), "-sig", sigFile},
@@ -346,11 +346,11 @@ func TestCLIRenewAndExpiry(t *testing.T) {
 	key, pub := filepath.Join(dir, "offline-root.key"), filepath.Join(dir, "offline-root.pub")
 	bundle := hex.EncodeToString(bytes.Repeat([]byte{4}, 32))
 	one := filepath.Join(dir, "1")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", one, "-bundle-key", bundle, "-updater-key", testUpdaterKey()}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", one, "-bundle-key", bundle, "-updater-key", testUpdaterKey()}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	two := filepath.Join(dir, "2")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", two, "-prev", filepath.Join(one, "trust.json"), "-renew"}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", two, "-prev", filepath.Join(one, "trust.json"), "-renew"}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	doc, _ := os.ReadFile(filepath.Join(two, "trust.json"))
@@ -361,17 +361,127 @@ func TestCLIRenewAndExpiry(t *testing.T) {
 		t.Fatalf("renewed statement: %+v %v", tr, err)
 	}
 	// Without -renew the allowed keys are not carried over.
-	if code, _, _ := run([]string{"trust", "sign", "-key-file", key, "-out", filepath.Join(dir, "3"), "-prev", filepath.Join(one, "trust.json")}, nil); code == 0 {
+	if code, _, _ := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "3"), "-prev", filepath.Join(one, "trust.json")}, nil); code == 0 {
 		t.Fatal("a statement without bundle keys was signed")
 	}
 	// An already expired statement fails verification with a hint.
 	old := filepath.Join(dir, "old")
-	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", old, "-bundle-key", bundle, "-valid-for", "1s"}, nil); code != 0 {
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", old, "-bundle-key", bundle, "-valid-for", "1s"}, nil); code != 0 {
 		t.Fatal(e)
 	}
 	time.Sleep(1100 * time.Millisecond)
 	code, _, e := run([]string{"trust", "verify", "-pub", pub, "-trust", filepath.Join(old, "trust.json"), "-sig", filepath.Join(old, "trust.json.sig")}, nil)
 	if code == 0 || !strings.Contains(e, "expired") {
 		t.Fatalf("expired statement verified: %d %s", code, e)
+	}
+}
+
+func runIn(stdin string, args []string) (int, string, string) {
+	var out, errb bytes.Buffer
+	code := Run(args, func(string) string { return "" }, strings.NewReader(stdin), &out, &errb)
+	return code, out.String(), errb.String()
+}
+
+func TestSignRefusesAnUnverifiedPrevious(t *testing.T) {
+	dir := t.TempDir()
+	for _, d := range []string{"root", "other"} {
+		if code, _, e := run([]string{"trust", "keygen", "-out", filepath.Join(dir, d)}, nil); code != 0 {
+			t.Fatal(e)
+		}
+	}
+	key := filepath.Join(dir, "root", "offline-root.key")
+	otherKey := filepath.Join(dir, "other", "offline-root.key")
+	good := hex.EncodeToString(bytes.Repeat([]byte{1}, 32))
+	evil := hex.EncodeToString(bytes.Repeat([]byte{9}, 32))
+	one := filepath.Join(dir, "1")
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", one, "-bundle-key", good}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	prev := filepath.Join(one, "trust.json")
+	args := func(extra ...string) []string {
+		return append([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "out"), "-renew", "-prev", prev}, extra...)
+	}
+	// A tampered previous statement: someone added their key.
+	raw, _ := os.ReadFile(prev)
+	tampered := filepath.Join(dir, "tampered.json")
+	_ = os.WriteFile(tampered, bytes.Replace(raw, []byte(good), []byte(evil), 1), 0o600)
+	sig, _ := os.ReadFile(prev + ".sig")
+	_ = os.WriteFile(tampered+".sig", sig, 0o600)
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "out"), "-renew", "-prev", tampered}, nil); code == 0 || !strings.Contains(e, "does not verify") {
+		t.Fatalf("tampered prev: %d %s", code, e)
+	}
+	// No signature next to it.
+	lone := filepath.Join(dir, "lone.json")
+	_ = os.WriteFile(lone, raw, 0o600)
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "out"), "-prev", lone}, nil); code == 0 || !strings.Contains(e, "needs its signature") {
+		t.Fatalf("missing sig: %d %s", code, e)
+	}
+	// Signed by another root key.
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", otherKey, "-out", filepath.Join(dir, "x"), "-prev", prev}, nil); code == 0 {
+		t.Fatalf("wrong root accepted: %s", e)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "out")); err == nil {
+		t.Fatal("something was written for a refused previous statement")
+	}
+	// An explicit -prev-sig works.
+	moved := filepath.Join(dir, "sig-elsewhere")
+	_ = os.WriteFile(moved, sig, 0o600)
+	if code, _, e := run(args("-prev-sig", moved), nil); code != 0 {
+		t.Fatal(e)
+	}
+}
+
+func TestSignShowsTheResultAndNeedsConfirmation(t *testing.T) {
+	dir := t.TempDir()
+	if code, _, e := run([]string{"trust", "keygen", "-out", dir}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	key := filepath.Join(dir, "offline-root.key")
+	oldK, newK := hex.EncodeToString(bytes.Repeat([]byte{1}, 32)), hex.EncodeToString(bytes.Repeat([]byte{2}, 32))
+	one := filepath.Join(dir, "1")
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", one, "-bundle-key", oldK, "-updater-key", testUpdaterKey()}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	oldRaw, _ := hex.DecodeString(oldK)
+	two := filepath.Join(dir, "2")
+	base := []string{"trust", "sign", "-key-file", key, "-out", two, "-prev", filepath.Join(one, "trust.json"), "-renew",
+		"-bundle-key", newK, "-revoke-bundle-key", KeyID(oldRaw), "-max-version", "1=0.9.0"}
+	// Declined (and an empty answer): nothing is written.
+	for _, answer := range []string{"n\n", ""} {
+		code, out, _ := runIn(answer, base)
+		if code == 0 {
+			t.Fatal("signed without confirmation")
+		}
+		if _, err := os.Stat(two); err == nil {
+			t.Fatal("written without confirmation")
+		}
+		for _, want := range []string{"+ ", "- ", KeyID(oldRaw), "rollback cap: web client API 1 at most 0.9.0", "allowed updater keys"} {
+			if !strings.Contains(out, want) {
+				t.Errorf("summary lacks %q:\n%s", want, out)
+			}
+		}
+	}
+	// The revoked key is not carried over by -renew; confirmed with y.
+	if code, _, e := runIn("y\n", base); code != 0 {
+		t.Fatal(e)
+	}
+	doc, _ := os.ReadFile(filepath.Join(two, "trust.json"))
+	if strings.Contains(string(doc), oldK) || !strings.Contains(string(doc), newK) || !strings.Contains(string(doc), `"1": "0.9.0"`) {
+		t.Fatalf("unexpected statement:\n%s", doc)
+	}
+	// A third statement drops the cap (caps are not carried) but keeps revocations.
+	three := filepath.Join(dir, "3")
+	if code, _, e := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", three, "-prev", filepath.Join(two, "trust.json"), "-renew"}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	doc3, _ := os.ReadFile(filepath.Join(three, "trust.json"))
+	if strings.Contains(string(doc3), "0.9.0") || !strings.Contains(string(doc3), KeyID(oldRaw)) {
+		t.Fatalf("unexpected renewal:\n%s", doc3)
+	}
+	// Bad caps.
+	for _, bad := range []string{"nocap", "x=0.9.0", "0=0.9.0", "01=0.9.0", "1=latest"} {
+		if code, _, _ := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "bad"), "-bundle-key", newK, "-max-version", bad}, nil); code == 0 {
+			t.Errorf("-max-version %s accepted", bad)
+		}
 	}
 }

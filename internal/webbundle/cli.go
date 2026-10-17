@@ -1,9 +1,9 @@
 package webbundle
 
 import (
+	"bufio"
 	"crypto/ed25519"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,7 +25,7 @@ const usage = `usage: webbundle <command> [flags]
 `
 
 // Run implements the webbundle command line and returns the exit code.
-func Run(args []string, getenv func(string) string, stdout, stderr io.Writer) int {
+func Run(args []string, getenv func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		_, _ = fmt.Fprint(stderr, usage)
 		return 2
@@ -39,7 +39,7 @@ func Run(args []string, getenv func(string) string, stdout, stderr io.Writer) in
 	case "keyid":
 		err = runKeyID(args[1:], stdout, stderr)
 	case "trust":
-		err = runTrust(args[1:], stdout, stderr)
+		err = runTrust(args[1:], stdin, stdout, stderr)
 	default:
 		_, _ = fmt.Fprint(stderr, usage)
 		return 2
@@ -196,7 +196,7 @@ type listFlag []string
 func (l *listFlag) String() string     { return strings.Join(*l, ",") }
 func (l *listFlag) Set(v string) error { *l = append(*l, v); return nil }
 
-func runTrust(args []string, stdout, stderr io.Writer) error {
+func runTrust(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
 		_, _ = fmt.Fprint(stderr, trustUsage)
 		return flag.ErrHelp
@@ -205,7 +205,7 @@ func runTrust(args []string, stdout, stderr io.Writer) error {
 	case "keygen":
 		return runTrustKeygen(args[1:], stdout, stderr)
 	case "sign":
-		return runTrustSign(args[1:], stdout, stderr)
+		return runTrustSign(args[1:], stdin, stdout, stderr)
 	case "verify":
 		return runTrustVerify(args[1:], stdout, stderr)
 	}
@@ -248,11 +248,15 @@ func bundleKeyArg(v string) (ed25519.PublicKey, error) {
 	return readPub(v)
 }
 
-func runTrustSign(args []string, stdout, stderr io.Writer) error {
+func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	fs := newFlags("trust sign", stderr)
 	keyFile := fs.String("key-file", "", "offline root private key (PKCS#8 PEM)")
 	out := fs.String("out", "", "output directory")
 	prev := fs.String("prev", "", "previous trust.json: serial becomes prev+1 and its revocations are kept")
+	prevSig := fs.String("prev-sig", "", "signature of -prev (default: -prev plus .sig); must verify under this root key")
+	yes := fs.Bool("yes", false, "sign without asking for confirmation (tests only)")
+	var maxVersions listFlag
+	fs.Var(&maxVersions, "max-version", "API=X.Y.Z: cap the rollback marks a client keeps for that web client API (repeatable, not carried over)")
 	serial := fs.Uint64("serial", 0, "serial (default: prev+1, or 1)")
 	validFor := fs.Duration("valid-for", DefaultTrustValidity, "how long the statement is valid")
 	renew := fs.Bool("renew", false, "with -prev: keep its allowed bundle and updater keys")
@@ -278,17 +282,27 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 	now := time.Now().UTC().Truncate(time.Second)
 	t := Trust{
 		Schema: TrustSchema, Serial: *serial,
-		IssuedAt:  now.Format(time.RFC3339),
-		ExpiresAt: now.Add(*validFor).Format(time.RFC3339),
+		IssuedAt:   now.Format(time.RFC3339),
+		ExpiresAt:  now.Add(*validFor).Format(time.RFC3339),
+		MaxVersion: map[string]string{},
 	}
+	var p *Trust
 	if *prev != "" {
+		if *prevSig == "" {
+			*prevSig = *prev + ".sig"
+		}
+		// Only a statement this root key signed is carried forward: the file
+		// on disk or in a pull request is not trusted by itself.
 		raw, err := os.ReadFile(*prev)
 		if err != nil {
 			return err
 		}
-		var p Trust
-		if err := json.Unmarshal(raw, &p); err != nil {
-			return fmt.Errorf("%s: %w", *prev, err)
+		sigRaw, err := os.ReadFile(*prevSig)
+		if err != nil {
+			return fmt.Errorf("-prev needs its signature: %w", err)
+		}
+		if p, err = VerifyTrust(raw, sigRaw, root.Public().(ed25519.PublicKey)); err != nil {
+			return fmt.Errorf("%s does not verify under this root key: %w", *prev, err)
 		}
 		if t.Serial == 0 {
 			t.Serial = p.Serial + 1
@@ -297,8 +311,22 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 			return fmt.Errorf("serial %d is not above the previous %d", t.Serial, p.Serial)
 		}
 		if *renew {
-			t.BundleKeys = append(t.BundleKeys, p.BundleKeys...)
-			updaterKeys = append(updaterKeys, p.UpdaterKeys...)
+			revoked := map[string]bool{}
+			for _, id := range append(append([]string{}, revokeBundle...), revokeUpdater...) {
+				revoked[id] = true
+			}
+			for _, k := range p.BundleKeys {
+				raw, _ := hex.DecodeString(k) // verified
+				if !revoked[KeyID(raw)] {
+					t.BundleKeys = append(t.BundleKeys, k)
+				}
+			}
+			for _, k := range p.UpdaterKeys {
+				id, _ := UpdaterKeyID(k) // verified
+				if !revoked[id] {
+					updaterKeys = append(updaterKeys, k)
+				}
+			}
 		}
 		revokeBundle = append(revokeBundle, p.RevokedBundleKeys...)
 		revokeUpdater = append(revokeUpdater, p.RevokedUpdaterKeys...)
@@ -317,9 +345,24 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 	t.UpdaterKeys = dedupe(updaterKeys)
 	t.RevokedUpdaterKeys = dedupe(revokeUpdater)
 	t.BundleKeys = dedupe(t.BundleKeys)
+	for _, m := range maxVersions {
+		api, version, ok := strings.Cut(m, "=")
+		if !ok {
+			return fmt.Errorf("-max-version %q is not API=X.Y.Z", m)
+		}
+		t.MaxVersion[api] = version
+	}
 	doc, sig, err := SignTrust(t, root)
 	if err != nil {
 		return err
+	}
+	describeTrust(stdout, &t, p)
+	if !*yes {
+		_, _ = fmt.Fprint(stdout, "Sign this statement? [y/N] ")
+		answer, _ := bufio.NewReader(stdin).ReadString('\n')
+		if a := strings.ToLower(strings.TrimSpace(answer)); a != "y" && a != "yes" {
+			return errors.New("aborted, nothing written")
+		}
 	}
 	if err := os.MkdirAll(*out, 0o755); err != nil {
 		return err
@@ -376,4 +419,48 @@ func runTrustVerify(args []string, stdout, stderr io.Writer) error {
 	}
 	_, _ = fmt.Fprintf(stdout, "ok: serial %d, %d bundle key(s), valid until %s, root key %s\n", t.Serial, len(t.BundleKeys), t.ExpiresAt, KeyID(pub))
 	return nil
+}
+
+// describeTrust prints the statement about to be signed with short ids, and
+// what changed against the verified previous one (+ added, - removed).
+func describeTrust(w io.Writer, t, prev *Trust) {
+	if prev == nil {
+		prev = &Trust{}
+	}
+	_, _ = fmt.Fprintf(w, "Trust statement serial %d, valid %s to %s\n", t.Serial, t.IssuedAt, t.ExpiresAt)
+	bundleID := func(k string) string {
+		raw, _ := hex.DecodeString(k)
+		return KeyID(raw) + " (key " + k[:8] + "...)"
+	}
+	updaterID := func(k string) string { id, _ := UpdaterKeyID(k); return id }
+	same := func(k string) string { return k }
+	listChange(w, "allowed bundle keys", t.BundleKeys, prev.BundleKeys, bundleID)
+	listChange(w, "revoked bundle key ids", t.RevokedBundleKeys, prev.RevokedBundleKeys, same)
+	listChange(w, "allowed updater keys", t.UpdaterKeys, prev.UpdaterKeys, updaterID)
+	listChange(w, "revoked updater key ids", t.RevokedUpdaterKeys, prev.RevokedUpdaterKeys, same)
+	for api, v := range t.MaxVersion {
+		_, _ = fmt.Fprintf(w, "  rollback cap: web client API %s at most %s\n", api, v)
+	}
+}
+
+func listChange(w io.Writer, title string, now, before []string, label func(string) string) {
+	_, _ = fmt.Fprintf(w, "%s:\n", title)
+	had := map[string]bool{}
+	for _, k := range before {
+		had[k] = true
+	}
+	is := map[string]bool{}
+	for _, k := range now {
+		is[k] = true
+		mark := "+"
+		if had[k] {
+			mark = " "
+		}
+		_, _ = fmt.Fprintf(w, "  %s %s\n", mark, label(k))
+	}
+	for _, k := range before {
+		if !is[k] {
+			_, _ = fmt.Fprintf(w, "  - %s\n", label(k))
+		}
+	}
 }
