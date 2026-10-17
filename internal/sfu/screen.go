@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/pion/webrtc/v4"
@@ -43,6 +44,13 @@ func (r *Room) receiveScreenLayer(peer *Peer, remote rtpReader, trackID string, 
 			r.groups = make(map[uuid.UUID]*layerGroup)
 		}
 		r.groups[userID] = g
+	} else {
+		// A new capture on a group that outlived the last share: its
+		// wanted layers are announced afresh, whatever they were.
+		g.mu.Lock()
+		g.resetAnnouncedLocked()
+		g.hold = [maxLayers]time.Time{}
+		g.mu.Unlock()
 	}
 	r.mu.Unlock()
 
@@ -81,6 +89,10 @@ func (r *Room) SetScreenLayers(publisher uuid.UUID, layers []Layer) error {
 	}
 	if r.layerMeta == nil {
 		r.layerMeta = make(map[uuid.UUID][]Layer)
+	}
+	if slices.Equal(r.layerMeta[publisher], layers) {
+		r.mu.Unlock()
+		return nil
 	}
 	r.layerMeta[publisher] = slices.Clone(layers)
 	g := r.groups[publisher]

@@ -118,8 +118,8 @@ func TestAdapterTreatsRepeatedKeyframeRequestsAsTrouble(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		b.keyframeRequested(now.Add(time.Duration(i) * 3 * time.Second))
 	}
-	if len(b.plis) > 2 {
-		t.Fatalf("kept %d requests", len(b.plis))
+	if n := b.recentPLIs(now.Add(15 * time.Second)); n > 2 {
+		t.Fatalf("kept %d requests", n)
 	}
 	if _, changed := b.observe(now.Add(15*time.Second), 0, 0); changed {
 		t.Fatal("spread-out requests moved the viewer")

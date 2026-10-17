@@ -47,6 +47,12 @@ const (
 	// (the viewer cannot decode what it gets).
 	adaptPLIs      = 3
 	adaptPLIWindow = 5 * time.Second
+	// adaptPLIGap is the closest two keyframe requests are counted apart; a
+	// viewer asking faster is flooding, which counts as one trouble signal.
+	adaptPLIGap = 100 * time.Millisecond
+	// adaptStall is how long nothing may reach a viewer, while another layer
+	// delivers, before the viewer is moved to that layer.
+	adaptStall = 2 * time.Second
 )
 
 // adapter decides the layer of one automatic viewer from its reports. It has no
@@ -65,10 +71,13 @@ type adapter struct {
 	cleanSince time.Time
 	highStreak int
 
-	rtts  [adaptRTTSamples]time.Duration
-	nRTT  int
-	plis  []time.Time
-	moved bool
+	rtts [adaptRTTSamples]time.Duration
+	nRTT int
+	// plis is a ring of the last adaptPLIs counted keyframe requests, so
+	// recording one is constant work however fast they arrive.
+	plis    [adaptPLIs]time.Time
+	nPLI    int
+	flooded bool
 }
 
 func newAdapter(now time.Time, floor int) *adapter {
@@ -83,23 +92,24 @@ func (a *adapter) setFloor(floor int) {
 	}
 }
 
-// keyframeRequested records a keyframe request of the viewer.
-func (a *adapter) keyframeRequested(now time.Time) {
-	cut := now.Add(-adaptPLIWindow)
-	kept := a.plis[:0]
-	for _, t := range a.plis {
-		if t.After(cut) {
-			kept = append(kept, t)
+// keyframeRequested records a keyframe request of the viewer in constant time.
+// Requests closer together than adaptPLIGap are not counted one by one: they
+// are a flood, which is trouble by itself.
+func (a *adapter) keyframeRequested(now time.Time) (counted bool) {
+	if a.nPLI > 0 {
+		last := a.plis[(a.nPLI-1)%adaptPLIs]
+		if now.Sub(last) < adaptPLIGap {
+			a.flooded = true
+			return false
 		}
 	}
-	a.plis = append(kept, now)
+	a.plis[a.nPLI%adaptPLIs] = now
+	a.nPLI++
+	return true
 }
 
-// observe takes one report: the loss fraction (0..1) and the round trip time
-// (zero when the report did not carry it). It returns the layer to receive
-// and whether that changed.
-func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, bool) {
-	rise := a.recordRTT(rtt)
+// recentPLIs is how many counted keyframe requests are within the window.
+func (a *adapter) recentPLIs(now time.Time) int {
 	cut := now.Add(-adaptPLIWindow)
 	recent := 0
 	for _, t := range a.plis {
@@ -107,6 +117,40 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 			recent++
 		}
 	}
+	return recent
+}
+
+// stalledTo moves the viewer to layer to after nothing reached it for
+// adaptStall although that layer delivers. It reports whether the layer changed.
+func (a *adapter) stalledTo(now time.Time, to int) bool {
+	to = min(to, a.floor)
+	if to == a.layer {
+		return false
+	}
+	a.layer = to
+	a.graceUntil = now.Add(adaptGrace)
+	a.holdUntil = now.Add(a.backoff)
+	a.cleanSince = now
+	a.probeEnd = time.Time{}
+	a.highStreak = 0
+	a.resetPLIs()
+	return true
+}
+
+func (a *adapter) resetPLIs() {
+	a.plis = [adaptPLIs]time.Time{}
+	a.nPLI = 0
+	a.flooded = false
+}
+
+// observe takes one report: the loss fraction (0..1) and the round trip time
+// (zero when the report did not carry it). It returns the layer to receive
+// and whether that changed.
+func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, bool) {
+	rise := a.recordRTT(rtt)
+	recent := a.recentPLIs(now)
+	flooded := a.flooded
+	a.flooded = false
 	if now.Before(a.graceUntil) {
 		return a.layer, false
 	}
@@ -116,7 +160,7 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 	} else {
 		a.highStreak = 0
 	}
-	trouble := severe || a.highStreak >= 2 || rise || recent >= adaptPLIs
+	trouble := severe || a.highStreak >= 2 || rise || flooded || recent >= adaptPLIs
 	if trouble {
 		a.cleanSince = now
 		if a.layer >= a.floor {
@@ -128,7 +172,7 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 		a.layer++
 		a.graceUntil = now.Add(adaptGrace)
 		a.highStreak = 0
-		a.plis = a.plis[:0]
+		a.resetPLIs()
 		if failedProbe {
 			a.backoff = min(a.backoff*2, adaptBackoffMax)
 		}

@@ -135,9 +135,11 @@ locally instead (`make up` or `make dev`).
   at a keyframe. Nothing about the sealing changes. Every frame's AES-GCM
   nonce is 96 fresh random bits from the browser (never derived from the layer,
   stream or counter), so layers add no way to repeat a nonce under the epoch
-  key; at most a few million frames are sealed per key and sender in one
-  30-minute epoch, far below the 2^32 messages NIST allows for random 96-bit
-  nonces, and the tests seal thousands of frames across layers and check that
+  key; in the worst case (a 4K share at 60 FPS in three layers, 100 members)
+  about 2^25.5 frames are sealed per key in one 30-minute epoch, about 2^28.5
+  with eight H.264 slices per frame, below the 2^32 invocations NIST SP
+  800-38D allows for random 96-bit nonces under one key. Rotation needs more
+  than one member, so a lone sender keeps its key until someone joins. The tests seal thousands of frames across layers and check that
   every nonce is a distinct draw. Each layer's transform starts a stream of its
   own whose ID carries the layer in its low two bits, so two layers of a share
   never share a stream, whatever the random rest of the ID is; the counter,
@@ -154,6 +156,12 @@ locally instead (`make up` or `make dev`).
   which a sender is asked to encode are metadata the server sees, like frame
   sizes. A viewer can only change its own layer, a sender only declares its
   own share, and a sender is asked to encode at most its three layers.
+  The server also sees the declared size and frame rate of each layer, each
+  viewer's quality choice and the layer each viewer receives. A layer stream
+  the receiver has not seen yet starts a fresh replay window, so an active or
+  compromised SFU can feed a viewer old recorded frames of a layer it has not
+  received yet (previously the same was true for newly joined viewers); this
+  falls under the active-server limits above, not under an honest SFU.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;
