@@ -24,14 +24,14 @@ binary release.
 
 | Component | Version | License |
 |---|---|---|
-| [Vue](https://vuejs.org) (`vue`, incl. `@vue/*` runtime) | 3.5.43 | MIT |
+| [Vue](https://vuejs.org) (`vue`, incl. `@vue/*` runtime) | 3.5.44 | MIT |
 | [Pinia](https://pinia.vuejs.org) | 4.0.3 | MIT |
-| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.52.0 | ISC |
+| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.56.0 | ISC |
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
 | [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
 | [emoji-picker-element-data](https://github.com/nolanlawson/emoji-picker-element-data) (emoji names and keywords built from [Emojibase](https://emojibase.dev) data, MIT, and [Unicode CLDR](https://cldr.unicode.org) annotations, Unicode License v3) | 1.8.0 | Apache-2.0 |
-| [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.1 | Apache-2.0 |
+| [Swagger UI](https://github.com/swagger-api/swagger-ui) (`swagger-ui-dist`, only on the API reference page `/api/docs`; NOTICE: "swagger-ui, Copyright 2020-2021 SmartBear Software Inc.") | 5.33.2 | Apache-2.0 |
 | [Tailwind CSS](https://tailwindcss.com) (only the generated CSS is shipped) | 3.4.19 | MIT |
 | [ts-mls](https://github.com/LukaJCB/ts-mls) | 1.6.4 | MIT |
 | [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) | 2.1.1 | MIT |
@@ -94,7 +94,7 @@ modules are compiled into `mnema-talk`:
 | `github.com/aws/aws-sdk-go-v2/service/sts` | v1.51.2 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2` | v1.47.1 | Apache-2.0 |
 | `github.com/aws/smithy-go` | v1.28.4 | Apache-2.0 |
-| `github.com/go-chi/chi/v5` | v5.3.2 | MIT |
+| `github.com/go-chi/chi/v5` | v5.4.0 | MIT |
 | `github.com/golang-jwt/jwt/v5` | v5.3.1 | MIT |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause |
 | `github.com/gorilla/websocket` | v1.5.3 | BSD-2-Clause |
