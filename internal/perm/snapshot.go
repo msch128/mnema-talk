@@ -75,7 +75,19 @@ type Snapshot struct {
 	categoryOv map[uuid.UUID]*scope
 	// globalUploadMB is the Owner's global upload limit; nil = the ceiling.
 	globalUploadMB *int
+	// timeouts are the running timeouts; an entry whose time has passed no
+	// longer counts, so expiry needs no reload.
+	timeouts map[uuid.UUID]Timeout
 }
+
+// Timeout is a member's timeout: they keep reading but lose TimeoutMask.
+type Timeout struct {
+	Until  time.Time
+	Reason string
+}
+
+// clock is the time source of timeout checks (replaced by tests).
+var clock = time.Now
 
 func newSnapshot(now time.Time) *Snapshot {
 	return &Snapshot{
@@ -88,6 +100,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		categories: map[uuid.UUID]bool{},
 		channelOv:  map[uuid.UUID]*scope{},
 		categoryOv: map[uuid.UUID]*scope{},
+		timeouts:   map[uuid.UUID]Timeout{},
 	}
 }
 
@@ -140,6 +153,12 @@ type roleRow struct {
 
 type userRoleRow struct{ UserID, RoleID uuid.UUID }
 
+type timeoutRow struct {
+	ID     uuid.UUID
+	Until  time.Time
+	Reason string
+}
+
 type channelRow struct {
 	ID       uuid.UUID
 	Category *uuid.UUID
@@ -156,6 +175,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
+	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id FROM channels`, pgx.RowToStructByPos[channelRow])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
@@ -184,6 +204,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	}
 	for _, id := range owners {
 		s.owners[id] = true
+	}
+	for _, t := range timeouts {
+		s.timeouts[t.ID] = Timeout{Until: t.Until, Reason: t.Reason}
 	}
 	for _, id := range cats {
 		s.categories[id] = true
@@ -252,9 +275,26 @@ func (s *Snapshot) Global(sub Subject) Set {
 		p |= s.roles[id].Permissions
 	}
 	if p.Has(Administrator) {
-		return All
+		p = All
 	}
-	return p & All
+	return s.silence(sub.ID, p&All)
+}
+
+// Timeout returns the member's running timeout.
+func (s *Snapshot) Timeout(userID uuid.UUID) (Timeout, bool) {
+	t, ok := s.timeouts[userID]
+	if !ok || !t.Until.After(clock()) {
+		return Timeout{}, false
+	}
+	return t, true
+}
+
+// silence removes TimeoutMask from p while the member is timed out.
+func (s *Snapshot) silence(userID uuid.UUID, p Set) Set {
+	if _, ok := s.Timeout(userID); ok {
+		return p &^ TimeoutMask
+	}
+	return p
 }
 
 func (sc *scope) apply(p Set, s *Snapshot, user uuid.UUID) Set {
@@ -321,7 +361,7 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	}
 	base := s.Global(sub)
 	if base.Has(Administrator) {
-		return All
+		return base
 	}
 	p := base
 	if cat != uuid.Nil {
@@ -331,7 +371,8 @@ func (s *Snapshot) Channel(sub Subject, ch uuid.UUID) Set {
 	if !p.Has(ViewChannel) {
 		p &^= ChannelScoped
 	}
-	return p
+	// Overwrites must not hand back what the timeout took.
+	return s.silence(sub.ID, p)
 }
 
 // CategoryPerms is what sub holds under a category's own overwrites: the

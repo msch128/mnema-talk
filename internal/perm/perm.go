@@ -55,6 +55,12 @@ const (
 	// ViewAuditLog reads the audit log (doc/moderation.md). Explicit value:
 	// 1<<16 belongs to Manage bots.
 	ViewAuditLog Set = 1 << 17
+	// TimeoutMembers silences members below the actor's highest role for a
+	// while (doc/moderation.md).
+	TimeoutMembers Set = 1 << 18
+	// BanMembers bans and unbans members below the actor's highest role and
+	// lists the bans.
+	BanMembers Set = 1 << 19
 )
 
 // Info describes one permission for clients.
@@ -86,6 +92,8 @@ var Catalog = []Info{
 	{Key: "manage_webhooks", Bit: ManageWebhooks, Name: "manage webhooks"},
 	{Key: "manage_members", Bit: ManageMembers, Name: "manage members"},
 	{Key: "view_audit_log", Bit: ViewAuditLog, Name: "view the audit log"},
+	{Key: "timeout_members", Bit: TimeoutMembers, Name: "timeout members"},
+	{Key: "ban_members", Bit: BanMembers, Name: "ban members"},
 }
 
 var (
@@ -116,8 +124,11 @@ const (
 	// existed. Do not widen it: upgrades must not change behavior.
 	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers
 )
+
+// TimeoutMask is what a timeout takes from a member: they can still read.
+const TimeoutMask = SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
 
 // Has reports whether every bit of need is in s.
 func (s Set) Has(need Set) bool { return s&need == need }
