@@ -2,10 +2,12 @@ import { webcrypto } from 'node:crypto'
 import { afterEach, afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import * as mls from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
-import { DEFAULT_TIMING, type MediaTiming } from './bounds'
+import { DEFAULT_TIMING, PREVIOUS_EPOCH_MS, type MediaTiming } from './bounds'
+import { clock, monotonicNow } from './clock'
 import { mediaTiming, resolveTiming } from './lifetime'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
 import { MediaGroup, type MediaStep } from './group'
+import { mediaGroupId } from './bounds'
 import { sealHeartbeat } from './heartbeat'
 
 const previous = globalThis.crypto
@@ -295,5 +297,191 @@ describe('the maintenance timer', () => {
     await vi.advanceTimersByTimeAsync(20_000)
     expect(steps).toHaveLength(seen)
     await bob.close()
+  }, 30_000)
+})
+
+describe('review fixes', () => {
+  const setClock = clock.now
+  const setWall = clock.wall
+  afterEach(() => {
+    clock.now = setClock
+    clock.wall = setWall
+    vi.restoreAllMocks()
+  })
+
+  it('lets the previous epoch open frames only for a short deadline after the switch', async () => {
+    const { alice, bob, groups, roster, a } = await pair({ absentMs: 1e9 })
+    // Alice founded epoch 0 and committed Bob in: epoch 0 is her previous one, for its short deadline only.
+    expect([...alice.openKeys().keys()].sort()).toEqual([0, 1])
+    expect([...bob.openKeys().keys()]).toEqual([1])
+    vi.setSystemTime(START + timing.rotateMs + timing.rotateJitterMs + 1)
+    const rotated = await alice.maintain()
+    // A rotation removes nobody: members may keep sealing a moment under the old epoch.
+    expect(rotated.soft).toBe(true)
+    await deliver(groups, aliceId, rotated.wires, roster)
+    const bobNow = await bob.sync(roster)
+    expect(bobNow.soft).toBe(true)
+    expect([...alice.openKeys().keys()].sort()).toEqual([1, 2])
+    expect([...bob.openKeys().keys()].sort()).toEqual([1, 2])
+    vi.setSystemTime(START + timing.rotateMs + timing.rotateJitterMs + 1 + PREVIOUS_EPOCH_MS - 1)
+    expect([...alice.openKeys().keys()].sort()).toEqual([1, 2])
+    vi.setSystemTime(START + timing.rotateMs + timing.rotateJitterMs + 1 + PREVIOUS_EPOCH_MS)
+    // Epoch 1's key and verifier set are gone from both: nothing sealed under it opens any more.
+    expect([...alice.openKeys().keys()]).toEqual([2])
+    expect([...bob.openKeys().keys()]).toEqual([2])
+    expect(await roundTrip(a.key, alice.openKeys(), 1, aliceId)).toBeNull()
+    expect(await roundTrip(rotated.key, alice.openKeys(), 2, aliceId)).toEqual([4, 2])
+    await alice.close()
+    await bob.close()
+    expect(alice.openKeys().size).toBe(0)
+  }, 30_000)
+
+  it('does not count a removal as soft', async () => {
+    const { alice, bob } = await pair()
+    vi.setSystemTime(START + timing.absentMs + 1)
+    const removal = await alice.maintain()
+    expect(kinds(removal)).toEqual(['mls_public_message'])
+    expect(removal.soft).toBeUndefined()
+    expect([...alice.openKeys().keys()].sort()).toEqual([1, 2])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('hands the committer role to the next member when the committer is connected but silent', async () => {
+    const { alice, bob, groups, roster } = await pair({ rotateMs: 1e9 })
+    const patience = timing.absentMs + 2 * timing.maintenanceMs
+    // Alice is the lowest id, in the room, and hung: from Bob's side she shows no life.
+    vi.setSystemTime(START + patience - 1)
+    expect((await bob.maintain()).wires).toEqual([])
+    vi.setSystemTime(START + patience + 1)
+    const takeover = await bob.maintain()
+    expect(kinds(takeover)).toEqual(['mls_public_message'])
+    expect(takeover.verification?.members).toEqual([bobId])
+    // She comes back: a fresh offer is let in again by the committer, now Bob.
+    const fresh = await open(aliceId, { rotateMs: 1e9 })
+    groups.set(aliceId, fresh)
+    const offer = await fresh.sync(roster)
+    await bob.receive(aliceId, offer.wires[0] as Uint8Array)
+    const back = await bob.sync(roster)
+    expect(back.verification?.members).toEqual([aliceId, bobId])
+    await Promise.all([alice.close(), bob.close(), fresh.close()])
+  }, 30_000)
+
+  it('has exactly one committer among three, also while the lowest is silent', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    const small = { rotateMs: 1e9, absentMs: 4000, maintenanceMs: 1000, heartbeatMs: 1000 }
+    const alice = await open(aliceId, small)
+    const bob = await open(bobId, small)
+    const carol = await open(carolId, small)
+    const roster = [aliceId, bobId, carolId]
+    const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
+    await alice.sync([aliceId])
+    await deliver(groups, bobId, (await bob.sync(roster)).wires, roster)
+    await deliver(groups, carolId, (await carol.sync(roster)).wires, roster)
+    for (const group of groups.values()) await group.sync(roster)
+    // Bob and Carol keep telling each other they are there; Alice does not.
+    vi.setSystemTime(START + 5000)
+    for (const wire of (await bob.maintain()).wires) await carol.receive(bobId, wire)
+    for (const wire of (await carol.maintain()).wires) await bob.receive(carolId, wire)
+    vi.setSystemTime(START + 7000)
+    const bobStep = await bob.maintain()
+    const carolStep = await carol.maintain()
+    expect(kinds(bobStep)).toContain('mls_public_message')
+    expect(carolStep.wires.filter(w => w[0] !== 0x4d)).toEqual([])
+    await Promise.all([alice.close(), bob.close(), carol.close()])
+  }, 60_000)
+
+  it('does not commit on the tick that finds the browser has slept, only on the next one', async () => {
+    const { alice, bob } = await pair({ absentMs: 1e9 })
+    vi.setSystemTime(START + 10 * 60_000)
+    const woke = await alice.maintain()
+    expect(kinds(woke)).toEqual(['heartbeat'])
+    expect(woke.epoch).toBe(1)
+    vi.setSystemTime(START + 10 * 60_000 + timing.maintenanceMs)
+    expect(kinds(await alice.maintain())).toEqual(['mls_public_message'])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('notices sleep that only the wall clock saw, and tells the member it was dropped for inactivity', async () => {
+    const { alice, bob, roster, groups } = await pair({ rotateMs: 1e9 })
+    let skew = 0
+    clock.wall = () => Date.now() + skew
+    const notices: string[] = []
+    bob.onNotice(notice => notices.push(notice))
+    for (let t = 1000; t <= 4000; t += 1000) {
+      vi.setSystemTime(START + t)
+      await alice.maintain()
+    }
+    vi.setSystemTime(START + 5000)
+    const removal = await alice.maintain()
+    expect(kinds(removal)).toContain('mls_public_message')
+    // The machine slept: the monotonic clock stood still while the wall clock moved on.
+    skew = 3_600_000
+    const told = await bob.receive(aliceId, removal.wires.find(w => w[0] !== 0x4d) as Uint8Array)
+    expect(notices).toEqual(['absent'])
+    expect(kinds(told)).toEqual(['mls_key_package'])
+    await deliver(groups, bobId, told.wires, roster)
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('keeps saying a hostile removal is a removal when the browser did not sleep', async () => {
+    const { alice, bob } = await pair({ rotateMs: 1e9 })
+    const notices: string[] = []
+    bob.onNotice(notice => notices.push(notice))
+    vi.setSystemTime(START + timing.absentMs + 1)
+    const removal = await alice.maintain()
+    await bob.receive(aliceId, removal.wires.find(w => w[0] !== 0x4d) as Uint8Array)
+    expect(notices).toEqual(['removed'])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('ages epochs by the monotonic clock: a wall-clock step neither rotates nor delays', async () => {
+    let mono = 1_000_000
+    clock.now = () => mono
+    const { alice, bob } = await pair({ absentMs: 1e9 })
+    // The wall clock jumping forward a year does not rotate (and looks like sleep: a heartbeat only).
+    vi.setSystemTime(START + 365 * 24 * 3_600_000)
+    expect((await alice.maintain()).wires.filter(w => w[0] !== 0x4d)).toEqual([])
+    // The wall clock going back does not hold a rotation off.
+    vi.setSystemTime(START - 365 * 24 * 3_600_000)
+    mono += timing.rotateMs + timing.rotateJitterMs + 1
+    expect(kinds(await alice.maintain())).toEqual(['mls_public_message'])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
+
+  it('uses the real monotonic clock by default', () => {
+    const spy = vi.spyOn(performance, 'now').mockReturnValue(10)
+    const first = monotonicNow()
+    spy.mockReturnValue(40)
+    expect(monotonicNow() - first).toBe(30)
+  })
+
+  it('accepts the heartbeats of a reloaded member although its clock restarted', async () => {
+    const { alice, bob, b, roster } = await pair({ heartbeatMs: 0, rotateMs: 1e9 })
+    const groupId = mediaGroupId(channelId) as Uint8Array
+    // The old tab's last heartbeat carries a time far ahead of anything the new tab sends.
+    vi.setSystemTime(START + 500)
+    const old = await sealHeartbeat(b.key?.signer as CryptoKey, groupId, bobId, 1, 1e15)
+    await alice.receive(bobId, old as Uint8Array)
+    vi.setSystemTime(START + 3000)
+    const reloaded = await open(bobId, { heartbeatMs: 0, rotateMs: 1e9 })
+    const swap = await alice.receive(bobId, (await reloaded.sync(roster)).wires[0] as Uint8Array)
+    expect(kinds(swap)).toEqual(['mls_welcome', 'mls_public_message'])
+    for (const wire of swap.wires) await reloaded.receive(aliceId, wire)
+    const joined = await reloaded.sync(roster)
+    expect(joined.epoch).toBe(swap.epoch)
+    vi.setSystemTime(START + 6500)
+    const beat = await reloaded.maintain()
+    const wire = beat.wires.find(w => w[0] === 0x4d) as Uint8Array
+    expect(wire).toBeDefined()
+    await alice.receive(bobId, wire)
+    // 3.5 s after the swap and only 0.6 s after the heartbeat: still here (without it, Bob would be 4.1 s silent).
+    vi.setSystemTime(START + 7100)
+    expect((await alice.maintain()).wires.filter(w => w[0] !== 0x4d)).toEqual([])
+    await Promise.all([alice.close(), bob.close(), reloaded.close()])
   }, 30_000)
 })

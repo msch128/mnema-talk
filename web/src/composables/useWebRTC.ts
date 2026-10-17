@@ -9,7 +9,7 @@ import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSup
 import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
 import { browserMediaCall } from '../lib/media/browserCall'
-import { installMediaCallFactory, mediaCall } from '../lib/media/api'
+import { installMediaCallFactory, mediaCall, type MediaNotice } from '../lib/media/api'
 import { playSoundEffect } from '../lib/soundEffects'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
@@ -84,10 +84,11 @@ let releaseUnprotectedCapture: () => void = () => {}
 
 // The group dropped this member without being asked: whoever relays the call
 // can do that, so say so once per call.
-function announceMediaRekeyed() {
+function announceMediaRekeyed(notice: MediaNotice) {
   if (mediaRekeyAnnounced) return
   mediaRekeyAnnounced = true
-  useToastStore().info(t('voice.mediaRekeyed'))
+  // A member dropped after its own browser slept was not removed by anyone hostile.
+  useToastStore().info(t(notice === 'absent' ? 'voice.mediaRefreshed' : 'voice.mediaRekeyed'))
 }
 
 function announceMediaUnprotected() {

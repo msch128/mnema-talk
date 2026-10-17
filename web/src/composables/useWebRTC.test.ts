@@ -247,7 +247,7 @@ const permissiveMediaCall: MediaCall = {
 function installRecordingCall(allow = true) {
   let onKeyListener: (() => void) | null = null
   let onWireListener: ((channelId: string, wire: string) => void) | null = null
-  let onNoticeListener: ((notice: 'removed') => void) | null = null
+  let onNoticeListener: ((notice: 'removed' | 'absent') => void) | null = null
   let onVerificationListener: ((verification: MediaVerification | null) => void) | null = null
   const call = {
     start: vi.fn(),
@@ -257,14 +257,14 @@ function installRecordingCall(allow = true) {
     stop: vi.fn(),
     onKey: vi.fn((listener: () => void) => { onKeyListener = listener }),
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
-    onNotice: vi.fn((listener: (notice: 'removed') => void) => { onNoticeListener = listener }),
+    onNotice: vi.fn((listener: (notice: 'removed' | 'absent') => void) => { onNoticeListener = listener }),
     onVerification: vi.fn((listener: (verification: MediaVerification | null) => void) => { onVerificationListener = listener }),
     protectSender: vi.fn(() => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
     protectIncoming: vi.fn(() => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
-    fireNotice() { onNoticeListener?.('removed') },
+    fireNotice(notice: 'removed' | 'absent' = 'removed') { onNoticeListener?.(notice) },
     fireVerification(verification: MediaVerification | null) { onVerificationListener?.(verification) },
   }
   installMediaCall(call)
@@ -3437,6 +3437,18 @@ describe('protected media', () => {
     await again
     call.fireNotice()
     expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRekeyed'), t('voice.mediaRekeyed')])
+  })
+
+  it('says the call was refreshed, not reset, when the member was dropped after its own inactivity', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    call.fireNotice('absent')
+    call.fireNotice('removed')
+    expect(useToastStore().toasts.map(toast => toast.text)).toEqual([t('voice.mediaRefreshed')])
+    expect(t('voice.mediaRefreshed')).not.toBe(t('voice.mediaRekeyed'))
   })
 
   it('arms every receiver before it answers the offer', async () => {

@@ -14,7 +14,8 @@ export interface MediaGuard {
    * names the publisher. Arming an armed receiver only names the publisher.
    */
   armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
-  setKey(epoch: number, key: EpochKeys, replace?: boolean): void
+  /** With soft, the epoch was reached by a commit that removed nobody: sealing may stay one moment on the epoch left. */
+  setKey(epoch: number, key: EpochKeys, replace?: boolean, soft?: boolean): void
   /** The call lost its group: the last keys may seal only a little longer. */
   staleKeys(): void
   /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
@@ -54,7 +55,7 @@ export function createMediaGuard(): MediaGuard {
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
   // The last key message, given to a line armed later; seq lets the shared
   // worker apply a message once however many lines deliver it.
-  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, seq: number } | null = null
+  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, seq: number } | null = null
   let seq = 0
   let statsListener: ((senders: Record<string, FrameStats>) => void) | null = null
 
@@ -103,11 +104,13 @@ export function createMediaGuard(): MediaGuard {
   return {
     armSender: (sender, channelId, senderId) => arm(sender, 'send', channelId, senderId),
     armReceiver: armIncoming,
-    setKey(epoch, key, replace = false) {
+    setKey(epoch, key, replace = false, soft = false) {
       seq += 1
-      const message = replace
-        ? { type: 'key' as const, epoch, key, replace: true as const, seq }
-        : { type: 'key' as const, epoch, key, seq }
+      const message = {
+        type: 'key' as const, epoch, key, seq,
+        ...(replace ? { replace: true as const } : {}),
+        ...(soft && !replace ? { soft: true as const } : {}),
+      }
       current = message
       for (const port of ports) port.postMessage(message)
     },

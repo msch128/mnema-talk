@@ -95,8 +95,25 @@ locally instead (`make up` or `make dev`).
   no joins or leaves every member gets a new exporter key, and the committer's
   own leaf secrets are replaced (post-compromise security for it). The
   schedule is the epoch's age, which every member knows, not a timer that
-  restarts when the committer changes. Receivers hold the previous epoch's
-  key, so media keeps playing across the switch; the cost is one small commit
+  restarts when the committer changes, and it is measured with the browser's
+  monotonic clock, so a wall-clock step moves nothing. Receivers hold the
+  previous epoch's key for 30 seconds after a switch within the same group,
+  so media keeps playing while the commit reaches the slowest member; after
+  that deadline its key and verifier set are deleted and nothing sealed or
+  signed under it opens. A member removed by a commit can therefore inject
+  frames under the epoch it was in for at most those 30 seconds. After a
+  commit that only adds a member or rotates, a sender goes on sealing under
+  the epoch it left for 1.5 seconds so receivers have the commit before the
+  first frame of the new epoch arrives; after a commit that removes someone
+  it seals under the new epoch at once, so a removed member never reads
+  anything sealed after the commit (receivers that have not yet processed the
+  commit drop those few frames for about a second). A committer that is
+  connected but shows no sign of life for longer than the absence limit plus
+  two maintenance intervals (a hung tab) is skipped when choosing the
+  committer: the next-lowest member takes over and removes it, and it is
+  let in again normally if it returns. A browser that wakes from sleep does
+  not commit on the tick that finds it slept, so the messages queued meanwhile
+  are handled first. The cost is one small commit
   per 30 minutes per Talk and nothing per frame. A member that showed no sign
   of life for 20 minutes is removed from the group (rekeyed out, so what it
   held no longer opens anything new) and must be let in again with a fresh

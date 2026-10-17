@@ -80,8 +80,10 @@ describe('media transform guard', () => {
     const next = {} as EpochKeys
     guard.setKey(5, next)
     expect(created.channels[1]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 5, key: next, seq: 2 })
-    guard.setKey(0, key, true)
-    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 0, key, replace: true, seq: 3 })
+    guard.setKey(6, next, false, true)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 6, key: next, soft: true, seq: 3 })
+    guard.setKey(0, key, true, true)
+    expect(created.channels[0]?.port1.postMessage).toHaveBeenCalledWith({ type: 'key', epoch: 0, key, replace: true, seq: 4 })
     guard.staleKeys()
     expect(created.channels[1]?.port1.postMessage).toHaveBeenCalledWith({ type: 'stale' })
     created.channels[0]?.port1.postMessage.mockImplementationOnce(() => { throw new Error('closed') })

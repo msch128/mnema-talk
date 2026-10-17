@@ -339,7 +339,8 @@
     "kicked": "An admin removed you from the voice channel.",
     "roomFull": "This voice channel is full. Try again when someone leaves.",
     "mediaUnprotected": "This browser cannot protect the call. Microphone, camera and screen stay off.",
-    "mediaRekeyed": "The media keys of this call were reset by someone else in it or by the server. The call re-keys itself."
+    "mediaRekeyed": "The media keys of this call were reset by someone else in it or by the server. The call re-keys itself.",
+    "mediaRefreshed": "The call was refreshed after a period of inactivity. Its media keys were renewed and the call re-keys itself."
   },
   "audio": {
     "settings": "Audio settings",

@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
-import { PREVIOUS_GROUP_MS, STALE_SEAL_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
 
 const previous = globalThis.crypto
 let alice: TestMember
@@ -157,7 +157,9 @@ describe('media frame worker', () => {
   })
 
   it('counts, per publisher, frames it opened and frames from an epoch newer than any key', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] })
+    // The worker reads the monotonic clock.
+    let at = 5000
+    vi.spyOn(performance, 'now').mockImplementation(() => at)
     const key = await epochKeys(5)
     const sealedAt = async (epoch: number, senderId = 'alice') => {
       const packet = await seal({ keys: key, epoch, channelId: 'channel', senderId, plaintext: new Uint8Array([4]) })
@@ -186,13 +188,13 @@ describe('media frame worker', () => {
     enqueue({ data: asBuffer(await sealedAt(5)) })
     await new Promise(resolve => setTimeout(resolve, 10))
     expect(posted).toHaveLength(1)
-    vi.setSystemTime(Date.now() + 1500)
+    at += 1500
     enqueue({ data: asBuffer(await sealedAt(2)) })
     await vi.waitFor(() => expect(posted).toHaveLength(2))
     expect(posted[1]).toEqual({ type: 'stats', senders: { alice: { opened: 2, newer: 1, epoch: 5 } } })
     close()
     await finished
-    vi.useRealTimers()
+    vi.mocked(performance.now).mockRestore()
   })
 
   it('drops video whose codec is unknown or whose type is not a picture', async () => {
@@ -333,6 +335,70 @@ describe('media frame worker', () => {
     await new Promise(resolve => setTimeout(resolve, 10))
   })
 
+  describe('across the epochs of one group', () => {
+    async function sealedAt(keys: EpochKeys, epoch: number, byte: number) {
+      const packet = await seal({ keys, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([byte]) })
+      if (!packet) throw new Error('expected a sealed frame')
+      return packet.buffer
+    }
+
+    function bytes(frames: unknown[]) {
+      return frames.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])
+    }
+
+    it('opens the previous epoch only for a short deadline after the switch, then forgets its key', async () => {
+      const first = await epochKeys(31)
+      const second = await epochKeys(32)
+      const now = vi.spyOn(performance, 'now')
+      let clock = 3_000_000
+      now.mockImplementation(() => clock)
+      const keyed = [{ type: 'key', epoch: 1, key: first, seq: 1 }, { type: 'key', epoch: 2, key: second, seq: 2 }]
+      const packets = async () => [await sealedAt(first, 1, 1), await sealedAt(second, 2, 2)]
+      // Just inside the deadline both open (a commit still on its way to the slowest member).
+      expect(bytes(await frames('recv', await packets(), keyed, { afterCommands: () => { clock += PREVIOUS_EPOCH_MS - 1 } }))).toEqual([[1], [2]])
+      // After it the old epoch's key is gone: a member removed by the switch can inject nothing sealed under it.
+      expect(bytes(await frames('recv', await packets(), keyed, { afterCommands: () => { clock += PREVIOUS_EPOCH_MS } }))).toEqual([[2]])
+      now.mockRestore()
+    })
+
+    it('does not extend the deadline of an older epoch when yet another one arrives', async () => {
+      const keys = [await epochKeys(33), await epochKeys(34), await epochKeys(35)]
+      const now = vi.spyOn(performance, 'now')
+      now.mockReturnValue(4_000_000)
+      const opened = await frames('recv', [await sealedAt(keys[1] as EpochKeys, 2, 2), await sealedAt(keys[0] as EpochKeys, 1, 1), await sealedAt(keys[2] as EpochKeys, 3, 3)], [
+        { type: 'key', epoch: 1, key: keys[0], seq: 1 },
+        { type: 'key', epoch: 2, key: keys[1], seq: 2 },
+        { type: 'key', epoch: 3, key: keys[2], seq: 3 },
+      ])
+      // Only the epoch right before the newest is held at all.
+      expect(bytes(opened)).toEqual([[2], [3]])
+      now.mockRestore()
+    })
+
+    it('seals under the epoch it left for a moment after a commit that removed nobody, never longer than the grace', async () => {
+      const first = await epochKeys(36)
+      const second = await epochKeys(37)
+      const now = vi.spyOn(performance, 'now')
+      let clock = 5_000_000
+      now.mockImplementation(() => clock)
+      const commands = [{ type: 'key', epoch: 1, key: first, seq: 1 }, { type: 'key', epoch: 2, key: second, soft: true, seq: 2 }]
+      const during = await frames('send', [new Uint8Array([1]).buffer], commands, { afterCommands: () => { clock += SEND_GRACE_MS - 1 } })
+      expect(await open(new Map([[1, first]]), new Uint8Array((during[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([1]))
+      const after = await frames('send', [new Uint8Array([1]).buffer], commands, { afterCommands: () => { clock += SEND_GRACE_MS } })
+      expect(await open(new Map([[2, second]]), new Uint8Array((after[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([1]))
+      now.mockRestore()
+    })
+
+    it('seals under the new epoch at once after a removal or a new group, and after the old one expired', async () => {
+      const first = await epochKeys(38)
+      const second = await epochKeys(39)
+      const removal = await frames('send', [new Uint8Array([2]).buffer], [{ type: 'key', epoch: 1, key: first, seq: 1 }, { type: 'key', epoch: 2, key: second, seq: 2 }])
+      expect(await open(new Map([[2, second]]), new Uint8Array((removal[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([2]))
+      const regrouped = await frames('send', [new Uint8Array([3]).buffer], [{ type: 'key', epoch: 1, key: first, seq: 1 }, { type: 'key', epoch: 0, key: second, soft: true, replace: true, seq: 2 }])
+      expect(await open(new Map([[0, second]]), new Uint8Array((regrouped[0] as { data: ArrayBuffer }).data))).toEqual(new Uint8Array([3]))
+    })
+  })
+
   describe('while the call regroups', () => {
     async function sealedAt(keys: EpochKeys, epoch: number, byte: number) {
       const packet = await seal({ keys, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([byte]) })
@@ -367,7 +433,7 @@ describe('media frame worker', () => {
     it('stops opening the previous group\'s frames after a while', async () => {
       const old = await epochKeys(25)
       const fresh = await epochKeys(26)
-      const now = vi.spyOn(Date, 'now')
+      const now = vi.spyOn(performance, 'now')
       let clock = 1_000_000
       now.mockImplementation(() => clock)
       const opened = await frames('recv', [await sealedAt(old, 2, 5), await sealedAt(fresh, 0, 6)], [
@@ -380,7 +446,7 @@ describe('media frame worker', () => {
 
     it('seals with the last keys only a little while after the group is gone, until a new key comes', async () => {
       const old = await epochKeys(27)
-      const now = vi.spyOn(Date, 'now')
+      const now = vi.spyOn(performance, 'now')
       let clock = 2_000_000
       now.mockImplementation(() => clock)
       const keyed = [{ type: 'key', epoch: 3, key: old, seq: 1 }, { type: 'stale' }]

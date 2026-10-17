@@ -1,7 +1,10 @@
 import type { MediaVerification } from './verify'
 
-/** Keys changed in a way the member did not ask for. */
-export type MediaNotice = 'removed'
+/**
+ * Keys changed in a way the member did not ask for: 'removed' by someone else
+ * in the call, 'absent' after this browser itself slept and was dropped for silence.
+ */
+export type MediaNotice = 'removed' | 'absent'
 
 export interface MediaCall {
   start(channelId: string, userId: string): void
