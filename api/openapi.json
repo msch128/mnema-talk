@@ -8445,7 +8445,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Sets the session cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username; the account-wide lockout only rejects wrong passwords, so the correct password always signs in. Limited requests answer 429 with Retry-After.",
+        "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, only devices that signed in to the account before (known-device cookie or recent address) get their password checked; everyone else is answered 429 without a check. Limited requests answer 429 with Retry-After.",
         "operationId": "login",
         "requestBody": {
           "content": {
@@ -8545,7 +8545,7 @@
     },
     "/api/auth/logout": {
       "post": {
-        "description": "Clears the session cookie. Needs no session.",
+        "description": "Clears the session cookie and revokes this session, so a copied cookie stops working. Needs no session.",
         "operationId": "logout",
         "responses": {
           "204": {

@@ -50,7 +50,10 @@ locally instead (`make up` or `make dev`).
   (`POST /api/auth/logout-all`) increments it, which revokes every existing
   session of that user immediately, including copied cookies, and closes the
   user's open WebSockets (after a password change the current client
-  reconnects with its fresh cookie).
+  reconnects with its fresh cookie). Each token also has its own id; signing
+  out records it in a small table until the token would have expired, so a
+  copied cookie of that one session stops working at once. Tokens issued
+  before this existed carry no id and stay valid until they expire.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
@@ -100,9 +103,16 @@ locally instead (`make up` or `make dev`).
   lockout per client address and username after repeated failures (1, 5, then
   30 minutes; the tier is forgotten after an hour without failures). A much
   higher per-account cap guards against guessing from many addresses: once it
-  trips, wrong passwords for that account are answered with 429 and count
-  triple against their address, but the correct password always signs in (and
-  resets the cap), so neither one address nor many can lock the owner out.
+  trips, only devices that signed in to that account before get their
+  password checked (a signed, long-lived known-device cookie set at login, or
+  a client address that signed in within 30 days); everyone else is answered
+  429 without any password check, so a distributed guesser stops learning
+  anything. Known devices still count wrong guesses triple. The cost: while
+  the cap is on, the owner can only sign in from a known device, or has to
+  wait for the cap to expire (a minute, rising with repeated trips). Password
+  hashing for login, registration, re-authentication and password changes
+  shares one concurrency limit, so a flood of attempts cannot starve the
+  server. Passwords need at least 10 characters, 14 for the Owner account.
   Rate-limit and lockout keys treat an IPv6 /64 as one client. Login attempts
   with a username that cannot exist are rejected before they are tracked, and
   limiter memory is capped. Invite codes are checked before any password

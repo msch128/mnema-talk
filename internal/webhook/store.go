@@ -211,8 +211,8 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 			return httpx.ErrConflict(fmt.Sprintf("a channel can have at most %d webhooks", maxPerChannel))
 		}
 		var bot uuid.UUID
-		// "!" is no password hash: the account can never sign in (Login skips
-		// bots anyway).
+		// "!" is no password hash: the account can never sign in (Login, sessions and
+		// re-authentication skip bots).
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO users (username, display_name, password_hash, role, is_bot)
 			VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,

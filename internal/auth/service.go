@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 
 const (
 	MinPasswordLength = 10
+	// MinOwnerPasswordLength applies to administrator accounts (also the seeded one).
+	MinOwnerPasswordLength = 14
 	// MaxPasswordBytes is bcrypt's input limit; longer inputs would be silently truncated.
 	MaxPasswordBytes   = 72
 	MaxDisplayNameLen  = 24
@@ -131,6 +134,16 @@ var passwordCost = bcryptCost
 // times do not reveal which accounts exist.
 var dummyHash = newDummyHash()
 
+// bcryptSlots bounds how many password hashes run at once across login,
+// register, reauth and password changes, so a flood of attempts cannot starve
+// the CPU of everything else.
+var bcryptSlots = make(chan struct{}, max(2, runtime.NumCPU()))
+
+func acquireBcrypt() func() {
+	bcryptSlots <- struct{}{}
+	return func() { <-bcryptSlots }
+}
+
 func newDummyHash() []byte {
 	h, _ := bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), passwordCost)
 	return h
@@ -138,6 +151,7 @@ func newDummyHash() []byte {
 
 // burnPasswordCheck spends the same bcrypt work as checking a real password.
 func burnPasswordCheck(password string) {
+	defer acquireBcrypt()()
 	_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(password))
 }
 
@@ -149,18 +163,33 @@ func isUniqueViolation(err error) bool {
 }
 
 func HashPassword(password string) (string, error) {
+	defer acquireBcrypt()()
 	b, err := bcrypt.GenerateFromPassword([]byte(password), passwordCost)
 	return string(b), err
 }
 
 func CheckPassword(password, hash string) bool {
+	defer acquireBcrypt()()
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) == nil
 }
 
-// ValidatePassword enforces the password policy.
+// ValidatePassword enforces the password policy for regular accounts.
 func ValidatePassword(password string) error {
-	if len([]rune(password)) < MinPasswordLength {
-		return httpx.ErrInvalidInput(fmt.Sprintf("password must be at least %d characters", MinPasswordLength))
+	return validatePasswordMin(password, MinPasswordLength)
+}
+
+// ValidatePasswordFor enforces the policy for a role: the Owner (admin) account
+// is the one worth guessing, so it needs a longer password.
+func ValidatePasswordFor(role, password string) error {
+	if role == RoleAdmin {
+		return validatePasswordMin(password, MinOwnerPasswordLength)
+	}
+	return ValidatePassword(password)
+}
+
+func validatePasswordMin(password string, min int) error {
+	if len([]rune(password)) < min {
+		return httpx.ErrInvalidInput(fmt.Sprintf("password must be at least %d characters", min))
 	}
 	if len(password) > MaxPasswordBytes {
 		return httpx.ErrInvalidInput(fmt.Sprintf("password must be at most %d bytes", MaxPasswordBytes))
@@ -202,9 +231,12 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 }
 
 // sessionUser loads the user behind a session and its current token version.
-func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, int, error) {
+// A session whose jti was revoked by logout (or a bot account) does not load.
+func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID, jti string) (*User, int, error) {
 	var tv int
-	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users WHERE id = $1 AND disabled_at IS NULL`, id), &tv)
+	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users
+		WHERE id = $1 AND disabled_at IS NULL AND NOT is_bot
+		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)`, id, jti), &tv)
 	return u, tv, err
 }
 
@@ -214,7 +246,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 	var tv int
 	var disabled bool
 	u, err := scanUser(p.QueryRow(ctx,
-		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1)`,
+		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
 		burnPasswordCheck(password)
@@ -325,9 +357,15 @@ func ChangePassword(ctx context.Context, p *db.Pool, userID uuid.UUID, current, 
 	if err := ValidatePassword(next); err != nil {
 		return 0, err
 	}
-	var hash string
+	var hash, role string
 	if err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&hash); err != nil {
 		return 0, fmt.Errorf("load password hash: %w", err)
+	}
+	if err := p.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, userID).Scan(&role); err != nil {
+		return 0, fmt.Errorf("load role: %w", err)
+	}
+	if err := ValidatePasswordFor(role, next); err != nil {
+		return 0, err
 	}
 	if !CheckPassword(current, hash) {
 		return 0, ErrWrongPassword

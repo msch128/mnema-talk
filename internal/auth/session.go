@@ -43,6 +43,26 @@ func (s *Sessions) Start(w http.ResponseWriter, u *User, tokenVersion int) error
 	return nil
 }
 
+// Revoke records the request's session id as signed out until its token would
+// have expired, and prunes entries that already have. A missing, invalid,
+// expired or legacy (no jti) token is ignored.
+func (s *Sessions) Revoke(r *http.Request) error {
+	c, err := r.Cookie(s.CookieName())
+	if err != nil || c.Value == "" {
+		return nil
+	}
+	claims, err := ParseToken(c.Value, s.Secret)
+	if err != nil || claims.ID == "" || claims.ExpiresAt == nil {
+		return nil
+	}
+	if _, err := s.DB.Exec(r.Context(), `DELETE FROM revoked_sessions WHERE expires_at < NOW()`); err != nil {
+		return err
+	}
+	_, err = s.DB.Exec(r.Context(), `INSERT INTO revoked_sessions (jti, expires_at) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		claims.ID, claims.ExpiresAt.Time)
+	return err
+}
+
 // End clears the session cookie.
 func (s *Sessions) End(w http.ResponseWriter) {
 	http.SetCookie(w, s.cookie("", -1))

@@ -50,28 +50,137 @@ func TestLoginRejectsImplausibleUsernamesWithoutTracking(t *testing.T) {
 	}
 }
 
-func TestAccountLockoutNeverBlocksTheCorrectPassword(t *testing.T) {
-	h := newLoginHandler()
+// postLoginWith signs in with the given cookies and returns the response.
+func postLoginWith(h *Handler, ip, username, password string, cookies ...*http.Cookie) *httptest.ResponseRecorder {
+	body, _ := json.Marshal(LoginRequest{Username: username, Password: password})
+	r := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(string(body)))
+	r.RemoteAddr = ip + ":1234"
+	for _, c := range cookies {
+		r.AddCookie(c)
+	}
+	rec := httptest.NewRecorder()
+	httpx.Handle(h.login).ServeHTTP(rec, r)
+	return rec
+}
+
+func tripAccountCap(t *testing.T, h *Handler) {
+	t.Helper()
 	// 100 wrong guesses spread over 20 addresses: below every per-address
-	// limit, but enough to trip the account-wide lockout.
+	// limit, but enough to trip the account-wide cap.
 	for i := 0; i < 100; i++ {
 		postLogin(h, fmt.Sprintf("198.51.100.%d", i%20), "Herzog", "wrong-guess")
 	}
 	if locked, _ := h.accountFailures.IsLockedOut("herzog"); !locked {
 		t.Fatal("account lockout did not trigger")
 	}
+}
 
-	if code := postLogin(h, "203.0.113.9", "herzog", "wrong-guess"); code != http.StatusTooManyRequests {
-		t.Fatalf("wrong password during account lockout: got %d, want 429", code)
+func TestAccountCapOnlyEvaluatesPasswordsOfKnownDevices(t *testing.T) {
+	h := newLoginHandler()
+	// The owner signed in from a browser (cookie) before the attack.
+	first := postLoginWith(h, "192.0.2.50", "Herzog", testPassword)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first login: %d", first.Code)
 	}
-	if code := postLogin(h, "192.0.2.1", "Herzog", testPassword); code != http.StatusOK {
-		t.Fatalf("correct password during account lockout: got %d, want 200", code)
+	var device *http.Cookie
+	for _, c := range first.Result().Cookies() {
+		if strings.HasPrefix(c.Name, "mnema_dev_") {
+			device = c
+		}
+	}
+	if device == nil || !device.HttpOnly || device.Path != "/api/auth" {
+		t.Fatalf("known-device cookie missing or weak: %+v", device)
+	}
+
+	tripAccountCap(t, h)
+
+	// A stranger with the right password is not even evaluated.
+	verified := false
+	inner := h.verify
+	h.verify = func(ctx context.Context, u, p string) (*User, int, error) { verified = true; return inner(ctx, u, p) }
+	if code := postLoginWith(h, "203.0.113.9", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
+		t.Fatalf("unknown device during account cap: got %d, want 429", code)
+	}
+	if verified {
+		t.Fatal("password was evaluated for an unknown device")
+	}
+	// A forged or foreign cookie does not make a device known.
+	forged := &http.Cookie{Name: device.Name, Value: "9999999999.AAAA"}
+	if code := postLoginWith(h, "203.0.113.9", "Herzog", testPassword, forged).Code; code != http.StatusTooManyRequests {
+		t.Fatalf("forged cookie: got %d, want 429", code)
+	}
+	// The cookie of the same account is honoured from a new address ...
+	if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword, device).Code; code != http.StatusOK {
+		t.Fatalf("known browser during account cap: got %d, want 200", code)
 	}
 	if locked, _ := h.accountFailures.IsLockedOut("herzog"); locked {
-		t.Fatal("successful login did not reset the account lockout")
+		t.Fatal("successful login did not reset the account cap")
 	}
-	if code := postLogin(h, "203.0.113.10", "Herzog", "wrong-guess"); code != http.StatusUnauthorized {
-		t.Fatalf("after reset a wrong password is a plain 401, got %d", code)
+	// ... and so is a recently seen address (native clients have no cookies).
+	tripAccountCap(t, h)
+	if code := postLoginWith(h, "192.0.2.77", "Herzog", testPassword).Code; code != http.StatusOK {
+		t.Fatalf("recently seen address during account cap: got %d, want 200", code)
+	}
+}
+
+func TestKnownDeviceCookieExpiresAndIsPerAccount(t *testing.T) {
+	s := &Sessions{Secret: strings.Repeat("s", 32)}
+	w := httptest.NewRecorder()
+	s.markDevice(w, "herzog")
+	c := w.Result().Cookies()[0]
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(c)
+	if !s.hasDeviceCookie(r, "herzog") || s.hasDeviceCookie(r, "other") {
+		t.Fatal("cookie must be valid for its own account only")
+	}
+	expired := &http.Cookie{Name: c.Name, Value: "1." + s.deviceMAC("herzog", 1)}
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(expired)
+	if s.hasDeviceCookie(r, "herzog") {
+		t.Fatal("expired cookie accepted")
+	}
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(&http.Cookie{Name: c.Name, Value: "nodot"})
+	if s.hasDeviceCookie(r, "herzog") {
+		t.Fatal("malformed cookie accepted")
+	}
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(&http.Cookie{Name: c.Name, Value: "x.y"})
+	if s.hasDeviceCookie(r, "herzog") {
+		t.Fatal("non-numeric expiry accepted")
+	}
+}
+
+func TestKnownAddrsAreBounded(t *testing.T) {
+	k := &knownAddrs{}
+	for i := 0; i < knownIPMax+5; i++ {
+		k.add("a", fmt.Sprint(i))
+	}
+	if len(k.m) > knownIPMax {
+		t.Fatalf("known addresses grew to %d", len(k.m))
+	}
+	for key := range k.m {
+		k.m[key] = time.Now().Add(-2 * knownIPTTL)
+	}
+	k.add("a", "fresh")
+	if len(k.m) != 1 || !k.has("a", "fresh") || k.has("a", "0") {
+		t.Fatalf("expired entries not pruned: %d", len(k.m))
+	}
+	var nilK *knownAddrs
+	nilK.add("a", "b")
+	if nilK.has("a", "b") {
+		t.Fatal("nil set knows nothing")
+	}
+}
+
+func TestAccountCapStillCountsWrongGuessesOfKnownDevices(t *testing.T) {
+	h := newLoginHandler()
+	if postLoginWith(h, "192.0.2.50", "Herzog", testPassword).Code != http.StatusOK {
+		t.Fatal("login")
+	}
+	tripAccountCap(t, h)
+	if code := postLogin(h, "192.0.2.50", "herzog", "wrong-guess"); code != http.StatusTooManyRequests {
+		t.Fatalf("wrong password from a known device during the cap: got %d, want 429", code)
 	}
 }
 

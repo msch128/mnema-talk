@@ -20,7 +20,7 @@ func (s *Sessions) AuthenticateRequest(r *http.Request) (*User, int, error) {
 	if err != nil {
 		return nil, 0, errNoSession
 	}
-	u, tv, err := sessionUser(r.Context(), s.DB, claims.UserID)
+	u, tv, err := sessionUser(r.Context(), s.DB, claims.UserID, claims.ID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, 0, errNoSession
 	}
