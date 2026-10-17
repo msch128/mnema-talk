@@ -396,6 +396,9 @@ func bannedError(ctx context.Context, p db.Querier, id uuid.UUID) error {
 
 // RunBanExpiry lifts bans whose time has come, every interval until ctx ends.
 func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
+	if h.Sessions == nil || h.Sessions.DB == nil {
+		return
+	}
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	for {

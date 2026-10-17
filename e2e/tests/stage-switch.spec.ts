@@ -1,5 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -66,6 +66,7 @@ async function twoMembers(browser: Browser, tag: string) {
   const channel = `${VOICE_CHANNEL} ${tag}`
   const bName = suiteMember.username
   await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
+  if (await awaitApiBudget(a)) await a.reload()
   expect((await apiFetch(a, 'POST', '/api/admin/channels', { name: channel, type: 'voice' })).status).toBe(201)
   await b.goto('/')
   // The suite's shared member: registrations are limited to ten an hour from

@@ -1,7 +1,72 @@
 # Moderation and the audit log
 
-This page describes the audit log. Code: [`internal/audit`](../internal/audit/).
+This page describes moderation (timeouts, bans, kicking) and the audit log that
+records it. Code: [`internal/auth/moderation.go`](../internal/auth/moderation.go),
+[`internal/perm`](../internal/perm/) and [`internal/audit`](../internal/audit/).
 Permissions and the hierarchy are in [roles-and-permissions.md](roles-and-permissions.md).
+
+## Who may moderate whom
+
+Every moderation action needs its permission **and** a highest role strictly
+above the member's. The Owner can never be targeted, and nobody can moderate
+themselves. The checks run on the server inside the transaction that changes
+the member, under the permission lock, so a concurrent role change cannot move
+the target out of reach between the check and the write.
+
+| Action | Permission | Notes |
+|---|---|---|
+| Timeout, end a timeout | *Timeout members* | `POST` / `DELETE /api/admin/users/{id}/timeout` |
+| Ban, unban, list bans | *Ban members* | `POST` / `DELETE /api/admin/users/{id}/ban`, `GET /api/admin/bans` |
+| Kick from the server | *Manage members* | The existing **Disable**: ends sessions and blocks sign-in until **Enable**. No record beyond the audit log |
+| Remove from a Talk | *Disconnect members* | The existing kick from a Talk |
+
+## Timeouts
+
+A timeout silences a member until a time passes: they can still read, and still
+delete or take back their own words, but they lose *Send messages*, *Attach
+files*, *Add reactions*, *Mention everyone*, *Connect*, *Speak* and *Video*
+(`perm.TimeoutMask`). Durations run from 5 seconds to 28 days; the interface
+offers 1 min, 5 min, 1 h, 1 day, 1 week or a custom time, with an optional
+reason of up to 200 characters.
+
+It is enforced in the permission snapshot, so every surface honours it with no
+extra check: REST (messages, replies, edits, reactions, uploads), the WebSocket
+hub (joining a Talk, typing), and the SFU (it drops audio and video without
+*Speak* and *Video*). Channel overwrites cannot hand back what a timeout took.
+Starting a timeout rebuilds the permission state at once, which removes the
+member from the Talk they are in (`voice_kicked`, `missing_permission`). It ends
+by itself: the end time is compared at every check, so nothing has to run, and
+the client counts down and refetches its permissions when it reaches zero.
+
+The member gets a `moderation_notice` event (shown as "You were timed out for
+1 h: spam") and sees a banner with the remaining time and the reason
+(`GET /api/permissions` carries `timeout_until` and `timeout_reason`). Everyone
+sees that a member is timed out in the member list (`timeout_until`), but not
+the reason.
+
+## Bans
+
+A ban ends the member's sessions and connections and blocks signing in, with an
+optional reason and an optional duration (otherwise it lasts until someone lifts
+it). The account and its messages stay. A ban is its own state, separate from
+Disable: banning does not disable the account, and lifting a ban (or its expiry)
+never re-enables an account that was disabled before, just as Enable never
+lifts a ban. Every check of whether an account may act (sign-in, sessions,
+WebSockets, native sessions, mentions, the member list) uses one condition
+(`auth.ActiveSQL`) that covers both, and a ban whose time has passed stops
+counting at once, before the expiry job (it runs every minute) clears it.
+
+By default the invite the account registered with is revoked, so that code
+cannot create the account anew; untick it in the dialog (`revoke_invite:
+false`) for an invite shared with others. Registration remembers the invite
+(`users.invite_id`). Banning by IP address is deliberately not offered: behind
+a proxy an address is shared or spoofable, and the trusted-proxy model makes it
+a weak signal.
+
+A banned member who signs in with the right password sees the reason and the end
+of the ban; with a wrong password the answer does not reveal the ban. The
+admin console has a **Bans** tab (for *Ban members*) listing active bans with
+reason, moderator and end, and **Unban**.
 
 ## Audit log
 
