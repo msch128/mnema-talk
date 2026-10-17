@@ -20,9 +20,10 @@ vi.mock('../lib/api', async (importOriginal) => ({
   onUnauthorized: vi.fn()
 }))
 vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
 
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
-  id: fixtureId(40 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(40 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const account = (n: number, overrides: Partial<AdminUser> = {}): AdminUser => ({
   ...userFixture({ id: fixtureId(n), username: `user${n}`, display_name: `User ${n}` }), disabled: false, last_seen_at: null, ...overrides
@@ -40,7 +41,7 @@ function asModerator(bits: number) {
   const auth = useAuthStore()
   auth.user = userFixture({ id: fixtureId(9) })
   const permissions = usePermissionsStore()
-  permissions.info = { owner: false, permissions: bits, role_ids: [], top_position: 3, catalog: [], channels: [] }
+  permissions.info = { owner: false, permissions: bits, max_upload_mb: 50, role_ids: [], top_position: 3, catalog: [], channels: [] }
   permissions.roles = roles
 }
 

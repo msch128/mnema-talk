@@ -19,6 +19,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
 
 // The live operations panel has its own tests and its own endpoint.
 vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div data-testid="system-ops-stub" />' } }))
+vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
 
 beforeEach(() => {
   setActivePinia(createPinia())

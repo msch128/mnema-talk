@@ -11,6 +11,7 @@ import { t, locale } from '../i18n'
 import { SOURCE_URL } from '../lib/thirdParty'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
+import AdminUploadLimit from './AdminUploadLimit.vue'
 
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
@@ -379,6 +380,8 @@ onMounted(refresh)
         </dl>
       </div>
     </div>
+
+    <AdminUploadLimit v-if="status" />
 
     <AdminOpsPanel v-if="status" />
   </section>

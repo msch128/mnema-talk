@@ -15,6 +15,7 @@ import { setLocale } from '../i18n'
 const apiMock = vi.fn<(path: string, options?: ApiOptions) => Promise<unknown>>()
 // The live operations panel has its own tests and endpoint.
 vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),

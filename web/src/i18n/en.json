@@ -245,6 +245,8 @@
     "placeholder": "Message #{channel}",
     "send": "Send",
     "upload": "Upload a file or image",
+    "uploadTooLarge": "File is too large (max. {max} MB).",
+    "uploadTooLargeDetail": "{name} is {size} MB.",
     "uploadFailed": "Upload failed.",
     "reply": "Reply",
     "cancelReply": "Cancel reply",
@@ -997,7 +999,16 @@
     "noMedia": "No media yet.",
     "loginLocked": "Login locked",
     "clearLoginLockout": "Clear login lockout",
-    "loginLockoutCleared": "Login lockout cleared"
+    "loginLockoutCleared": "Login lockout cleared",
+    "uploadLimit": {
+      "title": "Upload size",
+      "label": "Largest file",
+      "save": "Save",
+      "reset": "Back to the server maximum",
+      "saved": "Upload limit saved.",
+      "hint": "Applies to everyone unless a role sets its own. It cannot exceed the server maximum of {ceiling} MB (MAX_UPLOAD_SIZE_MB). Your reverse proxy must allow that body size.",
+      "invalid": "Enter a whole number from 1 to {ceiling}."
+    }
   },
   "profile": {
     "viewProfile": "View profile",
@@ -1222,7 +1233,11 @@
     "selected": "Selected role",
     "list": "Roles",
     "nameRequired": "Give the role a name.",
-    "reorderFailed": "Could not change the order."
+    "reorderFailed": "Could not change the order.",
+    "uploadLimit": "Max upload size",
+    "uploadInherit": "Inherit",
+    "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
+    "uploadInvalid": "Enter a whole number of MB, or leave it empty."
   },
   "memberRoles": {
     "title": "Roles of {name}",

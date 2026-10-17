@@ -948,6 +948,7 @@ export type PermRole = {
   hoist: boolean
   id: string
   is_everyone: boolean
+  max_upload_mb: number | null
   mentionable: boolean
   name: string
   permissions: number
@@ -960,6 +961,7 @@ export function isPermRole(value: unknown): value is PermRole {
     && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "is_everyone") && typeof value["is_everyone"] === 'boolean')
+    && (hasOwn(value, "max_upload_mb") && ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
     && (hasOwn(value, "mentionable") && typeof value["mentionable"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 32))
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
@@ -971,6 +973,7 @@ export const decodePermRole = decoder("perm.Role", isPermRole)
 export type PermRoleInput = {
   color?: number
   hoist?: boolean
+  max_upload_mb?: number | null
   mentionable?: boolean
   name?: string
   permissions?: number
@@ -980,12 +983,26 @@ export function isPermRoleInput(value: unknown): value is PermRoleInput {
   return isRecord(value)
     && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
     && (!hasOwn(value, "hoist") || typeof value["hoist"] === 'boolean')
+    && (!hasOwn(value, "max_upload_mb") || ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
     && (!hasOwn(value, "mentionable") || typeof value["mentionable"] === 'boolean')
     && (!hasOwn(value, "name") || isString(value["name"], 32))
     && (!hasOwn(value, "permissions") || (isInteger(value["permissions"]) && value["permissions"] >= 0))
 }
 
 export const decodePermRoleInput = decoder("perm.RoleInput", isPermRoleInput)
+
+export type PermUploadSettings = {
+  ceiling_mb: number
+  max_upload_mb: number
+}
+
+export function isPermUploadSettings(value: unknown): value is PermUploadSettings {
+  return isRecord(value)
+    && (hasOwn(value, "ceiling_mb") && (isInteger(value["ceiling_mb"]) && value["ceiling_mb"] >= 1))
+    && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
+}
+
+export const decodePermUploadSettings = decoder("perm.UploadSettings", isPermUploadSettings)
 
 export type RolesChannelPermissions = {
   channel_id: string
@@ -1025,6 +1042,7 @@ export const decodeRolesOverwritesBody = decoder("roles.OverwritesBody", isRoles
 export type RolesPermissionsInfo = {
   catalog: Array<PermInfo>
   channels: Array<RolesChannelPermissions>
+  max_upload_mb: number
   owner: boolean
   permissions: number
   role_ids: Array<string>
@@ -1035,6 +1053,7 @@ export function isRolesPermissionsInfo(value: unknown): value is RolesPermission
   return isRecord(value)
     && (hasOwn(value, "catalog") && isArrayOf(value["catalog"], item => isPermInfo(item)))
     && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isRolesChannelPermissions(item)))
+    && (hasOwn(value, "max_upload_mb") && (isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1))
     && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
@@ -1053,6 +1072,17 @@ export function isRolesReorderRequest(value: unknown): value is RolesReorderRequ
 }
 
 export const decodeRolesReorderRequest = decoder("roles.ReorderRequest", isRolesReorderRequest)
+
+export type RolesUploadLimitInput = {
+  max_upload_mb: number | null
+}
+
+export function isRolesUploadLimitInput(value: unknown): value is RolesUploadLimitInput {
+  return isRecord(value)
+    && (hasOwn(value, "max_upload_mb") && ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
+}
+
+export const decodeRolesUploadLimitInput = decoder("roles.UploadLimitInput", isRolesUploadLimitInput)
 
 export type ServerDatabaseHealth = {
   applied_migrations: number

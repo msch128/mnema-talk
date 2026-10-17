@@ -39,6 +39,10 @@ func (h *Handler) MountAdmin(r chi.Router) {
 	roles.Delete("/roles/{id}", httpx.Handle(h.deleteRole))
 	roles.Put("/users/{id}/roles", httpx.Handle(h.setMemberRoles))
 
+	owner := r.With(auth.RequireOwner)
+	owner.Get("/upload-limit", httpx.Handle(h.getUploadLimit))
+	owner.Put("/upload-limit", httpx.Handle(h.setUploadLimit))
+
 	chans := r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	chans.Get("/channels/{id}/overwrites", httpx.Handle(h.getChannelOverwrites))
 	chans.Put("/channels/{id}/overwrites", httpx.Handle(h.setChannelOverwrites))
@@ -70,6 +74,10 @@ type PermissionsInfo struct {
 	Channels []ChannelPermissions `json:"channels"`
 	// Catalog lists every permission bit.
 	Catalog []perm.Info `json:"catalog"`
+	// MaxUploadMB is the largest file the caller may upload, in MB: their
+	// roles' override or the global limit, never above the server's ceiling.
+	// It changes with permissions_changed.
+	MaxUploadMB int `json:"max_upload_mb" minimum:"1"`
 }
 
 // myPermissions handles GET /api/permissions.
@@ -105,6 +113,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		TopPosition: min(snap.TopPosition(sub), maxReportedPosition),
 		Channels:    channels,
 		Catalog:     perm.Catalog,
+		MaxUploadMB: snap.UploadMB(sub, h.Perms.UploadCeilingMB()),
 	})
 	return nil
 }
@@ -472,5 +481,66 @@ func (h *Handler) canSee(r *http.Request, kind string, id uuid.UUID) error {
 	if snap.KnowsCategory(id) && !snap.CategoryVisible(sub, id) {
 		return httpx.ErrNotFound("category not found")
 	}
+	return nil
+}
+
+// UploadLimitInput is the body of PUT /api/admin/upload-limit.
+type UploadLimitInput struct {
+	// MaxUploadMB is the new global limit; null returns to the server's ceiling.
+	MaxUploadMB *int `json:"max_upload_mb" minimum:"1" extensions:"x-nullable"`
+}
+
+// getUploadLimit handles GET /api/admin/upload-limit.
+//
+// @Summary Read the global upload limit
+// @Description Owner only. The effective global limit and the operator's ceiling (MAX_UPLOAD_SIZE_MB).
+// @ID getUploadLimit
+// @Tags Roles
+// @Produce json
+// @Security cookieAuth
+// @Success 200 {object} perm.UploadSettings "Upload limit."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/upload-limit [get]
+func (h *Handler) getUploadLimit(w http.ResponseWriter, r *http.Request) error {
+	st, err := h.Perms.UploadSettings(r.Context())
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, st)
+	return nil
+}
+
+// setUploadLimit handles PUT /api/admin/upload-limit.
+//
+// @Summary Set the global upload limit
+// @Description Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. Broadcasts permissions_changed so clients refetch their effective limit.
+// @ID setUploadLimit
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param body body UploadLimitInput true "New limit."
+// @Success 200 {object} perm.UploadSettings "Upload limit."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/upload-limit [put]
+func (h *Handler) setUploadLimit(w http.ResponseWriter, r *http.Request) error {
+	var in UploadLimitInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		return err
+	}
+	st, err := h.Perms.SetGlobalUploadMB(r.Context(), auth.UserFrom(r.Context()).Subject(), in.MaxUploadMB)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, st)
 	return nil
 }

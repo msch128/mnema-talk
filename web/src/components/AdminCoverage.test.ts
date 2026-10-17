@@ -31,6 +31,7 @@ const apiMock =
 const confirmMock = vi.fn<() => Promise<boolean>>()
 // The live operations panel has its own tests and endpoint.
 vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div />' } }))
+vi.mock('./AdminUploadLimit.vue', () => ({ default: { template: '<div />' } }))
 
 vi.mock('../lib/api', async (original) => ({
   ...(await original<typeof import('../lib/api')>()),

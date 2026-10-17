@@ -21,7 +21,7 @@ const confirmMock = vi.fn()
 vi.mock('../lib/confirm', () => ({ confirm: (...args: unknown[]) => confirmMock(...args) }))
 
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
-  id: fixtureId(20 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(20 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const everyone = role(0, { id: fixtureId(19), name: '@everyone', is_everyone: true, permissions: PERMISSION_BITS.view_channel })
 let roles: Role[]
@@ -31,7 +31,7 @@ function setup(owner = true) {
   const auth = useAuthStore()
   auth.user = userFixture({ role: owner ? 'admin' : 'user' })
   const permissions = usePermissionsStore()
-  permissions.info = { owner, permissions: owner ? 65535 : PERMISSION_BITS.manage_roles | PERMISSION_BITS.speak, role_ids: [], top_position: 3, catalog: [], channels: [] }
+  permissions.info = { owner, permissions: owner ? 65535 : PERMISSION_BITS.manage_roles | PERMISSION_BITS.speak, max_upload_mb: 50, role_ids: [], top_position: 3, catalog: [], channels: [] }
   apiMock.mockImplementation(async (path, options) => {
     if (path === '/api/roles') return roles
     if (path === '/api/admin/roles' && options?.method === 'POST') return role(9, { name: 'New role', position: 1 })
@@ -90,6 +90,28 @@ describe('AdminRolesTab', () => {
       json: { name: 'Moderators', color: 0xe8c25a, hoist: false, permissions: PERMISSION_BITS.speak | PERMISSION_BITS.send_messages }
     }))
     expect(toastTexts()).toContain('Role saved')
+  })
+
+  it('lets only the Owner set a role upload limit and sends null to inherit', async () => {
+    roles = [role(2, { name: 'Middle', max_upload_mb: 20 }), everyone]
+    const w = setup()
+    await flushPromises()
+    await row(w, 'Middle').find('button[aria-pressed]').trigger('click')
+    const field = w.find<HTMLInputElement>('input[aria-label="Max upload size"]')
+    expect(field.element.value).toBe('20')
+    const save = () => w.findAll('button').find(b => b.text() === 'Save role')!
+    await field.setValue('1.5')
+    await save().trigger('click')
+    expect(apiMock).not.toHaveBeenCalledWith(expect.stringContaining('/api/admin/roles/'), expect.anything())
+    await field.setValue('')
+    await save().trigger('click')
+    await flushPromises()
+    expect(apiMock).toHaveBeenCalledWith(`/api/admin/roles/${roles[0]!.id}`, expect.objectContaining({ json: expect.objectContaining({ max_upload_mb: null }) }))
+
+    const manager = setup(false)
+    await flushPromises()
+    await row(manager, 'Middle').find('button[aria-pressed]').trigger('click')
+    expect(manager.find('input[aria-label="Max upload size"]').exists()).toBe(false)
   })
 
   it('saves @everyone with only its permissions', async () => {

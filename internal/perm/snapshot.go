@@ -32,6 +32,10 @@ type Role struct {
 	Hoist       bool      `json:"hoist"`
 	Mentionable bool      `json:"mentionable"`
 	Everyone    bool      `json:"is_everyone"`
+	// MaxUploadMB overrides the upload limit of this role's members; null
+	// inherits the global limit. A member gets the highest override of their
+	// roles (@everyone included), never above the server's ceiling.
+	MaxUploadMB *int `json:"max_upload_mb" minimum:"1" extensions:"x-nullable"`
 }
 
 type overwrite struct{ allow, deny Set }
@@ -69,6 +73,8 @@ type Snapshot struct {
 	categories map[uuid.UUID]bool
 	channelOv  map[uuid.UUID]*scope
 	categoryOv map[uuid.UUID]*scope
+	// globalUploadMB is the Owner's global upload limit; nil = the ceiling.
+	globalUploadMB *int
 }
 
 func newSnapshot(now time.Time) *Snapshot {
@@ -129,6 +135,7 @@ type roleRow struct {
 	Hoist       bool
 	Mentionable bool
 	Everyone    bool
+	MaxUploadMB *int
 }
 
 type userRoleRow struct{ UserID, RoleID uuid.UUID }
@@ -145,9 +152,10 @@ type overwriteRow struct {
 
 func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	r := &reader{ctx: ctx, q: q}
-	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone FROM roles`, pgx.RowToStructByPos[roleRow])
+	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, max_upload_mb FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
+	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id FROM channels`, pgx.RowToStructByPos[channelRow])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
@@ -157,7 +165,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 
 	for _, row := range roles {
 		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
-			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone}
+			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, MaxUploadMB: row.MaxUploadMB}
 		s.roles[role.ID] = role
 		if role.Everyone {
 			s.everyoneID, s.everyone = role.ID, role.Permissions
@@ -170,6 +178,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		// Highest role first, so RoleIDs reads as the member's hierarchy.
 		slices.SortFunc(list, func(a, b uuid.UUID) int { return s.roles[b].Position - s.roles[a].Position })
 		s.userRoles[id] = list
+	}
+	if len(settings) > 0 {
+		s.globalUploadMB = settings[0]
 	}
 	for _, id := range owners {
 		s.owners[id] = true
@@ -435,3 +446,35 @@ func (s *Snapshot) ChannelPermissions(sub Subject) map[uuid.UUID]Set {
 // EmptySnapshot knows no channel: everybody but the Owner gets nothing from
 // it. Callers use it to fail closed when the real state cannot be loaded.
 func EmptySnapshot() *Snapshot { return newSnapshot(time.Time{}) }
+
+// GlobalUploadMB is the global upload limit in MB: the Owner's setting, or the
+// ceiling when none is set, never above the ceiling.
+func (s *Snapshot) GlobalUploadMB(ceiling int) int {
+	if s.globalUploadMB == nil {
+		return ceiling
+	}
+	return min(*s.globalUploadMB, ceiling)
+}
+
+// UploadMB is the largest file sub may upload, in MB. The Owner gets the
+// ceiling. Otherwise it is the highest override among @everyone and the
+// member's roles, or the global limit when none sets one; never above the
+// ceiling.
+func (s *Snapshot) UploadMB(sub Subject, ceiling int) int {
+	if s.IsOwner(sub) {
+		return ceiling
+	}
+	best := 0
+	if ev, ok := s.roles[s.everyoneID]; ok && ev.MaxUploadMB != nil {
+		best = *ev.MaxUploadMB
+	}
+	for _, id := range s.userRoles[sub.ID] {
+		if v := s.roles[id].MaxUploadMB; v != nil {
+			best = max(best, *v)
+		}
+	}
+	if best == 0 {
+		return s.GlobalUploadMB(ceiling)
+	}
+	return min(best, ceiling)
+}

@@ -12,7 +12,7 @@ import { setLocale } from '../i18n'
 import type { Role } from '../types/domain'
 
 const role = (n: number, overrides: Partial<Role> = {}): Role => ({
-  id: fixtureId(40 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, ...overrides
+  id: fixtureId(40 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const owner = userFixture({ id: fixtureId(1), username: 'herzog', display_name: 'Herzog', role: 'admin' })
 const ann = userFixture({ id: fixtureId(2), username: 'ann', display_name: 'Ann' })

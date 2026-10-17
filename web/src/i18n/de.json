@@ -245,6 +245,8 @@
     "placeholder": "Nachricht an #{channel}",
     "send": "Senden",
     "upload": "Datei oder Bild hochladen",
+    "uploadTooLarge": "Datei ist zu groß (max. {max} MB).",
+    "uploadTooLargeDetail": "{name} hat {size} MB.",
     "uploadFailed": "Hochladen fehlgeschlagen.",
     "reply": "Antworten",
     "cancelReply": "Antwort abbrechen",
@@ -997,7 +999,16 @@
     "noMedia": "Keine Medien vorhanden.",
     "loginLocked": "Login gesperrt",
     "clearLoginLockout": "Login-Sperre aufheben",
-    "loginLockoutCleared": "Login-Sperre aufgehoben"
+    "loginLockoutCleared": "Login-Sperre aufgehoben",
+    "uploadLimit": {
+      "title": "Upload-Größe",
+      "label": "Größte Datei",
+      "save": "Speichern",
+      "reset": "Zurück zum Server-Maximum",
+      "saved": "Upload-Limit gespeichert.",
+      "hint": "Gilt für alle, sofern eine Rolle kein eigenes Limit setzt. Es kann das Server-Maximum von {ceiling} MB (MAX_UPLOAD_SIZE_MB) nicht übersteigen. Dein Reverse-Proxy muss diese Body-Größe erlauben.",
+      "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein."
+    }
   },
   "profile": {
     "viewProfile": "Profil ansehen",
@@ -1222,7 +1233,11 @@
     "selected": "Ausgewählte Rolle",
     "list": "Rollen",
     "nameRequired": "Gib der Rolle einen Namen.",
-    "reorderFailed": "Die Reihenfolge konnte nicht geändert werden."
+    "reorderFailed": "Die Reihenfolge konnte nicht geändert werden.",
+    "uploadLimit": "Max. Upload-Größe",
+    "uploadInherit": "Erben",
+    "uploadHint": "Leer lassen, um das globale Limit zu nutzen. Mitglieder erhalten das höchste Limit ihrer Rollen, nie mehr als das Server-Maximum.",
+    "uploadInvalid": "Gib eine ganze Zahl in MB ein oder lass das Feld leer."
   },
   "memberRoles": {
     "title": "Rollen von {name}",

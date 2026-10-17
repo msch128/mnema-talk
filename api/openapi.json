@@ -1527,6 +1527,14 @@
           "is_everyone": {
             "type": "boolean"
           },
+          "max_upload_mb": {
+            "description": "MaxUploadMB overrides the upload limit of this role's members; null\ninherits the global limit. A member gets the highest override of their\nroles (@everyone included), never above the server's ceiling.",
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "mentionable": {
             "type": "boolean"
           },
@@ -1549,6 +1557,7 @@
           "hoist",
           "id",
           "is_everyone",
+          "max_upload_mb",
           "mentionable",
           "name",
           "permissions",
@@ -1566,6 +1575,14 @@
           "hoist": {
             "type": "boolean"
           },
+          "max_upload_mb": {
+            "description": "MaxUploadMB: absent leaves it alone, null inherits the global limit, a\nnumber sets the role's limit. Only the Owner may send it.",
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
           "mentionable": {
             "type": "boolean"
           },
@@ -1579,6 +1596,25 @@
             "type": "integer"
           }
         },
+        "type": "object"
+      },
+      "perm.UploadSettings": {
+        "properties": {
+          "ceiling_mb": {
+            "description": "CeilingMB is the operator's hard ceiling (MAX_UPLOAD_SIZE_MB).",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "max_upload_mb": {
+            "description": "MaxUploadMB is the effective global limit.",
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ceiling_mb",
+          "max_upload_mb"
+        ],
         "type": "object"
       },
       "roles.ChannelPermissions": {
@@ -1644,6 +1680,11 @@
             },
             "type": "array"
           },
+          "max_upload_mb": {
+            "description": "MaxUploadMB is the largest file the caller may upload, in MB: their\nroles' override or the global limit, never above the server's ceiling.\nIt changes with permissions_changed.",
+            "minimum": 1,
+            "type": "integer"
+          },
           "owner": {
             "description": "Owner is true for the Owner, who may do everything and cannot be\nrestricted.",
             "type": "boolean"
@@ -1670,6 +1711,7 @@
         "required": [
           "catalog",
           "channels",
+          "max_upload_mb",
           "owner",
           "permissions",
           "role_ids",
@@ -1690,6 +1732,22 @@
         },
         "required": [
           "role_ids"
+        ],
+        "type": "object"
+      },
+      "roles.UploadLimitInput": {
+        "properties": {
+          "max_upload_mb": {
+            "description": "MaxUploadMB is the new global limit; null returns to the server's ceiling.",
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "max_upload_mb"
         ],
         "type": "object"
       },
@@ -7065,6 +7123,175 @@
         "summary": "Update the server now",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/upload-limit": {
+      "get": {
+        "description": "Owner only. The effective global limit and the operator's ceiling (MAX_UPLOAD_SIZE_MB).",
+        "operationId": "getUploadLimit",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/perm.UploadSettings"
+                }
+              }
+            },
+            "description": "Upload limit."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Read the global upload limit",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "put": {
+        "description": "Owner only. Capped by the operator's ceiling (MAX_UPLOAD_SIZE_MB); null returns to the ceiling. Roles may override it per role. Broadcasts permissions_changed so clients refetch their effective limit.",
+        "operationId": "setUploadLimit",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles.UploadLimitInput"
+              }
+            }
+          },
+          "description": "New limit.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/perm.UploadSettings"
+                }
+              }
+            },
+            "description": "Upload limit."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set the global upload limit",
+        "tags": [
+          "Roles"
         ]
       }
     },

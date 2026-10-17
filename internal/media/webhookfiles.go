@@ -36,4 +36,18 @@ func (h *Handler) RecordFile(ctx context.Context, tx pgx.Tx, f *StoredFile, uplo
 }
 
 // FormError maps a failure reading a request body to the error to answer with.
-func (h *Handler) FormError(err error) error { return h.formError(err) }
+func (h *Handler) FormError(ctx context.Context, err error) error { return h.formError(ctx, err) }
+
+// GlobalLimit returns ctx carrying the global upload limit (webhooks have no
+// member, hence no role) and the transport body ceiling for the request.
+func (h *Handler) GlobalLimit(ctx context.Context) (context.Context, int64, error) {
+	limit := h.MaxUploadBytes
+	if h.Perms != nil {
+		v, err := h.Perms.GlobalUploadLimitBytes(ctx)
+		if err != nil {
+			return ctx, 0, err
+		}
+		limit = min(limit, v)
+	}
+	return WithUploadLimit(ctx, limit), bodyLimit(limit), nil
+}

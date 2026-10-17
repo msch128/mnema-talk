@@ -126,6 +126,25 @@ cannot do.
 | Talks | *View channels* + *Connect* to join; the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |
 
+## Upload size
+
+`MAX_UPLOAD_SIZE_MB` (default 50) is the operator's hard ceiling. On top of it
+the Owner sets, in the interface only:
+
+- a **global limit** (System tab, `PUT /api/admin/upload-limit`), at most the
+  ceiling; unset means the ceiling;
+- an optional **per-role limit** (role editor, `max_upload_mb`; empty = inherit).
+  `@everyone` can have one too.
+
+A member's effective limit is the highest limit among `@everyone` and their
+roles that set one, otherwise the global limit, never above the ceiling. The
+Owner always gets the ceiling. Webhooks have no role and use the global limit.
+Avatars keep their own 5 MB cap. Only the Owner may set these values (a role
+manager gets `403` for `max_upload_mb`); they are a resource limit, not a
+permission. The effective limit is `max_upload_mb` in `GET /api/permissions`
+and updates with `permissions_changed`; the web app refuses larger files
+before sending them, the server enforces it per request (`413`).
+
 ## Live changes
 
 Every change to roles, assignments, overwrites, channels or categories
@@ -143,6 +162,7 @@ minute is only a backstop for edits made directly in the database) and then:
 
 - `GET /api/permissions`: the caller's server-wide permissions and, per
   viewable channel, their permissions there, plus the catalog of bits.
+- `GET|PUT /api/admin/upload-limit` (Owner): the global upload limit and the ceiling.
 - `GET /api/roles`: all roles (visible to every member; they colour names).
 - `POST /api/admin/roles`, `PATCH|DELETE /api/admin/roles/{id}`,
   `PUT /api/admin/roles/order`, `PUT /api/admin/users/{id}/roles`.
