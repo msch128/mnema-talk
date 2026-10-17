@@ -170,15 +170,16 @@ func TestEarlyClientCandidatesAreAppliedWithTheAnswer(t *testing.T) {
 	if held != 0 {
 		t.Fatalf("%d early candidates still held after the answer", held)
 	}
-	remote := 0
-	for _, st := range peer.PC.GetStats() {
-		if cs, ok := st.(webrtc.ICECandidateStats); ok && cs.Type == webrtc.StatsTypeRemoteCandidate {
-			remote++
+	// Pion's agent takes a candidate on a goroutine of its own, so it shows up
+	// in the statistics shortly after AddICECandidate returned, not with it.
+	waitFor(t, func() bool {
+		for _, st := range peer.PC.GetStats() {
+			if cs, ok := st.(webrtc.ICECandidateStats); ok && cs.Type == webrtc.StatsTypeRemoteCandidate {
+				return true
+			}
 		}
-	}
-	if remote == 0 {
-		t.Fatal("the ICE agent never received the early candidate")
-	}
+		return false
+	})
 }
 
 func TestEarlyClientCandidatesAreBounded(t *testing.T) {
