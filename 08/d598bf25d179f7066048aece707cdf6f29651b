@@ -1,0 +1,38 @@
+web/src/lib/screenLayers.test.ts
+  s_06fcde5dbef956::t_0806c248f04391 2,73-77
+web/src/composables/useWebRTC.test.ts
+  s_06fcde5dbef956::t_362b057fd6d73f 3752
+  s_06fcde5dbef956::t_4e1f16f43136bd 3777
+  s_06fcde5dbef956::t_b37a3d8bba6855 3635,3772,3789
+  s_06fcde5dbef956::t_dff7e1b6c3f979 16
+  s_06fcde5dbef956::t_6b18c2b0092b84 3766,3773-3776
+  s_06fcde5dbef956::t_09a06d037f7bb9 3749-3751,3753-3765,3767-3771,3778-3788,3790-3791,3795-3796,3798-3799,3803-3820
+  s_06fcde5dbef956::t_221ffea84783fc 3792-3794,3797,3800-3802
+  s_06fcde5dbef956::t_d9dca761dd37f1 3821-3822
+web/src/stores/voice.test.ts
+  s_06fcde5dbef956::t_0806c248f04391 784-798
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_dff7e1b6c3f979 159-160
+  s_06fcde5dbef956::t_dbe54c5ce19966 379-380
+  s_06fcde5dbef956::t_fc0497c69ef250 155-158,161-162,378,381-405,407,1933,2069-2078,2080
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_fc0497c69ef250 7,625-627
+web/src/lib/screenLayers.ts
+  s_06fcde5dbef956::t_fc0497c69ef250 84-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08d598bf25d179f7066048aece707cdf6f29651b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
