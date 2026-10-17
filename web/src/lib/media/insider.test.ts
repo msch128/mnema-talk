@@ -99,9 +99,6 @@ describe('what a member may do to the group with a commit', () => {
       expect(step.key).not.toBeNull()
       expect(step.wires).toEqual([])
     }
-    // The same goes for an empty commit: only the committer rotates.
-    const empty = await forged(carol, [])
-    expect((await bob.receive(carolId, empty)).epoch).toBe(epoch)
     await closeAll(groups.values())
   }, 60_000)
 

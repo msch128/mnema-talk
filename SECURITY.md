@@ -171,7 +171,25 @@ locally instead (`make up` or `make dev`).
   epoch is that old, the committer (the lowest member id in the group and the
   room) advances it with a commit that carries an update path, so even with
   no joins or leaves every member gets a new exporter key, and the committer's
-  own leaf secrets are replaced (post-compromise security for it). The
+  own leaf secrets are replaced (post-compromise security for it).
+  **Leaf renewal.** Every other member renews its own leaf too, so that
+  post-compromise security covers each member and not only the committer: once
+  a member's leaf is about 30 minutes old (the same jittered period) it sends a
+  commit that holds nothing but its own new update path. To keep it from racing
+  the committer it waits for a quiet moment (no handshake or roster change for
+  one maintenance interval, the epoch that old, and one more interval per
+  member with a lower id whose leaf is due too); a leaf long overdue stops
+  waiting. Receivers take such a commit from any member in the group but at
+  most twice per rotation period per member, and ignore it otherwise. If two
+  commits for the same epoch still meet (a renewal with the committer's commit
+  or with another renewal), the committer's wins and, between renewals, the
+  lower id's; a member that took the loser goes back to the state it kept for
+  ten seconds and takes the winner, so the call does not split (anything else
+  that has split is repaired by the existing start-over). A member's leaf
+  secrets that an attacker held are therefore useless to it after about one
+  period of the member being online and in the group, and a member's keys
+  change at most once per period more than before: with 100 members that is
+  about 100 small commits per 30 minutes, inside the handshake budget. The
   schedule is the epoch's age, which every member knows, not a timer that
   restarts when the committer changes, and it is measured with the browser's
   monotonic clock, so a wall-clock step moves nothing. Receivers hold the

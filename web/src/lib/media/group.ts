@@ -23,6 +23,7 @@ import {
   type Credential,
   type IncomingMessageCallback,
   type KeyPackage,
+  type PublicMessage,
   type PrivateKeyPackage,
   type Proposal,
 } from 'ts-mls'
@@ -58,6 +59,9 @@ const FOUND_WAIT_MS = 4000
 // is let in. It stays longer than OFFER_WAIT_MS, so a lost welcome is asked
 // for again before the member who sent it is written off.
 const TAKEOVER_MS = 2 * OFFER_WAIT_MS
+// How long the state before a member's self-update is kept: a commit that
+// raced it for the same epoch and wins replaces it (see `selfUpdate`).
+const CONFLICT_MS = 10_000
 
 export interface MediaStep {
   wires: Uint8Array[]
@@ -233,7 +237,7 @@ export class MediaGroup {
   private readonly relayed = new Map<string, Uint8Array[]>()
   /** A welcome from a lower id outside my group may replace it this rarely per sender. */
   /** The roster as last announced, ahead of what the queue has handled. */
-  private hinted: Set<string> | null = null
+  private hinted = new Set<string>()
   private readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS)
   private closed = false
   private readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
@@ -260,6 +264,31 @@ export class MediaGroup {
   private lastBeatAt = 0
   private lastTick = 0
   private tickTimer: ReturnType<typeof setTimeout> | null = null
+  /** Each member's leaf (its HPKE key) and since when this client has seen that very leaf. */
+  private readonly leaves = new Map<string, { key: Uint8Array, at: number }>()
+  /** When this member's own leaf is due to be replaced by a self-update. */
+  private updateAfter = 0
+  /** When the last handshake (other than a heartbeat) and the last roster change were seen. */
+  private lastHandshakeAt = 0
+  private lastRosterAt = 0
+  /** When each member's last self-update was taken, so none may force an epoch more than twice per period. */
+  private readonly updates = new Map<string, number>()
+  /**
+   * The group as it was right before a self-update (a commit with nothing in
+   * it but its sender's new leaf) took effect, for CONFLICT_MS. Self-updates
+   * come from members other than the committer, so one can race the
+   * committer's commit or another update for the same epoch; the committer's
+   * wins, and between updates the lower id does. A member that took the loser
+   * goes back to this state and takes the winner.
+   */
+  private selfUpdate: {
+    state: ClientState
+    current: MediaGroup['current']
+    previousEpoch: MediaGroup['previousEpoch']
+    sender: string
+    until: number
+    held: Uint8Array[]
+  } | null = null
 
   private constructor(
     private readonly userId: string,
@@ -450,6 +479,7 @@ export class MediaGroup {
     const wires: Uint8Array[] = []
     this.lastRoster = roster
     const others = this.reachable(this.others(roster))
+    if (others.length !== this.room.length || others.some(id => !this.room.includes(id))) this.lastRosterAt = clock.now()
     this.room = others
     for (const id of [...this.relayed.keys()]) if (!others.includes(id)) this.relayed.delete(id)
     const state = this.state
@@ -572,20 +602,34 @@ export class MediaGroup {
     this.announcedFor = null
     this.alive.clear()
     this.beats.clear()
+    this.leaves.clear()
+    this.updates.clear()
+    this.dropSelfUpdate()
     if (this.tickTimer !== null) clearTimeout(this.tickTimer)
     this.tickTimer = null
     if (state) this.wipeRejected(state)
+  }
+
+  /** Forgets the state before a self-update once the time for a conflict has passed (or at once with `now`). */
+  private dropSelfUpdate(expiredOnly = false) {
+    const saved = this.selfUpdate
+    if (!saved || (expiredOnly && clock.now() < saved.until)) return
+    this.selfUpdate = null
+    wipeConsumed(saved.held)
+    this.wipeRejected(saved.state)
   }
 
   private async receiveNow(fromUserId: string, wire: Uint8Array, batch = false): Promise<MediaStep> {
     if (this.closed || wire.byteLength === 0 || wire.byteLength > HANDSHAKE_MAX_BYTES) return this.step()
     const from = mediaUserId(fromUserId)
     if (!from || from === this.userId) return this.step()
+    this.dropSelfUpdate(true)
     if (isHeartbeat(wire)) return this.beatNow(from, wire)
     const decoded = decodeMlsMessage(wire, 0)
     if (!decoded) return this.step()
     const [message] = decoded
     this.heard.add(from)
+    this.lastHandshakeAt = clock.now()
     const members = this.state ? treeMembers(this.state) : null
     const wires: Uint8Array[] = []
     if (message.wireformat === 'mls_key_package') {
@@ -659,14 +703,24 @@ export class MediaGroup {
         && members?.get(from) === framed.sender.leafIndex && this.mayCommit(from)) {
         return this.recoverNow()
       }
+      const saved = this.selfUpdate
+      if (saved && framed.contentType === 'commit' && framed.sender.senderType === 'member'
+        && sameBytes(framed.groupId, this.groupId) && framed.epoch === saved.state.groupContext.epoch && from !== saved.sender) {
+        return this.conflictNow(saved, message.publicMessage, from)
+      }
+      const isUpdate = framed.contentType === 'commit' && framed.commit.proposals.length === 0 && this.committer(this.listed()) !== from
       try {
         const processed = await processPublicMessage(previous, message.publicMessage, emptyPskIndex, this.cs, this.validator(previous, from))
         // Rejected by the rules above (or a proposal, which this group never
         // uses): the sender is not trusted with it, and nothing is thrown away.
         if (processed.actionTaken === 'reject') return this.step()
-        wipeConsumed(processed.consumed)
         // Only a commit that verified against this group's tree shows its member alive.
         this.alive.set(from, clock.now())
+        if (isUpdate) {
+          this.updates.set(from, clock.now())
+          return this.adoptUpdate(previous, processed.newState, processed.consumed, from)
+        }
+        wipeConsumed(processed.consumed)
         // A commit that removes a member who is still here was not asked for:
         // say so, and offer again, but not in a loop.
         if (!treeMembers(processed.newState).has(this.userId)) {
@@ -692,6 +746,74 @@ export class MediaGroup {
     return this.step()
   }
 
+  private mayUpdate(id: string): boolean {
+    const last = this.updates.get(id)
+    return last === undefined || clock.now() - last >= Math.max(0, this.timing.rotateMs - this.timing.rotateJitterMs) / 2
+  }
+
+  /** The roster as last announced. */
+  private listed(): string[] {
+    return [...this.hinted]
+  }
+
+  /**
+   * Takes another member's self-update, keeping the state before it for
+   * CONFLICT_MS in case the committer's commit for the same epoch wins.
+   */
+  private async adoptUpdate(previous: ClientState, next: ClientState, consumed: Uint8Array[], sender: string): Promise<MediaStep> {
+    const current = this.current
+    const previousEpoch = this.previousEpoch
+    this.dropSelfUpdate()
+    if (!await this.adopt(next, 'soft')) {
+      wipeConsumed(consumed)
+      return this.recoverNow()
+    }
+    this.selfUpdate = { state: previous, current, previousEpoch, sender, until: clock.now() + CONFLICT_MS, held: consumed }
+    return this.step()
+  }
+
+  /**
+   * A commit for the epoch I left with a self-update arrived. The committer's
+   * commit beats an update, and of two updates the lower id's does; the loser
+   * goes back to the state before the update and takes the winner, so a race
+   * between two members does not split the call. A commit that does not win,
+   * or does not verify against that state, changes nothing.
+   */
+  private async conflictNow(saved: NonNullable<MediaGroup['selfUpdate']>, message: PublicMessage, from: string): Promise<MediaStep> {
+    try {
+      const processed = await processPublicMessage(saved.state, message, emptyPskIndex, this.cs, this.validator(saved.state, from))
+      const content = message.content
+      const empty = content.contentType === 'commit' && content.commit.proposals.length === 0
+      const wins = processed.actionTaken !== 'reject' && (!empty || this.committer(this.listed()) === from || from < saved.sender)
+      if (!wins) {
+        wipeConsumed(processed.consumed)
+        if (processed.newState !== saved.state) this.wipeRejected(processed.newState)
+        return this.step()
+      }
+      const mine = this.state as ClientState
+      const mineCurrent = this.current
+      const minePrevious = this.previousEpoch
+      this.selfUpdate = null
+      this.state = saved.state
+      this.current = saved.current
+      this.previousEpoch = saved.previousEpoch
+      const adopted = await this.adopt(processed.newState, keepsEveryLeaf(saved.state, processed.newState) ? 'soft' : 'commit')
+      wipeConsumed(processed.consumed)
+      wipeConsumed(saved.held)
+      if (!adopted) {
+        this.state = mine
+        this.current = mineCurrent
+        this.previousEpoch = minePrevious
+        return this.recoverNow()
+      }
+      this.alive.set(from, clock.now())
+      this.wipeRejected(mine)
+      return this.step()
+    } catch {
+      return this.step()
+    }
+  }
+
   private relay(from: string, keyPackage: KeyPackage) {
     const wire = encodeWire({ version: 'mls10', wireformat: 'mls_key_package', keyPackage })
     if (!wire) return
@@ -707,17 +829,18 @@ export class MediaGroup {
 
   /** The two lowest members of the group the room lists (zombies included): whose commit a missed one may be blamed on. */
   private mayCommit(id: string): boolean {
-    if (!this.state) return false
     const room = new Set(this.room)
     room.add(this.userId)
-    const live = [...treeMembers(this.state).keys()].filter(member => room.has(member)).sort()
-    return live.slice(0, 2).includes(id) || this.committer(this.room) === id
+    const live = [...treeMembers(this.state as ClientState).keys()].filter(member => room.has(member)).sort()
+    return live.slice(0, 2).includes(id)
   }
 
   /**
    * What a commit may do to this group, checked after its signature and
    * membership tag verified against the tree but before it takes effect:
-   * - it comes from the member who commits now (the lowest live one);
+   * - it comes from the member who commits now (the lowest live one), or has
+   *   nothing in it but the sender's own new leaf, which any member may send
+   *   at most twice per rotation period;
    * - it only adds or removes;
    * - it adds only an identity in the room whose key package the relay
    *   delivered, and never one that already holds a leaf, unless the same
@@ -735,11 +858,15 @@ export class MediaGroup {
       const senderLeaf = members.get(from)
       if (senderLeaf === undefined || incoming.senderLeafIndex !== senderLeaf) return 'reject'
       const proposals = incoming.proposals
-      if (this.committer(this.hinted ? [...this.hinted] : this.room) !== from) return 'reject'
+      if (this.committer(this.listed()) !== from) {
+        // A member renewing its own leaf: a commit with nothing in it, not
+        // more than twice per rotation period.
+        return proposals.length === 0 && this.mayUpdate(from) ? 'accept' : 'reject'
+      }
       const identityOf = new Map<number, string>()
       for (const [id, leaf] of members) identityOf.set(leaf, id)
       // Newest roster: who is listed now. Adds also accept the last synced room.
-      const room = new Set(this.hinted ?? this.room)
+      const room = new Set(this.hinted)
       room.add(this.userId)
       const roomOrLast = new Set([...room, ...this.room])
       const now = clock.now()
@@ -750,7 +877,7 @@ export class MediaGroup {
       for (const { proposal } of proposals) {
         if (proposal.proposalType === 'remove') {
           const id = identityOf.get(proposal.remove.removed)
-          if (id === undefined || id === from || removed.has(id)) return 'reject'
+          if (id === undefined) return 'reject'
           removed.add(id)
         } else if (proposal.proposalType === 'add') {
           const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
@@ -765,7 +892,7 @@ export class MediaGroup {
         // My own removal is the committer's word about me (my link dropped, I
         // slept): I cannot judge it, and taking it means a notice and a rejoin.
         if (added.has(id) || slept || id === this.userId || !room.has(id)) continue
-        if (now - (this.alive.get(id) ?? now) <= this.timing.absentMs - slack) return 'reject'
+        if (now - (this.alive.get(id) as number) <= this.timing.absentMs - slack) return 'reject'
       }
       return 'accept'
     }
@@ -778,6 +905,16 @@ export class MediaGroup {
     const { rotateMs, rotateJitterMs } = this.timing
     this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     const members = treeMembers(state)
+    for (const id of [...this.leaves.keys()]) if (!members.has(id)) this.leaves.delete(id)
+    for (const id of [...this.updates.keys()]) if (!members.has(id)) this.updates.delete(id)
+    for (const [id, index] of members) {
+      const key = (state.ratchetTree[index * 2] as { leaf: { hpkePublicKey: Uint8Array } }).leaf.hpkePublicKey
+      const known = this.leaves.get(id)
+      if (known && sameBytes(known.key, key)) continue
+      this.leaves.set(id, { key: new Uint8Array(key), at: now })
+      // My own leaf is due again after a period of its own, jittered like an epoch's.
+      if (id === this.userId) this.updateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
+    }
     for (const id of [...this.alive.keys()]) if (!members.has(id)) this.alive.delete(id)
     for (const id of [...this.beats.keys()]) if (!members.has(id)) this.beats.delete(id)
     // Whoever is new to the group starts with a clean slate: it was let in just now.
@@ -836,6 +973,9 @@ export class MediaGroup {
     // Right after waking up this view is the stalest it will ever be: the
     // messages that arrived meanwhile are still queued behind this tick. The
     // next tick, one maintenance interval later, decides.
+    if (!slept && !this.canCommit(this.room) && members.size > 1 && this.renewalDue(now, members)) {
+      wires.push(...await this.commit([], true))
+    }
     if (!slept && this.canCommit(this.room)) {
       const absent: Proposal[] = []
       for (const [id, leaf] of members) {
@@ -844,9 +984,37 @@ export class MediaGroup {
         }
       }
       if (absent.length) wires.push(...await this.commit(absent))
-      else if (members.size > 1 && now - this.epochAt >= this.rotateAfter) wires.push(...await this.commit([]))
+      else if (members.size > 1 && (now - this.epochAt >= this.rotateAfter || this.leafAge(now) >= this.updateAfter)) wires.push(...await this.commit([]))
     }
     return this.step(wires)
+  }
+
+  private leafAge(now: number): number {
+    return now - (this.leaves.get(this.userId) as { at: number }).at
+  }
+
+  /**
+   * A member that is not the committer renews its own leaf (post-compromise
+   * security for it) once the leaf is as old as its period, with a commit
+   * that holds nothing else. To keep two commits from meeting, it waits for
+   * a quiet moment: no handshake or roster change for a while, the epoch a
+   * while old, and, behind every other member that is due before it (by id),
+   * one more wait each. A leaf long overdue stops waiting for quiet.
+   */
+  private renewalDue(now: number, members: Map<string, number>): boolean {
+    const age = this.leafAge(now)
+    if (age < this.updateAfter) return false
+    const settle = Math.max(10, this.timing.maintenanceMs)
+    if (age >= this.updateAfter + Math.max(4 * settle, this.timing.rotateMs / 10)) return true
+    if (now - this.lastHandshakeAt < settle || now - this.lastRosterAt < settle) return false
+    const due = Math.max(0, this.timing.rotateMs - this.timing.rotateJitterMs)
+    const committer = this.committer(this.room)
+    let ahead = 0
+    for (const id of members.keys()) {
+      if (id >= this.userId || id === committer) continue
+      if (now - (this.leaves.get(id) as { at: number }).at >= due) ahead++
+    }
+    return now - this.epochAt >= settle * (1 + ahead)
   }
 
   /** How long this browser was away since the last tick: the larger of what the monotonic and the wall clock saw (a monotonic clock may stand still in sleep). */
@@ -940,7 +1108,7 @@ export class MediaGroup {
     return wires
   }
 
-  private async commit(extraProposals: Proposal[]): Promise<Uint8Array[]> {
+  private async commit(extraProposals: Proposal[], renewal = false): Promise<Uint8Array[]> {
     if (!this.state) return []
     const previous = this.state
     let result: Awaited<ReturnType<typeof createCommit>>
@@ -952,18 +1120,27 @@ export class MediaGroup {
     } catch {
       return []
     }
-    wipeConsumed(result.consumed)
+    if (!renewal) wipeConsumed(result.consumed)
     const adding = extraProposals.some(proposal => proposal.proposalType === 'add')
     const welcome = result.welcome
       ? encodeWire({ version: 'mls10', wireformat: 'mls_welcome', welcome: result.welcome })
       : null
     const commit = result.commit.wireformat === 'mls_public_message' ? encodeWire(result.commit) : null
     if (!commit || (adding && !welcome)) {
+      if (renewal) wipeConsumed(result.consumed)
       this.wipeRejected(result.newState)
       return []
     }
     const soft = !extraProposals.some(proposal => proposal.proposalType === 'remove')
-    if (!await this.adopt(result.newState, soft ? 'soft' : 'commit')) return []
+    const current = this.current
+    const previousEpoch = this.previousEpoch
+    if (renewal) this.dropSelfUpdate()
+    if (!await this.adopt(result.newState, soft ? 'soft' : 'commit')) {
+      if (renewal) wipeConsumed(result.consumed)
+      return []
+    }
+    // A renewal may race another commit for the same epoch: keep the state it left.
+    if (renewal) this.selfUpdate = { state: previous, current, previousEpoch, sender: this.userId, until: clock.now() + CONFLICT_MS, held: result.consumed }
     return welcome ? [welcome, commit] : [commit]
   }
 

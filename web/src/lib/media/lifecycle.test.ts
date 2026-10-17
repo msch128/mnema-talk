@@ -97,8 +97,6 @@ describe('rotation', () => {
     vi.setSystemTime(START + timing.rotateMs - timing.rotateJitterMs - 1)
     expect((await alice.maintain()).wires).toEqual([])
     vi.setSystemTime(START + timing.rotateMs + timing.rotateJitterMs + 1)
-    // Bob is not the committer: nothing from him.
-    expect((await bob.maintain()).wires).toEqual([])
     const rotated = await alice.maintain()
     expect(kinds(rotated)).toEqual(['mls_public_message'])
     expect(rotated.epoch).toBe(2)
@@ -117,6 +115,8 @@ describe('rotation', () => {
     expect(await roundTrip(bobNow.key, new Map([[2, rotated.key as EpochKeys]]), 2, bobId)).toEqual([4, 2])
     // The next rotation counts from the new epoch, not from the old one.
     expect((await alice.maintain()).wires).toEqual([])
+    // Bob's own leaf is as old as Alice's was, but he waits for a quiet moment after the commit.
+    expect((await bob.maintain()).wires).toEqual([])
     await alice.close()
     await bob.close()
   }, 30_000)
@@ -158,13 +158,17 @@ describe('rotation', () => {
     await deliver(groups, bobId, removal.wires, left)
     const carolNow = await carol.sync(left)
     expect(carolNow.epoch).toBe(removal.epoch)
-    // Carol is not the committer and does nothing; Bob rotates when his epoch is old.
+    // Bob rotates when his epoch is old; Carol, no committer, waits for a quiet moment after it.
     vi.setSystemTime(START + 5000 + timing.rotateMs + timing.rotateJitterMs + 1)
-    expect((await carol.maintain()).wires).toEqual([])
     const rotated = await bob.maintain()
     expect(kinds(rotated)).toEqual(['mls_public_message'])
     await deliver(groups, bobId, rotated.wires, left)
     expect((await carol.sync(left)).epoch).toBe(rotated.epoch)
+    // Her own leaf is long overdue by now, so she renews it without waiting for quiet; Bob takes that.
+    const renewal = await carol.maintain()
+    expect(kinds(renewal)).toEqual(['mls_public_message'])
+    await deliver(groups, carolId, renewal.wires, left)
+    expect((await bob.sync(left)).epoch).toBe(renewal.epoch)
     await Promise.all([bob.close(), carol.close()])
   }, 60_000)
 })
