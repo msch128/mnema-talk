@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.15](https://github.com/msch128/mnema-talk/compare/v0.7.14...v0.7.15) (2026-10-17)
+
+
+### Features
+
+* let viewers choose the quality of a screen share ([#131](https://github.com/msch128/mnema-talk/issues/131)) ([d626afa](https://github.com/msch128/mnema-talk/commit/d626afa42d40e7950c5f2a831485f5405829ec10))
+
 ## [0.7.14](https://github.com/msch128/mnema-talk/compare/v0.7.13...v0.7.14) (2026-10-17)
 
 
