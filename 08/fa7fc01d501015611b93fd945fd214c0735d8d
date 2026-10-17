@@ -1,0 +1,23 @@
+e2e/tests/sidebar-layout.spec.ts
+  s_06fcde5dbef956::t_d6fe5c2303ba6c 176-179
+e2e/tests/screen-layers.spec.ts
+  s_06fcde5dbef956::t_dab7d605fa3011 176
+  s_06fcde5dbef956::t_ab766683d0528e 106-114,120,133,189-191,196
+  s_06fcde5dbef956::t_782e7562d42c78 172-175,177-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "08fa7fc01d501015611b93fd945fd214c0735d8d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
