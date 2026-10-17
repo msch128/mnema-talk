@@ -3229,7 +3229,7 @@
   "paths": {
     "/api/admin/audit-log": {
       "get": {
-        "description": "Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). Entries about webhooks, system and media administration, settings and Owner-only account actions are only returned to the Owner and Administrators. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.",
+        "description": "Newest first, filtered and paged by id. Requires the View audit log permission (the Owner always has it). What a reader sees depends on the entry's class (doc/moderation.md): sign-in events, webhooks, system, media, settings and Owner-only account actions are only returned to the Owner and Administrators, and message and Talk entries only for channels the caller can view. Entries are immutable. Secrets are never stored; message deletions and edits keep the message text.",
         "operationId": "listAuditLog",
         "parameters": [
           {
