@@ -82,7 +82,7 @@ has one; a locally installed open-source Chromium may not).
 ### Screenshots
 
 The pictures in the README (`doc/images/`) come from invented demo data on a
-throwaway stack. `e2e/screenshots/run.sh` builds the app, seeds users,
+throwaway stack. `scripts/screenshots/run.sh` builds the app, seeds users,
 channels, roles, a webhook and a conversation, starts a Talk with a fake screen
 share and captures 1440x900 PNGs with Playwright. `SHOTS_ONLY="chat roles"`
 limits it; `SKIP_BUILD=1` reuses the last build. Never capture a real instance.

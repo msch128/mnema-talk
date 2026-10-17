@@ -1,8 +1,10 @@
 /* global process */
 // Captures the README screenshots from a seeded throwaway instance.
-// Usage: see e2e/screenshots/run.sh. Output: SHOTS_OUT (default doc/images).
+// Usage: see scripts/screenshots/run.sh. Output: SHOTS_OUT (default doc/images).
 // The app has one (dark) theme, so every picture is 1440x900 at 1x.
-import { chromium } from '@playwright/test'
+import { createRequire } from 'node:module'
+// Playwright comes from e2e/ (one install, one pinned version).
+const { chromium } = createRequire(new URL('../../e2e/package.json', import.meta.url))('@playwright/test')
 import { mkdirSync } from 'node:fs'
 import { BASE, ADMIN_USER, ADMIN_PASSWORD, MEMBER_PASSWORD, login } from './seed.mjs'
 

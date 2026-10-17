@@ -1,7 +1,9 @@
 /* global process */
 // Seeds a throwaway Mnema Talk instance with neutral demo data (invented
 // people, channels and messages) for the README screenshots. See capture.mjs.
-import { chromium } from '@playwright/test'
+import { createRequire } from 'node:module'
+// Playwright comes from e2e/ (one install, one pinned version).
+const { chromium } = createRequire(new URL('../../e2e/package.json', import.meta.url))('@playwright/test')
 
 export const BASE = process.env.SHOTS_BASE_URL || 'http://127.0.0.1:58980'
 export const ADMIN_USER = process.env.SHOTS_ADMIN_USER || 'Herzog'

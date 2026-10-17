@@ -47,8 +47,7 @@ env -i PATH="$PATH" HOME="$HOME" APP_ENV=development PORT="$APP_PORT" BIND_ADDR=
 SERVER_PID=$!
 for _ in $(seq 1 60); do curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1 && break; sleep 1; done
 
-cd e2e
 export SHOTS_BASE_URL="http://127.0.0.1:$APP_PORT" SHOTS_ADMIN_PASSWORD="$PASSWORD"
-node screenshots/seed.mjs
+node scripts/screenshots/seed.mjs
 # shellcheck disable=SC2086
-node screenshots/capture.mjs ${SHOTS_ONLY:-}
+node scripts/screenshots/capture.mjs ${SHOTS_ONLY:-}

@@ -80,7 +80,7 @@ mnema-talk/
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
 ├── api/                     # Generated OpenAPI document (`make openapi`)
 ├── doc/                     # Architecture, operations, upgrade, roles, webhooks, desktop docs; doc/images has the README screenshots
-├── e2e/                     # Playwright browser tests (`make e2e`); e2e/screenshots/ regenerates doc/images
+├── e2e/                     # Playwright browser tests (`make e2e`)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
@@ -117,7 +117,7 @@ mnema-talk/
 1. **Check `.env` and `.gitignore` first**: before modifying or creating files, make sure no secrets, databases or uploads are staged.
 2. **Run `make check` before committing**: gofmt, `go vet`, unit + integration tests, govulncheck, frontend lint/test/build, `npm audit`, and the Docker build. That's the same set CI runs.
 3. **Tests**: `go test ./...` (unit), `go test -tags=integration ./...` (integration; needs Docker or `TEST_DATABASE_URL`), `npm run test` in `web/`. New behaviour comes with tests.
-   README screenshots (`doc/images/`) come from invented demo data only; regenerate them with `e2e/screenshots/run.sh` when the UI changes visibly, never from a real instance.
+   README screenshots (`doc/images/`) come from invented demo data only; regenerate them with `scripts/screenshots/run.sh` when the UI changes visibly, never from a real instance.
 4. **Migrations**: add a **new numbered file** in `internal/db/migrations/` (e.g. `0003_<name>.sql`). **Never edit a migration that has already been applied**; they are embedded and run in order at startup.
 5. **Configuration**: every new env variable is read in `internal/config`, documented in `.env.example` with a placeholder, and passed through in `docker-compose.yml` when needed.
 6. **Pure Go preferred**: keep CGO out of the build (`CGO_ENABLED=0`) so cross-compilation for Linux (Unraid/Docker) stays trivial.
