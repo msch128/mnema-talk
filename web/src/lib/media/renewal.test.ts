@@ -52,11 +52,13 @@ async function trio() {
   await (groups.get(aliceId) as MediaGroup).sync([aliceId])
   for (const id of roster.slice(1)) await deliver(groups, id, (await (groups.get(id) as MediaGroup).sync(roster)).wires)
   for (const group of groups.values()) await group.sync(roster)
+  // Everyone tells the others what it supports now, so later ticks carry only what the test is about.
+  for (const [id, group] of groups) await deliver(groups, id, (await group.maintain()).wires)
   return { groups, alice: groups.get(aliceId) as MediaGroup, bob: groups.get(bobId) as MediaGroup, carol: groups.get(carolId) as MediaGroup }
 }
 
 function kinds(step: MediaStep) {
-  return step.wires.map(wire => wire[0] === 0x4d ? 'heartbeat' : mls.decodeMlsMessage(wire, 0)?.[0].wireformat)
+  return step.wires.filter(wire => wire[1] !== 0x43).map(wire => wire[0] === 0x4d ? 'heartbeat' : mls.decodeMlsMessage(wire, 0)?.[0].wireformat)
 }
 
 async function closeAll(groups: Iterable<MediaGroup>) {

@@ -3396,6 +3396,24 @@ describe('protected media', () => {
     await join
   })
 
+  it('tells the call what each incoming line carries, from the stream the SFU names', async () => {
+    const call = installRecordingCall()
+    const { rtc } = setup()
+    useAuthStore().user = userFixture()
+    const join = rtc.joinVoiceChannel('ch-1')
+    await grantMic()
+    await join
+    const pc = await negotiate()
+    const receiver = (name: string) => ({ name }) as unknown as RTCRtpReceiver
+    present(pc.ontrack)({ track: fakeTrack('audio'), streams: [remoteStreamFor('alice')], receiver: receiver('mic') })
+    present(pc.ontrack)({ track: fakeTrack('audio'), streams: [remoteStreamFor('screen:alice')], receiver: receiver('screenAudio') })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('alice')], receiver: receiver('screen') })
+    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('cam:alice')], receiver: receiver('camera') })
+    expect(call.protectIncoming.mock.calls.map(c => [(c[0] as unknown as { name: string }).name, c[1], c[2]])).toEqual([
+      ['mic', 'alice', 0], ['screenAudio', 'alice', 3], ['screen', 'alice', 2], ['camera', 'alice', 1],
+    ])
+  })
+
   it('seals the call for the signed-in member and ignores another room', async () => {
     const call = installRecordingCall()
     const user = userFixture()
@@ -3411,7 +3429,7 @@ describe('protected media', () => {
     expect(call.roster).toHaveBeenLastCalledWith([member.id])
     const pc = await negotiate()
     present(pc.ontrack)({ track: fakeTrack(), streams: [remoteStreamFor('alice')] })
-    expect(call.protectIncoming).toHaveBeenCalledWith(undefined, 'alice')
+    expect(call.protectIncoming).toHaveBeenCalledWith(undefined, 'alice', 0)
     expect(audioElements.length).toBeGreaterThan(0)
     const keyframes = sent.filter(event => event.type === 'webrtc_request_keyframe').length
     call.fireKey()
@@ -3640,7 +3658,8 @@ describe('layers of my screen share', () => {
     const { pc } = await joinedWithLayers()
     expect(pc.transceivers.map(t => t.direction)).toEqual(['sendrecv', 'sendrecv', 'sendrecv', 'sendrecv', 'sendrecv', 'sendrecv'])
     // Mic, screen (layer 0), camera, screen sound, then layers 1 and 2.
-    expect(call.protectSender.mock.calls.map(c => (c as unknown[])[1])).toEqual([undefined, 0, undefined, undefined, 1, 2])
+    // Each line also says what it carries: 0 microphone, 1 camera, 2 screen, 3 screen sound.
+    expect(call.protectSender.mock.calls.map(c => [(c as unknown[])[1], (c as unknown[])[2]])).toEqual([[0, undefined], [2, 0], [1, undefined], [3, undefined], [2, 1], [2, 2]])
   })
 
   it('leaves the lines alone when the server does not take layers', async () => {

@@ -306,6 +306,21 @@ run. It can also run against a remote instance.
   [`group.ts`](../web/src/lib/media/group.ts), heartbeat format in
   [`heartbeat.ts`](../web/src/lib/media/heartbeat.ts). The e2e build
   (`MNEMA_E2E=1`) lets tests shorten them; release builds cannot.
+- **Frame format and line binding.** Each sealed unit is `M3 | epoch | stream
+  | counter | line | nonce | AES-GCM | Ed25519 signature`; the `line` byte
+  (source in the high nibble, screen layer in the low one) is in the AAD and
+  the signed bytes, and each receiving transform is armed with the source the
+  SFU names for its line, so a unit moved to another line does not open
+  ([`frame.ts`](../web/src/lib/media/frame.ts),
+  [`mediaFrameWorker.ts`](../web/src/lib/media/mediaFrameWorker.ts)). Version 2
+  (`M2`, no line) is still sent and accepted for mixed-version Talks: members
+  sign a capability message
+  ([`capability.ts`](../web/src/lib/media/capability.ts), `M` `C`, next to the
+  heartbeat), a sender seals version 3 only in an epoch where every member
+  advertised it (decided per epoch, never downgraded within one), and a
+  receiver refuses version 2 in an epoch where every member has.
+  Refusing version 2 outright is planned for a later release
+  ([SECURITY.md](../SECURITY.md)).
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
 - **Invite-only, one Owner.** No public registration; the Owner is seeded

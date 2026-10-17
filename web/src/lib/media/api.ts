@@ -1,4 +1,5 @@
 import type { MediaVerification } from './verify'
+import type { FrameSource } from './frame'
 
 /**
  * Keys changed in a way the member did not ask for: 'removed' by someone else
@@ -19,10 +20,12 @@ export interface MediaCall {
   /** The safety code of the keys in use, or null while there are none. */
   onVerification(listener: (verification: MediaVerification | null) => void): void
   /**
-   * Seals what a sender sends. `layer` (0..3) marks a line of a screen share's
-   * layers, whose frames then carry that layer in their stream ID.
+   * Seals what a sender sends. `source` is what the line carries (microphone,
+   * camera, screen, screen sound); it is bound into every frame. `layer` (0..3)
+   * marks a line of a screen share's layers, whose frames then carry that
+   * layer in their stream ID.
    */
-  protectSender(sender: RTCRtpSender, layer?: number): boolean
+  protectSender(sender: RTCRtpSender, source: FrameSource, layer?: number): boolean
   /**
    * Arms a receiver before its line receives anything. A browser applies a
    * receiver transform only if it was set before then, and the publisher of a
@@ -30,7 +33,8 @@ export interface MediaCall {
    * nothing until protectIncoming names it.
    */
   prepareIncoming(receiver: RTCRtpReceiver): boolean
-  protectIncoming(receiver: RTCRtpReceiver | undefined, senderId: string): boolean
+  /** `source` is what the SFU says this line carries; a frame that names another source does not open. */
+  protectIncoming(receiver: RTCRtpReceiver | undefined, senderId: string, source: FrameSource): boolean
 }
 
 const disabled: MediaCall = {

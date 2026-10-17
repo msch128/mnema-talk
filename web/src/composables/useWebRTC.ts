@@ -24,6 +24,7 @@ import type { MediaStat } from '../lib/mediaStats'
 import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
 import { declaredLayers, layersKey, planScreenLayers } from '../lib/screenLayers'
+import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../lib/media/frame'
 import type { AudioOutputTarget } from '../lib/audioOutput'
 import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
 import { decodeServerICEConfig } from '../types/rest'
@@ -580,7 +581,13 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
     const streamId = event.streams?.[0]?.id
     const senderId = publisherId(streamId)
     if (!senderId) return
-    if (!mediaCall().protectIncoming(event.receiver, senderId)) {
+    // What the line carries, as the SFU names it. A sealed frame says what its
+    // sender made it for, and only a frame that agrees is opened.
+    const isVideo = event.track.kind === 'video'
+    const source = isVideo
+      ? (streamId?.startsWith(CAMERA_STREAM_PREFIX) ? SOURCE_CAMERA : SOURCE_SCREEN)
+      : (streamId?.startsWith(SCREEN_AUDIO_STREAM_PREFIX) ? SOURCE_SCREEN_AUDIO : SOURCE_MIC)
+    if (!mediaCall().protectIncoming(event.receiver, senderId, source)) {
       announceMediaUnprotected()
       return
     }
@@ -795,10 +802,10 @@ function canSendH264() {
  */
 function bindPublishSenders(conn: RTCPeerConnection, sdp: string, layerLines = 0) {
   const mids = publishMids(sdp, layerLines)
-  const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined, layer?: number) => {
+  const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined, source: FrameSource, layer?: number) => {
     const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
     if (!tr) return null
-    if (!mediaCall().protectSender(tr.sender, layer)) {
+    if (!mediaCall().protectSender(tr.sender, source, layer)) {
       announceMediaUnprotected()
       return null
     }
@@ -809,27 +816,27 @@ function bindPublishSenders(conn: RTCPeerConnection, sdp: string, layerLines = 0
   // fresh: senders bound by this call, which still need their parameters.
   const bound: { screen: boolean; camera: boolean; fresh: BoundSenders } = { screen: false, camera: false, fresh: {} }
   if (!audioSender) {
-    audioSender = bind(mids.audio, activeAudioTrack())
+    audioSender = bind(mids.audio, activeAudioTrack(), SOURCE_MIC)
     if (audioSender) bound.fresh.audio = audioSender
   }
   if (!screenSender) {
-    screenSender = bind(mids.video[0], null, 0)
+    screenSender = bind(mids.video[0], null, SOURCE_SCREEN, 0)
     bound.screen = !!screenSender && !!localScreenStream.value
     if (screenSender) bound.fresh.screen = screenSender
   }
   if (!cameraSender) {
-    cameraSender = bind(mids.video[1], localCameraStream.value?.getVideoTracks()[0])
+    cameraSender = bind(mids.video[1], localCameraStream.value?.getVideoTracks()[0], SOURCE_CAMERA)
     bound.camera = !!cameraSender && !!localCameraStream.value
     if (cameraSender) bound.fresh.camera = cameraSender
   }
   if (!screenAudioSender) {
-    screenAudioSender = bind(mids.screenAudio, liveScreenAudioTrack())
+    screenAudioSender = bind(mids.screenAudio, liveScreenAudioTrack(), SOURCE_SCREEN_AUDIO)
     if (screenAudioSender) bound.fresh.screenAudio = screenAudioSender
   }
   // The lower layers of the screen share: lines an older server does not offer.
   for (let i = 0; i < Math.min(layerSenders.length, layerLines); i++) {
     if (layerSenders[i]) continue
-    const sender = bind(mids.video[2 + i], null, i + 1)
+    const sender = bind(mids.video[2 + i], null, SOURCE_SCREEN, i + 1)
     layerSenders[i] = sender
     if (sender) (bound.fresh.layers ??= []).push(sender)
   }

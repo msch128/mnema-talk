@@ -63,6 +63,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
   let roster: string[] = []
   let appliedEpoch: number | null = null
   let appliedKey: EpochKeys | null = null
+  let appliedCaps: string | null = null
   let generation = 0
   let opening: Promise<void> = Promise.resolve()
   let tail: Promise<void> = Promise.resolve()
@@ -140,18 +141,18 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     onWire(listener) { wireListener = listener },
     onNotice(listener) { noticeListener = listener },
     onVerification(listener) { verificationListener = listener },
-    protectSender(sender, layer) {
+    protectSender(sender, source, layer) {
       if (!channelId || !userId) return false
-      return guard.armSender(sender, channelId, userId, layer)
+      return guard.armSender(sender, channelId, userId, source, layer)
     },
     prepareIncoming(receiver) {
       if (!receiver || !channelId) return false
       return guard.armReceiver(receiver, channelId, null)
     },
-    protectIncoming(receiver, senderId) {
+    protectIncoming(receiver, senderId, source) {
       const id = mediaUserId(senderId)
       if (!receiver || !channelId || !id) return false
-      return guard.armReceiver(receiver, channelId, id)
+      return guard.armReceiver(receiver, channelId, id, source)
     },
   }
 
@@ -211,8 +212,13 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
         const replace = appliedEpoch === null || step.epoch <= appliedEpoch
         appliedEpoch = step.epoch
         appliedKey = step.key
-        guard.setKey(step.epoch, step.key, replace, step.soft === true)
+        appliedCaps = capsId(step)
+        guard.setKey(step.epoch, step.key, replace, step.soft === true, step.caps)
         keyListener?.()
+      } else if (step.caps && capsId(step) !== appliedCaps) {
+        // A member's advertisement arrived: the epoch is the same, the keys stay.
+        appliedCaps = capsId(step)
+        guard.setCaps(step.epoch, step.caps)
       }
       verify(step.verification ?? null)
       return
@@ -224,6 +230,10 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     appliedEpoch = null
     appliedKey = null
     verify(null)
+  }
+
+  function capsId(step: MediaStep): string | null {
+    return step.caps ? `${step.caps.complete}:${step.caps.members.join(',')}` : null
   }
 
   function verify(verification: MediaVerification | null) {

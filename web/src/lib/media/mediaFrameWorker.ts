@@ -1,6 +1,6 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
-import { FrameStream, LAYER_STREAM_MASK, layerStreamId, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
-import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
+import { FrameStream, LAYER_STREAM_MASK, SOURCE_SCREEN, isFrameSource, layerStreamId, openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSource } from './frame'
+import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS, V2_GRACE_MS } from './bounds'
 import { clock } from './clock'
 
 interface EncodedFrame {
@@ -17,6 +17,8 @@ interface TransformOptions {
   senderId?: unknown
   /** The layer of a screen share this line sends (0..3); absent for every other line. */
   layer?: unknown
+  /** What the line carries (frame.ts SOURCE_*). */
+  source?: unknown
 }
 
 interface RtpTransformer {
@@ -48,6 +50,10 @@ function replayOf(senderId: string): ReplayWindow {
   }
   return window
 }
+// Epochs in which every member opens version 3, with when this worker heard
+// so: sealed as version 3 from then on, never as version 2 again in that
+// epoch, and version 2 units of that epoch stop opening shortly after.
+const v3Epochs = new Map<number, number>()
 let sendEpoch: number | null = null
 // When each epoch that is no longer the newest of its group was left, so its
 // key stops opening frames PREVIOUS_EPOCH_MS later.
@@ -62,7 +68,7 @@ function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
   return map.size ? Math.max(...map.keys()) : null
 }
 
-function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null, soft = false) {
+function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null, soft = false, caps: Caps | null = null) {
   if (seq !== null) {
     if (seq <= lastSeq) return
     lastSeq = seq
@@ -76,6 +82,7 @@ function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number |
     keys = new Map()
     retiredAt = new Map()
     sendHold = null
+    v3Epochs.clear()
   }
   const left = sendEpoch
   const now = clock.now()
@@ -91,6 +98,31 @@ function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number |
   dropExpired()
   staleSince = null
   retainReplays()
+  if (caps) applyCaps(epoch, caps)
+}
+
+interface Caps { members: string[], complete: boolean }
+
+function isCaps(value: unknown): value is Caps {
+  return !!value && typeof value === 'object' && 'members' in value && Array.isArray(value.members) && value.members.every(id => typeof id === 'string')
+    && 'complete' in value && typeof value.complete === 'boolean'
+}
+
+/** Whether all of this epoch's members open version 3. Once they do, that stays so for the epoch. */
+function applyCaps(epoch: number, caps: Caps) {
+  if (caps.complete && keys.has(epoch) && !v3Epochs.has(epoch)) v3Epochs.set(epoch, clock.now())
+}
+
+/**
+ * Version 2 units open while some member of their epoch cannot open version
+ * 3 (their senders seal version 2 for it). Once every member can, senders
+ * switch within a moment (V2_GRACE_MS, while they hear the others' messages)
+ * and version 2 of that epoch opens no more: nobody honest makes it, so it is
+ * a downgrade or a replay.
+ */
+function acceptsV2(epoch: number): boolean {
+  const since = v3Epochs.get(epoch)
+  return since === undefined || clock.now() - since < V2_GRACE_MS
 }
 
 /** The epoch before the newest opens frames only briefly (PREVIOUS_EPOCH_MS); then its key and verifiers are gone. */
@@ -102,6 +134,7 @@ function dropExpired() {
     retiredAt.delete(epoch)
     if (keys.delete(epoch)) dropped = true
   }
+  for (const epoch of [...v3Epochs.keys()]) if (!keys.has(epoch)) v3Epochs.delete(epoch)
   if (dropped) retainReplays()
 }
 
@@ -128,6 +161,7 @@ function forget() {
   sendHold = null
   regroupedAt = -Infinity
   sendEpoch = null
+  v3Epochs.clear()
   replays.clear()
 }
 
@@ -149,6 +183,9 @@ interface Line {
   channelId: string
   senderId: string | null
   stream: FrameStream | null
+  /** What the line carries; a receiver learns it with the publisher. */
+  source: FrameSource | null
+  layer: number
 }
 
 async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | null> {
@@ -175,7 +212,7 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
       const counter = stream.next()
       return counter === null
         ? Promise.resolve(null)
-        : sealFrame({ keys: epochKeys, epoch, stream: stream.id, counter, channelId, senderId, plaintext, clear })
+        : sealFrame({ keys: epochKeys, epoch, stream: stream.id, counter, channelId, senderId, plaintext, clear, version: v3Epochs.has(epoch) ? 3 : 2, source: line.source as FrameSource, layer: line.layer })
     })
     return sealed ? packet(sealed) : null
   }
@@ -184,7 +221,7 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
   let unknown = -1
   const before = previousKeys()
   const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
-    keys, previous: before, channelId, senderId, packet: sealed, clear, replay, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
+    keys, previous: before, channelId, senderId, packet: sealed, clear, replay, source: line.source, acceptV2: acceptsV2, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
   }))
   count(senderId, opened !== null, unknown)
   return opened ? packet(opened) : null
@@ -235,8 +272,12 @@ scope.onrtctransform = (event) => {
   // Every sending transform starts a fresh stream; a screen share's layers
   // carry their layer in the stream ID, so they cannot share one.
   const layer = options?.layer
-  const layerId = typeof layer === 'number' && Number.isInteger(layer) && layer >= 0 && layer <= LAYER_STREAM_MASK ? layerStreamId(layer) : undefined
-  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null }
+  const source = isFrameSource(options?.source) ? options.source : null
+  // Every sending line says what it carries; without that nothing is sealed.
+  if (direction === 'send' && source === null) return
+  const layerNo = typeof layer === 'number' && Number.isInteger(layer) && layer >= 0 && layer <= LAYER_STREAM_MASK ? layer : source === SOURCE_SCREEN ? 0 : undefined
+  const layerId = layerNo === undefined ? undefined : layerStreamId(layerNo)
+  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null, source, layer: layerNo ?? 0 }
   port.onmessage = (message: MessageEvent<unknown>) => {
     const data = message.data
     if (!data || typeof data !== 'object') return
@@ -250,11 +291,22 @@ scope.onrtctransform = (event) => {
     }
     if (direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
       line.senderId = data.senderId
+      // A reused receiver may now carry another source.
+      line.source = 'source' in data && isFrameSource(data.source) ? data.source : null
       return
     }
     if ('type' in data && data.type === 'key' && 'epoch' in data && 'key' in data && isEpoch(data.epoch) && isEpochKeys(data.key)) {
       const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true)
+      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true, 'caps' in data && isCaps(data.caps) ? data.caps : null)
+      return
+    }
+    if ('type' in data && data.type === 'caps' && 'epoch' in data && 'caps' in data && isEpoch(data.epoch) && isCaps(data.caps)) {
+      const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
+      if (seq !== null) {
+        if (seq <= lastSeq) return
+        lastSeq = seq
+      }
+      applyCaps(data.epoch, data.caps)
     }
   }
   transformer.readable.pipeThrough(new TransformStream<EncodedFrame, EncodedFrame>({

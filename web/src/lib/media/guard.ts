@@ -1,4 +1,6 @@
-import type { EpochKeys } from './frame'
+import type { EpochKeys, FrameSource } from './frame'
+
+export interface FrameCaps { members: string[], complete: boolean }
 
 export interface FrameStats { opened: number, newer: number, epoch: number }
 
@@ -8,14 +10,20 @@ interface KeyedPort {
 }
 
 export interface MediaGuard {
-  armSender(sender: RTCRtpSender, channelId: string, senderId: string, layer?: number): boolean
+  armSender(sender: RTCRtpSender, channelId: string, senderId: string, source: FrameSource, layer?: number): boolean
   /**
    * Arms a receiver. With no sender yet it opens nothing until bindReceiver
-   * names the publisher. Arming an armed receiver only names the publisher.
+   * names the publisher. Arming an armed receiver only names the publisher
+   * and what its line carries now.
    */
-  armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean
-  /** With soft, the epoch was reached by a commit that removed nobody: sealing may stay one moment on the epoch left. */
-  setKey(epoch: number, key: EpochKeys, replace?: boolean, soft?: boolean): void
+  armReceiver(receiver: RTCRtpReceiver, channelId: string, senderId: string | null, source?: FrameSource): boolean
+  /**
+   * With soft, the epoch was reached by a commit that removed nobody: sealing may stay one moment on the epoch left.
+   * `caps` says who opens frame version 3 in the epoch and whether that is everyone.
+   */
+  setKey(epoch: number, key: EpochKeys, replace?: boolean, soft?: boolean, caps?: FrameCaps): void
+  /** Members of the epoch that advertised frame version 3 changed; the keys did not. */
+  setCaps(epoch: number, caps: FrameCaps): void
   /** The call lost its group: the last keys may seal only a little longer. */
   staleKeys(): void
   /** Per publisher: frames opened, and frames from an epoch newer than any key held. */
@@ -55,7 +63,9 @@ export function createMediaGuard(): MediaGuard {
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
   // The last key message, given to a line armed later; seq lets the shared
   // worker apply a message once however many lines deliver it.
-  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, seq: number } | null = null
+  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, caps?: FrameCaps, seq: number } | null = null
+  // The newest advertisement, given to a line armed later after the key.
+  let currentCaps: { type: 'caps', epoch: number, caps: FrameCaps, seq: number } | null = null
   let seq = 0
   let statsListener: ((senders: Record<string, FrameStats>) => void) | null = null
 
@@ -71,8 +81,8 @@ export function createMediaGuard(): MediaGuard {
     return worker
   }
 
-  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, layer?: number): boolean {
-    if (!channelId || senderId === '' || (senderId === null && direction === 'send')) return false
+  function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
+    if (!channelId || senderId === '' || (senderId === null && direction === 'send') || (direction === 'send' && source === undefined)) return false
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()
@@ -81,38 +91,48 @@ export function createMediaGuard(): MediaGuard {
       direction,
       channelId,
       ...(senderId === null ? {} : { senderId }),
+      ...(source === undefined ? {} : { source }),
       ...(layer === undefined ? {} : { layer }),
     }, [channel.port2])
     if (current) channel.port1.postMessage(current)
+    if (currentCaps && current && currentCaps.epoch === current.epoch) channel.port1.postMessage(currentCaps)
     ports.push(channel.port1)
     if (direction === 'recv') armed.set(target as RTCRtpReceiver, channel.port1)
     return true
   }
 
-  function armIncoming(receiver: RTCRtpReceiver, channelId: string, senderId: string | null): boolean {
+  function armIncoming(receiver: RTCRtpReceiver, channelId: string, senderId: string | null, source?: FrameSource): boolean {
     const port = armed.get(receiver)
     // Browsers only apply a receiver transform that was set before the line
     // started receiving, so a prepared receiver keeps its transform and is
-    // told who publishes on it.
+    // told who publishes on it and what it carries.
     if (port && receiver.transform) {
       if (senderId === null) return true
-      port.postMessage({ type: 'sender', senderId })
+      port.postMessage({ type: 'sender', senderId, ...(source === undefined ? {} : { source }) })
       return true
     }
-    return arm(receiver, 'recv', channelId, senderId)
+    return arm(receiver, 'recv', channelId, senderId, source)
   }
 
   return {
-    armSender: (sender, channelId, senderId, layer) => arm(sender, 'send', channelId, senderId, layer),
+    armSender: (sender, channelId, senderId, source, layer) => arm(sender, 'send', channelId, senderId, source, layer),
     armReceiver: armIncoming,
-    setKey(epoch, key, replace = false, soft = false) {
+    setKey(epoch, key, replace = false, soft = false, caps) {
       seq += 1
       const message = {
         type: 'key' as const, epoch, key, seq,
         ...(replace ? { replace: true as const } : {}),
         ...(soft && !replace ? { soft: true as const } : {}),
+        ...(caps ? { caps } : {}),
       }
       current = message
+      currentCaps = null
+      for (const port of ports) port.postMessage(message)
+    },
+    setCaps(epoch, caps) {
+      seq += 1
+      const message = { type: 'caps' as const, epoch, caps, seq }
+      currentCaps = message
       for (const port of ports) port.postMessage(message)
     },
     staleKeys() {
@@ -121,6 +141,7 @@ export function createMediaGuard(): MediaGuard {
     onStats(listener) { statsListener = listener },
     reset() {
       current = null
+      currentCaps = null
       for (const port of ports) {
         try { port.postMessage({ type: 'drop' }) } catch { /* already closed */ }
         try { port.close() } catch { /* already closed */ }
