@@ -108,6 +108,29 @@ the first codec, and viewers could not decode it. The client still reorders
 its own screen line so screen shares prefer H.264 (hardware encoding) and get
 a higher start bitrate ([`tuneScreenOffer`](../web/src/composables/useWebRTC.ts)).
 
+**Layers of a screen share (0.8).** A sharer can send its screen as up to three
+separate encodings of the same capture ("layers", best first), and each viewer
+receives exactly one of them. The SFU offers three more receive lines for this,
+after the four above: the screen's lower layers are the third and fourth
+video line ([`screen.go`](../internal/sfu/screen.go),
+[`layers.go`](../internal/sfu/layers.go)). They are plain lines, not RTP
+simulcast (`rid`): the SFU is the offerer and a browser cannot add simulcast to
+an answer, whereas separate lines work in every browser and need no SDP
+munging. A client that does not know them answers them inactive, so old and
+new clients interoperate in both directions. Per viewer the SFU forwards one
+layer on one outgoing track and switches layers only where a keyframe of the
+new layer starts (a VP8 keyframe tag or an H.264 parameter set, both of which
+the browser's media transform leaves readable), asking the publisher for one
+when it switches. Sequence numbers, timestamps and VP8 picture IDs and
+`TL0PICIDX` are rewritten so the viewer sees one continuous stream; the sealed
+payload is never touched. The sender declares the layers (`webrtc_layers`,
+announced as `screen_layers`), a viewer picks one with `quality` on
+`webrtc_subscribe` and is told what it receives (`screen_quality`), and the
+sender is told which layers anyone needs (`screen_layers_wanted`) so it can
+stop encoding the others. A layer nobody needs any more stays wanted for eight
+seconds, so switching back and forth does not restart an encoder each time.
+Cameras and audio are not layered.
+
 **Stream quality and volume (0.4.0).** The sharer chooses mode, resolution
 and frame rate; the client applies them as capture constraints and sender
 parameters (`maxFramerate`, a bitrate cap, `scaleResolutionDownBy`), so the

@@ -110,6 +110,9 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 	if voiceSFU != nil {
 		voiceSFU.SetMediaStateHandler(h.announceMediaState)
 		voiceSFU.SetScreenViewersHandler(h.announceScreenViewers)
+		voiceSFU.SetScreenLayersHandler(h.announceScreenLayers)
+		voiceSFU.SetScreenQualityHandler(h.announceScreenQuality)
+		voiceSFU.SetLayersWantedHandler(h.announceLayersWanted)
 	}
 	return h
 }

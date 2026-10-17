@@ -117,6 +117,9 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "webrtc_subscribe":
 		c.handleSubscribe(payload)
 
+	case "webrtc_layers":
+		c.handleLayers(payload)
+
 	case "webrtc_screenshare_start":
 		// The sharer's own screen needs a fresh keyframe for its viewers
 		// (DispatchKeyframe would ask for the videos the sharer watches).

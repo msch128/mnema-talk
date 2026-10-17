@@ -199,6 +199,9 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			for sharer, viewers := range room.ScreenViewers() {
 				c.SendEvent("screen_viewers", screenViewersPayload(ch.ID, sharer, viewers))
 			}
+			for sharer, layers := range room.ScreenLayers() {
+				c.SendEvent("screen_layers", screenLayersPayload(ch.ID, sharer, layers))
+			}
 		}
 	}
 	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", rejoin)

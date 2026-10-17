@@ -47,6 +47,12 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if room == nil || !c.nativeLive() {
 		return
 	}
+	// The layer is chosen first, so the viewer's track starts on it.
+	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
+		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
+			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
+		}
+	}
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
@@ -58,16 +64,21 @@ type subscribeRequest struct {
 	publisher uuid.UUID // uuid.Nil with all
 	all       bool
 	on        bool
+	// quality is the layer of a screen share ("auto" is -1); hasQuality
+	// tells whether the message chose one.
+	quality    int
+	hasQuality bool
 }
 
 // parseSubscribe validates a webrtc_subscribe payload from viewer: a screen
 // or camera of one other user, or every camera at once.
 func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest, bool) {
 	var req struct {
-		Kind   string `json:"kind"`
-		UserID string `json:"user_id"`
-		All    bool   `json:"all"`
-		On     bool   `json:"on"`
+		Kind    string          `json:"kind"`
+		UserID  string          `json:"user_id"`
+		All     bool            `json:"all"`
+		On      bool            `json:"on"`
+		Quality json.RawMessage `json:"quality"`
 	}
 	if json.Unmarshal(payload, &req) != nil {
 		return subscribeRequest{}, false
@@ -79,7 +90,11 @@ func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest
 	if req.All && kind != sfu.SourceCamera {
 		return subscribeRequest{}, false
 	}
-	out := subscribeRequest{kind: kind, all: req.All, on: req.On}
+	quality, hasQuality, ok := parseQuality(req.Quality)
+	if !ok || hasQuality && kind != sfu.SourceScreen {
+		return subscribeRequest{}, false
+	}
+	out := subscribeRequest{kind: kind, all: req.All, on: req.On, quality: quality, hasQuality: hasQuality}
 	if !req.All {
 		id, err := uuid.Parse(req.UserID)
 		if err != nil || id == uuid.Nil || id == viewer {

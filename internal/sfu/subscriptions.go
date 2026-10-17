@@ -28,6 +28,38 @@ type Subscriptions struct {
 	allCamerasOff bool
 	hiddenCameras map[uuid.UUID]bool
 	screens       map[uuid.UUID]bool
+	// quality is the layer chosen per publisher's screen share; absent means
+	// automatic.
+	quality map[uuid.UUID]int8
+}
+
+// screenQuality is the layer chosen for publisher's screen share, -1 for
+// automatic.
+func (s *Subscriptions) screenQuality(publisher uuid.UUID) int {
+	if s == nil {
+		return -1
+	}
+	if q, ok := s.quality[publisher]; ok {
+		return int(q)
+	}
+	return -1
+}
+
+// setScreenQuality remembers the viewer's layer choice for a screen share
+// (-1 forgets it). It is kept even before the share is watched, so the
+// choice made with "Watch" applies from the first picture.
+func (s *Subscriptions) setScreenQuality(publisher uuid.UUID, layer int) {
+	if layer < 0 {
+		delete(s.quality, publisher)
+		return
+	}
+	if _, ok := s.quality[publisher]; !ok && len(s.quality) >= maxScreenSubs {
+		return
+	}
+	if s.quality == nil {
+		s.quality = map[uuid.UUID]int8{}
+	}
+	s.quality[publisher] = int8(layer)
 }
 
 // Wants reports whether a track of the given kind and source published by
@@ -87,7 +119,10 @@ func (s *Subscriptions) SetScreen(publisher uuid.UUID, on bool) error {
 }
 
 // dropScreen forgets a publisher's screen opt-in: the opt-in belongs to one share.
-func (s *Subscriptions) dropScreen(publisher uuid.UUID) { delete(s.screens, publisher) }
+func (s *Subscriptions) dropScreen(publisher uuid.UUID) {
+	delete(s.screens, publisher)
+	delete(s.quality, publisher)
+}
 
 // MediaState tells which video a user currently publishes. Viewers learn this
 // without receiving the media, so they can offer to watch a screen share.
@@ -101,6 +136,45 @@ type mediaNotifier struct {
 	mu      sync.RWMutex
 	fn      func(roomID, userID uuid.UUID, state MediaState)
 	viewers func(roomID, sharer uuid.UUID, viewers []uuid.UUID)
+	layers  func(roomID, sharer uuid.UUID, layers []Layer)
+	quality func(roomID, viewer, sharer uuid.UUID, state QualityState)
+	wanted  func(roomID, sharer uuid.UUID, layers []int)
+}
+
+func (n *mediaNotifier) setLayers(fn func(roomID, sharer uuid.UUID, layers []Layer)) {
+	n.mu.Lock()
+	n.layers = fn
+	n.mu.Unlock()
+}
+
+func (n *mediaNotifier) setQuality(fn func(roomID, viewer, sharer uuid.UUID, state QualityState)) {
+	n.mu.Lock()
+	n.quality = fn
+	n.mu.Unlock()
+}
+
+func (n *mediaNotifier) setWanted(fn func(roomID, sharer uuid.UUID, layers []int)) {
+	n.mu.Lock()
+	n.wanted = fn
+	n.mu.Unlock()
+}
+
+func (n *mediaNotifier) layersFn() func(roomID, sharer uuid.UUID, layers []Layer) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.layers
+}
+
+func (n *mediaNotifier) qualityFn() func(roomID, viewer, sharer uuid.UUID, state QualityState) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.quality
+}
+
+func (n *mediaNotifier) wantedFn() func(roomID, sharer uuid.UUID, layers []int) {
+	n.mu.RLock()
+	defer n.mu.RUnlock()
+	return n.wanted
 }
 
 func (n *mediaNotifier) set(fn func(roomID, userID uuid.UUID, state MediaState)) {
@@ -160,7 +234,8 @@ func (r *Room) Subscribe(viewer, publisher uuid.UUID, kind Source, all, on bool)
 	var fresh []*TrackInfo
 	if err == nil && on {
 		for _, info := range r.trackLocals {
-			if info.Kind == webrtc.RTPCodecTypeVideo && info.Source == kind && (all || info.SenderID == publisher) && r.wantsLocked(viewer, info) {
+			// A layered share is asked for when the viewer's track exists.
+			if info.Kind == webrtc.RTPCodecTypeVideo && info.group == nil && info.Source == kind && (all || info.SenderID == publisher) && r.wantsLocked(viewer, info) {
 				fresh = append(fresh, info)
 			}
 		}
@@ -242,7 +317,8 @@ func compareIDs(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) }
 // keeps the announcements in the order the states were computed.
 func (r *Room) notifyMedia() {
 	mediaFn, viewersFn := r.notifier.get()
-	if mediaFn == nil && viewersFn == nil {
+	layersFn := r.notifier.layersFn()
+	if mediaFn == nil && viewersFn == nil && layersFn == nil {
 		return
 	}
 	r.notifyMu.Lock()
@@ -293,10 +369,33 @@ func (r *Room) notifyMedia() {
 		}
 		r.lastViewers = next
 	}
+	type layerChange struct {
+		sharer uuid.UUID
+		layers []Layer
+	}
+	var layerChanges []layerChange
+	if layersFn != nil {
+		next := r.screenLayersLocked(now)
+		for sharer, layers := range next {
+			if !slices.Equal(r.lastLayers[sharer], layers) {
+				layerChanges = append(layerChanges, layerChange{sharer, layers})
+			}
+		}
+		for sharer := range r.lastLayers {
+			if _, ok := next[sharer]; !ok {
+				layerChanges = append(layerChanges, layerChange{sharer, []Layer{}})
+			}
+		}
+		r.lastLayers = next
+	}
 	r.mu.Unlock()
 
 	for _, c := range changes {
 		mediaFn(r.ID, c.user, c.state)
+	}
+	slices.SortFunc(layerChanges, func(a, b layerChange) int { return compareIDs(a.sharer, b.sharer) })
+	for _, c := range layerChanges {
+		layersFn(r.ID, c.sharer, c.layers)
 	}
 	slices.SortFunc(audiences, func(a, b audience) int { return compareIDs(a.sharer, b.sharer) })
 	for _, a := range audiences {
