@@ -218,6 +218,10 @@ func (r *Room) wantsLocked(viewer uuid.UUID, info *TrackInfo) bool {
 // added or removed by renegotiating with the viewer.
 func (r *Room) Subscribe(viewer, publisher uuid.UUID, kind Source, all, on bool) error {
 	r.mu.Lock()
+	if r.peers[viewer] == nil {
+		r.mu.Unlock()
+		return ErrNotInRoom
+	}
 	s := r.subsLocked(viewer)
 	var err error
 	switch {

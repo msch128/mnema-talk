@@ -14,7 +14,7 @@ class FakeSocket {
   url: string
   sent: unknown[] = []
   readyState = 0
-  onclose: (() => void) | null = null
+  onclose: ((event?: { code?: number }) => void) | null = null
   onopen: (() => void) | null = null
   constructor(url: string) {
     this.url = url
@@ -24,7 +24,7 @@ class FakeSocket {
   send(data: string) { this.sent.push(JSON.parse(data)) }
   close() { this.onclose?.() }
   open() { this.readyState = 1; this.onopen?.() }
-  drop() { this.onclose?.() }
+  drop(code?: number) { this.onclose?.(code === undefined ? undefined : { code }) }
 }
 
 function jsonResponse(body: unknown, status = 200): Promise<Response> {
@@ -100,6 +100,23 @@ describe('websocket reconnect', () => {
     expect(calls).toContain('/api/members')
     expect(calls.some(u => u.startsWith(`/api/channels/${CHANNEL_ID}/messages`))).toBe(true)
     expect(chat.reconnectCount).toBe(1)
+  })
+
+  it('stays disconnected after the server evicted it for a newer tab, until shown again', async () => {
+    const { chat } = setup()
+    chat.initWebSocket()
+    required(FakeSocket.instances[0]).open()
+    await vi.advanceTimersByTimeAsync(0)
+
+    required(FakeSocket.instances[0]).drop(4001)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(FakeSocket.instances).toHaveLength(1)
+    expect(chat.isConnected).toBe(false)
+
+    chat.retryNow()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(FakeSocket.instances).toHaveLength(2)
+    chat.closeWebSocket()
   })
 
   it('catches changes between the initial snapshot and the first socket opening', async () => {

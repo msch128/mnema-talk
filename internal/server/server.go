@@ -101,6 +101,8 @@ func NewRouter(d Deps) (*Router, error) {
 		Secure: cfg.SecureCookies(),
 	}
 	hub := ws.NewHub(d.DB, sessions, d.SFU, cfg.AllowedOrigins)
+	hub.UpgradeLimit = httpx.NewRateLimiter(30, time.Minute).Named("ws_user")
+	wsPerIP := httpx.NewRateLimiter(120, time.Minute).Named("ws_ip")
 	hub.Version = d.Version
 	permSvc := perm.NewService(d.DB)
 	hub.SetPermissions(permSvc)
@@ -216,7 +218,7 @@ func NewRouter(d Deps) (*Router, error) {
 			// A page, not JSON: without a session it sends the browser to sign in.
 			api.Get("/docs", apiDocs(sessions, web.APIDocsPage()))
 		}
-		api.Get("/ws", hub.HandleWebSocket)
+		api.Method(http.MethodGet, "/ws", wsPerIP.PerIP(http.HandlerFunc(hub.HandleWebSocket)))
 		// Authenticated by the secret in the URL, not by a session.
 		webhookH.MountPublic(api)
 

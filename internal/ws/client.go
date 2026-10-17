@@ -38,6 +38,9 @@ type Client struct {
 	// "online" user into "away" while all of their connections are idle.
 	idle bool // guarded by hub.mu
 
+	// connectedAt orders a user's browser sockets for eviction.
+	connectedAt time.Time
+
 	// voiceMu serializes this connection's voice joins and leaves (its own
 	// read loop, an admin kick, a deleted channel), so a leave never runs
 	// between a join's presence update and its SFU peer being recorded.
@@ -67,7 +70,7 @@ type Client struct {
 
 func newClient(h *Hub, conn *websocket.Conn, user auth.User, tokenVersion int) *Client {
 	return &Client{hub: h, conn: conn, send: make(chan []byte, sendBuffer), done: make(chan struct{}),
-		User: user, tokenVersion: tokenVersion}
+		User: user, tokenVersion: tokenVersion, connectedAt: time.Now()}
 }
 
 // close tears the connection down once; readPump then unregisters the client.
@@ -224,4 +227,24 @@ func (c *Client) peer() *sfu.Peer {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.sfuPeer
+}
+
+const (
+	// maxBrowserSockets bounds the browser connections of one user; every
+	// per-connection budget multiplies with them.
+	maxBrowserSockets = 8
+	// closeReplaced is the close code of an evicted connection. The web
+	// client does not reconnect on it by itself (it would evict another tab
+	// in turn); the tab reconnects when its user returns to it.
+	closeReplaced = 4001
+)
+
+// evict closes a connection that gave way to a newer one of the same user.
+func (c *Client) evict() {
+	if c.conn != nil {
+		_ = c.conn.WriteControl(websocket.CloseMessage,
+			websocket.FormatCloseMessage(closeReplaced, "too many connections"), time.Now().Add(writeWait))
+	}
+	c.shutdown()
+	c.close()
 }

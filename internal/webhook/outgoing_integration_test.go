@@ -239,8 +239,14 @@ func TestRunWorksTheQueue(t *testing.T) {
 	}
 	// A full queue drops events instead of blocking.
 	full := NewDispatcher(f.p, loopbackClient(), "test")
-	for range queueSize + 205 {
-		full.enqueue(job{webhook: rec.ID, event: sampleEvent(), attempt: 1})
+	channels := make([]uuid.UUID, 8)
+	for i := range channels {
+		channels[i] = uuid.New()
+	}
+	for i := range queueSize + 205 {
+		ev := sampleEvent()
+		ev.Channel = channels[i%len(channels)]
+		full.enqueue(job{webhook: rec.ID, event: ev, attempt: 1})
 	}
 	if full.dropped.Load() != 205 {
 		t.Fatalf("dropped %d", full.dropped.Load())
