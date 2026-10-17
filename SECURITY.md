@@ -365,6 +365,13 @@ details and the limits.
 - **Data retention.** Nothing is deleted automatically by default
   (`MEDIA_RETENTION_DAYS=0`). Operators who enable pruning must say so in their
   privacy notice.
+- **Moderation.** Timeouts and bans need their own permissions and a higher
+  role than the member; the Owner cannot be targeted. A timeout is applied in
+  the permission snapshot, so REST, the WebSocket hub and the SFU all honour it
+  and overwrites cannot undo it. A ban is a separate state from a disabled
+  account and is checked wherever an account may act (sign-in, sessions,
+  WebSockets, native sessions). The checks and the writes happen in one
+  transaction under the permission lock. See doc/moderation.md.
 - **Audit log.** Administrative actions (roles, permissions, channels,
   invites, members, webhooks, settings, updates) and, in later entries,
   moderation actions, logins, Talk joins and leaves and message deletions and

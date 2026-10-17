@@ -26,7 +26,7 @@ const role = (n: number, overrides: Partial<Role> = {}): Role => ({
   id: fixtureId(40 + n), name: `Role ${n}`, color: 0, position: n, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...overrides
 })
 const account = (n: number, overrides: Partial<AdminUser> = {}): AdminUser => ({
-  ...userFixture({ id: fixtureId(n), username: `user${n}`, display_name: `User ${n}` }), disabled: false, last_seen_at: null, ...overrides
+  ...userFixture({ id: fixtureId(n), username: `user${n}`, display_name: `User ${n}` }), disabled: false, banned: false, last_seen_at: null, ...overrides
 })
 const roles = [role(5, { name: 'High', color: 0xff0000 }), role(2, { name: 'Mid' }), role(0, { name: '@everyone', is_everyone: true })]
 const accounts = () => [
@@ -110,11 +110,11 @@ describe('AdminUsersTab roles and rank', () => {
 
 describe('AdminDashboard tabs', () => {
   const tabs = (w: ReturnType<typeof mount>) => w.findAll('[data-testid^="tab-"]').map(t => t.attributes('data-testid')!.slice(4))
-  const stubs = { AdminUsersTab: true, AdminRolesTab: true, AdminLayoutTab: true, AdminInvitesTab: true, AdminMediaTab: true, AdminAuditTab: true, AdminSystemTab: true }
+  const stubs = { AdminUsersTab: true, AdminRolesTab: true, AdminLayoutTab: true, AdminInvitesTab: true, AdminMediaTab: true, AdminBansTab: true, AdminAuditTab: true, AdminSystemTab: true }
 
   it('shows a tab only to those it is for, and the storage and system tabs to the Owner alone', () => {
     useAuthStore().user = userFixture({ role: 'admin' })
-    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'media', 'audit', 'system'])
+    expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['users', 'roles', 'channels', 'invites', 'bans', 'media', 'audit', 'system'])
     setActivePinia(createPinia())
     asModerator(PERMISSION_BITS.view_audit_log)
     expect(tabs(mount(AdminDashboard, { global: { stubs } }))).toEqual(['audit'])

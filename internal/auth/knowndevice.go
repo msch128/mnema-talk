@@ -102,7 +102,7 @@ func (h *Handler) accountGeneration(ctx context.Context, account string) (uuid.U
 	var id uuid.UUID
 	var gen int
 	err := h.Sessions.DB.QueryRow(ctx, `SELECT id, token_version FROM users
-		WHERE LOWER(username) = $1 AND disabled_at IS NULL AND NOT is_bot`, account).Scan(&id, &gen)
+		WHERE LOWER(username) = $1 AND `+ActiveSQL("")+` AND NOT is_bot`, account).Scan(&id, &gen)
 	return id, gen, err
 }
 

@@ -11,6 +11,9 @@ import { setLocale } from '../i18n'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { usePermissionsStore } from '../stores/permissions'
+import { PERMISSION_BITS } from '../lib/permissions'
+import { pendingModeration } from '../lib/moderation'
 import { buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems, channelLink, mentionMember, useMenuState, notifyLevelOf } from './useNavMenus'
 
 vi.mock('../lib/api', async original => ({ ...(await original<typeof import('../lib/api')>()), api: vi.fn() }))
@@ -317,9 +320,38 @@ describe('member menu', () => {
 
   it('admins get kick (only in voice), end sessions and disable for others', () => {
     auth.user = userFixture({ id: 'me', role: 'admin' })
-    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'revoke', 'disable'])
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'timeout', 'ban', 'revoke', 'disable'])
     voice.channelUsers = { v9: { u2: voiceUserFixture({ id: 'u2' }) } }
-    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'kick', 'revoke', 'disable'])
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'kick', 'timeout', 'ban', 'revoke', 'disable'])
     expect(ids(buildMemberItems(userFixture({ id: 'me', username: 'me' })))).toEqual(['profile', 'mention'])
+  })
+
+  it('offers timeout and ban by permission and rank, and ending a running timeout', async () => {
+    const permissions = usePermissionsStore()
+    auth.user = userFixture({ id: 'me', role: 'user' })
+    permissions.info = { owner: false, permissions: PERMISSION_BITS.timeout_members, role_ids: [], top_position: 5, max_upload_mb: 50, catalog: [], channels: [] }
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'timeout'])
+    permissions.info = { owner: false, permissions: PERMISSION_BITS.ban_members, role_ids: [], top_position: 5, max_upload_mb: 50, catalog: [], channels: [] }
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'ban'])
+    // Equal rank is out of reach, whatever the permissions.
+    permissions.setMemberRoles([{ id: 'u2', role_ids: ['r9'] }])
+    permissions.roles = [{ id: 'r9', name: 'Mod', color: 0, position: 5, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null }]
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention'])
+    permissions.setMemberRoles([])
+
+    permissions.info = { owner: false, permissions: PERMISSION_BITS.timeout_members | PERMISSION_BITS.ban_members, role_ids: [], top_position: 5, max_upload_mb: 50, catalog: [], channels: [] }
+    chat.members = [{ ...other, timeout_until: new Date(Date.now() + 60_000).toISOString() } as never]
+    expect(ids(buildMemberItems(other))).toEqual(['profile', 'mention', 'timeout', 'untimeout', 'ban'])
+
+    // The items open the dialogs and lift the timeout.
+    required(menuItem(buildMemberItems(other), 'timeout').action)()
+    expect(pendingModeration.value?.kind).toBe('timeout')
+    required(menuItem(buildMemberItems(other), 'ban').action)()
+    expect(pendingModeration.value?.kind).toBe('ban')
+    pendingModeration.value = null
+    vi.mocked(api).mockResolvedValue(undefined)
+    required(menuItem(buildMemberItems(other), 'untimeout').action)()
+    await nextTick()
+    expect(api).toHaveBeenCalledWith('/api/admin/users/u2/timeout', { method: 'DELETE' })
   })
 })

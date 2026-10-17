@@ -2,14 +2,15 @@ package chat
 
 import (
 	"context"
-	"github.com/msch128/mnema-talk/internal/audit"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -119,10 +120,16 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	}
 	out := make([]Member, len(members))
 	var roles map[uuid.UUID][]uuid.UUID
+	var timeouts map[uuid.UUID]time.Time
 	if h.Perms != nil {
 		if roles, err = h.Perms.MemberRoles(r.Context()); err != nil {
 			return err
 		}
+		snap, err := h.Perms.Snapshot(r.Context())
+		if err != nil {
+			return err
+		}
+		timeouts = snap.Timeouts()
 	}
 	counts, err := h.visibleMessageCounts(r)
 	if err != nil {
@@ -130,6 +137,9 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	}
 	for i, m := range members {
 		out[i] = Member{User: m, RoleIDs: roles[m.ID]}
+		if until, ok := timeouts[m.ID]; ok {
+			out[i].TimeoutUntil = &until
+		}
 		if counts != nil {
 			// Totals must not reveal activity in channels the viewer cannot see.
 			out[i].MessageCount = counts[m.ID]

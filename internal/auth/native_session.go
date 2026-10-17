@@ -128,7 +128,7 @@ func (s *NativeSessions) transact(ctx context.Context, fn func(context.Context, 
 }
 
 func lockNativeUser(ctx context.Context, tx pgx.Tx, id uuid.UUID, skipLocked bool) (*User, int, bool, error) {
-	query := `SELECT ` + userColumns + `, token_version, disabled_at IS NOT NULL FROM users WHERE id=$1 FOR UPDATE`
+	query := `SELECT ` + userColumns + `, token_version, ` + InactiveSQL("") + ` FROM users WHERE id=$1 FOR UPDATE`
 	if skipLocked {
 		query += ` SKIP LOCKED`
 	}
@@ -415,7 +415,7 @@ func (s *NativeSessions) Cleanup(ctx context.Context, batch int) (int, error) {
 	err := s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT f.id,f.user_id FROM native_session_families f JOIN users u ON u.id=f.user_id
 			WHERE f.revoked_at IS NOT NULL OR f.expires_at<=clock_timestamp()
-			OR f.issued_token_version<>u.token_version OR u.disabled_at IS NOT NULL
+			OR f.issued_token_version<>u.token_version OR `+InactiveSQL("u")+`
 			ORDER BY f.user_id,f.id LIMIT $1`, batch)
 		if err != nil {
 			return nativeStoreFailure(err)

@@ -235,7 +235,7 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID, jti string) (*User, int, error) {
 	var tv int
 	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users
-		WHERE id = $1 AND disabled_at IS NULL AND NOT is_bot
+		WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot
 		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)`, id, jti), &tv)
 	return u, tv, err
 }
@@ -246,7 +246,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 	var tv int
 	var disabled bool
 	u, err := scanUser(p.QueryRow(ctx,
-		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
+		`SELECT `+userColumns+`, password_hash, token_version, `+InactiveSQL("")+` FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
 		burnPasswordCheck(password)
@@ -259,7 +259,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 		return nil, 0, ErrInvalidCredentials
 	}
 	if disabled {
-		return nil, 0, ErrAccountDisabled
+		return nil, 0, bannedError(ctx, p, u.ID)
 	}
 	return u, tv, nil
 }
@@ -330,9 +330,9 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		}
 
 		user, err = scanUser(tx.QueryRow(ctx, `
-			INSERT INTO users (username, display_name, password_hash, role)
-			VALUES ($1, $2, $3, 'user')
-			RETURNING `+userColumns, username, displayName, hash))
+			INSERT INTO users (username, display_name, password_hash, role, invite_id)
+			VALUES ($1, $2, $3, 'user', $4)
+			RETURNING `+userColumns, username, displayName, hash, inviteID))
 		if err != nil {
 			// Also covers a concurrent sign-up racing past the check above,
 			// whichever unique index on the username catches it.

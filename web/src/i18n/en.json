@@ -751,7 +751,8 @@
       "media": "Media & Storage",
       "system": "System",
       "roles": "Roles",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "bans": "Bans"
     },
     "system": {
       "heading": "System & version",
@@ -1204,7 +1205,15 @@
     },
     "allow": "Allow",
     "deny": "Deny",
-    "inherit": "Inherit"
+    "inherit": "Inherit",
+    "timeout_members": {
+      "name": "Timeout members",
+      "desc": "Members below your highest role can be silenced for a while: no writing, reacting, speaking or joining Talks."
+    },
+    "ban_members": {
+      "name": "Ban members",
+      "desc": "Ban and unban members below your highest role and see the list of bans."
+    }
   },
   "audit": {
     "title": "Audit log",
@@ -1234,7 +1243,8 @@
       "message": "Messages",
       "voice": "Talk presence",
       "auth": "Sign-ins",
-      "settings": "Settings"
+      "settings": "Settings",
+      "moderation": "Moderation"
     },
     "actions": {
       "role": {
@@ -1313,6 +1323,13 @@
       },
       "settings": {
         "upload_limit": "Upload limit changed"
+      },
+      "moderation": {
+        "timeout": "Member timed out",
+        "timeout_remove": "Timeout ended",
+        "ban": "Member banned",
+        "unban": "Member unbanned",
+        "ban_expired": "Ban expired"
       }
     }
   },
@@ -1458,6 +1475,57 @@
       "allow_attachments": "Allow attachments",
       "allow_embeds": "Allow embeds",
       "allow_identity_override": "Allow posts to set their own username"
+    }
+  },
+  "moderation": {
+    "timeoutAction": "Time out…",
+    "removeTimeout": "End timeout",
+    "banAction": "Ban…",
+    "timeoutTitle": "Time out {name}",
+    "timeoutBody": "They can read, but not write, react, speak, share video or join Talks until the time is up. A Talk they are in ends for them.",
+    "banTitle": "Ban {name}",
+    "banBody": "Ends their sessions and blocks signing in. The account and its messages stay.",
+    "duration": "Duration",
+    "forever": "Forever",
+    "custom": "Custom",
+    "customAmount": "Amount",
+    "customUnit": "Unit",
+    "durationRange": "Between {min} and {max}.",
+    "reason": "Reason (optional)",
+    "reasonPlaceholder": "Shown to them",
+    "revokeInvite": "Also revoke the invite they registered with",
+    "timeoutConfirm": "Time out",
+    "banConfirm": "Ban",
+    "timedOutToast": "{name} is timed out.",
+    "bannedToast": "{name} is banned.",
+    "timeoutRemovedToast": "Timeout for {name} ended.",
+    "failed": "The action failed.",
+    "bannerText": "You are timed out.",
+    "noticeTimeout": "You were timed out for {duration}",
+    "noticeTimeoutRemoved": "Your timeout was lifted.",
+    "noticeBan": "You were banned",
+    "bansTitle": "Bans",
+    "noBans": "Nobody is banned.",
+    "bannedUntil": "Banned until {date}",
+    "bannedForever": "Banned for good",
+    "bannedBy": "by {name}",
+    "unban": "Unban",
+    "unbanTitle": "Unban {name}?",
+    "unbanBody": "They can sign in again. A revoked invite stays revoked.",
+    "unbanConfirm": "Unban",
+    "unbannedToast": "{name} is unbanned.",
+    "units": {
+      "min": "{n} min",
+      "s": "{n} s",
+      "h": "{n} h",
+      "d": "{n} d",
+      "w": "{n} w"
+    },
+    "unitNames": {
+      "seconds": "Seconds",
+      "minutes": "Minutes",
+      "hours": "Hours",
+      "days": "Days"
     }
   }
 }

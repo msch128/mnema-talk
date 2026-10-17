@@ -32,6 +32,12 @@ const examples: Record<ServerEventType, unknown[]> = {
   message_delete: [{ id, channel_id: id, parent_id: null }, { id, channel_id: id, parent_id: id }],
   message_reaction: [{ message_id: id, reactions: [] }, { message_id: id, reactions: [reaction] }, { message_id: id, channel_id: id, reactions: [reaction] }],
   user_update: [userFixture(), { id, disabled: false }, { id, disabled: true }],
+  member_timeout: [{ id, timeout_until: FIXTURE_TIMESTAMP }, { id, timeout_until: null }],
+  moderation_notice: [
+    { kind: 'timeout', until: FIXTURE_TIMESTAMP, duration_seconds: 3600, reason: 'spam' },
+    { kind: 'timeout_removed', reason: '' },
+    { kind: 'ban', reason: 'no' },
+  ],
   webrtc_offer: [{ type: 'offer', sdp: 'v=0\r\n' }],
   webrtc_candidate: [{ candidate: '' }, { candidate: 'candidate:synthetic', sdpMid: '0', sdpMLineIndex: 0, usernameFragment: 'synthetic' }],
   voice_snapshot: [{}, { [id]: {} }, { [id]: { [id]: voiceUser } }],

@@ -77,6 +77,7 @@ function member(disabled = false): AdminUser {
       display_name: '',
     }),
     disabled,
+    banned: false,
     last_seen_at: disabled ? null : '2026-01-01T00:00:00Z',
   }
 }

@@ -39,7 +39,7 @@ func (s *NativeSessions) changePasswordAndReissue(ctx context.Context, expected 
 		return IssuedNative{}, ErrNativeUnauthorized
 	}
 	var capturedHash string
-	err = s.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1 AND token_version=$2 AND disabled_at IS NULL`, expected.user.ID, expected.tokenVersion).Scan(&capturedHash)
+	err = s.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1 AND token_version=$2 AND `+ActiveSQL(""), expected.user.ID, expected.tokenVersion).Scan(&capturedHash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return IssuedNative{}, ErrNativeUnauthorized
 	}

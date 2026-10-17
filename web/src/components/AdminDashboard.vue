@@ -2,7 +2,7 @@
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
 import { ref, computed, watch } from 'vue'
-import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText } from '@lucide/vue'
+import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
@@ -14,6 +14,7 @@ import AdminInvitesTab from './AdminInvitesTab.vue'
 import AdminMediaTab from './AdminMediaTab.vue'
 import AdminSystemTab from './AdminSystemTab.vue'
 import AdminAuditTab from './AdminAuditTab.vue'
+import AdminBansTab from './AdminBansTab.vue'
 
 const props = defineProps({
   initialTab: {
@@ -26,14 +27,15 @@ const emit = defineEmits<{ close: [] }>()
 const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 
-type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'media' | 'audit' | 'system'
-const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'media', 'audit', 'system']
+type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'media' | 'bans' | 'audit' | 'system'
+const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'bans', 'media', 'audit', 'system']
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
   users: () => permissions.can('manage_members') || permissions.can('manage_roles'),
   roles: () => permissions.can('manage_roles'),
   channels: () => permissions.can('manage_channels'),
   invites: () => permissions.can('create_invites'),
+  bans: () => permissions.can('ban_members'),
   media: () => permissions.isOwner,
   audit: () => permissions.can('view_audit_log'),
   system: () => permissions.isOwner
@@ -45,6 +47,7 @@ const TAB_COMPONENTS = {
   roles: AdminRolesTab,
   channels: AdminLayoutTab,
   invites: AdminInvitesTab,
+  bans: AdminBansTab,
   media: AdminMediaTab,
   audit: AdminAuditTab,
   system: AdminSystemTab
@@ -87,6 +90,7 @@ watch(activeTab, (tab) => {
         <Shield v-else-if="tab === 'roles'" class="w-4 h-4" />
         <FolderTree v-else-if="tab === 'channels'" class="w-4 h-4" />
         <Link v-else-if="tab === 'invites'" class="w-4 h-4" />
+        <Gavel v-else-if="tab === 'bans'" class="w-4 h-4" />
         <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />
         <ScrollText v-else-if="tab === 'audit'" class="w-4 h-4" />
         <Server v-else class="w-4 h-4" />

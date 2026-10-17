@@ -131,6 +131,7 @@ func NewRouter(d Deps) (*Router, error) {
 	authH.Live = hub
 	authH.Perms = permSvc
 	authH.Audit = auditLog
+	go authH.RunBanExpiry(ctx, time.Minute)
 	authH.Audit = auditLog
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go authH.RunUnlockWorker(ctx, auth.UnlockPollInterval)

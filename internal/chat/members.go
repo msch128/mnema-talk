@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -14,6 +15,9 @@ type Member struct {
 	auth.User
 	// RoleIDs are the member's custom roles, highest first.
 	RoleIDs []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
+	// TimeoutUntil is set while the member is timed out: they can read but
+	// not post, react, speak or join Talks.
+	TimeoutUntil *time.Time `json:"timeout_until,omitempty" binding:"optional" format:"date-time"`
 }
 
 // GetAllMembers lists active accounts, admins first, then by display name.
@@ -24,7 +28,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 		SELECT id, username, display_name, bio, role, avatar_s3_key, status_text, created_at,
 		       voice_seconds, message_count
 		FROM users
-		WHERE disabled_at IS NULL AND NOT is_bot
+		WHERE `+auth.ActiveSQL("")+` AND NOT is_bot
 		ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`)
 	if err != nil {
 		return nil, fmt.Errorf("query members: %w", err)

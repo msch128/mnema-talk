@@ -36,9 +36,13 @@ type LiveControl interface {
 type AdminUser struct {
 	User
 	// RoleIDs are the account's custom roles, highest first.
-	RoleIDs    []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
-	Disabled   bool        `json:"disabled"`
-	LastSeenAt *time.Time  `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
+	RoleIDs  []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
+	Disabled bool        `json:"disabled"`
+	// Banned marks a disabled account that was banned (see GET /api/admin/bans).
+	Banned bool `json:"banned"`
+	// TimeoutUntil is set while the account is timed out.
+	TimeoutUntil *time.Time `json:"timeout_until,omitempty" binding:"optional" format:"date-time"`
+	LastSeenAt   *time.Time `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
 	// LoginLocked is set while wrong passwords lock the account (or a client
 	// address) out in memory. Only the Owner sees it set.
 	LoginLocked bool `json:"login_locked" binding:"optional"`
@@ -46,7 +50,8 @@ type AdminUser struct {
 
 // ListUsersForAdmin returns every account, admins first, then by name.
 func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
-	rows, err := p.Query(ctx, `SELECT `+userColumns+`, disabled_at IS NOT NULL, last_seen_at
+	rows, err := p.Query(ctx, `SELECT `+userColumns+`, disabled_at IS NOT NULL, last_seen_at, banned_at IS NOT NULL,
+		       CASE WHEN timeout_until > NOW() THEN timeout_until END
 		FROM users WHERE NOT is_bot ORDER BY role = 'admin' DESC, LOWER(username)`)
 	if err != nil {
 		return nil, fmt.Errorf("list users: %w", err)
@@ -55,7 +60,7 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 	users := make([]AdminUser, 0)
 	for rows.Next() {
 		var au AdminUser
-		u, err := scanUser(rows, &au.Disabled, &au.LastSeenAt)
+		u, err := scanUser(rows, &au.Disabled, &au.LastSeenAt, &au.Banned, &au.TimeoutUntil)
 		if err != nil {
 			return nil, err
 		}
@@ -147,6 +152,7 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	r.With(RequireOwner).Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
 	r.With(RequireOwner).Post("/users/{id}/login-lockout/clear", httpx.Handle(h.clearUserLockout))
 	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
+	h.mountModeration(r)
 }
 
 // moderated runs fn on the member a moderation action aims at, after checking

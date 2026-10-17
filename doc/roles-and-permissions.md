@@ -60,6 +60,8 @@ mentions; stored, not used yet).
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
 | View audit log | Read the audit log ([moderation](moderation.md)) | no |
+| Timeout members | Silence members below your highest role for a while ([moderation](moderation.md)) | no |
+| Ban members | Ban and unban members below your highest role, list the bans | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).
@@ -108,8 +110,9 @@ category never turns its channels public.
 - Reordering only moves roles that are below your highest role, to places
   below it.
 - Moderating a member (disable, enable, end sessions, edit the status line,
-  remove from a Talk) needs the permission **and** a higher role than the
-  target. The Owner can never be targeted.
+  remove from a Talk, time out, ban) needs the permission **and** a higher role
+  than the target. The Owner can never be targeted, and nobody moderates
+  themselves (timeout and ban).
 
 ## Where it is enforced
 

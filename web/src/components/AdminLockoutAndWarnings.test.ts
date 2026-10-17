@@ -28,6 +28,7 @@ function account(locked: boolean): AdminUser {
   return {
     ...userFixture({ id: fixtureId(41), username: 'member', display_name: '' }),
     disabled: false,
+    banned: false,
     last_seen_at: null,
     login_locked: locked,
   }

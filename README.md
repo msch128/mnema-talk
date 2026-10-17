@@ -73,6 +73,7 @@ webhooks and a call you can join with one click.
   by anyone. Below them, custom roles hold Discord-style permissions, and
   categories and channels can allow or deny them per role or member, which
   makes **private channels and Talks**. Changes apply live, also in a call.
+- **Moderation.** Timeouts (a minute to four weeks, lifted automatically, enforced in REST, the hub and the SFU), bans with reason and duration, and kicking, all bound by the role hierarchy and written to the audit log.
 - **Audit log.** An append-only record of administrative and moderation
   actions with who, what, before and after, filterable in the admin console.
   It also holds deleted message text and Talk presence history, so mention it

@@ -58,6 +58,10 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/users/{id}/password-reset", Action: "user.password_reset", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/login-lockout/clear", Action: "user.lockout_clear", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "POST", Pattern: "/users/{id}/kick", Action: "user.talk_kick", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "POST", Pattern: "/users/{id}/timeout", Action: "moderation.timeout", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "DELETE", Pattern: "/users/{id}/timeout", Action: "moderation.timeout_remove", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "POST", Pattern: "/users/{id}/ban", Action: "moderation.ban", TargetType: "user", IDParam: "id", Snapshot: ResUser},
+	{Method: "DELETE", Pattern: "/users/{id}/ban", Action: "moderation.unban", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 	{Method: "PUT", Pattern: "/users/{id}/roles", Action: "user.roles_set", TargetType: "user", IDParam: "id", Snapshot: ResUser},
 
 	{Method: "POST", Pattern: "/roles", Action: "role.create", TargetType: "role"},

@@ -138,7 +138,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
 			return e
 		}},
-		{"register insert", "INSERT INTO users (username, display_name, password_hash, role)", func(p *db.Pool) error {
+		{"register insert", "INSERT INTO users (username, display_name, password_hash, role, invite_id)", func(p *db.Pool) error {
 			_, e := Register(ctx, p, "newmember", "", testPassword, "member-invite")
 			return e
 		}},
@@ -233,14 +233,14 @@ func TestAuthSessionFailurePaths(t *testing.T) {
 	}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.AddCookie(&http.Cookie{Name: s.CookieName(), Value: token})
-	fault := authHookPool(t, p, &authQueryHook{match: "FROM users WHERE id = $1 AND disabled_at IS NULL", cancel: true})
+	fault := authHookPool(t, p, &authQueryHook{match: "WHERE id = $1 AND NOT (disabled_at IS NOT NULL", cancel: true})
 	s.DB = fault
 	if _, _, err := s.AuthenticateRequest(r); !errors.Is(err, context.Canceled) {
 		t.Fatalf("auth db error = %v", err)
 	}
 	s.DB = p
 	// Use a second traced pool: the first hook intentionally fires only once.
-	s.DB = authHookPool(t, p, &authQueryHook{match: "FROM users WHERE id = $1 AND disabled_at IS NULL", cancel: true})
+	s.DB = authHookPool(t, p, &authQueryHook{match: "WHERE id = $1 AND NOT (disabled_at IS NOT NULL", cancel: true})
 	w := httptest.NewRecorder()
 	s.RequireUser(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { t.Fatal("failed authentication reached handler") })).ServeHTTP(w, r)
 	if w.Code != 500 {
@@ -300,7 +300,7 @@ func TestAuthRegistrationConcurrentChanges(t *testing.T) {
 				t.Fatal(e)
 			}
 		}, ErrInvalidInvite},
-		{"username inserted after check", "INSERT INTO users (username, display_name, password_hash, role)", func(t *testing.T, p *db.Pool) {
+		{"username inserted after check", "INSERT INTO users (username, display_name, password_hash, role, invite_id)", func(t *testing.T, p *db.Pool) {
 			if _, e := p.Exec(ctx, `INSERT INTO users(username,display_name,password_hash,role) VALUES('newmember','newmember','test-only-hash','user')`); e != nil {
 				t.Fatal(e)
 			}
@@ -443,7 +443,7 @@ func TestAuthListRejectsIncompatibleDatabaseColumnTypes(t *testing.T) {
 		'invalid-uuid'::text AS id, 'testuser'::text AS username, 'testuser'::text AS display_name,
 		''::text AS bio, 'user'::text AS role, NULL::text AS avatar_s3_key, ''::text AS status_text,
 		'online'::text AS presence, ''::text AS locale, NOW() AS created_at,
-		NULL::timestamptz AS disabled_at, NULL::timestamptz AS last_seen_at, FALSE AS is_bot`)
+		NULL::timestamptz AS disabled_at, NULL::timestamptz AS banned_at, NULL::timestamptz AS banned_until, NULL::timestamptz AS timeout_until, NULL::timestamptz AS last_seen_at, FALSE AS is_bot`)
 	if err != nil {
 		t.Fatal(err)
 	}
