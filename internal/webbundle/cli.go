@@ -282,7 +282,7 @@ func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	now := time.Now().UTC().Truncate(time.Second)
 	t := Trust{
 		Schema: TrustSchema, Serial: *serial,
-		IssuedAt:  now.Format(time.RFC3339),
+		IssuedAt:   now.Format(time.RFC3339),
 		ExpiresAt:  now.Add(*validFor).Format(time.RFC3339),
 		MaxVersion: map[string]string{},
 	}
