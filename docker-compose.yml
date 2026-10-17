@@ -300,7 +300,7 @@ services:
   # nicholas-fedor/watchtower is the maintained fork of containrrr/watchtower
   # (archived December 2025). Pinned by version and multi-arch digest.
   updater:
-    image: nickfedor/watchtower:1.23.0@sha256:45b54f6dc15227cfb38dbb826f2881aa0f56aaf0c255cdbb38bd80e598bdca9a
+    image: nickfedor/watchtower:1.23.1@sha256:3175c006eb20112f3a70f7002f82dbf4a4078c97e7033735a4d153668fc3dfb1
     container_name: mnema-updater
     restart: unless-stopped
     profiles:
