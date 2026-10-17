@@ -188,3 +188,34 @@ func TestWSWriterPeriodicLifecycle(t *testing.T) {
 		})
 	}
 }
+
+// Shutting down records last seen for everyone still connected while the
+// database is open; their own clean-up afterwards no longer writes it.
+func TestHubCloseRecordsLastSeenBeforeTheDatabaseCloses(t *testing.T) {
+	p := testutil.DB(t)
+	first, second := wsFixtureUser(t, p), wsFixtureUser(t, p)
+	h := NewHub(p, nil, nil, nil)
+	a, b := testClient(h, first), testClient(h, second)
+	h.Close()
+	for _, u := range []auth.User{first, second} {
+		var seen *time.Time
+		if err := p.QueryRow(context.Background(), `SELECT last_seen_at FROM users WHERE id=$1`, u.ID).Scan(&seen); err != nil || seen == nil {
+			t.Fatalf("last seen of %s = %v, %v", u.Username, seen, err)
+		}
+	}
+	if _, err := p.Exec(context.Background(), `UPDATE users SET last_seen_at = NULL WHERE id = ANY($1)`, []uuid.UUID{first.ID, second.ID}); err != nil {
+		t.Fatal(err)
+	}
+	h.unregister(a)
+	h.unregister(b)
+	var seen *time.Time
+	if err := p.QueryRow(context.Background(), `SELECT last_seen_at FROM users WHERE id=$1`, first.ID).Scan(&seen); err != nil || seen != nil {
+		t.Fatalf("clean-up after close wrote last seen again: %v, %v", seen, err)
+	}
+	broken := NewHub(closedWSFixturePool(t, p), nil, nil, nil)
+	testClient(broken, first)
+	broken.Close()
+	if broken.OnlineCount() != 1 {
+		t.Fatal("a failed write changed who is online")
+	}
+}
