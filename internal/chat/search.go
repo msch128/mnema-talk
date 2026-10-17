@@ -2,11 +2,16 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
@@ -14,6 +19,61 @@ import (
 const (
 	maxSearchQueryLen = 200
 	maxSearchTerms    = 8
+	// searchStatementTimeout bounds one search query inside the database.
+	searchStatementTimeout = "5s"
+	// maxSearchesPerUser is how many searches one user may have running at once.
+	maxSearchesPerUser = 2
+)
+
+// searchSlots counts the searches in flight per user.
+var searchSlots = &inflight{max: maxSearchesPerUser, n: map[uuid.UUID]int{}}
+
+type inflight struct {
+	mu  sync.Mutex
+	max int
+	n   map[uuid.UUID]int
+}
+
+// acquire reserves a slot for id; the returned func frees it. ok is false at the cap.
+func (f *inflight) acquire(id uuid.UUID) (release func(), ok bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.n[id] >= f.max {
+		return nil, false
+	}
+	f.n[id]++
+	return func() {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		if f.n[id]--; f.n[id] <= 0 {
+			delete(f.n, id)
+		}
+	}, true
+}
+
+// AcquireSearchSlot reserves one of the user's concurrent search slots (used by
+// the search handler; exported so integration tests can hold slots).
+func AcquireSearchSlot(user uuid.UUID) (release func(), ok bool) {
+	return searchSlots.acquire(user)
+}
+
+// mapSearchError turns the database's statement_timeout cancellation
+// (SQLSTATE 57014) into errSearchSlow and wraps anything else.
+func mapSearchError(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "57014" {
+		return errSearchSlow
+	}
+	if err != nil {
+		return fmt.Errorf("search: %w", err)
+	}
+	return nil
+}
+
+// errSearchBusy and errSearchSlow answer 429; searches are expensive.
+var (
+	errSearchBusy = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "too many searches at once, wait for the running ones to finish")
+	errSearchSlow = httpx.NewAPIError(http.StatusTooManyRequests, httpx.CodeRateLimited, "the search took too long, narrow it down")
 )
 
 // SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
@@ -92,13 +152,20 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	ORDER BY m.created_at DESC, m.id DESC
 	LIMIT ` + arg(q.Limit+1)
 
-	rows, err := p.Query(ctx, sql, args...)
-	if err != nil {
-		return nil, false, fmt.Errorf("search: %w", err)
-	}
-	msgs, err := scanMessages(rows)
-	if err != nil {
-		return nil, false, fmt.Errorf("search: %w", err)
+	var msgs []Message
+	err := pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, sql, args...)
+		if err != nil {
+			return err
+		}
+		msgs, err = scanMessages(rows)
+		return err
+	})
+	if err = mapSearchError(err); err != nil {
+		return nil, false, err
 	}
 	more := len(msgs) > q.Limit
 	if more {
