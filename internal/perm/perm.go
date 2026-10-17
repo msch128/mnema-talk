@@ -45,8 +45,9 @@ const (
 	ManageRoles
 	// CreateInvites creates, lists and revokes invite codes.
 	CreateInvites
-	// ManageWebhooks creates, lists, renames, regenerates and deletes a
-	// channel's webhooks (it also needs ViewChannel there).
+	// ManageWebhooks is reserved and unused: webhooks are an admin tool that
+	// the Owner and Administrators manage (doc/webhooks.md), decoupled from
+	// the other permissions. The bit keeps its place and meaning.
 	ManageWebhooks
 	// ManageMembers disables and re-enables accounts, ends their sessions and
 	// edits their status line (members below the actor's highest role only).

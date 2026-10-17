@@ -130,7 +130,7 @@ func NewRouter(d Deps) (*Router, error) {
 
 	// Outgoing webhooks may only reach public addresses (see internal/ssrf).
 	ssrfPolicy := &ssrf.Policy{Allow: cfg.WebhookAllowPrivateTargets}
-	outgoing := webhook.NewDispatcher(d.DB, permSvc, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
+	outgoing := webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	hub.Tap = outgoing.Observe
 	go outgoing.Run(ctx)
 	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})

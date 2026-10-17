@@ -15,8 +15,6 @@ import (
 func (h *Handler) mountOutgoing(r chi.Router) {
 	r.Get("/channels/{id}/outgoing-webhooks", httpx.Handle(h.listOutgoing))
 	r.Post("/channels/{id}/outgoing-webhooks", httpx.Handle(h.createOutgoing))
-	r.Get("/outgoing-webhooks", httpx.Handle(h.listServerOutgoing))
-	r.Post("/outgoing-webhooks", httpx.Handle(h.createServerOutgoing))
 	r.Patch("/outgoing-webhooks/{id}", httpx.Handle(h.updateOutgoing))
 	r.Post("/outgoing-webhooks/{id}/secret", httpx.Handle(h.rotateOutgoingSecret))
 	r.Post("/outgoing-webhooks/{id}/test", httpx.Handle(h.testOutgoing))
@@ -30,7 +28,7 @@ type CreateOutgoingRequest struct {
 	// URL receives the events: http or https, public addresses only unless
 	// the operator allowed more (WEBHOOK_ALLOW_PRIVATE_TARGETS).
 	URL    string   `json:"url" maxLength:"2048"`
-	Events []string `json:"events" enums:"MESSAGE_CREATE,MESSAGE_UPDATE,MESSAGE_DELETE,MESSAGE_REACTIONS_UPDATE,VOICE_STATE_UPDATE,MEMBER_ADD"`
+	Events []string `json:"events" enums:"MESSAGE_CREATE,MESSAGE_UPDATE,MESSAGE_DELETE,MESSAGE_REACTIONS_UPDATE,VOICE_STATE_UPDATE"`
 }
 
 // UpdateOutgoingRequest changes an outgoing webhook; omitted fields stay.
@@ -42,45 +40,17 @@ type UpdateOutgoingRequest struct {
 	Enabled *bool     `json:"enabled,omitempty" binding:"optional"`
 }
 
-// loadOutgoing finds the webhook of the path and checks the caller may manage
-// it: the Owner for a server-wide one, otherwise the same rules as for
-// incoming webhooks.
+// loadOutgoing finds the webhook of the path for an administrator. It belongs
+// to its channel; who made it and who last set its URL are only recorded.
 func (h *Handler) loadOutgoing(r *http.Request) (*outgoingRec, error) {
+	if err := h.requireAdmin(r); err != nil {
+		return nil, err
+	}
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	rec, err := getOutgoing(r.Context(), h.DB, id)
-	if err != nil {
-		return nil, err
-	}
-	if rec.ChannelID == nil {
-		return rec, requireOwner(r)
-	}
-	snap, err := h.authorize(r, *rec.ChannelID, 0)
-	if err != nil {
-		if ae, ok := httpx.AsAPIError(err); ok && ae.Status == http.StatusNotFound {
-			return nil, errOutgoingNotFound
-		}
-		return nil, err
-	}
-	if snap == nil {
-		return rec, nil
-	}
-	return rec, hierarchy(r, snap, rec.createdBy)
-}
-
-func requireOwner(r *http.Request) error {
-	if !auth.UserFrom(r.Context()).Subject().Owner {
-		return httpx.ErrForbidden("only the Owner can do this")
-	}
-	return nil
-}
-
-func (h *Handler) present(ctx context.Context, rec *outgoingRec) Outgoing {
-	out := rec.Outgoing
-	out.AccessOK = h.Outgoing.mayDeliver(ctx, rec)
-	return out
+	return getOutgoing(r.Context(), h.DB, id)
 }
 
 func (h *Handler) reload(ctx context.Context) {
@@ -89,14 +59,14 @@ func (h *Handler) reload(ctx context.Context) {
 	}
 }
 
-func (h *Handler) writeOutgoingList(w http.ResponseWriter, r *http.Request, channel *uuid.UUID) error {
+func (h *Handler) writeOutgoingList(w http.ResponseWriter, r *http.Request, channel uuid.UUID) error {
 	recs, err := listOutgoing(r.Context(), h.DB, channel)
 	if err != nil {
 		return err
 	}
 	out := make([]Outgoing, len(recs))
 	for i, rec := range recs {
-		out[i] = h.present(r.Context(), rec)
+		out[i] = rec.Outgoing
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
@@ -105,7 +75,7 @@ func (h *Handler) writeOutgoingList(w http.ResponseWriter, r *http.Request, chan
 // listOutgoing handles GET /api/admin/channels/{id}/outgoing-webhooks.
 //
 // @Summary List a channel's outgoing webhooks
-// @Description Needs Manage webhooks and View channel in that channel. Secrets are never listed.
+// @Description Owner or Administrator only. Secrets are never listed.
 // @ID listOutgoingWebhooks
 // @Tags Webhooks
 // @Produce json
@@ -125,35 +95,13 @@ func (h *Handler) listOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch, 0); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
-	return h.writeOutgoingList(w, r, &ch)
+	return h.writeOutgoingList(w, r, ch)
 }
 
-// listServerOutgoing handles GET /api/admin/outgoing-webhooks.
-//
-// @Summary List the server-wide outgoing webhooks
-// @Description Owner only.
-// @ID listServerOutgoingWebhooks
-// @Tags Webhooks
-// @Produce json
-// @Security cookieAuth
-// @Success 200 {array} Outgoing "Server-wide outgoing webhooks, oldest first."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/admin/outgoing-webhooks [get]
-func (h *Handler) listServerOutgoing(w http.ResponseWriter, r *http.Request) error {
-	if err := requireOwner(r); err != nil {
-		return err
-	}
-	return h.writeOutgoingList(w, r, nil)
-}
-
-func (h *Handler) createIn(w http.ResponseWriter, r *http.Request, channel *uuid.UUID) error {
+func (h *Handler) createIn(w http.ResponseWriter, r *http.Request, channel uuid.UUID) error {
 	var req CreateOutgoingRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
@@ -166,7 +114,7 @@ func (h *Handler) createIn(w http.ResponseWriter, r *http.Request, channel *uuid
 	if err != nil {
 		return httpx.ErrInvalidInput("url must be an http or https address that is allowed as a target")
 	}
-	events, err := validEvents(req.Events, channel == nil)
+	events, err := validEvents(req.Events)
 	if err != nil {
 		return err
 	}
@@ -175,14 +123,14 @@ func (h *Handler) createIn(w http.ResponseWriter, r *http.Request, channel *uuid
 		return err
 	}
 	h.reload(r.Context())
-	httpx.WriteJSON(w, http.StatusCreated, CreatedOutgoing{Outgoing: h.present(r.Context(), rec), Secret: secret})
+	httpx.WriteJSON(w, http.StatusCreated, CreatedOutgoing{Outgoing: rec.Outgoing, Secret: secret})
 	return nil
 }
 
 // createOutgoing handles POST /api/admin/channels/{id}/outgoing-webhooks.
 //
 // @Summary Create an outgoing webhook
-// @Description Needs Manage webhooks and View channel in that channel. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.
+// @Description Owner or Administrator only. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.
 // @ID createOutgoingWebhook
 // @Tags Webhooks
 // @Accept json
@@ -205,42 +153,16 @@ func (h *Handler) createOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch, 0); err != nil {
+	if err := h.authorize(r, ch); err != nil {
 		return err
 	}
-	return h.createIn(w, r, &ch)
-}
-
-// createServerOutgoing handles POST /api/admin/outgoing-webhooks.
-//
-// @Summary Create a server-wide outgoing webhook
-// @Description Owner only. Receives the subscribed events of every channel plus MEMBER_ADD. The answer carries the signing secret, shown only once.
-// @ID createServerOutgoingWebhook
-// @Tags Webhooks
-// @Accept json
-// @Produce json
-// @Security cookieAuth
-// @Param body body CreateOutgoingRequest true "Name, URL and events (also MEMBER_ADD)."
-// @Success 201 {object} CreatedOutgoing "Created."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: only the Owner, or cross-origin request rejected."
-// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: the maximum number of outgoing webhooks is reached."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/admin/outgoing-webhooks [post]
-func (h *Handler) createServerOutgoing(w http.ResponseWriter, r *http.Request) error {
-	if err := requireOwner(r); err != nil {
-		return err
-	}
-	return h.createIn(w, r, nil)
+	return h.createIn(w, r, ch)
 }
 
 // updateOutgoing handles PATCH /api/admin/outgoing-webhooks/{id}.
 //
 // @Summary Change an outgoing webhook
-// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.
+// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Records who set the URL and when (url_set_by, url_set_at).
 // @ID updateOutgoingWebhook
 // @Tags Webhooks
 // @Accept json
@@ -251,7 +173,7 @@ func (h *Handler) createServerOutgoing(w http.ResponseWriter, r *http.Request) e
 // @Success 200 {object} Outgoing "Updated."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such outgoing webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -281,9 +203,11 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 		}
 		s := u.String()
 		change.url = &s
+		editor := auth.UserFrom(r.Context()).ID
+		change.urlBy = &editor
 	}
 	if req.Events != nil {
-		if change.events, err = validEvents(*req.Events, rec.ChannelID == nil); err != nil {
+		if change.events, err = validEvents(*req.Events); err != nil {
 			return err
 		}
 	}
@@ -295,14 +219,14 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, h.present(r.Context(), cur))
+	httpx.WriteJSON(w, http.StatusOK, cur.Outgoing)
 	return nil
 }
 
 // rotateOutgoingSecret handles POST /api/admin/outgoing-webhooks/{id}/secret.
 //
 // @Summary Rotate an outgoing webhook's secret
-// @Description The old secret stops signing at once. The answer carries the new secret, shown only once.
+// @Description The old secret stops signing at once. The answer carries the new secret, shown only once. Nothing else changes.
 // @ID rotateOutgoingWebhookSecret
 // @Tags Webhooks
 // @Produce json
@@ -311,7 +235,7 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {object} CreatedOutgoing "New secret."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such outgoing webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -326,7 +250,7 @@ func (h *Handler) rotateOutgoingSecret(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, CreatedOutgoing{Outgoing: h.present(r.Context(), rec), Secret: secret})
+	httpx.WriteJSON(w, http.StatusOK, CreatedOutgoing{Outgoing: rec.Outgoing, Secret: secret})
 	return nil
 }
 
@@ -342,7 +266,7 @@ func (h *Handler) rotateOutgoingSecret(w http.ResponseWriter, r *http.Request) e
 // @Success 200 {object} Delivery "The attempt (success or the failure code)."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such outgoing webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -352,9 +276,6 @@ func (h *Handler) testOutgoing(w http.ResponseWriter, r *http.Request) error {
 	rec, err := h.loadOutgoing(r)
 	if err != nil {
 		return err
-	}
-	if !h.Outgoing.mayDeliver(r.Context(), rec) {
-		return httpx.ErrForbidden("the creator of this webhook no longer has the rights it needs")
 	}
 	if ok, _ := h.testLimiter.Allow(rec.ID.String()); !ok {
 		return httpx.ErrRateLimited()
@@ -379,7 +300,7 @@ func (h *Handler) testOutgoing(w http.ResponseWriter, r *http.Request) error {
 // @Success 200 {array} Delivery "Attempts."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such outgoing webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -409,7 +330,7 @@ func (h *Handler) outgoingDeliveries(w http.ResponseWriter, r *http.Request) err
 // @Success 204 "Deleted."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT)."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED)."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: missing permission, or cross-origin request rejected."
 // @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: no such outgoing webhook."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."

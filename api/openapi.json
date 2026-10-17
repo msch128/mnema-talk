@@ -2420,8 +2420,7 @@
                 "MESSAGE_UPDATE",
                 "MESSAGE_DELETE",
                 "MESSAGE_REACTIONS_UPDATE",
-                "VOICE_STATE_UPDATE",
-                "MEMBER_ADD"
+                "VOICE_STATE_UPDATE"
               ],
               "type": "string"
             },
@@ -2446,6 +2445,21 @@
       },
       "webhook.CreateRequest": {
         "properties": {
+          "allow_attachments": {
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 80,
             "type": "string"
@@ -2458,17 +2472,10 @@
       },
       "webhook.CreatedOutgoing": {
         "properties": {
-          "access_ok": {
-            "description": "AccessOK is false while the creator no longer holds the rights the\nwebhook needs; nothing is delivered then.",
-            "type": "boolean"
-          },
           "channel_id": {
-            "description": "ChannelID is null for a server-wide webhook (Owner only).",
+            "description": "ChannelID is the channel the webhook belongs to; it receives that\nchannel's events only.",
             "format": "uuid",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "consecutive_failures": {
             "minimum": 0,
@@ -2479,7 +2486,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member whose rights the webhook delivers with.",
+            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2545,10 +2552,21 @@
           "url": {
             "maxLength": 2048,
             "type": "string"
+          },
+          "url_set_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url_set_by": {
+            "description": "URLSetBy and URLSetAt record who last set the URL and when, so stale\nwebhooks are easy to spot. The URL receives the channel's events until an\nadministrator changes or deletes the webhook.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
-          "access_ok",
           "channel_id",
           "consecutive_failures",
           "created_at",
@@ -2562,12 +2580,34 @@
           "name",
           "secret",
           "status",
-          "url"
+          "url",
+          "url_set_at",
+          "url_set_by"
         ],
         "type": "object"
       },
       "webhook.CreatedWebhook": {
         "properties": {
+          "allow_attachments": {
+            "description": "AllowAttachments lets a post carry files (default on).",
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "description": "AllowEmbeds lets a post carry embeds (default on).",
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "description": "AllowEveryone lets @all and @here notify people (default off). It also\ntakes \"everyone\" in the sender's allowed_mentions.",
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "description": "AllowIdentityOverride lets a post set its own username (default on).\nAvatars from other hosts are never used.",
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "description": "AllowUserMentions lets @username notify members (default on, as Discord\ndoes with allowed_mentions.parse = users).",
+            "type": "boolean"
+          },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
             "type": "string"
@@ -2581,7 +2621,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it (null once that account is gone).",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null\nonce that account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2610,6 +2650,11 @@
           }
         },
         "required": [
+          "allow_attachments",
+          "allow_embeds",
+          "allow_everyone",
+          "allow_identity_override",
+          "allow_user_mentions",
           "channel_id",
           "created_at",
           "created_by",
@@ -2755,17 +2800,10 @@
       },
       "webhook.Outgoing": {
         "properties": {
-          "access_ok": {
-            "description": "AccessOK is false while the creator no longer holds the rights the\nwebhook needs; nothing is delivered then.",
-            "type": "boolean"
-          },
           "channel_id": {
-            "description": "ChannelID is null for a server-wide webhook (Owner only).",
+            "description": "ChannelID is the channel the webhook belongs to; it receives that\nchannel's events only.",
             "format": "uuid",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "consecutive_failures": {
             "minimum": 0,
@@ -2776,7 +2814,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member whose rights the webhook delivers with.",
+            "description": "CreatedBy is the member who created it, kept for the record (null once\nthat account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2838,10 +2876,21 @@
           "url": {
             "maxLength": 2048,
             "type": "string"
+          },
+          "url_set_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url_set_by": {
+            "description": "URLSetBy and URLSetAt record who last set the URL and when, so stale\nwebhooks are easy to spot. The URL receives the channel's events until an\nadministrator changes or deletes the webhook.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
-          "access_ok",
           "channel_id",
           "consecutive_failures",
           "created_at",
@@ -2854,7 +2903,9 @@
           "last_success_at",
           "name",
           "status",
-          "url"
+          "url",
+          "url_set_at",
+          "url_set_by"
         ],
         "type": "object"
       },
@@ -2882,18 +2933,50 @@
       },
       "webhook.UpdateRequest": {
         "properties": {
+          "allow_attachments": {
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "type": "boolean"
+          },
           "name": {
             "maxLength": 80,
             "type": "string"
           }
         },
-        "required": [
-          "name"
-        ],
         "type": "object"
       },
       "webhook.Webhook": {
         "properties": {
+          "allow_attachments": {
+            "description": "AllowAttachments lets a post carry files (default on).",
+            "type": "boolean"
+          },
+          "allow_embeds": {
+            "description": "AllowEmbeds lets a post carry embeds (default on).",
+            "type": "boolean"
+          },
+          "allow_everyone": {
+            "description": "AllowEveryone lets @all and @here notify people (default off). It also\ntakes \"everyone\" in the sender's allowed_mentions.",
+            "type": "boolean"
+          },
+          "allow_identity_override": {
+            "description": "AllowIdentityOverride lets a post set its own username (default on).\nAvatars from other hosts are never used.",
+            "type": "boolean"
+          },
+          "allow_user_mentions": {
+            "description": "AllowUserMentions lets @username notify members (default on, as Discord\ndoes with allowed_mentions.parse = users).",
+            "type": "boolean"
+          },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
             "type": "string"
@@ -2907,7 +2990,7 @@
             "type": "string"
           },
           "created_by": {
-            "description": "CreatedBy is the member who created it (null once that account is gone).",
+            "description": "CreatedBy is the administrator who created it, kept for the record (null\nonce that account is gone). It grants nothing.",
             "format": "uuid",
             "type": [
               "string",
@@ -2928,6 +3011,11 @@
           }
         },
         "required": [
+          "allow_attachments",
+          "allow_embeds",
+          "allow_everyone",
+          "allow_identity_override",
+          "allow_user_mentions",
           "channel_id",
           "created_at",
           "created_by",
@@ -3912,7 +4000,7 @@
     },
     "/api/admin/channels/{id}/outgoing-webhooks": {
       "get": {
-        "description": "Needs Manage webhooks and View channel in that channel. Secrets are never listed.",
+        "description": "Owner or Administrator only. Secrets are never listed.",
         "operationId": "listOutgoingWebhooks",
         "parameters": [
           {
@@ -4020,7 +4108,7 @@
         ]
       },
       "post": {
-        "description": "Needs Manage webhooks and View channel in that channel. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.",
+        "description": "Owner or Administrator only. The answer carries the signing secret, shown only once. Events of that channel are POSTed to the URL as signed JSON; see doc/webhooks.md. At most 10 per channel.",
         "operationId": "createOutgoingWebhook",
         "parameters": [
           {
@@ -4364,7 +4452,7 @@
     },
     "/api/admin/channels/{id}/webhooks": {
       "get": {
-        "description": "Needs Manage webhooks and View channel in that channel. The tokens are never listed.",
+        "description": "Owner or Administrator only. The tokens are never listed.",
         "operationId": "listWebhooks",
         "parameters": [
           {
@@ -4472,7 +4560,7 @@
         ]
       },
       "post": {
-        "description": "Needs Manage webhooks, View channel and Send messages in that channel, since the webhook posts there. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
+        "description": "Owner or Administrator only. The webhook belongs to the channel and posts with exactly its settings (see the allow_* fields; defaults: everyone-mentions off, the rest on), whoever holds the URL. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
         "operationId": "createWebhook",
         "parameters": [
           {
@@ -4494,7 +4582,7 @@
               }
             }
           },
-          "description": "Name.",
+          "description": "Name and optional settings.",
           "required": true
         },
         "responses": {
@@ -5542,188 +5630,6 @@
         ]
       }
     },
-    "/api/admin/outgoing-webhooks": {
-      "get": {
-        "description": "Owner only.",
-        "operationId": "listServerOutgoingWebhooks",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/webhook.Outgoing"
-                  },
-                  "type": "array"
-                }
-              }
-            },
-            "description": "Server-wide outgoing webhooks, oldest first."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "No valid session (UNAUTHORIZED)."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "FORBIDDEN: only the Owner."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "RATE_LIMITED: too many requests.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds until the client may retry.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "INTERNAL_ERROR: sanitized server failure."
-          }
-        },
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "summary": "List the server-wide outgoing webhooks",
-        "tags": [
-          "Webhooks"
-        ]
-      },
-      "post": {
-        "description": "Owner only. Receives the subscribed events of every channel plus MEMBER_ADD. The answer carries the signing secret, shown only once.",
-        "operationId": "createServerOutgoingWebhook",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/webhook.CreateOutgoingRequest"
-              }
-            }
-          },
-          "description": "Name, URL and events (also MEMBER_ADD).",
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/webhook.CreatedOutgoing"
-                }
-              }
-            },
-            "description": "Created."
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "Invalid input (INVALID_INPUT)."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "No valid session (UNAUTHORIZED)."
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "FORBIDDEN: only the Owner, or cross-origin request rejected."
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "CONFLICT: the maximum number of outgoing webhooks is reached."
-          },
-          "429": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "RATE_LIMITED: too many requests.",
-            "headers": {
-              "Retry-After": {
-                "description": "Seconds until the client may retry.",
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/httpx.ErrorResponse"
-                }
-              }
-            },
-            "description": "INTERNAL_ERROR: sanitized server failure."
-          }
-        },
-        "security": [
-          {
-            "cookieAuth": []
-          }
-        ],
-        "summary": "Create a server-wide outgoing webhook",
-        "tags": [
-          "Webhooks"
-        ]
-      }
-    },
     "/api/admin/outgoing-webhooks/{id}": {
       "delete": {
         "description": "Events still waiting to be delivered to it are dropped.",
@@ -5772,7 +5678,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -5824,7 +5730,7 @@
         ]
       },
       "patch": {
-        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.",
+        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Records who set the URL and when (url_set_by, url_set_at).",
         "operationId": "updateOutgoingWebhook",
         "parameters": [
           {
@@ -5888,7 +5794,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -5998,7 +5904,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy."
+            "description": "FORBIDDEN: missing permission."
           },
           "404": {
             "content": {
@@ -6052,7 +5958,7 @@
     },
     "/api/admin/outgoing-webhooks/{id}/secret": {
       "post": {
-        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once.",
+        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once. Nothing else changes.",
         "operationId": "rotateOutgoingWebhookSecret",
         "parameters": [
           {
@@ -6105,7 +6011,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -6212,7 +6118,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -8104,7 +8010,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -8156,7 +8062,7 @@
         ]
       },
       "patch": {
-        "description": "Needs Manage webhooks in the webhook's channel, and a highest role not below the creator's. Earlier messages keep the name they were posted under.",
+        "description": "Owner or Administrator only. Rename it and change its allow_* settings; omitted fields stay. Earlier messages keep the name they were posted under.",
         "operationId": "updateWebhook",
         "parameters": [
           {
@@ -8178,7 +8084,7 @@
               }
             }
           },
-          "description": "New name.",
+          "description": "Fields to change.",
           "required": true
         },
         "responses": {
@@ -8220,7 +8126,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -8266,7 +8172,7 @@
             "cookieAuth": []
           }
         ],
-        "summary": "Rename a webhook",
+        "summary": "Change a webhook",
         "tags": [
           "Webhooks"
         ]
@@ -8348,7 +8254,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {
@@ -8432,7 +8338,7 @@
     },
     "/api/admin/webhooks/{id}/token": {
       "post": {
-        "description": "The old URL stops working at once. The answer carries the new secret URL; it is shown only once.",
+        "description": "The old URL stops working at once. The answer carries the new secret URL; it is shown only once. Nothing else about the webhook changes.",
         "operationId": "regenerateWebhookToken",
         "parameters": [
           {
@@ -8485,7 +8391,7 @@
                 }
               }
             },
-            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
           },
           "404": {
             "content": {

@@ -28,8 +28,7 @@ func loopbackClient() *http.Client {
 
 func (f *fixture) outgoing(url string) *outgoingRec {
 	f.t.Helper()
-	ch := f.ch
-	rec, _, err := createOutgoing(context.Background(), f.p, &ch, f.owner.ID, "hook", url, []string{EventMessageCreate})
+	rec, _, err := createOutgoing(context.Background(), f.p, f.ch, f.owner.ID, "hook", url, []string{EventMessageCreate})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -55,9 +54,8 @@ func TestOutgoingManagementDatabaseFailures(t *testing.T) {
 		skip                            int
 		want                            int
 	}{
-		{"list query", "GET", list, "", "WHERE channel_id IS NOT DISTINCT", false, 0, 500},
-		{"list stream", "GET", list, "", "WHERE channel_id IS NOT DISTINCT", true, 0, 500},
-		{"server list", "GET", "/admin/outgoing-webhooks", "", "WHERE channel_id IS NOT DISTINCT", false, 0, 500},
+		{"list query", "GET", list, "", "FROM outgoing_webhooks WHERE channel_id = $1", false, 0, 500},
+		{"list stream", "GET", list, "", "FROM outgoing_webhooks WHERE channel_id = $1", true, 0, 500},
 		{"create count", "POST", list, body, "SELECT COUNT(*) FROM outgoing_webhooks", false, 0, 500},
 		{"create insert", "POST", list, body, "INSERT INTO outgoing_webhooks", false, 0, 500},
 		{"create read-back", "POST", list, body, "FROM outgoing_webhooks WHERE id = $1", false, 0, 500},
@@ -110,8 +108,6 @@ func TestOutgoingManagementEdges(t *testing.T) {
 	wantStatus(t, f.serve(f.h, "GET", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", nil, nil), 500, "list closed")
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{}`), 500, "create closed")
 	wantStatus(t, f.json(f.h, "PATCH", base, `{}`), 500, "update closed")
-	wantStatus(t, f.serve(f.h, "GET", "/admin/outgoing-webhooks", nil, nil), 403, "server list for a member")
-	wantStatus(t, f.json(f.h, "POST", "/admin/outgoing-webhooks", `{}`), 403, "server create for a member")
 	f.h.Perms = nil
 
 	// Bad bodies and ids.
@@ -119,8 +115,7 @@ func TestOutgoingManagementEdges(t *testing.T) {
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/zzz/outgoing-webhooks", `{}`), 400, "bad channel id")
 	wantStatus(t, f.serve(f.h, "GET", "/admin/channels/zzz/outgoing-webhooks", nil, nil), 400, "bad channel id list")
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{"nope":1}`), 400, "unknown field")
-	wantStatus(t, f.json(f.h, "POST", "/admin/outgoing-webhooks", `{"name":"a","url":"https://x.example","events":["MEMBER_ADD"]}`), 500, "creator is not a user row")
-	// Updating nothing is fine; the server-wide scope has no channel to check.
+	// Updating nothing is fine.
 	wantStatus(t, f.json(f.h, "PATCH", base, `{}`), 200, "empty patch")
 }
 
@@ -145,7 +140,7 @@ func TestProcessDeliversAndSettles(t *testing.T) {
 		w.WriteHeader(status)
 	}))
 	defer recv.Close()
-	d := NewDispatcher(f.p, nil, loopbackClient(), "test")
+	d := NewDispatcher(f.p, loopbackClient(), "test")
 	d.SetBackoff([]time.Duration{time.Millisecond})
 	ctx := context.Background()
 
@@ -201,11 +196,11 @@ func TestProcessDeliversAndSettles(t *testing.T) {
 	}
 
 	// Recording the attempt fails: nothing else happens.
-	d2 := NewDispatcher(dbFaulty{f, "INSERT INTO outgoing_deliveries"}.pool(), nil, loopbackClient(), "test")
+	d2 := NewDispatcher(dbFaulty{f, "INSERT INTO outgoing_deliveries"}.pool(), loopbackClient(), "test")
 	d2.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 1})
 	// A failing reload after a final failure is logged only.
 	gone := f.outgoing(recv.URL + "/gone")
-	d3 := NewDispatcher(dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}.pool(), nil, loopbackClient(), "test")
+	d3 := NewDispatcher(dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}.pool(), loopbackClient(), "test")
 	d3.process(ctx, job{webhook: gone.ID, event: sampleEvent(), attempt: 1})
 }
 
@@ -224,7 +219,7 @@ func TestRunWorksTheQueue(t *testing.T) {
 
 	// A pool whose list query fails shows the load and reload errors; the
 	// queue is still worked.
-	d := NewDispatcher((&dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}).pool(), nil, loopbackClient(), "test")
+	d := NewDispatcher((&dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}).pool(), loopbackClient(), "test")
 	d.ReloadEvery = 10 * time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -243,7 +238,7 @@ func TestRunWorksTheQueue(t *testing.T) {
 		t.Fatal("Run did not stop")
 	}
 	// A full queue drops events instead of blocking.
-	full := NewDispatcher(f.p, nil, loopbackClient(), "test")
+	full := NewDispatcher(f.p, loopbackClient(), "test")
 	for range queueSize + 205 {
 		full.enqueue(job{webhook: rec.ID, event: sampleEvent(), attempt: 1})
 	}
@@ -259,57 +254,14 @@ func TestReloadErrors(t *testing.T) {
 		{Query: "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"},
 		{Query: "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled", AfterPrepare: true},
 	} {
-		d := NewDispatcher((&dbFaulty{f, tr.Query}).poolWith(tr), nil, nil, "t")
+		d := NewDispatcher((&dbFaulty{f, tr.Query}).poolWith(tr), nil, "t")
 		if err := d.Reload(context.Background()); err == nil {
 			t.Errorf("reload with %+v succeeded", tr)
 		}
 	}
-	d := NewDispatcher(f.p, nil, nil, "t")
+	d := NewDispatcher(f.p, nil, "t")
 	if err := d.Reload(context.Background()); err != nil || len(*d.routes.Load()) != 1 {
 		t.Fatalf("reload: %v %v", err, *d.routes.Load())
-	}
-}
-
-func TestMayDeliverFailsClosed(t *testing.T) {
-	f := newFixture(t)
-	rec := f.outgoing("https://hooks.example/x")
-	ctx := context.Background()
-	d := NewDispatcher(f.p, perm.NewService(nil), nil, "t")
-	if d.mayDeliver(ctx, rec) {
-		t.Fatal("delivering without a readable permission state")
-	}
-	server := *rec
-	server.ChannelID = nil
-	if d.mayDeliver(ctx, &server) {
-		t.Fatal("server-wide delivery without a readable permission state")
-	}
-	// The account row is gone: no delivery.
-	gone := *rec
-	gone.createdBy = uuid.New()
-	if NewDispatcher(f.p, nil, nil, "t").mayDeliver(ctx, &gone) {
-		t.Fatal("delivering for an unknown account")
-	}
-	// With a model: the Owner holds everything, a plain member does not.
-	d = NewDispatcher(f.p, perm.NewService(f.p), nil, "t")
-	if !d.mayDeliver(ctx, rec) {
-		t.Fatal("the Owner's webhook must deliver")
-	}
-	if !d.mayDeliver(ctx, &server) {
-		t.Fatal("the Owner's server-wide webhook must deliver")
-	}
-	var member uuid.UUID
-	if err := f.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash) VALUES ('m', 'm', 'x') RETURNING id`).Scan(&member); err != nil {
-		t.Fatal(err)
-	}
-	other := *rec
-	other.createdBy = member
-	if d.mayDeliver(ctx, &other) {
-		t.Fatal("a member without Manage webhooks delivers")
-	}
-	otherServer := server
-	otherServer.createdBy = member
-	if d.mayDeliver(ctx, &otherServer) {
-		t.Fatal("a member's server-wide webhook delivers")
 	}
 }
 

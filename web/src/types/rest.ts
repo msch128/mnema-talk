@@ -1479,14 +1479,14 @@ export function isWebhookAllowedMentions(value: unknown): value is WebhookAllowe
 export const decodeWebhookAllowedMentions = decoder("webhook.AllowedMentions", isWebhookAllowedMentions)
 
 export type WebhookCreateOutgoingRequest = {
-  events: Array<"MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" | "MESSAGE_REACTIONS_UPDATE" | "VOICE_STATE_UPDATE" | "MEMBER_ADD">
+  events: Array<"MESSAGE_CREATE" | "MESSAGE_UPDATE" | "MESSAGE_DELETE" | "MESSAGE_REACTIONS_UPDATE" | "VOICE_STATE_UPDATE">
   name: string
   url: string
 }
 
 export function isWebhookCreateOutgoingRequest(value: unknown): value is WebhookCreateOutgoingRequest {
   return isRecord(value)
-    && (hasOwn(value, "events") && isArrayOf(value["events"], item => (item === "MESSAGE_CREATE" || item === "MESSAGE_UPDATE" || item === "MESSAGE_DELETE" || item === "MESSAGE_REACTIONS_UPDATE" || item === "VOICE_STATE_UPDATE" || item === "MEMBER_ADD")))
+    && (hasOwn(value, "events") && isArrayOf(value["events"], item => (item === "MESSAGE_CREATE" || item === "MESSAGE_UPDATE" || item === "MESSAGE_DELETE" || item === "MESSAGE_REACTIONS_UPDATE" || item === "VOICE_STATE_UPDATE")))
     && (hasOwn(value, "name") && isString(value["name"], 80))
     && (hasOwn(value, "url") && isString(value["url"], 2048))
 }
@@ -1494,19 +1494,28 @@ export function isWebhookCreateOutgoingRequest(value: unknown): value is Webhook
 export const decodeWebhookCreateOutgoingRequest = decoder("webhook.CreateOutgoingRequest", isWebhookCreateOutgoingRequest)
 
 export type WebhookCreateRequest = {
+  allow_attachments?: boolean
+  allow_embeds?: boolean
+  allow_everyone?: boolean
+  allow_identity_override?: boolean
+  allow_user_mentions?: boolean
   name: string
 }
 
 export function isWebhookCreateRequest(value: unknown): value is WebhookCreateRequest {
   return isRecord(value)
+    && (!hasOwn(value, "allow_attachments") || typeof value["allow_attachments"] === 'boolean')
+    && (!hasOwn(value, "allow_embeds") || typeof value["allow_embeds"] === 'boolean')
+    && (!hasOwn(value, "allow_everyone") || typeof value["allow_everyone"] === 'boolean')
+    && (!hasOwn(value, "allow_identity_override") || typeof value["allow_identity_override"] === 'boolean')
+    && (!hasOwn(value, "allow_user_mentions") || typeof value["allow_user_mentions"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 80))
 }
 
 export const decodeWebhookCreateRequest = decoder("webhook.CreateRequest", isWebhookCreateRequest)
 
 export type WebhookCreatedOutgoing = {
-  access_ok: boolean
-  channel_id: string | null
+  channel_id: string
   consecutive_failures: number
   created_at: string
   created_by: string | null
@@ -1520,12 +1529,13 @@ export type WebhookCreatedOutgoing = {
   secret: string
   status: "active" | "disabled" | "auto_disabled"
   url: string
+  url_set_at: string
+  url_set_by: string | null
 }
 
 export function isWebhookCreatedOutgoing(value: unknown): value is WebhookCreatedOutgoing {
   return isRecord(value)
-    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
-    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
@@ -1539,11 +1549,18 @@ export function isWebhookCreatedOutgoing(value: unknown): value is WebhookCreate
     && (hasOwn(value, "secret") && isString(value["secret"]))
     && (hasOwn(value, "status") && (value["status"] === "active" || value["status"] === "disabled" || value["status"] === "auto_disabled"))
     && (hasOwn(value, "url") && isString(value["url"], 2048))
+    && (hasOwn(value, "url_set_at") && isTimestamp(value["url_set_at"]))
+    && (hasOwn(value, "url_set_by") && (isIdentifier(value["url_set_by"]) || value["url_set_by"] === null))
 }
 
 export const decodeWebhookCreatedOutgoing = decoder("webhook.CreatedOutgoing", isWebhookCreatedOutgoing)
 
 export type WebhookCreatedWebhook = {
+  allow_attachments: boolean
+  allow_embeds: boolean
+  allow_everyone: boolean
+  allow_identity_override: boolean
+  allow_user_mentions: boolean
   avatar_url?: string
   channel_id: string
   created_at: string
@@ -1557,6 +1574,11 @@ export type WebhookCreatedWebhook = {
 
 export function isWebhookCreatedWebhook(value: unknown): value is WebhookCreatedWebhook {
   return isRecord(value)
+    && (hasOwn(value, "allow_attachments") && typeof value["allow_attachments"] === 'boolean')
+    && (hasOwn(value, "allow_embeds") && typeof value["allow_embeds"] === 'boolean')
+    && (hasOwn(value, "allow_everyone") && typeof value["allow_everyone"] === 'boolean')
+    && (hasOwn(value, "allow_identity_override") && typeof value["allow_identity_override"] === 'boolean')
+    && (hasOwn(value, "allow_user_mentions") && typeof value["allow_user_mentions"] === 'boolean')
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
@@ -1645,8 +1667,7 @@ export function isWebhookExecutePayload(value: unknown): value is WebhookExecute
 export const decodeWebhookExecutePayload = decoder("webhook.ExecutePayload", isWebhookExecutePayload)
 
 export type WebhookOutgoing = {
-  access_ok: boolean
-  channel_id: string | null
+  channel_id: string
   consecutive_failures: number
   created_at: string
   created_by: string | null
@@ -1659,12 +1680,13 @@ export type WebhookOutgoing = {
   name: string
   status: "active" | "disabled" | "auto_disabled"
   url: string
+  url_set_at: string
+  url_set_by: string | null
 }
 
 export function isWebhookOutgoing(value: unknown): value is WebhookOutgoing {
   return isRecord(value)
-    && (hasOwn(value, "access_ok") && typeof value["access_ok"] === 'boolean')
-    && (hasOwn(value, "channel_id") && (isIdentifier(value["channel_id"]) || value["channel_id"] === null))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "consecutive_failures") && (isInteger(value["consecutive_failures"]) && value["consecutive_failures"] >= 0))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
@@ -1677,6 +1699,8 @@ export function isWebhookOutgoing(value: unknown): value is WebhookOutgoing {
     && (hasOwn(value, "name") && isString(value["name"], 80))
     && (hasOwn(value, "status") && (value["status"] === "active" || value["status"] === "disabled" || value["status"] === "auto_disabled"))
     && (hasOwn(value, "url") && isString(value["url"], 2048))
+    && (hasOwn(value, "url_set_at") && isTimestamp(value["url_set_at"]))
+    && (hasOwn(value, "url_set_by") && (isIdentifier(value["url_set_by"]) || value["url_set_by"] === null))
 }
 
 export const decodeWebhookOutgoing = decoder("webhook.Outgoing", isWebhookOutgoing)
@@ -1699,17 +1723,32 @@ export function isWebhookUpdateOutgoingRequest(value: unknown): value is Webhook
 export const decodeWebhookUpdateOutgoingRequest = decoder("webhook.UpdateOutgoingRequest", isWebhookUpdateOutgoingRequest)
 
 export type WebhookUpdateRequest = {
-  name: string
+  allow_attachments?: boolean
+  allow_embeds?: boolean
+  allow_everyone?: boolean
+  allow_identity_override?: boolean
+  allow_user_mentions?: boolean
+  name?: string
 }
 
 export function isWebhookUpdateRequest(value: unknown): value is WebhookUpdateRequest {
   return isRecord(value)
-    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (!hasOwn(value, "allow_attachments") || typeof value["allow_attachments"] === 'boolean')
+    && (!hasOwn(value, "allow_embeds") || typeof value["allow_embeds"] === 'boolean')
+    && (!hasOwn(value, "allow_everyone") || typeof value["allow_everyone"] === 'boolean')
+    && (!hasOwn(value, "allow_identity_override") || typeof value["allow_identity_override"] === 'boolean')
+    && (!hasOwn(value, "allow_user_mentions") || typeof value["allow_user_mentions"] === 'boolean')
+    && (!hasOwn(value, "name") || isString(value["name"], 80))
 }
 
 export const decodeWebhookUpdateRequest = decoder("webhook.UpdateRequest", isWebhookUpdateRequest)
 
 export type WebhookWebhook = {
+  allow_attachments: boolean
+  allow_embeds: boolean
+  allow_everyone: boolean
+  allow_identity_override: boolean
+  allow_user_mentions: boolean
   avatar_url?: string
   channel_id: string
   created_at: string
@@ -1721,6 +1760,11 @@ export type WebhookWebhook = {
 
 export function isWebhookWebhook(value: unknown): value is WebhookWebhook {
   return isRecord(value)
+    && (hasOwn(value, "allow_attachments") && typeof value["allow_attachments"] === 'boolean')
+    && (hasOwn(value, "allow_embeds") && typeof value["allow_embeds"] === 'boolean')
+    && (hasOwn(value, "allow_everyone") && typeof value["allow_everyone"] === 'boolean')
+    && (hasOwn(value, "allow_identity_override") && typeof value["allow_identity_override"] === 'boolean')
+    && (hasOwn(value, "allow_user_mentions") && typeof value["allow_user_mentions"] === 'boolean')
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))

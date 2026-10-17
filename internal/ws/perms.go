@@ -54,7 +54,6 @@ func (c *Client) can(snap *perm.Snapshot, ch uuid.UUID, need perm.Set) bool {
 // BroadcastChannel sends an event to every connection whose user may view the
 // channel.
 func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload any) {
-	h.tapped(channelID, eventType, payload)
 	data := encode(eventType, payload)
 	if data == nil {
 		return
@@ -63,6 +62,7 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if !ok {
 		return
 	}
+	h.tapped(channelID, eventType, payload) // only what is really published
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {
