@@ -23,6 +23,9 @@ type client struct {
 	tracks chan *webrtc.TrackRemote
 	plis   chan uint32 // SSRCs the SFU asked this client to refresh
 	errors chan error
+	// received holds the RTP packets of every track this client receives, for
+	// tests that look at them; a full channel drops.
+	received chan *rtp.Packet
 }
 
 func newTestSFU(t *testing.T) *SFU {
@@ -49,14 +52,19 @@ func newClient(t *testing.T) *client {
 	}
 	t.Cleanup(func() { _ = pc.Close() })
 	c := &client{t: t, id: uuid.New(), pc: pc,
-		tracks: make(chan *webrtc.TrackRemote, 8), plis: make(chan uint32, 64), errors: make(chan error, 8)}
+		tracks: make(chan *webrtc.TrackRemote, 8), plis: make(chan uint32, 64), errors: make(chan error, 8),
+		received: make(chan *rtp.Packet, 8192)}
 	pc.OnTrack(func(tr *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
 		c.tracks <- tr
 		go func() {
-			buf := make([]byte, 1500)
 			for {
-				if _, _, err := tr.Read(buf); err != nil {
+				pkt, _, err := tr.ReadRTP()
+				if err != nil {
 					return
+				}
+				select {
+				case c.received <- pkt:
+				default:
 				}
 			}
 		}()
@@ -67,10 +75,27 @@ func newClient(t *testing.T) *client {
 // join connects the client to the room; the SFU drives the offers.
 func (c *client) join(s *SFU, room uuid.UUID) {
 	c.t.Helper()
+	c.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
+		_, p, err := s.Join(room, c.id, offer, nil)
+		return p, err
+	})
+}
+
+// joinNative joins with a media authorization latch, like the desktop app.
+func (c *client) joinNative(s *SFU, room uuid.UUID, authorize func() bool) {
+	c.t.Helper()
+	c.joinWith(func(offer func(webrtc.SessionDescription)) (*Peer, error) {
+		_, p, err := s.JoinWithAuthorization(room, c.id, offer, nil, authorize)
+		return p, err
+	})
+}
+
+func (c *client) joinWith(connect func(offer func(webrtc.SessionDescription)) (*Peer, error)) {
+	c.t.Helper()
 	var mu sync.Mutex
 	var peer *Peer
 	ready := make(chan struct{})
-	_, p, err := s.Join(room, c.id,
+	p, err := connect(
 		func(webrtc.SessionDescription) {
 			<-ready
 			go func() {
@@ -81,7 +106,7 @@ func (c *client) join(s *SFU, room uuid.UUID) {
 					}
 				}
 			}()
-		}, nil)
+		})
 	if err != nil {
 		c.t.Fatal(err)
 	}

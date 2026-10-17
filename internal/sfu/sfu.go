@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -64,6 +65,8 @@ const resumeHoldoff = 500 * time.Millisecond
 // TrackInfo is one forwarded track: the publisher's remote track and the
 // local track every other peer subscribes to.
 type TrackInfo struct {
+	// Track is what every subscriber binds to. A screen share's layers have no
+	// shared track: each viewer gets one of its own from the group.
 	Track     *webrtc.TrackLocalStaticRTP
 	SenderID  uuid.UUID
 	Kind      webrtc.RTPCodecType
@@ -78,6 +81,32 @@ type TrackInfo struct {
 	superseded atomic.Bool
 	// writeErrLogged keeps a failing forward from logging every packet.
 	writeErrLogged atomic.Bool
+	// group and layer are set on a screen share received as layers (see
+	// layerGroup); layer 0 is the best.
+	group *layerGroup
+	layer int
+}
+
+// codecMime is the codec the track carries, for the logs.
+func (t *TrackInfo) codecMime() string {
+	switch {
+	case t.Track != nil:
+		return t.Track.Codec().MimeType
+	case t.group != nil:
+		return t.group.codec.MimeType
+	}
+	return ""
+}
+
+// isSuperseded reports whether a newer capture replaced this track.
+func (t *TrackInfo) isSuperseded() bool {
+	return t.superseded.Load() || t.group != nil && t.group.superseded.Load()
+}
+
+// sameCapture reports whether two tracks belong to one capture: the same
+// track, or layers of one screen share.
+func (t *TrackInfo) sameCapture(o *TrackInfo) bool {
+	return t == o || t.group != nil && t.group == o.group
 }
 
 type Peer struct {
@@ -103,6 +132,39 @@ type Peer struct {
 	// so each failure is logged once rather than every signaling round.
 	// Guarded by signalingMu.
 	addTrackFailed map[string]bool
+	// viewerTracks are this peer's outgoing tracks of layered screen shares by
+	// track ID, so they can be released with the track.
+	vtMu         sync.Mutex
+	viewerTracks map[string]*viewerTrack
+}
+
+// takeViewerTrack removes and returns the outgoing layered track trackID.
+func (p *Peer) takeViewerTrack(trackID string) *viewerTrack {
+	p.vtMu.Lock()
+	defer p.vtMu.Unlock()
+	vt := p.viewerTracks[trackID]
+	delete(p.viewerTracks, trackID)
+	return vt
+}
+
+func (p *Peer) putViewerTrack(trackID string, vt *viewerTrack) {
+	p.vtMu.Lock()
+	defer p.vtMu.Unlock()
+	if p.viewerTracks == nil {
+		p.viewerTracks = make(map[string]*viewerTrack)
+	}
+	p.viewerTracks[trackID] = vt
+}
+
+// releaseViewerTracks stops every layered track this peer receives.
+func (p *Peer) releaseViewerTracks() {
+	p.vtMu.Lock()
+	tracks := p.viewerTracks
+	p.viewerTracks = nil
+	p.vtMu.Unlock()
+	for _, vt := range tracks {
+		vt.group.removeViewer(vt)
+	}
 }
 
 type Room struct {
@@ -118,10 +180,13 @@ type Room struct {
 	// Keeps the latest source even while stopped, so late packets from an older
 	// capture cannot replace a newer track. At most four entries per publisher.
 	latestSources map[string]*TrackInfo
-	mu            sync.RWMutex
-	api           *webrtc.API
-	iceServers    []webrtc.ICEServer
-	offerTimeout  time.Duration
+	// groups holds each publisher's screen share received as layers, guarded
+	// by mu.
+	groups       map[uuid.UUID]*layerGroup
+	mu           sync.RWMutex
+	api          *webrtc.API
+	iceServers   []webrtc.ICEServer
+	offerTimeout time.Duration
 
 	// subs is what each viewer receives (see Subscriptions); guarded by mu.
 	subs map[uuid.UUID]*Subscriptions
@@ -130,8 +195,12 @@ type Room struct {
 	// lastViewers is the announced non-empty audience of each screen share
 	// (see notifyMedia); guarded by mu.
 	lastViewers map[uuid.UUID][]uuid.UUID
-	notifyMu    sync.Mutex
-	notifier    *mediaNotifier
+	// layerMeta is what each publisher declared about its screen share's
+	// layers; lastLayers what was announced. Both guarded by mu.
+	layerMeta  map[uuid.UUID][]Layer
+	lastLayers map[uuid.UUID][]Layer
+	notifyMu   sync.Mutex
+	notifier   *mediaNotifier
 }
 
 type SFU struct {
@@ -168,6 +237,25 @@ func (s *SFU) SetMediaStateHandler(fn func(roomID, userID uuid.UUID, state Media
 // list once a watched share ends or loses its last viewer.
 func (s *SFU) SetScreenViewersHandler(fn func(roomID, sharer uuid.UUID, viewers []uuid.UUID)) {
 	s.notifier.setViewers(fn)
+}
+
+// SetScreenLayersHandler registers the callback that announces the layers of
+// a live screen share, once and again whenever they change; an empty list
+// once the share ends.
+func (s *SFU) SetScreenLayersHandler(fn func(roomID, sharer uuid.UUID, layers []Layer)) {
+	s.notifier.setLayers(fn)
+}
+
+// SetScreenQualityHandler registers the callback that tells a viewer which
+// layer of a screen share it receives, whenever that changes.
+func (s *SFU) SetScreenQualityHandler(fn func(roomID, viewer, sharer uuid.UUID, state QualityState)) {
+	s.notifier.setQuality(fn)
+}
+
+// SetLayersWantedHandler registers the callback that tells a sharer which of
+// its layers some viewer needs, so it can stop encoding the others.
+func (s *SFU) SetLayersWantedHandler(fn func(roomID, sharer uuid.UUID, layers []int)) {
+	s.notifier.setWanted(fn)
 }
 
 // NewSFU creates the SFU. announceIPs are the addresses browsers are told to
@@ -471,7 +559,10 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		r.removePeerTracksLocked(userID)
 		// Closing fires the old connection's state callback; removePeer
 		// ignores it because the user's entry is no longer that peer.
-		go func() { _ = existing.PC.Close() }()
+		go func() {
+			existing.releaseViewerTracks()
+			_ = existing.PC.Close()
+		}()
 	}
 
 	api := r.api
@@ -496,13 +587,19 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	// and the screen share's sound, in this order. Lines of one kind are told
 	// apart by their position: the first video line is the screen, the second
 	// the camera; the first audio line is the mic, the second the screen's
-	// sound.
+	// sound. After them come the lines of the screen's lower layers (see
+	// layerGroup): a sender that does not know them answers them inactive.
 	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
 	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
 	screenTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
 	cameraTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
 	screenAudioTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
-	pinCodecOrder(screenTr, cameraTr)
+	lowerTrs := make([]*webrtc.RTPTransceiver, 0, maxLayers-1)
+	for range maxLayers - 1 {
+		tr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+		lowerTrs = append(lowerTrs, tr)
+	}
+	pinCodecOrder(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...)...)
 
 	peer := &Peer{
 		authorizeMedia: authorize,
@@ -523,17 +620,28 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
 		source := SourceAudio
 		streamID := userID.String()
+		layer := 0
 		if remoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
 			source = SourceScreen
 			if cameraTr != nil && receiver == cameraTr.Receiver() {
 				source = SourceCamera
 				streamID = CameraStreamPrefix + streamID
 			}
+			for i, tr := range lowerTrs {
+				if tr != nil && receiver == tr.Receiver() {
+					layer = i + 1
+				}
+			}
 		} else if screenAudioTr != nil && receiver == screenAudioTr.Receiver() {
 			source = SourceScreenAudio
 			streamID = ScreenAudioStreamPrefix + streamID
 		}
-		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "codec", remoteTrack.Codec().MimeType)
+		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", layer, "codec", remoteTrack.Codec().MimeType)
+
+		if source == SourceScreen {
+			r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, layer)
+			return
+		}
 
 		key := trackKey(userID, remoteTrack.ID())
 		// The stream ID names the publishing user, so clients can map tracks to people.
@@ -631,7 +739,7 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
 			continue
 		}
-		if info.superseded.Load() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+		if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 			return
 		}
 		// Header extension IDs are negotiated per connection; the
@@ -714,9 +822,17 @@ func (r *Room) signalPeer(peer *Peer) {
 	}
 	desired := make(map[string]*TrackInfo)
 	for id, info := range r.trackLocals {
-		if r.wantsLocked(peer.ID, info) {
-			desired[id] = info
+		if !r.wantsLocked(peer.ID, info) {
+			continue
 		}
+		// The layers of a screen share reach a viewer as one track.
+		if info.group != nil {
+			id = info.group.id
+			if prev, ok := desired[id]; ok && prev.layer < info.layer {
+				continue
+			}
+		}
+		desired[id] = info
 	}
 	r.mu.RUnlock()
 	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
@@ -738,6 +854,9 @@ func (r *Room) signalPeer(peer *Peer) {
 		if _, ok := desired[trackID]; !ok {
 			if err := peer.PC.RemoveTrack(sender); err == nil {
 				needRenegotiate = true
+				if vt := peer.takeViewerTrack(trackID); vt != nil {
+					vt.group.removeViewer(vt)
+				}
 			}
 		}
 	}
@@ -747,12 +866,20 @@ func (r *Room) signalPeer(peer *Peer) {
 			continue
 		}
 		var recipientTrack webrtc.TrackLocal = info.Track
+		var vt *viewerTrack
+		if info.group != nil {
+			r.mu.RLock()
+			pref := r.subs[peer.ID].screenQuality(info.SenderID)
+			r.mu.RUnlock()
+			vt = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
+			recipientTrack = vt
+		}
 		if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
 			var source func() bool
 			if info.publisher != nil && info.publisher.authorizeMedia != nil {
 				source = info.publisher.mediaAuthorized
 			}
-			recipientTrack = &authorizedTrack{TrackLocal: info.Track, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
+			recipientTrack = &authorizedTrack{TrackLocal: recipientTrack, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
 		}
 		sender, err := peer.PC.AddTrack(recipientTrack)
 		if err != nil {
@@ -764,13 +891,21 @@ func (r *Room) signalPeer(peer *Peer) {
 				}
 				peer.addTrackFailed[trackID] = true
 				slog.Warn("sfu add track", "viewer", peer.ID, "publisher", info.SenderID, "source", string(info.Source),
-					"codec", info.Track.Codec().MimeType, "err", err)
+					"codec", info.codecMime(), "err", err)
 			}
 			continue
 		}
 		delete(peer.addTrackFailed, trackID)
 		needRenegotiate = true
-		go r.forwardRTCP(sender, info)
+		if vt != nil {
+			peer.putViewerTrack(trackID, vt)
+			// The new viewer waits for a keyframe of its layer, which
+			// addViewer asks for.
+			info.group.addViewer(vt)
+			go r.forwardRTCP(sender, vt.requestKeyframe)
+			continue
+		}
+		go r.forwardRTCP(sender, info.requestKeyframe)
 		if info.Kind == webrtc.RTPCodecTypeVideo {
 			// A new viewer needs a keyframe to start decoding.
 			info.requestKeyframe()
@@ -831,7 +966,7 @@ func (p *Peer) watchOffer(gen uint64, attempt int) {
 
 // forwardRTCP reads a subscriber's feedback for one forwarded track. Keyframe
 // requests go to the publisher; NACKs and reports are handled by interceptors.
-func (r *Room) forwardRTCP(sender *webrtc.RTPSender, info *TrackInfo) {
+func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func()) {
 	for {
 		pkts, _, err := sender.ReadRTCP()
 		if err != nil {
@@ -840,7 +975,7 @@ func (r *Room) forwardRTCP(sender *webrtc.RTPSender, info *TrackInfo) {
 		for _, p := range pkts {
 			switch p.(type) {
 			case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
-				info.requestKeyframe()
+				keyframe()
 			}
 		}
 	}
@@ -861,14 +996,28 @@ func (t *TrackInfo) requestKeyframe() {
 func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 	r.mu.RLock()
 	var tracks []*TrackInfo
+	var layered []*layerGroup
 	for _, info := range r.trackLocals {
-		if info.Kind == webrtc.RTPCodecTypeVideo && r.wantsLocked(viewerID, info) {
-			tracks = append(tracks, info)
+		if info.Kind != webrtc.RTPCodecTypeVideo || !r.wantsLocked(viewerID, info) {
+			continue
 		}
+		if info.group != nil {
+			if !slices.Contains(layered, info.group) {
+				layered = append(layered, info.group)
+			}
+			continue
+		}
+		tracks = append(tracks, info)
 	}
 	r.mu.RUnlock()
 	for _, info := range tracks {
 		info.requestKeyframe()
+	}
+	// A layered share is asked for only the layer this viewer receives.
+	for _, g := range layered {
+		if vt := g.viewerFor(viewerID); vt != nil {
+			vt.requestKeyframe()
+		}
 	}
 }
 
@@ -894,7 +1043,7 @@ func (r *Room) RequestSourceKeyframe(publisherID uuid.UUID, source Source) {
 func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.mu.Lock()
 	// The publisher may have been replaced while its track was arriving.
-	if r.peers[info.SenderID] != info.publisher || info.superseded.Load() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+	if r.peers[info.SenderID] != info.publisher || info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 		r.mu.Unlock()
 		return
 	}
@@ -902,10 +1051,10 @@ func (r *Room) addTrack(key string, info *TrackInfo) {
 		r.latestSources = make(map[string]*TrackInfo)
 	}
 	sourceKey := trackKey(info.SenderID, string(info.Source))
-	if previous := r.latestSources[sourceKey]; previous != nil && previous != info {
-		previous.superseded.Store(true)
+	if previous := r.latestSources[sourceKey]; previous != nil && !previous.sameCapture(info) {
+		previous.supersede()
 		for oldKey, old := range r.trackLocals {
-			if old == previous {
+			if old.sameCapture(previous) {
 				delete(r.trackLocals, oldKey)
 			}
 		}
@@ -917,6 +1066,10 @@ func (r *Room) addTrack(key string, info *TrackInfo) {
 }
 
 func (r *Room) removeTrack(key string, info *TrackInfo) {
+	if info.group != nil {
+		// The layer is gone for good, whether or not the share was stopped.
+		info.group.detach(info)
+	}
 	r.mu.Lock()
 	if r.trackLocals[key] != info {
 		r.mu.Unlock()
@@ -930,10 +1083,16 @@ func (r *Room) removeTrack(key string, info *TrackInfo) {
 func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 	for key, info := range r.latestSources {
 		if info.SenderID == userID {
-			info.superseded.Store(true)
+			info.supersede()
 			delete(r.latestSources, key)
 		}
 	}
+	if g := r.groups[userID]; g != nil {
+		g.supersede()
+		g.close()
+		delete(r.groups, userID)
+	}
+	delete(r.layerMeta, userID)
 	for id, tInfo := range r.trackLocals {
 		if tInfo.SenderID == userID {
 			delete(r.trackLocals, id)
@@ -947,6 +1106,14 @@ func (r *Room) removePeerTracksLocked(userID uuid.UUID) {
 func (r *Room) dropScreenSubsLocked(userID uuid.UUID) {
 	for _, s := range r.subs {
 		s.dropScreen(userID)
+	}
+}
+
+// supersede marks a replaced capture; the layers of a screen share go together.
+func (t *TrackInfo) supersede() {
+	t.superseded.Store(true)
+	if t.group != nil {
+		t.group.supersede()
 	}
 }
 
@@ -969,6 +1136,11 @@ func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 	}
 	if source == SourceScreen {
 		r.dropScreenSubsLocked(userID)
+		// The next share declares its own layers.
+		delete(r.layerMeta, userID)
+		if g := r.groups[userID]; g != nil {
+			g.setDeclared(0)
+		}
 	}
 	r.mu.Unlock()
 	if changed {
@@ -998,6 +1170,7 @@ func (r *Room) detachPeer(peer *Peer) bool {
 		delete(r.subs, peer.ID)
 		r.removePeerTracksLocked(peer.ID)
 	}
+	peer.releaseViewerTracks()
 	return current
 }
 

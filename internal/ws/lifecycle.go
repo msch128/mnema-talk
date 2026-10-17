@@ -55,6 +55,9 @@ const (
 // @Description - `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.
 // @Description - `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.
 // @Description - `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.
+// @Description - `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.
+// @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
+// @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.
 // @Description - `voice_kicked`: `{channel_id, reason?}` when an admin removes the user from voice, or `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`).
 // @Description - `pong`: `{t}` echoing a `ping`.
@@ -65,7 +68,8 @@ const (
 // @Description - `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.
 // @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
 // @Description - `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.
-// @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`.
+// @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`. A screen subscription may carry `quality`: `"auto"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent.
+// @Description - `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.
 // @Description - `webrtc_screenshare_stop`, `webrtc_camera_stop`.
 // @Description
 // @Description Unknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.
