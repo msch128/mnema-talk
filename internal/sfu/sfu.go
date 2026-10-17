@@ -1082,6 +1082,9 @@ func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.latestSources[sourceKey] = info
 	r.trackLocals[key] = info
 	r.mu.Unlock()
+	if info.group != nil {
+		info.group.markLive(info)
+	}
 	go r.SignalPeerConnections()
 }
 
@@ -1159,7 +1162,7 @@ func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 		// The next share declares its own layers.
 		delete(r.layerMeta, userID)
 		if g := r.groups[userID]; g != nil {
-			g.setDeclared(0)
+			g.shareStopped()
 		}
 	}
 	r.mu.Unlock()

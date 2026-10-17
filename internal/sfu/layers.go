@@ -98,6 +98,8 @@ type layerGroup struct {
 	// layers the sender announced (0 when it did not).
 	live     atomic.Uint32
 	declared atomic.Int32
+	// lastPkt is when a packet of layer i last arrived (unix nanoseconds).
+	lastPkt [maxLayers]atomic.Int64
 	// sawSPS: layer i sent a sequence parameter set with a keyframe, so an
 	// IDR slice alone is not taken for the start of one.
 	sawSPS [maxLayers]atomic.Bool
@@ -163,6 +165,59 @@ func (g *layerGroup) detach(info *TrackInfo) {
 	g.retarget()
 }
 
+// markLive sets the live bit of info's layer again when its packets resume
+// after the share was stopped.
+func (g *layerGroup) markLive(info *TrackInfo) {
+	g.mu.Lock()
+	if g.infos[info.layer] == info && g.live.Load()&(1<<info.layer) == 0 {
+		g.live.Store(g.live.Load() | 1<<info.layer)
+		g.mu.Unlock()
+		g.retarget()
+		return
+	}
+	g.mu.Unlock()
+}
+
+// shareStopped forgets what the stopped share announced and had live, so a
+// restart is announced to the sender afresh and no silent layer is resolved.
+func (g *layerGroup) shareStopped() {
+	g.mu.Lock()
+	g.resetAnnouncedLocked()
+	g.hold = [maxLayers]time.Time{}
+	g.live.Store(0)
+	g.declared.Store(0)
+	g.mu.Unlock()
+	g.retarget()
+}
+
+// resetAnnouncedLocked makes the next refreshWanted announce its mask.
+func (g *layerGroup) resetAnnouncedLocked() {
+	g.started = false
+	g.announced = 0
+	if g.timer != nil {
+		g.timer.Stop()
+		g.timer = nil
+	}
+}
+
+// flowing is the layer nearest to want that delivered a packet within the
+// last second; -1 when there is none. Worse layers win ties.
+func (g *layerGroup) flowing(want int, now time.Time) int {
+	recent := func(i int) bool {
+		return i >= 0 && i < maxLayers && g.live.Load()&(1<<i) != 0 &&
+			now.UnixNano()-g.lastPkt[i].Load() < int64(time.Second)
+	}
+	for d := 0; d < maxLayers; d++ {
+		if recent(want + d) {
+			return want + d
+		}
+		if recent(want - d) {
+			return want - d
+		}
+	}
+	return -1
+}
+
 // supersede ends the group: its layers stop forwarding.
 func (g *layerGroup) supersede() {
 	g.superseded.Store(true)
@@ -205,7 +260,7 @@ func (g *layerGroup) representative() *TrackInfo {
 func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID string) *viewerTrack {
 	// NewTrackLocalStaticRTP never fails.
 	local, _ := webrtc.NewTrackLocalStaticRTP(g.codec, trackID, streamID)
-	vt := &viewerTrack{TrackLocalStaticRTP: local, group: g, viewer: viewer, pref: pref, cur: -1, eff: -1, sink: local.WriteRTP}
+	vt := &viewerTrack{TrackLocalStaticRTP: local, group: g, since: layerNow(), viewer: viewer, pref: pref, cur: -1, eff: -1, sink: local.WriteRTP}
 	if pref < 0 {
 		vt.ad = newAdapter(layerNow(), g.floor())
 	}
@@ -250,6 +305,7 @@ func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 
 // write hands one packet of layer idx to every viewer.
 func (g *layerGroup) write(idx int, p *rtp.Packet) {
+	g.lastPkt[idx].Store(layerNow().UnixNano())
 	list := g.snapshot.Load()
 	if list == nil {
 		return
@@ -481,6 +537,8 @@ type viewerTrack struct {
 	closed     bool
 	started    bool
 	lastKeyAsk time.Time
+	// since is when the track was made, the stall clock until a first packet.
+	since time.Time
 	// Offsets that map the current layer's numbers onto the viewer's stream.
 	seqOff uint16
 	tsOff  uint32
@@ -575,6 +633,10 @@ func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 		return
 	}
 	layer, changed := vt.ad.observe(now, loss, rtt)
+	if !changed {
+		changed = vt.stalledLocked(now)
+		layer = vt.ad.layer
+	}
 	if changed {
 		vt.want = layer
 		vt.wantA.Store(int32(layer))
@@ -586,16 +648,36 @@ func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 	}
 }
 
+// stalledLocked moves an automatic viewer to a layer that delivers when
+// nothing has reached it for adaptStall (no packets mean no loss to report).
+func (vt *viewerTrack) stalledLocked(now time.Time) bool {
+	base := vt.lastAt
+	if base.IsZero() {
+		base = vt.since
+	}
+	if now.Sub(base) < adaptStall {
+		return false
+	}
+	to := vt.group.flowing(vt.ad.layer, now)
+	if to < 0 {
+		return false
+	}
+	return vt.ad.stalledTo(now, to)
+}
+
 // viewerKeyframe passes on the viewer's own keyframe request; for an automatic
 // viewer, repeated requests are a sign that it cannot decode what it gets.
 func (vt *viewerTrack) viewerKeyframe() {
 	now := layerNow()
 	vt.mu.Lock()
+	flood := false
 	if vt.ad != nil {
-		vt.ad.keyframeRequested(now)
+		flood = !vt.ad.keyframeRequested(now)
 	}
 	vt.mu.Unlock()
-	vt.requestKeyframe()
+	if !flood {
+		vt.requestKeyframe()
+	}
 }
 
 // layerGone drops the viewer's current layer when it was idx.
