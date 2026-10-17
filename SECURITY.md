@@ -53,6 +53,19 @@ locally instead (`make up` or `make dev`).
   reconnects with its fresh cookie).
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
+  The one exception is the webhook execute route
+  (`POST /api/webhooks/{id}/{token}`): it never reads the session cookie and is
+  authenticated by its secret alone, so there is nothing to forge.
+- **Webhooks.** Managing them needs *Manage webhooks* and *View channels* in
+  the channel (hierarchy as in roles). The execute URL is a bearer secret: 256
+  random bits, stored as a SHA-256 hash, compared in constant time and shown
+  once; wrong ids and tokens are rate limited per client address, and valid
+  ones per webhook and per channel. A webhook posts as a hidden bot account
+  that cannot sign in and is no member; mass mentions need the creator's
+  *Mention everyone* at the time of the post; files go through the same size
+  and type checks as uploads; embeds are validated, shown as sanitized text and
+  links and never fetched from their hosts. Details and the Discord
+  compatibility table: [doc/webhooks.md](doc/webhooks.md).
 - **Security headers.** Strict Content-Security-Policy (no inline scripts or
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),

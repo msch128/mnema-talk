@@ -85,6 +85,9 @@ for a server or NAS.
   and channels can allow or deny permissions per role or member, which makes
   private channels and Talks. Changes apply live, also to members in a call.
   See [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
+- **Incoming webhooks** per channel in Discord's execute format (content,
+  embeds, `allowed_mentions`, files), with a Webhook badge, a secret URL that
+  is stored hashed and rate limits. See [doc/webhooks.md](doc/webhooks.md).
 - **Sidebar management** for admins: drag and drop channels and categories
   (mouse, pen, touch) or move them with `Alt+↑/↓`; every move is saved at
   once and can be undone from a toast. Context menus create, duplicate and

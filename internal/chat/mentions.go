@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
@@ -22,6 +23,10 @@ const (
 type MentionPolicy struct {
 	// NoEveryone turns @all and @here into plain text.
 	NoEveryone bool
+	// NoUsers turns @username into plain text, except for AllowUsers.
+	NoUsers bool
+	// AllowUsers are the only users notified when NoUsers is set.
+	AllowUsers []uuid.UUID
 	// CanView, when set, drops mentioned users who cannot view the channel.
 	CanView func(userID uuid.UUID) bool
 }
@@ -91,7 +96,7 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	if all || len(usernames) > 0 || (here && len(online) > 0) {
 		rows, err := q.Query(ctx, `
 			SELECT id FROM users
-			WHERE disabled_at IS NULL AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
+			WHERE disabled_at IS NULL AND NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
 		if err != nil {
 			return nil, fmt.Errorf("resolve mentions: %w", err)
 		}
@@ -106,6 +111,9 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	delete(ids, authorID)
 	out := make([]uuid.UUID, 0, len(ids))
 	for id := range ids {
+		if policy.NoUsers && !all && !here && !slices.Contains(policy.AllowUsers, id) {
+			continue
+		}
 		if policy.CanView != nil && !policy.CanView(id) {
 			continue
 		}

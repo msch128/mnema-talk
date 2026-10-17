@@ -643,6 +643,109 @@
         ],
         "type": "object"
       },
+      "chat.Embed": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/chat.EmbedAuthor"
+          },
+          "color": {
+            "maximum": 16777215,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/chat.EmbedField"
+            },
+            "type": "array"
+          },
+          "footer": {
+            "$ref": "#/components/schemas/chat.EmbedFooter"
+          },
+          "image": {
+            "$ref": "#/components/schemas/chat.EmbedMedia"
+          },
+          "thumbnail": {
+            "$ref": "#/components/schemas/chat.EmbedMedia"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "chat.EmbedAuthor": {
+        "properties": {
+          "name": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "url": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "chat.EmbedField": {
+        "properties": {
+          "inline": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 256,
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 1024,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "type": "object"
+      },
+      "chat.EmbedFooter": {
+        "properties": {
+          "text": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "chat.EmbedMedia": {
+        "properties": {
+          "url": {
+            "maxLength": 2048,
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "type": "object"
+      },
       "chat.LayoutRequest": {
         "properties": {
           "categories": {
@@ -824,9 +927,20 @@
           "display_name": {
             "type": "string"
           },
+          "embeds": {
+            "description": "Embeds are the rich cards of a webhook message (Discord-style subset).",
+            "items": {
+              "$ref": "#/components/schemas/chat.Embed"
+            },
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "is_bot": {
+            "description": "IsBot is true for messages posted by a webhook. Their author is a\nhidden bot account; DisplayName is the webhook's name or the username\nthe sender gave for this message.",
+            "type": "boolean"
           },
           "is_edited": {
             "type": "boolean"
@@ -2266,6 +2380,237 @@
           "websocket_connections"
         ],
         "type": "object"
+      },
+      "webhook.AllowedMentions": {
+        "properties": {
+          "parse": {
+            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here). \"roles\" is accepted and ignored.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "users": {
+            "description": "Users are user IDs (UUIDs) that are notified although \"users\" is not in\nParse.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "parse",
+          "roles",
+          "users"
+        ],
+        "type": "object"
+      },
+      "webhook.CreateRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "webhook.CreatedWebhook": {
+        "properties": {
+          "avatar_url": {
+            "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "description": "CreatedBy is the member who created it (null once that account is gone).",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "token": {
+            "description": "Token is the secret part of the URL. It is stored hashed and cannot be\nshown again; regenerate the token to get a new URL.",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "url": {
+            "description": "URL is the full execute URL, token included.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "token",
+          "updated_at",
+          "url"
+        ],
+        "type": "object"
+      },
+      "webhook.DiscordError": {
+        "properties": {
+          "code": {
+            "description": "Code is Discord's JSON error code (10015 unknown webhook, 50027 invalid\ntoken, 50006 empty message, 50035 invalid form body, ...).",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "webhook.DiscordRateLimit": {
+        "properties": {
+          "global": {
+            "description": "Global is always false: limits are per webhook and per channel.",
+            "type": "boolean"
+          },
+          "message": {
+            "enum": [
+              "You are being rate limited."
+            ],
+            "type": "string"
+          },
+          "retry_after": {
+            "description": "RetryAfter is the number of seconds to wait.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "global",
+          "message",
+          "retry_after"
+        ],
+        "type": "object"
+      },
+      "webhook.ExecutePayload": {
+        "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/webhook.AllowedMentions",
+            "description": "AllowedMentions limits who is notified. Default: members mentioned by\n@username are, @all and @here are not."
+          },
+          "avatar_url": {
+            "description": "AvatarURL is accepted and ignored: Mnema Talk never loads pictures from\nother hosts. Set the avatar on the webhook instead.",
+            "type": "string"
+          },
+          "content": {
+            "description": "Content is the message text (Markdown), at most 4000 characters.",
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "embeds": {
+            "description": "Embeds are rich cards (at most 10).",
+            "items": {
+              "$ref": "#/components/schemas/chat.Embed"
+            },
+            "type": "array"
+          },
+          "username": {
+            "description": "Username overrides the webhook's name for this message.",
+            "maxLength": 80,
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed_mentions",
+          "avatar_url",
+          "content",
+          "embeds",
+          "username"
+        ],
+        "type": "object"
+      },
+      "webhook.UpdateRequest": {
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "webhook.Webhook": {
+        "properties": {
+          "avatar_url": {
+            "description": "AvatarURL is the API URL of the avatar; omitted when none is set.",
+            "type": "string"
+          },
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "description": "CreatedBy is the member who created it (null once that account is gone).",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 80,
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "created_at",
+          "created_by",
+          "id",
+          "name",
+          "updated_at"
+        ],
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -3453,6 +3798,242 @@
         "summary": "Replace the permission overwrites of a channel",
         "tags": [
           "Roles"
+        ]
+      }
+    },
+    "/api/admin/channels/{id}/webhooks": {
+      "get": {
+        "description": "Needs Manage webhooks and View channel in that channel. The tokens are never listed.",
+        "operationId": "listWebhooks",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/webhook.Webhook"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Webhooks, oldest first."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): bad ID."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the channel does not exist or is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List a channel's webhooks",
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "post": {
+        "description": "Needs Manage webhooks and View channel in that channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
+        "operationId": "createWebhook",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhook.CreateRequest"
+              }
+            }
+          },
+          "description": "Name.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.CreatedWebhook"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the channel does not exist or is hidden from the caller."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the channel has the maximum number of webhooks."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a webhook",
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -6189,6 +6770,487 @@
         "summary": "Edit or clear a member's status line",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/webhooks/{id}": {
+      "delete": {
+        "description": "Its URL stops working at once. Messages it posted stay.",
+        "operationId": "deleteWebhook",
+        "parameters": [
+          {
+            "description": "Webhook ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such webhook."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a webhook",
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "patch": {
+        "description": "Needs Manage webhooks in the webhook's channel, and a highest role not below the creator's. Earlier messages keep the name they were posted under.",
+        "operationId": "updateWebhook",
+        "parameters": [
+          {
+            "description": "Webhook ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhook.UpdateRequest"
+              }
+            }
+          },
+          "description": "New name.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.Webhook"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such webhook."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Rename a webhook",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/webhooks/{id}/avatar": {
+      "post": {
+        "description": "multipart/form-data with an image in field 'avatar' (max 5 MB). Replaces the previous one.",
+        "operationId": "uploadWebhookAvatar",
+        "parameters": [
+          {
+            "description": "Webhook ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "avatar": {
+                    "description": "Image file, at most 5 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "avatar"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Image file, at most 5 MB.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.Webhook"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such webhook."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: file exceeds the limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: file storage is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set a webhook's avatar",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    },
+    "/api/admin/webhooks/{id}/token": {
+      "post": {
+        "description": "The old URL stops working at once. The answer carries the new secret URL; it is shown only once.",
+        "operationId": "regenerateWebhookToken",
+        "parameters": [
+          {
+            "description": "Webhook ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.CreatedWebhook"
+                }
+              }
+            },
+            "description": "New token and URL."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or hierarchy, or cross-origin request rejected."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such webhook."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Regenerate a webhook's token",
+        "tags": [
+          "Webhooks"
         ]
       }
     },
@@ -9632,6 +10694,146 @@
         "summary": "Get a user profile",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/webhooks/{id}/{token}": {
+      "post": {
+        "description": "Posts a message into the webhook's channel as the webhook (Discord-compatible execute). Authenticated by the secret in the URL only: no cookie or CSRF origin is needed, and cookies are ignored. Send JSON, or multipart/form-data with the JSON in the `payload_json` part and up to 10 files in further parts (same size limit and type checks as member uploads). Errors use Discord's shape ({\"message\",\"code\"}); 429 carries `retry_after`. Limits: about 5 requests per 2 seconds per webhook and 30 per minute per channel. See doc/webhooks.md for what is supported and ignored.",
+        "operationId": "executeWebhook",
+        "parameters": [
+          {
+            "description": "Webhook ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Webhook token.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Answer 200 with the created message instead of 204.",
+            "in": "query",
+            "name": "wait",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "ID of a root message of the channel: the post becomes a reply in its thread.",
+            "in": "query",
+            "name": "thread_id",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/webhook.ExecutePayload"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          },
+          "description": "Message to post. At least one of content, embeds or files.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The created message (wait=true)."
+          },
+          "204": {
+            "description": "Posted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid payload (50035) or empty message (50006)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid Webhook Token (50027)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Webhook (10015) or unknown thread (10003)."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordError"
+                }
+              }
+            },
+            "description": "Request entity too large (40005)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/webhook.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [],
+        "summary": "Execute a webhook",
+        "tags": [
+          "Webhooks"
         ]
       }
     },

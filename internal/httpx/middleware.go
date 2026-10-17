@@ -313,8 +313,19 @@ func CheckSameOrigin(r *http.Request, allowedOrigins []string) bool {
 // the SameSite=Lax session cookie this closes cross-site request forgery on the
 // cookie-authenticated API.
 func CSRF(allowedOrigins []string) func(http.Handler) http.Handler {
+	return CSRFExcept(allowedOrigins, nil)
+}
+
+// CSRFExcept is CSRF that lets requests through for which skip returns true.
+// Only routes that never read the session cookie may be skipped: they carry
+// their own secret, so there is no ambient credential to forge.
+func CSRFExcept(allowedOrigins []string, skip func(*http.Request) bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if skip != nil && skip(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
 			switch r.Method {
 			case http.MethodGet, http.MethodHead, http.MethodOptions:
 			default:

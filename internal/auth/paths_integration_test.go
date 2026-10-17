@@ -154,7 +154,7 @@ func TestAuthDatabaseCancellationPropagates(t *testing.T) {
 		{"list invitations", "FROM invites ORDER BY", func(p *db.Pool) error { _, e := ListInvites(ctx, p); return e }},
 		{"create invitation", "INSERT INTO invites", func(p *db.Pool) error { _, e := CreateInvite(ctx, p, admin.ID, "cancelled-invite", nil, nil); return e }},
 		{"delete invitation", "DELETE FROM invites", func(p *db.Pool) error { return DeleteInvite(ctx, p, uuid.New()) }},
-		{"list admin users", "FROM users ORDER BY", func(p *db.Pool) error { _, e := ListUsersForAdmin(ctx, p); return e }},
+		{"list admin users", "ORDER BY role = 'admin' DESC", func(p *db.Pool) error { _, e := ListUsersForAdmin(ctx, p); return e }},
 		{"reset password write", "UPDATE users SET password_hash", func(p *db.Pool) error { _, e := ResetPassword(ctx, p, member.ID); return e }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestAuthHandlersPropagateDatabaseCancellation(t *testing.T) {
 		{"profile load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
 		{"profile stats", "SELECT voice_seconds", "", func(h *Handler) httpx.HandlerFunc { return h.getUser }, member.ID},
 		{"invitation list", "FROM invites ORDER BY", "", func(h *Handler) httpx.HandlerFunc { return h.listInvites }, member.ID},
-		{"admin list", "FROM users ORDER BY", "", func(h *Handler) httpx.HandlerFunc { return h.listUsers }, member.ID},
+		{"admin list", "ORDER BY role = 'admin' DESC", "", func(h *Handler) httpx.HandlerFunc { return h.listUsers }, member.ID},
 		{"disable", "UPDATE users SET disabled_at", "", func(h *Handler) httpx.HandlerFunc { return h.disableUser }, member.ID},
 		{"enable", "UPDATE users SET disabled_at", "", func(h *Handler) httpx.HandlerFunc { return h.enableUser }, member.ID},
 		{"revoke target load", "FROM users WHERE id = $1", "", func(h *Handler) httpx.HandlerFunc { return h.revokeUserSessions }, member.ID},
@@ -443,7 +443,7 @@ func TestAuthListRejectsIncompatibleDatabaseColumnTypes(t *testing.T) {
 		'invalid-uuid'::text AS id, 'testuser'::text AS username, 'testuser'::text AS display_name,
 		''::text AS bio, 'user'::text AS role, NULL::text AS avatar_s3_key, ''::text AS status_text,
 		'online'::text AS presence, ''::text AS locale, NOW() AS created_at,
-		NULL::timestamptz AS disabled_at, NULL::timestamptz AS last_seen_at`)
+		NULL::timestamptz AS disabled_at, NULL::timestamptz AS last_seen_at, FALSE AS is_bot`)
 	if err != nil {
 		t.Fatal(err)
 	}

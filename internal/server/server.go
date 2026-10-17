@@ -26,6 +26,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
+	"github.com/msch128/mnema-talk/internal/webhook"
 	"github.com/msch128/mnema-talk/internal/ws"
 	"github.com/msch128/mnema-talk/web"
 )
@@ -57,8 +58,10 @@ type Router struct {
 	// Retained for explicitly constructed native preview; NewRouter mounts no native routes.
 	preview nativePreviewDependencies
 	http.Handler
-	Hub    *ws.Hub
-	cancel context.CancelFunc
+	Hub *ws.Hub
+	// Webhooks is the incoming webhook handler (tests adjust its limits).
+	Webhooks *webhook.Handler
+	cancel   context.CancelFunc
 }
 
 // Close stops background work and closes the hub's upgraded WebSockets.
@@ -124,6 +127,8 @@ func NewRouter(d Deps) (*Router, error) {
 		Perms:          permSvc,
 	}
 
+	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL})
+
 	systemH := &systemHandler{
 		cfg:      cfg,
 		db:       d.DB,
@@ -187,7 +192,8 @@ func NewRouter(d Deps) (*Router, error) {
 	)
 
 	r.Route("/api", func(api chi.Router) {
-		api.Use(httpx.CSRF(cfg.AllowedOrigins))
+		// Webhook execute calls carry their own secret and no cookie.
+		api.Use(httpx.CSRFExcept(cfg.AllowedOrigins, webhook.IsExecute))
 		api.NotFound(func(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, httpx.ErrNotFound("route not found"))
 		})
@@ -205,6 +211,8 @@ func NewRouter(d Deps) (*Router, error) {
 			api.Get("/docs", apiDocs(sessions, web.APIDocsPage()))
 		}
 		api.Get("/ws", hub.HandleWebSocket)
+		// Authenticated by the secret in the URL, not by a session.
+		webhookH.MountPublic(api)
 
 		api.Group(func(pub chi.Router) {
 			pub.Use(httpx.MaxBody(httpx.DefaultMaxBody))
@@ -245,6 +253,7 @@ func NewRouter(d Deps) (*Router, error) {
 				authH.MountAdmin(adm)
 				chatH.MountAdmin(adm)
 				rolesH.MountAdmin(adm)
+				webhookH.MountAdmin(adm)
 				mediaH.MountAdmin(adm)
 				systemH.mountAdmin(adm)
 			})
@@ -252,7 +261,7 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
+	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from
