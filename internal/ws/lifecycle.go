@@ -167,12 +167,12 @@ func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 	if c.native == nil {
 		var mine []*Client
 		for existing := range h.clients {
-			if existing.native == nil && existing.User.ID == c.User.ID {
+			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
 				mine = append(mine, existing)
 			}
 		}
 		for existing := range h.pending {
-			if existing.native == nil && existing.User.ID == c.User.ID {
+			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
 				mine = append(mine, existing)
 			}
 		}
