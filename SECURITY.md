@@ -50,7 +50,10 @@ locally instead (`make up` or `make dev`).
   (`POST /api/auth/logout-all`) increments it, which revokes every existing
   session of that user immediately, including copied cookies, and closes the
   user's open WebSockets (after a password change the current client
-  reconnects with its fresh cookie).
+  reconnects with its fresh cookie). Each token also has its own id; signing
+  out records it in a small table until the token would have expired, so a
+  copied cookie of that one session stops working at once. Tokens issued
+  before this existed carry no id and stay valid until they expire.
 - **CSRF.** State-changing requests and WebSocket upgrades must come from an
   allowed origin (`PUBLIC_URL` / `CORS_ALLOWED_ORIGINS`), on top of `SameSite=Lax`.
   The one exception is the webhook execute route
@@ -100,9 +103,18 @@ locally instead (`make up` or `make dev`).
   lockout per client address and username after repeated failures (1, 5, then
   30 minutes; the tier is forgotten after an hour without failures). A much
   higher per-account cap guards against guessing from many addresses: once it
-  trips, wrong passwords for that account are answered with 429 and count
-  triple against their address, but the correct password always signs in (and
-  resets the cap), so neither one address nor many can lock the owner out.
+  trips, devices that signed in to that account before (a signed HttpOnly
+  cookie set at login, valid a year, an HMAC under a key derived from the
+  session secret, so it survives restarts and address changes) are checked as
+  usual, while every other device together gets about one password check per
+  minute for the whole account (however many addresses they come from) and is
+  answered 429 otherwise, so a distributed guesser
+  learns next to nothing and the owner on a new phone still gets in. Wrong
+  guesses count triple against their address. The cap lasts at most 15
+  minutes, and a restart clears all lockouts (they are held in memory). Password
+  hashing for login, registration, re-authentication and password changes
+  shares one concurrency limit, so a flood of attempts cannot starve the
+  server. Passwords need at least 10 characters, 14 for the Owner account.
   Rate-limit and lockout keys treat an IPv6 /64 as one client. Login attempts
   with a username that cannot exist are rejected before they are tracked, and
   limiter memory is capped. Invite codes are checked before any password

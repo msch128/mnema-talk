@@ -183,6 +183,18 @@ func NewLoginFailureLimiter(maxFailures int, base time.Duration) *LoginFailureLi
 	}
 }
 
+// CapLockout limits every lockout tier to at most max, so an attacker cannot
+// keep a key locked for long by tripping it repeatedly.
+func (l *LoginFailureLimiter) CapLockout(max time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for i, d := range l.schedule {
+		if d > max {
+			l.schedule[i] = max
+		}
+	}
+}
+
 func (l *LoginFailureLimiter) lockoutFor(n int) time.Duration {
 	idx := n - 1
 	if idx < 0 {

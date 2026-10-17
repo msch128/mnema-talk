@@ -28,6 +28,7 @@ func IssueToken(userID uuid.UUID, tokenVersion int, secret string, ttl time.Dura
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer,
 			Subject:   userID.String(),
+			ID:        uuid.NewString(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),

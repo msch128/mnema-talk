@@ -17,7 +17,7 @@ import (
 // (after the same bcrypt work), so callers can't tell the cases apart.
 func CheckUserPassword(ctx context.Context, p *db.Pool, userID uuid.UUID, password string) error {
 	var hash string
-	err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1 AND disabled_at IS NULL`, userID).Scan(&hash)
+	err := p.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1 AND disabled_at IS NULL AND NOT is_bot`, userID).Scan(&hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		burnPasswordCheck(password)
 		return ErrWrongPassword
