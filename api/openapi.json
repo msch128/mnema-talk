@@ -5539,7 +5539,7 @@
     },
     "/api/admin/users/{id}/kick": {
       "post": {
-        "description": "400 when the user is not in a voice room. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).",
+        "description": "400 when the user is not in a Talk the caller may moderate (View channels and Disconnect members in that Talk; a Talk they may not moderate answers the same). Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).",
         "operationId": "kickUserFromVoice",
         "parameters": [
           {
@@ -6076,7 +6076,7 @@
     },
     "/api/admin/users/{id}/status": {
       "put": {
-        "description": "Broadcasts user_update. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).",
+        "description": "Broadcasts user_update. Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.",
         "operationId": "setUserStatus",
         "parameters": [
           {

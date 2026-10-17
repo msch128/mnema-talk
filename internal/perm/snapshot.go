@@ -273,6 +273,28 @@ func (s *Snapshot) KnowsChannel(ch uuid.UUID) bool {
 	return ok
 }
 
+// CategoryOf returns the category of a channel (uuid.Nil: none).
+func (s *Snapshot) CategoryOf(ch uuid.UUID) (uuid.UUID, bool) {
+	cat, ok := s.channelCat[ch]
+	return cat, ok
+}
+
+// CanSeeAllChannelsIn reports whether sub may view every channel of a
+// category (always for the Owner and Administrators). Changing a category's
+// overwrites, or deleting it, can widen access to all its channels, so it is
+// only allowed to someone who can see them all.
+func (s *Snapshot) CanSeeAllChannelsIn(sub Subject, cat uuid.UUID) bool {
+	for ch, c := range s.channelCat {
+		if c == cat && !s.Channel(sub, ch).Has(ViewChannel) {
+			return false
+		}
+	}
+	return true
+}
+
+// HasCategoryOverwrites reports whether a category carries any overwrite.
+func (s *Snapshot) HasCategoryOverwrites(cat uuid.UUID) bool { return s.categoryOv[cat] != nil }
+
 // KnowsCategory reports whether the snapshot has seen the category.
 func (s *Snapshot) KnowsCategory(cat uuid.UUID) bool { return s.categories[cat] }
 

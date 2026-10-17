@@ -21,6 +21,10 @@ import (
 type LiveControl interface {
 	// KickFromVoice ends the user's voice presence; false if they were not in one.
 	KickFromVoice(userID uuid.UUID) bool
+	// VoiceChannels lists the Talks the user is in (or lingers in).
+	VoiceChannels(userID uuid.UUID) []uuid.UUID
+	// KickFromChannel ends the user's presence in one Talk.
+	KickFromChannel(userID, channelID uuid.UUID)
 	// DisconnectUser closes all of the user's live connections.
 	DisconnectUser(userID uuid.UUID)
 	// SetPresence applies a newly chosen presence to the user's live status.
@@ -369,7 +373,7 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 // kickUser handles POST /api/admin/users/{id}/kick.
 //
 // @Summary Remove a user from voice
-// @Description 400 when the user is not in a voice room. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
+// @Description 400 when the user is not in a Talk the caller may moderate (View channels and Disconnect members in that Talk; a Talk they may not moderate answers the same). Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
 // @ID kickUserFromVoice
 // @Tags Admin
 // @Produce json
@@ -395,7 +399,23 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 		}
 		return err
 	}
-	if h.Live == nil || !h.Live.KickFromVoice(id) {
+	// The caller needs the permission in the Talk the member is in; a Talk
+	// they may not use answers like no Talk at all, so it stays hidden.
+	kicked := false
+	if h.Live != nil {
+		actor := UserFrom(r.Context()).Subject()
+		for _, ch := range h.Live.VoiceChannels(id) {
+			if err := h.Perms.RequireChannel(r.Context(), actor, ch, perm.ViewChannel|perm.DisconnectMembers); err != nil {
+				if _, refused := httpx.AsAPIError(err); !refused {
+					return err
+				}
+				continue
+			}
+			h.Live.KickFromChannel(id, ch)
+			kicked = true
+		}
+	}
+	if !kicked {
 		return httpx.ErrInvalidInput("user is not in a Talk")
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -405,7 +425,7 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 // setUserStatus lets an admin edit or clear any member's status line.
 //
 // @Summary Edit or clear a member's status line
-// @Description Broadcasts user_update. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
+// @Description Broadcasts user_update. Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.
 // @ID setUserStatus
 // @Tags Admin
 // @Accept json

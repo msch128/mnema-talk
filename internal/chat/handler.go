@@ -582,7 +582,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := h.requireCategory(r, id); err != nil {
+	if err := h.requireWholeCategory(r, id); err != nil {
 		return err
 	}
 	if err := DeleteCategory(r.Context(), h.DB, id); err != nil {

@@ -14,6 +14,8 @@ type nativePasswordObserver struct{ calls int }
 func (o *nativePasswordObserver) DisconnectNativeCredentials(uuid.UUID) { o.calls++ }
 func (o *nativePasswordObserver) DisconnectUser(uuid.UUID)              {}
 func (o *nativePasswordObserver) KickFromVoice(uuid.UUID) bool          { return false }
+func (o *nativePasswordObserver) VoiceChannels(uuid.UUID) []uuid.UUID   { return nil }
+func (o *nativePasswordObserver) KickFromChannel(_, _ uuid.UUID)        {}
 func (o *nativePasswordObserver) SetPresence(uuid.UUID, string)         {}
 
 func TestNativePasswordDependenciesAndBoundary(t *testing.T) {

@@ -95,6 +95,15 @@ category never turns its channels public.
   highest role, and only change a member whose highest role is below theirs.
 - Nobody can grant a permission they do not hold themselves (editing a role,
   creating one, or allowing something in an overwrite).
+- A role can only be given by someone who holds all of its permissions, and
+  nobody changes their own roles.
+- Overwrites: every entry that is added, changed or removed needs authority
+  over its subject (a role below yours or `@everyone`; a member below you) and
+  the permissions it allows or denies. Changing or deleting a category, or
+  moving a channel between categories that have overwrites, needs sight of
+  every channel it affects (moving: the Administrator permission).
+- Removing a member from a Talk needs *Disconnect members* and *View channels*
+  in that Talk; a Talk you may not moderate answers like no Talk at all.
 - Reordering only moves roles that are below your highest role, to places
   below it.
 - Moderating a member (disable, enable, end sessions, edit the status line,

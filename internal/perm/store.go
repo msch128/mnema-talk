@@ -302,6 +302,11 @@ func (s *Service) SetMemberRoles(ctx context.Context, actor Subject, userID uuid
 		if err := snap.CanModerate(actor, target); err != nil {
 			return nil, err
 		}
+		// Nobody hands out roles to themselves: that would be a way to take
+		// permissions they were never given. (The Owner has no roles.)
+		if actor.ID == userID {
+			return nil, httpx.ErrForbidden("you cannot change your own roles")
+		}
 		want := map[uuid.UUID]bool{}
 		for _, id := range roleIDs {
 			r, ok := snap.roles[id]
@@ -317,6 +322,11 @@ func (s *Service) SetMemberRoles(ctx context.Context, actor Subject, userID uuid
 		for id := range want {
 			if !have[id] {
 				if err := snap.CanManageRole(actor, snap.roles[id]); err != nil {
+					return nil, err
+				}
+				// A role carries its permissions to the member: only roles
+				// whose permissions the actor holds themselves can be given.
+				if err := checkGrant(snap, actor, snap.roles[id].Permissions); err != nil {
 					return nil, err
 				}
 				if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, id); err != nil {
@@ -426,7 +436,8 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			if !snap.KnowsCategory(id) {
 				return nil, httpx.ErrNotFound("category not found")
 			}
-			if !snap.CategoryVisible(actor, id) {
+			// Hidden channels inside would be affected without the actor seeing them.
+			if !snap.CategoryVisible(actor, id) || !snap.CanSeeAllChannelsIn(actor, id) {
 				return nil, httpx.ErrNotFound("category not found")
 			}
 			held = snap.Global(actor)
@@ -437,6 +448,7 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			id  uuid.UUID
 		}
 		dup := map[key]bool{}
+		next := map[key]overwrite{}
 		for _, o := range list {
 			k := key{o.Type, o.ID}
 			if dup[k] {
@@ -449,14 +461,10 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			if o.Allow&o.Deny != 0 {
 				return nil, httpx.ErrInvalidInput("a permission cannot be both allowed and denied")
 			}
-			var before overwrite
 			switch o.Type {
 			case "role":
 				if _, ok := snap.roles[o.ID]; !ok {
 					return nil, httpx.ErrInvalidInput("unknown role")
-				}
-				if existing != nil {
-					before = existing.roles[o.ID]
 				}
 			case "member":
 				var role string
@@ -470,14 +478,50 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 				if role == "admin" || snap.owners[o.ID] {
 					return nil, ErrOwnerProtected
 				}
-				if existing != nil {
-					before = existing.members[o.ID]
-				}
 			default:
 				return nil, httpx.ErrInvalidInput("type must be role or member")
 			}
-			if name := held.MissingName(o.Allow &^ before.allow); name != "" {
-				return nil, httpx.ErrForbidden("cannot allow a permission you do not have: " + name)
+			if o.Allow != 0 || o.Deny != 0 {
+				next[k] = overwrite{allow: o.Allow, deny: o.Deny}
+			}
+		}
+		// Whatever changes (an entry added, changed or removed) needs the
+		// actor's authority over its subject and over the permissions that
+		// change, allowed or denied.
+		old := map[key]overwrite{}
+		if existing != nil {
+			for rid, ow := range existing.roles {
+				old[key{"role", rid}] = ow
+			}
+			for uid, ow := range existing.members {
+				old[key{"member", uid}] = ow
+			}
+		}
+		changed := map[key]Set{}
+		for k, ow := range next {
+			if prev := old[k]; prev != ow {
+				changed[k] = (prev.allow ^ ow.allow) | (prev.deny ^ ow.deny)
+			}
+		}
+		for k, prev := range old {
+			if _, kept := next[k]; !kept {
+				changed[k] = prev.allow | prev.deny
+			}
+		}
+		for k, bits := range changed {
+			if k.typ == "role" {
+				// @everyone sits at position 0 and is open to anyone who may
+				// manage this channel; every other role must be below the actor.
+				if role := snap.roles[k.id]; !role.Everyone {
+					if err := snap.CanManageRole(actor, role); err != nil {
+						return nil, err
+					}
+				}
+			} else if err := snap.CanModerate(actor, Subject{ID: k.id}); err != nil {
+				return nil, err
+			}
+			if name := held.MissingName(bits); name != "" {
+				return nil, httpx.ErrForbidden("cannot change a permission you do not have: " + name)
 			}
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {

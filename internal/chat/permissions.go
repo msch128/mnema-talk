@@ -172,6 +172,22 @@ func (h *Handler) requireCategory(r *http.Request, id uuid.UUID) error {
 	return nil
 }
 
+// requireWholeCategory is requireCategory for what affects every channel in
+// it (deleting the category): the caller must see all of them.
+func (h *Handler) requireWholeCategory(r *http.Request, id uuid.UUID) error {
+	if err := h.requireCategory(r, id); err != nil || h.Perms == nil {
+		return err
+	}
+	snap, err := h.Perms.Snapshot(r.Context())
+	if err != nil {
+		return err
+	}
+	if !snap.CanSeeAllChannelsIn(auth.UserFrom(r.Context()).Subject(), id) {
+		return errCategoryNotFound
+	}
+	return nil
+}
+
 // requireLayout checks that the caller sees everything a layout change names.
 func (h *Handler) requireLayout(r *http.Request, req LayoutRequest) error {
 	for _, c := range req.Categories {
@@ -188,6 +204,36 @@ func (h *Handler) requireLayout(r *http.Request, req LayoutRequest) error {
 				return err
 			}
 		}
+		if err := h.requireMoveAllowed(r, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// requireMoveAllowed guards the side effect of moving a channel between
+// categories: it takes on the permissions of its new category and drops those
+// of the old one, which could undo a restriction the caller may not lift.
+// Only an Administrator (or the Owner) moves a channel across categories when
+// either has permission overwrites.
+func (h *Handler) requireMoveAllowed(r *http.Request, c ChannelPlacement) error {
+	if h.Perms == nil {
+		return nil
+	}
+	snap, err := h.Perms.ForChannel(r.Context(), c.ID)
+	if err != nil {
+		return err
+	}
+	from, known := snap.CategoryOf(c.ID)
+	to := uuid.Nil
+	if c.CategoryID != nil {
+		to = *c.CategoryID
+	}
+	if !known || from == to || !snap.HasCategoryOverwrites(from) && !snap.HasCategoryOverwrites(to) {
+		return nil
+	}
+	if !snap.Global(auth.UserFrom(r.Context()).Subject()).Has(perm.Administrator) {
+		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 	}
 	return nil
 }

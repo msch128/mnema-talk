@@ -314,6 +314,7 @@ func TestOverwriteValidationAndLimits(t *testing.T) {
 	mod := f.a.register(f.owner, "mod")
 	role := createRole(t, f.owner, "Channel admin", perm.ManageChannels|perm.ViewChannel|perm.SendMessages)
 	assignRoles(t, f.owner, mod, role)
+	order(t, f.owner, role, f.staff) // the editor outranks the roles they edit
 
 	for _, c := range []struct {
 		what   string

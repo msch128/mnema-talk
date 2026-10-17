@@ -188,6 +188,22 @@ func (h *Hub) clientsMatching(want map[uuid.UUID]bool) []*Client {
 	return out
 }
 
+// VoiceChannels lists the Talks userID is in, including a lingering seat.
+func (h *Hub) VoiceChannels(userID uuid.UUID) []uuid.UUID {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	var out []uuid.UUID
+	for ch, users := range h.voice {
+		if _, in := users[userID]; in {
+			out = append(out, ch)
+		}
+	}
+	return out
+}
+
+// KickFromChannel ends userID's presence in one Talk (the moderator's kick).
+func (h *Hub) KickFromChannel(userID, chID uuid.UUID) { h.kickUserFromChannel(userID, chID, "") }
+
 // kickUserFromChannel ends userID's presence in one Talk on every connection
 // and in a pending grace period, telling the connections why.
 func (h *Hub) kickUserFromChannel(userID, chID uuid.UUID, reason string) {
