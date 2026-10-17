@@ -257,6 +257,12 @@ func refreshPreviewDeny(ctx context.Context, interval time.Duration, deny func()
 	}
 }
 
+// WebClientAPI is the contract number between a web app and this server. A
+// desktop client runs a signed bundle of the web app and only connects when
+// the bundle speaks the same number (doc/desktop-trusted-client.md). Raise it
+// together with web/desktop-compat.json when the contract breaks.
+const WebClientAPI = 1
+
 // Health is the response of GET /api/health.
 type Health struct {
 	Status  string `json:"status" enums:"ok"`
@@ -333,7 +339,7 @@ func health(hc *healthCheck, version string) http.HandlerFunc {
 			httpx.WriteError(w, err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: 1})
+		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI})
 	}
 }
 
