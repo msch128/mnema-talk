@@ -1,0 +1,31 @@
+scripts/screenshots/run.sh
+  s_06fcde5dbef956::t_f6e35975364f42 1-53
+doc/development.md
+  s_06fcde5dbef956::t_f6e35975364f42 85
+scripts/screenshots/capture.mjs
+  s_06fcde5dbef956::t_da0f221a6b2978 3
+  s_06fcde5dbef956::t_f6e35975364f42 6-7
+  s_06fcde5dbef956::t_76512fd547b85f 1-2,4-5,8-171
+scripts/screenshots/seed.mjs
+  s_06fcde5dbef956::t_76512fd547b85f 1-4,7-141
+  s_06fcde5dbef956::t_f6e35975364f42 5-6
+AGENTS.md
+  s_06fcde5dbef956::t_da0f221a6b2978 83
+  s_06fcde5dbef956::t_f6e35975364f42 120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba08121e27f3fd2b87e28a47d8dcaad66e2b6e86",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
