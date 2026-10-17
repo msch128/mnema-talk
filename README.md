@@ -73,6 +73,10 @@ webhooks and a call you can join with one click.
   by anyone. Below them, custom roles hold Discord-style permissions, and
   categories and channels can allow or deny them per role or member, which
   makes **private channels and Talks**. Changes apply live, also in a call.
+- **Audit log.** An append-only record of administrative and moderation
+  actions with who, what, before and after, filterable in the admin console.
+  It also holds deleted message text and Talk presence history, so mention it
+  in your privacy notice; `AUDIT_RETENTION_DAYS=0` keeps it forever.
 - **Webhooks.** Incoming ones in Discord's execute format (so most existing
   integrations work) and outgoing ones that POST signed events to your service
   with retries and a delivery log.
@@ -205,6 +209,7 @@ and [doc/desktop-app.md](doc/desktop-app.md).
 | Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
 | Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
+| Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Where media keys live in the browser | [doc/crypto-state.md](doc/crypto-state.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |

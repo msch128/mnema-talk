@@ -52,6 +52,9 @@ const (
 	// ManageMembers disables and re-enables accounts, ends their sessions and
 	// edits their status line (members below the actor's highest role only).
 	ManageMembers
+	// ViewAuditLog reads the audit log (doc/moderation.md). Explicit value:
+	// 1<<16 belongs to Manage bots.
+	ViewAuditLog Set = 1 << 17
 )
 
 // Info describes one permission for clients.
@@ -82,6 +85,7 @@ var Catalog = []Info{
 	{Key: "create_invites", Bit: CreateInvites, Name: "manage invites"},
 	{Key: "manage_webhooks", Bit: ManageWebhooks, Name: "manage webhooks"},
 	{Key: "manage_members", Bit: ManageMembers, Name: "manage members"},
+	{Key: "view_audit_log", Bit: ViewAuditLog, Name: "view the audit log"},
 }
 
 var (
@@ -112,7 +116,7 @@ const (
 	// existed. Do not widen it: upgrades must not change behavior.
 	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog
 )
 
 // Has reports whether every bit of need is in s.

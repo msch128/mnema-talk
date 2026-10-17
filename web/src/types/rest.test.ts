@@ -64,7 +64,7 @@ function invalidVariants(input: Schema): unknown[] {
   if (schema.format === 'uuid') variants.push('bad-id', FIXTURE_TIMESTAMP)
   if (schema.format === 'date-time') variants.push('2026-10-07', '2026-99-99T99:99:99Z')
   if (schema.type === 'array') return [undefined, null, {}, [null], [1.5]]
-  if (schema.type === 'object') return [undefined, null, [], { malformed: true }]
+  if (schema.type === 'object') return schema.properties ? [undefined, null, [], { malformed: true }] : [undefined, null, [], 'text']
   if (schema.maxLength !== undefined) variants.push('😀'.repeat(schema.maxLength + 1))
   if (schema.minimum !== undefined) variants.push(schema.minimum - 1)
   if (schema.maximum !== undefined) variants.push(schema.maximum + 1)

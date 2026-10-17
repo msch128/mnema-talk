@@ -59,6 +59,7 @@ mentions; stored, not used yet).
 | Manage invites | Create, list, revoke invite codes | no |
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
+| View audit log | Read the audit log ([moderation](moderation.md)) | no |
 
 The bit values are stored in the database and sent over the API; they never
 change meaning (`perm.Catalog` and its test freeze them).

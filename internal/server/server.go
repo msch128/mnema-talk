@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
@@ -121,6 +123,9 @@ func NewRouter(d Deps) (*Router, error) {
 	if d.Events != nil {
 		pub = d.Events
 	}
+
+	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Privileged: auditPrivileged(permSvc)}
+	go auditLog.RunRetention(ctx, cfg.AuditRetentionDays, 6*time.Hour)
 
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
@@ -272,6 +277,8 @@ func NewRouter(d Deps) (*Router, error) {
 
 			authed.Route("/admin", func(adm chi.Router) {
 				adm.Use(auth.RequireAnyPerm(permSvc, perm.AdminArea), httpx.MaxBody(httpx.DefaultMaxBody))
+				adm.Use(auditLog.Middleware)
+				auditLog.Mount(adm.With(auth.RequirePerm(permSvc, perm.ViewAuditLog)))
 				authH.MountAdmin(adm)
 				chatH.MountAdmin(adm)
 				rolesH.MountAdmin(adm)
@@ -284,6 +291,27 @@ func NewRouter(d Deps) (*Router, error) {
 
 	r.Handle("/*", web.Handler())
 	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, cancel: cancel, outgoing: outgoing, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
+}
+
+// auditActor names the signed-in user of a context for the audit log.
+func auditActor(ctx context.Context) (uuid.UUID, string, bool) {
+	if u := auth.UserFrom(ctx); u != nil {
+		return u.ID, u.Username, true
+	}
+	return uuid.Nil, "", false
+}
+
+// auditPrivileged says whether the signed-in user is the Owner or holds
+// Administrator, which the sensitive audit entries require.
+func auditPrivileged(svc *perm.Service) func(context.Context) (bool, error) {
+	return func(ctx context.Context) (bool, error) {
+		u := auth.UserFrom(ctx)
+		if u == nil {
+			return false, nil
+		}
+		p, err := svc.Global(ctx, u.Subject())
+		return p.Has(perm.Administrator), err
+	}
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from

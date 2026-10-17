@@ -750,7 +750,8 @@
       "invites": "Einladungen",
       "media": "Medien & Speicher",
       "system": "System",
-      "roles": "Rollen"
+      "roles": "Rollen",
+      "audit": "Audit-Log"
     },
     "system": {
       "heading": "System & Version",
@@ -1197,9 +1198,100 @@
       "name": "Mitglieder verwalten",
       "desc": "Konten sperren und entsperren, Sitzungen beenden und Status ändern, für Mitglieder unterhalb deiner höchsten Rolle."
     },
+    "view_audit_log": {
+      "name": "Audit-Log ansehen",
+      "desc": "Das Audit-Log lesen: wer was geändert hat, und Moderationsaktionen."
+    },
     "allow": "Erlauben",
     "deny": "Verbieten",
     "inherit": "Erben"
+  },
+  "audit": {
+    "title": "Audit-Log",
+    "immutable": "Einträge sind unveränderlich.",
+    "filterEvent": "Nach Ereignis filtern",
+    "filterActor": "Nach Mitglied filtern",
+    "allEvents": "Alle Ereignisse",
+    "allActors": "Alle",
+    "from": "Ab Datum",
+    "to": "Bis Datum",
+    "apply": "Anwenden",
+    "empty": "Keine Einträge.",
+    "system": "Server",
+    "request": "Anfrage",
+    "loadMore": "Mehr laden",
+    "groups": {
+      "role": "Rollen",
+      "user": "Mitglieder",
+      "channel": "Kanäle",
+      "category": "Kategorien",
+      "layout": "Layout",
+      "invite": "Einladungen",
+      "webhook": "Webhooks",
+      "outgoing_webhook": "Ausgehende Webhooks",
+      "media": "Medien",
+      "system": "System"
+    },
+    "actions": {
+      "role": {
+        "create": "Rolle erstellt",
+        "update": "Rolle bearbeitet",
+        "delete": "Rolle gelöscht",
+        "reorder": "Rollen sortiert"
+      },
+      "user": {
+        "roles_set": "Rollen zugewiesen",
+        "disable": "Konto deaktiviert",
+        "enable": "Konto aktiviert",
+        "sessions_revoke": "Sitzungen beendet",
+        "status": "Statuszeile bearbeitet",
+        "password_set": "Passwort gesetzt",
+        "password_reset": "Passwort zurückgesetzt",
+        "lockout_clear": "Login-Sperre aufgehoben",
+        "talk_kick": "Aus Talk entfernt"
+      },
+      "channel": {
+        "create": "Kanal erstellt",
+        "update": "Kanal bearbeitet",
+        "delete": "Kanal gelöscht",
+        "duplicate": "Kanal dupliziert",
+        "overwrites_set": "Kanalrechte geändert"
+      },
+      "category": {
+        "overwrites_set": "Kategorierechte geändert",
+        "create": "Kategorie erstellt",
+        "update": "Kategorie umbenannt",
+        "delete": "Kategorie gelöscht"
+      },
+      "layout": {
+        "apply": "Layout geändert"
+      },
+      "invite": {
+        "create": "Einladung erstellt",
+        "revoke": "Einladung widerrufen"
+      },
+      "webhook": {
+        "create": "Webhook erstellt",
+        "update": "Webhook bearbeitet",
+        "regenerate": "Webhook-Token neu erzeugt",
+        "avatar": "Webhook-Avatar geändert",
+        "delete": "Webhook gelöscht"
+      },
+      "outgoing_webhook": {
+        "create": "Ausgehender Webhook erstellt",
+        "update": "Ausgehender Webhook bearbeitet",
+        "rotate_secret": "Webhook-Geheimnis erneuert",
+        "delete": "Ausgehender Webhook gelöscht"
+      },
+      "media": {
+        "prune": "Medien bereinigt",
+        "orphans_cleanup": "Verwaiste Dateien entfernt",
+        "delete": "Medium gelöscht"
+      },
+      "system": {
+        "update": "Update gestartet"
+      }
+    }
   },
   "roles": {
     "title": "Rollen",

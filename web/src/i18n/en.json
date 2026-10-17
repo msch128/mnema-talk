@@ -750,7 +750,8 @@
       "invites": "Invites",
       "media": "Media & Storage",
       "system": "System",
-      "roles": "Roles"
+      "roles": "Roles",
+      "audit": "Audit log"
     },
     "system": {
       "heading": "System & version",
@@ -1197,9 +1198,100 @@
       "name": "Manage members",
       "desc": "Disable and re-enable accounts, end their sessions and edit their status line, for members below your highest role."
     },
+    "view_audit_log": {
+      "name": "View audit log",
+      "desc": "Read the audit log: who changed what, and moderation actions."
+    },
     "allow": "Allow",
     "deny": "Deny",
     "inherit": "Inherit"
+  },
+  "audit": {
+    "title": "Audit log",
+    "immutable": "Entries cannot be changed.",
+    "filterEvent": "Filter by event",
+    "filterActor": "Filter by member",
+    "allEvents": "All events",
+    "allActors": "Everyone",
+    "from": "From date",
+    "to": "To date",
+    "apply": "Apply",
+    "empty": "No entries.",
+    "system": "Server",
+    "request": "request",
+    "loadMore": "Load more",
+    "groups": {
+      "role": "Roles",
+      "user": "Members",
+      "channel": "Channels",
+      "category": "Categories",
+      "layout": "Layout",
+      "invite": "Invites",
+      "webhook": "Webhooks",
+      "outgoing_webhook": "Outgoing webhooks",
+      "media": "Media",
+      "system": "System"
+    },
+    "actions": {
+      "role": {
+        "create": "Role created",
+        "update": "Role edited",
+        "delete": "Role deleted",
+        "reorder": "Roles reordered"
+      },
+      "user": {
+        "roles_set": "Roles assigned",
+        "disable": "Account disabled",
+        "enable": "Account enabled",
+        "sessions_revoke": "Sessions ended",
+        "status": "Status line edited",
+        "password_set": "Password set",
+        "password_reset": "Password reset",
+        "lockout_clear": "Login lock cleared",
+        "talk_kick": "Removed from Talk"
+      },
+      "channel": {
+        "create": "Channel created",
+        "update": "Channel edited",
+        "delete": "Channel deleted",
+        "duplicate": "Channel duplicated",
+        "overwrites_set": "Channel permissions changed"
+      },
+      "category": {
+        "overwrites_set": "Category permissions changed",
+        "create": "Category created",
+        "update": "Category renamed",
+        "delete": "Category deleted"
+      },
+      "layout": {
+        "apply": "Layout changed"
+      },
+      "invite": {
+        "create": "Invite created",
+        "revoke": "Invite revoked"
+      },
+      "webhook": {
+        "create": "Webhook created",
+        "update": "Webhook edited",
+        "regenerate": "Webhook token regenerated",
+        "avatar": "Webhook avatar changed",
+        "delete": "Webhook deleted"
+      },
+      "outgoing_webhook": {
+        "create": "Outgoing webhook created",
+        "update": "Outgoing webhook edited",
+        "rotate_secret": "Outgoing webhook secret rotated",
+        "delete": "Outgoing webhook deleted"
+      },
+      "media": {
+        "prune": "Media pruned",
+        "orphans_cleanup": "Orphaned files removed",
+        "delete": "Media deleted"
+      },
+      "system": {
+        "update": "Update started"
+      }
+    }
   },
   "roles": {
     "title": "Roles",

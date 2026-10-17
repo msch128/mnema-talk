@@ -64,6 +64,8 @@ function typeOf(schema: Schema): string {
       if (!schema.items) throw new Error('Array is missing items')
       return `Array<${typeOf(schema.items)}>`
     case 'object': {
+      // A free-form object (map[string]any in Go) has no listed properties.
+      if (!schema.properties) return 'Record<string, unknown>'
       const required = new Set(schema.required || [])
       return `{\n${Object.entries(schema.properties || {}).map(([key, property]) => `  ${key}${required.has(key) ? '' : '?'}: ${typeOf(property)}`).join('\n')}\n}`
     }
