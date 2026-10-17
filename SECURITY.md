@@ -106,8 +106,9 @@ locally instead (`make up` or `make dev`).
   trips, devices that signed in to that account before (a signed HttpOnly
   cookie set at login, valid a year, an HMAC under a key derived from the
   session secret, so it survives restarts and address changes) are checked as
-  usual, while every other device gets one password check per minute per
-  client address and is answered 429 otherwise, so a distributed guesser
+  usual, while every other device together gets about one password check per
+  minute for the whole account (however many addresses they come from) and is
+  answered 429 otherwise, so a distributed guesser
   learns next to nothing and the owner on a new phone still gets in. Wrong
   guesses count triple against their address. The cap lasts at most 15
   minutes, and a restart clears all lockouts (they are held in memory). Password

@@ -540,8 +540,8 @@ Repeated wrong passwords lock a client address (1, 5, then 30 minutes). Many
 wrong guesses on one account from many addresses switch on an account-wide
 cap: while it is on, browsers that signed in to the account before (they hold
 a signed `mnema_dev_*` cookie, valid a year, independent of the IP) sign in
-normally, and every other device gets one password check per minute per
-address. The cap lasts at most 15 minutes. All of this state is held in
+normally, and every other device together gets about one password check per
+minute for the whole account. The cap lasts at most 15 minutes. All of this state is held in
 memory, so `docker restart mnema-talk` clears every lockout at once. Sign in
 from a browser you used before, or wait.
 

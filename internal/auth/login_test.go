@@ -100,20 +100,20 @@ func TestAccountCapTricklesUnknownDevicesAndKeepsKnownOnes(t *testing.T) {
 	inner := h.verify
 	h.verify = func(ctx context.Context, u, p string) (*User, int, error) { evaluated++; return inner(ctx, u, p) }
 
-	// A stranger gets one password check per minute, then 429 without a check.
-	if code := postLoginWith(h, "203.0.113.9", "Herzog", "guess-one").Code; code != http.StatusTooManyRequests {
-		t.Fatalf("wrong guess of an unknown device during the cap: got %d, want 429", code)
+	// Unknown devices share one trickle for the whole account (burst 2), no
+	// matter how many addresses they use.
+	for i := 0; i < 50; i++ {
+		postLoginWith(h, fmt.Sprintf("203.0.113.%d", i), "Herzog", "guess")
 	}
-	if code := postLoginWith(h, "203.0.113.9", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
-		t.Fatalf("second attempt within the minute: got %d, want 429", code)
+	if evaluated != 2 {
+		t.Fatalf("passwords evaluated for unknown devices: %d, want 2 across all addresses", evaluated)
 	}
-	if evaluated != 1 {
-		t.Fatalf("password evaluated %d times for an unknown device, want 1", evaluated)
+	if code := postLoginWith(h, "203.0.113.200", "Herzog", testPassword).Code; code != http.StatusTooManyRequests {
+		t.Fatalf("owner on a new device once the trickle is spent: got %d, want 429", code)
 	}
-	// Another address has its own trickle: the owner on a new phone is not
-	// starved by an attacker elsewhere.
-	if code := postLoginWith(h, "203.0.113.77", "Herzog", testPassword).Code; code != http.StatusOK {
-		t.Fatalf("owner on a new address: got %d, want 200", code)
+	// A known device bypasses the trickle.
+	if code := postLoginWith(h, "203.0.113.201", "Herzog", testPassword, device).Code; code != http.StatusOK {
+		t.Fatalf("known browser: got %d, want 200", code)
 	}
 	tripAccountCapFrom(t, h, "198.51.101")
 	// A forged cookie does not make a device known.
