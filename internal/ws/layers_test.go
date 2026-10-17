@@ -181,6 +181,26 @@ func TestQualityAndWantedGoToOneMemberOfTheRoom(t *testing.T) {
 	}
 }
 
+// A browser sends the lower layers only where the server says it takes them.
+func TestServerInfoAnnouncesScreenLayers(t *testing.T) {
+	h, _ := newSFUHub(t)
+	c := testClient(h, auth.User{ID: uuid.New(), Username: "member"})
+	got := events(t, c, "server_info")
+	if len(got) != 1 || got[0]["screen_layers"] != float64(sfu.MaxLayers) {
+		t.Fatalf("server_info with media: %+v", got)
+	}
+
+	plain := NewHub(nil, nil, nil, nil)
+	d := testClient(plain, auth.User{ID: uuid.New(), Username: "member"})
+	got = events(t, d, "server_info")
+	if len(got) != 1 {
+		t.Fatalf("server_info without media: %+v", got)
+	}
+	if _, ok := got[0]["screen_layers"]; ok {
+		t.Fatalf("a hub without media announced layers: %+v", got[0])
+	}
+}
+
 func TestParseQuality(t *testing.T) {
 	for _, c := range []struct {
 		raw             string
