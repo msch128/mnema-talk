@@ -1,0 +1,44 @@
+internal/gateway/serve.go
+  s_06fcde5dbef956::t_744f705ef027cc 4,45-50,179
+  s_06fcde5dbef956::t_508ebf2ad98da1 80-81,104,140,150,162,216
+  s_06fcde5dbef956::t_5da2953d2c89b9 1-3,5-44,51-79,82-103,105-139,141-149,151-161,163-178,180-215,217-293
+internal/server/gateway_integration_test.go
+  s_06fcde5dbef956::t_8f6d0d743cd2ea 1-291,293-364,366-424,426-431,433-441,443-495,497-516
+  s_06fcde5dbef956::t_508ebf2ad98da1 292,365,425,432,442,496
+doc/bots.md
+  s_06fcde5dbef956::t_0f9fc6eb9fb4d8 158-294
+internal/gateway/session.go
+  s_06fcde5dbef956::t_231914a3b96326 1-197
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_0f9fc6eb9fb4d8 1022-1036
+internal/gateway/gateway.go
+  s_06fcde5dbef956::t_508ebf2ad98da1 84-85,110,118-143,149,151,157,159-162,219,278,282
+  s_06fcde5dbef956::t_0056dc9bd882e1 98-106,108-109,117
+  s_06fcde5dbef956::t_96e9f5f52b1ac6 1-83,86-97,107,111-116,144-148,150,152-156,158,163-218,220-277,279-281,283-352
+api/openapi.json
+  s_06fcde5dbef956::t_c03a5fcdf7a0e4 1660-1681,12056-12101
+  s_06fcde5dbef956::t_f4b9cd77abaa83 12102
+internal/gateway/observe.go
+  s_06fcde5dbef956::t_78f11ee0126c9b 1-142
+internal/server/server.go
+  s_06fcde5dbef956::t_0056dc9bd882e1 162
+  s_06fcde5dbef956::t_6fd54636aa864e 70-73
+  s_06fcde5dbef956::t_809994a43e979e 24,163-174,268-278,330-339
+  s_06fcde5dbef956::t_c03a5fcdf7a0e4 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d2d0c9e223d57527271503e5f904dd8f5c27a41",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
