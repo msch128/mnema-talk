@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.16](https://github.com/msch128/mnema-talk/compare/v0.7.15...v0.7.16) (2026-10-17)
+
+
+### Features
+
+* choose the layer of an automatic viewer from its receiver reports ([#133](https://github.com/msch128/mnema-talk/issues/133)) ([9f286be](https://github.com/msch128/mnema-talk/commit/9f286be32cac992f52726c555b50dcc4fb730ca5))
+
 ## [0.7.15](https://github.com/msch128/mnema-talk/compare/v0.7.14...v0.7.15) (2026-10-17)
 
 
