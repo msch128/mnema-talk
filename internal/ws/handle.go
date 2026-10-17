@@ -63,23 +63,10 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		if !c.allowTyping(p.ChannelID, time.Now()) {
 			return
 		}
-		// The permission snapshot knows which channels exist, so no query is
-		// needed per notice; without a permission model (tests) the database
-		// is asked.
-		snap, ok := h.permSnapshot(p.ChannelID)
-		if !ok || !c.nativeLive() {
-			return
-		}
-		if snap == nil {
-			if _, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err != nil {
-				return
-			}
-		} else if !snap.KnowsChannel(p.ChannelID) {
-			return
-		}
 		// Only someone who could send a message shows as typing, and only to
 		// those who can see the channel.
-		if c.can(snap, p.ChannelID, perm.ViewChannel|perm.SendMessages) {
+		if snap, ok := h.permSnapshot(p.ChannelID); ok && c.nativeLive() && h.channelKnown(ctx, snap, p.ChannelID) &&
+			c.can(snap, p.ChannelID, perm.ViewChannel|perm.SendMessages) {
 			c.emitApplicationEvent("typing", map[string]any{"channel_id": p.ChannelID, "user_id": c.User.ID}, true, nil, p.ChannelID)
 		}
 
@@ -170,4 +157,15 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "media_handshake":
 		c.handleMediaHandshake(payload)
 	}
+}
+
+// channelKnown reports whether the channel exists. The permission snapshot
+// knows which do, so no query is needed per typing notice; without a
+// permission model (tests) the database is asked.
+func (h *Hub) channelKnown(ctx context.Context, snap *perm.Snapshot, ch uuid.UUID) bool {
+	if snap == nil {
+		_, err := chat.LoadChannel(ctx, h.DB, ch)
+		return err == nil
+	}
+	return snap.KnowsChannel(ch)
 }

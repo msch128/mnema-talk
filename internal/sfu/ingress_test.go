@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -103,4 +104,49 @@ func TestIngressAbuseClosesThePublisherConnection(t *testing.T) {
 		t.Fatalf("state = %v, want closed", peer.PC.ConnectionState())
 	}
 	ingressAbuse(&TrackInfo{SenderID: uuid.New(), Source: SourceAudio}) // no publisher: nothing to close
+}
+
+func TestForwardClosesAGrosslyAbusivePublisher(t *testing.T) {
+	prev := ingressAbuseWindows
+	ingressAbuseWindows = 0 // the first drop already counts
+	t.Cleanup(func() { ingressAbuseWindows = prev })
+	s := newTestSFU(t)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &Room{peers: map[uuid.UUID]*Peer{}, trackLocals: map[string]*TrackInfo{}, notifier: &mediaNotifier{}}
+	info := &TrackInfo{SenderID: peer.ID, Kind: webrtc.RTPCodecTypeAudio, Source: SourceAudio, publisher: peer}
+	r.forward(&fakeRemote{n: 400}, &failingLocal{}, trackKey(peer.ID, "audio"), info)
+	if peer.PC.ConnectionState() != webrtc.PeerConnectionStateClosed {
+		t.Fatalf("state = %v, want closed", peer.PC.ConnectionState())
+	}
+}
+
+func TestPeerHealthy(t *testing.T) {
+	var none *Peer
+	if none.Healthy() || (&Peer{}).Healthy() {
+		t.Fatal("a peer without a connection is healthy")
+	}
+}
+
+func TestJoinFailsWhenConnectionCannotBeBuilt(t *testing.T) {
+	s := newTestSFU(t)
+	s.iceServers = []webrtc.ICEServer{{URLs: []string{"turn:turn.invalid"}}} // a relay needs credentials
+	if _, _, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil); err == nil {
+		t.Fatal("join with an unusable ICE server succeeded")
+	}
+	r := &Room{api: s.currentAPI(), iceServers: s.iceServers, peers: map[uuid.UUID]*Peer{}}
+	if _, err := r.JoinPeer(uuid.New(), nil, nil); err == nil {
+		t.Fatal("room join with an unusable ICE server succeeded")
+	}
+}
+
+func TestJoinFailsWhenTheSFUClosesWhileBuilding(t *testing.T) {
+	s := newTestSFU(t)
+	s.afterBuild = func() { s.closed.Store(true) }
+	if _, _, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil); !errors.Is(err, errSFUClosed) {
+		t.Fatalf("err = %v, want closed", err)
+	}
+	s.closed.Store(false)
 }

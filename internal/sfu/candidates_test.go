@@ -384,3 +384,37 @@ func TestLoopbackCandidatesFollowTheAnnouncement(t *testing.T) {
 		t.Fatal("announcesLoopback")
 	}
 }
+
+// A candidate Pion refuses although it was vetted (here: the connection is
+// gone) is returned and logged.
+func TestLiveCandidateRefusedByPion(t *testing.T) {
+	logs := captureLogs(t)
+	s := newTestSFU(t)
+	c := newClient(t)
+	offers := make(chan webrtc.SessionDescription, 4)
+	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offer := <-offers
+	if err := c.pc.SetRemoteDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := c.pc.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.pc.SetLocalDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+	if err := peer.SetAnswer(answer); err != nil {
+		t.Fatal(err)
+	}
+	_ = peer.PC.Close()
+	if err := peer.AddRemoteCandidate(candidate(1)); err == nil {
+		t.Fatal("candidate accepted by a closed connection")
+	}
+	if !strings.Contains(logs.String(), "sfu remote candidate dropped") {
+		t.Fatalf("refusal not logged: %s", logs.String())
+	}
+}

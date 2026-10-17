@@ -159,3 +159,18 @@ func TestRejoinOfTheSameRoomKeepsAHealthyPeer(t *testing.T) {
 		t.Fatal("rejoin kept a closed peer")
 	}
 }
+
+// Handshakes still in flight count toward the cap, so a flood of upgrades
+// cannot overshoot it before any of them is registered.
+func TestPendingHandshakesCountTowardTheSocketCap(t *testing.T) {
+	h := NewHub(nil, nil, nil, nil)
+	user := auth.User{ID: uuid.New()}
+	for range maxBrowserSockets {
+		if ok, evicted := h.registerPending(newClient(h, nil, user, 0)); !ok || len(evicted) != 0 {
+			t.Fatalf("within the cap: ok=%v evicted=%d", ok, len(evicted))
+		}
+	}
+	if ok, evicted := h.registerPending(newClient(h, nil, user, 0)); !ok || len(evicted) != 1 {
+		t.Fatalf("over the cap: ok=%v evicted=%d", ok, len(evicted))
+	}
+}

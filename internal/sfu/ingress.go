@@ -28,7 +28,7 @@ var (
 
 // ingressAbuseWindows is how many seconds in a row may see a drop before the
 // publisher counts as grossly abusive and its connection is closed.
-const ingressAbuseWindows = 10
+var ingressAbuseWindows = 10
 
 type ingressVerdict int
 

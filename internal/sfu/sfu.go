@@ -261,6 +261,10 @@ type SFU struct {
 	closeOnce sync.Once
 	closeErr  error
 
+	// afterBuild runs in joinAuthorized right after the connection was built
+	// (tests only).
+	afterBuild func()
+
 	iceServers []webrtc.ICEServer
 	// offerTimeout is defaultOfferTimeout; tests shorten it.
 	offerTimeout time.Duration
@@ -509,6 +513,9 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	conn, err := newReceiveConn(api, s.iceServers)
 	if err != nil {
 		return nil, nil, err
+	}
+	if s.afterBuild != nil {
+		s.afterBuild() // tests close the SFU exactly here
 	}
 
 	s.roomsMu.Lock()

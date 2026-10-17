@@ -77,7 +77,7 @@ const (
 // @Description - `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.
 // @Description - `webrtc_screenshare_stop`, `webrtc_camera_stop`.
 // @Description
-// @Description Unknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.
+// @Description Unknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled. A user keeps at most 8 browser connections: a newer one closes the oldest with close code 4001 ("too many connections"), after which that client should not reconnect by itself. Upgrades are rate-limited per address and per user (429), and `voice_join` beyond about one per second (burst 3) is answered with `voice_kicked`.
 // @ID connectWebSocket
 // @Tags Realtime
 // @Produce json
