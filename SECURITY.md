@@ -180,7 +180,10 @@ locally instead (`make up` or `make dev`).
   one maintenance interval, the epoch that old, and one more interval per
   member with a lower id whose leaf is due too); a leaf long overdue stops
   waiting. Receivers take such a commit from any member in the group but at
-  most twice per rotation period per member, and ignore it otherwise. If two
+  most twice per rotation period per member, and only if the result differs
+  from the old tree in nothing but the sender's own leaf encryption key (same
+  identity, same signature key, same size, no other leaf touched); anything
+  else is ignored without discarding the group. If two
   commits for the same epoch still meet (a renewal with the committer's commit
   or with another renewal), the committer's wins and, between renewals, the
   lower id's; a member that took the loser goes back to the state it kept for

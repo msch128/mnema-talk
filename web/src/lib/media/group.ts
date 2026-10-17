@@ -177,6 +177,23 @@ function treeLeafSigner(state: ClientState, id: string): Uint8Array | null {
 }
 
 /**
+ * `after` is `before` with nothing changed but the HPKE key of the leaf at
+ * `index`: same size, every leaf keeps its identity, signature key and
+ * position, and no other leaf's HPKE key moved. This is all a member's
+ * renewal of its own leaf may do.
+ */
+export function onlyRenewsLeaf(before: ClientState, after: ClientState, index: number): boolean {
+  if (before.ratchetTree.length !== after.ratchetTree.length) return false
+  const same = leafIdentities(before).join(',') === leafIdentities(after).join(',')
+  if (!same || !keepsEveryLeaf(before, after)) return false
+  return before.ratchetTree.every((node, i) => {
+    if (!node || node.nodeType !== 'leaf' || i % 2 !== 0 || i === index * 2) return true
+    const next = after.ratchetTree[i]
+    return !!next && next.nodeType === 'leaf' && sameBytes(node.leaf.hpkePublicKey, next.leaf.hpkePublicKey)
+  })
+}
+
+/**
  * No leaf of `before` is gone or swapped in `after` (same position, same
  * signature key): the commit removed nobody. A leaf replaced by a new one of
  * the same user id is a removal.
@@ -717,6 +734,12 @@ export class MediaGroup {
         // Only a commit that verified against this group's tree shows its member alive.
         this.alive.set(from, clock.now())
         if (isUpdate) {
+          // Only the sender's own HPKE key may have changed: not its identity, its signature key or any other leaf.
+          if (!onlyRenewsLeaf(previous, processed.newState, members?.get(from) as number)) {
+            wipeConsumed(processed.consumed)
+            this.wipeRejected(processed.newState)
+            return this.step()
+          }
           this.updates.set(from, clock.now())
           return this.adoptUpdate(previous, processed.newState, processed.consumed, from)
         }
@@ -784,7 +807,8 @@ export class MediaGroup {
       const processed = await processPublicMessage(saved.state, message, emptyPskIndex, this.cs, this.validator(saved.state, from))
       const content = message.content
       const empty = content.contentType === 'commit' && content.commit.proposals.length === 0
-      const wins = processed.actionTaken !== 'reject' && (!empty || this.committer(this.listed()) === from || from < saved.sender)
+      const renews = !empty || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number)
+      const wins = processed.actionTaken !== 'reject' && renews && (!empty || this.committer(this.listed()) === from || from < saved.sender)
       if (!wins) {
         wipeConsumed(processed.consumed)
         if (processed.newState !== saved.state) this.wipeRejected(processed.newState)

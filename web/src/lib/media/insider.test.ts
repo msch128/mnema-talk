@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import * as mls from 'ts-mls'
 import { fixtureId } from '../../test-fixtures.fixture'
 import { type MediaTiming } from './bounds'
-import { MediaGroup } from './group'
+import { MediaGroup, onlyRenewsLeaf } from './group'
 
 const previous = globalThis.crypto
 const aliceId = fixtureId(1)
@@ -172,4 +172,66 @@ describe('what a member may do to the group with a commit', () => {
     expect((await bob.receive(aliceId, wire)).epoch).toBe((epoch ?? 0) + 1)
     await closeAll(groups.values())
   }, 60_000)
+
+  describe('a self-update that changes more than its sender\'s encryption key', () => {
+    /** The renewal bob would send, built from a state whose own leaf was doctored first. */
+    async function doctored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>) {
+      const trioNow = await trio()
+      const inside = trioNow.bob as unknown as Inside
+      const index = leafOf(trioNow.bob, bobId) * 2
+      const node = inside.state.ratchetTree[index] as unknown as { leaf: Record<string, unknown> }
+      const original = { ...node.leaf }
+      const signer = inside.state.signaturePrivateKey
+      await change(node.leaf, inside.cs, inside.state)
+      const wire = await forged(trioNow.bob, [])
+      Object.assign(node.leaf, original)
+      inside.state.signaturePrivateKey = signer
+      return { ...trioNow, wire }
+    }
+
+    async function ignored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>) {
+      const { groups, alice, carol, wire } = await doctored(change)
+      const epoch = (await alice.sync(roster)).epoch
+      for (const group of [alice, carol]) {
+        group.hint(roster)
+        const step = await group.receive(bobId, wire)
+        expect(step.epoch).toBe(epoch)
+        expect(step.key).not.toBeNull()
+      }
+      await closeAll(groups.values())
+    }
+
+    it('is ignored when it takes another user id', async () => {
+      await ignored(async (leaf) => {
+        leaf.credential = { credentialType: 'basic', identity: new TextEncoder().encode(carolId) }
+      })
+    }, 60_000)
+
+    it('is ignored when it swaps the signature key', async () => {
+      await ignored(async (leaf, cs, state) => {
+        const pair = await cs.signature.keygen()
+        leaf.signaturePublicKey = pair.publicKey
+        state.signaturePrivateKey = pair.signKey
+      })
+    }, 60_000)
+
+    it('is a renewal only when nothing but the sender\'s own encryption key moved', async () => {
+      const { groups, bob, carol } = await trio()
+      const before = (bob as unknown as Inside).state
+      const clone = (mutate: (tree: mls.ClientState['ratchetTree']) => void) => {
+        const tree = before.ratchetTree.map(node => (node && node.nodeType === 'leaf' ? { ...node, leaf: { ...node.leaf } } : node)) as mls.ClientState['ratchetTree']
+        mutate(tree)
+        return { ...before, ratchetTree: tree }
+      }
+      const leaf = (tree: mls.ClientState['ratchetTree'], at: number) => (tree[at * 2] as { leaf: { hpkePublicKey: Uint8Array } }).leaf
+      const mine = leafOf(bob, bobId)
+      expect(onlyRenewsLeaf(before, before, mine)).toBe(true)
+      expect(onlyRenewsLeaf(before, clone(tree => { leaf(tree, mine).hpkePublicKey = new Uint8Array(32).fill(9) }), mine)).toBe(true)
+      // Another leaf's encryption key moved.
+      expect(onlyRenewsLeaf(before, clone(tree => { leaf(tree, leafOf(carol, carolId)).hpkePublicKey = new Uint8Array(32).fill(9) }), mine)).toBe(false)
+      // The tree changed size.
+      expect(onlyRenewsLeaf(before, clone(tree => { tree.pop() }), mine)).toBe(false)
+      await closeAll(groups.values())
+    }, 60_000)
+  })
 })
