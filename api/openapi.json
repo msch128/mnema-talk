@@ -8445,7 +8445,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, only devices that signed in to the account before (known-device cookie or recent address) get their password checked; everyone else is answered 429 without a check. Limited requests answer 429 with Retry-After.",
+        "description": "Sets the session cookie and a signed known-device cookie. Rate limited per IP (60 per 15 min, IPv6 per /64) and by escalating lockouts per address+username. Once the account-wide guess cap trips, devices without the known-device cookie share about one password check per minute for the whole account; everything else is answered 429 without a check. The cap lasts at most 15 minutes. Limited requests answer 429 with Retry-After.",
         "operationId": "login",
         "requestBody": {
           "content": {
