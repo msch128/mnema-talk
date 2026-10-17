@@ -9,5 +9,5 @@ import (
 )
 
 func main() {
-	os.Exit(webbundle.Run(os.Args[1:], os.Getenv, os.Stdout, os.Stderr))
+	os.Exit(webbundle.Run(os.Args[1:], os.Getenv, os.Stdin, os.Stdout, os.Stderr))
 }

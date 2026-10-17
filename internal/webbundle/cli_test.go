@@ -26,7 +26,7 @@ func otherAlgorithmKeys(t *testing.T) (privPEM, pubPEM []byte) {
 
 func run(args []string, env map[string]string) (int, string, string) {
 	var out, errb bytes.Buffer
-	code := Run(args, func(k string) string { return env[k] }, &out, &errb)
+	code := Run(args, func(k string) string { return env[k] }, strings.NewReader(""), &out, &errb)
 	return code, out.String(), errb.String()
 }
 
