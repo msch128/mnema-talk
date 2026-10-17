@@ -11,6 +11,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
 import ChannelPermissionsDialog from './ChannelPermissionsDialog.vue'
+import ChannelWebhooksDialog from './ChannelWebhooksDialog.vue'
 import { usePermissionsStore } from '../stores/permissions'
 import EditNameDialog from './EditNameDialog.vue'
 import ContextMenu from './ContextMenu.vue'
@@ -39,6 +40,8 @@ const voiceStore = useVoiceStore()
 const permissions = usePermissionsStore()
 // The channel or category whose permissions are open in a dialog.
 const permissionsFor = ref<{ kind: 'channel' | 'category'; entity: Channel | Category } | null>(null)
+// The channel whose webhooks are open in a dialog.
+const webhooksFor = ref<Channel | null>(null)
 const toasts = useToastStore()
 const { joinVoiceChannel } = useWebRTC()
 // The order on screen: the server's, or a move that is still being saved.
@@ -117,6 +120,7 @@ function handleCategoryCreated(category: Category) {
 const menu = useMenuState()
 const editing = ref<EditingEntity | null>(null) // { kind: 'channel' | 'category', entity (null: create), after }
 const menuHandlers = {
+  onWebhooks: (channel: Channel) => { webhooksFor.value = channel },
   onPermissions: (entity: Channel | Category) => { permissionsFor.value = { kind: 'channels' in entity ? 'category' : 'channel', entity } },
   onEdit: (entity: Channel | Category) => { editing.value = { kind: 'channels' in entity ? 'category' : 'channel', entity } },
   onDelete: (entity: Channel | Category) => ('channels' in entity ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
@@ -511,6 +515,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       @close="editing = null"
     />
 
+    <ChannelWebhooksDialog v-if="webhooksFor" :channel="webhooksFor" @close="webhooksFor = null" />
     <ChannelPermissionsDialog
       v-if="permissionsFor"
       :kind="permissionsFor.kind"

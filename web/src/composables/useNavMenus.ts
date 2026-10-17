@@ -8,11 +8,11 @@ import type { ContextMenuItem, MenuAnchor } from '../components/menuTypes'
 
 type MenuMember = Pick<UserModel, 'id'> & Partial<UserModel>
 type MenuBuilder = (refresh: () => void) => ContextMenuItem[]
-interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onEdit?: (channel: Channel) => void; onDuplicate?: (channel: Channel) => void; onDelete?: (channel: Channel) => void }
+interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onWebhooks?: (channel: Channel) => void; onEdit?: (channel: Channel) => void; onDuplicate?: (channel: Channel) => void; onDelete?: (channel: Channel) => void }
 interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -108,8 +108,13 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
     })
   }
 
+  if (permissions.can('administrator') && !permissions.can('manage_channels')) {
+    items.push({ type: 'separator' })
+    items.push(webhooksItem(channel, handlers))
+  }
   if (permissions.can('manage_channels')) {
     items.push({ type: 'separator' })
+    if (permissions.can('administrator')) items.push(webhooksItem(channel, handlers))
     items.push({
       id: 'permissions',
       label: t('overwrites.menu'),
@@ -137,6 +142,10 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
     })
   }
   return items
+}
+
+function webhooksItem(channel: Channel, handlers: ChannelHandlers): ContextMenuItem {
+  return { id: 'webhooks', label: t('webhooks.menu'), icon: Webhook, action: () => handlers.onWebhooks?.(channel) }
 }
 
 /**
