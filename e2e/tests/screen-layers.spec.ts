@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString } from './helpers'
+import { apiFetch, responseString, suiteMember } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 
@@ -9,7 +9,8 @@ if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2
 
 const suffix = Date.now().toString(36)
 const VOICE_CHANNEL = `Layers ${suffix}`
-const VIEWER_A = `layers_a_${suffix}`
+// Registrations are limited to ten an hour from one address and the whole
+// suite shares them: viewer A is the suite's shared member.
 const VIEWER_B = `layers_b_${suffix}`
 const PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 
@@ -117,14 +118,21 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   }
 
   await signIn(sharer, ADMIN_USER, ADMIN_PASSWORD)
-  expect((await apiFetch(sharer, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })).status).toBe(201)
-  for (const [page, name] of [[a, VIEWER_A], [b, VIEWER_B]] as const) {
+  const created = await apiFetch(sharer, 'POST', '/api/admin/channels', { name: VOICE_CHANNEL, type: 'voice' })
+  expect(created.status).toBe(201)
+  await a.goto('/')
+  if (suiteMember.registered) {
+    expect((await apiFetch(a, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
+  } else {
     const invite = await apiFetch(sharer, 'POST', '/api/admin/invites', { max_uses: 1 })
-    await page.goto('/')
-    const reg = await apiFetch(page, 'POST', '/api/auth/register', { username: name, password: PASSWORD, invite_code: responseString(invite, 'code') })
-    expect(reg.status).toBe(201)
-    await page.reload()
+    expect((await apiFetch(a, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    suiteMember.registered = true
   }
+  await a.reload()
+  const invite = await apiFetch(sharer, 'POST', '/api/admin/invites', { max_uses: 1 })
+  await b.goto('/')
+  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: VIEWER_B, password: PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
+  await b.reload()
 
   const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: VOICE_CHANNEL })
   for (const page of [sharer, a, b]) {
@@ -173,6 +181,9 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   // B was not disturbed by A's choices.
   expect(await videoSize(b)).toBe('1280x720')
 
+  // Leave the sidebar as it was: other specs drag channels around by position.
+  for (const page of [a, b, sharer]) await page.getByRole('button', { name: 'Verlassen' }).first().click()
+  expect((await apiFetch(sharer, 'DELETE', `/api/admin/channels/${responseString(created, 'id')}`)).status).toBe(204)
   await sharerCtx.close()
   await aCtx.close()
   await bCtx.close()

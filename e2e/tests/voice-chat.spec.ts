@@ -1,6 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, bounds } from './helpers'
-import { randomBytes } from 'node:crypto'
+import { apiFetch, responseString, bounds, suiteMember } from './helpers'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -8,8 +7,6 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const USER = `chatter_${suffix}`
-const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const CHANNEL = `Runde ${suffix}`
 
 
@@ -41,9 +38,16 @@ test('the Talk has its own text chat under the stage', async ({ browser }) => {
   const created = await apiFetch(a, 'POST', '/api/admin/channels', { name: CHANNEL, type: 'voice' })
   expect(created.status).toBe(201)
   const channelId = responseString(created, 'id')
-  const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
   await b.goto('/')
-  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: USER, password: USER_PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
+  // The suite's shared member: registrations are limited to ten an hour from
+  // one address and the whole suite shares them (see helpers.ts).
+  if (suiteMember.registered) {
+    expect((await apiFetch(b, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
+  } else {
+    const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
+    expect((await apiFetch(b, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    suiteMember.registered = true
+  }
   await b.reload()
 
   // Both join the Talk; the chat is closed by default.

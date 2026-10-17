@@ -1,6 +1,5 @@
 import type { Page, Browser } from '@playwright/test'
-import { apiFetch, responseString, responseUserId, trackPeerConnections } from './helpers'
-import { randomBytes } from 'node:crypto'
+import { apiFetch, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
 import { test, expect } from '@playwright/test'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -8,8 +7,6 @@ const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
 if (!ADMIN_PASSWORD) throw new Error('E2E_ADMIN_PASSWORD is required (run via e2e/run.sh)')
 
 const suffix = Date.now().toString(36)
-const USER = `stage_${suffix}`
-const USER_PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 const VOICE_CHANNEL = `Stage ${suffix}`
 
 
@@ -67,12 +64,19 @@ async function twoMembers(browser: Browser, tag: string) {
   }
 
   const channel = `${VOICE_CHANNEL} ${tag}`
-  const bName = `${USER}_${tag}`
+  const bName = suiteMember.username
   await signIn(a, ADMIN_USER, ADMIN_PASSWORD)
   expect((await apiFetch(a, 'POST', '/api/admin/channels', { name: channel, type: 'voice' })).status).toBe(201)
-  const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
   await b.goto('/')
-  expect((await apiFetch(b, 'POST', '/api/auth/register', { username: bName, password: USER_PASSWORD, invite_code: responseString(invite, 'code') })).status).toBe(201)
+  // The suite's shared member: registrations are limited to ten an hour from
+  // one address and the whole suite shares them (see helpers.ts).
+  if (suiteMember.registered) {
+    expect((await apiFetch(b, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
+  } else {
+    const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
+    expect((await apiFetch(b, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+    suiteMember.registered = true
+  }
   await b.reload()
   const me = await apiFetch(b, 'GET', '/api/auth/me')
   const bId = responseUserId(me)
