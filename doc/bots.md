@@ -352,6 +352,16 @@ The bot needs *Send messages* in the channel when it responds; responses never
 notify `@all` or `@here`. Interactions live in the server's memory: a restart
 within the 15 minutes makes the token unknown (`404`).
 
+## In the app
+
+- Bot messages carry the **BOT** badge. Bots are not listed among the members.
+- Typing `/` in a channel lists the slash commands available there; picking one
+  shows its options in a bar above the composer (Enter on an empty composer or
+  the Run button sends it, Esc drops it). A bot's private reply appears below
+  the messages with a note that only you can see it, until you dismiss it.
+- Admins find **Bots** in the admin area: create, roles, intents, access view,
+  tokens and commands.
+
 ## Management API
 
 All under `/api/admin/bots`, documented in the OpenAPI document. Every

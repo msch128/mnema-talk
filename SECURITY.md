@@ -97,7 +97,19 @@ details and the limits.
   disabling or deleting a bot ends it at once, open connections included.
   Tokens travel in the `Authorization` header only (never in a URL), are
   never logged and never accepted on the cookie routes, which stay behind the
-  session and the CSRF origin check.
+  session and the CSRF origin check (the bot routes read no cookie, so there
+  is nothing to forge). Managing a bot needs at least the bot's own rights,
+  and every permission change is checked by outcome in one place: only the
+  Owner can make a bot elevated (Administrator or an admin-area permission,
+  anywhere), and nobody can give a bot more than they hold themselves,
+  server-wide or per channel. The gateway checks what a bot may see for every
+  event at the moment it is sent, not at connect time; a resume cannot revive
+  a session whose token was revoked. Slash commands are run only by members
+  who may send in the channel, only for bots that can view and send there,
+  and an admin can switch any command off; ephemeral replies are never stored.
+  Threat model and limits: a bot is as trusted as the roles it was given; a
+  leaked token is a leaked bot (revoke it), and the Owner's explicit choice to
+  give a bot administrator power is warned about in the interface.
 - **Outgoing webhooks and SSRF.** A webhook URL chosen by a member makes the
   server send requests, so `internal/ssrf` guards them: http(s) only, names
   resolved by the server, every answer must be a public unicast address
