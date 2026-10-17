@@ -24,6 +24,7 @@ web/src/components/ChatArea.vue
   s_06fcde5dbef956::t_b06a97385563f5 17-19,22,61,443,687-688,691-695,697-699,707-714,749,753
 web/src/types/events.ts
   s_06fcde5dbef956::t_4a42074dff3611 29-39,58,186-188,221-224
+  s_06fcde5dbef956::t_7ac1596cb73e30 228
 web/src/composables/useSlashCommands.test.ts
   s_06fcde5dbef956::t_8db4349e4a6011 1-79,81-83,85-86,88-190
   s_06fcde5dbef956::t_a12daf5e8f6e72 80,84,87
