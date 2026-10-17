@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.11](https://github.com/msch128/mnema-talk/compare/v0.7.10...v0.7.11) (2026-10-17)
+
+
+### Bug Fixes
+
+* record last seen before the database closes on shutdown ([#115](https://github.com/msch128/mnema-talk/issues/115)) ([5fe7199](https://github.com/msch128/mnema-talk/commit/5fe71990716c54110f450198180b67dd3dd6102c))
+
 ## [0.7.10](https://github.com/msch128/mnema-talk/compare/v0.7.9...v0.7.10) (2026-10-17)
 
 
