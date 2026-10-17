@@ -167,6 +167,19 @@ function treeLeafSigner(state: ClientState, id: string): Uint8Array | null {
   return node && node.nodeType === 'leaf' ? node.leaf.signaturePublicKey : null
 }
 
+/**
+ * No leaf of `before` is gone or swapped in `after` (same position, same
+ * signature key): the commit removed nobody. A leaf replaced by a new one of
+ * the same user id is a removal.
+ */
+export function keepsEveryLeaf(before: ClientState, after: ClientState): boolean {
+  return before.ratchetTree.every((node, index) => {
+    if (!node || node.nodeType !== 'leaf' || index % 2 !== 0) return true
+    const next = after.ratchetTree[index]
+    return !!next && next.nodeType === 'leaf' && sameBytes(node.leaf.signaturePublicKey, next.leaf.signaturePublicKey)
+  })
+}
+
 function lowest(ids: Iterable<string>): string | null {
   let best: string | null = null
   for (const id of ids) if (best === null || id < best) best = id
@@ -340,7 +353,7 @@ export class MediaGroup {
     const patience = this.timing.absentMs + 2 * Math.max(10, this.timing.maintenanceMs)
     for (const id of treeMembers(this.state).keys()) {
       if (!room.has(id) || this.restarting.has(id)) continue
-      if (id !== this.userId && now - (this.alive.get(id) ?? now) > patience) continue
+      if (id !== this.userId && now - (this.alive.get(id) as number) > patience) continue
       active.push(id)
     }
     return lowest(active)
@@ -628,9 +641,7 @@ export class MediaGroup {
           await this.rekey()
           return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
         }
-        const stayed = treeMembers(processed.newState)
-        const soft = [...treeMembers(previous).keys()].every(id => stayed.has(id))
-        await this.adopt(processed.newState, soft ? 'soft' : 'commit')
+        await this.adopt(processed.newState, keepsEveryLeaf(previous, processed.newState) ? 'soft' : 'commit')
       } catch {
         return this.step()
       }
@@ -727,7 +738,6 @@ export class MediaGroup {
 
   /** This browser was asleep just now: a removal that follows is for its silence, not a hostile relay. */
   private sleptRecently(): boolean {
-    if (this.lastTick === 0) return false
     const now = clock.now()
     if (this.sleepGap(now) > this.sleepLimit()) return true
     return this.sleptAt !== null && now - this.sleptAt <= this.sleepLimit()
@@ -741,8 +751,8 @@ export class MediaGroup {
     const beat = await openHeartbeat(verifier, this.groupId, from, wire)
     if (!beat || beat.epoch !== current.epoch) return this.step()
     const last = this.beats.get(from)
-    const signer = this.state ? treeLeafSigner(this.state, from) : null
-    if (!signer) return this.step()
+    // A verifier exists only for a member with exactly one leaf.
+    const signer = treeLeafSigner(this.state as ClientState, from) as Uint8Array
     // A reloaded member signs with a new leaf key and starts its clock anew.
     if (last !== undefined && sameBytes(last.signer, signer) && beat.at <= last.at) return this.step()
     this.beats.set(from, { at: beat.at, signer: new Uint8Array(signer) })

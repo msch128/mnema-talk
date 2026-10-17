@@ -484,4 +484,43 @@ describe('review fixes', () => {
     expect((await alice.maintain()).wires.filter(w => w[0] !== 0x4d)).toEqual([])
     await Promise.all([alice.close(), bob.close(), reloaded.close()])
   }, 30_000)
+
+  it('counts a leaf swap of the same user id as a removal, on the committer and on a receiver', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    const small = { rotateMs: 1e9, absentMs: 1e9 }
+    const alice = await open(aliceId, small)
+    const bob = await open(bobId, small)
+    const carol = await open(carolId, small)
+    const roster = [aliceId, bobId, carolId]
+    const groups = new Map([[aliceId, alice], [bobId, bob], [carolId, carol]])
+    await alice.sync([aliceId])
+    await deliver(groups, bobId, (await bob.sync(roster)).wires, roster)
+    await deliver(groups, carolId, (await carol.sync(roster)).wires, roster)
+    for (const group of groups.values()) await group.sync(roster)
+    // Bob reloads: Alice swaps his old leaf for the new one in one commit.
+    const reloaded = await open(bobId, small)
+    const swap = await alice.receive(bobId, (await reloaded.sync(roster)).wires[0] as Uint8Array)
+    expect(kinds(swap)).toEqual(['mls_welcome', 'mls_public_message'])
+    expect(swap.soft).toBeUndefined()
+    const seen = await carol.receive(aliceId, swap.wires[1] as Uint8Array)
+    expect(seen.epoch).toBe(swap.epoch)
+    expect(seen.soft).toBeUndefined()
+    await Promise.all([alice.close(), bob.close(), carol.close(), reloaded.close()])
+  }, 60_000)
+
+  it('tells a member that slept on an earlier tick that it was dropped for inactivity', async () => {
+    const { alice, bob } = await pair({ rotateMs: 1e9 })
+    const notices: string[] = []
+    bob.onNotice(notice => notices.push(notice))
+    vi.setSystemTime(START + timing.absentMs + 1)
+    const removal = await alice.maintain()
+    // Bob's first tick after waking finds the gap; the removal reaches him a moment later.
+    vi.setSystemTime(START + 10 * 60_000)
+    await bob.maintain()
+    vi.setSystemTime(START + 10 * 60_000 + 500)
+    await bob.receive(aliceId, removal.wires.find(w => w[0] !== 0x4d) as Uint8Array)
+    expect(notices).toEqual(['absent'])
+    await alice.close()
+    await bob.close()
+  }, 30_000)
 })
