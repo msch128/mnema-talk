@@ -493,12 +493,30 @@ func (s *SFU) JoinWithAuthorization(channelID, userID uuid.UUID, sendOffer func(
 }
 
 func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Room, *Peer, error) {
-	s.roomsMu.Lock()
-	defer s.roomsMu.Unlock()
 	if s.closed.Load() {
 		return nil, nil, errSFUClosed
 	}
+	// The connection is built before any lock is taken: creating it costs
+	// real time (transports, DTLS and ICE agents), and roomsMu serializes
+	// every join, leave and lookup of every room.
+	api := s.currentAPI()
+	if authorize != nil {
+		var err error
+		if api, err = s.nativeAPI(authorize); err != nil {
+			return nil, nil, err
+		}
+	}
+	conn, err := newReceiveConn(api, s.iceServers)
+	if err != nil {
+		return nil, nil, err
+	}
 
+	s.roomsMu.Lock()
+	defer s.roomsMu.Unlock()
+	if s.closed.Load() {
+		_ = conn.pc.Close()
+		return nil, nil, errSFUClosed
+	}
 	r, ok := s.rooms[channelID]
 	if !ok {
 		r = &Room{
@@ -511,7 +529,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 			subs:                make(map[uuid.UUID]*Subscriptions),
 			lastMedia:           make(map[uuid.UUID]MediaState),
 			notifier:            s.notifier,
-			api:                 s.currentAPI(),
+			api:                 api,
 			allowLoopbackCands:  announcesLoopback(s.AnnouncedIPs()),
 			iceServers:          s.iceServers,
 			offerTimeout:        s.offerTimeout,
@@ -523,14 +541,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	r.api = s.currentAPI()
 	r.allowLoopbackCands = announcesLoopback(s.AnnouncedIPs())
 	r.mu.Unlock()
-	peer, err := r.joinPeer(userID, sendOffer, sendICE, authorize)
-	if err != nil {
-		if r.empty() {
-			delete(s.rooms, channelID)
-		}
-		return nil, nil, err
-	}
-	return r, peer, nil
+	return r, r.attachPeer(userID, conn, sendOffer, sendICE, authorize), nil
 }
 
 // RemovePeer disconnects peer if it is still the user's current connection
@@ -597,22 +608,9 @@ func (r *Room) JoinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 }
 
 func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) (*Peer, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if existing, ok := r.peers[userID]; ok {
-		delete(r.peers, userID)
-		r.load.add(-1)
-		r.removePeerTracksLocked(userID)
-		// Closing fires the old connection's state callback; removePeer
-		// ignores it because the user's entry is no longer that peer.
-		go func() {
-			existing.releaseViewerTracks()
-			_ = existing.PC.Close()
-		}()
-	}
-
+	r.mu.RLock()
 	api := r.api
+	r.mu.RUnlock()
 	if authorize != nil {
 		if r.nativeAPI == nil {
 			return nil, errors.New("native media authorization unavailable")
@@ -623,8 +621,25 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 			return nil, err
 		}
 	}
+	conn, err := newReceiveConn(api, r.iceServers)
+	if err != nil {
+		return nil, err
+	}
+	return r.attachPeer(userID, conn, sendOffer, sendICE, authorize), nil
+}
+
+// receiveConn is a PeerConnection with the lines that receive a client's
+// media, built before it belongs to a room.
+type receiveConn struct {
+	pc            *webrtc.PeerConnection
+	cameraTr      *webrtc.RTPTransceiver
+	screenAudioTr *webrtc.RTPTransceiver
+	lowerTrs      []*webrtc.RTPTransceiver
+}
+
+func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveConn, error) {
 	pc, err := api.NewPeerConnection(webrtc.Configuration{
-		ICEServers: r.iceServers,
+		ICEServers: iceServers,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PeerConnection: %w", err)
@@ -647,6 +662,28 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		lowerTrs = append(lowerTrs, tr)
 	}
 	pinCodecOrder(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...)...)
+
+	return &receiveConn{pc: pc, cameraTr: cameraTr, screenAudioTr: screenAudioTr, lowerTrs: lowerTrs}, nil
+}
+
+// attachPeer makes conn the user's connection in the room, replacing an
+// earlier one. It only wires callbacks and maps: nothing in it waits.
+func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) *Peer {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	pc, cameraTr, screenAudioTr, lowerTrs := conn.pc, conn.cameraTr, conn.screenAudioTr, conn.lowerTrs
+
+	if existing, ok := r.peers[userID]; ok {
+		delete(r.peers, userID)
+		r.load.add(-1)
+		r.removePeerTracksLocked(userID)
+		// Closing fires the old connection's state callback; removePeer
+		// ignores it because the user's entry is no longer that peer.
+		go func() {
+			existing.releaseViewerTracks()
+			_ = existing.PC.Close()
+		}()
+	}
 
 	peer := &Peer{
 		authorizeMedia: authorize,
@@ -748,7 +785,7 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 
 	go r.SignalPeerConnections()
 
-	return peer, nil
+	return peer
 }
 
 // pinCodecOrder keeps the codec order of the first offer on a publisher's
@@ -1281,4 +1318,18 @@ func selectedPair(pc *webrtc.PeerConnection) (*webrtc.ICECandidatePair, error) {
 		}
 	}
 	return nil, nil
+}
+
+// Healthy reports whether the peer still has a live connection, one that has
+// not failed, closed or lost its transport. A rejoin of the same room over a
+// healthy peer changes nothing.
+func (p *Peer) Healthy() bool {
+	if p == nil || p.PC == nil {
+		return false
+	}
+	switch p.PC.ConnectionState() {
+	case webrtc.PeerConnectionStateFailed, webrtc.PeerConnectionStateClosed, webrtc.PeerConnectionStateDisconnected:
+		return false
+	}
+	return true
 }

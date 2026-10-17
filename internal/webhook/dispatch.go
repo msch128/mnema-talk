@@ -29,10 +29,13 @@ import (
 // Delivery limits. Events wait in memory: a restart loses the ones not yet
 // delivered or still waiting for a retry (documented in doc/webhooks.md).
 const (
-	queueSize      = 1000
-	maxRetrying    = 1000
-	workers        = 4
-	requestTimeout = 10 * time.Second
+	queueSize = 1000
+	// perChannelQueue is how much of the queue one channel may hold, so a
+	// channel with a flood of events cannot starve the webhooks of others.
+	perChannelQueue = queueSize / 4
+	maxRetrying     = 1000
+	workers         = 4
+	requestTimeout  = 10 * time.Second
 	// readLimit is how much of a response is read (and then dropped). The
 	// response is never stored or shown: it could come from an internal service.
 	readLimit = 64 << 10
@@ -109,8 +112,11 @@ type Dispatcher struct {
 	mu    sync.Mutex
 	waits []time.Duration // nil: defaultBackoff
 
-	routes   atomic.Pointer[[]route]
-	queue    chan job
+	routes atomic.Pointer[[]route]
+	queue  chan job
+	// queued counts the jobs in queue per channel; guarded by qmu.
+	qmu      sync.Mutex
+	queued   map[uuid.UUID]int
 	retrying atomic.Int64
 	dropped  atomic.Int64
 	wg       sync.WaitGroup
@@ -119,7 +125,7 @@ type Dispatcher struct {
 
 // NewDispatcher returns a Dispatcher; call Run to start it.
 func NewDispatcher(p *db.Pool, client *http.Client, version string) *Dispatcher {
-	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), ctx: context.Background(), ReloadEvery: reloadEvery}
+	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), queued: map[uuid.UUID]int{}, ctx: context.Background(), ReloadEvery: reloadEvery}
 	empty := []route{}
 	d.routes.Store(&empty)
 	return d
@@ -170,6 +176,7 @@ func (d *Dispatcher) Run(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				case j := <-d.queue:
+					d.dequeued(j)
 					select {
 					case <-ctx.Done():
 						return
@@ -225,15 +232,37 @@ func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
 }
 
 func (d *Dispatcher) enqueue(j job) {
+	d.qmu.Lock()
+	if d.queued[j.event.Channel] >= perChannelQueue {
+		d.qmu.Unlock()
+		d.drop()
+		return
+	}
+	d.queued[j.event.Channel]++
+	d.qmu.Unlock()
 	select {
 	case d.queue <- j:
 	default:
 		// A full queue means the receivers are too slow for the flow of
 		// events; the oldest work is kept, the newest dropped.
-		if d.dropped.Add(1)%100 == 1 {
-			slog.Warn("outgoing webhooks: queue full, dropping events", "dropped_total", d.dropped.Load())
-		}
+		d.dequeued(j)
+		d.drop()
 	}
+}
+
+func (d *Dispatcher) drop() {
+	if d.dropped.Add(1)%100 == 1 {
+		slog.Warn("outgoing webhooks: queue full, dropping events", "dropped_total", d.dropped.Load())
+	}
+}
+
+// dequeued releases j's place in its channel's share of the queue.
+func (d *Dispatcher) dequeued(j job) {
+	d.qmu.Lock()
+	if d.queued[j.event.Channel]--; d.queued[j.event.Channel] <= 0 {
+		delete(d.queued, j.event.Channel)
+	}
+	d.qmu.Unlock()
 }
 
 // translate maps a hub event to an outgoing one. Messages posted by a

@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/sfu"
 )
 
 func limitsServer(t *testing.T) (*Hub, string, http.Header) {
@@ -130,4 +131,31 @@ func waitUntil(t *testing.T, cond func() bool) {
 		}
 	}
 	t.Fatal("condition not reached")
+}
+
+// Joining the room one is already in, over a live media connection, changes
+// nothing; once that connection is gone the join builds a new one.
+func TestRejoinOfTheSameRoomKeepsAHealthyPeer(t *testing.T) {
+	voiceSFU, err := sfu.NewSFU(0, 0, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := NewHub(nil, nil, voiceSFU, nil)
+	ch := voiceCh()
+	c := testClient(h, auth.User{ID: uuid.New(), Username: "rejoiner"})
+	defer h.unregister(c)
+	h.joinVoice(c, ch)
+	first := c.peer()
+	if first == nil {
+		t.Fatal("no peer after the join")
+	}
+	h.joinVoice(c, ch)
+	if c.peer() != first {
+		t.Fatal("rejoin replaced a healthy peer")
+	}
+	_ = first.PC.Close()
+	h.joinVoice(c, ch)
+	if c.peer() == first {
+		t.Fatal("rejoin kept a closed peer")
+	}
 }

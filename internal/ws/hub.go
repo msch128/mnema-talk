@@ -85,6 +85,11 @@ type Hub struct {
 	afterPeer func()
 
 	upgrader websocket.Upgrader
+
+	// voiceGate limits voice join/leave churn per user; vtimes debounces the
+	// writes of voice time.
+	voiceGate voiceGate
+	vtimes    voiceTimes
 }
 
 type graceLeave struct {

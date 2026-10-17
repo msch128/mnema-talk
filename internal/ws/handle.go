@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
@@ -41,11 +42,21 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		h.setIdle(c, p.Idle)
 
 	case "voice_join":
+		if !h.voiceGate.take(c.User.ID, time.Now()) {
+			// Over the join/leave allowance: refused, and the client ends
+			// the attempt on voice_kicked.
+			metrics.WSDropped.With("voice_churn").Inc()
+			c.SendEvent("voice_kicked", map[string]any{"channel_id": p.ChannelID})
+			return
+		}
 		if ch, ok := h.voiceChannel(ctx, p.ChannelID); ok {
 			h.joinVoice(c, ch)
 		}
 
 	case "voice_leave":
+		// A leave is always honoured, but it spends from the same allowance
+		// as joins, so leave/join cycles stay bounded.
+		h.voiceGate.take(c.User.ID, time.Now())
 		h.leaveCurrentVoice(c)
 
 	case "typing":
