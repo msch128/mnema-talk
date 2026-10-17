@@ -3,7 +3,8 @@
 Status: **the Windows Desktop DEV client is experimentally testable**
 (releases of this repository through v0.7.3 attach its ZIP; later builds come
 from the desktop repository), including the Gaming integration described below.
-The package is unsigned and has no automatic updater. Earlier published-client checks cover instance
+The package is unsigned (no Authenticode); the installer of a desktop release updates itself from
+signed releases, see [doc/desktop-trusted-client.md](desktop-trusted-client.md#updating-the-client-itself). Earlier published-client checks cover instance
 selection, login, persisted chat, live peer reception and logout. Physical media
 capture, real-game/fullscreen compatibility, sealed media in WebView2 and complete browser parity
 remain separate acceptance work.
@@ -119,7 +120,8 @@ GitHub Releases. A mirror is a delivery location, not a release-signing authorit
 The client must independently verify package authenticity and prevent rollback or
 stale metadata from installing an unsafe release.
 
-No Windows signing certificate or updater signing setup currently exists.
+No Windows code-signing certificate exists. The self-update is signed separately
+(minisign, key pinned in the client) and installs only verified, newer versions.
 Development builds must be clearly identified as unsigned. Automatic installation
 of unverifiable updates remains disabled. Production distribution additionally
 requires updater signatures, platform signing requirements, complete license
