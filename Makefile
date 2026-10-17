@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e smoke backup-drill postgres-upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -131,6 +131,9 @@ check: lint typecheck-web contracts-check openapi-check test test-scripts covera
 
 e2e: ## Browser smoke test (Playwright + Chromium) against the real binary; needs Docker
 	e2e/run.sh
+
+load-test: ## Load test (PROFILE=smoke|full|join|reload|long) against a throwaway stack or BASE_URL; needs Docker, see loadtest/README.md
+	loadtest/run.sh
 
 smoke: docker ## Start the built image with the production compose file and check health + admin login
 	scripts/smoke-image.sh mnema-talk:local
