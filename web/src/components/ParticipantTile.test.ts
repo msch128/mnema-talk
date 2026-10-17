@@ -65,7 +65,7 @@ describe('ParticipantTile layout', () => {
 })
 
 describe('ParticipantTile name', () => {
-  it('is centered at the bottom with Admin and the mute marks', () => {
+  it('is centered at the bottom with Owner and the mute marks', () => {
     for (const compact of [false, true]) {
       const w = tile({ compact, muted: true, localMuted: true })
       const row = w.find('[data-tile-name]')
@@ -75,7 +75,7 @@ describe('ParticipantTile name', () => {
       const inner = row.find('div')
       expect(inner.classes()).toEqual(expect.arrayContaining(['justify-center', 'min-w-0', 'max-w-full']))
       expect(inner.find('span').classes()).toContain('truncate')
-      expect(inner.text()).toContain('Admin')
+      expect(inner.text()).toContain('Owner')
       expect(inner.find('[data-mute-marks]').exists()).toBe(true)
       expect(inner.findAll('svg').length).toBeGreaterThanOrEqual(2)
       // No time next to the name.

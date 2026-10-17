@@ -33,12 +33,16 @@ export interface ServerEventPayloads {
   presence_update: { user_id: string; status: Presence }
   member_joined: User
   channels_changed: null
+  /** Roles, assignments or overwrites changed for this user: refetch GET /api/permissions and /api/channels. */
+  permissions_changed: null
+  /** A role was created, edited, deleted, reordered or assigned: refetch GET /api/roles and /api/members. */
+  roles_changed: null
   typing: { channel_id: string; user_id: string }
   read_state: ReadStateUpdate
   message_create: Message
   message_update: Message
   message_delete: { id: string; channel_id: string; parent_id: string | null }
-  message_reaction: { message_id: string; reactions: ReactionSummary[] }
+  message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
   user_update: UserUpdate
   webrtc_offer: { type: 'offer'; sdp: string }
   webrtc_candidate: RTCIceCandidateInit
@@ -53,7 +57,7 @@ export interface ServerEventPayloads {
   screen_layers_wanted: ScreenLayersWanted
   voice_speaking: SpeakingState
   voice_mute_state: MuteState
-  voice_kicked: { channel_id: string; reason?: 'room_full' }
+  voice_kicked: { channel_id: string; reason?: 'room_full' | 'missing_permission' }
   media_handshake: { channel_id: string; user_id: string; wire: string }
 }
 
@@ -132,7 +136,9 @@ export function isServerEvent(value: unknown): value is ServerEvent {
   if (!isRecord(value) || typeof value['type'] !== 'string') return false
   const payload = value['payload']
   switch (value['type']) {
-    case 'channels_changed': return payload === null
+    case 'channels_changed':
+    case 'permissions_changed':
+    case 'roles_changed': return payload === null
     case 'member_joined': return isAuthUser(payload)
     case 'message_create':
     case 'message_update': return isChatMessage(payload)
@@ -158,7 +164,8 @@ export function isServerEvent(value: unknown): value is ServerEvent {
         && onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
     case 'message_delete': return isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
       && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))
-    case 'message_reaction': return isIdentifier(payload['message_id']) && isArrayOf(payload['reactions'], isChatReactionSummary)
+    case 'message_reaction': return isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
+      && isArrayOf(payload['reactions'], isChatReactionSummary)
     case 'user_update': return hasOwn(payload, 'disabled')
       ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
       : isAuthUser(payload)
@@ -178,7 +185,7 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     case 'voice_speaking': return roomUser(payload) && typeof payload['active'] === 'boolean'
     case 'voice_mute_state': return roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'
     case 'voice_kicked': return isIdentifier(payload['channel_id'])
-      && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full')
+      && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full' || payload['reason'] === 'missing_permission')
     case 'media_handshake': return isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
       && isString(payload['wire'], 48_000) && payload['wire'] !== ''
     default: return false
@@ -187,7 +194,7 @@ export function isServerEvent(value: unknown): value is ServerEvent {
 
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
-  'channels_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
+  'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
   'message_reaction', 'user_update', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'

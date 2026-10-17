@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-import { ref, nextTick, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   X, MessageSquare, ArrowUp, Plus, Loader2,
   Pencil, Trash2, Smile, Reply
@@ -9,6 +9,7 @@ import {
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
 import ReplyPreview from './ReplyPreview.vue'
@@ -29,6 +30,12 @@ import { t, locale } from '../i18n'
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
+const permissions = usePermissionsStore()
+// The thread lives in a channel; the server decides, this hides what would fail.
+const threadChannel = computed(() => chatStore.activeThread?.channel_id ?? chatStore.activeChannel?.id ?? '')
+const canSend = computed(() => permissions.canIn(threadChannel.value, 'send_messages'))
+const canAttach = computed(() => canSend.value && permissions.canIn(threadChannel.value, 'attach_files'))
+const canReact = computed(() => permissions.canIn(threadChannel.value, 'add_reactions'))
 
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
@@ -144,7 +151,7 @@ onUnmounted(() => {
 
 async function handleSendReply() {
   const text = replyInput.value.trim()
-  if (!text || isSending.value || isUploading.value) return
+  if (!text || !canSend.value || isSending.value || isUploading.value) return
 
   isSending.value = true
   try {
@@ -269,6 +276,7 @@ function formatDate(dateStr?: string) {
         <!-- Root message reactions -->
         <ReactionBar
           :reactions="chatStore.activeThread.reactions ?? []"
+          :can-add="canReact"
           small-icon
           :picker-open="activeReactionPickerMsgId === `bottom-${chatStore.activeThread.id}`"
           @toggle="actions.toggleReaction(chatStore.activeThread.id, $event)"
@@ -321,7 +329,7 @@ function formatDate(dateStr?: string) {
             activeReactionPickerMsgId === reply.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
           ]"
         >
-          <div :class="['relative', PICKER_ANCHOR]">
+          <div v-if="canReact" :class="['relative', PICKER_ANCHOR]">
             <button
               type="button"
               @click.stop="actions.togglePicker(reply.id)"
@@ -419,6 +427,7 @@ function formatDate(dateStr?: string) {
           <!-- Reaction badges -->
           <ReactionBar
             :reactions="reply.reactions"
+            :can-add="canReact"
             compact
             small-icon
             :picker-open="activeReactionPickerMsgId === `bottom-${reply.id}`"
@@ -459,6 +468,7 @@ function formatDate(dateStr?: string) {
         />
 
         <button
+          v-if="canAttach"
           @click="fileInput?.click()"
           :disabled="isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
@@ -480,17 +490,18 @@ function formatDate(dateStr?: string) {
           :aria-expanded="assist.open.value ? 'true' : 'false'"
           :aria-controls="assist.open.value ? 'thread-mentions' : undefined"
           :aria-activedescendant="assist.open.value ? `thread-mentions-${assist.active.value}` : undefined"
-          :placeholder="$t('thread.placeholder')"
-          :aria-label="$t('thread.placeholder')"
+          :placeholder="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
+          :disabled="!canSend"
+          :aria-label="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
 
-        <EmojiButton :disabled="isSending" @pick="assist.insertText" />
+        <EmojiButton :disabled="isSending || !canSend" @pick="assist.insertText" />
 
         <button
           @click="handleSendReply"
-          :disabled="!replyInput.trim() || isUploading || isSending"
+          :disabled="!canSend || !replyInput.trim() || isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
           v-tooltip="$t('chat.send')"
         >

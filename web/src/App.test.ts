@@ -5,6 +5,8 @@ import { useAuthStore } from './stores/auth'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useToastStore } from './stores/toast'
+import { usePermissionsStore } from './stores/permissions'
+import { PERMISSION_BITS } from './lib/permissions'
 import * as router from './lib/router'
 import { channelFixture, categoryFixture, messageFixture, userFixture, requireValue } from './test-fixtures.fixture'
 import App from './App.vue'
@@ -103,7 +105,11 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
   it('guards admin routes and repairs missing or incorrectly typed channels', async () => {
     const { toasts, w } = await mountApp()
     const error = vi.spyOn(toasts, 'error')
+    // A plain member: the server's answer to "what may I do?" opens no admin area.
+    const load = vi.spyOn(usePermissionsStore(), 'load').mockResolvedValue(undefined)
     await go('/admin/users')
+    await flushPromises()
+    expect(load).toHaveBeenCalled()
     expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
     expect(error).toHaveBeenCalled()
     await go('/c/missing')
@@ -114,6 +120,46 @@ async function go(path: string) { router.navigate(path); await flushPromises() }
     expect(window.location.pathname).toBe('/c/ch2')
     await go('/c/v1/m/message')
     expect(window.location.pathname).toBe('/v/v1/chat/m/message')
+  })
+  it('opens the console for a member whose role allows it, without asking again', async () => {
+    const { w } = await mountApp()
+    const permissions = usePermissionsStore()
+    permissions.info = { owner: false, permissions: PERMISSION_BITS.manage_roles, role_ids: [], top_position: 1, catalog: [], channels: [] }
+    const load = vi.spyOn(permissions, 'load').mockResolvedValue(undefined)
+    await go('/admin/roles')
+    await flushPromises()
+    expect(load).not.toHaveBeenCalled()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(true)
+  })
+  it('drops a console visit that another navigation replaced while permissions loaded', async () => {
+    const { w } = await mountApp()
+    let release = () => {}
+    const load = vi.spyOn(usePermissionsStore(), 'load').mockImplementation(() => new Promise<void>(resolve => { release = resolve }))
+    const first = go('/admin/users')
+    await vi.waitFor(() => expect(load).toHaveBeenCalled())
+    await go('/c/ch2')
+    release()
+    await first
+    await flushPromises()
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(false)
+  })
+  it('keeps a deep link into the console although loading the channels selects one', async () => {
+    const auth = useAuthStore(), chat = useChatStore()
+    router.navigate('/admin/users', { replace: true })
+    auth.checkAuth = vi.fn(async () => { auth.user = userFixture({ role: 'admin' }); return true })
+    chat.fetchChannels = vi.fn(async () => {
+      chat.categories = [categoryFixture({ channels })]
+      chat.activeChannel = requireValue(channels[0])
+    })
+    chat.fetchMembers = vi.fn(async () => {})
+    chat.fetchReadState = vi.fn(async () => ({}))
+    chat.initWebSocket = vi.fn()
+    chat.closeWebSocket = vi.fn()
+    const w = mount(App, { shallow: true })
+    wrapper = w
+    await flushPromises()
+    expect(window.location.pathname).toBe('/admin/users')
+    expect(w.findComponent({ name: 'AdminDashboard' }).exists()).toBe(true)
   })
   it('previews talks, remembers their chat, joins the current talk and reacts to mentions', async () => {
     const { chat, voice, w } = await mountApp()

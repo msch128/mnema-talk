@@ -11,6 +11,7 @@ import {
   Volume2, VolumeX, Sparkles, Sliders, Settings, PhoneOff, Ellipsis
 } from '@lucide/vue'
 import { useVoiceStore } from '../stores/voice'
+import { usePermissionsStore } from '../stores/permissions'
 import { useWebRTC } from '../composables/useWebRTC'
 import { useMenuState } from '../composables/useNavMenus'
 import ContextMenu from './ContextMenu.vue'
@@ -25,6 +26,11 @@ const props = defineProps({
 const emit = defineEmits<{ 'update:pinned': [pinned: boolean] }>()
 
 const voiceStore = useVoiceStore()
+const permissions = usePermissionsStore()
+// The server drops what the member may not send; these only say so up front.
+const room = computed(() => voiceStore.currentChannelId ?? '')
+const canSpeak = computed(() => permissions.canIn(room.value, 'speak'))
+const canVideo = computed(() => permissions.canIn(room.value, 'video'))
 const { leaveVoiceChannel, startScreenShare, stopScreenShare, applyAudioSettings, toggleCamera } = useWebRTC()
 
 function toggleScreenShare() {
@@ -142,7 +148,8 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       data-testid="talk-mute"
       :class="[icon, voiceStore.isMuted ? danger : neutral]"
       :aria-pressed="voiceStore.isMuted ? 'true' : 'false'"
-      v-tooltip="voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
+      :disabled="!canSpeak"
+      v-tooltip="!canSpeak ? t('talk.noSpeak') : voiceStore.isMuted ? t('voice.unmute') : t('voice.mute')"
       @click="voiceStore.toggleMute"
     >
       <MicOff v-if="voiceStore.isMuted" class="w-5 h-5" aria-hidden="true" />
@@ -165,7 +172,8 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       type="button"
       :class="[icon, voiceStore.isCameraOn ? accent : neutral]"
       :aria-pressed="voiceStore.isCameraOn ? 'true' : 'false'"
-      v-tooltip="voiceStore.isCameraOn ? t('talk.stopCamera') : t('talk.startCamera')"
+      :disabled="!canVideo && !voiceStore.isCameraOn"
+      v-tooltip="!canVideo ? t('talk.noVideo') : voiceStore.isCameraOn ? t('talk.stopCamera') : t('talk.startCamera')"
       @click="toggleCamera"
     >
       <Video v-if="voiceStore.isCameraOn" class="w-5 h-5" aria-hidden="true" />
@@ -188,7 +196,8 @@ const soft = 'bg-mnema-accent-subtle text-mnema-accent ring-1 ring-inset ring-mn
       type="button"
       :class="[wide, voiceStore.isScreenSharing ? accent : neutral]"
       :aria-pressed="voiceStore.isScreenSharing ? 'true' : 'false'"
-      v-tooltip="voiceStore.isScreenSharing ? t('voice.stopShare') : t('voice.share')"
+      :disabled="!canVideo && !voiceStore.isScreenSharing"
+      v-tooltip="!canVideo ? t('talk.noVideo') : voiceStore.isScreenSharing ? t('voice.stopShare') : t('voice.share')"
       @click="toggleScreenShare"
     >
       <Monitor class="w-5 h-5" aria-hidden="true" />

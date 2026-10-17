@@ -16,6 +16,8 @@ const examples: Record<ServerEventType, unknown[]> = {
   presence_update: [{ user_id: id, status: 'focus' }],
   member_joined: [userFixture()],
   channels_changed: [null],
+  permissions_changed: [null],
+  roles_changed: [null],
   typing: [room],
   read_state: [
     { channel_id: id, last_read_at: null, unread_count: 1, mention_count: 0 },
@@ -28,7 +30,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   message_create: [messageFixture()],
   message_update: [messageFixture({ is_edited: true })],
   message_delete: [{ id, channel_id: id, parent_id: null }, { id, channel_id: id, parent_id: id }],
-  message_reaction: [{ message_id: id, reactions: [] }, { message_id: id, reactions: [reaction] }],
+  message_reaction: [{ message_id: id, reactions: [] }, { message_id: id, reactions: [reaction] }, { message_id: id, channel_id: id, reactions: [reaction] }],
   user_update: [userFixture(), { id, disabled: false }, { id, disabled: true }],
   webrtc_offer: [{ type: 'offer', sdp: 'v=0\r\n' }],
   webrtc_candidate: [{ candidate: '' }, { candidate: 'candidate:synthetic', sdpMid: '0', sdpMLineIndex: 0, usernameFragment: 'synthetic' }],
@@ -43,7 +45,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   screen_layers_wanted: [{ channel_id: id, layers: [] }, { channel_id: id, layers: [0, 2] }],
   voice_speaking: [{ ...room, active: true }],
   voice_mute_state: [{ ...room, muted: true, deafened: false }],
-  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }],
+  voice_kicked: [{ channel_id: id }, { channel_id: id, reason: 'room_full' }, { channel_id: id, reason: 'missing_permission' }],
   media_handshake: [{ channel_id: id, user_id: id, wire: 'a' }],
 }
 
@@ -53,6 +55,8 @@ describe('WebSocket runtime event contracts', () => {
     expect(event?.type).toBe('voice_kicked')
     if (event?.type !== 'voice_kicked') throw new Error('Expected voice rejection')
     expect(event.payload.reason).toBe('room_full')
+    const denied = decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id, reason: 'missing_permission' } })
+    expect(denied?.type === 'voice_kicked' && denied.payload.reason).toBe('missing_permission')
     for (const reason of [undefined, null, '', 'admin', 'unknown']) {
       expect(() => decodeServerEvent({ type: 'voice_kicked', payload: { channel_id: id, reason } })).toThrow(ContractError)
     }

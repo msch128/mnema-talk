@@ -220,7 +220,7 @@ describe('category menu', () => {
   it('admins can also create, edit and delete', () => {
     auth.user = userFixture({ id: 'me', role: 'admin' })
     expect(ids(buildCategoryItems(cat))).toEqual([
-      'mark-all-read', 'collapse-all', 'expand-all', 'create-channel', 'create-category', 'edit', 'delete'
+      'mark-all-read', 'collapse-all', 'expand-all', 'permissions', 'create-channel', 'create-category', 'edit', 'delete'
     ])
   })
   it('collapse and expand all are disabled when there is nothing to do', () => {

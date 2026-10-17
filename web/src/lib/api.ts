@@ -44,7 +44,8 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^password must be at most/, () => t('errors.detail.passwordMax')],
   [/^username must be/, () => t('errors.detail.usernameFormat')],
   [/^(\w+) must be at most (\d+) characters$/, (field = '', n = '') => t('errors.detail.fieldMax', { field: FIELDS.has(field) ? t(`errors.field.${field}`) : field, count: n })],
-  [/^file exceeds the (\d+) MB limit$/, n => t('errors.detail.fileTooBig', { size: n })]
+  [/^file exceeds the (\d+) MB limit$/, n => t('errors.detail.fileTooBig', { size: n })],
+  [/^(missing permission|cannot (grant|allow|change) a permission you do not have)/, () => t('errors.detail.missingPermission')]
 ]
 
 // Untrusted error bodies may be null, arrays or objects. Bound copy before

@@ -108,6 +108,8 @@ describe('errorMessage', () => {
     expect(errorMessage('INVALID_INPUT', 'password must be at least 10 characters')).toBe('Das Passwort muss mindestens 10 Zeichen haben')
     expect(errorMessage('INVALID_INPUT', 'content must be at most 4000 characters')).toBe('Nachricht: höchstens 4000 Zeichen')
     expect(errorMessage('RATE_LIMITED', 'too many requests')).toMatch(/Zu viele Versuche/)
+    expect(errorMessage('FORBIDDEN', 'missing permission: send messages')).toBe('Dafür fehlt dir die Berechtigung.')
+    expect(errorMessage('FORBIDDEN', 'cannot grant a permission you do not have: speak')).toBe('Dafür fehlt dir die Berechtigung.')
   })
 })
 

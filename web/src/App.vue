@@ -3,6 +3,7 @@ import { startDesktopGaming } from './lib/desktopGaming'
 import type { Route } from './lib/router'
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useAuthStore } from './stores/auth'
+import { usePermissionsStore } from './stores/permissions'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { currentRoute, navigate, popRedirectRoute, savePendingRoute, resolveRoute, canGoBackInApp } from './lib/router'
@@ -37,6 +38,7 @@ import {
 } from './lib/voiceChatPanel'
 
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const toasts = useToastStore()
@@ -85,8 +87,13 @@ const authChecked = ref(false)
 // One voice-resume attempt per login (see the isConnected watcher below).
 let resumeAttempted = false
 
+// True from the first fetch of a login until its route is applied: loading the
+// channels selects one, which must not overwrite a deep link (the admin console).
+let loadingFirstRoute = false
+
 async function initializeApp() {
   if (!alive) return
+  loadingFirstRoute = true
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
@@ -120,7 +127,12 @@ async function applyRoute(route: Route) {
   const superseded = () => !alive || gen !== routeGen
 
   // Admin console is checked before anything renders, so non-admins never see it.
-  if (route.view === 'admin' && !authStore.isAdmin) {
+  if (route.view === 'admin' && !permissions.isOwner && !permissions.loaded) {
+    // A reload straight into the console: what the member may do is not known yet.
+    await permissions.load()
+    if (superseded()) return
+  }
+  if (route.view === 'admin' && !permissions.canOpenAdmin) {
     showAdminModal.value = false
     toasts.error(t('nav.noAccess'))
     navigate('/', { replace: true })
@@ -128,7 +140,7 @@ async function applyRoute(route: Route) {
   }
   if (!chatStore.allChannels.length) return
 
-  const fix = resolveRoute(route, { isAdmin: authStore.isAdmin, channels: chatStore.allChannels })
+  const fix = resolveRoute(route, { isAdmin: permissions.canOpenAdmin, channels: chatStore.allChannels })
   if (fix) {
     if (fix.reason) toasts.error(t(`nav.${fix.reason}`))
     navigate(fix.redirect, { replace: true })
@@ -223,7 +235,7 @@ async function applyRoute(route: Route) {
 }
 
 function syncCurrentStateToRoute() {
-  if (isSyncingFromRoute) return
+  if (isSyncingFromRoute || loadingFirstRoute) return
   if (!authStore.isAuthenticated) return
 
   const targetPath = showAdminModal.value ? `/admin/${adminTab.value || 'users'}` : currentStatePath()
@@ -254,7 +266,7 @@ watch(showAdminModal, () => syncCurrentStateToRoute())
 watch(adminTab, () => syncCurrentStateToRoute())
 
 function openAdmin(tab = 'users') {
-  if (!authStore.isAdmin) return
+  if (!permissions.canOpenAdmin) return
   adminTab.value = tab
   showAdminModal.value = true
   navigate(`/admin/${tab}`, { replace: false })
@@ -282,9 +294,14 @@ async function onAuthSuccess() {
   if (!alive) return
   const redirect = popRedirectRoute()
   if (redirect) {
+    loadingFirstRoute = false
     navigate(redirect, { replace: true })
   } else {
-    await applyRoute(currentRoute.value)
+    try {
+      await applyRoute(currentRoute.value)
+    } finally {
+      loadingFirstRoute = false
+    }
     if (!alive) return
     syncCurrentStateToRoute()
   }
@@ -433,7 +450,7 @@ onMounted(async () => {
       </div>
 
       <!-- Admin console dialog -->
-      <AdminDashboard v-if="showAdminModal && authStore.isAdmin" :initial-tab="adminTab" @close="closeAdmin" />
+      <AdminDashboard v-if="showAdminModal && permissions.canOpenAdmin" :initial-tab="adminTab" @close="closeAdmin" />
 
       <!-- Connection statistics dialog -->
       <ConnectionStatsModal 

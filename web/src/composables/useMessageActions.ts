@@ -6,6 +6,7 @@ import type { Message } from '../types/domain'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 import { useDismissable } from './useDismissable'
 import { previewText } from '../lib/replies'
 import { confirm } from '../lib/confirm'
@@ -31,6 +32,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   const chatStore = useChatStore()
   const authStore = useAuthStore()
   const toasts = useToastStore()
+  const permissions = usePermissionsStore()
 
   const editingId = ref<string | null>(null)
   const editText = ref('')
@@ -57,8 +59,12 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     return !!authStore.user?.id && msg.user_id === authStore.user.id
   }
 
+  // Own messages always; others' with Manage messages in the channel, but
+  // never the Owner's (the server refuses that too).
   function canDelete(msg: Message) {
-    return isOwn(msg) || authStore.isAdmin
+    if (isOwn(msg)) return true
+    if (chatStore.members.find(m => m.id === msg.user_id)?.role === 'admin') return authStore.isAdmin
+    return permissions.canIn(channelOf(msg), 'manage_messages')
   }
 
   function startEdit(msg: Message) {

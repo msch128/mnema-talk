@@ -4,6 +4,9 @@ export type {
   AuthUserEnvelope as UserEnvelope, AuthLoginRequest as LoginRequest,
   AuthRegisterRequest as RegisterRequest, AuthUpdateProfileRequest as UpdateProfileRequest,
   AuthCreateInviteRequest as CreateInviteRequest,
+  ChatMember as Member,
+  PermRole as Role, PermInfo as PermissionInfo, PermOverwrite as Overwrite,
+  RolesPermissionsInfo as PermissionsInfo, RolesChannelPermissions as ChannelPermissions,
   ChatChannel as Channel, ChatChannelType as ChannelType, ChatCategory as Category,
   ChatChannelHierarchy as ChannelHierarchy, ChatMessage as Message,
   ChatMediaAttachment as MediaAttachment, ChatReactionSummary as ReactionSummary,
@@ -25,6 +28,8 @@ export type {
 export {
   decodeAuthUser as decodeUser, decodeAuthAdminUser as decodeAdminUser,
   decodeAuthInvite as decodeInvite, decodeAuthUserEnvelope as decodeUserEnvelope,
+  decodePermRole as decodeRole, decodeRolesPermissionsInfo as decodePermissionsInfo,
+  decodePermOverwrite as decodeOverwrite, decodeRolesOverwritesBody as decodeOverwritesBody,
   decodeChatChannel as decodeChannel, decodeChatCategory as decodeCategory,
   decodeChatChannelHierarchy as decodeChannelHierarchy, decodeChatMessage as decodeMessage,
   decodeChatReactionResult as decodeReactionResult, decodeChatReadState as decodeReadState,

@@ -437,6 +437,30 @@ describe('kicked from voice', () => {
     } finally { setLocale('de') }
   })
 
+  it('refuses to start a join the member may not make', async () => {
+    const { rtc, sent, voice } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const { usePermissionsStore } = await import('../stores/permissions')
+    const { t } = await import('../i18n')
+    vi.spyOn(usePermissionsStore(), 'canIn').mockReturnValue(false)
+    await rtc.joinVoiceChannel('ch-1')
+    expect(voice.currentChannelId).toBeNull()
+    expect(sent.some(event => event.type === 'voice_join')).toBe(false)
+    expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('talk.noConnect'))
+  })
+
+  it('ends a call whose connect permission was withdrawn', async () => {
+    const { rtc, chat, voice } = setup()
+    const { useToastStore } = await import('../stores/toast')
+    const { t } = await import('../i18n')
+    const join = rtc.joinVoiceChannel('ch-2')
+    await grantMic()
+    await join
+    chat.handleWSEvent({ type: 'voice_kicked', payload: { channel_id: 'ch-2', reason: 'missing_permission' } })
+    expect(voice.currentChannelId).toBeNull()
+    expect(useToastStore().toasts.map(toast => toast.text)).toContain(t('voice.noPermission'))
+  })
+
   it('ignores a stale full-room refusal for a different channel', async () => {
     const { rtc, chat, voice } = setup()
     const { useToastStore } = await import('../stores/toast')
