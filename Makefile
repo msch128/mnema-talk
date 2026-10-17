@@ -122,7 +122,10 @@ openapi-check: ## Fail when api/openapi.json is stale (regenerates into a temp f
 	$(MAKE) --no-print-directory openapi OPENAPI_FILE="$$tmp/openapi.json" && \
 	diff -u api/openapi.json "$$tmp/openapi.json" || { echo "api/openapi.json is stale: run 'make openapi' and commit the result"; exit 1; }
 
-check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web ## Everything CI runs: backend and web checks, Docker build, smoke, backup and PostgreSQL upgrade drills
+web-bundle-check: web ## Sign web/dist with a throwaway key and verify the desktop bundle (scripts/web-bundle-check.sh)
+	scripts/web-bundle-check.sh
+
+check: lint typecheck-web contracts-check openapi-check test test-scripts coverage-go vuln coverage-web web web-bundle-check ## Everything CI runs: backend and web checks, Docker build, smoke, backup and PostgreSQL upgrade drills
 	cd web && npm audit --omit=dev --audit-level=high
 	CGO_ENABLED=0 go build ./...
 	docker build --build-arg VERSION=$(VERSION) --build-arg REVISION=$(REVISION) -t mnema-talk:ci .

@@ -236,3 +236,77 @@ jobs:
           # module download come from the CI build of this commit on main.
           cache-from: type=gha,scope=image
           cache-to: type=gha,scope=image,mode=max
+
+  # The desktop client runs a signed bundle of the web app instead of the
+  # server's JavaScript (doc/desktop-trusted-client.md). Build it from the
+  # release tag, sign it with the Actions secret WEB_BUNDLE_SIGNING_KEY, check
+  # it against the public key committed in this repository and attach it to
+  # the GitHub release. Without the secret (forks) nothing is signed and the
+  # job succeeds.
+  web-bundle:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.release-please.outputs.version }}
+      TAG: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Is a signing key configured?
+        id: key
+        env:
+          KEY: ${{ secrets.WEB_BUNDLE_SIGNING_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::WEB_BUNDLE_SIGNING_KEY is not set; the desktop bundle is not built."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.key.outputs.present == 'true'
+        with:
+          persist-credentials: false
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.key.outputs.present == 'true'
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.key.outputs.present == 'true'
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      # No secret in the environment while dependencies install and the app builds.
+      - name: Build the web app
+        if: steps.key.outputs.present == 'true'
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          MNEMA_VERSION="$VERSION" npm run build
+
+      - name: Sign and verify the bundle
+        if: steps.key.outputs.present == 'true'
+        env:
+          WEB_BUNDLE_SIGNING_KEY: ${{ secrets.WEB_BUNDLE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          go run ./cmd/webbundle build -dir web/dist -compat web/desktop-compat.json \
+            -version "$VERSION" -commit "$(git rev-parse HEAD)" -out bundle
+          go run ./cmd/webbundle verify -zip "bundle/mnema-web-$VERSION.zip" -pub web/desktop-signing.pub
+
+      - name: Attach the bundle to the release
+        if: steps.key.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" "bundle/mnema-web-$VERSION.zip" bundle/manifest.json bundle/manifest.sig \
+            --repo "$GITHUB_REPOSITORY" --clobber

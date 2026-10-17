@@ -230,6 +230,18 @@ jobs:
           retention-days: 30
 
       - run: npm run build
+
+      # The desktop client runs a signed bundle of this build. Sign it with a
+      # throwaway key and verify it, so a change that breaks the bundle (or
+      # web/desktop-compat.json) fails here and not in the release workflow.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Desktop bundle round trip
+        working-directory: .
+        run: scripts/web-bundle-check.sh
+
       - name: npm audit (runtime deps)
         run: npm audit --omit=dev --audit-level=high
 

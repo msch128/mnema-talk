@@ -1,0 +1,5 @@
+{
+  "web_client_api": 1,
+  "min_server_version": "0.7.16",
+  "security_floor": "0.0.0"
+}

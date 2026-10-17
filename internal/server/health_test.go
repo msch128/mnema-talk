@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/sfu"
+	"github.com/msch128/mnema-talk/internal/webbundle"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
 
@@ -131,5 +132,18 @@ func TestRouterCloseStopsBackgroundWork(t *testing.T) {
 	r.Hub.HandleWebSocket(response, httptest.NewRequest(http.MethodGet, "/api/ws", nil))
 	if response.Code != http.StatusServiceUnavailable {
 		t.Fatal("Close did not stop WebSocket admission")
+	}
+}
+
+// The desktop bundle declares the web_client_api it speaks in
+// web/desktop-compat.json; the server advertises WebClientAPI. A release that
+// changes one without the other would make every desktop client refuse it.
+func TestDesktopCompatFileMatchesServerContract(t *testing.T) {
+	c, err := webbundle.LoadCompat("../../web/desktop-compat.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.WebClientAPI != WebClientAPI {
+		t.Fatalf("web/desktop-compat.json declares web_client_api %d, server advertises %d", c.WebClientAPI, WebClientAPI)
 	}
 }
