@@ -1,0 +1,34 @@
+SECURITY.md
+  s_06fcde5dbef956::t_7aafc8058c9d9c 174-192
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_53f4bf19cc320f 62-64,267-291,605-607,613-619
+  s_06fcde5dbef956::t_18b9f1fa55e582 482,626,632,908-910,912,915-917
+  s_06fcde5dbef956::t_5f352d0d6db265 620,749-753,794-795,805-806,815,841-843,861-865,976-978,987,992,994-1014,1016-1019,1111,1123,1130,1135-1143
+  s_06fcde5dbef956::t_91e0b4cda1c82f 26,706-711,719-723,755,757-793,796-804,807-814
+  s_06fcde5dbef956::t_a50af5d38e7fae 240,754,756,834-835,869,880,895,911,913-914,993,1015
+  s_06fcde5dbef956::t_29d3f9e116a642 621,816
+web/src/lib/media/lifecycle.test.ts
+  s_06fcde5dbef956::t_0ca71e9eb6f4cc 167-171
+  s_06fcde5dbef956::t_808829e1c81122 118-119,161
+web/src/lib/media/renewal.test.ts
+  s_06fcde5dbef956::t_344d29fc33b77f 137-138,140
+  s_06fcde5dbef956::t_241e548df4a11d 48
+  s_06fcde5dbef956::t_4cf19b042324a5 1-47,49-136,139,141-218,260
+  s_06fcde5dbef956::t_48e6855913eb71 219-259
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "120b0df577eb0b6092e0cee82d7b2f215773c7a8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
