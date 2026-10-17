@@ -1,0 +1,54 @@
+internal/chat/audit_integration_test.go
+  s_06fcde5dbef956::t_c135a4ac1a6190 1-25
+doc/moderation.md
+  s_06fcde5dbef956::t_98ef5faa83a5a2 35-48
+internal/auth/handler.go
+  s_06fcde5dbef956::t_83f57576e7f0e5 7,12,31,56-58
+  s_06fcde5dbef956::t_cef394206f3743 28-30,150,176,179,187,229,277,375
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9c8412aa86ff8f 1233-1237,1297-1315
+internal/server/audit_events_integration_test.go
+  s_06fcde5dbef956::t_6bbc0367cb8679 1-165
+internal/chat/handler.go
+  s_06fcde5dbef956::t_5afa6a77f37435 5,35-36,338,342,384,389
+internal/server/server.go
+  s_06fcde5dbef956::t_5afa6a77f37435 137
+  s_06fcde5dbef956::t_faf92f6b5aa212 157
+  s_06fcde5dbef956::t_83f57576e7f0e5 133-134
+internal/auth/audit.go
+  s_06fcde5dbef956::t_8366d7689f672d 1-37,42-46,50-54
+  s_06fcde5dbef956::t_83f57576e7f0e5 38-41,47-49
+internal/ws/hub.go
+  s_06fcde5dbef956::t_361d29038a79eb 34-36
+internal/ws/voice.go
+  s_06fcde5dbef956::t_cc7a59365dc123 248-250
+  s_06fcde5dbef956::t_d8e3ba396d9a69 457-459
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9c8412aa86ff8f 1233-1237,1297-1315
+internal/server/audit_presence_test.go
+  s_06fcde5dbef956::t_71d7c235c68b74 16
+  s_06fcde5dbef956::t_26dbb5aefc86ff 1-15,17-20
+internal/server/audit_presence.go
+  s_06fcde5dbef956::t_ee5badab2a6327 45-47
+  s_06fcde5dbef956::t_43edb2b5d90600 1-44,48-59
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_9c8412aa86ff8f 19
+internal/chat/audit.go
+  s_06fcde5dbef956::t_2ebd54069c98fc 1-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ab9f8207a4bf28a773914a6594aa3bfffbeb70a0",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
