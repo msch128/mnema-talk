@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.21](https://github.com/msch128/mnema-talk/compare/v0.7.20...v0.7.21) (2026-10-17)
+
+
+### Features
+
+* incoming webhooks in Discord's execute format ([#150](https://github.com/msch128/mnema-talk/issues/150)) ([43236ef](https://github.com/msch128/mnema-talk/commit/43236efbabd4275639ff188e4f937810ce8aec82))
+
 ## [0.7.20](https://github.com/msch128/mnema-talk/compare/v0.7.19...v0.7.20) (2026-10-17)
 
 
