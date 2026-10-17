@@ -1,0 +1,136 @@
+web/src/composables/useNavMenusWebhooks.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 18
+internal/perm/upload_test.go
+  s_06fcde5dbef956::t_e2f7e90877b3e0 80-91
+  s_06fcde5dbef956::t_038df1b435e374 1-79,92-98
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_58293177888bd3 129-147,165
+README.md
+  s_06fcde5dbef956::t_791cbe1b11b003 50-51
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_68dd6daeaae7c5 14,384
+  s_06fcde5dbef956::t_29c2faadfee225 385
+web/src/stores/permissions.ts
+  s_06fcde5dbef956::t_62c6f9381ea6ab 34-35,112
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_152555475708c4 103
+  s_06fcde5dbef956::t_1d8c34b2687232 24,34
+  s_06fcde5dbef956::t_323ba855c75169 95-102,104-116
+web/src/components/UserProfileRoles.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 22,37
+doc/operations.md
+  s_06fcde5dbef956::t_58293177888bd3 74,164
+internal/media/webhookfiles.go
+  s_06fcde5dbef956::t_ca4820dd48da8a 39-53
+web/src/stores/permissions.test.ts
+  s_06fcde5dbef956::t_8586658ec85857 70-77
+  s_06fcde5dbef956::t_1d8c34b2687232 20,23
+web/src/composables/useMessageActions.test.ts
+  s_06fcde5dbef956::t_f3550e9b0fee8b 10,44-61
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_ae75e9144fd285 994-1006,1045,1056,1076,1078-1081,1083-1085
+  s_06fcde5dbef956::t_16c3ee14db3a53 951,964,976,986,1077,1082
+  s_06fcde5dbef956::t_b5ac684063dca2 1086
+e2e/tests/upload-limit.spec.ts
+  s_06fcde5dbef956::t_9f7cee12a62290 1-74
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_62c6f9381ea6ab 248-249
+  s_06fcde5dbef956::t_68dd6daeaae7c5 1002-1011,1236-1240
+web/src/components/AdminUploadLimit.test.ts
+  s_06fcde5dbef956::t_aaae438f7a6476 1-78
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_152555475708c4 16
+.env.example
+  s_06fcde5dbef956::t_58293177888bd3 92-94
+web/src/components/MemberList.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 15
+internal/server/server.go
+  s_06fcde5dbef956::t_ebcf59f6ce6b7f 118
+internal/roles/handler.go
+  s_06fcde5dbef956::t_ebcf59f6ce6b7f 537
+  s_06fcde5dbef956::t_86cb02359e03a1 42-45,77-80,116,486-489,491-536,538-546
+  s_06fcde5dbef956::t_16c3ee14db3a53 490
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_68dd6daeaae7c5 1002-1011,1236-1240
+  s_06fcde5dbef956::t_62c6f9381ea6ab 248-249
+internal/perm/service.go
+  s_06fcde5dbef956::t_3fb15ae0ad266b 5,11,43-44,59-127
+  s_06fcde5dbef956::t_05a9261e095dc2 128
+web/src/components/ChannelPermissionsDialog.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 24,36
+internal/db/migrations/0025_upload_limits.sql
+  s_06fcde5dbef956::t_72921dea6c5301 1-14
+internal/perm/fixture_upload.go
+  s_06fcde5dbef956::t_9cc5a5f1e54521 1-17
+internal/server/upload_limit_integration_test.go
+  s_06fcde5dbef956::t_a27fbde0e77366 47,134
+  s_06fcde5dbef956::t_af47b8e5c41235 101-102,105
+  s_06fcde5dbef956::t_608aec4deb3f2c 1-46,48-100,103-104,106-108,126-133,135-152
+  s_06fcde5dbef956::t_e2f7e90877b3e0 109-125
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_fd5a42b927aeef 116
+  s_06fcde5dbef956::t_68dd6daeaae7c5 25,44,46-49,52,68,109-115,118-119,282-289
+  s_06fcde5dbef956::t_a8e46464e46e36 26,45
+  s_06fcde5dbef956::t_9a14a45a357cd7 290
+web/src/components/AdminCoverage.test.ts
+  s_06fcde5dbef956::t_152555475708c4 34
+doc/upgrade.md
+  s_06fcde5dbef956::t_58293177888bd3 119-135
+web/src/components/AdminUploadLimit.vue
+  s_06fcde5dbef956::t_aa032e5fb26068 1-12,14-66
+  s_06fcde5dbef956::t_a8e46464e46e36 13
+web/src/App.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 127
+internal/media/limit_test.go
+  s_06fcde5dbef956::t_1a14de7142abf1 1-42
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_16c3ee14db3a53 38
+  s_06fcde5dbef956::t_72921dea6c5301 35-37,76-77,138,155,158,168,182-184,449-480
+doc/webhooks.md
+  s_06fcde5dbef956::t_58293177888bd3 81,132
+web/src/components/SelfUpdate.test.ts
+  s_06fcde5dbef956::t_152555475708c4 18
+web/src/components/AdminSystemTab.test.ts
+  s_06fcde5dbef956::t_152555475708c4 22
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_38a3f99f1bc8b7 156
+  s_06fcde5dbef956::t_288142033ca114 139,144
+  s_06fcde5dbef956::t_62c6f9381ea6ab 140-143,145-146
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_ca4820dd48da8a 266-271,317,332,344
+web/src/components/MemberRolesDialog.test.ts
+  s_06fcde5dbef956::t_1d8c34b2687232 22,30
+internal/media/handler.go
+  s_06fcde5dbef956::t_ca4820dd48da8a 52-83,213-222
+  s_06fcde5dbef956::t_0bd4d4b8809cd2 223
+api/openapi.json
+  s_06fcde5dbef956::t_e3245e01528fdf 1530-1532,1537,1560,1578-1580,1585,1601-1619,1683-1687,1714,1738-1742,1747-1753,7129-7295
+  s_06fcde5dbef956::t_16c3ee14db3a53 1533-1536,1581-1584,1743-1746
+  s_06fcde5dbef956::t_4023be2e8186dc 7296-7297
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_152555475708c4 23
+  s_06fcde5dbef956::t_1d8c34b2687232 26,44
+internal/media/stream.go
+  s_06fcde5dbef956::t_ca4820dd48da8a 71,88,132,140,152,158,163,172,175
+internal/perm/store.go
+  s_06fcde5dbef956::t_16c3ee14db3a53 36
+  s_06fcde5dbef956::t_89bf11dbd74879 5
+  s_06fcde5dbef956::t_3fb15ae0ad266b 34-35,37,39-57,110-125,147,152,187-190,195-197,254-257,259,261
+  s_06fcde5dbef956::t_5dbafd2aa3967a 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdb0e2622a156ac51a371527e164e2831ee3f3ae",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
