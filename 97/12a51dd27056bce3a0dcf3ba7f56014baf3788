@@ -1,0 +1,138 @@
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_ab7b40fe776238 58-60,71-72
+internal/ws/voice.go
+  s_06fcde5dbef956::t_9442ce9c6244ab 202-204
+internal/ws/signal.go
+  s_06fcde5dbef956::t_4316246c1481e2 77-78
+  s_06fcde5dbef956::t_9442ce9c6244ab 50-55,67-70,79-81,93-97
+internal/sfu/layers_integration_test.go
+  s_06fcde5dbef956::t_a04f940a626904 1-297
+  s_06fcde5dbef956::t_138fd79ed9a3a9 298-301
+internal/sfu/screen_order_test.go
+  s_06fcde5dbef956::t_fff7768e0b1b82 1-76
+internal/sfu/layers_native_test.go
+  s_06fcde5dbef956::t_d7a2433299f3f1 1-40
+doc/architecture.md
+  s_06fcde5dbef956::t_5a4e199165a545 111-133
+internal/sfu/subscriptions.go
+  s_06fcde5dbef956::t_a8c5428f5f6f35 31-62,122-125,139-177,237-238,320-321,372-390,396-399
+internal/ws/hub.go
+  s_06fcde5dbef956::t_9442ce9c6244ab 113-115
+internal/sfu/sfu.go
+  s_06fcde5dbef956::t_413ca9b9185bf6 562-565
+  s_06fcde5dbef956::t_181893cb3d3654 623,630-634,639-641,643
+  s_06fcde5dbef956::t_fd03f83fb3fa80 742,825-833,835,857-859,869-873,875-876,882,894,900-908,969,978,1046
+  s_06fcde5dbef956::t_a8c5428f5f6f35 242-260
+  s_06fcde5dbef956::t_4a359f324a1d53 642,874
+  s_06fcde5dbef956::t_e23871b44e9047 68-69,84-109,135-167,198-202
+  s_06fcde5dbef956::t_f5a4352d11eef1 590-591,597-602
+  s_06fcde5dbef956::t_4b3fb3be65fa4b 13,183-184,644,999,1001-1008,1010,1016-1021,1054-1055,1057,1069-1072,1086,1090-1095,1112-1119,1139-1143,1173
+  s_06fcde5dbef956::t_b241e3886535cd 185-189,203
+internal/ws/handle.go
+  s_06fcde5dbef956::t_9442ce9c6244ab 120-122
+internal/sfu/screen.go
+  s_06fcde5dbef956::t_4a359f324a1d53 20,28,39
+  s_06fcde5dbef956::t_197da63e4547a3 1-19,21-27,29-38,40-151
+internal/sfu/rtpkey_test.go
+  s_06fcde5dbef956::t_faeb981edf35f0 1-147
+internal/sfu/layers_test.go
+  s_06fcde5dbef956::t_0b1625bfc4a513 1-102,104-199,201-593,597-598,601-634
+  s_06fcde5dbef956::t_4a359f324a1d53 103,594-596,599-600
+  s_06fcde5dbef956::t_ee69125b9d7ae2 200
+internal/sfu/sfu_test.go
+  s_06fcde5dbef956::t_73cdb0d1085bca 77-93,98,109
+  s_06fcde5dbef956::t_dc0c080f49d929 26-28,55-56,61-62,65-67
+  s_06fcde5dbef956::t_d5d8d0b19aa9d2 68
+api/openapi.json
+  s_06fcde5dbef956::t_ab7b40fe776238 7971
+internal/sfu/screen_test.go
+  s_06fcde5dbef956::t_5451e3401e5b00 4,9,38-51,64-65
+  s_06fcde5dbef956::t_1f37dd850fa333 1-3,5-8,10-37,52-63,66-276,278-280,282-309
+  s_06fcde5dbef956::t_6a9106c5286923 277,281
+internal/ws/layers.go
+  s_06fcde5dbef956::t_fb63c331876ef6 1-96
+internal/ws/layers_test.go
+  s_06fcde5dbef956::t_f9f2a234095d44 268-297
+  s_06fcde5dbef956::t_7d628213ae9291 1-183,204-267,298
+  s_06fcde5dbef956::t_8c9f0b2c5970b4 184-203
+internal/sfu/rtpkey.go
+  s_06fcde5dbef956::t_5054295e5f6423 1-157
+internal/sfu/layers.go
+  s_06fcde5dbef956::t_ee69125b9d7ae2 539-540
+  s_06fcde5dbef956::t_f48406ec428bfb 206,483-484,637
+  s_06fcde5dbef956::t_f6584d3f0e5754 1-25,29-88,95-202,207-209,211-215,217-219,223-292,294-482,485-492,494-538,541-636,638-669
+  s_06fcde5dbef956::t_4a359f324a1d53 203-205,210,493
+  s_06fcde5dbef956::t_9442ce9c6244ab 26-28
+  s_06fcde5dbef956::t_e23871b44e9047 216,220-222
+  s_06fcde5dbef956::t_b241e3886535cd 89-94
+  s_06fcde5dbef956::t_39b47ec8c29e9f 293
+internal/sfu/codecs_test.go
+  s_06fcde5dbef956::t_4ce4e57845db43 146-149
+  s_06fcde5dbef956::t_79885369acdf26 107-108
+internal/ws/info.go
+  s_06fcde5dbef956::t_3d9e73d1b8ba1a 3-4,7-10,12-13,18-23,25
+web/src/components/ScreenLayerMenu.vue
+  s_06fcde5dbef956::t_448a6c2a37962b 1-74
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_b6f683a628582e 7,10,241-252,432,436-441,460,572,600-650,668-670,833-839,896-899,953-960
+  s_06fcde5dbef956::t_32a187468fcb4d 468,596-599
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_148ecd80d96f98 19
+  s_06fcde5dbef956::t_9e182fbcb1822c 643-650
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_0ae661f1aa372d 25,37-38,148-153,396-397,586-589,598,738-744,764,767,782,795-801,813,860,867,1364-1365,1394,1892,1900-1946,2031-2033,2045,2250-2252
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9e182fbcb1822c 438,666-673
+web/src/types/events.ts
+  s_06fcde5dbef956::t_134eb7ac494525 10-12,15,51,53,65-67,82,114-126,173-176,192
+  s_06fcde5dbef956::t_b6f683a628582e 13-14,52
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_b6f683a628582e 936-947
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_60b327232e3eb4 2
+  s_06fcde5dbef956::t_fcf093f3b92a18 235-239
+  s_06fcde5dbef956::t_8112950b3abd3c 18-19
+web/src/composables/useScreenLayerMenu.ts
+  s_06fcde5dbef956::t_e5b74a5a6f909e 1-20,22-80
+  s_06fcde5dbef956::t_9515fd2156d6d9 21
+web/src/lib/media/api.ts
+  s_06fcde5dbef956::t_98b3fc2d297554 21-25
+web/src/components/ConnectionStatsModal.vue
+  s_06fcde5dbef956::t_9e182fbcb1822c 54
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9e182fbcb1822c 438,666-673
+web/src/lib/screenLayers.ts
+  s_06fcde5dbef956::t_a2491c966d17ba 1-80
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_37244f50d6e06a 11
+  s_06fcde5dbef956::t_c9308b762d944f 74
+  s_06fcde5dbef956::t_e421b67e2d208a 106
+  s_06fcde5dbef956::t_1a5ed45372c8ae 84
+web/src/lib/rtcStats.ts
+  s_06fcde5dbef956::t_87782a05b4d881 7,57-64,100
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_a82fa70c9788fe 257
+  s_06fcde5dbef956::t_f6492beae4f089 218-231
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_9e182fbcb1822c 25-27,295
+web/src/lib/streamQuality.ts
+  s_06fcde5dbef956::t_b6b98521e238c8 83,95-101,107
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_a0b741956f57b7 142,144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9712a51dd27056bce3a0dcf3ba7f56014baf3788",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

@@ -1,0 +1,86 @@
+web/src/lib/rtcStats.test.ts
+  s_06fcde5dbef956::t_7a7467f6cf3856 111-133
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_056aa9edd7edd5 250-252,960
+  s_06fcde5dbef956::t_62cc5dea952344 643
+web/src/lib/media/mediaFrameWorker.test.ts
+  s_06fcde5dbef956::t_53a7495e1899ae 43,69
+  s_06fcde5dbef956::t_eee04eb329b2b4 461-502
+web/src/components/ConnectionStatsModal.sparkline.test.ts
+  s_06fcde5dbef956::t_7a7467f6cf3856 6,21-36
+  s_06fcde5dbef956::t_78bc7bd00014aa 37-38
+web/src/composables/useScreenLayerMenu.test.ts
+  s_06fcde5dbef956::t_8484081c01a9ab 1-6,8-48,51-53,55-60,62-63,65-77,79-89,91,93-94,96-107
+  s_06fcde5dbef956::t_a9a1821c1f99ec 7,49-50,54,61,64,78,90,92,95
+web/src/lib/media/frame.test.ts
+  s_06fcde5dbef956::t_99adfe2392f0c3 291
+  s_06fcde5dbef956::t_a84035f453cbfe 280,282
+  s_06fcde5dbef956::t_ebccbfb12e4a79 4,199-279,281,283-290,292-315
+  s_06fcde5dbef956::t_6dbae312176c8f 316
+e2e/tests/screen-layers.spec.ts
+  s_06fcde5dbef956::t_1001148a05d6b4 1-162,164-179
+  s_06fcde5dbef956::t_400e6b18dbb877 163
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_a7c715241ef606 1912-1913
+  s_06fcde5dbef956::t_9c73e01d11cc1d 586,594,759,1362
+  s_06fcde5dbef956::t_056aa9edd7edd5 758,792,1361,1365
+loadtest/run.sh
+  s_06fcde5dbef956::t_4246a822c10715 14,32,201
+web/src/stores/voice.test.ts
+  s_06fcde5dbef956::t_62cc5dea952344 810-811
+  s_06fcde5dbef956::t_f922bba3346a4b 700-809,812-862
+web/src/lib/screenLayers.ts
+  s_06fcde5dbef956::t_400e6b18dbb877 27,29,40,53-54,57
+web/src/composables/useWebRTC.test.ts
+  s_06fcde5dbef956::t_b642ef167cdfea 3739-3769
+  s_06fcde5dbef956::t_e1eae2935e810d 3669,3672,3674,3680-3681
+  s_06fcde5dbef956::t_62476577a33e8b 3607-3609
+  s_06fcde5dbef956::t_b7df579515931e 16,3574-3594,3597-3606,3610-3668,3670-3671,3673,3675-3679,3682-3738,3770-3798
+  s_06fcde5dbef956::t_c937f202e46da8 3595-3596
+web/src/lib/media/guard.test.ts
+  s_06fcde5dbef956::t_df09c514d89364 98-111
+web/src/lib/media/browserCall.test.ts
+  s_06fcde5dbef956::t_df09c514d89364 35-36,92-93
+web/src/components/ScreenLayerMenu.test.ts
+  s_06fcde5dbef956::t_a9a1821c1f99ec 7,40-41
+  s_06fcde5dbef956::t_b642ef167cdfea 70-82
+  s_06fcde5dbef956::t_1ffde806df7db5 1-6,8-39,42-69,83-123
+web/src/components/VoiceStage.test.ts
+  s_06fcde5dbef956::t_e519f605edb427 340-366
+SECURITY.md
+  s_06fcde5dbef956::t_4b31cb6bd4cba2 89,131-157
+web/src/types/events.ts
+  s_06fcde5dbef956::t_056aa9edd7edd5 30,145-146
+web/src/components/AdminCoverage.test.ts
+  s_06fcde5dbef956::t_50f1e496f0c236 487
+loadtest/viewer/main.go
+  s_06fcde5dbef956::t_504bbffd89d6c7 22-24,53-68,300-304
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_056aa9edd7edd5 776
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_a15a41e25c6c21 156-181
+  s_06fcde5dbef956::t_8931cc64f8a75a 13,41-43
+web/src/lib/screenLayers.test.ts
+  s_06fcde5dbef956::t_662e121d92e62a 1-74
+doc/architecture.md
+  s_06fcde5dbef956::t_278b7dad37000f 132-146
+loadtest/README.md
+  s_06fcde5dbef956::t_4246a822c10715 46-53
+  s_06fcde5dbef956::t_62a75b54d6dc5e 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a06bd55e29dbf5d2f3e52760f80b2f1125e24f05",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
