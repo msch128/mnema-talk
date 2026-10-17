@@ -1,0 +1,27 @@
+internal/sfu/sfu.go
+  s_06fcde5dbef956::t_685afed77b8def 75-77
+internal/ws/voice.go
+  s_06fcde5dbef956::t_685afed77b8def 211-222
+internal/ws/perms_test.go
+  s_06fcde5dbef956::t_685afed77b8def 285-311
+internal/ws/hub.go
+  s_06fcde5dbef956::t_685afed77b8def 73-74
+internal/chat/permissions_checks_test.go
+  s_06fcde5dbef956::t_0e90bddc9b340d 1-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a77592d768744e0ff64a613af5e6435f464a4f96",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
