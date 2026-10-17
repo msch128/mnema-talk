@@ -1,0 +1,77 @@
+internal/metrics/metrics.go
+  s_06fcde5dbef956::t_e6506c1e059578 267-272,334-335,361-379
+  s_06fcde5dbef956::t_3b2117a1610c1d 380
+loadtest/viewer/shaper.go
+  s_06fcde5dbef956::t_0c18d8365c855b 1-38
+loadtest/viewer/main.go
+  s_06fcde5dbef956::t_73b35d1428edff 19-22,191-194,198-202,209,225-231,254-256
+internal/sfu/adapt_bw_test.go
+  s_06fcde5dbef956::t_883d968fcff404 1-27,29-151,153-182,189-214,218-260
+  s_06fcde5dbef956::t_9812e95a0b09c4 152,215-217
+  s_06fcde5dbef956::t_bf57c50acb18c5 28
+  s_06fcde5dbef956::t_97bd50591e6603 183-188
+internal/sfu/sfu.go
+  s_06fcde5dbef956::t_edbe95a9f1a99b 442-448
+  s_06fcde5dbef956::t_48f89ad202db5d 1030,1097,1105,1118-1122
+doc/operations.md
+  s_06fcde5dbef956::t_02b7a83bb001ed 516-517
+loadtest/viewer/shaper_test.go
+  s_06fcde5dbef956::t_46a9b3b8423efe 11,22
+  s_06fcde5dbef956::t_9850d9e4b2375b 1-10,12-21,23-30
+internal/sfu/adapt.go
+  s_06fcde5dbef956::t_1a33f90f995bf2 211
+  s_06fcde5dbef956::t_d724294523e90b 20-28
+  s_06fcde5dbef956::t_3ed57b9ec04b01 246
+  s_06fcde5dbef956::t_48e44ab44aeade 227-233
+  s_06fcde5dbef956::t_688315e5bbedc3 258-262
+  s_06fcde5dbef956::t_5f81727e32db49 98-107
+  s_06fcde5dbef956::t_92ac8415528769 121-161
+  s_06fcde5dbef956::t_44ac487d9c17a5 65-79
+  s_06fcde5dbef956::t_69b35729845e51 281,283
+loadtest/README.md
+  s_06fcde5dbef956::t_73b35d1428edff 64-70
+internal/sfu/bwe.go
+  s_06fcde5dbef956::t_dc1c1e94c7925c 134
+  s_06fcde5dbef956::t_9cb98dd70b7e94 135-137,141
+  s_06fcde5dbef956::t_e27b81950d00bc 161,164
+  s_06fcde5dbef956::t_56c08b6d2b5b29 1-44,48-54,57-59,61-64,66-69,72-73,77-87,95-124,127-133,138-140,142-150,153-157,165-177,179-180
+  s_06fcde5dbef956::t_f8a0cb3c7140f2 55,60,65,70-71,88-94,158-160,162-163
+  s_06fcde5dbef956::t_97bd50591e6603 45-47,56,151-152,178
+  s_06fcde5dbef956::t_a8791162a8adc6 74-76,125-126
+internal/metrics/metrics_test.go
+  s_06fcde5dbef956::t_97bd50591e6603 121,189-197
+  s_06fcde5dbef956::t_b6efe3336fec43 198
+internal/sfu/bwe_test.go
+  s_06fcde5dbef956::t_7c8908c9aa7f8f 1-10,12-18,20-57,59-79,81-101,103-107,117-164,166-172,179-209
+  s_06fcde5dbef956::t_e27b81950d00bc 102,108-116
+  s_06fcde5dbef956::t_a8791162a8adc6 165
+  s_06fcde5dbef956::t_97bd50591e6603 11,80,173-178
+  s_06fcde5dbef956::t_9cb98dd70b7e94 19,58
+internal/sfu/layers.go
+  s_06fcde5dbef956::t_53c1d8aa8baa9f 109-112,115,360,363-366,371-373,732
+  s_06fcde5dbef956::t_48f89ad202db5d 108,113-114,325,335-345,347-348,352-353,355-357,361-362,367-370,374-376,688-693,700,702-704,720-731,733-735
+  s_06fcde5dbef956::t_97bd50591e6603 116-118,346,349-351,354,358-359
+  s_06fcde5dbef956::t_3fa7a7bc8ea404 736
+loadtest/run.sh
+  s_06fcde5dbef956::t_73b35d1428edff 16,205
+doc/architecture.md
+  s_06fcde5dbef956::t_02b7a83bb001ed 136-171,185-191
+SECURITY.md
+  s_06fcde5dbef956::t_02b7a83bb001ed 285-289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "448b003e23c26d14d4c86023cbf4adb212ae803a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
