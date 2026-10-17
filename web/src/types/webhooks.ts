@@ -14,5 +14,3 @@ export {
 
 /** Events a channel webhook can subscribe to, in display order. */
 export const CHANNEL_WEBHOOK_EVENTS = ['MESSAGE_CREATE', 'MESSAGE_UPDATE', 'MESSAGE_DELETE', 'MESSAGE_REACTIONS_UPDATE', 'VOICE_STATE_UPDATE'] as const
-/** Events only a server-wide webhook (Owner) can subscribe to. */
-export const SERVER_WEBHOOK_EVENTS = ['MEMBER_ADD'] as const

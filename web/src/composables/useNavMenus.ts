@@ -108,13 +108,13 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
     })
   }
 
-  if (permissions.canIn(channel.id, 'manage_webhooks') && !permissions.can('manage_channels')) {
+  if (permissions.can('administrator') && !permissions.can('manage_channels')) {
     items.push({ type: 'separator' })
     items.push(webhooksItem(channel, handlers))
   }
   if (permissions.can('manage_channels')) {
     items.push({ type: 'separator' })
-    if (permissions.canIn(channel.id, 'manage_webhooks')) items.push(webhooksItem(channel, handlers))
+    if (permissions.can('administrator')) items.push(webhooksItem(channel, handlers))
     items.push({
       id: 'permissions',
       label: t('overwrites.menu'),

@@ -1,23 +1,23 @@
 <script setup lang="ts">
 // Outgoing webhooks: URLs that receive signed events of a channel (or of the
 // whole server, for the Owner). The signing secret is shown once.
-import type { PropType } from 'vue'
 import { ref, computed, onMounted } from 'vue'
-import { Copy, KeyRound, Pencil, Trash2, Send, ListChecks, Power, AlertTriangle } from '@lucide/vue'
+import { Copy, KeyRound, Pencil, Trash2, Send, ListChecks, Power } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
-import { isOutgoingWebhook, isWebhookDelivery, decodeCreatedOutgoingWebhook, decodeOutgoingWebhook, decodeWebhookDelivery, CHANNEL_WEBHOOK_EVENTS, SERVER_WEBHOOK_EVENTS } from '../types/webhooks'
+import { isOutgoingWebhook, isWebhookDelivery, decodeCreatedOutgoingWebhook, decodeOutgoingWebhook, decodeWebhookDelivery, CHANNEL_WEBHOOK_EVENTS } from '../types/webhooks'
 import type { OutgoingWebhook, WebhookDelivery } from '../types/webhooks'
 import { confirm } from '../lib/confirm'
 import { useToastStore } from '../stores/toast'
+import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
 
 const props = defineProps({
-  // null: the server-wide webhooks (Owner only)
-  channelId: { type: String as PropType<string | null>, default: null }
+  channelId: { type: String, required: true }
 })
 
 const toasts = useToastStore()
+const chat = useChatStore()
 const hooks = ref<OutgoingWebhook[]>([])
 const loaded = ref(false)
 const secret = ref<{ id: string; value: string } | null>(null)
@@ -28,8 +28,8 @@ const busy = ref(false)
 // null: closed; id '': a new webhook
 const form = ref<{ id: string; name: string; url: string; events: string[] } | null>(null)
 
-const allEvents = computed<readonly string[]>(() => (props.channelId === null ? [...CHANNEL_WEBHOOK_EVENTS, ...SERVER_WEBHOOK_EVENTS] : CHANNEL_WEBHOOK_EVENTS))
-const listPath = computed(() => (props.channelId === null ? '/api/admin/outgoing-webhooks' : `/api/admin/channels/${props.channelId}/outgoing-webhooks`))
+const allEvents: readonly string[] = CHANNEL_WEBHOOK_EVENTS
+const listPath = computed(() => `/api/admin/channels/${props.channelId}/outgoing-webhooks`)
 const eventLabel = (event: string) => t(`webhooks.events.${event}`)
 
 function showError(e: unknown) {
@@ -154,6 +154,11 @@ async function remove(hook: OutgoingWebhook) {
   }
 }
 
+function memberName(id: string | null): string {
+  if (id === null) return t('webhooks.unknownMember')
+  const m = chat.members.find(x => x.id === id)
+  return m?.display_name || m?.username || t('webhooks.unknownMember')
+}
 const when = (iso: string) => new Date(iso).toLocaleString(locale.value)
 const statusClass = (status: OutgoingWebhook['status']) =>
   status === 'active' ? 'bg-mnema-accent-subtle text-mnema-accent' : status === 'auto_disabled' ? 'bg-mnema-danger/15 text-mnema-danger' : 'bg-mnema-raised text-mnema-muted'
@@ -163,7 +168,7 @@ onMounted(load)
 
 <template>
   <div class="space-y-4" data-testid="outgoing-webhooks">
-    <p class="text-sm text-mnema-tertiary">{{ channelId === null ? $t('webhooks.serverHint') : $t('webhooks.outgoingHint') }}</p>
+    <p class="text-sm text-mnema-tertiary">{{ $t('webhooks.outgoingHint') }}</p>
 
     <div v-if="secret" class="rounded-lg border border-mnema-accent/40 bg-mnema-accent-subtle p-3" role="status" data-testid="revealed-secret">
       <p class="text-sm font-medium text-mnema-text">{{ $t('webhooks.secretOnce') }}</p>
@@ -206,10 +211,10 @@ onMounted(load)
         <div class="flex flex-wrap items-center gap-2">
           <span class="min-w-0 truncate text-sm font-medium text-mnema-text">{{ hook.name }}</span>
           <span :class="['rounded px-1.5 py-px text-[11px] font-semibold', statusClass(hook.status)]" data-testid="outgoing-status">{{ $t(`webhooks.status.${hook.status}`) }}</span>
-          <span v-if="!hook.access_ok" class="inline-flex items-center gap-1 text-xs text-mnema-danger" data-testid="outgoing-no-access"><AlertTriangle class="h-3.5 w-3.5" aria-hidden="true" />{{ $t('webhooks.noAccess') }}</span>
         </div>
         <p class="truncate font-mono text-xs text-mnema-muted" :title="hook.url">{{ hook.url }}</p>
         <p class="text-xs text-mnema-tertiary">{{ hook.events.map(eventLabel).join(', ') }}</p>
+        <p class="text-xs text-mnema-tertiary" data-testid="outgoing-audit">{{ $t('webhooks.urlSet', { name: memberName(hook.url_set_by), when: when(hook.url_set_at) }) }}</p>
         <p v-if="hook.status === 'auto_disabled'" class="text-xs text-mnema-danger" data-testid="outgoing-auto-off">{{ $t('webhooks.autoDisabled', { count: hook.consecutive_failures }) }}</p>
         <p v-if="hook.last_attempt_at" class="text-xs text-mnema-tertiary" data-testid="outgoing-last">
           {{ hook.last_error ? $t('webhooks.lastFailed', { when: when(hook.last_attempt_at), error: hook.last_error }) : $t('webhooks.lastOk', { when: when(hook.last_attempt_at) }) }}

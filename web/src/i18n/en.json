@@ -748,8 +748,7 @@
       "invites": "Invites",
       "media": "Media & Storage",
       "system": "System",
-      "roles": "Roles",
-      "integrations": "Integrations"
+      "roles": "Roles"
     },
     "system": {
       "heading": "System & version",
@@ -1233,9 +1232,8 @@
       "outgoing": "Outgoing"
     },
     "menu": "Webhooks …",
-    "incomingHint": "An incoming webhook gives scripts and services a secret URL to post messages into this channel. Anyone with the URL can post, so treat it like a password.",
-    "outgoingHint": "An outgoing webhook sends events of this channel to a URL of yours, signed so you can check they come from here. It delivers with your rights and stops when you lose them.",
-    "serverHint": "Server-wide webhooks receive the chosen events of every channel, and new members. Only the Owner can manage them.",
+    "incomingHint": "An incoming webhook gives scripts and services a secret URL to post messages into this channel with the settings below. Anyone with the URL can post, so treat it like a password.",
+    "outgoingHint": "An outgoing webhook sends events of this channel to a URL, signed so you can check they come from here. It keeps sending until an administrator changes or deletes it.",
     "name": "Name",
     "namePlaceholder": "Name of the new webhook",
     "create": "Create",
@@ -1270,7 +1268,6 @@
     "rotate": "Make a new secret",
     "rotateTitle": "New secret for {name}?",
     "rotateBody": "The old secret stops signing at once. Update your receiver.",
-    "noAccess": "Paused: its creator no longer has the rights it needs",
     "autoDisabled": "Switched off after {count} failed events in a row. Switch it on again once the receiver works.",
     "lastOk": "Last delivery {when}",
     "lastFailed": "Last attempt {when} failed: {error}",
@@ -1288,8 +1285,18 @@
       "MESSAGE_DELETE": "Message deleted",
       "MESSAGE_REACTIONS_UPDATE": "Reactions changed",
       "VOICE_STATE_UPDATE": "Joined or left the Talk",
-      "MEMBER_ADD": "New member",
       "PING": "Test event"
+    },
+    "unknownMember": "an unknown member",
+    "createdBy": "Created by {name}",
+    "urlSet": "URL set by {name}, {when}",
+    "settingsFor": "Settings of {name}",
+    "setting": {
+      "allow_everyone": "Allow @all and @here to notify everyone",
+      "allow_user_mentions": "Allow @username to notify members",
+      "allow_attachments": "Allow attachments",
+      "allow_embeds": "Allow embeds",
+      "allow_identity_override": "Allow posts to set their own username"
     }
   }
 }

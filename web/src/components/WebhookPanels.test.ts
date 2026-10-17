@@ -5,9 +5,9 @@ import type { ApiOptions } from '../lib/api'
 import IncomingWebhooksPanel from './IncomingWebhooksPanel.vue'
 import OutgoingWebhooksPanel from './OutgoingWebhooksPanel.vue'
 import ChannelWebhooksDialog from './ChannelWebhooksDialog.vue'
-import AdminIntegrationsTab from './AdminIntegrationsTab.vue'
 import { useToastStore } from '../stores/toast'
-import { fixtureId } from '../test-fixtures.fixture'
+import { useChatStore } from '../stores/chat'
+import { fixtureId, userFixture } from '../test-fixtures.fixture'
 import { setLocale } from '../i18n'
 import type { Webhook, OutgoingWebhook, WebhookDelivery } from '../types/webhooks'
 
@@ -22,12 +22,16 @@ vi.mock('../lib/confirm', () => ({ confirm: () => confirmMock() }))
 
 const channelId = fixtureId(2)
 const stamp = '2026-01-02T03:04:05Z'
-const hook = (n: number, extra: Partial<Webhook> = {}): Webhook => ({ id: fixtureId(40 + n), channel_id: channelId, name: `Hook ${n}`, created_by: null, created_at: stamp, updated_at: stamp, ...extra })
+const hook = (n: number, extra: Partial<Webhook> = {}): Webhook => ({
+  id: fixtureId(40 + n), channel_id: channelId, name: `Hook ${n}`, created_by: null, created_at: stamp, updated_at: stamp,
+  allow_everyone: false, allow_attachments: true, allow_embeds: true, allow_user_mentions: true, allow_identity_override: true, ...extra
+})
 const out = (n: number, extra: Partial<OutgoingWebhook> = {}): OutgoingWebhook => ({
   id: fixtureId(60 + n), channel_id: channelId, created_by: null, name: `Out ${n}`, url: `https://example.org/${n}`, events: ['MESSAGE_CREATE'], status: 'active',
-  consecutive_failures: 0, last_status: null, last_error: null, last_attempt_at: null, last_success_at: null, created_at: stamp, access_ok: true, ...extra
+  consecutive_failures: 0, last_status: null, last_error: null, last_attempt_at: null, last_success_at: null, created_at: stamp, url_set_by: null, url_set_at: stamp, ...extra
 })
 const delivery = (extra: Partial<WebhookDelivery> = {}): WebhookDelivery => ({ id: fixtureId(80), event_id: fixtureId(81), event_type: 'MESSAGE_CREATE', attempt: 1, success: true, status_code: 204, error: null, duration_ms: 5, created_at: stamp, ...extra })
+const userFixtureForMember = () => userFixture({ id: fixtureId(7), username: 'max' })
 const toastTexts = () => useToastStore().toasts.map(t => t.text)
 
 let clipboard: ReturnType<typeof vi.fn>
@@ -118,7 +122,10 @@ describe('IncomingWebhooksPanel', () => {
     await w.find('button[aria-label="Rename Hook 2"]').trigger('click')
     await w.find('li input[type="text"]').setValue('Nope')
     apiMock.mockRejectedValueOnce(new Error('forbidden'))
-    await w.find('li input[type="text"]').trigger('blur')
+    // Enter and the blur that follows it both arrive before the field is gone.
+    const field = w.find('li input[type="text"]').element
+    field.dispatchEvent(new Event('blur'))
+    field.dispatchEvent(new Event('blur'))
     await flushPromises()
     expect(toastTexts()).toContain('forbidden')
   })
@@ -178,6 +185,41 @@ describe('IncomingWebhooksPanel', () => {
     expect(w.findAll('[data-testid="incoming-webhook"]')).toHaveLength(2)
   })
 
+  it('shows and changes the settings of a webhook and who made it', async () => {
+    useChatStore().members = [{ ...userFixtureForMember(), display_name: 'Max' }]
+    const w = await mountPanel([hook(1, { created_by: fixtureId(7) }), hook(2)])
+    expect(w.find('[data-testid="webhook-settings"]').exists()).toBe(false)
+    const open = (n: number) => w.find(`button[aria-label="Settings of Hook ${n}"]`)
+    await open(1).trigger('click')
+    expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by Max')
+    const box = (key: string) => w.find(`input[data-setting="${key}"]`)
+    expect((box('allow_everyone').element as HTMLInputElement).checked).toBe(false)
+    expect((box('allow_embeds').element as HTMLInputElement).checked).toBe(true)
+    apiMock.mockResolvedValueOnce(hook(1, { created_by: fixtureId(7), allow_everyone: true }))
+    ;(box('allow_everyone').element as HTMLInputElement).checked = true
+    await box('allow_everyone').trigger('change')
+    await flushPromises()
+    expect(apiMock).toHaveBeenLastCalledWith(`/api/admin/webhooks/${hook(1).id}`, expect.objectContaining({ method: 'PATCH', json: { allow_everyone: true } }))
+    expect((box('allow_everyone').element as HTMLInputElement).checked).toBe(true)
+    apiMock.mockRejectedValueOnce(new Error('cannot'))
+    ;(box('allow_embeds').element as HTMLInputElement).checked = false
+    await box('allow_embeds').trigger('change')
+    await flushPromises()
+    expect(toastTexts()).toContain('cannot')
+    // Another webhook, another switch; the same button closes it.
+    await open(2).trigger('click')
+    expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by an unknown member')
+    await open(2).trigger('click')
+    expect(w.find('[data-testid="webhook-settings"]').exists()).toBe(false)
+  })
+
+  it('names a member by username when they have no display name', async () => {
+    useChatStore().members = [{ ...userFixtureForMember(), display_name: '' }]
+    const w = await mountPanel([hook(1, { created_by: fixtureId(7) })])
+    await w.find('button[aria-label="Settings of Hook 1"]').trigger('click')
+    expect(w.find('[data-testid="incoming-audit"]').text()).toBe('Created by max')
+  })
+
   it('uploads an avatar', async () => {
     const w = await mountPanel()
     const input = w.find('input[type="file"]')
@@ -204,7 +246,7 @@ describe('IncomingWebhooksPanel', () => {
 })
 
 describe('OutgoingWebhooksPanel', () => {
-  const mountPanel = async (list: OutgoingWebhook[] = [out(1), out(2, { status: 'auto_disabled', consecutive_failures: 5, last_error: 'http_500', last_attempt_at: stamp, access_ok: false }), out(3, { status: 'disabled', last_attempt_at: stamp })], channel: string | null = channelId) => {
+  const mountPanel = async (list: OutgoingWebhook[] = [out(1), out(2, { status: 'auto_disabled', consecutive_failures: 5, last_error: 'http_500', last_attempt_at: stamp }), out(3, { status: 'disabled', last_attempt_at: stamp })], channel: string = channelId) => {
     apiMock.mockResolvedValueOnce(list)
     const w = mount(OutgoingWebhooksPanel, { props: { channelId: channel } })
     await flushPromises()
@@ -218,7 +260,6 @@ describe('OutgoingWebhooksPanel', () => {
     expect(row(w, 1).find('[data-testid="outgoing-status"]').text()).toBe('Active')
     expect(row(w, 1).find('[data-testid="outgoing-last"]').exists()).toBe(false)
     expect(row(w, 2).text()).toContain('Switched off after 5 failed events')
-    expect(row(w, 2).find('[data-testid="outgoing-no-access"]').exists()).toBe(true)
     expect(row(w, 2).find('[data-testid="outgoing-last"]').text()).toContain('failed: http_500')
     expect(row(w, 3).find('[data-testid="outgoing-status"]').text()).toBe('Off')
     expect(row(w, 3).find('[data-testid="outgoing-last"]').text()).toContain('Last delivery')
@@ -226,15 +267,19 @@ describe('OutgoingWebhooksPanel', () => {
     expect((await mountPanel([])).text()).toContain('No outgoing webhooks yet')
   })
 
-  it('uses the server-wide endpoint and offers server events', async () => {
-    const w = await mountPanel([], null)
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/outgoing-webhooks', { decode: expect.any(Function) })
-    expect(w.text()).toContain('Server-wide webhooks')
+  it('shows who last set the URL and offers only channel events', async () => {
+    useChatStore().members = [{ ...userFixtureForMember(), id: fixtureId(7), display_name: 'Max' }]
+    const w = await mountPanel([out(1, { url_set_by: fixtureId(7) }), out(2)])
+    expect(row(w, 1).find('[data-testid="outgoing-audit"]').text()).toContain('URL set by Max')
+    expect(row(w, 2).find('[data-testid="outgoing-audit"]').text()).toContain('an unknown member')
+    useChatStore().members = [{ ...userFixtureForMember(), id: fixtureId(7), display_name: '', username: 'max' }]
+    const byUsername = await mountPanel([out(1, { url_set_by: fixtureId(7) })])
+    expect(byUsername.find('[data-testid="outgoing-audit"]').text()).toContain('URL set by max')
+    const stranger = await mountPanel([out(1, { url_set_by: fixtureId(9) })])
+    expect(stranger.find('[data-testid="outgoing-audit"]').text()).toContain('an unknown member')
     await w.find('[data-testid="outgoing-new"]').trigger('click')
-    expect(w.find('input[data-event="MEMBER_ADD"]').exists()).toBe(true)
-    const channelPanel = await mountPanel([])
-    await channelPanel.find('[data-testid="outgoing-new"]').trigger('click')
-    expect(channelPanel.find('input[data-event="MEMBER_ADD"]').exists()).toBe(false)
+    expect(w.findAll('input[data-event]')).toHaveLength(5)
+    expect(w.find('input[data-event="MEMBER_ADD"]').exists()).toBe(false)
   })
 
   it('reports a failed load', async () => {
@@ -409,7 +454,7 @@ describe('OutgoingWebhooksPanel', () => {
   })
 })
 
-describe('ChannelWebhooksDialog and the server-wide tab', () => {
+describe('ChannelWebhooksDialog', () => {
   it('switches between incoming and outgoing webhooks', async () => {
     apiMock.mockResolvedValue([])
     const w = mount(ChannelWebhooksDialog, { props: { channel: { id: channelId, name: 'general' } }, attachTo: document.body })
@@ -425,13 +470,5 @@ describe('ChannelWebhooksDialog and the server-wide tab', () => {
     w.findComponent({ name: 'BaseDialog' }).vm.$emit('close')
     expect(w.emitted('close')).toHaveLength(1)
     w.unmount()
-  })
-
-  it('the admin tab manages the server-wide webhooks', async () => {
-    apiMock.mockResolvedValue([])
-    const w = mount(AdminIntegrationsTab)
-    await flushPromises()
-    expect(w.findComponent(OutgoingWebhooksPanel).props('channelId')).toBeNull()
-    expect(apiMock).toHaveBeenCalledWith('/api/admin/outgoing-webhooks', { decode: expect.any(Function) })
   })
 })

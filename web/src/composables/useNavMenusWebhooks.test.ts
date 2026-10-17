@@ -26,25 +26,29 @@ beforeEach(() => {
 })
 
 describe('the Webhooks entry of the channel menu', () => {
-  it('is for those who manage webhooks in that channel', () => {
-    asMember(0)
+  it('is for the Owner and Administrators only', () => {
+    // Not even Manage webhooks, Manage channels or Manage roles opens webhooks.
+    asMember(PERMISSION_BITS.manage_webhooks | PERMISSION_BITS.manage_roles)
+    expect(ids(buildChannelItems(channel))).not.toContain('webhooks')
+    asMember(PERMISSION_BITS.manage_channels | PERMISSION_BITS.manage_webhooks)
     expect(ids(buildChannelItems(channel))).not.toContain('webhooks')
     const onWebhooks = vi.fn()
-    asMember(PERMISSION_BITS.manage_webhooks)
+    asMember(PERMISSION_BITS.administrator)
     const items = buildChannelItems(channel, { onWebhooks })
     expect(ids(items)).toContain('webhooks')
-    expect(ids(items)).not.toContain('permissions') // not a channel manager
     items.find(i => i.id === 'webhooks')?.action?.()
     expect(onWebhooks).toHaveBeenCalledWith(channel)
+    asMember(0, true)
+    expect(ids(buildChannelItems(channel))).toContain('webhooks')
   })
 
   it('sits with the channel management entries for channel managers, and tolerates a missing handler', () => {
-    asMember(PERMISSION_BITS.manage_channels | PERMISSION_BITS.manage_webhooks)
+    asMember(PERMISSION_BITS.administrator | PERMISSION_BITS.manage_channels)
     const items = buildChannelItems(channel)
     expect(ids(items)).toContain('webhooks')
     expect(ids(items).indexOf('webhooks')).toBeLessThan(ids(items).indexOf('permissions'))
     expect(() => items.find(i => i.id === 'webhooks')?.action?.()).not.toThrow()
-    asMember(PERMISSION_BITS.manage_channels)
-    expect(ids(buildChannelItems(channel))).not.toContain('webhooks')
+    asMember(PERMISSION_BITS.administrator)
+    expect(ids(buildChannelItems(channel))).not.toContain('permissions')
   })
 })

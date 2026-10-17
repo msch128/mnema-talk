@@ -748,8 +748,7 @@
       "invites": "Einladungen",
       "media": "Medien & Speicher",
       "system": "System",
-      "roles": "Rollen",
-      "integrations": "Integrationen"
+      "roles": "Rollen"
     },
     "system": {
       "heading": "System & Version",
@@ -1233,9 +1232,8 @@
       "outgoing": "Ausgehend"
     },
     "menu": "Webhooks …",
-    "incomingHint": "Ein eingehender Webhook gibt Skripten und Diensten eine geheime URL, mit der sie Nachrichten in diesen Kanal schreiben. Wer die URL kennt, kann schreiben: behandle sie wie ein Passwort.",
-    "outgoingHint": "Ein ausgehender Webhook schickt Ereignisse dieses Kanals an eine URL von dir, signiert, damit du prüfen kannst, dass sie von hier kommen. Er arbeitet mit deinen Rechten und hört auf, wenn du sie verlierst.",
-    "serverHint": "Serverweite Webhooks bekommen die gewählten Ereignisse aller Kanäle und neue Mitglieder. Nur die Inhaberin oder der Inhaber verwaltet sie.",
+    "incomingHint": "Ein eingehender Webhook gibt Skripten und Diensten eine geheime URL, mit der sie mit den Einstellungen unten Nachrichten in diesen Kanal schreiben. Wer die URL kennt, kann schreiben: behandle sie wie ein Passwort.",
+    "outgoingHint": "Ein ausgehender Webhook schickt Ereignisse dieses Kanals an eine URL, signiert, damit du prüfen kannst, dass sie von hier kommen. Er sendet weiter, bis ein Administrator ihn ändert oder löscht.",
     "name": "Name",
     "namePlaceholder": "Name des neuen Webhooks",
     "create": "Erstellen",
@@ -1270,7 +1268,6 @@
     "rotate": "Neues Geheimnis erzeugen",
     "rotateTitle": "Neues Geheimnis für {name}?",
     "rotateBody": "Das alte Geheimnis signiert sofort nicht mehr. Passe deinen Empfänger an.",
-    "noAccess": "Pausiert: Wer ihn erstellt hat, hat nicht mehr die nötigen Rechte",
     "autoDisabled": "Nach {count} fehlgeschlagenen Ereignissen in Folge ausgeschaltet. Schalte ihn wieder ein, sobald der Empfänger funktioniert.",
     "lastOk": "Letzte Zustellung {when}",
     "lastFailed": "Letzter Versuch {when} fehlgeschlagen: {error}",
@@ -1288,8 +1285,18 @@
       "MESSAGE_DELETE": "Nachricht gelöscht",
       "MESSAGE_REACTIONS_UPDATE": "Reaktionen geändert",
       "VOICE_STATE_UPDATE": "Talk betreten oder verlassen",
-      "MEMBER_ADD": "Neues Mitglied",
       "PING": "Testereignis"
+    },
+    "unknownMember": "ein unbekanntes Mitglied",
+    "createdBy": "Erstellt von {name}",
+    "urlSet": "URL gesetzt von {name}, {when}",
+    "settingsFor": "Einstellungen von {name}",
+    "setting": {
+      "allow_everyone": "@all und @here dürfen alle benachrichtigen",
+      "allow_user_mentions": "@Benutzername darf Mitglieder benachrichtigen",
+      "allow_attachments": "Anhänge erlauben",
+      "allow_embeds": "Embeds erlauben",
+      "allow_identity_override": "Beiträge dürfen ihren Benutzernamen selbst festlegen"
     }
   }
 }
