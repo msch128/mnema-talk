@@ -17,6 +17,9 @@ vi.mock('../lib/api', async (importOriginal) => ({
   ApiError: class ApiError extends Error {}
 }))
 
+// The live operations panel has its own tests and its own endpoint.
+vi.mock('./AdminOpsPanel.vue', () => ({ default: { template: '<div data-testid="system-ops-stub" />' } }))
+
 beforeEach(() => {
   setActivePinia(createPinia())
   setLocale('en')
@@ -38,6 +41,7 @@ describe('AdminSystemTab', () => {
     expect(w.find('[data-testid="system-storage-size"]')!.text()).toContain('3 MB in 3 files')
     expect(w.find('[data-testid="system-uptime"]')!.text()).toBe('1 d 2 h')
     expect(health).toContain('TURN configured')
+    expect(w.find('[data-testid="system-ops-stub"]').exists()).toBe(true)
   })
 
   it('reports unreachable dependencies', async () => {

@@ -17,6 +17,7 @@ export type {
   LinkpreviewPreview as LinkPreview,
   MediaDashboardItem as MediaDashboardItem, MediaStats as MediaStats,
   ServerSystemStatus as SystemStatus, ServerUpdateStatus as UpdateStatus,
+  ServerOpsStatus as OpsStatus, ServerOpsSample as OpsSample,
   ServerSelfUpdateStatus as SelfUpdateStatus, ServerICEConfig as ICEConfig,
   ServerLegal as Legal,
 } from './rest'
@@ -29,7 +30,7 @@ export {
   decodeChatReactionResult as decodeReactionResult, decodeChatReadState as decodeReadState,
   decodeChatThread as decodeThread, decodeChatSearchResult as decodeSearchResult,
   decodeLinkpreviewPreview as decodeLinkPreview,
-  decodeServerSystemStatus as decodeSystemStatus,
+  decodeServerSystemStatus as decodeSystemStatus, decodeServerOpsStatus as decodeOpsStatus,
   decodeServerUpdateStatus as decodeUpdateStatus,
   decodeServerSelfUpdateStatus as decodeSelfUpdateStatus,
   decodeServerICEConfig as decodeICEConfig, decodeServerLegal as decodeLegal,

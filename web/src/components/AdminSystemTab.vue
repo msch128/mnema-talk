@@ -9,6 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
+import AdminOpsPanel from './AdminOpsPanel.vue'
 
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
@@ -338,5 +339,7 @@ onMounted(refresh)
         </dl>
       </div>
     </div>
+
+    <AdminOpsPanel v-if="status" />
   </section>
 </template>
