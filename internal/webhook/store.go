@@ -198,9 +198,11 @@ func rename(ctx context.Context, p *db.Pool, rec *record, name string) error {
 	})
 }
 
-func regenerate(ctx context.Context, p *db.Pool, rec *record) (string, error) {
+// regenerate makes a new token and makes actor the webhook's creator: whoever
+// holds the secret URL is whose rights every later post is checked against.
+func regenerate(ctx context.Context, p *db.Pool, rec *record, actor uuid.UUID) (string, error) {
 	token, hash := newToken()
-	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, updated_at = NOW() WHERE id = $2`, hash, rec.ID); err != nil {
+	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, created_by = $3, updated_at = NOW() WHERE id = $2`, hash, rec.ID, actor); err != nil {
 		return "", fmt.Errorf("regenerate webhook token: %w", err)
 	}
 	return token, nil
