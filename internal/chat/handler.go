@@ -929,6 +929,11 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
+	release, ok := searchSlots.acquire(auth.UserFrom(r.Context()).ID)
+	if !ok {
+		return errSearchBusy
+	}
+	defer release()
 	msgs, more, err := Search(r.Context(), h.DB, q)
 	if err != nil {
 		return err

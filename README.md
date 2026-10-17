@@ -340,9 +340,13 @@ or, in production, on a placeholder secret. Notable ones:
 - `PUBLIC_URL`: the URL browsers use; `https://` enables Secure/`__Host-` cookies.
 - `CORS_ALLOWED_ORIGINS`: extra allowed origins (defaults to `PUBLIC_URL`).
 - `TRUSTED_PROXY_CIDRS`: proxies whose `X-Forwarded-For` is trusted. The app
-  defaults to loopback only; `docker-compose.yml` adds Docker's default bridge
-  range `172.16.0.0/12`. If your reverse proxy runs on another host or in a
-  Docker network with a custom subnet, set it to that address or network.
+  defaults to loopback only, in compose too. A reverse proxy on another host or
+  in a container (or on the compose host, which reaches the app from the Docker
+  bridge gateway) must be listed here by address, otherwise all clients share
+  its IP for rate limits and login lockout. See
+  [upgrade notes](doc/upgrade.md#07x--080).
+- `PUBLISH_ADDR` (compose): host address the app port is published on,
+  `127.0.0.1` by default; `0.0.0.0` exposes it to the network.
 - `LOG_LEVEL`: `debug`, `info`, `warn` or `error` (empty = by `APP_ENV`).
 - `MEDIA_RETENTION_DAYS`: `0` (default) = never delete media automatically.
 - `API_DOCS_ENABLED`: `true` serves the API reference (Swagger UI) at `/api/docs` and the OpenAPI document at `/api/openapi.json` to signed-in members; off by default.
@@ -372,10 +376,10 @@ chat.example.com {
 - The proxy must pass the client IP in `X-Forwarded-For` (Caddy does this by
   default), and its address must be within `TRUSTED_PROXY_CIDRS`. Otherwise
   rate limiting and login lockout see only the proxy's IP. The compose file
-  trusts loopback and the Docker bridge range (`172.16.0.0/12`), which covers a
-  proxy on the same host or in a container; a proxy on another machine needs
-  its address in `TRUSTED_PROXY_CIDRS`. Don't list ranges that untrusted
-  clients can connect from: they could fake their IP.
+  trusts loopback only; list your proxy's address in `TRUSTED_PROXY_CIDRS`
+  (container IP, Docker bridge gateway for a proxy on the host, or LAN
+  address). Don't list ranges that untrusted clients can connect from: they
+  could fake their IP.
 - Voice and video do **not** go through the proxy. Forward the UDP range
   `WEBRTC_UDP_PORT_MIN`–`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) from
   your router/firewall to the host, and set `WEBRTC_NAT_1TO1_IP` to the public
@@ -403,10 +407,9 @@ network:
 | 5432 | TCP | PostgreSQL | No, Docker network only |
 | 8333 | TCP | SeaweedFS S3 API | No, Docker network only |
 
-- The compose file publishes `8080/tcp` on all host interfaces. Don't forward
-  it from the router; if the host is reachable from outside, restrict it with
-  the host firewall or change the mapping to `127.0.0.1:8080:8080` when the
-  proxy runs on the same host.
+- The compose file publishes `8080/tcp` on `127.0.0.1` only (set
+  `PUBLISH_ADDR=0.0.0.0` in `.env` to reach it from the network). Don't forward
+  it from the router.
 - If you change `WEBRTC_UDP_PORT_MIN/MAX`, forward the new range; Docker
   publishes the same range.
 - Users behind strict firewalls that block UDP can only join voice through

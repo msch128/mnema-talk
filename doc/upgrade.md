@@ -116,6 +116,52 @@ until the new release has passed your application checks.
 
 ## Version notes
 
+### 0.7.x → 0.8.0
+
+- **The compose file publishes the app port on loopback only**
+  (`127.0.0.1:${PORT:-8080}`, before: all interfaces). Set `PUBLISH_ADDR=0.0.0.0`
+  (or a LAN address) in `.env` to reach the app directly from the network.
+  A reverse proxy on the same host keeps working.
+- **`TRUSTED_PROXY_CIDRS` is empty (loopback only) in compose** (before:
+  also `172.16.0.0/12`). Requests through Docker's published port, or from a
+  proxy container, arrive from the Docker bridge, so the whole range could
+  forge `X-Forwarded-For`. **If you run a reverse proxy on another host or in
+  a container, set `TRUSTED_PROXY_CIDRS` to that proxy's address**, e.g.
+  `192.168.0.20` or the container's IP (a proxy on the compose host reaches
+  the app from the bridge gateway: `docker network inspect <project>_default`).
+  Until you do, X-Forwarded-For is ignored: nothing breaks, but all clients
+  share the proxy's address for rate limits and login lockout, and the log
+  says `ignoring X-Forwarded-For from a peer that is not in TRUSTED_PROXY_CIDRS`.
+  A deployment that still trusts a broad private range logs a startup warning.
+  Setups:
+  - Caddy or nginx on the compose host: set `PUBLISH_ADDR` unchanged
+    (loopback); the proxy reaches `127.0.0.1:8080` through Docker, so the app
+    sees the bridge gateway, not loopback. Set `TRUSTED_PROXY_CIDRS` to that
+    gateway (`docker network inspect <project>_default`, field `Gateway`).
+  - A proxy container on the same Docker network: set it to the container's
+    IP, or the network's subnet if the proxy's IP can change (the subnet holds
+    only your own containers).
+  - A proxy on another host: set `PUBLISH_ADDR` to a LAN address (or
+    `0.0.0.0` behind a firewall) and `TRUSTED_PROXY_CIDRS` to the proxy's
+    address.
+  An existing deployment with its own compose file that already sets
+  `TRUSTED_PROXY_CIDRS` (or its own default) is unaffected by this change.
+- **Owner password: 14 characters minimum** when the administrator is
+  created (`ADMIN_INITIAL_PASSWORD`) or changes their password (members keep
+  10). An existing administrator is not affected until they change it, and a
+  too-short `ADMIN_INITIAL_PASSWORD` is only logged as ignored once an
+  administrator exists.
+- **Login lockout is stricter.** After 100 failed attempts on one account
+  across addresses, only browsers that signed in to it before (a signed
+  known-device cookie, set again at the next login) are checked as usual; all
+  other devices together share about one password check per minute for the
+  account. The cap lasts at most 15 minutes and `docker restart` clears it.
+- **Signing out revokes the session** (migration `0021_revoked_sessions`).
+  Sessions issued before the upgrade stay valid until they expire.
+- **`APP_ENV=development` only listens on loopback.** `BIND_ADDR` defaults to
+  `127.0.0.1` there and any other address is refused at startup. Production,
+  staging and test are unchanged (`0.0.0.0`).
+
 ### 0.4.x → 0.5.0
 
 - **PostgreSQL 17 → 18, one manual step.** The database moves to a new

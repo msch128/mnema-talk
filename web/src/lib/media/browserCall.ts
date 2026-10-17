@@ -110,6 +110,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
     },
     roster(ids) {
       roster = rosterIds(ids, userId)
+      group?.hint(roster)
       track(flush(generation))
     },
     receive(fromUserId, wire) {

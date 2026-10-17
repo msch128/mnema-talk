@@ -22,10 +22,8 @@ func (h *Hub) statusLocked(userID uuid.UUID) string {
 	if chosen != auth.PresenceOnline {
 		return chosen
 	}
-	for c := range h.clients {
-		if c.User.ID == userID && !c.idle {
-			return auth.PresenceOnline
-		}
+	if h.active[userID] > 0 {
+		return auth.PresenceOnline
 	}
 	return auth.PresenceAway
 }
@@ -60,7 +58,14 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 		return
 	}
 	before := h.statusLocked(c.User.ID)
-	c.idle = idle
+	if c.idle != idle {
+		c.idle = idle
+		if idle {
+			h.active[c.User.ID]--
+		} else {
+			h.active[c.User.ID]++
+		}
+	}
 	after := h.statusLocked(c.User.ID)
 	h.mu.Unlock()
 	if before != after {

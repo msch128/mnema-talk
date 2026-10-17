@@ -2,6 +2,7 @@ package sfu
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"slices"
@@ -306,10 +307,10 @@ func TestSubscriberFullIntraRequestReachesPublisher(t *testing.T) {
 	publisher.join(s, roomID)
 	r := s.Room(roomID)
 	viewer := newClient(t)
+	viewer.join(s, roomID)
 	if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, true); err != nil {
 		t.Fatal(err)
 	}
-	viewer.join(s, roomID)
 	remote := waitTrack(t, viewer)
 	// Wait out the keyframe throttle after the initial subscription's PLI,
 	// then drain it so the assertion concerns only the subscriber feedback.
@@ -419,11 +420,11 @@ func TestConcurrentViewerCloseAndSubscriptionsPreservePublisher(t *testing.T) {
 			defer wg.Done()
 			<-start
 			for i := range 48 {
-				if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, i%2 == 0); err != nil {
+				if err := r.Subscribe(viewer.id, publisher.id, SourceScreen, false, i%2 == 0); err != nil && !errors.Is(err, ErrNotInRoom) {
 					errs <- err
 					return
 				}
-				if err := r.Subscribe(viewer.id, publisher.id, SourceCamera, false, i%2 != 0); err != nil {
+				if err := r.Subscribe(viewer.id, publisher.id, SourceCamera, false, i%2 != 0); err != nil && !errors.Is(err, ErrNotInRoom) {
 					errs <- err
 					return
 				}
@@ -463,10 +464,10 @@ func TestConcurrentViewerCloseAndSubscriptionsPreservePublisher(t *testing.T) {
 	// A new viewer must receive the still-live publisher's two independent
 	// sources after the closed viewers' offers, answers and removals settle.
 	replacement := newClient(t)
+	replacement.join(s, roomID)
 	if err := r.Subscribe(replacement.id, publisher.id, SourceScreen, false, true); err != nil {
 		t.Fatal(err)
 	}
-	replacement.join(s, roomID)
 	streams := map[string]bool{}
 	for range 2 {
 		streams[awaitTrack(replacement).StreamID()] = true
@@ -507,5 +508,26 @@ func TestICEReportsDisconnectedAfterRealClientTransportCloses(t *testing.T) {
 				return
 			}
 		}
+	}
+}
+
+func TestSubscribeRequiresAPeerOfTheRoom(t *testing.T) {
+	s := newTestSFU(t)
+	roomID := uuid.New()
+	publisher := newClient(t)
+	publisher.join(s, roomID)
+	r := s.Room(roomID)
+	stranger := uuid.New()
+	if err := r.Subscribe(stranger, publisher.id, SourceScreen, false, true); !errors.Is(err, ErrNotInRoom) {
+		t.Fatalf("Subscribe by a stranger = %v", err)
+	}
+	if err := r.SetScreenQuality(stranger, publisher.id, 0); err == nil {
+		t.Fatal("SetScreenQuality by a stranger accepted")
+	}
+	r.mu.RLock()
+	_, kept := r.subs[stranger]
+	r.mu.RUnlock()
+	if kept {
+		t.Fatal("a stranger got a subscription record")
 	}
 }

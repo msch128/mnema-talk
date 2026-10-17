@@ -97,7 +97,7 @@ func Reset(t testing.TB, p *db.Pool) {
 func reset(p *db.Pool) error {
 	ctx := context.Background()
 	if _, err := p.Exec(ctx, `
-		TRUNCATE message_reactions, media, messages, channels, categories, invites, users
+		TRUNCATE message_reactions, media, messages, channels, categories, invites, users, revoked_sessions
 		RESTART IDENTITY CASCADE`); err != nil {
 		return err
 	}

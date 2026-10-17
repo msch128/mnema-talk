@@ -52,7 +52,7 @@ func (h *Hub) NativeMetadataWebSocketHandler(a NativeAuthenticator) http.Handler
 		principal := original.Principal()
 		c := newClient(h, conn, principal.User(), principal.TokenVersion())
 		c.native = newNativeSocketState(a, original)
-		if !h.registerPending(c) {
+		if ok, _ := h.registerPending(c); !ok {
 			c.shutdown()
 			c.close()
 			return

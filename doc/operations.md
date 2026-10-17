@@ -32,9 +32,10 @@ General rules:
 | `APP_ENV` | `development` (compose: `production`) | `production`, `staging`, `development` or `test`; `prod`/`dev` are aliases. `production`/`staging` enforce strong secrets, enable HSTS and log at `info`. |
 | `PUBLIC_URL` | `http://localhost:8080` | Absolute `http(s)` URL browsers use. `https://` turns on `Secure` and `__Host-` cookies. Trailing slash and default ports are dropped so it matches the browser's `Origin`. |
 | `CORS_ALLOWED_ORIGINS` | `PUBLIC_URL` | Comma-separated origins allowed for API and WebSocket requests (CSRF origin check). Add `http://localhost:3000` for the Vite dev server. |
-| `TRUSTED_PROXY_CIDRS` | `127.0.0.0/8,::1/128` (compose: plus `172.16.0.0/12`) | CIDRs or IPs whose `X-Forwarded-For` is trusted. Each entry must parse. See [Reverse proxy](#reverse-proxy-and-trusted_proxy_cidrs). |
+| `TRUSTED_PROXY_CIDRS` | `127.0.0.0/8,::1/128` (compose: the same) | CIDRs or IPs whose `X-Forwarded-For` is trusted. Each entry must parse. See [Reverse proxy](#reverse-proxy-and-trusted_proxy_cidrs). |
 | `PORT` | `8080` | HTTP port, 1–65535. In compose the container always listens on 8080; `PORT` there is the **host** port of the mapping. |
-| `BIND_ADDR` | `0.0.0.0` | Listen address (outside compose). |
+| `BIND_ADDR` | `127.0.0.1` in development, else `0.0.0.0` | Listen address (outside compose). `APP_ENV=development` refuses any non-loopback address. |
+| `PUBLISH_ADDR` | `127.0.0.1` | Compose only: host address the app port is published on. |
 | `LOG_LEVEL` | empty | `debug`, `info`, `warn` or `error`. Empty = `info` in production/staging, `debug` otherwise. `debug` adds voice connection details (offered addresses, browser diagnostics). |
 
 ### Sessions and admin
@@ -182,15 +183,16 @@ untrusted hop). Rate limits and the login lockout depend on that address.
 - **App outside Docker, proxy on the same host**: the default (loopback) is
   enough.
 - **Compose, proxy on the host or in a container**: requests arrive from the
-  Docker bridge; the compose default `127.0.0.0/8,::1/128,172.16.0.0/12`
-  covers Docker's default bridge range.
+  Docker bridge (gateway address for a proxy on the host, container IP for a
+  proxy container), not from loopback. Set `TRUSTED_PROXY_CIDRS` to that one
+  address. Without it X-Forwarded-For is ignored and the log says so.
 - **Proxy on another LAN host or a custom Docker subnet**: set
   `TRUSTED_PROXY_CIDRS` to its address or network, e.g. `192.168.0.20`.
 - Never list ranges untrusted clients can connect from, and don't expose port
   8080 directly while private ranges are trusted: anyone connecting from a
-  trusted range could set their own `X-Forwarded-For`. Publish only the
-  proxy (bind the app to `127.0.0.1:8080:8080` when the proxy is on the same
-  host, or firewall it).
+  trusted range could set their own `X-Forwarded-For`. The compose file
+  publishes the app on `127.0.0.1` by default (`PUBLISH_ADDR`); a startup
+  warning flags broad trusted ranges on a non-loopback listener.
 
 `PUBLIC_URL` must be the `https://` URL users open; otherwise the CSRF origin
 check rejects their requests and cookies lose `Secure`.
@@ -551,6 +553,17 @@ port range, or `webrtc sfu unavailable, voice disabled` when the SFU could
 not start (e.g. the UDP range is in use).
 
 ## Troubleshooting
+
+### The Owner cannot sign in: "too many requests"
+
+Repeated wrong passwords lock a client address (1, 5, then 30 minutes). Many
+wrong guesses on one account from many addresses switch on an account-wide
+cap: while it is on, browsers that signed in to the account before (they hold
+a signed `mnema_dev_*` cookie, valid a year, independent of the IP) sign in
+normally, and every other device together gets about one password check per
+minute for the whole account. The cap lasts at most 15 minutes. All of this state is held in
+memory, so `docker restart mnema-talk` clears every lockout at once. Sign in
+from a browser you used before, or wait.
 
 ### Nobody can join voice, or it connects and drops after a few seconds
 

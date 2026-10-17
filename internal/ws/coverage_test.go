@@ -269,7 +269,7 @@ func TestPendingRegistrationAndPromotionRequireLiveHandshake(t *testing.T) {
 		t.Fatal("promoted client without a pending handshake")
 	}
 	h.Close()
-	if h.registerPending(c) {
+	if ok, _ := h.registerPending(c); ok {
 		t.Fatal("pending handshake accepted by closed hub")
 	}
 }

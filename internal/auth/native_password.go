@@ -26,7 +26,7 @@ func (s *NativeSessions) changePasswordAndReissue(ctx context.Context, expected 
 	if expected.user.ID == uuid.Nil || expected.familyID == uuid.Nil || expected.instanceID == uuid.Nil || control == nil {
 		return IssuedNative{}, ErrNativeUnauthorized
 	}
-	if err := ValidatePassword(next); err != nil {
+	if err := ValidatePasswordFor(expected.user.Role, next); err != nil {
 		return IssuedNative{}, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)

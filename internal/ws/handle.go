@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
@@ -41,23 +42,32 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 		h.setIdle(c, p.Idle)
 
 	case "voice_join":
+		if !h.voiceGate.take(c.User.ID, time.Now()) {
+			// Over the join/leave allowance: refused, and the client ends
+			// the attempt on voice_kicked.
+			metrics.WSDropped.With("voice_churn").Inc()
+			c.SendEvent("voice_kicked", map[string]any{"channel_id": p.ChannelID})
+			return
+		}
 		if ch, ok := h.voiceChannel(ctx, p.ChannelID); ok {
 			h.joinVoice(c, ch)
 		}
 
 	case "voice_leave":
+		// A leave is always honoured, but it spends from the same allowance
+		// as joins, so leave/join cycles stay bounded.
+		h.voiceGate.take(c.User.ID, time.Now())
 		h.leaveCurrentVoice(c)
 
 	case "typing":
 		if !c.allowTyping(p.ChannelID, time.Now()) {
 			return
 		}
-		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil && c.nativeLive() {
-			// Only someone who could send a message shows as typing, and
-			// only to those who can see the channel.
-			if snap, ok := h.permSnapshot(ch.ID); ok && c.can(snap, ch.ID, perm.ViewChannel|perm.SendMessages) {
-				c.emitApplicationEvent("typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID}, true, nil, ch.ID)
-			}
+		// Only someone who could send a message shows as typing, and only to
+		// those who can see the channel.
+		if snap, ok := h.permSnapshot(p.ChannelID); ok && c.nativeLive() && h.channelKnown(ctx, snap, p.ChannelID) &&
+			c.can(snap, p.ChannelID, perm.ViewChannel|perm.SendMessages) {
+			c.emitApplicationEvent("typing", map[string]any{"channel_id": p.ChannelID, "user_id": c.User.ID}, true, nil, p.ChannelID)
 		}
 
 	case "voice_speaking":
@@ -147,4 +157,15 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	case "media_handshake":
 		c.handleMediaHandshake(payload)
 	}
+}
+
+// channelKnown reports whether the channel exists. The permission snapshot
+// knows which do, so no query is needed per typing notice; without a
+// permission model (tests) the database is asked.
+func (h *Hub) channelKnown(ctx context.Context, snap *perm.Snapshot, ch uuid.UUID) bool {
+	if snap == nil {
+		_, err := chat.LoadChannel(ctx, h.DB, ch)
+		return err == nil
+	}
+	return snap.KnowsChannel(ch)
 }

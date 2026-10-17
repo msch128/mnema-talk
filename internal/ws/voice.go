@@ -139,6 +139,12 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	if cur := c.currentVoice(); cur != nil {
 		if *cur == ch.ID {
 			rejoin = true
+			// Already in this room with a live media connection: nothing to
+			// renegotiate. (A client that wants a fresh connection leaves
+			// first, or reconnects its socket.)
+			if h.SFU != nil && c.peer().Healthy() {
+				return
+			}
 		} else {
 			h.leaveVoiceLocked(c, *cur)
 		}
@@ -450,27 +456,6 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 			h.addVoiceTime(userID, chID, time.Since(since))
 		}
 	}
-}
-
-// addVoiceTime adds one finished stay in a voice room to the user's total and
-// tells everyone the new total.
-func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
-	secs := int64(d / time.Second)
-	if h.DB == nil || secs <= 0 {
-		return
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	var total int64
-	err := h.DB.QueryRow(ctx, `UPDATE users SET voice_seconds = voice_seconds + $1 WHERE id = $2 RETURNING voice_seconds`,
-		secs, userID).Scan(&total)
-	if err != nil {
-		slog.Warn("record voice time", "user", userID, "err", err)
-		return
-	}
-	// A total that just grew by a stay in a Talk reveals that stay, so only
-	// those who can view that Talk learn it.
-	h.BroadcastChannel(chID, "user_stats", map[string]any{"user_id": userID, "voice_seconds": total})
 }
 
 // startGrace keeps a user listed in a room for VoiceGrace, then removes them

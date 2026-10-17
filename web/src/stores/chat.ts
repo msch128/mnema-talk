@@ -681,13 +681,21 @@ export const useChatStore = defineStore('chat', () => {
       }
     }
 
-    socket.onclose = () => {
+    socket.onclose = (event?: { code?: number }) => {
       if (!currentSocket()) return
       suppressedPresence.clear()
       isConnected.value = false
       stopPingHeartbeat()
       ws.value = null
       if (!currentAccount()) return
+      // The server closed this tab for a newer one of the same account (too
+      // many connections). Reconnecting at once would evict another tab in
+      // turn; this one reconnects when it is shown again (visibilitychange).
+      if (event?.code === 4001) {
+        reconnectAttempt.value = 0
+        nextRetryAt.value = 0
+        return
+      }
       // Exponential backoff; a revoked session (401) stops the loop.
       scheduleReconnect()
     }

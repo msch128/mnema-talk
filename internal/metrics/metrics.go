@@ -252,7 +252,11 @@ var (
 	// SFUIngressBytes/Packets are RTP received from publishers; the Egress
 	// pair is RTP written to subscribers (one packet counts once per viewer).
 	SFUIngressBytes, SFUIngressPackets Counter
-	SFUEgressBytes, SFUEgressPackets   Counter
+	// SFUIngressDropped counts publisher packets dropped over the per-track
+	// rate limit (reason "rate") and publishers closed for sustained
+	// abuse (reason "closed").
+	SFUIngressDropped                = newVec("mnema_sfu_ingress_dropped_total", "Publisher packets dropped over the ingress limit, by reason", "reason")
+	SFUEgressBytes, SFUEgressPackets Counter
 	// SFUNackRequests counts NACK feedback messages received from
 	// subscribers, SFUNackPackets the packets they asked to resend.
 	SFUNackRequests, SFUNackPackets Counter
@@ -317,6 +321,7 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_keyframe_requests_total", "PLI and FIR feedback messages received", SFUKeyframeRequests.Load())
 	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers", SFULayerSwitches.Load())
 	SFUICE.write(w)
+	SFUIngressDropped.write(w)
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
 	S3Operations.write(w)
 }

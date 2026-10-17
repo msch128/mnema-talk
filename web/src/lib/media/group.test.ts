@@ -27,6 +27,7 @@ async function opened(userId: string) {
 // same, since the roster arrives before the handshake that depends on it.
 async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uint8Array[], roster?: string[], tally?: { wires: number }) {
   const pending = wires.map(wire => ({ from, wire }))
+  if (roster) for (const [id, group] of groups) if (roster.includes(id)) group.hint(roster)
   if (tally) tally.wires += wires.length
   const seen = new Set<string>()
   while (pending.length) {
@@ -304,6 +305,7 @@ describe('media group', () => {
     const carol = await opened(carolId)
     const offer = await carol.sync([aliceId, bobId, carolId])
     const keyPackage = wireAt(offer.wires, 0)
+    await bob.sync([aliceId, bobId, carolId])
     expect((await bob.receive(carolId, keyPackage)).wires).toEqual([])
     await alice.sync([aliceId, bobId, carolId])
     const added = await alice.receive(carolId, keyPackage)
@@ -452,6 +454,8 @@ describe('a member who starts over inside the grace period', () => {
 
   async function settle(groups: Map<string, MediaGroup>, roster: string[]) {
     const keys = new Map<string, { epoch: number | null, key: EpochKeys | null }>()
+    // The roster reaches everyone before any handshake that depends on it.
+    for (const group of groups.values()) group.hint(roster)
     for (let round = 0; round < 3; round++) {
       for (const [id, group] of groups) {
         const step = await group.sync(roster)
@@ -651,17 +655,59 @@ describe('a member who missed a commit', () => {
     expect((await alice.recover([bobId, aliceId])).wires).toEqual([])
   }, 30_000)
 
-  it('drops its own group when a lower member it does not hold sends a welcome', async () => {
-    const bob = await opened(bobId)
-    expect((await bob.sync([bobId])).epoch).toBe(0)
+  async function laterPair() {
     const carol = await opened(carolId)
-    const offer = await carol.sync([aliceId, carolId])
+    const dave = await opened(daveId)
+    const groups = new Map([[carolId, carol], [daveId, dave]])
+    await carol.sync([carolId])
+    await deliver(groups, daveId, (await dave.sync([carolId, daveId])).wires, [carolId, daveId])
+    await carol.sync([carolId, daveId])
+    await dave.sync([carolId, daveId])
+    return { carol, dave }
+  }
+  const ownPackage = (group: MediaGroup) => mls.encodeMlsMessage({ version: 'mls10', wireformat: 'mls_key_package', keyPackage: (group as unknown as { own: { publicPackage: KeyPackage } }).own.publicPackage })
+
+  it('keeps its group when a lower member outside it sends a welcome that is not for it', async () => {
+    const { carol, dave } = await laterPair()
+    const before = (await carol.sync([aliceId, carolId, daveId])).epoch
+    const stranger = await opened(bobId)
+    const offer = await stranger.sync([aliceId, bobId])
     const welcome = await welcomeFrom(aliceId, mediaGroupId(channelId) as Uint8Array, wireAt(offer.wires, 0))
-    const step = await bob.receive(aliceId, welcome)
-    expect(step.key).toBeNull()
-    await bob.close()
-    await carol.close()
+    for (let i = 0; i < 20; i++) {
+      const step = await carol.receive(aliceId, welcome)
+      expect(step.epoch).toBe(before)
+      expect(step.key).not.toBeNull()
+    }
+    // Neither does a key package or a parseable handshake of any kind from outside the group.
+    expect((await carol.receive(aliceId, wireAt(offer.wires, 0))).key).not.toBeNull()
+    const alone = await opened(bobId)
+    expect((await alone.sync([bobId])).epoch).toBe(0)
+    expect((await alone.receive(aliceId, welcome)).key).not.toBeNull()
+    for (const group of [carol, dave, stranger, alone]) await group.close()
   }, 30_000)
+
+  describe('a rival welcome', () => {
+    afterEach(() => { vi.useRealTimers() })
+
+    it('replaces a group others are in only when it opens with my own package, and not more than rarely per sender', async () => {
+      const { carol, dave } = await laterPair()
+      const roster = [aliceId, carolId, daveId]
+      const before = (await carol.sync(roster)).epoch
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.now() })
+      const channel = mediaGroupId(channelId) as Uint8Array
+      // A welcome for somebody else's package spends the sender's allowance and changes nothing.
+      const stranger = await opened(bobId)
+      const bogus = await welcomeFrom(aliceId, channel, wireAt((await stranger.sync([aliceId, bobId])).wires, 0))
+      expect((await carol.receive(aliceId, bogus)).epoch).toBe(before)
+      const real = await welcomeFrom(aliceId, channel, ownPackage(carol))
+      expect((await carol.receive(aliceId, real)).epoch).toBe(before)
+      // Later, the same sender proves itself.
+      vi.setSystemTime(Date.now() + 61_000)
+      const joined = await carol.receive(aliceId, real)
+      expect(joined.verification?.members).toEqual([aliceId, carolId])
+      for (const group of [carol, dave, stranger]) await group.close()
+    }, 30_000)
+  })
 
   it('starts over when a commit for a later epoch arrives', async () => {
     const roster = [aliceId, bobId, carolId]
@@ -702,6 +748,8 @@ describe('a member who missed a commit', () => {
     const carol = await opened(carolId)
     const offer = await carol.sync([aliceId, bobId, carolId])
     await alice.sync([aliceId, bobId, carolId])
+    await bob.sync([aliceId, bobId, carolId])
+    await bob.receive(carolId, wireAt(offer.wires, 0))
     const added = await alice.receive(carolId, wireAt(offer.wires, 0))
     const commit = wireAt(added.wires, 1)
     await bob.receive(aliceId, commit)

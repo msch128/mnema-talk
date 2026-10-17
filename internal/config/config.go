@@ -109,6 +109,54 @@ func isPlaceholder(v string) bool {
 // ranges could spoof X-Forwarded-For.
 var defaultTrustedProxies = "127.0.0.0/8,::1/128"
 
+// IsLoopbackAddr reports whether host is "localhost" or a loopback IP.
+func IsLoopbackAddr(host string) bool {
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+// resolveBindAddr applies the BIND_ADDR default and the development rule.
+// Development logs the generated admin password and uses a random JWT
+// secret, so it must never face a network: it defaults to loopback and
+// refuses any other address. All other environments default to 0.0.0.0.
+func (c *Config) resolveBindAddr() error {
+	dev := c.AppEnv == "development" || c.AppEnv == "dev"
+	if c.BindAddr == "" {
+		if dev {
+			c.BindAddr = "127.0.0.1"
+		} else {
+			c.BindAddr = "0.0.0.0"
+		}
+		return nil
+	}
+	if dev && !IsLoopbackAddr(c.BindAddr) {
+		return fmt.Errorf("BIND_ADDR=%s is not allowed with APP_ENV=development: development logs the generated admin password and uses a random JWT secret, so it may only listen on loopback; set APP_ENV=production (with real secrets) to listen on a network address", c.BindAddr)
+	}
+	return nil
+}
+
+// BroadTrustedProxies lists TRUSTED_PROXY_CIDRS entries that are not
+// loopback and cover more than a small network (IPv4 shorter than /24, IPv6
+// shorter than /64). Any host in such a range can forge X-Forwarded-For.
+func (c *Config) BroadTrustedProxies() []string {
+	var out []string
+	for _, p := range c.TrustedProxies {
+		_, n, err := net.ParseCIDR(p)
+		if err != nil || n.IP.IsLoopback() {
+			continue
+		}
+		ones, bits := n.Mask.Size()
+		if (bits == 32 && ones < 24) || (bits == 128 && ones < 64) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.
 const maxSessionExpiryHours = 8760
 
@@ -209,7 +257,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 
 	cfg := &Config{
 		Port:                       strconv.Itoa(int(httpPort)),
-		BindAddr:                   get("BIND_ADDR", "0.0.0.0"),
+		BindAddr:                   get("BIND_ADDR", ""),
 		AppEnv:                     strings.ToLower(get("APP_ENV", "development")),
 		LogLevel:                   strings.ToLower(get("LOG_LEVEL", "")),
 		PublicURL:                  normalizeURL(get("PUBLIC_URL", "http://localhost:8080")),
@@ -258,6 +306,9 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 func (c *Config) validate(portMin, portMax uint16) error {
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
+	}
+	if err := c.resolveBindAddr(); err != nil {
+		return err
 	}
 	if isPlaceholder(c.AdminInitialPassword) {
 		return fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
