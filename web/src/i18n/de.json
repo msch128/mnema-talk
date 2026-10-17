@@ -1230,7 +1230,11 @@
       "webhook": "Webhooks",
       "outgoing_webhook": "Ausgehende Webhooks",
       "media": "Medien",
-      "system": "System"
+      "system": "System",
+      "message": "Nachrichten",
+      "voice": "Talk-Anwesenheit",
+      "auth": "Anmeldungen",
+      "settings": "Einstellungen"
     },
     "actions": {
       "role": {
@@ -1290,6 +1294,25 @@
       },
       "system": {
         "update": "Update gestartet"
+      },
+      "message": {
+        "delete": "Nachricht gelöscht",
+        "edit": "Nachricht bearbeitet"
+      },
+      "voice": {
+        "join": "Talk betreten",
+        "leave": "Talk verlassen"
+      },
+      "auth": {
+        "login": "Angemeldet",
+        "login_failed": "Anmeldung fehlgeschlagen",
+        "login_locked": "Anmeldung gesperrt",
+        "register": "Registriert",
+        "logout_all": "Überall abgemeldet",
+        "password_change": "Passwort geändert"
+      },
+      "settings": {
+        "upload_limit": "Upload-Limit geändert"
       }
     }
   },

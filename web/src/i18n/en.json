@@ -1230,7 +1230,11 @@
       "webhook": "Webhooks",
       "outgoing_webhook": "Outgoing webhooks",
       "media": "Media",
-      "system": "System"
+      "system": "System",
+      "message": "Messages",
+      "voice": "Talk presence",
+      "auth": "Sign-ins",
+      "settings": "Settings"
     },
     "actions": {
       "role": {
@@ -1290,6 +1294,25 @@
       },
       "system": {
         "update": "Update started"
+      },
+      "message": {
+        "delete": "Message deleted",
+        "edit": "Message edited"
+      },
+      "voice": {
+        "join": "Joined Talk",
+        "leave": "Left Talk"
+      },
+      "auth": {
+        "login": "Signed in",
+        "login_failed": "Sign-in failed",
+        "login_locked": "Sign-in blocked",
+        "register": "Registered",
+        "logout_all": "Signed out everywhere",
+        "password_change": "Password changed"
+      },
+      "settings": {
+        "upload_limit": "Upload limit changed"
       }
     }
   },

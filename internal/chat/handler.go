@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"github.com/msch128/mnema-talk/internal/audit"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -31,6 +32,8 @@ type Handler struct {
 	// channel limits (tests); the router always sets it, and without it the
 	// admin routes stay Owner-only.
 	Perms *perm.Service
+	// Audit records message deletions and edits; nil records nothing.
+	Audit *audit.Log
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -332,9 +335,11 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	userID := auth.UserFrom(r.Context()).ID
+	before := h.snapshotMessage(r.Context(), msgID, false)
 	if err := EditMessage(ctx, h.DB, h.Online, msgID, userID, content); err != nil {
 		return err
 	}
+	h.auditEdit(r.Context(), msgID, before, content)
 	msg, err := GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
@@ -376,10 +381,12 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if !p.Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
+	snap := h.snapshotMessage(r.Context(), msgID, true)
 	keys, err := DeleteMessageAs(r.Context(), h.DB, msgID, user, p.Has(perm.ManageMessages))
 	if err != nil {
 		return err
 	}
+	h.auditDelete(r.Context(), user, msgID, snap)
 	h.deleteObjects(r.Context(), keys)
 	h.Events.BroadcastChannel(ref.ChannelID, "message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)

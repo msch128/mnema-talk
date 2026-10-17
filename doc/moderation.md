@@ -32,6 +32,20 @@ and fails when an admin route is missing from the table; an unlisted route is
 still recorded under a generic `admin.<method>` action. Refused or failed
 requests leave no entry. Reading the log is not recorded.
 
+### Events besides admin actions
+
+| Action | When | What it holds |
+|---|---|---|
+| `message.delete` | A message is deleted, by its author or a moderator | The **full text**, the attachment names, types and sizes (not the files), author, channel, send time, `moderator` (true when someone else deleted it) and the thread replies (author and text, up to 50) |
+| `message.edit` | An author edits a message | Text `before` and `after`, author, channel |
+| `voice.join`, `voice.leave` | A member enters or leaves a Talk | Member and Talk with the time. A reload within the grace period is neither. High volume on a busy server: filter by the *Talk presence* group |
+| `auth.login` | Successful sign-in (browser and native) | The member |
+| `auth.login_failed`, `auth.login_locked` | A wrong password, or a blocked attempt, for an **existing** account | The member. At most one entry per account and kind per minute, and no address, password or typed name; a name that is no account is not stored at all |
+| `auth.register`, `auth.password_change`, `auth.logout_all` | Own-account events | The member |
+
+Text channels have no membership (who may see one follows from roles and
+overwrites, which are audited), so there is no join entry for them.
+
 ### What is never stored
 
 Passwords, tokens, secrets, hashes, invite codes, cookies, authorization

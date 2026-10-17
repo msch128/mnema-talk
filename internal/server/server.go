@@ -130,9 +130,11 @@ func NewRouter(d Deps) (*Router, error) {
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
 	authH.Perms = permSvc
+	authH.Audit = auditLog
+	authH.Audit = auditLog
 	// `mnema-talk unlock` runs in another process and queues requests here.
 	go authH.RunUnlockWorker(ctx, auth.UnlockPollInterval)
-	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc}
+	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc, Audit: auditLog}
 	rolesH := &roles.Handler{Perms: permSvc, Events: pub}
 	if d.Store != nil {
 		chatH.Objects = d.Store
@@ -152,6 +154,7 @@ func NewRouter(d Deps) (*Router, error) {
 	ssrfPolicy := &ssrf.Policy{Allow: cfg.WebhookAllowPrivateTargets}
 	outgoing := webhook.NewDispatcher(d.DB, ssrf.NewClient(ssrf.NewDialer(ssrfPolicy), 10*time.Second), d.Version)
 	hub.Tap = outgoing.Observe
+	hub.Presence = auditPresence(ctx, auditLog, d.DB)
 	go outgoing.Run(ctx)
 	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})
 
