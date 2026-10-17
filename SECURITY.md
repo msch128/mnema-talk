@@ -182,8 +182,11 @@ locally instead (`make up` or `make dev`).
   waiting. Receivers take such a commit from any member in the group but at
   most twice per rotation period per member, and only if the result differs
   from the old tree in nothing but the sender's own leaf encryption key (same
-  identity, same signature key, same size, no other leaf touched); anything
-  else is ignored without discarding the group. If two
+  identity, same signature key, no other leaf touched); anything else is
+  ignored without discarding the group. The same check applies to every
+  commit, the committer's included: no commit may change the identity or
+  signature key of a leaf it does not remove, or the encryption key of a leaf
+  other than the sender's. If two
   commits for the same epoch still meet (a renewal with the committer's commit
   or with another renewal), the committer's wins and, between renewals, the
   lower id's; a member that took the loser goes back to the state it kept for

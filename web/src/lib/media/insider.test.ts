@@ -175,26 +175,28 @@ describe('what a member may do to the group with a commit', () => {
 
   describe('a self-update that changes more than its sender\'s encryption key', () => {
     /** The renewal bob would send, built from a state whose own leaf was doctored first. */
-    async function doctored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>) {
+    async function doctored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>, sender: string) {
       const trioNow = await trio()
-      const inside = trioNow.bob as unknown as Inside
-      const index = leafOf(trioNow.bob, bobId) * 2
+      const who = sender === aliceId ? trioNow.alice : trioNow.bob
+      const inside = who as unknown as Inside
+      const index = leafOf(who, sender) * 2
       const node = inside.state.ratchetTree[index] as unknown as { leaf: Record<string, unknown> }
       const original = { ...node.leaf }
       const signer = inside.state.signaturePrivateKey
       await change(node.leaf, inside.cs, inside.state)
-      const wire = await forged(trioNow.bob, [])
+      const wire = await forged(who, [])
       Object.assign(node.leaf, original)
       inside.state.signaturePrivateKey = signer
       return { ...trioNow, wire }
     }
 
-    async function ignored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>) {
-      const { groups, alice, carol, wire } = await doctored(change)
-      const epoch = (await alice.sync(roster)).epoch
-      for (const group of [alice, carol]) {
+    async function ignored(change: (leaf: Record<string, unknown>, cs: mls.CiphersuiteImpl, state: mls.ClientState) => Promise<void>, sender = bobId) {
+      const { groups, wire } = await doctored(change, sender)
+      const epoch = (await groups.get(carolId)?.sync(roster))?.epoch
+      for (const [id, group] of groups) {
+        if (id === sender) continue
         group.hint(roster)
-        const step = await group.receive(bobId, wire)
+        const step = await group.receive(sender, wire)
         expect(step.epoch).toBe(epoch)
         expect(step.key).not.toBeNull()
       }
@@ -215,6 +217,17 @@ describe('what a member may do to the group with a commit', () => {
       })
     }, 60_000)
 
+    it('is ignored from the committer too, whose rotation carries a path as well', async () => {
+      await ignored(async (leaf) => {
+        leaf.credential = { credentialType: 'basic', identity: new TextEncoder().encode(carolId) }
+      }, aliceId)
+      await ignored(async (leaf, cs, state) => {
+        const pair = await cs.signature.keygen()
+        leaf.signaturePublicKey = pair.publicKey
+        state.signaturePrivateKey = pair.signKey
+      }, aliceId)
+    }, 60_000)
+
     it('is a renewal only when nothing but the sender\'s own encryption key moved', async () => {
       const { groups, bob, carol } = await trio()
       const before = (bob as unknown as Inside).state
@@ -223,14 +236,19 @@ describe('what a member may do to the group with a commit', () => {
         mutate(tree)
         return { ...before, ratchetTree: tree }
       }
-      const leaf = (tree: mls.ClientState['ratchetTree'], at: number) => (tree[at * 2] as { leaf: { hpkePublicKey: Uint8Array } }).leaf
+      const leaf = (tree: mls.ClientState['ratchetTree'], at: number) => (tree[at * 2] as unknown as { leaf: { hpkePublicKey: Uint8Array, credential: mls.Credential, signaturePublicKey: Uint8Array } }).leaf
       const mine = leafOf(bob, bobId)
       expect(onlyRenewsLeaf(before, before, mine)).toBe(true)
       expect(onlyRenewsLeaf(before, clone(tree => { leaf(tree, mine).hpkePublicKey = new Uint8Array(32).fill(9) }), mine)).toBe(true)
       // Another leaf's encryption key moved.
       expect(onlyRenewsLeaf(before, clone(tree => { leaf(tree, leafOf(carol, carolId)).hpkePublicKey = new Uint8Array(32).fill(9) }), mine)).toBe(false)
-      // The tree changed size.
-      expect(onlyRenewsLeaf(before, clone(tree => { tree.pop() }), mine)).toBe(false)
+      // A leaf went missing, or took another identity, or another signature key.
+      const carolAt = leafOf(carol, carolId)
+      expect(onlyRenewsLeaf(before, clone((tree) => { tree[carolAt * 2] = undefined }), mine)).toBe(false)
+      expect(onlyRenewsLeaf(before, clone((tree) => { leaf(tree, carolAt).credential = { credentialType: 'basic', identity: new TextEncoder().encode(aliceId) } }), mine)).toBe(false)
+      expect(onlyRenewsLeaf(before, clone((tree) => { leaf(tree, carolAt).signaturePublicKey = new Uint8Array(32) }), mine)).toBe(false)
+      // ... unless the commit removed that leaf.
+      expect(onlyRenewsLeaf(before, clone((tree) => { tree[carolAt * 2] = undefined }), mine, new Set([carolAt]))).toBe(true)
       await closeAll(groups.values())
     }, 60_000)
   })

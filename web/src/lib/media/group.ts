@@ -177,19 +177,20 @@ function treeLeafSigner(state: ClientState, id: string): Uint8Array | null {
 }
 
 /**
- * `after` is `before` with nothing changed but the HPKE key of the leaf at
- * `index`: same size, every leaf keeps its identity, signature key and
- * position, and no other leaf's HPKE key moved. This is all a member's
- * renewal of its own leaf may do.
+ * What a commit may do to the leaves that are already there: every leaf of
+ * `before` the commit does not remove (or replace) is still at its position
+ * with its identity and signature key, and only the sender's own HPKE key (the
+ * leaf at `index`) may have changed. The committer's path commit and a
+ * member's renewal alike can change nothing else; leaves the commit adds are
+ * checked against the roster and the relayed key packages separately.
  */
-export function onlyRenewsLeaf(before: ClientState, after: ClientState, index: number): boolean {
-  if (before.ratchetTree.length !== after.ratchetTree.length) return false
-  const same = leafIdentities(before).join(',') === leafIdentities(after).join(',')
-  if (!same || !keepsEveryLeaf(before, after)) return false
+export function onlyRenewsLeaf(before: ClientState, after: ClientState, index: number, removed: ReadonlySet<number> = new Set()): boolean {
   return before.ratchetTree.every((node, i) => {
-    if (!node || node.nodeType !== 'leaf' || i % 2 !== 0 || i === index * 2) return true
+    if (!node || node.nodeType !== 'leaf' || i % 2 !== 0 || removed.has(i / 2)) return true
     const next = after.ratchetTree[i]
-    return !!next && next.nodeType === 'leaf' && sameBytes(node.leaf.hpkePublicKey, next.leaf.hpkePublicKey)
+    if (!next || next.nodeType !== 'leaf' || credentialIdentity(next.leaf.credential) !== credentialIdentity(node.leaf.credential)) return false
+    if (!sameBytes(node.leaf.signaturePublicKey, next.leaf.signaturePublicKey)) return false
+    return i === index * 2 || sameBytes(node.leaf.hpkePublicKey, next.leaf.hpkePublicKey)
   })
 }
 
@@ -255,6 +256,8 @@ export class MediaGroup {
   /** A welcome from a lower id outside my group may replace it this rarely per sender. */
   /** The roster as last announced, ahead of what the queue has handled. */
   private hinted = new Set<string>()
+  /** The leaves removed by the commit the rules last accepted: all others must keep identity and signature key. */
+  private vetted: ReadonlySet<number> = new Set()
   private readonly rivals = new Backoff(RIVAL_BASE_MS, RIVAL_MAX_MS)
   private closed = false
   private readonly swaps = new Backoff(SWAP_BASE_MS, BACKOFF_MAX_MS)
@@ -733,13 +736,14 @@ export class MediaGroup {
         if (processed.actionTaken === 'reject') return this.step()
         // Only a commit that verified against this group's tree shows its member alive.
         this.alive.set(from, clock.now())
+        // Every commit funnels through this: nobody's identity or signature key may change, and no
+        // leaf but the sender's own may get a new encryption key, except leaves the commit removes.
+        if (!onlyRenewsLeaf(previous, processed.newState, members?.get(from) as number, this.vetted)) {
+          wipeConsumed(processed.consumed)
+          this.wipeRejected(processed.newState)
+          return this.step()
+        }
         if (isUpdate) {
-          // Only the sender's own HPKE key may have changed: not its identity, its signature key or any other leaf.
-          if (!onlyRenewsLeaf(previous, processed.newState, members?.get(from) as number)) {
-            wipeConsumed(processed.consumed)
-            this.wipeRejected(processed.newState)
-            return this.step()
-          }
           this.updates.set(from, clock.now())
           return this.adoptUpdate(previous, processed.newState, processed.consumed, from)
         }
@@ -807,7 +811,7 @@ export class MediaGroup {
       const processed = await processPublicMessage(saved.state, message, emptyPskIndex, this.cs, this.validator(saved.state, from))
       const content = message.content
       const empty = content.contentType === 'commit' && content.commit.proposals.length === 0
-      const renews = !empty || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number)
+      const renews = processed.actionTaken === 'reject' || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number, this.vetted)
       const wins = processed.actionTaken !== 'reject' && renews && (!empty || this.committer(this.listed()) === from || from < saved.sender)
       if (!wins) {
         wipeConsumed(processed.consumed)
@@ -877,6 +881,7 @@ export class MediaGroup {
    */
   private validator(state: ClientState, from: string): IncomingMessageCallback {
     return (incoming) => {
+      this.vetted = new Set()
       if (incoming.kind !== 'commit') return 'reject'
       const members = treeMembers(state)
       const senderLeaf = members.get(from)
@@ -898,11 +903,13 @@ export class MediaGroup {
       const slept = this.sleptRecently()
       const removed = new Set<string>()
       const added = new Set<string>()
+      const removedAt = new Set<number>()
       for (const { proposal } of proposals) {
         if (proposal.proposalType === 'remove') {
           const id = identityOf.get(proposal.remove.removed)
           if (id === undefined) return 'reject'
           removed.add(id)
+          removedAt.add(proposal.remove.removed)
         } else if (proposal.proposalType === 'add') {
           const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
           if (id === null || id === from || added.has(id) || !roomOrLast.has(id) || !this.wasRelayed(id, proposal.add.keyPackage)) return 'reject'
@@ -918,6 +925,7 @@ export class MediaGroup {
         if (added.has(id) || slept || id === this.userId || !room.has(id)) continue
         if (now - (this.alive.get(id) as number) <= this.timing.absentMs - slack) return 'reject'
       }
+      this.vetted = removedAt
       return 'accept'
     }
   }
