@@ -211,6 +211,9 @@ type outgoingChange struct {
 	url     *string
 	events  []string
 	enabled *bool
+	// owner, set when the URL changes, makes the editor the creator: the
+	// events go where they chose, so they are filtered by their rights.
+	owner *uuid.UUID
 }
 
 func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingChange) error {
@@ -222,21 +225,22 @@ func updateOutgoing(ctx context.Context, p *db.Pool, id uuid.UUID, c outgoingCha
 		    url = COALESCE($3, url),
 		    events = COALESCE($4, events),
 		    enabled = COALESCE($5, enabled),
+		    created_by = COALESCE($6, created_by),
 		    auto_disabled = CASE WHEN $5 IS NULL THEN auto_disabled ELSE FALSE END,
 		    consecutive_failures = CASE WHEN $5 IS TRUE THEN 0 ELSE consecutive_failures END,
 		    updated_at = NOW()
-		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled)
+		WHERE id = $1`, id, c.name, c.url, c.events, c.enabled, c.owner)
 	if err != nil {
 		return fmt.Errorf("update outgoing webhook: %w", err)
 	}
 	return nil
 }
 
-// rotateSecret makes a new secret and makes actor the webhook's creator: the
-// holder of the secret is whose rights every later delivery is checked against.
-func rotateSecret(ctx context.Context, p *db.Pool, id, actor uuid.UUID) (string, error) {
+// rotateSecret makes a new secret. It never changes the creator: the URL was
+// chosen by them, and the events sent there follow their rights.
+func rotateSecret(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error) {
 	secret := newSecret()
-	if _, err := p.Exec(ctx, `UPDATE outgoing_webhooks SET secret = $2, created_by = $3, updated_at = NOW() WHERE id = $1`, id, secret, actor); err != nil {
+	if _, err := p.Exec(ctx, `UPDATE outgoing_webhooks SET secret = $2, updated_at = NOW() WHERE id = $1`, id, secret); err != nil {
 		return "", fmt.Errorf("rotate secret: %w", err)
 	}
 	return secret, nil

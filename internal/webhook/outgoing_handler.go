@@ -240,7 +240,7 @@ func (h *Handler) createServerOutgoing(w http.ResponseWriter, r *http.Request) e
 // updateOutgoing handles PATCH /api/admin/outgoing-webhooks/{id}.
 //
 // @Summary Change an outgoing webhook
-// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.
+// @Description Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Changing the URL makes the caller the webhook's creator (deliveries follow their rights); rotating the secret, renaming and switching on or off never change the creator. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.
 // @ID updateOutgoingWebhook
 // @Tags Webhooks
 // @Accept json
@@ -281,6 +281,10 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 		}
 		s := u.String()
 		change.url = &s
+		// Whoever points the events somewhere becomes responsible for who
+		// may see them: deliveries follow their rights from now on.
+		editor := auth.UserFrom(r.Context()).ID
+		change.owner = &editor
 	}
 	if req.Events != nil {
 		if change.events, err = validEvents(*req.Events, rec.ChannelID == nil); err != nil {
@@ -302,7 +306,7 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 // rotateOutgoingSecret handles POST /api/admin/outgoing-webhooks/{id}/secret.
 //
 // @Summary Rotate an outgoing webhook's secret
-// @Description The old secret stops signing at once. The answer carries the new secret, shown only once. The caller becomes the webhook's creator, so deliveries are checked against their rights from now on.
+// @Description The old secret stops signing at once. The answer carries the new secret, shown only once. The creator stays as it is.
 // @ID rotateOutgoingWebhookSecret
 // @Tags Webhooks
 // @Produce json
@@ -322,13 +326,10 @@ func (h *Handler) rotateOutgoingSecret(w http.ResponseWriter, r *http.Request) e
 	if err != nil {
 		return err
 	}
-	actor := auth.UserFrom(r.Context()).ID
-	secret, err := rotateSecret(r.Context(), h.DB, rec.ID, actor)
+	secret, err := rotateSecret(r.Context(), h.DB, rec.ID)
 	if err != nil {
 		return err
 	}
-	rec.createdBy = actor
-	rec.CreatedBy = &actor
 	httpx.WriteJSON(w, http.StatusOK, CreatedOutgoing{Outgoing: h.present(r.Context(), rec), Secret: secret})
 	return nil
 }

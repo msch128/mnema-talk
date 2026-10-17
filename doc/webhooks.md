@@ -241,8 +241,9 @@ export function verify(secret, header, rawBody, toleranceSeconds = 300) {
 
 ### Who sees what
 
-Rotating the secret hands it to the caller, who becomes the webhook's
-creator: deliveries are always checked against whoever holds the secret.
+Changing a webhook's URL makes the editor its creator, because they decide
+where the events go and so who may see them. Rotating the secret, renaming it
+and switching it on or off never change the creator.
 
 A webhook delivers with its creator's rights. Before **every** attempt
 (retries included) the server checks that the creator's account is enabled

@@ -5824,7 +5824,7 @@
         ]
       },
       "patch": {
-        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.",
+        "description": "Rename it, change its URL or events, switch it on or off. Switching it on clears an automatic switch-off. Changing the URL makes the caller the webhook's creator (deliveries follow their rights); rotating the secret, renaming and switching on or off never change the creator. Needs Manage webhooks in its channel (the Owner for server-wide ones), and a highest role not below the creator's.",
         "operationId": "updateOutgoingWebhook",
         "parameters": [
           {
@@ -6052,7 +6052,7 @@
     },
     "/api/admin/outgoing-webhooks/{id}/secret": {
       "post": {
-        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once. The caller becomes the webhook's creator, so deliveries are checked against their rights from now on.",
+        "description": "The old secret stops signing at once. The answer carries the new secret, shown only once. The creator stays as it is.",
         "operationId": "rotateOutgoingWebhookSecret",
         "parameters": [
           {
