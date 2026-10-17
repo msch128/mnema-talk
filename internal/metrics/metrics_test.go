@@ -118,7 +118,7 @@ func TestWriteInstrumentsListsEveryFamily(t *testing.T) {
 		"mnema_mls_handshake_bytes_total", "mnema_sfu_ingress_bytes_total", "mnema_sfu_egress_packets_total",
 		"mnema_sfu_nack_requests_total", "mnema_sfu_nack_packets_total", "mnema_sfu_keyframe_requests_total",
 		"mnema_sfu_layer_switches_total", "mnema_sfu_ice_transitions_total", "mnema_sfu_peer_joins_total",
-		"mnema_s3_operations_total",
+		"mnema_s3_operations_total", "mnema_sfu_bandwidth_estimate_reports_total", "mnema_sfu_bandwidth_layer_moves_total",
 	} {
 		if !strings.Contains(b.String(), "# TYPE "+name+" ") {
 			t.Errorf("missing family %s", name)
@@ -184,5 +184,15 @@ func TestProcessReportsCPU(t *testing.T) {
 	}
 	if ProcessStart().After(time.Now()) {
 		t.Fatal("start in the future")
+	}
+}
+
+func TestBandwidthRange(t *testing.T) {
+	seen := map[string]bool{}
+	for _, bps := range []int{0, 499_999, 500_000, 999_999, 1_000_000, 2_000_000, 4_000_000, 8_000_000, 16_000_000, 1 << 30} {
+		seen[BandwidthRange(bps)] = true
+	}
+	if len(seen) != 7 {
+		t.Fatalf("ranges %v", seen)
 	}
 }

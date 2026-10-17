@@ -1,371 +1,142 @@
 # Mnema Talk
 
-A self-hosted home for your community: chat in text channels, drop into Talk
-with one click, and share your screen while you hang out. Mnema brings your
-conversations together in one place, on a server you control.
+**A small, self-hosted home for one community.** Text channels, drop-in Talks
+and screen sharing up to 4K at 60 FPS, in one Go binary that you run on your
+own server or NAS. Invite-only, no accounts on someone else's platform, no
+transcoding, and microphone, camera and screen are end-to-end encrypted
+against the server that relays them.
 
-**[Desktop clients](https://github.com/msch128/mnema-talk-desktop)**
+Mnema Talk is not a Discord clone. It has one community instead of many
+servers, no direct messages, no ringing, and its own quiet, dark design. It
+keeps the parts that make a community server useful: roles, private channels,
+webhooks and a call you can join with one click.
 
-Use it in your browser or with a desktop client. Both use the same Vue
-interface and connect to your community's instance. Members join by
-invitation; the administrator manages accounts, channels and storage.
+![Mnema Talk: a text channel with replies, reactions and a code block](doc/images/chat.png)
 
-## Get started
-
-**Join a community:** open its Mnema address in your browser and sign in.
-Ask the administrator for an invite if you need an account. Choose a text
-channel to chat, or click a Talk channel to join the conversation.
-
-**[Desktop clients](https://github.com/msch128/mnema-talk-desktop):** the Windows
-Desktop DEV client.
-Releases through v0.7.3, including
-`Mnema-Desktop-DEV-…-windows-x64.zip`, remain on
-[this repository's releases](https://github.com/msch128/mnema-talk/releases).
-Later desktop builds are published from the desktop repository.
-Extract the ZIP and run `Mnema Desktop DEV.exe`. Enter your community's
-HTTPS address and sign in. Microsoft Edge WebView2 Runtime is required.
-Desktop packages are unsigned DEV builds (no Authenticode signature yet:
-Windows SmartScreen warns, and the checksum file in the same release only
-detects a damaged download, it does not prove who built it); updates are
-installed manually.
-
-**Stay in Talk while gaming:** the Windows client offers a left-hand sidepeek
-showing participants, who's speaking, mute and screen-share status. Press
-**Alt+M** for the interactive overlay and Talk controls. Both appear while
-you have your own connected Talk and a detected foreground game. Shortcuts
-are configurable; see the [Gaming guide](doc/desktop-app.md#windows-gaming-dev)
-for setup and game compatibility.
-
-**Host your own community:** the [Docker quickstart](#quickstart-docker-compose)
-gets you started. Linux images are published for amd64 and arm64, suitable
-for a server or NAS.
+[Features](#features) · [Quickstart](#quickstart) · [Security model](#security-and-privacy) ·
+[Desktop client](#desktop-client) · [Documentation](#documentation) ·
+[Development](#development)
 
 ## Features
 
-**Chat**
+### Talk (voice, camera, screen)
 
-- **One community, no guilds**: categories with text channels and voice
-  channels. Every voice channel has its own text chat as well.
-- **Text chat** over WebSocket: Markdown, replies that quote and jump to the
-  original (even thousands of messages back), threads, reactions, emoji,
-  @mentions, file and image attachments, link cards, search, typing notices,
-  unread and mention markers, per-channel notification settings and live
-  presence with status text.
+- **Hangout spots.** Click a Talk and you are in. A reload within 30 seconds
+  puts you back into the call.
+- **Screen sharing up to source quality**, up to 4K at 60 FPS with hardware
+  encoding in the browser. A share is sent as the source plus smaller **layers**;
+  every viewer picks a layer or leaves it on **Auto**, which follows the
+  receiver reports, so each viewer is served separately. Watching is opt-in
+  and everyone sees who watches.
+- **A Talk view built for long sessions.** Participant grid, a stage for the
+  share or camera you focus, full screen, picture-in-picture while you read
+  another channel, per-person and per-stream volume, push-to-talk, noise
+  suppression and the Talk's own chat as a resizable panel.
+- **No transcoding.** A Pion-based forwarding unit (SFU) copies RTP packets;
+  see [doc/architecture.md](doc/architecture.md).
 
-**Talk (voice channels)**
+| Talk with a screen share and the quality picker | Safety code for the call |
+|---|---|
+| ![A Talk with a shared screen and the viewing quality menu](doc/images/talk-screenshare.png) | ![Connection details with the safety code and the members holding the keys](doc/images/safety-code.png) |
 
-- **Hangout spots**: click a voice channel and you are in, no ringing. A page
-  reload within 30 seconds puts you back into the call.
-- **Voice**: voice activity or push-to-talk (while the tab has focus), noise
-  suppression, per-person volume and mute, output device choice, mic test and
-  sound effects.
-- **Discord-like Talk view**: a participant grid that fits the free space, a
-  **stage** for the screen share or camera you focus, cameras on the stage,
-  full screen (double-click or `F`), **picture-in-picture** that keeps
-  playing while you read a text channel, an option to hide participants
-  without video, and the voice channel's chat as a resizable panel under the
-  stage (deep link `/v/<id>/chat`).
-- **Screen sharing** up to source quality (e.g. 1440p/4K at 60 FPS, hardware
-  encoding in the browser). Watching is opt-in: a share is only sent to the
-  people who click "Watch", and everyone sees who is watching. The sharer's
-  **quality menu** sets mode (Gaming, Screen, Custom), resolution, frame rate
-  and stream sound, with live codec and bitrate stats; every new share starts
-  at 1080p / 30 FPS. Viewers set the **stream's volume** separately from the
-  person's voice (0–100 %, default 50 %, remembered per sharer). One share per
-  person; starting another one replaces it.
-- The Pion-based SFU forwards RTP packets and never transcodes (see
-  [doc/architecture.md](doc/architecture.md)).
+### Chat
 
-**Administration**
+- Markdown, replies that jump to the original (also thousands of messages
+  back), threads, reactions, emoji, @mentions, file and image attachments,
+  link cards, search, typing notices, unread and mention markers,
+  per-channel notification settings and presence with a status line.
+- One community with categories, text channels and Talks. Every Talk has its
+  own text chat.
+- German and English, chosen per account.
 
-- **Invite-only**: no public registration; the Owner (default `Herzog`,
-  configurable) and members they trust with *Manage invites* create invite
-  codes.
-- **Roles and permissions**: the Owner can do everything and cannot be
-  restricted by anyone; below them custom roles (name, colour, hierarchy) hold
-  Discord-style permissions (view, send, attach, react, connect, speak, share
-  video, manage channels, roles, invites and members, and more). Categories
-  and channels can allow or deny permissions per role or member, which makes
-  private channels and Talks. Changes apply live, also to members in a call.
-  See [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
-- **Webhooks**: incoming ones per channel in Discord's execute format
-  (content, embeds, `allowed_mentions`, files) with a Webhook badge, and
-  outgoing ones per channel that POST signed events (messages, reactions, Talk
-  joins and leaves) to your own service, with retries, a delivery log and a guard that
-  keeps them away from your internal network. See
-  [doc/webhooks.md](doc/webhooks.md).
-- **Sidebar management** for admins: drag and drop channels and categories
-  (mouse, pen, touch) or move them with `Alt+↑/↓`; every move is saved at
-  once and can be undone from a toast. Context menus create, duplicate and
-  edit channels and categories, collapse or expand them and mark them read.
-- **Admin console**: users and their roles (disable, kick, reset password,
-  revoke sessions), roles, channel layout and permissions, invites, media
-  (usage, pruning) and a **System** tab (Owner only) with
-  version, health of database, storage and voice, the update check against
-  GitHub releases and an optional "Update now" (see [Updates](#updates)).
-- **Privacy-minded defaults**: no third-party STUN unless configured, no
-  automatic data deletion unless enabled, generic legal/privacy page driven by
-  env vars. The security model is summarised in [SECURITY.md](SECURITY.md).
-- UI in German and English (chosen per account).
+### Security and privacy
 
-## How it works
+- **Media is end-to-end encrypted** in the browser with keys from an MLS
+  group: microphone, camera, screen video and screen audio. Keys rotate every
+  30 minutes, every sealed frame is signed by its sender, and a **safety code**
+  in the connection details lets members compare keys out of band.
+- **Invite-only.** There is no public registration.
+- **Hardened by default**: `HttpOnly` session cookies with revocation, CSRF
+  origin check, strict CSP, upload content sniffing, rate limits and login
+  lockout, an SSRF guard for outgoing webhooks, and an app port that only
+  listens on loopback until you say otherwise.
+- **Privacy-minded**: no third-party STUN unless configured, no automatic data
+  deletion unless enabled (`MEDIA_RETENTION_DAYS=0`), no telemetry (the optional release check is the only call home, and it can be
+  turned off).
+- Release images are signed with cosign and ship provenance and an SBOM.
 
-Mnema runs on one community server. Chat updates arrive over WebSockets;
-voice, camera and screen sharing use WebRTC. The server forwards media to
-subscribed participants without transcoding it. The Go application contains
-the web interface, API and media relay in one binary; PostgreSQL stores
-community data and S3-compatible storage holds uploads and avatars.
+### Administration
 
-```
-            Browser / Windows client (Vue 3 SPA)
-     HTTPS / WSS │        │ UDP (DTLS-SRTP)
-                 ▼        ▼
-   ┌───────────────────────────────────────┐
-   │ mnema-talk  (single Go binary)        │
-   │  - embedded web app (go:embed)        │
-   │  - REST API + WebSocket hub           │
-   │  - Pion WebRTC SFU                    │
-   │  - embedded SQL migrations            │
-   └──────────┬─────────────────┬──────────┘
-              ▼                 ▼
-      PostgreSQL 18       SeaweedFS (S3 API)
-      (data)              (uploads, avatars)
-```
+- **An Owner and roles.** The Owner can do everything and cannot be restricted
+  by anyone. Below them, custom roles hold Discord-style permissions, and
+  categories and channels can allow or deny them per role or member, which
+  makes **private channels and Talks**. Changes apply live, also in a call.
+- **Webhooks.** Incoming ones in Discord's execute format (so most existing
+  integrations work) and outgoing ones that POST signed events to your service
+  with retries and a delivery log.
+- **Admin console** for members (disable, kick, reset password, revoke
+  sessions), roles, channel layout, invites, media and storage, and a System
+  tab with health and a live operator view. The sidebar supports drag and drop
+  with undo.
 
-`docker compose` runs three containers: `app`, `postgres` and `seaweedfs`
-(plus `coturn` and the updater sidecar when you enable their profiles). Any
-S3-compatible store can replace SeaweedFS.
+| Roles and permissions | Webhook settings |
+|---|---|
+| ![The roles editor with the Moderator role selected](doc/images/roles.png) | ![The webhooks dialog of a channel with an incoming webhook's settings](doc/images/webhooks.png) |
 
-| Part      | Tech |
-|-----------|------|
-| Backend   | Go, chi, pgx, gorilla/websocket, Pion WebRTC v4, AWS SDK v2 (S3) |
-| Frontend  | Vue 3, Pinia, Vite, Tailwind CSS (`web/`) |
-| Storage   | PostgreSQL 18, S3 (SeaweedFS by default) |
+### Operations
 
-More documentation in [`doc/`](doc/):
+- **One binary, three containers**: `app`, PostgreSQL 18 and SeaweedFS (any S3
+  store works). Low idle memory; images for linux/amd64 and linux/arm64, so a
+  NAS or a Raspberry Pi works.
+- **Observable**: Prometheus metrics at `/api/metrics`, a live operator view in
+  the System tab, and alert rules you can copy
+  ([doc/operations.md](doc/operations.md#monitoring-and-alerts)).
+- **Recoverable**: backup and restore scripts, plus drills in CI that prove
+  them: backup to restore, release-to-release upgrade and the PostgreSQL move.
+- **Measured**: `make load-test` reproduces a 100-member call with real
+  decrypting browsers and lightweight viewers
+  ([loadtest/README.md](loadtest/README.md)).
+- Optional TURN relay (`coturn` profile) and a self-update sidecar
+  (`autoupdate` profile, off by default).
 
-- [doc/architecture.md](doc/architecture.md): components, data flow for chat
-  and voice, frontend structure, design decisions
-- [doc/operations.md](doc/operations.md): configuration reference, reverse
-  proxy, TURN, backups, monitoring, troubleshooting
-- [doc/upgrade.md](doc/upgrade.md): upgrade notes per version and the update
-  procedure
-- [doc/desktop-app.md](doc/desktop-app.md): Windows client, gaming setup and
-  desktop roadmap
+![The admin System tab with live operations charts](doc/images/operations.png)
 
-## Quickstart (Docker Compose)
+## Quickstart
+
+You need a Linux host with Docker and Docker Compose, a domain with HTTPS
+(through a reverse proxy) and a UDP port range open for voice.
 
 ```sh
+git clone https://github.com/msch128/mnema-talk.git && cd mnema-talk
 cp .env.example .env
-# edit .env: set PUBLIC_URL, JWT_SECRET (openssl rand -hex 32),
-# POSTGRES_PASSWORD, S3_ACCESS_KEY / S3_SECRET_KEY, ADMIN_INITIAL_PASSWORD
+# edit .env: PUBLIC_URL, JWT_SECRET (openssl rand -hex 32), POSTGRES_PASSWORD,
+# S3_ACCESS_KEY / S3_SECRET_KEY and ADMIN_INITIAL_PASSWORD (14+ characters)
 docker compose up -d --build      # or: make up
 ```
 
-Open `PUBLIC_URL`, log in as the admin, and create invite codes for your users.
-`ADMIN_INITIAL_PASSWORD` is required for the first production start; it is only
-used to create the admin. Change it after the first login (and then remove it
-from `.env`). In development an empty value generates a password and logs it once.
+To run a published image instead of building, set
+`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.8` in `.env` and use
+`docker compose pull app && docker compose up -d`
+([doc/deployment.md](doc/deployment.md)).
 
-## Status and security
+Open `PUBLIC_URL`, sign in as the Owner (default username `Herzog`, set with
+`ADMIN_USERNAME`) and create invite codes for your members.
+`ADMIN_INITIAL_PASSWORD` only creates the account on the first start; remove
+it from `.env` afterwards.
 
-The browser app and Linux Docker deployment are the normal maintained product
-path. The Windows Desktop DEV client (separate
-[mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository)
-runs a signed, locally verified bundle of this web app (the instance supplies
-data, never code; see [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md))
-in WebView2 and includes the Gaming
-integration (sidepeek, Alt+M, Talk controls and persisted shortcut settings).
-Windows gaming uses native topmost windows; game and fullscreen compatibility
-still need testing on the target machine. macOS and Linux desktop clients
-remain roadmap targets.
+Two defaults to know about:
 
-Traffic is protected in transit by HTTPS and WebRTC's DTLS-SRTP. Chat
-messages and attachments stay readable by the server. Microphone, camera,
-screen video and screen audio are encrypted in the browser with MLS-derived
-keys, so an honest SFU cannot read them. A compromised server could still
-subvert group membership, since it serves the code and relays the handshakes,
-and metadata such as who speaks when stays visible. The connection details
-show a safety code and the key holders so members can compare them. The
-Windows client uses the same browser path inside WebView2; that combination
-is not yet qualified on real Windows hardware. Capacity: see
-[doc/architecture.md](doc/architecture.md#capacity). A release number describes development progress,
-not completion of those milestones.
+- **`PUBLISH_ADDR`** is `127.0.0.1`: the app port is only reachable from the
+  host itself, which is what a reverse proxy on the same host needs. Set it to
+  a LAN address (or `0.0.0.0` behind a firewall) when the proxy runs elsewhere.
+- **`TRUSTED_PROXY_CIDRS`** is empty, which trusts loopback only. A reverse
+  proxy on another host or in a container must be listed here by address,
+  otherwise all members share the proxy's IP for rate limits and login
+  lockout. See [the upgrade note](doc/upgrade.md#07x--080) for the exact setups.
 
-See [product status and acceptance evidence](doc/product-status.md) for test
-scope and [SECURITY.md](SECURITY.md) for the security model and vulnerability
-reporting.
+### Behind a reverse proxy
 
-## Development
-
-Requirements: Go (see `go.mod`), Node 26 + npm, Docker, GNU make (on Windows use
-Git Bash or WSL). Run `make help` for all targets.
-
-```sh
-make install-hooks   # pre-commit: gitleaks + gofmt
-make dev             # postgres + seaweedfs in Docker (docker-compose.dev.yml publishes
-                     # them on 127.0.0.1), server on :8080 via go run (reads .env)
-cd web && npm run dev   # Vite dev server on http://localhost:3000, proxies /api to :8080
-```
-
-For the Vite dev server, allow its origin in `.env`:
-
-```sh
-CORS_ALLOWED_ORIGINS=http://localhost:8080,http://localhost:3000
-DATABASE_URL=postgres://mnema:<password>@localhost:5432/mnema_talk?sslmode=disable
-```
-
-`make build` produces `bin/mnema-talk` with the web app embedded (`make web`
-builds only `web/dist`).
-
-`main` is protected: changes land through a pull request (no approvals
-required) once the `secret-scan`, `backend`, `frontend`, `govulncheck`,
-`docker`, `e2e` and CodeQL `analyze` checks are green; squash merge only.
-
-Frontend source uses strict TypeScript, including Vue scripts, media workers,
-browser tests and build tools. See [the TypeScript contract](doc/typescript.md)
-for compiler scopes, runtime decoding and the generated-vendor exception.
-
-## Testing
-
-```sh
-make test              # Go unit tests (-race)
-make test-integration  # Go integration tests: starts postgres:18-alpine via Docker,
-                       # or uses TEST_DATABASE_URL if set
-make test-web          # vitest
-make coverage          # Go (unit + integration) and web coverage: coverage.out,
-                       # web/coverage/lcov.info; CI shows the totals in the job summary
-make lint              # gofmt, go vet, eslint
-make typecheck-web     # complete frontend source and strict compiler checks
-make contracts-check   # generated frontend REST contract drift check
-make check             # everything CI runs: lint, tests, govulncheck, builds,
-                       # npm audit, docker build
-make e2e               # Playwright (Chromium) against the real binary, see below
-make load-test         # voice/screen-share load test, see loadtest/README.md
-```
-
-### Browser tests (e2e)
-
-`make e2e` (= `e2e/run.sh`) builds the web app and the binary, starts a
-throwaway PostgreSQL and SeaweedFS with Docker on loopback ports, runs the
-Playwright specs in `e2e/tests/` with fake camera/microphone devices and tears
-everything down again. `SKIP_BUILD=1` reuses the last build,
-`E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
-file.
-
-**Without Docker** (e.g. in a sandbox): start PostgreSQL 18 and a SeaweedFS
-S3 gateway any other way, run the binary with the environment `e2e/run.sh`
-uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,
-`DATABASE_URL`, `S3_*`, `UPDATE_CHECK_ENABLED=false`,
-`WEBRTC_NAT_1TO1_IP=127.0.0.1`, ...), then point Playwright at it:
-
-```sh
-cd e2e && npm ci
-E2E_BASE_URL=http://127.0.0.1:58080 E2E_ADMIN_USER=Herzog \
-  E2E_ADMIN_PASSWORD=<the admin password you set> npx playwright test
-```
-
-The screen share specs need a Chromium with an H.264 encoder (CI's Chrome
-has one; a locally installed open-source Chromium may not).
-
-### CI pipeline
-
-On every pull request and every push to `main`, `.github/workflows/ci.yml` runs
-these jobs in parallel (rough wall times with warm caches):
-
-| Job | What | Time |
-|-----|------|------|
-| `secret-scan` | gitleaks (pinned, checksum verified) over the tree and the history | < 1 min |
-| `backend` | gofmt, go vet, OpenAPI check, unit tests, unit + integration tests with coverage (Postgres service), build | 4–6 min |
-| `govulncheck` | Go vulnerability scan | 1–2 min |
-| `frontend` | eslint, strict TypeScript, contract drift, vitest with coverage, build, `npm audit` | 2–3 min |
-| `docker` | image build for linux/amd64 + linux/arm64, not pushed | 2–4 min |
-| `e2e` | Playwright smoke test against the real binary | 4–6 min |
-
-`codeql.yml` (actions, Go incl. tests and the integration tag, JS) runs on the
-same events plus weekly. Caches: Go modules and build cache per job (keyed on
-`go.sum` and the Go version), npm (`setup-node`), Playwright browsers (keyed on
-the Playwright version) and Docker layers (GitHub Actions cache, scope `image`,
-shared with the release build). A new push to a pull request cancels its
-running CI; runs for pushes to `main` always finish, because the release
-workflow starts from their result. Every job has a `timeout-minutes`; tests are
-never retried.
-
-## Releases
-
-Releases are automated with [release-please](https://github.com/googleapis/release-please)
-(`.github/workflows/release.yml`) and driven by conventional commits
-(`feat:` = minor, `fix:` = patch, `feat!:` / `BREAKING CHANGE:` = major). Until
-1.0.0 the project stays on `0.x`: `feat:` and `fix:` bump the patch version and
-breaking changes bump the minor version. 1.0.0 is released deliberately with a
-`Release-As: 1.0.0` commit footer.
-
-1. After CI passes on a push to `main`, release-please opens or updates a
-   **release PR** that bumps `version.txt` and `CHANGELOG.md`. Only the CI run
-   for the commit that is still `main`'s tip releases; if `main` moved on, the
-   run for the newer commit decides.
-2. The release workflow merges that PR right away and publishes the GitHub
-   Release and tag `vX.Y.Z`, so every green push to
-   `main` that contains a `feat:` or `fix:` becomes a release. A PR opened
-   with `GITHUB_TOKEN` starts no workflows, so the workflow reports the tested
-   CI run's result as commit statuses on the release commit (only after
-   checking that it touches nothing but `version.txt`, `CHANGELOG.md` and the
-   manifest and sits directly on the tested commit); that satisfies the
-   required checks on `main`.
-3. The same workflow then builds the image and pushes it to GHCR:
-   `ghcr.io/msch128/mnema-talk:X.Y.Z`, `:X.Y` and `:latest` (linux/amd64 and
-   linux/arm64), with OCI labels,
-   provenance and SBOM. The version and commit are baked into the binary
-   (`internal/version`, via the `VERSION`/`REVISION` build args) and the same
-   version into the web app, so the app can tell browsers when a newer
-   version is running.
-4. Windows Desktop DEV builds are published from
-   [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
-   Releases through v0.7.3 still carry
-   `Mnema-Desktop-DEV-vX.Y.Z-windows-x64.zip` on this repository.
-   Extract that ZIP and run `Mnema Desktop DEV.exe`, then enter your HTTPS
-   instance address. These are unsigned DEV packages with no automatic updater.
-   See [desktop client status](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md)
-   for verification limits. The server ships through Docker; new releases do not
-   publish standalone server binaries for Windows or macOS.
-
-## Configuration
-
-All settings are environment variables; `.env.example` documents every one of
-them with safe placeholder values, and
-[doc/operations.md](doc/operations.md#configuration-reference) lists each with
-its default and validation. The server refuses to start on an invalid value
-or, in production, on a placeholder secret. Notable ones:
-
-- `PUBLIC_URL`: the URL browsers use; `https://` enables Secure/`__Host-` cookies.
-- `CORS_ALLOWED_ORIGINS`: extra allowed origins (defaults to `PUBLIC_URL`).
-- `TRUSTED_PROXY_CIDRS`: proxies whose `X-Forwarded-For` is trusted. The app
-  defaults to loopback only, in compose too. A reverse proxy on another host or
-  in a container (or on the compose host, which reaches the app from the Docker
-  bridge gateway) must be listed here by address, otherwise all clients share
-  its IP for rate limits and login lockout. See
-  [upgrade notes](doc/upgrade.md#07x--080).
-- `PUBLISH_ADDR` (compose): host address the app port is published on,
-  `127.0.0.1` by default; `0.0.0.0` exposes it to the network.
-- `LOG_LEVEL`: `debug`, `info`, `warn` or `error` (empty = by `APP_ENV`).
-- `MEDIA_RETENTION_DAYS`: `0` (default) = never delete media automatically.
-- `API_DOCS_ENABLED`: `true` serves the API reference (Swagger UI) at `/api/docs` and the OpenAPI document at `/api/openapi.json` to signed-in members; off by default.
-- `WEBHOOK_ALLOW_PRIVATE_TARGETS`: empty (default) = outgoing webhooks may only
-  contact public addresses. A comma-separated list of addresses and CIDR
-  ranges (for example `192.168.1.20,10.0.0.0/24`) lets them reach services
-  on your own network; read the SSRF notes in
-  [doc/webhooks.md](doc/webhooks.md) first. Cloud metadata addresses stay
-  blocked either way.
-- `WEBRTC_UDP_PORT_MIN/MAX`, `WEBRTC_NAT_1TO1_IP`, `WEBRTC_STUN_URLS`: voice networking.
-- `LEGAL_*`: operator details shown in the privacy policy.
-- `UPDATE_CHECK_ENABLED`: `true` (default) lets the server ask GitHub every 30
-  minutes for the latest release; admins see it in the System tab. `false`
-  = no outbound request.
-
-## Deployment behind a reverse proxy
-
-Terminate TLS in a reverse proxy such as Caddy and forward HTTP and WebSocket
-traffic to the app:
+Terminate TLS in a proxy such as Caddy and forward HTTP and WebSockets:
 
 ```caddy
 chat.example.com {
@@ -373,184 +144,99 @@ chat.example.com {
 }
 ```
 
-- The proxy must pass the client IP in `X-Forwarded-For` (Caddy does this by
-  default), and its address must be within `TRUSTED_PROXY_CIDRS`. Otherwise
-  rate limiting and login lockout see only the proxy's IP. The compose file
-  trusts loopback only; list your proxy's address in `TRUSTED_PROXY_CIDRS`
-  (container IP, Docker bridge gateway for a proxy on the host, or LAN
-  address). Don't list ranges that untrusted clients can connect from: they
-  could fake their IP.
-- Voice and video do **not** go through the proxy. Forward the UDP range
-  `WEBRTC_UDP_PORT_MIN`–`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) from
-  your router/firewall to the host, and set `WEBRTC_NAT_1TO1_IP` to the public
-  IP when the server is behind NAT.
-- Set `APP_ENV=production`, a strong `JWT_SECRET` and an `https://` `PUBLIC_URL`.
-- Do not use `docker-compose.dev.yml` in production; the base compose file
-  does not publish PostgreSQL or SeaweedFS.
-- The SeaweedFS S3 gateway only accepts `S3_ACCESS_KEY` / `S3_SECRET_KEY`
-  (letters, digits and `._~+/=-`; the secret at least 8 characters). The
-  container writes its identity config from them at every start, so changing
-  the keys in `.env` and running `docker compose up -d` updates both sides.
+Voice and video bypass the proxy: forward the UDP range
+`WEBRTC_UDP_PORT_MIN`-`WEBRTC_UDP_PORT_MAX` (default `50000-50050/udp`) to the
+host and set `WEBRTC_NAT_1TO1_IP` to your public IP when the server is behind
+NAT. Users on networks that block UDP need the optional TURN relay. Ports,
+proxy settings, TURN and troubleshooting:
+[doc/operations.md](doc/operations.md) and [doc/deployment.md](doc/deployment.md).
 
-### Ports
+### Upgrades and backups
 
-What to open, assuming the default settings and a reverse proxy on the same
-network:
+Take a backup before every update (`scripts/backup.sh`; restore with
+`scripts/restore.sh`, which can verify a backup in a disposable container
+first). Migrations run at startup and are forward-only. Per-version notes,
+including the move from 0.7 to 0.8, and the rollback procedure are in
+[doc/upgrade.md](doc/upgrade.md). Admins see new releases in the System tab; an
+optional update button needs the `autoupdate` profile.
 
-| Port | Protocol | Service | Forward from the internet? |
-|---|---|---|---|
-| 443 (and 80 for certificates) | TCP | Reverse proxy (HTTPS, WebSocket) | Yes |
-| 50000–50050 | UDP | App: voice, video and screen share (`WEBRTC_UDP_PORT_MIN/MAX`) | Yes |
-| 3478 | UDP + TCP | coturn, only with the `turn` profile | Yes, if you run it |
-| 49152–49200 | UDP | coturn relay ports, only with the `turn` profile | Yes, if you run it |
-| 8080 | TCP | App HTTP (`PORT`), reached by the proxy | No, proxy only |
-| 5432 | TCP | PostgreSQL | No, Docker network only |
-| 8333 | TCP | SeaweedFS S3 API | No, Docker network only |
+## Security and privacy
 
-- The compose file publishes `8080/tcp` on `127.0.0.1` only (set
-  `PUBLISH_ADDR=0.0.0.0` in `.env` to reach it from the network). Don't forward
-  it from the router.
-- If you change `WEBRTC_UDP_PORT_MIN/MAX`, forward the new range; Docker
-  publishes the same range.
-- Users behind strict firewalls that block UDP can only join voice through
-  TURN (`WEBRTC_TURN_URLS`, see `.env.example`).
+In a few honest sentences:
 
-### Running a released image
+- **Media** (microphone, camera, screen video and screen audio) is encrypted in
+  the browser with MLS-derived keys, so an honest server, and anyone who only
+  sees the forwarded packets, cannot read it. The server still serves the web
+  app's code and relays the key exchange, so a malicious or compromised server
+  could subvert it; members who compare the safety code notice most such
+  attacks. Who speaks when, and who is in which Talk, stays visible to the
+  server.
+- **Text messages and attachments** are readable by the server, as on
+  Discord. Nothing is recorded and nothing is deleted automatically unless you
+  turn retention on.
+- **The desktop client removes server-served JavaScript**: it runs a signed web
+  bundle that it verifies itself, so the server supplies data, never code.
+- Transport is HTTPS and DTLS-SRTP. The project is pre-1.0 and has had an
+  internal security review, not an external audit.
 
-Instead of building on the server, use a published image: set `MNEMA_IMAGE`
-in `.env` (the compose file uses it for the `app` service) and start without
-`--build`:
+The full model, its limits and how to report a vulnerability privately are in
+[SECURITY.md](SECURITY.md); the product's test scope is in
+[doc/product-status.md](doc/product-status.md).
 
-```sh
-# .env
-MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4   # or :0.4.1 (pinned) or :latest
+## Desktop client
 
-docker compose pull app && docker compose up -d
-```
+The [Windows desktop client](https://github.com/msch128/mnema-talk-desktop)
+(experimental, unsigned) wraps the same web app. Instead of loading code from
+your server it runs a **signed bundle** that it verifies on every start, with
+rollback protection and a security floor, and keeps the session in the OS
+keychain. It adds a gaming sidepeek and an `Alt+M` overlay for your Talk. The
+browser app remains the primary, fully supported client. Details and the
+threat model: [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md)
+and [doc/desktop-app.md](doc/desktop-app.md).
 
-Then update with `docker compose pull app && docker compose up -d app`, or
-from the admin console (see [Updates](#updates)).
+## Documentation
 
-### Supported platforms
+| Topic | Where |
+|---|---|
+| Components, data flow, capacity | [doc/architecture.md](doc/architecture.md) |
+| Configuration, reverse proxy, TURN, backups, metrics and alerts, troubleshooting | [doc/operations.md](doc/operations.md) |
+| Ports, image tags, platforms, updating | [doc/deployment.md](doc/deployment.md) |
+| Upgrade notes per version, rollback | [doc/upgrade.md](doc/upgrade.md) |
+| Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
+| Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
+| Where media keys live in the browser | [doc/crypto-state.md](doc/crypto-state.md) |
+| Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
+| Load test | [loadtest/README.md](loadtest/README.md) |
+| Product status and acceptance | [doc/product-status.md](doc/product-status.md) |
+| Building, testing, CI, releases | [doc/development.md](doc/development.md) |
+| API reference | `API_DOCS_ENABLED=true` serves it at `/api/docs` to signed-in members |
 
-Images are published for **linux/amd64** and **linux/arm64** (e.g. Raspberry Pi
-4/5 with a 64-bit OS); Docker picks the right one. The rest of the stack
-(`postgres:18-alpine`, `chrislusf/seaweedfs`, `coturn/coturn`) is published for
-both as well. **linux/arm/v7** (32-bit ARM) is not built: those images exist
-for it too, but the server doesn't compile for 32-bit targets yet (a 64-bit
-constant in `internal/db` overflows `int`). Builders cross-compile the Go
-binary on the build machine, so a multi-arch build needs no QEMU:
-`docker buildx build --platform linux/amd64,linux/arm64 .`
+## Development
 
-### Pull-based deployment
-
-Deployment to a LAN/self-hosted server stays **manual and pull-based**: GitHub's
-hosted runners cannot reach a server inside a private network, so nothing
-pushes to it. Bump the tag (or pull `:X.Y` / `:latest`) when you want to update.
-Database migrations run automatically at startup.
-
-If the GHCR package is private (the default for a newly published package),
-either make it public once under the package's settings on GitHub, or run
-`docker login ghcr.io` on the server with a token that has `read:packages`.
-
-## Updates
-
-**Everyone: reload notice.** Every page knows the version it was built as and
-the server tells each connection its version. After an update, open tabs show
-"A new version is available – click here to reload". Nothing reloads by
-itself; a call in progress reconnects automatically after the reload.
-
-**Admins: update check.** The server asks GitHub every 30 minutes for the
-latest release (`UPDATE_CHECK_ENABLED`, default on; conditional requests, so
-it stays far below GitHub's rate limit). Admin → **System** shows the running
-version and commit, the latest release with its notes, health of database,
-storage and voice, and the update command. A dot on the ⋯ menu and a badge
-on "Admin console" announce a new release. Nothing is ever updated
-automatically.
-
-**Optional: update from the admin console.** "Update now" asks a separate
-updater sidecar to pull the app image again and restart the app (everyone is
-disconnected for about 30–60 seconds). It is **off by default**; to enable it:
-
-1. Run a released image: `MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4` (see
-   below for the tag).
-2. Set `UPDATER_TOKEN` in `.env` (`openssl rand -hex 32`, at least 32
-   characters).
-3. Start with the profile: `docker compose --profile autoupdate up -d`.
-
-The confirm dialog asks for the admin's password again; the server allows one
-update every 5 minutes and only while a newer release is known, and logs who
-started which update (`"audit":"self_update"` in the app log). Read the
-threat model in [SECURITY.md](SECURITY.md#self-update-sidecar) first: the
-sidecar holds the Docker socket.
-
-**Which tag?** The sidecar re-pulls the tag the app runs; it never switches
-tags. That decides what "update now" can reach:
-
-| `MNEMA_IMAGE` tag | Follows | Self-update |
-|---|---|---|
-| `:0.4` (major.minor) | all `0.4.x` releases | yes, until a breaking `0.5.0`; then change the tag by hand (recommended) |
-| `:latest` | every release, breaking ones included | always |
-| `:0.4.1` or `@sha256:…` | nothing (pinned) | no; the System tab shows the manual steps |
-| `mnema-talk:local` (default) | built on the server | no; `git pull && docker compose up -d --build` |
-
-Pinned tags are the most predictable (you choose every version and can roll
-back by setting the old one); `:0.4` is the practical middle ground. Until
-1.0.0, `feat:` and `fix:` releases bump the patch version, so a `:0.4` image
-receives them, and breaking changes need a deliberate tag change. To roll
-back, set the previous version (e.g. `:0.4.1`) and run `docker compose pull
-app && docker compose up -d app`; database migrations are forward-only, so
-check the changelog before going back across a release that changed the
-schema.
-
-**Manual update, step by step** (backup, compose file for the new tag, image,
-pull, verify, rollback) and what changed between versions for operators:
-[doc/upgrade.md](doc/upgrade.md).
-
-## Backups
-
-Everything stateful lives in two Docker volumes (PostgreSQL and SeaweedFS) plus
-deployment configuration. `scripts/backup.sh` saves the data, `.env` and a
-rendered uninterpolated `compose.yaml` into one timestamped folder
-under `BACKUP_DIR` (default `$HOME/mnema-talk-backups`) and removes validated,
-complete folders older than `KEEP_DAYS` (default 14). A backup contains your
-secrets, so the script refuses a `BACKUP_DIR` inside a git checkout (`BACKUP_ALLOW_IN_REPO=1`
-overrides that; `/backups/` is git-ignored). The app and SeaweedFS are stopped
-before the database snapshot and media copy, so writes and retention pause
-together; active calls disconnect. Previously running services resume afterward.
-New backups include checksums and a completion marker. Retention runs after
-successful backup and service recovery. Run from the deployment directory, for example
-nightly via cron:
+Requirements: Go (see `go.mod`), Node and npm, Docker, GNU make. `make help`
+lists every target.
 
 ```sh
-30 3 * * *  cd /path/to/mnema-talk && BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh >> /srv/backups/mnema/backup.log 2>&1
+make install-hooks      # pre-commit: gitleaks + gofmt
+make dev                # postgres + seaweedfs in Docker, server on :8080 (reads .env)
+cd web && npm run dev   # Vite on :3000, proxies /api to :8080
+make check              # everything CI runs
+make e2e                # Playwright against the real binary
 ```
 
-Copy the backup folder off the machine as well (another disk, NAS share or
-cloud storage); a backup on the same disk does not survive a disk failure.
+Stack: Go, chi, pgx, Pion WebRTC; Vue 3, Pinia, Vite, Tailwind in strict
+TypeScript; PostgreSQL 18; S3-compatible storage. More in
+[doc/development.md](doc/development.md).
 
-Check backup integrity and SQL import in an isolated disposable PostgreSQL
-container, without touching live data (then test application functions on a
-separately restored deployment):
+## Contributing
 
-```sh
-./scripts/restore.sh /srv/backups/mnema/20261005-033000 --verify
-```
-
-Restore for real (stops the app, replaces database and media, starts again):
-
-```sh
-./scripts/restore.sh /srv/backups/mnema/20261005-033000
-```
-
-More on monitoring, health checks and troubleshooting voice connections:
-[doc/operations.md](doc/operations.md).
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for how to report vulnerabilities and a summary of
-the security model. Contributors and AI agents: read [AGENTS.md](AGENTS.md)
-first. This repository is public, so never commit secrets.
+Pull requests are welcome. The repository is public: never commit secrets,
+databases or uploads. Use conventional commits (`feat:`, `fix:`, `docs:`);
+release-please derives versions and the changelog from them. `main` is
+protected, so changes land through a pull request with green checks and a
+squash merge. Read [AGENTS.md](AGENTS.md) first, it applies to people and AI
+agents alike. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md).
 
 ## License
 

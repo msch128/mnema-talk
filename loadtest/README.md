@@ -61,6 +61,13 @@ drop 5 % of incoming RTP packets before Pion's NACK generator (so NACK and
 retransmission paths run) and delay each packet by up to 20 ms. Browsers stay on
 clean loopback.
 
+**Slow links.** `BW_KBPS=1500 QUALITY=auto make load-test` gives each Pion
+viewer its own 1.5 Mbit/s link with a 1.5 s queue (`BW_QUEUE_MS`) in front of
+it. Nothing is lost while the queue fills, so only the bandwidth estimate (and
+later the round trip time) can tell the SFU that layer 0 does not fit: the
+viewers should end on the layer that does, with `mnema_sfu_bandwidth_layer_moves_total`
+counting the moves.
+
 **A single laptop is the limit of `full`.** The server, 16 Chromium processes
 and 84 viewers share the machine; on 10 cores the sharer's bitrate ramps up for
 a while and viewers see their first frame late. Use the same profile against a

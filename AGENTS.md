@@ -56,6 +56,7 @@ Mnema Talk is a **lightweight, single-server Discord alternative** written in **
 ```
 mnema-talk/
 ├── cmd/server/              # Main entrypoint (main.go)
+├── cmd/webbundle/           # Signs and verifies the web bundle for the trusted desktop client
 ├── internal/
 │   ├── config/              # Environment configuration loading + validation
 │   ├── db/                  # pgx pool, embedded versioned migrations (db/migrations/*.sql)
@@ -63,6 +64,10 @@ mnema-talk/
 │   ├── auth/                # Password hashing, sessions (token_version), invites, admin logic, permission guards
 │   ├── perm/                # Roles and permissions: bits, resolver (Snapshot), cache, hierarchy rules, role/overwrite store
 │   ├── roles/               # HTTP API for roles, member roles and channel overwrites; GET /api/permissions
+│   ├── webhook/             # Incoming (Discord execute format) and outgoing (signed, durable queue) webhooks
+│   ├── ssrf/                # Guard for outbound requests to member-chosen addresses (outgoing webhooks)
+│   ├── metrics/             # Prometheus counters (no client library), feed /api/metrics and the live operator view
+│   ├── webbundle/           # Build, sign and verify the desktop client's web bundle (Ed25519)
 │   ├── chat/                # Channels, categories, messages, replies, members
 │   ├── media/               # Uploads (MIME sniffing), authenticated media serving, retention
 │   ├── s3/                  # S3 client
@@ -73,6 +78,10 @@ mnema-talk/
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
+├── api/                     # Generated OpenAPI document (`make openapi`)
+├── doc/                     # Architecture, operations, upgrade, roles, webhooks, desktop docs; doc/images has the README screenshots
+├── e2e/                     # Playwright browser tests (`make e2e`)
+├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
@@ -80,6 +89,8 @@ mnema-talk/
 ├── scripts/upgrade-drill.sh # Previous release (GHCR) -> this build with seeded data (`make upgrade-drill`)
 ├── scripts/upgrade-postgres.sh # One-time PostgreSQL 17 -> 18 move (0.4 -> 0.5)
 ├── scripts/postgres-upgrade-drill.sh # Drill for it (`make postgres-upgrade-drill`)
+├── scripts/backup.sh, restore.sh # Backup and restore of database, media and configuration
+├── scripts/web-bundle-check.sh # Signs web/dist with a throwaway key and verifies it (`make web-bundle-check`)
 ├── .github/workflows/
 │   ├── ci.yml               # CI: gitleaks, Go vet/fmt/tests, govulncheck, frontend, e2e,
 │   │                        # docker build + smoke test, backup/restore drill, trivy scan
@@ -106,6 +117,7 @@ mnema-talk/
 1. **Check `.env` and `.gitignore` first**: before modifying or creating files, make sure no secrets, databases or uploads are staged.
 2. **Run `make check` before committing**: gofmt, `go vet`, unit + integration tests, govulncheck, frontend lint/test/build, `npm audit`, and the Docker build. That's the same set CI runs.
 3. **Tests**: `go test ./...` (unit), `go test -tags=integration ./...` (integration; needs Docker or `TEST_DATABASE_URL`), `npm run test` in `web/`. New behaviour comes with tests.
+   README screenshots (`doc/images/`) come from invented demo data only; regenerate them with `scripts/screenshots/run.sh` when the UI changes visibly, never from a real instance.
 4. **Migrations**: add a **new numbered file** in `internal/db/migrations/` (e.g. `0003_<name>.sql`). **Never edit a migration that has already been applied**; they are embedded and run in order at startup.
 5. **Configuration**: every new env variable is read in `internal/config`, documented in `.env.example` with a placeholder, and passed through in `docker-compose.yml` when needed.
 6. **Pure Go preferred**: keep CGO out of the build (`CGO_ENABLED=0`) so cross-compilation for Linux (Unraid/Docker) stays trivial.

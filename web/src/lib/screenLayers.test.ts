@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { declaredLayers, layerDetail, layerName, layersKey, MIN_LAYER_STEP, planScreenLayers } from './screenLayers'
+import { declaredLayers, layerDetail, layerName, layersKey, layersShape, MIN_LAYER_STEP, planScreenLayers } from './screenLayers'
 import { streamBitrate } from './streamQuality'
 
 const capture = (width: number, height: number): MediaTrackSettings => ({ width, height, frameRate: 60 })
@@ -70,5 +70,10 @@ describe('layer descriptions', () => {
     expect(layersKey(declared)).toBe(layersKey([...declared]))
     expect(layersKey(declared)).not.toBe(layersKey(declared.slice(0, 2)))
     expect(layersKey([])).toBe('')
+    // The shape is the count and the frame rates: new sizes do not change it.
+    expect(layersShape(declared)).toBe(layersShape(declared.map(l => ({ ...l, width: l.width + 2, height: l.height + 2 }))))
+    expect(layersShape(declared)).not.toBe(layersShape(declared.slice(0, 2)))
+    expect(layersShape(declared)).not.toBe(layersShape(declared.map(l => ({ ...l, fps: 24 }))))
+    expect(layersShape([])).toBe('')
   })
 })

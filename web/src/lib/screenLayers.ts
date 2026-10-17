@@ -81,3 +81,12 @@ export function layerDetail(layer: ScreenLayer): string {
 export function layersKey(layers: readonly ScreenLayer[]): string {
   return layers.map(l => `${l.width}x${l.height}@${l.fps}`).join(',')
 }
+
+/**
+ * Equal while the number of layers and their frame rates are: what a viewer
+ * chose by position still means the same thing when only the sizes changed
+ * (the sharer resized the captured window).
+ */
+export function layersShape(layers: readonly ScreenLayer[]): string {
+  return layers.map(l => l.fps).join(',')
+}

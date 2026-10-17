@@ -38,6 +38,9 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/events`](../internal/events/events.go) | The `Publisher` interface between feature packages and the hub (`Broadcast`, `SendToUsers`), with an in-memory recorder for tests. |
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
+| [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
+| [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
+| [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
 | [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)). |
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
@@ -133,15 +136,42 @@ seconds, so switching back and forth does not restart an encoder each time.
 **Auto.** A viewer who leaves the choice to the server starts on layer 0 and is
 moved by what its browser reports ([`adapt.go`](../internal/sfu/adapt.go)):
 the loss fraction and round trip time of its RTCP receiver reports (about
-every second) and how often it asks for a keyframe. Lasting loss (5 % twice in
-a row, 15 % at once), a round trip time 250 ms above its recent minimum or
-three keyframe requests in five seconds move it down one layer; the reports of
-the three seconds after any move are ignored (a keyframe burst loses packets on
-its own). After 12 seconds without trouble it tries one layer up, and a try
-that fails within eight seconds makes the next one wait twice as long (up to
-two minutes), so a link that carries the lower layer but not the higher one
-does not flap. A viewer who picked a layer is never moved. The SFU cannot read
-the media and does not estimate bandwidth; it judges by these reports only.
+every second), how often it asks for a keyframe, and a bandwidth estimate.
+Lasting loss (5 % twice in a row, 15 % at once), a round trip time 250 ms above
+its recent minimum or three keyframe requests in five seconds move it down one
+layer; the reports of the three seconds after any move are ignored (a keyframe
+burst loses packets on its own). After 12 seconds without trouble it tries one
+layer up, and a try that fails within eight seconds makes the next one wait
+twice as long (up to two minutes), so a link that carries the lower layer but
+not the higher one does not flap. A viewer who picked a layer is never moved.
+The SFU cannot read the media; it never estimates from it.
+
+*Bandwidth* ([`bwe.go`](../internal/sfu/bwe.go)). A link that is too slow for
+a layer but queues instead of dropping shows neither loss nor a higher round
+trip time for a long while. So each viewer connection carries Pion's Google
+Congestion Control estimator (`pkg/gcc` of `pion/interceptor`): the SFU stamps
+the transport-cc sequence number on every outgoing packet (beneath the
+authorization gate, so a refused packet never leaves a gap the browser would
+report as lost), the browser answers with transport-wide feedback (arrival
+time of each packet) and the estimator turns both into a bitrate. It is only
+read: the pacer is a pass-through, so nothing is delayed or dropped, and
+audio, cameras and viewers who chose a layer are unaffected. The cost is the
+estimator's history of 250 packets and two small goroutines per connection.
+The estimate is compared with the bitrate each layer has at the SFU (bytes
+arriving per layer, measured once a second per share, smoothed; a layer the
+sender switched off keeps its last size). Delivery that keeps up makes the
+estimate about 1.5 times the bitrate sent, so an estimate below 1.2 times the
+current layer's bitrate for four reports in a row counts as trouble and moves
+the viewer down one layer. The estimate cannot rise above 1.5 times what is
+being sent, so it can never show that a better layer fits; a viewer moved down
+this way therefore stays put for a minute unless the estimate is above 1.5
+times the better layer's bitrate for four reports, and then tries once more
+under the usual backoff. The estimates are counted in
+`mnema_sfu_bandwidth_estimate_reports_total{range}` (seven fixed ranges) and the
+moves they cause in `mnema_sfu_bandwidth_layer_moves_total`. Browsers
+that send no transport-wide feedback leave the estimate at "unknown" and the
+rules above are the only ones. `BW_KBPS` of the load test gives each viewer a
+link with a rate and a queue to try this.
 
 Cameras and audio are not layered (small pictures, and every layer costs the
 sender an encoder).
@@ -155,7 +185,13 @@ lines. The lower layers stay switched off (`active=false`) until the server
 says a viewer needs them, and layer 0 is switched off when everybody watches
 a lower one. It uses these lines only when `server_info.screen_layers` says the
 server has them. Viewers pick Auto or a layer in a menu on the stage, labelled
-with the sizes the sender declared. Each layer's frames are sealed in a stream
+with the sizes the sender declared. The sender watches its capture: when the
+width, height or frame rate it delivers (a resized window) has changed and
+stayed so for a second, it sizes the best layer for the new picture and
+declares the layers again; the server announces them only if they differ, and
+the pickers follow live. A viewer's explicit choice is a position among the
+layers and survives new sizes, but not a different number of layers or other
+frame rates. Each layer's frames are sealed in a stream
 of their own (see SECURITY.md), so a switch needs no coordination between
 sender and receiver.
 
@@ -165,6 +201,17 @@ parameters (`maxFramerate`, a bitrate cap, `scaleResolutionDownBy`), so the
 SFU still forwards whatever arrives. Viewers play the screen's sound in its
 own element with a per-sharer volume (0–100 %, default 50 %), independent of
 the person's voice volume.
+
+**Media key lifecycle (0.8).** The browsers of a Talk form an MLS group and
+derive the media keys from it; the server only relays the handshakes and
+stamps the sender. The member with the lowest id commits a fresh key about
+every 30 minutes, every member renews its own leaf key, members that showed no
+sign of life for 20 minutes are removed and re-admitted when they return, and
+every sealed frame is signed with its sender's leaf key. The connection
+details show a **safety code** for the current epoch so members can compare
+keys out of band. The server validates who may commit but never sees keys.
+Details and limits: [SECURITY.md](../SECURITY.md#security-model-summary) and
+[crypto-state.md](crypto-state.md).
 
 ## Capacity
 
