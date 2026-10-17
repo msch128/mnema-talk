@@ -38,6 +38,9 @@ type Hub struct {
 	// pending handshakes can be revoked, but receive no events or presence.
 	pending map[*Client]struct{}
 	online  map[uuid.UUID]int
+	// active counts each user's connections that are not idle, so a user's
+	// status is O(1) to derive instead of a scan of every client.
+	active map[uuid.UUID]int
 	// chosen is the presence each connected user picked (online, away, dnd, focus).
 	chosen map[uuid.UUID]string
 	// profiles is the latest public profile of each connected user; it
@@ -71,6 +74,10 @@ type Hub struct {
 	// version string: no commit or build details.
 	Version string
 
+	// UpgradeLimit, when set, limits WebSocket upgrades per user (the router
+	// sets it); the per-address limit sits in front of the route.
+	UpgradeLimit *httpx.RateLimiter
+
 	// afterSeat, when set, runs in joinVoice right after the seat is taken
 	// (tests only).
 	afterSeat func()
@@ -103,6 +110,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		clients:  map[*Client]struct{}{},
 		pending:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
+		active:   map[uuid.UUID]int{},
 		chosen:   map[uuid.UUID]string{},
 		profiles: map[uuid.UUID]auth.User{},
 		voice:    map[uuid.UUID]map[uuid.UUID]auth.User{},

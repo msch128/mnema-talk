@@ -259,31 +259,18 @@ func TestRejectedRemoteCandidatesAreLoggedRateLimited(t *testing.T) {
 func TestEarlyCandidateRejectedWhenApplied(t *testing.T) {
 	logs := captureLogs(t)
 	s := newTestSFU(t)
-	c := newClient(t)
-	offers := make(chan webrtc.SessionDescription, 4)
-	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	_, peer, err := s.Join(uuid.New(), uuid.New(), func(webrtc.SessionDescription) {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	offer := <-offers
-	if err := c.pc.SetRemoteDescription(offer); err != nil {
-		t.Fatal(err)
-	}
-	answer, err := c.pc.CreateAnswer(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := c.pc.SetLocalDescription(answer); err != nil {
-		t.Fatal(err)
-	}
-	// Garbage is only found out when the candidate is applied.
-	if err := peer.AddRemoteCandidate(webrtc.ICECandidateInit{Candidate: "candidate:1 1 udp notanumber 198.51.100.7 50000 typ host"}); err != nil {
+	// A vetted candidate is held, and Pion refuses it once the connection is
+	// gone before the answer arrives.
+	if err := peer.AddRemoteCandidate(candidate(1)); err != nil {
 		t.Fatalf("held candidate returned %v", err)
 	}
-	if err := peer.SetAnswer(answer); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(logs.String(), "level=WARN msg=\"sfu remote candidate dropped\" user="+peer.ID.String()+" reason=\"invalid candidate\"") {
+	_ = peer.PC.Close()
+	peer.applyEarlyCandidates()
+	if !strings.Contains(logs.String(), "level=WARN msg=\"sfu remote candidate dropped\" user="+peer.ID.String()+" reason=\"no remote description\"") {
 		t.Fatalf("dropped early candidate not logged: %s", logs.String())
 	}
 }
@@ -316,15 +303,38 @@ func TestVetRemoteCandidate(t *testing.T) {
 		"127.0.0.1", "::1", "169.254.1.1", "fe80::1", "224.0.0.251", "ff02::fb", "0.0.0.0", "::",
 		"::ffff:127.0.0.1", "3f2a9c1e-77aa-4c3d-9d54-0c1d9a0b6f11.local", "example.com",
 	} {
-		if err := vetRemoteCandidate(line(addr), false); !errors.Is(err, errCandidateAddress) {
+		if err := vetRemoteCandidate(line(addr), false); err == nil {
 			t.Errorf("%s: err = %v, want refused", addr, err)
 		}
 	}
 	if err := vetRemoteCandidate("", false); err != nil {
 		t.Errorf("empty candidate refused: %v", err)
 	}
-	if err := vetRemoteCandidate("candidate:1 1 udp", false); !errors.Is(err, errCandidateAddress) {
+	if err := vetRemoteCandidate("candidate:1 1 udp", false); !errors.Is(err, errCandidateInvalid) {
 		t.Errorf("short candidate: %v", err)
+	}
+	// Odd whitespace, controls, a long line and a related address behind a
+	// good one are refused alike.
+	for _, sep := range []string{"\t", "\v", "\f", "\r", "\u0085", "\u00a0", "\x00", "  "} {
+		for _, addr := range []string{"127.0.0.1", "169.254.1.1", "x.local"} {
+			c := "candidate:1" + sep + "1" + sep + "udp" + sep + "2122260223" + sep + addr + sep + "50000" + sep + "typ" + sep + "host"
+			if err := vetRemoteCandidate(c, false); err == nil {
+				t.Errorf("%q accepted", c)
+			}
+			c = "candidate:1 1 udp 1 " + addr + sep + "50000 typ host"
+			if err := vetRemoteCandidate(c, false); err == nil {
+				t.Errorf("%q accepted", c)
+			}
+		}
+	}
+	if err := vetRemoteCandidate("candidate:1 1 udp 1 198.51.100.7 5 typ srflx raddr 127.0.0.1 rport 6", false); err == nil {
+		t.Error("loopback raddr accepted")
+	}
+	if err := vetRemoteCandidate("candidate:1 1 udp 1 198.51.100.7 5 typ srflx raddr 10.0.0.2 rport 6", false); err != nil {
+		t.Errorf("private raddr refused: %v", err)
+	}
+	if err := vetRemoteCandidate("candidate:1 1 udp 1 198.51.100.7 5 typ host "+strings.Repeat("x", maxCandidateLen), false); err == nil {
+		t.Error("overlong candidate accepted")
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -110,6 +111,12 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
 		return
 	}
+	if h.UpgradeLimit != nil {
+		if ok, retry := h.UpgradeLimit.Allow(user.ID.String()); !ok {
+			httpx.WriteRateLimited(w, retry)
+			return
+		}
+	}
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// The upgrader already answered (e.g. 403 for a foreign origin).
@@ -117,7 +124,11 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
-	if !h.registerPending(c) {
+	ok, evicted := h.registerPending(c)
+	for _, old := range evicted {
+		old.evict()
+	}
+	if !ok {
 		c.shutdown()
 		c.close()
 		return
@@ -143,11 +154,33 @@ func (h *Hub) tokenVersion(ctx context.Context, userID uuid.UUID) (int, error) {
 	return tv, err
 }
 
-func (h *Hub) registerPending(c *Client) bool {
+// registerPending admits a handshake. A browser user keeps at most
+// maxBrowserSockets connections: the oldest ones beyond that are returned
+// to be evicted by the caller (outside the lock).
+func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closed {
-		return false
+		return false, nil
+	}
+	var evicted []*Client
+	if c.native == nil {
+		var mine []*Client
+		for existing := range h.clients {
+			if existing.native == nil && existing.User.ID == c.User.ID {
+				mine = append(mine, existing)
+			}
+		}
+		for existing := range h.pending {
+			if existing.native == nil && existing.User.ID == c.User.ID {
+				mine = append(mine, existing)
+			}
+		}
+		sort.Slice(mine, func(i, j int) bool { return mine[i].connectedAt.Before(mine[j].connectedAt) })
+		for len(mine) >= maxBrowserSockets {
+			evicted = append(evicted, mine[0])
+			mine = mine[1:]
+		}
 	}
 	if c.native != nil {
 		count := 0
@@ -162,11 +195,11 @@ func (h *Hub) registerPending(c *Client) bool {
 			}
 		}
 		if count >= 4 {
-			return false
+			return false, nil
 		}
 	}
 	h.pending[c] = struct{}{}
-	return true
+	return true, evicted
 }
 
 func (h *Hub) cancelPending(c *Client) {
@@ -200,6 +233,7 @@ func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	before := h.statusLocked(c.User.ID)
 	h.clients[c] = struct{}{}
 	h.online[c.User.ID]++
+	h.active[c.User.ID]++
 	// The session was just loaded from the database: the freshest profile.
 	h.profiles[c.User.ID] = c.User.Public()
 	// The session was just loaded, so its presence is the latest choice.
@@ -319,6 +353,11 @@ func (h *Hub) unregister(c *Client) {
 	closing := h.closed
 	delete(h.clients, c)
 	c.shutdown()
+	if !c.idle {
+		if h.active[c.User.ID]--; h.active[c.User.ID] <= 0 {
+			delete(h.active, c.User.ID)
+		}
+	}
 	h.online[c.User.ID]--
 	offline := h.online[c.User.ID] <= 0
 	if offline {

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pion/ice/v4"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -35,6 +36,8 @@ const (
 	// address the member chose, so a flood is a way to point the server at
 	// others. A browser gathers a handful per interface and per STUN server.
 	maxRemoteCandidates = 64
+	// maxCandidateLen bounds one candidate line; real ones are under 200.
+	maxCandidateLen = 512
 	// candidateWarnWindow and candidateWarnBurst rate-limit the log of
 	// dropped candidates per peer.
 	candidateWarnWindow = 30 * time.Second
@@ -45,6 +48,7 @@ var (
 	errTooManyCandidates = errors.New("too many candidates before the remote description")
 	errCandidateBudget   = errors.New("candidate budget exhausted")
 	errCandidateAddress  = errors.New("candidate address refused")
+	errCandidateInvalid  = errors.New("candidate invalid")
 )
 
 // candidateState is the per-peer bookkeeping of the two queues above.
@@ -200,23 +204,45 @@ func vetRemoteCandidate(candidate string, allowLoopback bool) error {
 	if candidate == "" {
 		return nil
 	}
-	fields := strings.Fields(strings.TrimPrefix(candidate, "candidate:"))
-	if len(fields) < 8 {
-		return errCandidateAddress
+	if len(candidate) > maxCandidateLen {
+		return errCandidateInvalid
 	}
-	addr, err := netip.ParseAddr(fields[4])
+	// Plain printable ASCII and single spaces only: Pion splits on its own
+	// idea of a separator, and anything else (tabs, NBSP, NEL, controls)
+	// could make the two readings differ.
+	for i := 0; i < len(candidate); i++ {
+		if b := candidate[i]; b < 0x20 || b > 0x7e {
+			return errCandidateInvalid
+		}
+	}
+	// Pion's own parser, on the same text Pion will be given, so what is
+	// vetted is exactly what is applied.
+	parsed, err := ice.UnmarshalCandidate(strings.TrimPrefix(candidate, "candidate:"))
 	if err != nil {
-		// A name, including *.local.
+		return errCandidateInvalid
+	}
+	if !routableCandidateAddress(parsed.Address(), allowLoopback) {
 		return errCandidateAddress
 	}
-	addr = addr.Unmap()
-	if addr.IsUnspecified() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
-		return errCandidateAddress
-	}
-	if addr.IsLoopback() && !allowLoopback {
+	if rel := parsed.RelatedAddress(); rel != nil && rel.Address != "" && !routableCandidateAddress(rel.Address, allowLoopback) {
 		return errCandidateAddress
 	}
 	return nil
+}
+
+// routableCandidateAddress accepts an IP literal that is not unspecified,
+// multicast, link-local or (unless allowLoopback) loopback. A name,
+// including *.local, is refused.
+func routableCandidateAddress(host string, allowLoopback bool) bool {
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
+		return false
+	}
+	addr = addr.Unmap()
+	if addr.IsUnspecified() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
+		return false
+	}
+	return allowLoopback || !addr.IsLoopback()
 }
 
 // takeCandidateBudget counts one accepted candidate. The caller holds candMu.
