@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.22](https://github.com/msch128/mnema-talk/compare/v0.7.21...v0.7.22) (2026-10-17)
+
+
+### Bug Fixes
+
+* a regenerated webhook token belongs to whoever receives it ([#155](https://github.com/msch128/mnema-talk/issues/155)) ([7b21229](https://github.com/msch128/mnema-talk/commit/7b21229291f377bbbd1e1ef52629529862638194))
+
 ## [0.7.21](https://github.com/msch128/mnema-talk/compare/v0.7.20...v0.7.21) (2026-10-17)
 
 
