@@ -1149,7 +1149,7 @@
     },
     "manage_webhooks": {
       "name": "Manage webhooks",
-      "desc": "Reserved for the upcoming webhooks."
+      "desc": "Reserved. Webhooks are managed by the Owner and Administrators."
     },
     "manage_members": {
       "name": "Manage members",

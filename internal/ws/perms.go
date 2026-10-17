@@ -62,6 +62,7 @@ func (h *Hub) BroadcastChannel(channelID uuid.UUID, eventType string, payload an
 	if !ok {
 		return
 	}
+	h.tapped(channelID, eventType, payload) // only what is really published
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	for c := range h.clients {

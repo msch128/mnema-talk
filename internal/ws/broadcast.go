@@ -21,12 +21,20 @@ func encode(eventType string, payload any) []byte {
 	return data
 }
 
+// tapped shows a published event to the hub's Tap.
+func (h *Hub) tapped(channel uuid.UUID, eventType string, payload any) {
+	if h.Tap != nil {
+		h.Tap(channel, eventType, payload)
+	}
+}
+
 // Broadcast sends an event to every connected client.
 func (h *Hub) Broadcast(eventType string, payload any) {
 	data := encode(eventType, payload)
 	if data == nil {
 		return
 	}
+	h.tapped(uuid.Nil, eventType, payload)
 	if eventType == "user_update" {
 		h.applyUserUpdate(payload)
 	}

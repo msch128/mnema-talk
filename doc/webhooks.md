@@ -1,40 +1,45 @@
 # Webhooks
 
 Mnema Talk has **incoming webhooks**: a URL per channel that scripts, CI
-systems and bots post messages to, in Discord's execute format. (Outgoing
-webhooks, which tell your own service about events, are documented further
-down once they ship.)
+systems and bots post messages to, in Discord's execute format, and
+**outgoing webhooks**, which tell your own service what happens (signed JSON
+over HTTP). Outgoing webhooks are described from
+[Outgoing webhooks](#outgoing-webhooks) on.
 
 The OpenAPI document ([`api/openapi.json`](../api/openapi.json)) has every
 route, field and error; this page explains the behaviour and the choices.
 
 ## Who may manage webhooks
 
-The Owner always. Everybody else needs the permission **Manage webhooks** and
-**View channels** in that channel (a channel you cannot view does not exist for
-you, so neither do its webhooks). Because the webhook is an admin-area
-feature, the API lives under `/api/admin`.
+Webhooks are an **admin tool**, decoupled from roles and permissions: only the
+**Owner** and members with **Administrator** can create or manage them, in any
+channel, and nothing else opens them (not *Manage webhooks*, which is reserved
+and unused, nor *Manage channels* or *Manage roles*). The API lives under
+`/api/admin`.
 
-Creating a webhook also needs **Send messages** in the channel, because the
-webhook posts there. A webhook acts with its creator's rights, checked again
-at every post: it needs the creator to hold *Send messages* (and *Attach
-files* when files are sent) in the channel right now, and the creator's
-account to exist and be enabled; otherwise the post is refused with `403`
-(code 50013). The Owner's webhooks always pass.
+A webhook belongs to its channel, not to a person. The administrator who made
+it is kept as a record (`created_by`, and for outgoing ones `url_set_by` and
+`url_set_at`, shown in the interface so stale webhooks are easy to spot). That
+record grants nothing: the webhook keeps working if its maker loses a role,
+is disabled or is deleted, and any administrator can change or delete it.
+Regenerating a token or rotating a secret changes only that.
 
-Regenerating a token gives the new URL to the caller, so it needs the same
-rights as creating (including *Send messages*), and the caller becomes the
-webhook's creator: posts are always checked against whoever holds the URL.
+A webhook posts with **its own settings** and nothing else; whoever holds the
+URL gets exactly these, so treat the URL like a password. Set them when
+creating the webhook or later (`PATCH /api/admin/webhooks/{id}`):
 
-Hierarchy follows [roles and permissions](roles-and-permissions.md):
+| Setting | Default | Meaning |
+|---|---|---|
+| `allow_everyone` | off | `@all` and `@here` may notify (the sender must also ask for it with `allowed_mentions.parse: ["everyone"]`) |
+| `allow_user_mentions` | on | `@username` notifies members, as Discord's `parse: ["users"]`; off turns every member mention into plain text |
+| `allow_attachments` | on | a post may carry files; otherwise it is refused with `400` |
+| `allow_embeds` | on | a post may carry embeds; otherwise it is refused with `400` |
+| `allow_identity_override` | on | a post may set its own `username`; otherwise the webhook's name is used |
 
-- A webhook created by the Owner can only be changed by the Owner.
-- Otherwise a member may change, regenerate or delete a webhook of someone
-  whose highest role is **not above** theirs (peers may look after each
-  other's webhooks), and always their own.
-- A webhook can mention `@all` and `@here` only if its **creator** holds
-  *Mention everyone* in that channel at the moment of the post, so a webhook
-  never gives anyone more power than its creator has.
+Roles cannot be mentioned from a webhook (`allowed_mentions.roles` is ignored).
+Nobody who cannot see the channel is ever notified, whatever the settings say.
+The limits that protect the server stay global: sizes, rate limits, sanitizing
+of text and links, the file type checks.
 
 ## Create one
 
@@ -92,10 +97,10 @@ posted.
 | Discord feature | Mnema Talk |
 |---|---|
 | `content` | Supported, up to 4000 characters (Discord: 2000) |
-| `username` | Supported (1 to 80 characters, no control characters) |
+| `username` | Supported (1 to 80 characters, no control characters) unless the webhook's `allow_identity_override` is off |
 | `avatar_url` | **Ignored.** Mnema Talk never loads pictures from other hosts; set the avatar on the webhook |
 | `embeds` | Subset: `title`, `description`, `url`, `color`, `timestamp`, `fields`, `footer.text`, `author.name`/`url`, `image.url`, `thumbnail.url`. Discord's limits apply (10 embeds, 25 fields, 6000 characters in total). Pictures are shown as links, not loaded. `type`, `video`, `provider` and icon URLs are accepted and dropped |
-| `allowed_mentions` | `parse` with `users` and `everyone`, and `users` (member IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the creator may mention everyone. `roles` is accepted and ignored |
+| `allowed_mentions` | `parse` with `users` and `everyone`, and `users` (member IDs). Default **differs from Discord**: `@username` notifies, `@all`/`@here` do not unless `parse` contains `everyone` and the webhook's `allow_everyone` setting is on (the settings can only narrow what a sender asks for). `roles` is accepted and ignored |
 | `?wait` | Supported |
 | `?thread_id` | Supported, as the ID of a root message |
 | `multipart/form-data`, `payload_json`, files | Supported (`files[n]`; any part with a file name counts) |
@@ -128,10 +133,159 @@ channel** (Discord's numbers), JSON bodies up to 1 MiB, multipart up to
 address (30 a minute) and then answered with `429`, so a token cannot be
 guessed by hammering the route (it has 256 random bits anyway).
 
+## Outgoing webhooks
+
+An outgoing webhook sends events of a channel (or of the whole server) to a
+URL of yours. Administrators create them under **Webhooks** in a channel's menu, or
+through the API:
+
+```
+POST /api/admin/channels/{channelId}/outgoing-webhooks
+     {"name": "CI", "url": "https://ci.example.org/mnema", "events": ["MESSAGE_CREATE"]}
+```
+
+The answer carries the **signing secret, shown once** (`whsec_...`); rotate
+it with `POST /api/admin/outgoing-webhooks/{id}/secret`. Up to 10 per channel.
+An outgoing webhook belongs to its channel and receives that channel's events
+only; there are no server-wide webhooks. Its settings are the events it sends
+and whether it is enabled. Deleting the channel deletes it.
+
+### Events
+
+| Event | When | `d` |
+|---|---|---|
+| `MESSAGE_CREATE` | a message is posted in the channel (messages posted by an incoming webhook are not sent, so two webhooks cannot feed each other) | the message, as in `GET /api/channels/{id}/messages` |
+| `MESSAGE_UPDATE` | a message is edited | the message |
+| `MESSAGE_DELETE` | a message is deleted | `{id, channel_id, parent_id}` |
+| `MESSAGE_REACTIONS_UPDATE` | someone reacts or takes a reaction back | `{message_id, channel_id, reactions}` |
+| `VOICE_STATE_UPDATE` | a member joins or leaves a Talk of the channel | `{action: "join"\|"leave", channel_id, user...}` |
+| `PING` | the "send test event" button; cannot be subscribed to | `{message}` |
+
+`d` is exactly the object the WebSocket sends for that event, so the
+OpenAPI schemas of the messages apply. Typing, presence and similar
+short-lived events are not offered.
+
+### The request
+
+`POST` with `Content-Type: application/json`:
+
+```json
+{
+  "id": "6f1c...",
+  "t": "MESSAGE_CREATE",
+  "timestamp": "2026-10-17T09:30:00Z",
+  "webhook_id": "b0a1...",
+  "channel_id": "93de...",
+  "d": { "id": "...", "content": "hello", "user_id": "...", "...": "..." }
+}
+```
+
+`id` is unique per event and **repeated by retries**; use it (or the
+`X-Mnema-Delivery` header, the same value) to deduplicate. More headers:
+
+- `X-Mnema-Event`: the event type.
+- `User-Agent: MnemaTalk-Webhook/<version>`.
+- `X-Mnema-Signature: t=<unix seconds>,v1=<hex>`, where `v1` is the
+  HMAC-SHA256 of `"<t>.<raw body>"` with your secret as the key.
+
+Your endpoint answers with any `2xx` within 10 seconds; the body is ignored.
+
+### Verify the signature
+
+Recompute over the **raw** request body, compare in constant time, and refuse
+timestamps that are too old (replay protection):
+
+```python
+import hmac, hashlib, time
+
+def verify(secret: str, header: str, raw_body: bytes, tolerance=300) -> bool:
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    t, v1 = parts["t"], parts["v1"]
+    if abs(time.time() - int(t)) > tolerance:
+        return False
+    expected = hmac.new(secret.encode(), f"{t}.".encode() + raw_body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, v1)
+```
+
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto'
+
+export function verify(secret, header, rawBody, toleranceSeconds = 300) {
+  const { t, v1 } = Object.fromEntries(header.split(',').map(p => p.split('=')))
+  if (Math.abs(Date.now() / 1000 - Number(t)) > toleranceSeconds) return false
+  const expected = createHmac('sha256', secret).update(`${t}.`).update(rawBody).digest('hex')
+  return expected.length === v1.length && timingSafeEqual(Buffer.from(expected), Buffer.from(v1))
+}
+```
+
+### Retries, switch-off and the log
+
+- A delivery that fails with a network error, a timeout, `5xx`, `408` or
+  `429` is retried after 5 seconds, 30 seconds, 2, 10 and 30 minutes (a
+  `Retry-After` of the receiver, up to 10 minutes, is honoured), so an event
+  is tried up to 6 times in about 45 minutes. Other `4xx`, redirects and
+  refused addresses are not retried.
+- **Five events in a row** that failed for good switch the webhook off
+  (status `auto_disabled`, visible in the list). Switching it on again
+  (`PATCH ... {"enabled": true}`) starts over.
+- The queue lives **in memory**: at most 1000 events wait, and further ones are
+  dropped when receivers cannot keep up. Events still waiting or waiting for a
+  retry are **lost on a restart** of the server. Outgoing webhooks are a
+  notification channel, not a log; fetch the messages from the API if you
+  must not miss any. The cost is no extra table, no extra service.
+- At most 20 delivery attempts a second go out in total, 4 at a time.
+- `GET /api/admin/outgoing-webhooks/{id}/deliveries` shows the last 50
+  attempts (event, attempt number, HTTP status, a short error code, duration).
+  **The receiver's response is never stored or shown**, only the status code,
+  because it could come from a service inside your network.
+- "Send test event" (`POST .../test`) sends a `PING` once, right away, and
+  shows the result. It is limited to 6 a minute per webhook and does not count
+  towards the switch-off.
+
+### Who sees what
+
+An outgoing URL receives its channel's events until an administrator changes
+or deletes the webhook, whoever set the URL and whatever became of them, as in
+Discord. Only administrators can set URLs, and each webhook only gets one
+channel's events. Nothing is checked per delivery beyond the webhook still
+existing. Rotating the secret, renaming and switching on or off change only
+that.
+
+### Target addresses (SSRF protection)
+
+A URL typed by a member makes **this server** send a request, so the server
+guards where requests may go:
+
+- Only `http` and `https`, no credentials in the URL, at most 2048 bytes.
+- The server resolves the name itself and refuses the **whole host** if any
+  answer is not a public address: loopback, private ranges (`10/8`,
+  `172.16/12`, `192.168/16`), link-local, carrier-grade NAT (`100.64/10`),
+  multicast, unspecified, IPv6 unique-local and link-local, reserved and
+  documentation ranges, NAT64/6to4/Teredo, and the cloud metadata addresses
+  (`169.254.169.254`, `fd00:ec2::254`, ...). IPv4-mapped IPv6 forms are
+  checked as the IPv4 address they carry.
+- It then connects to **exactly the address it checked**, not to the name
+  again, so a DNS answer that changes between the check and the connection
+  (rebinding) is harmless. This also applies to every connection.
+- **Redirects are not followed** (a `3xx` is a failed delivery), so a public
+  URL cannot bounce the server to an internal one. No proxy from the
+  environment is used. Responses are read up to 64 KiB and dropped.
+- Failures are reported as short codes (`blocked_address`, `dns_error`,
+  `connect_error`, `timeout`, `tls_error`, `http_500`, ...), never as the raw
+  network error, so the log cannot be used to map a network.
+
+If a webhook must reach a service on your own network, the operator can list
+it in `WEBHOOK_ALLOW_PRIVATE_TARGETS` (addresses and CIDR ranges, comma
+separated; empty by default). **This is a risk decision:** every administrator
+can then make the server send POST requests with a JSON body
+to those addresses. List single hosts rather than whole networks, and prefer
+a receiver that checks the signature. The metadata addresses and the reserved
+ranges cannot be opened this way.
+
 ## Security notes
 
 See the *Webhooks* paragraph in [SECURITY.md](../SECURITY.md). In short: the
 URL is a bearer secret, treat it like a password; tokens are stored hashed and
 compared in constant time; a webhook cannot sign in, appear as a member, or
-mention beyond what its creator may; embeds are rendered as sanitized text
+notify everyone unless its maker could; embeds are rendered as sanitized text
 and links, nothing is fetched from the senders' hosts.

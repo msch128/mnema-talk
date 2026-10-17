@@ -26,7 +26,6 @@ const (
 	codeUnknownChannel   = 10003
 	codeUnknownWebhook   = 10015
 	codeInvalidToken     = 50027
-	codeMissingAccess    = 50013
 	codeEmptyMessage     = 50006
 	codeInvalidFormBody  = 50035
 	codeEntityTooLarge   = 40005
@@ -100,8 +99,6 @@ func writeFailure(w http.ResponseWriter, err error) {
 	}
 	code := 0
 	switch ae.Status {
-	case http.StatusForbidden:
-		code = codeMissingAccess
 	case http.StatusBadRequest:
 		code = codeInvalidFormBody
 	case http.StatusRequestEntityTooLarge:
@@ -387,18 +384,22 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 // build validates a parsed request into a message and the mention policy.
 func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*chat.NewMessage, chat.MentionPolicy, error) {
 	p := req.payload
-	if err := h.creatorMayPost(ctx, rec, len(req.files) > 0); err != nil {
-		return nil, chat.MentionPolicy{}, err
-	}
 	content, err := chat.ValidateContent(p.Content, true)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, formError(err.Error())
 	}
 	name := rec.Name
-	if strings.TrimSpace(p.Username) != "" {
+	// Without the setting the sender's username is ignored, like avatar_url.
+	if rec.AllowIdentityOverride && strings.TrimSpace(p.Username) != "" {
 		if name, err = cleanName("username", p.Username); err != nil {
 			return nil, chat.MentionPolicy{}, formError(err.Error())
 		}
+	}
+	if !rec.AllowEmbeds && len(p.Embeds) > 0 {
+		return nil, chat.MentionPolicy{}, formError("embeds are not allowed for this webhook")
+	}
+	if !rec.AllowAttachments && len(req.files) > 0 {
+		return nil, chat.MentionPolicy{}, formError("attachments are not allowed for this webhook")
 	}
 	embeds, err := sanitizeEmbeds(p.Embeds)
 	if err != nil {
@@ -438,45 +439,20 @@ type unknownThread struct{}
 
 func (unknownThread) Error() string { return "Unknown Channel" }
 
-// creatorMayPost re-checks, at every post, what the webhook's creator may do:
-// a webhook never outlives its creator's right to post (Send messages, and
-// Attach files with files). It is refused once the creator's account is gone
-// or disabled. The Owner always passes.
-func (h *Handler) creatorMayPost(ctx context.Context, rec *record, files bool) error {
-	if !rec.creatorActive || rec.CreatedBy == nil {
-		return httpx.ErrForbidden("the webhook's creator can no longer post here")
-	}
-	if h.Perms == nil {
-		return nil
-	}
-	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
-	if err != nil {
-		return err
-	}
-	need := perm.SendMessages
-	if files {
-		need |= perm.AttachFiles
-	}
-	if perm.CheckChannel(snap.Channel(perm.Subject{ID: *rec.CreatedBy}, rec.ChannelID), need) != nil {
-		return httpx.ErrForbidden("the webhook's creator can no longer post here")
-	}
-	return nil
-}
-
-// mentionPolicy turns allowed_mentions into the policy for the message. The
-// default notifies mentioned members but never @all and @here. Those need
-// "everyone" in parse and the webhook's creator to hold Mention everyone in
-// the channel right now: a webhook cannot give anyone more power than its
-// creator has.
+// mentionPolicy turns the webhook's settings and allowed_mentions into the
+// policy for the message. The settings limit what a sender can ask for: with
+// the defaults @username notifies members and @all and @here do not. The
+// request can only narrow that, never widen it. Nobody who cannot view the
+// channel is notified, whatever the settings say.
 func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
-	policy := chat.MentionPolicy{NoEveryone: true}
+	policy := chat.MentionPolicy{NoEveryone: true, NoUsers: !rec.AllowUserMentions}
 	if am != nil {
 		wantUsers := slices.Contains(am.Parse, "users")
 		wantEveryone := slices.Contains(am.Parse, "everyone")
 		if wantUsers && len(am.Users) > 0 {
 			return policy, formError("allowed_mentions: users cannot be in parse and listed at once")
 		}
-		if !wantUsers {
+		if !wantUsers && rec.AllowUserMentions {
 			policy.NoUsers = true
 			for _, raw := range am.Users {
 				if id, err := uuid.Parse(raw); err == nil {
@@ -486,15 +462,14 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 		}
 		policy.NoEveryone = !wantEveryone
 	}
+	// @all and @here need both the sender's request and the webhook's setting.
+	policy.NoEveryone = policy.NoEveryone || !rec.AllowEveryone
 	if h.Perms == nil {
 		return policy, nil
 	}
 	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
 	if err != nil {
 		return policy, err
-	}
-	if !policy.NoEveryone {
-		policy.NoEveryone = rec.CreatedBy == nil || !snap.Channel(perm.Subject{ID: *rec.CreatedBy}, rec.ChannelID).Has(perm.MentionEveryone)
 	}
 	ch := rec.ChannelID
 	policy.CanView = func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) }

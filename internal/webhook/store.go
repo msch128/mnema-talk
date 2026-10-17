@@ -35,6 +35,51 @@ const (
 
 var errNotFound = httpx.ErrNotFound("webhook not found")
 
+// Settings are what an incoming webhook may do. An administrator sets them for
+// each webhook; the webhook posts with exactly these, whoever made it.
+type Settings struct {
+	// AllowEveryone lets @all and @here notify people (default off). It also
+	// takes "everyone" in the sender's allowed_mentions.
+	AllowEveryone bool `json:"allow_everyone"`
+	// AllowAttachments lets a post carry files (default on).
+	AllowAttachments bool `json:"allow_attachments"`
+	// AllowEmbeds lets a post carry embeds (default on).
+	AllowEmbeds bool `json:"allow_embeds"`
+	// AllowUserMentions lets @username notify members (default on, as Discord
+	// does with allowed_mentions.parse = users).
+	AllowUserMentions bool `json:"allow_user_mentions"`
+	// AllowIdentityOverride lets a post set its own username (default on).
+	// Avatars from other hosts are never used.
+	AllowIdentityOverride bool `json:"allow_identity_override"`
+}
+
+// DefaultSettings are the settings of a new webhook.
+var DefaultSettings = Settings{AllowAttachments: true, AllowEmbeds: true, AllowUserMentions: true, AllowIdentityOverride: true}
+
+// SettingsPatch changes some settings; nil leaves one as it is.
+type SettingsPatch struct {
+	AllowEveryone         *bool `json:"allow_everyone,omitempty" binding:"optional"`
+	AllowAttachments      *bool `json:"allow_attachments,omitempty" binding:"optional"`
+	AllowEmbeds           *bool `json:"allow_embeds,omitempty" binding:"optional"`
+	AllowUserMentions     *bool `json:"allow_user_mentions,omitempty" binding:"optional"`
+	AllowIdentityOverride *bool `json:"allow_identity_override,omitempty" binding:"optional"`
+}
+
+// apply returns s with the patch applied.
+func (p SettingsPatch) apply(s Settings) Settings {
+	set := func(dst *bool, v *bool) {
+		if v != nil {
+			*dst = *v
+		}
+	}
+	set(&s.AllowEveryone, p.AllowEveryone)
+	set(&s.AllowAttachments, p.AllowAttachments)
+	set(&s.AllowEmbeds, p.AllowEmbeds)
+	set(&s.AllowUserMentions, p.AllowUserMentions)
+	set(&s.AllowIdentityOverride, p.AllowIdentityOverride)
+	return s
+}
+
 // Webhook is a webhook as the management API shows it. The token is only
 // ever shown once, in CreatedWebhook.
 type Webhook struct {
@@ -43,10 +88,12 @@ type Webhook struct {
 	Name      string    `json:"name" maxLength:"80"`
 	// AvatarURL is the API URL of the avatar; omitted when none is set.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
-	// CreatedBy is the member who created it (null once that account is gone).
+	// CreatedBy is the administrator who created it, kept for the record (null
+	// once that account is gone). It grants nothing.
 	CreatedBy *uuid.UUID `json:"created_by" format:"uuid" extensions:"x-nullable"`
 	CreatedAt time.Time  `json:"created_at" format:"date-time"`
 	UpdatedAt time.Time  `json:"updated_at" format:"date-time"`
+	Settings
 }
 
 // CreatedWebhook is the answer to creating a webhook or regenerating its
@@ -63,22 +110,20 @@ type CreatedWebhook struct {
 // record is a webhook with what only the server needs.
 type record struct {
 	Webhook
-	// creatorActive is false once the creator's account is gone or disabled.
-	creatorActive bool
-	botUserID     uuid.UUID
-	tokenHash     []byte
+	botUserID uuid.UUID
+	tokenHash []byte
 }
 
 const recordSelect = `
 	SELECT w.id, w.channel_id, w.name, u.avatar_s3_key, w.created_by, w.created_at, w.updated_at, w.bot_user_id, w.token_hash,
-	       (c.id IS NOT NULL AND c.disabled_at IS NULL)
-	FROM webhooks w JOIN users u ON u.id = w.bot_user_id
-	LEFT JOIN users c ON c.id = w.created_by`
+	       w.allow_everyone, w.allow_attachments, w.allow_embeds, w.allow_user_mentions, w.allow_identity_override
+	FROM webhooks w JOIN users u ON u.id = w.bot_user_id`
 
 func scanRecord(row pgx.Row) (*record, error) {
 	var rec record
 	var avatar *string
-	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash, &rec.creatorActive)
+	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash,
+		&rec.AllowEveryone, &rec.AllowAttachments, &rec.AllowEmbeds, &rec.AllowUserMentions, &rec.AllowIdentityOverride)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errNotFound
 	}
@@ -152,7 +197,7 @@ func botDisplayName(name string) string {
 
 // create stores a webhook with its bot account and returns it with the
 // secret token.
-func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name string) (*record, string, error) {
+func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name string, st Settings) (*record, string, error) {
 	token, hash := newToken()
 	suffix := make([]byte, 8)
 	_, _ = rand.Read(suffix)
@@ -175,8 +220,11 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 			return err
 		}
 		return tx.QueryRow(ctx, `
-			INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by)
-			VALUES ($1, $2, $3, $4, $5) RETURNING id`, channel, bot, name, hash, creator).Scan(&id)
+			INSERT INTO webhooks (channel_id, bot_user_id, name, token_hash, created_by,
+			    allow_everyone, allow_attachments, allow_embeds, allow_user_mentions, allow_identity_override)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+			channel, bot, name, hash, creator,
+			st.AllowEveryone, st.AllowAttachments, st.AllowEmbeds, st.AllowUserMentions, st.AllowIdentityOverride).Scan(&id)
 	})
 	if err != nil {
 		if _, ok := httpx.AsAPIError(err); ok {
@@ -188,21 +236,27 @@ func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name st
 	return rec, token, err
 }
 
-func rename(ctx context.Context, p *db.Pool, rec *record, name string) error {
+// update changes the name and the settings (nil/empty leaves them) and the
+// bot account's name with it.
+func update(ctx context.Context, p *db.Pool, rec *record, name *string, st Settings) error {
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE webhooks SET name = $1, updated_at = NOW() WHERE id = $2`, name, rec.ID); err != nil {
-			return err
+		if name != nil {
+			if _, err := tx.Exec(ctx, `UPDATE users SET display_name = $1, updated_at = NOW() WHERE id = $2`, botDisplayName(*name), rec.botUserID); err != nil {
+				return err
+			}
 		}
-		_, err := tx.Exec(ctx, `UPDATE users SET display_name = $1, updated_at = NOW() WHERE id = $2`, botDisplayName(name), rec.botUserID)
+		_, err := tx.Exec(ctx, `
+			UPDATE webhooks SET name = COALESCE($2, name), updated_at = NOW(),
+			    allow_everyone = $3, allow_attachments = $4, allow_embeds = $5, allow_user_mentions = $6, allow_identity_override = $7
+			WHERE id = $1`, rec.ID, name, st.AllowEveryone, st.AllowAttachments, st.AllowEmbeds, st.AllowUserMentions, st.AllowIdentityOverride)
 		return err
 	})
 }
 
-// regenerate makes a new token and makes actor the webhook's creator: whoever
-// holds the secret URL is whose rights every later post is checked against.
-func regenerate(ctx context.Context, p *db.Pool, rec *record, actor uuid.UUID) (string, error) {
+// regenerate makes a new token and changes nothing else.
+func regenerate(ctx context.Context, p *db.Pool, rec *record) (string, error) {
 	token, hash := newToken()
-	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, created_by = $3, updated_at = NOW() WHERE id = $2`, hash, rec.ID, actor); err != nil {
+	if _, err := p.Exec(ctx, `UPDATE webhooks SET token_hash = $1, updated_at = NOW() WHERE id = $2`, hash, rec.ID); err != nil {
 		return "", fmt.Errorf("regenerate webhook token: %w", err)
 	}
 	return token, nil

@@ -257,6 +257,11 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	if !c.nativeLive() {
 		return
 	}
+	// Outgoing webhooks only hear what is really published: after the
+	// publication is authorized and live, never before.
+	if view != uuid.Nil {
+		h.tapped(view, eventType, payload)
+	}
 	for recipient := range h.clients {
 		if excludeSelf && recipient.User.ID == c.User.ID {
 			continue

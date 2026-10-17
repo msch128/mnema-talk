@@ -80,8 +80,13 @@ func TestEventsFailClosedWhenPermissionsCannotBeLoaded(t *testing.T) {
 	}
 	drainTypes(t, b)
 	ch := uuid.New()
+	var tapped []string
+	h.Tap = func(_ uuid.UUID, eventType string, _ any) { tapped = append(tapped, eventType) }
 	h.BroadcastChannel(ch, "message_create", nil)
 	a.emitApplicationEvent("typing", nil, true, nil, ch)
+	if len(tapped) != 0 {
+		t.Fatalf("outgoing webhooks heard events nobody was sent: %v", tapped)
+	}
 	h.PermissionsChanged(nil)
 	if got := drainTypes(t, a); len(got) != 0 {
 		t.Fatalf("events delivered without permissions: %v", got)
