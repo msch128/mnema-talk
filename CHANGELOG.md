@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.20](https://github.com/msch128/mnema-talk/compare/v0.7.19...v0.7.20) (2026-10-17)
+
+
+### Features
+
+* manage roles and permissions in the web app ([#149](https://github.com/msch128/mnema-talk/issues/149)) ([450a0b3](https://github.com/msch128/mnema-talk/commit/450a0b333658251ed531552063091a555953472d))
+* roles and permissions with a protected Owner ([#145](https://github.com/msch128/mnema-talk/issues/145)) ([82421ab](https://github.com/msch128/mnema-talk/commit/82421abdf5aa5989499f62bb6e37d1be8fa4f91e))
+
 ## [0.7.19](https://github.com/msch128/mnema-talk/compare/v0.7.18...v0.7.19) (2026-10-17)
 
 
