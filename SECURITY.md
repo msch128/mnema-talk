@@ -139,12 +139,63 @@ locally instead (`make up` or `make dev`).
   sending transform numbers its frames, and a receiver opens a frame only once
   (64-frame window per stream, see below for streams and layers). The previous epoch's key is kept until the
   next rotation.
+  **What a member can do.** A member of the call is inside the trust
+  boundary for the media it can read, but the group's rules limit what it can
+  do to the others. Every receiver checks a commit after its signature has
+  verified and before it takes effect, and ignores one that breaks the rules
+  (without discarding anything, as for an untrusted rival): it must come from
+  the member who commits now (the lowest id in the group and the room, with the
+  hung-tab skip); it may only add or remove; an add must be of an identity that
+  is in the room and sent that very key package through the relay, and never
+  of an identity that already holds a leaf, unless the same commit removes the
+  old leaf (a member who came back); a remove must be of a member the roster no
+  longer lists, one silent for about the absence limit by the receiver's own
+  clock, or one the commit replaces. A browser that slept, and the member being
+  removed itself, take a removal on the committer's word, since neither can
+  judge silence. So another member cannot remove a present member or give
+  someone a second leaf (an epoch where an identity holds two leaves is
+  refused and the member starts over). A malicious committer (the lowest id)
+  keeps the powers the rules give the role: it can remove a member that looks
+  silent to it, delay joins or stop the call, as above. Only authenticated input discards a
+  group: a handshake that merely parses, a key package, or a public message from
+  an id outside the group never does. A welcome from a lower id outside my
+  group replaces it only if it opens with the key package I offered and passes
+  the committer rule, at most once per minute per sender (doubling to ten
+  minutes); a member who holds a key package I offered can therefore still pull
+  me into a group of its own, as noted above. A commit for an epoch I have not
+  reached makes me start over only from one of the two lowest live members and
+  naming that member's own leaf. A member counts as alive only for a verified
+  heartbeat or a verified commit, never for a message that merely parses.
   **Key lifetime.** A key never outlives 30 minutes (plus or minus a random
   two-minute jitter per epoch, so Talks do not rotate in step): once the
   epoch is that old, the committer (the lowest member id in the group and the
   room) advances it with a commit that carries an update path, so even with
   no joins or leaves every member gets a new exporter key, and the committer's
-  own leaf secrets are replaced (post-compromise security for it). The
+  own leaf secrets are replaced (post-compromise security for it).
+  **Leaf renewal.** Every other member renews its own leaf too, so that
+  post-compromise security covers each member and not only the committer: once
+  a member's leaf is about 30 minutes old (the same jittered period) it sends a
+  commit that holds nothing but its own new update path. To keep it from racing
+  the committer it waits for a quiet moment (no handshake or roster change for
+  one maintenance interval, the epoch that old, and one more interval per
+  member with a lower id whose leaf is due too); a leaf long overdue stops
+  waiting. Receivers take such a commit from any member in the group but at
+  most twice per rotation period per member, and only if the result differs
+  from the old tree in nothing but the sender's own leaf encryption key (same
+  identity, same signature key, no other leaf touched); anything else is
+  ignored without discarding the group. The same check applies to every
+  commit, the committer's included: no commit may change the identity or
+  signature key of a leaf it does not remove, or the encryption key of a leaf
+  other than the sender's. If two
+  commits for the same epoch still meet (a renewal with the committer's commit
+  or with another renewal), the committer's wins and, between renewals, the
+  lower id's; a member that took the loser goes back to the state it kept for
+  ten seconds and takes the winner, so the call does not split (anything else
+  that has split is repaired by the existing start-over). A member's leaf
+  secrets that an attacker held are therefore useless to it after about one
+  period of the member being online and in the group, and a member's keys
+  change at most once per period more than before: with 100 members that is
+  about 100 small commits per 30 minutes, inside the handshake budget. The
   schedule is the epoch's age, which every member knows, not a timer that
   restarts when the committer changes, and it is measured with the browser's
   monotonic clock, so a wall-clock step moves nothing. Receivers hold the
@@ -198,9 +249,14 @@ locally instead (`make up` or `make dev`).
   receiver's replay window is per (epoch, stream), so when the SFU switches a
   viewer from one layer to another, or back, the counters of the other layers
   (which kept counting while not forwarded) never look like replays of each
-  other and nothing is opened twice. A sender may use up to 256 streams per
-  epoch (a share takes three, each reconnect re-arms all of its lines); further
-  new streams are refused rather than evicting an old one. The SFU reads only
+  other and nothing is opened twice. A sender may have up to 256 live streams per
+  epoch (a share takes three, each reconnect re-arms all of its lines). When
+  they are used up, streams silent for more than a minute are retired to their
+  highest counter (up to 1024 retired per epoch): a retired stream ID reopens
+  only for a counter above that, and then treats everything below as seen, so
+  no unit it opened can open again. If none is idle or the retired list is
+  full, new streams are refused until the next epoch; nothing is ever evicted
+  without keeping its high-water counter. The SFU reads only
   what the transform leaves readable (the RTP descriptor, the VP8 frame tag,
   H.264 NAL types) to find keyframes and renumber packets; it never decodes or
   alters sealed bytes. Which layers exist, which one a viewer receives and
@@ -213,6 +269,14 @@ locally instead (`make up` or `make dev`).
   compromised SFU can feed a viewer old recorded frames of a layer it has not
   received yet (previously the same was true for newly joined viewers); this
   falls under the active-server limits above, not under an honest SFU.
+  The line a unit belongs to (microphone, camera, screen, screen audio, layer)
+  is not part of the authenticated data; the sender, epoch, stream and counter
+  are. A sender's lines share one replay window per sender, so a unit still
+  opens only once, but an active SFU can move a sealed unit from one of a
+  sender's lines to another (the receiver then fails to decode it, or decodes
+  audio as video). Binding the line would change the frame format and the
+  receiver's arming on a live rollout for a disruption an active server already
+  has, so it is a known limit, not a fixed one.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;

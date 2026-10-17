@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import {
-  FRAME_OVERHEAD_BYTES, FrameStream, LAYER_STREAM_MASK, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, layerStreamId, importEpochKey, importFrameSigner, importFrameVerifier,
+  FRAME_OVERHEAD_BYTES, FrameStream, LAYER_STREAM_MASK, REPLAY_IDLE_MS, REPLAY_RETIRED, REPLAY_STREAMS, ReplayWindow, SIGNATURE_BYTES, layerStreamId, importEpochKey, importFrameSigner, importFrameVerifier,
   openFrame, rememberEpochKey, sealFrame, type EpochKeys,
 } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
@@ -154,6 +154,45 @@ describe('media frames', () => {
     expect(replay.fresh(2, 1, 5)).toBe(false)
     expect(replay.mark(2, 1, 1000)).toBe(true)
     expect(replay.fresh(2, 1, 5)).toBe(false)
+  })
+
+  it('retires streams idle for a minute to make room, and never lets a retired stream replay', () => {
+    let now = 1_000_000
+    const replay = new ReplayWindow(() => now)
+    for (let stream = 0; stream < REPLAY_STREAMS; stream++) expect(replay.mark(1, stream, 100 + stream)).toBe(true)
+    // Nobody is idle yet: a new stream is still refused.
+    now += REPLAY_IDLE_MS
+    expect(replay.mark(1, 1000, 0)).toBe(false)
+    // Stream 0 keeps talking; the rest go idle past the limit.
+    now += 1
+    expect(replay.mark(1, 0, 200)).toBe(true)
+    expect(replay.mark(1, 1000, 0)).toBe(true)
+    // Retired streams refuse everything up to their highest counter, even ones never seen.
+    expect(replay.fresh(1, 5, 105)).toBe(false)
+    expect(replay.fresh(1, 5, 100)).toBe(false)
+    expect(replay.fresh(1, 5, 50)).toBe(false)
+    // A newer counter reopens the stream, if there is room for it.
+    expect(replay.fresh(1, 5, 106)).toBe(true)
+    expect(replay.mark(1, 5, 106)).toBe(true)
+    expect(replay.mark(1, 5, 106)).toBe(false)
+    expect(replay.mark(1, 5, 105)).toBe(false)
+    // A dropped epoch forgets its retired streams too.
+    replay.retain([2])
+    expect(replay.fresh(1, 6, 0)).toBe(true)
+  })
+
+  it('refuses new streams again once the retired ones fill up, and while no live stream is idle', () => {
+    let now = 0
+    const replay = new ReplayWindow(() => now)
+    let stream = 0
+    for (let round = 0; round < REPLAY_RETIRED / REPLAY_STREAMS + 1; round++) {
+      for (let i = 0; i < REPLAY_STREAMS; i++) expect(replay.mark(1, stream++, 1)).toBe(true)
+      now += REPLAY_IDLE_MS + 1
+    }
+    // 1280 streams are open or retired now; the last round is idle but the retired list is full.
+    expect(replay.mark(1, stream, 1)).toBe(false)
+    expect(replay.fresh(1, 0, 1)).toBe(false)
+    expect(replay.fresh(2, stream, 1)).toBe(true)
   })
 
   it('keeps refusing the frame of an old stream after the sender used up its streams', async () => {
