@@ -1,0 +1,31 @@
+internal/ws/tap_test.go
+  s_06fcde5dbef956::t_8c6720a0759ade 22,30,44
+  s_06fcde5dbef956::t_33792d9a111d77 29
+  s_06fcde5dbef956::t_8a8e31ba471d7d 1-21,23-28,31-43,45-49
+internal/ws/perms.go
+  s_06fcde5dbef956::t_e52f86e1377ced 65
+internal/ws/native_lease.go
+  s_06fcde5dbef956::t_e52f86e1377ced 260-263
+  s_06fcde5dbef956::t_a865879f60e174 264
+internal/ws/perms_test.go
+  s_06fcde5dbef956::t_e52f86e1377ced 83-84,87-89
+internal/ws/broadcast.go
+  s_06fcde5dbef956::t_d9d8a88ee022ae 24,31
+  s_06fcde5dbef956::t_e52f86e1377ced 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "33231c20fe4dfb7d9e37c8ced86ab63b445c3b09",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
