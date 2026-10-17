@@ -2,6 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
+import { PREVIOUS_GROUP_MS } from './bounds'
 
 const previous = globalThis.crypto
 let alice: TestMember
@@ -39,7 +40,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264' }: { named?: boolean, type?: string, mime?: string } = {}) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands }: { named?: boolean, type?: string, mime?: string, afterCommands?: () => void } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
   vi.stubGlobal('self', scope)
@@ -67,6 +68,7 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
   scope.onrtctransform?.({})
   scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}) } } })
   for (const command of commands) port.postMessage(command)
+  afterCommands?.()
   for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type, getMetadata: () => ({ mimeType: mime }) } : {}) })
   closeStream()
   await done
@@ -329,5 +331,51 @@ describe('media frame worker', () => {
       transformer: { readable, writable, options: { port, direction: 'recv', channelId: 'channel', senderId: 'alice' } },
     })
     await new Promise(resolve => setTimeout(resolve, 10))
+  })
+
+  describe('while the call regroups', () => {
+    async function sealedAt(keys: EpochKeys, epoch: number, byte: number) {
+      const packet = await seal({ keys, epoch, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([byte]) })
+      if (!packet) throw new Error('expected a sealed frame')
+      return packet.buffer
+    }
+
+    it('opens frames under the previous group\'s keys, also on the same epoch number', async () => {
+      const old = await epochKeys(21)
+      const fresh = await epochKeys(22)
+      const opened = await frames('recv', [await sealedAt(old, 3, 1), await sealedAt(old, 1, 2), await sealedAt(fresh, 1, 3)], [
+        { type: 'key', epoch: 1, key: old, seq: 1 },
+        { type: 'key', epoch: 3, key: old, seq: 2 },
+        { type: 'key', epoch: 1, key: fresh, replace: true, seq: 3 },
+      ])
+      expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[1], [2], [3]])
+    })
+
+    it('applies a key message once, however many lines deliver it', async () => {
+      const old = await epochKeys(23)
+      const fresh = await epochKeys(24)
+      const replaced = { type: 'key', epoch: 0, key: fresh, replace: true, seq: 2 }
+      const opened = await frames('recv', [await sealedAt(old, 5, 4)], [
+        { type: 'key', epoch: 5, key: old, seq: 1 },
+        replaced,
+        replaced,
+        { ...replaced, seq: 1 },
+      ])
+      expect(opened).toHaveLength(1)
+    })
+
+    it('stops opening the previous group\'s frames after a while', async () => {
+      const old = await epochKeys(25)
+      const fresh = await epochKeys(26)
+      const now = vi.spyOn(Date, 'now')
+      let clock = 1_000_000
+      now.mockImplementation(() => clock)
+      const opened = await frames('recv', [await sealedAt(old, 2, 5), await sealedAt(fresh, 0, 6)], [
+        { type: 'key', epoch: 2, key: old, seq: 1 },
+        { type: 'key', epoch: 0, key: fresh, replace: true, seq: 2 },
+      ], { afterCommands: () => { clock += PREVIOUS_GROUP_MS + 1 } })
+      now.mockRestore()
+      expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[6]])
+    })
   })
 })

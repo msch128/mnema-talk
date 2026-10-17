@@ -39,7 +39,6 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
       return true
     },
     setKey(epoch, key, replace = false) { keys.push({ epoch, key, replace }) },
-    clearKeys() { keys.length = 0 },
     reset() { keys.length = 0 },
   }
 }
@@ -154,7 +153,7 @@ describe('browser media call', () => {
     expect(aliceCodes.at(-1)).toBeNull()
   }, 30_000)
 
-  it('forgets a discarded epoch before a later group installs its own', async () => {
+  it('keeps the last key while regrouping and installs the next group as a new one', async () => {
     const guard = recordingGuard()
     const bob = browserMediaCall(guard)
     bob.start(channelId, bobId)
@@ -164,9 +163,14 @@ describe('browser media call', () => {
     bob.roster([bobId])
     await mediaSettled(bob)
     expect(guard.keys.map(item => item.epoch)).toEqual([0])
+    // A lower id arrives: bob leaves his group but the worker keeps sealing
+    // with its key until the next group's key comes.
     bob.roster([aliceId, bobId])
     await mediaSettled(bob)
-    expect(guard.keys).toEqual([])
+    expect(guard.keys.map(item => item.epoch)).toEqual([0])
+    bob.roster([bobId])
+    await mediaSettled(bob)
+    expect(guard.keys.map(item => [item.epoch, item.replace])).toEqual([[0, true], [0, true]])
     bob.stop()
     await mediaSettled(bob)
   }, 30_000)

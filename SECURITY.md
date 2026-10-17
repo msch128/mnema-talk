@@ -75,7 +75,9 @@ locally instead (`make up` or `make dev`).
   impersonate the committer, or swap a present member's leaf for its own
   (the member is told its media keys changed) and obtain the keys. It can also
   force a group restart (rate-limited with backoff) or stop the call by
-  dropping messages. The connection details show a safety code for the current
+  dropping messages. A newcomer joins the group of whichever member of the
+  Talk lets it in, so such a server, or a malicious member, can also steer a
+  newcomer into a group of its own. The connection details show a safety code for the current
   key epoch (derived from the MLS epoch authenticator) and who holds its keys.
   Members who compare it in person or over a channel they trust notice an
   added member, a swapped leaf or a split call; this cannot help against a

@@ -1415,7 +1415,13 @@ export function useWebRTC() {
     const gen = ++joinGeneration
     voiceStore.setChannel(channelId)
     const mediaUser = useAuthStore().user?.id
-    if (mediaUser) mediaCall().start(channelId, mediaUser)
+    if (mediaUser) {
+      mediaCall().start(channelId, mediaUser)
+      // Whoever the Talk already lists (also members whose reload is still in
+      // its grace period): the group must not take the room for empty and
+      // found its own before the roster changes for the first time.
+      mediaCall().roster(Object.keys(voiceStore.channelUsers[channelId] || {}))
+    }
     voiceSession.track(channelId)
     await loadIceServers()
     if (gen !== joinGeneration) return

@@ -215,11 +215,11 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       verify(step.verification ?? null)
       return
     }
-    if (appliedEpoch !== null) {
-      appliedEpoch = null
-      appliedKey = null
-      guard.clearKeys()
-    }
+    // Without a group (regrouping, or waiting to be let in again) the worker
+    // keeps the last keys: it goes on sealing and opening with them until the
+    // next group's key arrives, which then counts as a new group.
+    appliedEpoch = null
+    appliedKey = null
     verify(null)
   }
 
@@ -240,7 +240,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       if (!item) break
       const raw = decodeWire(item.wire)
       if (!raw) continue
-      const step = await live.receive(item.from, raw)
+      const step = await live.receive(item.from, raw, true)
       if (current !== generation) return
       emit(step)
     }

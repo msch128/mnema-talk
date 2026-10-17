@@ -1,5 +1,6 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
 import { FrameStream, openFrame, ReplayWindow, sealFrame, type EpochKeys } from './frame'
+import { PREVIOUS_GROUP_MS } from './bounds'
 
 interface EncodedFrame {
   data: ArrayBuffer
@@ -21,7 +22,16 @@ interface RtpTransformer {
   options: TransformOptions
 }
 
-const keys = new Map<number, EpochKeys>()
+// Keys of the group in use, and of the group before it. When the call
+// regroups (a lower id arrives, the committer reloads), members join the new
+// group one after another; until they all have, frames under the old keys keep
+// arriving, and this member keeps sealing with them until its new key comes.
+// The previous group's keys only open frames, and only for a while.
+let keys = new Map<number, EpochKeys>()
+let previous = new Map<number, EpochKeys>()
+let regroupedAt = -Infinity
+// Every port of the call delivers the same key message: apply each once.
+let lastSeq = -1
 // Per publisher, shared by every receiving line of this worker (one worker
 // serves the whole call): a unit opens once, whichever line or recreated
 // receiver it is played into.
@@ -37,18 +47,49 @@ function replayOf(senderId: string): ReplayWindow {
 }
 let sendEpoch: number | null = null
 
-function remember(epoch: number, key: EpochKeys, replace: boolean) {
-  if (replace || (sendEpoch !== null && epoch < sendEpoch)) keys.clear()
+function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
+  return map.size ? Math.max(...map.keys()) : null
+}
+
+function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null) {
+  if (seq !== null) {
+    if (seq <= lastSeq) return
+    lastSeq = seq
+  }
+  if (replace || (sendEpoch !== null && epoch < sendEpoch)) {
+    // A new group: what this member held so far is now the previous group.
+    if (keys.size) {
+      previous = keys
+      regroupedAt = Date.now()
+    }
+    keys = new Map()
+  }
   keys.set(epoch, key)
   const ordered = [...keys.keys()].sort((a, b) => a - b)
   for (const drop of ordered.slice(0, -2)) keys.delete(drop)
-  // A key was just stored, so the newest epoch is present.
-  sendEpoch = ordered[ordered.length - 1] as number
-  for (const window of replays.values()) window.retain(keys.keys())
+  sendEpoch = newest(keys)
+  retainReplays()
+}
+
+function retainReplays() {
+  const held = new Set([...keys.keys(), ...previous.keys()])
+  for (const window of replays.values()) window.retain(held)
+}
+
+/** The previous group's keys, while they may still open frames. */
+function previousKeys(): ReadonlyMap<number, EpochKeys> {
+  if (previous.size && Date.now() - regroupedAt > PREVIOUS_GROUP_MS) {
+    previous = new Map()
+    retainReplays()
+  }
+  return previous
 }
 
 function forget() {
-  keys.clear()
+  lastSeq = -1
+  keys = new Map()
+  previous = new Map()
+  regroupedAt = -Infinity
   sendEpoch = null
   replays.clear()
 }
@@ -98,8 +139,9 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
   }
   const replay = replayOf(senderId)
   let unknown = -1
+  const before = previousKeys()
   const opened = await openMedia(data, kind, codec, (sealed, clear) => openFrame({
-    keys, channelId, senderId, packet: sealed, clear, replay, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
+    keys, previous: before, channelId, senderId, packet: sealed, clear, replay, onUnknownEpoch: (epoch) => { unknown = Math.max(unknown, epoch) },
   }))
   count(senderId, opened !== null, unknown)
   return opened ? packet(opened) : null
@@ -115,10 +157,10 @@ const stats = new Map<string, SenderStats>()
 let lastStats = -Infinity
 
 function count(senderId: string, opened: boolean, unknownEpoch: number) {
-  const newest = Math.max(-1, ...keys.keys())
+  const latest = newest(keys) ?? -1
   const entry = stats.get(senderId) ?? { opened: 0, newer: 0, epoch: -1 }
   if (opened) entry.opened++
-  else if (unknownEpoch > newest) {
+  else if (unknownEpoch > latest) {
     entry.newer++
     entry.epoch = Math.max(entry.epoch, unknownEpoch)
   } else return
@@ -161,7 +203,8 @@ scope.onrtctransform = (event) => {
       return
     }
     if ('type' in data && data.type === 'key' && 'epoch' in data && 'key' in data && isEpoch(data.epoch) && isEpochKeys(data.key)) {
-      remember(data.epoch, data.key, 'replace' in data && data.replace === true)
+      const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
+      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq)
     }
   }
   transformer.readable.pipeThrough(new TransformStream<EncodedFrame, EncodedFrame>({

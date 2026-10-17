@@ -3,6 +3,10 @@
 export const HANDSHAKE_MAX_BYTES = 32 * 1024
 export const HANDSHAKE_MAX_CHARS = 48_000
 
+// How long the keys of the group a member held before the call regrouped
+// still open frames (see mediaFrameWorker).
+export const PREVIOUS_GROUP_MS = 30_000
+
 export const MEDIA_EXPORTER_LABEL = 'mnema-media-v1'
 export const FRAME_EPOCH_BYTES = 16
 
