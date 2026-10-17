@@ -1,0 +1,44 @@
+internal/ws/coverage_test.go
+  s_06fcde5dbef956::t_91ff16804c1635 272
+internal/ws/native_admission.go
+  s_06fcde5dbef956::t_91ff16804c1635 75
+internal/server/server.go
+  s_06fcde5dbef956::t_c0b0697f5a11ac 104-105,221
+internal/sfu/candidates.go
+  s_06fcde5dbef956::t_9c9880132a2b4f 10,39-40,207,209-214,216,218-220,224,227,233-245
+  s_06fcde5dbef956::t_c30f038eb6cab8 247
+  s_06fcde5dbef956::t_77b632f5e303bf 51,208,215,222
+  s_06fcde5dbef956::t_c56138e4ef2ed4 246
+internal/ws/presence.go
+  s_06fcde5dbef956::t_38a8069a0c8863 25-26,61-68
+internal/ws/native_metadata_admission.go
+  s_06fcde5dbef956::t_91ff16804c1635 55
+internal/ws/client.go
+  s_06fcde5dbef956::t_91ff16804c1635 41-43,73,231-249
+  s_06fcde5dbef956::t_4a257553bb7a93 250
+internal/sfu/candidates_test.go
+  s_06fcde5dbef956::t_77b632f5e303bf 262,266-268,271-272,313
+  s_06fcde5dbef956::t_9c9880132a2b4f 316-338
+  s_06fcde5dbef956::t_fca7e5ed55ec85 273,306
+internal/ws/hub.go
+  s_06fcde5dbef956::t_38a8069a0c8863 41-43,77-80,113
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_91ff16804c1635 9
+  s_06fcde5dbef956::t_38a8069a0c8863 114-119,127-131,157-160,164-183,198,202,236,356-360
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b2923aef99ece4c2cc12bfd8445dccec226bfe3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
