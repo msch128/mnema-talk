@@ -385,6 +385,85 @@ export function isChatEditMessageRequest(value: unknown): value is ChatEditMessa
 
 export const decodeChatEditMessageRequest = decoder("chat.EditMessageRequest", isChatEditMessageRequest)
 
+export type ChatEmbed = {
+  author?: ChatEmbedAuthor
+  color?: number
+  description?: string
+  fields?: Array<ChatEmbedField>
+  footer?: ChatEmbedFooter
+  image?: ChatEmbedMedia
+  thumbnail?: ChatEmbedMedia
+  timestamp?: string
+  title?: string
+  url?: string
+}
+
+export function isChatEmbed(value: unknown): value is ChatEmbed {
+  return isRecord(value)
+    && (!hasOwn(value, "author") || isChatEmbedAuthor(value["author"]))
+    && (!hasOwn(value, "color") || (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
+    && (!hasOwn(value, "description") || isString(value["description"], 4096))
+    && (!hasOwn(value, "fields") || isArrayOf(value["fields"], item => isChatEmbedField(item)))
+    && (!hasOwn(value, "footer") || isChatEmbedFooter(value["footer"]))
+    && (!hasOwn(value, "image") || isChatEmbedMedia(value["image"]))
+    && (!hasOwn(value, "thumbnail") || isChatEmbedMedia(value["thumbnail"]))
+    && (!hasOwn(value, "timestamp") || isString(value["timestamp"]))
+    && (!hasOwn(value, "title") || isString(value["title"], 256))
+    && (!hasOwn(value, "url") || isString(value["url"], 2048))
+}
+
+export const decodeChatEmbed = decoder("chat.Embed", isChatEmbed)
+
+export type ChatEmbedAuthor = {
+  name: string
+  url?: string
+}
+
+export function isChatEmbedAuthor(value: unknown): value is ChatEmbedAuthor {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 256))
+    && (!hasOwn(value, "url") || isString(value["url"], 2048))
+}
+
+export const decodeChatEmbedAuthor = decoder("chat.EmbedAuthor", isChatEmbedAuthor)
+
+export type ChatEmbedField = {
+  inline?: boolean
+  name: string
+  value: string
+}
+
+export function isChatEmbedField(value: unknown): value is ChatEmbedField {
+  return isRecord(value)
+    && (!hasOwn(value, "inline") || typeof value["inline"] === 'boolean')
+    && (hasOwn(value, "name") && isString(value["name"], 256))
+    && (hasOwn(value, "value") && isString(value["value"], 1024))
+}
+
+export const decodeChatEmbedField = decoder("chat.EmbedField", isChatEmbedField)
+
+export type ChatEmbedFooter = {
+  text: string
+}
+
+export function isChatEmbedFooter(value: unknown): value is ChatEmbedFooter {
+  return isRecord(value)
+    && (hasOwn(value, "text") && isString(value["text"], 2048))
+}
+
+export const decodeChatEmbedFooter = decoder("chat.EmbedFooter", isChatEmbedFooter)
+
+export type ChatEmbedMedia = {
+  url: string
+}
+
+export function isChatEmbedMedia(value: unknown): value is ChatEmbedMedia {
+  return isRecord(value)
+    && (hasOwn(value, "url") && isString(value["url"], 2048))
+}
+
+export const decodeChatEmbedMedia = decoder("chat.EmbedMedia", isChatEmbedMedia)
+
 export type ChatLayoutRequest = {
   categories?: Array<ChatCategoryOrder>
   channels?: Array<ChatChannelPlacement>
@@ -483,7 +562,9 @@ export type ChatMessage = {
   content: string
   created_at: string
   display_name: string
+  embeds?: Array<ChatEmbed>
   id: string
+  is_bot?: boolean
   is_edited: boolean
   is_pinned: boolean
   mentions: Array<string>
@@ -506,7 +587,9 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "content") && isString(value["content"], 4000))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (!hasOwn(value, "embeds") || isArrayOf(value["embeds"], item => isChatEmbed(item)))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
@@ -1379,3 +1462,137 @@ export function isServerVoiceHealth(value: unknown): value is ServerVoiceHealth 
 }
 
 export const decodeServerVoiceHealth = decoder("server.VoiceHealth", isServerVoiceHealth)
+
+export type WebhookAllowedMentions = {
+  parse: Array<string>
+  roles: Array<string>
+  users: Array<string>
+}
+
+export function isWebhookAllowedMentions(value: unknown): value is WebhookAllowedMentions {
+  return isRecord(value)
+    && (hasOwn(value, "parse") && isArrayOf(value["parse"], item => isString(item)))
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isString(item)))
+    && (hasOwn(value, "users") && isArrayOf(value["users"], item => isString(item)))
+}
+
+export const decodeWebhookAllowedMentions = decoder("webhook.AllowedMentions", isWebhookAllowedMentions)
+
+export type WebhookCreateRequest = {
+  name: string
+}
+
+export function isWebhookCreateRequest(value: unknown): value is WebhookCreateRequest {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+}
+
+export const decodeWebhookCreateRequest = decoder("webhook.CreateRequest", isWebhookCreateRequest)
+
+export type WebhookCreatedWebhook = {
+  avatar_url?: string
+  channel_id: string
+  created_at: string
+  created_by: string | null
+  id: string
+  name: string
+  token: string
+  updated_at: string
+  url: string
+}
+
+export function isWebhookCreatedWebhook(value: unknown): value is WebhookCreatedWebhook {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (hasOwn(value, "token") && isString(value["token"]))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeWebhookCreatedWebhook = decoder("webhook.CreatedWebhook", isWebhookCreatedWebhook)
+
+export type WebhookDiscordError = {
+  code: number
+  message: string
+}
+
+export function isWebhookDiscordError(value: unknown): value is WebhookDiscordError {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isInteger(value["code"]))
+    && (hasOwn(value, "message") && isString(value["message"]))
+}
+
+export const decodeWebhookDiscordError = decoder("webhook.DiscordError", isWebhookDiscordError)
+
+export type WebhookDiscordRateLimit = {
+  global: boolean
+  message: "You are being rate limited."
+  retry_after: number
+}
+
+export function isWebhookDiscordRateLimit(value: unknown): value is WebhookDiscordRateLimit {
+  return isRecord(value)
+    && (hasOwn(value, "global") && typeof value["global"] === 'boolean')
+    && (hasOwn(value, "message") && (value["message"] === "You are being rate limited."))
+    && (hasOwn(value, "retry_after") && (typeof value["retry_after"] === 'number' && Number.isFinite(value["retry_after"])))
+}
+
+export const decodeWebhookDiscordRateLimit = decoder("webhook.DiscordRateLimit", isWebhookDiscordRateLimit)
+
+export type WebhookExecutePayload = {
+  allowed_mentions: WebhookAllowedMentions
+  avatar_url: string
+  content: string
+  embeds: Array<ChatEmbed>
+  username: string
+}
+
+export function isWebhookExecutePayload(value: unknown): value is WebhookExecutePayload {
+  return isRecord(value)
+    && (hasOwn(value, "allowed_mentions") && isWebhookAllowedMentions(value["allowed_mentions"]))
+    && (hasOwn(value, "avatar_url") && isString(value["avatar_url"]))
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatEmbed(item)))
+    && (hasOwn(value, "username") && isString(value["username"], 80))
+}
+
+export const decodeWebhookExecutePayload = decoder("webhook.ExecutePayload", isWebhookExecutePayload)
+
+export type WebhookUpdateRequest = {
+  name: string
+}
+
+export function isWebhookUpdateRequest(value: unknown): value is WebhookUpdateRequest {
+  return isRecord(value)
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+}
+
+export const decodeWebhookUpdateRequest = decoder("webhook.UpdateRequest", isWebhookUpdateRequest)
+
+export type WebhookWebhook = {
+  avatar_url?: string
+  channel_id: string
+  created_at: string
+  created_by: string | null
+  id: string
+  name: string
+  updated_at: string
+}
+
+export function isWebhookWebhook(value: unknown): value is WebhookWebhook {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "created_by") && (isIdentifier(value["created_by"]) || value["created_by"] === null))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"], 80))
+    && (hasOwn(value, "updated_at") && isTimestamp(value["updated_at"]))
+}
+
+export const decodeWebhookWebhook = decoder("webhook.Webhook", isWebhookWebhook)

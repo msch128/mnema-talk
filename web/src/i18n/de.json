@@ -252,6 +252,9 @@
     "reaction": "Reaktion {emoji}",
     "edit": "Nachricht bearbeiten",
     "delete": "Nachricht löschen",
+    "bot": "Webhook",
+    "embedImage": "Bild",
+    "embedThumbnail": "Vorschaubild",
     "edited": "(bearbeitet)",
     "editHint": "Enter speichert · Esc bricht ab",
     "replies": {
