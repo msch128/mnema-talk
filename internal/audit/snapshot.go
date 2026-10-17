@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -15,7 +16,7 @@ import (
 // must not leak into the log by accident. Every query takes the id as $1.
 var snapshotSQL = map[Resource]string{
 	ResRole: `SELECT jsonb_build_object('name', name, 'color', color, 'position', position,
-		'permissions', permissions, 'hoist', hoist, 'mentionable', mentionable), name
+		'permissions', permissions, 'hoist', hoist, 'mentionable', mentionable, 'max_upload_mb', max_upload_mb), name
 		FROM roles WHERE id = $1`,
 	ResChannel: `SELECT jsonb_build_object('name', name, 'type', type, 'topic', topic,
 		'category_id', category_id, 'user_limit', user_limit, 'sort_order', sort_order), name
@@ -31,6 +32,7 @@ var snapshotSQL = map[Resource]string{
 		'disabled', disabled_at IS NOT NULL, 'status_text', status_text,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = users.id), '[]'::jsonb)),
 		username FROM users WHERE id = $1`,
+	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb), 'instance settings' FROM instance_settings`,
 	ResInvite: `SELECT jsonb_build_object('max_uses', max_uses, 'uses_count', uses_count, 'expires_at', expires_at), ''
 		FROM invites WHERE id = $1`,
 	ResChannelOvw: `SELECT jsonb_build_object('overwrites', COALESCE((SELECT jsonb_agg(jsonb_build_object(
@@ -49,13 +51,20 @@ var snapshotSQL = map[Resource]string{
 // missing resource yields nil.
 func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[string]any, string) {
 	query, ok := snapshotSQL[res]
-	uid, err := uuid.Parse(id)
-	if !ok || err != nil {
+	if !ok {
 		return nil, ""
+	}
+	var args []any
+	if res != ResSettings {
+		uid, err := uuid.Parse(id)
+		if err != nil {
+			return nil, ""
+		}
+		args = append(args, uid)
 	}
 	var raw []byte
 	var name string
-	if err := q.QueryRow(ctx, query, uid).Scan(&raw, &name); err != nil {
+	if err := q.QueryRow(ctx, query, args...).Scan(&raw, &name); err != nil {
 		return nil, ""
 	}
 	// The queries above build JSON objects, so this cannot fail.
@@ -64,18 +73,25 @@ func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[s
 	return out, name
 }
 
-// diff lists the fields of the request that differ from the snapshot.
-func diff(before, req map[string]any) map[string]any {
+// diff lists the fields that differ between two snapshots, or between a
+// snapshot and the request (keys match case-insensitively, as encoding/json
+// does when the handler decodes them).
+func diff(before, after map[string]any) map[string]any {
 	changes := map[string]any{}
-	for k, to := range req {
-		from, ok := before[k]
+	lower := make(map[string]string, len(before))
+	for k := range before {
+		lower[strings.ToLower(k)] = k
+	}
+	for k, to := range after {
+		bk, ok := lower[strings.ToLower(k)]
 		if !ok {
 			continue
 		}
+		from := before[bk]
 		if fmt.Sprint(from) == fmt.Sprint(to) {
 			continue
 		}
-		changes[k] = map[string]any{"from": from, "to": to}
+		changes[bk] = map[string]any{"from": from, "to": to}
 	}
 	return changes
 }

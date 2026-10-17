@@ -48,21 +48,30 @@ func (l *Log) Middleware(next http.Handler) http.Handler {
 		}
 		ctx := r.Context()
 
+		// The body is read whatever the Content-Type says: the handler may
+		// decode it regardless, and an entry must not lose its request to a
+		// mislabelled one. Anything that is not a JSON object, or does not fit
+		// in the limit, is marked instead of dropped silently.
 		var req map[string]any
-		if !(known && rt.NoBody) && strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") && r.Body != nil {
+		var reqMark string
+		if !(known && rt.NoBody) && r.Body != nil && r.Body != http.NoBody && !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
 			head, _ := io.ReadAll(io.LimitReader(r.Body, maxRequestBody+1))
 			r.Body = struct {
 				io.Reader
 				io.Closer
 			}{io.MultiReader(bytes.NewReader(head), r.Body), r.Body}
-			if len(head) <= maxRequestBody {
-				_ = json.Unmarshal(head, &req)
+			switch {
+			case len(head) > maxRequestBody:
+				reqMark = "request_truncated"
+			case len(bytes.TrimSpace(head)) == 0:
+			case json.Unmarshal(head, &req) != nil:
+				req, reqMark = nil, "request_unparsed"
 			}
 		}
 
 		var before map[string]any
 		var name string
-		if known && rt.Snapshot != ResNone && rt.IDParam != "" {
+		if known && rt.Snapshot != ResNone {
 			before, name = Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam])
 		}
 
@@ -86,16 +95,22 @@ func (l *Log) Middleware(next http.Handler) http.Handler {
 		if len(params) > 0 {
 			e.Details["params"] = params
 		}
+		if reqMark != "" {
+			e.Details[reqMark] = true
+		}
 		if req != nil {
 			e.Details["request"] = req
-			if before != nil {
-				if ch := diff(before, req); len(ch) > 0 {
-					e.Details["changes"] = ch
-				}
-			}
 		}
 		if before != nil {
 			e.Details["before"] = before
+			// What the handler really did: compare with the state afterwards,
+			// not with what the request claims. A deleted resource has none.
+			if after, _ := Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam]); after != nil {
+				e.Details["after"] = after
+				if ch := diff(before, after); len(ch) > 0 {
+					e.Details["changes"] = ch
+				}
+			}
 		}
 		if e.TargetID == "" {
 			// A creation: take the new id and name from the response, and

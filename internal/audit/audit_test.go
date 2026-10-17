@@ -27,7 +27,7 @@ func TestSanitizeRedactsSecretsAndBoundsSizes(t *testing.T) {
 	if out["password"] != redacted || out["api_token"] != redacted || out["Secret"] != redacted || out["code"] != redacted || out["session_id"] != redacted {
 		t.Errorf("not redacted: %v", out)
 	}
-	if out["url"] != "https://example.com/hook" {
+	if u, _ := out["url"].(string); !strings.HasPrefix(u, "https://example.com [sha256:") || strings.Contains(u, "hook") || strings.Contains(u, "pw") {
 		t.Errorf("url = %v", out["url"])
 	}
 	if len([]rune(out["long"].(string))) != maxStringRunes {

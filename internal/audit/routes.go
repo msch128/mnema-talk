@@ -22,6 +22,7 @@ const (
 	ResInvite     Resource = "invite"
 	ResChannelOvw Resource = "channel_overwrites"
 	ResCatOvw     Resource = "category_overwrites"
+	ResSettings   Resource = "settings"
 )
 
 // Route describes one mutating admin route.
@@ -86,6 +87,8 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/outgoing-webhooks/{id}/secret", Action: "outgoing_webhook.rotate_secret", TargetType: "outgoing_webhook", IDParam: "id", Snapshot: ResOutgoing},
 	{Method: "POST", Pattern: "/outgoing-webhooks/{id}/test", Skip: true},
 	{Method: "DELETE", Pattern: "/outgoing-webhooks/{id}", Action: "outgoing_webhook.delete", TargetType: "outgoing_webhook", IDParam: "id", Snapshot: ResOutgoing},
+
+	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},

@@ -35,8 +35,11 @@ requests leave no entry. Reading the log is not recorded.
 ### What is never stored
 
 Passwords, tokens, secrets, hashes, invite codes, cookies, authorization
-values and session ids are redacted by key name wherever they appear. URLs lose
-credentials, query and fragment. Snapshots list columns one by one, so a secret
+values and session ids are redacted by key name wherever they appear. A web
+address anywhere in a value is reduced to its scheme and host plus a short
+hash of the whole address (`https://hooks.example.com [sha256:1a2b3c4d]`),
+because webhook URLs carry tokens in the path as well as the query; the hash
+still shows that an address changed. Snapshots list columns one by one, so a secret
 column added to a table later does not leak by accident. Strings are clipped to
 200 characters and an entry to 32 KiB.
 
@@ -54,12 +57,25 @@ has no write route. The only deletion is the retention job:
 many days (checked every six hours). Entries have no foreign key to users, so
 they outlive the accounts they mention.
 
+### The diff cannot be evaded
+
+The request body is captured whatever its `Content-Type` says, and a body that
+is not a JSON object or is too large is marked (`request_unparsed`,
+`request_truncated`) instead of dropped. The `changes` of an edit do not come
+from the request at all: the audited fields are read before and after the
+change and compared, so they show what really happened. If an entry grows
+beyond its size limit, the request is trimmed first (`request_truncated`), then
+`after`, `before` and `params`; `changes` is kept.
+
 ### Access
 
 Only the Owner and holders of the **View audit log** permission may read it
 (`GET /api/admin/audit-log`; the permission also opens the admin console on the
-*Audit log* tab). *Administrator* includes it. The audit log is not sent to
-outgoing webhooks.
+*Audit log* tab). *Administrator* includes it. Entries about webhooks and bots, system and media
+administration, settings and the Owner-only account actions (setting or
+resetting a password, clearing a login lock) are only returned to the Owner and
+Administrators, even to holders of *View audit log* (`audit.Sensitive`). The
+audit log is not sent to outgoing webhooks.
 
 ### API
 

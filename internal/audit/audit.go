@@ -45,6 +45,19 @@ type Log struct {
 	DB db.Querier
 	// Actor names the signed-in user of a context.
 	Actor func(ctx context.Context) (id uuid.UUID, name string, ok bool)
+	// Privileged says whether the signed-in user is the Owner or an
+	// Administrator; only they read the sensitive entries (see Sensitive).
+	// Without it nobody does.
+	Privileged func(ctx context.Context) (bool, error)
+}
+
+// Sensitive lists the action patterns (SQL LIKE) that only the Owner and
+// Administrators may read, even with the View audit log permission: webhooks
+// (their addresses are credentials), bots, system and media administration,
+// settings, and the Owner-only account takeovers.
+var Sensitive = []string{
+	"webhook.%", "outgoing_webhook.%", "bot.%", "system.%", "settings.%", "media.%", "admin.%",
+	"user.password_set", "user.password_reset", "user.lockout_clear",
 }
 
 // Record stores e. It returns the database error; callers that already did

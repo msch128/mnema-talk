@@ -1,8 +1,11 @@
 package audit
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -33,15 +36,36 @@ func secretKey(k string) bool {
 type Content string
 
 // SanitizeDetails returns details with secrets removed and sizes bounded.
+// When they are too big the request part is trimmed first, then the others,
+// but the changes (the diff) are always kept and the entry says what was
+// trimmed (<key>_truncated).
 func SanitizeDetails(details map[string]any) map[string]any {
 	if details == nil {
 		return map[string]any{}
 	}
 	out, _ := sanitize(details, 0).(map[string]any)
-	if b, err := json.Marshal(out); err != nil || len(b) > maxDetailBytes {
+	for _, key := range []string{"request", "after", "before", "params"} {
+		if size(out) <= maxDetailBytes {
+			return out
+		}
+		if _, ok := out[key]; ok {
+			delete(out, key)
+			out[key+"_truncated"] = true
+		}
+	}
+	if size(out) > maxDetailBytes {
+		// Only a huge changes block or free-form fields remain.
 		return map[string]any{"truncated": true}
 	}
 	return out
+}
+
+func size(v map[string]any) int {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return maxDetailBytes + 1
+	}
+	return len(b)
 }
 
 func sanitize(v any, depth int) any {
@@ -81,13 +105,19 @@ func sanitize(v any, depth int) any {
 	}
 }
 
-// cleanString drops credentials and queries from URLs and bounds the length.
+// cleanString reduces URLs to scheme and host plus a short hash of the whole
+// address (so a change is still visible): paths can carry tokens too
+// (https://host/hooks/<token>). Other strings are only bounded in length.
 func cleanString(s string) string {
-	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
-		if u, err := url.Parse(s); err == nil {
-			u.User, u.RawQuery, u.Fragment = nil, "", ""
-			s = u.String()
+	return clip(urlPattern.ReplaceAllStringFunc(s, func(raw string) string {
+		u, err := url.Parse(raw)
+		if err != nil || u.Host == "" {
+			return "[url]"
 		}
-	}
-	return clip(s, maxStringRunes)
+		sum := sha256.Sum256([]byte(raw))
+		return strings.ToLower(u.Scheme) + "://" + u.Host + " [sha256:" + hex.EncodeToString(sum[:4]) + "]"
+	}), maxStringRunes)
 }
+
+// urlPattern finds web addresses anywhere in a string, in any letter case.
+var urlPattern = regexp.MustCompile(`(?i)https?://[^\s"'<>]+`)

@@ -124,7 +124,7 @@ func NewRouter(d Deps) (*Router, error) {
 		pub = d.Events
 	}
 
-	auditLog := &audit.Log{DB: d.DB, Actor: auditActor}
+	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Privileged: auditPrivileged(permSvc)}
 	go auditLog.RunRetention(ctx, cfg.AuditRetentionDays, 6*time.Hour)
 
 	authH := auth.NewHandler(sessions, pub)
@@ -299,6 +299,19 @@ func auditActor(ctx context.Context) (uuid.UUID, string, bool) {
 		return u.ID, u.Username, true
 	}
 	return uuid.Nil, "", false
+}
+
+// auditPrivileged says whether the signed-in user is the Owner or holds
+// Administrator, which the sensitive audit entries require.
+func auditPrivileged(svc *perm.Service) func(context.Context) (bool, error) {
+	return func(ctx context.Context) (bool, error) {
+		u := auth.UserFrom(ctx)
+		if u == nil {
+			return false, nil
+		}
+		p, err := svc.Global(ctx, u.Subject())
+		return p.Has(perm.Administrator), err
+	}
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from
