@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.19](https://github.com/msch128/mnema-talk/compare/v0.7.18...v0.7.19) (2026-10-17)
+
+
+### Features
+
+* expose operator metrics for HTTP, realtime, SFU, storage and the process ([#142](https://github.com/msch128/mnema-talk/issues/142)) ([cdb898f](https://github.com/msch128/mnema-talk/commit/cdb898fa970d9a6f0ac2ac7eaf6946deaab80dc5))
+* show a live operator view with sparklines in the admin System tab ([#144](https://github.com/msch128/mnema-talk/issues/144)) ([863614d](https://github.com/msch128/mnema-talk/commit/863614d706fa5ca24a83f72bbae48552ddad627f))
+
 ## [0.7.18](https://github.com/msch128/mnema-talk/compare/v0.7.17...v0.7.18) (2026-10-17)
 
 
