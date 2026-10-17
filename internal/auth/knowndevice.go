@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
 )
 
 // Known devices decide who may keep guessing once an account's guess cap has

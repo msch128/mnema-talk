@@ -146,6 +146,18 @@ until the new release has passed your application checks.
     address.
   An existing deployment with its own compose file that already sets
   `TRUSTED_PROXY_CIDRS` (or its own default) is unaffected by this change.
+- **Owner password: 14 characters minimum** when the administrator is
+  created (`ADMIN_INITIAL_PASSWORD`) or changes their password (members keep
+  10). An existing administrator is not affected until they change it, and a
+  too-short `ADMIN_INITIAL_PASSWORD` is only logged as ignored once an
+  administrator exists.
+- **Login lockout is stricter.** After 100 failed attempts on one account
+  across addresses, only browsers that signed in to it before (a signed
+  known-device cookie, set again at the next login) are checked as usual; all
+  other devices together share about one password check per minute for the
+  account. The cap lasts at most 15 minutes and `docker restart` clears it.
+- **Signing out revokes the session** (migration `0021_revoked_sessions`).
+  Sessions issued before the upgrade stay valid until they expire.
 - **`APP_ENV=development` only listens on loopback.** `BIND_ADDR` defaults to
   `127.0.0.1` there and any other address is refused at startup. Production,
   staging and test are unchanged (`0.0.0.0`).
