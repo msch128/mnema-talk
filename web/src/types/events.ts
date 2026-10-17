@@ -26,6 +26,17 @@ export type ReadStateUpdate =
   | { channel_id: string; last_read_at: string; refresh: true }
   | Pick<ReadState, 'channel_id' | 'notify_level'>
 
+/** A bot's reply to a slash command that only the member who ran it sees (never stored). */
+export interface InteractionResponse {
+  channel_id: string
+  bot_id: string
+  bot_name: string
+  bot_avatar_url?: string
+  content: string
+  embeds: { title?: string; description?: string }[] | null
+  created_at: string
+}
+
 export interface ServerEventPayloads {
   pong: { t: number }
   server_info: { version: string; screen_layers?: number }
@@ -44,6 +55,7 @@ export interface ServerEventPayloads {
   message_update: Message
   message_delete: { id: string; channel_id: string; parent_id: string | null }
   message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
+  interaction_response: InteractionResponse
   user_update: UserUpdate
   /** A member's timeout started (timeout_until) or ended (null). */
   member_timeout: { id: string; timeout_until: string | null }
@@ -171,6 +183,9 @@ export function isServerEvent(value: unknown): value is ServerEvent {
       && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))
     case 'message_reaction': return isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
       && isArrayOf(payload['reactions'], isChatReactionSummary)
+    case 'interaction_response': return isIdentifier(payload['channel_id']) && isIdentifier(payload['bot_id']) && isString(payload['bot_name'], 64)
+      && (!hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)) && isString(payload['content'], 8_000)
+      && (payload['embeds'] === null || isArrayOf(payload['embeds'], isNoteEmbed)) && isTimestamp(payload['created_at'])
     case 'user_update': return hasOwn(payload, 'disabled')
       ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
       : isAuthUser(payload)
@@ -203,10 +218,14 @@ export function isServerEvent(value: unknown): value is ServerEvent {
   }
 }
 
+function isNoteEmbed(value: unknown): boolean {
+  return isRecord(value) && (!hasOwn(value, 'title') || isString(value['title'], 1_000)) && (!hasOwn(value, 'description') || isString(value['description'], 8_000))
+}
+
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'interaction_response', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])

@@ -752,7 +752,8 @@
       "system": "System",
       "roles": "Rollen",
       "audit": "Audit-Log",
-      "bans": "Sperren"
+      "bans": "Sperren",
+      "bots": "Bots"
     },
     "system": {
       "heading": "System & Version",
@@ -1062,6 +1063,22 @@
     "noAccess": "Dafür fehlt dir die Berechtigung.",
     "mentionCopied": "@Name in die Zwischenablage kopiert",
     "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
+  },
+  "slash": {
+    "title": "Befehle",
+    "listLabel": "Slash-Befehle",
+    "barLabel": "Optionen von /{name}",
+    "run": "Ausführen",
+    "cancel": "Befehl abbrechen",
+    "required": "Pflichtfeld",
+    "missing": "Fülle zuerst „{name}“ aus.",
+    "notANumber": "„{name}“ braucht eine ganze Zahl.",
+    "botOffline": "{bot} ist gerade nicht verbunden.",
+    "failed": "Der Befehl konnte nicht ausgeführt werden.",
+    "privateFrom": "Private Antwort von {bot}",
+    "bot": "Bot",
+    "onlyYou": "Nur du siehst das",
+    "dismiss": "Ausblenden"
   },
   "mention": {
     "title": "Erwähnen",
@@ -1530,6 +1547,116 @@
       "minutes": "Minuten",
       "hours": "Stunden",
       "days": "Tage"
+    }
+  },
+  "bots": {
+    "title": "Bots",
+    "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe doc/bots.md). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",
+    "badge": "Bot",
+    "new": "Neuer Bot",
+    "name": "Name",
+    "namePlaceholder": "Name des neuen Bots",
+    "nameRequired": "Ein Bot braucht einen Namen.",
+    "list": "Bots",
+    "empty": "Noch keine Bots.",
+    "select": "Wähle einen Bot aus, um ihn zu verwalten.",
+    "created": "Bot erstellt. Er hat noch keinen Zugriff.",
+    "enabled": "Aktiv",
+    "disabled": "Deaktiviert",
+    "enabledLabel": "Aktiv",
+    "disabledHint": "Ein deaktivierter Bot wird sofort abgewiesen, mit allen Tokens und Verbindungen. Seine Nachrichten bleiben.",
+    "lastActive": "aktiv {when}",
+    "neverActive": "nie aktiv",
+    "noRoles": "Keine Rolle: kann nichts tun",
+    "detail": "Einstellungen von {name}",
+    "avatar": "Avatar",
+    "avatarFor": "Avatar für {name} hochladen",
+    "delete": "Bot löschen",
+    "deleteTitle": "Bot {name} löschen?",
+    "deleteBody": "Alle Tokens funktionieren sofort nicht mehr und seine Befehle verschwinden. Nachrichten, die er geschrieben hat, bleiben.",
+    "deleted": "Bot gelöscht.",
+    "intents": {
+      "title": "Erlaubte Intents",
+      "hint": "Worum der Bot beim Verbinden mit dem Gateway bitten darf. Ohne Intent bekommt er solche Ereignisse nicht.",
+      "guilds": {
+        "name": "Kanaländerungen",
+        "desc": "Kanäle und Kategorien, die erstellt, geändert oder gelöscht werden."
+      },
+      "members": {
+        "name": "Mitglieder",
+        "desc": "Die Mitgliederliste und neue Mitglieder."
+      },
+      "messages": {
+        "name": "Nachrichten",
+        "desc": "Neue, bearbeitete und gelöschte Nachrichten in Kanälen, die der Bot sehen kann."
+      },
+      "reactions": {
+        "name": "Reaktionen",
+        "desc": "Reaktionen, die zu Nachrichten hinzukommen oder entfernt werden."
+      }
+    },
+    "roles": {
+      "title": "Rollen",
+      "hint": "Ein Bot bekommt @everyone nicht und startet daher ganz ohne Zugriff. Gib ihm Rollen für das, was er serverweit darf, und lege den Kanalzugriff im Rechte-Dialog jedes Kanals fest, indem du dort eine der Rollen des Bots erlaubst.",
+      "empty": "Es gibt noch keine Rollen. Lege eine im Tab Rollen an.",
+      "power": "Gibt dem Bot Administratorrechte. Nur der Owner darf diese Rolle vergeben.",
+      "powerSelected": "Eine gewählte Rolle gibt dem Bot Administratorrechte. Vergib das nur an ein Programm, dem du voll vertraust.",
+      "save": "Rollen speichern",
+      "saved": "Rollen gespeichert."
+    },
+    "access": {
+      "title": "Effektiver Zugriff",
+      "server": "Serverweite Rechte",
+      "none": "Keine Rechte",
+      "noChannels": "Keine Kanal-Überschreibungen aktiv.",
+      "elevated": "Dieser Bot hat Administrator- oder Admin-Bereich-Rechte. Er kann den Server weit über das Schreiben von Nachrichten hinaus verändern."
+    },
+    "tokens": {
+      "title": "Tokens",
+      "hint": "Der Bot sendet ein Token als Authorization: Bot <token>. Hier werden nur die letzten vier Zeichen gespeichert.",
+      "name": "Name (optional)",
+      "namePlaceholder": "z. B. Produktion",
+      "expiry": "Läuft ab (optional)",
+      "issue": "Token ausstellen",
+      "empty": "Noch keine Tokens.",
+      "colName": "Name",
+      "colToken": "Token",
+      "colState": "Status",
+      "colExpires": "Läuft ab",
+      "colLastUsed": "Zuletzt benutzt",
+      "colActions": "Aktionen",
+      "never": "Nie",
+      "state": {
+        "active": "Aktiv",
+        "expired": "Abgelaufen",
+        "revoked": "Widerrufen"
+      },
+      "regenerate": "Neu erzeugen",
+      "regenerateFor": "Token {name} neu erzeugen",
+      "regenerateTitle": "Token {name} neu erzeugen?",
+      "regenerateBody": "Das alte Token funktioniert sofort nicht mehr. Ein neues Geheimnis wird einmalig angezeigt.",
+      "revoke": "Widerrufen",
+      "revokeFor": "Token {name} widerrufen",
+      "revokeTitle": "Token {name} widerrufen?",
+      "revokeBody": "Programme mit diesem Token werden ab jetzt abgewiesen. Das lässt sich nicht rückgängig machen."
+    },
+    "secret": {
+      "title": "Token für {name}",
+      "once": "Kopiere dieses Token jetzt. Es kann nicht noch einmal angezeigt werden.",
+      "copy": "Token kopieren",
+      "copied": "Token kopiert.",
+      "try": "Ausprobieren",
+      "done": "Ich habe es kopiert"
+    },
+    "commands": {
+      "title": "Slash-Befehle",
+      "hint": "Mitglieder sehen einen Befehl in den Kanälen, in denen der Bot sehen und schreiben kann. Schalte einen aus, um ihn zu verbergen, ohne ihn zu löschen.",
+      "empty": "Dieser Bot hat keine Befehle registriert.",
+      "options": "{count} Optionen",
+      "enabledFor": "Befehl {name} aktiv",
+      "deleteFor": "Befehl {name} löschen",
+      "deleteTitle": "Befehl /{name} löschen?",
+      "deleteBody": "Der Bot kann ihn erneut registrieren."
     }
   }
 }

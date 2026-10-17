@@ -89,14 +89,29 @@ export const usePermissionsStore = defineStore('permissions', () => {
     memberRoles.value = Object.fromEntries(members.map(m => [m.id, m.role_ids ?? []]))
   }
 
-  async function load() {
-    const seq = ++loadSeq
+  // The newest request: a load that was superseded by a later one (the socket
+  // opening refreshes too) must not report "done" before that one has landed,
+  // or a caller that waits for the permissions (the deep link into the admin
+  // area) would look at nothing.
+  let latest: Promise<void> = Promise.resolve()
+
+  async function fetchPermissions(seq: number) {
     try {
       const data = await api('/api/permissions', { decode: decodePermissionsInfo })
       if (seq === loadSeq) info.value = data
     } catch (e) {
       console.error('Failed to fetch permissions:', e)
     }
+  }
+
+  async function load() {
+    const run = fetchPermissions(++loadSeq)
+    latest = run
+    let waited: Promise<void>
+    do {
+      waited = latest
+      await waited
+    } while (waited !== latest)
   }
 
   async function loadRoles() {

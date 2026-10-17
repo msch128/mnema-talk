@@ -9,7 +9,7 @@ import { decodeChannelHierarchy, decodeUser, decodeMessage, decodeThread, decode
 import { isChatMember, isChatMessage, isChatReadState, decodeChatRenamedCategory } from '../types/rest'
 import { arrayDecoder, isRecord } from '../types/validation'
 import { decodeServerEvent } from '../types/events'
-import type { ServerEvent, ServerEventPayloads, ClientEventPayloads } from '../types/events'
+import type { ServerEvent, ServerEventPayloads, ClientEventPayloads, InteractionResponse } from '../types/events'
 
 export type ThreadRoot = Pick<Message, 'id'> & Partial<Omit<Message, 'id'>>
 export type ProfilePreview = Pick<User, 'id' | 'username' | 'display_name' | 'role'> & Partial<Omit<User, 'id' | 'username' | 'display_name' | 'role'>>
@@ -52,6 +52,14 @@ if (typeof document !== 'undefined') {
   window.addEventListener('focus', () => onReturnToTab?.())
 }
 
+/** A private reply of a bot to a slash command, shown in its channel until dismissed. */
+export interface EphemeralNote extends InteractionResponse {
+  id: number
+}
+
+/** How many private replies are kept. */
+const MAX_EPHEMERAL = 20
+
 export const useChatStore = defineStore('chat', () => {
   let communityGeneration = 0
   function assertCommunity(generation: number) {
@@ -81,6 +89,9 @@ export const useChatStore = defineStore('chat', () => {
 
   // Community members & real-time presence
   const members = ref<Member[]>([])
+  // Replies to slash commands that only this member sees; kept in memory, never stored.
+  const ephemeral = ref<EphemeralNote[]>([])
+  let ephemeralSeq = 0
   let membersFetchSeq = 0
   let memberRevision = 0
   // A disable event wins over requests already in flight. A later active-only
@@ -946,6 +957,10 @@ export const useChatStore = defineStore('chat', () => {
         if (p?.message_id) applyToMessage(p.message_id, m => { m.reactions = p.reactions })
         break
 
+      case 'interaction_response':
+        if (p?.channel_id) ephemeral.value = [...ephemeral.value, { ...p, id: ++ephemeralSeq }].slice(-MAX_EPHEMERAL)
+        break
+
       case 'webrtc_offer':
         webrtcOfferHandler?.(p)
         break
@@ -1490,7 +1505,12 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /** Retire all instance data and pending work before selecting another origin. */
+  function dismissEphemeral(id: number) {
+    ephemeral.value = ephemeral.value.filter(n => n.id !== id)
+  }
+
   function resetCommunityState() {
+    ephemeral.value = []
     ++communityGeneration
     ++channelsFetchSeq
     latestChannelsFetch = Promise.resolve()
@@ -1552,6 +1572,8 @@ export const useChatStore = defineStore('chat', () => {
     retryNow,
     categories,
     allChannels,
+    ephemeral,
+    dismissEphemeral,
     isVoiceChannel,
     uncategorized,
     activeChannel,

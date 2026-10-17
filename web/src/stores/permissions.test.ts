@@ -128,4 +128,26 @@ describe('permissions store', () => {
     store.reset()
     expect(store.memberRoles).toEqual({})
   })
+
+  it('reports a load as done only after the newest request has landed', async () => {
+    const store = usePermissionsStore()
+    let first: (value: unknown) => void = () => {}
+    let second: (value: unknown) => void = () => {}
+    apiMock.mockReturnValueOnce(new Promise(r => { first = r }))
+    apiMock.mockReturnValueOnce(new Promise(r => { second = r }))
+    // A caller waits for the permissions while the socket's refresh overtakes it.
+    let done = false
+    const waiting = store.load().then(() => { done = true })
+    const refresh = store.load()
+    first(info({ permissions: DEFAULT_EVERYONE }))
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(done).toBe(false)
+    expect(store.loaded).toBe(false)
+    second(info({ permissions: PERMISSION_BITS.manage_bots }))
+    await Promise.all([waiting, refresh])
+    expect(done).toBe(true)
+    expect(store.can('manage_bots')).toBe(true)
+    expect(store.canOpenAdmin).toBe(true)
+  })
 })

@@ -73,6 +73,8 @@ mnema-talk/
 │   ├── s3/                  # S3 client
 │   ├── events/              # Event types / publishing to the hub
 │   ├── ws/                  # Real-time WebSocket hub (events, presence)
+│   ├── bot/                 # Bot accounts, tokens, bot API authentication, slash commands (doc/bots.md)
+│   ├── gateway/             # Bot gateway (Discord-style opcodes, intents, resume)
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
