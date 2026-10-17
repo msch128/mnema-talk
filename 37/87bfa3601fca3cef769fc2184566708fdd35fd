@@ -1,0 +1,406 @@
+internal/server/audit_integration_test.go
+  s_06fcde5dbef956::t_f4bb9773e1c327 8
+  s_06fcde5dbef956::t_244400dd0caece 1-6,10-210,219
+  s_06fcde5dbef956::t_be201785b85198 7,9,211-218,220-229
+internal/audit/middleware.go
+  s_06fcde5dbef956::t_f510fafabf7c49 1-10,12-51,56,59-63,70-74,76-98,102-103,104-106,115-127,133-135
+  s_06fcde5dbef956::t_b6268811c1605a 52-55,57-58,64-69,75,99-101,107-113
+  s_06fcde5dbef956::t_129e6e0c1ffd32 114
+  s_06fcde5dbef956::t_d8653d24e8d9e8 11,128-130
+  s_06fcde5dbef956::t_9b0f5ba3acf453 131-132
+internal/audit/handler.go
+  s_06fcde5dbef956::t_b2426b468594c9 1-48,50-120,139-184
+  s_06fcde5dbef956::t_8d743c88659645 123,125-127,138
+  s_06fcde5dbef956::t_13fa2fec12358e 49,121-122,124,128-137
+SECURITY.md
+  s_06fcde5dbef956::t_9a9f7ea71a7ee3 401-410
+  s_06fcde5dbef956::t_2ef01d67e23caf 393-398
+  s_06fcde5dbef956::t_0f7ecc5e600336 399-400
+internal/server/audit_actor_test.go
+  s_06fcde5dbef956::t_5bc73331ed7752 1-12
+  s_06fcde5dbef956::t_2a2dcb2b74120b 13,18-19
+  s_06fcde5dbef956::t_ade1fcdeae49ac 14-17
+internal/perm/perm.go
+  s_06fcde5dbef956::t_cdcd0d2431b71b 58-60,98
+  s_06fcde5dbef956::t_0fd00fe930ef3c 61-66,99-100,136-137
+  s_06fcde5dbef956::t_b1d60715fb9ca3 138
+README.md
+  s_06fcde5dbef956::t_9a9f7ea71a7ee3 77-80,214
+  s_06fcde5dbef956::t_2ef01d67e23caf 76
+.env.example
+  s_06fcde5dbef956::t_7bf94a7a5e8729 118-121
+internal/testutil/db.go
+  s_06fcde5dbef956::t_75a57b62389f77 106-108
+doc/moderation.md
+  s_06fcde5dbef956::t_26d855a1142c81 1-2,6-7,101-129,144-146,152-168,179-182,198-205
+  s_06fcde5dbef956::t_d92aced6b65982 147-151,169-178
+  s_06fcde5dbef956::t_98ef5faa83a5a2 130-143
+  s_06fcde5dbef956::t_b4cf8d295c709b 183-197
+  s_06fcde5dbef956::t_2ef01d67e23caf 57
+  s_06fcde5dbef956::t_c652c5ba57e1d1 3-5,8-56,58-69
+  s_06fcde5dbef956::t_0e80f882981fdc 70
+  s_06fcde5dbef956::t_0f7ecc5e600336 71-100
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_7410414e31dcee 16,40,52,95
+  s_06fcde5dbef956::t_17a5848d1d50ed 5,17,30-31,38,50,93
+internal/audit/routes.go
+  s_06fcde5dbef956::t_50a8a49a7abfdf 1-24,27-61,66-95,109-164
+  s_06fcde5dbef956::t_367fde60100f53 25,107
+  s_06fcde5dbef956::t_e1a28c12c439d4 108
+  s_06fcde5dbef956::t_60134b3b46e41c 62-65
+internal/server/server.go
+  s_06fcde5dbef956::t_c69530cf1b6da4 356-361
+  s_06fcde5dbef956::t_3d92dbe1dc81bf 134-135,330-331
+  s_06fcde5dbef956::t_7bf94a7a5e8729 17-18
+  s_06fcde5dbef956::t_360a2af32eb956 362-363
+  s_06fcde5dbef956::t_2a2dcb2b74120b 369-370,372,382
+  s_06fcde5dbef956::t_8220a75e2cab04 383-384
+  s_06fcde5dbef956::t_5afa6a77f37435 144
+  s_06fcde5dbef956::t_faf92f6b5aa212 164
+  s_06fcde5dbef956::t_83f57576e7f0e5 139,141
+  s_06fcde5dbef956::t_ade1fcdeae49ac 133,364-368,371,373-381
+  s_06fcde5dbef956::t_60134b3b46e41c 140
+web/src/types/rest.test.ts
+  s_06fcde5dbef956::t_d4ecc86edce80c 67
+internal/audit/audit_test.go
+  s_06fcde5dbef956::t_8e8020320e02cf 1-29,31-146
+  s_06fcde5dbef956::t_65bf45608b0eea 30
+api/openapi.json
+  s_06fcde5dbef956::t_d4af1a8e672d8a 4-82,7229,7232-7233,7238-7241,7254,7264,7274,7284,7294,7311-7312,7325,7338,7343,7346-7348,7360,7365-7367,7369-7371,7373,7375-7381,7383,7385-7391,7393,7395-7401,7403-7437
+  s_06fcde5dbef956::t_94b4a415d161ad 89-92,161-165,175,189-234,236-241,243-250,254-255,460-500,1132,1921-1922,1940-1942,7460-7465,7467-7471,7483-7491,7493-7501,7513-7547,7549,7551,11882-11883,11885,11897-11899,11901-11902,12509-12511,12513,12522,12527,12529-12531,12533-12535,12537,12540-12553,12555-12565,12567-12573,12575-12604,12658-12659,12661-12662,12664,12666-12668,12673-12674,12676,12678-12682,12693-12694,12703,12712,12725-12727,12732-12734,12736,12738-12740,12742-12744,12746,12748-12750,12752-12754,12756,12758-12760,12762,12770,12772-12773,12776-12780,12782-12784,12786-12789,12791-12792,12794,13011-13012,13014,13026-13033,13035-13037,13039-13041,13043,13045-13047,13049-13051,13053,13055-13057,13059-13061,13063-13067,13069-13071,13073-13077,13079-13081,13083-13087,13089-13091,13093-13096,13098-13099,13101,13103-13104,13108-13109,13111,13123-13133,13135-13137,13139-13145,13147-13149,13151-13155,13157-13159,13161-13165,13167-13169,13171-13175,13177-13179,13181-13185,13187-13189,13191-13195,13197-13199,13201-13205,13207-13209,13211-13214,13216-13217,13219,13221-13223
+  s_06fcde5dbef956::t_19d8438039f9c6 242,251-253
+  s_06fcde5dbef956::t_cdc4782804eb47 235
+  s_06fcde5dbef956::t_bda2100228ea4c 599,628-629,657-658,667,668-672,679-682,684,694-697,700-702,1437-1438,14531,14534-14549,14551-14553,14555-14557,14559-14561,14563-14565,14567-14575,14577-14585,14587-14595,14597-14605,14617-14651,14653,14655-14657,14700-14701,14913,14916-14938,14941-15015,15017-15021,15024-15045,15057-15065,15067-15141,15143-15145
+  s_06fcde5dbef956::t_121f0aec4d3fa2 15146-15147
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_896977ec17c605 5-9,11-46
+  s_06fcde5dbef956::t_75be652ea97f7f 10
+  s_06fcde5dbef956::t_d9e49a5da9d203 49,63,71,85,92-116,118-122,125-129,264-291,1086,1104,1643-1644,1656-1657
+  s_06fcde5dbef956::t_19d8438039f9c6 117,124
+  s_06fcde5dbef956::t_cdc4782804eb47 123
+  s_06fcde5dbef956::t_bda2100228ea4c 374-376,378,388-390,724,727-728,730,732-733,735
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_9a9f7ea71a7ee3 63
+  s_06fcde5dbef956::t_2ef01d67e23caf 64-65,114-116
+  s_06fcde5dbef956::t_0f7ecc5e600336 51
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_45a6d9e38fe448 118-120
+  s_06fcde5dbef956::t_0fd440b1563916 29
+  s_06fcde5dbef956::t_17a5848d1d50ed 113,117
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_199efc1e6d45ee 1-18,20-163
+  s_06fcde5dbef956::t_17a5848d1d50ed 19
+internal/config/config.go
+  s_06fcde5dbef956::t_e875259407b172 47
+  s_06fcde5dbef956::t_3d92dbe1dc81bf 44-46,217-220,284,341-343
+web/scripts/generate-contracts.ts
+  s_06fcde5dbef956::t_75be652ea97f7f 67-68
+internal/audit/audit.go
+  s_06fcde5dbef956::t_c69530cf1b6da4 88-90
+  s_06fcde5dbef956::t_286f383558fcc5 1-35,39-50,63-87,94-142
+  s_06fcde5dbef956::t_8d743c88659645 54-55
+  s_06fcde5dbef956::t_13fa2fec12358e 36-38,51-53,56-62,91-93
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_85c195f315e784 1-6,8-18,20-21,23-32,35-36,44-61,63-64,73-74,76-77,79,81-83,88,95-97,99-101,103-105
+  s_06fcde5dbef956::t_c69530cf1b6da4 78,80
+  s_06fcde5dbef956::t_367fde60100f53 7,19,37,62,65-72,75,84-87,89-94,98,102
+  s_06fcde5dbef956::t_60134b3b46e41c 33-34
+  s_06fcde5dbef956::t_a4aa018f12a29c 22
+web/src/lib/permissions.ts
+  s_06fcde5dbef956::t_751fe579d5f8e4 22
+  s_06fcde5dbef956::t_0fd00fe930ef3c 24-26
+internal/audit/sanitize.go
+  s_06fcde5dbef956::t_146faf070737ce 1-3,6-7,9-22,24-38,42-46,58-62,71-107,111,116,120
+  s_06fcde5dbef956::t_9e97bff4aa799f 23
+  s_06fcde5dbef956::t_12132df2f939f7 8,112-115,117,119,121-123
+  s_06fcde5dbef956::t_ac844e2656f362 4-5,39-41,47-57,63-70,108-110,118
+docker-compose.yml
+  s_06fcde5dbef956::t_7bf94a7a5e8729 70-71
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_2122ce47617715 1254-1310,1340
+  s_06fcde5dbef956::t_8b8bf710ec9508 753,1206-1209,1222-1245,1252-1253,1341
+  s_06fcde5dbef956::t_2ee2c4152a7c59 1342
+  s_06fcde5dbef956::t_9c8412aa86ff8f 1246-1249,1311-1313,1317-1331
+  s_06fcde5dbef956::t_a4bc6ea42fcf08 754-755,1212-1220,1250-1251,1332-1337,1486-1535
+  s_06fcde5dbef956::t_504162015ef9f9 1314-1316,1338-1339,1536-1554
+internal/config/config_test.go
+  s_06fcde5dbef956::t_c69530cf1b6da4 143-161
+internal/audit/fake_test.go
+  s_06fcde5dbef956::t_a639ed06d4550c 16,58
+  s_06fcde5dbef956::t_d0b1d58d68801a 9,21,30-31,78,80,84-85
+  s_06fcde5dbef956::t_a2286377401143 1-8,10-15,17-20,22-29,32-57,59-77,79,81-83,86-133
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_8b8bf710ec9508 753,1206-1209,1222-1245,1252-1253,1341
+  s_06fcde5dbef956::t_2122ce47617715 1254-1310,1340
+  s_06fcde5dbef956::t_4cf55a8125672e 1342
+  s_06fcde5dbef956::t_9c8412aa86ff8f 1246-1249,1311-1313,1317-1331
+  s_06fcde5dbef956::t_a4bc6ea42fcf08 754-755,1212-1220,1250-1251,1332-1337,1486-1535
+  s_06fcde5dbef956::t_504162015ef9f9 1314-1316,1338-1339,1536-1554
+web/src/components/AdminAuditTab.test.ts
+  s_06fcde5dbef956::t_bffceda9ac4c6d 1-8,11-73,79-80,84-104
+  s_06fcde5dbef956::t_96a295a43d7a95 9-10,74-78,81-83
+internal/db/migrations/0027_audit_log.sql
+  s_06fcde5dbef956::t_66e24d85e7c848 1-29
+e2e/tests/audit.spec.ts
+  s_06fcde5dbef956::t_a63be17555bcb3 1-66
+internal/server/audit_hardening_integration_test.go
+  s_06fcde5dbef956::t_f59bd809a3b9fc 23,45,48
+  s_06fcde5dbef956::t_7a98a47e371a0a 1-22,24-44,46-47,49-72,75-87
+  s_06fcde5dbef956::t_a1b6f08b1d2c6c 73-74
+internal/audit/hardening_test.go
+  s_06fcde5dbef956::t_dfd2306cc6b5cc 6-7,60,98-107
+  s_06fcde5dbef956::t_115d92e0b6fd05 1-5,8-59,61-86,89-91,93-97
+  s_06fcde5dbef956::t_0c98d9ea7af2e3 87-88,92
+internal/chat/audit_integration_test.go
+  s_06fcde5dbef956::t_c135a4ac1a6190 1-23,25
+  s_06fcde5dbef956::t_dee994c3d21656 24
+internal/auth/handler.go
+  s_06fcde5dbef956::t_83f57576e7f0e5 7,12,31,56-58
+  s_06fcde5dbef956::t_cef394206f3743 28-30,150,176,179,187,229,277,375
+internal/server/audit_events_integration_test.go
+  s_06fcde5dbef956::t_6bbc0367cb8679 1-82,88-168
+  s_06fcde5dbef956::t_a1b6f08b1d2c6c 83-87
+internal/chat/handler.go
+  s_06fcde5dbef956::t_5afa6a77f37435 36-37,349,353,400
+  s_06fcde5dbef956::t_1bccc166d55a3a 8,13
+  s_06fcde5dbef956::t_f9305e38e0e05f 124,129-133,141-143
+  s_06fcde5dbef956::t_bd4eb30c38f464 78,366,373,396-399,405-406
+  s_06fcde5dbef956::t_55fefee10ba38f 1001,1192-1195
+internal/auth/audit.go
+  s_06fcde5dbef956::t_8366d7689f672d 1-37,42-46,50-54
+  s_06fcde5dbef956::t_83f57576e7f0e5 38-41,47-49
+internal/ws/hub.go
+  s_06fcde5dbef956::t_361d29038a79eb 34-36
+internal/ws/voice.go
+  s_06fcde5dbef956::t_cc7a59365dc123 248-250
+  s_06fcde5dbef956::t_d8e3ba396d9a69 457-459
+internal/server/audit_presence_test.go
+  s_06fcde5dbef956::t_71d7c235c68b74 16
+  s_06fcde5dbef956::t_26dbb5aefc86ff 1-15,17-20
+internal/server/audit_presence.go
+  s_06fcde5dbef956::t_ee5badab2a6327 45-47
+  s_06fcde5dbef956::t_43edb2b5d90600 1-44,48-56,58-59
+  s_06fcde5dbef956::t_ade1fcdeae49ac 57
+internal/chat/audit.go
+  s_06fcde5dbef956::t_2ebd54069c98fc 1-4,6-10,12-22,24-38,42-44,48-78,80-83,88,90-102,104
+  s_06fcde5dbef956::t_ade1fcdeae49ac 23,41,45-47,84,89,103
+  s_06fcde5dbef956::t_a1b6f08b1d2c6c 39-40
+  s_06fcde5dbef956::t_bd4eb30c38f464 5,11,79,85-87,105-135
+internal/db/migrations/0028_audit_channel.sql
+  s_06fcde5dbef956::t_b01ebbe6ed2e25 1-4
+internal/server/audit_scope_integration_test.go
+  s_06fcde5dbef956::t_7f528fa2ad886a 1-94
+internal/audit/classes.go
+  s_06fcde5dbef956::t_d8653d24e8d9e8 43
+  s_06fcde5dbef956::t_739d3c4bc57d85 1-40,42,44-78
+  s_06fcde5dbef956::t_17efe1ffcf5d65 41
+internal/audit/classes_test.go
+  s_06fcde5dbef956::t_d8653d24e8d9e8 21-22
+  s_06fcde5dbef956::t_36b540273cc666 1-9,13-20,23,27-32,35-56
+  s_06fcde5dbef956::t_60134b3b46e41c 33-34
+  s_06fcde5dbef956::t_5824dbd19642ab 12
+  s_06fcde5dbef956::t_17efe1ffcf5d65 10-11
+internal/db/migrations/0029_moderation.sql
+  s_06fcde5dbef956::t_0bc5b36ffa0a70 1-23
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_c9377cef0d853f 80-82,85-93,106,159-164,181,212-214,292-305,317-320,322,389,399-400
+  s_06fcde5dbef956::t_f9305e38e0e05f 306-316
+internal/auth/service.go
+  s_06fcde5dbef956::t_fec23bd79ba98e 262,333-335
+  s_06fcde5dbef956::t_a391ec58b19203 238,249
+internal/chat/members.go
+  s_06fcde5dbef956::t_f9305e38e0e05f 6,18-20
+  s_06fcde5dbef956::t_a391ec58b19203 31
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_c45e12c824fda3 71-76
+internal/server/moderation_integration_test.go
+  s_06fcde5dbef956::t_3d422b115b4cff 1-6,8,10-20,26-76,80,83-335,337-338,344-386,410
+  s_06fcde5dbef956::t_bb6b341c24bfd2 7,9,21-25,77-79,81-82,387-409
+  s_06fcde5dbef956::t_5d3e0aeb9d6ee8 336,339-343,411-467
+  s_06fcde5dbef956::t_a39ad5ce904104 468
+internal/roles/handler.go
+  s_06fcde5dbef956::t_7e8f07c7b41201 10
+  s_06fcde5dbef956::t_f9305e38e0e05f 73-77,115,123-127
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_a40a7e2d012ccf 1-28,32-58,65-168,170-205,207-259,263-265,267-272,275,280-331,333-378,381-398,402-404,406-413,417-446
+  s_06fcde5dbef956::t_bb6b341c24bfd2 29-31,260-262,266
+  s_06fcde5dbef956::t_4cdd505c39c11e 405,414-415
+  s_06fcde5dbef956::t_bc30617d6840ca 273-274,276-279,332,379-380,416
+  s_06fcde5dbef956::t_e89479144a722c 169,206
+  s_06fcde5dbef956::t_19d8438039f9c6 59-61
+  s_06fcde5dbef956::t_cdc4782804eb47 62-64
+  s_06fcde5dbef956::t_d1b7a0d4c6a0de 399-401
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_401cda79a497d1 39-40,45
+  s_06fcde5dbef956::t_fec23bd79ba98e 41-44,53-54,63,155
+  s_06fcde5dbef956::t_bc30617d6840ca 98
+internal/perm/timeout_test.go
+  s_06fcde5dbef956::t_512a87765abaf8 1-65
+web/src/stores/permissions.ts
+  s_06fcde5dbef956::t_010670e6db1396 34-39,118
+internal/auth/knowndevice.go
+  s_06fcde5dbef956::t_a391ec58b19203 105
+internal/auth/native_password.go
+  s_06fcde5dbef956::t_bc30617d6840ca 42
+web/src/components/ModerationDialog.vue
+  s_06fcde5dbef956::t_27cd978a11d5a0 6,22,42-52,106,163
+  s_06fcde5dbef956::t_b555c8a88424b1 1-5,7-17,18-21,23-32,34-41,53-91,93-105,107-162,164-183
+  s_06fcde5dbef956::t_eb9adb61f41325 33,92
+internal/auth/reauth.go
+  s_06fcde5dbef956::t_bc30617d6840ca 20
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_a391ec58b19203 100
+  s_06fcde5dbef956::t_303a42229db554 12
+web/src/components/TimeoutBanner.vue
+  s_06fcde5dbef956::t_cd9b0cc0cfa14b 1-52
+internal/auth/native_lease.go
+  s_06fcde5dbef956::t_bc30617d6840ca 50
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_010670e6db1396 912-915,920-928
+  s_06fcde5dbef956::t_5fc5a76884b6d8 33
+  s_06fcde5dbef956::t_f3d2dffcca3ee0 916-919
+  s_06fcde5dbef956::t_7ea6c3e3c50a1d 1604
+  s_06fcde5dbef956::t_7d0fc28e3b9a78 1151,1155
+  s_06fcde5dbef956::t_a97d7ff2651308 1474,1476,1484-1490
+  s_06fcde5dbef956::t_f9d76d90779e66 1491-1492
+web/src/App.vue
+  s_06fcde5dbef956::t_010670e6db1396 32-33,412,504
+  s_06fcde5dbef956::t_e4fe2c36433ed6 34,505
+web/src/types/events.ts
+  s_06fcde5dbef956::t_010670e6db1396 3,48-51,177-178,180,183-184,211
+  s_06fcde5dbef956::t_cb6e196e99be12 179,181-182
+internal/auth/native_session.go
+  s_06fcde5dbef956::t_a391ec58b19203 131
+  s_06fcde5dbef956::t_bc30617d6840ca 418
+web/src/lib/moderation.ts
+  s_06fcde5dbef956::t_66712f21821568 1-77,79-81,86-91,94-97
+  s_06fcde5dbef956::t_cb6e196e99be12 78,82-85,92-93
+internal/auth/active.go
+  s_06fcde5dbef956::t_0668dcdff09838 1-23
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_2aaf9e6a094521 155-156,409-431
+  s_06fcde5dbef956::t_33731ce8876060 23
+  s_06fcde5dbef956::t_cb21dca3bea25e 432-433
+web/src/components/ModerationDialog.test.ts
+  s_06fcde5dbef956::t_56cdd515a38d8c 1-90,94-138
+  s_06fcde5dbef956::t_eb9adb61f41325 91-93
+web/src/lib/moderationActions.test.ts
+  s_06fcde5dbef956::t_91d0fc74368964 1-65
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_2aaf9e6a094521 15,26,298-299,314-322
+web/src/stores/chatModeration.test.ts
+  s_06fcde5dbef956::t_78d7110ea36d41 1-42
+web/src/stores/permissionsTimeout.test.ts
+  s_06fcde5dbef956::t_ee43942a10c067 1-16
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_dbb5acea9628c4 1-84
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 35-39,42
+  s_06fcde5dbef956::t_ae8eaa575479ba 40-41
+web/src/lib/moderationActions.ts
+  s_06fcde5dbef956::t_e4e3c777c3fc14 1-55
+web/src/components/TimeoutBanner.test.ts
+  s_06fcde5dbef956::t_38f7fb73cef1c4 1-67
+web/src/components/AdminBansTab.test.ts
+  s_06fcde5dbef956::t_d61321070e8d32 1-78,90-101
+  s_06fcde5dbef956::t_eb9adb61f41325 79-89
+web/src/components/AdminCoverage.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 80
+web/src/composables/useNavMenus.test.ts
+  s_06fcde5dbef956::t_3795908ab3c6ce 332,334,342
+  s_06fcde5dbef956::t_a133791349e874 14-16,323,325,328-331,333,335-341,343-355
+  s_06fcde5dbef956::t_982ea8e070034b 356
+web/src/components/UserProfileModeration.test.ts
+  s_06fcde5dbef956::t_cd778b733fc12a 1-73
+web/src/lib/moderation.test.ts
+  s_06fcde5dbef956::t_1ecabd9d1eea7f 1-61
+  s_06fcde5dbef956::t_cca26002931239 62-70
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 31
+e2e/tests/moderation.spec.ts
+  s_06fcde5dbef956::t_a2e66ab9a36de6 1-101
+internal/auth/paths_integration_test.go
+  s_06fcde5dbef956::t_33dcea8e56a4e3 141,236,243,303,446
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_c6b9e4bce86d51 2,69
+internal/auth/moderation_test.go
+  s_06fcde5dbef956::t_7ba760e31d2290 1-43
+internal/chat/database_failures_integration_test.go
+  s_06fcde5dbef956::t_33dcea8e56a4e3 79,84
+  s_06fcde5dbef956::t_55fefee10ba38f 74
+internal/auth/moderation_paths_integration_test.go
+  s_06fcde5dbef956::t_49758306ddad12 1-106
+e2e/tests/message-moderation.spec.ts
+  s_06fcde5dbef956::t_33db235eb83976 1-102
+internal/httpx/response.go
+  s_06fcde5dbef956::t_9ef58177262527 17,19-20
+  s_06fcde5dbef956::t_a4d7e859db638b 50-51,136-137
+  s_06fcde5dbef956::t_66cb3a85f46845 138
+internal/chat/access.go
+  s_06fcde5dbef956::t_55fefee10ba38f 21-23,31
+web/src/components/MessageModerationDialog.vue
+  s_06fcde5dbef956::t_35dd9dd0a782b4 1-114
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_504162015ef9f9 23
+  s_06fcde5dbef956::t_7d0fc28e3b9a78 493-498
+internal/server/message_moderation_integration_test.go
+  s_06fcde5dbef956::t_538bee991aa283 22,32-33,317
+  s_06fcde5dbef956::t_82eedead15f988 1-21,23-31,34-276,279,281,283-316,318-348
+  s_06fcde5dbef956::t_5824dbd19642ab 277-278,280,282
+web/src/test-fixtures.fixture.ts
+  s_06fcde5dbef956::t_6c2e7f3f93feb7 39
+internal/db/migrations/0030_slow_mode.sql
+  s_06fcde5dbef956::t_4f2a4492a82fc4 1-5
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_fe7eed31d96477 515
+  s_06fcde5dbef956::t_466e1dd29dfcf9 501
+  s_06fcde5dbef956::t_b36b22717c3dfe 498-500,502-507
+  s_06fcde5dbef956::t_cca26002931239 508-514,516-517
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_e4fe2c36433ed6 9,157,181-183
+web/src/components/EditNameDialog.test.ts
+  s_06fcde5dbef956::t_8d6288b4a3e40a 91-93
+  s_06fcde5dbef956::t_ae8eaa575479ba 69,79,84-90,94-100
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_129dd993170f80 1-4,6-204,207-309
+  s_06fcde5dbef956::t_bd4eb30c38f464 5,205-206
+internal/chat/post.go
+  s_06fcde5dbef956::t_9ef58177262527 5-7,9,42-46,64-109
+  s_06fcde5dbef956::t_4da0de13c12081 110
+web/src/composables/useMessageModerationMenu.test.ts
+  s_06fcde5dbef956::t_89fbab6ec14428 1-108
+web/src/lib/messageModeration.ts
+  s_06fcde5dbef956::t_a76f951af6ffd5 1-33
+web/src/components/MessageModerationDialog.test.ts
+  s_06fcde5dbef956::t_404f29c4a287b0 1-7,9-113,119-125
+  s_06fcde5dbef956::t_33cdd00eae7c0f 8,114-118
+internal/chat/channels.go
+  s_06fcde5dbef956::t_55fefee10ba38f 38-41,76,86,140,142,231-240,261,263-264,367,369,405-408
+web/src/stores/chatMessageModeration.test.ts
+  s_06fcde5dbef956::t_05f8236d580ab7 1-49
+internal/chat/coverage_integration_test.go
+  s_06fcde5dbef956::t_55fefee10ba38f 87,330,335
+web/src/components/EditNameDialog.vue
+  s_06fcde5dbef956::t_7d0fc28e3b9a78 11,27-34,58,108-120
+  s_06fcde5dbef956::t_a59c1f83d13914 121-122
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_9ef58177262527 63
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_e4fe2c36433ed6 9,13-15,25,79-94,98-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3787bfa3601fca3cef769fc2184566708fdd35fd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
