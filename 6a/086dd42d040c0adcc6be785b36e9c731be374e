@@ -1,0 +1,69 @@
+internal/webhook/outgoing_handler.go
+  s_06fcde5dbef956::t_bf41d6f8577f10 106,164
+  s_06fcde5dbef956::t_59b8040b85d840 31,44-45,55,61,70,77,86,109,112,125,134,167,173,184,216,228,235,244,259,275,309,339
+internal/webhook/dispatch.go
+  s_06fcde5dbef956::t_59b8040b85d840 96,121-122,199-201,204,212,313
+internal/webhook/outgoing_store.go
+  s_06fcde5dbef956::t_ac0015f23f2c6d 30-31,34-35,49-51,68-69,99-101,111,134-136,150-152,156,170,175,178,215,222
+  s_06fcde5dbef956::t_bf41d6f8577f10 52-53,179
+internal/server/server.go
+  s_06fcde5dbef956::t_e821f07b1ec323 133
+internal/webhook/handler.go
+  s_06fcde5dbef956::t_674f01bfbe4e87 212-216,257-261
+  s_06fcde5dbef956::t_066f66c2786d55 87,95,99-102,112,118,121-125,127-128,164,178,201,227,238,279,288,299,321,352
+internal/server/webhooks_access_integration_test.go
+  s_06fcde5dbef956::t_4b6a5bef41c7bd 13,34-37,43-44,46,48-49,51-54,56-58,60-63,65-66,68-73,75-77,79-82,84-89
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_ac0015f23f2c6d 437-438
+  s_06fcde5dbef956::t_674f01bfbe4e87 415,439,457-460,463-465
+internal/server/webhooks_outgoing_rotate_integration_test.go
+  s_06fcde5dbef956::t_30db9d81b37492 12-15,28-37,40-42,44,47
+api/openapi.json
+  s_06fcde5dbef956::t_3016e4d388247a 2423,2461,2463,2474,2575,2750,2752,2763,2893,3898,4458,5576,5628,5692,5802,5856,5909,6016,7908,7960,8024,8152,8236,8289
+internal/db/migrations/0019_outgoing_webhooks.sql
+  s_06fcde5dbef956::t_ac0015f23f2c6d 3-5,11-12
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_7bbda31943a190 60
+README.md
+  s_06fcde5dbef956::t_486f4bbb11e7a0 90-91
+internal/server/webhooks_outgoing_integration_test.go
+  s_06fcde5dbef956::t_30db9d81b37492 147,300-303,307,316,319,326-327,329-348,350-353,355-358,360-361,363-365,368
+internal/webhook/dispatch_test.go
+  s_06fcde5dbef956::t_009ee58283f628 55,123,144,146,148-151,162,171,180-182,202,236,241-242
+internal/webhook/outgoing_integration_test.go
+  s_06fcde5dbef956::t_24b3250dcc15f7 31,57-58,118,143,199,203,241,262
+  s_06fcde5dbef956::t_5a4bf88a5954ce 222,257
+doc/webhooks.md
+  s_06fcde5dbef956::t_b1d7d0b5e91198 91
+  s_06fcde5dbef956::t_486f4bbb11e7a0 19-30,137-138,234-239,277
+SECURITY.md
+  s_06fcde5dbef956::t_486f4bbb11e7a0 59-74,86-88
+internal/server/webhooks_regenerate_integration_test.go
+  s_06fcde5dbef956::t_77311582901647 14-16,25-38,40-44,47,49-50,53,55-56,58-59
+internal/webhook/store.go
+  s_06fcde5dbef956::t_8cf12e6c9defd1 46-47,67-70,74-75,80,154,177-178,190-192,194,202-203,205
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_2da1ba83b5e109 1482,1489,1508,1526,1646,1663
+internal/webhook/faults_integration_test.go
+  s_06fcde5dbef956::t_795ddf56bd4062 72,111,333-335,339,343-347,350
+internal/db/migrations/0020_webhook_mention_everyone.sql
+  s_06fcde5dbef956::t_af6473ef75fd2e 1-5
+internal/server/webhooks_more_integration_test.go
+  s_06fcde5dbef956::t_1d31c82b1975b7 283-289,297-298,300-301,303-304
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a086dd42d040c0adcc6be785b36e9c731be374e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
