@@ -20,6 +20,11 @@ package server
 // @name						mnema_session
 // @description				HttpOnly session cookie issued by POST /api/auth/login or /api/auth/register. The name is __Host-mnema_session when PUBLIC_URL is https.
 
+// @securityDefinitions.apikey	botAuth
+// @in							header
+// @name						Authorization
+// @description				A bot token, sent as `Authorization: Bot <token>`. Only for /api/bot/v1.
+
 // @securitydefinitions.bearerauth	bearerAuth
 // @description					METRICS_TOKEN, only for /api/metrics.
 
@@ -43,6 +48,15 @@ package server
 
 // @tag.name			Realtime
 // @tag.description	WebSocket and WebRTC configuration.
+
+// @tag.name			Commands
+// @tag.description	Slash commands of bots: listing them in a channel and running them.
+
+// @tag.name			Bot API
+// @tag.description	The REST API of bot accounts (/api/bot/v1), authenticated with a bot token. Errors use Discord's shape; see doc/bots.md for the gateway.
+
+// @tag.name			Bots
+// @tag.description	Managing bot accounts, roles and tokens (Owner or Manage bots).
 
 // @tag.name			Admin
 // @tag.description	Administrator-only management.

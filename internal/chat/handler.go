@@ -612,7 +612,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 		err = DeleteCategory(r.Context(), h.DB, id)
 	} else {
 		sub := auth.UserFrom(r.Context()).Subject()
-		err = h.Perms.Locked(r.Context(), func(tx pgx.Tx, snap *perm.Snapshot) error {
+		err = h.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
 			if err := checkWholeCategory(snap, sub, id); err != nil {
 				return err
 			}
@@ -1072,7 +1072,7 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 		err = ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels)
 	} else {
 		sub := auth.UserFrom(r.Context()).Subject()
-		err = h.Perms.Locked(r.Context(), func(tx pgx.Tx, snap *perm.Snapshot) error {
+		err = h.Perms.Locked(r.Context(), sub, func(tx pgx.Tx, snap *perm.Snapshot) error {
 			if err := checkLayout(snap, sub, req); err != nil {
 				return err
 			}

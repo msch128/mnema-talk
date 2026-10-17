@@ -59,6 +59,7 @@ mentions; stored, not used yet).
 | Manage invites | Create, list, revoke invite codes | no |
 | Manage webhooks | Reserved, unused: webhooks are managed by the Owner and Administrators (see [webhooks](webhooks.md)) | no |
 | Manage members | Disable and re-enable accounts, end their sessions, edit their status line | no |
+| Manage bots | Create bots, give them roles and tokens, set their intents (see [bots](bots.md)). Only the Owner can grant it | no |
 | View audit log | Read the audit log ([moderation](moderation.md)) | no |
 | Timeout members | Silence members below your highest role for a while ([moderation](moderation.md)) | no |
 | Ban members | Ban and unban members below your highest role, list the bans | no |

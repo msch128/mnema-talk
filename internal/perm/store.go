@@ -62,7 +62,15 @@ func (o *OptionalInt) UnmarshalJSON(b []byte) error {
 // depends on roles or overwrites (moderating a member, moving a channel,
 // deleting a category) decides and writes here, so a concurrent permission
 // change cannot slip in between the check and the write.
-func (s *Service) Locked(ctx context.Context, fn func(tx pgx.Tx, snap *Snapshot) error) error {
+//
+// Every permission change runs through here, which makes it the one place for
+// the bot invariant (checkBotGrowth): nobody but the Owner can cause a bot to
+// gain an elevated permission anywhere, or any permission, server-wide or in
+// a channel, that they lack themselves. The outcome is compared, not the
+// individual edit, so any path (role bits, positions, memberships,
+// overwrites, removing a deny, a channel moving between categories) is
+// covered, now and later.
+func (s *Service) Locked(ctx context.Context, actor Subject, fn func(tx pgx.Tx, snap *Snapshot) error) error {
 	if s.db == nil {
 		return errNoDatabase
 	}
@@ -74,16 +82,65 @@ func (s *Service) Locked(ctx context.Context, fn func(tx pgx.Tx, snap *Snapshot)
 		if err := snap.read(ctx, tx); err != nil {
 			return fmt.Errorf("load permissions: %w", err)
 		}
-		return fn(tx, snap)
+		if err := fn(tx, snap); err != nil {
+			return err
+		}
+		if snap.IsOwner(actor) || len(snap.bots) == 0 {
+			return nil
+		}
+		after := newSnapshot(s.now())
+		if err := after.read(ctx, tx); err != nil {
+			return fmt.Errorf("load permissions: %w", err)
+		}
+		return checkBotGrowth(snap, after, actor)
 	})
 }
 
-// mutate runs fn under the permission lock with the state as it is inside the
-// transaction, then publishes the change for the users fn reports (nil =
-// everybody).
+var (
+	errBotElevation = httpx.ErrForbidden("only the Owner can give a bot administrator or admin-area permissions, anywhere")
+	errBotGrowth    = httpx.ErrForbidden("the change would give a bot a permission you do not have")
+)
+
+// checkBotGrowth is the bot invariant of every permission change by someone
+// other than the Owner: comparing where each bot stands before and after the
+// change, nothing may have been added to a bot (server-wide or in any channel)
+// that is elevated (Administrator or an admin-area permission), or that the
+// actor does not hold there themselves after the change. Whatever the path
+// (roles, role bits, positions, memberships, overwrites, a removed deny, a
+// channel moving), a bot never ends up with more than its manager has.
+func checkBotGrowth(before, after *Snapshot, actor Subject) error {
+	for id := range after.bots {
+		bot := Subject{ID: id}
+		if err := growth(before.Global(bot), after.Global(bot), after.Global(actor)); err != nil {
+			return err
+		}
+		now := after.ChannelPermissions(bot)
+		was := before.ChannelPermissions(bot)
+		for ch, p := range now {
+			if err := growth(was[ch], p, after.Channel(actor, ch)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// growth checks what was added between before and after against what the
+// actor holds.
+func growth(before, after, actor Set) error {
+	added := after &^ before
+	switch {
+	case added.HasAny(Elevated):
+		return errBotElevation
+	case added&^actor != 0:
+		return errBotGrowth
+	}
+	return nil
+}
+
 func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error)) error {
 	var affected []uuid.UUID
-	err := s.Locked(ctx, func(tx pgx.Tx, snap *Snapshot) error {
+	err := s.Locked(ctx, actor, func(tx pgx.Tx, snap *Snapshot) error {
 		if name := snap.Global(actor).MissingName(need); name != "" {
 			return httpx.ErrForbidden("missing permission: " + name)
 		}
@@ -101,6 +158,9 @@ func (s *Service) mutate(ctx context.Context, actor Subject, need Set, fn func(t
 // checkGrant rejects bits the actor does not hold themselves: nobody can
 // hand out more than they have.
 func checkGrant(snap *Snapshot, actor Subject, changed Set) error {
+	if changed.HasAny(OwnerGrantOnly) && !snap.IsOwner(actor) {
+		return httpx.ErrForbidden("only the Owner can grant: manage bots")
+	}
 	if name := snap.Global(actor).MissingName(changed); name != "" {
 		return httpx.ErrForbidden("cannot grant a permission you do not have: " + name)
 	}
@@ -250,6 +310,11 @@ func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, i
 		if err := checkGrant(snap, actor, role.Permissions^next.Permissions); err != nil {
 			return nil, err
 		}
+		// A role a bot already holds must not become a way to give it
+		// administrator power: that stays with the Owner.
+		if added := next.Permissions &^ role.Permissions; added.HasAny(Elevated) && !snap.IsOwner(actor) && snap.RoleHeldByBot(id) {
+			return nil, httpx.ErrForbidden("a bot holds this role: only the Owner can add administrator or admin-area permissions to it")
+		}
 		var err error
 		next.MaxUploadMB, err = s.checkRoleUpload(actor, in.MaxUploadMB, role.MaxUploadMB)
 		if err != nil {
@@ -352,14 +417,33 @@ func (s *Service) ReorderRoles(ctx context.Context, actor Subject, ids []uuid.UU
 // actor's highest role can be added or removed, only on members whose highest
 // role is below it, and never on the Owner.
 func (s *Service) SetMemberRoles(ctx context.Context, actor Subject, userID uuid.UUID, roleIDs []uuid.UUID) error {
-	return s.mutate(ctx, actor, ManageRoles, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
+	return s.setRoles(ctx, actor, ManageRoles, userID, roleIDs, false)
+}
+
+// SetBotRoles replaces the roles of a bot account. It needs Manage bots (not
+// Manage roles), follows the same hierarchy rules as SetMemberRoles, and a
+// role that carries Administrator or opens any part of the admin area can only
+// be given by the Owner: a bot never gets such power by accident.
+func (s *Service) SetBotRoles(ctx context.Context, actor Subject, userID uuid.UUID, roleIDs []uuid.UUID) error {
+	return s.setRoles(ctx, actor, ManageBots, userID, roleIDs, true)
+}
+
+func (s *Service) setRoles(ctx context.Context, actor Subject, need Set, userID uuid.UUID, roleIDs []uuid.UUID, bot bool) error {
+	return s.mutate(ctx, actor, need, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
 		var role string
-		err := tx.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, userID).Scan(&role)
+		var isBot bool
+		err := tx.QueryRow(ctx, `SELECT role, is_bot FROM users WHERE id = $1`, userID).Scan(&role, &isBot)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, httpx.ErrNotFound("user not found")
 		}
 		if err != nil {
 			return nil, fmt.Errorf("load user: %w", err)
+		}
+		if isBot != bot {
+			if bot {
+				return nil, httpx.ErrNotFound("user not found")
+			}
+			return nil, httpx.ErrForbidden("a bot's roles are set in its bot settings")
 		}
 		target := Subject{ID: userID, Owner: role == "admin"}
 		if err := snap.CanModerate(actor, target); err != nil {
@@ -391,6 +475,9 @@ func (s *Service) SetMemberRoles(ctx context.Context, actor Subject, userID uuid
 				// whose permissions the actor holds themselves can be given.
 				if err := checkGrant(snap, actor, snap.roles[id].Permissions); err != nil {
 					return nil, err
+				}
+				if bot && (snap.roles[id].Permissions.HasAny(Elevated) || snap.RoleGrantsElevatedInChannels(id)) && !snap.IsOwner(actor) {
+					return nil, httpx.ErrForbidden("only the Owner can give a bot a role with administrator or admin-area permissions")
 				}
 				if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, id); err != nil {
 					return nil, fmt.Errorf("assign role: %w", err)
@@ -592,6 +679,12 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 			}
 			if name := held.MissingName(bits); name != "" {
 				return nil, httpx.ErrForbidden("cannot change a permission you do not have: " + name)
+			}
+			// Elevated channel permissions (Disconnect members) for a bot are
+			// the Owner's to give, as are administrator roles.
+			if added := next[k].allow &^ old[k].allow; added.HasAny(Elevated) && !snap.IsOwner(actor) &&
+				(k.typ == "member" && snap.bots[k.id] || k.typ == "role" && snap.RoleHeldByBot(k.id)) {
+				return nil, httpx.ErrForbidden("only the Owner can allow a bot administrator or admin-area permissions")
 			}
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {

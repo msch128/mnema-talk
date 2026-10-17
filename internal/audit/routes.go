@@ -23,6 +23,7 @@ const (
 	ResChannelOvw Resource = "channel_overwrites"
 	ResCatOvw     Resource = "category_overwrites"
 	ResSettings   Resource = "settings"
+	ResBot        Resource = "bot"
 )
 
 // Route describes one mutating admin route.
@@ -91,6 +92,17 @@ var Routes = []Route{
 	{Method: "POST", Pattern: "/outgoing-webhooks/{id}/secret", Action: "outgoing_webhook.rotate_secret", TargetType: "outgoing_webhook", IDParam: "id", Snapshot: ResOutgoing},
 	{Method: "POST", Pattern: "/outgoing-webhooks/{id}/test", Skip: true},
 	{Method: "DELETE", Pattern: "/outgoing-webhooks/{id}", Action: "outgoing_webhook.delete", TargetType: "outgoing_webhook", IDParam: "id", Snapshot: ResOutgoing},
+
+	{Method: "POST", Pattern: "/bots", Action: "bot.create", TargetType: "bot"},
+	{Method: "PATCH", Pattern: "/bots/{id}", Action: "bot.update", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "DELETE", Pattern: "/bots/{id}", Action: "bot.delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "POST", Pattern: "/bots/{id}/avatar", Action: "bot.avatar", TargetType: "bot", IDParam: "id", Snapshot: ResBot, NoBody: true},
+	{Method: "PUT", Pattern: "/bots/{id}/roles", Action: "bot.roles", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "POST", Pattern: "/bots/{id}/tokens", Action: "bot.token_create", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "POST", Pattern: "/bots/{id}/tokens/{tokenID}/regenerate", Action: "bot.token_regenerate", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "DELETE", Pattern: "/bots/{id}/tokens/{tokenID}", Action: "bot.token_revoke", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "PATCH", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_update", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
+	{Method: "DELETE", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
 

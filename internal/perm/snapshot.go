@@ -69,6 +69,8 @@ type Snapshot struct {
 	roles      map[uuid.UUID]Role
 	userRoles  map[uuid.UUID][]uuid.UUID
 	owners     map[uuid.UUID]bool
+	// bots are bot accounts: they do not inherit @everyone.
+	bots       map[uuid.UUID]bool
 	channelCat map[uuid.UUID]uuid.UUID // uuid.Nil: uncategorized
 	categories map[uuid.UUID]bool
 	channelOv  map[uuid.UUID]*scope
@@ -96,6 +98,7 @@ func newSnapshot(now time.Time) *Snapshot {
 		roles:      map[uuid.UUID]Role{},
 		userRoles:  map[uuid.UUID][]uuid.UUID{},
 		owners:     map[uuid.UUID]bool{},
+		bots:       map[uuid.UUID]bool{},
 		channelCat: map[uuid.UUID]uuid.UUID{},
 		categories: map[uuid.UUID]bool{},
 		channelOv:  map[uuid.UUID]*scope{},
@@ -176,6 +179,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
 	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
+	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id FROM channels`, pgx.RowToStructByPos[channelRow])
 	ows := load(r, `SELECT channel_id, category_id, role_id, user_id, allow, deny FROM permission_overwrites`, pgx.RowToStructByPos[overwriteRow])
@@ -207,6 +211,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	}
 	for _, t := range timeouts {
 		s.timeouts[t.ID] = Timeout{Until: t.Until, Reason: t.Reason}
+	}
+	for _, id := range bots {
+		s.bots[id] = true
 	}
 	for _, id := range cats {
 		s.categories[id] = true
@@ -240,6 +247,9 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 // Age is how long ago the snapshot was loaded.
 func (s *Snapshot) age(now time.Time) time.Duration { return now.Sub(s.loaded) }
 
+// IsBot reports whether the account is a bot.
+func (s *Snapshot) IsBot(id uuid.UUID) bool { return s.bots[id] }
+
 // IsOwner reports whether sub is the Owner.
 func (s *Snapshot) IsOwner(sub Subject) bool { return sub.Owner || s.owners[sub.ID] }
 
@@ -271,6 +281,10 @@ func (s *Snapshot) Global(sub Subject) Set {
 		return All
 	}
 	p := s.everyone
+	if s.bots[sub.ID] {
+		// A bot gets nothing it was not given: no @everyone.
+		p = 0
+	}
 	for _, id := range s.userRoles[sub.ID] {
 		p |= s.roles[id].Permissions
 	}
@@ -312,7 +326,7 @@ func (sc *scope) apply(p Set, s *Snapshot, user uuid.UUID) Set {
 	if sc == nil {
 		return p
 	}
-	if ow, ok := sc.roles[s.everyoneID]; ok {
+	if ow, ok := sc.roles[s.everyoneID]; ok && !s.bots[user] {
 		p = p&^ow.deny | ow.allow
 	}
 	var allow, deny Set
@@ -529,4 +543,70 @@ func (s *Snapshot) UploadMB(sub Subject, ceiling int) int {
 		return s.GlobalUploadMB(ceiling)
 	}
 	return min(best, ceiling)
+}
+
+// Elevated are the permissions only the Owner may hand to, or manage on, a
+// bot: Administrator and everything that opens the admin area.
+const Elevated = Administrator | AdminArea
+
+// CanActAs checks that actor may mint a token for, or change the access of,
+// the bot: the bot must not hold elevated permissions unless actor is the
+// Owner, and everything it may do, server-wide and in every channel it can
+// view, must be within what actor may do themselves. Otherwise holding Manage
+// bots would be a way to act with rights one does not have.
+func (s *Snapshot) CanActAs(actor, bot Subject) error {
+	if s.IsOwner(actor) {
+		return nil
+	}
+	g := s.Global(bot)
+	if s.ElevatedFor(bot) {
+		return httpx.ErrForbidden("only the Owner can manage a bot with administrator permissions")
+	}
+	if name := s.Global(actor).MissingName(g); name != "" {
+		return httpx.ErrForbidden("the bot holds a permission you do not have: " + name)
+	}
+	for ch, p := range s.ChannelPermissions(bot) {
+		if name := s.Channel(actor, ch).MissingName(p); name != "" {
+			return httpx.ErrForbidden("the bot holds a permission you do not have in a channel: " + name)
+		}
+	}
+	return nil
+}
+
+// RoleHeldByBot reports whether any bot holds the role.
+func (s *Snapshot) RoleHeldByBot(role uuid.UUID) bool {
+	for u, roles := range s.userRoles {
+		if s.bots[u] && slices.Contains(roles, role) {
+			return true
+		}
+	}
+	return false
+}
+
+// ElevatedFor reports whether sub holds an elevated permission, server-wide or
+// in any channel (Disconnect members is a channel permission that opens part
+// of the admin area).
+func (s *Snapshot) ElevatedFor(sub Subject) bool {
+	if s.Global(sub).HasAny(Elevated) {
+		return true
+	}
+	for _, p := range s.ChannelPermissions(sub) {
+		if p.HasAny(Elevated) {
+			return true
+		}
+	}
+	return false
+}
+
+// RoleGrantsElevatedInChannels reports whether any category or channel
+// overwrite allows the role an elevated permission.
+func (s *Snapshot) RoleGrantsElevatedInChannels(role uuid.UUID) bool {
+	for _, m := range []map[uuid.UUID]*scope{s.channelOv, s.categoryOv} {
+		for _, sc := range m {
+			if ow, ok := sc.roles[role]; ok && ow.allow.HasAny(Elevated) {
+				return true
+			}
+		}
+	}
+	return false
 }

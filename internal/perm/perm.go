@@ -52,6 +52,9 @@ const (
 	// ManageMembers disables and re-enables accounts, ends their sessions and
 	// edits their status line (members below the actor's highest role only).
 	ManageMembers
+	// ManageBots creates bot accounts and sets their tokens, scope,
+	// capabilities and events (doc/bots.md). Only the Owner can grant it.
+	ManageBots
 	// ViewAuditLog reads the audit log (doc/moderation.md). Explicit value:
 	// 1<<16 belongs to Manage bots.
 	ViewAuditLog Set = 1 << 17
@@ -91,6 +94,7 @@ var Catalog = []Info{
 	{Key: "create_invites", Bit: CreateInvites, Name: "manage invites"},
 	{Key: "manage_webhooks", Bit: ManageWebhooks, Name: "manage webhooks"},
 	{Key: "manage_members", Bit: ManageMembers, Name: "manage members"},
+	{Key: "manage_bots", Bit: ManageBots, Name: "manage bots"},
 	{Key: "view_audit_log", Bit: ViewAuditLog, Name: "view the audit log"},
 	{Key: "timeout_members", Bit: TimeoutMembers, Name: "timeout members"},
 	{Key: "ban_members", Bit: BanMembers, Name: "ban members"},
@@ -123,8 +127,10 @@ const (
 	// migration 0017 seeds: exactly what every member could do before roles
 	// existed. Do not widen it: upgrades must not change behavior.
 	DefaultEveryone = ViewChannel | SendMessages | AttachFiles | AddReactions | MentionEveryone | Connect | Speak | Video
+	// OwnerGrantOnly can only be handed out by the Owner.
+	OwnerGrantOnly = ManageBots
 	// AdminArea is any permission that opens a part of the admin area.
-	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers
+	AdminArea = ManageChannels | ManageRoles | CreateInvites | ManageWebhooks | ManageMembers | DisconnectMembers | ViewAuditLog | TimeoutMembers | BanMembers | ManageBots
 )
 
 // TimeoutMask is what a timeout takes from a member: they can still read.

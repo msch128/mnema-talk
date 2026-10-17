@@ -17,10 +17,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/audit"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
+	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
@@ -65,7 +67,11 @@ type Router struct {
 	Hub *ws.Hub
 	// Webhooks is the incoming webhook handler (tests adjust its limits).
 	Webhooks *webhook.Handler
-	cancel   context.CancelFunc
+	// Bots authenticates the bot API (tests adjust its limits).
+	Bots *bot.Authenticator
+	// Gateway is the bot gateway (tests adjust its timings).
+	Gateway *gateway.Gateway
+	cancel  context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
 }
@@ -159,6 +165,24 @@ func NewRouter(d Deps) (*Router, error) {
 	go outgoing.Run(ctx)
 	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})
 
+	botH := &bot.Handler{DB: d.DB, Perms: permSvc, Media: mediaH}
+	botAuthn := bot.NewAuthenticator(d.DB)
+	cmds := bot.NewCommands(bot.Commands{DB: d.DB, Perms: permSvc, Events: pub, Online: hub})
+	gw := gateway.New(gateway.Config{Auth: botAuthn, Perms: permSvc, DB: d.DB, PublicURL: cfg.PublicURL})
+	botH.OnRevoke = gw.Revoke
+	cmds.Deliver = gw
+	go gw.Run(ctx)
+	// Both the hub and the gateway learn about permission changes, and the
+	// gateway sees every event the hub publishes (as outgoing webhooks do).
+	permSvc.SetNotifier(notifiers{hub, gw})
+	prevTap := hub.Tap
+	hub.Tap = func(ch uuid.UUID, eventType string, payload any) {
+		if prevTap != nil {
+			prevTap(ch, eventType, payload)
+		}
+		gw.Observe(ch, eventType, payload)
+	}
+
 	systemH := &systemHandler{
 		cfg:      cfg,
 		db:       d.DB,
@@ -224,7 +248,8 @@ func NewRouter(d Deps) (*Router, error) {
 
 	r.Route("/api", func(api chi.Router) {
 		// Webhook execute calls carry their own secret and no cookie.
-		api.Use(httpx.CSRFExcept(cfg.AllowedOrigins, webhook.IsExecute))
+		// The bot API reads the Authorization header only and never the cookie.
+		api.Use(httpx.CSRFExcept(cfg.AllowedOrigins, func(r *http.Request) bool { return webhook.IsExecute(r) || bot.IsAPIPath(r) }))
 		api.NotFound(func(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, httpx.ErrNotFound("route not found"))
 		})
@@ -245,6 +270,26 @@ func NewRouter(d Deps) (*Router, error) {
 		// Authenticated by the secret in the URL, not by a session.
 		webhookH.MountPublic(api)
 
+		// Bots authenticate with a token in the Authorization header, have
+		// their own rate limits and Discord-shaped errors.
+		api.Route("/bot/v1", func(b chi.Router) {
+			b.NotFound(bot.NotFound)
+			b.MethodNotAllowed(bot.MethodNotAllowed)
+			// The gateway authenticates itself (header or IDENTIFY).
+			b.Get("/gateway", gw.Handle)
+			b.Group(func(a chi.Router) {
+				a.Use(botAuthn.Middleware)
+				send := botAuthn.LimitSends(bot.ChannelParam)
+				a.Get("/users/@me", bot.Me)
+				a.Group(func(j chi.Router) {
+					j.Use(httpx.MaxBodyDiscord(httpx.DefaultMaxBody))
+					chatH.MountBot(j, send)
+					cmds.MountBot(j)
+				})
+				mediaH.MountBot(a, send)
+			})
+		})
+
 		api.Group(func(pub chi.Router) {
 			pub.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 			authH.MountPublic(pub)
@@ -261,6 +306,7 @@ func NewRouter(d Deps) (*Router, error) {
 					j.Get("/openapi.json", openAPISpec)
 				}
 				chatH.Mount(j)
+				cmds.MountMember(j)
 				mediaH.Mount(j)
 				rolesH.Mount(j)
 			})
@@ -287,6 +333,7 @@ func NewRouter(d Deps) (*Router, error) {
 				chatH.MountAdmin(adm)
 				rolesH.MountAdmin(adm)
 				webhookH.MountAdmin(adm)
+				botH.MountAdmin(adm)
 				mediaH.MountAdmin(adm)
 				systemH.mountAdmin(adm)
 			})
@@ -294,7 +341,16 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, cancel: cancel, outgoing: outgoing, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
+	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, Bots: botAuthn, Gateway: gw, cancel: cancel, outgoing: outgoing, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
+}
+
+// notifiers tells several parties about permission changes.
+type notifiers []perm.Notifier
+
+func (n notifiers) PermissionsChanged(userIDs []uuid.UUID) {
+	for _, x := range n {
+		x.PermissionsChanged(userIDs)
+	}
 }
 
 // auditActor names the signed-in user of a context for the audit log.

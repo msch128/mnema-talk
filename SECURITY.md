@@ -85,6 +85,19 @@ details and the limits.
   cannot see the channel is notified. The token is redacted from access and
   error logs (`/api/webhooks/{id}/[redacted]`). Details and the Discord
   compatibility table: [doc/webhooks.md](doc/webhooks.md).
+- **Bots** (see [doc/bots.md](doc/bots.md)) are accounts that cannot sign in
+  and authenticate with an API token. Only the Owner and members with *Manage
+  bots* create and manage them; *Manage bots* can only be granted by the Owner,
+  and a role with Administrator or admin-area permissions can only be given to
+  a bot by the Owner. A bot's permissions come from its roles and channel
+  overwrites through the same engine as members', but it does not inherit
+  `@everyone`: a new bot can reach nothing, and a private channel stays hidden
+  from it. A token is 256 random bits, shown once, stored as a SHA-256 hash,
+  optionally expiring, revocable, with a last-used time; revoking a token,
+  disabling or deleting a bot ends it at once, open connections included.
+  Tokens travel in the `Authorization` header only (never in a URL), are
+  never logged and never accepted on the cookie routes, which stay behind the
+  session and the CSRF origin check.
 - **Outgoing webhooks and SSRF.** A webhook URL chosen by a member makes the
   server send requests, so `internal/ssrf` guards them: http(s) only, names
   resolved by the server, every answer must be a public unicast address

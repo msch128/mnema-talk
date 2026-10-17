@@ -35,6 +35,12 @@ var snapshotSQL = map[Resource]string{
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = users.id), '[]'::jsonb)),
 		username FROM users WHERE id = $1`,
 	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb), 'instance settings' FROM instance_settings`,
+	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
+		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = b.user_id), '[]'::jsonb),
+		'active_tokens', (SELECT COUNT(*) FROM bot_tokens t WHERE t.bot_id = b.id AND t.revoked_at IS NULL
+		                  AND (t.expires_at IS NULL OR t.expires_at > NOW())),
+		'commands', (SELECT COUNT(*) FROM bot_commands c WHERE c.bot_id = b.id)), b.name
+		FROM bots b WHERE b.id = $1`,
 	ResInvite: `SELECT jsonb_build_object('max_uses', max_uses, 'uses_count', uses_count, 'expires_at', expires_at), ''
 		FROM invites WHERE id = $1`,
 	ResChannelOvw: `SELECT jsonb_build_object('overwrites', COALESCE((SELECT jsonb_agg(jsonb_build_object(

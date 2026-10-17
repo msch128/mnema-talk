@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type obj = map[string]any
@@ -55,6 +56,14 @@ func run(in, out string) error {
 		return err
 	}
 	if paths, ok := doc["paths"].(obj); ok {
+		// swag's route syntax has no '@': routes with a literal "@me" segment
+		// are annotated as "/at_me" and renamed here.
+		for p, item := range paths {
+			if renamed := strings.ReplaceAll(p, "/at_me", "/@me"); renamed != p {
+				delete(paths, p)
+				paths[renamed] = item
+			}
+		}
 		for _, item := range paths {
 			for _, op := range item.(obj) {
 				if op, ok := op.(obj); ok {
