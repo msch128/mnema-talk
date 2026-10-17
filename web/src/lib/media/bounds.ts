@@ -10,6 +10,35 @@ export const PREVIOUS_GROUP_MS = 30_000
 // let in again) goes on sealing with its last keys before it sends nothing.
 export const STALE_SEAL_MS = 10_000
 
+// Time-based key lifecycle (see SECURITY.md, "Key lifetime").
+// The committer advances the epoch with a path commit once the epoch is this
+// old, even if nobody joined or left, so a key never lives longer than this.
+export const ROTATE_MS = 30 * 60_000
+// Each epoch draws its own delay in ROTATE_MS +- this, so Talks do not rotate in lockstep.
+export const ROTATE_JITTER_MS = 2 * 60_000
+// A member that showed no sign of life for this long is removed from the group.
+export const ABSENT_MS = 20 * 60_000
+// Every member signs one tiny liveness message this often (a quarter of ABSENT_MS).
+export const HEARTBEAT_MS = 5 * 60_000
+// How often the group looks at its clocks.
+export const MAINTENANCE_MS = 30_000
+
+export interface MediaTiming {
+  rotateMs: number
+  rotateJitterMs: number
+  absentMs: number
+  heartbeatMs: number
+  maintenanceMs: number
+}
+
+export const DEFAULT_TIMING: MediaTiming = {
+  rotateMs: ROTATE_MS,
+  rotateJitterMs: ROTATE_JITTER_MS,
+  absentMs: ABSENT_MS,
+  heartbeatMs: HEARTBEAT_MS,
+  maintenanceMs: MAINTENANCE_MS,
+}
+
 export const MEDIA_EXPORTER_LABEL = 'mnema-media-v1'
 export const FRAME_EPOCH_BYTES = 16
 

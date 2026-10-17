@@ -44,7 +44,8 @@ trap cleanup EXIT
 
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   echo "==> building web app"
-  (cd web && npm ci --no-audit --no-fund && npm run build)
+  # MNEMA_E2E=1 enables the media key-lifetime test hook (web/src/lib/media/lifetime.ts); never set for releases.
+  (cd web && npm ci --no-audit --no-fund && MNEMA_E2E=1 npm run build)
   echo "==> building server binary"
   mkdir -p "$(dirname "$BIN")"
   CGO_ENABLED=0 go build -o "$BIN" ./cmd/server

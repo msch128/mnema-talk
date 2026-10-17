@@ -4,6 +4,7 @@ import type { t, locale } from './i18n/index.ts'
 
 declare global {
   const __APP_VERSION__: string
+  const __MNEMA_E2E_HOOKS__: boolean
   // Optional browser extensions used by capability checks / requested hints.
   // These declarations do not promise that an engine supports an extension.
   interface Window { webkitAudioContext?: typeof AudioContext }

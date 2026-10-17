@@ -1,4 +1,13 @@
+import { randomBytes } from 'node:crypto'
 import type { Page, Locator } from '@playwright/test'
+
+// The invite-only sign-up allows ten registrations an hour from one address and
+// the whole suite shares them, so specs that need a second member share one.
+export const suiteMember = {
+  username: `member_${Date.now().toString(36)}`,
+  password: `pw-${Date.now().toString(36)}-${randomBytes(8).toString('hex')}`,
+  registered: false,
+}
 import { decodeChatChannelHierarchy } from '../../web/src/types/rest'
 import { decodeUser } from '../../web/src/types/domain'
 import type { ChatChannelHierarchy } from '../../web/src/types/rest'

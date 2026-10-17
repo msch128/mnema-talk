@@ -26,10 +26,12 @@ import {
   type PrivateKeyPackage,
   type Proposal,
 } from 'ts-mls'
-import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGroupId, mediaUserId } from './bounds'
+import { FRAME_EPOCH_BYTES, HANDSHAKE_MAX_BYTES, MEDIA_EXPORTER_LABEL, mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
+import { mediaTiming } from './lifetime'
 import type { MediaNotice } from './api'
 import { Backoff } from './backoff'
 import { importEpochKey, importFrameSigner, importFrameVerifier, type EpochKeys } from './frame'
+import { isHeartbeat, openHeartbeat, sealHeartbeat } from './heartbeat'
 import { safetyCode, type MediaVerification } from './verify'
 
 // A member's leaf is swapped at most once per this long, doubling while it keeps happening.
@@ -210,6 +212,16 @@ export class MediaGroup {
   private readonly heard = new Set<string>()
   private readonly firstSeen = new Map<string, number>()
   private tail: Promise<void> = Promise.resolve()
+  /** When each member of the group last showed a sign of life (any handshake, or a heartbeat). */
+  private readonly alive = new Map<string, number>()
+  /** Newest heartbeat time accepted from each member, so an older copy counts for nothing. */
+  private readonly beats = new Map<string, number>()
+  private epochAt = 0
+  private rotateAfter = 0
+  private lastBeat = 0
+  private lastBeatAt = 0
+  private lastTick = 0
+  private tickTimer: ReturnType<typeof setTimeout> | null = null
 
   private constructor(
     private readonly userId: string,
@@ -217,16 +229,17 @@ export class MediaGroup {
     private own: OwnPackage,
     private readonly cs: CiphersuiteImpl,
     private readonly credential: Credential,
+    private readonly timing: MediaTiming,
   ) {}
 
-  static async open(userId: string, channelId: string): Promise<MediaGroup | null> {
+  static async open(userId: string, channelId: string, timing: MediaTiming = mediaTiming()): Promise<MediaGroup | null> {
     const id = mediaUserId(userId)
     const groupId = mediaGroupId(channelId)
     if (!id || !groupId) return null
     const cs = await suite()
     const credential: Credential = { credentialType: 'basic', identity: new TextEncoder().encode(id) }
     const own = await generateKeyPackage(credential, defaultCapabilities(), defaultLifetime, [], cs)
-    return new MediaGroup(id, groupId, own, cs, credential)
+    return new MediaGroup(id, groupId, own, cs, credential, timing)
   }
 
   /** Called when keys changed in a way the member did not ask for. */
@@ -260,8 +273,8 @@ export class MediaGroup {
   close(): Promise<void> {
     return this.enqueue(async () => {
       this.closed = true
-      for (const timer of [this.deferTimer, this.offerTimer, this.takeoverTimer]) if (timer !== null) clearTimeout(timer)
-      this.deferTimer = this.offerTimer = this.takeoverTimer = null
+      for (const timer of [this.deferTimer, this.offerTimer, this.takeoverTimer, this.tickTimer]) if (timer !== null) clearTimeout(timer)
+      this.deferTimer = this.offerTimer = this.takeoverTimer = this.tickTimer = null
       this.discard()
       wipeBytes(this.own.privatePackage.initPrivateKey)
       wipeBytes(this.own.privatePackage.hpkePrivateKey)
@@ -482,6 +495,10 @@ export class MediaGroup {
     this.offeredFor = null
     this.restarting.clear()
     this.announcedFor = null
+    this.alive.clear()
+    this.beats.clear()
+    if (this.tickTimer !== null) clearTimeout(this.tickTimer)
+    this.tickTimer = null
     if (state) this.wipeRejected(state)
   }
 
@@ -489,11 +506,13 @@ export class MediaGroup {
     if (this.closed || wire.byteLength === 0 || wire.byteLength > HANDSHAKE_MAX_BYTES) return this.step()
     const from = mediaUserId(fromUserId)
     if (!from || from === this.userId) return this.step()
+    if (isHeartbeat(wire)) return this.beatNow(from, wire)
     const decoded = decodeMlsMessage(wire, 0)
     if (!decoded) return this.step()
     const [message] = decoded
     this.heard.add(from)
     const members = this.state ? treeMembers(this.state) : null
+    if (members?.has(from)) this.alive.set(from, Date.now())
     const wires: Uint8Array[] = []
     if (message.wireformat === 'mls_key_package') {
       const id = credentialIdentity(message.keyPackage.leafNode.credential)
@@ -577,6 +596,90 @@ export class MediaGroup {
         return this.step()
       }
     }
+    return this.step()
+  }
+
+  /** A new epoch begins: its age starts, and so does the delay before it is rotated. */
+  private startEpoch(state: ClientState) {
+    const now = Date.now()
+    this.epochAt = now
+    const { rotateMs, rotateJitterMs } = this.timing
+    this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
+    const members = treeMembers(state)
+    for (const id of [...this.alive.keys()]) if (!members.has(id)) this.alive.delete(id)
+    for (const id of [...this.beats.keys()]) if (!members.has(id)) this.beats.delete(id)
+    // Whoever is new to the group starts with a clean slate: it was let in just now.
+    for (const id of members.keys()) if (!this.alive.has(id)) this.alive.set(id, now)
+    if (this.tickTimer === null) {
+      this.lastTick = now
+      this.lastBeat = now
+      this.scheduleTick()
+    }
+  }
+
+  private scheduleTick() {
+    this.tickTimer = setTimeout(() => {
+      this.tickTimer = null
+      void this.enqueue(async () => (this.closed || !this.state ? null : this.tickNow())).then((step) => {
+        if (step && step.wires.length) this.stepListener(step)
+      })
+      if (!this.closed && this.state) this.scheduleTick()
+    }, Math.max(10, this.timing.maintenanceMs))
+  }
+
+  /**
+   * Looks at the clocks: sends this member's heartbeat when it is due and, if
+   * this member is the committer, removes members that showed no sign of life
+   * for ABSENT_MS and advances an epoch that has reached its age. Both are
+   * decided by the epoch's age and the members' last sign of life, never by a
+   * timer that restarts when the committer changes.
+   */
+  maintain(): Promise<MediaStep> {
+    return this.enqueue(async () => (this.closed || !this.state ? this.step() : this.tickNow()))
+  }
+
+  private async tickNow(): Promise<MediaStep> {
+    const wires: Uint8Array[] = []
+    // Callers hold a group: a state and the keys of its epoch go together.
+    const state = this.state as ClientState
+    const current = this.current as NonNullable<typeof this.current>
+    const now = Date.now()
+    // This browser slept (a frozen tab, a closed lid): it heard nothing, so it
+    // cannot tell who is absent. Everyone starts over, and says it is here.
+    const slept = now - this.lastTick > 2 * Math.max(10, this.timing.maintenanceMs) + 60_000
+    this.lastTick = now
+    if (slept) for (const id of this.alive.keys()) this.alive.set(id, now)
+    const members = treeMembers(state)
+    if (members.size > 1 && (slept || now - this.lastBeat >= this.timing.heartbeatMs)) {
+      this.lastBeat = now
+      this.lastBeatAt = Math.max(now, this.lastBeatAt + 1)
+      const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
+      if (beat) wires.push(beat)
+    }
+    if (this.canCommit(this.room)) {
+      const absent: Proposal[] = []
+      for (const [id, leaf] of members) {
+        if (id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs) {
+          absent.push({ proposalType: 'remove', remove: { removed: leaf } })
+        }
+      }
+      if (absent.length) wires.push(...await this.commit(absent))
+      else if (members.size > 1 && now - this.epochAt >= this.rotateAfter) wires.push(...await this.commit([]))
+    }
+    return this.step(wires)
+  }
+
+  /** A heartbeat counts when this epoch's member signed it, and it is newer than the last. */
+  private async beatNow(from: string, wire: Uint8Array): Promise<MediaStep> {
+    const current = this.current
+    const verifier = current?.key.verifiers.get(from)
+    if (!current || !verifier) return this.step()
+    const beat = await openHeartbeat(verifier, this.groupId, from, wire)
+    if (!beat || beat.epoch !== current.epoch) return this.step()
+    const last = this.beats.get(from)
+    if (last !== undefined && beat.at <= last) return this.step()
+    this.beats.set(from, beat.at)
+    this.alive.set(from, Date.now())
     return this.step()
   }
 
@@ -718,6 +821,7 @@ export class MediaGroup {
       const key: EpochKeys = { key: aes, signer, verifiers }
       this.current = { epoch: epochNumber, key, verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
       this.keys.set(epochNumber, key)
+      this.startEpoch(state)
       const ordered = [...this.keys.keys()].sort((a, b) => a - b)
       for (const drop of ordered.slice(0, -2)) this.keys.delete(drop)
       return true

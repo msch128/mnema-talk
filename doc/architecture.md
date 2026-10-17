@@ -194,6 +194,14 @@ qualified capacity guarantee.
   subvert group membership and serves the code, and metadata stays visible.
   Text and attachments stay readable by the server
   ([SECURITY.md](../SECURITY.md#security-model-summary)).
+- **Media key lifecycle.** A new epoch (and so a new key) comes from every
+  join, leave or kick, and otherwise every 30 minutes (+-2 min jitter) from a
+  path commit by the committer. A member with no heartbeat or handshake for
+  20 minutes is removed and must be let in again. Constants in
+  [`bounds.ts`](../web/src/lib/media/bounds.ts), logic in
+  [`group.ts`](../web/src/lib/media/group.ts), heartbeat format in
+  [`heartbeat.ts`](../web/src/lib/media/heartbeat.ts). The e2e build
+  (`MNEMA_E2E=1`) lets tests shorten them; release builds cannot.
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
 - **Invite-only, single admin.** No public registration; the admin is seeded
