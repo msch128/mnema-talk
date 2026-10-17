@@ -22,9 +22,29 @@ not establish real 4K/60 capture, system audio or 100-person capacity.
 HTTPS protects browser traffic in transit. Chat messages and attachments stay
 readable by the server. Microphone, camera, screen video and screen audio are
 encrypted in the browser with MLS-derived keys; an honest SFU forwards those
-payloads and cannot read them. An active or compromised server is not
-excluded (it serves the code and asserts group membership), and metadata such
-as who speaks when stays visible. The transport underneath is DTLS-SRTP. See [SECURITY.md](../SECURITY.md).
+payloads and cannot read them. Since 0.8 the keys rotate every 30 minutes,
+members silent for 20 minutes are removed and re-admitted, every sealed frame
+is signed with its sender's leaf key, and the connection details show a safety
+code to compare. An active or compromised server is not excluded (it serves
+the code and asserts group membership), and metadata such as who speaks when
+stays visible. The transport underneath is DTLS-SRTP. See [SECURITY.md](../SECURITY.md).
+
+Other 0.8 capabilities on this path, each with automated tests:
+
+- **Screen-share layers** (source up to 4K at 60 FPS plus smaller layers) with a
+  per-viewer choice or Auto; the browser tests switch layers mid-stream and
+  check that other viewers are not disturbed.
+- **Roles and permissions** with a protected Owner, overwrites and private
+  channels and Talks, enforced in REST, the hub, media serving and the SFU.
+- **Incoming and outgoing webhooks** with an SSRF guard for outgoing delivery.
+- **Operations**: Prometheus metrics, the live operator view, alert examples,
+  cosign-signed release images, and the backup, upgrade (release to release)
+  and PostgreSQL upgrade drills in CI.
+
+Not covered by these tests: real 4K/60 capture, system audio from physical
+hardware, an external security audit and capacity beyond the recorded runs.
+An internal five-area security review preceded 0.8 and its medium and low
+findings are fixed; it is not an independent audit.
 
 ## Experimental Windows desktop path
 
@@ -41,7 +61,9 @@ WebSocket, so the instance supplies community data and never executable code
 ([design and threat model](desktop-trusted-client.md)). The page receives only
 the WebSocket commands and the gaming integration's session-bound Talk-state
 sync; local gaming surfaces hold their separate display/control permissions.
-Status: unit-tested and run on macOS during development; Windows/WebView2
+Status: unit-tested and run on macOS during development; the bundle verifier
+has a high-water mark, a security floor that rises with `fix(security)`
+releases and a session cookie kept in the OS keychain; Windows/WebView2
 acceptance (custom-protocol mapping, media permission prompts, gaming surfaces,
 sealed media on real hardware) is outstanding, and the installer is unsigned.
 
@@ -86,10 +108,12 @@ Topmost windows do not establish exclusive fullscreen or anti-cheat support.
 
 The remaining fixes and acceptance work follow:
 
-1. Keep documentation, release downloads and reachable features consistent; address client defects and remaining platform parity.
-2. Chat messages and attachments stay readable by the server and are not deleted by age. Microphone, camera, screen video and screen audio are encrypted in the browser against an honest server, not an active one; the safety code in the connection details lets members compare keys. The desktop client reuses the browser path in WebView2, which is not yet qualified on real Windows hardware.
-3. Verify receiver-specific quality adaptation: degrading one viewer must not reduce other viewers' quality or disrupt audio. Then extend the first load tests ([capacity notes](architecture.md#capacity): one publisher to 99 members, real decrypting clients up to 24 viewers) with real decrypting clients, difficult networks and long sessions. The reproducible profiles now exist as `make load-test` ([`loadtest/`](../loadtest/README.md): smoke, the 100-member `full` profile, join/reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile); what remains is recording results for them on dedicated hardware, with more real decrypting viewers than one test machine carries. Other source/room profiles need separate results. The additional 250-endpoint target is deferred.
-4. Validate independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
+1. Client parity: Windows/WebView2 acceptance of the trusted bundle (custom
+   protocol mapping, media permission prompts, gaming surfaces) and a signed
+   installer. macOS and Linux clients are not started.
+2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium browsers, including calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
+3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds for 0.8 and 0.7.25 alike while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). Verify receiver-specific adaptation under difficult networks: degrading one viewer must not reduce others' quality or disrupt audio. The additional 250-endpoint target is deferred.
+4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
 [Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
 and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe

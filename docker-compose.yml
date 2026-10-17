@@ -17,7 +17,7 @@ services:
     # Default: built on this host. To run (and self-update) a released image,
     # set MNEMA_IMAGE in .env, e.g. ghcr.io/msch128/mnema-talk:0.4 (follows
     # 0.4.x) or :latest, and start with `docker compose pull app && docker
-    # compose up -d` instead of --build. See README, "Updates".
+    # compose up -d` instead of --build. See doc/deployment.md, "Updates".
     image: ${MNEMA_IMAGE:-mnema-talk:local}
     container_name: mnema-talk
     restart: unless-stopped

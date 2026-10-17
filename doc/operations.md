@@ -99,7 +99,7 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `UPDATE_CHECK_ENABLED` | `true` | Ask GitHub every 30 minutes for the latest release (admin System tab). `false` = no outbound request. |
-| `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [README](../README.md#updates). |
+| `MNEMA_IMAGE` | compose: `mnema-talk:local` | Image the `app` service runs; the app reads it to tell whether a re-pull can reach the latest release. See the tag table in the [deployment guide](deployment.md#updates). |
 | `UPDATER_TOKEN` | empty | Turns on "Update now" through the updater sidecar (profile `autoupdate`). At least 32 characters of letters, digits and `._~+/=-`, no placeholder. Empty = feature off, `UPDATER_URL` ignored. |
 | `UPDATER_URL` | `http://mnema-updater:8080` | Where the app reaches the sidecar: `http(s)` without credentials, query or fragment. |
 
@@ -292,7 +292,7 @@ BACKUP_DIR=/srv/backups/mnema ./scripts/backup.sh
   blindly replacing database credentials or storage endpoints can make the
   restored deployment inaccessible or target the wrong stores. Client content
   recovery remains separate from a server backup.
-- Nightly via cron, see the [README](../README.md#backups).
+- Nightly via cron, see the backup section above.
 
 ## Verifying a release image
 

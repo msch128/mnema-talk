@@ -16,13 +16,13 @@ Replace the version and paths with yours.
 
 ```sh
 cd /path/to/mnema-talk
-NEW=0.4.0                                  # version to install
+NEW=0.8.0                                  # version to install
 
 # 1. Back up database, media and .env (see operations.md, "Backups")
 BACKUP_DIR=/path/to/backups ./scripts/backup.sh
 
 # 2. Note what runs now, for a rollback
-grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.3.3
+grep '^MNEMA_IMAGE=' .env                  # e.g. ghcr.io/msch128/mnema-talk:0.7.25
 curl -fsS http://127.0.0.1:8080/api/health # {"status":"ok","version":"..."}
 cp docker-compose.yml docker-compose.yml.bak
 
@@ -63,7 +63,7 @@ reconnect after the reload. Admin → System shows the new version.
 If you follow a minor line instead (`MNEMA_IMAGE=ghcr.io/msch128/mnema-talk:0.4`),
 step 4 is unnecessary within that line: `docker compose pull app && docker
 compose up -d app`, or "Update now" in the System tab when the updater
-sidecar is enabled (see the [README](../README.md#updates)). A new minor
+sidecar is enabled (see the [deployment guide](deployment.md#updates)). A new minor
 line (e.g. `0.4` → `0.5`) always needs this full procedure.
 
 If you build on the server instead (`MNEMA_IMAGE=mnema-talk:local`):
@@ -162,6 +162,27 @@ until the new release has passed your application checks.
 - **`APP_ENV=development` only listens on loopback.** `BIND_ADDR` defaults to
   `127.0.0.1` there and any other address is refused at startup. Production,
   staging and test are unchanged (`0.0.0.0`).
+
+- **Two new migrations**: `0021_revoked_sessions` and `0022_search_trigram`
+  (a `pg_trgm` index for search). Both run at startup; the trigram index can
+  take a moment on a large message table. **Do not roll back below 0.7.20
+  once roles or private channels exist**, and the app now refuses to start on a
+  database that a newer version migrated (restore a backup instead).
+- **Media keys rotate every 30 minutes** and members silent for 20 minutes are
+  removed from the call's key group and re-admitted when they are active
+  again. Calls between 0.7.25 and 0.8 tabs interoperate, so a running call
+  survives the update; reload tabs when the "new version available" notice
+  appears to get the new key lifecycle.
+- **Screen shares carry quality layers**: the source plus smaller ones, and each
+  viewer picks one or leaves **Auto**. Nothing to configure; sharers need a
+  current browser.
+- **Release images are signed** with cosign (keyless); see
+  [Verifying a release image](operations.md#verifying-a-release-image). Pin the
+  digest in `MNEMA_IMAGE` if you want the verified bytes to stay put.
+- **Desktop client**: it runs a signed web bundle with a security floor that
+  rises with `fix(security)` releases; see
+  [desktop-trusted-client.md](desktop-trusted-client.md). The server needs no
+  configuration for it.
 
 ### 0.4.x → 0.5.0
 

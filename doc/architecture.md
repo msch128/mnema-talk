@@ -38,6 +38,9 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/events`](../internal/events/events.go) | The `Publisher` interface between feature packages and the hub (`Broadcast`, `SendToUsers`), with an in-memory recorder for tests. |
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
+| [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
+| [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
+| [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
 | [`internal/update`](../internal/update/checker.go) | Release check against GitHub every 30 minutes (ETag, backoff on 403/429), image-tag reach analysis ([`image.go`](../internal/update/image.go)) and the client for the optional updater sidecar ([`updater.go`](../internal/update/updater.go)). |
 | [`internal/version`](../internal/version/version.go) | Version and commit baked in at build time (`VERSION` / `REVISION` build args). |
@@ -165,6 +168,17 @@ parameters (`maxFramerate`, a bitrate cap, `scaleResolutionDownBy`), so the
 SFU still forwards whatever arrives. Viewers play the screen's sound in its
 own element with a per-sharer volume (0–100 %, default 50 %), independent of
 the person's voice volume.
+
+**Media key lifecycle (0.8).** The browsers of a Talk form an MLS group and
+derive the media keys from it; the server only relays the handshakes and
+stamps the sender. The member with the lowest id commits a fresh key about
+every 30 minutes, every member renews its own leaf key, members that showed no
+sign of life for 20 minutes are removed and re-admitted when they return, and
+every sealed frame is signed with its sender's leaf key. The connection
+details show a **safety code** for the current epoch so members can compare
+keys out of band. The server validates who may commit but never sees keys.
+Details and limits: [SECURITY.md](../SECURITY.md#security-model-summary) and
+[crypto-state.md](crypto-state.md).
 
 ## Capacity
 
