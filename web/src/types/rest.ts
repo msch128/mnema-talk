@@ -46,6 +46,7 @@ export const decodeAuditPage = decoder("audit.Page", isAuditPage)
 
 export type AuthAdminUser = {
   avatar_url?: string
+  banned: boolean
   bio: string
   created_at: string
   disabled: boolean
@@ -59,6 +60,7 @@ export type AuthAdminUser = {
   role: "admin" | "user"
   role_ids?: Array<string>
   status_text: string
+  timeout_until?: string
   username: string
   voice_seconds?: number
 }
@@ -66,6 +68,7 @@ export type AuthAdminUser = {
 export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
   return isRecord(value)
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "banned") && typeof value["banned"] === 'boolean')
     && (hasOwn(value, "bio") && isString(value["bio"], 250))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
@@ -79,11 +82,50 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
+    && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
 }
 
 export const decodeAuthAdminUser = decoder("auth.AdminUser", isAuthAdminUser)
+
+export type AuthBan = {
+  banned_at: string
+  banned_by: string
+  banned_until: string | null
+  display_name: string
+  reason: string
+  user_id: string
+  username: string
+}
+
+export function isAuthBan(value: unknown): value is AuthBan {
+  return isRecord(value)
+    && (hasOwn(value, "banned_at") && isTimestamp(value["banned_at"]))
+    && (hasOwn(value, "banned_by") && isString(value["banned_by"]))
+    && (hasOwn(value, "banned_until") && (isTimestamp(value["banned_until"]) || value["banned_until"] === null))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "reason") && isString(value["reason"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeAuthBan = decoder("auth.Ban", isAuthBan)
+
+export type AuthBanRequest = {
+  duration_seconds?: number | null
+  reason?: string
+  revoke_invite?: boolean
+}
+
+export function isAuthBanRequest(value: unknown): value is AuthBanRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "duration_seconds") || ((isInteger(value["duration_seconds"]) && value["duration_seconds"] >= 60 && value["duration_seconds"] <= 315360000) || value["duration_seconds"] === null))
+    && (!hasOwn(value, "reason") || isString(value["reason"], 200))
+    && (!hasOwn(value, "revoke_invite") || typeof value["revoke_invite"] === 'boolean')
+}
+
+export const decodeAuthBanRequest = decoder("auth.BanRequest", isAuthBanRequest)
 
 export type AuthChangePasswordRequest = {
   current_password: string
@@ -218,6 +260,34 @@ export function isAuthTemporaryPassword(value: unknown): value is AuthTemporaryP
 }
 
 export const decodeAuthTemporaryPassword = decoder("auth.TemporaryPassword", isAuthTemporaryPassword)
+
+export type AuthTimeoutRequest = {
+  duration_seconds: number
+  reason?: string
+}
+
+export function isAuthTimeoutRequest(value: unknown): value is AuthTimeoutRequest {
+  return isRecord(value)
+    && (hasOwn(value, "duration_seconds") && (isInteger(value["duration_seconds"]) && value["duration_seconds"] >= 5 && value["duration_seconds"] <= 2419200))
+    && (!hasOwn(value, "reason") || isString(value["reason"], 200))
+}
+
+export const decodeAuthTimeoutRequest = decoder("auth.TimeoutRequest", isAuthTimeoutRequest)
+
+export type AuthTimeoutState = {
+  reason: string
+  timeout_until: string
+  user_id: string
+}
+
+export function isAuthTimeoutState(value: unknown): value is AuthTimeoutState {
+  return isRecord(value)
+    && (hasOwn(value, "reason") && isString(value["reason"]))
+    && (hasOwn(value, "timeout_until") && isTimestamp(value["timeout_until"]))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeAuthTimeoutState = decoder("auth.TimeoutState", isAuthTimeoutState)
 
 export type AuthUpdateProfileRequest = {
   bio?: string
@@ -576,6 +646,7 @@ export type ChatMember = {
   role: "admin" | "user"
   role_ids?: Array<string>
   status_text: string
+  timeout_until?: string
   username: string
   voice_seconds?: number
 }
@@ -593,6 +664,7 @@ export function isChatMember(value: unknown): value is ChatMember {
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
+    && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
 }
@@ -1088,6 +1160,8 @@ export type RolesPermissionsInfo = {
   owner: boolean
   permissions: number
   role_ids: Array<string>
+  timeout_reason?: string
+  timeout_until?: string
   top_position: number
 }
 
@@ -1099,6 +1173,8 @@ export function isRolesPermissionsInfo(value: unknown): value is RolesPermission
     && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (!hasOwn(value, "timeout_reason") || isString(value["timeout_reason"]))
+    && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "top_position") && (isInteger(value["top_position"]) && value["top_position"] >= 0))
 }
 

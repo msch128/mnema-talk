@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
@@ -14,6 +15,9 @@ type Member struct {
 	auth.User
 	// RoleIDs are the member's custom roles, highest first.
 	RoleIDs []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
+	// TimeoutUntil is set while the member is timed out: they can read but
+	// not post, react, speak or join Talks.
+	TimeoutUntil *time.Time `json:"timeout_until,omitempty" binding:"optional" format:"date-time"`
 }
 
 // GetAllMembers lists active accounts, admins first, then by display name.

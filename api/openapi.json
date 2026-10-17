@@ -86,6 +86,10 @@
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
             "type": "string"
           },
+          "banned": {
+            "description": "Banned marks a disabled account that was banned (see GET /api/admin/bans).",
+            "type": "boolean"
+          },
           "bio": {
             "maxLength": 250,
             "type": "string"
@@ -154,6 +158,11 @@
             "maxLength": 32,
             "type": "string"
           },
+          "timeout_until": {
+            "description": "TimeoutUntil is set while the account is timed out.",
+            "format": "date-time",
+            "type": "string"
+          },
           "username": {
             "type": "string"
           },
@@ -163,6 +172,7 @@
           }
         },
         "required": [
+          "banned",
           "bio",
           "created_at",
           "disabled",
@@ -174,6 +184,72 @@
           "status_text",
           "username"
         ],
+        "type": "object"
+      },
+      "auth.Ban": {
+        "properties": {
+          "banned_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "banned_by": {
+            "description": "BannedBy names the moderator; empty when that account is gone.",
+            "type": "string"
+          },
+          "banned_until": {
+            "description": "BannedUntil is null for a ban without an end.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "banned_at",
+          "banned_by",
+          "banned_until",
+          "display_name",
+          "reason",
+          "user_id",
+          "username"
+        ],
+        "type": "object"
+      },
+      "auth.BanRequest": {
+        "properties": {
+          "duration_seconds": {
+            "description": "DurationSeconds ends the ban by itself after that long; null or\nmissing bans for good.",
+            "maximum": 315360000,
+            "minimum": 60,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "Reason is shown to the member when they try to sign in. Optional.",
+            "maxLength": 200,
+            "type": "string"
+          },
+          "revoke_invite": {
+            "description": "RevokeInvite also revokes the invite the account registered with, so\nthat code cannot create the account anew (default true).",
+            "type": "boolean"
+          }
+        },
         "type": "object"
       },
       "auth.ChangePasswordRequest": {
@@ -377,6 +453,47 @@
         },
         "required": [
           "password"
+        ],
+        "type": "object"
+      },
+      "auth.TimeoutRequest": {
+        "properties": {
+          "duration_seconds": {
+            "description": "DurationSeconds is how long the member is silenced, from now.",
+            "maximum": 2419200,
+            "minimum": 5,
+            "type": "integer"
+          },
+          "reason": {
+            "description": "Reason is shown to the member. Optional.",
+            "maxLength": 200,
+            "type": "string"
+          }
+        },
+        "required": [
+          "duration_seconds"
+        ],
+        "type": "object"
+      },
+      "auth.TimeoutState": {
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "timeout_until": {
+            "description": "TimeoutUntil is when it ends.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "timeout_until",
+          "user_id"
         ],
         "type": "object"
       },
@@ -962,6 +1079,11 @@
           "status_text": {
             "description": "StatusText is a free-text status line; empty when unset.",
             "maxLength": 32,
+            "type": "string"
+          },
+          "timeout_until": {
+            "description": "TimeoutUntil is set while the member is timed out: they can read but\nnot post, react, speak or join Talks.",
+            "format": "date-time",
             "type": "string"
           },
           "username": {
@@ -1780,6 +1902,14 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "timeout_reason": {
+            "type": "string"
+          },
+          "timeout_until": {
+            "description": "TimeoutUntil and TimeoutReason are set while the caller is timed out:\nthey can read but not post, react, speak or join Talks. The reason is\nthe moderator's, and the caller's own to see.",
+            "format": "date-time",
+            "type": "string"
           },
           "top_position": {
             "description": "TopPosition is the position of the caller's highest role (0 without\none); the Owner is above every position. A member can only manage roles\nand members below it.",
@@ -3377,6 +3507,84 @@
           }
         ],
         "summary": "List audit log entries",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/bans": {
+      "get": {
+        "description": "Active bans, newest first. Needs Ban members.",
+        "operationId": "listBans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/auth.Ban"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bans."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List bans",
         "tags": [
           "Admin"
         ]
@@ -7607,6 +7815,215 @@
         ]
       }
     },
+    "/api/admin/users/{id}/ban": {
+      "delete": {
+        "description": "Lets the member sign in again. A revoked invite stays revoked. Needs Ban members and a higher role than the member.",
+        "operationId": "unbanUser",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the member does not exist or is not banned."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Lift a ban",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "description": "Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.",
+        "operationId": "banUser",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.BanRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Ban a member",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
     "/api/admin/users/{id}/disable": {
       "post": {
         "description": "Signs the user out, drops their live connections and removes them from voice. Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted. The Owner cannot be targeted (400).",
@@ -8557,6 +8974,222 @@
           }
         ],
         "summary": "Edit or clear a member's status line",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/users/{id}/timeout": {
+      "delete": {
+        "description": "Lifts a running timeout at once. Needs Timeout members and a higher role than the member. The member is told through a moderation_notice event.",
+        "operationId": "untimeoutUser",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "End a member's timeout",
+        "tags": [
+          "Admin"
+        ]
+      },
+      "post": {
+        "description": "Silences a member for a while: they can read but not post, react, speak, share video or join Talks, and are removed from the Talk they are in. It ends by itself. Needs Timeout members and a higher role than the member; the Owner cannot be timed out, nobody can time themselves out. The member is told through a moderation_notice event. Replaces a running timeout.",
+        "operationId": "timeoutUser",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/auth.TimeoutRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/auth.TimeoutState"
+                }
+              }
+            },
+            "description": "The timeout."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Time out a member",
         "tags": [
           "Admin"
         ]

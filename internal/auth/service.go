@@ -259,7 +259,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 		return nil, 0, ErrInvalidCredentials
 	}
 	if disabled {
-		return nil, 0, ErrAccountDisabled
+		return nil, 0, bannedError(ctx, p, u.ID)
 	}
 	return u, tv, nil
 }
@@ -330,9 +330,9 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 		}
 
 		user, err = scanUser(tx.QueryRow(ctx, `
-			INSERT INTO users (username, display_name, password_hash, role)
-			VALUES ($1, $2, $3, 'user')
-			RETURNING `+userColumns, username, displayName, hash))
+			INSERT INTO users (username, display_name, password_hash, role, invite_id)
+			VALUES ($1, $2, $3, 'user', $4)
+			RETURNING `+userColumns, username, displayName, hash, inviteID))
 		if err != nil {
 			// Also covers a concurrent sign-up racing past the check above,
 			// whichever unique index on the username catches it.

@@ -30,6 +30,8 @@ var snapshotSQL = map[Resource]string{
 		FROM outgoing_webhooks WHERE id = $1`,
 	ResUser: `SELECT jsonb_build_object('username', username, 'display_name', display_name,
 		'disabled', disabled_at IS NOT NULL, 'status_text', status_text,
+		'timeout_until', CASE WHEN timeout_until > NOW() THEN timeout_until END,
+		'banned', banned_at IS NOT NULL, 'banned_until', banned_until,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = users.id), '[]'::jsonb)),
 		username FROM users WHERE id = $1`,
 	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb), 'instance settings' FROM instance_settings`,

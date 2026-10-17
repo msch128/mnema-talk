@@ -289,6 +289,17 @@ func (s *Snapshot) Timeout(userID uuid.UUID) (Timeout, bool) {
 	return t, true
 }
 
+// Timeouts lists the running timeouts (member to end time).
+func (s *Snapshot) Timeouts() map[uuid.UUID]time.Time {
+	out := map[uuid.UUID]time.Time{}
+	for id := range s.timeouts {
+		if t, ok := s.Timeout(id); ok {
+			out[id] = t.Until
+		}
+	}
+	return out
+}
+
 // silence removes TimeoutMask from p while the member is timed out.
 func (s *Snapshot) silence(userID uuid.UUID, p Set) Set {
 	if _, ok := s.Timeout(userID); ok {

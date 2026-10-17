@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -69,6 +70,11 @@ type PermissionsInfo struct {
 	// one); the Owner is above every position. A member can only manage roles
 	// and members below it.
 	TopPosition int `json:"top_position" minimum:"0"`
+	// TimeoutUntil and TimeoutReason are set while the caller is timed out:
+	// they can read but not post, react, speak or join Talks. The reason is
+	// the moderator's, and the caller's own to see.
+	TimeoutUntil  *time.Time `json:"timeout_until,omitempty" binding:"optional" format:"date-time"`
+	TimeoutReason string     `json:"timeout_reason,omitempty" binding:"optional"`
 	// Channels lists every channel the caller may view with what they may do
 	// there (bits).
 	Channels []ChannelPermissions `json:"channels"`
@@ -106,7 +112,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		channels = append(channels, ChannelPermissions{ChannelID: id, Permissions: p})
 	}
 	slices.SortFunc(channels, func(a, b ChannelPermissions) int { return bytes.Compare(a.ChannelID[:], b.ChannelID[:]) })
-	httpx.WriteJSON(w, http.StatusOK, PermissionsInfo{
+	info := PermissionsInfo{
 		Owner:       snap.IsOwner(sub),
 		Permissions: snap.Global(sub),
 		RoleIDs:     nonNil(snap.RoleIDs(user.ID)),
@@ -114,7 +120,11 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		Channels:    channels,
 		Catalog:     perm.Catalog,
 		MaxUploadMB: snap.UploadMB(sub, h.Perms.UploadCeilingMB()),
-	})
+	}
+	if t, ok := snap.Timeout(user.ID); ok {
+		info.TimeoutUntil, info.TimeoutReason = &t.Until, t.Reason
+	}
+	httpx.WriteJSON(w, http.StatusOK, info)
 	return nil
 }
 

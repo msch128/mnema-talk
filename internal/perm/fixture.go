@@ -62,6 +62,12 @@ func (f *Fixture) Owner(user uuid.UUID) *Fixture {
 	return f
 }
 
+// Timeout silences a member until the given time.
+func (f *Fixture) Timeout(user uuid.UUID, until time.Time, reason string) *Fixture {
+	f.s.timeouts[user] = Timeout{Until: until, Reason: reason}
+	return f
+}
+
 // Category adds a category.
 func (f *Fixture) Category() uuid.UUID {
 	id := uuid.New()
