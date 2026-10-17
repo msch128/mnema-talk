@@ -2,6 +2,8 @@ package webbundle
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const usage = `usage: webbundle <command> [flags]
@@ -18,6 +21,7 @@ const usage = `usage: webbundle <command> [flags]
           signs the web app and writes mnema-web-<version>.zip, manifest.json, manifest.sig
   verify  -zip FILE -pub web/desktop-signing.pub
   keyid   -pub web/desktop-signing.pub
+  trust   keygen|sign|verify   offline root key and signed trust statements (key revocation)
 `
 
 // Run implements the webbundle command line and returns the exit code.
@@ -34,6 +38,8 @@ func Run(args []string, getenv func(string) string, stdout, stderr io.Writer) in
 		err = runVerify(args[1:], stdout, stderr)
 	case "keyid":
 		err = runKeyID(args[1:], stdout, stderr)
+	case "trust":
+		err = runTrust(args[1:], stdout, stderr)
 	default:
 		_, _ = fmt.Fprint(stderr, usage)
 		return 2
@@ -170,5 +176,189 @@ func runKeyID(args []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	_, _ = fmt.Fprintln(stdout, KeyID(pub))
+	return nil
+}
+
+const trustUsage = `usage: webbundle trust <command> [flags]
+
+  keygen  -out DIR            new offline root key: DIR/offline-root.key (mode 600), DIR/offline-root.pub
+  sign    -key-file PATH -out DIR [-prev trust.json] [-serial N]
+          [-bundle-key PEM|HEX]... [-revoke-bundle-key ID]...
+          [-updater-key TEXT]... [-revoke-updater-key ID]...
+          signs a trust statement; writes DIR/trust.json and DIR/trust.json.sig
+          with -prev the serial is prev+1 and earlier revocations are kept
+  verify  -trust FILE -sig FILE -pub PEM
+`
+
+type listFlag []string
+
+func (l *listFlag) String() string     { return strings.Join(*l, ",") }
+func (l *listFlag) Set(v string) error { *l = append(*l, v); return nil }
+
+func runTrust(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 0 {
+		_, _ = fmt.Fprint(stderr, trustUsage)
+		return flag.ErrHelp
+	}
+	switch args[0] {
+	case "keygen":
+		return runTrustKeygen(args[1:], stdout, stderr)
+	case "sign":
+		return runTrustSign(args[1:], stdout, stderr)
+	case "verify":
+		return runTrustVerify(args[1:], stdout, stderr)
+	}
+	_, _ = fmt.Fprint(stderr, trustUsage)
+	return flag.ErrHelp
+}
+
+func runTrustKeygen(args []string, stdout, stderr io.Writer) error {
+	fs := newFlags("trust keygen", stderr)
+	out := fs.String("out", "", "directory for the new key pair")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *out == "" {
+		return errors.New("-out is required")
+	}
+	keyPath := filepath.Join(*out, "offline-root.key")
+	if _, err := os.Stat(keyPath); err == nil {
+		return fmt.Errorf("%s exists; refusing to overwrite a root key", keyPath)
+	}
+	if err := os.MkdirAll(*out, 0o700); err != nil {
+		return err
+	}
+	pub, priv, _ := GenerateRootKey()
+	if err := errors.Join(
+		os.WriteFile(keyPath, MarshalPrivateKeyPEM(priv), 0o600),
+		os.WriteFile(filepath.Join(*out, "offline-root.pub"), MarshalPublicKeyPEM(pub), 0o644),
+	); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(stdout, "wrote %s (keep it offline) and offline-root.pub, key id %s\n", keyPath, KeyID(pub))
+	return nil
+}
+
+// bundleKeyArg accepts a PEM file path or the raw key as hex.
+func bundleKeyArg(v string) (ed25519.PublicKey, error) {
+	if b, err := hex.DecodeString(v); err == nil && len(b) == ed25519.PublicKeySize {
+		return ed25519.PublicKey(b), nil
+	}
+	return readPub(v)
+}
+
+func runTrustSign(args []string, stdout, stderr io.Writer) error {
+	fs := newFlags("trust sign", stderr)
+	keyFile := fs.String("key-file", "", "offline root private key (PKCS#8 PEM)")
+	out := fs.String("out", "", "output directory")
+	prev := fs.String("prev", "", "previous trust.json: serial becomes prev+1 and its revocations are kept")
+	serial := fs.Uint64("serial", 0, "serial (default: prev+1, or 1)")
+	var bundleKeys, revokeBundle, updaterKeys, revokeUpdater listFlag
+	fs.Var(&bundleKeys, "bundle-key", "allowed web bundle public key: PEM file or 64 hex digits (repeatable)")
+	fs.Var(&revokeBundle, "revoke-bundle-key", "bundle key id to revoke (repeatable)")
+	fs.Var(&updaterKeys, "updater-key", "allowed updater public key as in tauri.conf.json (repeatable)")
+	fs.Var(&revokeUpdater, "revoke-updater-key", "updater key id to revoke (repeatable)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *keyFile == "" || *out == "" {
+		return errors.New("-key-file and -out are required")
+	}
+	pemKey, err := os.ReadFile(*keyFile)
+	if err != nil {
+		return err
+	}
+	root, err := ParsePrivateKeyPEM(pemKey)
+	if err != nil {
+		return err
+	}
+	t := Trust{Schema: TrustSchema, Serial: *serial, IssuedAt: time.Now().UTC().Format(time.RFC3339)}
+	if *prev != "" {
+		raw, err := os.ReadFile(*prev)
+		if err != nil {
+			return err
+		}
+		var p Trust
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return fmt.Errorf("%s: %w", *prev, err)
+		}
+		if t.Serial == 0 {
+			t.Serial = p.Serial + 1
+		}
+		if t.Serial <= p.Serial {
+			return fmt.Errorf("serial %d is not above the previous %d", t.Serial, p.Serial)
+		}
+		revokeBundle = append(revokeBundle, p.RevokedBundleKeys...)
+		revokeUpdater = append(revokeUpdater, p.RevokedUpdaterKeys...)
+	}
+	if t.Serial == 0 {
+		t.Serial = 1
+	}
+	for _, v := range bundleKeys {
+		pub, err := bundleKeyArg(v)
+		if err != nil {
+			return fmt.Errorf("-bundle-key %s: %w", v, err)
+		}
+		t.BundleKeys = append(t.BundleKeys, hex.EncodeToString(pub))
+	}
+	t.RevokedBundleKeys = dedupe(revokeBundle)
+	t.UpdaterKeys = dedupe(updaterKeys)
+	t.RevokedUpdaterKeys = dedupe(revokeUpdater)
+	t.BundleKeys = dedupe(t.BundleKeys)
+	doc, sig, err := SignTrust(t, root)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(*out, 0o755); err != nil {
+		return err
+	}
+	if err := errors.Join(
+		os.WriteFile(filepath.Join(*out, "trust.json"), doc, 0o644),
+		os.WriteFile(filepath.Join(*out, "trust.json.sig"), sig, 0o644),
+	); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(stdout, "signed trust statement serial %d: %d bundle key(s), %d revoked, %d updater key(s), %d revoked\n",
+		t.Serial, len(t.BundleKeys), len(t.RevokedBundleKeys), len(t.UpdaterKeys), len(t.RevokedUpdaterKeys))
+	return nil
+}
+
+func dedupe(in []string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, v := range in {
+		if !seen[v] {
+			seen[v] = true
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func runTrustVerify(args []string, stdout, stderr io.Writer) error {
+	fs := newFlags("trust verify", stderr)
+	doc := fs.String("trust", "desktop-trust/trust.json", "trust statement")
+	sig := fs.String("sig", "desktop-trust/trust.json.sig", "its signature")
+	pubPath := fs.String("pub", "desktop-trust/root.pub", "root public key (PEM)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	pub, err := readPub(*pubPath)
+	if err != nil {
+		return err
+	}
+	docB, err := os.ReadFile(*doc)
+	if err != nil {
+		return err
+	}
+	sigB, err := os.ReadFile(*sig)
+	if err != nil {
+		return err
+	}
+	t, err := VerifyTrust(docB, sigB, pub)
+	if err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(stdout, "ok: serial %d, %d bundle key(s), root key %s\n", t.Serial, len(t.BundleKeys), KeyID(pub))
 	return nil
 }

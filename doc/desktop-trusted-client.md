@@ -138,13 +138,93 @@ stored only as the environment secret and in the owner's backup directory
 ### Pinning and rotation
 
 The desktop host embeds a list of `(key_id, public key)` pairs. A manifest is
-accepted if one pinned key verifies it. To rotate: ship a desktop release
-that pins both keys, sign new bundles with the new key, and retire the old
-key from the next desktop release. A leaked key cannot be revoked remotely
-for already-installed clients (no revocation channel exists, by design: it
-would be a second thing a network attacker could forge); the answer is a
-new desktop release with the compromised key removed, and `security_floor`
-in bundles signed with the new key.
+accepted if one pinned key verifies it. These compiled-in keys are the default
+until the client has fetched its first signed trust statement (next section).
+A key can also be retired by a new desktop release that no longer pins it, but
+that path is slow and an attacker holding the key can front-run it; the
+trust statement is the remedy for a leaked key.
+
+### Key revocation: the offline root key and the trust statement
+
+A leaked CI signing key must be revocable without shipping a new client, so a
+third key exists that never touches CI: the **offline root key** (Ed25519).
+Its public half is committed as `desktop-trust/root.pub` and pinned in the
+desktop client. It signs one small statement:
+
+* `desktop-trust/trust.json`: `schema`, `serial` (grows with every statement),
+  `issued_at`, `bundle_keys` (allowed web bundle public keys, raw Ed25519 in
+  hex), `revoked_bundle_keys` (key ids), `updater_keys` (allowed Tauri updater
+  public keys, in the text form of `tauri.conf.json`) and
+  `revoked_updater_keys` (minisign key ids, hex in file order).
+* `desktop-trust/trust.json.sig`: base64 Ed25519 signature over the exact bytes
+  of `trust.json`.
+
+Both files are served from
+`https://raw.githubusercontent.com/msch128/mnema-talk/main/desktop-trust/`.
+The transport is untrusted; only the signature counts. No release is needed:
+merging a new statement to `main` publishes it.
+
+How the client uses it (the desktop repository implements the same format in
+Rust):
+
+* It fetches the statement at start and at every six-hourly check, verifies the
+  signature with the pinned root key before parsing anything, and keeps the
+  last good statement on disk.
+* **Anti-rollback.** The highest serial ever accepted is persisted. A statement
+  with a lower serial is refused; an equal serial changes nothing.
+* **Authoritative.** Once a client holds a statement, it accepts web bundles
+  only from keys listed in `bundle_keys` and not in `revoked_bundle_keys`. The
+  compiled-in keys no longer count. Bundles already held (built-in or cached)
+  are checked again; those signed by a withdrawn key are dropped, and the
+  rollback high-water mark and security floor they raised are recomputed from
+  what remains, so a bundle forged with a leaked key cannot lock out the real
+  ones.
+* **Fail closed, stay usable.** If a statement cannot be fetched or does not
+  verify, the last good one stays in force (or the compiled-in keys, if there
+  never was one). If the only bundle left was signed by a revoked key, the
+  client says so and asks for an update instead of running it.
+* **Updater.** The Tauri updater verifies installers with one public key from
+  `tauri.conf.json`. The client additionally refuses any update whose signature
+  names a revoked updater key id, and, for key rotation, uses the matching
+  public key from `updater_keys` when the signature names one that is not the
+  built-in key. Limit: the updater is only as trustworthy as the signed
+  installer it checks; revocation cannot undo an installer that a client has
+  already run.
+* The statement is cumulative for revocations: `webbundle trust sign -prev`
+  carries earlier revocations forward, and a key that was revoked cannot be
+  allowed again.
+
+Root key handling: the private key lives only at
+`~/.mnema-signing/offline-root.key` (directory mode 700, file mode 600). It is
+never a GitHub secret and never in CI. Keep a copy offline (USB stick or
+password manager); losing it means a new desktop release is the only way to
+change the root key.
+
+#### Runbook: a CI signing key leaked
+
+Assume the leaked key is the web bundle key (`web-bundle-signing`). The
+updater key works the same with `-updater-key` and `-revoke-updater-key`.
+
+1. Generate a new key pair locally (never in CI):
+   `openssl genpkey -algorithm ED25519 -out new.key` and
+   `openssl pkey -in new.key -pubout -out new.pub`.
+2. Replace the `WEB_BUNDLE_SIGNING_KEY` secret of the `web-bundle-signing`
+   environment with `new.key`, commit `new.pub` as `web/desktop-signing.pub`
+   and delete `new.key`. Rotate the environment's access if the leak was
+   through GitHub.
+3. Issue the statement on the machine that holds the offline root key:
+   `go run ./cmd/webbundle trust sign -key-file ~/.mnema-signing/offline-root.key
+   -out desktop-trust -prev desktop-trust/trust.json -bundle-key web/desktop-signing.pub
+   -revoke-bundle-key $(go run ./cmd/webbundle keyid -pub OLD.pub)`
+   (use the old key's id; `OLD.pub` is the previous `desktop-signing.pub`).
+   Check it with `go run ./cmd/webbundle trust verify`.
+4. Open a pull request with `desktop-trust/` and `web/desktop-signing.pub`
+   and merge it. Clients pick the statement up at their next start or
+   six-hourly check and stop accepting the old key at once.
+5. Cut a release so a bundle signed with the new key exists
+   (raise `security_floor` in `web/desktop-compat.json` if the old key's
+   bundles were vulnerable). Clients whose only bundle was signed by the
+   revoked key show a message and fetch the new bundle on that check.
 
 ## How the desktop verifies, caches and selects
 
@@ -391,10 +471,10 @@ an installer by hand after the first time.
   config. To rotate, publish a release that carries the new public key but is
   signed with the **old** key, and only then switch to the new key. A client that
   never received that release cannot install releases of the new key and needs a
-  manual install; if the old key is compromised, clients cannot be protected
-  remotely (there is no revocation channel, by design), so the fix is a new
-  release signed with the old key that pins the new one, and a manual install for
-  everyone else. A bad release is replaced by a higher version, never by
+  manual install. If the updater key is compromised, a trust statement signed
+  by the offline root key revokes it and lists its replacement (see "Key
+  revocation"); clients refuse installers signed by a revoked key and accept the
+  replacement key. A bad release is replaced by a higher version, never by
   lowering.
 * **Residual risk.** Whoever holds the updater key, or both the GitHub account
   and a way around the protected environment, can ship malicious code to every
