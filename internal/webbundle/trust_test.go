@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // testUpdaterKey builds a minisign public key in the form of tauri.conf.json:
@@ -28,6 +29,7 @@ func baseTrust(t *testing.T) (Trust, ed25519.PublicKey, ed25519.PrivateKey, ed25
 		Schema:     TrustSchema,
 		Serial:     1,
 		IssuedAt:   "2026-10-17T10:00:00Z",
+		ExpiresAt:  "2027-04-15T10:00:00Z",
 		BundleKeys: []string{hex.EncodeToString(bundlePub)},
 	}, rootPub, rootPriv, bundlePub
 }
@@ -100,6 +102,10 @@ func TestTrustRejectsInconsistentStatements(t *testing.T) {
 		"no bundle key":       func(x *Trust) { x.BundleKeys = nil },
 		"serial zero":         func(x *Trust) { x.Serial = 0 },
 		"bad time":            func(x *Trust) { x.IssuedAt = "yesterday" },
+		"non-UTC time":        func(x *Trust) { x.IssuedAt = "2026-10-17T12:00:00+02:00" },
+		"bad expiry":          func(x *Trust) { x.ExpiresAt = "soon" },
+		"expiry before issue": func(x *Trust) { x.ExpiresAt = x.IssuedAt },
+		"expiry too far":      func(x *Trust) { x.ExpiresAt = "2030-01-01T00:00:00Z" },
 		"bad key":             func(x *Trust) { x.BundleKeys = []string{"abcd"} },
 		"bad revoked id":      func(x *Trust) { x.RevokedBundleKeys = []string{"XYZ"} },
 		"bad updater key":     func(x *Trust) { x.UpdaterKeys = []string{"AAAA"} },
@@ -317,5 +323,55 @@ func TestCLITrustErrors(t *testing.T) {
 	}
 	if code, _, e := run([]string{"trust", "verify", "-pub", pub, "-trust", trustFile, "-sig", sigFile}, nil); code != 0 {
 		t.Fatal(e)
+	}
+}
+
+func TestTrustExpiry(t *testing.T) {
+	tr, _, _, _ := baseTrust(t)
+	before := time.Date(2027, 4, 15, 9, 59, 59, 0, time.UTC)
+	if tr.Expired(before) || !tr.Expired(before.Add(time.Second)) {
+		t.Fatal("expiry boundary")
+	}
+	tr.ExpiresAt = "garbage"
+	if !tr.Expired(before) {
+		t.Fatal("an unreadable expiry counts as expired")
+	}
+}
+
+func TestCLIRenewAndExpiry(t *testing.T) {
+	dir := t.TempDir()
+	if code, _, e := run([]string{"trust", "keygen", "-out", dir}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	key, pub := filepath.Join(dir, "offline-root.key"), filepath.Join(dir, "offline-root.pub")
+	bundle := hex.EncodeToString(bytes.Repeat([]byte{4}, 32))
+	one := filepath.Join(dir, "1")
+	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", one, "-bundle-key", bundle, "-updater-key", testUpdaterKey()}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	two := filepath.Join(dir, "2")
+	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", two, "-prev", filepath.Join(one, "trust.json"), "-renew"}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	doc, _ := os.ReadFile(filepath.Join(two, "trust.json"))
+	sig, _ := os.ReadFile(filepath.Join(two, "trust.json.sig"))
+	pk, _ := readPub(pub)
+	tr, err := VerifyTrust(doc, sig, pk)
+	if err != nil || tr.Serial != 2 || len(tr.BundleKeys) != 1 || len(tr.UpdaterKeys) != 1 {
+		t.Fatalf("renewed statement: %+v %v", tr, err)
+	}
+	// Without -renew the allowed keys are not carried over.
+	if code, _, _ := run([]string{"trust", "sign", "-key-file", key, "-out", filepath.Join(dir, "3"), "-prev", filepath.Join(one, "trust.json")}, nil); code == 0 {
+		t.Fatal("a statement without bundle keys was signed")
+	}
+	// An already expired statement fails verification with a hint.
+	old := filepath.Join(dir, "old")
+	if code, _, e := run([]string{"trust", "sign", "-key-file", key, "-out", old, "-bundle-key", bundle, "-valid-for", "1s"}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	time.Sleep(1100 * time.Millisecond)
+	code, _, e := run([]string{"trust", "verify", "-pub", pub, "-trust", filepath.Join(old, "trust.json"), "-sig", filepath.Join(old, "trust.json.sig")}, nil)
+	if code == 0 || !strings.Contains(e, "expired") {
+		t.Fatalf("expired statement verified: %d %s", code, e)
 	}
 }

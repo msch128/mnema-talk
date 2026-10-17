@@ -1,7 +1,8 @@
 {
   "schema": 1,
-  "serial": 1,
-  "issued_at": "2026-10-17T20:38:31Z",
+  "serial": 2,
+  "issued_at": "2026-10-17T21:28:34Z",
+  "expires_at": "2027-04-15T21:28:34Z",
   "bundle_keys": [
     "7815c02fddb14038cf3641036ba2e4e20ffdd0e42d00be3477671ca4628de06d"
   ],

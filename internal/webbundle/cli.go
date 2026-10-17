@@ -184,9 +184,10 @@ const trustUsage = `usage: webbundle trust <command> [flags]
   keygen  -out DIR            new offline root key: DIR/offline-root.key (mode 600), DIR/offline-root.pub
   sign    -key-file PATH -out DIR [-prev trust.json] [-serial N]
           [-bundle-key PEM|HEX]... [-revoke-bundle-key ID]...
-          [-updater-key TEXT]... [-revoke-updater-key ID]...
+          [-updater-key TEXT]... [-revoke-updater-key ID]... [-valid-for 4320h] [-renew]
           signs a trust statement; writes DIR/trust.json and DIR/trust.json.sig
-          with -prev the serial is prev+1 and earlier revocations are kept
+          with -prev the serial is prev+1 and earlier revocations are kept;
+          -renew also keeps prev's allowed keys (re-sign before it expires)
   verify  -trust FILE -sig FILE -pub PEM
 `
 
@@ -253,6 +254,8 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 	out := fs.String("out", "", "output directory")
 	prev := fs.String("prev", "", "previous trust.json: serial becomes prev+1 and its revocations are kept")
 	serial := fs.Uint64("serial", 0, "serial (default: prev+1, or 1)")
+	validFor := fs.Duration("valid-for", DefaultTrustValidity, "how long the statement is valid")
+	renew := fs.Bool("renew", false, "with -prev: keep its allowed bundle and updater keys")
 	var bundleKeys, revokeBundle, updaterKeys, revokeUpdater listFlag
 	fs.Var(&bundleKeys, "bundle-key", "allowed web bundle public key: PEM file or 64 hex digits (repeatable)")
 	fs.Var(&revokeBundle, "revoke-bundle-key", "bundle key id to revoke (repeatable)")
@@ -272,7 +275,12 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	t := Trust{Schema: TrustSchema, Serial: *serial, IssuedAt: time.Now().UTC().Format(time.RFC3339)}
+	now := time.Now().UTC().Truncate(time.Second)
+	t := Trust{
+		Schema: TrustSchema, Serial: *serial,
+		IssuedAt:  now.Format(time.RFC3339),
+		ExpiresAt: now.Add(*validFor).Format(time.RFC3339),
+	}
 	if *prev != "" {
 		raw, err := os.ReadFile(*prev)
 		if err != nil {
@@ -287,6 +295,10 @@ func runTrustSign(args []string, stdout, stderr io.Writer) error {
 		}
 		if t.Serial <= p.Serial {
 			return fmt.Errorf("serial %d is not above the previous %d", t.Serial, p.Serial)
+		}
+		if *renew {
+			t.BundleKeys = append(t.BundleKeys, p.BundleKeys...)
+			updaterKeys = append(updaterKeys, p.UpdaterKeys...)
 		}
 		revokeBundle = append(revokeBundle, p.RevokedBundleKeys...)
 		revokeUpdater = append(revokeUpdater, p.RevokedUpdaterKeys...)
@@ -359,6 +371,9 @@ func runTrustVerify(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(stdout, "ok: serial %d, %d bundle key(s), root key %s\n", t.Serial, len(t.BundleKeys), KeyID(pub))
+	if t.Expired(time.Now()) {
+		return fmt.Errorf("trust statement serial %d expired at %s; re-sign it with trust sign -renew", t.Serial, t.ExpiresAt)
+	}
+	_, _ = fmt.Fprintf(stdout, "ok: serial %d, %d bundle key(s), valid until %s, root key %s\n", t.Serial, len(t.BundleKeys), t.ExpiresAt, KeyID(pub))
 	return nil
 }

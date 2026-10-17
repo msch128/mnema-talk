@@ -152,7 +152,8 @@ Its public half is committed as `desktop-trust/root.pub` and pinned in the
 desktop client. It signs one small statement:
 
 * `desktop-trust/trust.json`: `schema`, `serial` (grows with every statement),
-  `issued_at`, `bundle_keys` (allowed web bundle public keys, raw Ed25519 in
+  `issued_at`, `expires_at` (UTC, at most 400 days after `issued_at`; the CLI
+  default is 180 days), `bundle_keys` (allowed web bundle public keys, raw Ed25519 in
   hex), `revoked_bundle_keys` (key ids), `updater_keys` (allowed Tauri updater
   public keys, in the text form of `tauri.conf.json`) and
   `revoked_updater_keys` (minisign key ids, hex in file order).
@@ -175,10 +176,19 @@ Rust):
 * **Authoritative.** Once a client holds a statement, it accepts web bundles
   only from keys listed in `bundle_keys` and not in `revoked_bundle_keys`. The
   compiled-in keys no longer count. Bundles already held (built-in or cached)
-  are checked again; those signed by a withdrawn key are dropped, and the
-  rollback high-water mark and security floor they raised are recomputed from
-  what remains, so a bundle forged with a leaked key cannot lock out the real
-  ones.
+  are checked again; those signed by a withdrawn key are dropped (and their
+  cache files removed). The rollback high-water mark and the security floor are
+  **never lowered**: revoking a key does not make older versions safe. If the
+  newest bundle the client has accepted was signed by a revoked key, the client
+  refuses to run older ones, says so, and waits for a bundle from an allowed key
+  whose version is not below that mark. After a leak, release the replacement
+  bundle with a version above anything the attacker could have published.
+* **Freshness (freeze protection).** An attacker who blocks the fetch must not
+  keep a stale statement in force. A statement past `expires_at` is never
+  accepted, and while the one in force has expired, or this round's fetch
+  failed, the client installs **no new bundle and no updater package**. It keeps
+  running the already verified installed bundle, and an expired statement still
+  applies its revocations. Re-sign before expiry (below).
 * **Fail closed, stay usable.** If a statement cannot be fetched or does not
   verify, the last good one stays in force (or the compiled-in keys, if there
   never was one). If the only bundle left was signed by a revoked key, the
@@ -199,6 +209,18 @@ Root key handling: the private key lives only at
 never a GitHub secret and never in CI. Keep a copy offline (USB stick or
 password manager); losing it means a new desktop release is the only way to
 change the root key.
+
+#### Renewing the statement (every 3 months)
+
+A statement is valid for 180 days. Renew it well before then, on the machine
+that holds the root key, with one command, then merge the result:
+
+    go run ./cmd/webbundle trust sign -key-file ~/.mnema-signing/offline-root.key \
+      -out desktop-trust -prev desktop-trust/trust.json -renew
+
+`-renew` keeps the allowed keys and all revocations and raises the serial.
+`go run ./cmd/webbundle trust verify` prints the expiry. A client that cannot
+get a fresh statement keeps working but stops installing updates.
 
 #### Runbook: a CI signing key leaked
 
@@ -221,7 +243,8 @@ updater key works the same with `-updater-key` and `-revoke-updater-key`.
 4. Open a pull request with `desktop-trust/` and `web/desktop-signing.pub`
    and merge it. Clients pick the statement up at their next start or
    six-hourly check and stop accepting the old key at once.
-5. Cut a release so a bundle signed with the new key exists
+5. Cut a release so a bundle signed with the new key exists, with a version
+   above anything the old key could have signed
    (raise `security_floor` in `web/desktop-compat.json` if the old key's
    bundles were vulnerable). Clients whose only bundle was signed by the
    revoked key show a message and fetch the new bundle on that check.
