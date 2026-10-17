@@ -111,7 +111,14 @@
     "reloadInCall": "Dein Anruf wird dabei kurz getrennt und danach automatisch wieder verbunden.",
     "dismiss": "Später",
     "badge": "Update {version}",
-    "updating": "Der Server wird gerade auf Version {version} aktualisiert – gleich kurze Unterbrechung."
+    "updating": "Der Server wird gerade auf Version {version} aktualisiert – gleich kurze Unterbrechung.",
+    "trustedBanner": "Der Server läuft mit Version {version}. Starte die Desktop-App neu, um nach der passenden geprüften App zu suchen."
+  },
+  "trustedApp": {
+    "verified": "Geprüfte App v{version}",
+    "builtin": "im Installer enthalten",
+    "cache": "geprüftes Update",
+    "explain": "Diese App wurde gegen eine im Desktop-Client festgelegte Signatur geprüft. Der Server kann sie nicht verändern."
   },
   "login": {
     "subtitleLogin": "Anmelden bei Mnema Talk",

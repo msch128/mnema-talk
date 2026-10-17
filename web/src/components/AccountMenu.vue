@@ -10,6 +10,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
+import { trustedApp } from '../lib/trustedDesktop'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
@@ -22,6 +23,8 @@ const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
+// Set only in the trusted desktop client, which runs a bundle it verified.
+const verified = trustedApp()
 const { stopScreenShare } = useWebRTC()
 
 const root = ref<HTMLElement | null>(null)
@@ -201,5 +204,15 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     <button type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => authStore.logout())">
       <LogOut class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('account.signOut') }}
     </button>
+    <div
+      v-if="verified"
+      role="note"
+      data-testid="verified-app"
+      :title="$t('trustedApp.explain')"
+      class="mx-0.5 mt-1 flex items-center gap-2 border-t border-mnema-hairline px-2.5 pb-1 pt-2 text-xs text-mnema-tertiary"
+    >
+      <ShieldCheck class="h-3.5 w-3.5 flex-shrink-0 text-mnema-accent" />
+      <span>{{ $t('trustedApp.verified', { version: verified.version }) }} · {{ $t(`trustedApp.${verified.source}`) }}</span>
+    </div>
   </div>
 </template>

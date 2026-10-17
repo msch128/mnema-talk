@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { isDesktopRuntime } from './desktopRuntime'
+import { isDesktopRuntime, isWebDesktopSelector } from './desktopRuntime'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -29,4 +29,15 @@ it.each(['http://tauri.localhost:9000/', 'https://tauri.localhost/', 'http://loc
   vi.stubGlobal('isTauri', true)
   vi.stubGlobal('location', new URL(origin))
   expect(isDesktopRuntime()).toBe(false)
+})
+
+it('treats the verified bundle in its selector role as the instance selector, and no other role', () => {
+  vi.stubGlobal('isTauri', true)
+  vi.stubGlobal('location', new URL('mnema://localhost/'))
+  const identity = { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272' }
+  vi.stubGlobal('__MNEMA_TRUSTED_APP__', { ...identity, role: 'selector' })
+  expect(isWebDesktopSelector()).toBe(true)
+  expect(isDesktopRuntime()).toBe(false)
+  vi.stubGlobal('__MNEMA_TRUSTED_APP__', { ...identity, role: 'instance' })
+  expect(isWebDesktopSelector()).toBe(false)
 })

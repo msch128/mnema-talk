@@ -1,4 +1,6 @@
 import { NativeSocket } from '../lib/nativeTransport'
+import { isTrustedDesktop } from '../lib/trustedDesktop'
+import { TrustedSocket } from '../lib/trustedSocket'
 import { isDesktopRuntime } from '../lib/desktopRuntime'
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
@@ -72,7 +74,7 @@ export const useChatStore = defineStore('chat', () => {
   const activeThread = ref<ThreadRoot | null>(null)
   const threadReplies = ref<Message[]>([])
   const isThreadLoading = ref(false)
-  const ws = shallowRef<WebSocket | NativeSocket | null>(null)
+  const ws = shallowRef<WebSocket | NativeSocket | TrustedSocket | null>(null)
   const isConnected = ref(false)
 
   // Community members & real-time presence
@@ -639,9 +641,13 @@ export const useChatStore = defineStore('chat', () => {
 
     // The session cookie authenticates the upgrade; no token in the URL.
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    // The trusted desktop client cannot reach the server from its own origin:
+    // its host opens the socket (doc/desktop-trusted-client.md).
     const socket = isDesktopRuntime()
       ? new NativeSocket()
-      : new WebSocket(`${protocol}//${window.location.host}/api/ws`)
+      : isTrustedDesktop()
+        ? new TrustedSocket()
+        : new WebSocket(`${protocol}//${window.location.host}/api/ws`)
 
     const currentSocket = () => ws.value === socket && socketGeneration === generation
     const currentAccount = () => authStore.user?.id === accountId

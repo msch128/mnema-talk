@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC, setGamingPttLease } from '../composables/useWebRTC'
+import { trustedApp } from './trustedDesktop'
 
 export interface GamingChord { key: number; alt: boolean; control: boolean; shift: boolean }
 export interface GamingSettings { enabled: boolean; sidepeek_opacity: number; overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }
@@ -15,7 +16,7 @@ export function gamingSurface(): boolean {
 }
 export function startDesktopGaming(): () => void {
   const token: unknown = Reflect.get(window, '__MNEMA_GAMING_BRIDGE__')
-  if (typeof token !== 'string' || window.location.protocol !== 'https:') return () => {}
+  if (typeof token !== 'string' || trustedApp()?.role !== 'instance') return () => {}
   const auth = useAuthStore(); const chat = useChatStore(); const voice = useVoiceStore()
   const { stopScreenShare } = useWebRTC()
   let alive = true; let pending = false

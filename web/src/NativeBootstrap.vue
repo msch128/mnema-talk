@@ -8,9 +8,11 @@ import { useAuthStore } from './stores/auth'
 import { initializeNativeContext, connectNative, disconnectNative } from './lib/nativeTransport'
 import { navigate, popRedirectRoute } from './lib/router'
 import { isWebDesktopSelector } from './lib/desktopRuntime'
+import { trustedApp } from './lib/trustedDesktop'
 import { invoke } from '@tauri-apps/api/core'
 
 const address = ref('')
+const verified = trustedApp()
 const addressInput = ref<HTMLInputElement | null>(null)
 const ready = ref(false)
 const busy = ref(false)
@@ -77,7 +79,8 @@ async function changeServer() {
         <button type="submit" :disabled="!ready || busy">{{ busy ? t('nativeDesktop.checking') : t('nativeDesktop.connect') }}</button>
       </form>
       <p v-if="error" class="native-connect-error" role="alert">{{ error }}</p>
-      <p class="native-connect-note">{{ t('nativeDesktop.dev') }}</p>
+      <p v-if="verified" class="native-connect-note" data-testid="verified-app">{{ t('trustedApp.verified', { version: verified.version }) }} · {{ t(`trustedApp.${verified.source}`) }}</p>
+      <p v-else class="native-connect-note">{{ t('nativeDesktop.dev') }}</p>
     </section>
   </main>
 </template>
