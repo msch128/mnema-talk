@@ -751,7 +751,8 @@
       "media": "Medien & Speicher",
       "system": "System",
       "roles": "Rollen",
-      "audit": "Audit-Log"
+      "audit": "Audit-Log",
+      "bans": "Sperren"
     },
     "system": {
       "heading": "System & Version",
@@ -1204,7 +1205,15 @@
     },
     "allow": "Erlauben",
     "deny": "Verbieten",
-    "inherit": "Erben"
+    "inherit": "Erben",
+    "timeout_members": {
+      "name": "Mitglieder stummschalten",
+      "desc": "Mitglieder unterhalb deiner höchsten Rolle für eine Weile stummschalten: kein Schreiben, Reagieren, Sprechen oder Talk-Beitreten."
+    },
+    "ban_members": {
+      "name": "Mitglieder sperren",
+      "desc": "Mitglieder unterhalb deiner höchsten Rolle sperren und entsperren und die Liste der Sperren sehen."
+    }
   },
   "audit": {
     "title": "Audit-Log",
@@ -1234,7 +1243,8 @@
       "message": "Nachrichten",
       "voice": "Talk-Anwesenheit",
       "auth": "Anmeldungen",
-      "settings": "Einstellungen"
+      "settings": "Einstellungen",
+      "moderation": "Moderation"
     },
     "actions": {
       "role": {
@@ -1313,6 +1323,13 @@
       },
       "settings": {
         "upload_limit": "Upload-Limit geändert"
+      },
+      "moderation": {
+        "timeout": "Mitglied stummgeschaltet",
+        "timeout_remove": "Timeout aufgehoben",
+        "ban": "Mitglied gesperrt",
+        "unban": "Mitglied entsperrt",
+        "ban_expired": "Sperre abgelaufen"
       }
     }
   },
@@ -1458,6 +1475,57 @@
       "allow_attachments": "Anhänge erlauben",
       "allow_embeds": "Embeds erlauben",
       "allow_identity_override": "Beiträge dürfen ihren Benutzernamen selbst festlegen"
+    }
+  },
+  "moderation": {
+    "timeoutAction": "Timeout…",
+    "removeTimeout": "Timeout aufheben",
+    "banAction": "Sperren…",
+    "timeoutTitle": "{name} stummschalten",
+    "timeoutBody": "Die Person kann lesen, aber weder schreiben, reagieren, sprechen, Video teilen noch Talks beitreten, bis die Zeit um ist. Ein laufender Talk endet für sie.",
+    "banTitle": "{name} sperren",
+    "banBody": "Beendet alle Sitzungen und verhindert die Anmeldung. Konto und Nachrichten bleiben erhalten.",
+    "duration": "Dauer",
+    "forever": "Dauerhaft",
+    "custom": "Eigene",
+    "customAmount": "Anzahl",
+    "customUnit": "Einheit",
+    "durationRange": "Zwischen {min} und {max}.",
+    "reason": "Grund (optional)",
+    "reasonPlaceholder": "Wird der Person angezeigt",
+    "revokeInvite": "Auch die Einladung widerrufen, mit der sie sich registriert haben",
+    "timeoutConfirm": "Stummschalten",
+    "banConfirm": "Sperren",
+    "timedOutToast": "{name} ist stummgeschaltet.",
+    "bannedToast": "{name} ist gesperrt.",
+    "timeoutRemovedToast": "Timeout für {name} aufgehoben.",
+    "failed": "Die Aktion ist fehlgeschlagen.",
+    "bannerText": "Du bist stummgeschaltet.",
+    "noticeTimeout": "Du wurdest für {duration} stummgeschaltet",
+    "noticeTimeoutRemoved": "Dein Timeout wurde aufgehoben.",
+    "noticeBan": "Du wurdest gesperrt",
+    "bansTitle": "Sperren",
+    "noBans": "Niemand ist gesperrt.",
+    "bannedUntil": "Gesperrt bis {date}",
+    "bannedForever": "Dauerhaft gesperrt",
+    "bannedBy": "von {name}",
+    "unban": "Entsperren",
+    "unbanTitle": "{name} entsperren?",
+    "unbanBody": "Die Person kann sich wieder anmelden. Eine widerrufene Einladung bleibt widerrufen.",
+    "unbanConfirm": "Entsperren",
+    "unbannedToast": "{name} ist entsperrt.",
+    "units": {
+      "min": "{n} Min.",
+      "s": "{n} s",
+      "h": "{n} Std.",
+      "d": "{n} Tg.",
+      "w": "{n} Wo."
+    },
+    "unitNames": {
+      "seconds": "Sekunden",
+      "minutes": "Minuten",
+      "hours": "Stunden",
+      "days": "Tage"
     }
   }
 }

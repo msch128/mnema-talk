@@ -15,7 +15,6 @@ import { t } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 
 const request = computed(() => pendingModeration.value)
-const requestKey = computed(() => Symbol(request.value?.target.id ?? 'moderation'))
 const toasts = useToastStore()
 
 const isBan = computed(() => request.value?.kind === 'ban')
@@ -31,8 +30,7 @@ const saving = ref(false)
 const seconds = computed<number | null>(() => {
   if (choice.value === 'forever') return null
   if (choice.value === 'custom') return customSeconds(amount.value, unit.value)
-  const n = Number(choice.value)
-  return Number.isInteger(n) && n > 0 ? n : null
+  return Number(choice.value)
 })
 const limits = computed(() => (isBan.value ? [MIN_BAN_SECONDS, MAX_BAN_SECONDS] : [MIN_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS]) as [number, number])
 const valid = computed(() => {
@@ -91,7 +89,7 @@ const chipClass = (on: boolean) => [
 </script>
 
 <template>
-  <BaseDialog v-if="request" :key="requestKey" panel-class="max-w-[480px]" @close="close(false)">
+  <BaseDialog v-if="request" :key="request.target.id" panel-class="max-w-[480px]" @close="close(false)">
     <template #default="{ titleId }">
       <form class="space-y-4 overflow-y-auto p-5" @submit.prevent="submit">
         <h2 :id="titleId" class="break-words text-lg font-semibold text-mnema-text">

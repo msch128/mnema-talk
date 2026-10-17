@@ -114,14 +114,14 @@ export const decodeAuthBan = decoder("auth.Ban", isAuthBan)
 
 export type AuthBanRequest = {
   duration_seconds?: number | null
-  reason?: string
+  reason: string
   revoke_invite?: boolean
 }
 
 export function isAuthBanRequest(value: unknown): value is AuthBanRequest {
   return isRecord(value)
-    && (!hasOwn(value, "duration_seconds") || ((isInteger(value["duration_seconds"]) && value["duration_seconds"] >= 60 && value["duration_seconds"] <= 315360000) || value["duration_seconds"] === null))
-    && (!hasOwn(value, "reason") || isString(value["reason"], 200))
+    && (!hasOwn(value, "duration_seconds") || (isInteger(value["duration_seconds"]) || value["duration_seconds"] === null))
+    && (hasOwn(value, "reason") && isString(value["reason"], 200))
     && (!hasOwn(value, "revoke_invite") || typeof value["revoke_invite"] === 'boolean')
 }
 

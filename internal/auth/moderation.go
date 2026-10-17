@@ -56,11 +56,12 @@ type TimeoutState struct {
 
 // BanRequest is the body of POST /api/admin/users/{id}/ban.
 type BanRequest struct {
-	// Reason is shown to the member when they try to sign in. Optional.
-	Reason string `json:"reason" maxLength:"200" binding:"optional"`
-	// DurationSeconds ends the ban by itself after that long; null or
-	// missing bans for good.
-	DurationSeconds *int `json:"duration_seconds" minimum:"60" maximum:"315360000" extensions:"x-nullable" binding:"optional"`
+	// Reason is shown to the member when they try to sign in; send an empty
+	// string for none.
+	Reason string `json:"reason" maxLength:"200"`
+	// DurationSeconds ends the ban by itself after that long (60 seconds to
+	// ten years); null or missing bans for good.
+	DurationSeconds *int `json:"duration_seconds" extensions:"x-nullable" binding:"optional"`
 	// RevokeInvite also revokes the invite the account registered with, so
 	// that code cannot create the account anew (default true).
 	RevokeInvite *bool `json:"revoke_invite" binding:"optional"`

@@ -913,8 +913,10 @@ export const useChatStore = defineStore('chat', () => {
         const idx = members.value.findIndex(member => member.id === p.id)
         const existing = members.value[idx]
         if (existing) {
-          const { timeout_until: _gone, ...rest } = existing
-          members.value[idx] = p.timeout_until ? { ...rest, timeout_until: p.timeout_until } : rest
+          const next = { ...existing }
+          if (p.timeout_until) next.timeout_until = p.timeout_until
+          else delete next.timeout_until
+          members.value[idx] = next
         }
         break
       }

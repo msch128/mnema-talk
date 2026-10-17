@@ -12,7 +12,7 @@ interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onWebhoo
 interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield, Webhook, Clock, Gavel
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
@@ -23,6 +23,7 @@ import { api } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { menuPointFromEvent } from '../lib/contextMenuPoint'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
+import { moderationOffer, openTimeout, openBan, liftTimeout } from '../lib/moderationActions'
 import { t } from '../i18n'
 
 export const NOTIFY_LEVELS = ['all', 'mentions', 'mute'] as const
@@ -294,7 +295,8 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
   const reachable = !isSelf && member.role !== 'admin' && permissions.outranksMember(member.id)
   const canKick = reachable && permissions.can('disconnect_members')
   const canModerate = reachable && permissions.can('manage_members')
-  if (canKick || canModerate) {
+  const offer = moderationOffer(member)
+  if (canKick || canModerate || offer.timeout || offer.ban) {
     items.push({ type: 'separator' })
     const inAnyCall = Object.values(voiceStore.channelUsers || {}).some(u => u && u[member.id])
     if (canKick && inAnyCall) {
@@ -308,6 +310,15 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
         })
       })
     }
+  }
+  if (offer.timeout) {
+    items.push({ id: 'timeout', label: t('moderation.timeoutAction'), icon: Clock, danger: true, action: () => { void openTimeout(member) } })
+  }
+  if (offer.removeTimeout) {
+    items.push({ id: 'untimeout', label: t('moderation.removeTimeout'), icon: Clock, action: () => { void liftTimeout(member) } })
+  }
+  if (offer.ban) {
+    items.push({ id: 'ban', label: t('moderation.banAction'), icon: Gavel, danger: true, action: () => { void openBan(member) } })
   }
   if (canModerate) {
     items.push({

@@ -20,6 +20,7 @@ import PresenceDot from './PresenceDot.vue'
 import ActivityStats from './ActivityStats.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
+import { moderationOffer, openTimeout, openBan, liftTimeout } from '../lib/moderationActions'
 
 const props = defineProps({
   user: {
@@ -151,6 +152,8 @@ const showRolesDialog = ref(false)
 // Roles are given by someone with Manage roles and a higher rank; never the Owner's, never one's own.
 const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
 const canEditStatus = computed(() => isSelf.value || (profileUser.value.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(profileId.value)))
+const offer = computed(() => moderationOffer({ id: profileId.value, role: profileUser.value.role, display_name: profileUser.value.display_name, username: profileUser.value.username }))
+const moderationSubject = computed(() => ({ id: profileId.value, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 const isEditingStatus = ref(false)
 const editStatus = ref('')
 const isSavingStatus = ref(false)
@@ -401,6 +404,31 @@ function handleMention() {
               class="rounded-md border border-dashed border-mnema-border px-1.5 py-0.5 text-xs text-mnema-tertiary transition hover:border-mnema-accent hover:text-mnema-accent"
               @click="showRolesDialog = true"
             >{{ $t('memberRoles.edit') }}</button>
+          </div>
+
+          <!-- Moderation -->
+          <div v-if="offer.timeout || offer.ban" class="mt-3 flex flex-wrap items-center gap-1.5" data-testid="profile-moderation">
+            <button
+              v-if="offer.timeout"
+              type="button"
+              data-testid="profile-timeout"
+              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              @click="openTimeout(moderationSubject)"
+            >{{ $t('moderation.timeoutAction') }}</button>
+            <button
+              v-if="offer.removeTimeout"
+              type="button"
+              data-testid="profile-untimeout"
+              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-accent hover:text-mnema-accent"
+              @click="liftTimeout(moderationSubject)"
+            >{{ $t('moderation.removeTimeout') }}</button>
+            <button
+              v-if="offer.ban"
+              type="button"
+              data-testid="profile-ban"
+              class="rounded-md border border-mnema-border px-2 py-1 text-xs text-mnema-text transition hover:border-mnema-danger hover:text-mnema-danger"
+              @click="openBan(moderationSubject)"
+            >{{ $t('moderation.banAction') }}</button>
           </div>
 
           <!-- Status line -->

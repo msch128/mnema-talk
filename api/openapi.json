@@ -232,16 +232,14 @@
       "auth.BanRequest": {
         "properties": {
           "duration_seconds": {
-            "description": "DurationSeconds ends the ban by itself after that long; null or\nmissing bans for good.",
-            "maximum": 315360000,
-            "minimum": 60,
+            "description": "DurationSeconds ends the ban by itself after that long (60 seconds to\nten years); null or missing bans for good.",
             "type": [
               "integer",
               "null"
             ]
           },
           "reason": {
-            "description": "Reason is shown to the member when they try to sign in. Optional.",
+            "description": "Reason is shown to the member when they try to sign in; send an empty\nstring for none.",
             "maxLength": 200,
             "type": "string"
           },
@@ -250,6 +248,9 @@
             "type": "boolean"
           }
         },
+        "required": [
+          "reason"
+        ],
         "type": "object"
       },
       "auth.ChangePasswordRequest": {
