@@ -140,7 +140,7 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 		if err := h(w, r); err != nil {
 			if _, ok := AsAPIError(err); !ok {
 				slog.ErrorContext(r.Context(), "request failed",
-					"request_id", RequestIDFromContext(r.Context()), "method", r.Method, "path", r.URL.Path, "err", err)
+					"request_id", RequestIDFromContext(r.Context()), "method", r.Method, "path", LogPath(r.URL.Path), "err", err)
 				err = ErrInternal("internal server error")
 			}
 			WriteError(w, err)

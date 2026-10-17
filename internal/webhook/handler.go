@@ -73,7 +73,7 @@ func (h *Handler) url(rec *record, token string) string {
 // authorize checks the caller may manage webhooks in the channel and returns
 // the permission state it decided on (nil without a permission model). A
 // channel they cannot view looks like a missing one.
-func (h *Handler) authorize(r *http.Request, ch uuid.UUID) (*perm.Snapshot, error) {
+func (h *Handler) authorize(r *http.Request, ch uuid.UUID, need perm.Set) (*perm.Snapshot, error) {
 	if h.Perms == nil {
 		return nil, nil
 	}
@@ -81,7 +81,7 @@ func (h *Handler) authorize(r *http.Request, ch uuid.UUID) (*perm.Snapshot, erro
 	if err != nil {
 		return nil, err
 	}
-	return snap, perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ManageWebhooks)
+	return snap, perm.CheckChannel(snap.Channel(auth.UserFrom(r.Context()).Subject(), ch), perm.ManageWebhooks|need)
 }
 
 // load finds the webhook of the path and checks the caller may manage it:
@@ -97,7 +97,7 @@ func (h *Handler) load(r *http.Request) (*record, error) {
 	if err != nil {
 		return nil, err
 	}
-	snap, err := h.authorize(r, rec.ChannelID)
+	snap, err := h.authorize(r, rec.ChannelID, 0)
 	if err != nil {
 		// A hidden channel hides its webhooks; a plain missing permission
 		// stays a 403.
@@ -155,7 +155,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if _, err := h.authorize(r, ch, 0); err != nil {
 		return err
 	}
 	hooks, err := list(r.Context(), h.DB, ch)
@@ -169,7 +169,7 @@ func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
 // create handles POST /api/admin/channels/{id}/webhooks.
 //
 // @Summary Create a webhook
-// @Description Needs Manage webhooks and View channel in that channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.
+// @Description Needs Manage webhooks, View channel and Send messages in that channel, since the webhook posts there. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.
 // @ID createWebhook
 // @Tags Webhooks
 // @Accept json
@@ -192,7 +192,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := h.authorize(r, ch); err != nil {
+	if _, err := h.authorize(r, ch, perm.SendMessages); err != nil {
 		return err
 	}
 	var req CreateRequest

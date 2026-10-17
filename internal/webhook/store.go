@@ -63,18 +63,22 @@ type CreatedWebhook struct {
 // record is a webhook with what only the server needs.
 type record struct {
 	Webhook
+	// creatorActive is false once the creator's account is gone or disabled.
+	creatorActive bool
 	botUserID uuid.UUID
 	tokenHash []byte
 }
 
 const recordSelect = `
-	SELECT w.id, w.channel_id, w.name, u.avatar_s3_key, w.created_by, w.created_at, w.updated_at, w.bot_user_id, w.token_hash
-	FROM webhooks w JOIN users u ON u.id = w.bot_user_id`
+	SELECT w.id, w.channel_id, w.name, u.avatar_s3_key, w.created_by, w.created_at, w.updated_at, w.bot_user_id, w.token_hash,
+	       (c.id IS NOT NULL AND c.disabled_at IS NULL)
+	FROM webhooks w JOIN users u ON u.id = w.bot_user_id
+	LEFT JOIN users c ON c.id = w.created_by`
 
 func scanRecord(row pgx.Row) (*record, error) {
 	var rec record
 	var avatar *string
-	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash)
+	err := row.Scan(&rec.ID, &rec.ChannelID, &rec.Name, &avatar, &rec.CreatedBy, &rec.CreatedAt, &rec.UpdatedAt, &rec.botUserID, &rec.tokenHash, &rec.creatorActive)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errNotFound
 	}

@@ -15,6 +15,13 @@ The Owner always. Everybody else needs the permission **Manage webhooks** and
 you, so neither do its webhooks). Because the webhook is an admin-area
 feature, the API lives under `/api/admin`.
 
+Creating a webhook also needs **Send messages** in the channel, because the
+webhook posts there. A webhook acts with its creator's rights, checked again
+at every post: it needs the creator to hold *Send messages* (and *Attach
+files* when files are sent) in the channel right now, and the creator's
+account to exist and be enabled; otherwise the post is refused with `403`
+(code 50013). The Owner's webhooks always pass.
+
 Hierarchy follows [roles and permissions](roles-and-permissions.md):
 
 - A webhook created by the Owner can only be changed by the Owner.

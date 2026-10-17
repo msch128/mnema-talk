@@ -26,6 +26,7 @@ const (
 	codeUnknownChannel   = 10003
 	codeUnknownWebhook   = 10015
 	codeInvalidToken     = 50027
+	codeMissingAccess    = 50013
 	codeEmptyMessage     = 50006
 	codeInvalidFormBody  = 50035
 	codeEntityTooLarge   = 40005
@@ -99,6 +100,8 @@ func writeFailure(w http.ResponseWriter, err error) {
 	}
 	code := 0
 	switch ae.Status {
+	case http.StatusForbidden:
+		code = codeMissingAccess
 	case http.StatusBadRequest:
 		code = codeInvalidFormBody
 	case http.StatusRequestEntityTooLarge:
@@ -384,6 +387,9 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 // build validates a parsed request into a message and the mention policy.
 func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*chat.NewMessage, chat.MentionPolicy, error) {
 	p := req.payload
+	if err := h.creatorMayPost(ctx, rec, len(req.files) > 0); err != nil {
+		return nil, chat.MentionPolicy{}, err
+	}
 	content, err := chat.ValidateContent(p.Content, true)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, formError(err.Error())
@@ -431,6 +437,31 @@ func (emptyMessage) Error() string { return "Cannot send an empty message" }
 type unknownThread struct{}
 
 func (unknownThread) Error() string { return "Unknown Channel" }
+
+// creatorMayPost re-checks, at every post, what the webhook's creator may do:
+// a webhook never outlives its creator's right to post (Send messages, and
+// Attach files with files). It is refused once the creator's account is gone
+// or disabled. The Owner always passes.
+func (h *Handler) creatorMayPost(ctx context.Context, rec *record, files bool) error {
+	if !rec.creatorActive || rec.CreatedBy == nil {
+		return httpx.ErrForbidden("the webhook's creator can no longer post here")
+	}
+	if h.Perms == nil {
+		return nil
+	}
+	snap, err := h.Perms.ForChannel(ctx, rec.ChannelID)
+	if err != nil {
+		return err
+	}
+	need := perm.SendMessages
+	if files {
+		need |= perm.AttachFiles
+	}
+	if perm.CheckChannel(snap.Channel(perm.Subject{ID: *rec.CreatedBy}, rec.ChannelID), need) != nil {
+		return httpx.ErrForbidden("the webhook's creator can no longer post here")
+	}
+	return nil
+}
 
 // mentionPolicy turns allowed_mentions into the policy for the message. The
 // default notifies mentioned members but never @all and @here. Those need

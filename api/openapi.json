@@ -3911,7 +3911,7 @@
         ]
       },
       "post": {
-        "description": "Needs Manage webhooks and View channel in that channel. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
+        "description": "Needs Manage webhooks, View channel and Send messages in that channel, since the webhook posts there. The answer carries the secret URL; it is shown only once. At most 15 webhooks per channel.",
         "operationId": "createWebhook",
         "parameters": [
           {

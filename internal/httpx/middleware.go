@@ -78,6 +78,17 @@ func Recover(prod bool) func(http.Handler) http.Handler {
 	}
 }
 
+// LogPath is the path as it may appear in logs: the secret token of a webhook
+// execute URL (/api/webhooks/{id}/{token}) is replaced.
+func LogPath(path string) string {
+	if rest, ok := strings.CutPrefix(path, "/api/webhooks/"); ok {
+		if id, _, found := strings.Cut(rest, "/"); found {
+			return "/api/webhooks/" + id + "/[redacted]"
+		}
+	}
+	return path
+}
+
 // Logger emits one structured line per request. Only the path is logged, never
 // the query string, so nothing passed in a URL ends up in the logs.
 func Logger(next http.Handler) http.Handler {
@@ -91,7 +102,7 @@ func Logger(next http.Handler) http.Handler {
 		slog.Info("http",
 			"request_id", RequestIDFromContext(r.Context()),
 			"method", r.Method,
-			"path", r.URL.Path,
+			"path", LogPath(r.URL.Path),
 			"status", ww.Status(),
 			"bytes", ww.BytesWritten(),
 			"duration_ms", time.Since(start).Milliseconds(),
