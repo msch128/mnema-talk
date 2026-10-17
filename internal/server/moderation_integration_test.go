@@ -333,10 +333,14 @@ func TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores(t *testing.T) {
 	if !flagged {
 		t.Error("the user list does not flag the ban")
 	}
+	// Enable lifts a disabling, never a ban.
 	manager := a.register(f.admin, "manager")
 	assignRoles(t, f.admin, manager, createRole(t, f.admin, "managers", perm.ManageMembers))
-	if res := manager.post("/api/admin/users/"+outlaw+"/enable", nil); res.status != http.StatusForbidden {
-		t.Errorf("enable lifts a ban without the ban permission: %d", res.status)
+	if res := manager.post("/api/admin/users/"+outlaw+"/enable", nil); res.status != http.StatusNoContent {
+		t.Errorf("enable: %d", res.status)
+	}
+	if res := a.anon().post("/api/auth/login", map[string]string{"username": "outlaw", "password": "member-password-123"}); res.status != http.StatusForbidden {
+		t.Errorf("enable lifted a ban: %d", res.status)
 	}
 
 	if res := f.mod.delete("/api/admin/users/" + outlaw + "/ban"); res.status != http.StatusNoContent {
@@ -403,4 +407,62 @@ func (w *wsConn) collect(within time.Duration, types ...string) map[string]json.
 		}
 	}
 	return got
+}
+
+// Ban and Disable are separate states: lifting one never lifts the other, and
+// a ban leaves a running timeout alone.
+func TestBanAndDisableDoNotClobberEachOther(t *testing.T) {
+	f := newModerationFixture(t, false)
+	id := f.target.user.ID.String()
+	login := func() int {
+		return f.a.anon().post("/api/auth/login", map[string]string{"username": "troll", "password": "member-password-123"}).status
+	}
+	if res := f.timeout(f.mod, f.target, 3600, "t"); res.status != http.StatusOK {
+		t.Fatal(res.status)
+	}
+	if res := f.mod.post("/api/admin/users/"+id+"/disable", nil); res.status != http.StatusNoContent {
+		t.Fatal(res.status)
+	}
+	if res := f.mod.post("/api/admin/users/"+id+"/ban", map[string]any{"reason": "r"}); res.status != http.StatusNoContent {
+		t.Fatal(res.status)
+	}
+	var timeoutLeft bool
+	if err := f.a.db.QueryRow(context.Background(), `SELECT timeout_until > NOW() FROM users WHERE id = $1`, f.target.user.ID).Scan(&timeoutLeft); err != nil || !timeoutLeft {
+		t.Fatalf("a ban cleared the timeout: %v %v", timeoutLeft, err)
+	}
+	// Unbanning leaves the account disabled.
+	if res := f.mod.delete("/api/admin/users/" + id + "/ban"); res.status != http.StatusNoContent {
+		t.Fatal(res.status)
+	}
+	if got := login(); got != http.StatusForbidden {
+		t.Fatalf("unban re-enabled a disabled account: %d", got)
+	}
+	// Enabling it brings the account back.
+	if res := f.mod.post("/api/admin/users/"+id+"/enable", nil); res.status != http.StatusNoContent {
+		t.Fatal(res.status)
+	}
+	if got := login(); got != http.StatusOK {
+		t.Fatalf("enabled account cannot sign in: %d", got)
+	}
+
+	// An expiring ban does not enable a disabled account either, and an
+	// expired ban stops counting before the job clears it.
+	f.mod.post("/api/admin/users/"+id+"/disable", nil)
+	f.mod.post("/api/admin/users/"+id+"/ban", map[string]any{"duration_seconds": 3600})
+	ctx := context.Background()
+	if _, err := f.a.db.Exec(ctx, `UPDATE users SET banned_until = NOW() - INTERVAL '1 second' WHERE id = $1`, f.target.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	f.a.router.preview.accounts.ExpireBans(ctx)
+	if got := login(); got != http.StatusForbidden {
+		t.Fatalf("expiry re-enabled a disabled account: %d", got)
+	}
+	f.mod.post("/api/admin/users/"+id+"/enable", nil)
+	f.mod.post("/api/admin/users/"+id+"/ban", map[string]any{"duration_seconds": 3600})
+	if _, err := f.a.db.Exec(ctx, `UPDATE users SET banned_until = NOW() - INTERVAL '1 second' WHERE id = $1`, f.target.user.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got := login(); got != http.StatusOK {
+		t.Fatalf("an expired ban still blocks (before the job ran): %d", got)
+	}
 }

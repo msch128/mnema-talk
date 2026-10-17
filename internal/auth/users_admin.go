@@ -95,7 +95,7 @@ func SetDisabled(ctx context.Context, p db.Querier, id uuid.UUID, disabled bool)
 			token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, id)
 		return err
 	}
-	_, err := p.Exec(ctx, clearBanSQL, id)
+	_, err := p.Exec(ctx, `UPDATE users SET disabled_at = NULL, updated_at = NOW() WHERE id = $1`, id)
 	return err
 }
 
@@ -299,13 +299,6 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
 		return err
-	}
-	// A banned account is only restored by whoever may unban.
-	var banned bool
-	if err := h.Sessions.DB.QueryRow(r.Context(), `SELECT banned_at IS NOT NULL FROM users WHERE id = $1`, id).Scan(&banned); err == nil && banned {
-		if err := h.requireBanPermission(r); err != nil {
-			return err
-		}
 	}
 	if err := h.moderated(r, id, func(q db.Querier) error { return SetDisabled(r.Context(), q, id, false) }); err != nil {
 		return err

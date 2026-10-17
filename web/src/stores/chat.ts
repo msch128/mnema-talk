@@ -30,6 +30,7 @@ import {
   PAGE_SIZE, WINDOW_CAP, emptyWindow, fromLatest, fromAround,
   prependOlder, appendNewer, appendLive, removeMessage
 } from '../lib/messageWindow'
+import { noticeText } from '../lib/moderation'
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
 import { currentRoute, navigate, voiceMessagePath } from '../lib/router'
 import { mentionsUser, shouldNotify, createKeyedThrottle } from '../lib/chatLogic'
@@ -906,6 +907,21 @@ export const useChatStore = defineStore('chat', () => {
 
       case 'user_update':
         if (p) updateUserEverywhere(p)
+        break
+
+      case 'member_timeout': {
+        const idx = members.value.findIndex(member => member.id === p.id)
+        const existing = members.value[idx]
+        if (existing) {
+          const { timeout_until: _gone, ...rest } = existing
+          members.value[idx] = p.timeout_until ? { ...rest, timeout_until: p.timeout_until } : rest
+        }
+        break
+      }
+
+      case 'moderation_notice':
+        useToastStore().info(noticeText(p))
+        usePermissionsStore().load()
         break
 
       case 'message_update':

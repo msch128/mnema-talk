@@ -165,7 +165,7 @@ func (h *Handler) timeoutUser(w http.ResponseWriter, r *http.Request) error {
 	// Talk they are in ends for them.
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout", Until: &until, Seconds: req.DurationSeconds, Reason: reason})
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "timeout_until": until})
+	h.Events.Broadcast("member_timeout", map[string]any{"id": id, "timeout_until": until})
 	httpx.WriteJSON(w, http.StatusOK, TimeoutState{UserID: id, TimeoutUntil: until, Reason: reason})
 	return nil
 }
@@ -202,7 +202,7 @@ func (h *Handler) untimeoutUser(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.Perms.Changed([]uuid.UUID{id})
 	h.notify(id, notice{Kind: "timeout_removed"})
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "timeout_until": nil})
+	h.Events.Broadcast("member_timeout", map[string]any{"id": id, "timeout_until": nil})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -269,12 +269,13 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-// setBan records a ban: the account is disabled (which is what blocks every
-// session and sign-in), its sessions end, and optionally its invite is revoked.
+// setBan records a ban: it blocks every session and sign-in (see ActiveSQL),
+// its sessions end, and optionally its invite is revoked.
 func setBan(ctx context.Context, q db.Querier, id, by uuid.UUID, reason string, until *time.Time, revokeInvite bool) error {
-	if _, err := q.Exec(ctx, `UPDATE users SET disabled_at = COALESCE(disabled_at, NOW()),
-		banned_at = NOW(), banned_until = $2, ban_reason = $3, banned_by = $4,
-		timeout_until = NULL, timeout_reason = '', timeout_by = NULL,
+	// The ban is its own state: disabled_at is neither set nor cleared, so
+	// lifting the ban never re-enables an account an admin disabled, and a
+	// running timeout stays what it was.
+	if _, err := q.Exec(ctx, `UPDATE users SET banned_at = NOW(), banned_until = $2, ban_reason = $3, banned_by = $4,
 		token_version = token_version + 1, updated_at = NOW() WHERE id = $1`, id, until, reason, by); err != nil {
 		return err
 	}
@@ -327,7 +328,7 @@ func (h *Handler) unbanUser(w http.ResponseWriter, r *http.Request) error {
 }
 
 // clearBanSQL lifts a ban and the disabling that came with it.
-const clearBanSQL = `UPDATE users SET disabled_at = NULL, banned_at = NULL, banned_until = NULL,
+const clearBanSQL = `UPDATE users SET banned_at = NULL, banned_until = NULL,
 	ban_reason = '', banned_by = NULL, updated_at = NOW() WHERE id = $1`
 
 // listBans handles GET /api/admin/bans.
@@ -374,7 +375,8 @@ func (h *Handler) listBans(w http.ResponseWriter, r *http.Request) error {
 func bannedError(ctx context.Context, p db.Querier, id uuid.UUID) error {
 	var reason string
 	var until *time.Time
-	err := p.QueryRow(ctx, `SELECT ban_reason, banned_until FROM users WHERE id = $1 AND banned_at IS NOT NULL`, id).Scan(&reason, &until)
+	err := p.QueryRow(ctx, `SELECT ban_reason, banned_until FROM users
+		WHERE id = $1 AND banned_at IS NOT NULL AND (banned_until IS NULL OR banned_until > NOW())`, id).Scan(&reason, &until)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrAccountDisabled
 	}
@@ -407,7 +409,7 @@ func (h *Handler) RunBanExpiry(ctx context.Context, interval time.Duration) {
 
 // ExpireBans lifts the bans whose time has come.
 func (h *Handler) ExpireBans(ctx context.Context) {
-	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET disabled_at = NULL, banned_at = NULL, banned_until = NULL,
+	rows, err := h.Sessions.DB.Query(ctx, `UPDATE users SET banned_at = NULL, banned_until = NULL,
 		ban_reason = '', banned_by = NULL, updated_at = NOW()
 		WHERE banned_at IS NOT NULL AND banned_until IS NOT NULL AND banned_until <= NOW()
 		RETURNING id, username`)
@@ -437,20 +439,4 @@ func (h *Handler) ExpireBans(ctx context.Context) {
 			h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": false})
 		}
 	}
-}
-
-// requireBanPermission demands Ban members of the caller.
-func (h *Handler) requireBanPermission(r *http.Request) error {
-	actor := UserFrom(r.Context())
-	if h.Perms == nil || actor == nil || actor.IsAdmin() {
-		return nil
-	}
-	p, err := h.Perms.Global(r.Context(), actor.Subject())
-	if err != nil {
-		return err
-	}
-	if name := p.MissingName(perm.BanMembers); name != "" {
-		return httpx.ErrForbidden("a banned member can only be restored by someone who may unban: missing permission: " + name)
-	}
-	return nil
 }

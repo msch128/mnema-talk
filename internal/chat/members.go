@@ -28,7 +28,7 @@ func GetAllMembers(ctx context.Context, p *db.Pool) ([]auth.User, error) {
 		SELECT id, username, display_name, bio, role, avatar_s3_key, status_text, created_at,
 		       voice_seconds, message_count
 		FROM users
-		WHERE disabled_at IS NULL AND NOT is_bot
+		WHERE `+auth.ActiveSQL("")+` AND NOT is_bot
 		ORDER BY CASE WHEN role = 'admin' THEN 0 ELSE 1 END, display_name`)
 	if err != nil {
 		return nil, fmt.Errorf("query members: %w", err)

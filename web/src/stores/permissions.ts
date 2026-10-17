@@ -31,6 +31,12 @@ export const usePermissionsStore = defineStore('permissions', () => {
   const channelPermissions = computed(() => new Map((info.value?.channels ?? []).map(c => [c.channel_id, c.permissions])))
   const topPosition = computed(() => info.value?.top_position ?? 0)
   const myRoleIds = computed(() => info.value?.role_ids ?? [])
+  // A running timeout, as milliseconds since the epoch; null without one.
+  const timeoutUntil = computed(() => {
+    const until = info.value?.timeout_until
+    return until ? Date.parse(until) : null
+  })
+  const timeoutReason = computed(() => info.value?.timeout_reason ?? '')
   /** The largest file the member may upload, in MB; null until known. */
   const maxUploadMb = computed(() => info.value?.max_upload_mb ?? null)
 
@@ -109,7 +115,7 @@ export const usePermissionsStore = defineStore('permissions', () => {
   }
 
   return {
-    info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, canOpenAdmin,
+    info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, timeoutUntil, timeoutReason, canOpenAdmin,
     can, canIn, outranks, outranksMember, roleById, rolesOf, nameColor, setMemberRoles, load, loadRoles, reset
   }
 })

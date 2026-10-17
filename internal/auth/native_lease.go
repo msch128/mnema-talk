@@ -47,7 +47,7 @@ func (s *NativeSessions) authenticateNativeHash(ctx context.Context, hash [32]by
 		FROM native_access_tokens a JOIN native_session_families f ON f.id=a.family_id
 		JOIN users u ON u.id=f.user_id WHERE a.token_hash=$1
 		AND a.expires_at>clock_timestamp() AND f.expires_at>clock_timestamp()
-		AND f.revoked_at IS NULL AND u.disabled_at IS NULL AND f.issued_token_version=u.token_version`, hash[:]),
+		AND f.revoked_at IS NULL AND `+ActiveSQL("u")+` AND f.issued_token_version=u.token_version`, hash[:]),
 		&principal.familyID, &principal.instanceID, &principal.tokenVersion, &principal.accessExpiresAt, &principal.familyExpiresAt, &databaseNow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return NativePrincipal{}, time.Time{}, ErrNativeUnauthorized

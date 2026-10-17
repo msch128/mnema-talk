@@ -235,7 +235,7 @@ func GetUser(ctx context.Context, p db.Querier, id uuid.UUID) (*User, error) {
 func sessionUser(ctx context.Context, p *db.Pool, id uuid.UUID, jti string) (*User, int, error) {
 	var tv int
 	u, err := scanUser(p.QueryRow(ctx, `SELECT `+userColumns+`, token_version FROM users
-		WHERE id = $1 AND disabled_at IS NULL AND NOT is_bot
+		WHERE id = $1 AND `+ActiveSQL("")+` AND NOT is_bot
 		AND NOT EXISTS (SELECT 1 FROM revoked_sessions WHERE jti = $2)`, id, jti), &tv)
 	return u, tv, err
 }
@@ -246,7 +246,7 @@ func Login(ctx context.Context, p *db.Pool, username, password string) (*User, i
 	var tv int
 	var disabled bool
 	u, err := scanUser(p.QueryRow(ctx,
-		`SELECT `+userColumns+`, password_hash, token_version, disabled_at IS NOT NULL FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
+		`SELECT `+userColumns+`, password_hash, token_version, `+InactiveSQL("")+` FROM users WHERE LOWER(username) = LOWER($1) AND NOT is_bot`,
 		strings.TrimSpace(username)), &hash, &tv, &disabled)
 	if errors.Is(err, pgx.ErrNoRows) {
 		burnPasswordCheck(password)

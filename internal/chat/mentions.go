@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
 )
 
@@ -96,7 +97,7 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	if all || len(usernames) > 0 || (here && len(online) > 0) {
 		rows, err := q.Query(ctx, `
 			SELECT id FROM users
-			WHERE disabled_at IS NULL AND NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
+			WHERE `+auth.ActiveSQL("")+` AND NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
 		if err != nil {
 			return nil, fmt.Errorf("resolve mentions: %w", err)
 		}

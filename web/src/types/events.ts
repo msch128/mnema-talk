@@ -1,5 +1,6 @@
 // WebSocket is not represented in OpenAPI. These payloads follow
 // internal/ws/{handle,voice,presence,signal,lifecycle}.go and chat publications.
+import type { ModerationNotice } from '../lib/moderation'
 import type { Message, ReactionSummary, ReadState, User, UserUpdate, VoiceUser, Presence } from './domain'
 import { isAuthUser, isChatMessage, isChatReactionSummary, isChatNotifyLevel } from './rest'
 import { ContractError, hasOwn, isRecord, isIdentifier, isTimestamp, isInteger, isString, isArrayOf, isDictionaryOf } from './validation'
@@ -44,6 +45,10 @@ export interface ServerEventPayloads {
   message_delete: { id: string; channel_id: string; parent_id: string | null }
   message_reaction: { message_id: string; channel_id?: string; reactions: ReactionSummary[] }
   user_update: UserUpdate
+  /** A member's timeout started (timeout_until) or ended (null). */
+  member_timeout: { id: string; timeout_until: string | null }
+  /** Told to the member a moderator acted on. */
+  moderation_notice: ModerationNotice
   webrtc_offer: { type: 'offer'; sdp: string }
   webrtc_candidate: RTCIceCandidateInit
   voice_snapshot: VoiceSnapshot
@@ -169,6 +174,12 @@ export function isServerEvent(value: unknown): value is ServerEvent {
     case 'user_update': return hasOwn(payload, 'disabled')
       ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
       : isAuthUser(payload)
+    case 'member_timeout': return isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
+      && onlyFields(payload, ['id', 'timeout_until'])
+    case 'moderation_notice': return (payload['kind'] === 'timeout' || payload['kind'] === 'timeout_removed' || payload['kind'] === 'ban')
+      && isString(payload['reason'], 400)
+      && (!hasOwn(payload, 'until') || isTimestamp(payload['until']))
+      && (!hasOwn(payload, 'duration_seconds') || isInteger(payload['duration_seconds']))
     case 'webrtc_offer': return payload['type'] === 'offer' && isString(payload['sdp'], 262_144)
     case 'webrtc_candidate': return isIceCandidate(payload)
     case 'voice_state_update': return isIdentifier(payload['channel_id']) && (
@@ -195,7 +206,7 @@ export function isServerEvent(value: unknown): value is ServerEvent {
 const SERVER_EVENT_TYPES = new Set<string>([
   'pong', 'server_info', 'system_update', 'presence_snapshot', 'presence_update', 'member_joined',
   'channels_changed', 'permissions_changed', 'roles_changed', 'typing', 'read_state', 'message_create', 'message_update', 'message_delete',
-  'message_reaction', 'user_update', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
+  'message_reaction', 'user_update', 'member_timeout', 'moderation_notice', 'webrtc_offer', 'webrtc_candidate', 'voice_snapshot',
   'voice_state_update', 'voice_rooms', 'user_stats', 'webrtc_media_state', 'screen_viewers',
   'screen_layers', 'screen_quality', 'screen_layers_wanted', 'voice_speaking', 'voice_mute_state', 'voice_kicked', 'media_handshake'
 ])
