@@ -85,11 +85,21 @@ beyond its size limit, the request is trimmed first (`request_truncated`), then
 
 Only the Owner and holders of the **View audit log** permission may read it
 (`GET /api/admin/audit-log`; the permission also opens the admin console on the
-*Audit log* tab). *Administrator* includes it. Entries about webhooks and bots, system and media
-administration, settings and the Owner-only account actions (setting or
-resetting a password, clearing a login lock) are only returned to the Owner and
-Administrators, even to holders of *View audit log* (`audit.Sensitive`). The
-audit log is not sent to outgoing webhooks.
+*Audit log* tab). *Administrator* includes it. What a reader sees depends on the class of the entry. The table lives in code
+(`audit.Classes`, pinned action by action in a test), so a new action cannot
+quietly default to something wider than intended; this is the same table.
+
+| Class | Who reads it | Actions |
+|---|---|---|
+| Auditors | Every holder of *View audit log* | `role.*`, `user.*` except the Owner-only ones below, `invite.*`, `category.*`, `layout.apply` (and the moderation actions of later releases) |
+| Channel | Holders of *View audit log* **who can view the entry's channel when they read** | `message.*`, `voice.*`, `channel.*` (a private channel's name, topic and overwrites are private too) |
+| Owner and Administrators only | The Owner and members with *Administrator* | `auth.*` (sign-ins, failures, lockouts, password changes of other members), `webhook.*`, `outgoing_webhook.*`, `bot.*`, `media.*`, `settings.*`, `system.*`, `user.password_set`, `user.password_reset`, `user.lockout_clear`, `admin.*` (routes not yet named in the route table) |
+
+The check runs on every read against the current permissions, so access that is
+granted later also opens the older entries of that channel, and access that is
+taken away closes them. The Owner and Administrators see everything. Deleted
+thread replies are recorded by id only; a reply deleted on its own has its own
+entry with its text. The audit log is not sent to outgoing webhooks.
 
 ### API
 

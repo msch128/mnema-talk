@@ -80,8 +80,11 @@ func TestAuditKeepsDeletedAndEditedMessages(t *testing.T) {
 	if !strings.Contains(flaggedEntry["content"].(string), "token=abc") {
 		t.Error("deleted message text must be kept in full")
 	}
-	if replies, _ := flaggedEntry["replies"].([]any); len(replies) != 1 {
-		t.Errorf("replies %v", flaggedEntry["replies"])
+	if ids, _ := flaggedEntry["reply_ids"].([]any); len(ids) != 1 {
+		t.Errorf("reply ids %v", flaggedEntry["reply_ids"])
+	}
+	if strings.Contains(string(mustJSON(flaggedEntry)), "a reply") {
+		t.Error("reply text must not be copied into the parent's entry")
 	}
 	if editEntry == nil || editEntry["before"] != "before edit" || editEntry["after"] != "after edit" {
 		t.Errorf("edit entry %v", editEntry)

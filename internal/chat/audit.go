@@ -18,7 +18,7 @@ const maxAuditedReplies = 50
 type auditSnapshot struct {
 	msg     *Message
 	channel string
-	replies []map[string]any
+	replies []uuid.UUID
 }
 
 // snapshotMessage reads what the audit log needs to know about a message. A
@@ -34,18 +34,15 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 	s := &auditSnapshot{msg: msg}
 	_ = h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel)
 	if withReplies && msg.ReplyCount > 0 {
-		rows, err := h.DB.Query(ctx, `
-			SELECT r.id, r.user_id, u.username, r.content, r.created_at
-			FROM messages r JOIN users u ON u.id = r.user_id
-			WHERE r.parent_id = $1 ORDER BY r.created_at LIMIT $2`, id, maxAuditedReplies)
+		// Ids only: replies are other members' messages, and one that is
+		// deleted on its own gets its own entry with its text.
+		rows, err := h.DB.Query(ctx, `SELECT id FROM messages WHERE parent_id = $1 ORDER BY created_at LIMIT $2`, id, maxAuditedReplies)
 		if err == nil {
 			defer rows.Close()
 			for rows.Next() {
-				var rid, uid uuid.UUID
-				var name, content string
-				var at any
-				if rows.Scan(&rid, &uid, &name, &content, &at) == nil {
-					s.replies = append(s.replies, map[string]any{"id": rid, "author_id": uid, "author_name": name, "content": audit.Content(content), "created_at": at})
+				var rid uuid.UUID
+				if rows.Scan(&rid) == nil {
+					s.replies = append(s.replies, rid)
 				}
 			}
 		}
@@ -82,8 +79,9 @@ func (h *Handler) auditDelete(ctx context.Context, user *auth.User, id uuid.UUID
 	if s != nil {
 		e.Details = s.details()
 		e.Details["moderator"] = s.msg.UserID != user.ID
-		e.Details["replies"] = s.replies
+		e.Details["reply_ids"] = s.replies
 		e.TargetName = s.channel
+		e.ChannelID = &s.msg.ChannelID
 	}
 	h.Audit.RecordOrLog(ctx, e)
 }
@@ -97,5 +95,5 @@ func (h *Handler) auditEdit(ctx context.Context, id uuid.UUID, s *auditSnapshot,
 	delete(d, "content")
 	d["before"] = audit.Content(s.msg.Content)
 	d["after"] = audit.Content(after)
-	h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, Details: d})
+	h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.edit", TargetType: "message", TargetID: id.String(), TargetName: s.channel, ChannelID: &s.msg.ChannelID, Details: d})
 }

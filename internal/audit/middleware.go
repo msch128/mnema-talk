@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 )
 
 const (
@@ -122,6 +123,11 @@ func (l *Log) Middleware(next http.Handler) http.Handler {
 			}
 			if json.Unmarshal(resp.buf.Bytes(), &out) == nil {
 				e.TargetID, e.TargetName = out.ID, out.Name
+			}
+		}
+		if e.TargetType == "channel" {
+			if id, err := uuid.Parse(e.TargetID); err == nil {
+				e.ChannelID = &id
 			}
 		}
 		l.RecordOrLog(ctx, e)

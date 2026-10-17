@@ -54,6 +54,6 @@ func writePresence(ctx context.Context, l *audit.Log, q db.Querier, ev presenceE
 	}
 	l.RecordOrLog(ctx, audit.Entry{
 		ActorID: &ev.user, ActorName: username, Action: action,
-		TargetType: "channel", TargetID: ev.channel.String(), TargetName: channel,
+		TargetType: "channel", TargetID: ev.channel.String(), TargetName: channel, ChannelID: &ev.channel,
 	})
 }

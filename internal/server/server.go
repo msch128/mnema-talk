@@ -124,7 +124,7 @@ func NewRouter(d Deps) (*Router, error) {
 		pub = d.Events
 	}
 
-	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Privileged: auditPrivileged(permSvc)}
+	auditLog := &audit.Log{DB: d.DB, Actor: auditActor, Viewer: auditViewer(permSvc)}
 	go auditLog.RunRetention(ctx, cfg.AuditRetentionDays, 6*time.Hour)
 
 	authH := auth.NewHandler(sessions, pub)
@@ -304,16 +304,24 @@ func auditActor(ctx context.Context) (uuid.UUID, string, bool) {
 	return uuid.Nil, "", false
 }
 
-// auditPrivileged says whether the signed-in user is the Owner or holds
-// Administrator, which the sensitive audit entries require.
-func auditPrivileged(svc *perm.Service) func(context.Context) (bool, error) {
-	return func(ctx context.Context) (bool, error) {
+// auditViewer says what the signed-in user may read in the audit log: the
+// Owner and Administrators everything, others the entries of the channels
+// they can view (audit.Classes).
+func auditViewer(svc *perm.Service) func(context.Context) (audit.Viewer, error) {
+	return func(ctx context.Context) (audit.Viewer, error) {
 		u := auth.UserFrom(ctx)
 		if u == nil {
-			return false, nil
+			return audit.Viewer{}, nil
 		}
-		p, err := svc.Global(ctx, u.Subject())
-		return p.Has(perm.Administrator), err
+		snap, err := svc.Snapshot(ctx)
+		if err != nil {
+			return audit.Viewer{}, err
+		}
+		sub := u.Subject()
+		if snap.Global(sub).Has(perm.Administrator) {
+			return audit.Viewer{Privileged: true}, nil
+		}
+		return audit.Viewer{Channels: snap.ViewableChannels(sub)}, nil
 	}
 }
 
