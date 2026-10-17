@@ -1,8 +1,8 @@
 # Trusted desktop client: a signed web app instead of server JavaScript
 
-Status: design and implementation of roadmap item 0.9.1. The release
-tooling and the server side are in this repository; the Tauri host that
-verifies and loads the bundle is in
+Status: implemented (roadmap item 0.9.1). The release tooling is in this
+repository and needs no server change; the Tauri host that verifies and loads
+the bundle is in
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop).
 
 ## Why
@@ -150,7 +150,8 @@ limit).
 ### Rollback protection
 
 The host keeps `state.json` next to the cache:
-`{ "highest_version", "security_floor", "last_check" }`.
+`{ "security_floor", "last_check" }`. The floor is recomputed from the held
+bundles if the file is lost.
 
 * A bundle is refused when `version < security_floor`, where the floor is the
   maximum of every `security_floor` of every manifest that has verified so
@@ -193,9 +194,13 @@ feature protects against (it controls `web_client_api` and `version`); a user
 who is told "the server's app is different, continue?" has no way to judge
 it; and the old mode would keep the original hole one click away. The
 legacy path is removed from the host rather than hidden. Whoever needs to
-run an unreleased web app builds the host themselves with their own bundle
-and key (`MNEMA_BUNDLE_ZIP`, `MNEMA_DEV_TRUSTED_KEYS` at build time, never in
-release builds).
+run an unreleased web app signs a bundle with a key of their own and builds a
+host that pins that key (`MNEMA_BUNDLE_ZIP` embeds it); the pinned list is in
+the source, not configurable at run time.
+
+One address exception exists: an instance on the same machine may be entered
+as `http://localhost`, `http://127.0.0.1` or `http://[::1]` (a development
+stack). Anything else must be HTTPS with normal system certificate checks.
 
 ## Origin and authentication
 

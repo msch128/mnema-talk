@@ -154,7 +154,9 @@ from `.env`). In development an empty value generates a password and logs it onc
 The browser app and Linux Docker deployment are the normal maintained product
 path. The Windows Desktop DEV client (separate
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository)
-loads the instance's own web app in WebView2 and includes the Gaming
+runs a signed, locally verified bundle of this web app (the instance supplies
+data, never code; see [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md))
+in WebView2 and includes the Gaming
 integration (sidepeek, Alt+M, Talk controls and persisted shortcut settings).
 Windows gaming uses native topmost windows; game and fullscreen compatibility
 still need testing on the target machine. macOS and Linux desktop clients

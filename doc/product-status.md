@@ -32,15 +32,18 @@ The Windows desktop app lives in the separate
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository
 and is an unsigned Tauri DEV client, including the Gaming integration described
 in the [usage guide](desktop-app.md#windows-gaming-dev). Its local instance
-selector checks HTTPS and `web_client_api: 1`; it then opens the same Vue app
-served by the chosen instance inside WebView2. That remote page uses same-origin
-browser cookies, REST and WebSockets and receives no native IPC permissions
-beyond the gaming integration's session-bound, selected-origin Talk-state sync
-command; local gaming surfaces hold their separate display/control permissions.
-It does not grant the instance cryptographic or selector authority.
-The selected instance supplies executable web code as well as community data.
-A locally bundled protected communication client remains an outstanding target;
-the current web-client mode does not establish that boundary.
+selector checks HTTPS (or a loopback address) and the server's `web_client_api`
+and release; it then opens the Vue app from a **signed bundle that the client
+verified** (built into the installer or downloaded from this repository's
+releases, Ed25519 key pinned in the client) at the client's own origin. The
+client forwards `/api/` to the instance, keeps the session cookie and relays the
+WebSocket, so the instance supplies community data and never executable code
+([design and threat model](desktop-trusted-client.md)). The page receives only
+the WebSocket commands and the gaming integration's session-bound Talk-state
+sync; local gaming surfaces hold their separate display/control permissions.
+Status: unit-tested and run on macOS during development; Windows/WebView2
+acceptance (custom-protocol mapping, media permission prompts, gaming surfaces,
+sealed media on real hardware) is outstanding, and the installer is unsigned.
 
 Voice in the desktop client uses the instance's browser path, so microphone,
 camera and screen payloads are sealed in WebView2 by the same code as in a
