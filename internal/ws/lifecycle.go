@@ -251,8 +251,12 @@ func (h *Hub) Close() {
 	}
 	h.closed = true
 	clients := make([]*Client, 0, len(h.clients))
+	online := make([]uuid.UUID, 0, len(h.online))
 	for c := range h.clients {
 		clients = append(clients, c)
+	}
+	for id := range h.online {
+		online = append(online, id)
 	}
 	for c := range h.pending {
 		delete(h.pending, c)
@@ -263,9 +267,24 @@ func (h *Hub) Close() {
 		delete(h.grace, key)
 	}
 	h.mu.Unlock()
+	// Everyone still connected goes offline now. Record it here, while the
+	// database is still open: the connections' own clean-up runs after the
+	// server has moved on to closing it.
+	h.recordLastSeen(online...)
 	for _, c := range clients {
 		c.shutdown()
 		c.close()
+	}
+}
+
+func (h *Hub) recordLastSeen(ids ...uuid.UUID) {
+	if h.DB == nil || len(ids) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := h.DB.Exec(ctx, `UPDATE users SET last_seen_at = NOW() WHERE id = ANY($1)`, ids); err != nil {
+		slog.Warn("record last seen", "users", len(ids), "err", err)
 	}
 }
 
@@ -281,6 +300,8 @@ func (h *Hub) unregister(c *Client) {
 		return
 	}
 	before := h.statusLocked(c.User.ID)
+	// Close has recorded last seen for everyone already.
+	closing := h.closed
 	delete(h.clients, c)
 	c.shutdown()
 	h.online[c.User.ID]--
@@ -294,14 +315,8 @@ func (h *Hub) unregister(c *Client) {
 	h.mu.Unlock()
 
 	slog.Info("ws disconnected", "user", c.User.Username)
-	if offline {
-		if h.DB != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			if _, err := h.DB.Exec(ctx, `UPDATE users SET last_seen_at = NOW() WHERE id = $1`, c.User.ID); err != nil {
-				slog.Warn("record last seen", "user", c.User.ID, "err", err)
-			}
-			cancel()
-		}
+	if offline && !closing {
+		h.recordLastSeen(c.User.ID)
 	}
 	h.announcePresence(c.User.ID, before, after)
 }
