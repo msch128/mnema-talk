@@ -79,14 +79,24 @@ type voiceTimes struct {
 // tells those who can see the room the new total. Writes of one user are
 // spaced voiceTimeFlushEvery apart: a stay ending sooner after the last write
 // waits for a timer (or the hub's shutdown) and is written together with
-// whatever follows.
+// whatever follows in the same Talk; a stay in a different Talk first writes
+// the held time of the previous one.
 func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
 	secs := int64(d / time.Second)
 	if h.DB == nil || secs <= 0 {
 		return
 	}
-	now := time.Now()
+	// Held time of another Talk is written, and announced to that Talk's
+	// viewers only, before this stay is added: one pending total never mixes
+	// two Talks, so it cannot reveal a hidden Talk to the viewers of a
+	// visible one.
 	h.vtimes.mu.Lock()
+	if p := h.vtimes.m[userID]; p != nil && p.secs > 0 && p.channel != chID {
+		h.vtimes.mu.Unlock()
+		h.flushVoiceTime(userID)
+		h.vtimes.mu.Lock()
+	}
+	now := time.Now()
 	if h.vtimes.m == nil {
 		h.vtimes.m = map[uuid.UUID]*pendingVoiceTime{}
 	}
