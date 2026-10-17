@@ -808,7 +808,7 @@
       "selfUpdateStalled": "After 5 minutes the old version is still running. Check the updater's log (docker compose logs updater) and whether MNEMA_IMAGE uses a tag that contains the new version.",
       "selfUpdateDone": "Version {version} is running",
       "selfUpdateCooldown": "An update was just requested; the next one is possible from {when}.",
-      "selfUpdateNotConfigured": "Updating from within Mnema is not set up (optional updater, see README \"Updates\").",
+      "selfUpdateNotConfigured": "Updating from within Mnema is not set up (optional updater, see doc/deployment.md \"Updates\").",
       "ops": {
         "heading": "Live operations",
         "hint": "The last hour, refreshed every 10 seconds. Prometheus can read the same numbers (METRICS_TOKEN).",
