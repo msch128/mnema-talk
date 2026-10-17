@@ -1,0 +1,27 @@
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_be79392f294d49 9,20-26,30,32,35,146,148,150-158,161-234
+SECURITY.md
+  s_06fcde5dbef956::t_47c2d92feede48 108-110
+internal/auth/knowndevice.go
+  s_06fcde5dbef956::t_189d0dfe91990f 4,13-14,43,45,49-52,55,57-67,69,71-74,76,79-83,86-88,97-111,113-118
+internal/auth/handler.go
+  s_06fcde5dbef956::t_189d0dfe91990f 38-39,123,150-152,366
+internal/auth/device_generation_integration_test.go
+  s_06fcde5dbef956::t_7f8dd9cd82b140 1-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8993ca23c433ca9356a1215a627525cfbe08d63b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
