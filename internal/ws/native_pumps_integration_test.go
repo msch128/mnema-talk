@@ -322,6 +322,9 @@ func TestNativeMediaRejectsBogusAnswerAndCandidate(t *testing.T) {
 	endpoint := mediaProbeAttach(t, conn, channel, false)
 	client := a.client(t, grant.Family)
 	mediaProbeWait(t, func() bool { return client.peer() != nil }, "native peer never created")
+	// Before the answer a candidate is held for it; once the session has a
+	// remote description a bogus one is refused on the spot.
+	mediaProbeWait(t, func() bool { return client.peer().PC.RemoteDescription() != nil }, "native session never negotiated")
 	secret := "bogus-" + uuid.NewString()
 	if err := endpoint.write("webrtc_answer", map[string]string{"type": "answer", "sdp": secret}); err != nil {
 		t.Fatal(err)
@@ -331,7 +334,7 @@ func TestNativeMediaRejectsBogusAnswerAndCandidate(t *testing.T) {
 	}
 	mediaProbeWait(t, func() bool {
 		out := logs.String()
-		return strings.Contains(out, "native sfu answer rejected") && strings.Contains(out, "native sfu candidate rejected")
+		return strings.Contains(out, "native sfu answer rejected") && strings.Contains(out, "sfu remote candidate dropped")
 	}, "bogus native answer/candidate not rejected")
 	if strings.Contains(logs.String(), secret) {
 		t.Fatal("rejection log carried request data")

@@ -91,13 +91,9 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 				slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 			}
 			if peer := c.peer(); peer != nil && c.nativeLive() {
-				if err := peer.PC.AddICECandidate(cand); err != nil {
-					if c.native == nil {
-						slog.Debug("sfu add ice candidate", "user", c.User.ID, "err", err)
-					} else {
-						slog.Debug("native sfu candidate rejected", "user", c.User.ID)
-					}
-				}
+				// Held until the answer is applied; a rejected candidate is
+				// logged by the SFU with its reason (rate-limited).
+				_ = peer.AddRemoteCandidate(cand)
 			}
 		}
 

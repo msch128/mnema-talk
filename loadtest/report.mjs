@@ -41,7 +41,14 @@ if (browsers) {
 const viewers = read('viewers.json')
 if (viewers) {
   say(`viewers    ${viewers.members} lightweight: never connected ${viewers.never_connected}, no video ${viewers.never_received}, flaps ${viewers.flaps}, candidate errors ${viewers.candidate_errors}, connect p50/p95 ${viewers.connect_ms_p50}/${viewers.connect_ms_p95} ms, first video p50/p95 ${viewers.first_video_ms_p50}/${viewers.first_video_ms_p95} ms, max gap ${viewers.max_stall_ms} ms, ${Math.round(viewers.avg_video_kbps)} kbit/s each${viewers.loss ? `, loss ${viewers.loss * 100}%` : ''}${viewers.jitter_ms ? `, jitter ${viewers.jitter_ms} ms` : ''}`)
-  if (viewers.never_connected > T.neverConnected) fail(`viewers: ${viewers.never_connected} of ${viewers.members} never reached ICE connected (allowed ${T.neverConnected})`)
+  if (viewers.never_connected > T.neverConnected) {
+    fail(`viewers: ${viewers.never_connected} of ${viewers.members} never reached ICE connected (allowed ${T.neverConnected}, ${viewers.ice_timed_out} hit the ICE timeout)`)
+    // Why, for the first few: viewers.json has the full timeline, candidates and pair statistics.
+    for (const m of (viewers.per_member || []).filter((m) => !m.ever_connected).slice(0, 5)) {
+      const ice = m.ice || {}
+      say(`  ${m.id.slice(0, 8)}: ice ${ice.ice_state || '?'}${ice.unresponsive ? ' (agent unresponsive, ' + ice.blocked_udp_writes + ' goroutines in a UDP write)' : ''}, ${m.candidates_sent} candidates sent, ${m.candidates_received} received, ${(ice.pairs || []).length} pairs`)
+    }
+  }
   if (viewers.never_received > T.neverConnected) fail(`viewers: ${viewers.never_received} of ${viewers.members} never received video`)
   if (viewers.failed) fail(`viewers: ${viewers.failed} signalling failure(s)`)
   if (viewers.max_stall_ms > T.viewerStallMs) fail(`viewers: longest gap without video ${viewers.max_stall_ms} ms > ${T.viewerStallMs} ms`)

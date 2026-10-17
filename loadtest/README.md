@@ -137,3 +137,26 @@ candidates until the answer is sent. Without that, a candidate can reach Pion
 before `SetRemoteDescription` (`AddICECandidate` then fails) or reach the server
 before it has the answer (it is dropped). `LEGACY_SIGNALLING=1` switches the
 queues off to reproduce the old behaviour for comparison.
+
+### When viewers never connect
+
+`viewers.json` and the console list every member that did not reach ICE
+connected: a timeline of its state changes with times, the candidates it
+gathered and the ones the server sent (and whether Pion accepted them), and
+Pion's candidate pair statistics (requests and responses per pair). A member
+that is still not connected after `ICE_TIMEOUT_S` (default 25) is recorded as
+failed with that data and closed; the result is written before the members are
+closed, and closing is bounded by `CLOSE_TIMEOUT_S` (default 10), so a stuck
+connection cannot hide the summary.
+
+`ICE agent unresponsive ... goroutines blocked in a UDP write` means the
+viewer's own ICE agent is frozen, not the server: Pion sends its connectivity
+checks from inside the agent's single task loop, so one `sendto` that the OS
+refuses (EAGAIN) stops the whole agent for good, and `Close` then waits
+forever on it. This showed on a multi-homed Mac, where the OS stopped
+accepting UDP datagrams from a socket to private-network addresses after a
+fixed number of them, which a viewer with several interfaces reaches within
+about a second when none of its first pairs is answered. Such a viewer
+connects in under a second or never. `ICE_INTERFACES=en0` (or any other
+interface list) and `ICE_UDP4_ONLY=1` restrict what the viewer gathers, to
+compare a multi-homed host with a single-homed one.

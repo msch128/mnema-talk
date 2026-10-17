@@ -1,0 +1,161 @@
+package sfu
+
+import (
+	"errors"
+	"log/slog"
+	"time"
+
+	"github.com/pion/webrtc/v4"
+)
+
+// Trickle ICE crosses two independent orderings, and both used to lose
+// candidates silently:
+//
+//   - The server's own candidates are gathered as soon as it sets its offer,
+//     concurrently with handing that offer to the signalling channel, so a
+//     candidate could reach the client before the offer. A browser rejects
+//     addIceCandidate without a remote description. They are now held back
+//     until the offer has been handed over.
+//   - A client's candidates can reach the server before its answer is applied
+//     (they are produced right after the client sets its local description,
+//     while the answer travels the same channel but is applied on the server
+//     only after it returns from SetRemoteDescription). Pion refuses them
+//     without a remote description. They are now kept and applied once the
+//     answer is.
+
+const (
+	// maxHeldCandidates bounds the candidates kept in either direction. A
+	// peer gathers a handful per interface; more than this is not a client
+	// worth keeping them for.
+	maxHeldCandidates = 64
+	// candidateWarnWindow and candidateWarnBurst rate-limit the log of
+	// dropped candidates per peer.
+	candidateWarnWindow = 30 * time.Second
+	candidateWarnBurst  = 3
+)
+
+var errTooManyCandidates = errors.New("too many candidates before the remote description")
+
+// candidateState is the per-peer bookkeeping of the two queues above.
+type candidateState struct {
+	// offered turns true once an offer was handed to SendOffer; the server's
+	// candidates flow after that.
+	offered bool
+	// out are the server's candidates gathered before that.
+	out []webrtc.ICECandidateInit
+	// early are the client's candidates received before its answer was applied.
+	early []webrtc.ICECandidateInit
+
+	warnWindow     time.Time
+	warnCount      int
+	warnSuppressed int
+}
+
+// emitCandidate hands one of the server's candidates to the client, or holds
+// it until the offer has been handed over.
+func (p *Peer) emitCandidate(c webrtc.ICECandidateInit) {
+	p.candMu.Lock()
+	defer p.candMu.Unlock()
+	if !p.cands.offered {
+		if len(p.cands.out) < maxHeldCandidates {
+			p.cands.out = append(p.cands.out, c)
+		}
+		return
+	}
+	if p.SendICE != nil {
+		// Under the lock so a candidate gathered now cannot overtake the
+		// flush of the earlier ones.
+		p.SendICE(&c)
+	}
+}
+
+// offerDelivered releases the candidates held back while the first offer was
+// being handed over. Later offers change nothing.
+func (p *Peer) offerDelivered() {
+	p.candMu.Lock()
+	defer p.candMu.Unlock()
+	if p.cands.offered {
+		return
+	}
+	p.cands.offered = true
+	held := p.cands.out
+	p.cands.out = nil
+	if p.SendICE == nil {
+		return
+	}
+	for i := range held {
+		p.SendICE(&held[i])
+	}
+}
+
+// AddRemoteCandidate applies a candidate of the client, or keeps it until
+// the client's answer is applied. A candidate Pion rejects is logged with its
+// reason (rate-limited, without the address) and returned.
+func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
+	p.candMu.Lock()
+	if p.PC.RemoteDescription() == nil {
+		defer p.candMu.Unlock()
+		if len(p.cands.early) >= maxHeldCandidates {
+			p.candidateDropped(errTooManyCandidates)
+			return errTooManyCandidates
+		}
+		p.cands.early = append(p.cands.early, c)
+		return nil
+	}
+	p.candMu.Unlock()
+	err := p.PC.AddICECandidate(c)
+	if err != nil {
+		p.candMu.Lock()
+		p.candidateDropped(err)
+		p.candMu.Unlock()
+	}
+	return err
+}
+
+// applyEarlyCandidates adds what arrived before the answer was applied.
+func (p *Peer) applyEarlyCandidates() {
+	p.candMu.Lock()
+	early := p.cands.early
+	p.cands.early = nil
+	p.candMu.Unlock()
+	for _, c := range early {
+		if err := p.PC.AddICECandidate(c); err != nil {
+			p.candMu.Lock()
+			p.candidateDropped(err)
+			p.candMu.Unlock()
+		}
+	}
+}
+
+// candidateDropped logs a rejected remote candidate. The caller holds candMu.
+func (p *Peer) candidateDropped(err error) {
+	now := time.Now()
+	if now.Sub(p.cands.warnWindow) >= candidateWarnWindow {
+		suppressed := p.cands.warnSuppressed
+		p.cands.warnWindow, p.cands.warnCount, p.cands.warnSuppressed = now, 0, 0
+		if suppressed > 0 {
+			slog.Warn("sfu more remote candidates dropped", "user", p.ID, "count", suppressed)
+		}
+	}
+	if p.cands.warnCount >= candidateWarnBurst {
+		p.cands.warnSuppressed++
+		return
+	}
+	p.cands.warnCount++
+	slog.Warn("sfu remote candidate dropped", "user", p.ID, "reason", candidateDropReason(err))
+}
+
+// candidateDropReason names why Pion refused a candidate without echoing the
+// candidate (it carries the client's address).
+func candidateDropReason(err error) string {
+	switch {
+	case errors.Is(err, errTooManyCandidates):
+		return "too many candidates before the answer"
+	case errors.Is(err, webrtc.ErrNoRemoteDescription):
+		return "no remote description"
+	case errors.Is(err, webrtc.ErrConnectionClosed):
+		return "connection closed"
+	default:
+		return "invalid candidate"
+	}
+}
