@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.24](https://github.com/msch128/mnema-talk/compare/v0.7.23...v0.7.24) (2026-10-17)
+
+
+### Features
+
+* **web:** manage webhooks in the channel menu ([#157](https://github.com/msch128/mnema-talk/issues/157)) ([ba4afd3](https://github.com/msch128/mnema-talk/commit/ba4afd3735029fca0280b09c1f93274051ee6cc4))
+
 ## [0.7.23](https://github.com/msch128/mnema-talk/compare/v0.7.22...v0.7.23) (2026-10-17)
 
 
