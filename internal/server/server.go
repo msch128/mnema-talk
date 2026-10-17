@@ -63,6 +63,8 @@ type Router struct {
 	// Webhooks is the incoming webhook handler (tests adjust its limits).
 	Webhooks *webhook.Handler
 	cancel   context.CancelFunc
+	// outgoing delivers outgoing webhooks; Close waits for it to settle.
+	outgoing *webhook.Dispatcher
 }
 
 // Close stops background work and closes the hub's upgraded WebSockets.
@@ -73,6 +75,10 @@ func (r *Router) Close() {
 	if r.cancel != nil {
 		r.cancel()
 	}
+	if r.outgoing != nil {
+		// Attempts in flight finish and the queue stays in the database.
+		r.outgoing.Wait(webhookStopWait)
+	}
 }
 
 // denyRefresh is how often the link-preview deny list (the server's own
@@ -81,6 +87,9 @@ const (
 	denyRefresh = 10 * time.Minute
 	denyTimeout = 10 * time.Second
 )
+
+// webhookStopWait bounds how long Close waits for outgoing webhook attempts in flight.
+const webhookStopWait = 10 * time.Second
 
 func NewRouter(d Deps) (*Router, error) {
 	cfg := d.Config
@@ -269,7 +278,7 @@ func NewRouter(d Deps) (*Router, error) {
 	})
 
 	r.Handle("/*", web.Handler())
-	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, cancel: cancel, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
+	return &Router{Handler: r, Hub: hub, Webhooks: webhookH, cancel: cancel, outgoing: outgoing, preview: nativePreviewDependencies{accounts: authH, chat: chatH, system: systemH, perUser: perUser, trusted: trusted}}, nil
 }
 
 // refreshPreviewDeny keeps the server's changing public address excluded from

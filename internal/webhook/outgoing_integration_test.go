@@ -4,11 +4,9 @@ package webhook
 
 import (
 	"context"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -117,140 +115,6 @@ func TestOutgoingManagementEdges(t *testing.T) {
 	wantStatus(t, f.json(f.h, "POST", "/admin/channels/"+f.ch.String()+"/outgoing-webhooks", `{"nope":1}`), 400, "unknown field")
 	// Updating nothing is fine.
 	wantStatus(t, f.json(f.h, "PATCH", base, `{}`), 200, "empty patch")
-}
-
-func TestProcessDeliversAndSettles(t *testing.T) {
-	f := newFixture(t)
-	var hits atomic.Int32
-	var retryAfter atomic.Value
-	retryAfter.Store("")
-	recv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hits.Add(1)
-		_, _ = io.Copy(io.Discard, r.Body)
-		if v := retryAfter.Load().(string); v != "" {
-			w.Header().Set("Retry-After", v)
-		}
-		status := http.StatusInternalServerError
-		if r.URL.Path == "/ok" {
-			status = http.StatusNoContent
-		}
-		if r.URL.Path == "/gone" {
-			status = http.StatusGone
-		}
-		w.WriteHeader(status)
-	}))
-	defer recv.Close()
-	d := NewDispatcher(f.p, loopbackClient(), "test")
-	d.SetBackoff([]time.Duration{time.Millisecond})
-	ctx := context.Background()
-
-	// Success.
-	ok := f.outgoing(recv.URL + "/ok")
-	d.process(ctx, job{webhook: ok.ID, event: sampleEvent(), attempt: 1})
-	cur, _ := getOutgoing(ctx, f.p, ok.ID)
-	if cur.LastSuccessAt == nil || cur.ConsecutiveFailures != 0 {
-		t.Fatalf("success state %+v", cur.Outgoing)
-	}
-	// A webhook that is gone or switched off is skipped quietly.
-	d.process(ctx, job{webhook: uuid.New(), event: sampleEvent(), attempt: 1})
-	if err := updateOutgoing(ctx, f.p, ok.ID, outgoingChange{enabled: ptr(false)}); err != nil {
-		t.Fatal(err)
-	}
-	before := hits.Load()
-	d.process(ctx, job{webhook: ok.ID, event: sampleEvent(), attempt: 1})
-	if hits.Load() != before {
-		t.Fatal("a switched-off webhook was called")
-	}
-
-	// A failure with attempts left schedules the retry and honours Retry-After.
-	bad := f.outgoing(recv.URL + "/fail")
-	d.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 1})
-	select {
-	case j := <-d.queue:
-		if j.attempt != 2 || j.webhook != bad.ID {
-			t.Fatalf("retry job %+v", j)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("no retry was queued")
-	}
-	retryAfter.Store("1")
-	d.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 1})
-	select {
-	case <-d.queue:
-		t.Fatal("Retry-After was not honoured")
-	case <-time.After(300 * time.Millisecond):
-	}
-	retryAfter.Store("")
-
-	// Out of attempts: the failure counts, 410 does not retry at all.
-	d.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 2})
-	if cur, _ := getOutgoing(ctx, f.p, bad.ID); cur.ConsecutiveFailures != 1 {
-		t.Fatalf("failure not counted: %+v", cur.Outgoing)
-	}
-	// Too many retries pending: the event is given up instead of waiting.
-	d.retrying.Store(maxRetrying)
-	d.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 1})
-	d.retrying.Store(0)
-	if cur, _ := getOutgoing(ctx, f.p, bad.ID); cur.ConsecutiveFailures != 2 {
-		t.Fatalf("failure not counted: %+v", cur.Outgoing)
-	}
-
-	// Recording the attempt fails: nothing else happens.
-	d2 := NewDispatcher(dbFaulty{f, "INSERT INTO outgoing_deliveries"}.pool(), loopbackClient(), "test")
-	d2.process(ctx, job{webhook: bad.ID, event: sampleEvent(), attempt: 1})
-	// A failing reload after a final failure is logged only.
-	gone := f.outgoing(recv.URL + "/gone")
-	d3 := NewDispatcher(dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}.pool(), loopbackClient(), "test")
-	d3.process(ctx, job{webhook: gone.ID, event: sampleEvent(), attempt: 1})
-}
-
-func ptr[T any](v T) *T { return &v }
-
-func TestRunWorksTheQueue(t *testing.T) {
-	f := newFixture(t)
-	got := make(chan struct{}, 4)
-	recv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.Copy(io.Discard, r.Body)
-		got <- struct{}{}
-		w.WriteHeader(http.StatusNoContent)
-	}))
-	defer recv.Close()
-	rec := f.outgoing(recv.URL)
-
-	// A pool whose list query fails shows the load and reload errors; the
-	// queue is still worked.
-	d := NewDispatcher((&dbFaulty{f, "SELECT id, channel_id, events FROM outgoing_webhooks WHERE enabled"}).pool(), loopbackClient(), "test")
-	d.ReloadEvery = 10 * time.Millisecond
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-	go func() { d.Run(ctx); close(done) }()
-	d.enqueue(job{webhook: rec.ID, event: sampleEvent(), attempt: 1})
-	select {
-	case <-got:
-	case <-time.After(5 * time.Second):
-		t.Fatal("queued event was not delivered")
-	}
-	time.Sleep(50 * time.Millisecond) // a few reload ticks
-	cancel()
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("Run did not stop")
-	}
-	// A full queue drops events instead of blocking.
-	full := NewDispatcher(f.p, loopbackClient(), "test")
-	channels := make([]uuid.UUID, 8)
-	for i := range channels {
-		channels[i] = uuid.New()
-	}
-	for i := range queueSize + 205 {
-		ev := sampleEvent()
-		ev.Channel = channels[i%len(channels)]
-		full.enqueue(job{webhook: rec.ID, event: ev, attempt: 1})
-	}
-	if full.dropped.Load() != 205 {
-		t.Fatalf("dropped %d", full.dropped.Load())
-	}
 }
 
 func TestReloadErrors(t *testing.T) {

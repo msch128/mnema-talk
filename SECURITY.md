@@ -89,7 +89,11 @@ locally instead (`make up` or `make dev`).
   default; metadata and reserved ranges stay closed). Deliveries are signed
   (`X-Mnema-Signature`, HMAC-SHA256 over `t.body`), belong to one channel, send only
   its events to a URL that only administrators can set, and are rate and
-  concurrency limited.
+  concurrency limited. Pending deliveries are
+  stored in PostgreSQL (payloads are the events the server already holds; the
+  signing secret is not copied into the queue), bounded per webhook and in
+  total, and expire after 2 hours; a retry is signed with the time of the
+  attempt actually made, so receivers' replay windows stay valid.
 - **Security headers.** Strict Content-Security-Policy (no inline scripts or
   JS eval; `'wasm-unsafe-eval'` only so the bundled noise filter can compile
   its WebAssembly),

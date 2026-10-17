@@ -193,7 +193,11 @@ Your endpoint answers with any `2xx` within 10 seconds; the body is ignored.
 ### Verify the signature
 
 Recompute over the **raw** request body, compare in constant time, and refuse
-timestamps that are too old (replay protection):
+timestamps that are too old (replay protection). The `t` in the signature
+header is the time of **this attempt**, set when the request is sent, so the
+tolerance holds for retries and for deliveries made after a restart too; the
+`timestamp` in the body is when the event happened and can be hours older, so
+do not apply the tolerance to it:
 
 ```python
 import hmac, hashlib, time
@@ -228,11 +232,25 @@ export function verify(secret, header, rawBody, toleranceSeconds = 300) {
 - **Five events in a row** that failed for good switch the webhook off
   (status `auto_disabled`, visible in the list). Switching it on again
   (`PATCH ... {"enabled": true}`) starts over.
-- The queue lives **in memory**: at most 1000 events wait, and further ones are
-  dropped when receivers cannot keep up. Events still waiting or waiting for a
-  retry are **lost on a restart** of the server. Outgoing webhooks are a
-  notification channel, not a log; fetch the messages from the API if you
-  must not miss any. The cost is no extra table, no extra service.
+- **Pending deliveries are kept in PostgreSQL** (table `outgoing_queue`), so
+  events waiting for a first attempt or for a retry **survive a restart or an
+  update** of the server and are sent afterwards. Only the instant between an
+  event happening and being written (milliseconds) is held in memory. Bounds:
+  at most 500 pending deliveries per webhook and 5000 in total (the oldest are
+  dropped first, counted in `mnema_webhook_events_dropped_total`), and a
+  delivery not settled within 2 hours (past the last retry) is given up. A
+  per-channel share of the in-memory buffer keeps one noisy channel from
+  starving the others.
+- **At least once, best-effort order.** If the server stops after a request
+  went out but before it was recorded, the event is sent again after the
+  restart, and retries of one event may arrive after later events of the same
+  webhook. Do not rely on order or on exactly-once: **deduplicate on the
+  delivery id** (`id` in the body, the same value as the `X-Mnema-Delivery`
+  header; it never changes between attempts) and, if you need ordering, sort by
+  `timestamp`. Outgoing webhooks are still a notification channel, not a log;
+  fetch the messages from the API if you must not miss any.
+- On shutdown the server stops starting new attempts, lets those in flight
+  finish (up to 5 seconds) and leaves the rest in the database.
 - At most 20 delivery attempts a second go out in total, 4 at a time.
 - `GET /api/admin/outgoing-webhooks/{id}/deliveries` shows the last 50
   attempts (event, attempt number, HTTP status, a short error code, duration).

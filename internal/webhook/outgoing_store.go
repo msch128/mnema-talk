@@ -258,7 +258,7 @@ func listDeliveries(ctx context.Context, p *db.Pool, id uuid.UUID) ([]Delivery, 
 // the end of an event's attempts (success, or failure for good): only a final
 // failure counts towards switching the webhook off. It reports whether the
 // webhook was switched off by this call.
-func recordDelivery(ctx context.Context, p *db.Pool, id uuid.UUID, d Delivery, final, count bool) (switchedOff bool, err error) {
+func recordDelivery(ctx context.Context, p *db.Pool, id uuid.UUID, d Delivery, final, count bool, steps ...step) (switchedOff bool, err error) {
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO outgoing_deliveries (webhook_id, event_id, event_type, attempt, success, status_code, error, duration_ms)
@@ -270,6 +270,12 @@ func recordDelivery(ctx context.Context, p *db.Pool, id uuid.UUID, d Delivery, f
 			DELETE FROM outgoing_deliveries WHERE webhook_id = $1 AND id NOT IN (
 			    SELECT id FROM outgoing_deliveries WHERE webhook_id = $1 ORDER BY created_at DESC, id LIMIT $2)`, id, deliveryLogSize); err != nil {
 			return err
+		}
+		// The queue row is settled or rescheduled atomically with the log.
+		for _, st := range steps {
+			if err := st(ctx, tx); err != nil {
+				return err
+			}
 		}
 		if !count {
 			return nil
