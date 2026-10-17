@@ -105,7 +105,9 @@ locally instead (`make up` or `make dev`).
   higher per-account cap guards against guessing from many addresses: once it
   trips, devices that signed in to that account before (a signed HttpOnly
   cookie set at login, valid a year, an HMAC under a key derived from the
-  session secret, so it survives restarts and address changes) are checked as
+  session secret, bound to the user id and the account's token_version, so it survives restarts
+  and address changes but not a password change or reset, "log out
+  everywhere", an administrator revoking sessions or disabling the account) are checked as
   usual, while every other device together gets about one password check per
   minute for the whole account (however many addresses they come from) and is
   answered 429 otherwise, so a distributed guesser
