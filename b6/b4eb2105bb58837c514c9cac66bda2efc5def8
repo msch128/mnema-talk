@@ -1,0 +1,45 @@
+.github/dependabot.yml
+  s_06fcde5dbef956::t_cd8594cadf3714 3-4,12-13,30-31,44-45
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_ba8ebf76cd6915 161,187,223,242-250,328,343-368,371,376-381
+AGENTS.md
+  s_06fcde5dbef956::t_4858606297c58f 121-125
+Dockerfile
+  s_06fcde5dbef956::t_833b30c3f15ad8 23
+README.md
+  s_06fcde5dbef956::t_ebb6c318472f9e 27-30
+SECURITY.md
+  s_06fcde5dbef956::t_0990ec7180c067 225-226,233
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_37956fa0b1f6f6 29-30,83-86,116-133,182-185,189-195,201-219,231,280,291-298,317-321,361,363-364,368-380
+doc/operations.md
+  s_06fcde5dbef956::t_4fe13c3f538098 295-314
+docker-compose.yml
+  s_06fcde5dbef956::t_9cef888c4b0d74 145-160,217-226
+internal/webbundle/cli.go
+  s_06fcde5dbef956::t_ce854551758f30 16,66,93-101
+internal/webbundle/cli_test.go
+  s_06fcde5dbef956::t_c98da6723ffd66 87-113
+scripts/backup.sh
+  s_06fcde5dbef956::t_ee8f4ca1f4e721 60
+scripts/restore.sh
+  s_06fcde5dbef956::t_2753adbbca9622 84
+web/desktop-compat.json
+  s_06fcde5dbef956::t_7ff82b7848768e 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b6b4eb2105bb58837c514c9cac66bda2efc5def8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
