@@ -11,12 +11,15 @@ import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
+import { roleColorCss } from '../lib/permissions'
 import { t, locale } from '../i18n'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
 import ActivityStats from './ActivityStats.vue'
 import VoiceTimer from './VoiceTimer.vue'
+import MemberRolesDialog from './MemberRolesDialog.vue'
 
 const props = defineProps({
   user: {
@@ -140,7 +143,14 @@ const liveStatus = computed(() => {
 
 // Status line: the user edits their own; an admin may edit or clear anyone's.
 const MAX_STATUS = 32
-const canEditStatus = computed(() => isSelf.value || authStore.isAdmin)
+const permissions = usePermissionsStore()
+const profileId = computed(() => profileUser.value.id ?? '')
+const profileRoles = computed(() => permissions.rolesOf(profileId.value))
+const rolesDialogUser = computed(() => ({ id: profileId.value, username: profileUser.value.username ?? '', display_name: profileUser.value.display_name ?? '', role: profileUser.value.role ?? 'user' }))
+const showRolesDialog = ref(false)
+// Roles are given by someone with Manage roles and a higher rank; never the Owner's, never one's own.
+const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
+const canEditStatus = computed(() => isSelf.value || (profileUser.value.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(profileId.value)))
 const isEditingStatus = ref(false)
 const editStatus = ref('')
 const isSavingStatus = ref(false)
@@ -373,6 +383,24 @@ function handleMention() {
               <User v-else class="w-3.5 h-3.5" />
               <span>{{ profileUser.role === 'admin' ? $t('role.admin') : $t('role.member') }}</span>
             </div>
+          </div>
+
+          <!-- Roles -->
+          <div v-if="profileRoles.length || canGiveRoles" class="mt-3 flex flex-wrap items-center gap-1.5" data-testid="profile-roles">
+            <span
+              v-for="role in profileRoles"
+              :key="role.id"
+              class="inline-flex items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 text-xs text-mnema-text"
+            >
+              <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
+            </span>
+            <button
+              v-if="canGiveRoles"
+              type="button"
+              data-testid="profile-edit-roles"
+              class="rounded-md border border-dashed border-mnema-border px-1.5 py-0.5 text-xs text-mnema-tertiary transition hover:border-mnema-accent hover:text-mnema-accent"
+              @click="showRolesDialog = true"
+            >{{ $t('memberRoles.edit') }}</button>
           </div>
 
           <!-- Status line -->
@@ -620,6 +648,7 @@ function handleMention() {
         </div>
       </div>
     </div>
+    <MemberRolesDialog v-if="showRolesDialog" :user="rolesDialogUser" @close="showRolesDialog = false" />
     </template>
   </BaseDialog>
 </template>

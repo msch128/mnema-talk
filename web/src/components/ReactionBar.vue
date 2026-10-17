@@ -10,6 +10,8 @@ import { PICKER_ANCHOR } from '../composables/useMessageActions'
 
 defineProps({
   reactions: { type: Array as PropType<ReactionSummary[]>, default: () => [] },
+  // May the member add reactions (they can always take back their own).
+  canAdd: { type: Boolean, default: true },
   // Whether this bar's palette is open.
   pickerOpen: { type: Boolean, default: false },
   // Smaller badges for thread replies.
@@ -33,6 +35,7 @@ function reacted(reaction: ReactionSummary) {
       v-for="r in reactions"
       :key="r.emoji"
       type="button"
+      :disabled="!canAdd && !reacted(r)"
       :aria-pressed="reacted(r) ? 'true' : 'false'"
       @click.stop="emit('toggle', r.emoji)"
       :class="[
@@ -49,7 +52,7 @@ function reacted(reaction: ReactionSummary) {
     </button>
 
     <!-- Add-reaction button inline with reactions -->
-    <div :class="['relative inline-block', PICKER_ANCHOR]">
+    <div v-if="canAdd" :class="['relative inline-block', PICKER_ANCHOR]">
       <button
         type="button"
         data-testid="reaction-add"

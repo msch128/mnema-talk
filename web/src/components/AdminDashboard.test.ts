@@ -117,6 +117,7 @@ beforeEach(() => {
   setLocale('en')
   apiMock.mockClear()
   confirmMock.mockClear()
+  useAuthStore().user = userFixture({ role: 'admin', username: 'owner' }) // the Owner may do everything
 })
 
 afterEach(() => {
@@ -169,7 +170,7 @@ describe('AdminDashboard - Users Tab', () => {
     const adminRow = rows[0]!
     expect(adminRow!.find('[data-testid="user-username"]')!.text()).toContain('@herzog')
     expect(adminRow!.find('[data-testid="user-displayname"]')!.text()).toBe('Herzog')
-    expect(adminRow!.find('[data-testid="user-role"]')!.text()).toBe('Admin')
+    expect(adminRow!.find('[data-testid="user-role"]')!.text()).toBe('Owner')
     expect(adminRow!.find('[data-testid="user-status"]')!.text()).toBe('Active')
 
     // Disabled user row

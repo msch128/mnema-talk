@@ -24,7 +24,7 @@
     "voiceChat": "Resize the chat"
   },
   "role": {
-    "admin": "Admin",
+    "admin": "Owner",
     "member": "Member"
   },
   "presence": {
@@ -90,7 +90,8 @@
       "passwordMax": "The password is too long",
       "usernameFormat": "Username: 3–32 characters, letters, digits, _ . or - only",
       "fieldMax": "{field}: at most {count} characters",
-      "fileTooBig": "The file is larger than {size} MB"
+      "fileTooBig": "The file is larger than {size} MB",
+      "missingPermission": "You don’t have permission to do that."
     },
     "field": {
       "content": "Message",
@@ -231,9 +232,10 @@
   "members": {
     "title": "Members",
     "toggle": "Show or hide the member list",
-    "admins": "Admin — {count}",
+    "admins": "Owner",
     "online": "Online — {count}",
-    "offline": "Offline — {count}"
+    "offline": "Offline — {count}",
+    "roleGroup": "{name} — {count}"
   },
   "chat": {
     "selectChannel": "Choose a channel",
@@ -301,7 +303,9 @@
     "copiedText": "Text copied",
     "copyLink": "Copy link",
     "copiedLink": "Link copied",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "readOnly": "You can’t write in this channel.",
+    "noAttach": "You can’t attach files here."
   },
   "thread": {
     "title": "Thread",
@@ -347,7 +351,8 @@
     "roomFull": "This voice channel is full. Try again when someone leaves.",
     "mediaUnprotected": "This browser cannot protect the call. Microphone, camera and screen stay off.",
     "mediaRekeyed": "The media keys of this call were reset by someone else in it or by the server. The call re-keys itself.",
-    "mediaRefreshed": "The call was refreshed after a period of inactivity. Its media keys were renewed and the call re-keys itself."
+    "mediaRefreshed": "The call was refreshed after a period of inactivity. Its media keys were renewed and the call re-keys itself.",
+    "noPermission": "You don’t have permission to join or speak in this voice channel."
   },
   "audio": {
     "settings": "Audio settings",
@@ -725,18 +730,22 @@
     "controls": "Talk controls",
     "moreControls": "More options",
     "hideParticipants": "Hide participants",
-    "showParticipants": "Show participants"
+    "showParticipants": "Show participants",
+    "noSpeak": "You don’t have permission to speak here.",
+    "noVideo": "You don’t have permission to share video here.",
+    "noConnect": "You don’t have permission to join this voice channel."
   },
   "admin": {
     "title": "Storage & administration",
-    "signedInAs": "Signed in as {name} (admin)",
+    "signedInAs": "Signed in as {name} (Owner)",
     "unknownError": "Unknown error",
     "tabs": {
       "users": "Users",
       "channels": "Channels & Layout",
       "invites": "Invites",
       "media": "Media & Storage",
-      "system": "System"
+      "system": "System",
+      "roles": "Roles"
     },
     "system": {
       "heading": "System & version",
@@ -1077,5 +1086,139 @@
     "enabled": "Enable Gaming overlay and sidepeek",
     "opacity": "Sidepeek background opacity",
     "gamesHint": "300 games are included. Add executable names for other games or installation variants."
+  },
+  "perm": {
+    "administrator": {
+      "name": "Administrator",
+      "desc": "Has every permission below and ignores channel permissions. Cannot touch the Owner."
+    },
+    "view_channel": {
+      "name": "View channels",
+      "desc": "See a channel or Talk and read its history."
+    },
+    "send_messages": {
+      "name": "Send messages",
+      "desc": "Write, reply and edit own messages."
+    },
+    "attach_files": {
+      "name": "Attach files",
+      "desc": "Upload files with a message."
+    },
+    "add_reactions": {
+      "name": "Add reactions",
+      "desc": "React to messages. Taking back your own reaction always works."
+    },
+    "manage_messages": {
+      "name": "Manage messages",
+      "desc": "Delete other members’ messages (never the Owner’s)."
+    },
+    "mention_everyone": {
+      "name": "Mention everyone",
+      "desc": "Use @all and @here to notify people."
+    },
+    "connect": {
+      "name": "Connect to Talks",
+      "desc": "Join a Talk."
+    },
+    "speak": {
+      "name": "Speak",
+      "desc": "Send audio in a Talk, also the sound of a screen share."
+    },
+    "video": {
+      "name": "Share video and screen",
+      "desc": "Turn on the camera and share the screen in a Talk."
+    },
+    "disconnect_members": {
+      "name": "Disconnect members",
+      "desc": "Remove members from a Talk."
+    },
+    "manage_channels": {
+      "name": "Manage channels",
+      "desc": "Create, rename, order and delete channels and categories, and set their permissions."
+    },
+    "manage_roles": {
+      "name": "Manage roles",
+      "desc": "Create, edit, order and assign roles below your own highest role."
+    },
+    "create_invites": {
+      "name": "Manage invites",
+      "desc": "Create, see and revoke invite codes."
+    },
+    "manage_webhooks": {
+      "name": "Manage webhooks",
+      "desc": "Reserved for the upcoming webhooks."
+    },
+    "manage_members": {
+      "name": "Manage members",
+      "desc": "Disable and re-enable accounts, end their sessions and edit their status line, for members below your highest role."
+    },
+    "allow": "Allow",
+    "deny": "Deny",
+    "inherit": "Inherit"
+  },
+  "roles": {
+    "title": "Roles",
+    "intro": "Roles give members permissions. A higher role outranks a lower one. The Owner always has every permission and cannot be restricted.",
+    "new": "New role",
+    "newName": "New role",
+    "everyone": "@everyone",
+    "everyoneHint": "What every member has. Roles add to it.",
+    "name": "Name",
+    "color": "Colour",
+    "colorNone": "No colour",
+    "colorCustom": "Hex colour (#rrggbb)",
+    "hoist": "List members of this role separately",
+    "permissions": "Permissions",
+    "save": "Save role",
+    "saved": "Role saved",
+    "created": "Role created",
+    "deleted": "Role deleted",
+    "delete": "Delete role",
+    "deleteTitle": "Delete the role “{name}”?",
+    "deleteBody": "Everyone who has it loses it, and its channel permissions are removed.",
+    "reorderHint": "Drag roles or use the arrows to change their rank. Higher roles outrank lower ones.",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "drag": "Drag to reorder {name}",
+    "locked": "This role is not below your highest role. You can look at it, but not change it.",
+    "rank": "Rank {n}",
+    "empty": "No roles yet. Create one to give members more permissions.",
+    "ownerNote": "Owner permissions cannot be changed.",
+    "cannotGrant": "You can only grant permissions you have yourself.",
+    "selected": "Selected role",
+    "list": "Roles",
+    "nameRequired": "Give the role a name.",
+    "reorderFailed": "Could not change the order."
+  },
+  "memberRoles": {
+    "title": "Roles of {name}",
+    "edit": "Roles",
+    "hint": "Choose the roles this member has. You can only change roles below your highest role.",
+    "saved": "Roles saved",
+    "locked": "Above your rank",
+    "none": "No roles",
+    "owner": "The Owner has every permission and cannot be given roles.",
+    "own": "You cannot change your own roles."
+  },
+  "overwrites": {
+    "menu": "Permissions …",
+    "titleChannel": "Permissions of #{name}",
+    "titleCategory": "Permissions of the category {name}",
+    "hintChannel": "Allow or deny permissions for roles and members in this channel. A channel also inherits its category; its own settings win.",
+    "hintCategory": "Allow or deny permissions for roles and members in all channels of this category. A channel can override them.",
+    "addRole": "Add a role",
+    "addMember": "Add a member",
+    "choose": "Choose …",
+    "remove": "Remove {name}",
+    "empty": "No special permissions here. Everyone follows their roles.",
+    "save": "Save permissions",
+    "saved": "Permissions saved",
+    "private": "Make private",
+    "privateHint": "Deny viewing for @everyone. Then allow it for the roles that should see this.",
+    "subjects": "Roles and members",
+    "role": "Role",
+    "member": "Member",
+    "loadFailed": "Could not load the permissions.",
+    "ownerNote": "The Owner always has access and is not listed."
   }
 }

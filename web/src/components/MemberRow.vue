@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import { Crown, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
@@ -20,6 +21,9 @@ const emit = defineEmits<{ menu: [event: MouseEvent | KeyboardEvent] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const permissions = usePermissionsStore()
+// The colour of the member's highest role that has one (''. none).
+const nameColor = computed(() => permissions.nameColor(props.member.id))
 
 const status = computed(() => chatStore.presenceOf(props.member.id))
 const offline = computed(() => status.value === 'offline')
@@ -60,6 +64,7 @@ const subline = computed(() => {
             offline ? 'text-mnema-muted' : 'font-medium text-mnema-text',
             member.role === 'admin' && !offline ? 'font-semibold' : ''
           ]"
+          :style="nameColor && !offline ? { color: nameColor } : undefined"
         >{{ member.display_name || member.username }}</span>
         <Crown v-if="member.role === 'admin'" class="h-3.5 w-3.5 flex-shrink-0 text-mnema-amber" />
       </div>

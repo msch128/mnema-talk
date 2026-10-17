@@ -94,6 +94,7 @@ beforeEach(() => {
   setLocale('en')
   apiMock.mockReset()
   confirmMock.mockReset().mockResolvedValue(true)
+  useAuthStore().user = userFixture({ role: 'admin', username: 'owner' }) // the Owner may do everything
 })
 afterEach(() => {
   for (const w of wrappers) w.unmount()
@@ -191,7 +192,7 @@ describe('admin account recovery and cancellation', () => {
 describe('dashboard route synchronization', () => {
   it('accepts valid prop changes, ignores invalid props, and emits close', async () => {
     apiMock.mockResolvedValue([])
-    useAuthStore().user = userFixture({ username: 'admin', display_name: '' })
+    useAuthStore().user = userFixture({ username: 'admin', display_name: '', role: 'admin' })
     const w = keep(
       mount(AdminDashboard, {
         props: { initialTab: 'invalid' },

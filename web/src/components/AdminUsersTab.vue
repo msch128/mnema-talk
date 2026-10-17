@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Admin dashboard: accounts (disable, password reset, sessions, voice kick).
 import { ref, computed, onMounted } from 'vue'
-import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2 } from '@lucide/vue'
+import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import type { VoiceSnapshot } from '../types/events'
 import type { AdminUser } from '../types/domain'
@@ -12,13 +12,19 @@ import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
+import { useAuthStore } from '../stores/auth'
 import { t, locale } from '../i18n'
 import BaseDialog from './BaseDialog.vue'
 import UserAvatar from './UserAvatar.vue'
+import MemberRolesDialog from './MemberRolesDialog.vue'
+import { roleColorCss } from '../lib/permissions'
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
 const toasts = useToastStore()
+const permissions = usePermissionsStore()
+const rolesModalUser = ref<AdminUser | null>(null)
 
 const users = ref<AdminUser[]>([])
 const userSearch = ref('')
@@ -37,6 +43,7 @@ function showError(e: unknown) {
 async function refreshUsers() {
   try {
     users.value = await api('/api/admin/users', { decode: arrayDecoder('admin users', isAuthAdminUser) })
+    permissions.setMemberRoles(users.value)
   } catch (e) {
     showError(e)
   }
@@ -168,7 +175,20 @@ async function kickUserFromVoice(u: AdminUser) {
   }
 }
 
-onMounted(refreshUsers)
+// What the signed-in member may do with an account, by permission and rank.
+function canModerate(u: AdminUser) {
+  return u.role !== 'admin' && u.id !== useAuthStore().user?.id && permissions.can('manage_members') && permissions.outranksMember(u.id)
+}
+function canGiveRoles(u: AdminUser) {
+  return u.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(u.id) && u.id !== useAuthStore().user?.id
+}
+function rolesOf(u: AdminUser) {
+  return (u.role_ids ?? []).map(id => permissions.roleById(id)).filter(role => role !== undefined)
+}
+
+onMounted(async () => {
+  await Promise.all([refreshUsers(), permissions.loadRoles()])
+})
 </script>
 
 <template>
@@ -253,9 +273,16 @@ onMounted(refreshUsers)
                 >
                   {{ $t('role.admin') }}
                 </span>
-                <span v-else data-testid="user-role" class="text-xs text-mnema-muted font-normal">
-                  {{ $t('role.member') }}
-                </span>
+                <div v-else data-testid="user-role" class="flex flex-wrap items-center gap-1 text-xs text-mnema-muted">
+                  <span v-if="!rolesOf(u).length">{{ $t('role.member') }}</span>
+                  <span
+                    v-for="role in rolesOf(u)"
+                    :key="role.id"
+                    class="inline-flex items-center gap-1 rounded border border-mnema-border px-1.5 py-0.5 text-mnema-text"
+                  >
+                    <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
+                  </span>
+                </div>
               </td>
 
               <!-- Last Seen -->
@@ -298,7 +325,7 @@ onMounted(refreshUsers)
                 <div class="flex items-center justify-end gap-1">
                   <!-- Kick from voice -->
                   <button
-                    v-if="isUserInVoice(u.id)"
+                    v-if="isUserInVoice(u.id) && permissions.can('disconnect_members')"
                     data-testid="action-kick"
                     type="button"
                     class="p-1.5 rounded text-mnema-danger hover:bg-mnema-danger/15 transition"
@@ -309,7 +336,19 @@ onMounted(refreshUsers)
                     <PhoneOff class="w-4 h-4" />
                   </button>
 
-                  <template v-if="u.role !== 'admin'">
+                  <button
+                    v-if="canGiveRoles(u)"
+                    data-testid="action-roles"
+                    type="button"
+                    class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
+                    :title="$t('memberRoles.edit')"
+                    :aria-label="$t('memberRoles.edit')"
+                    @click="rolesModalUser = u"
+                  >
+                    <Shield class="w-4 h-4" />
+                  </button>
+
+                  <template v-if="canModerate(u)">
                     <!-- Disable / Enable -->
                     <button
                       data-testid="action-disable"
@@ -328,8 +367,9 @@ onMounted(refreshUsers)
                       <UserX v-else class="w-4 h-4" />
                     </button>
 
-                    <!-- Reset Password -->
+                    <!-- Reset Password: only the Owner takes over accounts -->
                     <button
+                      v-if="permissions.isOwner"
                       data-testid="action-reset-password"
                       type="button"
                       class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
@@ -359,6 +399,8 @@ onMounted(refreshUsers)
         </table>
       </div>
     </div>
+
+    <MemberRolesDialog v-if="rolesModalUser" :user="rolesModalUser" @close="rolesModalUser = null" @saved="refreshUsers" />
 
     <!-- Reset Password Modal -->
     <BaseDialog

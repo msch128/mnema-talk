@@ -22,6 +22,7 @@ import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { continuationIds } from '../lib/messageGrouping'
 import { firstUnreadId, typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
+import { usePermissionsStore } from '../stores/permissions'
 import { t, locale } from '../i18n'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
@@ -34,12 +35,19 @@ const emit = defineEmits<{ close: [] }>()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const toasts = useToastStore()
+const permissions = usePermissionsStore()
 
 const channelName = computed(() => chatStore.activeChannel?.name || '')
 const channelIcon = computed(() => (props.panel ? Volume2 : Hash))
 const welcomeText = computed(() => t(props.panel ? 'talk.chatWelcome' : 'chat.welcome', { channel: channelName.value }))
 const beginningText = computed(() => t(props.panel ? 'talk.chatBeginning' : 'chat.beginning', { channel: channelName.value }))
-const placeholder = computed(() => t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value }))
+// What the member may do here; the server decides, this only hides what would fail.
+const canSend = computed(() => permissions.canIn(chatStore.activeChannel?.id ?? '', 'send_messages'))
+const canAttach = computed(() => canSend.value && permissions.canIn(chatStore.activeChannel?.id ?? '', 'attach_files'))
+const canReact = computed(() => permissions.canIn(chatStore.activeChannel?.id ?? '', 'add_reactions'))
+const placeholder = computed(() => (canSend.value
+  ? t(props.panel ? 'talk.chatPlaceholder' : 'chat.placeholder', { channel: channelName.value })
+  : t('chat.readOnly')))
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
@@ -411,7 +419,7 @@ async function revealOwnMessage() {
 
 async function handleSend() {
   const text = inputMessage.value.trim()
-  if (!text || isUploading.value || isSending.value) return
+  if (!text || !canSend.value || isUploading.value || isSending.value) return
 
   isSending.value = true
   try {
@@ -619,6 +627,7 @@ const groupedIds = computed(() => {
         :highlighted="highlightedId === msg.id"
         :mentions-me="msg.user_id !== authStore.user?.id && chatStore.messageMentionsMe(msg)"
         :is-own="actions.isOwn(msg)"
+        :can-react="canReact"
         :editing="editingMessageId === msg.id"
         v-model:edit-text="actions.editText.value"
         :saving="actions.isSavingEdit.value"
@@ -699,6 +708,7 @@ const groupedIds = computed(() => {
 
         <!-- Attachment Button -->
         <button
+          v-if="canAttach"
           @click="fileInput?.click()"
           :disabled="isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
@@ -722,17 +732,18 @@ const groupedIds = computed(() => {
           :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
           :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
           :placeholder="placeholder"
+          :disabled="!canSend"
           :aria-label="placeholder"
           rows="1"
           class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
         ></textarea>
 
-        <EmojiButton :disabled="isSending" @pick="assist.insertText" />
+        <EmojiButton :disabled="isSending || !canSend" @pick="assist.insertText" />
 
         <!-- Send Button -->
         <button
           @click="handleSend"
-          :disabled="!inputMessage.trim() || isUploading || isSending"
+          :disabled="!canSend || !inputMessage.trim() || isUploading || isSending"
           class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
           v-tooltip="$t('chat.send')"
         >

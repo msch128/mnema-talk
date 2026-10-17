@@ -4,9 +4,9 @@ import { TrustedSocket } from '../lib/trustedSocket'
 import { isDesktopRuntime } from '../lib/desktopRuntime'
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
-import type { Category, Channel, Message, User, UserUpdate, Presence, ChosenPresence, ReadState, NotifyLevel, CreateMessageRequest } from '../types/domain'
+import type { Category, Channel, Member, Message, User, UserUpdate, Presence, ChosenPresence, ReadState, NotifyLevel, CreateMessageRequest } from '../types/domain'
 import { decodeChannelHierarchy, decodeUser, decodeMessage, decodeThread, decodeChannel, decodeCategory, decodeReactionResult } from '../types/domain'
-import { isAuthUser, isChatMessage, isChatReadState, decodeChatRenamedCategory } from '../types/rest'
+import { isChatMember, isChatMessage, isChatReadState, decodeChatRenamedCategory } from '../types/rest'
 import { arrayDecoder, isRecord } from '../types/validation'
 import { decodeServerEvent } from '../types/events'
 import type { ServerEvent, ServerEventPayloads, ClientEventPayloads } from '../types/events'
@@ -16,13 +16,14 @@ export type ProfilePreview = Pick<User, 'id' | 'username' | 'display_name' | 'ro
 interface TypingUser { user_id: string; username: string; display_name: string }
 interface MessageWindow { messages: Message[]; hasMoreBefore: boolean; hasMoreAfter: boolean }
 type Timer = ReturnType<typeof setTimeout>
-const decodeMembers = arrayDecoder('members', isAuthUser)
+const decodeMembers = arrayDecoder('members', isChatMember)
 const decodeMessages = arrayDecoder('messages', isChatMessage)
 const decodeReadStates = arrayDecoder('read states', isChatReadState)
 import { api } from '../lib/api'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import { useToastStore } from './toast'
+import { usePermissionsStore } from './permissions'
 import { useAppVersionStore } from './appVersion'
 import { t } from '../i18n'
 import {
@@ -78,7 +79,7 @@ export const useChatStore = defineStore('chat', () => {
   const isConnected = ref(false)
 
   // Community members & real-time presence
-  const members = ref<User[]>([])
+  const members = ref<Member[]>([])
   let membersFetchSeq = 0
   let memberRevision = 0
   // A disable event wins over requests already in flight. A later active-only
@@ -219,6 +220,7 @@ export const useChatStore = defineStore('chat', () => {
         const latest = memberProfileUpdates.get(member.id)
         return latest && latest.revision > revision ? { ...member, ...latest.user } : member
       })
+      usePermissionsStore().setMemberRoles(members.value)
     } catch (e) {
       console.error('Failed to fetch members:', e)
     }
@@ -585,6 +587,9 @@ export const useChatStore = defineStore('chat', () => {
   // HTTP snapshots were fetched before broadcasts could reach this client.
   // Older history stays where the user is reading it.
   function resyncState() {
+    const permissions = usePermissionsStore()
+    permissions.load()
+    permissions.loadRoles()
     fetchChannels()
     fetchMembers()
     fetchReadState()
@@ -817,6 +822,20 @@ export const useChatStore = defineStore('chat', () => {
       case 'channels_changed':
         fetchChannels()
         break
+
+      case 'permissions_changed':
+        // My roles, a role of mine or a channel's overwrites changed.
+        usePermissionsStore().load()
+        fetchChannels()
+        break
+
+      case 'roles_changed': {
+        const permissions = usePermissionsStore()
+        permissions.loadRoles()
+        permissions.load()
+        fetchMembers()
+        break
+      }
 
       case 'typing':
         if (p) handleTypingEvent(p)
@@ -1464,6 +1483,7 @@ export const useChatStore = defineStore('chat', () => {
     uncategorized.value = []
     activeChannel.value = null
     members.value = []
+    usePermissionsStore().reset()
     presenceById.value = {}
     disabledMembers.clear()
     suppressedPresence.clear()

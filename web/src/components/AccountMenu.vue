@@ -10,6 +10,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
+import { usePermissionsStore } from '../stores/permissions'
 import { trustedApp } from '../lib/trustedDesktop'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
@@ -19,6 +20,7 @@ const props = defineProps({ trigger: { type: Object as PropType<HTMLElement | nu
 const emit = defineEmits<{ close: []; 'open-admin': []; 'open-legal': [] }>()
 
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 const voiceStore = useVoiceStore()
 const chatStore = useChatStore()
 const toasts = useToastStore()
@@ -189,7 +191,7 @@ const item = 'flex min-h-8 w-full items-center gap-2.5 rounded-md px-2 py-1.5 te
     </div>
 
     <div class="mx-0.5 my-1 h-px bg-mnema-hairline" role="separator"></div>
-    <button v-if="authStore.isAdmin" type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-admin'))">
+    <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="item" @click="run(() => emit('open-admin'))">
       <ShieldCheck class="h-4 w-4 flex-shrink-0 text-mnema-tertiary" />{{ $t('menu.adminConsole') }}
       <span
         v-if="versionStore.adminUpdateAvailable"

@@ -24,7 +24,7 @@
     "voiceChat": "Höhe des Chats anpassen"
   },
   "role": {
-    "admin": "Admin",
+    "admin": "Inhaber",
     "member": "Mitglied"
   },
   "presence": {
@@ -90,7 +90,8 @@
       "passwordMax": "Das Passwort ist zu lang",
       "usernameFormat": "Benutzername: 3–32 Zeichen, nur Buchstaben, Ziffern, _ . oder -",
       "fieldMax": "{field}: höchstens {count} Zeichen",
-      "fileTooBig": "Die Datei ist größer als {size} MB"
+      "fileTooBig": "Die Datei ist größer als {size} MB",
+      "missingPermission": "Dafür fehlt dir die Berechtigung."
     },
     "field": {
       "content": "Nachricht",
@@ -231,9 +232,10 @@
   "members": {
     "title": "Mitglieder",
     "toggle": "Mitgliederliste ein-/ausblenden",
-    "admins": "Admin — {count}",
+    "admins": "Inhaber",
     "online": "Online — {count}",
-    "offline": "Offline — {count}"
+    "offline": "Offline — {count}",
+    "roleGroup": "{name} — {count}"
   },
   "chat": {
     "selectChannel": "Kanal auswählen",
@@ -301,7 +303,9 @@
     "copiedText": "Text kopiert",
     "copyLink": "Link kopieren",
     "copiedLink": "Link kopiert",
-    "moreActions": "Weitere Aktionen"
+    "moreActions": "Weitere Aktionen",
+    "readOnly": "Du darfst in diesem Kanal nicht schreiben.",
+    "noAttach": "Du darfst hier keine Dateien anhängen."
   },
   "thread": {
     "title": "Thread",
@@ -347,7 +351,8 @@
     "roomFull": "Dieser Talk ist voll. Versuche es erneut, sobald jemand den Talk verlässt.",
     "mediaUnprotected": "Dieser Browser kann den Anruf nicht schützen. Mikrofon, Kamera und Bildschirm bleiben aus.",
     "mediaRekeyed": "Die Medienschlüssel dieses Anrufs wurden von jemand anderem im Anruf oder vom Server zurückgesetzt. Der Anruf richtet sie neu ein.",
-    "mediaRefreshed": "Der Anruf wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert, der Anruf richtet sie neu ein."
+    "mediaRefreshed": "Der Anruf wurde nach einer Zeit der Inaktivität aufgefrischt. Seine Medienschlüssel wurden erneuert, der Anruf richtet sie neu ein.",
+    "noPermission": "Du darfst diesem Talk nicht beitreten oder darin sprechen."
   },
   "audio": {
     "settings": "Audio-Einstellungen",
@@ -725,18 +730,22 @@
     "controls": "Talk-Steuerung",
     "moreControls": "Weitere Optionen",
     "hideParticipants": "Teilnehmer ausblenden",
-    "showParticipants": "Teilnehmer einblenden"
+    "showParticipants": "Teilnehmer einblenden",
+    "noSpeak": "Du darfst hier nicht sprechen.",
+    "noVideo": "Du darfst hier kein Video teilen.",
+    "noConnect": "Du darfst diesem Talk nicht beitreten."
   },
   "admin": {
     "title": "Speicher & Administration",
-    "signedInAs": "Angemeldet als {name} (Admin)",
+    "signedInAs": "Angemeldet als {name} (Inhaber)",
     "unknownError": "Unbekannter Fehler",
     "tabs": {
       "users": "Nutzer",
       "channels": "Kanäle & Layout",
       "invites": "Einladungen",
       "media": "Medien & Speicher",
-      "system": "System"
+      "system": "System",
+      "roles": "Rollen"
     },
     "system": {
       "heading": "System & Version",
@@ -1077,5 +1086,139 @@
     "enabled": "Gaming-Overlay und Sidepeek aktivieren",
     "opacity": "Deckkraft des Sidepeek-Hintergrunds",
     "gamesHint": "300 Spiele sind enthalten. Ergänze EXE-Namen für weitere Spiele oder Installationsvarianten."
+  },
+  "perm": {
+    "administrator": {
+      "name": "Administrator",
+      "desc": "Hat alle Rechte unten und ignoriert Kanalrechte. Kann den Inhaber nicht antasten."
+    },
+    "view_channel": {
+      "name": "Kanäle ansehen",
+      "desc": "Einen Kanal oder Talk sehen und seinen Verlauf lesen."
+    },
+    "send_messages": {
+      "name": "Nachrichten senden",
+      "desc": "Schreiben, antworten und eigene Nachrichten bearbeiten."
+    },
+    "attach_files": {
+      "name": "Dateien anhängen",
+      "desc": "Dateien mit einer Nachricht hochladen."
+    },
+    "add_reactions": {
+      "name": "Reaktionen hinzufügen",
+      "desc": "Auf Nachrichten reagieren. Die eigene Reaktion zurücknehmen geht immer."
+    },
+    "manage_messages": {
+      "name": "Nachrichten verwalten",
+      "desc": "Nachrichten anderer löschen (nie die des Inhabers)."
+    },
+    "mention_everyone": {
+      "name": "@all erwähnen",
+      "desc": "@all und @here nutzen, um alle zu benachrichtigen."
+    },
+    "connect": {
+      "name": "Mit Talks verbinden",
+      "desc": "Einem Talk beitreten."
+    },
+    "speak": {
+      "name": "Sprechen",
+      "desc": "In einem Talk Ton senden, auch den Ton einer Bildschirmübertragung."
+    },
+    "video": {
+      "name": "Video und Bildschirm teilen",
+      "desc": "In einem Talk Kamera einschalten und Bildschirm teilen."
+    },
+    "disconnect_members": {
+      "name": "Mitglieder trennen",
+      "desc": "Mitglieder aus einem Talk entfernen."
+    },
+    "manage_channels": {
+      "name": "Kanäle verwalten",
+      "desc": "Kanäle und Kategorien anlegen, umbenennen, sortieren, löschen und ihre Rechte setzen."
+    },
+    "manage_roles": {
+      "name": "Rollen verwalten",
+      "desc": "Rollen unterhalb deiner höchsten Rolle anlegen, bearbeiten, sortieren und vergeben."
+    },
+    "create_invites": {
+      "name": "Einladungen verwalten",
+      "desc": "Einladungscodes erstellen, ansehen und widerrufen."
+    },
+    "manage_webhooks": {
+      "name": "Webhooks verwalten",
+      "desc": "Für die kommenden Webhooks reserviert."
+    },
+    "manage_members": {
+      "name": "Mitglieder verwalten",
+      "desc": "Konten sperren und entsperren, Sitzungen beenden und Status ändern, für Mitglieder unterhalb deiner höchsten Rolle."
+    },
+    "allow": "Erlauben",
+    "deny": "Verbieten",
+    "inherit": "Erben"
+  },
+  "roles": {
+    "title": "Rollen",
+    "intro": "Rollen geben Mitgliedern Rechte. Eine höhere Rolle steht über einer niedrigeren. Der Inhaber hat immer alle Rechte und kann nicht eingeschränkt werden.",
+    "new": "Neue Rolle",
+    "newName": "Neue Rolle",
+    "everyone": "@everyone",
+    "everyoneHint": "Was jedes Mitglied hat. Rollen kommen dazu.",
+    "name": "Name",
+    "color": "Farbe",
+    "colorNone": "Keine Farbe",
+    "colorCustom": "Hex-Farbe (#rrggbb)",
+    "hoist": "Mitglieder dieser Rolle getrennt auflisten",
+    "permissions": "Rechte",
+    "save": "Rolle speichern",
+    "saved": "Rolle gespeichert",
+    "created": "Rolle erstellt",
+    "deleted": "Rolle gelöscht",
+    "delete": "Rolle löschen",
+    "deleteTitle": "Rolle „{name}“ löschen?",
+    "deleteBody": "Alle, die sie haben, verlieren sie, und ihre Kanalrechte werden entfernt.",
+    "reorderHint": "Ziehe Rollen oder nutze die Pfeile, um ihren Rang zu ändern. Höhere Rollen stehen über niedrigeren.",
+    "moveUp": "{name} nach oben",
+    "moveDown": "{name} nach unten",
+    "drag": "{name} zum Sortieren ziehen",
+    "locked": "Diese Rolle steht nicht unter deiner höchsten Rolle. Du kannst sie ansehen, aber nicht ändern.",
+    "rank": "Rang {n}",
+    "empty": "Noch keine Rollen. Lege eine an, um Mitgliedern mehr Rechte zu geben.",
+    "ownerNote": "Die Rechte des Inhabers lassen sich nicht ändern.",
+    "cannotGrant": "Du kannst nur Rechte vergeben, die du selbst hast.",
+    "selected": "Ausgewählte Rolle",
+    "list": "Rollen",
+    "nameRequired": "Gib der Rolle einen Namen.",
+    "reorderFailed": "Die Reihenfolge konnte nicht geändert werden."
+  },
+  "memberRoles": {
+    "title": "Rollen von {name}",
+    "edit": "Rollen",
+    "hint": "Wähle die Rollen dieses Mitglieds. Du kannst nur Rollen unterhalb deiner höchsten Rolle ändern.",
+    "saved": "Rollen gespeichert",
+    "locked": "Über deinem Rang",
+    "none": "Keine Rollen",
+    "owner": "Der Inhaber hat alle Rechte und bekommt keine Rollen.",
+    "own": "Du kannst deine eigenen Rollen nicht ändern."
+  },
+  "overwrites": {
+    "menu": "Rechte …",
+    "titleChannel": "Rechte von #{name}",
+    "titleCategory": "Rechte der Kategorie {name}",
+    "hintChannel": "Erlaube oder verbiete Rollen und Mitgliedern etwas in diesem Kanal. Ein Kanal erbt auch von seiner Kategorie; seine eigenen Einstellungen gelten zuerst.",
+    "hintCategory": "Erlaube oder verbiete Rollen und Mitgliedern etwas in allen Kanälen dieser Kategorie. Ein Kanal kann es überschreiben.",
+    "addRole": "Rolle hinzufügen",
+    "addMember": "Mitglied hinzufügen",
+    "choose": "Auswählen …",
+    "remove": "{name} entfernen",
+    "empty": "Hier gibt es keine besonderen Rechte. Alle folgen ihren Rollen.",
+    "save": "Rechte speichern",
+    "saved": "Rechte gespeichert",
+    "private": "Privat machen",
+    "privateHint": "Ansehen für @everyone verbieten. Erlaube es dann den Rollen, die das hier sehen sollen.",
+    "subjects": "Rollen und Mitglieder",
+    "role": "Rolle",
+    "member": "Mitglied",
+    "loadFailed": "Die Rechte konnten nicht geladen werden.",
+    "ownerNote": "Der Inhaber hat immer Zugriff und wird nicht aufgelistet."
   }
 }

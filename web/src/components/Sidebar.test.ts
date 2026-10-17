@@ -569,7 +569,7 @@ describe('Sidebar context menus', () => {
     await contextMenu(headerOf('voice'))
     expect(menuLabels()).toEqual([
       'Alle als gelesen markieren', 'Alle einklappen', 'Alle ausklappen',
-      'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
+      'Rechte …', 'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
     ])
     await choose('Kanal erstellen')
     // The category is preselected; a voice-only category suggests a voice channel.
@@ -627,6 +627,19 @@ describe('Sidebar context menus', () => {
     expect(channelIds('text')).toEqual(['general', 'general-2', 'random'])
     expect(rowOf('general-2').classes()).toContain('nav-flash')
     expect(select).not.toHaveBeenCalled()
+  })
+
+  it('channel and category menus open the permissions dialog', async () => {
+    await mountSidebar()
+    await contextMenu(rowOf('general'))
+    await choose('Rechte \u2026')
+    expect(document.body.textContent).toContain('Rechte von #general')
+    expect(h.calls.some(c => c.url === '/api/admin/channels/general/overwrites')).toBe(true)
+    ;(document.querySelector<HTMLButtonElement>('[role="dialog"] button[aria-label="Schlie\u00dfen"]') ?? document.querySelector<HTMLButtonElement>('[role="dialog"] button'))?.click()
+    await flush()
+    await contextMenu(headerOf('voice'))
+    await choose('Rechte \u2026')
+    expect(h.calls.some(c => c.url.startsWith('/api/admin/categories/') && c.url.endsWith('/overwrites'))).toBe(true)
   })
 
   it('reports a failed duplicate', async () => {

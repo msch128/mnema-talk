@@ -15,6 +15,9 @@ import MessageAttachments from './MessageAttachments.vue'
 import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
 import { formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
+import { usePermissionsStore } from '../stores/permissions'
+
+const permissions = usePermissionsStore()
 
 defineProps({
   msg: { type: Object as PropType<Message>, required: true },
@@ -23,6 +26,8 @@ defineProps({
   highlighted: { type: Boolean, default: false },
   mentionsMe: { type: Boolean, default: false },
   isOwn: { type: Boolean, default: false },
+  // May the member add reactions here (taking back their own always works).
+  canReact: { type: Boolean, default: true },
   editing: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
   // Id of the open reaction picker in the list (see useMessageActions).
@@ -57,7 +62,7 @@ defineExpose({ el: row })
       ]"
     >
       <!-- Emoji Reactions Trigger -->
-      <div :class="['relative', PICKER_ANCHOR]">
+      <div v-if="canReact" :class="['relative', PICKER_ANCHOR]">
         <button
           type="button"
           @click.stop="emit('toggle-picker', msg.id)"
@@ -139,6 +144,7 @@ defineExpose({ el: row })
           type="button"
           data-testid="author-name"
           @click="emit('open-profile')"
+          :style="permissions.nameColor(msg.user_id) ? { color: permissions.nameColor(msg.user_id) } : undefined"
           class="font-semibold text-message text-mnema-text hover:text-mnema-accent hover:underline transition-colors cursor-pointer truncate text-left focus-visible:underline focus-visible:text-mnema-accent"
         >
           {{ msg.display_name || msg.username }}
@@ -185,6 +191,7 @@ defineExpose({ el: row })
       <!-- Reaction badges -->
       <ReactionBar
         :reactions="msg.reactions"
+        :can-add="canReact"
         :picker-open="pickerId === `bottom-${msg.id}`"
         @toggle="emit('react', $event)"
         @toggle-picker="emit('toggle-picker', `bottom-${msg.id}`)"

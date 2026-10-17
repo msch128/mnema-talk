@@ -4,6 +4,8 @@ import { computed } from 'vue'
 import { Crown } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
+import { usePermissionsStore } from '../stores/permissions'
+import { roleColorCss } from '../lib/permissions'
 import MemberRow from './MemberRow.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
@@ -11,14 +13,28 @@ import { t } from '../i18n'
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
+const permissions = usePermissionsStore()
 
 // Group members into admins, online members and offline members
 const admins = computed(() => {
   return chatStore.members.filter(m => m.role === 'admin')
 })
 
+const onlineOthers = computed(() => chatStore.onlineMembers.filter(m => m.role !== 'admin'))
+
+// Online members whose highest hoisted role gets a group of its own, in the
+// rank order of the roles; everyone else online stays in "Online".
+const roleGroups = computed(() => {
+  const hoistedOf = (id: string) => permissions.rolesOf(id).find(role => role.hoist)
+  return permissions.roles
+    .filter(role => role.hoist && !role.is_everyone)
+    .map(role => ({ role, members: onlineOthers.value.filter(m => hoistedOf(m.id)?.id === role.id) }))
+    .filter(group => group.members.length > 0)
+})
+
 const onlineNonAdmins = computed(() => {
-  return chatStore.onlineMembers.filter(m => m.role !== 'admin')
+  const grouped = new Set(roleGroups.value.flatMap(group => group.members.map(m => m.id)))
+  return onlineOthers.value.filter(m => !grouped.has(m.id))
 })
 
 const offlineNonAdmins = computed(() => {
@@ -77,7 +93,22 @@ function getUserVoiceChannel(userId: string) {
         />
       </section>
 
-      <!-- 2. Online Members Group -->
+      <!-- 2. Groups of hoisted roles -->
+      <section v-for="group in roleGroups" :key="group.role.id" :data-role-group="group.role.name">
+        <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary flex items-center gap-1.5 min-w-0">
+          <span class="h-2 w-2 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(group.role.color) || 'transparent' }"></span>
+          <span class="truncate">{{ $t('members.roleGroup', { name: group.role.name, count: group.members.length }) }}</span>
+        </h3>
+        <MemberRow
+          v-for="member in group.members"
+          :key="member.id"
+          :member="member"
+          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          @menu="openMemberMenu($event, member)"
+        />
+      </section>
+
+      <!-- 3. Online Members Group -->
       <section v-if="onlineNonAdmins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.online', { count: onlineNonAdmins.length }) }}
@@ -91,7 +122,7 @@ function getUserVoiceChannel(userId: string) {
         />
       </section>
 
-      <!-- 3. Offline Members Group -->
+      <!-- 4. Offline Members Group -->
       <section v-if="offlineNonAdmins.length">
         <h3 class="pt-6 pb-1 px-2 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary truncate">
           {{ $t('members.offline', { count: offlineNonAdmins.length }) }}

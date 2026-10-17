@@ -8,6 +8,7 @@ import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
 import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { browserMediaCall } from '../lib/media/browserCall'
 import { installMediaCallFactory, mediaCall, type MediaNotice } from '../lib/media/api'
 import { playSoundEffect } from '../lib/soundEffects'
@@ -1411,6 +1412,11 @@ export function useWebRTC() {
   }
 
   async function joinVoiceChannel(channelId: string) {
+    // The server refuses it too; saying so up front avoids a half-started call.
+    if (!usePermissionsStore().canIn(channelId, 'connect')) {
+      useToastStore().error(t('talk.noConnect'))
+      return
+    }
     // The native transport has no qualified protected-media owner yet.
     // Reject before changing connection state or requesting physical capture.
     if (isDesktopRuntime()) {
@@ -2178,7 +2184,7 @@ export function useWebRTC() {
     if (!voiceStore.currentChannelId) return
     if (payload.channel_id !== voiceStore.currentChannelId) return
     endCall({ notifyServer: false })
-    useToastStore().info(t(payload.reason === 'room_full' ? 'voice.roomFull' : 'voice.kicked'))
+    useToastStore().info(t(payload.reason === 'room_full' ? 'voice.roomFull' : payload.reason === 'missing_permission' ? 'voice.noPermission' : 'voice.kicked'))
   }
 
   // Rejoins the channel of a call interrupted by a reload less than 30 s ago.

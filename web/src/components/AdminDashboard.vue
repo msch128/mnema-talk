@@ -1,12 +1,14 @@
 <script setup lang="ts">
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
-import { ref, watch } from 'vue'
-import { Users, FolderTree, Link, HardDrive, Server } from '@lucide/vue'
+import { ref, computed, watch } from 'vue'
+import { Users, FolderTree, Link, HardDrive, Server, Shield } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import BaseDialog from './BaseDialog.vue'
 import AdminUsersTab from './AdminUsersTab.vue'
+import AdminRolesTab from './AdminRolesTab.vue'
 import AdminLayoutTab from './AdminLayoutTab.vue'
 import AdminInvitesTab from './AdminInvitesTab.vue'
 import AdminMediaTab from './AdminMediaTab.vue'
@@ -21,18 +23,30 @@ const props = defineProps({
 
 const emit = defineEmits<{ close: [] }>()
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 
-type AdminTab = 'users' | 'channels' | 'invites' | 'media' | 'system'
-const TABS: readonly AdminTab[] = ['users', 'channels', 'invites', 'media', 'system']
-function isAdminTab(value: string): value is AdminTab { return TABS.some(tab => tab === value) }
+type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'media' | 'system'
+const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'media', 'system']
+// Each tab needs its own permission; storage and system are the Owner's.
+const ALLOWED: Record<AdminTab, () => boolean> = {
+  users: () => permissions.can('manage_members') || permissions.can('manage_roles'),
+  roles: () => permissions.can('manage_roles'),
+  channels: () => permissions.can('manage_channels'),
+  invites: () => permissions.can('create_invites'),
+  media: () => permissions.isOwner,
+  system: () => permissions.isOwner
+}
+const TABS = computed(() => ALL_TABS.filter(tab => ALLOWED[tab]()))
+function isAdminTab(value: string): value is AdminTab { return TABS.value.some(tab => tab === value) }
 const TAB_COMPONENTS = {
   users: AdminUsersTab,
+  roles: AdminRolesTab,
   channels: AdminLayoutTab,
   invites: AdminInvitesTab,
   media: AdminMediaTab,
   system: AdminSystemTab
 }
-const activeTab = ref<AdminTab>(isAdminTab(props.initialTab) ? props.initialTab : 'users')
+const activeTab = ref<AdminTab>(isAdminTab(props.initialTab) ? props.initialTab : (TABS.value[0] ?? 'users'))
 
 watch(() => props.initialTab, (newTab) => {
   if (newTab && isAdminTab(newTab)) {
@@ -67,6 +81,7 @@ watch(activeTab, (tab) => {
         @click="activeTab = tab"
       >
         <Users v-if="tab === 'users'" class="w-4 h-4" />
+        <Shield v-else-if="tab === 'roles'" class="w-4 h-4" />
         <FolderTree v-else-if="tab === 'channels'" class="w-4 h-4" />
         <Link v-else-if="tab === 'invites'" class="w-4 h-4" />
         <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />

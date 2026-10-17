@@ -8,9 +8,10 @@ import { ref, computed, watch, nextTick } from 'vue'
 import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
-import { useAuthStore } from '../stores/auth'
 import { useWebRTC } from '../composables/useWebRTC'
 import CreateChannelModal from './CreateChannelModal.vue'
+import ChannelPermissionsDialog from './ChannelPermissionsDialog.vue'
+import { usePermissionsStore } from '../stores/permissions'
 import EditNameDialog from './EditNameDialog.vue'
 import ContextMenu from './ContextMenu.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
@@ -35,7 +36,9 @@ const emit = defineEmits<{ 'open-admin': []; 'open-legal': [] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
-const authStore = useAuthStore()
+const permissions = usePermissionsStore()
+// The channel or category whose permissions are open in a dialog.
+const permissionsFor = ref<{ kind: 'channel' | 'category'; entity: Channel | Category } | null>(null)
 const toasts = useToastStore()
 const { joinVoiceChannel } = useWebRTC()
 // The order on screen: the server's, or a move that is still being saved.
@@ -114,6 +117,7 @@ function handleCategoryCreated(category: Category) {
 const menu = useMenuState()
 const editing = ref<EditingEntity | null>(null) // { kind: 'channel' | 'category', entity (null: create), after }
 const menuHandlers = {
+  onPermissions: (entity: Channel | Category) => { permissionsFor.value = { kind: 'channels' in entity ? 'category' : 'channel', entity } },
   onEdit: (entity: Channel | Category) => { editing.value = { kind: 'channels' in entity ? 'category' : 'channel', entity } },
   onDelete: (entity: Channel | Category) => ('channels' in entity ? handleDeleteCategory(entity) : handleDeleteChannel(entity)),
   onDuplicate: (channel: Channel) => handleDuplicateChannel(channel),
@@ -253,7 +257,7 @@ const {
   commit,
   collapsed,
   expandCategory,
-  enabled: () => authStore.isAdmin,
+  enabled: () => permissions.can('manage_channels'),
   // Touch: holding an item and letting go without moving opens its menu.
   onLongPress: (_kind: 'channel' | 'category', entity: Channel | Category, e: PointerEvent) => ('channels' in entity ? openCategoryMenu(e, entity) : openChannelMenu(e, entity))
 })
@@ -332,7 +336,7 @@ function runMenuAction(action: () => void) {
 // A press elsewhere closes the menu; Escape also returns focus to its button.
 useDismissable(menuRoot, (e, reason) => closeMenu(reason === 'escape'), { active: menuOpen })
 
-watch(() => authStore.isAdmin, () => closeMenu())
+watch(() => permissions.can('manage_channels'), () => closeMenu())
 
 const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
 </script>
@@ -376,19 +380,21 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         class="absolute left-2 top-[52px] z-40 w-max min-w-[calc(100%-16px)] max-w-[calc(100vw-16px)] p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-xl"
         @keydown="onMenuKeydown"
       >
-        <template v-if="authStore.isAdmin">
-          <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
+        <template v-if="permissions.canOpenAdmin || permissions.can('manage_channels')">
+          <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
             <span class="truncate">{{ $t('menu.adminConsole') }}</span>
             <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
           </button>
-          <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateChannel('text'))">
-            <span class="truncate">{{ $t('channel.create') }}</span>
-            <Plus class="w-4 h-4 flex-shrink-0" />
-          </button>
-          <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateCategory())">
-            <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
-            <FolderPlus class="w-4 h-4 flex-shrink-0" />
-          </button>
+          <template v-if="permissions.can('manage_channels')">
+            <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateChannel('text'))">
+              <span class="truncate">{{ $t('channel.create') }}</span>
+              <Plus class="w-4 h-4 flex-shrink-0" />
+            </button>
+            <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateCategory())">
+              <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
+              <FolderPlus class="w-4 h-4 flex-shrink-0" />
+            </button>
+          </template>
           <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
         </template>
         <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
@@ -401,7 +407,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
     <!-- Navigation Scroll Area -->
     <nav
       ref="navEl"
-      :class="['flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden px-2 pt-3', authStore.isAdmin && '[-webkit-touch-callout:none]']"
+      :class="['flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden px-2 pt-3', permissions.can('manage_channels') && '[-webkit-touch-callout:none]']"
       :aria-label="$t('sidebar.channels')"
       v-on="navListeners"
       @contextmenu="openListMenu"
@@ -419,7 +425,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
             v-if="!category.headless"
             :category="category"
             :collapsed="isCollapsed(category.id)"
-            :admin="authStore.isAdmin"
+            :admin="permissions.can('manage_channels')"
             :dragging="isDragged('category', category.id)"
             :indicator="indicatorFor(`header:${category.id}`)"
             :flash="flashKey === `category:${category.id}`"
@@ -437,7 +443,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
               v-for="channel in visibleChannels(category)"
               :key="channel.id"
               :channel="channel"
-              :admin="authStore.isAdmin"
+              :admin="permissions.can('manage_channels')"
               :dragging="isDragged('channel', channel.id)"
               :indicator="channelIndicator(channel.id)"
               :flash="flashKey === `channel:${channel.id}`"
@@ -477,7 +483,7 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
     </nav>
 
     <!-- How to move things, and where a move ended up, for screen readers -->
-    <p v-if="authStore.isAdmin" :id="hintId" class="sr-only">{{ $t('sidebar.reorderHint') }}</p>
+    <p v-if="permissions.can('manage_channels')" :id="hintId" class="sr-only">{{ $t('sidebar.reorderHint') }}</p>
     <div class="sr-only" role="status" aria-live="polite" data-testid="sidebar-announcer">{{ announcement }}</div>
 
     <!-- The dragged item follows the pointer -->
@@ -503,6 +509,13 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
       :entity="editing.entity"
       @created="handleCategoryCreated"
       @close="editing = null"
+    />
+
+    <ChannelPermissionsDialog
+      v-if="permissionsFor"
+      :kind="permissionsFor.kind"
+      :target="permissionsFor.entity"
+      @close="permissionsFor = null"
     />
 
     <!-- Create Channel Modal Dialog -->

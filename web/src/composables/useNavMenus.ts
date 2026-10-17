@@ -8,15 +8,16 @@ import type { ContextMenuItem, MenuAnchor } from '../components/menuTypes'
 
 type MenuMember = Pick<UserModel, 'id'> & Partial<UserModel>
 type MenuBuilder = (refresh: () => void) => ContextMenuItem[]
-interface ChannelHandlers { onEdit?: (channel: Channel) => void; onDuplicate?: (channel: Channel) => void; onDelete?: (channel: Channel) => void }
-interface CategoryHandlers { onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
+interface ChannelHandlers { onPermissions?: (channel: Channel) => void; onEdit?: (channel: Channel) => void; onDuplicate?: (channel: Channel) => void; onDelete?: (channel: Channel) => void }
+interface CategoryHandlers { onPermissions?: (category: Category) => void; onCollapseAll?: () => void; onExpandAll?: () => void; allCollapsed?: boolean; noneCollapsed?: boolean; onCreateChannel?: (category: Category) => void; onCreateCategory?: (category: Category) => void; onEdit?: (category: Category) => void; onDelete?: (category: Category) => void }
 import {
   CheckCheck, Link, Pencil, Trash2, User, AtSign, Volume2, VolumeX, Eye, EyeOff, UserX, Ban, LogOut,
-  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown
+  CopyPlus, Plus, FolderPlus, ChevronsDownUp, ChevronsUpDown, Shield
 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { useToastStore } from '../stores/toast'
 import { api } from '../lib/api'
 import { confirm } from '../lib/confirm'
@@ -72,7 +73,7 @@ export function notifyLevelOf(chatStore: Pick<ChatStore, "notificationLevel" | "
 /** handlers: { onEdit(channel), onDuplicate(channel), onDelete(channel) } (admin only). */
 export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = {}): ContextMenuItem[] {
   const chatStore = useChatStore()
-  const authStore = useAuthStore()
+  const permissions = usePermissionsStore()
   const toasts = useToastStore()
   // Every channel has a chat (a voice channel's sits next to its Talk), so
   // every channel has a read state and a notification level.
@@ -107,8 +108,14 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
     })
   }
 
-  if (authStore.isAdmin) {
+  if (permissions.can('manage_channels')) {
     items.push({ type: 'separator' })
+    items.push({
+      id: 'permissions',
+      label: t('overwrites.menu'),
+      icon: Shield,
+      action: () => handlers.onPermissions?.(channel)
+    })
     items.push({
       id: 'edit',
       label: t('sidebar.editChannel'),
@@ -139,7 +146,7 @@ export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = 
  */
 export function buildCategoryItems(category: Category, handlers: CategoryHandlers = {}): ContextMenuItem[] {
   const chatStore = useChatStore()
-  const authStore = useAuthStore()
+  const permissions = usePermissionsStore()
   const toasts = useToastStore()
   // Text and voice channels alike: both have a chat.
   const channels = category.channels || []
@@ -172,8 +179,9 @@ export function buildCategoryItems(category: Category, handlers: CategoryHandler
     disabled: !!handlers.noneCollapsed,
     action: () => handlers.onExpandAll?.()
   })
-  if (authStore.isAdmin) {
+  if (permissions.can('manage_channels')) {
     items.push({ type: 'separator' })
+    items.push({ id: 'permissions', label: t('overwrites.menu'), icon: Shield, action: () => handlers.onPermissions?.(category) })
     items.push({ id: 'create-channel', label: t('channel.create'), icon: Plus, action: () => handlers.onCreateChannel?.(category) })
     items.push({ id: 'create-category', label: t('sidebar.createCategory'), icon: FolderPlus, action: () => handlers.onCreateCategory?.(category) })
     items.push({ type: 'separator' })
@@ -188,8 +196,7 @@ export function buildCategoryItems(category: Category, handlers: CategoryHandler
  * (members keep the browser's own); handlers: { onCreateChannel, onCreateCategory }.
  */
 export function buildSidebarItems(handlers: { onCreateChannel?: () => void; onCreateCategory?: () => void } = {}): ContextMenuItem[] {
-  const authStore = useAuthStore()
-  if (!authStore.isAdmin) return []
+  if (!usePermissionsStore().can('manage_channels')) return []
   return [
     { id: 'create-channel', label: t('channel.create'), icon: Plus, action: () => handlers.onCreateChannel?.() },
     { id: 'create-category', label: t('sidebar.createCategory'), icon: FolderPlus, action: () => handlers.onCreateCategory?.() }
@@ -234,6 +241,7 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
   const chatStore = useChatStore()
   const voiceStore = useVoiceStore()
   const authStore = useAuthStore()
+  const permissions = usePermissionsStore()
   const isSelf = authStore.user?.id === member.id
   const items: ContextMenuItem[] = [
     { id: 'profile', label: t('profile.viewProfile'), icon: User, action: () => chatStore.openUserProfile(member) },
@@ -272,10 +280,15 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
     }
   }
 
-  if (authStore.isAdmin && !isSelf) {
+  // Moderation needs the permission and a higher rank than the member; the
+  // Owner is out of reach for everyone.
+  const reachable = !isSelf && member.role !== 'admin' && permissions.outranksMember(member.id)
+  const canKick = reachable && permissions.can('disconnect_members')
+  const canModerate = reachable && permissions.can('manage_members')
+  if (canKick || canModerate) {
     items.push({ type: 'separator' })
     const inAnyCall = Object.values(voiceStore.channelUsers || {}).some(u => u && u[member.id])
-    if (inAnyCall) {
+    if (canKick && inAnyCall) {
       items.push({
         id: 'kick',
         label: t('admin.kickFromVoice'),
@@ -286,6 +299,8 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
         })
       })
     }
+  }
+  if (canModerate) {
     items.push({
       id: 'revoke',
       label: t('admin.revokeSessions'),
