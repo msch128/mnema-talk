@@ -282,3 +282,30 @@ func TestJoinIsRevokedWhenPermissionsChangeMeanwhile(t *testing.T) {
 		t.Fatalf("events: %v", got)
 	}
 }
+
+// A revoke that lands after the media peer exists but before the policy is
+// applied is not lost: the policy is decided on the state as it is then.
+func TestMediaPolicyIsDecidedAfterThePeerIsAttached(t *testing.T) {
+	w := newPermWorld(t)
+	media, err := sfu.NewSFU(0, 0, []string{"127.0.0.1"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = media.Close() })
+	w.h.SFU = media
+	w.h.afterPeer = func() { w.f.Everyone(perm.DefaultEveryone &^ perm.Speak) }
+	w.h.joinVoice(w.outsider, w.public)
+	peer := w.outsider.peer()
+	if peer == nil || !peer.DeniedSources().Has(sfu.SourceAudio) {
+		t.Fatal("the revoke of Speak was lost for the new peer")
+	}
+	// And a revoke of Connect at that moment removes the seat.
+	w.f.Everyone(perm.DefaultEveryone)
+	other := testClient(w.h, auth.User{ID: uuid.New()})
+	drainTypes(t, other)
+	w.h.afterPeer = func() { w.f.RoleOverwrite(true, w.public.ID, w.f.EveryoneID(), 0, perm.Connect) }
+	w.h.joinVoice(other, w.public)
+	if inRoom(w.h, w.public.ID, other.User.ID) || count(drainTypes(t, other), "voice_kicked") != 1 {
+		t.Fatal("the seat survived a Connect revoke between the peer and the policy")
+	}
+}

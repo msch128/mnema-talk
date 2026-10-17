@@ -70,6 +70,8 @@ type Hub struct {
 	// afterSeat, when set, runs in joinVoice right after the seat is taken
 	// (tests only).
 	afterSeat func()
+	// afterPeer is the same right after the media peer is attached.
+	afterPeer func()
 
 	upgrader websocket.Upgrader
 }

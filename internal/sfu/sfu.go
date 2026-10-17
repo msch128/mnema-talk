@@ -72,6 +72,9 @@ func (set SourceSet) Has(s Source) bool { return set&sourceBit(s) != 0 }
 // track that arrives for one is ignored.
 func (p *Peer) SetDeniedSources(set SourceSet) { p.denied.Store(uint32(set)) }
 
+// DeniedSources is the set given to SetDeniedSources.
+func (p *Peer) DeniedSources() SourceSet { return SourceSet(p.denied.Load()) }
+
 func (p *Peer) sourceDenied(s Source) bool { return SourceSet(p.denied.Load()).Has(s) }
 
 // CameraStreamPrefix precedes the publisher's user ID in a camera's stream ID.

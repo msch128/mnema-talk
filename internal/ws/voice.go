@@ -208,6 +208,18 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
 		c.setPeer(peer)
+		if h.afterPeer != nil {
+			h.afterPeer() // tests change permissions exactly here
+		}
+		// A sweep between the check and now found a seat without a peer and
+		// skipped it: decide again on the state as it is now.
+		snap, ok = h.permSnapshot(ch.ID)
+		if !ok || !c.can(snap, ch.ID, perm.ViewChannel|perm.Connect) {
+			slog.Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", ch.ID)
+			h.leaveVoiceLocked(c, ch.ID)
+			c.SendEvent("voice_kicked", map[string]any{"channel_id": ch.ID, "reason": "missing_permission"})
+			return
+		}
 		h.applyMediaPolicy(c, snap)
 		// A late joiner learns who shares a screen or runs a camera, and who
 		// watches each share.
