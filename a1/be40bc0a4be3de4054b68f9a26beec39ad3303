@@ -1,0 +1,65 @@
+web/src/components/ScreenLayerMenu.vue
+  s_06fcde5dbef956::t_448a6c2a37962b 1-74
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_b6f683a628582e 7,10,241-252,432,436-441,460,572,600-650,668-670,833-839,896-899,953-960
+  s_06fcde5dbef956::t_32a187468fcb4d 468,596-599
+web/src/components/VoiceStage.vue
+  s_06fcde5dbef956::t_148ecd80d96f98 19
+  s_06fcde5dbef956::t_9e182fbcb1822c 643-650
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_0ae661f1aa372d 25,37-38,148-153,396-397,586-589,598,738-744,764,767,782,795-801,813,860,867,1364-1365,1394,1892,1900-1946,2031-2033,2045,2250-2252
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_9e182fbcb1822c 438,666-673
+web/src/types/events.ts
+  s_06fcde5dbef956::t_134eb7ac494525 10-12,15,51,53,65-67,82,114-126,173-176,192
+  s_06fcde5dbef956::t_b6f683a628582e 13-14,52
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_b6f683a628582e 936-947
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_60b327232e3eb4 2
+  s_06fcde5dbef956::t_fcf093f3b92a18 235-239
+  s_06fcde5dbef956::t_8112950b3abd3c 18-19
+web/src/composables/useScreenLayerMenu.ts
+  s_06fcde5dbef956::t_e5b74a5a6f909e 1-20,22-80
+  s_06fcde5dbef956::t_9515fd2156d6d9 21
+web/src/lib/media/api.ts
+  s_06fcde5dbef956::t_98b3fc2d297554 21-25
+web/src/components/ConnectionStatsModal.vue
+  s_06fcde5dbef956::t_9e182fbcb1822c 54
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_9e182fbcb1822c 438,666-673
+web/src/lib/screenLayers.ts
+  s_06fcde5dbef956::t_a2491c966d17ba 1-80
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_37244f50d6e06a 11
+  s_06fcde5dbef956::t_c9308b762d944f 74
+  s_06fcde5dbef956::t_e421b67e2d208a 106
+  s_06fcde5dbef956::t_1a5ed45372c8ae 84
+web/src/lib/rtcStats.ts
+  s_06fcde5dbef956::t_87782a05b4d881 7,57-64,100
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_a82fa70c9788fe 257
+  s_06fcde5dbef956::t_f6492beae4f089 218-231
+web/src/components/ContextMenu.vue
+  s_06fcde5dbef956::t_9e182fbcb1822c 25-27,295
+web/src/lib/streamQuality.ts
+  s_06fcde5dbef956::t_b6b98521e238c8 83,95-101,107
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_a0b741956f57b7 142,144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1be40bc0a4be3de4054b68f9a26beec39ad3303",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
