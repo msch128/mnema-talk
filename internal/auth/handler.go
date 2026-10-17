@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // Handler serves /api/auth/* and the profile endpoints under /api/users.
@@ -18,6 +19,9 @@ type Handler struct {
 	Events   events.Publisher
 	// Live acts on users' open connections (voice kick, disconnect); optional.
 	Live LiveControl
+	// Perms decides who may use the admin routes beyond the Owner. nil means
+	// only the Owner may.
+	Perms *perm.Service
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter

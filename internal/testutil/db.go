@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/testutil/pgtest"
 )
 
@@ -83,5 +84,14 @@ func Reset(t testing.TB, p *db.Pool) {
 		RESTART IDENTITY CASCADE`)
 	if err != nil {
 		t.Fatalf("reset database: %v", err)
+	}
+	// Roles are not user data: @everyone stays (back at its defaults), the
+	// custom roles of the previous test go.
+	_, err = p.Exec(context.Background(), `DELETE FROM roles WHERE NOT is_everyone`)
+	if err == nil {
+		_, err = p.Exec(context.Background(), `UPDATE roles SET permissions = $1 WHERE is_everyone`, int64(perm.DefaultEveryone))
+	}
+	if err != nil {
+		t.Fatalf("reset roles: %v", err)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
@@ -52,7 +53,11 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 			return
 		}
 		if ch, err := chat.LoadChannel(ctx, h.DB, p.ChannelID); err == nil && c.nativeLive() {
-			c.emitApplicationEvent("typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID}, true, nil)
+			// Only someone who could send a message shows as typing, and
+			// only to those who can see the channel.
+			if snap, ok := h.permSnapshot(ch.ID); ok && c.can(snap, ch.ID, perm.ViewChannel|perm.SendMessages) {
+				c.emitApplicationEvent("typing", map[string]any{"channel_id": ch.ID, "user_id": c.User.ID}, true, nil, ch.ID)
+			}
 		}
 
 	case "voice_speaking":
@@ -60,7 +65,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 			// A muted or deafened member is never shown as speaking.
 			active := p.Active && !h.isMuted(c.User.ID, *cur)
 			if c.speakingChanged(active, time.Now()) {
-				c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur)
+				c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
 			}
 		}
 

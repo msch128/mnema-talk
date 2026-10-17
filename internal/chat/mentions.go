@@ -17,6 +17,28 @@ const (
 	MentionHere = "here"
 )
 
+// MentionPolicy limits whom a message notifies, from the author's permissions
+// in the channel. The zero value limits nothing.
+type MentionPolicy struct {
+	// NoEveryone turns @all and @here into plain text.
+	NoEveryone bool
+	// CanView, when set, drops mentioned users who cannot view the channel.
+	CanView func(userID uuid.UUID) bool
+}
+
+type mentionPolicyKey struct{}
+
+// WithMentionPolicy attaches the policy that ResolveMentions (and so
+// InsertMessage and EditMessage) applies.
+func WithMentionPolicy(ctx context.Context, p MentionPolicy) context.Context {
+	return context.WithValue(ctx, mentionPolicyKey{}, p)
+}
+
+func mentionPolicyFrom(ctx context.Context) MentionPolicy {
+	p, _ := ctx.Value(mentionPolicyKey{}).(MentionPolicy)
+	return p
+}
+
 // OnlineSource reports who has an open connection right now (the WebSocket hub).
 type OnlineSource interface {
 	OnlineUserIDs() []uuid.UUID
@@ -51,14 +73,15 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	if len(names) == 0 {
 		return nil, nil
 	}
+	policy := mentionPolicyFrom(ctx)
 	var all, here bool
 	usernames := make([]string, 0, len(names))
 	for _, n := range names {
 		switch n {
 		case MentionAll:
-			all = true
+			all = !policy.NoEveryone
 		case MentionHere:
-			here = true
+			here = !policy.NoEveryone
 		default:
 			usernames = append(usernames, n)
 		}
@@ -83,6 +106,9 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	delete(ids, authorID)
 	out := make([]uuid.UUID, 0, len(ids))
 	for id := range ids {
+		if policy.CanView != nil && !policy.CanView(id) {
+			continue
+		}
 		out = append(out, id)
 	}
 	return out, nil

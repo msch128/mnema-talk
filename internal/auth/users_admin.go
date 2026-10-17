@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // LiveControl acts on a user's live connections (implemented by the WebSocket hub).
@@ -29,8 +30,10 @@ type LiveControl interface {
 // AdminUser is a user as the admin panel lists it.
 type AdminUser struct {
 	User
-	Disabled   bool       `json:"disabled"`
-	LastSeenAt *time.Time `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
+	// RoleIDs are the account's custom roles, highest first.
+	RoleIDs    []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
+	Disabled   bool        `json:"disabled"`
+	LastSeenAt *time.Time  `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
 }
 
 // ListUsersForAdmin returns every account, admins first, then by name.
@@ -54,6 +57,8 @@ func ListUsersForAdmin(ctx context.Context, p *db.Pool) ([]AdminUser, error) {
 	return users, rows.Err()
 }
 
+var errOwnerAction = httpx.ErrInvalidInput("this action is not available for the Owner account")
+
 // targetUser loads the user an admin action applies to. Admin accounts are
 // never targets: the single administrator cannot lock themselves out.
 func targetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
@@ -62,7 +67,7 @@ func targetUser(ctx context.Context, p *db.Pool, id uuid.UUID) (*User, error) {
 		return nil, err
 	}
 	if u.IsAdmin() {
-		return nil, httpx.ErrInvalidInput("this action is not available for the administrator account")
+		return nil, errOwnerAction
 	}
 	return u, nil
 }
@@ -123,20 +128,35 @@ func SetPassword(ctx context.Context, p *db.Pool, id uuid.UUID, password string)
 }
 
 func (h *Handler) mountUserAdmin(r chi.Router) {
-	r.Get("/users", httpx.Handle(h.listUsers))
-	r.Post("/users/{id}/disable", httpx.Handle(h.disableUser))
-	r.Post("/users/{id}/enable", httpx.Handle(h.enableUser))
-	r.Post("/users/{id}/sessions/revoke", httpx.Handle(h.revokeUserSessions))
-	r.Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
-	r.Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
-	r.Post("/users/{id}/kick", httpx.Handle(h.kickUser))
-	r.Put("/users/{id}/status", httpx.Handle(h.setUserStatus))
+	r.With(RequireAnyPerm(h.Perms, perm.ManageMembers|perm.ManageRoles)).Get("/users", httpx.Handle(h.listUsers))
+	members := r.With(RequirePerm(h.Perms, perm.ManageMembers))
+	members.Post("/users/{id}/disable", httpx.Handle(h.disableUser))
+	members.Post("/users/{id}/enable", httpx.Handle(h.enableUser))
+	members.Post("/users/{id}/sessions/revoke", httpx.Handle(h.revokeUserSessions))
+	members.Put("/users/{id}/status", httpx.Handle(h.setUserStatus))
+	// Taking over an account is not a role's business: the Owner only.
+	r.With(RequireOwner).Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
+	r.With(RequireOwner).Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
+	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
+}
+
+// moderate loads the member a moderation action aims at and checks that the
+// caller may act on them: never the Owner, only members below the caller.
+func (h *Handler) moderate(r *http.Request, id uuid.UUID) (*User, error) {
+	target, err := GetUser(r.Context(), h.Sessions.DB, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.authorizeTarget(r, target); err != nil {
+		return nil, err
+	}
+	return target, nil
 }
 
 // listUsers handles GET /api/admin/users.
 //
 // @Summary List all accounts
-// @Description Admins first, then by username. Requires role admin (403 otherwise).
+// @Description Admins first, then by username. Requires the Manage members or Manage roles permission (403 otherwise). Includes each account's role_ids.
 // @ID listUsersAdmin
 // @Tags Admin
 // @Produce json
@@ -153,6 +173,9 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := h.withRoles(r, users); err != nil {
+		return err
+	}
 	httpx.WriteJSON(w, http.StatusOK, users)
 	return nil
 }
@@ -160,7 +183,7 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 // disableUser handles POST /api/admin/users/{id}/disable.
 //
 // @Summary Disable an account
-// @Description Signs the user out, drops their live connections and removes them from voice. The administrator account cannot be targeted (400). Requires role admin (403 otherwise).
+// @Description Signs the user out, drops their live connections and removes them from voice. Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted. The Owner cannot be targeted (400).
 // @ID disableUser
 // @Tags Admin
 // @Produce json
@@ -180,6 +203,9 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if _, err := h.moderate(r, id); err != nil {
+		return err
+	}
 	if err := SetDisabled(r.Context(), h.Sessions.DB, id, true); err != nil {
 		return err
 	}
@@ -195,7 +221,7 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 // enableUser handles POST /api/admin/users/{id}/enable.
 //
 // @Summary Re-enable an account
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.
 // @ID enableUser
 // @Tags Admin
 // @Produce json
@@ -215,6 +241,9 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if _, err := h.moderate(r, id); err != nil {
+		return err
+	}
 	if err := SetDisabled(r.Context(), h.Sessions.DB, id, false); err != nil {
 		return err
 	}
@@ -226,7 +255,7 @@ func (h *Handler) enableUser(w http.ResponseWriter, r *http.Request) error {
 // revokeUserSessions handles POST /api/admin/users/{id}/sessions/revoke.
 //
 // @Summary Revoke all sessions of a user
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.
 // @ID revokeUserSessions
 // @Tags Admin
 // @Produce json
@@ -249,6 +278,9 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 	if _, err := targetUser(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
+	if _, err := h.moderate(r, id); err != nil {
+		return err
+	}
 	if err := RevokeSessions(r.Context(), h.Sessions.DB, id); err != nil {
 		return err
 	}
@@ -262,7 +294,7 @@ func (h *Handler) revokeUserSessions(w http.ResponseWriter, r *http.Request) err
 // resetUserPassword handles POST /api/admin/users/{id}/password-reset.
 //
 // @Summary Generate a temporary password
-// @Description Ends all sessions; the password is returned once. Requires role admin (403 otherwise).
+// @Description Ends all sessions; the password is returned once. Owner only (403 otherwise).
 // @ID resetUserPassword
 // @Tags Admin
 // @Produce json
@@ -298,7 +330,7 @@ func (h *Handler) resetUserPassword(w http.ResponseWriter, r *http.Request) erro
 // setUserPassword handles POST /api/admin/users/{id}/password.
 //
 // @Summary Set a user's password
-// @Description Ends all of the user's sessions. Requires role admin (403 otherwise).
+// @Description Ends all of the user's sessions. Owner only (403 otherwise).
 // @ID setUserPassword
 // @Tags Admin
 // @Accept json
@@ -337,7 +369,7 @@ func (h *Handler) setUserPassword(w http.ResponseWriter, r *http.Request) error 
 // kickUser handles POST /api/admin/users/{id}/kick.
 //
 // @Summary Remove a user from voice
-// @Description 400 when the user is not in a voice room. Requires role admin (403 otherwise).
+// @Description 400 when the user is not in a voice room. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
 // @ID kickUserFromVoice
 // @Tags Admin
 // @Produce json
@@ -357,7 +389,7 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := GetUser(r.Context(), h.Sessions.DB, id); err != nil {
+	if _, err := h.moderate(r, id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return httpx.ErrNotFound("user not found")
 		}
@@ -373,7 +405,7 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 // setUserStatus lets an admin edit or clear any member's status line.
 //
 // @Summary Edit or clear a member's status line
-// @Description Broadcasts user_update. Requires role admin (403 otherwise).
+// @Description Broadcasts user_update. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).
 // @ID setUserStatus
 // @Tags Admin
 // @Accept json
@@ -393,6 +425,9 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) setUserStatus(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
+		return err
+	}
+	if _, err := h.moderate(r, id); err != nil {
 		return err
 	}
 	return h.writeStatus(w, r, id)

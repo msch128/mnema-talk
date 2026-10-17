@@ -37,21 +37,6 @@ func (h *Hub) Broadcast(eventType string, payload any) {
 	}
 }
 
-// broadcastExcept sends an event to every connected user except userID.
-func (h *Hub) broadcastExcept(userID uuid.UUID, eventType string, payload any) {
-	data := encode(eventType, payload)
-	if data == nil {
-		return
-	}
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for c := range h.clients {
-		if c.User.ID != userID {
-			c.deliver(data)
-		}
-	}
-}
-
 // SendToUsers sends an event to all sessions of the given users.
 func (h *Hub) SendToUsers(userIDs []uuid.UUID, eventType string, payload any) {
 	data := encode(eventType, payload)

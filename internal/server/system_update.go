@@ -60,7 +60,7 @@ func (h *systemHandler) updateStatus() UpdateStatus {
 // getUpdate handles GET /api/admin/system/update.
 //
 // @Summary Update status
-// @Description What the last release check found (cheap: no request to GitHub). Requires role admin (403 otherwise).
+// @Description What the last release check found (cheap: no request to GitHub). Owner only (403 otherwise).
 // @ID getSystemUpdate
 // @Tags Admin
 // @Produce json
@@ -82,7 +82,7 @@ func (h *systemHandler) getUpdate(w http.ResponseWriter, r *http.Request) error 
 // checkNow handles POST /api/admin/system/check.
 //
 // @Summary Check for a new release now
-// @Description Asks GitHub for the latest release right away (at most once a minute; while GitHub rate-limits the server, 429 until that ends). 409 when UPDATE_CHECK_ENABLED=false. A failed check still answers 200 with check_error set. Requires role admin (403 otherwise).
+// @Description Asks GitHub for the latest release right away (at most once a minute; while GitHub rate-limits the server, 429 until that ends). 409 when UPDATE_CHECK_ENABLED=false. A failed check still answers 200 with check_error set. Owner only (403 otherwise).
 // @ID checkSystemUpdate
 // @Tags Admin
 // @Produce json

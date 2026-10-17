@@ -436,6 +436,13 @@ func EditMessage(ctx context.Context, p *db.Pool, online OnlineSource, messageID
 // author or an admin. It returns the storage keys of the media that went with
 // it; their rows are removed by cascade, the caller deletes the objects.
 func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User) ([]string, error) {
+	return DeleteMessageAs(ctx, p, messageID, user, user.IsAdmin())
+}
+
+// DeleteMessageAs is DeleteMessage where canManage says whether user may
+// delete other members' messages (the Manage messages permission in the
+// message's channel, or being the Owner).
+func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *auth.User, canManage bool) ([]string, error) {
 	var keys []string
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// Locking the message first blocks a concurrent thread reply or
@@ -449,8 +456,8 @@ func DeleteMessage(ctx context.Context, p *db.Pool, messageID uuid.UUID, user *a
 		if err != nil {
 			return fmt.Errorf("lock message: %w", err)
 		}
-		if author != user.ID && !user.IsAdmin() {
-			return httpx.ErrForbidden("only the author or an admin can delete this message")
+		if author != user.ID && !canManage {
+			return httpx.ErrForbidden("only the author or a moderator can delete this message")
 		}
 		if err := collectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
@@ -494,6 +501,12 @@ const (
 // Adding is refused with 409 CONFLICT beyond MaxReactionsPerUser per user or
 // MaxEmojiPerMessage distinct emoji per message.
 func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string) ([]ReactionSummary, error) {
+	return ToggleReactionAs(ctx, p, messageID, userID, emoji, true)
+}
+
+// ToggleReactionAs is ToggleReaction where canAdd says whether userID may add
+// reactions; without it only taking back an existing one works (403 otherwise).
+func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID, emoji string, canAdd bool) ([]ReactionSummary, error) {
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		// The row lock serializes toggles on one message, so concurrent
 		// adds cannot overshoot the limits.
@@ -511,6 +524,9 @@ func ToggleReaction(ctx context.Context, p *db.Pool, messageID, userID uuid.UUID
 		}
 		if tag.RowsAffected() > 0 {
 			return nil
+		}
+		if !canAdd {
+			return httpx.ErrForbidden("missing permission: add reactions")
 		}
 		var mine, distinct int
 		var emojiPresent bool

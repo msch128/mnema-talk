@@ -26,6 +26,9 @@ type SearchQuery struct {
 	Has       string
 	Before    *uuid.UUID
 	Limit     int
+	// Visible limits the search to these channels; nil searches all of them
+	// (an empty, non-nil list finds nothing).
+	Visible []uuid.UUID
 }
 
 // likePattern escapes LIKE wildcards so user input matches literally.
@@ -58,6 +61,9 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	}
 	for _, t := range terms {
 		where = append(where, "m.content ILIKE "+arg(likePattern(t))+` ESCAPE '\'`)
+	}
+	if q.Visible != nil {
+		where = append(where, "m.channel_id = ANY("+arg(q.Visible)+"::uuid[])")
 	}
 	if q.ChannelID != nil {
 		where = append(where, "m.channel_id = "+arg(*q.ChannelID))

@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 const nativeRevalidateEvery = 5 * time.Second
@@ -226,12 +227,13 @@ func (h *Hub) expireNativeClient(c *Client) bool {
 // The family observer seals under that same lock, so a frame that waited behind
 // confirmed revocation cannot publish participant state. Browser calls delegate
 // to their existing helpers, including their established presence behavior.
-func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID) {
+//
+// view, when set, limits the event to the connections whose user may view
+// that channel.
+func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
 	h := c.hub
-	if c.native == nil {
+	if c.native == nil && view == uuid.Nil && !excludeSelf {
 		switch {
-		case excludeSelf:
-			h.broadcastExcept(c.User.ID, eventType, payload)
 		case voice != nil:
 			h.sendToVoiceRoom(*voice, eventType, payload)
 		default:
@@ -242,6 +244,13 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	data := encode(eventType, payload)
 	if data == nil {
 		return
+	}
+	var snap *perm.Snapshot
+	if view != uuid.Nil {
+		var ok bool
+		if snap, ok = h.permSnapshot(view); !ok {
+			return
+		}
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -257,6 +266,9 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 			if current == nil || *current != *voice {
 				continue
 			}
+		}
+		if view != uuid.Nil && !recipient.can(snap, view, perm.ViewChannel) {
+			continue
 		}
 		recipient.deliver(data)
 	}

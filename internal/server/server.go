@@ -22,6 +22,8 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/perm"
+	"github.com/msch128/mnema-talk/internal/roles"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/ws"
@@ -96,6 +98,8 @@ func NewRouter(d Deps) (*Router, error) {
 	}
 	hub := ws.NewHub(d.DB, sessions, d.SFU, cfg.AllowedOrigins)
 	hub.Version = d.Version
+	permSvc := perm.NewService(d.DB)
+	hub.SetPermissions(permSvc)
 	var pub events.Publisher = hub
 	if d.Events != nil {
 		pub = d.Events
@@ -103,7 +107,9 @@ func NewRouter(d Deps) (*Router, error) {
 
 	authH := auth.NewHandler(sessions, pub)
 	authH.Live = hub
-	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub}
+	authH.Perms = permSvc
+	chatH := &chat.Handler{DB: d.DB, Events: pub, Online: hub, Perms: permSvc}
+	rolesH := &roles.Handler{Perms: permSvc, Events: pub}
 	if d.Store != nil {
 		chatH.Objects = d.Store
 	}
@@ -115,6 +121,7 @@ func NewRouter(d Deps) (*Router, error) {
 		MaxUploadBytes: int64(cfg.MaxUploadMB) << 20,
 		RetentionDays:  cfg.MediaRetentionDays,
 		Online:         hub,
+		Perms:          permSvc,
 	}
 
 	systemH := &systemHandler{
@@ -216,6 +223,7 @@ func NewRouter(d Deps) (*Router, error) {
 				}
 				chatH.Mount(j)
 				mediaH.Mount(j)
+				rolesH.Mount(j)
 			})
 
 			// Link cards make outbound requests; they get their own budget.
@@ -233,9 +241,10 @@ func NewRouter(d Deps) (*Router, error) {
 			})
 
 			authed.Route("/admin", func(adm chi.Router) {
-				adm.Use(auth.RequireAdmin, httpx.MaxBody(httpx.DefaultMaxBody))
+				adm.Use(auth.RequireAnyPerm(permSvc, perm.AdminArea), httpx.MaxBody(httpx.DefaultMaxBody))
 				authH.MountAdmin(adm)
 				chatH.MountAdmin(adm)
+				rolesH.MountAdmin(adm)
 				mediaH.MountAdmin(adm)
 				systemH.mountAdmin(adm)
 			})

@@ -140,7 +140,7 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 		for _, route := range nativeMetadataRoutes {
 			handler := metadataHandlers[route.Method+" "+route.Path]
 			if strings.HasPrefix(route.Path, "/admin/") {
-				handler = auth.RequireAdmin(handler)
+				handler = auth.RequireOwner(handler)
 			}
 			metadata.Method(route.Method, route.Path, handler)
 		}

@@ -77,7 +77,7 @@ func (h *systemHandler) selfUpdateStatus(upd UpdateStatus) SelfUpdateStatus {
 // startSelfUpdate handles POST /api/admin/system/update.
 //
 // @Summary Update the server now
-// @Description Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Requires role admin (403 otherwise).
+// @Description Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).
 // @ID startSelfUpdate
 // @Tags Admin
 // @Accept json

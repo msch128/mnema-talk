@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 )
 
 // Handler serves channels, messages, threads and reactions.
@@ -25,6 +26,10 @@ type Handler struct {
 	// Voice empties the voice room of a deleted channel. When nil, Online is
 	// used if it implements VoiceRooms (the WebSocket hub does).
 	Voice VoiceRooms
+	// Perms decides who may see and use which channel. nil imposes no
+	// channel limits (tests); the router always sets it, and without it the
+	// admin routes stay Owner-only.
+	Perms *perm.Service
 }
 
 // VoiceRooms acts on live voice rooms (implemented by the WebSocket hub).
@@ -75,8 +80,10 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
 }
 
-// MountAdmin registers channel and category management (RequireAdmin applies).
+// MountAdmin registers channel and category management (the Manage channels
+// permission applies).
 func (h *Handler) MountAdmin(r chi.Router) {
+	r = r.With(auth.RequirePerm(h.Perms, perm.ManageChannels))
 	r.Post("/categories", httpx.Handle(h.createCategory))
 	r.Delete("/categories/{id}", httpx.Handle(h.deleteCategory))
 	r.Post("/channels", httpx.Handle(h.createChannel))
@@ -90,12 +97,12 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // listMembers handles GET /api/members.
 //
 // @Summary List members
-// @Description Active accounts, admins first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
+// @Description Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
 // @ID listMembers
 // @Tags Users
 // @Produce json
 // @Security cookieAuth
-// @Success 200 {array} auth.User "Members."
+// @Success 200 {array} Member "Members."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
 // @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
@@ -106,13 +113,24 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, members)
+	out := make([]Member, len(members))
+	var roles map[uuid.UUID][]uuid.UUID
+	if h.Perms != nil {
+		if roles, err = h.Perms.MemberRoles(r.Context()); err != nil {
+			return err
+		}
+	}
+	for i, m := range members {
+		out[i] = Member{User: m, RoleIDs: roles[m.ID]}
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
 	return nil
 }
 
 // listChannels handles GET /api/channels.
 //
 // @Summary List categories and channels
+// @Description Only the channels the caller may view; a category shows when its own permissions allow it or any of its channels is visible.
 // @ID listChannels
 // @Tags Channels
 // @Produce json
@@ -125,6 +143,10 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 // @Router /api/channels [get]
 func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
 	cats, uncat, err := GetServerHierarchy(r.Context(), h.DB)
+	if err != nil {
+		return err
+	}
+	cats, uncat, err = h.visibleHierarchy(r, cats, uncat)
 	if err != nil {
 		return err
 	}
@@ -156,6 +178,9 @@ func (h *Handler) listChannels(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
+		return err
+	}
+	if err := h.require(r, chID, perm.ViewChannel); err != nil {
 		return err
 	}
 	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
@@ -210,7 +235,11 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if _, err := ChannelForMessages(r.Context(), h.DB, chID); err != nil {
+	ctx, err := h.sendContext(r, chID, perm.SendMessages)
+	if err != nil {
+		return err
+	}
+	if _, err := ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
 	var req CreateMessageRequest
@@ -221,10 +250,10 @@ func (h *Handler) createMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := ValidateTarget(r.Context(), h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
+	if err := ValidateTarget(ctx, h.DB, chID, req.ParentID, req.ReplyToID); err != nil {
 		return err
 	}
-	id, err := InsertMessage(r.Context(), h.DB, h.Online, NewMessage{
+	id, err := InsertMessage(ctx, h.DB, h.Online, NewMessage{
 		ChannelID: chID, UserID: user.ID, Content: content, ParentID: req.ParentID, ReplyToID: req.ReplyToID,
 	}, nil)
 	if err != nil {
@@ -276,7 +305,11 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, err
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID} [put]
 func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
-	msgID, _, err := h.messageInChannel(r)
+	msgID, ref, err := h.messageInChannel(r)
+	if err != nil {
+		return err
+	}
+	ctx, err := h.sendContext(r, ref.ChannelID, perm.SendMessages)
 	if err != nil {
 		return err
 	}
@@ -290,14 +323,14 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	userID := auth.UserFrom(r.Context()).ID
-	if err := EditMessage(r.Context(), h.DB, h.Online, msgID, userID, content); err != nil {
+	if err := EditMessage(ctx, h.DB, h.Online, msgID, userID, content); err != nil {
 		return err
 	}
 	msg, err := GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("message_update", msg)
+	h.Events.BroadcastChannel(msg.ChannelID, "message_update", msg)
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -305,7 +338,7 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 // deleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Delete a message
-// @Description Author or admin. Also deletes the message's thread replies and attachments. Broadcasts message_delete.
+// @Description The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. Broadcasts message_delete.
 // @ID deleteMessage
 // @Tags Messages
 // @Produce json
@@ -326,12 +359,20 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	keys, err := DeleteMessage(r.Context(), h.DB, msgID, auth.UserFrom(r.Context()))
+	user := auth.UserFrom(r.Context())
+	p, err := h.channelPerms(r, ref.ChannelID)
+	if err != nil {
+		return err
+	}
+	if !p.Has(perm.ViewChannel) {
+		return perm.ErrChannelHidden
+	}
+	keys, err := DeleteMessageAs(r.Context(), h.DB, msgID, user, p.Has(perm.ManageMessages))
 	if err != nil {
 		return err
 	}
 	h.deleteObjects(r.Context(), keys)
-	h.Events.Broadcast("message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
+	h.Events.BroadcastChannel(ref.ChannelID, "message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -371,12 +412,24 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	reactions, err := ToggleReaction(r.Context(), h.DB, msgID, user.ID, emoji)
+	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
 	}
-	payload := ReactionResult{MessageID: msgID, Reactions: reactions}
-	h.Events.Broadcast("message_reaction", payload)
+	p, err := h.channelPerms(r, ref.ChannelID)
+	if err != nil {
+		return err
+	}
+	if !p.Has(perm.ViewChannel) {
+		return errMessageNotFound
+	}
+	// Taking back an own reaction stays possible without the permission.
+	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
+	if err != nil {
+		return err
+	}
+	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
+	h.Events.BroadcastChannel(ref.ChannelID, "message_reaction", payload)
 	httpx.WriteJSON(w, http.StatusOK, payload)
 	return nil
 }
@@ -409,6 +462,9 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	root, err := GetMessage(r.Context(), h.DB, msgID)
 	if err != nil {
 		return err
+	}
+	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
+		return notFoundUnlessFailure(err)
 	}
 	// Only a root message has a thread; a reply is not one.
 	if root.ParentID != nil {
@@ -464,6 +520,9 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
+	if err := h.require(r, msg.ChannelID, perm.ViewChannel); err != nil {
+		return notFoundUnlessFailure(err)
+	}
 	httpx.WriteJSON(w, http.StatusOK, msg)
 	return nil
 }
@@ -471,7 +530,7 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // createCategory handles POST /api/admin/categories.
 //
 // @Summary Create a category
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage channels permission (403 otherwise).
 // @ID createCategory
 // @Tags Admin
 // @Accept json
@@ -495,7 +554,7 @@ func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusCreated, cat)
 	return nil
 }
@@ -503,7 +562,7 @@ func (h *Handler) createCategory(w http.ResponseWriter, r *http.Request) error {
 // deleteCategory handles DELETE /api/admin/categories/{id}.
 //
 // @Summary Delete a category
-// @Description Its channels become uncategorized. Requires role admin (403 otherwise).
+// @Description Its channels become uncategorized. Requires the Manage channels permission (403 otherwise).
 // @ID deleteCategory
 // @Tags Admin
 // @Produce json
@@ -523,10 +582,13 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := h.requireCategory(r, id); err != nil {
+		return err
+	}
 	if err := DeleteCategory(r.Context(), h.DB, id); err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -534,7 +596,7 @@ func (h *Handler) deleteCategory(w http.ResponseWriter, r *http.Request) error {
 // createChannel handles POST /api/admin/channels.
 //
 // @Summary Create a channel
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage channels permission (403 otherwise).
 // @ID createChannel
 // @Tags Admin
 // @Accept json
@@ -557,11 +619,16 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 	if req.Type == "" {
 		req.Type = ChannelTypeText
 	}
+	if req.CategoryID != nil {
+		if err := h.requireCategory(r, *req.CategoryID); err != nil {
+			return err
+		}
+	}
 	ch, err := CreateChannel(r.Context(), h.DB, req.CategoryID, req.Name, req.Type, req.Topic, req.SortOrder)
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -569,7 +636,7 @@ func (h *Handler) createChannel(w http.ResponseWriter, r *http.Request) error {
 // duplicateChannel handles POST /api/admin/channels/{id}/duplicate.
 //
 // @Summary Duplicate a channel
-// @Description Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires role admin (403 otherwise).
+// @Description Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Its permission overwrites are copied, so a copy of a private channel stays private. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires the Manage channels permission (403 otherwise).
 // @ID duplicateChannel
 // @Tags Admin
 // @Produce json
@@ -589,11 +656,14 @@ func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
+	if err := h.require(r, id, perm.ViewChannel); err != nil {
+		return err
+	}
 	ch, err := DuplicateChannel(r.Context(), h.DB, id)
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusCreated, ch)
 	return nil
 }
@@ -601,7 +671,7 @@ func (h *Handler) duplicateChannel(w http.ResponseWriter, r *http.Request) error
 // deleteChannel handles DELETE /api/admin/channels/{id}.
 //
 // @Summary Delete a channel
-// @Description Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires role admin (403 otherwise).
+// @Description Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires the Manage channels permission (403 otherwise).
 // @ID deleteChannel
 // @Tags Admin
 // @Produce json
@@ -621,6 +691,9 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if err := h.require(r, id, perm.ViewChannel); err != nil {
+		return err
+	}
 	keys, err := DeleteChannel(r.Context(), h.DB, id)
 	if err != nil {
 		return err
@@ -630,7 +703,7 @@ func (h *Handler) deleteChannel(w http.ResponseWriter, r *http.Request) error {
 		v.CloseVoiceChannel(id)
 	}
 	h.deleteObjects(r.Context(), keys)
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -653,6 +726,9 @@ func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	if states, err = h.visibleReadStates(r, states); err != nil {
+		return err
+	}
 	httpx.WriteJSON(w, http.StatusOK, states)
 	return nil
 }
@@ -662,6 +738,9 @@ func (h *Handler) readState(w http.ResponseWriter, r *http.Request) error {
 func (h *Handler) channelParam(r *http.Request) (uuid.UUID, error) {
 	chID, err := httpx.PathUUID(r, "channelID")
 	if err != nil {
+		return chID, err
+	}
+	if err := h.require(r, chID, perm.ViewChannel); err != nil {
 		return chID, err
 	}
 	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
@@ -824,6 +903,15 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before}); err != nil {
 		return err
 	}
+	var err error
+	if q.Visible, err = h.viewableChannels(r); err != nil {
+		return err
+	}
+	if q.ChannelID != nil {
+		if err := h.require(r, *q.ChannelID, perm.ViewChannel); err != nil {
+			return err
+		}
+	}
 	msgs, more, err := Search(r.Context(), h.DB, q)
 	if err != nil {
 		return err
@@ -835,7 +923,7 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 // updateChannel handles PATCH /api/admin/channels/{id}.
 //
 // @Summary Rename a channel, change its topic or member limit
-// @Description Requires role admin (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.
+// @Description Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.
 // @ID updateChannel
 // @Tags Admin
 // @Accept json
@@ -861,11 +949,14 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	if err := h.require(r, id, perm.ViewChannel); err != nil {
+		return err
+	}
 	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit)
 	if err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, ch)
 	return nil
 }
@@ -873,7 +964,7 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 // renameCategory handles PATCH /api/admin/categories/{id}.
 //
 // @Summary Rename a category
-// @Description Requires role admin (403 otherwise).
+// @Description Requires the Manage channels permission (403 otherwise).
 // @ID renameCategory
 // @Tags Admin
 // @Accept json
@@ -899,10 +990,13 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
+	if err := h.requireCategory(r, id); err != nil {
+		return err
+	}
 	if err := RenameCategory(r.Context(), h.DB, id, req.Name); err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	httpx.WriteJSON(w, http.StatusOK, RenamedCategory{ID: id, Name: req.Name})
 	return nil
 }
@@ -910,7 +1004,7 @@ func (h *Handler) renameCategory(w http.ResponseWriter, r *http.Request) error {
 // applyLayout handles PUT /api/admin/layout.
 //
 // @Summary Apply category order and channel placement
-// @Description Applied in one transaction. Requires role admin (403 otherwise).
+// @Description Applied in one transaction. Requires the Manage channels permission (403 otherwise).
 // @ID applyLayout
 // @Tags Admin
 // @Accept json
@@ -934,10 +1028,13 @@ func (h *Handler) applyLayout(w http.ResponseWriter, r *http.Request) error {
 	if len(req.Categories)+len(req.Channels) > 500 {
 		return httpx.ErrInvalidInput("too many entries")
 	}
+	if err := h.requireLayout(r, req); err != nil {
+		return err
+	}
 	if err := ApplyLayout(r.Context(), h.DB, req.Categories, req.Channels); err != nil {
 		return err
 	}
-	h.Events.Broadcast("channels_changed", nil)
+	h.channelsChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
@@ -964,7 +1061,9 @@ type ReactionRequest struct {
 
 // ReactionResult is the reaction summary after a toggle.
 type ReactionResult struct {
-	MessageID uuid.UUID         `json:"message_id" format:"uuid"`
+	MessageID uuid.UUID `json:"message_id" format:"uuid"`
+	// ChannelID is the channel of the message.
+	ChannelID uuid.UUID         `json:"channel_id" format:"uuid"`
 	Reactions []ReactionSummary `json:"reactions"`
 }
 

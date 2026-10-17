@@ -75,14 +75,23 @@ for a server or NAS.
 
 **Administration**
 
-- **Invite-only**: no public registration; the admin (default `Herzog`,
-  configurable) creates invite codes.
+- **Invite-only**: no public registration; the Owner (default `Herzog`,
+  configurable) and members they trust with *Manage invites* create invite
+  codes.
+- **Roles and permissions**: the Owner can do everything and cannot be
+  restricted by anyone; below them custom roles (name, colour, hierarchy) hold
+  Discord-style permissions (view, send, attach, react, connect, speak, share
+  video, manage channels, roles, invites and members, and more). Categories
+  and channels can allow or deny permissions per role or member, which makes
+  private channels and Talks. Changes apply live, also to members in a call.
+  See [doc/roles-and-permissions.md](doc/roles-and-permissions.md).
 - **Sidebar management** for admins: drag and drop channels and categories
   (mouse, pen, touch) or move them with `Alt+↑/↓`; every move is saved at
   once and can be undone from a toast. Context menus create, duplicate and
   edit channels and categories, collapse or expand them and mark them read.
-- **Admin console**: users (disable, kick, reset password, revoke sessions),
-  channel layout, invites, media (usage, pruning) and a **System** tab with
+- **Admin console**: users and their roles (disable, kick, reset password,
+  revoke sessions), roles, channel layout and permissions, invites, media
+  (usage, pruning) and a **System** tab (Owner only) with
   version, health of database, storage and voice, the update check against
   GitHub releases and an optional "Update now" (see [Updates](#updates)).
 - **Privacy-minded defaults**: no third-party STUN unless configured, no

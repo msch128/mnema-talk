@@ -56,7 +56,10 @@ type User struct {
 	Username    string    `json:"username"`
 	DisplayName string    `json:"display_name" maxLength:"24"`
 	Bio         string    `json:"bio" maxLength:"250"`
-	Role        string    `json:"role" enums:"admin,user"`
+	// Role is "admin" for the Owner (the one account named by ADMIN_USERNAME,
+	// all-powerful and untouchable) and "user" for everybody else; what a user
+	// may do beyond the defaults comes from roles (see GET /api/permissions).
+	Role string `json:"role" enums:"admin,user"`
 	// AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.
 	AvatarURL string `json:"avatar_url,omitempty" binding:"optional"`
 	// StatusText is a free-text status line; empty when unset.

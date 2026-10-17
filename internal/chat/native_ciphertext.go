@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"io"
 	"time"
 )
@@ -72,7 +74,35 @@ func (r NativeCiphertextRecord) Wire() NativeCiphertextWire {
 	return NativeCiphertextWire{v.id, v.number, v.channelID, v.userID, v.clientEventID, bytes.Clone(v.groupID), bytes.Clone(v.ciphertext), v.createdAt}
 }
 
-type NativeCiphertextStore struct{ sessions *auth.NativeSessions }
+type NativeCiphertextStore struct {
+	sessions *auth.NativeSessions
+	perms    *perm.Service
+}
+
+// WithPermissions makes the store enforce channel permissions: publishing
+// needs to view the channel and send messages in it, listing needs to view it.
+// A channel the caller may not use is reported as unavailable, like a missing
+// one. Without it the store follows the single-server model of every member
+// seeing every channel.
+func (s *NativeCiphertextStore) WithPermissions(p *perm.Service) *NativeCiphertextStore {
+	s.perms = p
+	return s
+}
+
+// authorize checks need in channel for user.
+func (s *NativeCiphertextStore) authorize(ctx context.Context, user auth.User, channel uuid.UUID, need perm.Set) error {
+	if s.perms == nil {
+		return nil
+	}
+	err := s.perms.RequireChannel(ctx, user.Subject(), channel, need)
+	if err == nil {
+		return nil
+	}
+	if _, denied := httpx.AsAPIError(err); denied {
+		return ErrNativeContentChannel
+	}
+	return ErrNativeContentUnavailable
+}
 
 func NewNativeCiphertextStore(sessions *auth.NativeSessions) (*NativeCiphertextStore, error) {
 	if sessions == nil {
@@ -113,6 +143,9 @@ func (s *NativeCiphertextStore) Publish(ctx context.Context, principal auth.Nati
 			}
 			return ErrNativeContentUnavailable
 		}
+		if err := s.authorize(ctx, user, request.ChannelID, perm.SendMessages); err != nil {
+			return err
+		}
 		var err error
 		record, err = scanNativeCiphertext(tx.QueryRow(ctx, `INSERT INTO native_ciphertext_events
    (id,channel_id,user_id,client_event_id,group_id,ciphertext) VALUES($1,$2,$3,$4,$5,$6)
@@ -147,13 +180,16 @@ func (s *NativeCiphertextStore) List(ctx context.Context, principal auth.NativeP
 		return nil, ErrNativeContentInput
 	}
 	records := make([]NativeCiphertextRecord, 0)
-	err := s.sessions.WithAuthorizedTransaction(ctx, principal, func(ctx context.Context, tx pgx.Tx, _ auth.User) error {
+	err := s.sessions.WithAuthorizedTransaction(ctx, principal, func(ctx context.Context, tx pgx.Tx, user auth.User) error {
 		var channel uuid.UUID
 		if err := tx.QueryRow(ctx, `SELECT id FROM channels WHERE id=$1 FOR SHARE`, channelID).Scan(&channel); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return ErrNativeContentChannel
 			}
 			return ErrNativeContentUnavailable
+		}
+		if err := s.authorize(ctx, user, channelID, perm.ViewChannel); err != nil {
+			return err
 		}
 		rows, err := tx.Query(ctx, `SELECT `+nativeCiphertextColumns+` FROM native_ciphertext_events WHERE channel_id=$1 AND number>$2 ORDER BY number LIMIT $3`, channelID, after, limit)
 		if err != nil {

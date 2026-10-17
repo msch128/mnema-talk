@@ -44,6 +44,36 @@ const (
 	SourceScreenAudio Source = "screen-audio"
 )
 
+// SourceSet is a set of media sources.
+type SourceSet uint8
+
+func sourceBit(s Source) SourceSet {
+	switch s {
+	case SourceAudio:
+		return 1
+	case SourceScreen:
+		return 2
+	case SourceCamera:
+		return 4
+	case SourceScreenAudio:
+		return 8
+	}
+	return 0
+}
+
+// With returns the set plus s.
+func (set SourceSet) With(s Source) SourceSet { return set | sourceBit(s) }
+
+// Has reports whether s is in the set.
+func (set SourceSet) Has(s Source) bool { return set&sourceBit(s) != 0 }
+
+// SetDeniedSources sets which sources the peer's user may not publish
+// (without the Speak or Video permission): their packets are dropped, and a
+// track that arrives for one is ignored.
+func (p *Peer) SetDeniedSources(set SourceSet) { p.denied.Store(uint32(set)) }
+
+func (p *Peer) sourceDenied(s Source) bool { return SourceSet(p.denied.Load()).Has(s) }
+
 // CameraStreamPrefix precedes the publisher's user ID in a camera's stream ID.
 const CameraStreamPrefix = "cam:"
 
@@ -112,11 +142,13 @@ func (t *TrackInfo) sameCapture(o *TrackInfo) bool {
 
 type Peer struct {
 	authorizeMedia func() bool
-	ID             uuid.UUID
-	PC             *webrtc.PeerConnection
-	SendOffer      func(offer webrtc.SessionDescription)
-	SendICE        func(candidate *webrtc.ICECandidateInit)
-	room           *Room
+	// denied is the SourceSet the user may not publish.
+	denied    atomic.Uint32
+	ID        uuid.UUID
+	PC        *webrtc.PeerConnection
+	SendOffer func(offer webrtc.SessionDescription)
+	SendICE   func(candidate *webrtc.ICECandidateInit)
+	room      *Room
 
 	// negotiationPending is set when tracks changed while an offer was still
 	// unanswered; the next answer triggers another round.
@@ -643,6 +675,14 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		}
 		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", layer, "codec", remoteTrack.Codec().MimeType)
 
+		// The user may not send this (no Speak or Video permission): never
+		// publish it. Should the permission come back later, the client
+		// renegotiates and the track is accepted then.
+		if peer.sourceDenied(source) {
+			drain(remoteTrack)
+			return
+		}
+
 		if source == SourceScreen {
 			r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, layer)
 			return
@@ -751,6 +791,10 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		metrics.SFUIngressBytes.Add(uint64(n))
 		if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
 			return
+		}
+		// Permission revoked while the track was live: drop its packets.
+		if info.publisher != nil && info.publisher.sourceDenied(info.Source) {
+			continue
 		}
 		// Header extension IDs are negotiated per connection; the
 		// subscriber side adds its own (e.g. transport-cc).
@@ -1154,6 +1198,20 @@ func (r *Room) RemoveUserSource(userID uuid.UUID, source Source) {
 	if source != SourceScreen && source != SourceCamera {
 		return
 	}
+	r.unpublish(userID, source)
+}
+
+// RevokeUserSource unpublishes a source because the user may no longer send
+// it (their Speak or Video permission was taken away). Unlike the client's
+// own stop it also covers the voice.
+func (r *Room) RevokeUserSource(userID uuid.UUID, source Source) {
+	if source != SourceScreen && source != SourceCamera && source != SourceAudio {
+		return
+	}
+	r.unpublish(userID, source)
+}
+
+func (r *Room) unpublish(userID uuid.UUID, source Source) {
 	r.mu.Lock()
 	changed := false
 	for id, tInfo := range r.trackLocals {

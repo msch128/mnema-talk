@@ -30,6 +30,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/server`](../internal/server/server.go) | Router wiring (chi): middleware, `/api/health`, `/api/metrics`, `/api/legal`, the API docs, the WebSocket endpoint, the authenticated and admin route groups, and the admin System tab ([`system.go`](../internal/server/system.go), [`system_update.go`](../internal/server/system_update.go), [`system_selfupdate.go`](../internal/server/system_selfupdate.go)). Integration tests live here too. |
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
+| [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
 | [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions, read state, notification settings, search, members. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
@@ -260,8 +261,11 @@ run. It can also run against a remote instance.
   (`MNEMA_E2E=1`) lets tests shorten them; release builds cannot.
 - **Screen shares are opt-in per viewer** so an idle viewer costs no
   bandwidth ([`subscriptions.go`](../internal/sfu/subscriptions.go)).
-- **Invite-only, single admin.** No public registration; the admin is seeded
-  from `ADMIN_USERNAME` ([`admin_seed.go`](../internal/auth/admin_seed.go)).
+- **Invite-only, one Owner.** No public registration; the Owner is seeded
+  from `ADMIN_USERNAME` ([`admin_seed.go`](../internal/auth/admin_seed.go)) and
+  holds every permission; roles below them are managed through
+  [`internal/perm`](../internal/perm/perm.go) and enforced server-side
+  ([roles-and-permissions.md](roles-and-permissions.md)).
 - **Sessions revocable by version.** Password change or "log out everywhere"
   bumps `token_version`, invalidating every cookie and closing the user's
   sockets ([`session.go`](../internal/auth/session.go), [`token.go`](../internal/auth/token.go)).

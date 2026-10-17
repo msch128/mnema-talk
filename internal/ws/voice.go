@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
+	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
@@ -51,14 +52,14 @@ func (h *Hub) voiceSnapshot() map[uuid.UUID]map[uuid.UUID]VoiceUser {
 
 // voiceRooms says since when each voice room is occupied, plus the server's
 // clock so clients can count up without trusting their own.
-func (h *Hub) voiceRooms() map[string]any {
+func (h *Hub) voiceRooms(c *Client, snap *perm.Snapshot) map[string]any {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	started := make(map[uuid.UUID]time.Time, len(h.roomSince))
 	for id, t := range h.roomSince {
 		started[id] = t
 	}
-	return map[string]any{"started": started, "now": time.Now()}
+	return map[string]any{"started": visibleTo(c, snap, started), "now": time.Now()}
 }
 
 // voiceChannel returns chID if it exists and is a voice channel.
@@ -117,6 +118,12 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
 	if c.closed.Load() || !c.nativeLive() {
+		return
+	}
+	snap, ok := h.permSnapshot(ch.ID)
+	if !ok || !c.can(snap, ch.ID, perm.ViewChannel|perm.Connect) {
+		slog.Info("voice join refused, missing permission", "user", c.User.Username, "channel", ch.ID)
+		c.SendEvent("voice_kicked", map[string]any{"channel_id": ch.ID, "reason": "missing_permission"})
 		return
 	}
 	// A user returning within the grace period resumes silently in the same
@@ -188,6 +195,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 			slog.Error("sfu join failed", "user", c.User.ID, "channel", ch.ID, "err", err)
 		}
 		c.setPeer(peer)
+		h.applyMediaPolicy(c, snap)
 		// A late joiner learns who shares a screen or runs a camera, and who
 		// watches each share.
 		if room := h.SFU.Room(ch.ID); room != nil {
@@ -206,7 +214,7 @@ func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	}
 	slog.Info("voice join", "user", c.User.Username, "channel", ch.ID, "rejoin", rejoin)
 	if !rejoin {
-		c.emitApplicationEvent("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted}, false, nil)
+		c.emitApplicationEvent("voice_state_update", map[string]any{"action": "join", "channel_id": ch.ID, "user": joined, "started_at": roomStarted}, false, nil, ch.ID)
 	}
 }
 
@@ -255,6 +263,12 @@ func (h *Hub) dropVoiceForGrace(c *Client) {
 // kickClient takes c out of its voice room and tells it so. It reports
 // whether c was in a room (only chID's room when onlyCh is set).
 func (h *Hub) kickClient(c *Client, onlyCh *uuid.UUID) bool {
+	return h.kickClientReason(c, onlyCh, "")
+}
+
+// kickClientReason is kickClient telling the client why (voice_kicked
+// reason), e.g. "missing_permission".
+func (h *Hub) kickClientReason(c *Client, onlyCh *uuid.UUID, reason string) bool {
 	c.voiceMu.Lock()
 	cur := c.currentVoice()
 	if cur == nil || (onlyCh != nil && *cur != *onlyCh) {
@@ -264,7 +278,11 @@ func (h *Hub) kickClient(c *Client, onlyCh *uuid.UUID) bool {
 	ch := *cur
 	h.leaveVoiceLocked(c, ch)
 	c.voiceMu.Unlock()
-	c.SendEvent("voice_kicked", map[string]any{"channel_id": ch})
+	payload := map[string]any{"channel_id": ch}
+	if reason != "" {
+		payload["reason"] = reason
+	}
+	c.SendEvent("voice_kicked", payload)
 	return true
 }
 
@@ -402,7 +420,7 @@ func (h *Hub) removePresence(userID, chID uuid.UUID) {
 	h.mu.Unlock()
 	if wasIn {
 		slog.Info("voice leave", "user", userID, "channel", chID)
-		h.Broadcast("voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
+		h.BroadcastChannel(chID, "voice_state_update", map[string]any{"action": "leave", "channel_id": chID, "user_id": userID})
 		if hadSince {
 			h.addVoiceTime(userID, time.Since(since))
 		}
@@ -535,8 +553,8 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	if !changed {
 		return
 	}
-	c.emitApplicationEvent("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil)
+	c.emitApplicationEvent("voice_mute_state", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "muted": st.Muted, "deafened": st.Deafened}, false, nil, *cur)
 	if st.Muted && c.speakingChanged(false, time.Now()) {
-		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur)
+		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": false}, false, cur, uuid.Nil)
 	}
 }

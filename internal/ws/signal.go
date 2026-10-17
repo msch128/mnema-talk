@@ -11,7 +11,7 @@ import (
 // announceMediaState tells all clients that userID started or stopped
 // a screen share or camera so they can show the LIVE indicator and offer to watch.
 func (h *Hub) announceMediaState(roomID, userID uuid.UUID, st sfu.MediaState) {
-	h.Broadcast("webrtc_media_state", mediaStatePayload(roomID, userID, st))
+	h.BroadcastChannel(roomID, "webrtc_media_state", mediaStatePayload(roomID, userID, st))
 }
 
 func mediaStatePayload(roomID, userID uuid.UUID, st sfu.MediaState) map[string]any {

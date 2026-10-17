@@ -175,15 +175,37 @@ func DeleteChannel(ctx context.Context, p *db.Pool, channelID uuid.UUID) ([]stri
 }
 
 // DeleteCategory removes a category; its channels become uncategorized.
+// The category's permission overwrites do not vanish for them: they are
+// folded into each channel's own overwrites first (the channel's own entries
+// win), so deleting a private category never makes its channels public.
 func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error {
-	tag, err := p.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID)
-	if err != nil {
-		return fmt.Errorf("delete category: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return httpx.ErrNotFound("category not found")
-	}
-	return nil
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		var one int
+		err := tx.QueryRow(ctx, `SELECT 1 FROM categories WHERE id = $1 FOR UPDATE`, categoryID).Scan(&one)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errCategoryNotFound
+		}
+		if err != nil {
+			return fmt.Errorf("lock category: %w", err)
+		}
+		for _, subject := range []string{"role_id", "user_id"} {
+			_, err := tx.Exec(ctx, `
+				INSERT INTO permission_overwrites (channel_id, `+subject+`, allow, deny)
+				SELECT ch.id, co.`+subject+`, co.allow, co.deny
+				FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
+				WHERE ch.category_id = $1 AND co.`+subject+` IS NOT NULL
+				ON CONFLICT (channel_id, `+subject+`) WHERE channel_id IS NOT NULL AND `+subject+` IS NOT NULL
+				DO UPDATE SET allow = (EXCLUDED.allow & ~permission_overwrites.deny) | permission_overwrites.allow,
+				              deny = (EXCLUDED.deny & ~permission_overwrites.allow) | permission_overwrites.deny`, categoryID)
+			if err != nil {
+				return fmt.Errorf("keep category permissions: %w", err)
+			}
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
+			return fmt.Errorf("delete category: %w", err)
+		}
+		return nil
+	})
 }
 
 var errCategoryNotFound = httpx.ErrNotFound("category not found")
@@ -361,6 +383,13 @@ func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Cha
 			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit)
 		if err != nil {
 			return fmt.Errorf("duplicate channel: %w", err)
+		}
+		// A copy of a private channel stays private.
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
+			SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,
+			ch.ID, src.ID); err != nil {
+			return fmt.Errorf("copy permissions: %w", err)
 		}
 		return nil
 	})

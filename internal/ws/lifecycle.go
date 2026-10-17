@@ -39,10 +39,13 @@ const (
 // @Description - `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.
 // @Description
 // @Description Server to client, broadcast to all connections:
+// @Description Channel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.
 // @Description - `message_create`, `message_update`: Message.
 // @Description - `message_delete`: `{id, channel_id, parent_id}`.
-// @Description - `message_reaction`: `{message_id, reactions}`.
+// @Description - `message_reaction`: `{message_id, channel_id, reactions}`.
 // @Description - `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).
+// @Description - `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).
+// @Description - `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
 // @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
@@ -60,13 +63,13 @@ const (
 // @Description - `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).
 // @Description - `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.
 // @Description - `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.
-// @Description - `voice_kicked`: `{channel_id, reason?}` when an admin removes the user from voice, or `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`).
+// @Description - `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: "room_full"` when a voice join is refused because the room is full (the channel's `user_limit`), or `reason: "missing_permission"` when the user may not (or no longer may) view and connect to that Talk.
 // @Description - `pong`: `{t}` echoing a `ping`.
 // @Description
 // @Description Client to server:
 // @Description - `ping` `{t}`; `presence_idle` `{idle: bool}`.
-// @Description - `typing` `{channel_id}` (text and voice channels, rate-limited).
-// @Description - `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.
+// @Description - `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).
+// @Description - `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: "missing_permission"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.
 // @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
 // @Description - `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.
 // @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`. A screen subscription may carry `quality`: `"auto"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `"auto"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).
@@ -212,10 +215,16 @@ func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	h.announcePresence(c.User.ID, before, after)
 	c.SendEvent("server_info", h.serverInfo())
 	c.SendEvent("presence_snapshot", h.presenceSnapshot())
-	c.SendEvent("voice_snapshot", h.voiceSnapshot())
-	c.SendEvent("voice_rooms", h.voiceRooms())
+	// Talks the member may not view stay invisible: who sits in them, since
+	// when and what they share.
+	snap, ok := h.permSnapshot(uuid.Nil)
+	if !ok {
+		snap = deniedSnapshot
+	}
+	c.SendEvent("voice_snapshot", visibleTo(c, snap, h.voiceSnapshot()))
+	c.SendEvent("voice_rooms", h.voiceRooms(c, snap))
 	if h.SFU != nil {
-		for chID, states := range h.SFU.AllMediaStates() {
+		for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
 			for uid, st := range states {
 				c.SendEvent("webrtc_media_state", mediaStatePayload(chID, uid, st))
 			}

@@ -51,11 +51,20 @@
             "type": "string"
           },
           "role": {
+            "description": "Role is \"admin\" for the Owner (the one account named by ADMIN_USERNAME,\nall-powerful and untouchable) and \"user\" for everybody else; what a user\nmay do beyond the defaults comes from roles (see GET /api/permissions).",
             "enum": [
               "admin",
               "user"
             ],
             "type": "string"
+          },
+          "role_ids": {
+            "description": "RoleIDs are the account's custom roles, highest first.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
           },
           "status_text": {
             "description": "StatusText is a free-text status line; empty when unset.",
@@ -342,6 +351,7 @@
             "type": "string"
           },
           "role": {
+            "description": "Role is \"admin\" for the Owner (the one account named by ADMIN_USERNAME,\nall-powerful and untouchable) and \"user\" for everybody else; what a user\nmay do beyond the defaults comes from roles (see GET /api/permissions).",
             "enum": [
               "admin",
               "user"
@@ -708,6 +718,86 @@
         ],
         "type": "object"
       },
+      "chat.Member": {
+        "properties": {
+          "avatar_url": {
+            "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
+            "type": "string"
+          },
+          "bio": {
+            "maxLength": 250,
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "display_name": {
+            "maxLength": 24,
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "locale": {
+            "description": "Locale is the chosen UI language (\"de\", \"en\"); empty until chosen.",
+            "type": "string"
+          },
+          "message_count": {
+            "type": "integer"
+          },
+          "presence": {
+            "description": "Presence is the chosen presence, only present in responses about the\ncaller's own account; others see the live one from the hub.",
+            "enum": [
+              "online",
+              "away",
+              "dnd",
+              "focus"
+            ],
+            "type": "string"
+          },
+          "role": {
+            "description": "Role is \"admin\" for the Owner (the one account named by ADMIN_USERNAME,\nall-powerful and untouchable) and \"user\" for everybody else; what a user\nmay do beyond the defaults comes from roles (see GET /api/permissions).",
+            "enum": [
+              "admin",
+              "user"
+            ],
+            "type": "string"
+          },
+          "role_ids": {
+            "description": "RoleIDs are the member's custom roles, highest first.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "status_text": {
+            "description": "StatusText is a free-text status line; empty when unset.",
+            "maxLength": 32,
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "voice_seconds": {
+            "description": "Activity totals, filled where they are shown (members, profiles):\ntime spent in voice rooms (finished stays) and messages sent.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bio",
+          "created_at",
+          "display_name",
+          "id",
+          "locale",
+          "role",
+          "status_text",
+          "username"
+        ],
+        "type": "object"
+      },
       "chat.Message": {
         "properties": {
           "attachments": {
@@ -835,6 +925,11 @@
       },
       "chat.ReactionResult": {
         "properties": {
+          "channel_id": {
+            "description": "ChannelID is the channel of the message.",
+            "format": "uuid",
+            "type": "string"
+          },
           "message_id": {
             "format": "uuid",
             "type": "string"
@@ -847,6 +942,7 @@
           }
         },
         "required": [
+          "channel_id",
           "message_id",
           "reactions"
         ],
@@ -1213,6 +1309,242 @@
           "deleted_files",
           "total_files",
           "total_size_bytes"
+        ],
+        "type": "object"
+      },
+      "perm.Info": {
+        "properties": {
+          "bit": {
+            "minimum": 1,
+            "type": "integer"
+          },
+          "channel": {
+            "description": "Channel permissions can be overwritten per category and channel; the\nrest only apply server-wide.",
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "bit",
+          "channel",
+          "key"
+        ],
+        "type": "object"
+      },
+      "perm.Overwrite": {
+        "properties": {
+          "allow": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "deny": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "id": {
+            "description": "ID is the role's or the member's ID; the @everyone role is a role.",
+            "format": "uuid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Type is what ID refers to.",
+            "enum": [
+              "role",
+              "member"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "allow",
+          "deny",
+          "id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "perm.Role": {
+        "properties": {
+          "color": {
+            "maximum": 16777215,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "hoist": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "is_everyone": {
+            "type": "boolean"
+          },
+          "mentionable": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "permissions": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "position": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "color",
+          "hoist",
+          "id",
+          "is_everyone",
+          "mentionable",
+          "name",
+          "permissions",
+          "position"
+        ],
+        "type": "object"
+      },
+      "perm.RoleInput": {
+        "properties": {
+          "color": {
+            "maximum": 16777215,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "hoist": {
+            "type": "boolean"
+          },
+          "mentionable": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "permissions": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "roles.ChannelPermissions": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "permissions": {
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel_id",
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "roles.MemberRolesRequest": {
+        "properties": {
+          "role_ids": {
+            "description": "RoleIDs are all custom roles the member should have.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "role_ids"
+        ],
+        "type": "object"
+      },
+      "roles.OverwritesBody": {
+        "properties": {
+          "overwrites": {
+            "items": {
+              "$ref": "#/components/schemas/perm.Overwrite"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "overwrites"
+        ],
+        "type": "object"
+      },
+      "roles.PermissionsInfo": {
+        "properties": {
+          "catalog": {
+            "description": "Catalog lists every permission bit.",
+            "items": {
+              "$ref": "#/components/schemas/perm.Info"
+            },
+            "type": "array"
+          },
+          "channels": {
+            "description": "Channels lists every channel the caller may view with what they may do\nthere (bits).",
+            "items": {
+              "$ref": "#/components/schemas/roles.ChannelPermissions"
+            },
+            "type": "array"
+          },
+          "owner": {
+            "description": "Owner is true for the Owner, who may do everything and cannot be\nrestricted.",
+            "type": "boolean"
+          },
+          "permissions": {
+            "description": "Permissions are the server-wide permissions (bits, see catalog).",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "role_ids": {
+            "description": "RoleIDs are the caller's custom roles, highest first.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "top_position": {
+            "description": "TopPosition is the position of the caller's highest role (0 without\none); the Owner is above every position. A member can only manage roles\nand members below it.",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "channels",
+          "owner",
+          "permissions",
+          "role_ids",
+          "top_position"
+        ],
+        "type": "object"
+      },
+      "roles.ReorderRequest": {
+        "properties": {
+          "role_ids": {
+            "description": "RoleIDs lists every custom role (not @everyone) exactly once, highest\nfirst.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "role_ids"
         ],
         "type": "object"
       },
@@ -1963,7 +2295,7 @@
   "paths": {
     "/api/admin/categories": {
       "post": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage channels permission (403 otherwise).",
         "operationId": "createCategory",
         "requestBody": {
           "content": {
@@ -2059,7 +2391,7 @@
     },
     "/api/admin/categories/{id}": {
       "delete": {
-        "description": "Its channels become uncategorized. Requires role admin (403 otherwise).",
+        "description": "Its channels become uncategorized. Requires the Manage channels permission (403 otherwise).",
         "operationId": "deleteCategory",
         "parameters": [
           {
@@ -2157,7 +2489,7 @@
         ]
       },
       "patch": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage channels permission (403 otherwise).",
         "operationId": "renameCategory",
         "parameters": [
           {
@@ -2273,9 +2605,225 @@
         ]
       }
     },
+    "/api/admin/categories/{id}/overwrites": {
+      "get": {
+        "description": "The allow/deny pairs set directly on the category. Its channels inherit them. Needs the Manage channels permission and view access.",
+        "operationId": "getCategoryOverwrites",
+        "parameters": [
+          {
+            "description": "Category ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/roles.OverwritesBody"
+                }
+              }
+            },
+            "description": "Overwrites."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Permission overwrites of a category",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "put": {
+        "description": "Replaces all overwrites of the category. Only channel permissions can be overwritten; the caller can only allow what they hold themselves; the Owner cannot be the subject of one. Everyone affected is told to refresh and removed from Talks they may no longer join.",
+        "operationId": "setCategoryOverwrites",
+        "parameters": [
+          {
+            "description": "Category ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles.OverwritesBody"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, the subject is the Owner, or allowing a permission the caller lacks."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Replace the permission overwrites of a category",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/admin/channels": {
       "post": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage channels permission (403 otherwise).",
         "operationId": "createChannel",
         "requestBody": {
           "content": {
@@ -2371,7 +2919,7 @@
     },
     "/api/admin/channels/{id}": {
       "delete": {
-        "description": "Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires role admin (403 otherwise).",
+        "description": "Cascades to its messages and attachments; everyone in a deleted voice channel is disconnected from it. Requires the Manage channels permission (403 otherwise).",
         "operationId": "deleteChannel",
         "parameters": [
           {
@@ -2469,7 +3017,7 @@
         ]
       },
       "patch": {
-        "description": "Requires role admin (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.",
+        "description": "Requires the Manage channels permission (403 otherwise). user_limit (voice channels only) caps how many members can be in the room at once; 0 removes the limit (the default). A member already in the room always gets back in.",
         "operationId": "updateChannel",
         "parameters": [
           {
@@ -2587,7 +3135,7 @@
     },
     "/api/admin/channels/{id}/duplicate": {
       "post": {
-        "description": "Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires role admin (403 otherwise).",
+        "description": "Creates a channel with the source's name (unchanged; names need not be unique), type, topic and category, placed directly below the source: the channels after it in its category (or among the uncategorized channels) move down by one. Its permission overwrites are copied, so a copy of a private channel stays private. Messages, reactions, read state and per-user notification levels are not copied. No request body. Requires the Manage channels permission (403 otherwise).",
         "operationId": "duplicateChannel",
         "parameters": [
           {
@@ -2692,9 +3240,225 @@
         ]
       }
     },
+    "/api/admin/channels/{id}/overwrites": {
+      "get": {
+        "description": "The allow/deny pairs set directly on the channel. A channel also inherits its category's (its own win). Needs the Manage channels permission and view access.",
+        "operationId": "getChannelOverwrites",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/roles.OverwritesBody"
+                }
+              }
+            },
+            "description": "Overwrites."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Permission overwrites of a channel",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "put": {
+        "description": "Replaces all overwrites of the channel. Only channel permissions can be overwritten; the caller can only allow what they hold themselves; the Owner cannot be the subject of one. Everyone affected is told to refresh and removed from Talks they may no longer join.",
+        "operationId": "setChannelOverwrites",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles.OverwritesBody"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, the subject is the Owner, or allowing a permission the caller lacks."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Replace the permission overwrites of a channel",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/admin/invites": {
       "get": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage invites permission (403 otherwise).",
         "operationId": "listInvites",
         "responses": {
           "200": {
@@ -2770,7 +3534,7 @@
         ]
       },
       "post": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage invites permission (403 otherwise).",
         "operationId": "createInvite",
         "requestBody": {
           "content": {
@@ -2876,7 +3640,7 @@
     },
     "/api/admin/invites/{id}": {
       "delete": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage invites permission (403 otherwise).",
         "operationId": "deleteInvite",
         "parameters": [
           {
@@ -2976,7 +3740,7 @@
     },
     "/api/admin/layout": {
       "put": {
-        "description": "Applied in one transaction. Requires role admin (403 otherwise).",
+        "description": "Applied in one transaction. Requires the Manage channels permission (403 otherwise).",
         "operationId": "applyLayout",
         "requestBody": {
           "content": {
@@ -3075,7 +3839,7 @@
     },
     "/api/admin/media": {
       "get": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Owner only (403 otherwise).",
         "operationId": "listMedia",
         "parameters": [
           {
@@ -3176,7 +3940,7 @@
     },
     "/api/admin/media/orphans": {
       "get": {
-        "description": "Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Requires role admin (403 otherwise).",
+        "description": "Objects in storage (uploads/, avatars/) that no media row refers to, older than 24 hours: left behind by a failed delete or a crash during an upload. Nothing shows them; they only take space. Lists the whole bucket prefix, so it may take a while. Owner only (403 otherwise).",
         "operationId": "getMediaOrphans",
         "responses": {
           "200": {
@@ -3261,7 +4025,7 @@
     },
     "/api/admin/media/orphans/cleanup": {
       "post": {
-        "description": "Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Requires role admin (403 otherwise).",
+        "description": "Deletes the objects GET /api/admin/media/orphans counts. Never touches an object a media row refers to, nor one younger than 24 hours. Owner only (403 otherwise).",
         "operationId": "cleanupMediaOrphans",
         "responses": {
           "200": {
@@ -3346,7 +4110,7 @@
     },
     "/api/admin/media/prune": {
       "post": {
-        "description": "Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Requires role admin (403 otherwise).",
+        "description": "Avatars are never pruned. Without days, uses MEDIA_RETENTION_DAYS; 400 when that is disabled. Owner only (403 otherwise).",
         "operationId": "pruneMedia",
         "parameters": [
           {
@@ -3453,7 +4217,7 @@
     },
     "/api/admin/media/stats": {
       "get": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Owner only (403 otherwise).",
         "operationId": "getMediaStats",
         "responses": {
           "200": {
@@ -3528,7 +4292,7 @@
     },
     "/api/admin/media/{id}": {
       "delete": {
-        "description": "Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Requires role admin (403 otherwise).",
+        "description": "Removes the object from storage and marks it deleted; chat shows a placeholder. Idempotent. Owner only (403 otherwise).",
         "operationId": "deleteMedia",
         "parameters": [
           {
@@ -3636,9 +4400,420 @@
         ]
       }
     },
+    "/api/admin/roles": {
+      "post": {
+        "description": "The new role sits at the bottom of the hierarchy, just above @everyone. Needs the Manage roles permission and the caller cannot grant permissions they lack. Broadcasts roles_changed.",
+        "operationId": "createRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/perm.RoleInput"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/perm.Role"
+                }
+              }
+            },
+            "description": "Created role."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or granting a permission the caller lacks."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: too many roles."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a role",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
+    "/api/admin/roles/order": {
+      "put": {
+        "description": "Sets the hierarchy. The caller can only move roles below their own highest role, to places below it. Broadcasts roles_changed.",
+        "operationId": "reorderRoles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles.ReorderRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or moving roles at or above the caller's highest role."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Reorder roles",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
+    "/api/admin/roles/{id}": {
+      "delete": {
+        "description": "Removes it from everyone who has it and from all overwrites. Only roles below the caller's highest role. @everyone cannot be deleted. Broadcasts roles_changed.",
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or role not below the caller's highest role."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a role",
+        "tags": [
+          "Roles"
+        ]
+      },
+      "patch": {
+        "description": "Omitted fields are kept. Only roles below the caller's highest role can be edited, and only permissions the caller holds can be added or removed. @everyone only has its permissions editable. Members who hold the role are told to refresh (permissions_changed) and removed from Talks they may no longer join. Broadcasts roles_changed.",
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "description": "Role ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/perm.RoleInput"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/perm.Role"
+                }
+              }
+            },
+            "description": "Updated role."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, role not below the caller's highest role, or granting a permission the caller lacks."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Edit a role",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/admin/system": {
       "get": {
-        "description": "Version, health and load of the server for the admin System tab. Contains no secrets. Requires role admin (403 otherwise).",
+        "description": "Version, health and load of the server for the admin System tab. Contains no secrets. Owner only (403 otherwise).",
         "operationId": "getSystemStatus",
         "responses": {
           "200": {
@@ -3721,7 +4896,7 @@
     },
     "/api/admin/system/check": {
       "post": {
-        "description": "Asks GitHub for the latest release right away (at most once a minute; while GitHub rate-limits the server, 429 until that ends). 409 when UPDATE_CHECK_ENABLED=false. A failed check still answers 200 with check_error set. Requires role admin (403 otherwise).",
+        "description": "Asks GitHub for the latest release right away (at most once a minute; while GitHub rate-limits the server, 429 until that ends). 409 when UPDATE_CHECK_ENABLED=false. A failed check still answers 200 with check_error set. Owner only (403 otherwise).",
         "operationId": "checkSystemUpdate",
         "responses": {
           "200": {
@@ -3806,7 +4981,7 @@
     },
     "/api/admin/system/ops": {
       "get": {
-        "description": "Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Requires role admin (403 otherwise).",
+        "description": "Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Owner only (403 otherwise).",
         "operationId": "getSystemOps",
         "responses": {
           "200": {
@@ -3889,7 +5064,7 @@
     },
     "/api/admin/system/update": {
       "get": {
-        "description": "What the last release check found (cheap: no request to GitHub). Requires role admin (403 otherwise).",
+        "description": "What the last release check found (cheap: no request to GitHub). Owner only (403 otherwise).",
         "operationId": "getSystemUpdate",
         "responses": {
           "200": {
@@ -3970,7 +5145,7 @@
         ]
       },
       "post": {
-        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Requires role admin (403 otherwise).",
+        "description": "Asks the optional updater sidecar (compose profile autoupdate, UPDATER_TOKEN) to pull the app image again and restart the app; everyone is disconnected for about 30-60 seconds. Admin only, same-origin only, re-authenticates with the admin's current password (5 wrong passwords lock the action like a password change does), at most once per 5 minutes, only while a newer release is known and target_version names it. Audit-logged. Owner only (403 otherwise).",
         "operationId": "startSelfUpdate",
         "requestBody": {
           "content": {
@@ -4086,7 +5261,7 @@
     },
     "/api/admin/users": {
       "get": {
-        "description": "Admins first, then by username. Requires role admin (403 otherwise).",
+        "description": "Admins first, then by username. Requires the Manage members or Manage roles permission (403 otherwise). Includes each account's role_ids.",
         "operationId": "listUsersAdmin",
         "responses": {
           "200": {
@@ -4164,7 +5339,7 @@
     },
     "/api/admin/users/{id}/disable": {
       "post": {
-        "description": "Signs the user out, drops their live connections and removes them from voice. The administrator account cannot be targeted (400). Requires role admin (403 otherwise).",
+        "description": "Signs the user out, drops their live connections and removes them from voice. Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted. The Owner cannot be targeted (400).",
         "operationId": "disableUser",
         "parameters": [
           {
@@ -4264,7 +5439,7 @@
     },
     "/api/admin/users/{id}/enable": {
       "post": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.",
         "operationId": "enableUser",
         "parameters": [
           {
@@ -4364,7 +5539,7 @@
     },
     "/api/admin/users/{id}/kick": {
       "post": {
-        "description": "400 when the user is not in a voice room. Requires role admin (403 otherwise).",
+        "description": "400 when the user is not in a voice room. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).",
         "operationId": "kickUserFromVoice",
         "parameters": [
           {
@@ -4464,7 +5639,7 @@
     },
     "/api/admin/users/{id}/password": {
       "post": {
-        "description": "Ends all of the user's sessions. Requires role admin (403 otherwise).",
+        "description": "Ends all of the user's sessions. Owner only (403 otherwise).",
         "operationId": "setUserPassword",
         "parameters": [
           {
@@ -4575,7 +5750,7 @@
     },
     "/api/admin/users/{id}/password-reset": {
       "post": {
-        "description": "Ends all sessions; the password is returned once. Requires role admin (403 otherwise).",
+        "description": "Ends all sessions; the password is returned once. Owner only (403 otherwise).",
         "operationId": "resetUserPassword",
         "parameters": [
           {
@@ -4688,9 +5863,120 @@
         ]
       }
     },
+    "/api/admin/users/{id}/roles": {
+      "put": {
+        "description": "Replaces the member's custom roles. Only roles below the caller's highest role can be added or removed, and only on members whose highest role is below it. The Owner's roles cannot be changed (403). The member is told to refresh and removed from Talks they may no longer join. Broadcasts roles_changed.",
+        "operationId": "setMemberRoles",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/roles.MemberRolesRequest"
+              }
+            }
+          },
+          "description": "Request body.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, the target is the Owner or not below the caller, or a role is not below the caller's highest role."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set a member's roles",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/admin/users/{id}/sessions/revoke": {
       "post": {
-        "description": "Requires role admin (403 otherwise).",
+        "description": "Requires the Manage members permission (403 otherwise); members whose highest role is not below the caller's, and the Owner, cannot be targeted.",
         "operationId": "revokeUserSessions",
         "parameters": [
           {
@@ -4790,7 +6076,7 @@
     },
     "/api/admin/users/{id}/status": {
       "put": {
-        "description": "Broadcasts user_update. Requires role admin (403 otherwise).",
+        "description": "Broadcasts user_update. Requires the Disconnect members permission (403 otherwise); members whose highest role is not below the caller's cannot be targeted, and the Owner cannot be removed (400).",
         "operationId": "setUserStatus",
         "parameters": [
           {
@@ -5389,6 +6675,7 @@
     },
     "/api/channels": {
       "get": {
+        "description": "Only the channels the caller may view; a category shows when its own permissions allow it or any of its channels is visible.",
         "operationId": "listChannels",
         "responses": {
           "200": {
@@ -5707,7 +6994,7 @@
     },
     "/api/channels/{channelID}/messages/{messageID}": {
       "delete": {
-        "description": "Author or admin. Also deletes the message's thread replies and attachments. Broadcasts message_delete.",
+        "description": "The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. Broadcasts message_delete.",
         "operationId": "deleteMessage",
         "parameters": [
           {
@@ -6855,7 +8142,7 @@
     },
     "/api/members": {
       "get": {
-        "description": "Active accounts, admins first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.",
+        "description": "Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.",
         "operationId": "listMembers",
         "responses": {
           "200": {
@@ -6863,7 +8150,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/auth.User"
+                    "$ref": "#/components/schemas/chat.Member"
                   },
                   "type": "array"
                 }
@@ -7365,6 +8652,71 @@
         ]
       }
     },
+    "/api/permissions": {
+      "get": {
+        "description": "The caller's server-wide permissions and, per viewable channel, what they may do there. Refetch after a permissions_changed event.",
+        "operationId": "getPermissions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/roles.PermissionsInfo"
+                }
+              }
+            },
+            "description": "Permissions."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Own permissions",
+        "tags": [
+          "Roles"
+        ]
+      }
+    },
     "/api/read-state": {
       "get": {
         "operationId": "getReadState",
@@ -7429,6 +8781,74 @@
         "summary": "Unread summary of all channels",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/roles": {
+      "get": {
+        "description": "Every role, highest first; @everyone (is_everyone) is last. Roles are visible to all members, they colour names.",
+        "operationId": "listRoles",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/perm.Role"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Roles."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List roles",
+        "tags": [
+          "Roles"
         ]
       }
     },
@@ -8290,7 +9710,7 @@
     },
     "/api/ws": {
       "get": {
-        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.\n- `voice_kicked`: `{channel_id, reason?}` when an admin removes the user from voice, or `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`).\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited).\n- `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
+        "description": "Upgrades to a WebSocket (requires a same-origin Origin header; a foreign origin is refused with 403 by the upgrade handler). OpenAPI cannot model WebSocket frames, so the protocol is described here.\n\nEvery frame in both directions is a JSON text message `{\"type\": string, \"payload\": any}`. At most a few events per second per connection are processed; excess client events are dropped.\n\nServer to client, on connect (to this connection only):\n- `presence_snapshot`: map of user id to live status for every online user.\n- `voice_snapshot`: map of voice channel id to a map of user id to User plus `joined_at`.\n- `voice_rooms`: `{started: {channelId: time}, now}`; the server clock lets clients count up.\n\nServer to client, broadcast to all connections:\nChannel events (`message_*`, `typing`, `voice_state_update`, `webrtc_media_state`) only reach connections whose user may view that channel; the connect snapshots list only the Talks the user may view.\n- `message_create`, `message_update`: Message.\n- `message_delete`: `{id, channel_id, parent_id}`.\n- `message_reaction`: `{message_id, channel_id, reactions}`.\n- `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).\n- `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).\n- `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).\n- `member_joined`: public User of a newly registered member.\n- `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.\n- `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.\n- `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.\n- `voice_state_update`: `{action: \"join\", channel_id, user, started_at}` or `{action: \"leave\", channel_id, user_id}`.\n- `typing`: `{channel_id, user_id}` (to everyone except the typist).\n\nServer to client, targeted:\n- `read_state`: to the user's own sessions only; `{channel_id, last_read_at, unread_count, mention_count}`, `{channel_id, last_read_at, refresh: true}` or `{channel_id, notify_level}`.\n- `webrtc_media_state`: `{channel_id, user_id, screen, camera}` to voice-room members.\n- `voice_speaking`: `{channel_id, user_id, active}` to voice-room members, only when the state changes.\n- `screen_viewers`: `{channel_id, user_id, viewers}` to voice-room members: `viewers` are the distinct users in the room watching `user_id`'s screen share (sorted ids, never the sharer). Sent whenever that set changes (`viewers: []` once when a watched share ends or loses its last viewer), and on `voice_join` one per live share to the joining connection only.\n- `webrtc_offer` (SDP offer), `webrtc_candidate` (ICE candidate): SFU signalling.\n- `screen_layers`: `{channel_id, user_id, layers}` to voice-room members: the layers of `user_id`'s live screen share, best first, each `{width, height, fps}` as the sharer declared them. Sent when they change, as an empty list once the share ends, and on `voice_join` one per live share to the joining connection only. A share of a client without layers has none.\n- `screen_quality`: `{channel_id, user_id, layer, auto}` to the watching connection only: the layer of `user_id`'s screen share it receives now (`-1` before the first picture) and whether the server chooses it (`auto`).\n- `screen_layers_wanted`: `{channel_id, layers}` to the sharing connection only: the indexes of its layers some viewer receives or is about to. A sender may stop encoding the others; layer 0 is always listed while nobody watches.\n- `media_handshake`: `{channel_id, user_id, wire}` to the other connections in that voice room. `wire` is opaque; the server does not read it.\n- `voice_kicked`: `{channel_id, reason?}` when a moderator removes the user from voice, `reason: \"room_full\"` when a voice join is refused because the room is full (the channel's `user_limit`), or `reason: \"missing_permission\"` when the user may not (or no longer may) view and connect to that Talk.\n- `pong`: `{t}` echoing a `ping`.\n\nClient to server:\n- `ping` `{t}`; `presence_idle` `{idle: bool}`.\n- `typing` `{channel_id}` (text and voice channels, rate-limited; ignored without View channels and Send messages).\n- `voice_join` `{channel_id}` (needs View channels and Connect, otherwise `voice_kicked` with `reason: \"missing_permission\"`); `voice_leave`; `voice_speaking` `{active}`. The SFU drops audio without Speak and camera/screen without Video.\n- `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.\n- `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.\n- `webrtc_subscribe` `{kind: \"screen\"|\"camera\", user_id, on}` or `{kind: \"camera\", all: true, on}`. A screen subscription may carry `quality`: `\"auto\"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `\"auto\"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).\n- `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.\n- `webrtc_screenshare_stop`, `webrtc_camera_stop`.\n\nUnknown event types are ignored. The server closes the connection when the session is revoked or the account is disabled.",
         "operationId": "connectWebSocket",
         "parameters": [
           {
