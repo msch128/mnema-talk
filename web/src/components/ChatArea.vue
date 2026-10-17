@@ -14,8 +14,12 @@ import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import SlashSuggestions from './SlashSuggestions.vue'
+import SlashCommandBar from './SlashCommandBar.vue'
+import EphemeralNotes from './EphemeralNotes.vue'
 import MessageRow from './MessageRow.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
+import { useSlashCommands } from '../composables/useSlashCommands'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
@@ -54,6 +58,7 @@ const messageContainer = ref<HTMLElement | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, inputMessage)
+const slash = useSlashCommands(inputMessage, () => chatStore.activeChannel?.id)
 const isSending = ref(false)
 const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
@@ -435,7 +440,7 @@ async function handleSend() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (assist.onKeydown(e)) return
+  if (slash.onKeydown(e) || assist.onKeydown(e)) return
   if (e.key === 'Escape' && replyingTo.value) {
     e.preventDefault()
     cancelReply()
@@ -679,8 +684,19 @@ const groupedIds = computed(() => {
 
     </div>
 
+    <EphemeralNotes v-if="chatStore.activeChannel" :channel-id="chatStore.activeChannel.id" />
+
     <!-- Composer -->
     <div class="px-4 pb-1 flex-shrink-0">
+      <SlashCommandBar
+        v-if="slash.picked.value && canSend"
+        :command="slash.picked.value"
+        :values="slash.values"
+        :running="slash.running.value"
+        @set="(name, value) => (slash.values[name] = value)"
+        @run="slash.run()"
+        @cancel="slash.cancel(); textAreaEl?.focus()"
+      />
       <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
       <div
         :class="[
@@ -688,6 +704,14 @@ const groupedIds = computed(() => {
           replyingTo ? 'rounded-b-lg' : 'rounded-lg'
         ]"
       >
+        <SlashSuggestions
+          v-if="slash.open.value && canSend"
+          id="chat-slash"
+          :items="slash.suggestions.value"
+          :active="slash.active.value"
+          @pick="slash.pick"
+          @hover="slash.active.value = $event"
+        />
         <MentionSuggestions
           v-if="assist.open.value"
           id="chat-mentions"
@@ -722,11 +746,11 @@ const groupedIds = computed(() => {
           ref="textAreaEl"
           v-model="inputMessage"
           @keydown="handleKeyDown"
-          @input="handleComposerInput(); assist.onInput()"
+          @input="handleComposerInput(); assist.onInput(); slash.onInput()"
           @click="assist.onInput"
           @keyup.left="assist.onInput"
           @keyup.right="assist.onInput"
-          @blur="assist.close"
+          @blur="assist.close(); slash.close()"
           aria-autocomplete="list"
           :aria-expanded="assist.open.value ? 'true' : 'false'"
           :aria-controls="assist.open.value ? 'chat-mentions' : undefined"

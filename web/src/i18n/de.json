@@ -1064,6 +1064,22 @@
     "mentionCopied": "@Name in die Zwischenablage kopiert",
     "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
   },
+  "slash": {
+    "title": "Befehle",
+    "listLabel": "Slash-Befehle",
+    "barLabel": "Optionen von /{name}",
+    "run": "Ausführen",
+    "cancel": "Befehl abbrechen",
+    "required": "Pflichtfeld",
+    "missing": "Fülle zuerst „{name}“ aus.",
+    "notANumber": "„{name}“ braucht eine ganze Zahl.",
+    "botOffline": "{bot} ist gerade nicht verbunden.",
+    "failed": "Der Befehl konnte nicht ausgeführt werden.",
+    "privateFrom": "Private Antwort von {bot}",
+    "bot": "Bot",
+    "onlyYou": "Nur du siehst das",
+    "dismiss": "Ausblenden"
+  },
   "mention": {
     "title": "Erwähnen",
     "listLabel": "Vorschläge für Erwähnungen",

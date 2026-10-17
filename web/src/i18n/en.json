@@ -1064,6 +1064,22 @@
     "mentionCopied": "Copied @name to the clipboard",
     "actionFailed": "That didn't work. Please try again."
   },
+  "slash": {
+    "title": "Commands",
+    "listLabel": "Slash commands",
+    "barLabel": "Options of /{name}",
+    "run": "Run",
+    "cancel": "Cancel command",
+    "required": "Required",
+    "missing": "Fill in \"{name}\" first.",
+    "notANumber": "\"{name}\" needs a whole number.",
+    "botOffline": "{bot} is not connected right now.",
+    "failed": "The command could not be run.",
+    "privateFrom": "Private reply from {bot}",
+    "bot": "Bot",
+    "onlyYou": "Only you can see this",
+    "dismiss": "Dismiss"
+  },
   "mention": {
     "title": "Mention",
     "listLabel": "Mention suggestions",
