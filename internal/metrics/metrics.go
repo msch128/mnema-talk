@@ -264,6 +264,12 @@ var (
 	SFUKeyframeRequests Counter
 	// SFULayerSwitches counts simulcast layer changes for viewers.
 	SFULayerSwitches Counter
+	// SFUBandwidth counts the bandwidth estimates taken for automatic screen
+	// viewers, by range (see BandwidthRange), so the distribution is visible
+	// with a handful of series. SFUBandwidthMoves counts layer moves down that
+	// the estimate caused.
+	SFUBandwidth      = newVec("mnema_sfu_bandwidth_estimate_reports_total", "Bandwidth estimates of automatic screen viewers, by range", "range")
+	SFUBandwidthMoves Counter
 	// SFUICE counts ICE connection transitions, by state: connected, failed,
 	// disconnected.
 	SFUICE = newVec("mnema_sfu_ice_transitions_total", "SFU ICE connection transitions, by state", "state")
@@ -325,6 +331,8 @@ func WriteInstruments(w io.Writer) {
 	writeCounter(w, "mnema_sfu_nack_packets_total", "Packets subscribers asked to be retransmitted", SFUNackPackets.Load())
 	writeCounter(w, "mnema_sfu_keyframe_requests_total", "PLI and FIR feedback messages received", SFUKeyframeRequests.Load())
 	writeCounter(w, "mnema_sfu_layer_switches_total", "Simulcast layer switches for viewers", SFULayerSwitches.Load())
+	writeCounter(w, "mnema_sfu_bandwidth_layer_moves_total", "Layer moves down caused by the bandwidth estimate", SFUBandwidthMoves.Load())
+	SFUBandwidth.write(w)
 	SFUICE.write(w)
 	SFUIngressDropped.write(w)
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
@@ -349,4 +357,24 @@ func WriteFloatGauge(w io.Writer, name, help string, v float64) {
 // WriteFloatCounter writes a counter with a fractional value.
 func WriteFloatCounter(w io.Writer, name, help string, v float64) {
 	fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s counter\n%s %s\n\n", name, help, name, name, formatFloat(v))
+}
+
+// BandwidthRange names the bucket of a bandwidth estimate in bits per second;
+// the set of names is fixed, so the label has few values.
+func BandwidthRange(bps int) string {
+	switch {
+	case bps < 500_000:
+		return "lt0.5m"
+	case bps < 1_000_000:
+		return "lt1m"
+	case bps < 2_000_000:
+		return "lt2m"
+	case bps < 4_000_000:
+		return "lt4m"
+	case bps < 8_000_000:
+		return "lt8m"
+	case bps < 16_000_000:
+		return "lt16m"
+	}
+	return "ge16m"
 }

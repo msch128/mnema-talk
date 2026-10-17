@@ -105,6 +105,17 @@ type layerGroup struct {
 	declared atomic.Int32
 	// lastPkt is when a packet of layer i last arrived (unix nanoseconds).
 	lastPkt [maxLayers]atomic.Int64
+	// sent counts the bytes of layer i that arrived; rate is its bitrate in
+	// bits per second over the last measurement (zero when nothing came) and
+	// last the most recent bitrate that was not zero, which stays as the size
+	// of a layer the sender has switched off. rateAt and seen are the time and
+	// the byte counts of the last measurement.
+	sent   [maxLayers]atomic.Uint64
+	rate   [maxLayers]atomic.Int64
+	last   [maxLayers]atomic.Int64
+	rateMu sync.Mutex
+	seen   [maxLayers]uint64
+	rateAt int64
 	// sawSPS: layer i sent a sequence parameter set with a keyframe, so an
 	// IDR slice alone is not taken for the start of one.
 	sawSPS [maxLayers]atomic.Bool
@@ -311,12 +322,55 @@ func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
 // write hands one packet of layer idx to every viewer.
 func (g *layerGroup) write(idx int, p *rtp.Packet) {
 	g.lastPkt[idx].Store(layerNow().UnixNano())
+	g.sent[idx].Add(uint64(rtpHeaderSize + len(p.Payload)))
 	list := g.snapshot.Load()
 	if list == nil {
 		return
 	}
 	for _, vt := range *list {
 		vt.write(idx, p)
+	}
+}
+
+// rateEvery is the shortest time between two measurements of the layers'
+// bitrates, whatever the number of viewers asking.
+const rateEvery = 900 * time.Millisecond
+
+// rtpHeaderSize is the size counted for an RTP header (no extensions).
+const rtpHeaderSize = 12
+
+// sampleRates measures the layers' bitrates from the bytes received since the
+// last measurement, smoothing over about three of them. It is cheap and
+// lock free: of many viewers asking at once, one measures.
+func (g *layerGroup) sampleRates(now time.Time) {
+	if !g.rateMu.TryLock() {
+		return
+	}
+	defer g.rateMu.Unlock()
+	at, t := g.rateAt, now.UnixNano()
+	if at != 0 && t-at < int64(rateEvery) {
+		return
+	}
+	g.rateAt = t
+	secs := float64(t-at) / float64(time.Second)
+	for i := range g.sent {
+		total := g.sent[i].Load()
+		delta := total - g.seen[i]
+		g.seen[i] = total
+		if at == 0 {
+			continue
+		}
+		if delta == 0 {
+			g.rate[i].Store(0)
+			continue
+		}
+		bps := int64(float64(delta) * 8 / secs)
+		if old := g.rate[i].Load(); old > 0 {
+			bps = (2*old + bps) / 3
+		}
+		bps = max(bps, 1)
+		g.rate[i].Store(bps)
+		g.last[i].Store(bps)
 	}
 }
 
@@ -631,13 +685,23 @@ func (vt *viewerTrack) chosenLayer() int {
 
 // observeReport gives a receiver report of the viewer to the automatic choice.
 func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
+	vt.observeReportWithBandwidth(loss, rtt, 0)
+}
+
+// observeReportWithBandwidth is observeReport with the bandwidth estimate of
+// the viewer's connection in bits per second (zero when unknown).
+func (vt *viewerTrack) observeReportWithBandwidth(loss float64, rtt time.Duration, bandwidth int) {
 	now := layerNow()
 	vt.mu.Lock()
 	if vt.ad == nil || vt.closed {
 		vt.mu.Unlock()
 		return
 	}
+	vt.ad.setBandwidth(vt.bandwidthSampleLocked(now, bandwidth))
 	layer, changed := vt.ad.observe(now, loss, rtt)
+	if changed && vt.ad.narrowed {
+		metrics.SFUBandwidthMoves.Inc()
+	}
 	if !changed {
 		changed = vt.stalledLocked(now)
 		layer = vt.ad.layer
@@ -651,6 +715,23 @@ func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
 		vt.retarget()
 		vt.group.refreshWanted()
 	}
+}
+
+// bandwidthSampleLocked pairs the estimate with the bitrates of the layer
+// being received and the next better one, or reports nothing when any is
+// unknown or the viewer is not on the layer the adapter stands on.
+func (vt *viewerTrack) bandwidthSampleLocked(now time.Time, est int) (int, int, int) {
+	if est <= 0 || vt.cur < 0 || vt.cur != vt.ad.layer {
+		return 0, 0, 0
+	}
+	metrics.SFUBandwidth.With(metrics.BandwidthRange(est)).Inc()
+	g := vt.group
+	g.sampleRates(now)
+	next := 0
+	if vt.cur > 0 {
+		next = int(g.last[vt.cur-1].Load())
+	}
+	return est, int(g.rate[vt.cur].Load()), next
 }
 
 // stalledLocked moves an automatic viewer to a layer that delivers when

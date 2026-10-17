@@ -13,7 +13,7 @@
 # Remote mode (no infrastructure, no seeding; see the README for how to prepare
 # an instance): BASE_URL, TOKENS (json file [{id, token}]), CHANNEL_ID,
 # optionally CHANNEL_NAME (default Loadtest) and METRICS_TOKEN.
-# Knobs: BROWSERS, PION, HOLD_S, MEMBERS, LOSS, JITTER_MS, QUALITY, SPACING_MS, WIDTH,
+# Knobs: BROWSERS, PION, HOLD_S, MEMBERS, LOSS, JITTER_MS, BW_KBPS, BW_QUEUE_MS, QUALITY, SPACING_MS, WIDTH,
 # FPS, BATCH, BATCH_MS, PER_BROWSER, SCENARIOS (watch join reload).
 set -euo pipefail
 
@@ -202,7 +202,7 @@ run_watch() {
     # The viewers outlast the browsers' joins so both overlap for HOLD_S.
     local join_s=$(( (BROWSERS / BATCH + 1) * (BATCH_MS / 1000 + 8) + 20 ))
     FROM=$((BROWSERS + 1)) TO=$((BROWSERS + 1 + PION)) HOLD_S=$((HOLD_S + join_s)) \
-      SHARER_ID="$SHARER_ID" STOP_FILE="$RESULT_DIR/.stop" LOSS="$LOSS" QUALITY="$QUALITY" JITTER_MS="$JITTER_MS" SPACING_MS="$SPACING_MS" \
+      SHARER_ID="$SHARER_ID" STOP_FILE="$RESULT_DIR/.stop" LOSS="$LOSS" QUALITY="$QUALITY" JITTER_MS="$JITTER_MS" BW_KBPS="${BW_KBPS:-0}" BW_QUEUE_MS="${BW_QUEUE_MS:-1500}" SPACING_MS="$SPACING_MS" \
       OUT="$RESULT_DIR/viewers.json" "$VIEWER_BIN" > >(tee "$RESULT_DIR/viewers.log") 2>&1 &
     vpid=$!
     SCENARIO_PIDS+=("$vpid")

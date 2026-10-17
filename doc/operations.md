@@ -513,6 +513,8 @@ Counters only go up (use `rate()` or `increase()`); gauges are current values.
 | `mnema_sfu_nack_requests_total`, `mnema_sfu_nack_packets_total` | counter | Retransmission requests from viewers and the packets they asked for: a measure of packet loss on the downlinks. |
 | `mnema_sfu_keyframe_requests_total` | counter | PLI and FIR feedback from viewers. |
 | `mnema_sfu_layer_switches_total` | counter | Simulcast layer changes of screen share viewers. |
+| `mnema_sfu_bandwidth_estimate_reports_total{range}` | counter | Bandwidth estimates taken for viewers whose screen layer the server chooses, by range (`lt0.5m` ... `ge16m`, bits per second); `rate()` per range shows how the downlinks are distributed. |
+| `mnema_sfu_bandwidth_layer_moves_total` | counter | Moves to a lower layer caused by the bandwidth estimate (those caused by loss, round trip time or keyframe requests are only in `mnema_sfu_layer_switches_total`). |
 | `mnema_sfu_ice_transitions_total{state}` | counter | `connected`, `failed`, `disconnected` ICE transitions. A rising `failed` share means clients cannot reach the UDP port or TURN. |
 | `mnema_sfu_peer_joins_total` | counter | Media connections created. |
 | `mnema_db_connections_total\|acquired\|idle\|max` | gauge | Database pool. `mnema_db_acquires_total`, `..._waited_total`, `..._canceled_total`, `mnema_db_acquire_seconds_total` count acquisitions, those that had to wait, those abandoned and the time spent. |

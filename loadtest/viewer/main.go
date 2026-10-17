@@ -16,6 +16,10 @@
 //	LOSS          fraction of incoming RTP packets dropped before NACK
 //	              generation, 0..1 (default 0)
 //	JITTER_MS     random per-packet delay up to this many ms (default 0)
+//	BW_KBPS       limit of each viewer's link in kbit/s, with a queue of
+//	              BW_QUEUE_MS (default 1500) before packets are dropped;
+//	              0 = unlimited (default). A link too slow for the layer
+//	              shows a rising delay first and loss only later
 //	LEGACY_SIGNALLING=1  diagnostic: send candidates before the answer and
 //	              apply remote ones without a remote description (the
 //	              pre-0.8 scratch client), to reproduce ICE failures
@@ -184,16 +188,25 @@ func runBounded(fns []func(), limit time.Duration) int {
 type lossFactory struct {
 	loss   float64
 	jitter time.Duration
+	// kbps limits the connection's rate (0 = unlimited) with a queue of
+	// queue; each connection gets a link of its own.
+	kbps  int
+	queue time.Duration
 }
 
 func (f *lossFactory) NewInterceptor(string) (interceptor.Interceptor, error) {
-	return &lossInterceptor{loss: f.loss, jitter: f.jitter}, nil
+	l := &lossInterceptor{loss: f.loss, jitter: f.jitter}
+	if f.kbps > 0 {
+		l.link = newShaper(f.kbps, f.queue)
+	}
+	return l, nil
 }
 
 type lossInterceptor struct {
 	interceptor.NoOp
 	loss   float64
 	jitter time.Duration
+	link   *shaper
 }
 
 func (l *lossInterceptor) BindRemoteStream(_ *interceptor.StreamInfo, reader interceptor.RTPReader) interceptor.RTPReader {
@@ -208,6 +221,13 @@ func (l *lossInterceptor) BindRemoteStream(_ *interceptor.StreamInfo, reader int
 			}
 			if l.loss > 0 && rand.Float64() < l.loss {
 				continue
+			}
+			if l.link != nil {
+				wait, ok := l.link.admit(time.Now(), n)
+				if !ok {
+					continue
+				}
+				time.Sleep(wait)
 			}
 			return n, attr, nil
 		}
@@ -231,8 +251,9 @@ func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {
 		return nil, err
 	}
 	reg := &interceptor.Registry{}
-	if loss > 0 || jitter > 0 {
-		reg.Add(&lossFactory{loss: loss, jitter: jitter})
+	kbps := envInt("BW_KBPS", 0)
+	if loss > 0 || jitter > 0 || kbps > 0 {
+		reg.Add(&lossFactory{loss: loss, jitter: jitter, kbps: kbps, queue: time.Duration(envInt("BW_QUEUE_MS", 1500)) * time.Millisecond})
 	}
 	if err := webrtc.RegisterDefaultInterceptors(me, reg); err != nil {
 		return nil, err
