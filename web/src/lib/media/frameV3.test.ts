@@ -21,7 +21,7 @@ async function keysOf(byte = 7): Promise<EpochKeys> {
   return testEpochKeys(await testAesKey(byte), alice, { alice, bob })
 }
 
-interface Made { version?: 2 | 3, source?: FrameSource, layer?: number, stream?: number, counter?: number }
+interface Made { version?: 2 | 3, source?: FrameSource, layer?: number | undefined, stream?: number, counter?: number }
 
 async function made(keys: EpochKeys, { version = 3, source = SOURCE_MIC, layer, stream = 9, counter = 0 }: Made = {}) {
   const packet = await sealFrame({ keys, epoch: 4, stream, counter, channelId: 'channel', senderId: 'alice', plaintext: Uint8Array.of(1, 2, 3), version, source, layer })

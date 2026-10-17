@@ -259,9 +259,9 @@ function installRecordingCall(allow = true) {
     onWire: vi.fn((listener: (channelId: string, wire: string) => void) => { onWireListener = listener }),
     onNotice: vi.fn((listener: (notice: 'removed' | 'absent') => void) => { onNoticeListener = listener }),
     onVerification: vi.fn((listener: (verification: MediaVerification | null) => void) => { onVerificationListener = listener }),
-    protectSender: vi.fn(() => allow),
+    protectSender: vi.fn((_sender: RTCRtpSender, _source: number, _layer?: number) => allow),
     prepareIncoming: vi.fn((_receiver: RTCRtpReceiver) => allow),
-    protectIncoming: vi.fn(() => allow),
+    protectIncoming: vi.fn((_receiver: RTCRtpReceiver | undefined, _senderId: string, _source: number) => allow),
     fireKey() { onKeyListener?.() },
     fireWire(channelId: string, wire: string) { onWireListener?.(channelId, wire) },
     fireNotice(notice: 'removed' | 'absent' = 'removed') { onNoticeListener?.(notice) },
@@ -3404,11 +3404,12 @@ describe('protected media', () => {
     await grantMic()
     await join
     const pc = await negotiate()
+    const ontrack = present(pc.ontrack) as unknown as (event: unknown) => void
     const receiver = (name: string) => ({ name }) as unknown as RTCRtpReceiver
-    present(pc.ontrack)({ track: fakeTrack('audio'), streams: [remoteStreamFor('alice')], receiver: receiver('mic') })
-    present(pc.ontrack)({ track: fakeTrack('audio'), streams: [remoteStreamFor('screen:alice')], receiver: receiver('screenAudio') })
-    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('alice')], receiver: receiver('screen') })
-    present(pc.ontrack)({ track: fakeTrack('video'), streams: [remoteStreamFor('cam:alice')], receiver: receiver('camera') })
+    ontrack({ track: fakeTrack('audio'), streams: [remoteStreamFor('alice')], receiver: receiver('mic') })
+    ontrack({ track: fakeTrack('audio'), streams: [remoteStreamFor('screen:alice')], receiver: receiver('screenAudio') })
+    ontrack({ track: fakeTrack('video'), streams: [remoteStreamFor('alice')], receiver: receiver('screen') })
+    ontrack({ track: fakeTrack('video'), streams: [remoteStreamFor('cam:alice')], receiver: receiver('camera') })
     expect(call.protectIncoming.mock.calls.map(c => [(c[0] as unknown as { name: string }).name, c[1], c[2]])).toEqual([
       ['mic', 'alice', 0], ['screenAudio', 'alice', 3], ['screen', 'alice', 2], ['camera', 'alice', 1],
     ])

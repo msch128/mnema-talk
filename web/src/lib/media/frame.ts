@@ -77,10 +77,10 @@ export interface FrameSeal {
   /** Bytes that stay readable beside the sealed ones. They are authenticated. */
   clear?: Uint8Array
   /** 3 binds `source` and `layer` into the unit; 2 (the default) is the older format without them. */
-  version?: FrameVersion
-  source?: FrameSource
+  version?: FrameVersion | undefined
+  source?: FrameSource | undefined
   /** Screen layer, 0..3; every other source is layer 0. */
-  layer?: number
+  layer?: number | undefined
 }
 
 export interface FrameOpen {
@@ -101,9 +101,9 @@ export interface FrameOpen {
    * source (and, for a screen, a layer its stream carries); without one no
    * version 3 unit opens.
    */
-  source?: FrameSource | null
+  source?: FrameSource | null | undefined
   /** Whether a version 2 unit of this epoch is still taken (while a member cannot open version 3). Absent: taken. */
-  acceptV2?: (epoch: number) => boolean
+  acceptV2?: ((epoch: number) => boolean) | undefined
   /** Called with the epoch of a frame whose key is not held. */
   onUnknownEpoch?: (epoch: number) => void
 }

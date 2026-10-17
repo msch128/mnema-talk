@@ -9,8 +9,8 @@ describe('media call seam', () => {
   it('prefers an installed call, then a factory, then a call that protects nothing', async () => {
     const api = await load()
     const installed = api.mediaCall()
-    expect(installed.protectSender({} as RTCRtpSender)).toBe(false)
-    expect(installed.protectIncoming(undefined, 'alice')).toBe(false)
+    expect(installed.protectSender({} as RTCRtpSender, 0)).toBe(false)
+    expect(installed.protectIncoming(undefined, 'alice', 0)).toBe(false)
     expect(installed.prepareIncoming({} as RTCRtpReceiver)).toBe(false)
     installed.start('channel', 'alice')
     installed.roster([])
@@ -32,6 +32,6 @@ describe('media call seam', () => {
     replacement.installMediaCall(null)
     replacement.installMediaCallFactory(() => custom)
     expect(replacement.mediaCall()).toBe(custom)
-    expect(replacement.mediaCall().protectSender({} as RTCRtpSender)).toBe(false)
+    expect(replacement.mediaCall().protectSender({} as RTCRtpSender, 0)).toBe(false)
   })
 })
