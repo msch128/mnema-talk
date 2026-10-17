@@ -1,0 +1,57 @@
+web/src/NativeBootstrap.test.ts
+  s_06fcde5dbef956::t_e7ef659184f506 122-134
+web/src/NativeBootstrap.vue
+  s_06fcde5dbef956::t_ed11b10adc8f86 11,15,82-83
+web/src/components/AccountMenu.test.ts
+  s_06fcde5dbef956::t_1c86b6481fbb9b 31-51
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_ce12ffc5b99cd9 13,26-27,207-216
+web/src/components/UpdateBanner.test.ts
+  s_06fcde5dbef956::t_6545a6ec1aaf4f 52-65
+web/src/components/UpdateBanner.vue
+  s_06fcde5dbef956::t_c85376f39b9bdc 9,15-17,41,43
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7c1e0d4c0c0da5 114-121
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7c232122014546 114-121
+web/src/lib/desktopGaming.test.ts
+  s_06fcde5dbef956::t_de1c33c27d1762 3,5,21,29-30
+web/src/lib/desktopGaming.ts
+  s_06fcde5dbef956::t_31083d617e44ec 7,19
+web/src/lib/desktopRuntime.test.ts
+  s_06fcde5dbef956::t_b7a536829dd80a 2,33-43
+web/src/lib/desktopRuntime.ts
+  s_06fcde5dbef956::t_b46cdbb645b328 2,12-16,18
+web/src/lib/trustedDesktop.test.ts
+  s_06fcde5dbef956::t_35c4649b7dde0d 1-63
+web/src/lib/trustedDesktop.ts
+  s_06fcde5dbef956::t_171c683334446b 1-54
+web/src/lib/trustedSocket.test.ts
+  s_06fcde5dbef956::t_d6aff1682f8936 1-136
+web/src/lib/trustedSocket.ts
+  s_06fcde5dbef956::t_0e71ab3b97647d 1-72
+web/src/main.test.ts
+  s_06fcde5dbef956::t_38b37b15ee7523 44-55
+web/src/main.ts
+  s_06fcde5dbef956::t_22c509c5d045f7 13,23
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_40f5c3c8051faf 2-3,77,644-645,648-650
+web/src/stores/chatTrustedSocket.test.ts
+  s_06fcde5dbef956::t_adfac1dd5ad5a0 1-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "24207f9109c5f8236f1c7d6ce2bc0f843ba4784d",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
