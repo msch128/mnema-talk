@@ -1,0 +1,21 @@
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_d94aacf7c26ba5 241-255,259-294,325,327-329,337-339,341-346
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_a8d58d9d26641f 105-113,115
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5ec6e9de5596e926af0012ba0eadc13fa726f822",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
