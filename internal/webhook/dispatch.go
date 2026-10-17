@@ -23,17 +23,17 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
-// Delivery limits. Events wait in memory: a restart loses the ones not yet
-// delivered or still waiting for a retry (documented in doc/webhooks.md).
+// Delivery limits. Pending deliveries live in Postgres (queue.go); the memory
+// queue below is only the buffer between the event hub and the database.
 const (
 	queueSize = 1000
 	// perChannelQueue is how much of the queue one channel may hold, so a
 	// channel with a flood of events cannot starve the webhooks of others.
 	perChannelQueue = queueSize / 4
-	maxRetrying     = 1000
 	workers         = 4
 	requestTimeout  = 10 * time.Second
 	// readLimit is how much of a response is read (and then dropped). The
@@ -90,6 +90,8 @@ type job struct {
 	webhook uuid.UUID
 	event   Event
 	attempt int
+	// seq identifies the row in outgoing_queue (0 while only buffered).
+	seq int64
 }
 
 // route is the cached part of a webhook needed to decide whether an event
@@ -100,14 +102,20 @@ type route struct {
 	events  []string
 }
 
-// Dispatcher delivers events to outgoing webhooks. Observe feeds it; Run
-// works the queue.
+// Dispatcher delivers events to outgoing webhooks. Observe buffers events in
+// memory (fast, never blocking); a writer moves them into the outgoing_queue
+// table, which is the source of truth; workers claim due rows from there
+// (FOR UPDATE SKIP LOCKED), attempt them and settle or reschedule them. A
+// restart therefore loses at most the few events still in the buffer.
 type Dispatcher struct {
 	DB      *db.Pool
 	Client  *http.Client
 	Version string
-	// ReloadEvery replaces reloadEvery (tests); set it before Run.
+	// ReloadEvery replaces reloadEvery, PollEvery pollEvery, PruneEvery pruneEvery (tests); set them
+	// before Run.
 	ReloadEvery time.Duration
+	PollEvery   time.Duration
+	PruneEvery  time.Duration
 
 	mu    sync.Mutex
 	waits []time.Duration // nil: defaultBackoff
@@ -115,17 +123,19 @@ type Dispatcher struct {
 	routes atomic.Pointer[[]route]
 	queue  chan job
 	// queued counts the jobs in queue per channel; guarded by qmu.
-	qmu      sync.Mutex
-	queued   map[uuid.UUID]int
-	retrying atomic.Int64
-	dropped  atomic.Int64
-	wg       sync.WaitGroup
-	ctx      context.Context
+	qmu     sync.Mutex
+	queued  map[uuid.UUID]int
+	dropped atomic.Int64
+	wg      sync.WaitGroup
+	// wake tells an idle worker to look for due rows.
+	wake    chan struct{}
+	started atomic.Bool
+	done    chan struct{}
 }
 
 // NewDispatcher returns a Dispatcher; call Run to start it.
 func NewDispatcher(p *db.Pool, client *http.Client, version string) *Dispatcher {
-	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), queued: map[uuid.UUID]int{}, ctx: context.Background(), ReloadEvery: reloadEvery}
+	d := &Dispatcher{DB: p, Client: client, Version: version, queue: make(chan job, queueSize), queued: map[uuid.UUID]int{}, ReloadEvery: reloadEvery, PollEvery: pollEvery, PruneEvery: pruneEvery, wake: make(chan struct{}, 1), done: make(chan struct{})}
 	empty := []route{}
 	d.routes.Store(&empty)
 	return d
@@ -159,36 +169,42 @@ func (d *Dispatcher) Reload(ctx context.Context) error {
 	return nil
 }
 
-// Run reloads the webhook list regularly and works the queue until ctx ends.
+// Run reloads the webhook list regularly, moves buffered events into the
+// database and works the queue until ctx ends. On shutdown it stops claiming,
+// writes what is still buffered, lets attempts in flight finish (for at most
+// shutdownGrace) and leaves everything else in the database for the next
+// start.
 func (d *Dispatcher) Run(ctx context.Context) {
-	d.ctx = ctx
+	d.started.Store(true)
+	defer close(d.done)
+	if d.DB == nil { // router built without a database (tests): nothing to deliver
+		<-ctx.Done()
+		return
+	}
 	if err := d.Reload(ctx); err != nil {
 		slog.Warn("outgoing webhooks: load", "err", err)
 	}
+	d.prune(ctx)
 	tick := time.NewTicker(time.Second / ratePerSecond)
 	defer tick.Stop()
+	d.wg.Add(1)
+	go func() {
+		defer d.wg.Done()
+		d.persist(ctx)
+	}()
 	for range workers {
 		d.wg.Add(1)
 		go func() {
 			defer d.wg.Done()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case j := <-d.queue:
-					d.dequeued(j)
-					select {
-					case <-ctx.Done():
-						return
-					case <-tick.C: // one attempt per tick, shared by the workers
-					}
-					d.process(ctx, j)
-				}
-			}
+			d.work(ctx, tick.C)
 		}()
 	}
 	reload := time.NewTicker(d.ReloadEvery)
 	defer reload.Stop()
+	poll := time.NewTicker(d.PollEvery)
+	defer poll.Stop()
+	pruneT := time.NewTicker(d.PruneEvery)
+	defer pruneT.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -198,7 +214,138 @@ func (d *Dispatcher) Run(ctx context.Context) {
 			if err := d.Reload(ctx); err != nil {
 				slog.Warn("outgoing webhooks: reload", "err", err)
 			}
+		case <-poll.C:
+			d.signal()
+		case <-pruneT.C:
+			d.prune(ctx)
 		}
+	}
+}
+
+// Wait blocks until Run has finished (at most max); it returns at once when
+// Run never started. The server calls it before closing the database.
+func (d *Dispatcher) Wait(max time.Duration) {
+	if !d.started.Load() {
+		return
+	}
+	select {
+	case <-d.done:
+	case <-time.After(max):
+	}
+}
+
+// signal wakes a worker; it never blocks.
+func (d *Dispatcher) signal() {
+	select {
+	case d.wake <- struct{}{}:
+	default:
+	}
+}
+
+// persist moves buffered events into the database in batches.
+func (d *Dispatcher) persist(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			d.flush() // what is still buffered must not be lost with the process
+			return
+		case first := <-d.queue:
+			d.store(ctx, d.gather(first))
+		}
+	}
+}
+
+// gather takes up to storeBatch buffered jobs, first included.
+func (d *Dispatcher) gather(first job) []job {
+	batch := []job{first}
+	d.dequeued(first)
+	for len(batch) < storeBatch {
+		select {
+		case j := <-d.queue:
+			d.dequeued(j)
+			batch = append(batch, j)
+		default:
+			return batch
+		}
+	}
+	return batch
+}
+
+// flush writes the whole buffer (at shutdown).
+func (d *Dispatcher) flush() {
+	for {
+		select {
+		case first := <-d.queue:
+			d.store(context.Background(), d.gather(first))
+		default:
+			return
+		}
+	}
+}
+
+func (d *Dispatcher) store(ctx context.Context, batch []job) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), storeTimeout)
+	defer cancel()
+	perWebhook, global, err := storeEvents(ctx, d.DB, batch)
+	if err != nil {
+		slog.Warn("outgoing webhooks: store events", "err", err, "events", len(batch))
+		d.count("store_error", int64(len(batch)))
+		return
+	}
+	d.count("webhook_cap", perWebhook)
+	d.count("global_cap", global)
+	d.signal()
+}
+
+// count adds n dropped events to the metric and the dropped total.
+func (d *Dispatcher) count(reason string, n int64) {
+	if n <= 0 {
+		return
+	}
+	metrics.WebhookDropped.With(reason).Add(uint64(n))
+	total := d.dropped.Add(n)
+	if prev := total - n; prev == 0 || prev/100 != total/100 {
+		slog.Warn("outgoing webhooks: events dropped", "reason", reason, "dropped_total", total)
+	}
+}
+
+// prune gives up rows that outlived the last backoff step.
+func (d *Dispatcher) prune(ctx context.Context) {
+	n, err := pruneQueue(ctx, d.DB)
+	if err != nil {
+		slog.Warn("outgoing webhooks: prune", "err", err)
+		return
+	}
+	d.count("expired", n)
+}
+
+// work claims due rows one at a time and attempts them, one attempt per tick
+// of the global rate limiter.
+func (d *Dispatcher) work(ctx context.Context, tick <-chan time.Time) {
+	for ctx.Err() == nil {
+		j, ok, err := claimJob(ctx, d.DB)
+		if err != nil && ctx.Err() == nil {
+			slog.Warn("outgoing webhooks: claim", "err", err)
+		}
+		if !ok {
+			select {
+			case <-ctx.Done():
+				return
+			case <-d.wake:
+			}
+			continue
+		}
+		d.signal() // there may be more: let an idle worker look too
+		select {
+		case <-ctx.Done():
+			// Shutting down: hand the row back instead of holding it for the lease.
+			if err := releaseJob(context.WithoutCancel(ctx), d.DB, j.seq); err != nil {
+				slog.Warn("outgoing webhooks: release", "err", err)
+			}
+			return
+		case <-tick: // one attempt per tick, shared by the workers
+		}
+		d.process(ctx, j)
 	}
 }
 
@@ -235,7 +382,7 @@ func (d *Dispatcher) enqueue(j job) {
 	d.qmu.Lock()
 	if d.queued[j.event.Channel] >= perChannelQueue {
 		d.qmu.Unlock()
-		d.drop()
+		d.count("channel_share", 1)
 		return
 	}
 	d.queued[j.event.Channel]++
@@ -246,13 +393,7 @@ func (d *Dispatcher) enqueue(j job) {
 		// A full queue means the receivers are too slow for the flow of
 		// events; the oldest work is kept, the newest dropped.
 		d.dequeued(j)
-		d.drop()
-	}
-}
-
-func (d *Dispatcher) drop() {
-	if d.dropped.Add(1)%100 == 1 {
-		slog.Warn("outgoing webhooks: queue full, dropping events", "dropped_total", d.dropped.Load())
+		d.count("buffer_full", 1)
 	}
 }
 
@@ -335,44 +476,65 @@ func (d *Dispatcher) backoff(attempt int) time.Duration {
 	return base + time.Duration(rand.Int64N(int64(base)/5+1)) - base/10 // +-10 %
 }
 
-// process makes one attempt of a job and schedules the next one or settles
-// the event.
+// process makes one attempt of a claimed row and, in the same transaction
+// that logs it, deletes the row (settled) or schedules the next attempt.
+// A crash between the request and that transaction repeats the delivery
+// (at least once; receivers deduplicate on the delivery id).
 func (d *Dispatcher) process(ctx context.Context, j job) {
-	rec, err := getOutgoing(ctx, d.DB, j.webhook)
-	if err != nil || !rec.enabled {
+	// Bookkeeping completes even while shutting down.
+	wctx := context.WithoutCancel(ctx)
+	rec, err := getOutgoing(wctx, d.DB, j.webhook)
+	switch {
+	case errors.Is(err, errOutgoingNotFound) || (err == nil && !rec.enabled):
+		if err := dropRow(wctx, d.DB, j.seq); err != nil {
+			slog.Warn("outgoing webhooks: drop", "err", err)
+		}
+		return
+	case err != nil:
+		slog.Warn("outgoing webhooks: load webhook", "err", err) // the lease makes the row due again
 		return
 	}
-	del, retryAfter := d.attempt(ctx, rec, j.event, j.attempt)
+	// Attempts already under way when shutdown begins get shutdownGrace to finish.
+	actx, cancel := context.WithCancel(wctx)
+	grace := shutdownGrace
+	stop := context.AfterFunc(ctx, func() { time.AfterFunc(grace, cancel) })
+	del, retryAfter := d.attempt(actx, rec, j.event, j.attempt)
+	aborted := actx.Err() != nil
+	stop()
+	cancel()
+	if aborted { // cut off by the shutdown: not an outcome, leave the row for the next start
+		if err := releaseJob(wctx, d.DB, j.seq); err != nil {
+			slog.Warn("outgoing webhooks: release", "err", err)
+		}
+		return
+	}
 	wait := d.backoff(j.attempt)
 	retry := !del.Success && retriable(del) && wait >= 0
-	if retry && d.retrying.Load() >= maxRetrying {
-		retry = false
+	settle := settleStep(j.seq)
+	if retry {
+		wait = max(wait, min(retryAfter, maxRetryAfter))
+		settle = rescheduleStep(j.seq, j.attempt+1, wait)
 	}
-	if _, err := recordDelivery(ctx, d.DB, rec.ID, del, !retry, true); err != nil {
+	off, err := recordDelivery(wctx, d.DB, rec.ID, del, !retry, true, settle)
+	if err != nil {
 		slog.Warn("outgoing webhooks: record delivery", "err", err)
 		return
 	}
 	if !del.Success && !retry {
-		d.afterFinal(ctx, rec.ID)
-	}
-	if retry {
-		wait = max(wait, min(retryAfter, maxRetryAfter))
-		j.attempt++
-		d.retrying.Add(1)
-		time.AfterFunc(wait, func() {
-			d.retrying.Add(-1)
-			if d.ctx.Err() == nil {
-				d.enqueue(j)
-			}
-		})
+		d.afterFinal(wctx, rec.ID, off)
 	}
 }
 
 // afterFinal refreshes the cached list after a failure for good, which may
-// have switched the webhook off.
-func (d *Dispatcher) afterFinal(ctx context.Context, id uuid.UUID) {
+// have switched the webhook off; then nothing more is sent to it.
+func (d *Dispatcher) afterFinal(ctx context.Context, id uuid.UUID, off bool) {
 	if err := d.Reload(ctx); err != nil {
 		slog.Warn("outgoing webhooks: reload", "webhook", id, "err", err)
+	}
+	if off {
+		if err := purgeWebhook(ctx, d.DB, id); err != nil {
+			slog.Warn("outgoing webhooks: purge", "webhook", id, "err", err)
+		}
 	}
 }
 

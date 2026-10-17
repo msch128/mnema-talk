@@ -270,6 +270,11 @@ var (
 	// SFUPeerJoins counts media connections created.
 	SFUPeerJoins Counter
 
+	// WebhookDropped counts outgoing webhook events that were not delivered
+	// because of a bound, by reason: buffer_full, channel_share, webhook_cap,
+	// global_cap, expired, store_error.
+	WebhookDropped = newVec("mnema_webhook_events_dropped_total", "Outgoing webhook events dropped or expired unsent, by reason", "reason")
+
 	// S3Operations counts object storage calls, by operation and result.
 	S3Operations = newVec("mnema_s3_operations_total", "Object storage operations, by operation and result", "op", "result")
 )
@@ -324,6 +329,7 @@ func WriteInstruments(w io.Writer) {
 	SFUIngressDropped.write(w)
 	writeCounter(w, "mnema_sfu_peer_joins_total", "Media connections created", SFUPeerJoins.Load())
 	S3Operations.write(w)
+	WebhookDropped.write(w)
 }
 
 func writeCounter(w io.Writer, name, help string, v uint64) {
