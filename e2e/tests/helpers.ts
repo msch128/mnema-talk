@@ -40,6 +40,24 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
   return result
 }
 
+// The API allows 600 requests a minute per account and every spec signs in as
+// the same administrator from one address, so a spec that follows a busy one
+// can start inside an exhausted window. Waits out the Retry-After of such a
+// 429 and reports whether the page was throttled, so the caller can reload it.
+export async function awaitApiBudget(page: Page): Promise<boolean> {
+  let throttled = false
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const retryAfter = await page.evaluate(async () => {
+      const response = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      return response.status === 429 ? Number(response.headers.get('Retry-After') ?? '5') : 0
+    })
+    if (retryAfter === 0) break
+    throttled = true
+    await page.waitForTimeout((Math.min(retryAfter, 65) + 1) * 1000)
+  }
+  return throttled
+}
+
 export function responseString(response: ApiResponse, field: string): string {
   const value = response.json
   if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected an object response')
