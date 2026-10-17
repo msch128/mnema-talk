@@ -97,3 +97,14 @@ func (s *SFU) Close() error {
 	})
 	return s.closeErr
 }
+
+// announcesLoopback reports whether any announced address is loopback, i.e.
+// the server runs where its clients can be on loopback too (dev, e2e).
+func announcesLoopback(ips []string) bool {
+	for _, ip := range ips {
+		if addr, err := netip.ParseAddr(ip); err == nil && addr.IsLoopback() {
+			return true
+		}
+	}
+	return false
+}

@@ -163,6 +163,9 @@ type Peer struct {
 	// handed over (outgoing) or the answer was applied (incoming).
 	candMu sync.Mutex
 	cands  candidateState
+	// allowLoopbackCands admits loopback candidates of the client; set when
+	// the server itself is announced on loopback (dev, e2e).
+	allowLoopbackCands bool
 	// signalingMu permits one active signaling task per peer.
 	signalingMu sync.Mutex
 	// offerGen identifies the latest offer; a watchdog for an older one
@@ -209,6 +212,7 @@ func (p *Peer) releaseViewerTracks() {
 
 type Room struct {
 	nativeAPI           func(func() bool) (*webrtc.API, error)
+	allowLoopbackCands  bool
 	load                *peerLoad
 	sourceAuthorization *sourceAuthorizationRegistry
 	ID                  uuid.UUID
@@ -508,6 +512,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 			lastMedia:           make(map[uuid.UUID]MediaState),
 			notifier:            s.notifier,
 			api:                 s.currentAPI(),
+			allowLoopbackCands:  announcesLoopback(s.AnnouncedIPs()),
 			iceServers:          s.iceServers,
 			offerTimeout:        s.offerTimeout,
 		}
@@ -516,6 +521,7 @@ func (s *SFU) joinAuthorized(channelID, userID uuid.UUID, sendOffer func(webrtc.
 	// A long-lived room picks up changed announced addresses for new peers.
 	r.mu.Lock()
 	r.api = s.currentAPI()
+	r.allowLoopbackCands = announcesLoopback(s.AnnouncedIPs())
 	r.mu.Unlock()
 	peer, err := r.joinPeer(userID, sendOffer, sendICE, authorize)
 	if err != nil {
@@ -649,6 +655,8 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 		SendOffer:      sendOffer,
 		SendICE:        sendICE,
 		room:           r,
+
+		allowLoopbackCands: r.allowLoopbackCands,
 	}
 
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {

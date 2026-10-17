@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -298,5 +299,78 @@ func TestCandidateDropReasons(t *testing.T) {
 		if got := candidateDropReason(err); got != want {
 			t.Errorf("%v: %q, want %q", err, got, want)
 		}
+	}
+}
+
+func TestVetRemoteCandidate(t *testing.T) {
+	line := func(addr string) string { return "candidate:1 1 udp 2122260223 " + addr + " 50000 typ host" }
+	for addr, allowLoopback := range map[string]bool{
+		"198.51.100.7": false, "192.168.1.20": false, "10.0.0.3": false, "2001:db8::1": false,
+		"127.0.0.1": true,
+	} {
+		if err := vetRemoteCandidate(line(addr), allowLoopback); err != nil {
+			t.Errorf("%s refused: %v", addr, err)
+		}
+	}
+	for _, addr := range []string{
+		"127.0.0.1", "::1", "169.254.1.1", "fe80::1", "224.0.0.251", "ff02::fb", "0.0.0.0", "::",
+		"::ffff:127.0.0.1", "3f2a9c1e-77aa-4c3d-9d54-0c1d9a0b6f11.local", "example.com",
+	} {
+		if err := vetRemoteCandidate(line(addr), false); !errors.Is(err, errCandidateAddress) {
+			t.Errorf("%s: err = %v, want refused", addr, err)
+		}
+	}
+	if err := vetRemoteCandidate("", false); err != nil {
+		t.Errorf("empty candidate refused: %v", err)
+	}
+	if err := vetRemoteCandidate("candidate:1 1 udp", false); !errors.Is(err, errCandidateAddress) {
+		t.Errorf("short candidate: %v", err)
+	}
+}
+
+func TestRemoteCandidateBudgetHoldsAfterTheAnswer(t *testing.T) {
+	logs := captureLogs(t)
+	s := newTestSFU(t)
+	c := newClient(t)
+	offers := make(chan webrtc.SessionDescription, 4)
+	_, peer, err := s.Join(uuid.New(), c.id, func(o webrtc.SessionDescription) { offers <- o }, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	offer := <-offers
+	if err := c.pc.SetRemoteDescription(offer); err != nil {
+		t.Fatal(err)
+	}
+	answer, err := c.pc.CreateAnswer(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.pc.SetLocalDescription(answer); err != nil {
+		t.Fatal(err)
+	}
+	if err := peer.SetAnswer(answer); err != nil {
+		t.Fatal(err)
+	}
+	peer.candMu.Lock()
+	peer.cands.accepted = maxRemoteCandidates - 1
+	peer.candMu.Unlock()
+	if err := peer.AddRemoteCandidate(candidate(1)); err != nil {
+		t.Fatalf("last candidate of the budget: %v", err)
+	}
+	if err := peer.AddRemoteCandidate(candidate(2)); !errors.Is(err, errCandidateBudget) {
+		t.Fatalf("err = %v, want budget", err)
+	}
+	if err := peer.AddRemoteCandidate(webrtc.ICECandidateInit{Candidate: "candidate:1 1 udp 1 x.local 5 typ host"}); !errors.Is(err, errCandidateAddress) {
+		t.Fatalf("mDNS err = %v", err)
+	}
+	got := logs.String()
+	if !strings.Contains(got, "reason=\"candidate budget exhausted\"") || !strings.Contains(got, "reason=\"address refused\"") {
+		t.Fatalf("log lacks the reasons: %s", got)
+	}
+}
+
+func TestLoopbackCandidatesFollowTheAnnouncement(t *testing.T) {
+	if !announcesLoopback([]string{"198.51.100.7", "127.0.0.1"}) || announcesLoopback([]string{"198.51.100.7", "x"}) || announcesLoopback(nil) {
+		t.Fatal("announcesLoopback")
 	}
 }

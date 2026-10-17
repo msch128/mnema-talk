@@ -3,6 +3,8 @@ package sfu
 import (
 	"errors"
 	"log/slog"
+	"net/netip"
+	"strings"
 	"time"
 
 	"github.com/pion/webrtc/v4"
@@ -28,13 +30,22 @@ const (
 	// peer gathers a handful per interface; more than this is not a client
 	// worth keeping them for.
 	maxHeldCandidates = 64
+	// maxRemoteCandidates bounds the candidates one peer may have applied
+	// over its lifetime. Every one costs pairs and STUN probes toward an
+	// address the member chose, so a flood is a way to point the server at
+	// others. A browser gathers a handful per interface and per STUN server.
+	maxRemoteCandidates = 64
 	// candidateWarnWindow and candidateWarnBurst rate-limit the log of
 	// dropped candidates per peer.
 	candidateWarnWindow = 30 * time.Second
 	candidateWarnBurst  = 3
 )
 
-var errTooManyCandidates = errors.New("too many candidates before the remote description")
+var (
+	errTooManyCandidates = errors.New("too many candidates before the remote description")
+	errCandidateBudget   = errors.New("candidate budget exhausted")
+	errCandidateAddress  = errors.New("candidate address refused")
+)
 
 // candidateState is the per-peer bookkeeping of the two queues above.
 type candidateState struct {
@@ -45,6 +56,9 @@ type candidateState struct {
 	out []webrtc.ICECandidateInit
 	// early are the client's candidates received before its answer was applied.
 	early []webrtc.ICECandidateInit
+	// accepted counts the client's candidates taken so far (see
+	// maxRemoteCandidates).
+	accepted int
 
 	warnWindow     time.Time
 	warnCount      int
@@ -93,14 +107,26 @@ func (p *Peer) offerDelivered() {
 // reason (rate-limited, without the address) and returned.
 func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
 	p.candMu.Lock()
+	if err := vetRemoteCandidate(c.Candidate, p.allowLoopbackCands); err != nil {
+		p.candidateDropped(err)
+		p.candMu.Unlock()
+		return err
+	}
 	if p.PC.RemoteDescription() == nil {
 		defer p.candMu.Unlock()
 		if len(p.cands.early) >= maxHeldCandidates {
 			p.candidateDropped(errTooManyCandidates)
 			return errTooManyCandidates
 		}
+		// The held ones are counted and the bound above is not above the
+		// budget, so there is always room.
+		p.cands.accepted++
 		p.cands.early = append(p.cands.early, c)
 		return nil
+	}
+	if err := p.takeCandidateBudget(); err != nil {
+		p.candMu.Unlock()
+		return err
 	}
 	p.candMu.Unlock()
 	err := p.PC.AddICECandidate(c)
@@ -151,6 +177,10 @@ func candidateDropReason(err error) string {
 	switch {
 	case errors.Is(err, errTooManyCandidates):
 		return "too many candidates before the answer"
+	case errors.Is(err, errCandidateBudget):
+		return "candidate budget exhausted"
+	case errors.Is(err, errCandidateAddress):
+		return "address refused"
 	case errors.Is(err, webrtc.ErrNoRemoteDescription):
 		return "no remote description"
 	case errors.Is(err, webrtc.ErrConnectionClosed):
@@ -158,4 +188,43 @@ func candidateDropReason(err error) string {
 	default:
 		return "invalid candidate"
 	}
+}
+
+// vetRemoteCandidate refuses candidates that would make the server probe
+// addresses a member has no business pointing it at: mDNS names (each costs
+// a multicast query and a goroutine), names in general, and unspecified,
+// multicast, link-local and (unless the server itself runs on loopback)
+// loopback addresses. Private ranges stay: LAN deployments need them. An
+// empty candidate (end of candidates) passes.
+func vetRemoteCandidate(candidate string, allowLoopback bool) error {
+	if candidate == "" {
+		return nil
+	}
+	fields := strings.Fields(strings.TrimPrefix(candidate, "candidate:"))
+	if len(fields) < 8 {
+		return errCandidateAddress
+	}
+	addr, err := netip.ParseAddr(fields[4])
+	if err != nil {
+		// A name, including *.local.
+		return errCandidateAddress
+	}
+	addr = addr.Unmap()
+	if addr.IsUnspecified() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
+		return errCandidateAddress
+	}
+	if addr.IsLoopback() && !allowLoopback {
+		return errCandidateAddress
+	}
+	return nil
+}
+
+// takeCandidateBudget counts one accepted candidate. The caller holds candMu.
+func (p *Peer) takeCandidateBudget() error {
+	if p.cands.accepted >= maxRemoteCandidates {
+		p.candidateDropped(errCandidateBudget)
+		return errCandidateBudget
+	}
+	p.cands.accepted++
+	return nil
 }
