@@ -25,9 +25,14 @@ func TestOlderVersionRefusesAMigratedDatabase(t *testing.T) {
 		"0002_b.sql": old["0002_b.sql"],
 		"0003_c.sql": {Data: []byte(`CREATE TABLE c (x INT);`)},
 	}
-	for name, fsys := range map[string]fstest.MapFS{"old": old, "forward": next, "restart": next} {
-		if err := p.MigrateFS(ctx, fsys); err != nil {
-			t.Fatalf("%s: %v", name, err)
+	// In order: a map would run the steps in random order.
+	steps := []struct {
+		name string
+		fsys fstest.MapFS
+	}{{"old", old}, {"forward", next}, {"restart", next}}
+	for _, s := range steps {
+		if err := p.MigrateFS(ctx, s.fsys); err != nil {
+			t.Fatalf("%s: %v", s.name, err)
 		}
 	}
 	err := p.MigrateFS(ctx, old)
