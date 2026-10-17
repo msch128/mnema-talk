@@ -14,6 +14,7 @@ web/src/components/BotRolesPanel.test.ts
   s_06fcde5dbef956::t_0503f4fcf86ca7 1-86
 web/src/components/AdminPermissionsUi.test.ts
   s_06fcde5dbef956::t_9d6e708aeeb7aa 118-120
+  s_06fcde5dbef956::t_43e69437ed91a6 113,117
 web/src/components/AdminBotsTab.test.ts
   s_06fcde5dbef956::t_7bed7a9a819b3b 1-125
 ---
