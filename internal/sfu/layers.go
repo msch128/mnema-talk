@@ -110,6 +110,8 @@ type layerGroup struct {
 	announced uint8
 	started   bool
 	timer     *time.Timer
+	// wantedOut delivers the announcements to the sharer in order.
+	wantedOut newest[[]int]
 }
 
 func newLayerGroup(id string, roomID, publisher uuid.UUID, notifier *mediaNotifier, codec webrtc.RTPCodecCapability) *layerGroup {
@@ -204,7 +206,10 @@ func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID str
 	// NewTrackLocalStaticRTP never fails.
 	local, _ := webrtc.NewTrackLocalStaticRTP(g.codec, trackID, streamID)
 	vt := &viewerTrack{TrackLocalStaticRTP: local, group: g, viewer: viewer, pref: pref, cur: -1, eff: -1, sink: local.WriteRTP}
-	vt.want = wantedLayer(pref)
+	if pref < 0 {
+		vt.ad = newAdapter(layerNow(), g.floor())
+	}
+	vt.want = vt.chosenLayer()
 	vt.curA.Store(-1)
 	vt.wantA.Store(int32(vt.want))
 	return vt
@@ -302,6 +307,21 @@ func (g *layerGroup) resolve(want int) int {
 		}
 	}
 	return -1
+}
+
+// floor is the worst layer a viewer may be given: the last declared one, else
+// the lowest-quality layer that exists.
+func (g *layerGroup) floor() int {
+	if n := int(g.declared.Load()); n > 0 {
+		return min(n, maxLayers) - 1
+	}
+	live := g.live.Load()
+	for i := maxLayers - 1; i > 0; i-- {
+		if live&(1<<i) != 0 {
+			return i
+		}
+	}
+	return 0
 }
 
 // clampWant is a wished-for layer limited to the declared ones.
@@ -413,15 +433,15 @@ func (g *layerGroup) notifyWanted(mask uint8) {
 			layers = append(layers, i)
 		}
 	}
-	go fn(g.roomID, g.publisher, layers)
+	g.wantedOut.send(layers, func(layers []int) { fn(g.roomID, g.publisher, layers) })
 }
 
-func (g *layerGroup) notifyQuality(viewer uuid.UUID, st QualityState) {
+func (g *layerGroup) notifyQuality(vt *viewerTrack, st QualityState) {
 	if g.notifier == nil {
 		return
 	}
 	if fn := g.notifier.qualityFn(); fn != nil {
-		go fn(g.roomID, viewer, g.publisher, st)
+		vt.qualityOut.send(st, func(st QualityState) { fn(g.roomID, vt.viewer, g.publisher, st) })
 	}
 }
 
@@ -435,15 +455,6 @@ type layerWriter struct {
 func (w layerWriter) WriteRTP(p *rtp.Packet) error {
 	w.group.write(w.layer, p)
 	return nil
-}
-
-// wantedLayer is the layer a viewer's choice stands for. Automatic starts at
-// the best layer.
-func wantedLayer(pref int) int {
-	if pref < 0 {
-		return 0
-	}
-	return pref
 }
 
 // viewerTrack is the outgoing track of one viewer for a layered screen share.
@@ -465,9 +476,11 @@ type viewerTrack struct {
 	// for, eff the layer that exists nearest to it and cur the layer being
 	// forwarded (-1 before the first keyframe).
 	pref, want, eff, cur int
-	closed               bool
-	started              bool
-	lastKeyAsk           time.Time
+	// ad chooses the layer of a viewer who left it to the server (pref < 0).
+	ad         *adapter
+	closed     bool
+	started    bool
+	lastKeyAsk time.Time
 	// Offsets that map the current layer's numbers onto the viewer's stream.
 	seqOff uint16
 	tsOff  uint32
@@ -483,8 +496,9 @@ type viewerTrack struct {
 	// sink delivers a packet to the viewer: the track's own WriteRTP.
 	sink func(*rtp.Packet) error
 	// reported is the last state announced to the viewer.
-	reported QualityState
-	hasRep   bool
+	reported   QualityState
+	hasRep     bool
+	qualityOut newest[QualityState]
 }
 
 // close ends delivery; the track itself is torn down by Pion.
@@ -498,6 +512,11 @@ func (vt *viewerTrack) close() {
 // that waits for a keyframe asks the publisher for one.
 func (vt *viewerTrack) retarget() {
 	vt.mu.Lock()
+	if vt.ad != nil {
+		vt.ad.setFloor(vt.group.floor())
+		vt.want = vt.ad.layer
+		vt.wantA.Store(int32(vt.want))
+	}
 	vt.eff = vt.group.resolve(vt.want)
 	ask := vt.keyframeDueLocked(layerNow())
 	eff := vt.eff
@@ -521,13 +540,62 @@ func (vt *viewerTrack) keyframeDueLocked(now time.Time) bool {
 func (vt *viewerTrack) setPref(pref int) {
 	vt.mu.Lock()
 	vt.pref = pref
-	vt.want = wantedLayer(pref)
+	switch {
+	case pref >= 0:
+		vt.ad = nil
+	case vt.ad == nil:
+		// Automatic carries on from the layer chosen so far.
+		vt.ad = newAdapter(layerNow(), vt.group.floor())
+		vt.ad.layer = min(vt.want, vt.ad.floor)
+	}
+	vt.want = vt.chosenLayer()
 	vt.wantA.Store(int32(vt.want))
 	vt.lastKeyAsk = time.Time{}
 	vt.mu.Unlock()
 	vt.retarget()
 	vt.group.refreshWanted()
 	vt.report(true)
+}
+
+// chosenLayer is the layer the viewer's choice stands for: the one it picked,
+// or the one the adapter has arrived at.
+func (vt *viewerTrack) chosenLayer() int {
+	if vt.ad != nil {
+		return vt.ad.layer
+	}
+	return vt.pref
+}
+
+// observeReport gives a receiver report of the viewer to the automatic choice.
+func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
+	now := layerNow()
+	vt.mu.Lock()
+	if vt.ad == nil || vt.closed {
+		vt.mu.Unlock()
+		return
+	}
+	layer, changed := vt.ad.observe(now, loss, rtt)
+	if changed {
+		vt.want = layer
+		vt.wantA.Store(int32(layer))
+	}
+	vt.mu.Unlock()
+	if changed {
+		vt.retarget()
+		vt.group.refreshWanted()
+	}
+}
+
+// viewerKeyframe passes on the viewer's own keyframe request; for an automatic
+// viewer, repeated requests are a sign that it cannot decode what it gets.
+func (vt *viewerTrack) viewerKeyframe() {
+	now := layerNow()
+	vt.mu.Lock()
+	if vt.ad != nil {
+		vt.ad.keyframeRequested(now)
+	}
+	vt.mu.Unlock()
+	vt.requestKeyframe()
 }
 
 // layerGone drops the viewer's current layer when it was idx.
@@ -573,7 +641,7 @@ func (vt *viewerTrack) report(force bool) {
 	if closed || (same && !force) {
 		return
 	}
-	vt.group.notifyQuality(vt.viewer, st)
+	vt.group.notifyQuality(vt, st)
 }
 
 // write offers one packet of layer idx to the viewer.

@@ -15,6 +15,8 @@ Needs Docker (throwaway PostgreSQL and SeaweedFS from `e2e/docker-compose.yml`,
 own compose project `mnema-loadtest` and ports, so it does not collide with
 `make e2e`), Go, Node 22+ and the Chromium of `e2e/`
 (`LOADTEST_INSTALL_BROWSER=1` runs `playwright install --with-deps chromium`).
+`LOADTEST_UDP_PORT`, `LOADTEST_APP_PORT`, `LOADTEST_PG_PORT` and `LOADTEST_S3_PORT`
+move the ports when something else on the machine uses one.
 
 ## What runs
 
@@ -48,7 +50,10 @@ capture is larger than 480p, so `WIDTH=1280` (a 720p share, layers 720p, 480p,
 360p) exercises the SFU's layer switching. `QUALITY=2 make load-test` makes
 every Pion viewer ask for the smallest layer, `QUALITY=spread` spreads them over
 the layers by index (`avgKbps` of the viewers then shows the different
-bitrates), and the default `auto` takes the best layer. The browsers decode
+bitrates), and the default `auto` lets the server choose: it starts on the best
+layer and moves viewers down when their receiver reports show trouble, so
+`LOSS=0.15 WIDTH=1280 make load-test` ends with all viewers on the smaller
+layers (compare their `video_bytes` in `viewers.json`). The browsers decode
 whichever layer the server gives them.
 
 **Bad networks.** `LOSS=0.05 JITTER_MS=20 make load-test` makes the Pion viewers

@@ -666,7 +666,7 @@
     "layers": {
       "title": "Viewing quality",
       "auto": "Auto",
-      "autoHint": "The best quality available",
+      "autoHint": "Adjusts to your connection",
       "autoNow": "Currently {name}",
       "source": "Source",
       "switching": "Switching…"

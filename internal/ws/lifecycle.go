@@ -68,7 +68,7 @@ const (
 // @Description - `voice_join` `{channel_id}`; `voice_leave`; `voice_speaking` `{active}`.
 // @Description - `webrtc_answer` (SDP answer), `webrtc_candidate` (ICE candidate), `webrtc_request_keyframe`.
 // @Description - `media_handshake` `{channel_id, wire}`: opaque handshake bytes for the current voice room.
-// @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`. A screen subscription may carry `quality`: `"auto"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent.
+// @Description - `webrtc_subscribe` `{kind: "screen"|"camera", user_id, on}` or `{kind: "camera", all: true, on}`. A screen subscription may carry `quality`: `"auto"` or the index of a layer (0 is the best); it is applied before the first picture and again whenever sent. Without one, or with `"auto"`, the server chooses: it starts on the best layer, moves down one layer at a time when the viewer's receiver reports show lasting loss, a rising round trip time or repeated keyframe requests, and tries one layer up again after a long stretch without trouble (a failed attempt makes the next one wait twice as long).
 // @Description - `webrtc_layers` `{layers: [{width, height, fps}, ...]}` (1 to 3, best first, strictly shrinking): the layers of the sender's own screen share. They are sent on the SFU's lower video lines.
 // @Description - `webrtc_screenshare_stop`, `webrtc_camera_stop`.
 // @Description

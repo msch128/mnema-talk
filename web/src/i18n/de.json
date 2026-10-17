@@ -666,7 +666,7 @@
     "layers": {
       "title": "Wiedergabequalität",
       "auto": "Automatisch",
-      "autoHint": "Die beste verfügbare Qualität",
+      "autoHint": "Passt sich deiner Verbindung an",
       "autoNow": "Gerade {name}",
       "source": "Quelle",
       "switching": "Wechsle …"
