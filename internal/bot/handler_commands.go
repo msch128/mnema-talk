@@ -63,7 +63,7 @@ func (h *Handler) listCommands(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/bots/{id}/commands/{commandID} [patch]
 func (h *Handler) patchCommand(w http.ResponseWriter, r *http.Request) error {
-	b, _, err := h.load(r)
+	b, err := h.loadActing(r)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (h *Handler) patchCommand(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/bots/{id}/commands/{commandID} [delete]
 func (h *Handler) deleteCommand(w http.ResponseWriter, r *http.Request) error {
-	b, _, err := h.load(r)
+	b, err := h.loadActing(r)
 	if err != nil {
 		return err
 	}
