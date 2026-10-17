@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/msch128/mnema-talk/compare/v0.7.25...v0.8.0) (2026-10-17)
+
+
+### Features
+
+* Mnema Talk 0.8 ([#170](https://github.com/msch128/mnema-talk/issues/170)) ([71dd384](https://github.com/msch128/mnema-talk/commit/71dd384988c14aca353010bb6df6fabc0abd9a41))
+
 ## [0.7.25](https://github.com/msch128/mnema-talk/compare/v0.7.24...v0.7.25) (2026-10-17)
 
 
