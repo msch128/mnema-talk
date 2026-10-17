@@ -123,6 +123,10 @@ type Peer struct {
 	// offerSent is guarded by signalingMu. Reading LocalDescription may wait for
 	// the ICE task loop, so it must not be used as a flag under the room lock.
 	offerSent bool
+	// candMu guards cands: trickle candidates held back until the offer was
+	// handed over (outgoing) or the answer was applied (incoming).
+	candMu sync.Mutex
+	cands  candidateState
 	// signalingMu permits one active signaling task per peer.
 	signalingMu sync.Mutex
 	// offerGen identifies the latest offer; a watchdog for an older one
@@ -611,9 +615,8 @@ func (r *Room) joinPeer(userID uuid.UUID, sendOffer func(webrtc.SessionDescripti
 	}
 
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
-		if c != nil && peer.SendICE != nil {
-			cand := c.ToJSON()
-			peer.SendICE(&cand)
+		if c != nil {
+			peer.emitCandidate(c.ToJSON())
 		}
 	})
 
@@ -767,6 +770,7 @@ func (p *Peer) SetAnswer(answer webrtc.SessionDescription) error {
 	if err := p.PC.SetRemoteDescription(answer); err != nil {
 		return err
 	}
+	p.applyEarlyCandidates()
 	if p.negotiationPending.Swap(false) {
 		p.room.requestPeerSignal(p)
 	}
@@ -928,6 +932,9 @@ func (r *Room) signalPeer(peer *Peer) {
 		if peer.SendOffer != nil {
 			peer.SendOffer(offer)
 		}
+		// Gathering started with SetLocalDescription, so candidates may be
+		// waiting; the client must see them after the offer.
+		peer.offerDelivered()
 	}
 }
 
