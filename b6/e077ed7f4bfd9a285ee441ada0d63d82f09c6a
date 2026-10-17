@@ -1,0 +1,26 @@
+web/src/components/WebhookPanels.test.ts
+  s_06fcde5dbef956::t_c5f48a5537d632 1-437
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_905b341542b39f 15
+web/src/components/OutgoingWebhooksPanel.vue
+  s_06fcde5dbef956::t_de49871f371127 185
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_de49871f371127 116
+  s_06fcde5dbef956::t_343d721a795c2a 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b6e077ed7f4bfd9a285ee441ada0d63d82f09c6a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
