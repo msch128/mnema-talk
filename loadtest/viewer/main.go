@@ -22,6 +22,14 @@
 //	QUALITY       layer of the screen share to watch: "auto" (default), a
 //	              layer index 0..2 (0 is the best), or "spread" to give each
 //	              viewer layer index%3, so a run exercises all layers
+//	ICE_TIMEOUT_S a member that is not connected this long after its join is
+//	              recorded as failed (with its ICE diagnostics) and closed
+//	              (default 25, 0 = never)
+//	CLOSE_TIMEOUT_S  bound for tearing the members down at the end (default 10);
+//	              the result is written first, so a stuck Close cannot hide it
+//	ICE_INTERFACES  comma separated interface names the viewer may gather
+//	              candidates on (default: all), to compare multi-homed hosts
+//	ICE_UDP4_ONLY=1  gather IPv4 UDP candidates only
 //	STOP_FILE     optional path; the run ends early once the file exists
 //	OUT           optional path of the JSON result
 package main
@@ -36,6 +44,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -103,6 +112,15 @@ type member struct {
 	answerSent bool
 	pendingOut []webrtc.ICECandidateInit
 	closeOnce  sync.Once
+
+	// Diagnostics: a timeline of state changes, what became of the server's
+	// candidates, and the ICE statistics taken when the member finished.
+	diagMu     sync.Mutex
+	timeline   []string
+	remoteSeen []string
+	snapshot   *iceSnapshot
+	snapOnce   sync.Once
+	timedOut   atomic.Bool
 }
 
 func (m *member) send(kind string, payload any) {
@@ -125,6 +143,39 @@ func (m *member) close() {
 			_ = m.pc.Close()
 		}
 	})
+}
+
+// closeAll closes the members concurrently and returns after at most limit,
+// with the number that finished. Pion's Close can block on a lock held by an
+// ICE start that never completes, so the caller must not depend on it.
+func closeAll(members []*member, limit time.Duration) int {
+	fns := make([]func(), len(members))
+	for i, m := range members {
+		fns[i] = m.close
+	}
+	return runBounded(fns, limit)
+}
+
+// runBounded runs fns concurrently and returns after they all finished or
+// limit passed, with the number that finished. Stuck ones are left running.
+func runBounded(fns []func(), limit time.Duration) int {
+	var done atomic.Int64
+	var wg sync.WaitGroup
+	for _, fn := range fns {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fn()
+			done.Add(1)
+		}()
+	}
+	finished := make(chan struct{})
+	go func() { wg.Wait(); close(finished) }()
+	select {
+	case <-finished:
+	case <-time.After(limit):
+	}
+	return int(done.Load())
 }
 
 // lossFactory drops incoming RTP before the NACK generator (the factory is
@@ -164,6 +215,17 @@ func (l *lossInterceptor) BindRemoteStream(_ *interceptor.StreamInfo, reader int
 }
 
 func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {
+	se := webrtc.SettingEngine{}
+	if v := os.Getenv("ICE_INTERFACES"); v != "" {
+		allowed := map[string]bool{}
+		for _, n := range strings.Split(v, ",") {
+			allowed[strings.TrimSpace(n)] = true
+		}
+		se.SetInterfaceFilter(func(name string) bool { return allowed[name] })
+	}
+	if os.Getenv("ICE_UDP4_ONLY") == "1" {
+		se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+	}
 	me := &webrtc.MediaEngine{}
 	if err := me.RegisterDefaultCodecs(); err != nil {
 		return nil, err
@@ -175,7 +237,7 @@ func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {
 	if err := webrtc.RegisterDefaultInterceptors(me, reg); err != nil {
 		return nil, err
 	}
-	return webrtc.NewAPI(webrtc.WithMediaEngine(me), webrtc.WithInterceptorRegistry(reg)), nil
+	return webrtc.NewAPI(webrtc.WithSettingEngine(se), webrtc.WithMediaEngine(me), webrtc.WithInterceptorRegistry(reg)), nil
 }
 
 // addRemote applies a candidate, or queues it until the offer is applied.
@@ -184,12 +246,16 @@ func (m *member) addRemote(c webrtc.ICECandidateInit) {
 	defer m.candMu.Unlock()
 	if !m.remoteSet {
 		m.pendingIn = append(m.pendingIn, c)
+		m.noteRemote(c, "queued")
 		return
 	}
 	m.candRecv.Add(1)
 	if err := m.pc.AddICECandidate(c); err != nil {
 		m.candErr.Add(1)
+		m.noteRemote(c, "error("+err.Error()+")")
+		return
 	}
+	m.noteRemote(c, "added")
 }
 
 func (m *member) remoteApplied() {
@@ -200,7 +266,10 @@ func (m *member) remoteApplied() {
 		m.candRecv.Add(1)
 		if err := m.pc.AddICECandidate(c); err != nil {
 			m.candErr.Add(1)
+			m.noteRemote(c, "queued-error("+err.Error()+")")
+			continue
 		}
+		m.noteRemote(c, "queued-added")
 	}
 	m.pendingIn = nil
 }
@@ -253,10 +322,15 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 	m.pc = pc
 	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
 		if c != nil {
+			m.event("local candidate %s %s %s:%d", c.Protocol, c.Typ, c.Address, c.Port)
 			m.sendCandidate(c.ToJSON())
 		}
 	})
+	pc.OnICEGatheringStateChange(func(s webrtc.ICEGatheringState) { m.event("gathering %s", s) })
+	pc.OnICEConnectionStateChange(func(s webrtc.ICEConnectionState) { m.event("ice %s", s) })
+	pc.OnSignalingStateChange(func(s webrtc.SignalingState) { m.event("signaling %s", s) })
 	pc.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
+		m.event("connection %s", s)
 		ok := s == webrtc.PeerConnectionStateConnected
 		if !ok && m.connected.Load() {
 			m.flaps.Add(1)
@@ -292,6 +366,9 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 	}
 	m.startedAt = time.Now()
 	m.send("voice_join", map[string]any{"channel_id": channel})
+	if d := iceTimeout(); d > 0 {
+		go m.watchConnect(d)
+	}
 	m.send("voice_mute_state", map[string]any{"muted": true, "deafened": false})
 	go func() {
 		t := time.NewTicker(5 * time.Second)
@@ -320,6 +397,7 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 		switch ev.Type {
 		case "webrtc_offer":
 			m.offers.Add(1)
+			m.event("offer %d received", m.offers.Load())
 			var offer webrtc.SessionDescription
 			if json.Unmarshal(ev.Payload, &offer) != nil {
 				continue
@@ -336,6 +414,7 @@ func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *me
 				continue
 			}
 			m.send("webrtc_answer", pc.LocalDescription())
+			m.event("answer sent")
 			m.answerWasSent()
 		case "webrtc_candidate":
 			var c webrtc.ICECandidateInit
@@ -363,11 +442,19 @@ type memberResult struct {
 	CandErrors    int64  `json:"candidate_errors"`
 	MaxStallMs    int64  `json:"max_stall_ms"`
 	Error         string `json:"error,omitempty"`
+	TimedOut      bool   `json:"ice_timed_out,omitempty"`
+	SelectedPair  string `json:"selected_pair,omitempty"`
+	// Timeline, ServerCandidates and ICE are set for members that never
+	// connected: what happened and what Pion knew.
+	Timeline         []string     `json:"timeline,omitempty"`
+	ServerCandidates []string     `json:"server_candidates,omitempty"`
+	ICE              *iceSnapshot `json:"ice,omitempty"`
 }
 
 type result struct {
 	Members         int            `json:"members"`
 	NeverConnected  int            `json:"never_connected"`
+	ICETimedOut     int            `json:"ice_timed_out"`
 	NeverReceived   int            `json:"never_received"`
 	Failed          int            `json:"failed"`
 	Flaps           int64          `json:"flaps"`
@@ -499,6 +586,64 @@ func mainErr() error {
 			now.Format("15:04:05"), len(members), connected, receiving, failed, offers)
 	}
 
+	// Take every member's ICE snapshot (bounded: Pion's statistics can block on
+	// a stuck connection) before anything is closed, then write the result,
+	// and only then tear down.
+	diagnoseAll(members, 5*time.Second)
+	res := summarize(members, loss, jitter)
+	if out := os.Getenv("OUT"); out != "" {
+		b, _ := json.MarshalIndent(res, "", " ")
+		if err := os.WriteFile(out, b, 0o600); err != nil {
+			return err
+		}
+	}
+	for _, mr := range res.PerMember {
+		if mr.EverConnected {
+			continue
+		}
+		fmt.Printf("member %s never connected (err=%s)\n", mr.ID[:min(8, len(mr.ID))], mr.Error)
+		for _, m := range members {
+			if m.id == mr.ID {
+				for _, l := range m.diagLines() {
+					fmt.Println(l)
+				}
+			}
+		}
+	}
+	fmt.Printf("viewers=%d neverConnected=%d iceTimedOut=%d neverReceived=%d failed=%d flaps=%d connect p50/p95=%d/%dms firstVideo p50/p95=%d/%dms maxStall=%dms avgKbps=%.0f\n",
+		res.Members, res.NeverConnected, res.ICETimedOut, res.NeverReceived, res.Failed, res.Flaps,
+		res.ConnectMsP50, res.ConnectMsP95, res.FirstVideoMsP50, res.FirstVideoMsP95, res.MaxStallMs, res.AvgVideoKbps)
+
+	// Closing is bounded: a Pion Close can wait forever on a connection whose
+	// ICE start never finishes. The process exits right after, which drops
+	// whatever is left.
+	limit := time.Duration(envInt("CLOSE_TIMEOUT_S", 10)) * time.Second
+	if n := closeAll(members, limit); n < len(members) {
+		fmt.Printf("close: %d of %d members did not close within %s\n", len(members)-n, len(members), limit)
+	}
+	return nil
+}
+
+// diagnoseAll snapshots all members concurrently and waits at most limit.
+func diagnoseAll(members []*member, limit time.Duration) {
+	var wg sync.WaitGroup
+	for _, m := range members {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			m.diagnose()
+		}()
+	}
+	done := make(chan struct{})
+	go func() { wg.Wait(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(limit):
+	}
+}
+
+// summarize turns the members' counters and diagnostics into the result.
+func summarize(members []*member, loss float64, jitter time.Duration) result {
 	res := result{Members: len(members), Loss: loss, JitterMs: jitter.Milliseconds()}
 	var conns, firsts []int64
 	var kbps float64
@@ -509,6 +654,7 @@ func mainErr() error {
 			ConnectMs: m.connMs.Load(), VideoBytes: m.videoB.Load(), AudioTracks: m.audioT.Load(),
 			Offers: m.offers.Load(), Flaps: m.flaps.Load(), CandSent: m.candSent.Load(),
 			CandRecv: m.candRecv.Load(), CandErrors: m.candErr.Load(), MaxStallMs: m.maxStallMs.Load(),
+			TimedOut: m.timedOut.Load(),
 		}
 		if v := m.videoMs.Load(); v > 0 {
 			mr.FirstVideoMs = v - 1
@@ -518,10 +664,23 @@ func mainErr() error {
 			mr.Error = f
 			res.Failed++
 		}
+		m.diagMu.Lock()
+		if m.snapshot != nil {
+			mr.SelectedPair = m.snapshot.SelectedPair
+		}
+		if !mr.EverConnected {
+			mr.Timeline = append([]string(nil), m.timeline...)
+			mr.ServerCandidates = append([]string(nil), m.remoteSeen...)
+			mr.ICE = m.snapshot
+		}
+		m.diagMu.Unlock()
 		if !mr.EverConnected {
 			res.NeverConnected++
 		} else {
 			conns = append(conns, mr.ConnectMs)
+		}
+		if mr.TimedOut {
+			res.ICETimedOut++
 		}
 		if mr.VideoBytes == 0 {
 			res.NeverReceived++
@@ -539,21 +698,5 @@ func mainErr() error {
 	if kbpsN > 0 {
 		res.AvgVideoKbps = kbps / float64(kbpsN)
 	}
-	for _, m := range members {
-		if !m.everConn.Load() {
-			fmt.Printf("member %s never connected (err=%v)\n", m.id[:min(8, len(m.id))], m.failed.Load())
-		}
-		m.close()
-	}
-	if out := os.Getenv("OUT"); out != "" {
-		b, _ := json.MarshalIndent(res, "", " ")
-		if err := os.WriteFile(out, b, 0o600); err != nil {
-			return err
-		}
-	}
-	fmt.Printf("viewers=%d neverConnected=%d neverReceived=%d failed=%d flaps=%d connect p50/p95=%d/%dms firstVideo p50/p95=%d/%dms maxStall=%dms avgKbps=%.0f\n",
-		res.Members, res.NeverConnected, res.NeverReceived, res.Failed, res.Flaps,
-		res.ConnectMsP50, res.ConnectMsP95, res.FirstVideoMsP50, res.FirstVideoMsP95, res.MaxStallMs, res.AvgVideoKbps)
-	time.Sleep(500 * time.Millisecond)
-	return nil
+	return res
 }
