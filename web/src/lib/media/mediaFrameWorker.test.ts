@@ -2,7 +2,7 @@ import { webcrypto } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSeal } from './frame'
 import { testAesKey, testEpochKeys, testMember, type TestMember } from './keys.fixture'
-import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS } from './bounds'
+import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS, V2_GRACE_MS } from './bounds'
 
 const previous = globalThis.crypto
 let alice: TestMember
@@ -40,7 +40,7 @@ function asBuffer(data: ArrayBufferLike): ArrayBuffer {
   return copy.buffer
 }
 
-async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands, layer }: { named?: boolean, type?: string, mime?: string, afterCommands?: () => void, layer?: unknown } = {}) {
+async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], commands: unknown[], { named = true, type, mime = 'video/H264', afterCommands, layer, source = 0 }: { named?: boolean, type?: string, mime?: string, afterCommands?: () => void, layer?: unknown, source?: unknown } = {}) {
   vi.resetModules()
   const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
   vi.stubGlobal('self', scope)
@@ -66,7 +66,7 @@ async function frames(direction: 'send' | 'recv', packets: ArrayBufferLike[], co
     close() { resolveDone() },
   })
   scope.onrtctransform?.({})
-  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(named ? { senderId: 'alice' } : {}), ...(layer === undefined ? {} : { layer }) } } })
+  scope.onrtctransform?.({ transformer: { readable, writable, options: { port, direction, channelId: 'channel', ...(source === undefined ? {} : { source }), ...(named ? { senderId: 'alice' } : {}), ...(layer === undefined ? {} : { layer }) } } })
   for (const command of commands) port.postMessage(command)
   afterCommands?.()
   for (const data of packets) enqueueFrame({ data: asBuffer(data), ...(type ? { type, getMetadata: () => ({ mimeType: mime }) } : {}) })
@@ -307,7 +307,7 @@ describe('media frame worker', () => {
     let done: () => void = () => {}
     const finished = new Promise<void>((resolve) => { done = resolve })
     const readable = new ReadableStream({ start(controller) { controller.enqueue({ data: new Uint8Array([1]).buffer }); controller.close() } })
-    scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ write(chunk) { written.push(chunk) }, close() { done() } }), options: { port, direction: 'send', channelId: 'channel', senderId: 'alice' } } })
+    scope.onrtctransform?.({ transformer: { readable, writable: new WritableStream({ write(chunk) { written.push(chunk) }, close() { done() } }), options: { port, direction: 'send', channelId: 'channel', senderId: 'alice', source: 0 } } })
     port.onmessage?.({ data: { type: 'key', epoch: 1, key } })
     await finished
     expect(written).toEqual([])
@@ -498,5 +498,122 @@ describe('media frame worker, layers of a screen share', () => {
     const packets = [await sealedBy(0), await sealedBy(2), await sealedBy(1), await sealedBy(2)]
     const opened = await frames('recv', packets.map(packet => asBuffer(packet.buffer)), keyed)
     expect(opened.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[0, 9], [2, 9], [1, 9], [2, 9]])
+  })
+})
+
+describe('media frame worker, frame versions and lines', () => {
+  const body = [new Uint8Array([6, 6]).buffer]
+  const everyone = { members: ['alice', 'bob'], complete: true }
+  const someone = { members: ['alice'], complete: false }
+  const magic = async (keysAt: unknown[], over: Parameters<typeof frames>[3] = {}) => {
+    const out = await frames('send', body, keysAt, over)
+    return out.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data).subarray(0, 2)])
+  }
+  const V2 = [0x4d, 0x32]
+  const V3 = [0x4d, 0x33]
+
+  it('seals version 2 until every member of the epoch advertised version 3, then version 3', async () => {
+    const key = await epochKeys(51)
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1 }])).toEqual([V2])
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: someone }])).toEqual([V2])
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }])).toEqual([V3])
+    // The last advertisement arrives later, in the same epoch.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: someone }, { type: 'caps', epoch: 1, caps: everyone, seq: 2 }])).toEqual([V3])
+    // A message with the same number as one applied, or one that is not an advertisement, changes nothing.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 5, caps: someone }, { type: 'caps', epoch: 1, caps: everyone, seq: 5 }])).toEqual([V2])
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: someone }, { type: 'caps', epoch: 1, caps: { members: [1], complete: true }, seq: 2 }, { type: 'caps', epoch: 1, caps: { members: ['a'], complete: 'yes' }, seq: 3 }, { type: 'caps', epoch: -1, caps: everyone, seq: 4 }])).toEqual([V2])
+    // An advertisement for an epoch this worker does not hold locks nothing.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: someone }, { type: 'caps', epoch: 7, caps: everyone, seq: 2 }])).toEqual([V2])
+  })
+
+  it('never goes back to version 2 within an epoch, and decides again for the next one', async () => {
+    const key = await epochKeys(52)
+    const next = await epochKeys(53)
+    // Within the epoch a later, smaller view (an advertisement lost, a leaf swapped) does not unlock it.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'caps', epoch: 1, caps: someone, seq: 2 }])).toEqual([V3])
+    // A new epoch with a member that never advertised (it joined): version 2 from its first frame.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'key', epoch: 2, key: next, seq: 2, caps: someone }])).toEqual([V2])
+    // A new epoch in which everyone advertised stays on version 3.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: someone }, { type: 'key', epoch: 2, key: next, seq: 2, caps: everyone }])).toEqual([V3])
+    // The epoch before still seals what it was decided for while it is held for a moment.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'key', epoch: 2, key: next, seq: 2, soft: true, caps: someone }])).toEqual([V3])
+    // A new group starts over: nothing decided in the old one counts.
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'key', epoch: 1, key: next, seq: 2, replace: true, caps: someone }])).toEqual([V2])
+    expect(await magic([{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'drop' }, { type: 'key', epoch: 1, key: next, seq: 3 }])).toEqual([V2])
+  })
+
+  it('names the line it seals: microphone, camera, screen with its layer, screen sound', async () => {
+    const key = await epochKeys(54)
+    const keyed = [{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }]
+    const lineOf = async (over: Parameters<typeof frames>[3]) => {
+      const out = await frames('send', body, keyed, over)
+      return new Uint8Array((out[0] as { data: ArrayBuffer }).data)[14]
+    }
+    expect(await lineOf({ source: 0 })).toBe(0x00)
+    expect(await lineOf({ source: 1 })).toBe(0x10)
+    expect(await lineOf({ source: 2 })).toBe(0x20)
+    expect(await lineOf({ source: 2, layer: 2 })).toBe(0x22)
+    expect(await lineOf({ source: 3 })).toBe(0x30)
+    // A line that does not say what it carries seals nothing; neither does an unknown source.
+    for (const source of [null, 4, 'mic']) {
+      vi.resetModules()
+      const scope: WorkerScope = { onrtctransform: null, postMessage() {} }
+      vi.stubGlobal('self', scope)
+      await import('./mediaFrameWorker')
+      const readable = new ReadableStream()
+      const writable = new WritableStream()
+      scope.onrtctransform?.({ transformer: { readable, writable, options: { port: { onmessage: null }, direction: 'send', channelId: 'channel', senderId: 'alice', source } } })
+      expect(readable.locked).toBe(false)
+    }
+  })
+
+  it('opens version 3 only on the line it names, whoever relabelled it', async () => {
+    const key = await epochKeys(55)
+    const keyed = [{ type: 'key', epoch: 1, key, seq: 1 }]
+    const made = async (source: 0 | 1 | 2 | 3, stream = 7) => {
+      const packet = await sealFrame({ keys: key, epoch: 1, stream, counter: counter++, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([source]), version: 3, source })
+      return asBuffer((packet as Uint8Array).buffer)
+    }
+    const got = async (packet: ArrayBuffer, source: number) => (await frames('recv', [packet], keyed, { source })).length
+    expect(await got(await made(0), 0)).toBe(1)
+    expect(await got(await made(0), 3)).toBe(0)
+    expect(await got(await made(1), 2)).toBe(0)
+    expect(await got(await made(3), 0)).toBe(0)
+    // A reused receiver is told its new line along with the publisher; without one, nothing of version 3 opens.
+    const screen = await made(2, 100)
+    expect((await frames('recv', [screen], keyed, { named: false, source: null })).length).toBe(0)
+    const told = [...keyed, { type: 'sender', senderId: 'alice', source: 2 }]
+    expect((await frames('recv', [screen], told, { named: false, source: null })).length).toBe(1)
+    expect((await frames('recv', [screen], [...keyed, { type: 'sender', senderId: 'alice', source: 0 }], { named: false, source: null })).length).toBe(0)
+    expect((await frames('recv', [screen], [...keyed, { type: 'sender', senderId: 'alice' }], { named: false, source: null })).length).toBe(0)
+  })
+
+  it('takes version 2 while a member cannot open version 3, and refuses it in an epoch where all can, after a short grace', async () => {
+    const key = await epochKeys(56)
+    const v2 = async (epoch = 1) => {
+      const packet = await sealFrame({ keys: key, epoch, stream: 7, counter: counter++, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([2]) })
+      return asBuffer((packet as Uint8Array).buffer)
+    }
+    const v3 = async () => {
+      const packet = await sealFrame({ keys: key, epoch: 1, stream: 7, counter: counter++, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([3]), version: 3, source: 0 })
+      return asBuffer((packet as Uint8Array).buffer)
+    }
+    const now = vi.spyOn(performance, 'now')
+    let at = 7_000_000
+    now.mockImplementation(() => at)
+    // Alice advertised, but someone in the epoch (an older tab) did not: she seals version 2 for it, and it opens.
+    expect((await frames('recv', [await v2()], [{ type: 'key', epoch: 1, key, seq: 1, caps: someone }, { type: 'caps', epoch: 1, caps: someone, seq: 2 }], { afterCommands: () => { at += 10 * V2_GRACE_MS } })).length).toBe(1)
+    // Everyone advertised: her version 2 still opens while she catches up on the others' messages ...
+    const keyed = [{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }]
+    expect((await frames('recv', [await v2()], keyed, { afterCommands: () => { at += V2_GRACE_MS - 1 } })).length).toBe(1)
+    // ... and after that a downgrade or a replay of her version 2 opens nothing, where her version 3 does.
+    const late = await frames('recv', [await v2(), await v3()], keyed, { afterCommands: () => { at += V2_GRACE_MS } })
+    expect(late.map(frame => [...new Uint8Array((frame as { data: ArrayBuffer }).data)])).toEqual([[3]])
+    // The lock is per epoch: version 2 of the next epoch, which is not all-capable, still opens while epoch 1 is locked.
+    const next = await epochKeys(57)
+    const packet = await sealFrame({ keys: next, epoch: 2, stream: 7, counter: counter++, channelId: 'channel', senderId: 'alice', plaintext: new Uint8Array([5]) })
+    const second = await frames('recv', [asBuffer((packet as Uint8Array).buffer)], [{ type: 'key', epoch: 1, key, seq: 1, caps: everyone }, { type: 'key', epoch: 2, key: next, seq: 2, caps: someone }], { afterCommands: () => { at += 10 * V2_GRACE_MS } })
+    expect(second).toHaveLength(1)
+    now.mockRestore()
   })
 })

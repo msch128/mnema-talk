@@ -15,6 +15,10 @@ export const PREVIOUS_EPOCH_MS = PREVIOUS_GROUP_MS
 // epoch it left for this long, so receivers have the commit before the first
 // frame of the new epoch reaches them. Never after a removal.
 export const SEND_GRACE_MS = 1500
+// Once every member of an epoch has advertised frame version 3, senders
+// switch to it as they hear the last advertisement; version 2 of that epoch
+// opens for this long more, then no more.
+export const V2_GRACE_MS = 3000
 // How long a member without a group (regrouping, or removed and waiting to be
 // let in again) goes on sealing with its last keys before it sends nothing.
 export const STALE_SEAL_MS = 10_000

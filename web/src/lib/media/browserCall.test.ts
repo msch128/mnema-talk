@@ -19,11 +19,12 @@ const channelId = fixtureId(9)
 beforeAll(() => { vi.stubGlobal('crypto', webcrypto) })
 afterAll(() => { vi.stubGlobal('crypto', previous) })
 
-function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
+function recordingGuard(): MediaGuard & { capsSeen: [number, boolean, number][], keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[], stale: number[], sends: string[], receives: string[], stats(senders: Record<string, FrameStats>): void } {
   const keys: { epoch: number, key: EpochKeys, replace: boolean, soft?: boolean }[] = []
   const stale: number[] = []
   const sends: string[] = []
   const receives: string[] = []
+  const capsSeen: [number, boolean, number][] = []
   let statsListener: (senders: Record<string, FrameStats>) => void = () => {}
   return {
     stats: senders => statsListener(senders),
@@ -32,15 +33,20 @@ function recordingGuard(): MediaGuard & { keys: { epoch: number, key: EpochKeys,
     stale,
     sends,
     receives,
-    armSender(_sender, channelId, senderId, layer) {
-      sends.push(`${channelId}:${senderId}${layer === undefined ? '' : `#${layer}`}`)
+    armSender(_sender, channelId, senderId, source, layer) {
+      sends.push(`${channelId}:${senderId}/${source}${layer === undefined ? '' : `#${layer}`}`)
       return true
     },
-    armReceiver(_receiver, channelId, senderId) {
-      receives.push(`${channelId}:${senderId}`)
+    armReceiver(_receiver, channelId, senderId, source) {
+      receives.push(`${channelId}:${senderId}${source === undefined ? '' : `/${source}`}`)
       return true
     },
-    setKey(epoch, key, replace = false, soft = false) { keys.push({ epoch, key, replace, ...(soft ? { soft } : {}) }) },
+    setKey(epoch, key, replace = false, soft = false, caps) {
+      keys.push({ epoch, key, replace, ...(soft ? { soft } : {}) })
+      if (caps) capsSeen.push([epoch, caps.complete, caps.members.length])
+    },
+    setCaps(epoch, caps) { capsSeen.push([epoch, caps.complete, caps.members.length]) },
+    capsSeen,
     staleKeys() { stale.push(keys.length) },
     reset() { keys.length = 0 },
   }
@@ -57,9 +63,9 @@ describe('browser media call', () => {
     call.receive(bobId, 'a'.repeat(48_001))
     const sender = { transform: null } as RTCRtpSender
     const receiver = { transform: null } as RTCRtpReceiver
-    expect(call.protectSender(sender)).toBe(false)
-    expect(call.protectIncoming(undefined, aliceId)).toBe(false)
-    expect(call.protectIncoming(receiver, 'alice')).toBe(false)
+    expect(call.protectSender(sender, 0)).toBe(false)
+    expect(call.protectIncoming(undefined, aliceId, 0)).toBe(false)
+    expect(call.protectIncoming(receiver, 'alice', 0)).toBe(false)
     expect(call.prepareIncoming(undefined as unknown as RTCRtpReceiver)).toBe(false)
     call.stop()
     expect(call.prepareIncoming(receiver)).toBe(false)
@@ -72,8 +78,8 @@ describe('browser media call', () => {
     const receiver = { transform: null } as RTCRtpReceiver
     call.start(channelId, aliceId)
     expect(call.prepareIncoming(receiver)).toBe(true)
-    expect(call.protectIncoming(receiver, bobId)).toBe(true)
-    expect(guard.receives).toEqual([`${channelId}:null`, `${channelId}:${bobId}`])
+    expect(call.protectIncoming(receiver, bobId, 3)).toBe(true)
+    expect(guard.receives).toEqual([`${channelId}:null`, `${channelId}:${bobId}/3`])
     call.stop()
   })
 
@@ -88,9 +94,9 @@ describe('browser media call', () => {
     await mediaSettled(call)
     expect(close).toHaveBeenCalled()
     const sender = { transform: null } as RTCRtpSender
-    expect(call.protectSender(sender)).toBe(true)
-    expect(call.protectSender(sender, 1)).toBe(true)
-    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}`, `${nextChannel}:${aliceId}#1`])
+    expect(call.protectSender(sender, 0)).toBe(true)
+    expect(call.protectSender(sender, 2, 1)).toBe(true)
+    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}/0`, `${nextChannel}:${aliceId}/2#1`])
     close.mockRestore()
     call.stop()
     await mediaSettled(call)
@@ -143,16 +149,16 @@ describe('browser media call', () => {
     await expect(openFrame({ keys: new Map([[aliceKey.epoch, aliceKey.key]]), channelId, senderId: aliceId, packet: forged, replay: new ReplayWindow() })).resolves.toBeNull()
     const sender = { transform: null } as RTCRtpSender
     const receiver = { transform: null } as RTCRtpReceiver
-    expect(alice.protectSender(sender)).toBe(true)
-    expect(alice.protectIncoming(receiver, bobId)).toBe(true)
-    expect(aliceGuard.sends).toEqual([`${channelId}:${aliceId}`])
-    expect(aliceGuard.receives).toEqual([`${channelId}:${bobId}`])
+    expect(alice.protectSender(sender, 0)).toBe(true)
+    expect(alice.protectIncoming(receiver, bobId, 1)).toBe(true)
+    expect(aliceGuard.sends).toEqual([`${channelId}:${aliceId}/0`])
+    expect(aliceGuard.receives).toEqual([`${channelId}:${bobId}/1`])
     alice.receive(bobId, '@@@@')
     alice.stop()
     bob.stop()
     await mediaSettled(alice)
     await mediaSettled(bob)
-    expect(alice.protectSender(sender)).toBe(false)
+    expect(alice.protectSender(sender, 0)).toBe(false)
     expect(aliceGuard.keys).toEqual([])
     expect(aliceCodes.at(-1)).toBeNull()
   }, 30_000)
@@ -245,6 +251,41 @@ describe('browser media call', () => {
     await mediaSettled(call)
   }, 30_000)
 
+  it('tells the guard who opens version 3 with the key, and again when only that changed', async () => {
+    const guard = recordingGuard()
+    const call = browserMediaCall(guard)
+    call.start(channelId, aliceId)
+    call.roster([aliceId])
+    await mediaSettled(call)
+    const current = guard.keys.at(-1)
+    if (!current) throw new Error('expected an epoch key')
+    const seen = guard.capsSeen.length
+    let step: MediaStep = { wires: [], epoch: current.epoch, key: current.key, caps: { members: [aliceId], complete: false } }
+    const sync = vi.spyOn(MediaGroup.prototype, 'sync').mockImplementation(() => Promise.resolve(step))
+    call.resume()
+    await mediaSettled(call)
+    // Same epoch, same key: the guard hears only about the advertisement.
+    expect(guard.keys.at(-1)?.epoch).toBe(current.epoch)
+    expect(guard.capsSeen.slice(seen)).toEqual([[current.epoch, false, 1]])
+    call.resume()
+    await mediaSettled(call)
+    expect(guard.capsSeen.slice(seen)).toHaveLength(1)
+    step = { ...step, caps: { members: [aliceId, bobId], complete: true } }
+    call.resume()
+    await mediaSettled(call)
+    expect(guard.capsSeen.slice(seen)).toEqual([[current.epoch, false, 1], [current.epoch, true, 2]])
+    // A new epoch brings its own, with the key.
+    const epochs = guard.keys.length
+    step = { wires: [], epoch: current.epoch + 1, key: { ...current.key }, caps: { members: [aliceId], complete: false } }
+    call.resume()
+    await mediaSettled(call)
+    expect(guard.keys).toHaveLength(epochs + 1)
+    expect(guard.capsSeen.at(-1)).toEqual([current.epoch + 1, false, 1])
+    sync.mockRestore()
+    call.stop()
+    await mediaSettled(call)
+  }, 30_000)
+
   it('settles a call it does not own', async () => {
     await expect(mediaSettled({} as MediaCall)).resolves.toBeUndefined()
   })
@@ -262,8 +303,8 @@ describe('browser media call', () => {
     expect(close).toHaveBeenCalled()
     close.mockRestore()
     const sender = { transform: null } as RTCRtpSender
-    expect(call.protectSender(sender)).toBe(true)
-    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}`])
+    expect(call.protectSender(sender, 0)).toBe(true)
+    expect(guard.sends).toEqual([`${nextChannel}:${aliceId}/0`])
     const sync = vi.spyOn(MediaGroup.prototype, 'sync').mockResolvedValueOnce({ wires: [new Uint8Array()], epoch: null, key: null })
     call.roster([aliceId, bobId])
     await mediaSettled(call)
@@ -278,7 +319,7 @@ describe('browser media call', () => {
     await mediaSettled(call)
     call.stop()
     await mediaSettled(call)
-    expect(call.protectSender(sender)).toBe(false)
+    expect(call.protectSender(sender, 0)).toBe(false)
   }, 30_000)
 
   it('continues after a failed sync and stops publishing when the call ends mid-handshake', async () => {
@@ -291,7 +332,7 @@ describe('browser media call', () => {
     call.roster([aliceId])
     await mediaSettled(call)
     const sender = { transform: null } as RTCRtpSender
-    expect(call.protectSender(sender)).toBe(true)
+    expect(call.protectSender(sender, 0)).toBe(true)
     const receive = MediaGroup.prototype.receive
     const spy = vi.spyOn(MediaGroup.prototype, 'receive').mockImplementation(function (this: MediaGroup, from: string, wire: Uint8Array) {
       spy.mockRestore()
@@ -300,7 +341,7 @@ describe('browser media call', () => {
     })
     call.receive(bobId, btoa('hi'))
     await mediaSettled(call)
-    expect(call.protectSender(sender)).toBe(false)
+    expect(call.protectSender(sender, 0)).toBe(false)
   }, 30_000)
 
   describe('frames of an epoch the call has no key for', () => {

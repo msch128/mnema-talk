@@ -300,14 +300,38 @@ details and the limits.
   compromised SFU can feed a viewer old recorded frames of a layer it has not
   received yet (previously the same was true for newly joined viewers); this
   falls under the active-server limits above, not under an honest SFU.
-  The line a unit belongs to (microphone, camera, screen, screen audio, layer)
-  is not part of the authenticated data; the sender, epoch, stream and counter
-  are. A sender's lines share one replay window per sender, so a unit still
-  opens only once, but an active SFU can move a sealed unit from one of a
-  sender's lines to another (the receiver then fails to decode it, or decodes
-  audio as video). Binding the line would change the frame format and the
-  receiver's arming on a live rollout for a disruption an active server already
-  has, so it is a known limit, not a fixed one.
+  **The line is part of the frame (version 3).** A sealed unit names the line
+  it was made for (microphone, camera, screen, screen audio, and a screen's
+  layer) in one byte that is part of both the AES-GCM AAD and the signed
+  bytes, under its own signature domain. A receiver knows what a line carries
+  (the SFU names the stream; each receiving transform is armed with it) and
+  opens a unit only if it names that source; a screen unit must also carry
+  the layer its stream was made for. An active SFU can therefore no longer
+  move a unit from a sender's microphone line to its screen audio, from
+  its camera to its screen, or relabel one layer as another: the unit stays
+  sealed and signed but does not open. Only the sender's own MLS leaf key
+  can sign for a line. The replay windows, stream retirement, nonces and key
+  lifecycle are unchanged.
+  **Rollout, and what it does not yet cover.** Frame version 2 (no line)
+  is still understood, so Talks of mixed versions interoperate and tabs
+  that predate version 3 keep working. Each member signs a small capability
+  message (`M` `C`, bits, Ed25519 signature over group, id and bits, with its
+  leaf key) when it joins or meets a member it has not told, and with each
+  heartbeat; older clients ignore it. A sender seals version 3 in an epoch only
+  when every member of that epoch has advertised it, decides again at each
+  epoch, and never goes back to version 2 within an epoch; a member that
+  joins without advertising (an older tab) makes the next epoch version 2
+  until it leaves. A receiver takes version 3 always, and version 2 only in an
+  epoch where some member has not advertised version 3 (the senders seal
+  version 2 for that member); in an epoch where every member has, version 2 is
+  refused after a 3 second grace (while senders learn the last advertisement),
+  so a downgrade or replay of a capable sender's frames opens nothing. Until
+  version 2 is refused entirely, a server that withholds capability messages
+  (the same denial of service it has by dropping any message) keeps an epoch
+  on version 2, and a version 2 unit carries no line, so in such an epoch its
+  units can still be moved between lines, exactly as before.
+  Planned (phase B, a later release): refuse version 2 entirely and stop
+  sending it, once older tabs and desktop clients have aged out.
   Video stays decodable by the
   browser's packetizer, so the codec headers it parses (H.264 parameter sets
   and slice headers, the VP8 payload header) are readable but authenticated;

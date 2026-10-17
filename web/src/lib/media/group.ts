@@ -34,6 +34,7 @@ import type { MediaNotice } from './api'
 import { Backoff } from './backoff'
 import { importEpochKey, importFrameSigner, importFrameVerifier, type EpochKeys } from './frame'
 import { isHeartbeat, openHeartbeat, sealHeartbeat } from './heartbeat'
+import { CAP_FRAME_V3, isCapability, openCapability, sealCapability } from './capability'
 import { safetyCode, type MediaVerification } from './verify'
 
 // A member's leaf is swapped at most once per this long, doubling while it keeps happening.
@@ -74,6 +75,8 @@ export interface MediaStep {
    * sealing under the epoch it left for a moment (SEND_GRACE_MS).
    */
   soft?: boolean
+  /** Members of the epoch known to open frame version 3, and whether that is all of them. */
+  caps?: { members: string[], complete: boolean }
 }
 
 interface OwnPackage {
@@ -275,6 +278,12 @@ export class MediaGroup {
   private readonly alive = new Map<string, number>()
   /** Newest heartbeat time accepted from each member (and the leaf key that signed it), so an older copy counts for nothing. */
   private readonly beats = new Map<string, { at: number, signer: Uint8Array }>()
+  /** Members that advertised frame version 3, with the leaf key that signed it: a different leaf (a reload) counts for nothing. */
+  private readonly capable = new Map<string, Uint8Array>()
+  /** This member's own capability is due: a member it has not told is in the group. */
+  private capDue = true
+  /** Members seen in the group since this member last advertised. */
+  private readonly capHeard = new Set<string>()
   /** Since when this browser noticed that it slept, if it did. */
   private sleptAt: number | null = null
   private lastTickWall = 0
@@ -387,7 +396,24 @@ export class MediaGroup {
   private step(wires: Uint8Array[] = []): MediaStep {
     const step: MediaStep = { wires, epoch: this.current?.epoch ?? null, key: this.current?.key ?? null, verification: this.current?.verification ?? null }
     if (this.current?.soft) step.soft = true
+    if (this.current && this.state) step.caps = this.capabilities(this.current.key, this.state)
     return step
+  }
+
+  /**
+   * Who can open frame version 3 in the current epoch (this member always
+   * can), and whether that is every member: only then may anyone seal it.
+   */
+  private capabilities(key: EpochKeys, state: ClientState): { members: string[], complete: boolean } {
+    const members: string[] = []
+    let complete = true
+    for (const id of key.verifiers.keys()) {
+      const signer = this.capable.get(id)
+      const leaf = id === this.userId ? null : treeLeafSigner(state, id)
+      if (id === this.userId || (signer !== undefined && leaf !== null && sameBytes(signer, leaf))) members.push(id)
+      else complete = false
+    }
+    return { members: members.sort(), complete }
   }
 
   /**
@@ -622,6 +648,9 @@ export class MediaGroup {
     this.announcedFor = null
     this.alive.clear()
     this.beats.clear()
+    this.capable.clear()
+    this.capHeard.clear()
+    this.capDue = true
     this.leaves.clear()
     this.updates.clear()
     this.dropSelfUpdate()
@@ -645,6 +674,7 @@ export class MediaGroup {
     if (!from || from === this.userId) return this.step()
     this.dropSelfUpdate(true)
     if (isHeartbeat(wire)) return this.beatNow(from, wire)
+    if (isCapability(wire)) return this.capNow(from, wire)
     const decoded = decodeMlsMessage(wire, 0)
     if (!decoded) return this.step()
     const [message] = decoded
@@ -949,6 +979,15 @@ export class MediaGroup {
     }
     for (const id of [...this.alive.keys()]) if (!members.has(id)) this.alive.delete(id)
     for (const id of [...this.beats.keys()]) if (!members.has(id)) this.beats.delete(id)
+    for (const id of [...this.capable.keys()]) if (!members.has(id)) this.capable.delete(id)
+    // A member this one has not advertised to yet is told at the next tick.
+    for (const id of [...this.capHeard]) if (!members.has(id)) this.capHeard.delete(id)
+    for (const id of members.keys()) {
+      if (id !== this.userId && !this.capHeard.has(id)) {
+        this.capHeard.add(id)
+        this.capDue = true
+      }
+    }
     // Whoever is new to the group starts with a clean slate: it was let in just now.
     for (const id of members.keys()) if (!this.alive.has(id)) this.alive.set(id, now)
     if (this.tickTimer === null) {
@@ -996,7 +1035,13 @@ export class MediaGroup {
       for (const id of this.alive.keys()) this.alive.set(id, now)
     }
     const members = treeMembers(state)
-    if (members.size > 1 && (slept || now - this.lastBeat >= this.timing.heartbeatMs)) {
+    const beatDue = slept || now - this.lastBeat >= this.timing.heartbeatMs
+    if (members.size > 1 && (this.capDue || beatDue)) {
+      this.capDue = false
+      const cap = await sealCapability(current.key.signer, this.groupId, this.userId)
+      if (cap) wires.push(cap)
+    }
+    if (members.size > 1 && beatDue) {
       this.lastBeat = now
       this.lastBeatAt = Math.max(now, this.lastBeatAt + 1)
       const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
@@ -1080,6 +1125,26 @@ export class MediaGroup {
     this.beats.set(from, { at: beat.at, signer: new Uint8Array(signer) })
     this.alive.set(from, clock.now())
     return this.step()
+  }
+
+  /**
+   * A capability counts when a member of this epoch signed it with its leaf
+   * key. Hearing a member's for the first time is answered with this member's
+   * own at once, so two newcomers do not wait for a tick to learn each other.
+   */
+  private async capNow(from: string, wire: Uint8Array): Promise<MediaStep> {
+    const current = this.current
+    const verifier = current?.key.verifiers.get(from)
+    if (!current || !verifier || !this.state) return this.step()
+    const bits = await openCapability(verifier, this.groupId, from, wire)
+    if (bits === null || (bits & CAP_FRAME_V3) === 0) return this.step()
+    const signer = treeLeafSigner(this.state, from) as Uint8Array
+    const known = this.capable.get(from)
+    this.capable.set(from, new Uint8Array(signer))
+    if (known !== undefined && sameBytes(known, signer)) return this.step()
+    this.capDue = false
+    const own = await sealCapability(current.key.signer, this.groupId, this.userId)
+    return this.step(own ? [own] : [])
   }
 
   private seen(from: string, wire: Uint8Array): boolean {

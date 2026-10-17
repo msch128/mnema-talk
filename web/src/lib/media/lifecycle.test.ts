@@ -48,6 +48,11 @@ async function deliver(groups: Map<string, MediaGroup>, from: string, wires: Uin
   }
 }
 
+/** Lets every member tell the others what it supports (the first tick does), so later ticks are quiet. */
+async function settleCaps(groups: Map<string, MediaGroup>, roster: string[]) {
+  for (const [id, group] of groups) await deliver(groups, id, (await group.maintain()).wires, roster)
+}
+
 async function pair(over: Partial<MediaTiming> = {}) {
   vi.useFakeTimers({ toFake: ['Date'], now: START })
   const alice = await open(aliceId, over)
@@ -59,6 +64,7 @@ async function pair(over: Partial<MediaTiming> = {}) {
   const a = await alice.sync(roster)
   const b = await bob.sync(roster)
   if (a.epoch !== 1 || b.epoch !== 1) throw new Error('expected epoch 1')
+  await settleCaps(groups, roster)
   return { alice, bob, groups, roster, a, b }
 }
 
@@ -71,7 +77,8 @@ async function roundTrip(sealer: EpochKeys | null, keys: Map<number, EpochKeys>,
 }
 
 function kinds(step: MediaStep) {
-  return step.wires.map(wire => wire[0] === 0x4d ? 'heartbeat' : mls.decodeMlsMessage(wire, 0)?.[0].wireformat)
+  // A member's capability message rides beside its heartbeat; the lifecycle tests look past it.
+  return step.wires.filter(wire => wire[1] !== 0x43).map(wire => wire[0] === 0x4d ? 'heartbeat' : mls.decodeMlsMessage(wire, 0)?.[0].wireformat)
 }
 
 describe('timing hook', () => {
@@ -194,9 +201,9 @@ describe('absence', () => {
     expect(back.verification?.members).toEqual([aliceId, bobId])
     expect(bobBack.epoch).toBe(back.epoch)
     // The returning member starts with a clean slate, not the old silence.
-    expect((await alice.maintain()).wires).toEqual([])
+    expect(kinds(await alice.maintain())).toEqual([])
     vi.setSystemTime(START + timing.absentMs + 1 + timing.absentMs - 1)
-    expect((await alice.maintain()).wires).toEqual([])
+    expect(kinds(await alice.maintain())).toEqual([])
     await alice.close()
     await bob.close()
   }, 30_000)
@@ -206,7 +213,7 @@ describe('absence', () => {
     vi.setSystemTime(START + 3000)
     const beat = await bob.maintain()
     expect(kinds(beat)).toEqual(['heartbeat'])
-    const wire = beat.wires[0] as Uint8Array
+    const wire = beat.wires.find(w => w[1] === 0x48) as Uint8Array
     expect(wire.byteLength).toBe(78)
     await alice.receive(bobId, wire)
     vi.setSystemTime(START + 6000)
@@ -297,7 +304,7 @@ describe('the maintenance timer', () => {
     alice.onStep(step => steps.push(step))
     await vi.advanceTimersByTimeAsync(5500)
     await vi.waitFor(() => expect(steps.some(step => step.epoch === 2)).toBe(true))
-    expect(kinds(steps[0] as MediaStep)).toEqual(['mls_public_message'])
+    expect(kinds(steps.find(step => kinds(step).length) as MediaStep)).toEqual(['mls_public_message'])
     await alice.close()
     const seen = steps.length
     await vi.advanceTimersByTimeAsync(20_000)
@@ -482,7 +489,7 @@ describe('review fixes', () => {
     expect(joined.epoch).toBe(swap.epoch)
     vi.setSystemTime(START + 6500)
     const beat = await reloaded.maintain()
-    const wire = beat.wires.find(w => w[0] === 0x4d) as Uint8Array
+    const wire = beat.wires.find(w => w[1] === 0x48) as Uint8Array
     expect(wire).toBeDefined()
     await alice.receive(bobId, wire)
     // 3.5 s after the swap and only 0.6 s after the heartbeat: still here (without it, Bob would be 4.1 s silent).
