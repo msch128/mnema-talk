@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.18](https://github.com/msch128/mnema-talk/compare/v0.7.17...v0.7.18) (2026-10-17)
+
+
+### Features
+
+* run from a verified bundle in the trusted desktop client ([#139](https://github.com/msch128/mnema-talk/issues/139)) ([7500081](https://github.com/msch128/mnema-talk/commit/75000818fe5f59a4602e5d17ef272014e26a1a5d))
+* sign the web app as a bundle for the trusted desktop client ([#138](https://github.com/msch128/mnema-talk/issues/138)) ([6bdf4b6](https://github.com/msch128/mnema-talk/commit/6bdf4b6d45453a63ff2480c57ec98b8e0dbeb732))
+
 ## [0.7.17](https://github.com/msch128/mnema-talk/compare/v0.7.16...v0.7.17) (2026-10-17)
 
 
