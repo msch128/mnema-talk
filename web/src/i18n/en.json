@@ -748,7 +748,8 @@
       "invites": "Invites",
       "media": "Media & Storage",
       "system": "System",
-      "roles": "Roles"
+      "roles": "Roles",
+      "integrations": "Integrations"
     },
     "system": {
       "heading": "System & version",
@@ -1223,5 +1224,72 @@
     "member": "Member",
     "loadFailed": "Could not load the permissions.",
     "ownerNote": "The Owner always has access and is not listed."
+  },
+  "webhooks": {
+    "title": "Webhooks of #{name}",
+    "tabs": "Kinds of webhooks",
+    "tab": {
+      "incoming": "Incoming",
+      "outgoing": "Outgoing"
+    },
+    "menu": "Webhooks …",
+    "incomingHint": "An incoming webhook gives scripts and services a secret URL to post messages into this channel. Anyone with the URL can post, so treat it like a password.",
+    "outgoingHint": "An outgoing webhook sends events of this channel to a URL of yours, signed so you can check they come from here. It delivers with your rights and stops when you lose them.",
+    "serverHint": "Server-wide webhooks receive the chosen events of every channel, and new members. Only the Owner can manage them.",
+    "name": "Name",
+    "namePlaceholder": "Name of the new webhook",
+    "create": "Create",
+    "created": "Webhook created",
+    "copied": "Copied",
+    "copyUrl": "Copy URL",
+    "copySecret": "Copy secret",
+    "urlOnce": "Copy the URL now: it is shown only once. If it gets lost, make a new one.",
+    "secretOnce": "Copy the secret now: it is shown only once. Use it to check the signature of each delivery.",
+    "emptyIncoming": "No incoming webhooks in this channel yet.",
+    "emptyOutgoing": "No outgoing webhooks yet.",
+    "rename": "Rename {name}",
+    "avatar": "Set picture",
+    "avatarFor": "Picture of {name}",
+    "regenerate": "Make a new URL",
+    "regenerateFor": "New URL for {name}",
+    "regenerateTitle": "New URL for {name}?",
+    "regenerateBody": "The old URL stops working at once. Update everything that posts to it.",
+    "deleteFor": "Delete {name}",
+    "deleteTitle": "Delete {name}?",
+    "deleteBody": "Its URL stops working at once. Messages it posted stay.",
+    "deleteOutgoingBody": "Events waiting for it are dropped.",
+    "newOutgoing": "New outgoing webhook",
+    "url": "Target URL",
+    "eventsLabel": "Events",
+    "edit": "Edit {name}",
+    "switchOff": "Switch off {name}",
+    "switchOn": "Switch on {name}",
+    "test": "Send a test event to {name}",
+    "deliveries": "Recent deliveries of {name}",
+    "rotateFor": "New secret for {name}",
+    "rotate": "Make a new secret",
+    "rotateTitle": "New secret for {name}?",
+    "rotateBody": "The old secret stops signing at once. Update your receiver.",
+    "noAccess": "Paused: its creator no longer has the rights it needs",
+    "autoDisabled": "Switched off after {count} failed events in a row. Switch it on again once the receiver works.",
+    "lastOk": "Last delivery {when}",
+    "lastFailed": "Last attempt {when} failed: {error}",
+    "testOk": "Test delivered (HTTP {status})",
+    "testFailed": "Test failed: {error}",
+    "noDeliveries": "Nothing delivered yet.",
+    "status": {
+      "active": "Active",
+      "disabled": "Off",
+      "auto_disabled": "Switched off"
+    },
+    "events": {
+      "MESSAGE_CREATE": "Message posted",
+      "MESSAGE_UPDATE": "Message edited",
+      "MESSAGE_DELETE": "Message deleted",
+      "MESSAGE_REACTIONS_UPDATE": "Reactions changed",
+      "VOICE_STATE_UPDATE": "Joined or left the Talk",
+      "MEMBER_ADD": "New member",
+      "PING": "Test event"
+    }
   }
 }
