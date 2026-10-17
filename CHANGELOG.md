@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.13](https://github.com/msch128/mnema-talk/compare/v0.7.12...v0.7.13) (2026-10-17)
+
+
+### Features
+
+* add reproducible load test (make load-test) ([#120](https://github.com/msch128/mnema-talk/issues/120)) ([731f37a](https://github.com/msch128/mnema-talk/commit/731f37a416c1c0aadf6bff7e7b0af9dfc031419c))
+
+
+### Bug Fixes
+
+* tighten media key lifecycle after review of 30-minute rotation ([#119](https://github.com/msch128/mnema-talk/issues/119)) ([801e799](https://github.com/msch128/mnema-talk/commit/801e799a82b32aff3e4d924b378cf94cce832ebf))
+
 ## [0.7.12](https://github.com/msch128/mnema-talk/compare/v0.7.11...v0.7.12) (2026-10-17)
 
 
