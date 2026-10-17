@@ -1,0 +1,43 @@
+web/src/components/MessageEmbeds.test.ts
+  s_06fcde5dbef956::t_a889c85551ed1b 62-67
+  s_06fcde5dbef956::t_524094b7852aa4 1-61,68-82
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_425a92f1ef2ff0 265,420
+  s_06fcde5dbef956::t_7ace6106eedb94 21-22,257,403
+web/src/components/BotBadge.vue
+  s_06fcde5dbef956::t_1bf0ef49bcb6cf 1-10
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_425a92f1ef2ff0 167
+  s_06fcde5dbef956::t_7ace6106eedb94 15-16,148,166
+  s_06fcde5dbef956::t_0a5de6ea4d7f0c 168
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_7ace6106eedb94 255-257
+web/src/components/MessageEmbeds.vue
+  s_06fcde5dbef956::t_4183b24a4dc395 14
+  s_06fcde5dbef956::t_c8fe4fda0444eb 1-13,15-74
+web/src/types/rest.test.ts
+  s_06fcde5dbef956::t_425a92f1ef2ff0 39
+  s_06fcde5dbef956::t_61450dc65d426b 60-61
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_7ace6106eedb94 255-257
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_6d8fd6d3eec14e 388-466,565,567,590,592,1465-1598
+e2e/tests/webhooks.spec.ts
+  s_06fcde5dbef956::t_bfaa0d2db2e08c 1-57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1abbefcaa38b1727331a8bd836fa5cf57eb780d8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
