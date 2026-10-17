@@ -331,8 +331,9 @@ details and the limits.
   announced one, the version is newer than the installed one, and the download is HTTPS from
   github.com. The private key lives in a protected GitHub environment (tags
   `v*` only) and an offline backup. Rotation: ship a release that pins the new
-  key, signed with the old key; there is no remote revocation, and a client that
-  missed that release needs a manual install. Whoever holds that key can ship
+  key, signed with the old key. A leaked CI key (bundle or updater) is revoked
+  remotely by a statement signed with an offline root key (`desktop-trust/`, see
+  the desktop doc); a client that missed a release needs a manual install. Whoever holds that key can ship
   malicious code to every installed client. Browsers are
   unchanged: the server serves the code. See
   [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md). Sealed media
