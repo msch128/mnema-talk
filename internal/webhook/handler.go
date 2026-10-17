@@ -262,7 +262,7 @@ func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.U
 // regenerate handles POST /api/admin/webhooks/{id}/token.
 //
 // @Summary Regenerate a webhook's token
-// @Description The old URL stops working at once. The answer carries the new secret URL; it is shown only once.
+// @Description The old URL stops working at once. The answer carries the new secret URL; it is shown only once. Needs the same rights as creating a webhook (Manage webhooks, View channel and Send messages in the channel); the caller becomes the webhook's creator, so later posts are checked against their rights.
 // @ID regenerateWebhookToken
 // @Tags Webhooks
 // @Produce json
@@ -282,10 +282,17 @@ func (h *Handler) regenerate(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	token, err := regenerate(r.Context(), h.DB, rec)
+	// The new URL is a key to post with the creator's rights, so it goes to
+	// someone who could create the webhook, and they become its creator.
+	if _, err := h.authorize(r, rec.ChannelID, perm.SendMessages); err != nil {
+		return err
+	}
+	actor := auth.UserFrom(r.Context()).ID
+	token, err := regenerate(r.Context(), h.DB, rec, actor)
 	if err != nil {
 		return err
 	}
+	rec.CreatedBy = &actor
 	httpx.WriteJSON(w, http.StatusOK, CreatedWebhook{Webhook: rec.Webhook, Token: token, URL: h.url(rec, token)})
 	return nil
 }

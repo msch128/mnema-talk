@@ -7149,7 +7149,7 @@
     },
     "/api/admin/webhooks/{id}/token": {
       "post": {
-        "description": "The old URL stops working at once. The answer carries the new secret URL; it is shown only once.",
+        "description": "The old URL stops working at once. The answer carries the new secret URL; it is shown only once. Needs the same rights as creating a webhook (Manage webhooks, View channel and Send messages in the channel); the caller becomes the webhook's creator, so later posts are checked against their rights.",
         "operationId": "regenerateWebhookToken",
         "parameters": [
           {

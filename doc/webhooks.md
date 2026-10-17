@@ -22,6 +22,10 @@ files* when files are sent) in the channel right now, and the creator's
 account to exist and be enabled; otherwise the post is refused with `403`
 (code 50013). The Owner's webhooks always pass.
 
+Regenerating a token gives the new URL to the caller, so it needs the same
+rights as creating (including *Send messages*), and the caller becomes the
+webhook's creator: posts are always checked against whoever holds the URL.
+
 Hierarchy follows [roles and permissions](roles-and-permissions.md):
 
 - A webhook created by the Owner can only be changed by the Owner.
