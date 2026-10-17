@@ -1,0 +1,48 @@
+internal/webbundle/cli.go
+  s_06fcde5dbef956::t_66d77f3282b7b4 1-164
+cmd/webbundle/main.go
+  s_06fcde5dbef956::t_f2078b8388a2ef 1-13
+internal/webbundle/cli_test.go
+  s_06fcde5dbef956::t_d4010cb16669e5 1-132
+internal/webbundle/webbundle_test.go
+  s_06fcde5dbef956::t_a5f4d5d190f105 1-468,471-472
+  s_06fcde5dbef956::t_2c275a8ed2f81e 469-470,473-509
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_83be168a94ba68 1-313
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_9790511253599e 233-244
+.github/workflows/release.yml
+  s_06fcde5dbef956::t_940712f02e0748 239-312
+Makefile
+  s_06fcde5dbef956::t_74bce81d10dfdc 125-128
+internal/server/health_test.go
+  s_06fcde5dbef956::t_9bf66c808cb28d 17,137-149
+internal/server/server.go
+  s_06fcde5dbef956::t_88dd291f0daf97 260-265,342
+internal/webbundle/version.go
+  s_06fcde5dbef956::t_dd410fcda1741a 1-51
+internal/webbundle/webbundle.go
+  s_06fcde5dbef956::t_3df711b10a69eb 1-438
+scripts/web-bundle-check.sh
+  s_06fcde5dbef956::t_92c09f2f7968d3 1-18
+web/desktop-compat.json
+  s_06fcde5dbef956::t_728debbdad205e 1-5
+web/desktop-signing.pub
+  s_06fcde5dbef956::t_f13d6cbf557e2f 1-3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "959d660be88df8b47d050debce366dc27b9dced3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
