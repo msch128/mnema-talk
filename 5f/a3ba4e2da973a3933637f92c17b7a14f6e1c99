@@ -1,0 +1,81 @@
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_2aaf9e6a094521 155-156,409-431
+  s_06fcde5dbef956::t_33731ce8876060 23
+  s_06fcde5dbef956::t_cb21dca3bea25e 432-433
+web/src/components/ModerationDialog.test.ts
+  s_06fcde5dbef956::t_56cdd515a38d8c 1-90,94-138
+  s_06fcde5dbef956::t_eb9adb61f41325 91-93
+web/src/lib/moderationActions.test.ts
+  s_06fcde5dbef956::t_91d0fc74368964 1-65
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_2aaf9e6a094521 15,26,298-299,314-322
+web/src/stores/chatModeration.test.ts
+  s_06fcde5dbef956::t_78d7110ea36d41 1-42
+web/src/stores/permissionsTimeout.test.ts
+  s_06fcde5dbef956::t_ee43942a10c067 1-16
+web/src/components/AdminBansTab.vue
+  s_06fcde5dbef956::t_dbb5acea9628c4 1-84
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_19d8438039f9c6 117,124
+  s_06fcde5dbef956::t_cdc4782804eb47 123
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 29
+  s_06fcde5dbef956::t_17a5848d1d50ed 113,117
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_19d8438039f9c6 59-61
+  s_06fcde5dbef956::t_cdc4782804eb47 62-64
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 35-40
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_17a5848d1d50ed 19
+web/src/components/ModerationDialog.vue
+  s_06fcde5dbef956::t_eb9adb61f41325 33,92
+web/src/lib/moderationActions.ts
+  s_06fcde5dbef956::t_e4e3c777c3fc14 1-55
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_17a5848d1d50ed 5,17,30-31,38,50,93
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_a4bc6ea42fcf08 754-755,1208-1216,1246-1247,1326-1332,1479-1529
+web/src/components/AdminRolesTab.test.ts
+  s_06fcde5dbef956::t_19d8438039f9c6 62
+web/src/components/TimeoutBanner.test.ts
+  s_06fcde5dbef956::t_38f7fb73cef1c4 1-67
+web/src/components/AdminBansTab.test.ts
+  s_06fcde5dbef956::t_d61321070e8d32 1-78,90-101
+  s_06fcde5dbef956::t_eb9adb61f41325 79-89
+web/src/components/AdminCoverage.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 80
+api/openapi.json
+  s_06fcde5dbef956::t_19d8438039f9c6 242,251-253
+  s_06fcde5dbef956::t_cdc4782804eb47 235
+web/src/composables/useNavMenus.test.ts
+  s_06fcde5dbef956::t_3795908ab3c6ce 332,334,342
+  s_06fcde5dbef956::t_a133791349e874 14-16,323,325,328-331,333,335-341,343-355
+  s_06fcde5dbef956::t_982ea8e070034b 356
+web/src/components/UserProfileModeration.test.ts
+  s_06fcde5dbef956::t_cd778b733fc12a 1-73
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_f3d2dffcca3ee0 916-919
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_a4bc6ea42fcf08 754-755,1208-1216,1246-1247,1326-1332,1479-1529
+web/src/lib/moderation.test.ts
+  s_06fcde5dbef956::t_1ecabd9d1eea7f 1-61
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_0fd440b1563916 31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5fa3ba4e2da973a3933637f92c17b7a14f6e1c99",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
