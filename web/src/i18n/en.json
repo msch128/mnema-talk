@@ -1199,6 +1199,10 @@
       "name": "Manage members",
       "desc": "Disable and re-enable accounts, end their sessions and edit their status line, for members below your highest role."
     },
+    "manage_bots": {
+      "name": "Manage bots",
+      "desc": "Create bots, give them roles and tokens and choose what they may receive. Only the Owner can grant this."
+    },
     "view_audit_log": {
       "name": "View audit log",
       "desc": "Read the audit log: who changed what, and moderation actions."

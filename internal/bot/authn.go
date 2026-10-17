@@ -1,0 +1,188 @@
+package bot
+
+import (
+	"context"
+	"crypto/subtle"
+	"errors"
+	"log/slog"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/httpx"
+)
+
+const (
+	// tokenLen is the length of every token this server issues.
+	tokenLen = len(TokenPrefix) + 43
+	// touchEvery bounds how often a token's last-used time is written.
+	touchEvery = time.Minute
+
+	// Per-bot limits, in Discord's spirit: a global budget and a tighter one
+	// for sending messages in one channel.
+	globalLimit  = 50
+	globalWindow = time.Second
+	sendLimit    = 5
+	sendWindow   = 5 * time.Second
+	// failedLimit bounds wrong tokens per client address.
+	failedLimit  = 30
+	failedWindow = time.Minute
+)
+
+var errUnauthorized = httpx.ErrUnauthorized("401: Unauthorized")
+
+// Authenticator admits requests that carry a valid bot token and applies the
+// per-bot rate limits. It reads only the Authorization header: cookies are
+// never looked at, so the routes behind it have nothing to forge.
+type Authenticator struct {
+	DB       *db.Pool
+	failures *httpx.RateLimiter
+	global   *httpx.RateLimiter
+	sends    *httpx.RateLimiter
+	now      func() time.Time
+
+	mu      sync.Mutex
+	touched map[uuid.UUID]time.Time
+}
+
+// NewAuthenticator returns an Authenticator with its rate limiters.
+func NewAuthenticator(p *db.Pool) *Authenticator {
+	return &Authenticator{
+		DB:       p,
+		failures: httpx.NewRateLimiter(failedLimit, failedWindow).Named("bot_auth"),
+		global:   httpx.NewRateLimiter(globalLimit, globalWindow).Named("bot_api"),
+		sends:    httpx.NewRateLimiter(sendLimit, sendWindow).Named("bot_send"),
+		now:      time.Now,
+		touched:  map[uuid.UUID]time.Time{},
+	}
+}
+
+// SetLimits replaces the global (per second) and send (per 5 seconds) limits.
+// For tests.
+func (a *Authenticator) SetLimits(global, send int) {
+	a.global = httpx.NewRateLimiter(global, globalWindow).Named("bot_api")
+	a.sends = httpx.NewRateLimiter(send, sendWindow).Named("bot_send")
+}
+
+// Credentials is what a valid token resolves to.
+type Credentials struct {
+	Bot  auth.BotInfo
+	User *auth.User
+}
+
+// Lookup resolves a token. Unknown, expired and revoked tokens and disabled
+// bots all give errUnauthorized, so nothing tells them apart.
+func (a *Authenticator) Lookup(ctx context.Context, token string) (*Credentials, error) {
+	if len(token) != tokenLen || !strings.HasPrefix(token, TokenPrefix) {
+		return nil, errUnauthorized
+	}
+	hash := HashToken(token)
+	var c Credentials
+	var userID uuid.UUID
+	var lastUsed *time.Time
+	err := a.DB.QueryRow(ctx, `
+		SELECT t.id, b.id, b.user_id, b.name, b.allowed_intents, t.last_used_at
+		FROM bot_tokens t JOIN bots b ON b.id = t.bot_id
+		WHERE t.token_hash = $1 AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled`,
+		hash).Scan(&c.Bot.TokenID, &c.Bot.BotID, &userID, &c.Bot.Name, &c.Bot.Intents, &lastUsed)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errUnauthorized
+	}
+	if err != nil {
+		return nil, err
+	}
+	// The account exists as long as the bot does (the foreign key cascades).
+	if c.User, err = auth.GetUser(ctx, a.DB, userID); err != nil {
+		return nil, err
+	}
+	a.touch(ctx, &c.Bot, lastUsed)
+	return &c, nil
+}
+
+// touch records the use of a token and of its bot, at most once a minute per
+// token. A failure only loses a timestamp.
+func (a *Authenticator) touch(ctx context.Context, b *auth.BotInfo, last *time.Time) {
+	now := a.now()
+	a.mu.Lock()
+	prev, seen := a.touched[b.TokenID]
+	if seen && now.Sub(prev) < touchEvery || last != nil && !seen && now.Sub(*last) < touchEvery {
+		a.mu.Unlock()
+		return
+	}
+	if len(a.touched) > 4096 {
+		clear(a.touched)
+	}
+	a.touched[b.TokenID] = now
+	a.mu.Unlock()
+	ctx = context.WithoutCancel(ctx)
+	if _, err := a.DB.Exec(ctx, `UPDATE bot_tokens SET last_used_at = NOW() WHERE id = $1`, b.TokenID); err != nil {
+		slog.Warn("bot token last-used", "err", err)
+		return
+	}
+	if _, err := a.DB.Exec(ctx, `UPDATE bots SET last_active_at = NOW() WHERE id = $1`, b.BotID); err != nil {
+		slog.Warn("bot last-active", "err", err)
+	}
+}
+
+// BearerToken reads the credential of an Authorization header: "Bot <token>".
+func BearerToken(r *http.Request) (string, bool) {
+	scheme, token, ok := strings.Cut(r.Header.Get("Authorization"), " ")
+	if !ok || subtle.ConstantTimeCompare([]byte(strings.ToLower(scheme)), []byte("bot")) != 1 {
+		return "", false
+	}
+	return strings.TrimSpace(token), true
+}
+
+// Middleware requires a bot token, puts the bot's account and the bot into
+// the context and applies the per-bot global rate limit. Errors are in
+// Discord's shape.
+func (a *Authenticator) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ip := httpx.ClientIPKey(r)
+		token, ok := BearerToken(r)
+		var c *Credentials
+		var err error
+		if ok {
+			c, err = a.Lookup(r.Context(), token)
+		} else {
+			err = errUnauthorized
+		}
+		if err != nil {
+			if apiErr, isAPI := httpx.AsAPIError(err); isAPI && apiErr.Status == http.StatusUnauthorized {
+				if allowed, retry := a.failures.Allow(ip); !allowed {
+					httpx.WriteDiscordRateLimit(w, retry, true)
+					return
+				}
+			}
+			httpx.WriteDiscordError(w, err)
+			return
+		}
+		if allowed, retry := a.global.Allow(c.Bot.BotID.String()); !allowed {
+			httpx.WriteDiscordRateLimit(w, retry, true)
+			return
+		}
+		ctx := auth.WithBot(auth.WithUser(r.Context(), c.User), &c.Bot)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// LimitSends applies the send limit per bot and channel (the channelID path
+// parameter) to the routes it wraps.
+func (a *Authenticator) LimitSends(channelParam func(*http.Request) string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if b := auth.BotFrom(r.Context()); b != nil {
+				if allowed, retry := a.sends.Allow(b.BotID.String() + ":" + channelParam(r)); !allowed {
+					httpx.WriteDiscordRateLimit(w, retry, false)
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}

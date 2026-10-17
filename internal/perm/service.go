@@ -115,7 +115,7 @@ func (s *Service) SetGlobalUploadMB(ctx context.Context, actor Subject, mb *int)
 	if mb != nil && (*mb < 1 || *mb > s.UploadCeilingMB()) {
 		return UploadSettings{}, httpx.ErrInvalidInput(fmt.Sprintf("max_upload_mb must be between 1 and %d", s.UploadCeilingMB()))
 	}
-	err := s.Locked(ctx, func(tx pgx.Tx, _ *Snapshot) error {
+	err := s.Locked(ctx, actor, func(tx pgx.Tx, _ *Snapshot) error {
 		_, err := tx.Exec(ctx, `UPDATE instance_settings SET max_upload_mb = $1, updated_at = NOW()`, mb)
 		return err
 	})

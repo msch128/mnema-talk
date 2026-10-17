@@ -346,6 +346,393 @@ export function isAuthUserEnvelope(value: unknown): value is AuthUserEnvelope {
 
 export const decodeAuthUserEnvelope = decoder("auth.UserEnvelope", isAuthUserEnvelope)
 
+export type BotAccess = {
+  channels: Array<BotChannelAccess>
+  elevated: boolean
+  permissions: number
+}
+
+export function isBotAccess(value: unknown): value is BotAccess {
+  return isRecord(value)
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isBotChannelAccess(item)))
+    && (hasOwn(value, "elevated") && typeof value["elevated"] === 'boolean')
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
+}
+
+export const decodeBotAccess = decoder("bot.Access", isBotAccess)
+
+export type BotBot = {
+  allowed_intents: number
+  avatar_url?: string
+  created_at: string
+  created_by?: string
+  disabled: boolean
+  id: string
+  last_active_at?: string
+  name: string
+  role_ids: Array<string>
+  user_id: string
+}
+
+export function isBotBot(value: unknown): value is BotBot {
+  return isRecord(value)
+    && (hasOwn(value, "allowed_intents") && (isInteger(value["allowed_intents"]) && value["allowed_intents"] >= 0))
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "created_by") || isIdentifier(value["created_by"]))
+    && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "last_active_at") || isTimestamp(value["last_active_at"]))
+    && (hasOwn(value, "name") && isString(value["name"], 24))
+    && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (hasOwn(value, "user_id") && isIdentifier(value["user_id"]))
+}
+
+export const decodeBotBot = decoder("bot.Bot", isBotBot)
+
+export type BotCallbackRequest = {
+  data: BotResponseData
+  type: 4 | 5
+}
+
+export function isBotCallbackRequest(value: unknown): value is BotCallbackRequest {
+  return isRecord(value)
+    && (hasOwn(value, "data") && isBotResponseData(value["data"]))
+    && (hasOwn(value, "type") && (value["type"] === 4 || value["type"] === 5))
+}
+
+export const decodeBotCallbackRequest = decoder("bot.CallbackRequest", isBotCallbackRequest)
+
+export type BotChannelAccess = {
+  channel_id: string
+  name: string
+  permissions: number
+}
+
+export function isBotChannelAccess(value: unknown): value is BotChannelAccess {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+    && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 1))
+}
+
+export const decodeBotChannelAccess = decoder("bot.ChannelAccess", isBotChannelAccess)
+
+export type BotChannelCommand = {
+  bot_avatar_url?: string
+  bot_id: string
+  bot_name: string
+  created_at: string
+  description: string
+  disabled: boolean
+  id: string
+  name: string
+  options: Array<BotOption>
+}
+
+export function isBotChannelCommand(value: unknown): value is BotChannelCommand {
+  return isRecord(value)
+    && (!hasOwn(value, "bot_avatar_url") || isString(value["bot_avatar_url"]))
+    && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
+    && (hasOwn(value, "bot_name") && isString(value["bot_name"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "description") && isString(value["description"]))
+    && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isBotOption(item)))
+}
+
+export const decodeBotChannelCommand = decoder("bot.ChannelCommand", isBotChannelCommand)
+
+export type BotCommand = {
+  bot_id: string
+  created_at: string
+  description: string
+  disabled: boolean
+  id: string
+  name: string
+  options: Array<BotOption>
+}
+
+export function isBotCommand(value: unknown): value is BotCommand {
+  return isRecord(value)
+    && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (hasOwn(value, "description") && isString(value["description"]))
+    && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "name") && isString(value["name"]))
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isBotOption(item)))
+}
+
+export const decodeBotCommand = decoder("bot.Command", isBotCommand)
+
+export type BotCommandInput = {
+  description: string
+  name: string
+  options: Array<BotOption>
+}
+
+export function isBotCommandInput(value: unknown): value is BotCommandInput {
+  return isRecord(value)
+    && (hasOwn(value, "description") && isString(value["description"], 100))
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "options") && isArrayOf(value["options"], item => isBotOption(item)))
+}
+
+export const decodeBotCommandInput = decoder("bot.CommandInput", isBotCommandInput)
+
+export type BotCommandPatch = {
+  disabled: boolean
+}
+
+export function isBotCommandPatch(value: unknown): value is BotCommandPatch {
+  return isRecord(value)
+    && (hasOwn(value, "disabled") && typeof value["disabled"] === 'boolean')
+}
+
+export const decodeBotCommandPatch = decoder("bot.CommandPatch", isBotCommandPatch)
+
+export type BotCreateRequest = {
+  allowed_intents?: number
+  name: string
+}
+
+export function isBotCreateRequest(value: unknown): value is BotCreateRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "allowed_intents") || (isInteger(value["allowed_intents"]) && value["allowed_intents"] >= 0))
+    && (hasOwn(value, "name") && isString(value["name"], 24))
+}
+
+export const decodeBotCreateRequest = decoder("bot.CreateRequest", isBotCreateRequest)
+
+export type BotInvokeRequest = {
+  command_id: string
+  options: Record<string, unknown>
+}
+
+export function isBotInvokeRequest(value: unknown): value is BotInvokeRequest {
+  return isRecord(value)
+    && (hasOwn(value, "command_id") && isIdentifier(value["command_id"]))
+    && (hasOwn(value, "options") && isRecord(value["options"]))
+}
+
+export const decodeBotInvokeRequest = decoder("bot.InvokeRequest", isBotInvokeRequest)
+
+export type BotInvoked = {
+  interaction_id: string
+}
+
+export function isBotInvoked(value: unknown): value is BotInvoked {
+  return isRecord(value)
+    && (hasOwn(value, "interaction_id") && isIdentifier(value["interaction_id"]))
+}
+
+export const decodeBotInvoked = decoder("bot.Invoked", isBotInvoked)
+
+export type BotNewTokenResponse = {
+  created_at: string
+  expires_at?: string
+  hint: string
+  id: string
+  last_used_at?: string
+  name: string
+  secret: string
+  state: "active" | "expired" | "revoked"
+}
+
+export function isBotNewTokenResponse(value: unknown): value is BotNewTokenResponse {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
+    && (hasOwn(value, "hint") && isString(value["hint"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "last_used_at") || isTimestamp(value["last_used_at"]))
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "secret") && isString(value["secret"]))
+    && (hasOwn(value, "state") && (value["state"] === "active" || value["state"] === "expired" || value["state"] === "revoked"))
+}
+
+export const decodeBotNewTokenResponse = decoder("bot.NewTokenResponse", isBotNewTokenResponse)
+
+export type BotOption = {
+  description: string
+  name: string
+  required: boolean
+  type: 3 | 4 | 5 | 6 | 7
+}
+
+export function isBotOption(value: unknown): value is BotOption {
+  return isRecord(value)
+    && (hasOwn(value, "description") && isString(value["description"], 100))
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "required") && typeof value["required"] === 'boolean')
+    && (hasOwn(value, "type") && (value["type"] === 3 || value["type"] === 4 || value["type"] === 5 || value["type"] === 6 || value["type"] === 7))
+}
+
+export const decodeBotOption = decoder("bot.Option", isBotOption)
+
+export type BotResponseData = {
+  content: string
+  embeds: Array<ChatInEmbed>
+  flags: 0 | 64
+}
+
+export function isBotResponseData(value: unknown): value is BotResponseData {
+  return isRecord(value)
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatInEmbed(item)))
+    && (hasOwn(value, "flags") && (value["flags"] === 0 || value["flags"] === 64))
+}
+
+export const decodeBotResponseData = decoder("bot.ResponseData", isBotResponseData)
+
+export type BotRolesRequest = {
+  role_ids: Array<string>
+}
+
+export function isBotRolesRequest(value: unknown): value is BotRolesRequest {
+  return isRecord(value)
+    && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+}
+
+export const decodeBotRolesRequest = decoder("bot.RolesRequest", isBotRolesRequest)
+
+export type BotSelf = {
+  allowed_intents: number
+  avatar_url?: string
+  bot: true
+  bot_id: string
+  id: string
+  username: string
+}
+
+export function isBotSelf(value: unknown): value is BotSelf {
+  return isRecord(value)
+    && (hasOwn(value, "allowed_intents") && isInteger(value["allowed_intents"]))
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "bot") && (value["bot"] === true))
+    && (hasOwn(value, "bot_id") && isIdentifier(value["bot_id"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeBotSelf = decoder("bot.Self", isBotSelf)
+
+export type BotToken = {
+  created_at: string
+  expires_at?: string
+  hint: string
+  id: string
+  last_used_at?: string
+  name: string
+  state: "active" | "expired" | "revoked"
+}
+
+export function isBotToken(value: unknown): value is BotToken {
+  return isRecord(value)
+    && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
+    && (hasOwn(value, "hint") && isString(value["hint"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "last_used_at") || isTimestamp(value["last_used_at"]))
+    && (hasOwn(value, "name") && isString(value["name"], 32))
+    && (hasOwn(value, "state") && (value["state"] === "active" || value["state"] === "expired" || value["state"] === "revoked"))
+}
+
+export const decodeBotToken = decoder("bot.Token", isBotToken)
+
+export type BotTokenRequest = {
+  expires_at?: string
+  name?: string
+}
+
+export function isBotTokenRequest(value: unknown): value is BotTokenRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
+    && (!hasOwn(value, "name") || isString(value["name"], 32))
+}
+
+export const decodeBotTokenRequest = decoder("bot.TokenRequest", isBotTokenRequest)
+
+export type BotUpdateRequest = {
+  allowed_intents?: number
+  disabled?: boolean
+  name?: string
+}
+
+export function isBotUpdateRequest(value: unknown): value is BotUpdateRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "allowed_intents") || (isInteger(value["allowed_intents"]) && value["allowed_intents"] >= 0))
+    && (!hasOwn(value, "disabled") || typeof value["disabled"] === 'boolean')
+    && (!hasOwn(value, "name") || isString(value["name"], 24))
+}
+
+export const decodeBotUpdateRequest = decoder("bot.UpdateRequest", isBotUpdateRequest)
+
+export type ChatBotAllowedMentions = {
+  parse: Array<string>
+  roles: Array<string>
+  users: Array<string>
+}
+
+export function isChatBotAllowedMentions(value: unknown): value is ChatBotAllowedMentions {
+  return isRecord(value)
+    && (hasOwn(value, "parse") && isArrayOf(value["parse"], item => isString(item)))
+    && (hasOwn(value, "roles") && isArrayOf(value["roles"], item => isString(item)))
+    && (hasOwn(value, "users") && isArrayOf(value["users"], item => isString(item)))
+}
+
+export const decodeChatBotAllowedMentions = decoder("chat.BotAllowedMentions", isChatBotAllowedMentions)
+
+export type ChatBotCreateMessageRequest = {
+  allowed_mentions: ChatBotAllowedMentions
+  content: string
+  embeds: Array<ChatEmbed>
+  message_reference: ChatBotMessageReference
+  parent_id?: string | null
+}
+
+export function isChatBotCreateMessageRequest(value: unknown): value is ChatBotCreateMessageRequest {
+  return isRecord(value)
+    && (hasOwn(value, "allowed_mentions") && isChatBotAllowedMentions(value["allowed_mentions"]))
+    && (hasOwn(value, "content") && isString(value["content"], 4000))
+    && (hasOwn(value, "embeds") && isArrayOf(value["embeds"], item => isChatEmbed(item)))
+    && (hasOwn(value, "message_reference") && isChatBotMessageReference(value["message_reference"]))
+    && (!hasOwn(value, "parent_id") || (isIdentifier(value["parent_id"]) || value["parent_id"] === null))
+}
+
+export const decodeChatBotCreateMessageRequest = decoder("chat.BotCreateMessageRequest", isChatBotCreateMessageRequest)
+
+export type ChatBotMember = {
+  avatar_url?: string
+  display_name: string
+  id: string
+  username: string
+}
+
+export function isChatBotMember(value: unknown): value is ChatBotMember {
+  return isRecord(value)
+    && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatBotMember = decoder("chat.BotMember", isChatBotMember)
+
+export type ChatBotMessageReference = {
+  message_id: string
+}
+
+export function isChatBotMessageReference(value: unknown): value is ChatBotMessageReference {
+  return isRecord(value)
+    && (hasOwn(value, "message_id") && isIdentifier(value["message_id"]))
+}
+
+export const decodeChatBotMessageReference = decoder("chat.BotMessageReference", isChatBotMessageReference)
+
 export type ChatCategory = {
   channels: Array<ChatChannel>
   created_at: string
@@ -577,6 +964,56 @@ export function isChatEmbedMedia(value: unknown): value is ChatEmbedMedia {
 }
 
 export const decodeChatEmbedMedia = decoder("chat.EmbedMedia", isChatEmbedMedia)
+
+export type ChatInEmbed = {
+  author: {
+  name: string
+  url: string
+}
+  color: number
+  description: string
+  fields: Array<{
+  inline: boolean
+  name: string
+  value: string
+}>
+  footer: {
+  text: string
+}
+  image: {
+  url: string
+}
+  thumbnail: {
+  url: string
+}
+  timestamp: string
+  title: string
+  url: string
+}
+
+export function isChatInEmbed(value: unknown): value is ChatInEmbed {
+  return isRecord(value)
+    && (hasOwn(value, "author") && isRecord(value["author"])
+    && (hasOwn(value["author"], "name") && isString(value["author"]["name"]))
+    && (hasOwn(value["author"], "url") && isString(value["author"]["url"])))
+    && (hasOwn(value, "color") && isInteger(value["color"]))
+    && (hasOwn(value, "description") && isString(value["description"]))
+    && (hasOwn(value, "fields") && isArrayOf(value["fields"], item => isRecord(item)
+    && (hasOwn(item, "inline") && typeof item["inline"] === 'boolean')
+    && (hasOwn(item, "name") && isString(item["name"]))
+    && (hasOwn(item, "value") && isString(item["value"]))))
+    && (hasOwn(value, "footer") && isRecord(value["footer"])
+    && (hasOwn(value["footer"], "text") && isString(value["footer"]["text"])))
+    && (hasOwn(value, "image") && isRecord(value["image"])
+    && (hasOwn(value["image"], "url") && isString(value["image"]["url"])))
+    && (hasOwn(value, "thumbnail") && isRecord(value["thumbnail"])
+    && (hasOwn(value["thumbnail"], "url") && isString(value["thumbnail"]["url"])))
+    && (hasOwn(value, "timestamp") && isString(value["timestamp"]))
+    && (hasOwn(value, "title") && isString(value["title"]))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeChatInEmbed = decoder("chat.InEmbed", isChatInEmbed)
 
 export type ChatLayoutRequest = {
   categories?: Array<ChatCategoryOrder>
@@ -891,6 +1328,21 @@ export function isChatUpdateChannelRequest(value: unknown): value is ChatUpdateC
 
 export const decodeChatUpdateChannelRequest = decoder("chat.UpdateChannelRequest", isChatUpdateChannelRequest)
 
+export type GatewayInfo = {
+  heartbeat_interval: number
+  max_connections: number
+  url: string
+}
+
+export function isGatewayInfo(value: unknown): value is GatewayInfo {
+  return isRecord(value)
+    && (hasOwn(value, "heartbeat_interval") && isInteger(value["heartbeat_interval"]))
+    && (hasOwn(value, "max_connections") && isInteger(value["max_connections"]))
+    && (hasOwn(value, "url") && isString(value["url"]))
+}
+
+export const decodeGatewayInfo = decoder("gateway.Info", isGatewayInfo)
+
 export type HttpxAPIError = {
   code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR"
   message: string
@@ -903,6 +1355,34 @@ export function isHttpxAPIError(value: unknown): value is HttpxAPIError {
 }
 
 export const decodeHttpxAPIError = decoder("httpx.APIError", isHttpxAPIError)
+
+export type HttpxDiscordError = {
+  code: number
+  message: string
+}
+
+export function isHttpxDiscordError(value: unknown): value is HttpxDiscordError {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isInteger(value["code"]))
+    && (hasOwn(value, "message") && isString(value["message"]))
+}
+
+export const decodeHttpxDiscordError = decoder("httpx.DiscordError", isHttpxDiscordError)
+
+export type HttpxDiscordRateLimit = {
+  global: boolean
+  message: "You are being rate limited."
+  retry_after: number
+}
+
+export function isHttpxDiscordRateLimit(value: unknown): value is HttpxDiscordRateLimit {
+  return isRecord(value)
+    && (hasOwn(value, "global") && typeof value["global"] === 'boolean')
+    && (hasOwn(value, "message") && (value["message"] === "You are being rate limited."))
+    && (hasOwn(value, "retry_after") && (typeof value["retry_after"] === 'number' && Number.isFinite(value["retry_after"])))
+}
+
+export const decodeHttpxDiscordRateLimit = decoder("httpx.DiscordRateLimit", isHttpxDiscordRateLimit)
 
 export type HttpxErrorResponse = {
   error: HttpxAPIError

@@ -1,0 +1,387 @@
+# Bots
+
+Mnema Talk has **bot accounts**: programs that read and post messages through
+an API and a gateway, with exactly the access an admin gave them. The model
+follows Discord where it maps (bot users, roles and channel overwrites,
+`Authorization: Bot <token>`, intents), and differs where this server is
+smaller (one community, UUID ids); the
+[compatibility table](#differences-from-discord) lists the differences.
+
+This page describes accounts, access and tokens. The REST API, the gateway
+and commands are described in the sections that follow them as they ship.
+
+## Who may create bots
+
+Only the **Owner** and members with the **Manage bots** permission (it opens
+the *Bots* tab in the admin area). Administrators hold every permission and so
+do too. Rules that keep the power with the Owner:
+
+- **Manage bots can only be granted by the Owner**, never passed on by someone
+  with *Manage roles*.
+- The usual hierarchy applies: you can only change a bot whose highest role is
+  below yours, give it roles below your own highest role, and no permission
+  you do not hold yourself.
+- A role with **Administrator** or any admin-area permission can only be given
+  to a bot by the Owner. The interface warns when a bot holds such a role.
+- Managing a bot (tokens, roles, edits) needs at least the rights the bot
+  has: everything it may do server-wide and in each channel it can view must
+  be within what you may do yourself, and a bot with Administrator or
+  admin-area permissions is the Owner's. Adding such permissions to a role a
+  bot holds is Owner-only. Otherwise *Manage bots* would be a way to act with
+  rights you do not have.
+- A bot cannot sign in (no password; login, sessions and re-authentication
+  skip bots), cannot hold the Owner role, and the Owner cannot be targeted by
+  anything a bot can do. No bot endpoint manages roles, bots, webhooks or
+  members, whatever roles the bot holds.
+
+## What a bot is
+
+A bot is a hidden member-like account plus a record with its name, avatar,
+allowed intents and tokens. Its messages show the author's name and avatar
+and the **BOT** badge, like webhook messages. Bots are not listed among the
+members, are not mentionable, and have no presence in v1.
+
+## Permissions: roles and overwrites
+
+A bot's permissions come from the same engine as a member's: its **roles**
+(`PUT /api/admin/bots/{id}/roles`) and the **channel and category overwrites**
+for those roles (the usual channel permissions dialog). Unlike a member it
+does **not inherit @everyone**, neither the base permissions nor @everyone
+overwrites: a new bot can see and do nothing until an admin gives it a role
+and allows that role in channels. A private channel stays invisible to it
+unless one of its roles is allowed there. This keeps one enforcement path
+for members, bots, the REST API and the gateway.
+
+`GET /api/admin/bots/{id}/access` (the *Access* view of the Bots tab) shows
+the effective result: the server-wide permissions and, per viewable channel,
+what the bot may do.
+
+Voice is out of scope in v1: bots cannot join Talks (their roles' Connect,
+Speak and Video bits do nothing for them).
+
+### Every way a bot can gain permissions
+
+One rule covers all of it, checked on the outcome in the same transaction as
+every permission change (roles, role bits and positions, memberships,
+overwrites, removed denies, channel moves), so no path can get around it:
+**a change by anyone but the Owner can add nothing to a bot, server-wide or in
+any channel, that is elevated** (Administrator or any admin-area permission,
+including Disconnect members) **or that the person making the change does not
+hold there themselves.** The table lists the friendlier early errors on the
+common paths.
+
+| Path | Rule |
+|---|---|
+| Roles of the bot (`PUT /bots/{id}/roles`) | *Manage bots*, a role below your highest, only permissions you hold; a role with Administrator, an admin-area permission, or an overwrite that allows Disconnect members anywhere is the Owner's to give |
+| `PUT /admin/users/{id}/roles` | refused for bots |
+| Editing a role a bot holds | the usual role rules, and adding Administrator or admin-area bits is Owner-only |
+| Reordering roles | moves positions only, grants no permission |
+| Channel or category overwrite for a role a bot holds, or for the bot itself | the usual overwrite rules (*Manage channels*, only what you hold there), and allowing Disconnect members (the one channel permission that opens part of the admin area) is Owner-only |
+| `@everyone` | not inherited, its overwrites do not apply |
+| Managing the bot afterwards (tokens, edits) | needs at least the bot's rights, server-wide and per channel; a bot holding any elevated permission anywhere is the Owner's. The access view lists only channels the caller can see |
+
+## Tokens
+
+Each bot holds up to 10 active API tokens (`mnb_...`, 256 random bits).
+
+- The secret is **shown once**, when the token is issued or regenerated. Only a
+  SHA-256 hash is stored; a lost token cannot be shown again.
+- Optional **expiry**; every token shows its last characters, state
+  (`active`, `expired`, `revoked`) and **last used** time.
+- **Regenerate** issues a new token with the same name and expiry and revokes
+  the old one at once. **Revoke** and disabling or deleting the bot take
+  effect immediately, also for connections that are open.
+
+## Getting started
+
+1. As the Owner (or with *Manage bots*): **Admin area > Bots > New bot**, or
+   `POST /api/admin/bots {"name": "helper"}`.
+2. Give it a **role** (for example *Send messages*, *Add reactions*) and allow
+   that role in the channels it should work in (the channel permissions
+   dialog). The *Access* view shows the result.
+3. Issue a **token** and copy it: it is shown once.
+4. Call the API:
+
+```sh
+export MNEMA=https://talk.example.org
+export TOKEN=mnb_...
+curl -s -H "Authorization: Bot $TOKEN" $MNEMA/api/bot/v1/users/@me
+curl -s -H "Authorization: Bot $TOKEN" $MNEMA/api/bot/v1/channels
+curl -s -X POST -H "Authorization: Bot $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"content": "build **passed**", "embeds": [{"title": "Run 42", "color": 65280}]}' \
+  $MNEMA/api/bot/v1/channels/$CHANNEL_ID/messages
+```
+
+## REST API
+
+The base path is **`/api/bot/v1`**. It is a separate, versioned path, not the
+member routes with another header: the contract (shapes, errors, limits) stays
+stable for bots while the web app's API evolves, and a breaking change gets
+`/v2` next to it. The handlers behind it are the same ones the web app uses,
+so a bot can never do something through the API that its permissions would not
+allow in the app. The OpenAPI document describes every route (tag *Bot API*,
+security scheme `botAuth`).
+
+- **Authentication:** `Authorization: Bot <token>` only. No cookie is read, so
+  there is no CSRF path (no Origin header is needed), and a token is refused on
+  every other route (members' routes, `/api/admin/*`, webhooks) with `401`.
+  Wrong tokens are counted per client address (30 a minute, then `429`).
+- **Ids** are UUIDs, not snowflakes.
+- **Errors** use Discord's shape, `{"message": "...", "code": 10003}`, with
+  Discord's codes where one fits: `10003` unknown channel (also for a channel
+  the bot may not see), `10008` unknown message, `50013` missing permissions,
+  `50035` invalid form body, `50006` empty message, `40005` too large, `0` for
+  plain HTTP errors (`401: Unauthorized`, `404: Not Found`).
+- **Rate limits** per bot, with separate buckets: **50 requests per second**
+  overall (`global: true` when that one is hit) and **5 messages per 5 seconds
+  per channel** for posts and uploads. A `429` carries
+  `{"message": "You are being rate limited.", "retry_after": 1.2, "global": false}`
+  and a `Retry-After` header. Other bots' limits are unaffected.
+
+| Route | Needs |
+|---|---|
+| `GET /users/@me` | a valid token |
+| `GET /channels` | the channels the bot can view, with their categories |
+| `GET /channels/{id}/messages` (`limit`, `before`, `after`, `around`) | View channels |
+| `GET /channels/{id}/messages/{id}` | View channels |
+| `POST /channels/{id}/messages` | Send messages; body `content`, `embeds`, `allowed_mentions`, `message_reference`, `parent_id` |
+| `PATCH /channels/{id}/messages/{id}` | Send messages, own messages only |
+| `DELETE /channels/{id}/messages/{id}` | own messages; others' with Manage messages |
+| `PUT`, `DELETE /channels/{id}/messages/{id}/reactions/{emoji}/@me` | Add reactions (taking back always works) |
+| `POST /channels/{id}/upload` (multipart `file`, optional `content`) | Send messages and Attach files; the Owner's upload limit for the bot's roles applies |
+| `GET /members`, `GET /members/{id}` | the `GUILD_MEMBERS` intent allowed; only members who can view a channel the bot can view; id, name, avatar |
+
+Mentions: `@username` notifies members who can view the channel; `@all` and
+`@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
+contains `"everyone"`. Bots do not appear in the member list, have no presence,
+cannot be mentioned, and cannot join Talks (voice) in v1.
+
+## Gateway
+
+The gateway pushes events to a bot over a WebSocket, with Discord's opcodes
+and flow. OpenAPI cannot describe it, so this page is its reference.
+`GET /api/bot/v1/gateway` (with the token) returns its address, the
+heartbeat interval and the connection cap; the same path is the gateway when
+the request is a WebSocket upgrade.
+
+**Authentication.** Send `Authorization: Bot <token>` with the upgrade
+request. The token is never taken from the URL, so it cannot end up in logs.
+Clients that cannot set headers (browsers) may instead put the token in
+IDENTIFY, like Discord; an upgrade without a valid token closes with `4004`.
+
+### Frames
+
+Every frame is JSON, `{"op": n, "d": ..., "s": seq, "t": "NAME"}`; `s` and `t`
+are only set on dispatches (`op 0`). Frames from the bot are at most 4096
+bytes and 120 a minute.
+
+| op | name | direction | |
+|---|---|---|---|
+| 10 | HELLO | server | first frame: `{"heartbeat_interval": 41250}` (ms) |
+| 2 | IDENTIFY | bot | `{"token": "...", "intents": 512, "properties": {...}}`; token optional when the header authenticated; intents required |
+| 0 | DISPATCH | server | an event, numbered by `s`; the first is `READY` |
+| 1 | HEARTBEAT | bot | send every `heartbeat_interval`; `d` may carry the last `s` |
+| 11 | HEARTBEAT_ACK | server | answer to HEARTBEAT |
+| 6 | RESUME | bot | `{"token": "...", "session_id": "...", "seq": 41}` on a new connection |
+| 9 | INVALID_SESSION | server | `d: false`: the session cannot be resumed; send IDENTIFY on the same connection |
+| 7 | RECONNECT | server | reserved; the server closes instead |
+
+`READY` carries `v`, `user` (`id`, `bot_id`, `username`, `bot`, `avatar_url`),
+`session_id`, `intents` (granted), `resume_gateway_url` and
+`heartbeat_interval`.
+
+**Heartbeats.** A bot that sends nothing for 1.5 intervals after identifying
+is closed with `4009`; one that does not identify within 10 seconds, `4003`.
+
+**Resume.** Keep the last `s`. After a disconnect, open a new connection and
+send RESUME within **2 minutes**: the server replays the events after `seq`
+(it keeps the last 512 per session) and sends `RESUMED`. If it cannot (unknown
+session, `seq` ahead of the session or older than the buffer, window over) it
+answers INVALID_SESSION and the bot identifies instead. Resuming takes the
+session over from a connection that still holds it (closed with `4000`).
+Events during the gap are replayed through the same scope checks that applied
+when they happened.
+
+### Close codes
+
+| code | meaning |
+|---|---|
+| `4000` | session taken over by another connection |
+| `4001`, `4002` | unknown opcode, undecodable frame |
+| `4003` | not authenticated (no IDENTIFY in time) |
+| `4004` | authentication failed: bad, revoked or expired token, bot disabled or deleted. Revoking a token or disabling a bot closes its open connections with this code **immediately** |
+| `4005` | already identified |
+| `4008` | rate limited: too many frames, IDENTIFYs, or connections (at most **3** live connections and 6 resumable sessions per bot) |
+| `4009` | session timed out (missed heartbeats) |
+| `4013`, `4014` | invalid intents; intents the admin has not allowed for this bot |
+| `1009`, `1013` | frame too large; the bot reads too slowly (resume) |
+
+### Intents and events
+
+IDENTIFY lists the **intents** the bot wants, using Discord's bit numbers; the
+admin sets the intents a bot is *allowed* to ask for (Bots tab), and asking for
+more closes with `4014`. Intents choose event classes. **Which channels an
+event comes from is not an intent**: every event is checked, at the moment it
+is sent, against what the bot's roles and overwrites let it view, so a bot
+never receives an event of a channel it cannot see, a private channel included,
+and loses a channel's events the moment its access ends.
+
+| Intent | Bit | Events |
+|---|---|---|
+| `GUILDS` | 1 | `CHANNELS_UPDATE` `{}`: the channel layout or the bot's access changed, fetch `GET /channels` again |
+| `GUILD_MEMBERS` | 2 | `GUILD_MEMBER_ADD` (`id`, `username`, `display_name`, `avatar_url`), for new members who share a channel with the bot |
+| `GUILD_MESSAGES` | 512 | `MESSAGE_CREATE`, `MESSAGE_UPDATE` (the message, as in the REST API), `MESSAGE_DELETE` (`id`, `channel_id`, `parent_id`) |
+| `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
+
+The bot's own messages are dispatched to it as well. Message content is always
+included. Not offered in v1: typing, presence, voice, member removal.
+
+### A minimal client
+
+JavaScript (Node 22, no libraries):
+
+```js
+const token = process.env.TOKEN
+const ws = new WebSocket('wss://talk.example.org/api/bot/v1/gateway', { headers: { Authorization: `Bot ${token}` } })
+let seq = null, timer
+const send = (op, d) => ws.send(JSON.stringify({ op, d }))
+ws.onmessage = ({ data }) => {
+  const f = JSON.parse(data)
+  if (f.s != null) seq = f.s
+  if (f.op === 10) {
+    send(2, { intents: 512, properties: { os: 'linux' } }) // GUILD_MESSAGES
+    timer = setInterval(() => send(1, seq), f.d.heartbeat_interval)
+  } else if (f.op === 0 && f.t === 'MESSAGE_CREATE' && !f.d.is_bot && f.d.content === '!ping') {
+    fetch(`https://talk.example.org/api/bot/v1/channels/${f.d.channel_id}/messages`, {
+      method: 'POST',
+      headers: { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'pong', message_reference: { message_id: f.d.id } })
+    })
+  }
+}
+ws.onclose = (e) => { clearInterval(timer); console.log('closed', e.code) } // resume or identify again
+```
+
+Go (`github.com/gorilla/websocket`):
+
+```go
+hdr := http.Header{"Authorization": {"Bot " + token}}
+c, _, err := websocket.DefaultDialer.Dial("wss://talk.example.org/api/bot/v1/gateway", hdr)
+if err != nil { log.Fatal(err) }
+var hello struct{ D struct{ HeartbeatInterval int `json:"heartbeat_interval"` } }
+if err := c.ReadJSON(&hello); err != nil { log.Fatal(err) }
+_ = c.WriteJSON(map[string]any{"op": 2, "d": map[string]any{"intents": 512}})
+var mu sync.Mutex
+var seq atomic.Int64
+go func() {
+	for range time.Tick(time.Duration(hello.D.HeartbeatInterval) * time.Millisecond) {
+		mu.Lock()
+		_ = c.WriteJSON(map[string]any{"op": 1, "d": seq.Load()})
+		mu.Unlock()
+	}
+}()
+for {
+	var f struct {
+		Op int             `json:"op"`
+		S  *int64          `json:"s"`
+		T  string          `json:"t"`
+		D  json.RawMessage `json:"d"`
+	}
+	if err := c.ReadJSON(&f); err != nil { log.Fatal(err) } // resume or identify again
+	if f.S != nil { seq.Store(*f.S) }
+	if f.T == "MESSAGE_CREATE" { log.Printf("%s", f.D) }
+}
+```
+
+## Slash commands
+
+A bot registers commands over its API; members run them from the composer by
+typing `/`, and the bot answers over the REST API. It is Discord's application
+command and interaction flow, reduced to what a single community needs.
+
+**Register** (`PUT /api/bot/v1/commands` replaces them all, as Discord's bulk
+overwrite; `POST` adds or updates one by name; `GET`, `DELETE
+/commands/{id}`):
+
+```json
+{"name": "ping", "description": "Replies with pong",
+ "options": [{"name": "text", "description": "What to say", "type": 3, "required": true}]}
+```
+
+Names are 1 to 32 lowercase letters, digits, `-` or `_`; at most 50 commands
+per bot and 10 options per command. Option types: `3` string, `4` integer,
+`5` boolean, `6` user (a member's ID), `7` channel (an ID); required options
+come first.
+
+**Where they show.** Commands are not tied to channels by the bot. A member
+sees a command in the composer of every channel where the **bot can view and
+send** (its roles and overwrites decide, so the admin's channel scoping is the
+command scoping), and only while neither the command nor the bot is disabled.
+The composer lists them with the bot's name and avatar. Running one needs *Send
+messages* in the channel. The admin sees all of a bot's commands (Bots tab) and
+can **disable** any of them or delete them; a disabled command stays off even
+when the bot registers it again.
+
+**Run.** `POST /api/channels/{id}/interactions {"command_id": "...",
+"options": {"text": "hello"}}` validates the options (types, required ones,
+members and channels the caller can see) and delivers an `INTERACTION_CREATE`
+dispatch to one live gateway session of the bot (no intent needed). It answers
+`202`, or `409` when the bot is not connected. At most 20 runs a minute per
+member.
+
+```json
+{"op": 0, "t": "INTERACTION_CREATE", "s": 7, "d": {
+  "id": "...", "token": "...", "type": 2, "channel_id": "...", "application_id": "<bot id>",
+  "data": {"id": "<command id>", "name": "ping", "options": [{"name": "text", "type": 3, "value": "hello"}]},
+  "member": {"user": {"id": "...", "username": "max", "display_name": "Max", "avatar_url": "/api/media/..."}}}}
+```
+
+**Respond** within 15 minutes, with `id` and `token` from the event:
+
+- `POST /api/bot/v1/interactions/{id}/{token}/callback`
+  `{"type": 4, "data": {"content": "pong", "embeds": [...], "flags": 0}}` posts
+  the message as the bot; `type 5` only acknowledges and the answer follows.
+- `POST .../followups` with `data` as the body sends more messages, up to 5
+  responses in total.
+- **Ephemeral:** `"flags": 64` shows the response to the member who ran the
+  command only. It is sent as the `interaction_response` WebSocket event to
+  that member's sessions, shown as a private note in the channel, and **never
+  stored**; if the member is offline they miss it.
+
+The bot needs *Send messages* in the channel when it responds; responses never
+notify `@all` or `@here`. Interactions live in the server's memory: a restart
+within the 15 minutes makes the token unknown (`404`).
+
+## In the app
+
+- Bot messages carry the **BOT** badge. Bots are not listed among the members.
+- Typing `/` in a channel lists the slash commands available there; picking one
+  shows its options in a bar above the composer (Enter on an empty composer or
+  the Run button sends it, Esc drops it). A bot's private reply appears below
+  the messages with a note that only you can see it, until you dismiss it.
+- Admins find **Bots** in the admin area: create, roles, intents, access view,
+  tokens and commands.
+
+## Management API
+
+All under `/api/admin/bots`, documented in the OpenAPI document. Every
+mutation is reported to the audit log.
+
+| Route | Purpose |
+|---|---|
+| `GET`, `POST /bots` | list, create (name, optional intents) |
+| `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete |
+| `POST /bots/{id}/avatar` | avatar (multipart, field `avatar`) |
+| `PUT /bots/{id}/roles` | the bot's roles |
+| `GET /bots/{id}/access` | effective permissions |
+| `GET`, `POST /bots/{id}/tokens` | list, issue |
+| `POST /bots/{id}/tokens/{tokenID}/regenerate`, `DELETE ...` | rotate, revoke |
+
+## Differences from Discord
+
+| | Discord | Mnema Talk |
+|---|---|---|
+| Who creates bots | anyone with a developer account | the Owner and *Manage bots* (Owner-granted) |
+| Ids | snowflakes | UUIDs |
+| Default access | bots get `@everyone` | bots get nothing until given a role |
+| Admin power | an invite with permissions | only the Owner can give Administrator or admin-area roles |

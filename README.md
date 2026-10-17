@@ -81,6 +81,7 @@ webhooks and a call you can join with one click.
 - **Webhooks.** Incoming ones in Discord's execute format (so most existing
   integrations work) and outgoing ones that POST signed events to your service
   with retries and a delivery log.
+- **Bots.** Bot accounts with API tokens, scoped by roles and channel overwrites like members, a REST API and a gateway modelled on Discord's (see [doc/bots.md](doc/bots.md)); only the Owner and *Manage bots* create them.
 - **Admin console** for members (disable, kick, reset password, revoke
   sessions), roles, channel layout, invites, media and storage, and a System
   tab with health and a live operator view. The sidebar supports drag and drop
@@ -212,6 +213,7 @@ and [doc/desktop-app.md](doc/desktop-app.md).
 | Roles, permissions and private channels | [doc/roles-and-permissions.md](doc/roles-and-permissions.md) |
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
+| Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
 | Where media keys live in the browser | [doc/crypto-state.md](doc/crypto-state.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
 | Load test | [loadtest/README.md](loadtest/README.md) |

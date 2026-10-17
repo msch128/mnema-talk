@@ -595,6 +595,654 @@
         ],
         "type": "object"
       },
+      "bot.Access": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/bot.ChannelAccess"
+            },
+            "type": "array"
+          },
+          "elevated": {
+            "description": "Elevated is true when the bot holds Administrator or opens any part of\nthe admin area: the interface warns about it.",
+            "type": "boolean"
+          },
+          "permissions": {
+            "description": "Permissions are the server-wide permissions (a bit set).",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channels",
+          "elevated",
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "bot.Bot": {
+        "properties": {
+          "allowed_intents": {
+            "description": "AllowedIntents are the gateway intents the bot may ask for.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "avatar_url": {
+            "description": "AvatarURL is the API URL of the avatar; omitted when none.",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "disabled": {
+            "description": "Disabled bots cannot use any token or gateway connection.",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_active_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          },
+          "role_ids": {
+            "description": "RoleIDs are the bot's roles, highest first; its permissions come from\nthem and from channel overwrites, never from @everyone.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "user_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed_intents",
+          "created_at",
+          "disabled",
+          "id",
+          "name",
+          "role_ids",
+          "user_id"
+        ],
+        "type": "object"
+      },
+      "bot.CallbackRequest": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/bot.ResponseData"
+          },
+          "type": {
+            "description": "Type is 4 (reply with a message) or 5 (acknowledge now, answer later\nwith follow-ups).",
+            "enum": [
+              4,
+              5
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "type"
+        ],
+        "type": "object"
+      },
+      "bot.ChannelAccess": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "channel_id",
+          "name",
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "bot.ChannelCommand": {
+        "properties": {
+          "bot_avatar_url": {
+            "type": "string"
+          },
+          "bot_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "bot_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disabled": {
+            "description": "Disabled commands are hidden from members and refuse invocations; only\nan admin can set it, a bot registering the command again keeps it.",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/bot.Option"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "bot_id",
+          "bot_name",
+          "created_at",
+          "description",
+          "disabled",
+          "id",
+          "name",
+          "options"
+        ],
+        "type": "object"
+      },
+      "bot.Command": {
+        "properties": {
+          "bot_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "disabled": {
+            "description": "Disabled commands are hidden from members and refuse invocations; only\nan admin can set it, a bot registering the command again keeps it.",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/bot.Option"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "bot_id",
+          "created_at",
+          "description",
+          "disabled",
+          "id",
+          "name",
+          "options"
+        ],
+        "type": "object"
+      },
+      "bot.CommandInput": {
+        "properties": {
+          "description": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Name is lowercase letters, digits, '-' and '_' (1 to 32).",
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/bot.Option"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "name",
+          "options"
+        ],
+        "type": "object"
+      },
+      "bot.CommandPatch": {
+        "properties": {
+          "disabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "disabled"
+        ],
+        "type": "object"
+      },
+      "bot.CreateRequest": {
+        "properties": {
+          "allowed_intents": {
+            "description": "AllowedIntents defaults to none.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "bot.InvokeRequest": {
+        "properties": {
+          "command_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "options": {
+            "additionalProperties": {},
+            "description": "Options maps option names to values: a string, a whole number, a\nboolean, or the ID of a member or channel.",
+            "type": "object"
+          }
+        },
+        "required": [
+          "command_id",
+          "options"
+        ],
+        "type": "object"
+      },
+      "bot.Invoked": {
+        "properties": {
+          "interaction_id": {
+            "description": "InteractionID identifies the run; the bot answers it.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "interaction_id"
+        ],
+        "type": "object"
+      },
+      "bot.NewTokenResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "ExpiresAt is empty for a token that never expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "secret": {
+            "description": "Secret is the API token. It is shown only now; only its hash is kept.",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "hint",
+          "id",
+          "name",
+          "secret",
+          "state"
+        ],
+        "type": "object"
+      },
+      "bot.Option": {
+        "properties": {
+          "description": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "description": "Type is Discord's option type: 3 string, 4 integer, 5 boolean, 6 user\n(a member's ID), 7 channel (a channel ID).",
+            "enum": [
+              3,
+              4,
+              5,
+              6,
+              7
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "description",
+          "name",
+          "required",
+          "type"
+        ],
+        "type": "object"
+      },
+      "bot.ResponseData": {
+        "properties": {
+          "content": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "embeds": {
+            "items": {
+              "$ref": "#/components/schemas/chat.InEmbed"
+            },
+            "type": "array"
+          },
+          "flags": {
+            "description": "Flags: 64 makes the response ephemeral, visible only to the member who ran\nthe command (never stored).",
+            "enum": [
+              0,
+              64
+            ],
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content",
+          "embeds",
+          "flags"
+        ],
+        "type": "object"
+      },
+      "bot.RolesRequest": {
+        "properties": {
+          "role_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "role_ids"
+        ],
+        "type": "object"
+      },
+      "bot.Self": {
+        "properties": {
+          "allowed_intents": {
+            "description": "AllowedIntents are the gateway intents the admin allowed.",
+            "type": "integer"
+          },
+          "avatar_url": {
+            "type": "string"
+          },
+          "bot": {
+            "enum": [
+              true
+            ],
+            "type": "boolean"
+          },
+          "bot_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "id": {
+            "description": "ID is the bot's user ID: the author of its messages (user_id).",
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "allowed_intents",
+          "bot",
+          "bot_id",
+          "id",
+          "username"
+        ],
+        "type": "object"
+      },
+      "bot.Token": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "ExpiresAt is empty for a token that never expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "last_used_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 32,
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "hint",
+          "id",
+          "name",
+          "state"
+        ],
+        "type": "object"
+      },
+      "bot.TokenRequest": {
+        "properties": {
+          "expires_at": {
+            "description": "ExpiresAt is optional; without it the token never expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 32,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "bot.UpdateRequest": {
+        "properties": {
+          "allowed_intents": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "chat.BotAllowedMentions": {
+        "properties": {
+          "parse": {
+            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here, which also need the Mention everyone permission).\n\"roles\" is accepted and ignored.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "users": {
+            "description": "Users are user IDs (UUIDs) notified although \"users\" is not in Parse.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "parse",
+          "roles",
+          "users"
+        ],
+        "type": "object"
+      },
+      "chat.BotCreateMessageRequest": {
+        "properties": {
+          "allowed_mentions": {
+            "$ref": "#/components/schemas/chat.BotAllowedMentions",
+            "description": "AllowedMentions limits who is notified. Default: members mentioned by\n@username are, @all and @here are not."
+          },
+          "content": {
+            "description": "Content is the message text (Markdown), at most 4000 characters.",
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "embeds": {
+            "description": "Embeds are rich cards (at most 10).",
+            "items": {
+              "$ref": "#/components/schemas/chat.Embed"
+            },
+            "type": "array"
+          },
+          "message_reference": {
+            "$ref": "#/components/schemas/chat.BotMessageReference",
+            "description": "MessageReference quotes a message of the same channel."
+          },
+          "parent_id": {
+            "description": "ParentID posts into the thread of a root message of the channel.",
+            "format": "uuid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "allowed_mentions",
+          "content",
+          "embeds",
+          "message_reference"
+        ],
+        "type": "object"
+      },
+      "chat.BotMember": {
+        "properties": {
+          "avatar_url": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "display_name",
+          "id",
+          "username"
+        ],
+        "type": "object"
+      },
+      "chat.BotMessageReference": {
+        "properties": {
+          "message_id": {
+            "description": "MessageID is the message to quote; it must be in the same channel.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id"
+        ],
+        "type": "object"
+      },
       "chat.Category": {
         "properties": {
           "channels": {
@@ -943,6 +1591,108 @@
           }
         },
         "required": [
+          "url"
+        ],
+        "type": "object"
+      },
+      "chat.InEmbed": {
+        "properties": {
+          "author": {
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "url"
+            ],
+            "type": "object"
+          },
+          "color": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "properties": {
+                "inline": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "inline",
+                "name",
+                "value"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "footer": {
+            "properties": {
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "text"
+            ],
+            "type": "object"
+          },
+          "image": {
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "type": "object"
+          },
+          "thumbnail": {
+            "properties": {
+              "url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "url"
+            ],
+            "type": "object"
+          },
+          "timestamp": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "author",
+          "color",
+          "description",
+          "fields",
+          "footer",
+          "image",
+          "thumbnail",
+          "timestamp",
+          "title",
           "url"
         ],
         "type": "object"
@@ -1454,6 +2204,28 @@
         },
         "type": "object"
       },
+      "gateway.Info": {
+        "properties": {
+          "heartbeat_interval": {
+            "description": "HeartbeatInterval is the interval the gateway will ask for, in\nmilliseconds (also in HELLO).",
+            "type": "integer"
+          },
+          "max_connections": {
+            "description": "MaxConnections is how many gateway connections one bot may hold.",
+            "type": "integer"
+          },
+          "url": {
+            "description": "URL is the WebSocket address of the gateway.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heartbeat_interval",
+          "max_connections",
+          "url"
+        ],
+        "type": "object"
+      },
       "httpx.APIError": {
         "properties": {
           "code": {
@@ -1482,6 +2254,46 @@
         "required": [
           "code",
           "message"
+        ],
+        "type": "object"
+      },
+      "httpx.DiscordError": {
+        "properties": {
+          "code": {
+            "description": "Code is Discord's JSON error code: 0 for plain HTTP errors, 10003\nunknown channel, 10008 unknown message, 50001 missing access, 50006\nempty message, 50013 missing permissions, 50035 invalid form body,\n40005 request entity too large.",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "httpx.DiscordRateLimit": {
+        "properties": {
+          "global": {
+            "description": "Global is true when the bot's overall limit was hit, false for the\nlimit of one route.",
+            "type": "boolean"
+          },
+          "message": {
+            "enum": [
+              "You are being rate limited."
+            ],
+            "type": "string"
+          },
+          "retry_after": {
+            "description": "RetryAfter is the number of seconds to wait.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "global",
+          "message",
+          "retry_after"
         ],
         "type": "object"
       },
@@ -3339,6 +4151,12 @@
         "scheme": "bearer",
         "type": "http"
       },
+      "botAuth": {
+        "description": "A bot token, sent as `Authorization: Bot <token>`. Only for /api/bot/v1.",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      },
       "cookieAuth": {
         "description": "HttpOnly session cookie issued by POST /api/auth/login or /api/auth/register. The name is __Host-mnema_session when PUBLIC_URL is https.",
         "in": "cookie",
@@ -3588,6 +4406,1639 @@
         "summary": "List bans",
         "tags": [
           "Admin"
+        ]
+      }
+    },
+    "/api/admin/bots": {
+      "get": {
+        "description": "Owner or Manage bots. Bots the caller outranks or not alike are all listed; changing one needs a higher role than the bot's.",
+        "operationId": "listBots",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.Bot"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Bots, oldest first."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List bots",
+        "tags": [
+          "Bots"
+        ]
+      },
+      "post": {
+        "description": "Owner or Manage bots. The bot starts with no role, no intents and no token: it can do nothing until an admin gives it roles and a token. At most 50 bots.",
+        "operationId": "createBot",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.CreateRequest"
+              }
+            }
+          },
+          "description": "Name and optional intents.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Bot"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot limit is reached."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Create a bot",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}": {
+      "delete": {
+        "description": "Its tokens stop working and its gateway connections close at once. Messages it posted stay, with its name.",
+        "operationId": "deleteBot",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a bot",
+        "tags": [
+          "Bots"
+        ]
+      },
+      "get": {
+        "operationId": "getBot",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Bot"
+                }
+              }
+            },
+            "description": "The bot."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get a bot",
+        "tags": [
+          "Bots"
+        ]
+      },
+      "patch": {
+        "description": "Name, allowed gateway intents, or disabled. Disabling closes its gateway connections at once and refuses all its tokens.",
+        "operationId": "updateBot",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.UpdateRequest"
+              }
+            }
+          },
+          "description": "Fields to change.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Bot"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Change a bot",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/access": {
+      "get": {
+        "description": "The effective result of the bot's roles and the channel overwrites: its server-wide permissions and, per channel it can view, what it may do there.",
+        "operationId": "getBotAccess",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Access"
+                }
+              }
+            },
+            "description": "Effective access."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Show what a bot can reach",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/avatar": {
+      "post": {
+        "description": "multipart/form-data with an image in field 'avatar' (max 5 MB).",
+        "operationId": "uploadBotAvatar",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "avatar": {
+                    "description": "Image file, at most 5 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "avatar"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Image file, at most 5 MB.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Bot"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "PAYLOAD_TOO_LARGE: file exceeds the limit."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNSUPPORTED_MEDIA_TYPE: the file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "UNAVAILABLE: file storage is not available."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set a bot's avatar",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/commands": {
+      "get": {
+        "description": "All of them, including the disabled ones.",
+        "operationId": "adminListBotCommands",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.Command"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Commands by name."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List a bot's commands",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/commands/{commandID}": {
+      "delete": {
+        "description": "The bot can register it again; disable it instead to keep it off.",
+        "operationId": "adminDeleteBotCommand",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Command ID.",
+            "in": "path",
+            "name": "commandID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot or command."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Delete a command",
+        "tags": [
+          "Bots"
+        ]
+      },
+      "patch": {
+        "description": "A disabled command is hidden from members and refuses invocations. The bot cannot switch it back on, not even by registering the command again.",
+        "operationId": "adminPatchBotCommand",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Command ID.",
+            "in": "path",
+            "name": "commandID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.CommandPatch"
+              }
+            }
+          },
+          "description": "The new state.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Command"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot or command."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Enable or disable a command",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/roles": {
+      "put": {
+        "description": "Replaces the bot's roles. The usual hierarchy applies: only roles below the caller's highest role, and no permission the caller lacks. A role with Administrator or any admin-area permission can only be given by the Owner. The bot never inherits @everyone.",
+        "operationId": "setBotRoles",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.RolesRequest"
+              }
+            }
+          },
+          "description": "The bot's roles.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Bot"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission or authority over a role."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Set a bot's roles",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/tokens": {
+      "get": {
+        "description": "Never contains the secrets: name, last characters, state, expiry and last use.",
+        "operationId": "listBotTokens",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.Token"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Tokens, newest first."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List a bot's tokens",
+        "tags": [
+          "Bots"
+        ]
+      },
+      "post": {
+        "description": "The secret is in the answer and shown only once; only a SHA-256 hash is stored. Optional expiry. At most 10 active tokens per bot.",
+        "operationId": "createBotToken",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.TokenRequest"
+              }
+            }
+          },
+          "description": "Name and expiry."
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.NewTokenResponse"
+                }
+              }
+            },
+            "description": "Issued."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: too many active tokens."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Issue a token",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/tokens/{tokenID}": {
+      "delete": {
+        "description": "Takes effect at once; open gateway connections that used the token close.",
+        "operationId": "revokeBotToken",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Token ID.",
+            "in": "path",
+            "name": "tokenID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot or token."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Revoke a token",
+        "tags": [
+          "Bots"
+        ]
+      }
+    },
+    "/api/admin/bots/{id}/tokens/{tokenID}/regenerate": {
+      "post": {
+        "description": "Issues a new token with the same name and expiry and revokes the old one at once (its gateway connections close).",
+        "operationId": "regenerateBotToken",
+        "parameters": [
+          {
+            "description": "Bot ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Token ID.",
+            "in": "path",
+            "name": "tokenID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.NewTokenResponse"
+                }
+              }
+            },
+            "description": "Issued; the secret is shown once."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission, or the bot's highest role is not below yours."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such bot or token."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: too many active tokens."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Regenerate a token",
+        "tags": [
+          "Bots"
         ]
       }
     },
@@ -10158,6 +12609,1769 @@
         ]
       }
     },
+    "/api/bot/v1/channels": {
+      "get": {
+        "description": "The categories and channels the bot may view, through its roles and overwrites. A bot without a role sees nothing. A category shows when its own permissions allow it or any of its channels is visible.",
+        "operationId": "botListChannels",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.ChannelHierarchy"
+                }
+              }
+            },
+            "description": "Visible categories and channels."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "List the bot's channels",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/channels/{channelID}/messages": {
+      "get": {
+        "description": "Top-level messages only, oldest first within the page. Without an anchor returns the newest page. Use at most one of before, after, around. Needs View channels in the channel; a channel the bot cannot view answers 404 like a missing one.",
+        "operationId": "botListMessages",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size (1 to 100).",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Messages older than this message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Messages newer than this message.",
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Messages around (and including) this message.",
+            "in": "query",
+            "name": "around",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.Message"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "A page of messages."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "List channel messages",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "post": {
+        "description": "Posts as the bot (author name, avatar and the BOT badge). Needs View channels and Send messages in the channel. At least one of content or embeds. @all and @here notify only when the bot may mention everyone and allowed_mentions.parse asks for \"everyone\". Limit: 5 messages per 5 seconds per channel, on top of 50 requests per second per bot. For files use the upload route.",
+        "operationId": "botCreateMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.BotCreateMessageRequest"
+              }
+            }
+          },
+          "description": "Message to post.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The created message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035) or empty message (50006)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Post a message",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/channels/{channelID}/messages/{messageID}": {
+      "delete": {
+        "description": "The bot's own messages, or any message when the bot holds Manage messages in the channel. Also deletes the message's thread replies and attachments.",
+        "operationId": "botDeleteMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Delete a message",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "get": {
+        "description": "Needs View channels in the channel.",
+        "operationId": "botGetMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Get a message",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "patch": {
+        "description": "Only the bot's own messages; needs Send messages in the channel. The content may be empty when the message has an attachment.",
+        "operationId": "botEditMessage",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/chat.EditMessageRequest"
+              }
+            }
+          },
+          "description": "New content.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The updated message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013), or not the bot's own message."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Edit the bot's own message",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/channels/{channelID}/messages/{messageID}/reactions/{emoji}/@me": {
+      "delete": {
+        "description": "Idempotent. Taking a reaction back always works.",
+        "operationId": "botRemoveReaction",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The emoji, URL-encoded.",
+            "in": "path",
+            "name": "emoji",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed, or not there."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Remove the bot's reaction",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "put": {
+        "description": "Idempotent. The emoji is URL-encoded. Needs Add reactions in the channel. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409).",
+        "operationId": "botAddReaction",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Message ID.",
+            "in": "path",
+            "name": "messageID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The emoji, URL-encoded.",
+            "in": "path",
+            "name": "emoji",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Added, or already there."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003) or Unknown Message (10008)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Too many reactions."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Add the bot's reaction",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/channels/{channelID}/upload": {
+      "post": {
+        "description": "multipart/form-data. Creates a message carrying the file as the bot. Needs View channels, Send messages and Attach files in the channel. The size limit is the Owner's upload limit for the bot's roles (and the server's), the type is sniffed and checked against an allowlist. Counts towards the send limit of the channel.",
+        "operationId": "botUploadFile",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "content": {
+                    "description": "Optional caption.",
+                    "maxLength": 4000,
+                    "type": "string"
+                  },
+                  "file": {
+                    "description": "The file; type is sniffed and checked against an allowlist.",
+                    "format": "binary",
+                    "type": "string"
+                  },
+                  "parent_id": {
+                    "description": "Thread root message ID (reply in a thread).",
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "reply_to_id": {
+                    "description": "Quoted message ID.",
+                    "format": "uuid",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "description": "The file; type is sniffed and checked against an allowlist.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "Created message."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown Channel (10003)."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Request entity too large (40005)."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "The file type is not allowed."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "File storage is not available."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Post a message with an attachment",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/commands": {
+      "get": {
+        "operationId": "botListCommands",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.Command"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The bot's commands."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "List the bot's commands",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "post": {
+        "description": "Creates the command, or updates the one with the same name (keeping an admin's disabled flag).",
+        "operationId": "botCreateCommand",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.CommandInput"
+              }
+            }
+          },
+          "description": "The command.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Command"
+                }
+              }
+            },
+            "description": "The command."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "The bot has the maximum number of commands."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Register a command",
+        "tags": [
+          "Bot API"
+        ]
+      },
+      "put": {
+        "description": "Bulk overwrite as in Discord: adds and updates the given commands by name and removes the others. An admin's disabled flag on a command stays. At most 50 commands, 10 options each. Members see the commands in every channel the bot can view and send in.",
+        "operationId": "botReplaceCommands",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/bot.CommandInput"
+                },
+                "title": "body",
+                "type": "array"
+              }
+            }
+          },
+          "description": "The complete list of commands.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.Command"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The bot's commands."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Replace the bot's commands",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/commands/{commandID}": {
+      "delete": {
+        "operationId": "botDeleteCommand",
+        "parameters": [
+          {
+            "description": "Command ID.",
+            "in": "path",
+            "name": "commandID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown command."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Delete a command",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/gateway": {
+      "get": {
+        "description": "Returns the WebSocket address of the gateway. The same path is the gateway itself when the request is a WebSocket upgrade; its protocol (HELLO, IDENTIFY, READY, heartbeats, DISPATCH, RESUME) is described in doc/bots.md because OpenAPI cannot express it. Authenticate the upgrade with `Authorization: Bot <token>` (never a query parameter) or with the token in IDENTIFY.",
+        "operationId": "botGateway",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/gateway.Info"
+                }
+              }
+            },
+            "description": "The gateway."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Get the gateway address",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/interactions/{interactionID}/{token}/callback": {
+      "post": {
+        "description": "The first response to an interaction a member created by running a command. Type 4 posts a message in the channel as the bot (or, with flags 64, shows it to the member only); type 5 only acknowledges, and follow-ups answer. An interaction can be answered for 15 minutes, with at most 5 responses in total. The bot needs Send messages in the channel at that moment.",
+        "operationId": "botInteractionCallback",
+        "parameters": [
+          {
+            "description": "Interaction ID.",
+            "in": "path",
+            "name": "interactionID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Interaction token from the INTERACTION_CREATE event.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.CallbackRequest"
+              }
+            }
+          },
+          "description": "The response.",
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Accepted."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035) or empty message (50006)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown interaction (10062)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Already answered, or too many responses."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Respond to an interaction",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/interactions/{interactionID}/{token}/followups": {
+      "post": {
+        "description": "After the first response: another message for the same interaction (public, or ephemeral with flags 64). Counts towards the 5 responses.",
+        "operationId": "botInteractionFollowup",
+        "parameters": [
+          {
+            "description": "Interaction ID.",
+            "in": "path",
+            "name": "interactionID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Interaction token from the INTERACTION_CREATE event.",
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.ResponseData"
+              }
+            }
+          },
+          "description": "The message.",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.Message"
+                }
+              }
+            },
+            "description": "The posted message."
+          },
+          "204": {
+            "description": "Shown to the member only."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035) or empty message (50006)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing Permissions (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown interaction (10062)."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Respond first, or too many responses."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Send a follow-up to an interaction",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/members": {
+      "get": {
+        "description": "Needs the GUILD_MEMBERS intent to be allowed for the bot (an admin sets it). Lists only the members who can view at least one channel the bot can view; no profile, presence or role data.",
+        "operationId": "botListMembers",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/chat.BotMember"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Members."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "The bot is not allowed to read members (50013)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "List members",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/members/{userID}": {
+      "get": {
+        "description": "Same rules as the list; a member the bot may not know about answers 404.",
+        "operationId": "botGetMember",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "userID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.BotMember"
+                }
+              }
+            },
+            "description": "The member."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Invalid form body (50035)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "The bot is not allowed to read members (50013)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Unknown User (10013)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Server failure."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Get a member",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
+    "/api/bot/v1/users/@me": {
+      "get": {
+        "description": "The bot behind the token: its user ID (the author of its messages), name, avatar and the gateway intents it may use. Also a cheap way to check a token.",
+        "operationId": "botMe",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Self"
+                }
+              }
+            },
+            "description": "The bot."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordError"
+                }
+              }
+            },
+            "description": "Missing or invalid token (0)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.DiscordRateLimit"
+                }
+              }
+            },
+            "description": "Rate limited; see retry_after and Retry-After."
+          }
+        },
+        "security": [
+          {
+            "botAuth": []
+          }
+        ],
+        "summary": "Get the bot itself",
+        "tags": [
+          "Bot API"
+        ]
+      }
+    },
     "/api/channels": {
       "get": {
         "description": "Only the channels the caller may view; a category shows when its own permissions allow it or any of its channels is visible.",
@@ -10220,6 +14434,224 @@
         "summary": "List categories and channels",
         "tags": [
           "Channels"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/commands": {
+      "get": {
+        "description": "The commands of bots that can view and send in the channel (through their roles and overwrites), not disabled by an admin, for the composer's autocomplete. Needs View channels.",
+        "operationId": "listChannelCommands",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/bot.ChannelCommand"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Commands by name."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel, or it is hidden from the caller."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List the slash commands of a channel",
+        "tags": [
+          "Commands"
+        ]
+      }
+    },
+    "/api/channels/{channelID}/interactions": {
+      "post": {
+        "description": "Sends an interaction to the command's bot over the gateway; the bot answers with a message in the channel, or one only the caller sees (an ephemeral response, delivered as the interaction_response WebSocket event). Needs Send messages in the channel; the bot must still be able to view and send there. 409 when the bot is not connected. At most 20 a minute per member.",
+        "operationId": "invokeCommand",
+        "parameters": [
+          {
+            "description": "Channel ID.",
+            "in": "path",
+            "name": "channelID",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/bot.InvokeRequest"
+              }
+            }
+          },
+          "description": "The command and its options.",
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/bot.Invoked"
+                }
+              }
+            },
+            "description": "Delivered to the bot."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): unknown or ill-typed options."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED)."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: missing permission."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: no such channel or command, or the command is not available here."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "CONFLICT: the bot is not connected."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Run a slash command",
+        "tags": [
+          "Commands"
         ]
       }
     },
@@ -13459,6 +17891,18 @@
     {
       "description": "WebSocket and WebRTC configuration.",
       "name": "Realtime"
+    },
+    {
+      "description": "Slash commands of bots: listing them in a channel and running them.",
+      "name": "Commands"
+    },
+    {
+      "description": "The REST API of bot accounts (/api/bot/v1), authenticated with a bot token. Errors use Discord's shape; see doc/bots.md for the gateway.",
+      "name": "Bot API"
+    },
+    {
+      "description": "Managing bot accounts, roles and tokens (Owner or Manage bots).",
+      "name": "Bots"
     },
     {
       "description": "Administrator-only management.",

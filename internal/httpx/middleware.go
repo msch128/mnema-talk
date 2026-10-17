@@ -126,11 +126,18 @@ func SetJSONReadDeadline(w http.ResponseWriter) {
 
 // MaxBody caps request bodies at limit bytes, rejecting a declared oversize
 // Content-Length before any byte is read.
-func MaxBody(limit int64) func(http.Handler) http.Handler {
+func MaxBody(limit int64) func(http.Handler) http.Handler { return maxBody(limit, WriteError) }
+
+// MaxBodyDiscord is MaxBody with the bot API's Discord-shaped error.
+func MaxBodyDiscord(limit int64) func(http.Handler) http.Handler {
+	return maxBody(limit, WriteDiscordError)
+}
+
+func maxBody(limit int64, refuse func(http.ResponseWriter, error)) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.ContentLength > limit {
-				WriteError(w, ErrPayloadTooLarge("request body too large"))
+				refuse(w, ErrPayloadTooLarge("request body too large"))
 				return
 			}
 			if limit <= DefaultMaxBody {

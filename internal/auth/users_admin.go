@@ -173,7 +173,7 @@ func (h *Handler) moderated(r *http.Request, id uuid.UUID, fn func(q db.Querier)
 		}
 		return fn(h.Sessions.DB)
 	}
-	return h.Perms.Locked(ctx, func(tx pgx.Tx, snap *perm.Snapshot) error {
+	return h.Perms.Locked(ctx, actor.Subject(), func(tx pgx.Tx, snap *perm.Snapshot) error {
 		target, err := GetUser(ctx, tx, id)
 		if err != nil {
 			return err

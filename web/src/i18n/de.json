@@ -1199,6 +1199,10 @@
       "name": "Mitglieder verwalten",
       "desc": "Konten sperren und entsperren, Sitzungen beenden und Status ändern, für Mitglieder unterhalb deiner höchsten Rolle."
     },
+    "manage_bots": {
+      "name": "Bots verwalten",
+      "desc": "Bots anlegen, ihnen Rollen und Tokens geben und festlegen, was sie empfangen dürfen. Nur der Owner kann das vergeben."
+    },
     "view_audit_log": {
       "name": "Audit-Log ansehen",
       "desc": "Das Audit-Log lesen: wer was geändert hat, und Moderationsaktionen."

@@ -56,6 +56,12 @@ func (f *Fixture) Unassign(user, role uuid.UUID) *Fixture {
 	return f
 }
 
+// Bot marks user as a bot account (no @everyone).
+func (f *Fixture) Bot(user uuid.UUID) *Fixture {
+	f.s.bots[user] = true
+	return f
+}
+
 // Owner marks a member as the Owner.
 func (f *Fixture) Owner(user uuid.UUID) *Fixture {
 	f.s.owners[user] = true

@@ -338,7 +338,7 @@ func TestStoreFailsWhenTheDatabaseDoes(t *testing.T) {
 		{"move role", "UPDATE roles SET position = $2", 1, false, func(s *perm.Service, c context.Context) error {
 			return s.ReorderRoles(c, w.owner, []uuid.UUID{high.ID, low.ID})
 		}},
-		{"load user", "SELECT role FROM users WHERE id", 1, false, func(s *perm.Service, c context.Context) error {
+		{"load user", "SELECT role, is_bot FROM users WHERE id", 1, false, func(s *perm.Service, c context.Context) error {
 			return s.SetMemberRoles(c, w.owner, w.other.ID, []uuid.UUID{low.ID})
 		}},
 		{"assign role", "INSERT INTO user_roles", 1, false, func(s *perm.Service, c context.Context) error {
@@ -387,4 +387,41 @@ func TestStoreFailsWhenTheDatabaseDoes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// With bots around, every change by a non-Owner is checked by outcome: the
+// permission state is read again after it, and a failure of that read fails
+// the change. A bot's roles cannot be set through a member's account.
+func TestBotInvariantReadsTheStateAfterAChange(t *testing.T) {
+	w := newWorld(t)
+	ctx := context.Background()
+	var botUser uuid.UUID
+	if err := w.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role, is_bot) VALUES ('bot-x', 'x', '!', 'user', TRUE) RETURNING id`).Scan(&botUser); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := w.p.Exec(ctx, `INSERT INTO bots (user_id, name) VALUES ($1, 'x')`, botUser); err != nil {
+		t.Fatal(err)
+	}
+	managers := perm.ManageRoles
+	name := "Managers"
+	role, err := w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &name, Permissions: &managers})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.svc.SetMemberRoles(ctx, w.owner, w.member.ID, []uuid.UUID{role.ID}); err != nil {
+		t.Fatal(err)
+	}
+
+	other := "Other"
+	if _, err := w.svc.CreateRole(ctx, w.member, perm.RoleInput{Name: &other}); err != nil {
+		t.Fatalf("an ordinary change by a non-Owner: %v", err)
+	}
+	svc, cctx := faultService(t, w.p, &faultTracer{match: contains("FROM roles"), nth: 2})
+	third := "Third"
+	if _, err := svc.CreateRole(cctx, w.member, perm.RoleInput{Name: &third}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("a failing read after the change must fail it, got %v", err)
+	}
+
+	wantAPI(t, "bot roles on a member", w.svc.SetBotRoles(ctx, w.owner, w.member.ID, nil), 404)
+	wantAPI(t, "member roles on a bot", w.svc.SetMemberRoles(ctx, w.owner, botUser, nil), 403)
 }
