@@ -14,7 +14,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
-	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 )
 
@@ -28,19 +27,6 @@ func TestPublicConfigurationEmptyListsAndSTUN(t *testing.T) {
 	webrtcConfig(&config.Config{WebRTCSTUNURLs: []string{"stun:stun.example.test"}}).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/webrtc/config", nil))
 	if !strings.Contains(rec.Body.String(), "stun:stun.example.test") || rec.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal(rec.Body.String())
-	}
-}
-
-func TestSFUMetricsCountsBothVideoSources(t *testing.T) {
-	var b strings.Builder
-	writeSFUMetrics(&b, map[uuid.UUID]map[uuid.UUID]sfu.MediaState{
-		uuid.New(): {uuid.New(): {Screen: true, Camera: true}, uuid.New(): {Screen: true}},
-		uuid.New(): {uuid.New(): {Camera: true}},
-	})
-	for _, metric := range []string{"mnema_sfu_video_rooms 2", "mnema_sfu_screen_shares 2", "mnema_sfu_cameras 2"} {
-		if !strings.Contains(b.String(), metric) {
-			t.Fatal(b.String())
-		}
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/metrics"
 	"github.com/pion/rtp"
 	"github.com/pion/webrtc/v4"
 )
@@ -795,6 +796,7 @@ func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (swi
 // ones sent.
 func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
 	if vt.started {
+		metrics.SFULayerSwitches.Inc()
 		vt.seqOff = vt.lastSeq + 1 - src.SequenceNumber
 		ticks := uint32(now.Sub(vt.lastAt).Seconds() * videoClockRate)
 		if ticks < 1 {

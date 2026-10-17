@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/webbundle"
 	"github.com/msch128/mnema-talk/internal/ws"
 )
@@ -103,19 +101,6 @@ func TestHealthReportsStorageOutage(t *testing.T) {
 	health(hc, "").ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/health", nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("storage back: status %d", rec.Code)
-	}
-}
-
-func TestSFUMetrics(t *testing.T) {
-	var b strings.Builder
-	writeSFUMetrics(&b, map[uuid.UUID]map[uuid.UUID]sfu.MediaState{
-		uuid.New(): {uuid.New(): {Screen: true, Camera: true}, uuid.New(): {Camera: true}},
-		uuid.New(): {uuid.New(): {Screen: true}},
-	})
-	for _, want := range []string{"mnema_sfu_video_rooms 2\n", "mnema_sfu_screen_shares 2\n", "mnema_sfu_cameras 2\n"} {
-		if !strings.Contains(b.String(), want) {
-			t.Errorf("missing %q in\n%s", want, b.String())
-		}
 	}
 }
 

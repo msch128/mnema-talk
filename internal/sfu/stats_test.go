@@ -22,7 +22,7 @@ func TestStatsCountsRoomsPeersAndVideo(t *testing.T) {
 	s := &SFU{rooms: map[uuid.UUID]*Room{uuid.New(): busy, uuid.New(): quiet, uuid.New(): empty}}
 
 	got := s.Stats()
-	want := Stats{Rooms: 2, Peers: 3, ScreenShares: 1, Cameras: 1}
+	want := Stats{Rooms: 2, VideoRooms: 1, Peers: 3, ScreenShares: 1, Cameras: 1, AudioTracks: 1, VideoTracks: 2}
 	if got != want {
 		t.Fatalf("Stats() = %+v, want %+v", got, want)
 	}

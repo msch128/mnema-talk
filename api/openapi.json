@@ -1355,6 +1355,245 @@
         ],
         "type": "object"
       },
+      "server.OpsPool": {
+        "properties": {
+          "acquired": {
+            "type": "integer"
+          },
+          "idle": {
+            "type": "integer"
+          },
+          "max": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "waited": {
+            "description": "Waited counts acquisitions that had to wait for a free connection.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "acquired",
+          "idle",
+          "max",
+          "total",
+          "waited"
+        ],
+        "type": "object"
+      },
+      "server.OpsProcess": {
+        "properties": {
+          "cpu_ms": {
+            "type": "integer"
+          },
+          "gc_cycles": {
+            "type": "integer"
+          },
+          "gc_pause_ms": {
+            "type": "integer"
+          },
+          "goroutines": {
+            "type": "integer"
+          },
+          "heap_bytes": {
+            "type": "integer"
+          },
+          "rss_bytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cpu_ms",
+          "gc_cycles",
+          "gc_pause_ms",
+          "goroutines",
+          "heap_bytes",
+          "rss_bytes"
+        ],
+        "type": "object"
+      },
+      "server.OpsSample": {
+        "properties": {
+          "cpu_millicores": {
+            "description": "CPUMillicores is process CPU use over the interval, 1000 = one core.",
+            "type": "integer"
+          },
+          "db_connections_acquired": {
+            "type": "integer"
+          },
+          "egress_bps": {
+            "type": "integer"
+          },
+          "errors_5xx": {
+            "type": "integer"
+          },
+          "goroutines": {
+            "type": "integer"
+          },
+          "heap_bytes": {
+            "type": "integer"
+          },
+          "ice_failures": {
+            "type": "integer"
+          },
+          "ingress_bps": {
+            "type": "integer"
+          },
+          "online_users": {
+            "type": "integer"
+          },
+          "peers": {
+            "type": "integer"
+          },
+          "requests": {
+            "type": "integer"
+          },
+          "rss_bytes": {
+            "type": "integer"
+          },
+          "screen_shares": {
+            "type": "integer"
+          },
+          "t": {
+            "description": "T is the unix time in seconds.",
+            "type": "integer"
+          },
+          "ws_connections": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cpu_millicores",
+          "db_connections_acquired",
+          "egress_bps",
+          "errors_5xx",
+          "goroutines",
+          "heap_bytes",
+          "ice_failures",
+          "ingress_bps",
+          "online_users",
+          "peers",
+          "requests",
+          "rss_bytes",
+          "screen_shares",
+          "t",
+          "ws_connections"
+        ],
+        "type": "object"
+      },
+      "server.OpsStatus": {
+        "properties": {
+          "db_pool": {
+            "$ref": "#/components/schemas/server.OpsPool"
+          },
+          "history": {
+            "description": "History holds up to the last hour of samples, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/server.OpsSample"
+            },
+            "type": "array"
+          },
+          "interval_seconds": {
+            "description": "IntervalSeconds is the spacing of History.",
+            "type": "integer"
+          },
+          "process": {
+            "$ref": "#/components/schemas/server.OpsProcess"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/server.OpsTotals"
+          }
+        },
+        "required": [
+          "db_pool",
+          "history",
+          "interval_seconds",
+          "process",
+          "totals"
+        ],
+        "type": "object"
+      },
+      "server.OpsTotals": {
+        "properties": {
+          "egress_bytes": {
+            "type": "integer"
+          },
+          "errors_4xx": {
+            "type": "integer"
+          },
+          "errors_5xx": {
+            "type": "integer"
+          },
+          "ice_connected": {
+            "type": "integer"
+          },
+          "ice_disconnected": {
+            "type": "integer"
+          },
+          "ice_failed": {
+            "type": "integer"
+          },
+          "ingress_bytes": {
+            "type": "integer"
+          },
+          "keyframe_requests": {
+            "type": "integer"
+          },
+          "layer_switches": {
+            "type": "integer"
+          },
+          "mls_handshakes_rejected": {
+            "type": "integer"
+          },
+          "mls_handshakes_relayed": {
+            "type": "integer"
+          },
+          "nack_requests": {
+            "type": "integer"
+          },
+          "rate_limited": {
+            "type": "integer"
+          },
+          "requests": {
+            "type": "integer"
+          },
+          "storage_errors": {
+            "type": "integer"
+          },
+          "storage_operations": {
+            "type": "integer"
+          },
+          "ws_connections": {
+            "type": "integer"
+          },
+          "ws_dropped": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "egress_bytes",
+          "errors_4xx",
+          "errors_5xx",
+          "ice_connected",
+          "ice_disconnected",
+          "ice_failed",
+          "ingress_bytes",
+          "keyframe_requests",
+          "layer_switches",
+          "mls_handshakes_rejected",
+          "mls_handshakes_relayed",
+          "nack_requests",
+          "rate_limited",
+          "requests",
+          "storage_errors",
+          "storage_operations",
+          "ws_connections",
+          "ws_dropped"
+        ],
+        "type": "object"
+      },
       "server.RuntimeHealth": {
         "properties": {
           "go_version": {
@@ -3560,6 +3799,89 @@
           }
         ],
         "summary": "Check for a new release now",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/system/ops": {
+      "get": {
+        "description": "Live counters and a short history (last hour, 10 s resolution) for the admin System tab. Contains no secrets and no user or channel ids. Requires role admin (403 otherwise).",
+        "operationId": "getSystemOps",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/server.OpsStatus"
+                }
+              }
+            },
+            "description": "Operator metrics.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Operator metrics",
         "tags": [
           "Admin"
         ]

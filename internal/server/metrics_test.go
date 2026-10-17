@@ -8,7 +8,7 @@ import (
 )
 
 func TestMetricsEndpoint(t *testing.T) {
-	handler := metricsHandler(nil, nil, nil)
+	handler := metricsHandler(nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/metrics", nil)
 
@@ -32,7 +32,7 @@ func TestMetricsEndpoint(t *testing.T) {
 
 func TestMetricsRequiresBearerToken(t *testing.T) {
 	const token = "test-metrics-token-0123456789"
-	h := requireBearer(token, metricsHandler(nil, nil, nil))
+	h := requireBearer(token, metricsHandler(nil))
 	for _, tc := range []struct {
 		auth string
 		want int

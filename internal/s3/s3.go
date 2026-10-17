@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/metrics"
 )
 
 type Client struct {
@@ -112,11 +113,12 @@ func isNotFound(err error) bool {
 
 // Upload stores body under key. A negative size means the length is not
 // known up front (a streamed upload): the body is then sent in parts.
-func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) error {
+func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeType string, size int64) (err error) {
+	defer func() { metrics.S3("upload", err) }()
 	if size < 0 {
 		return uploadStream(ctx, c.client, c.bucket, key, body, mimeType)
 	}
-	_, err := c.client.PutObject(ctx, &s3svc.PutObjectInput{
+	_, err = c.client.PutObject(ctx, &s3svc.PutObjectInput{
 		Bucket:        aws.String(c.bucket),
 		Key:           aws.String(key),
 		Body:          body,
@@ -129,7 +131,8 @@ func (c *Client) Upload(ctx context.Context, key string, body io.Reader, mimeTyp
 	return nil
 }
 
-func (c *Client) Delete(ctx context.Context, key string) error {
+func (c *Client) Delete(ctx context.Context, key string) (err error) {
+	defer func() { metrics.S3("delete", err) }()
 	if _, err := c.client.DeleteObject(ctx, &s3svc.DeleteObjectInput{Bucket: aws.String(c.bucket), Key: aws.String(key)}); err != nil {
 		return fmt.Errorf("delete object %s: %w", key, err)
 	}
@@ -137,7 +140,8 @@ func (c *Client) Delete(ctx context.Context, key string) error {
 }
 
 // DeleteBatch deletes keys in chunks of 1000 (the S3 per-request maximum).
-func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
+func (c *Client) DeleteBatch(ctx context.Context, keys []string) (err error) {
+	defer func() { metrics.S3("delete", err) }()
 	for start := 0; start < len(keys); start += 1000 {
 		end := min(start+1000, len(keys))
 		ids := make([]types.ObjectIdentifier, 0, end-start)
@@ -159,7 +163,8 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
 }
 
 // GetObjectFrom streams the object from byte offset to its end.
-func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (io.ReadCloser, error) {
+func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (rc io.ReadCloser, err error) {
+	defer func() { metrics.S3("get", err) }()
 	out, err := c.client.GetObject(ctx, &s3svc.GetObjectInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(key),
@@ -172,7 +177,8 @@ func (c *Client) GetObjectFrom(ctx context.Context, key string, offset int64) (i
 }
 
 // List calls fn for every object whose key starts with prefix, page by page.
-func (c *Client) List(ctx context.Context, prefix string, fn func(media.ObjectInfo) error) error {
+func (c *Client) List(ctx context.Context, prefix string, fn func(media.ObjectInfo) error) (err error) {
+	defer func() { metrics.S3("list", err) }()
 	pages := s3svc.NewListObjectsV2Paginator(c.client, &s3svc.ListObjectsV2Input{
 		Bucket: aws.String(c.bucket),
 		Prefix: aws.String(prefix),

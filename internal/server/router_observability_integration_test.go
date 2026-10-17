@@ -19,11 +19,12 @@ func TestRouterMetricsExposeRealPoolHubAndVoice(t *testing.T) {
 	}
 	defer voice.Close()
 	a := newAppWithDeps(t, false, func(cfg *config.Config) { cfg.MetricsToken = "fixture-metrics-token" }, func(deps *Deps) { deps.SFU = voice })
+	a.anon().get("/api/health")
 	res := a.anon().do(http.MethodGet, "/api/metrics", nil, map[string]string{"Authorization": "Bearer fixture-metrics-token"})
 	if res.status != http.StatusOK {
 		t.Fatalf("metrics=%d %s", res.status, res.body)
 	}
-	for _, metric := range []string{"mnema_db_connections_total", "mnema_db_connections_acquired", "mnema_db_connections_idle", "mnema_db_connections_max", "mnema_ws_online_users 0", "mnema_sfu_video_rooms 0"} {
+	for _, metric := range []string{"mnema_db_connections_total", "mnema_db_connections_acquired", "mnema_db_connections_idle", "mnema_db_connections_max", "mnema_ws_online_users 0", "mnema_sfu_video_rooms 0", "mnema_build_info{", "process_cpu_seconds_total", "go_gc_pause_seconds_total", `mnema_sfu_tracks{kind="audio"} 0`, "mnema_storage_up ", `mnema_http_requests_total{route="/api/health",class="2xx"}`, "mnema_http_request_duration_seconds_bucket", "mnema_db_acquires_total"} {
 		if !strings.Contains(string(res.body), metric) {
 			t.Fatalf("missing %s", metric)
 		}

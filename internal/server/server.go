@@ -132,6 +132,9 @@ func NewRouter(d Deps) (*Router, error) {
 		systemH.version = "dev"
 	}
 	systemH.events = pub
+	opsSrc := &opsSource{db: d.DB, hub: hub, sfu: d.SFU, storage: d.StorageReady, hasStore: d.Store != nil, version: systemH.version}
+	systemH.ops = newOpsSampler(opsSrc)
+	go systemH.ops.run(ctx)
 	systemH.self = selfUpdate{confirm: authH.ConfirmPassword, now: time.Now}
 	if cfg.SelfUpdateConfigured() {
 		u, err := update.NewUpdater(cfg.UpdaterURL, cfg.UpdaterToken)
@@ -161,14 +164,15 @@ func NewRouter(d Deps) (*Router, error) {
 		previewH = &linkpreview.Handler{Fetcher: fetcher}
 	}
 
-	perUser := httpx.NewRateLimiter(600, time.Minute)
-	previewsPerUser := httpx.NewRateLimiter(120, time.Minute)
-	uploadsPerUser := httpx.NewRateLimiter(30, time.Minute)
+	perUser := httpx.NewRateLimiter(600, time.Minute).Named("api_user")
+	previewsPerUser := httpx.NewRateLimiter(120, time.Minute).Named("link_preview")
+	uploadsPerUser := httpx.NewRateLimiter(30, time.Minute).Named("upload")
 
 	r := chi.NewRouter()
 	r.Use(
 		httpx.RequestID,
 		httpx.ClientIPMiddleware(trusted),
+		httpx.Metrics,
 		httpx.Logger,
 		httpx.Recover(cfg.IsProduction()),
 		httpx.SecurityHeaders(trusted, cfg.IsProduction()),
@@ -186,7 +190,7 @@ func NewRouter(d Deps) (*Router, error) {
 
 		api.Get("/health", health(newHealthCheck(d.DB, d.StorageReady, healthCacheTTL), d.Version))
 		if cfg.MetricsToken != "" {
-			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(d.DB, hub, d.SFU)))
+			api.Get("/metrics", requireBearer(cfg.MetricsToken, metricsHandler(opsSrc)))
 		}
 		api.Get("/legal", legal(cfg))
 		if cfg.APIDocs {

@@ -1,6 +1,10 @@
 package ws
 
-import "time"
+import (
+	"time"
+
+	"github.com/msch128/mnema-talk/internal/metrics"
+)
 
 const (
 	// maxEventsPerSec caps a connection's ordinary events (typing, speaking,
@@ -59,12 +63,29 @@ func (b *eventBudget) roll(now time.Time) {
 func (b *eventBudget) allowFrame(now time.Time) bool {
 	b.roll(now)
 	b.frames++
-	return b.frames <= maxFramesPerSec
+	if b.frames > maxFramesPerSec {
+		metrics.WSDropped.With("flood_frame").Inc()
+		return false
+	}
+	return true
 }
 
 // allowEvent counts a parsed event against its category's budget. An
 // oversized signaling payload is dropped (and still counted).
 func (b *eventBudget) allowEvent(eventType string, payloadLen int, now time.Time) bool {
+	ok := b.admit(eventType, payloadLen, now)
+	switch {
+	case ok:
+		metrics.WSEventsReceived.Inc()
+	case eventType == handshakeEvent:
+		metrics.MLSHandshakes.With("rate_limited").Inc()
+	default:
+		metrics.WSDropped.With("flood_event").Inc()
+	}
+	return ok
+}
+
+func (b *eventBudget) admit(eventType string, payloadLen int, now time.Time) bool {
 	b.roll(now)
 	if eventType == handshakeEvent {
 		// One handshake is the only copy of a key package or welcome. It
