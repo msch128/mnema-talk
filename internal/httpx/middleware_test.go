@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/opwarn"
 )
 
 var okHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
@@ -276,4 +278,12 @@ func TestClientIPWarnsOnceForUntrustedPrivatePeer(t *testing.T) {
 	if lastWarn.Load() == 0 {
 		t.Fatal("X-Real-IP from a private untrusted peer must warn")
 	}
+	found := false
+	for _, w := range opwarn.Default.List() {
+		found = found || w.Code == opwarn.ProxyNotTrusted
+	}
+	if !found {
+		t.Fatal("warning not registered for the admin System tab")
+	}
+	opwarn.Default.Clear(opwarn.ProxyNotTrusted)
 }

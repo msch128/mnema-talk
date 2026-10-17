@@ -17,6 +17,7 @@ export function systemStatus(overrides: Partial<SystemStatus> = {}): SystemStatu
       release_url: '', release_notes: '', published_at: null, checked_at: '2026-10-05T11:00:00Z', check_error: '', retry_at: null
     },
     self_update: { configured: false, image: '', reach: 'unknown', reach_reason: 'unset', available: false, next_allowed_at: null },
+    warnings: [],
     ...overrides
   }
 }

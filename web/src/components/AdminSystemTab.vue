@@ -1,13 +1,14 @@
 <script setup lang="ts">
 // Admin dashboard: version, health and load of the server (GET /api/admin/system).
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { RefreshCw, CheckCircle2, XCircle } from '@lucide/vue'
+import { RefreshCw, CheckCircle2, XCircle, TriangleAlert } from '@lucide/vue'
 import { api, caughtErrorMessage, isApiError } from '../lib/api'
 import type { SystemStatus } from '../types/domain'
 import { decodeServerSystemStatus, decodeServerUpdateStatus, decodeServerHealth, type ServerSelfUpdateStarted } from '../types/rest'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { t, locale } from '../i18n'
+import { SOURCE_URL } from '../lib/thirdParty'
 import SelfUpdateDialog from './SelfUpdateDialog.vue'
 import AdminOpsPanel from './AdminOpsPanel.vue'
 
@@ -118,6 +119,30 @@ onBeforeUnmount(stopPolling)
 
 defineExpose({ refresh, status })
 
+// ---- Operator warnings (stable codes from the server) ----
+const OPERATIONS_DOC = `${SOURCE_URL}/blob/main/doc/operations.md`
+const PROXY_DOC = `${OPERATIONS_DOC}#reverse-proxy-and-trusted_proxy_cidrs`
+const VOICE_DOC = `${OPERATIONS_DOC}#nobody-can-join-voice-or-it-connects-and-drops-after-a-few-seconds`
+
+function describeWarning(code: string, value: number | undefined) {
+  switch (code) {
+    case 'trusted_proxy_broad':
+      return { title: t('admin.system.warn.trusted_proxy_broad.title'), body: t('admin.system.warn.trusted_proxy_broad.body'), doc: PROXY_DOC }
+    case 'proxy_not_trusted':
+      return { title: t('admin.system.warn.proxy_not_trusted.title'), body: t('admin.system.warn.proxy_not_trusted.body'), doc: PROXY_DOC }
+    case 'webrtc_reachability':
+      return { title: t('admin.system.warn.webrtc_reachability.title'), body: t('admin.system.warn.webrtc_reachability.body'), doc: VOICE_DOC }
+    case 'webrtc_udp_mux_disabled':
+      return { title: t('admin.system.warn.webrtc_udp_mux_disabled.title'), body: t('admin.system.warn.webrtc_udp_mux_disabled.body', { count: value ?? 0 }), doc: `${OPERATIONS_DOC}#voice-webrtc` }
+    case 'voice_unavailable':
+      return { title: t('admin.system.warn.voice_unavailable.title'), body: t('admin.system.warn.voice_unavailable.body'), doc: VOICE_DOC }
+    default:
+      return { title: t('admin.system.warn.unknown.title', { code }), body: t('admin.system.warn.unknown.body'), doc: OPERATIONS_DOC }
+  }
+}
+
+const warnings = computed(() => (status.value?.warnings || []).map(w => ({ code: w.code, ...describeWarning(w.code, w.value) })))
+
 const health = computed(() => status.value?.health || null)
 const upd = computed(() => status.value?.update || null)
 
@@ -156,6 +181,21 @@ onMounted(refresh)
       >
         <RefreshCw class="w-4 h-4" :class="loading && 'animate-spin'" />
       </button>
+    </div>
+
+    <!-- Operator warnings -->
+    <div v-if="warnings.length" class="rounded-lg border border-mnema-warning/35 bg-mnema-warning/10 p-4 space-y-3" role="region" :aria-label="$t('admin.system.warn.heading')" data-testid="system-warnings">
+      <div class="flex items-center gap-2 text-sm font-semibold text-mnema-text">
+        <TriangleAlert class="w-4 h-4 text-mnema-warning flex-shrink-0" aria-hidden="true" />
+        {{ $t('admin.system.warn.heading') }}
+      </div>
+      <ul class="space-y-3">
+        <li v-for="w in warnings" :key="w.code" class="text-sm" :data-testid="`system-warning-${w.code}`">
+          <p class="font-medium text-mnema-text">{{ w.title }}</p>
+          <p class="text-mnema-muted">{{ w.body }}</p>
+          <a :href="w.doc" target="_blank" rel="noopener noreferrer" class="text-xs text-mnema-accent hover:underline">{{ $t('admin.system.warn.docs') }}</a>
+        </li>
+      </ul>
     </div>
 
     <!-- Version -->

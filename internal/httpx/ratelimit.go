@@ -76,6 +76,20 @@ func (rl *RateLimiter) Allow(key string) (bool, time.Duration) {
 	return e.count <= rl.limit, e.reset.Sub(now)
 }
 
+// Clear forgets every key for which match reports true and returns how many.
+func (rl *RateLimiter) Clear(match func(key string) bool) int {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	n := 0
+	for k := range rl.entries {
+		if match(k) {
+			delete(rl.entries, k)
+			n++
+		}
+	}
+	return n
+}
+
 // sweepLocked drops expired entries at most once per sweepInterval, bounding
 // memory without a background goroutine and without an O(n) scan per request.
 func (rl *RateLimiter) sweepLocked(now time.Time) {
@@ -274,6 +288,35 @@ func (l *LoginFailureLimiter) ResetFailures(key string) {
 	l.mu.Lock()
 	delete(l.entries, strings.ToLower(key))
 	l.mu.Unlock()
+}
+
+// Clear forgets every key for which match reports true (failures, lockouts
+// and tier) and returns how many were forgotten. Keys reach match lower-cased.
+func (l *LoginFailureLimiter) Clear(match func(key string) bool) int {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	n := 0
+	for k := range l.entries {
+		if match(k) {
+			delete(l.entries, k)
+			n++
+		}
+	}
+	return n
+}
+
+// LockedKeys lists the keys that are locked out right now.
+func (l *LoginFailureLimiter) LockedKeys() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.now()
+	var keys []string
+	for k, e := range l.entries {
+		if locked, _ := l.refreshLocked(e, now); locked {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 // Len reports how many keys are tracked.

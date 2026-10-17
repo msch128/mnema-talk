@@ -857,6 +857,34 @@
         "version_pinned": "The image {image} is pinned to a version – change the tag in .env for {version}.",
         "track_mismatch": "The tag of {image} does not include {version} (e.g. a bigger version jump) – change the tag in .env.",
         "custom_tag": "Unknown tag on {image}."
+      },
+      "warn": {
+        "heading": "Needs attention",
+        "docs": "How to fix this",
+        "trusted_proxy_broad": {
+          "title": "TRUSTED_PROXY_CIDRS is too broad",
+          "body": "It contains broad ranges while the server is reachable beyond loopback. Any host in those ranges can forge its client address and evade rate limits and login lockout. List only your reverse proxy's address."
+        },
+        "proxy_not_trusted": {
+          "title": "Requests arrive through an untrusted proxy",
+          "body": "Requests came in through a proxy that is not in TRUSTED_PROXY_CIDRS, so all clients share one rate-limit identity. Add the reverse proxy's address to TRUSTED_PROXY_CIDRS."
+        },
+        "webrtc_reachability": {
+          "title": "Voice may not work outside this host",
+          "body": "Neither WEBRTC_NAT_1TO1_IP nor WEBRTC_TURN_URLS is set, so browsers are told the container's own address. Set WEBRTC_NAT_1TO1_IP to the public (and LAN) address, or add a TURN server."
+        },
+        "webrtc_udp_mux_disabled": {
+          "title": "Voice capacity is limited",
+          "body": "WEBRTC_UDP_MUX_PORT=0 gives every media peer its own UDP port from the range ({count} ports), which caps how many people can be in calls at once. Leave it empty to share one port."
+        },
+        "voice_unavailable": {
+          "title": "Voice is disabled",
+          "body": "The WebRTC engine could not start, so nobody can join voice or share screens. See the server log for the reason."
+        },
+        "unknown": {
+          "title": "Server warning: {code}",
+          "body": "The server reported a problem this version of the app has no description for. See the server log."
+        }
       }
     },
     "users": "User Management",
@@ -966,7 +994,10 @@
     "deleteInviteBody": "The code stops working right away.",
     "inviteDeleted": "Invite deleted",
     "media": "Uploaded media",
-    "noMedia": "No media yet."
+    "noMedia": "No media yet.",
+    "loginLocked": "Login locked",
+    "clearLoginLockout": "Clear login lockout",
+    "loginLockoutCleared": "Login lockout cleared"
   },
   "profile": {
     "viewProfile": "View profile",

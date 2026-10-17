@@ -155,7 +155,8 @@ until the new release has passed your application checks.
   across addresses, only browsers that signed in to it before (a signed
   known-device cookie, set again at the next login) are checked as usual; all
   other devices together share about one password check per minute for the
-  account. The cap lasts at most 15 minutes and `docker restart` clears it.
+  account. The cap lasts at most 15 minutes; `mnema-talk unlock` clears it (see
+  [operations.md](operations.md#the-owner-cannot-sign-in-too-many-requests)).
 - **Signing out revokes the session** (migration `0021_revoked_sessions`).
   Sessions issued before the upgrade stay valid until they expire.
 - **`APP_ENV=development` only listens on loopback.** `BIND_ADDR` defaults to

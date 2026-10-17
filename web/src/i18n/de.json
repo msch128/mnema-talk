@@ -857,6 +857,34 @@
         "version_pinned": "Das Image {image} ist auf eine Version festgelegt – für {version} den Tag in .env ändern.",
         "track_mismatch": "Der Tag von {image} enthält {version} nicht (z. B. größerer Versionssprung) – Tag in .env ändern.",
         "custom_tag": "Unbekannter Tag bei {image}."
+      },
+      "warn": {
+        "heading": "Braucht Aufmerksamkeit",
+        "docs": "So wird es behoben",
+        "trusted_proxy_broad": {
+          "title": "TRUSTED_PROXY_CIDRS ist zu weit gefasst",
+          "body": "Die Einstellung enthält weite Bereiche, obwohl der Server nicht nur lokal erreichbar ist. Jeder Host in diesen Bereichen kann seine Client-Adresse fälschen und Ratenbegrenzung und Login-Sperre umgehen. Trage nur die Adresse deines Reverse-Proxys ein."
+        },
+        "proxy_not_trusted": {
+          "title": "Anfragen kommen über einen nicht vertrauten Proxy",
+          "body": "Anfragen kamen über einen Proxy, der nicht in TRUSTED_PROXY_CIDRS steht, daher teilen sich alle Clients eine Ratenbegrenzungs-Identität. Trage die Adresse des Reverse-Proxys in TRUSTED_PROXY_CIDRS ein."
+        },
+        "webrtc_reachability": {
+          "title": "Sprache funktioniert außerhalb dieses Hosts womöglich nicht",
+          "body": "Weder WEBRTC_NAT_1TO1_IP noch WEBRTC_TURN_URLS ist gesetzt, daher erhalten Browser die Adresse des Containers. Setze WEBRTC_NAT_1TO1_IP auf die öffentliche (und die LAN-)Adresse oder richte einen TURN-Server ein."
+        },
+        "webrtc_udp_mux_disabled": {
+          "title": "Sprachkapazität ist begrenzt",
+          "body": "WEBRTC_UDP_MUX_PORT=0 gibt jedem Medien-Peer einen eigenen UDP-Port aus dem Bereich ({count} Ports); das begrenzt, wie viele Personen gleichzeitig in Gesprächen sein können. Lass die Einstellung leer, damit sich alle einen Port teilen."
+        },
+        "voice_unavailable": {
+          "title": "Sprache ist deaktiviert",
+          "body": "Die WebRTC-Engine konnte nicht starten, daher kann niemand Sprachkanälen beitreten oder den Bildschirm teilen. Den Grund findest du im Server-Log."
+        },
+        "unknown": {
+          "title": "Server-Warnung: {code}",
+          "body": "Der Server meldet ein Problem, für das diese App-Version keine Beschreibung hat. Siehe Server-Log."
+        }
       }
     },
     "users": "Nutzerverwaltung",
@@ -966,7 +994,10 @@
     "deleteInviteBody": "Der Code funktioniert danach nicht mehr.",
     "inviteDeleted": "Einladung gelöscht",
     "media": "Hochgeladene Medien",
-    "noMedia": "Keine Medien vorhanden."
+    "noMedia": "Keine Medien vorhanden.",
+    "loginLocked": "Login gesperrt",
+    "clearLoginLockout": "Login-Sperre aufheben",
+    "loginLockoutCleared": "Login-Sperre aufgehoben"
   },
   "profile": {
     "viewProfile": "Profil ansehen",

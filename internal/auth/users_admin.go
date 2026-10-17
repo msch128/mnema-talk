@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -38,6 +39,9 @@ type AdminUser struct {
 	RoleIDs    []uuid.UUID `json:"role_ids,omitempty" binding:"optional" format:"uuid"`
 	Disabled   bool        `json:"disabled"`
 	LastSeenAt *time.Time  `json:"last_seen_at" format:"date-time" extensions:"x-nullable"`
+	// LoginLocked is set while wrong passwords lock the account (or a client
+	// address) out in memory. Only the Owner sees it set.
+	LoginLocked bool `json:"login_locked" binding:"optional"`
 }
 
 // ListUsersForAdmin returns every account, admins first, then by name.
@@ -141,6 +145,7 @@ func (h *Handler) mountUserAdmin(r chi.Router) {
 	// Taking over an account is not a role's business: the Owner only.
 	r.With(RequireOwner).Post("/users/{id}/password", httpx.Handle(h.setUserPassword))
 	r.With(RequireOwner).Post("/users/{id}/password-reset", httpx.Handle(h.resetUserPassword))
+	r.With(RequireOwner).Post("/users/{id}/login-lockout/clear", httpx.Handle(h.clearUserLockout))
 	r.With(RequirePerm(h.Perms, perm.DisconnectMembers)).Post("/users/{id}/kick", httpx.Handle(h.kickUser))
 }
 
@@ -220,6 +225,12 @@ func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err := h.withRoles(r, users); err != nil {
 		return err
+	}
+	if u := UserFrom(r.Context()); u != nil && u.IsAdmin() {
+		locked := h.lockedAccounts()
+		for i := range users {
+			users[i].LoginLocked = locked[strings.ToLower(users[i].Username)]
+		}
 	}
 	httpx.WriteJSON(w, http.StatusOK, users)
 	return nil

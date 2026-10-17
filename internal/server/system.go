@@ -13,6 +13,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/update"
 	"github.com/msch128/mnema-talk/internal/version"
@@ -35,6 +36,8 @@ type systemHandler struct {
 	updates  *update.Checker // nil: update check disabled
 	events   events.Publisher
 	ops      *opsSampler
+	// warnings is the operator-warning registry (opwarn.Default in production).
+	warnings *opwarn.Registry
 
 	selfMu sync.Mutex
 	self   selfUpdate
@@ -46,6 +49,9 @@ type SystemStatus struct {
 	Health     SystemHealth     `json:"health"`
 	Update     UpdateStatus     `json:"update"`
 	SelfUpdate SelfUpdateStatus `json:"self_update"`
+	// Warnings are configuration or deployment problems the server noticed
+	// (stable codes; the web app explains each). Empty when all is well.
+	Warnings []opwarn.Warning `json:"warnings"`
 }
 
 // SystemVersion describes the running build.
@@ -157,6 +163,7 @@ func (h *systemHandler) snapshot(ctx context.Context) SystemStatus {
 		Health:     h.health(ctx),
 		Update:     upd,
 		SelfUpdate: h.selfUpdateStatus(upd),
+		Warnings:   h.warnings.List(),
 	}
 }
 

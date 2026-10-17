@@ -11,6 +11,7 @@ export type AuthAdminUser = {
   id: string
   last_seen_at: string | null
   locale: string
+  login_locked?: boolean
   message_count?: number
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
@@ -30,6 +31,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "last_seen_at") && (isTimestamp(value["last_seen_at"]) || value["last_seen_at"] === null))
     && (hasOwn(value, "locale") && isString(value["locale"]))
+    && (!hasOwn(value, "login_locked") || typeof value["login_locked"] === 'boolean')
     && (!hasOwn(value, "message_count") || isInteger(value["message_count"]))
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
@@ -892,6 +894,23 @@ export function isMediaStats(value: unknown): value is MediaStats {
 
 export const decodeMediaStats = decoder("media.Stats", isMediaStats)
 
+export type OpwarnWarning = {
+  code: string
+  count: number
+  since: string
+  value?: number
+}
+
+export function isOpwarnWarning(value: unknown): value is OpwarnWarning {
+  return isRecord(value)
+    && (hasOwn(value, "code") && isString(value["code"]))
+    && (hasOwn(value, "count") && isInteger(value["count"]))
+    && (hasOwn(value, "since") && isTimestamp(value["since"]))
+    && (!hasOwn(value, "value") || isInteger(value["value"]))
+}
+
+export const decodeOpwarnWarning = decoder("opwarn.Warning", isOpwarnWarning)
+
 export type PermInfo = {
   bit: number
   channel: boolean
@@ -1378,6 +1397,7 @@ export type ServerSystemStatus = {
   self_update: ServerSelfUpdateStatus
   update: ServerUpdateStatus
   version: ServerSystemVersion
+  warnings: Array<OpwarnWarning>
 }
 
 export function isServerSystemStatus(value: unknown): value is ServerSystemStatus {
@@ -1386,6 +1406,7 @@ export function isServerSystemStatus(value: unknown): value is ServerSystemStatu
     && (hasOwn(value, "self_update") && isServerSelfUpdateStatus(value["self_update"]))
     && (hasOwn(value, "update") && isServerUpdateStatus(value["update"]))
     && (hasOwn(value, "version") && isServerSystemVersion(value["version"]))
+    && (hasOwn(value, "warnings") && isArrayOf(value["warnings"], item => isOpwarnWarning(item)))
 }
 
 export const decodeServerSystemStatus = decoder("server.SystemStatus", isServerSystemStatus)

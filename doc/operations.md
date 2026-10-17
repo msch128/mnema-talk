@@ -548,6 +548,12 @@ docker compose logs app | grep '"audit":"self_update"'
 Compose rotates every container's log at 3 x 10 MB, so older lines drop off;
 ship them elsewhere if you need a longer history.
 
+Configuration problems the server notices (`TRUSTED_PROXY_CIDRS` too broad,
+requests arriving through an untrusted proxy, voice unreachable from outside
+or without a shared UDP port, voice disabled) are logged and also shown at the
+top of Admin > System, each with a short explanation and a link to this guide.
+They are not part of the public `/api/health`.
+
 At startup the app logs `webrtc announce` with the announced IPs and the
 port range, or `webrtc sfu unavailable, voice disabled` when the SFU could
 not start (e.g. the UDP range is in use).
@@ -561,9 +567,28 @@ wrong guesses on one account from many addresses switch on an account-wide
 cap: while it is on, browsers that signed in to the account before (they hold
 a signed `mnema_dev_*` cookie, valid a year, independent of the IP) sign in
 normally, and every other device together gets about one password check per
-minute for the whole account. The cap lasts at most 15 minutes. All of this state is held in
-memory, so `docker restart mnema-talk` clears every lockout at once. Sign in
-from a browser you used before, or wait.
+minute for the whole account. The cap lasts at most 15 minutes. All of this
+state is held in memory; a restart is not needed to clear it:
+
+- **From the host** (works even when nobody can sign in):
+
+  ```sh
+  docker exec mnema-talk /usr/local/bin/mnema-talk unlock Herzog   # one account
+  docker exec mnema-talk /usr/local/bin/mnema-talk unlock --all    # everybody
+  ```
+
+  The command runs in a second process, so it leaves a request in the
+  database (table `login_unlock_requests`); the running server picks it up
+  within a couple of seconds and forgets that account's lockouts (every client
+  address, the account-wide cap, the unknown-device trickle and the
+  password-change lockout). It prints `Login lockouts cleared ...` once the
+  server applied it, or says the request stays queued when no server picked it
+  up in 15 seconds. Only someone who can reach the database can do this; there
+  is no network endpoint for it.
+- **From the admin panel:** the Owner sees a "Login locked" badge on a locked
+  account in Admin > Users and can click "Clear login lockout".
+
+Otherwise sign in from a browser you used before, or wait.
 
 ### Nobody can join voice, or it connects and drops after a few seconds
 

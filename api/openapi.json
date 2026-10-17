@@ -37,6 +37,10 @@
             "description": "Locale is the chosen UI language (\"de\", \"en\"); empty until chosen.",
             "type": "string"
           },
+          "login_locked": {
+            "description": "LoginLocked is set while wrong passwords lock the account (or a client\naddress) out in memory. Only the Owner sees it set.",
+            "type": "boolean"
+          },
           "message_count": {
             "type": "integer"
           },
@@ -1426,6 +1430,33 @@
         ],
         "type": "object"
       },
+      "opwarn.Warning": {
+        "properties": {
+          "code": {
+            "description": "Code is the stable identifier.",
+            "type": "string"
+          },
+          "count": {
+            "description": "Count is how often it was raised since then (for runtime warnings).",
+            "type": "integer"
+          },
+          "since": {
+            "description": "Since is when the warning was first raised in this process.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "value": {
+            "description": "Value is an optional non-sensitive number (e.g. the UDP port count).",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "count",
+          "since"
+        ],
+        "type": "object"
+      },
       "perm.Info": {
         "properties": {
           "bit": {
@@ -2234,13 +2265,21 @@
           },
           "version": {
             "$ref": "#/components/schemas/server.SystemVersion"
+          },
+          "warnings": {
+            "description": "Warnings are configuration or deployment problems the server noticed\n(stable codes; the web app explains each). Empty when all is well.",
+            "items": {
+              "$ref": "#/components/schemas/opwarn.Warning"
+            },
+            "type": "array"
           }
         },
         "required": [
           "health",
           "self_update",
           "update",
-          "version"
+          "version",
+          "warnings"
         ],
         "type": "object"
       },
@@ -7402,6 +7441,106 @@
           }
         ],
         "summary": "Remove a user from voice",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/admin/users/{id}/login-lockout/clear": {
+      "post": {
+        "description": "Forgets the wrong-password counters and lockouts held in memory for the account (per client address, account-wide and the password-change lockout), so its owner can sign in at once. Owner only (403 otherwise). The same is possible from the host with `mnema-talk unlock <username>`.",
+        "operationId": "clearUserLoginLockout",
+        "parameters": [
+          {
+            "description": "User ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success, no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "NOT_FOUND: the resource, or the route, does not exist."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Clear an account's login lockout",
         "tags": [
           "Admin"
         ]
