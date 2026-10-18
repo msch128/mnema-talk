@@ -64,6 +64,12 @@ everything down again. `SKIP_BUILD=1` reuses the last build,
 `E2E_INSTALL_BROWSER=1` installs Chromium first and `E2E_ONLY=<spec>` runs one
 file.
 
+Runs do not collide, so several can go at once (other worktrees, agents):
+every run uses its own Docker Compose project (`mnema-e2e-<pid>`) and free
+ports for PostgreSQL, S3, the app and WebRTC media, picked at start. Pin them
+for debugging with `E2E_PROJECT`, `E2E_PG_PORT`, `E2E_S3_PORT`, `E2E_APP_PORT`,
+`E2E_UDP_PORT` (first of 51 UDP ports) and `E2E_LOG`.
+
 **Without Docker** (e.g. in a sandbox): start PostgreSQL 18 and a SeaweedFS
 S3 gateway any other way, run the binary with the environment `e2e/run.sh`
 uses (`APP_ENV=development`, a fresh `JWT_SECRET`, `ADMIN_INITIAL_PASSWORD`,

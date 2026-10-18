@@ -3,7 +3,7 @@
 // editor for the selected role: name, colour, permissions. The server checks
 // every rule (rank, granting only what you hold); this only offers what fits.
 import { ref, computed, watch, onMounted } from 'vue'
-import { Shield, Plus, GripVertical, ChevronUp, ChevronDown, Trash2, AtSign } from '@lucide/vue'
+import { Shield, Plus, GripVertical, ChevronUp, ChevronDown, Trash2, AtSign, Lock } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
 import { confirm } from '../lib/confirm'
 import { decodeRole } from '../types/domain'
@@ -33,6 +33,8 @@ const everyone = computed(() => permissions.roles.find(r => r.is_everyone))
 const custom = computed(() => permissions.roles.filter(r => !r.is_everyone))
 const selected = computed(() => permissions.roles.find(r => r.id === selectedId.value) ?? null)
 const isEveryone = computed(() => !!selected.value?.is_everyone)
+// The built-in Bot role: every bot holds it. It keeps its name and cannot be deleted.
+const isManaged = computed(() => !!selected.value?.managed)
 // Roles at or above the member's own rank can be looked at, not changed.
 const readonly = computed(() => !!selected.value && !isEveryone.value && !permissions.outranks(selected.value))
 // Permissions the member does not hold cannot be handed out.
@@ -224,6 +226,7 @@ onMounted(async () => {
             <button type="button" class="flex min-w-0 flex-1 items-center gap-2 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
               <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
               <span class="truncate text-mnema-text">{{ role.name }}</span>
+              <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t('roles.managedHint')" data-testid="role-managed-icon" />
             </button>
             <button type="button" class="p-1 text-mnema-tertiary transition hover:text-mnema-text disabled:opacity-30" :disabled="!canMove(index, -1)" :aria-label="$t('roles.moveUp', { name: role.name })" @click="move(index, -1)">
               <ChevronUp class="h-4 w-4" />
@@ -245,12 +248,16 @@ onMounted(async () => {
       <!-- Editor -->
       <div v-if="selected" class="min-w-0 space-y-4" :aria-label="$t('roles.selected')" role="group">
         <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>
-        <p v-else-if="readonly" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary">{{ $t('roles.locked') }}</p>
+        <p v-else-if="isManaged" class="flex items-start gap-2 rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary" data-testid="role-managed-note">
+          <Lock class="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+          <span>{{ $t('roles.managedNote') }}</span>
+        </p>
+        <p v-if="!isEveryone && readonly" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary">{{ $t('roles.locked') }}</p>
 
         <template v-if="!isEveryone">
           <label class="block space-y-1">
             <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.name') }}</span>
-            <input v-model="name" maxlength="32" :disabled="readonly" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent disabled:opacity-50" />
+            <input v-model="name" maxlength="32" :disabled="readonly || isManaged" class="w-full rounded-md border border-mnema-border-field bg-mnema-surface px-3 py-1.5 text-sm text-mnema-text outline-none transition focus:border-mnema-accent disabled:opacity-50" />
           </label>
 
           <div class="space-y-1">
@@ -279,7 +286,7 @@ onMounted(async () => {
           </label>
         </template>
 
-        <label v-if="permissions.isOwner" class="block space-y-1">
+        <label v-if="permissions.isOwner && !isManaged" class="block space-y-1">
           <span class="text-xs font-semibold uppercase tracking-wide text-mnema-tertiary">{{ $t('roles.uploadLimit') }}</span>
           <span class="flex items-center gap-2">
             <input v-model="uploadMb" type="number" inputmode="numeric" min="1" step="1" :placeholder="$t('roles.uploadInherit')" :aria-label="$t('roles.uploadLimit')" class="w-32 rounded-md border border-mnema-border-field bg-mnema-surface px-2 py-1 text-sm tabular-nums text-mnema-text outline-none focus:border-mnema-accent" />
@@ -296,7 +303,7 @@ onMounted(async () => {
 
         <div v-if="!readonly" class="flex items-center justify-between gap-3">
           <button type="button" :disabled="!isDirty(selected) || busy" class="rounded-md bg-mnema-accent px-3.5 py-1.5 text-sm font-semibold text-mnema-accent-ink shadow-sm transition hover:bg-mnema-accent-hover disabled:opacity-40" @click="save">{{ $t('roles.save') }}</button>
-          <button v-if="!isEveryone" type="button" class="flex items-center gap-1.5 text-sm text-mnema-tertiary transition hover:text-mnema-danger" @click="remove(selected)">
+          <button v-if="!isEveryone && !isManaged" type="button" class="flex items-center gap-1.5 text-sm text-mnema-tertiary transition hover:text-mnema-danger" @click="remove(selected)">
             <Trash2 class="h-4 w-4" />
             <span>{{ $t('roles.delete') }}</span>
           </button>

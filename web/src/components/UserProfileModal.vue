@@ -5,7 +5,7 @@ import { caughtErrorMessage } from '../lib/api'
 import { ref, computed } from 'vue'
 import { 
   X, Crown, Shield, User, Calendar, Volume2,
-  Camera, AtSign, Loader2, Edit3, Save, Eraser
+  Camera, AtSign, Loader2, Edit3, Save, Eraser, Lock
 } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
@@ -17,6 +17,7 @@ import { t, locale } from '../i18n'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import BaseDialog from './BaseDialog.vue'
 import PresenceDot from './PresenceDot.vue'
+import BotBadge from './BotBadge.vue'
 import ActivityStats from './ActivityStats.vue'
 import VoiceTimer from './VoiceTimer.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
@@ -147,10 +148,19 @@ const MAX_STATUS = 32
 const permissions = usePermissionsStore()
 const profileId = computed(() => profileUser.value.id ?? '')
 const profileRoles = computed(() => permissions.rolesOf(profileId.value))
+// A bot is a member of the list with the built-in Bot role; the profile may
+// be opened from a message, so the list is where its bot-ness and creator live.
+const profileMember = computed(() => chatStore.members.find(m => m.id === profileId.value))
+const isBot = computed(() => profileMember.value?.is_bot === true)
+const addedBy = computed(() => {
+  const id = profileMember.value?.added_by
+  const creator = id ? chatStore.members.find(m => m.id === id) : undefined
+  return creator ? creator.display_name || creator.username : ''
+})
 const rolesDialogUser = computed(() => ({ id: profileId.value, username: profileUser.value.username ?? '', display_name: profileUser.value.display_name ?? '', role: profileUser.value.role ?? 'user' }))
 const showRolesDialog = ref(false)
 // Roles are given by someone with Manage roles and a higher rank; never the Owner's, never one's own.
-const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
+const canGiveRoles = computed(() => !!profileId.value && !isSelf.value && !isBot.value && profileUser.value.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(profileId.value))
 const canEditStatus = computed(() => isSelf.value || (profileUser.value.role !== 'admin' && permissions.can('manage_members') && permissions.outranksMember(profileId.value)))
 const offer = computed(() => moderationOffer({ id: profileId.value, role: profileUser.value.role, display_name: profileUser.value.display_name, username: profileUser.value.username }))
 const moderationSubject = computed(() => ({ id: profileId.value, display_name: profileUser.value.display_name, username: profileUser.value.username }))
@@ -358,6 +368,7 @@ function handleMention() {
             <div>
               <h2 :id="titleId" class="text-lg font-bold text-mnema-text leading-tight flex items-center gap-1.5">
                 {{ profileUser.display_name || profileUser.username }}
+                <BotBadge v-if="isBot" />
                 <Crown 
                   v-if="profileUser.role === 'admin'" 
                   class="w-4 h-4 text-amber-400 inline-block drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" 
@@ -375,6 +386,7 @@ function handleMention() {
 
             <!-- Role Badge -->
             <div 
+              v-if="!isBot"
               :class="[
                 'px-2 py-0.5 rounded-md text-xs font-semibold border flex items-center gap-1 uppercase tracking-wider',
                 profileUser.role === 'admin'
@@ -396,6 +408,7 @@ function handleMention() {
               class="inline-flex items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 text-xs text-mnema-text"
             >
               <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
+              <Lock v-if="role.managed" class="h-3 w-3 text-mnema-tertiary" v-tooltip.visual="$t('roles.managedHint')" role="img" :aria-label="$t('roles.managedHint')" />
             </span>
             <button
               v-if="canGiveRoles"
@@ -406,8 +419,10 @@ function handleMention() {
             >{{ $t('memberRoles.edit') }}</button>
           </div>
 
+          <p v-if="isBot && addedBy" class="mt-3 text-xs text-mnema-tertiary" data-testid="profile-added-by">{{ $t('profile.addedBy', { name: addedBy }) }}</p>
+
           <!-- Moderation -->
-          <div v-if="offer.timeout || offer.ban" class="mt-3 flex flex-wrap items-center gap-1.5" data-testid="profile-moderation">
+          <div v-if="!isBot && (offer.timeout || offer.ban)" class="mt-3 flex flex-wrap items-center gap-1.5" data-testid="profile-moderation">
             <button
               v-if="offer.timeout"
               type="button"

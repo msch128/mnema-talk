@@ -32,6 +32,9 @@ type Role struct {
 	Hoist       bool      `json:"hoist"`
 	Mentionable bool      `json:"mentionable"`
 	Everyone    bool      `json:"is_everyone"`
+	// Managed marks the built-in Bot role: every bot holds it and no one else
+	// can; it cannot be renamed, removed from a bot or deleted.
+	Managed bool `json:"managed,omitempty" binding:"optional"`
 	// MaxUploadMB overrides the upload limit of this role's members; null
 	// inherits the global limit. A member gets the highest override of their
 	// roles (@everyone included), never above the server's ceiling.
@@ -151,6 +154,7 @@ type roleRow struct {
 	Hoist       bool
 	Mentionable bool
 	Everyone    bool
+	Managed     bool
 	MaxUploadMB *int
 }
 
@@ -174,7 +178,7 @@ type overwriteRow struct {
 
 func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	r := &reader{ctx: ctx, q: q}
-	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, max_upload_mb FROM roles`, pgx.RowToStructByPos[roleRow])
+	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
@@ -189,7 +193,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 
 	for _, row := range roles {
 		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
-			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, MaxUploadMB: row.MaxUploadMB}
+			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB}
 		s.roles[role.ID] = role
 		if role.Everyone {
 			s.everyoneID, s.everyone = role.ID, role.Permissions
@@ -573,8 +577,12 @@ func (s *Snapshot) CanActAs(actor, bot Subject) error {
 	return nil
 }
 
-// RoleHeldByBot reports whether any bot holds the role.
+// RoleHeldByBot reports whether any bot holds the role. The managed Bot role
+// counts as held even before the first bot exists: it is every bot's.
 func (s *Snapshot) RoleHeldByBot(role uuid.UUID) bool {
+	if s.roles[role].Managed {
+		return true
+	}
 	for u, roles := range s.userRoles {
 		if s.bots[u] && slices.Contains(roles, role) {
 			return true

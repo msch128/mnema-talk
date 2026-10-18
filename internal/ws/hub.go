@@ -41,6 +41,9 @@ type Hub struct {
 	// pending handshakes can be revoked, but receive no events or presence.
 	pending map[*Client]struct{}
 	online  map[uuid.UUID]int
+	// botLive holds the bots with a live gateway connection; they are online
+	// without a WebSocket client (see SetBotPresence).
+	botLive map[uuid.UUID]bool
 	// active counts each user's connections that are not idle, so a user's
 	// status is O(1) to derive instead of a scan of every client.
 	active map[uuid.UUID]int
@@ -118,6 +121,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		clients:  map[*Client]struct{}{},
 		pending:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
+		botLive:  map[uuid.UUID]bool{},
 		active:   map[uuid.UUID]int{},
 		chosen:   map[uuid.UUID]string{},
 		profiles: map[uuid.UUID]auth.User{},

@@ -4,6 +4,7 @@ import type { ReplyPreview } from '../types/domain'
 import { computed } from 'vue'
 import { Reply, Image as ImageIcon } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import BotBadge from './BotBadge.vue'
 import { previewText } from '../lib/replies'
 import { t } from '../i18n'
 
@@ -45,6 +46,7 @@ const name = computed(() => props.reply?.display_name || props.reply?.username |
     <template v-else>
       <UserAvatar :user="reply" size="xxs" />
       <span class="font-semibold text-mnema-muted flex-shrink-0 max-w-[40%] truncate">{{ name }}</span>
+      <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
       <button
         type="button"
         class="reply-preview-jump flex items-center gap-1 min-w-0 text-left text-mnema-tertiary hover:text-mnema-text transition-colors cursor-pointer"

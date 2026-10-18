@@ -73,6 +73,28 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 	}
 }
 
+// SetBotPresence records whether a bot has a live gateway connection and
+// announces the change. Bots are online or offline only; they are not counted
+// by OnlineCount or OnlineUserIDs, so @here and the user count stay about
+// people.
+func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
+	h.mu.Lock()
+	had := h.botLive[userID]
+	if online {
+		h.botLive[userID] = true
+	} else {
+		delete(h.botLive, userID)
+	}
+	h.mu.Unlock()
+	if had != online {
+		status := StatusOffline
+		if online {
+			status = auth.PresenceOnline
+		}
+		h.Broadcast("presence_update", map[string]any{"user_id": userID, "status": status})
+	}
+}
+
 // OnlineCount returns the number of distinct online users.
 func (h *Hub) OnlineCount() int {
 	h.mu.RLock()
@@ -84,9 +106,12 @@ func (h *Hub) OnlineCount() int {
 func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	out := make(map[uuid.UUID]string, len(h.online))
+	out := make(map[uuid.UUID]string, len(h.online)+len(h.botLive))
 	for id := range h.online {
 		out[id] = h.statusLocked(id)
+	}
+	for id := range h.botLive {
+		out[id] = auth.PresenceOnline
 	}
 	return out
 }

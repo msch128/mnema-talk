@@ -257,7 +257,8 @@
     "reaction": "Reaktion {emoji}",
     "edit": "Nachricht bearbeiten",
     "delete": "Nachricht löschen",
-    "bot": "Webhook",
+    "bot": "Bot",
+    "webhook": "Webhook",
     "embedImage": "Bild",
     "embedThumbnail": "Vorschaubild",
     "edited": "(bearbeitet)",
@@ -1015,6 +1016,7 @@
     }
   },
   "profile": {
+    "addedBy": "Hinzugefügt von {name}",
     "viewProfile": "Profil ansehen",
     "unknown": "Unbekannt",
     "talk": "Talk",
@@ -1359,6 +1361,8 @@
     }
   },
   "roles": {
+    "managedHint": "Verwaltete Rolle: Jeder Bot hat sie, sie lässt sich nicht entfernen.",
+    "managedNote": "Die Bot-Rolle wird vom System verwaltet. Jeder Bot erhält sie automatisch, niemand sonst kann sie haben; sie lässt sich nicht umbenennen, einem Bot nicht wegnehmen und nicht löschen. Farbe, Position und getrennte Auflistung kannst du ändern. Sie startet ohne Rechte: Ein Bot kann nichts, bis du ihm hier oder in einem Kanal etwas erlaubst. Nur der Owner kann Bots erhöhte Rechte geben, und niemand kann Bots Rechte geben, die er selbst nicht hat.",
     "title": "Rollen",
     "intro": "Rollen geben Mitgliedern Rechte. Eine höhere Rolle steht über einer niedrigeren. Der Inhaber hat immer alle Rechte und kann nicht eingeschränkt werden.",
     "new": "Neue Rolle",
@@ -1618,6 +1622,7 @@
       }
     },
     "roles": {
+      "managed": "Verwaltet: Jeder Bot hat diese Rolle, sie lässt sich nicht wegnehmen.",
       "title": "Rollen",
       "hint": "Ein Bot bekommt @everyone nicht und startet daher ganz ohne Zugriff. Gib ihm Rollen für das, was er serverweit darf, und lege den Kanalzugriff im Rechte-Dialog jedes Kanals fest, indem du dort eine der Rollen des Bots erlaubst.",
       "empty": "Es gibt noch keine Rollen. Lege eine im Tab Rollen an.",

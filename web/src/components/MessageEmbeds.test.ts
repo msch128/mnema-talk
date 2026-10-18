@@ -72,8 +72,8 @@ describe('MessageEmbeds', () => {
 
 describe('webhook messages in the timeline', () => {
   it('marks a bot message and shows its cards', () => {
-    const bot = mount(MessageRow, { props: { msg: messageFixture({ display_name: 'CI', is_bot: true, embeds: [{ title: 'Run' }] }) } })
-    expect(bot.findComponent(BotBadge).text()).toBe(t('chat.bot'))
+    const bot = mount(MessageRow, { props: { msg: messageFixture({ display_name: 'CI', is_bot: true, is_webhook: true, embeds: [{ title: 'Run' }] }) } })
+    expect(bot.findComponent(BotBadge).text()).toBe(t('chat.webhook'))
     expect(bot.find('[data-testid="embed-title"]').text()).toBe('Run')
     const human = mount(MessageRow, { props: { msg: messageFixture({ display_name: 'Ann' }) } })
     expect(human.findComponent(BotBadge).exists()).toBe(false)

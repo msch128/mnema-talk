@@ -97,7 +97,10 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	if all || len(usernames) > 0 || (here && len(online) > 0) {
 		rows, err := q.Query(ctx, `
 			SELECT id FROM users
-			WHERE `+auth.ActiveSQL("")+` AND NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[])))`, all, usernames, here, online)
+			WHERE `+auth.ActiveSQL("")+` AND (
+			    (NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[]))))
+			    -- a bot is mentioned by name only, never by @all or @here
+			    OR (LOWER(username) = ANY($2) AND EXISTS (SELECT 1 FROM bots b WHERE b.user_id = users.id AND NOT b.disabled)))`, all, usernames, here, online)
 		if err != nil {
 			return nil, fmt.Errorf("resolve mentions: %w", err)
 		}

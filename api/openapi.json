@@ -1212,6 +1212,10 @@
           "avatar_url": {
             "type": "string"
           },
+          "bot": {
+            "description": "Bot is true for bot accounts, which are members too. Mention one by its\nusername like any member; message.mentions then lists its id.",
+            "type": "boolean"
+          },
           "display_name": {
             "type": "string"
           },
@@ -1827,6 +1831,11 @@
       },
       "chat.Member": {
         "properties": {
+          "added_by": {
+            "description": "AddedBy is the member who created the bot, when known.",
+            "format": "uuid",
+            "type": "string"
+          },
           "avatar_url": {
             "description": "AvatarURL is the API URL of the avatar (/api/media/{id}); omitted when none.",
             "type": "string"
@@ -1846,6 +1855,10 @@
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "is_bot": {
+            "description": "IsBot is true for a bot account (see doc/bots.md). Bots hold the\nbuilt-in Bot role; webhook authors are never listed.",
+            "type": "boolean"
           },
           "locale": {
             "description": "Locale is the chosen UI language (\"de\", \"en\"); empty until chosen.",
@@ -1955,6 +1968,10 @@
             "type": "boolean"
           },
           "is_pinned": {
+            "type": "boolean"
+          },
+          "is_webhook": {
+            "description": "IsWebhook narrows IsBot: the author is an incoming webhook (shown with\na Webhook label), not a bot account (shown with a BOT label).",
             "type": "boolean"
           },
           "mentions": {
@@ -2175,6 +2192,13 @@
           "id": {
             "format": "uuid",
             "type": "string"
+          },
+          "is_bot": {
+            "description": "IsBot and IsWebhook describe the quoted author like Message does.",
+            "type": "boolean"
+          },
+          "is_webhook": {
+            "type": "boolean"
           },
           "user_id": {
             "format": "uuid",
@@ -2598,6 +2622,10 @@
             "type": "string"
           },
           "is_everyone": {
+            "type": "boolean"
+          },
+          "managed": {
+            "description": "Managed marks the built-in Bot role: every bot holds it and no one else\ncan; it cannot be renamed, removed from a bot or deleted.",
             "type": "boolean"
           },
           "max_upload_mb": {
@@ -16478,7 +16506,7 @@
     },
     "/api/members": {
       "get": {
-        "description": "Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.",
+        "description": "Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Enabled bots are members too (is_bot, added_by) and hold the built-in Bot role; incoming-webhook authors are not listed. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.",
         "operationId": "listMembers",
         "responses": {
           "200": {

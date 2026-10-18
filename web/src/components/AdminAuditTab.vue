@@ -10,6 +10,7 @@ import { decoder } from '../types/validation'
 import { useToastStore } from '../stores/toast'
 import { useChatStore } from '../stores/chat'
 import { t, locale } from '../i18n'
+import BotBadge from './BotBadge.vue'
 
 const decodePage = decoder<AuditPage>('audit.Page', isAuditPage)
 const toasts = useToastStore()
@@ -27,6 +28,8 @@ const from = ref('')
 const to = ref('')
 const open = ref<Set<number>>(new Set())
 
+// Bots appear in the log by name too; the member list says who is one.
+const botIds = computed(() => new Set(chat.members.filter(m => m.is_bot).map(m => m.id)))
 const actors = computed(() => chat.members.map(m => ({ id: m.id, name: m.display_name || m.username })))
 
 function query(before: number | null): string {
@@ -137,8 +140,10 @@ onMounted(() => load(false))
           <ChevronRight v-else class="w-4 h-4 text-mnema-tertiary flex-shrink-0" />
           <span class="text-mnema-tertiary whitespace-nowrap font-mono text-xs">{{ when(e.created_at) }}</span>
           <span class="text-mnema-text font-medium truncate">{{ e.actor_name || $t('audit.system') }}</span>
+          <BotBadge v-if="e.actor_id && botIds.has(e.actor_id)" />
           <span class="text-mnema-accent truncate">{{ actionLabel(e.action) }}</span>
           <span v-if="e.target_name || e.target_id" class="text-mnema-muted truncate">{{ e.target_name || e.target_id }}</span>
+          <BotBadge v-if="e.target_id && botIds.has(e.target_id)" />
         </button>
         <div v-if="open.has(e.id)" class="px-4 pb-3 space-y-1.5">
           <div class="text-xs text-mnema-tertiary font-mono break-all">

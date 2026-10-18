@@ -74,7 +74,8 @@ func wantAPI(t *testing.T, what string, err error, status int) {
 func TestMigrationSeedsTheDocumentedDefaults(t *testing.T) {
 	w := newWorld(t)
 	roles, err := w.svc.Roles(context.Background())
-	if err != nil || len(roles) != 1 || !roles[0].Everyone || roles[0].Permissions != perm.DefaultEveryone || roles[0].Position != 0 {
+	if err != nil || len(roles) != 2 || !roles[1].Everyone || roles[1].Permissions != perm.DefaultEveryone || roles[1].Position != 0 ||
+		!roles[0].Managed || roles[0].Name != "Bot" || roles[0].Position != 1 || roles[0].Permissions != 0 || !roles[0].Hoist {
 		t.Fatalf("roles after migration: %+v %v", roles, err)
 	}
 }
@@ -114,7 +115,7 @@ func TestStoreEnforcesRulesWithoutTheHTTPLayer(t *testing.T) {
 	}
 	hoist, mention := true, true
 	role, err := w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &name, Hoist: &hoist, Mentionable: &mention})
-	if err != nil || !role.Hoist || !role.Mentionable || role.Position != 1 {
+	if err != nil || !role.Hoist || !role.Mentionable || role.Position != 2 {
 		t.Fatalf("create: %+v %v", role, err)
 	}
 	for _, c := range []struct {

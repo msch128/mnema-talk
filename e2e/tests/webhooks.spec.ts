@@ -45,7 +45,7 @@ test('a script posts through a webhook and the message appears live', async ({ b
   expect(sent.status()).toBe(204)
 
   await expect(page.getByText(text)).toBeVisible()
-  await expect(page.getByTestId('bot-badge')).toBeVisible()
+  await expect(page.getByTestId('webhook-badge')).toBeVisible()
   await expect(page.getByTestId('embed-title')).toHaveText('Run 42')
   await expect(page.getByTestId('embed-field')).toContainText('812')
 

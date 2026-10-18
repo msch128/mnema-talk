@@ -64,6 +64,9 @@ type Message struct {
 	// hidden bot account; DisplayName is the webhook's name or the username
 	// the sender gave for this message.
 	IsBot bool `json:"is_bot,omitempty" binding:"optional"`
+	// IsWebhook narrows IsBot: the author is an incoming webhook (shown with
+	// a Webhook label), not a bot account (shown with a BOT label).
+	IsWebhook bool `json:"is_webhook,omitempty" binding:"optional"`
 	// Embeds are the rich cards of a webhook message (Discord-style subset).
 	Embeds []Embed `json:"embeds,omitempty" binding:"optional"`
 }
@@ -117,6 +120,9 @@ type ReplyPreview struct {
 	AvatarURL      string    `json:"avatar_url,omitempty" binding:"optional"`
 	Content        string    `json:"content,omitempty" binding:"optional"`
 	HasAttachments bool      `json:"has_attachments,omitempty" binding:"optional"`
+	// IsBot and IsWebhook describe the quoted author like Message does.
+	IsBot     bool `json:"is_bot,omitempty" binding:"optional"`
+	IsWebhook bool `json:"is_webhook,omitempty" binding:"optional"`
 }
 
 // ValidateContent trims and length-checks message text. Empty content is only
@@ -151,7 +157,7 @@ const messageSelect = `
 	       LEFT(rm.content, 200),
 	       CASE WHEN rm.id IS NULL THEN FALSE
 	            ELSE EXISTS (SELECT 1 FROM media md WHERE md.message_id = rm.id) END,
-	       u.is_bot, m.embeds
+	       u.is_bot, (u.is_bot AND u.username LIKE 'wh-%'), m.embeds, ru.is_bot, (ru.is_bot AND ru.username LIKE 'wh-%')
 	FROM messages m
 	JOIN users u ON u.id = m.user_id
 	LEFT JOIN messages rm ON rm.id = m.reply_to_id
@@ -165,10 +171,11 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 		var avatar, rUsername, rDisplay, rAvatar, rContent *string
 		var rID, rUser *uuid.UUID
 		var rHasMedia bool
+		var rBot, rWebhook *bool
 		var embeds []byte
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia, &m.IsBot, &embeds); err != nil {
+			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia, &m.IsBot, &m.IsWebhook, &embeds, &rBot, &rWebhook); err != nil {
 			return nil, err
 		}
 		if len(embeds) > 2 { // anything but the empty array
@@ -186,6 +193,8 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 				p.AvatarURL = auth.AvatarURL(rAvatar)
 				p.Content = deref(rContent)
 				p.HasAttachments = rHasMedia
+				p.IsBot = rBot != nil && *rBot
+				p.IsWebhook = rWebhook != nil && *rWebhook
 			}
 			m.ReplyTo = p
 		}

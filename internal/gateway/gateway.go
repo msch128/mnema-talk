@@ -81,6 +81,10 @@ type Gateway struct {
 	DB    *db.Pool
 	// PublicURL builds the address returned by GET /gateway.
 	PublicURL string
+	// OnPresence, when set before Run, is told when a bot gains its first or
+	// loses its last live connection (the member list shows it online or
+	// offline). A session that is only resumable does not count as live.
+	OnPresence func(userID uuid.UUID, online bool)
 
 	tmu sync.RWMutex
 	tm  Timings
@@ -94,6 +98,8 @@ type Gateway struct {
 	byBot    map[uuid.UUID]map[string]*session
 	closed   bool
 	stop     chan struct{}
+	// announced is the set of bots OnPresence last reported online.
+	announced map[uuid.UUID]bool
 }
 
 // Config is what a Gateway needs.
@@ -154,14 +160,46 @@ func (g *Gateway) Run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			g.Close()
+			g.syncPresence()
 			return
 		case now := <-tick.C:
 			g.expire()
+			g.syncPresence()
 			if now.Sub(last) >= g.timings().TokenCheck {
 				last = now
 				g.checkTokens(ctx)
 			}
 		}
+	}
+}
+
+// syncPresence reports the bots whose online state changed since the last call.
+func (g *Gateway) syncPresence() {
+	if g.OnPresence == nil {
+		return
+	}
+	g.mu.Lock()
+	live := map[uuid.UUID]bool{}
+	for _, s := range g.sessions {
+		if s.live() {
+			live[s.userID] = true
+		}
+	}
+	var changes []uuid.UUID
+	for id := range live {
+		if !g.announced[id] {
+			changes = append(changes, id)
+		}
+	}
+	for id := range g.announced {
+		if !live[id] {
+			changes = append(changes, id)
+		}
+	}
+	g.announced = live
+	g.mu.Unlock()
+	for _, id := range changes {
+		g.OnPresence(id, live[id])
 	}
 }
 
