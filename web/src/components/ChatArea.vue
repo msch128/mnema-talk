@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import {
   Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X, Volume2
 } from '@lucide/vue'
@@ -24,6 +24,7 @@ import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
+import { handleComposerKeydown, useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
 import { durationLabel } from '../lib/moderation'
 import { typingLine } from '../lib/chatLogic'
@@ -161,25 +162,19 @@ function onMessageKeydown(e: KeyboardEvent, msg: Message) {
   })
 }
 
-function onGlobalKeydown(e: KeyboardEvent) {
-  if (e.key !== 'Escape') return
-  if (contextMenu.value.open) { menu.close(); return }
-  // Something else (dialog, lightbox, composer reply, editor) already used the key.
-  if (e.defaultPrevented || selectedImage.value || editingMessageId.value || replyingTo.value) return
-  if (inputMessage.value.trim() || document.querySelector('[role="dialog"]')) return
-  const tag = e.target instanceof Element ? e.target.tagName : undefined
-  if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.target !== textAreaEl.value) return
-  if (markAllRead()) e.preventDefault()
-}
-
-onMounted(() => {
-  textAreaEl.value?.focus()
-  window.addEventListener('keydown', onGlobalKeydown)
+useEscapeMarksRead({
+  composer: textAreaEl,
+  closeMenu: () => {
+    if (!contextMenu.value.open) return false
+    menu.close()
+    return true
+  },
+  occupied: () => !!(selectedImage.value || editingMessageId.value || replyingTo.value),
+  draft: () => inputMessage.value,
+  markAllRead
 })
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', onGlobalKeydown)
-})
+onMounted(() => textAreaEl.value?.focus())
 
 // After sending while viewing older history, jump to the present.
 async function revealOwnMessage() {
@@ -205,16 +200,7 @@ async function handleSend() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (slash.onKeydown(e) || assist.onKeydown(e)) return
-  if (e.key === 'Escape' && replyingTo.value) {
-    e.preventDefault()
-    cancelReply()
-    return
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    handleSend()
-  }
+  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!replyingTo.value, cancelReply, send: handleSend })
 }
 
 async function handleFileUpload(e: Event) {

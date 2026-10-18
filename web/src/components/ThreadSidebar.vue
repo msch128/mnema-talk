@@ -26,6 +26,7 @@ import ReactionBar from './ReactionBar.vue'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useMessageActions, formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
+import { handleComposerKeydown } from '../composables/useComposerKeys'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
@@ -169,16 +170,7 @@ async function handleSendReply() {
 }
 
 function handleKeyDown(e: KeyboardEvent) {
-  if (assist.onKeydown(e)) return
-  if (e.key === 'Escape' && replyingTo.value) {
-    e.preventDefault()
-    cancelReply()
-    return
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault()
-    handleSendReply()
-  }
+  handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!replyingTo.value, cancelReply, send: handleSendReply })
 }
 
 async function handleFileUpload(e: Event) {
