@@ -1,0 +1,50 @@
+// Keys of a message composer, shared by the channel chat and the thread panel.
+import { onMounted, onUnmounted } from 'vue'
+import type { Ref } from 'vue'
+
+interface ComposerKeys {
+  /** Handlers that may consume the key first (suggestion lists); each returns true when it did. */
+  consumers: ((e: KeyboardEvent) => boolean)[]
+  replying: () => boolean
+  cancelReply: () => void
+  send: () => void
+}
+
+/** Escape leaves a reply; Enter sends, Shift+Enter breaks the line. */
+export function handleComposerKeydown(e: KeyboardEvent, { consumers, replying, cancelReply, send }: ComposerKeys) {
+  if (consumers.some(consume => consume(e))) return
+  if (e.key === 'Escape' && replying()) {
+    e.preventDefault()
+    cancelReply()
+    return
+  }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault()
+    send()
+  }
+}
+
+interface EscapeMarksRead {
+  composer: Ref<HTMLTextAreaElement | null>
+  /** Closes an open menu; returns true when one was open (it keeps the key). */
+  closeMenu: () => boolean
+  /** True while something else owns Escape: a lightbox, an editor, a reply in the composer. */
+  occupied: () => boolean
+  draft: () => string
+  markAllRead: () => boolean
+}
+
+/** Escape anywhere in the channel marks it read, unless something else is using the key. */
+export function useEscapeMarksRead({ composer, closeMenu, occupied, draft, markAllRead }: EscapeMarksRead) {
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key !== 'Escape') return
+    if (closeMenu()) return
+    if (e.defaultPrevented || occupied()) return
+    if (draft().trim() || document.querySelector('[role="dialog"]')) return
+    const tag = e.target instanceof Element ? e.target.tagName : undefined
+    if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.target !== composer.value) return
+    if (markAllRead()) e.preventDefault()
+  }
+  onMounted(() => window.addEventListener('keydown', onKeydown))
+  onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+}
