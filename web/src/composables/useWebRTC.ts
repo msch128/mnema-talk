@@ -11,7 +11,6 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { browserMediaCall } from '../lib/media/browserCall'
 import { installMediaCallFactory, mediaCall } from '../lib/media/api'
-import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
 import { confirm } from '../lib/confirm'
@@ -24,12 +23,13 @@ import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
 import { declaredLayers, layersKey, planScreenLayers } from '../lib/screenLayers'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../lib/media/frame'
-import type { AudioOutputTarget } from '../lib/audioOutput'
 import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
 import { decodeServerICEConfig } from '../types/rest'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './webrtc/sdp'
 import { streamDiag } from './webrtc/streamDiag'
 import { createPushToTalk } from './webrtc/pushToTalk'
+import { applyOutput, applyOutputToRemote, attachRemoteAudio, followOutputDevice, playPausedRemoteAudio, releaseRemoteAudio, resumeRemoteAudio as resumeRemotePlayback, updateRemoteVolume } from './webrtc/remoteAudio'
+import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from './webrtc/streamIds'
 import { announceMediaRekeyed, announceMediaUnprotected, closeMediaRoom, mediaUnprotected, onMediaUnprotected, openMediaRoom, queueMediaWire, resetMediaAnnouncements } from './webrtc/mediaRoom'
 
 // Tests install a double first. This only supplies the call when none is installed.
@@ -37,27 +37,10 @@ installMediaCallFactory(browserMediaCall)
 
 type VoiceStore = ReturnType<typeof useVoiceStore>
 type ChatStore = ReturnType<typeof useChatStore>
-type RemoteAudioElement = HTMLAudioElement & { srcObject: MediaStream | null }
 type AudioGuard = 'restricted' | 'echo-cancel' | 'none'
 interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender; layers?: RTCRtpSender[] }
 interface SenderTuning { active?: boolean; maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number; degradationPreference?: RTCDegradationPreference; priority?: RTCPriorityType; networkPriority?: RTCPriorityType }
 
-
-// The SFU publishes a camera under this prefix plus the user ID as stream ID,
-// and the sound of a screen share under SCREEN_AUDIO_STREAM_PREFIX (screen
-// share and voice use the plain user ID); see internal/sfu.
-const CAMERA_STREAM_PREFIX = 'cam:'
-const SCREEN_AUDIO_STREAM_PREFIX = 'screen:'
-
-function publisherId(streamId: string | undefined): string | null {
-  if (!streamId) return null
-  const id = streamId.startsWith(CAMERA_STREAM_PREFIX)
-    ? streamId.slice(CAMERA_STREAM_PREFIX.length)
-    : streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
-      ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length)
-      : streamId
-  return id || null
-}
 
 // Module-level shared singletons across all components
 const localAudioStream = ref<MediaStream | null>(null)
@@ -92,10 +75,6 @@ let lastNoAudioWarningToastTime = 0
 
 // WebRTC Peer Connection and Remote Audio
 let pc: RTCPeerConnection | null = null
-// Remote audio elements by track id. The SFU reuses its transceivers: the
-// same track may come back in a new stream (another speaker), so elements
-// are keyed by track and retagged instead of piling up.
-const remoteAudioElements = new Map<string, RemoteAudioElement>()
 // Senders of the four fixed outgoing lines, created with the connection:
 // mic, screen share, camera and the screen share's sound. Tracks are swapped
 // with replaceTrack, so starting or stopping them never renegotiates. The
@@ -126,8 +105,6 @@ let screenCaptureGeneration = 0
 let cameraCaptureGeneration = 0
 // Quality changes are applied one after another.
 let qualityChain = Promise.resolve()
-// Playback above 100 % needs a gain stage: element.volume tops out at 1.
-let playbackContext: AudioContext | null = null
 // Input volume: a gain stage in the mic pipeline, only built when the input
 // volume is not 100 % (so the default path stays the plain microphone).
 let gamingGainNode: GainNode | null = null
@@ -139,12 +116,10 @@ const pushToTalk = createPushToTalk({
   lease: setGamingPttLease,
   wake(inCall) {
     if (audioContext && audioContext.state === 'suspended') audioContext.resume().catch(() => {})
-    if (inCall) remoteAudioElements.forEach(el => { if (el.paused) el.play().catch(() => {}) })
+    if (inCall) playPausedRemoteAudio()
   }
 })
 let inputGainNode: GainNode | null = null
-// The voice store, for the output device of a lazily created playback context.
-let outputDeviceStore: VoiceStore | null = null
 // The settings watchers of useWebRTC, registered once per voice store.
 let watcherScope: ReturnType<typeof effectScope> | null = null
 let watchedStore: VoiceStore | null = null
@@ -152,7 +127,6 @@ let inputVolumeTimer: ReturnType<typeof setTimeout> | undefined
 // applyAudioSettings runs one at a time; busy counts queued and running ones.
 let audioSettingsChain = Promise.resolve()
 let audioSettingsBusy = 0
-const boosts = new WeakMap<RemoteAudioElement, { source: MediaStreamAudioSourceNode; gain: GainNode }>()
 // Offers are applied one after another; candidates that arrive before the
 // remote description is set wait in pendingCandidates.
 let signalingChain = Promise.resolve()
@@ -226,82 +200,6 @@ function stopStatsPolling(voiceStore: VoiceStore) {
   if (voiceStore) voiceStore.rtcStats = null
 }
 
-// Linear gain for one remote audio element: master volume x that user's
-// voice volume, or x the volume of their stream for a screen share's sound.
-function remoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
-  if (voiceStore.isDeafened || voiceStore.isMicTesting) return 0
-  const master = voiceStore.outputVolume / 100
-  const userId = el.dataset?.userId
-  if (!userId) return master
-  if (el.dataset.source === 'screen') return master * voiceStore.streamGain(userId)
-  if (voiceStore.isUserLocalMuted(userId)) return 0
-  return master * (voiceStore.getUserVolume(userId) / 100)
-}
-
-// Routes the element's stream through a GainNode (the element stays attached
-// but muted so the stream keeps flowing). Only done once a gain above 1 is
-// asked for; until then plain element.volume does the job.
-function createBoost(el: RemoteAudioElement) {
-  const AudioCtx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
-  if (!AudioCtx || !el.srcObject) return null
-  try {
-    if (!playbackContext || playbackContext.state === 'closed') {
-      playbackContext = new AudioCtx()
-      if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
-    }
-    if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {})
-    const source = playbackContext.createMediaStreamSource(el.srcObject)
-    const gain = playbackContext.createGain()
-    source.connect(gain)
-    gain.connect(playbackContext.destination)
-    el.muted = true
-    const boost = { source, gain }
-    boosts.set(el, boost)
-    return boost
-  } catch (err) {
-    console.warn('[WebRTC] Volume boost unavailable:', err)
-    return null
-  }
-}
-
-// Plays remote audio (an element or an AudioContext) on the chosen output device.
-function applyOutput(voiceStore: VoiceStore, target: AudioOutputTarget | null) {
-  applyOutputDevice(target, voiceStore.selectedOutputDeviceId)
-}
-
-function applyOutputDeviceAll(voiceStore: VoiceStore) {
-  remoteAudioElements.forEach(el => applyOutput(voiceStore, el))
-  // Boosted voices (over 100 %) play through the playback context.
-  applyOutput(voiceStore, playbackContext)
-  // The mic-test monitor.
-  applyOutput(voiceStore, loopbackCtx)
-}
-
-function applyRemoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
-  const gain = remoteGain(voiceStore, el)
-  let boost = boosts.get(el) ?? null
-  if (!boost && gain > 1) boost = createBoost(el)
-  if (boost) {
-    boost.gain.gain.value = gain
-  } else {
-    el.volume = Math.min(1, Math.max(0, gain))
-  }
-}
-
-function releaseBoost(el: RemoteAudioElement) {
-  const boost = boosts.get(el)
-  if (!boost) return
-  try {
-    boost.source.disconnect()
-    boost.gain.disconnect()
-  } catch { /* already disconnected */ }
-  boosts.delete(el)
-}
-
-function updateRemoteVolume(voiceStore: VoiceStore) {
-  remoteAudioElements.forEach(el => applyRemoteGain(voiceStore, el))
-}
-
 function captureKey(track: MediaStreamTrack): string {
   const settings = track.getSettings?.()
   return `${settings?.width}x${settings?.height}@${Math.round(settings?.frameRate ?? 0)}`
@@ -339,21 +237,7 @@ function cleanupPeerConnection(voiceStore: VoiceStore) {
     try { pc.close() } catch { /* connection already closed */ }
     pc = null
   }
-  remoteAudioElements.forEach(el => {
-    releaseBoost(el)
-    try {
-      el.pause()
-      el.srcObject = null
-      el.remove()
-    } catch {
-      // element already detached / disposed
-    }
-  })
-  remoteAudioElements.clear()
-  if (playbackContext) {
-    playbackContext.close().catch(() => {})
-    playbackContext = null
-  }
+  releaseRemoteAudio()
   audioSender = null
   screenSender = null
   cameraSender = null
@@ -373,90 +257,6 @@ function liveScreenAudioTrack() {
   const track = localScreenStream.value?.getAudioTracks()[0]
   return track && track.readyState !== 'ended' ? track : null
 }
-
-
-function removeRemoteAudio(trackId: string) {
-  const el = remoteAudioElements.get(trackId)
-  if (!el) return
-  remoteAudioElements.delete(trackId)
-  releaseBoost(el)
-  try {
-    el.pause?.()
-    el.srcObject = null
-    el.remove()
-  } catch { /* detached */ }
-}
-
-// Who an audio element plays (data-user-id) and whether it is the sound of
-// their screen share (data-source="screen") rather than their voice.
-function tagRemoteAudio(el: RemoteAudioElement, streamId: string) {
-  const screen = streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
-  const userId = screen ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length) : streamId
-  if (userId) el.dataset.userId = userId
-  else delete el.dataset.userId
-  if (screen) el.dataset.source = 'screen'
-  else delete el.dataset.source
-  el.dataset.streamId = streamId
-}
-
-// Plays one remote audio track. The stream ID names the speaking user (or,
-// prefixed, the user whose screen share it is); a repeated ontrack for the
-// same track (transceiver reused for someone else) only retags its element.
-function attachRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrack, stream: MediaStream | undefined) {
-  const streamId = stream?.id || ''
-  // A source can return on a different receiver track after renegotiation.
-  // Its previous HTML/WebAudio sink must leave before the replacement plays;
-  // microphone and screen audio stay distinct through their stream prefixes.
-  for (const [trackId, el] of remoteAudioElements) {
-    const sameSource = streamId && el.dataset.streamId === streamId
-    const replacedTrack = trackId === track.id && el.srcObject?.getAudioTracks()[0] !== track
-    if ((sameSource && trackId !== track.id) || replacedTrack) removeRemoteAudio(trackId)
-  }
-  let audioEl = remoteAudioElements.get(track.id)
-  if (audioEl) {
-    tagRemoteAudio(audioEl, streamId)
-    applyRemoteGain(voiceStore, audioEl)
-    if (audioEl.paused) audioEl.play?.().catch(() => {})
-  } else {
-    audioEl = new Audio() as RemoteAudioElement
-    audioEl.srcObject = new MediaStream([track])
-    audioEl.autoplay = true
-    tagRemoteAudio(audioEl, streamId)
-    applyOutput(voiceStore, audioEl)
-    applyRemoteGain(voiceStore, audioEl)
-    audioEl.play().catch(e => {
-      // After a reload without a user gesture the browser may refuse to play;
-      // the UI then offers a click to enable sound (resumeRemoteAudio).
-      if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
-      console.warn('[WebRTC] Audio auto-play warning:', e)
-    })
-    if (typeof document !== 'undefined' && document.body) {
-      let sink = document.getElementById('mnema-audio-sink')
-      if (!sink) {
-        sink = document.createElement('div')
-        sink.id = 'mnema-audio-sink'
-        sink.style.display = 'none'
-        document.body.appendChild(sink)
-      }
-      sink.appendChild(audioEl)
-    }
-    remoteAudioElements.set(track.id, audioEl)
-    track.onended = () => {
-      const current = remoteAudioElements.get(track.id)
-      if (current?.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-    }
-  }
-
-  // When the SFU stops forwarding, the browser removes the track from its
-  // stream instead of ending it. Only drop the element while it still
-  // belongs to this stream: a reused track may already play for someone else.
-  stream?.addEventListener?.('removetrack', (e) => {
-    if (e.track !== track) return
-    const el = remoteAudioElements.get(track.id)
-    if (el && (el.dataset.streamId || '') === streamId && el.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-  })
-}
-
 function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
   cleanupPeerConnection(voiceStore)
 
@@ -1942,8 +1742,7 @@ export function useWebRTC() {
   // Called from a user click when autoplay was blocked after a reload.
   function resumeRemoteAudio() {
     voiceStore.audioBlocked = false
-    playbackContext?.resume?.().catch(() => {})
-    remoteAudioElements.forEach(el => el.play().catch(() => { voiceStore.audioBlocked = true }))
+    resumeRemotePlayback(voiceStore)
   }
 
   // These watchers exist once per voice store, however many components call
@@ -1954,10 +1753,14 @@ export function useWebRTC() {
   if (watchedStore !== voiceStore) {
     watcherScope?.stop()
     watchedStore = voiceStore
-    outputDeviceStore = voiceStore
+    followOutputDevice(voiceStore)
     watcherScope = effectScope(true)
     watcherScope.run(() => {
-      watch(() => voiceStore.selectedOutputDeviceId, () => applyOutputDeviceAll(voiceStore))
+      watch(() => voiceStore.selectedOutputDeviceId, () => {
+        applyOutputToRemote(voiceStore)
+        // The mic-test monitor.
+        applyOutput(voiceStore, loopbackCtx)
+      })
 
       // Input volume: adjust the gain live; the first change away from 100 %
       // rebuilds the pipeline once to put the gain stage in.
