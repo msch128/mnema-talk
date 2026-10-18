@@ -5,6 +5,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -163,8 +164,17 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	start := time.Now()
-	newest := page(t, admin, ch, "?limit=100")
+	// What the test guards is that a page costs the same at any depth (a cursor
+	// seek, not an OFFSET scan). That is judged against pages of this very run,
+	// so a slow or busy machine (CI with coverage) cannot fail it by itself.
+	var took []time.Duration
+	timed := func(query string) []pageMsg {
+		begin := time.Now()
+		msgs := page(t, admin, ch, query)
+		took = append(took, time.Since(begin))
+		return msgs
+	}
+	newest := timed("?limit=100")
 	if len(newest) != 100 || newest[99].Content != "msg 15000" || newest[0].Content != "msg 14901" {
 		t.Fatalf("newest page wrong: first=%q last=%q len=%d", newest[0].Content, newest[len(newest)-1].Content, len(newest))
 	}
@@ -177,7 +187,7 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 	cursor := newest[0].ID
 	pages := 1
 	for {
-		older := page(t, admin, ch, "?limit=100&before="+cursor.String())
+		older := timed("?limit=100&before=" + cursor.String())
 		if len(older) == 0 {
 			break
 		}
@@ -190,14 +200,17 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 		cursor = older[0].ID
 		pages++
 	}
-	elapsed := time.Since(start)
 	if len(seen) != total {
 		t.Fatalf("paged %d messages, want %d", len(seen), total)
 	}
-	perPage := elapsed / time.Duration(pages)
-	t.Logf("%d pages over %d messages, %v per page", pages, total, perPage)
-	if perPage > 250*time.Millisecond {
-		t.Fatalf("history paging too slow: %v per page", perPage)
+	// took[0] is the newest page, the last entry the empty page past the start.
+	shallow, deep := medianDuration(took[:10]), medianDuration(took[len(took)-11:len(took)-1])
+	t.Logf("%d pages over %d messages, median %v at the newest end, %v at the oldest", pages, total, shallow, deep)
+	if deep > 4*shallow+20*time.Millisecond {
+		t.Fatalf("paging gets slower with depth: %v at the oldest end vs %v at the newest", deep, shallow)
+	}
+	if deep > 2*time.Second {
+		t.Fatalf("history paging too slow: %v per page", deep)
 	}
 
 	// Jump to a message deep in the history.
@@ -239,12 +252,13 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 	jumpStart := time.Now()
 	jump := page(t, admin, ch, "?limit=50&around="+ancient.String())
 	jumpTook := time.Since(jumpStart)
+	jumpLimit := 10*shallow + 100*time.Millisecond
 	if len(jump) == 0 || jump[0].Content != "msg 1" {
 		t.Fatalf("jump to msg 3 must land at the start of history, got %q", jump[0].Content)
 	}
 	t.Logf("jump 15k messages back took %v", jumpTook)
-	if jumpTook > 250*time.Millisecond {
-		t.Fatalf("jump too slow: %v", jumpTook)
+	if jumpTook > jumpLimit {
+		t.Fatalf("jump too slow: %v (a normal page takes about %v)", jumpTook, shallow)
 	}
 
 	if res := admin.get("/api/channels/" + ch.String() + "/messages?before=" + target.String() + "&after=" + target.String()); res.status != http.StatusBadRequest {
@@ -254,6 +268,12 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 	if res := admin.get("/api/channels/" + other.String() + "/messages?around=" + target.String()); res.status != http.StatusNotFound {
 		t.Fatalf("anchor from another channel: %d", res.status)
 	}
+}
+
+func medianDuration(ds []time.Duration) time.Duration {
+	sorted := append([]time.Duration(nil), ds...)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	return sorted[len(sorted)/2]
 }
 
 func TestRepliesQuoteTheOriginal(t *testing.T) {
