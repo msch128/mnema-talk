@@ -1,851 +1,126 @@
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, watch } from 'vue'
-import { syncServerClock } from '../lib/clock'
-import { playSoundEffect } from '../lib/soundEffects'
-import { useAuthStore } from './auth'
-import { DEFAULT_STREAM_QUALITY, normalizeQuality, SCREEN_QUALITY_STORAGE_KEY } from '../lib/streamQuality'
-import { layersShape } from '../lib/screenLayers'
+import { createVoiceState, type VoiceState } from './voice/state'
+import { toggleScreenAudioMute, setScreenQuality, resetScreenQuality, openScreenShareModal, closeScreenShareModal, recordPing, setNoiseMode, toggleNoiseCancelling, toggleMute, toggleDeafen } from './voice/controls'
+import { setSubscriptionSink, isCameraHidden, setCameraHidden, toggleCameraHidden, setAllCamerasOff, setHideNoVideo, toggleHideNoVideo, resendSubscriptions, cameraStreamOf, canFocusCamera, focusCamera, unfocusCamera, toggleCameraFocus, setUserVideoStream, removeUserVideoStream } from './voice/cameras'
+import { watchScreen, unwatchScreen, focusScreen, focusOwnScreen, setRemoteScreen, removeRemoteScreen, handleMediaState, handleScreenViewers, handleScreenLayers, handleScreenQuality, handleLayersWanted, setScreenChoice, viewersOf, resetRemoteMedia } from './voice/screens'
+import { updateUser, setVoiceRooms, joinedAtOf, setVoiceSnapshot, handleVoiceStateUpdate, handleSpeakingEvent, handleMuteState, muteStateOf, isSpeaking, setChannel, disconnect } from './voice/room'
+import { installStage } from './voice/cameras'
 
-import type { UserUpdate } from '../types/domain'
-import type { MediaState, ScreenLayer, ScreenLayers, ScreenLayersWanted, ScreenReception, ScreenViewers, VoiceRooms, VoiceSnapshot, VoiceStateUpdate, MuteState, SpeakingState, SubscribeRequest } from '../types/events'
-import type { RTCConnectionStats } from '../lib/rtcStats'
-import type { MediaVerification } from '../lib/media/verify'
-import type { ScreenQuality } from '../lib/streamQuality'
 export type { RTCConnectionStats } from '../lib/rtcStats'
 export type { ScreenQuality } from '../lib/streamQuality'
-import { isRecord } from '../types/validation'
-import { usePlaybackPrefs, readJson, writeJson, USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../lib/voicePlayback'
-export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT }
-export { NOISE_MODES, SOUND_EVENTS } from './voiceSettings'
 export type { InputMode, NoiseMode, SoundEvent } from './voiceSettings'
-import { useVoiceSettings, type NoiseMode } from './voiceSettings'
-
-// Cameras of others are on by default; what I opted out of is remembered.
-const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
-const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
-// "Hide participants without video" in the Talk view (per browser).
-const HIDE_NO_VIDEO_KEY = 'mnema_hide_no_video'
+export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../lib/voicePlayback'
+export { NOISE_MODES, SOUND_EVENTS } from './voiceSettings'
 
 export const useVoiceStore = defineStore('voice', () => {
-  const currentChannelId = ref<string | null>(null)
-  const isMuted = ref(false)
-  const isDeafened = ref(false)
-  const isScreenSharing = ref(false)
-  // My own share: its sound is not sent (the streamer's mute), whether it has
-  // sound at all, and the quality it is sent in (see useStreamQuality; every
-  // share starts at the default).
-  function loadSavedScreenQuality(): ScreenQuality {
-    try {
-      const raw = localStorage.getItem(SCREEN_QUALITY_STORAGE_KEY)
-      if (raw) {
-        const parsed: unknown = JSON.parse(raw)
-        return { ...normalizeQuality(parsed), ...(isRecord(parsed) && parsed['custom'] === true ? { custom: true } : {}) }
-      }
-    } catch {
-      // Storage blocked or invalid JSON: fall back to default quality.
-    }
-    return { ...DEFAULT_STREAM_QUALITY }
-  }
-
-  const isScreenAudioMuted = ref(false)
-  const hasScreenAudio = ref(false)
-  const screenQuality = ref(loadSavedScreenQuality())
-  const showScreenShareModal = ref(false)
-  const isCameraOn = ref(false)
-  const isConnected = ref(false)
-  const activeView = ref<'chat' | 'voice'>('chat') // 'chat' | 'voice'
-  const showStatsModal = ref(false)
-  // The safety code of the call's current media keys (null without keys).
-  const mediaVerification = ref<MediaVerification | null>(null)
-  const showAudioSettings = ref(false)
-
-  // Measured connection metrics. `ping` is the WebSocket round trip to the
-  // server; `rtcStats` holds what RTCPeerConnection.getStats() reports while in
-  // voice. Both stay empty until there is a real measurement.
-  const ping = ref<number | null>(null)
-  const pingHistory = ref<number[]>([])
-  const rtcStats = ref<RTCConnectionStats | null>(null)
-  // True when the browser blocked remote audio playback (autoplay policy after
-  // a reload); the UI shows a click-to-enable banner.
-  const audioBlocked = ref(false)
-
-  // Persisted settings (inputMode, volumes, devices, noise handling, sound effects)
-  const {
-    inputMode, pttKey, autoSensitivity, sensitivityThreshold, hangoverMs,
-    warnNoAudioDetected, warnSwitchChannel, qosHighPriority,
-    soundEffectsEnabled, soundEffectsVolume, soundEvents,
-    noiseMode, noiseCancelling, autoGainControl, echoCancellation, inputVolume, outputVolume,
-    selectedInputDeviceId, selectedOutputDeviceId,
-    saveSettings, toggleSoundEvent
-  } = useVoiceSettings()
-  // Live voice activity state
-  const isPttPressed = ref(false)
-  const currentInputLevel = ref(0) // live meter 0-100
-
-  // Mic test loopback state
-  const isMicTesting = ref(false)
-
-  const availableInputDevices = ref<MediaDeviceInfo[]>([])
-  const availableOutputDevices = ref<MediaDeviceInfo[]>([])
-
-  const minPing = computed(() => (pingHistory.value.length ? Math.min(...pingHistory.value) : null))
-  const maxPing = computed(() => (pingHistory.value.length ? Math.max(...pingHistory.value) : null))
-  const avgPing = computed(() => {
-    if (!pingHistory.value.length) return null
-    return Math.round(pingHistory.value.reduce((a, b) => a + b, 0) / pingHistory.value.length)
-  })
-
-  function recordPing(rtt: number) {
-    if (typeof rtt !== 'number' || isNaN(rtt) || rtt < 0) return
-    const rounded = Math.min(9999, Math.round(rtt))
-    ping.value = rounded
-
-    const updated = [...pingHistory.value, rounded]
-    if (updated.length > 30) updated.shift()
-    pingHistory.value = updated
-  }
-
-  // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
-  const localScreenStream = shallowRef<MediaStream | null>(null)
-  const localAudioStream = shallowRef<MediaStream | null>(null)
-  // The remote screen share in focus and its publisher (user ID). It is on the
-  // stage unless my own share is (see `stage`).
-  const remoteScreenStream = shallowRef<MediaStream | null>(null)
-  const remoteScreenUserId = ref<string | null>(null)
-  // userId -> MediaStream of every screen share I watch (replaced, never mutated).
-  const remoteScreenStreams = shallowRef<Record<string, MediaStream>>({})
-  // My own share was chosen for the stage (see `stage`).
-  const ownScreenFocused = ref(false)
-  // userId of the camera put on the stage (mine too), null for none.
-  const focusedCamera = ref<string | null>(null)
-  // userId -> true for screen shares I opted into. Not persisted: it lasts
-  // for one share and one call.
-  const watchedScreens = ref<Record<string, boolean>>({})
-  // userId -> { screen, camera }: who publishes what, known without receiving it.
-  const mediaState = ref<Record<string, Omit<MediaState, 'user_id'>>>({})
-  // sharer userId -> user IDs watching their screen share (the server's
-  // screen_viewers event; only for the room I am in).
-  const screenViewers = ref<Record<string, string[]>>({})
-  // sharer userId -> the layers of their live screen share, best first (the
-  // server's screen_layers event). Without layers there is nothing to choose.
-  const screenLayers = ref<Record<string, ScreenLayer[]>>({})
-  // sharer userId -> the layer of their share I receive now, and whether the
-  // server picked it (screen_quality).
-  const receivedLayer = ref<Record<string, { layer: number, auto: boolean }>>({})
-  // sharer userId -> my choice: 'auto' or the index of a layer. Not persisted:
-  // it lasts for one share and one call.
-  const screenChoice = ref<Record<string, number | 'auto'>>({})
-  // How many layers of a screen share the server takes (server_info); 0 for a
-  // server that does not know layers, which then gets the screen as one.
-  const serverScreenLayers = ref(0)
-  // Which of my own screen share's layers some viewer needs (screen_layers_wanted);
-  // null until the server says, then my share sends only these.
-  const layersWanted = ref<number[] | null>(null)
-  const localCameraStream = shallowRef<MediaStream | null>(null)
-  // userId -> MediaStream of that participant's camera (replaced, never mutated).
-  const userVideoStreams = shallowRef<Record<string, MediaStream>>({})
-
-  // Map of channelId -> Map of userId -> User object
-  const channelUsers = ref<VoiceSnapshot>({})
-  // Map of userId -> boolean (true if speaking)
-  const speakingUsers = ref<Record<string, boolean>>({})
-
-  // channelId -> ISO time the room got its first member (for the Talk timer).
-  const roomStartedAt = ref<Record<string, string>>({})
-
-  function setVoiceSnapshot(snapshot: VoiceSnapshot | null) {
-    channelUsers.value = snapshot || {}
-  }
-
-  /** When userId joined the room they are in now ('' if in none). */
-  function joinedAtOf(userId: string | null) {
-    for (const users of Object.values(channelUsers.value)) {
-      const user = userId ? users[userId] : undefined
-      if (user) return user.joined_at || ''
-    }
-    return ''
-  }
-
-  /** voice_rooms: { started: { channelId: iso }, now: iso (server clock) }. */
-  function setVoiceRooms(payload: VoiceRooms) {
-    if (payload?.now) syncServerClock(payload.now)
-    roomStartedAt.value = { ...(payload?.started || {}) }
-  }
-
-  const {
-    userVolumes, localMutedUsers, streamVolumes, mutedStreams, getUserVolume, setUserVolume, isUserLocalMuted, getStreamVolume, setStreamVolume, isStreamMuted, toggleStreamMute, streamVolumeShown, streamGain, toggleLocalMute
-  } = usePlaybackPrefs()
-
-  // --- Video subscriptions (enforced by the server's SFU) ---
-  const hiddenCameras = ref(readJson(HIDDEN_CAMERAS_KEY))
-  const allCamerasOff = ref(readJson(ALL_CAMERAS_OFF_KEY).off === true)
-  // Set by useWebRTC while in a call: sends a webrtc_subscribe event.
-  let subscriptionSink: ((request: SubscribeRequest) => void) | null = null
-
-  function setSubscriptionSink(fn: ((request: SubscribeRequest) => void) | null) {
-    subscriptionSink = typeof fn === 'function' ? fn : null
-  }
-
-  function emitSubscription(msg: SubscribeRequest) {
-    subscriptionSink?.(msg)
-  }
-
-  function isCameraHidden(userId: string | null) {
-    return allCamerasOff.value || (!!userId && !!hiddenCameras.value[userId])
-  }
-
-  function setCameraHidden(userId: string | null, hidden: boolean) {
-    if (!userId) return
-    const next = { ...hiddenCameras.value }
-    if (hidden) next[userId] = true
-    else delete next[userId]
-    hiddenCameras.value = next
-    writeJson(HIDDEN_CAMERAS_KEY, next)
-    if (hidden) removeUserVideoStream(userId)
-    emitSubscription({ kind: 'camera', user_id: userId, on: !hidden })
-  }
-
-  function toggleCameraHidden(userId: string | null) {
-    if (userId) setCameraHidden(userId, !hiddenCameras.value[userId])
-  }
-
-  function setAllCamerasOff(off: boolean) {
-    allCamerasOff.value = !!off
-    writeJson(ALL_CAMERAS_OFF_KEY, { off: !!off })
-    if (off) userVideoStreams.value = {}
-    emitSubscription({ kind: 'camera', all: true, on: !off })
-  }
-
-  // Only tiles with a camera or a screen share in the Talk view.
-  const hideNoVideo = ref(readJson(HIDE_NO_VIDEO_KEY).on === true)
-
-  function setHideNoVideo(on: boolean) {
-    hideNoVideo.value = !!on
-    writeJson(HIDE_NO_VIDEO_KEY, { on: !!on })
-  }
-
-  function toggleHideNoVideo() {
-    setHideNoVideo(!hideNoVideo.value)
-  }
-
-  // Sends every stored choice; right after joining and after a reconnect.
-  function resendSubscriptions() {
-    if (allCamerasOff.value) emitSubscription({ kind: 'camera', all: true, on: false })
-    for (const id of Object.keys(hiddenCameras.value)) {
-      emitSubscription({ kind: 'camera', user_id: id, on: false })
-    }
-    for (const id of Object.keys(watchedScreens.value)) {
-      emitSubscription(screenRequest(id, true))
-    }
-  }
-
-  // A subscription to a screen share carries the layer I chose, if I did.
-  function screenRequest(userId: string, on: boolean): SubscribeRequest {
-    const choice = screenChoice.value[userId]
-    return choice === undefined ? { kind: 'screen', user_id: userId, on } : { kind: 'screen', user_id: userId, on, quality: choice }
-  }
-
-  function syncScreenFocus(preferred: string | null) {
-    let id = preferred
-    if (!id || !watchedScreens.value[id]) {
-      id = remoteScreenUserId.value && watchedScreens.value[remoteScreenUserId.value]
-        ? remoteScreenUserId.value
-        : Object.keys(watchedScreens.value)[0] || null
-    }
-    remoteScreenUserId.value = id
-    remoteScreenStream.value = (id && remoteScreenStreams.value[id]) || null
-  }
-
-  // Opt into someone's screen share; it goes on the stage.
-  function watchScreen(userId: string | null) {
-    if (!userId) return
-    ownScreenFocused.value = false
-    focusedCamera.value = null
-    watchedScreens.value = { ...watchedScreens.value, [userId]: true }
-    syncScreenFocus(userId)
-    emitSubscription(screenRequest(userId, true))
-  }
-
-  function unwatchScreen(userId: string | null) {
-    if (!userId || !watchedScreens.value[userId]) return
-    const next = { ...watchedScreens.value }
-    delete next[userId]
-    watchedScreens.value = next
-    forgetScreenQuality(userId, false)
-    const streams = { ...remoteScreenStreams.value }
-    delete streams[userId]
-    remoteScreenStreams.value = streams
-    syncScreenFocus(null)
-    emitSubscription({ kind: 'screen', user_id: userId, on: false })
-  }
-
-  // Which of the screen shares I watch is on the stage.
-  function focusScreen(userId: string | null) {
-    if (!userId || !watchedScreens.value[userId]) return
-    ownScreenFocused.value = false
-    focusedCamera.value = null
-    syncScreenFocus(userId)
-  }
-
-  // --- The stage: one screen share (mine or one I watch) or one camera ---
-  // Starting to share puts my own share on the stage unless I already watch
-  // someone; then theirs stays and mine is a card.
-  watch(localScreenStream, (stream, prev) => {
-    if (!stream) ownScreenFocused.value = false
-    else if (!prev) ownScreenFocused.value = !remoteScreenUserId.value
-  }, { flush: 'sync' })
-
-  function focusOwnScreen() {
-    if (!localScreenStream.value) return
-    ownScreenFocused.value = true
-    focusedCamera.value = null
-  }
-
-  // A camera on the stage: mine, or one I receive and have not hidden.
-  function cameraStreamOf(userId: string | null) {
-    if (!userId) return null
-    if (userId === myUserId()) return localCameraStream.value || null
-    return isCameraHidden(userId) ? null : userVideoStreams.value[userId] || null
-  }
-
-  function canFocusCamera(userId: string | null) {
-    return !!cameraStreamOf(userId)
-  }
-
-  function focusCamera(userId: string | null) {
-    if (canFocusCamera(userId)) focusedCamera.value = userId
-  }
-
-  // Back to the screen share it replaced, or to everyone (the grid).
-  function unfocusCamera() {
-    focusedCamera.value = null
-  }
-
-  function toggleCameraFocus(userId: string | null) {
-    if (focusedCamera.value === userId) unfocusCamera()
-    else focusCamera(userId)
-  }
-
-  // The camera on the stage was turned off, hidden or left: it leaves the stage.
-  watch(() => !!focusedCamera.value && !canFocusCamera(focusedCamera.value), gone => {
-    if (gone) focusedCamera.value = null
-  }, { flush: 'sync' })
-
-  // What the stage shows, null for nothing (the grid):
-  //   { kind: 'camera', own, userId, stream } a camera I chose, else
-  //   { kind: 'screen', own, userId, stream } a screen share.
-  // A chosen share that is not there (yet) falls back to the other one.
-  const stage = computed(() => {
-    const cameraId = focusedCamera.value
-    const camera = cameraStreamOf(cameraId)
-    if (camera) return { kind: 'camera' as const, own: cameraId === myUserId(), userId: cameraId, stream: camera }
-    const own = localScreenStream.value
-    const remoteId = remoteScreenUserId.value
-    const remote = remoteId ? remoteScreenStream.value : null
-    if (own && (ownScreenFocused.value || !remote)) return { kind: 'screen' as const, own: true, userId: myUserId(), stream: own }
-    if (remote) return { kind: 'screen' as const, own: false, userId: remoteId, stream: remote }
-    return null
-  })
-
-  function setRemoteScreen(userId: string | null, stream: MediaStream) {
-    // A track that arrives after I stopped watching is not shown.
-    if (!userId || !watchedScreens.value[userId]) return
-    remoteScreenStreams.value = { ...remoteScreenStreams.value, [userId]: stream }
-    syncScreenFocus(remoteScreenUserId.value === userId || !remoteScreenStream.value ? userId : null)
-  }
-
-  function removeRemoteScreen(userId: string, stream?: MediaStream) {
-    const current = remoteScreenStreams.value[userId]
-    if (!current || (stream && current !== stream)) return
-    const next = { ...remoteScreenStreams.value }
-    delete next[userId]
-    remoteScreenStreams.value = next
-    syncScreenFocus(null)
-  }
-
-  function handleMediaState(update: Pick<MediaState, 'user_id'> & Partial<Omit<MediaState, 'user_id'>>) {
-    const { user_id, channel_id, screen, camera } = update || {}
-    if (!user_id) return
-    const next = { ...mediaState.value }
-    if ((screen || camera) && channel_id) next[user_id] = { channel_id, screen: !!screen, camera: !!camera }
-    else delete next[user_id]
-    mediaState.value = next
-    if (!screen && screenViewers.value[user_id]) {
-      const v = { ...screenViewers.value }
-      delete v[user_id]
-      screenViewers.value = v
-    }
-    if (!screen) forgetScreenQuality(user_id)
-    // The share ended: the opt-in ended with it.
-    if (!screen && watchedScreens.value[user_id]) {
-      const w = { ...watchedScreens.value }
-      delete w[user_id]
-      watchedScreens.value = w
-      removeRemoteScreen(user_id)
-      syncScreenFocus(null)
-    }
-  }
-
-  /** screen_viewers: { channel_id, user_id (the sharer), viewers: [user IDs] }. */
-  function handleScreenViewers(event: ScreenViewers) {
-    const { channel_id, user_id, viewers } = event || {}
-    if (!user_id) return
-    // Late events of a room I left (or before I joined one) are not mine.
-    if (!currentChannelId.value || (channel_id && channel_id !== currentChannelId.value)) return
-    const ids = Array.isArray(viewers) ? [...new Set(viewers.filter(id => id && id !== user_id))] : []
-    const next = { ...screenViewers.value }
-    if (ids.length) next[user_id] = ids
-    else delete next[user_id]
-    screenViewers.value = next
-  }
-
-  // What I chose and receive of a share ends with my watching it; the layers it
-  // has stay known until it ends.
-  function forgetScreenQuality(userId: string, withLayers = true) {
-    for (const ref of withLayers ? [screenLayers, receivedLayer, screenChoice] as const : [receivedLayer, screenChoice] as const) {
-      if (!(userId in ref.value)) continue
-      const next = { ...ref.value }
-      delete next[userId]
-      ref.value = next as never
-    }
-  }
-
-  function sameRoom(channelId: string | undefined): boolean {
-    // Late events of a room I left (or before I joined one) are not mine.
-    return !!currentChannelId.value && (!channelId || channelId === currentChannelId.value)
-  }
-
-  /** screen_layers: the layers of userId's live screen share ([] once it ended). */
-  function handleScreenLayers(event: ScreenLayers) {
-    const { channel_id, user_id, layers } = event || {}
-    if (!user_id || !sameRoom(channel_id)) return
-    const before = screenLayers.value[user_id]
-    if (!layers?.length) {
-      forgetScreenQuality(user_id)
-      return
-    }
-    screenLayers.value = { ...screenLayers.value, [user_id]: layers }
-    // A choice is a position among the layers: it survives new sizes (a resized
-    // window) but not other layers, where the server's pick stands again.
-    if (before && layersShape(before) !== layersShape(layers) && user_id in screenChoice.value) {
-      const next = { ...screenChoice.value }
-      delete next[user_id]
-      screenChoice.value = next
-      if (watchedScreens.value[user_id]) emitSubscription({ kind: 'screen', user_id, on: true, quality: 'auto' })
-    }
-  }
-
-  /** screen_quality: the layer of userId's share I receive now. */
-  function handleScreenQuality(event: ScreenReception) {
-    const { channel_id, user_id, layer, auto } = event || {}
-    if (!user_id || !sameRoom(channel_id) || !watchedScreens.value[user_id]) return
-    receivedLayer.value = { ...receivedLayer.value, [user_id]: { layer, auto } }
-  }
-
-  /** screen_layers_wanted: the layers of my own share that someone receives. */
-  function handleLayersWanted(event: ScreenLayersWanted) {
-    if (!event || !Array.isArray(event.layers) || !sameRoom(event.channel_id)) return
-    layersWanted.value = [...event.layers]
-  }
-
-  /** Chooses which layer of userId's screen share I receive: 'auto' or a layer index. */
-  function setScreenChoice(userId: string | null, choice: number | 'auto') {
-    if (!userId || !watchedScreens.value[userId]) return
-    screenChoice.value = { ...screenChoice.value, [userId]: choice }
-    emitSubscription({ kind: 'screen', user_id: userId, on: true, quality: choice })
-  }
-
-  /** Who watches userId's screen share (my own too): user IDs, [] for nobody. */
-  function viewersOf(userId: string | null) {
-    return userId ? screenViewers.value[userId] || [] : []
-  }
-
-  // The media connection restarted (reconnect): streams are gone and the server
-  // announces what is published again. Opt-ins for shares that ended are dropped.
-  function resetRemoteMedia() {
-    const keep: Record<string, boolean> = {}
-    for (const id of Object.keys(watchedScreens.value)) {
-      if (mediaState.value[id]?.screen) keep[id] = true
-    }
-    watchedScreens.value = keep
-    remoteScreenStreams.value = {}
-    mediaState.value = {}
-    // The server sends who watches what again after the join.
-    screenViewers.value = {}
-    screenLayers.value = {}
-    receivedLayer.value = {}
-    layersWanted.value = null
-    userVideoStreams.value = {}
-    syncScreenFocus(null)
-  }
-
-  function setUserVideoStream(userId: string, stream: MediaStream) {
-    if (isCameraHidden(userId)) return
-    userVideoStreams.value = { ...userVideoStreams.value, [userId]: stream }
-  }
-
-  function removeUserVideoStream(userId: string, stream?: MediaStream) {
-    const current = userVideoStreams.value[userId]
-    // A stale track ending must not drop a newer stream of the same user.
-    if (!current || (stream && current !== stream)) return
-    const next = { ...userVideoStreams.value }
-    delete next[userId]
-    userVideoStreams.value = next
-  }
-
-  function handleVoiceStateUpdate(update: VoiceStateUpdate) {
-    const { action, channel_id } = update
-    const user = update.action === 'join' ? update.user : null
-    const user_id = update.action === 'leave' ? update.user_id : null
-    if (!channelUsers.value[channel_id]) {
-      channelUsers.value[channel_id] = {}
-    }
-
-    let myId: string | null | undefined = null
-    try {
-      myId = useAuthStore()?.user?.id
-    } catch {
-      // outside pinia/test context
-    }
-
-    if (action === 'join' && user) {
-      channelUsers.value[channel_id][user.id] = user
-      if (update.action === 'join' && update.started_at) roomStartedAt.value = { ...roomStartedAt.value, [channel_id]: update.started_at }
-      if (currentChannelId.value === channel_id && myId && user.id !== myId) {
-        playSoundEffect('user_join')
-      }
-    } else if (action === 'leave' && user_id) {
-      delete channelUsers.value[channel_id][user_id]
-      if (!Object.keys(channelUsers.value[channel_id]).length) {
-        const next = { ...roomStartedAt.value }
-        delete next[channel_id]
-        roomStartedAt.value = next
-      }
-      // A delayed departure from another room must not clear this room's
-      // receiver streams or speaking state for a participant who moved here.
-      const leavesCurrentRoom = currentChannelId.value === channel_id
-      const mediaChannelId = mediaState.value[user_id]?.channel_id
-      if (leavesCurrentRoom || !currentChannelId.value) {
-        delete speakingUsers.value[user_id]
-        removeUserVideoStream(user_id)
-      }
-      // Publication snapshots cover every room. Only retire the publication
-      // named by this departure, or a current-room share without a snapshot.
-      if (mediaChannelId === channel_id || (!mediaChannelId && (leavesCurrentRoom || !currentChannelId.value))) {
-        handleMediaState({ user_id })
-      }
-      if (currentChannelId.value === channel_id && myId && user_id !== myId) {
-        playSoundEffect('user_leave')
-      }
-    }
-  }
-
-  /** user_update: a new name or avatar also shows in the Talk lists and tiles. */
-  function updateUser(updated: UserUpdate) {
-    if (!updated?.id) return
-    for (const users of Object.values(channelUsers.value)) {
-      const user = users?.[updated.id]
-      if (user) users[updated.id] = { ...user, ...updated }
-    }
-  }
-
-  function myUserId() {
-    try {
-      return useAuthStore()?.user?.id || null
-    } catch {
-      return null // outside pinia (tests)
-    }
-  }
-
-  /** voice_mute_state: someone in a Talk muted or deafened (or stopped). */
-  function handleMuteState(event: MuteState) {
-    const { channel_id, user_id, muted, deafened } = event || {}
-    const users = channelUsers.value[channel_id]
-    const user = users?.[user_id]
-    if (!users || !user) return
-    users[user_id] = { ...user, muted: !!muted, deafened: !!deafened }
-  }
-
-  /** Mute/deafen state of a user in a Talk; mine comes from my own controls. */
-  function muteStateOf(userId: string | null) {
-    if (userId && userId === myUserId()) return { muted: isMuted.value, deafened: isDeafened.value }
-    for (const users of Object.values(channelUsers.value)) {
-      const u = userId ? users[userId] : undefined
-      if (u) return { muted: !!u.muted, deafened: !!u.deafened }
-    }
-    return { muted: false, deafened: false }
-  }
-
-  /** The speaking ring: never while muted or deafened. */
-  function isSpeaking(userId: string | null) {
-    if (!userId || !speakingUsers.value[userId]) return false
-    const st = muteStateOf(userId)
-    return !st.muted && !st.deafened
-  }
-
-  function handleSpeakingEvent(event: SpeakingState) {
-    const { user_id, active } = event || {}
-    if (!user_id) return
-    if (active) {
-      if (!speakingUsers.value[user_id]) {
-        speakingUsers.value = { ...speakingUsers.value, [user_id]: true }
-      }
-    } else {
-      if (speakingUsers.value[user_id]) {
-        const next = { ...speakingUsers.value }
-        delete next[user_id]
-        speakingUsers.value = next
-      }
-    }
-  }
-
-  function toggleMute() {
-    isMuted.value = !isMuted.value
-    playSoundEffect(isMuted.value ? 'mute' : 'unmute')
-    if (localAudioStream.value) {
-      localAudioStream.value.getAudioTracks().forEach(track => {
-        track.enabled = !isMuted.value
-      })
-    }
-  }
-
-  function toggleDeafen() {
-    isDeafened.value = !isDeafened.value
-    playSoundEffect(isDeafened.value ? 'deafen' : 'undeafen')
-    if (isDeafened.value) {
-      isMuted.value = true
-      if (localAudioStream.value) {
-        localAudioStream.value.getAudioTracks().forEach(track => {
-          track.enabled = false
-        })
-      }
-    }
-  }
-
-  function setNoiseMode(mode: NoiseMode) {
-    noiseMode.value = mode
-    saveSettings()
-  }
-
-  // Quick toggle in the call bar: off <-> AI filter.
-  function toggleNoiseCancelling() {
-    setNoiseMode(noiseMode.value === 'off' ? 'ai' : 'off')
-  }
-
-  function setChannel(channelId: string | null) {
-    const prev = currentChannelId.value
-    currentChannelId.value = channelId
-    isConnected.value = !!channelId
-    // Viewers belong to one room.
-    if (prev !== channelId) {
-      screenViewers.value = {}
-      screenLayers.value = {}
-      receivedLayer.value = {}
-      screenChoice.value = {}
-      layersWanted.value = null
-    }
-    if (channelId) {
-      if (prev !== channelId) {
-        playSoundEffect('join')
-      }
-      activeView.value = 'voice'
-    }
-  }
-
-  function toggleScreenAudioMute() {
-    isScreenAudioMuted.value = !isScreenAudioMuted.value
-  }
-
-  // q: { resolution, fps, custom? } (see useStreamQuality).
-  function setScreenQuality(q: ScreenQuality) {
-    const norm = { ...normalizeQuality(q), ...(q?.custom === true ? { custom: true } : {}) }
-    screenQuality.value = norm
-    try {
-      localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify(norm))
-    } catch {
-      // Storage blocked or full: keeps quality for this session only.
-    }
-  }
-
-  function resetScreenQuality() {
-    screenQuality.value = { ...DEFAULT_STREAM_QUALITY }
-  }
-
-  function openScreenShareModal() {
-    showScreenShareModal.value = true
-  }
-
-  function closeScreenShareModal() {
-    showScreenShareModal.value = false
-  }
-
-  function disconnect() {
-    if (isConnected.value || currentChannelId.value) {
-      playSoundEffect('leave')
-    }
-    isMicTesting.value = false
-    currentChannelId.value = null
-    isConnected.value = false
-    isScreenSharing.value = false
-    isScreenAudioMuted.value = false
-    hasScreenAudio.value = false
-    resetScreenQuality()
-    isCameraOn.value = false
-    localCameraStream.value = null
-    remoteScreenStream.value = null
-    remoteScreenUserId.value = null
-    remoteScreenStreams.value = {}
-    watchedScreens.value = {}
-    ownScreenFocused.value = false
-    focusedCamera.value = null
-    mediaState.value = {}
-    screenViewers.value = {}
-    screenLayers.value = {}
-    receivedLayer.value = {}
-    screenChoice.value = {}
-    layersWanted.value = null
-    userVideoStreams.value = {}
-    subscriptionSink = null
-    activeView.value = 'chat'
-  }
+  const cs = createVoiceState()
+  // Each module function takes the state first; the store exposes them without it.
+  const bind = <A extends unknown[], R>(fn: (cs: VoiceState, ...args: A) => R) => (...args: A): R => fn(cs, ...args)
+  const stage = installStage(cs)
 
   return {
-    currentChannelId,
-    isMuted,
-    isDeafened,
-    isScreenSharing,
-    isScreenAudioMuted,
-    hasScreenAudio,
-    toggleScreenAudioMute,
-    screenQuality,
-    setScreenQuality,
-    resetScreenQuality,
-    showScreenShareModal,
-    openScreenShareModal,
-    closeScreenShareModal,
-    isCameraOn,
-    localCameraStream,
-    remoteScreenUserId,
-    remoteScreenStreams,
-    watchedScreens,
-    mediaState,
-    hiddenCameras,
-    allCamerasOff,
-    setSubscriptionSink,
-    isCameraHidden,
-    setCameraHidden,
-    toggleCameraHidden,
-    setAllCamerasOff,
-    hideNoVideo,
-    setHideNoVideo,
-    toggleHideNoVideo,
-    resendSubscriptions,
-    watchScreen,
-    unwatchScreen,
-    focusScreen,
-    focusOwnScreen,
-    ownScreenFocused,
-    focusedCamera,
-    cameraStreamOf,
-    canFocusCamera,
-    focusCamera,
-    unfocusCamera,
-    toggleCameraFocus,
+    currentChannelId: cs.currentChannelId,
+    isMuted: cs.isMuted,
+    isDeafened: cs.isDeafened,
+    isScreenSharing: cs.isScreenSharing,
+    isScreenAudioMuted: cs.isScreenAudioMuted,
+    hasScreenAudio: cs.hasScreenAudio,
+    toggleScreenAudioMute: bind(toggleScreenAudioMute),
+    screenQuality: cs.screenQuality,
+    setScreenQuality: bind(setScreenQuality),
+    resetScreenQuality: bind(resetScreenQuality),
+    showScreenShareModal: cs.showScreenShareModal,
+    openScreenShareModal: bind(openScreenShareModal),
+    closeScreenShareModal: bind(closeScreenShareModal),
+    isCameraOn: cs.isCameraOn,
+    localCameraStream: cs.localCameraStream,
+    remoteScreenUserId: cs.remoteScreenUserId,
+    remoteScreenStreams: cs.remoteScreenStreams,
+    watchedScreens: cs.watchedScreens,
+    mediaState: cs.mediaState,
+    hiddenCameras: cs.hiddenCameras,
+    allCamerasOff: cs.allCamerasOff,
+    setSubscriptionSink: bind(setSubscriptionSink),
+    isCameraHidden: bind(isCameraHidden),
+    setCameraHidden: bind(setCameraHidden),
+    toggleCameraHidden: bind(toggleCameraHidden),
+    setAllCamerasOff: bind(setAllCamerasOff),
+    hideNoVideo: cs.hideNoVideo,
+    setHideNoVideo: bind(setHideNoVideo),
+    toggleHideNoVideo: bind(toggleHideNoVideo),
+    resendSubscriptions: bind(resendSubscriptions),
+    watchScreen: bind(watchScreen),
+    unwatchScreen: bind(unwatchScreen),
+    focusScreen: bind(focusScreen),
+    focusOwnScreen: bind(focusOwnScreen),
+    ownScreenFocused: cs.ownScreenFocused,
+    focusedCamera: cs.focusedCamera,
+    cameraStreamOf: bind(cameraStreamOf),
+    canFocusCamera: bind(canFocusCamera),
+    focusCamera: bind(focusCamera),
+    unfocusCamera: bind(unfocusCamera),
+    toggleCameraFocus: bind(toggleCameraFocus),
     stage,
-    setRemoteScreen,
-    removeRemoteScreen,
-    handleMediaState,
-    screenViewers,
-    handleScreenViewers,
-    screenLayers,
-    receivedLayer,
-    screenChoice,
-    layersWanted,
-    serverScreenLayers,
-    handleScreenLayers,
-    handleScreenQuality,
-    handleLayersWanted,
-    setScreenChoice,
-    viewersOf,
-    resetRemoteMedia,
-    userVideoStreams,
-    setUserVideoStream,
-    removeUserVideoStream,
-    userVolumes,
-    localMutedUsers,
-    getUserVolume,
-    setUserVolume,
-    isUserLocalMuted,
-    toggleLocalMute,
-    streamVolumes,
-    mutedStreams,
-    getStreamVolume,
-    setStreamVolume,
-    isStreamMuted,
-    toggleStreamMute,
-    streamVolumeShown,
-    streamGain,
-    isConnected,
-    ping,
-    pingHistory,
-    minPing,
-    avgPing,
-    maxPing,
-    rtcStats,
-    audioBlocked,
-    recordPing,
-    showStatsModal,
-    mediaVerification,
-    showAudioSettings,
-    // Voice activity & Sensitivity settings
-    inputMode,
-    pttKey,
-    isPttPressed,
-    autoSensitivity,
-    sensitivityThreshold,
-    currentInputLevel,
-    hangoverMs,
-    isMicTesting,
-    warnNoAudioDetected,
-    warnSwitchChannel,
-    qosHighPriority,
-    soundEffectsEnabled,
-    soundEffectsVolume,
-    soundEvents,
-    toggleSoundEvent,
-    noiseMode,
-    noiseCancelling,
-    setNoiseMode,
-    autoGainControl,
-    echoCancellation,
-    inputVolume,
-    outputVolume,
-    selectedInputDeviceId,
-    selectedOutputDeviceId,
-    availableInputDevices,
-    availableOutputDevices,
-    saveSettings,
-    toggleNoiseCancelling,
-    activeView,
-    localScreenStream,
-    localAudioStream,
-    remoteScreenStream,
-    channelUsers,
-    updateUser,
-    roomStartedAt,
-    setVoiceRooms,
-    joinedAtOf,
-    speakingUsers,
-    setVoiceSnapshot,
-    handleVoiceStateUpdate,
-    handleSpeakingEvent,
-    handleMuteState,
-    muteStateOf,
-    isSpeaking,
-    toggleMute,
-    toggleDeafen,
-    setChannel,
-    disconnect
+    setRemoteScreen: bind(setRemoteScreen),
+    removeRemoteScreen: bind(removeRemoteScreen),
+    handleMediaState: bind(handleMediaState),
+    screenViewers: cs.screenViewers,
+    handleScreenViewers: bind(handleScreenViewers),
+    screenLayers: cs.screenLayers,
+    receivedLayer: cs.receivedLayer,
+    screenChoice: cs.screenChoice,
+    layersWanted: cs.layersWanted,
+    serverScreenLayers: cs.serverScreenLayers,
+    handleScreenLayers: bind(handleScreenLayers),
+    handleScreenQuality: bind(handleScreenQuality),
+    handleLayersWanted: bind(handleLayersWanted),
+    setScreenChoice: bind(setScreenChoice),
+    viewersOf: bind(viewersOf),
+    resetRemoteMedia: bind(resetRemoteMedia),
+    userVideoStreams: cs.userVideoStreams,
+    setUserVideoStream: bind(setUserVideoStream),
+    removeUserVideoStream: bind(removeUserVideoStream),
+    isConnected: cs.isConnected,
+    ping: cs.ping,
+    pingHistory: cs.pingHistory,
+    minPing: cs.minPing,
+    avgPing: cs.avgPing,
+    maxPing: cs.maxPing,
+    rtcStats: cs.rtcStats,
+    audioBlocked: cs.audioBlocked,
+    recordPing: bind(recordPing),
+    showStatsModal: cs.showStatsModal,
+    mediaVerification: cs.mediaVerification,
+    showAudioSettings: cs.showAudioSettings,
+    isPttPressed: cs.isPttPressed,
+    currentInputLevel: cs.currentInputLevel,
+    isMicTesting: cs.isMicTesting,
+    setNoiseMode: bind(setNoiseMode),
+    availableInputDevices: cs.availableInputDevices,
+    availableOutputDevices: cs.availableOutputDevices,
+    toggleNoiseCancelling: bind(toggleNoiseCancelling),
+    activeView: cs.activeView,
+    localScreenStream: cs.localScreenStream,
+    localAudioStream: cs.localAudioStream,
+    remoteScreenStream: cs.remoteScreenStream,
+    channelUsers: cs.channelUsers,
+    updateUser: bind(updateUser),
+    roomStartedAt: cs.roomStartedAt,
+    setVoiceRooms: bind(setVoiceRooms),
+    joinedAtOf: bind(joinedAtOf),
+    speakingUsers: cs.speakingUsers,
+    setVoiceSnapshot: bind(setVoiceSnapshot),
+    handleVoiceStateUpdate: bind(handleVoiceStateUpdate),
+    handleSpeakingEvent: bind(handleSpeakingEvent),
+    handleMuteState: bind(handleMuteState),
+    muteStateOf: bind(muteStateOf),
+    isSpeaking: bind(isSpeaking),
+    toggleMute: bind(toggleMute),
+    toggleDeafen: bind(toggleDeafen),
+    setChannel: bind(setChannel),
+    disconnect: bind(disconnect),
+    ...cs.settings,
+    ...cs.playback
   }
 })
 

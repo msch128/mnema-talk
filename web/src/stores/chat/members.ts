@@ -1,0 +1,154 @@
+import type { User, UserUpdate } from '../../types/domain'
+import { decodeUser } from '../../types/domain'
+import { isChatMember } from '../../types/rest'
+import { arrayDecoder } from '../../types/validation'
+import { api } from '../../lib/api'
+import { usePermissionsStore } from '../permissions'
+import { applyPresenceUpdate, activityOf } from '../../lib/presence'
+import type { Cx } from './state'
+import { loadedLists } from './messageWindow'
+
+const decodeMembers = arrayDecoder('members', isChatMember)
+
+/** The activity a bot shows, or null. */
+export function activityOfUser(cx: Cx, userId: string | null) {
+  const { cs } = cx
+  return userId ? cs.activityById.value[userId] ?? null : null
+}
+
+export function applyActivity(cx: Cx, update: { user_id: string; status?: unknown; activity?: unknown }) {
+  const { cs } = cx
+  const activity = update.status === 'offline' ? null : activityOf(update.activity)
+  const next = { ...cs.activityById.value }
+  if (activity) next[update.user_id] = activity
+  else delete next[update.user_id]
+  cs.activityById.value = next
+}
+
+/** Live status of a user; 'offline' when not connected. */
+export function presenceOf(cx: Cx, userId: string | null) {
+  const { cs } = cx
+  return userId ? cs.presenceById.value[userId] || 'offline' : 'offline'
+}
+
+function confirmActiveMember(cx: Cx, id: string) {
+  const { cs } = cx
+  cs.disabledMembers.delete(id)
+  const presence = cs.suppressedPresence.get(id)
+  if (presence) cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, { user_id: id, status: presence })
+  cs.suppressedPresence.delete(id)
+}
+
+export async function fetchMembers(cx: Cx) {
+  const { cs } = cx
+  const seq = ++cs.membersFetchSeq
+  const revision = cs.memberRevision
+  try {
+    const data = await api('/api/members', { decode: decodeMembers })
+    if (seq !== cs.membersFetchSeq) return
+    cs.members.value = data.filter(member => {
+      const disabledAt = cs.disabledMembers.get(member.id)
+      if (disabledAt !== undefined && disabledAt > revision) return false
+      // This request started after the disable event. Since the server only
+      // returns active accounts, presence here confirms a later re-enable.
+      confirmActiveMember(cx, member.id)
+      return true
+    }).map(member => {
+      const latest = cs.memberProfileUpdates.get(member.id)
+      return latest && latest.revision > revision ? { ...member, ...latest.user } : member
+    })
+    usePermissionsStore().setMemberRoles(cs.members.value)
+  } catch (e) {
+    console.error('Failed to fetch members:', e)
+  }
+}
+
+export function countMessageOf(cx: Cx, userId: string) {
+  const { cs } = cx
+  const m = cs.members.value.find(x => x.id === userId)
+  if (m) m.message_count = (m.message_count || 0) + 1
+}
+
+export function refreshMemberStats(cx: Cx) {
+  const { cs } = cx
+  clearTimeout(cs.memberStatsTimer)
+  cs.memberStatsTimer = setTimeout(() => fetchMembers(cx), 3000)
+}
+
+export function updateUserEverywhere(cx: Cx, updated: UserUpdate) {
+  const { cs, authStore, voiceStore } = cx
+  if (!updated?.id) return
+  const revision = ++cs.memberRevision
+  if ('disabled' in updated) {
+    if (updated.disabled) {
+      cs.disabledMembers.set(updated.id, revision)
+      cs.suppressedPresence.delete(updated.id)
+      cs.members.value = cs.members.value.filter(member => member.id !== updated.id)
+      cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, { user_id: updated.id, status: 'offline' })
+    } else {
+      confirmActiveMember(cx, updated.id)
+      fetchMembers(cx)
+    }
+  } else {
+    cs.memberProfileUpdates.set(updated.id, { revision, user: updated })
+    const idx = cs.members.value.findIndex(member => member.id === updated.id)
+    const existing = cs.members.value[idx]
+    // Profiles do not establish membership. Registration uses member_joined,
+    // and re-enabling uses the authoritative active-member roster above.
+    if (existing) cs.members.value[idx] = { ...existing, ...updated }
+  }
+  // Disabled updates carry no author fields; full profiles always carry a name.
+  if (!('disabled' in updated)) {
+    const copy = (target: { avatar_url?: string; display_name?: string }) => {
+      target.display_name = updated.display_name
+      if ('avatar_url' in updated && updated.avatar_url !== undefined) target.avatar_url = updated.avatar_url
+    }
+    for (const list of loadedLists(cx)) {
+      for (const m of list) {
+        if (m.user_id === updated.id) copy(m)
+        if (m.reply_to?.user_id === updated.id) copy(m.reply_to)
+      }
+    }
+  }
+  voiceStore.updateUser(updated)
+  if (authStore.user?.id === updated.id) authStore.user = { ...authStore.user, ...updated }
+  if (cs.selectedUserProfile.value?.id === updated.id) {
+    cs.selectedUserProfile.value = { ...cs.selectedUserProfile.value, ...updated }
+  }
+}
+
+export async function openUserProfile(cx: Cx, userOrMessage: Pick<User, 'id'> & Partial<User> & { user_id?: string }) {
+  const { cs } = cx
+  const community = cs.communityGeneration
+  const userId = userOrMessage?.user_id || userOrMessage?.id
+  if (!userId) return
+  const known = cs.members.value.find(m => m.id === userId)
+  const createdAt = userOrMessage.created_at || known?.created_at
+  cs.selectedUserProfile.value = {
+    id: userId,
+    username: userOrMessage.username || known?.username || '',
+    display_name: userOrMessage.display_name || known?.display_name || userOrMessage.username || '',
+    avatar_url: userOrMessage.avatar_url || known?.avatar_url || '',
+    role: userOrMessage.role || known?.role || 'user',
+    ...(createdAt ? { created_at: createdAt } : {})
+  }
+  try {
+    const full = await api(`/api/users/${userId}`, { decode: decodeUser })
+    // Closed, or another profile opened, while this one loaded.
+    if (community !== cs.communityGeneration || cs.selectedUserProfile.value?.id !== userId) return
+    cs.selectedUserProfile.value = { ...cs.selectedUserProfile.value, ...full }
+  } catch (e) {
+    console.warn('Failed to fetch full user profile:', e)
+  }
+}
+
+export function closeUserProfile(cx: Cx) {
+  const { cs } = cx
+  cs.selectedUserProfile.value = null
+}
+
+export function insertMention(cx: Cx, username: string) {
+  const { cs } = cx
+  if (username) cs.pendingMention.value = username
+}
+

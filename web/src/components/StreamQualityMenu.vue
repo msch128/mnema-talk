@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 // The gear on my own screen share: its quality menu (see useStreamQuality).
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { Settings } from '@lucide/vue'
 import ContextMenu from './ContextMenu.vue'
-import { useMenuState } from '../composables/useNavMenus'
+import { useButtonMenu } from '../composables/useButtonMenu'
 import { useStreamQuality } from '../composables/useStreamQuality'
 import { useWebRTC } from '../composables/useWebRTC'
 import { t } from '../i18n'
@@ -19,24 +19,7 @@ const quality = useStreamQuality({
   getStats: () => rtc.getScreenSendStats?.() ?? null,
   getCaptureSettings: () => rtc.getScreenCaptureSettings?.() ?? null
 })
-const menu = useMenuState()
-const button = ref<HTMLButtonElement | null>(null)
-// The menu closes on pointer down outside it (also on this button): a click
-// on the button while it was open only closes it.
-let wasOpen = false
-
-function onPointerDown() {
-  wasOpen = menu.state.open
-}
-
-function toggle() {
-  if (wasOpen || menu.state.open) {
-    wasOpen = false
-    menu.state.open = false
-    return
-  }
-  menu.show({ currentTarget: button.value }, () => quality.menuItems({ onChangeSource: () => rtc.startScreenShare() }))
-}
+const { menu, button, onPointerDown, toggle } = useButtonMenu(() => quality.menuItems({ onChangeSource: () => rtc.startScreenShare() }))
 
 watch(() => menu.state.open, open => {
   if (!open) quality.stopStats()
