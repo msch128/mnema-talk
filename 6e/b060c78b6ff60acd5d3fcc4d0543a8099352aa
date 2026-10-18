@@ -1,0 +1,27 @@
+internal/config/config_test.go
+  s_06fcde5dbef956::t_7deb00ff40bed9 5,7,436-527
+internal/db/migrate_integration_test.go
+  s_06fcde5dbef956::t_7deb00ff40bed9 9,17-19,245-397
+internal/httpx/middleware_test.go
+  s_06fcde5dbef956::t_ea6a633787c32f 5-8,294-394
+internal/httpx/ratelimit_test.go
+  s_06fcde5dbef956::t_ca79017059ce33 182-237
+internal/httpx/request_test.go
+  s_06fcde5dbef956::t_c596ecadec1ead 4-5,7,14-15,162-231
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6eb060c78b6ff60acd5d3fcc4d0543a8099352aa",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
