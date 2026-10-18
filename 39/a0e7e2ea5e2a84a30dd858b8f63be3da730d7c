@@ -1,0 +1,60 @@
+web/src/composables/webrtc/state.ts
+  s_06fcde5dbef956::t_655b2c500ced15 1-174
+web/src/composables/webrtc/layers.ts
+  s_06fcde5dbef956::t_a2149b91bae9ce 50,59
+  s_06fcde5dbef956::t_77aaf8c7914401 1-49,51-58,60-106
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-205
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-48,52-107,109-193
+  s_06fcde5dbef956::t_a2149b91bae9ce 49-51
+  s_06fcde5dbef956::t_0fe4152ebb7b02 108
+web/src/composables/webrtc/audioSettings.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-11,13-17,19-83
+  s_06fcde5dbef956::t_94e91a2d97e7a3 12,18
+web/src/composables/webrtc/layers.test.ts
+  s_06fcde5dbef956::t_98c5b64569d2ef 1-2,4-39,55-56
+  s_06fcde5dbef956::t_84a6b01290ad7f 3,40-54
+web/src/composables/webrtc/senders.ts
+  s_06fcde5dbef956::t_0fe4152ebb7b02 17,62-63
+  s_06fcde5dbef956::t_a2149b91bae9ce 30
+  s_06fcde5dbef956::t_77aaf8c7914401 1-16,18-29,31-61,64-144
+web/src/composables/webrtc/screen.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-219
+web/src/composables/webrtc/micPipeline.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-221
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_e141eda19afa7c 4,6-18,23-24,27,31-36,38-40,42,45-66
+web/src/composables/webrtc/watchers.ts
+  s_06fcde5dbef956::t_9fd2158fcb2c90 1-89
+web/src/composables/webrtc/audioMath.test.ts
+  s_06fcde5dbef956::t_1d8e891ca830f6 1-38
+web/src/composables/webrtc/audioMath.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-40
+web/src/composables/webrtc/micTest.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-203
+web/src/composables/webrtc/camera.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-89
+web/src/composables/webrtc/voiceAudio.ts
+  s_06fcde5dbef956::t_77aaf8c7914401 1-3,7-8,14-131
+  s_06fcde5dbef956::t_94e91a2d97e7a3 4-6,9-13
+web/src/composables/webrtc/senderTuning.ts
+  s_06fcde5dbef956::t_94e91a2d97e7a3 1-14
+  s_06fcde5dbef956::t_77aaf8c7914401 15-69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39a0e7e2ea5e2a84a30dd858b8f63be3da730d7c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
