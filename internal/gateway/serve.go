@@ -247,11 +247,16 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Bot: true, AvatarURL: creds.User.AvatarURL},
 	})
 	s.enqueue("READY", ready)
+	// An invalid or missing presence in IDENTIFY leaves the bot online.
+	set := false
 	if req.Presence != nil {
-		// An invalid presence in IDENTIFY is ignored; the bot connects as online.
 		if p, err := req.Presence.validate(); err == nil {
 			g.setPresence(s.userID, p)
+			set = true
 		}
+	}
+	if !set {
+		g.resetIdlePresence(s)
 	}
 	return s
 }
