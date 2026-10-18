@@ -1,13 +1,18 @@
 package httpx
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func TestDecodeJSONIsStrict(t *testing.T) {
@@ -152,5 +157,75 @@ func TestLoginFailureLimiterEscalates(t *testing.T) {
 	l.ResetFailures("herzog")
 	if locked, _ := l.IsLockedOut("herzog"); locked {
 		t.Fatal("reset did not clear lockout")
+	}
+}
+
+func TestHandleSanitizesDownstreamFailureAndKeepsTypedAPIError(t *testing.T) {
+	for name, err := range map[string]error{
+		"downstream": errors.New("test-only private downstream detail"),
+		"typed":      fmt.Errorf("wrapped: %w", ErrForbidden("permission denied")),
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := httptest.NewRequest(http.MethodGet, "/api/channels?never-log-this", nil)
+			r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "core-error-test"))
+			w := httptest.NewRecorder()
+			Handle(func(http.ResponseWriter, *http.Request) error { return err })(w, r)
+			want := http.StatusInternalServerError
+			if name == "typed" {
+				want = http.StatusForbidden
+			}
+			if w.Code != want || strings.Contains(w.Body.String(), "downstream detail") {
+				t.Fatalf("error response status/body: %d %s", w.Code, w.Body.String())
+			}
+		})
+	}
+}
+
+func TestQueryLimitClampsAndDefaultsInvalidValues(t *testing.T) {
+	for query, want := range map[string]int{"": 20, "?limit=bad": 20, "?limit=0": 20, "?limit=-1": 20, "?limit=10": 10, "?limit=500": 100} {
+		if got := QueryLimit(httptest.NewRequest(http.MethodGet, "/"+query, nil), "limit", 20, 100); got != want {
+			t.Errorf("QueryLimit(%q) = %d, want %d", query, got, want)
+		}
+	}
+}
+
+func TestPathUUIDRejectsMissingAndMalformedParameters(t *testing.T) {
+	for _, value := range []string{"", "not-a-uuid", "123e4567-e89b-12d3-a456-426614174000"} {
+		r := httptest.NewRequest(http.MethodGet, "/", nil)
+		route := chi.NewRouteContext()
+		route.URLParams.Add("id", value)
+		r = r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, route))
+		id, err := PathUUID(r, "id")
+		if value == "123e4567-e89b-12d3-a456-426614174000" {
+			if err != nil || id.String() != value {
+				t.Fatalf("valid path UUID: id=%v err=%v", id, err)
+			}
+		} else if api, ok := AsAPIError(err); !ok || api.Status != http.StatusBadRequest {
+			t.Fatalf("invalid path UUID %q: %v", value, err)
+		}
+	}
+}
+
+func TestAPIErrorConstructorsPreserveStableStatusAndCode(t *testing.T) {
+	for _, tc := range []struct {
+		err    *APIError
+		status int
+		code   string
+	}{
+		{ErrUnauthorized("test denial"), http.StatusUnauthorized, CodeUnauthorized},
+		{ErrNotFound("test denial"), http.StatusNotFound, CodeNotFound},
+		{ErrConflict("test denial"), http.StatusConflict, CodeConflict},
+		{ErrUnsupportedMediaType("test denial"), http.StatusUnsupportedMediaType, CodeUnsupportedMediaType},
+		{ErrUnavailable("test denial"), http.StatusServiceUnavailable, CodeUnavailable},
+	} {
+		w := httptest.NewRecorder()
+		WriteError(w, tc.err)
+		var envelope ErrorResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &envelope); err != nil {
+			t.Fatal(err)
+		}
+		if w.Code != tc.status || envelope.Error.Code != tc.code || envelope.Error.Message != "test denial" || strings.Contains(w.Body.String(), "Status") {
+			t.Fatalf("API error contract: status=%d body=%s", w.Code, w.Body.String())
+		}
 	}
 }
