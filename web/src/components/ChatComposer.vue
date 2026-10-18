@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { Message } from '../types/domain'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import ReplyComposerBar from './ReplyComposerBar.vue'
@@ -9,6 +9,7 @@ import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import SlashSuggestions from './SlashSuggestions.vue'
 import SlashCommandBar from './SlashCommandBar.vue'
+import { useDraftModel } from '../composables/useDraftModel'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
@@ -27,13 +28,9 @@ const props = defineProps({
 })
 const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
 
-// The draft: typing updates it at once (the suggestions read it in the same
-// tick), the parent follows and may also set it (a mention from elsewhere).
-const text = ref(props.modelValue)
-watch(() => props.modelValue, value => { text.value = value })
-watch(text, value => emit('update:modelValue', value), { flush: 'sync' })
-
 const chatStore = useChatStore()
+const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
+
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)
 const assist = useComposerAssist(textAreaEl, text)

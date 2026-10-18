@@ -25,6 +25,18 @@ export function startSpeakingDetection(cx: Cx) {
   const gateOpen = createVoiceGate(voice)
   let lastGamingTick = performance.now()
 
+  // Nothing goes out: the speaking ring ends and the track is disabled.
+  const stopTransmitting = () => {
+    if (wasSpeaking) {
+      wasSpeaking = false
+      chat.sendWSEvent('voice_speaking', { active: false })
+    }
+    if (st.localAudioStream.value) {
+      const track = st.localAudioStream.value.getAudioTracks()[0]
+      if (track && track.enabled) track.enabled = false
+    }
+  }
+
   st.speakingInterval = setInterval(() => {
     const now = performance.now()
     if (st.gamingGainNode && voice.inputMode === 'ptt' && now - lastGamingTick > 250) {
@@ -62,14 +74,7 @@ export function startSpeakingDetection(cx: Cx) {
 
     // If mic testing in a call: mute channel transmission and gate loopback
     if (voice.isMicTesting) {
-      if (wasSpeaking) {
-        wasSpeaking = false
-        chat.sendWSEvent('voice_speaking', { active: false })
-      }
-      if (st.localAudioStream.value) {
-        const track = st.localAudioStream.value.getAudioTracks()[0]
-        if (track && track.enabled) track.enabled = false
-      }
+      stopTransmitting()
       const open = gateOpen(level)
       if (st.loopbackGain && st.audioContext && st.loopbackCtx === st.audioContext) {
         setNodeGain(st.loopbackGain, open ? (voice.outputVolume / 100) : 0, st.audioContext.currentTime)
@@ -78,14 +83,7 @@ export function startSpeakingDetection(cx: Cx) {
     }
 
     if (voice.isMuted) {
-      if (wasSpeaking) {
-        wasSpeaking = false
-        chat.sendWSEvent('voice_speaking', { active: false })
-      }
-      if (st.localAudioStream.value) {
-        const track = st.localAudioStream.value.getAudioTracks()[0]
-        if (track && track.enabled) track.enabled = false
-      }
+      stopTransmitting()
       return
     }
 

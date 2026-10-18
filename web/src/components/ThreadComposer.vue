@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { ThreadRoot } from '../stores/chat'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { Plus, ArrowUp } from '@lucide/vue'
 import ReplyComposerBar from './ReplyComposerBar.vue'
 import EmojiButton from './EmojiButton.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
+import { useDraftModel } from '../composables/useDraftModel'
 import { useComposerAssist } from '../composables/useComposerAssist'
 import { handleComposerKeydown } from '../composables/useComposerKeys'
 
@@ -21,11 +22,7 @@ const props = defineProps({
 })
 const emit = defineEmits<{ 'update:modelValue': [text: string]; send: []; 'cancel-reply': []; file: [event: Event] }>()
 
-// The draft: typing updates it at once (the suggestions read it in the same
-// tick), the parent follows and may also set it.
-const text = ref(props.modelValue)
-watch(() => props.modelValue, value => { text.value = value })
-watch(text, value => emit('update:modelValue', value), { flush: 'sync' })
+const text = useDraftModel(() => props.modelValue, value => emit('update:modelValue', value))
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const textAreaEl = ref<HTMLTextAreaElement | null>(null)

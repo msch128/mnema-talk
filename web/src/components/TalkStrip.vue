@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import { talkTileProps, type TalkTileEmits } from './talkTileProps'
 import { ref } from 'vue'
 import { ChevronDown, ChevronUp, Users } from '@lucide/vue'
 import { loadStripCollapsed, saveStripCollapsed } from '../lib/talkLayout'
@@ -9,18 +8,8 @@ import { focusRing } from './talkButtons'
 
 // Participants under the stage: a strip that collapses (like Discord's
 // "hide members", remembered per browser); the stage then takes the room.
-defineProps({
-  users: { type: Array as PropType<TalkParticipant[]>, required: true },
-  streamOf: { type: Function as PropType<(user: TalkParticipant) => MediaStream | null>, required: true },
-  canFocusCamera: { type: Function as PropType<(user: TalkParticipant) => boolean>, required: true },
-  isCameraFocused: { type: Function as PropType<(user: TalkParticipant) => boolean>, required: true }
-})
-const emit = defineEmits<{
-  'focus-camera': [user: TalkParticipant]
-  'fullscreen-camera': [userId: string]
-  'watch-stream': [userId: string]
-  menu: [event: MouseEvent | KeyboardEvent, user: TalkParticipant]
-}>()
+defineProps(talkTileProps)
+const emit = defineEmits<TalkTileEmits>()
 
 const collapsed = ref(loadStripCollapsed())
 function toggle() {
