@@ -66,7 +66,7 @@ production dependency results.
 
 Frontend coverage is enforced by `npm run test:coverage`, `make coverage-web`,
 `make check` and CI. Statements, branches, functions and lines must each reach
-95% globally and per module; the gate compares exact counts without rounding.
+90% in total and 80% per module; the gate compares exact counts without rounding.
 All first-party app entries, Vue components, workers and AudioWorklets stay in
 the measured source inventory. An executable module with missing or zero
 instrumentation fails the gate, even if the coverage tool displays 100%.

@@ -10,12 +10,13 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 class CoverageSummaryTests(unittest.TestCase):
-    def run_profile(self, blocks, minimum):
+    def run_profile(self, blocks, minimum, file_minimum=None):
         with tempfile.TemporaryDirectory(prefix="mnema-coverage-summary-") as directory:
             profile = pathlib.Path(directory) / "coverage.out"
             profile.write_text("mode: atomic\n" + "\n".join(blocks) + "\n")
             return subprocess.run(
-                ["node", str(ROOT / "scripts/coverage-summary.mjs"), "go", str(profile), "--min", str(minimum)],
+                ["node", str(ROOT / "scripts/coverage-summary.mjs"), "go", str(profile), "--min", str(minimum)]
+                + (["--file-min", str(file_minimum)] if file_minimum is not None else []),
                 text=True,
                 capture_output=True,
                 check=False,
@@ -53,6 +54,30 @@ class CoverageSummaryTests(unittest.TestCase):
         ], 100)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("2 of 2", result.stdout)
+
+    def test_one_poorly_covered_file_fails_despite_a_healthy_total(self):
+        result = self.run_profile([
+            "github.com/msch128/mnema-talk/internal/good/good.go:1.1,2.1 1000 1",
+            "github.com/msch128/mnema-talk/internal/weak/weak.go:1.1,2.1 10 1",
+            "github.com/msch128/mnema-talk/internal/weak/weak.go:3.1,4.1 10 0",
+        ], 90, 80)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("internal/weak/weak.go: 50.0 %", result.stderr)
+        self.assertNotIn("good.go", result.stderr)
+
+    def test_tiny_files_are_exempt_from_the_floor(self):
+        result = self.run_profile([
+            "gh.example/mnema-talk/internal/big/big.go:1.1,2.1 100 1",
+            "gh.example/mnema-talk/cmd/tool/main.go:1.1,2.1 1 0",
+        ], 90, 80)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_files_at_the_floor_qualify(self):
+        result = self.run_profile([
+            "github.com/msch128/mnema-talk/internal/edge/edge.go:1.1,2.1 80 1",
+            "github.com/msch128/mnema-talk/internal/edge/edge.go:3.1,4.1 20 0",
+        ], 80, 80)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_empty_report_cannot_qualify_even_at_zero(self):
         result = self.run_profile([], 0)
