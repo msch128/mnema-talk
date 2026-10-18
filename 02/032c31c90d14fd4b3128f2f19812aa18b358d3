@@ -1,0 +1,22 @@
+web/src/components/MemberList.vue
+  s_06fcde5dbef956::t_1299908126b533 9,12
+  s_06fcde5dbef956::t_1d9d4b563d7d28 45,60,74
+web/src/composables/useMemberGroups.ts
+  s_06fcde5dbef956::t_1e1f942015056c 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "02032c31c90d14fd4b3128f2f19812aa18b358d3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
