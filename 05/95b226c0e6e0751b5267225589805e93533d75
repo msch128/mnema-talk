@@ -1,0 +1,111 @@
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_0bf07efd0b7d84 16
+doc/bots.md
+  s_06fcde5dbef956::t_c20c1429cc3b78 61-67,76-82,202,230,239-265,310-311,429-446,453-455,471,473,486-488
+internal/ws/hub.go
+  s_06fcde5dbef956::t_285ee69fffdab3 47-48,127
+internal/auth/users_admin.go
+  s_06fcde5dbef956::t_3e782d6f638198 275-277
+e2e/tests/bot-members.spec.ts
+  s_06fcde5dbef956::t_8f5052ae9be85a 70
+  s_06fcde5dbef956::t_57c5fbb48e6a6c 41,43-46,53-61,71-79,88-90
+internal/testutil/db.go
+  s_06fcde5dbef956::t_d7a8217ddb3228 109,112,115
+internal/server/bot_role_integration_test.go
+  s_06fcde5dbef956::t_3b0f39abc45b60 23,106
+internal/auth/moderation.go
+  s_06fcde5dbef956::t_3e782d6f638198 264-266
+internal/perm/store.go
+  s_06fcde5dbef956::t_c680b8a292dc8d 293-295,325,399,423-424,427,432-433,435,515-517,525-527,529
+  s_06fcde5dbef956::t_54274fe54efac9 223,228
+internal/bot/store.go
+  s_06fcde5dbef956::t_4f27dcc69c9b68 15,185-197,201-209,225-229,247-250
+  s_06fcde5dbef956::t_6c59b9009a0eae 251
+web/src/components/BotDiscordParity.test.ts
+  s_06fcde5dbef956::t_550690403cd1a8 16,133
+  s_06fcde5dbef956::t_d45644ca811e56 1-15,17-132,134-187
+internal/bot/authn.go
+  s_06fcde5dbef956::t_482c102fbe89e5 90-92
+internal/ws/presence.go
+  s_06fcde5dbef956::t_285ee69fffdab3 76-115,117-119,122,127,129,131-164,166-169,189-191
+internal/ws/bot_status_test.go
+  s_06fcde5dbef956::t_cd0ff5e0498b5b 1-79
+api/openapi.json
+  s_06fcde5dbef956::t_9b87b8f0398f4d 2612-2616,2633,18222
+  s_06fcde5dbef956::t_5a835b539c2e46 4688,4870,5579
+internal/gateway/presence_test.go
+  s_06fcde5dbef956::t_16cd35c9f53ddf 1-52
+web/src/types/events.ts
+  s_06fcde5dbef956::t_f8e01592e25f02 30-40,56-57,184
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_2d45e06e5a76ab 16,417
+  s_06fcde5dbef956::t_f8e01592e25f02 156-159,390
+internal/server/server.go
+  s_06fcde5dbef956::t_3e782d6f638198 175-182
+internal/server/bot_status_integration_test.go
+  s_06fcde5dbef956::t_b169aed79a4475 227
+  s_06fcde5dbef956::t_d95edff10fb005 1-155,161-195,197-198,200-201,205-225,228-265
+  s_06fcde5dbef956::t_8434a328bec205 196,202-204
+  s_06fcde5dbef956::t_4c0a75e2f4590d 199,226
+  s_06fcde5dbef956::t_6d5ddb8e135b76 156-160
+internal/server/bot_own_role_integration_test.go
+  s_06fcde5dbef956::t_1185bc0f4baa34 11,158,164,166-167
+  s_06fcde5dbef956::t_31ef1a80de041e 1-10,12-137,139-144,146-157,160-163,168-169
+  s_06fcde5dbef956::t_065f5d6107acf3 145,159
+  s_06fcde5dbef956::t_346f132d581953 138
+  s_06fcde5dbef956::t_270b3ee9852d70 165
+internal/auth/handler.go
+  s_06fcde5dbef956::t_3e782d6f638198 25-28
+internal/db/migrations/0033_bot_own_role.sql
+  s_06fcde5dbef956::t_2c1a7538cc19a6 1-57
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_40ff55ab5b355f 73-98
+internal/gateway/gateway.go
+  s_06fcde5dbef956::t_40db731046a798 89-93,109-112,131,208
+  s_06fcde5dbef956::t_12dc48807263f9 211-217
+  s_06fcde5dbef956::t_3e782d6f638198 22,209-210,336-352,376,380-382
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_285ee69fffdab3 53,252
+internal/gateway/serve.go
+  s_06fcde5dbef956::t_40db731046a798 33-34,161-174,250-255
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_54274fe54efac9 35-37,39-41,163,186,201
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_2d45e06e5a76ab 32-35,38-39,41,242-257,273
+web/src/components/BotRolesPanel.vue
+  s_06fcde5dbef956::t_2d45e06e5a76ab 26-27,71,73
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_f752f25ed0cb80 37
+  s_06fcde5dbef956::t_f8e01592e25f02 105-117,839,844,1558,1624-1625
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_6a8352954d38dc 1594,1609
+internal/bot/handler.go
+  s_06fcde5dbef956::t_5a835b539c2e46 282,352,422
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_2d45e06e5a76ab 46-51,1407-1410,1641-1642
+web/src/lib/presence.ts
+  s_06fcde5dbef956::t_f8e01592e25f02 8,40-56
+  s_06fcde5dbef956::t_809d9a0515b3a3 57
+web/src/components/MemberRow.vue
+  s_06fcde5dbef956::t_f8e01592e25f02 12,32,35,81
+internal/gateway/presence.go
+  s_06fcde5dbef956::t_b4d8b6486a4b00 1-151
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_2d45e06e5a76ab 46-51,1407-1410,1641-1642
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0595b226c0e6e0751b5267225589805e93533d75",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
