@@ -171,7 +171,13 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 	timed := func(query string) []pageMsg {
 		begin := time.Now()
 		msgs := page(t, admin, ch, query)
-		took = append(took, time.Since(begin))
+		d := time.Since(begin)
+		took = append(took, d)
+		// Generous absolute bound per page: the relative check below cannot see
+		// a slowdown that hits every depth alike, such as a lost index.
+		if d > time.Second {
+			t.Fatalf("history page %q took %v, over the 1s bound", query, d)
+		}
 		return msgs
 	}
 	newest := timed("?limit=100")
@@ -208,9 +214,6 @@ func TestHistoryPagingAt15kMessages(t *testing.T) {
 	t.Logf("%d pages over %d messages, median %v at the newest end, %v at the oldest", pages, total, shallow, deep)
 	if deep > 4*shallow+20*time.Millisecond {
 		t.Fatalf("paging gets slower with depth: %v at the oldest end vs %v at the newest", deep, shallow)
-	}
-	if deep > 2*time.Second {
-		t.Fatalf("history paging too slow: %v per page", deep)
 	}
 
 	// Jump to a message deep in the history.
