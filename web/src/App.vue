@@ -120,6 +120,82 @@ function currentStatePath() {
   return '/'
 }
 
+async function applyChatRoute(route: Route & { view: 'chat' }, superseded: () => boolean) {
+  showAdminModal.value = false
+  previewVoiceChannelId.value = null
+  voiceStore.activeView = 'chat'
+  const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
+  if (!targetChannel) return
+  if (chatStore.activeChannel?.id !== targetChannel.id) {
+    await chatStore.selectChannel(targetChannel)
+    if (superseded()) return
+  }
+  if (route.messageId) {
+    const found = await chatStore.jumpToMessage(route.messageId)
+    if (superseded()) return
+    // jumpToMessage already toasted; leave the dead /m/:id address.
+    if (found === false) navigate(`/c/${targetChannel.id}`, { replace: true })
+  } else if (route.threadId) {
+    if (chatStore.activeThread?.id !== route.threadId) {
+      await chatStore.openThread(route.threadId)
+      if (superseded()) return
+      // A thread that failed to load only has its id.
+      const th = chatStore.activeThread
+      if (th && th.id === route.threadId && !th.user_id && !th.content) {
+        chatStore.closeThread()
+        toasts.error(t('chat.messageNotFound'))
+        navigate(`/c/${targetChannel.id}`, { replace: true })
+      }
+    }
+  } else if (chatStore.activeThread) {
+    chatStore.closeThread()
+  }
+}
+
+async function applyVoiceRoute(route: Route & { view: 'voice' }, previousVoiceChannel: string | null, superseded: () => boolean) {
+  showAdminModal.value = false
+  // Opening the channel you're connected to is not a preview.
+  previewVoiceChannelId.value = route.channelId === voiceStore.currentChannelId ? null : route.channelId
+  voiceStore.activeView = 'voice'
+  voiceShowChat.value = voiceChatOpenFor({
+    routeShowChat: !!route.showChat,
+    sameTalk: previousVoiceChannel === route.channelId,
+    remembered: voiceShowChat.value
+  })
+  // Entering a Talk with its chat remembered open: say so in the address
+  // (that route then does the rest).
+  if (voiceShowChat.value && !route.showChat) {
+    navigate(`/v/${route.channelId}/chat`, { replace: true })
+    return
+  }
+  const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
+  if (!targetChannel) return
+  if (chatStore.activeChannel?.id !== targetChannel.id) {
+    await chatStore.selectChannel(targetChannel)
+    if (superseded()) return
+  }
+  if (route.messageId) {
+    // The chat (and its scroll handling) renders before the jump.
+    await nextTick()
+    if (superseded()) return
+    const found = await chatStore.jumpToMessage(route.messageId)
+    if (superseded()) return
+    if (found === false) navigate(`/v/${targetChannel.id}/chat`, { replace: true })
+  }
+}
+
+function applyRootRoute() {
+  showAdminModal.value = false
+  const own = currentStatePath()
+  if (own !== '/') {
+    navigate(own, { replace: true })
+  } else {
+    const first = chatStore.allChannels.find(c => c.type === 'text') || chatStore.allChannels[0]
+    if (first) navigate(`/${first.type === 'voice' ? 'v' : 'c'}/${first.id}`, { replace: true })
+  }
+
+}
+
 // Bumped by every applyRoute: a route that is still loading when the next one
 // arrives stops after its current await instead of acting on stale state.
 let routeGen = 0
@@ -157,77 +233,14 @@ async function applyRoute(route: Route) {
   routesApplying++
   try {
     if (route.view === 'chat' && route.channelId) {
-      showAdminModal.value = false
-      previewVoiceChannelId.value = null
-      voiceStore.activeView = 'chat'
-      const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
-      if (!targetChannel) return
-      if (chatStore.activeChannel?.id !== targetChannel.id) {
-        await chatStore.selectChannel(targetChannel)
-        if (superseded()) return
-      }
-      if (route.messageId) {
-        const found = await chatStore.jumpToMessage(route.messageId)
-        if (superseded()) return
-        // jumpToMessage already toasted; leave the dead /m/:id address.
-        if (found === false) navigate(`/c/${targetChannel.id}`, { replace: true })
-      } else if (route.threadId) {
-        if (chatStore.activeThread?.id !== route.threadId) {
-          await chatStore.openThread(route.threadId)
-          if (superseded()) return
-          // A thread that failed to load only has its id.
-          const th = chatStore.activeThread
-          if (th && th.id === route.threadId && !th.user_id && !th.content) {
-            chatStore.closeThread()
-            toasts.error(t('chat.messageNotFound'))
-            navigate(`/c/${targetChannel.id}`, { replace: true })
-          }
-        }
-      } else if (chatStore.activeThread) {
-        chatStore.closeThread()
-      }
+      await applyChatRoute(route, superseded)
     } else if (route.view === 'voice' && route.channelId) {
-      showAdminModal.value = false
-      // Opening the channel you're connected to is not a preview.
-      previewVoiceChannelId.value = route.channelId === voiceStore.currentChannelId ? null : route.channelId
-      voiceStore.activeView = 'voice'
-      voiceShowChat.value = voiceChatOpenFor({
-        routeShowChat: !!route.showChat,
-        sameTalk: previousVoiceChannel === route.channelId,
-        remembered: voiceShowChat.value
-      })
-      // Entering a Talk with its chat remembered open: say so in the address
-      // (that route then does the rest).
-      if (voiceShowChat.value && !route.showChat) {
-        navigate(`/v/${route.channelId}/chat`, { replace: true })
-        return
-      }
-      const targetChannel = chatStore.allChannels.find(c => c.id === route.channelId)
-      if (!targetChannel) return
-      if (chatStore.activeChannel?.id !== targetChannel.id) {
-        await chatStore.selectChannel(targetChannel)
-        if (superseded()) return
-      }
-      if (route.messageId) {
-        // The chat (and its scroll handling) renders before the jump.
-        await nextTick()
-        if (superseded()) return
-        const found = await chatStore.jumpToMessage(route.messageId)
-        if (superseded()) return
-        if (found === false) navigate(`/v/${targetChannel.id}/chat`, { replace: true })
-      }
+      await applyVoiceRoute(route, previousVoiceChannel, superseded)
     } else if (route.view === 'admin') {
       adminTab.value = route.tab || 'users'
       showAdminModal.value = true
     } else if (route.view === 'root') {
-      showAdminModal.value = false
-      const own = currentStatePath()
-      if (own !== '/') {
-        navigate(own, { replace: true })
-      } else {
-        const first = chatStore.allChannels.find(c => c.type === 'text') || chatStore.allChannels[0]
-        if (first) navigate(`/${first.type === 'voice' ? 'v' : 'c'}/${first.id}`, { replace: true })
-      }
+      applyRootRoute()
     }
   } finally {
     // Overlapping routes each hold the flag; the last one out clears it.
