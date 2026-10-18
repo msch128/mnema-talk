@@ -1,40 +1,26 @@
 <script setup lang="ts">
 // Admin dashboard: accounts (disable, password reset, sessions, voice kick).
 import { ref, computed, onMounted } from 'vue'
-import { Users, RefreshCw, Search, KeyRound, UserX, UserCheck, PhoneOff, LogOut, Volume2, Shield, LockOpen } from '@lucide/vue'
+import { Users, RefreshCw, Search } from '@lucide/vue'
 import { api, caughtErrorMessage } from '../lib/api'
-import type { VoiceSnapshot } from '../types/events'
 import type { AdminUser } from '../types/domain'
 import { isAuthAdminUser } from '../types/rest'
 import { arrayDecoder } from '../types/validation'
 import { confirm } from '../lib/confirm'
-import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
-import { useChatStore } from '../stores/chat'
-import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
-import { useAuthStore } from '../stores/auth'
-import { t, locale } from '../i18n'
-import BaseDialog from './BaseDialog.vue'
-import UserAvatar from './UserAvatar.vue'
+import { t } from '../i18n'
+import AdminUserRow from './AdminUserRow.vue'
+import AdminResetPasswordDialog from './AdminResetPasswordDialog.vue'
 import MemberRolesDialog from './MemberRolesDialog.vue'
-import { roleColorCss } from '../lib/permissions'
 
-const chatStore = useChatStore()
-const voiceStore = useVoiceStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
 const rolesModalUser = ref<AdminUser | null>(null)
 
 const users = ref<AdminUser[]>([])
-const userSearch = ref('')
 const passwordModalUser = ref<AdminUser | null>(null)
-const newPasswordInput = ref('')
-const isResettingPassword = ref(false)
-
-// Counted in characters like the server does, not UTF-16 units.
-const passwordTooShort = computed(() => [...newPasswordInput.value].length < MIN_PASSWORD_LENGTH)
-
+const userSearch = ref('')
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
 }
@@ -57,36 +43,6 @@ const filteredUsers = computed(() => {
     (u.display_name && u.display_name.toLowerCase().includes(q))
   )
 })
-
-function isUserInVoice(userId: string) {
-  if (!voiceStore.channelUsers) return false
-  const rooms: VoiceSnapshot = voiceStore.channelUsers
-  for (const group of Object.values(rooms)) {
-    if (group && group[userId]) return true
-  }
-  return false
-}
-
-function userVoiceChannelName(userId: string) {
-  if (!voiceStore.channelUsers) return ''
-  const rooms: VoiceSnapshot = voiceStore.channelUsers
-  for (const [chId, group] of Object.entries(rooms)) {
-    if (group && group[userId]) {
-      const ch = chatStore.allChannels?.find(c => c.id === chId)
-      return ch?.name || chId
-    }
-  }
-  return ''
-}
-
-function formatDateTime(dt: string | null | undefined) {
-  if (!dt) return t('admin.never')
-  try {
-    return new Date(dt).toLocaleString(locale.value)
-  } catch {
-    return String(dt)
-  }
-}
 
 async function toggleDisableUser(u: AdminUser) {
   const isDisabled = !!u.disabled
@@ -113,33 +69,6 @@ async function toggleDisableUser(u: AdminUser) {
     } catch (e) {
       showError(e)
     }
-  }
-}
-
-function openPasswordModal(u: AdminUser) {
-  passwordModalUser.value = u
-  newPasswordInput.value = ''
-}
-
-function closePasswordModal() {
-  passwordModalUser.value = null
-  newPasswordInput.value = ''
-}
-
-async function submitPasswordReset() {
-  if (!passwordModalUser.value || passwordTooShort.value) return
-  isResettingPassword.value = true
-  try {
-    await api(`/api/admin/users/${passwordModalUser.value.id}/password`, {
-      method: 'POST',
-      json: { password: newPasswordInput.value }
-    })
-    toasts.success(t('admin.passwordResetSuccess'))
-    closePasswordModal()
-  } catch (e) {
-    showError(e)
-  } finally {
-    isResettingPassword.value = false
   }
 }
 
@@ -183,17 +112,6 @@ async function kickUserFromVoice(u: AdminUser) {
   } catch (e) {
     showError(e)
   }
-}
-
-// What the signed-in member may do with an account, by permission and rank.
-function canModerate(u: AdminUser) {
-  return u.role !== 'admin' && u.id !== useAuthStore().user?.id && permissions.can('manage_members') && permissions.outranksMember(u.id)
-}
-function canGiveRoles(u: AdminUser) {
-  return u.role !== 'admin' && permissions.can('manage_roles') && permissions.outranksMember(u.id) && u.id !== useAuthStore().user?.id
-}
-function rolesOf(u: AdminUser) {
-  return (u.role_ids ?? []).map(id => permissions.roleById(id)).filter(role => role !== undefined)
 }
 
 onMounted(async () => {
@@ -255,177 +173,17 @@ onMounted(async () => {
                 {{ $t('admin.noUsersFound') }}
               </td>
             </tr>
-            <tr
+            <AdminUserRow
               v-for="u in filteredUsers"
               :key="u.id"
-              data-testid="user-row"
-              class="hover:bg-mnema-elevated/60 transition-colors"
-            >
-              <!-- Username with avatar -->
-              <td class="py-3 px-4">
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <UserAvatar :user="u" size="xs" />
-                  <span data-testid="user-username" class="font-mono text-xs font-semibold text-mnema-text truncate">@{{ u.username }}</span>
-                </div>
-              </td>
-
-              <!-- Display name -->
-              <td class="py-3 px-4">
-                <span data-testid="user-displayname" class="text-mnema-text font-medium truncate block max-w-[160px]">{{ u.display_name || u.username }}</span>
-              </td>
-
-              <!-- Role -->
-              <td class="py-3 px-4">
-                <span
-                  v-if="u.role === 'admin'"
-                  data-testid="user-role"
-                  class="px-2 py-0.5 rounded text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                >
-                  {{ $t('role.admin') }}
-                </span>
-                <div v-else data-testid="user-role" class="flex flex-wrap items-center gap-1 text-xs text-mnema-muted">
-                  <span v-if="!rolesOf(u).length">{{ $t('role.member') }}</span>
-                  <span
-                    v-for="role in rolesOf(u)"
-                    :key="role.id"
-                    class="inline-flex items-center gap-1 rounded border border-mnema-border px-1.5 py-0.5 text-mnema-text"
-                  >
-                    <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
-                  </span>
-                </div>
-              </td>
-
-              <!-- Last Seen -->
-              <td class="py-3 px-4 text-xs text-mnema-muted whitespace-nowrap">
-                <span data-testid="user-lastseen">{{ formatDateTime(u.last_seen_at) }}</span>
-              </td>
-
-              <!-- Status -->
-              <td class="py-3 px-4 whitespace-nowrap">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <span
-                    v-if="u.disabled"
-                    data-testid="user-status"
-                    class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-danger/10 text-mnema-danger border border-mnema-danger/20"
-                  >
-                    {{ $t('admin.userDisabled') }}
-                  </span>
-                  <span
-                    v-else
-                    data-testid="user-status"
-                    class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-accent/10 text-mnema-accent border border-mnema-accent/20"
-                  >
-                    {{ $t('admin.userActive') }}
-                  </span>
-
-                  <span
-                    v-if="u.login_locked"
-                    data-testid="user-login-locked"
-                    class="px-2 py-0.5 rounded text-xs font-medium bg-mnema-warning/10 text-mnema-warning border border-mnema-warning/25"
-                  >
-                    {{ $t('admin.loginLocked') }}
-                  </span>
-
-                  <!-- In Voice indicator -->
-                  <span
-                    v-if="isUserInVoice(u.id)"
-                    class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono bg-mnema-band text-mnema-mint border border-mnema-mint/30"
-                    :title="$t('admin.inVoice')"
-                  >
-                    <Volume2 class="w-3 h-3 flex-shrink-0" />
-                    <span class="truncate max-w-[80px]">{{ userVoiceChannelName(u.id) }}</span>
-                  </span>
-                </div>
-              </td>
-
-              <!-- Actions -->
-              <td class="py-3 px-4 text-right whitespace-nowrap">
-                <div class="flex items-center justify-end gap-1">
-                  <!-- Kick from voice -->
-                  <button
-                    v-if="isUserInVoice(u.id) && permissions.can('disconnect_members')"
-                    data-testid="action-kick"
-                    type="button"
-                    class="p-1.5 rounded text-mnema-danger hover:bg-mnema-danger/15 transition"
-                    :title="$t('admin.kickFromVoice')"
-                    :aria-label="$t('admin.kickFromVoice')"
-                    @click="kickUserFromVoice(u)"
-                  >
-                    <PhoneOff class="w-4 h-4" />
-                  </button>
-
-                  <!-- Clear login lockout: Owner only, shown while locked -->
-                  <button
-                    v-if="permissions.isOwner && u.login_locked"
-                    data-testid="action-clear-lockout"
-                    type="button"
-                    class="p-1.5 rounded text-mnema-warning hover:bg-mnema-warning/15 transition"
-                    :title="$t('admin.clearLoginLockout')"
-                    :aria-label="$t('admin.clearLoginLockout')"
-                    @click="clearLoginLockout(u)"
-                  >
-                    <LockOpen class="w-4 h-4" />
-                  </button>
-
-                  <button
-                    v-if="canGiveRoles(u)"
-                    data-testid="action-roles"
-                    type="button"
-                    class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
-                    :title="$t('memberRoles.edit')"
-                    :aria-label="$t('memberRoles.edit')"
-                    @click="rolesModalUser = u"
-                  >
-                    <Shield class="w-4 h-4" />
-                  </button>
-
-                  <template v-if="canModerate(u)">
-                    <!-- Disable / Enable -->
-                    <button
-                      data-testid="action-disable"
-                      type="button"
-                      :class="[
-                        'p-1.5 rounded transition',
-                        (u.disabled)
-                          ? 'text-mnema-accent hover:bg-mnema-accent/15'
-                          : 'text-mnema-tertiary hover:text-mnema-danger hover:bg-mnema-hover'
-                      ]"
-                      :title="(u.disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
-                      :aria-label="(u.disabled) ? $t('admin.enableUser') : $t('admin.disableUser')"
-                      @click="toggleDisableUser(u)"
-                    >
-                      <UserCheck v-if="u.disabled" class="w-4 h-4" />
-                      <UserX v-else class="w-4 h-4" />
-                    </button>
-
-                    <!-- Reset Password: only the Owner takes over accounts -->
-                    <button
-                      v-if="permissions.isOwner"
-                      data-testid="action-reset-password"
-                      type="button"
-                      class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
-                      :title="$t('admin.resetPassword')"
-                      :aria-label="$t('admin.resetPassword')"
-                      @click="openPasswordModal(u)"
-                    >
-                      <KeyRound class="w-4 h-4" />
-                    </button>
-
-                    <!-- Revoke Sessions -->
-                    <button
-                      data-testid="action-revoke-sessions"
-                      type="button"
-                      class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-warning hover:bg-mnema-hover transition"
-                      :title="$t('admin.revokeSessions')"
-                      :aria-label="$t('admin.revokeSessions')"
-                      @click="revokeSessions(u)"
-                    >
-                      <LogOut class="w-4 h-4" />
-                    </button>
-                  </template>
-                </div>
-              </td>
-            </tr>
+              :user="u"
+              @kick="kickUserFromVoice(u)"
+              @clear-lockout="clearLoginLockout(u)"
+              @roles="rolesModalUser = u"
+              @toggle-disable="toggleDisableUser(u)"
+              @reset-password="passwordModalUser = u"
+              @revoke-sessions="revokeSessions(u)"
+            />
           </tbody>
         </table>
       </div>
@@ -433,49 +191,6 @@ onMounted(async () => {
 
     <MemberRolesDialog v-if="rolesModalUser" :user="rolesModalUser" @close="rolesModalUser = null" @saved="refreshUsers" />
 
-    <!-- Reset Password Modal -->
-    <BaseDialog
-      v-if="passwordModalUser"
-      :title="$t('admin.resetPasswordTitle', { name: passwordModalUser.display_name || passwordModalUser.username })"
-      panel-class="max-w-md"
-      @close="closePasswordModal"
-    >
-      <form @submit.prevent="submitPasswordReset" class="p-6 space-y-4">
-        <p class="text-sm text-mnema-muted">{{ $t('admin.resetPasswordPrompt', { count: MIN_PASSWORD_LENGTH }) }}</p>
-        <div>
-          <label class="block text-xs font-semibold text-mnema-tertiary uppercase tracking-wider mb-1.5 font-mono">
-            {{ $t('admin.newPasswordLabel') }}
-          </label>
-          <input
-            v-model="newPasswordInput"
-            data-testid="new-password-input"
-            type="password"
-            :placeholder="$t('admin.newPasswordPlaceholder', { count: MIN_PASSWORD_LENGTH })"
-            :aria-label="$t('admin.newPasswordLabel')"
-            class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition"
-          />
-          <p v-if="newPasswordInput && passwordTooShort" class="text-xs text-mnema-danger mt-1">
-            {{ $t('admin.passwordTooShort', { count: MIN_PASSWORD_LENGTH }) }}
-          </p>
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            class="px-3.5 py-1.5 rounded-md border border-mnema-border text-sm text-mnema-muted hover:text-mnema-text hover:bg-mnema-hover transition"
-            @click="closePasswordModal"
-          >
-            {{ $t('common.cancel') }}
-          </button>
-          <button
-            data-testid="save-password-button"
-            type="submit"
-            :disabled="passwordTooShort || isResettingPassword"
-            class="bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold px-4 py-1.5 rounded-md text-sm transition disabled:opacity-40"
-          >
-            {{ $t('admin.savePassword') }}
-          </button>
-        </div>
-      </form>
-    </BaseDialog>
+    <AdminResetPasswordDialog v-if="passwordModalUser" :user="passwordModalUser" @close="passwordModalUser = null" />
   </section>
 </template>

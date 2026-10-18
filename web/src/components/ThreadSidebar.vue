@@ -2,36 +2,25 @@
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
-import {
-  X, MessageSquare, ArrowUp, Plus, Loader2,
-  Pencil, Trash2, Smile, Reply
-} from '@lucide/vue'
+import { X, MessageSquare, Loader2, Reply } from '@lucide/vue'
 import type { ThreadRoot } from '../stores/chat'
 import { useChatStore } from '../stores/chat'
-import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import UserAvatar from './UserAvatar.vue'
 import MarkdownContent from './MarkdownContent.vue'
-import ReplyPreview from './ReplyPreview.vue'
-import ReplyComposerBar from './ReplyComposerBar.vue'
 import ImageLightbox from './ImageLightbox.vue'
-import ReactionPalette from './ReactionPalette.vue'
-import EmojiButton from './EmojiButton.vue'
-import MentionSuggestions from './MentionSuggestions.vue'
 import MessageAttachments from './MessageAttachments.vue'
 import MessageEmbeds from './MessageEmbeds.vue'
 import BotBadge from './BotBadge.vue'
-import MessageEditor from './MessageEditor.vue'
 import ReactionBar from './ReactionBar.vue'
-import { useComposerAssist } from '../composables/useComposerAssist'
-import { useMessageActions, formatTime, PICKER_ANCHOR } from '../composables/useMessageActions'
+import ThreadReply from './ThreadReply.vue'
+import ThreadComposer from './ThreadComposer.vue'
+import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
-import { handleComposerKeydown } from '../composables/useComposerKeys'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
 const chatStore = useChatStore()
-const authStore = useAuthStore()
 const toasts = useToastStore()
 const permissions = usePermissionsStore()
 // The thread lives in a channel; the server decides, this hides what would fail.
@@ -42,7 +31,6 @@ const canReact = computed(() => permissions.canIn(threadChannel.value, 'add_reac
 
 const replyInput = ref('')
 const repliesContainer = ref<HTMLElement | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
 const isSending = ref(false)
 const selectedImage = ref<string | null>(null)
 
@@ -65,8 +53,7 @@ watch(() => chatStore.threadReplies.length, () => {
 // ---- Replies inside the thread ----
 
 const replyingTo = ref<ThreadRoot | null>(null)
-const replyTextArea = ref<HTMLTextAreaElement | null>(null)
-const assist = useComposerAssist(replyTextArea, replyInput)
+const composer = ref<InstanceType<typeof ThreadComposer> | null>(null)
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -78,7 +65,7 @@ watch(() => chatStore.activeThread?.id, () => {
 function startReply(msg: ThreadRoot) {
   replyingTo.value = msg
   activeReactionPickerMsgId.value = null
-  nextTick(() => replyTextArea.value?.focus())
+  nextTick(() => composer.value?.focus())
 }
 
 function cancelReply() {
@@ -167,10 +154,6 @@ async function handleSendReply() {
   } finally {
     isSending.value = false
   }
-}
-
-function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [assist.onKeydown], replying: () => !!replyingTo.value, cancelReply, send: handleSendReply })
 }
 
 async function handleFileUpload(e: Event) {
@@ -305,208 +288,32 @@ function formatDate(dateStr?: string) {
       </div>
 
       <!-- Replies List -->
-      <div
+      <ThreadReply
         v-for="reply in chatStore.threadReplies"
         :key="reply.id"
-        :data-reply-id="reply.id"
-        tabindex="0"
-        role="article"
+        :reply="reply"
+        :actions="actions"
+        :can-react="canReact"
+        :highlighted="highlightedId === reply.id"
         @keydown="onReplyKeydown($event, reply)"
-        :class="[
-          'relative hover:bg-mnema-surface/50 -mx-2 px-2 py-1.5 rounded-md transition-colors group focus:outline-none focus-visible:bg-mnema-surface/40',
-          highlightedId === reply.id ? 'msg-flash' : '',
-          reply.user_id !== authStore.user?.id && chatStore.messageMentionsMe(reply) ? 'msg-mentions-me' : ''
-        ]"
-      >
-        <!-- Hover Quick Actions Bar -->
-        <div
-          :class="[
-            'absolute right-2 -top-2.5 items-center gap-0.5 bg-mnema-elevated border border-mnema-border rounded-lg p-0.5 shadow-md z-20 before:absolute before:-inset-2 before:content-[\'\'] before:-z-10',
-            activeReactionPickerMsgId === reply.id ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'
-          ]"
-        >
-          <div v-if="canReact" :class="['relative', PICKER_ANCHOR]">
-            <button
-              type="button"
-              @click.stop="actions.togglePicker(reply.id)"
-              :class="[
-                'p-1 rounded transition',
-                activeReactionPickerMsgId === reply.id
-                  ? 'bg-mnema-surface text-amber-400'
-                  : 'hover:bg-mnema-surface text-mnema-tertiary hover:text-amber-400'
-              ]"
-              v-tooltip="$t('chat.addReaction')"
-            >
-              <Smile class="w-3.5 h-3.5" />
-            </button>
-            <ReactionPalette
-              v-if="activeReactionPickerMsgId === reply.id"
-              align="right"
-              @pick="actions.toggleReaction(reply.id, $event)"
-              @close="actions.closePicker()"
-            />
-          </div>
-
-          <button
-            type="button"
-            @click.stop="startReply(reply)"
-            class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition"
-            v-tooltip="$t('chat.reply')"
-          >
-            <Reply class="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            v-if="actions.isOwn(reply)"
-            type="button"
-            @click.stop="actions.startEdit(reply)"
-            class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-accent transition"
-            v-tooltip="$t('thread.edit')"
-          >
-            <Pencil class="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            v-if="actions.canDelete(reply)"
-            type="button"
-            @click.stop="actions.deleteMessage(reply)"
-            class="p-1 rounded hover:bg-mnema-surface text-mnema-tertiary hover:text-red-400 transition"
-            v-tooltip="$t('thread.delete')"
-          >
-            <Trash2 class="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <!-- "Replied to" reference line; connector ends at the 32px avatar -->
-        <div v-if="reply.reply_to" class="pl-11">
-          <ReplyPreview :reply="reply.reply_to" spine-class="left-[-29px] w-[25px]" @jump="jumpToReplied(reply)" />
-        </div>
-
-        <div class="flex items-start gap-3">
-        <UserAvatar
-          :user="reply"
-          size="sm"
-          class="cursor-pointer hover:opacity-85 transition mt-0.5"
-          @click="chatStore.openUserProfile(reply)"
-        />
-
-        <div class="flex-1 min-w-0">
-          <div class="flex items-baseline gap-2 min-w-0">
-            <button
-              type="button"
-              data-testid="author-name"
-              @click="chatStore.openUserProfile(reply)"
-              class="font-semibold text-message text-mnema-text hover:text-mnema-accent transition-colors cursor-pointer truncate text-left focus-visible:text-mnema-accent"
-            >
-              {{ reply.display_name || reply.username }}
-            </button>
-            <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
-            <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
-            <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
-          </div>
-
-          <!-- Inline Reply Editor -->
-          <MessageEditor
-            v-if="editingReplyId === reply.id"
-            v-model="actions.editText.value"
-            compact
-            :saving="actions.isSavingEdit.value"
-            :label="$t('thread.edit')"
-            @save="actions.saveEdit(reply)"
-            @cancel="actions.cancelEdit()"
-          />
-
-          <MarkdownContent v-else-if="reply.content" :content="reply.content" class="mt-0.5" />
-          <MessageEmbeds v-if="editingReplyId !== reply.id" :embeds="reply.embeds ?? []" />
-
-          <!-- Reply Attachments -->
-          <MessageAttachments :attachments="reply.attachments" variant="reply" @open-image="selectedImage = $event" />
-
-          <!-- Reaction badges -->
-          <ReactionBar
-            :reactions="reply.reactions"
-            :can-add="canReact"
-            compact
-            small-icon
-            :picker-open="activeReactionPickerMsgId === `bottom-${reply.id}`"
-            @toggle="actions.toggleReaction(reply.id, $event)"
-            @toggle-picker="actions.togglePicker(`bottom-${reply.id}`)"
-            @close-picker="actions.closePicker()"
-          />
-        </div>
-        </div>
-      </div>
+        @reply="startReply(reply)"
+        @jump="jumpToReplied(reply)"
+        @open-image="selectedImage = $event"
+      />
     </div>
 
-    <!-- Thread Composer Input Bar -->
-    <div class="px-4 pb-6 pt-1 flex-shrink-0">
-      <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
-      <div
-        :class="[
-          'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
-          replyingTo ? 'rounded-b-lg' : 'rounded-lg'
-        ]"
-      >
-        <MentionSuggestions
-          v-if="assist.open.value"
-          id="thread-mentions"
-          :items="assist.suggestions.value"
-          :active="assist.active.value"
-          @pick="assist.pick"
-          @hover="assist.active.value = $event"
-        />
-
-        <!-- Hidden file input for thread -->
-        <input
-          ref="fileInput"
-          type="file"
-          class="hidden"
-          @change="handleFileUpload"
-          accept="image/*,video/*"
-        />
-
-        <button
-          v-if="canAttach"
-          @click="fileInput?.click()"
-          :disabled="isUploading || isSending"
-          class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition disabled:opacity-50"
-          v-tooltip="$t('thread.upload')"
-        >
-          <Plus class="w-5 h-5" />
-        </button>
-
-        <textarea
-          ref="replyTextArea"
-          v-model="replyInput"
-          @keydown="handleKeyDown"
-          @input="assist.onInput"
-          @click="assist.onInput"
-          @keyup.left="assist.onInput"
-          @keyup.right="assist.onInput"
-          @blur="assist.close"
-          aria-autocomplete="list"
-          :aria-expanded="assist.open.value ? 'true' : 'false'"
-          :aria-controls="assist.open.value ? 'thread-mentions' : undefined"
-          :aria-activedescendant="assist.open.value ? `thread-mentions-${assist.active.value}` : undefined"
-          :placeholder="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
-          :disabled="!canSend"
-          :aria-label="canSend ? $t('thread.placeholder') : $t('chat.readOnly')"
-          rows="1"
-          class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
-        ></textarea>
-
-        <EmojiButton :disabled="isSending || !canSend" @pick="assist.insertText" />
-
-        <button
-          @click="handleSendReply"
-          :disabled="!canSend || !replyInput.trim() || isUploading || isSending"
-          class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
-          v-tooltip="$t('chat.send')"
-        >
-          <ArrowUp class="w-4 h-4" />
-        </button>
-      </div>
-    </div>
+    <ThreadComposer
+      ref="composer"
+      v-model="replyInput"
+      :replying-to="replyingTo"
+      :can-send="canSend"
+      :can-attach="canAttach"
+      :uploading="isUploading"
+      :sending="isSending"
+      @send="handleSendReply"
+      @cancel-reply="cancelReply"
+      @file="handleFileUpload"
+    />
 
     <!-- Image lightbox -->
     <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />

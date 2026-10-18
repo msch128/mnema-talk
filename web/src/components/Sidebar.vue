@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import type { Channel, ChannelType, Category, VoiceUser } from '../types/domain'
-import { caughtErrorMessage } from '../lib/api'
 type MenuOpener = MouseEvent | KeyboardEvent | { currentTarget: HTMLElement | null; preventDefault?: () => void }
 interface EditingEntity { kind: 'channel' | 'category'; entity: Channel | Category | null; after?: string | null }
 type SidebarSection = (Category & { headless?: false }) | { id: string; headless: true; channels: Channel[] }
-import { ref, computed, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X } from '@lucide/vue'
+import { ref, computed } from 'vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC } from '../composables/useWebRTC'
@@ -18,7 +16,7 @@ import ContextMenu from './ContextMenu.vue'
 import SidebarChannelRow from './SidebarChannelRow.vue'
 import SidebarCategoryHeader from './SidebarCategoryHeader.vue'
 import SidebarDragGhost from './SidebarDragGhost.vue'
-import { useToastStore } from '../stores/toast'
+import SidebarServerMenu from './SidebarServerMenu.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
@@ -27,11 +25,9 @@ import { currentRoute, navigate } from '../lib/router'
 import {
   useMenuState, buildChannelItems, buildCategoryItems, buildMemberItems, buildSidebarItems
 } from '../composables/useNavMenus'
-import { useDismissable } from '../composables/useDismissable'
+import { useChannelAdminActions } from '../composables/useChannelAdminActions'
 import { useChannelLayout } from '../composables/useChannelLayout'
 import { useSidebarReorder, UNCATEGORIZED_SECTION } from '../composables/useSidebarReorder'
-
-const SERVER_NAME = 'Mnema Talk'
 
 const emit = defineEmits<{ 'open-admin': []; 'open-legal': [] }>()
 
@@ -42,7 +38,6 @@ const permissions = usePermissionsStore()
 const permissionsFor = ref<{ kind: 'channel' | 'category'; entity: Channel | Category } | null>(null)
 // The channel whose webhooks are open in a dialog.
 const webhooksFor = ref<Channel | null>(null)
-const toasts = useToastStore()
 const { joinVoiceChannel } = useWebRTC()
 // The order on screen: the server's, or a move that is still being saved.
 const { layout, commit } = useChannelLayout()
@@ -57,49 +52,7 @@ function openCreateChannel(type: ChannelType = 'text', categoryId = '') {
   showCreateChannelModal.value = true
 }
 
-async function handleDeleteChannel(channel: Channel) {
-  const isVoice = channel.type === 'voice'
-  const ok = await confirm({
-    title: t(isVoice ? 'sidebar.deleteVoiceChannelTitle' : 'sidebar.deleteChannelTitle', { name: channel.name }),
-    body: t(isVoice ? 'sidebar.deleteVoiceChannelBody' : 'sidebar.deleteChannelBody'),
-    confirmLabel: t('common.delete'),
-    danger: true
-  })
-  if (!ok) return
-  try {
-    await chatStore.deleteChannel(channel.id)
-    toasts.success(t('sidebar.channelDeleted'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('sidebar.deleteFailed')))
-  }
-}
-
-async function handleDeleteCategory(category: Category) {
-  const ok = await confirm({
-    title: t('sidebar.deleteCategoryTitle', { name: category.name }),
-    body: t('sidebar.deleteCategoryBody'),
-    confirmLabel: t('common.delete'),
-    danger: true
-  })
-  if (!ok) return
-  try {
-    await chatStore.deleteCategory(category.id)
-    toasts.success(t('sidebar.categoryDeleted'))
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('sidebar.deleteFailed')))
-  }
-}
-
-async function handleDuplicateChannel(channel: Channel) {
-  try {
-    const created = await chatStore.duplicateChannel(channel.id)
-    toasts.success(t('sidebar.channelDuplicated', { name: channel.name }))
-    // The copy sits right below the original; show it without navigating.
-    if (created?.id) reveal('channel', created.id)
-  } catch (err) {
-    toasts.error(caughtErrorMessage(err, t('sidebar.duplicateFailed')))
-  }
-}
+const { deleteChannel: handleDeleteChannel, deleteCategory: handleDeleteCategory, duplicateChannel: handleDuplicateChannel } = useChannelAdminActions(id => reveal('channel', id))
 
 // New categories go to the end; one created from a category's menu then
 // moves right below that category (a silent layout save).
@@ -272,141 +225,16 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
   return indicator === 'inside' ? '' : indicator
 }
 
-// ---- Server header dropdown ----
-
-const menuOpen = ref(false)
-const menuRoot = ref<HTMLElement | null>(null)
-const menuButton = ref<HTMLButtonElement | null>(null)
-const menuEl = ref<HTMLElement | null>(null)
-
-function menuItems() {
-  return menuEl.value ? [...menuEl.value.querySelectorAll<HTMLElement>('[role="menuitem"]')] : []
-}
-
-function openMenu(focusIndex = 0) {
-  menuOpen.value = true
-  nextTick(() => {
-    const items = menuItems()
-    items[(focusIndex + items.length) % items.length]?.focus()
-  })
-}
-
-function closeMenu(returnFocus = false) {
-  if (!menuOpen.value) return
-  menuOpen.value = false
-  if (returnFocus) menuButton.value?.focus()
-}
-
-function toggleMenu() {
-  if (menuOpen.value) closeMenu()
-  else openMenu()
-}
-
-function onMenuButtonKeydown(e: KeyboardEvent) {
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    openMenu(0)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    openMenu(-1)
-  }
-}
-
-function onMenuKeydown(e: KeyboardEvent) {
-  const items = menuItems()
-  const i = items.findIndex(el => el === document.activeElement)
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    items[(i + 1) % items.length]?.focus()
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    items[(i - 1 + items.length) % items.length]?.focus()
-  } else if (e.key === 'Home') {
-    e.preventDefault()
-    items[0]?.focus()
-  } else if (e.key === 'End') {
-    e.preventDefault()
-    items[items.length - 1]?.focus()
-  } else if (e.key === 'Tab') {
-    closeMenu()
-  }
-}
-
-function runMenuAction(action: () => void) {
-  closeMenu(true)
-  action()
-}
-
-// A press elsewhere closes the menu; Escape also returns focus to its button.
-useDismissable(menuRoot, (e, reason) => closeMenu(reason === 'escape'), { active: menuOpen })
-
-watch(() => permissions.can('manage_channels'), () => closeMenu())
-
-const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 rounded text-sm text-left text-mnema-muted hover:bg-mnema-hover hover:text-mnema-text focus:outline-none focus-visible:bg-mnema-hover focus-visible:text-mnema-text transition-colors'
 </script>
 
 <template>
   <aside class="w-full min-w-0 bg-mnema-raised flex flex-col h-full select-none">
-    <!-- Server Header (48px, aligned with the channel header) with dropdown menu -->
-    <div ref="menuRoot" class="relative flex-shrink-0">
-      <button
-        ref="menuButton"
-        type="button"
-        aria-haspopup="menu"
-        :aria-expanded="menuOpen ? 'true' : 'false'"
-        aria-controls="server-menu"
-        :class="[
-          'w-full h-12 pl-3 pr-3 border-b border-mnema-hairline flex items-center gap-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-mnema-accent',
-          menuOpen ? 'bg-mnema-hover' : 'hover:bg-mnema-hover/70'
-        ]"
-        v-tooltip.visual="SERVER_NAME"
-        @click="toggleMenu"
-        @keydown="onMenuButtonKeydown"
-      >
-        <!-- Mnema Forest Mark -->
-        <span class="w-7 h-7 rounded-md bg-mnema-band border border-mnema-mint/30 flex items-center justify-center text-mnema-mint font-semibold text-sm shadow-sm flex-shrink-0">
-          M
-        </span>
-        <span class="flex flex-col min-w-0 flex-1">
-          <span class="font-semibold text-nav text-mnema-text truncate">{{ SERVER_NAME }}</span>
-          <span class="text-xs text-mnema-tertiary truncate">{{ $t('sidebar.subtitle') }}</span>
-        </span>
-        <X v-if="menuOpen" class="w-4 h-4 text-mnema-muted flex-shrink-0" />
-        <ChevronDown v-else class="w-4 h-4 text-mnema-muted flex-shrink-0" />
-      </button>
-
-      <div
-        v-if="menuOpen"
-        id="server-menu"
-        ref="menuEl"
-        role="menu"
-        :aria-label="$t('sidebar.menu')"
-        class="absolute left-2 top-[52px] z-40 w-max min-w-[calc(100%-16px)] max-w-[calc(100vw-16px)] p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-xl"
-        @keydown="onMenuKeydown"
-      >
-        <template v-if="permissions.canOpenAdmin || permissions.can('manage_channels')">
-          <button v-if="permissions.canOpenAdmin" type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-admin'))">
-            <span class="truncate">{{ $t('menu.adminConsole') }}</span>
-            <Crown class="w-4 h-4 text-mnema-amber flex-shrink-0" />
-          </button>
-          <template v-if="permissions.can('manage_channels')">
-            <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateChannel('text'))">
-              <span class="truncate">{{ $t('channel.create') }}</span>
-              <Plus class="w-4 h-4 flex-shrink-0" />
-            </button>
-            <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => openCreateCategory())">
-              <span class="truncate">{{ $t('sidebar.createCategory') }}</span>
-              <FolderPlus class="w-4 h-4 flex-shrink-0" />
-            </button>
-          </template>
-          <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
-        </template>
-        <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
-          <span class="truncate">{{ $t('menu.legal') }}</span>
-          <ShieldCheck class="w-4 h-4 flex-shrink-0" />
-        </button>
-      </div>
-    </div>
+    <SidebarServerMenu
+      @open-admin="emit('open-admin')"
+      @open-legal="emit('open-legal')"
+      @create-channel="openCreateChannel('text')"
+      @create-category="openCreateCategory()"
+    />
 
     <!-- Navigation Scroll Area -->
     <nav
