@@ -179,3 +179,59 @@ func TestClientIPJoinsForwardedForLines(t *testing.T) {
 		t.Fatalf("ClientIP = %q, want the proxy-appended hop", got)
 	}
 }
+
+func TestLimiterCapsRemainBoundedBeyondEvictionSample(t *testing.T) {
+	now := time.Unix(1000, 0)
+	rl := NewRateLimiter(2, time.Hour)
+	rl.now = func() time.Time { return now }
+	rl.maxEntries = 64
+	l := NewLoginFailureLimiter(2, time.Minute)
+	l.now = func() time.Time { return now }
+	l.maxEntries = 64
+	for i := 0; i < 256; i++ {
+		key := fmt.Sprintf("client-%d", i)
+		if ok, _ := rl.Allow(key); !ok {
+			t.Fatal("new client incorrectly limited")
+		}
+		l.RecordFailure(key)
+		if len(rl.entries) > 64 || l.Len() > 64 {
+			t.Fatal("flooded limiter exceeded its memory cap")
+		}
+	}
+	if ok, _ := rl.Allow("client-255"); !ok {
+		t.Fatal("latest client lost first hit")
+	}
+	if ok, _ := rl.Allow("client-255"); ok {
+		t.Fatal("latest client lost its rate-limit history")
+	}
+	l.RecordFailure("client-255")
+	if locked, _ := l.IsLockedOut("client-255"); !locked {
+		t.Fatal("latest client lost its login failure history")
+	}
+}
+
+func TestLoginLockoutTierBounds(t *testing.T) {
+	l := NewLoginFailureLimiter(2, time.Minute)
+	for n, want := range map[int]time.Duration{0: time.Minute, 1: time.Minute, 2: 5 * time.Minute, 3: 30 * time.Minute, 4: 30 * time.Minute} {
+		if got := l.lockoutFor(n); got != want {
+			t.Errorf("lockout tier %d = %v, want %v", n, got, want)
+		}
+	}
+}
+
+func TestFailuresDuringLockoutDoNotRestartOrEscalateIt(t *testing.T) {
+	now := time.Unix(1000, 0)
+	l := NewLoginFailureLimiter(1, time.Minute)
+	l.now = func() time.Time { return now }
+	l.RecordFailure("client")
+	now = now.Add(30 * time.Second)
+	l.RecordFailures("client", 100)
+	if locked, retry := l.IsLockedOut("CLIENT"); !locked || retry != 30*time.Second {
+		t.Fatalf("active lockout was restarted: locked=%v remaining=%v", locked, retry)
+	}
+	now = now.Add(30 * time.Second)
+	l.RecordFailure("client")
+	if locked, retry := l.IsLockedOut("client"); !locked || retry != 5*time.Minute {
+		t.Fatalf("new breach used wrong tier: locked=%v remaining=%v", locked, retry)
+	}
+}

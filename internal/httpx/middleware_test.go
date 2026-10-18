@@ -2,6 +2,10 @@ package httpx
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -286,4 +290,105 @@ func TestClientIPWarnsOnceForUntrustedPrivatePeer(t *testing.T) {
 		t.Fatal("warning not registered for the admin System tab")
 	}
 	opwarn.Default.Clear(opwarn.ProxyNotTrusted)
+}
+
+func TestRecoverPreservesAbortHandlerPanic(t *testing.T) {
+	defer func() {
+		if got := recover(); got != http.ErrAbortHandler {
+			t.Fatalf("abort panic = %v, want http.ErrAbortHandler", got)
+		}
+	}()
+	rec := httptest.NewRecorder()
+	Recover(false)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		panic(http.ErrAbortHandler)
+	})).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	t.Fatal("request abort was swallowed")
+}
+
+func TestProxyAddressParsingRejectsMalformedPeersAndCIDRs(t *testing.T) {
+	trusted, err := ParseCIDRs([]string{"203.0.113.9", "2001:db8::1"})
+	if err != nil || len(trusted) != 2 {
+		t.Fatalf("bare IPv4/IPv6 allowlist: %v %v", trusted, err)
+	}
+	if !remoteTrusted("2001:db8::1", trusted) || remoteTrusted("not-a-peer", trusted) {
+		t.Fatal("trusted IPv6 or malformed peer policy incorrect")
+	}
+	if _, err := ParseCIDRs([]string{"203.0.113.0/999"}); err == nil {
+		t.Fatal("invalid CIDR accepted")
+	}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.RemoteAddr = "203.0.113.9"
+	if got := ClientIP(r); got != r.RemoteAddr {
+		t.Fatalf("peer without port: %q", got)
+	}
+}
+
+func TestCORSIgnoresUnusableAllowlistAndCompletesAllowedPreflight(t *testing.T) {
+	h := CORS([]string{"missing-scheme", "https://chat.example.com"})(okHandler)
+	r := httptest.NewRequest(http.MethodOptions, "/api/channels", nil)
+	r.Header.Set("Origin", "https://chat.example.com")
+	r.Header.Set("Access-Control-Request-Method", http.MethodPatch)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusNoContent || w.Header().Get("Access-Control-Allow-Origin") != "https://chat.example.com" || !strings.Contains(w.Header().Get("Access-Control-Allow-Methods"), "PATCH") {
+		t.Fatalf("allowed preflight: status=%d headers=%v", w.Code, w.Header())
+	}
+	r.Header.Set("Origin", "missing-scheme")
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusForbidden || w.Header().Get("Access-Control-Allow-Origin") != "" {
+		t.Fatal("unusable allowlist origin was trusted")
+	}
+}
+
+func TestLoggerOmitsSensitiveQueryAndSkipsHealthRequests(t *testing.T) {
+	var output bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	h := Logger(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_, _ = io.WriteString(w, "created")
+	}))
+	r := httptest.NewRequest(http.MethodGet, "/api/channels?token=test-only-query-marker", nil)
+	r.RemoteAddr = "203.0.113.9:1234"
+	r = r.WithContext(context.WithValue(r.Context(), requestIDKey, "logger-core-test"))
+	h.ServeHTTP(httptest.NewRecorder(), r)
+	var event map[string]any
+	if err := json.Unmarshal(output.Bytes(), &event); err != nil {
+		t.Fatal(err)
+	}
+	if event["path"] != "/api/channels" || event["request_id"] != "logger-core-test" || event["status"] != float64(http.StatusCreated) || event["bytes"] != float64(7) || event["ip"] != "203.0.113.9" || strings.Contains(output.String(), "test-only-query-marker") {
+		t.Fatalf("unsafe or incomplete request log: %s", output.String())
+	}
+	output.Reset()
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/health", nil))
+	if output.Len() != 0 {
+		t.Fatal("health poll generated request log noise")
+	}
+}
+
+func TestMaxBodyLimitsUnknownLengthAndAllowsEmptyRequests(t *testing.T) {
+	h := MaxBody(10)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := io.ReadAll(r.Body)
+		var max *http.MaxBytesError
+		if !errors.As(err, &max) {
+			t.Fatalf("unknown length oversized body: %v", err)
+		}
+		WriteError(w, ErrPayloadTooLarge("request body too large"))
+	}))
+	r := httptest.NewRequest(http.MethodPost, "/api/test", strings.NewReader(strings.Repeat("x", 11)))
+	r.ContentLength = -1
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("unknown length limit status: %d", w.Code)
+	}
+	r = httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Body = nil
+	w = httptest.NewRecorder()
+	MaxBody(10)(okHandler).ServeHTTP(w, r)
+	if w.Code != http.StatusOK {
+		t.Fatal("request with no body was rejected")
+	}
 }
