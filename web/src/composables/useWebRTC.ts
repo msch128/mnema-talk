@@ -2,7 +2,6 @@ import { gamingMicLease } from '../lib/gamingMicLease'
 import { ref, watch, effectScope, toRaw } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
-import { summarizeStats } from '../lib/rtcStats'
 import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
@@ -10,9 +9,7 @@ import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { browserMediaCall } from '../lib/media/browserCall'
-import { installMediaCallFactory, mediaCall, type MediaNotice } from '../lib/media/api'
-import { playSoundEffect } from '../lib/soundEffects'
-import { applyOutputDevice } from '../lib/audioOutput'
+import { installMediaCallFactory, mediaCall } from '../lib/media/api'
 import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
 import { confirm } from '../lib/confirm'
@@ -21,85 +18,27 @@ import { platform } from '../lib/platform'
 import type { FilterNode } from '../lib/dfnNode'
 import type { NoiseModel } from '../lib/dfnTypes'
 import type { MediaStat } from '../lib/mediaStats'
-import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
 import { declaredLayers, layersKey, planScreenLayers } from '../lib/screenLayers'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../lib/media/frame'
-import type { AudioOutputTarget } from '../lib/audioOutput'
-import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
-import { decodeServerICEConfig } from '../types/rest'
+import type { SubscribeRequest, ServerEventPayloads } from '../types/events'
+import { publishMids, restrictVideoCodecs, tuneScreenLines } from './webrtc/sdp'
+import { createPushToTalk } from './webrtc/pushToTalk'
+import { iceServers, loadIceServers } from './webrtc/iceServers'
+import { createStatsPolling } from './webrtc/statsPolling'
+import { applyOutput, applyOutputToRemote, attachRemoteAudio, followOutputDevice, playPausedRemoteAudio, releaseRemoteAudio, resumeRemoteAudio as resumeRemotePlayback, updateRemoteVolume } from './webrtc/remoteAudio'
+import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from './webrtc/streamIds'
+import { announceMediaRekeyed, announceMediaUnprotected, closeMediaRoom, mediaUnprotected, onMediaUnprotected, openMediaRoom, queueMediaWire, resetMediaAnnouncements } from './webrtc/mediaRoom'
 
 // Tests install a double first. This only supplies the call when none is installed.
 installMediaCallFactory(browserMediaCall)
 
 type VoiceStore = ReturnType<typeof useVoiceStore>
 type ChatStore = ReturnType<typeof useChatStore>
-type RemoteAudioElement = HTMLAudioElement & { srcObject: MediaStream | null }
 type AudioGuard = 'restricted' | 'echo-cancel' | 'none'
 interface BoundSenders { audio?: RTCRtpSender; screen?: RTCRtpSender; camera?: RTCRtpSender; screenAudio?: RTCRtpSender; layers?: RTCRtpSender[] }
 interface SenderTuning { active?: boolean; maxBitrate?: number; maxFramerate?: number; scaleResolutionDownBy?: number; degradationPreference?: RTCDegradationPreference; priority?: RTCPriorityType; networkPriority?: RTCPriorityType }
 
-
-// The SFU publishes a camera under this prefix plus the user ID as stream ID,
-// and the sound of a screen share under SCREEN_AUDIO_STREAM_PREFIX (screen
-// share and voice use the plain user ID); see internal/sfu.
-const CAMERA_STREAM_PREFIX = 'cam:'
-const SCREEN_AUDIO_STREAM_PREFIX = 'screen:'
-
-function publisherId(streamId: string | undefined): string | null {
-  if (!streamId) return null
-  const id = streamId.startsWith(CAMERA_STREAM_PREFIX)
-    ? streamId.slice(CAMERA_STREAM_PREFIX.length)
-    : streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
-      ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length)
-      : streamId
-  return id || null
-}
-
-let mediaUnprotectedAnnounced = false
-let mediaRekeyAnnounced = false
-// The hub relays a handshake only to members of the voice room, and drops one
-// that arrives before voice_join. The call starts while the microphone is still
-// opening, so its first wires wait here until voice_join is sent.
-let mediaRoomOpen = false
-const heldMediaWires: { channelId: string, wire: string }[] = []
-
-function closeMediaRoom() {
-  mediaRoomOpen = false
-  heldMediaWires.length = 0
-}
-
-function sendMediaWire(channelId: string, wire: string) {
-  if (useVoiceStore().currentChannelId !== channelId) return
-  useChatStore().sendWSEvent('media_handshake', { channel_id: channelId, wire })
-}
-
-function openMediaRoom() {
-  mediaRoomOpen = true
-  for (const held of heldMediaWires.splice(0)) sendMediaWire(held.channelId, held.wire)
-}
-
-function queueMediaWire(channelId: string, wire: string) {
-  if (mediaRoomOpen) sendMediaWire(channelId, wire)
-  else heldMediaWires.push({ channelId, wire })
-}
-let releaseUnprotectedCapture: () => void = () => {}
-
-// The group dropped this member without being asked: whoever relays the call
-// can do that, so say so once per call.
-function announceMediaRekeyed(notice: MediaNotice) {
-  if (mediaRekeyAnnounced) return
-  mediaRekeyAnnounced = true
-  // A member dropped after its own browser slept was not removed by anyone hostile.
-  useToastStore().info(t(notice === 'absent' ? 'voice.mediaRefreshed' : 'voice.mediaRekeyed'))
-}
-
-function announceMediaUnprotected() {
-  if (mediaUnprotectedAnnounced) return
-  mediaUnprotectedAnnounced = true
-  releaseUnprotectedCapture()
-  useToastStore().error(t('voice.mediaUnprotected'))
-}
 
 // Module-level shared singletons across all components
 const localAudioStream = ref<MediaStream | null>(null)
@@ -134,10 +73,6 @@ let lastNoAudioWarningToastTime = 0
 
 // WebRTC Peer Connection and Remote Audio
 let pc: RTCPeerConnection | null = null
-// Remote audio elements by track id. The SFU reuses its transceivers: the
-// same track may come back in a new stream (another speaker), so elements
-// are keyed by track and retagged instead of piling up.
-const remoteAudioElements = new Map<string, RemoteAudioElement>()
 // Senders of the four fixed outgoing lines, created with the connection:
 // mic, screen share, camera and the screen share's sound. Tracks are swapped
 // with replaceTrack, so starting or stopping them never renegotiates. The
@@ -168,17 +103,21 @@ let screenCaptureGeneration = 0
 let cameraCaptureGeneration = 0
 // Quality changes are applied one after another.
 let qualityChain = Promise.resolve()
-// Playback above 100 % needs a gain stage: element.volume tops out at 1.
-let playbackContext: AudioContext | null = null
 // Input volume: a gain stage in the mic pipeline, only built when the input
 // volume is not 100 % (so the default path stays the plain microphone).
 let gamingGainNode: GainNode | null = null
 export function setGamingPttLease(pressed: boolean): void {
   if (gamingGainNode && audioContext) gamingMicLease(gamingGainNode, audioContext, useVoiceStore().inputMode === 'ptt', pressed)
 }
+// Back in view, the browser may have suspended the audio it plays.
+const pushToTalk = createPushToTalk({
+  lease: setGamingPttLease,
+  wake(inCall) {
+    if (audioContext && audioContext.state === 'suspended') audioContext.resume().catch(() => {})
+    if (inCall) playPausedRemoteAudio()
+  }
+})
 let inputGainNode: GainNode | null = null
-// The voice store, for the output device of a lazily created playback context.
-let outputDeviceStore: VoiceStore | null = null
 // The settings watchers of useWebRTC, registered once per voice store.
 let watcherScope: ReturnType<typeof effectScope> | null = null
 let watchedStore: VoiceStore | null = null
@@ -186,7 +125,6 @@ let inputVolumeTimer: ReturnType<typeof setTimeout> | undefined
 // applyAudioSettings runs one at a time; busy counts queued and running ones.
 let audioSettingsChain = Promise.resolve()
 let audioSettingsBusy = 0
-const boosts = new WeakMap<RemoteAudioElement, { source: MediaStreamAudioSourceNode; gain: GainNode }>()
 // Offers are applied one after another; candidates that arrive before the
 // remote description is set wait in pendingCandidates.
 let signalingChain = Promise.resolve()
@@ -194,187 +132,8 @@ let pendingCandidates: RTCIceCandidateInit[] = []
 // Bumped by every join and leave: an older join that is still awaiting the
 // microphone sees the change and backs out instead of finishing.
 let joinGeneration = 0
-// Push-to-talk listeners are module-level so any component can remove them.
-let pttStore: VoiceStore | null = null
 
-// ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
-// third-party STUN server learns the user's IP
-let iceServers: RTCIceServer[] = []
-let iceConfigLoaded: Promise<void> | null = null
-
-// Loaded once, on the first voice join rather than at import time.
-function loadIceServers() {
-  if (!iceConfigLoaded) {
-    iceConfigLoaded = fetch('/api/webrtc/config', { credentials: 'same-origin' })
-      .then(async (res): Promise<unknown> => res.ok ? res.json() : null)
-      .then(data => { if (data !== null) iceServers = decodeServerICEConfig(data).ice_servers })
-      .catch(() => { iceConfigLoaded = null })
-  }
-  return iceConfigLoaded
-}
-
-// Connection statistics measured by the browser (RTCPeerConnection.getStats).
-let statsTimer: ReturnType<typeof setInterval> | null = null
-let lastStatsSample: RTCStatsSample | null = null
-let statsPollingGeneration = 0
-
-// Where stream diagnostics go (the server log, via the WebSocket).
-let diagSink: ((payload: Record<string, JsonValue | undefined>) => void) | null = null
-let statsTicks = 0
-const lastVideoBytes = new Map<string, number>()
-
-/**
- * What a shared screen looks like on the wire, for the server log: per video
- * stream its codec, size, frame rate, bitrate, losses and, when sending, why
- * the browser holds the quality back (cpu, bandwidth). Never addresses.
- */
-export function streamDiag(stats: Iterable<MediaStat>, previousBytes = new Map<string, number>(), seconds = 10) {
-  const codecs = new Map<string, string | undefined>()
-  for (const s of stats) if (s.type === 'codec') codecs.set(s.id, s.mimeType)
-  const out = []
-  for (const s of stats) {
-    if (s.kind !== 'video' || (s.type !== 'outbound-rtp' && s.type !== 'inbound-rtp')) continue
-    const sending = s.type === 'outbound-rtp'
-    const bytes = sending ? s.bytesSent : s.bytesReceived
-    if (!bytes) continue
-    const before = previousBytes.get(s.id)
-    previousBytes.set(s.id, bytes)
-    out.push({
-      dir: sending ? 'out' : 'in',
-      codec: codecs.get(s.codecId || '') || '',
-      size: s.frameWidth ? `${s.frameWidth}x${s.frameHeight}` : '',
-      fps: Math.round(s.framesPerSecond || 0),
-      kbps: before === undefined ? null : Math.round(((bytes - before) * 8) / 1000 / seconds),
-      limit: sending ? (s.qualityLimitationReason || '') : undefined,
-      encoder: sending ? (s.encoderImplementation || '') : undefined,
-      decoder: sending ? undefined : (s.decoderImplementation || ''),
-      // Hardware (power efficient) encoder or decoder; Chrome reports it once
-      // the page holds a capture permission, other browsers leave it out.
-      hw: sending ? s.powerEfficientEncoder : s.powerEfficientDecoder,
-      lost: s.packetsLost ?? undefined,
-      dropped: sending ? undefined : (s.framesDropped ?? 0),
-      freezes: sending ? undefined : (s.freezeCount ?? 0),
-      nacks: s.nackCount ?? undefined,
-      plis: s.pliCount ?? undefined
-    })
-  }
-  return out
-}
-
-function startStatsPolling(voiceStore: VoiceStore) {
-  stopStatsPolling(voiceStore)
-  statsTicks = 0
-  lastVideoBytes.clear()
-  const generation = statsPollingGeneration
-  statsTimer = setInterval(async () => {
-    const conn = pc
-    if (!conn) return
-    try {
-      const report = await conn.getStats()
-      // A stopped poll must not restore statistics from a retired connection,
-      // including a restarted poll that happens to use the same connection.
-      if (pc !== conn || generation !== statsPollingGeneration) return
-      const summary = summarizeStats(report.values(), lastStatsSample)
-      lastStatsSample = summary.sample
-      voiceStore.rtcStats = summary
-      // Every 10 s while a screen is shared or watched: what the stream does.
-      if (++statsTicks % 5 === 0 && diagSink && (voiceStore.isScreenSharing || voiceStore.remoteScreenStream)) {
-        const video = streamDiag([...report.values()], lastVideoBytes, 10)
-        if (video.length) {
-          diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, own_audio: voiceStore.isScreenSharing ? screenAudioGuard : undefined, sharing: !!voiceStore.isScreenSharing })
-        }
-      }
-    } catch {
-      // The connection may be closing; the next tick retries.
-    }
-  }, 2000)
-}
-
-function stopStatsPolling(voiceStore: VoiceStore) {
-  statsPollingGeneration++
-  if (statsTimer) {
-    clearInterval(statsTimer)
-    statsTimer = null
-  }
-  lastStatsSample = null
-  if (voiceStore) voiceStore.rtcStats = null
-}
-
-// Linear gain for one remote audio element: master volume x that user's
-// voice volume, or x the volume of their stream for a screen share's sound.
-function remoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
-  if (voiceStore.isDeafened || voiceStore.isMicTesting) return 0
-  const master = voiceStore.outputVolume / 100
-  const userId = el.dataset?.userId
-  if (!userId) return master
-  if (el.dataset.source === 'screen') return master * voiceStore.streamGain(userId)
-  if (voiceStore.isUserLocalMuted(userId)) return 0
-  return master * (voiceStore.getUserVolume(userId) / 100)
-}
-
-// Routes the element's stream through a GainNode (the element stays attached
-// but muted so the stream keeps flowing). Only done once a gain above 1 is
-// asked for; until then plain element.volume does the job.
-function createBoost(el: RemoteAudioElement) {
-  const AudioCtx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
-  if (!AudioCtx || !el.srcObject) return null
-  try {
-    if (!playbackContext || playbackContext.state === 'closed') {
-      playbackContext = new AudioCtx()
-      if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
-    }
-    if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {})
-    const source = playbackContext.createMediaStreamSource(el.srcObject)
-    const gain = playbackContext.createGain()
-    source.connect(gain)
-    gain.connect(playbackContext.destination)
-    el.muted = true
-    const boost = { source, gain }
-    boosts.set(el, boost)
-    return boost
-  } catch (err) {
-    console.warn('[WebRTC] Volume boost unavailable:', err)
-    return null
-  }
-}
-
-// Plays remote audio (an element or an AudioContext) on the chosen output device.
-function applyOutput(voiceStore: VoiceStore, target: AudioOutputTarget | null) {
-  applyOutputDevice(target, voiceStore.selectedOutputDeviceId)
-}
-
-function applyOutputDeviceAll(voiceStore: VoiceStore) {
-  remoteAudioElements.forEach(el => applyOutput(voiceStore, el))
-  // Boosted voices (over 100 %) play through the playback context.
-  applyOutput(voiceStore, playbackContext)
-  // The mic-test monitor.
-  applyOutput(voiceStore, loopbackCtx)
-}
-
-function applyRemoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
-  const gain = remoteGain(voiceStore, el)
-  let boost = boosts.get(el) ?? null
-  if (!boost && gain > 1) boost = createBoost(el)
-  if (boost) {
-    boost.gain.gain.value = gain
-  } else {
-    el.volume = Math.min(1, Math.max(0, gain))
-  }
-}
-
-function releaseBoost(el: RemoteAudioElement) {
-  const boost = boosts.get(el)
-  if (!boost) return
-  try {
-    boost.source.disconnect()
-    boost.gain.disconnect()
-  } catch { /* already disconnected */ }
-  boosts.delete(el)
-}
-
-function updateRemoteVolume(voiceStore: VoiceStore) {
-  remoteAudioElements.forEach(el => applyRemoteGain(voiceStore, el))
-}
+const statsPolling = createStatsPolling({ connection: () => pc, screenAudioGuard: () => screenAudioGuard })
 
 function captureKey(track: MediaStreamTrack): string {
   const settings = track.getSettings?.()
@@ -406,28 +165,14 @@ function stopCaptureWatch() {
 
 function cleanupPeerConnection(voiceStore: VoiceStore) {
   stopCaptureWatch()
-  stopStatsPolling(voiceStore)
+  statsPolling.stop(voiceStore)
   signalingChain = Promise.resolve()
   pendingCandidates = []
   if (pc) {
     try { pc.close() } catch { /* connection already closed */ }
     pc = null
   }
-  remoteAudioElements.forEach(el => {
-    releaseBoost(el)
-    try {
-      el.pause()
-      el.srcObject = null
-      el.remove()
-    } catch {
-      // element already detached / disposed
-    }
-  })
-  remoteAudioElements.clear()
-  if (playbackContext) {
-    playbackContext.close().catch(() => {})
-    playbackContext = null
-  }
+  releaseRemoteAudio()
   audioSender = null
   screenSender = null
   cameraSender = null
@@ -447,101 +192,16 @@ function liveScreenAudioTrack() {
   const track = localScreenStream.value?.getAudioTracks()[0]
   return track && track.readyState !== 'ended' ? track : null
 }
-
-
-function removeRemoteAudio(trackId: string) {
-  const el = remoteAudioElements.get(trackId)
-  if (!el) return
-  remoteAudioElements.delete(trackId)
-  releaseBoost(el)
-  try {
-    el.pause?.()
-    el.srcObject = null
-    el.remove()
-  } catch { /* detached */ }
-}
-
-// Who an audio element plays (data-user-id) and whether it is the sound of
-// their screen share (data-source="screen") rather than their voice.
-function tagRemoteAudio(el: RemoteAudioElement, streamId: string) {
-  const screen = streamId.startsWith(SCREEN_AUDIO_STREAM_PREFIX)
-  const userId = screen ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length) : streamId
-  if (userId) el.dataset.userId = userId
-  else delete el.dataset.userId
-  if (screen) el.dataset.source = 'screen'
-  else delete el.dataset.source
-  el.dataset.streamId = streamId
-}
-
-// Plays one remote audio track. The stream ID names the speaking user (or,
-// prefixed, the user whose screen share it is); a repeated ontrack for the
-// same track (transceiver reused for someone else) only retags its element.
-function attachRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrack, stream: MediaStream | undefined) {
-  const streamId = stream?.id || ''
-  // A source can return on a different receiver track after renegotiation.
-  // Its previous HTML/WebAudio sink must leave before the replacement plays;
-  // microphone and screen audio stay distinct through their stream prefixes.
-  for (const [trackId, el] of remoteAudioElements) {
-    const sameSource = streamId && el.dataset.streamId === streamId
-    const replacedTrack = trackId === track.id && el.srcObject?.getAudioTracks()[0] !== track
-    if ((sameSource && trackId !== track.id) || replacedTrack) removeRemoteAudio(trackId)
-  }
-  let audioEl = remoteAudioElements.get(track.id)
-  if (audioEl) {
-    tagRemoteAudio(audioEl, streamId)
-    applyRemoteGain(voiceStore, audioEl)
-    if (audioEl.paused) audioEl.play?.().catch(() => {})
-  } else {
-    audioEl = new Audio() as RemoteAudioElement
-    audioEl.srcObject = new MediaStream([track])
-    audioEl.autoplay = true
-    tagRemoteAudio(audioEl, streamId)
-    applyOutput(voiceStore, audioEl)
-    applyRemoteGain(voiceStore, audioEl)
-    audioEl.play().catch(e => {
-      // After a reload without a user gesture the browser may refuse to play;
-      // the UI then offers a click to enable sound (resumeRemoteAudio).
-      if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
-      console.warn('[WebRTC] Audio auto-play warning:', e)
-    })
-    if (typeof document !== 'undefined' && document.body) {
-      let sink = document.getElementById('mnema-audio-sink')
-      if (!sink) {
-        sink = document.createElement('div')
-        sink.id = 'mnema-audio-sink'
-        sink.style.display = 'none'
-        document.body.appendChild(sink)
-      }
-      sink.appendChild(audioEl)
-    }
-    remoteAudioElements.set(track.id, audioEl)
-    track.onended = () => {
-      const current = remoteAudioElements.get(track.id)
-      if (current?.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-    }
-  }
-
-  // When the SFU stops forwarding, the browser removes the track from its
-  // stream instead of ending it. Only drop the element while it still
-  // belongs to this stream: a reused track may already play for someone else.
-  stream?.addEventListener?.('removetrack', (e) => {
-    if (e.track !== track) return
-    const el = remoteAudioElements.get(track.id)
-    if (el && (el.dataset.streamId || '') === streamId && el.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-  })
-}
-
 function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
   cleanupPeerConnection(voiceStore)
 
-  const rtcConfig: RTCConfiguration = { iceServers }
+  const rtcConfig: RTCConfiguration = { iceServers: iceServers() }
   if (voiceStore?.qosHighPriority) {
     rtcConfig.dscp = true
   }
   pc = new RTCPeerConnection(rtcConfig)
   const conn = pc
-  diagSink = (payload) => chatStore.sendWSEvent('webrtc_diag', payload)
-  startStatsPolling(voiceStore)
+  statsPolling.start(voiceStore, payload => chatStore.sendWSEvent('webrtc_diag', payload))
 
   // Connection diagnostics for the server log: what this browser gathers and
   // how the connection develops (candidate types only, never addresses).
@@ -554,7 +214,7 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
     signaling: pc?.signalingState,
     candidates: diag.candidates,
     errors: diag.errors.slice(-5),
-    ice_servers: (iceServers || []).length,
+    ice_servers: iceServers().length,
     ua: typeof navigator !== 'undefined' ? navigator.userAgent : ''
   })
 
@@ -619,168 +279,6 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
   // The outgoing lines (microphone, screen, camera) are the SFU's own receive
   // lines from its offer; see bindPublishSenders.
   return pc
-}
-
-/**
- * The SFU creates our four receive lines before anything else, so they are
- * the offer's first two audio lines (microphone, screen share's sound) and
- * first two video lines (screen, camera). Their direction says nothing: the
- * SFU may reuse them to forward other members' media (then they read
- * sendrecv/sendonly).
- */
-export function publishMids(sdp: string | null | undefined, layerLines = 0) {
-  const out: { audio: string | null; screenAudio: string | null; video: string[] } = { audio: null, screenAudio: null, video: [] }
-  let kind: string | undefined | null = null
-  let mid: string | null = null
-  const flush = () => {
-    if (!kind || mid === null) return
-    if (kind === 'audio' && out.audio === null) out.audio = mid
-    else if (kind === 'audio' && out.screenAudio === null) out.screenAudio = mid
-    else if (kind === 'video' && out.video.length < 2 + layerLines) out.video.push(mid)
-  }
-  for (const line of String(sdp || '').split(/\r?\n/)) {
-    if (line.startsWith('m=')) {
-      flush()
-      kind = line.slice(2).split(' ')[0]
-      mid = null
-    } else if (line.startsWith('a=mid:')) {
-      mid = line.slice(6).trim()
-    }
-  }
-  flush()
-  return out
-}
-
-// How a shared screen starts: the browser's bandwidth estimate opens at a few
-// hundred kbit/s and only creeps up, which at 4K means a slideshow for the
-// first half minute. The estimate starts at SCREEN_START_KBPS instead and
-// never drops below SCREEN_MIN_KBPS (congestion control still backs off above
-// that). Chrome reads both from the codec parameters of what it sends.
-export const SCREEN_START_KBPS = 6000
-export const SCREEN_MIN_KBPS = 1000
-
-// Payload types that carry no video of their own.
-const AUX_CODECS = new Set(['rtx', 'red', 'ulpfec', 'flexfec-03'])
-
-// H.264 first, preferring constrained baseline (what the hardware encoders on
-// Mac and Windows handle everywhere), then baseline, then other profiles.
-function h264Rank(name: string, fmtp: string) {
-  if (name !== 'h264') return 4
-  if (!/packetization-mode=1/.test(fmtp)) return 3
-  const profile = (/profile-level-id=([0-9a-f]{4})/i.exec(fmtp)?.[1] || '').toLowerCase()
-  if (profile === '42e0') return 0
-  if (profile === '4200') return 1
-  return 2
-}
-
-// Sealed video needs framing that keeps what the network path parses readable,
-// which exists for these codecs only (see lib/media/codec.ts).
-const SEALABLE_VIDEO = new Set(['vp8', 'h264'])
-
-/**
- * Drops every video codec that cannot be sealed from the offer's video lines
- * (and the retransmission entries that point at them), so neither side ever
- * sends or expects one. A line that would be left without a codec stays as it
- * is: its frames are refused by the media worker instead.
- */
-export function restrictVideoCodecs(sdp: string) {
-  if (!sdp) return sdp
-  const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
-  const lines = sdp.split(/\r?\n/)
-  const starts: number[] = []
-  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
-  for (let n = starts.length - 1; n >= 0; n--) {
-    const from = starts[n]
-    if (from === undefined) continue
-    const to = starts[n + 1] ?? lines.length
-    const section = lines.slice(from, to)
-    if (!section[0]?.startsWith('m=video')) continue
-    const names = new Map<string, string>()
-    const apt = new Map<string, string>()
-    for (const l of section) {
-      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
-      if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
-      m = /^a=fmtp:(\d+) .*\bapt=(\d+)/.exec(l)
-      if (m?.[1] && m[2]) apt.set(m[1], m[2])
-    }
-    const keep = new Set<string>()
-    for (const [pt, name] of names) if (SEALABLE_VIDEO.has(name)) keep.add(pt)
-    for (const [pt, name] of names) if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
-    const listed = section[0].split(' ').slice(3)
-    if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) continue
-    const out = section.flatMap((l) => {
-      if (l.startsWith('m=')) return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
-      const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
-      return m?.[1] && !keep.has(m[1]) ? [] : [l]
-    })
-    lines.splice(from, to - from, ...out)
-  }
-  return lines.join(eol)
-}
-
-/**
- * Tunes the screen line (mid) of the SFU's offer before it is applied: with
- * h264, H.264 moves to the front so the browser sends it (hardware encoded on
- * Mac and Windows; VP8 at 4K runs on the CPU and tops out near 30 fps), and
- * every video codec on the line gets the start and floor bitrate above. The
- * SFU forwards whatever arrives, so viewers decode the same codec.
- */
-export function tuneScreenOffer(sdp: string, mid: string | null | undefined, { h264 = false, startKbps = SCREEN_START_KBPS, minKbps = SCREEN_MIN_KBPS } = {}) {
-  if (!sdp || mid === null || mid === undefined) return sdp
-  const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
-  const lines = sdp.split(/\r?\n/)
-  // Section boundaries: [start, end) per m= line.
-  const starts: number[] = []
-  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
-  for (let n = 0; n < starts.length; n++) {
-    const from = starts[n]
-    if (from === undefined) continue
-    const to = starts[n + 1] ?? lines.length
-    const section = lines.slice(from, to)
-    if (!section[0]?.startsWith('m=video') || !section.includes(`a=mid:${mid}`)) continue
-
-    const names = new Map<string, string>()
-    const fmtps = new Map<string, string>()
-    for (const l of section) {
-      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
-      if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
-      m = /^a=fmtp:(\d+) (.*)$/.exec(l)
-      if (m?.[1] && m[2] !== undefined) fmtps.set(m[1], m[2])
-    }
-    const media = (pt: string) => names.has(pt) && !AUX_CODECS.has(names.get(pt) || '')
-
-    const out = []
-    for (const l of section) {
-      if (l.startsWith('m=') && h264) {
-        const parts = l.split(' ')
-        const pts = parts.slice(3)
-        const rank = (pt: string) => (media(pt) ? h264Rank(names.get(pt) || '', fmtps.get(pt) || '') : 5)
-        const sorted = pts.map((pt, i): [string, number] => [pt, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(e => e[0])
-        out.push([...parts.slice(0, 3), ...sorted].join(' '))
-        continue
-      }
-      let m = startKbps ? /^a=fmtp:(\d+) (.*)$/.exec(l) : null
-      if (m?.[1] && m[2] !== undefined && media(m[1]) && !m[2].includes('x-google-')) {
-        out.push(`${l};x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
-        continue
-      }
-      out.push(l)
-      m = startKbps ? /^a=rtpmap:(\d+) /.exec(l) : null
-      if (m?.[1] && media(m[1]) && !fmtps.has(m[1])) {
-        out.push(`a=fmtp:${m[1]} x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
-      }
-    }
-    lines.splice(from, to - from, ...out)
-    break
-  }
-  return lines.join(eol)
-}
-
-/** tuneScreenOffer for the screen line and the lines of its lower layers. */
-export function tuneScreenLines(sdp: string, mids: { video: string[] }, h264: boolean) {
-  let tuned = sdp
-  for (const mid of [mids.video[0], ...mids.video.slice(2)]) tuned = tuneScreenOffer(tuned, mid, { h264 })
-  return tuned
 }
 
 // Whether this browser can send H.264 at all (not whether in hardware; the
@@ -969,81 +467,6 @@ async function applyQosToSender(sender: RTCRtpSender | null, voiceStore: VoiceSt
   await tuneSender(sender, { priority: prio, networkPriority: prio })
 }
 
-function isTypingTarget(el: EventTarget | null) {
-  if (!(el instanceof HTMLElement)) return false
-  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable
-}
-
-function handlePttKeyDown(e: KeyboardEvent) {
-  const voiceStore = pttStore
-  if (!voiceStore || voiceStore.inputMode !== 'ptt' || e.repeat) return
-  // Holding the key while typing in the composer must not open the mic.
-  if (isTypingTarget(e.target)) return
-  if ((e.code || e.key) === voiceStore.pttKey) {
-    setGamingPttLease(true)
-    if (!voiceStore.isPttPressed) {
-      voiceStore.isPttPressed = true
-      if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSoundEffect('ptt_start')
-      }
-    }
-  }
-}
-
-function handlePttKeyUp(e: KeyboardEvent) {
-  const voiceStore = pttStore
-  if (!voiceStore || voiceStore.inputMode !== 'ptt') return
-  if ((e.code || e.key) === voiceStore.pttKey) {
-    if (voiceStore.isPttPressed) {
-      voiceStore.isPttPressed = false
-      setGamingPttLease(false)
-      if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSoundEffect('ptt_stop')
-      }
-    }
-  }
-}
-
-// A keyup that happens while the window is in the background never arrives;
-// release the key so the mic does not stay open.
-function releasePtt() {
-  if (pttStore) pttStore.isPttPressed = false
-  setGamingPttLease(false)
-}
-
-function onVisibilityChange() {
-  if (document.visibilityState === 'hidden') {
-    releasePtt()
-  } else if (document.visibilityState === 'visible') {
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {})
-    }
-    if (pttStore?.isConnected && pttStore?.currentChannelId) {
-      remoteAudioElements.forEach(el => {
-        if (el.paused) el.play().catch(() => {})
-      })
-    }
-  }
-}
-
-function setupPttListeners(voiceStore: VoiceStore) {
-  removePttListeners()
-  pttStore = voiceStore
-  window.addEventListener('keydown', handlePttKeyDown)
-  window.addEventListener('keyup', handlePttKeyUp)
-  window.addEventListener('blur', releasePtt)
-  document.addEventListener('visibilitychange', onVisibilityChange)
-}
-
-function removePttListeners() {
-  window.removeEventListener('keydown', handlePttKeyDown)
-  window.removeEventListener('keyup', handlePttKeyUp)
-  window.removeEventListener('blur', releasePtt)
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-  releasePtt()
-  pttStore = null
-}
-
 // Test stream for Settings Modal when not connected to a voice channel
 let testAudioStream: MediaStream | null = null
 let testAudioContext: AudioContext | null = null
@@ -1092,11 +515,11 @@ function setNodeGain(gainNode: GainNode | null, val: number, time = 0) {
 export function useWebRTC() {
   const voiceStore = useVoiceStore()
   const chatStore = useChatStore()
-  releaseUnprotectedCapture = () => {
+  onMediaUnprotected(() => {
     stopScreenShare()
     stopCamera()
     cleanupVoiceAudio()
-  }
+  })
 
   async function refreshAudioDevices() {
     try {
@@ -1248,8 +671,8 @@ export function useWebRTC() {
       if (voiceStore.isMicTesting) connectLoopback(ctx, biquad)
 
       // Push-to-talk works in the test too, also outside a call.
-      if (!pttStore) {
-        setupPttListeners(voiceStore)
+      if (!pushToTalk.attached()) {
+        pushToTalk.attach(voiceStore)
         testOwnsPtt = true
       }
 
@@ -1352,7 +775,7 @@ export function useWebRTC() {
     if (testOwnsPtt) {
       testOwnsPtt = false
       // A call that started meanwhile keeps its own listeners.
-      if (!localAudioStream.value) removePttListeners()
+      if (!localAudioStream.value) pushToTalk.detach()
     }
   }
 
@@ -1373,7 +796,7 @@ export function useWebRTC() {
       speakingInterval = null
     }
 
-    removePttListeners()
+    pushToTalk.detach()
 
     if (localAudioStream.value) {
       localAudioStream.value.getTracks().forEach(t => t.stop())
@@ -1471,8 +894,7 @@ export function useWebRTC() {
     if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
       return
     }
-    mediaUnprotectedAnnounced = false
-    mediaRekeyAnnounced = false
+    resetMediaAnnouncements()
     closeMediaRoom()
 
     // Stop standalone mic test before joining voice
@@ -1536,7 +958,7 @@ export function useWebRTC() {
 
     if (sendStream) {
       startSpeakingDetection()
-      setupPttListeners(voiceStore)
+      pushToTalk.attach(voiceStore)
     }
   }
 
@@ -1999,10 +1421,7 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
-    if (mediaUnprotectedAnnounced) {
-      announceMediaUnprotected()
-      return
-    }
+    if (mediaUnprotected()) return
     if (screenCapturePending) return
     if (localScreenStream.value) {
       const ok = await confirm({
@@ -2154,10 +1573,7 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
-    if (mediaUnprotectedAnnounced) {
-      announceMediaUnprotected()
-      return
-    }
+    if (mediaUnprotected()) return
     if (!voiceStore.currentChannelId || localCameraStream.value) return
     const gen = joinGeneration
     const captureGen = cameraCaptureGeneration
@@ -2217,7 +1633,7 @@ export function useWebRTC() {
   // unset, so neither a reload nor a reconnect rejoins it.
   function endCall({ notifyServer }: { notifyServer: boolean }) {
     joinGeneration++
-    mediaUnprotectedAnnounced = false
+    resetMediaAnnouncements()
     closeMediaRoom()
     mediaCall().stop()
     voiceSession.forget()
@@ -2260,8 +1676,7 @@ export function useWebRTC() {
   // Called from a user click when autoplay was blocked after a reload.
   function resumeRemoteAudio() {
     voiceStore.audioBlocked = false
-    playbackContext?.resume?.().catch(() => {})
-    remoteAudioElements.forEach(el => el.play().catch(() => { voiceStore.audioBlocked = true }))
+    resumeRemotePlayback(voiceStore)
   }
 
   // These watchers exist once per voice store, however many components call
@@ -2272,10 +1687,14 @@ export function useWebRTC() {
   if (watchedStore !== voiceStore) {
     watcherScope?.stop()
     watchedStore = voiceStore
-    outputDeviceStore = voiceStore
+    followOutputDevice(voiceStore)
     watcherScope = effectScope(true)
     watcherScope.run(() => {
-      watch(() => voiceStore.selectedOutputDeviceId, () => applyOutputDeviceAll(voiceStore))
+      watch(() => voiceStore.selectedOutputDeviceId, () => {
+        applyOutputToRemote(voiceStore)
+        // The mic-test monitor.
+        applyOutput(voiceStore, loopbackCtx)
+      })
 
       // Input volume: adjust the gain live; the first change away from 100 %
       // rebuilds the pipeline once to put the gain stage in.
