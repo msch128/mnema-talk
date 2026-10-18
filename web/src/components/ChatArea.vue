@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
-import type { Message, NotifyLevel } from '../types/domain'
+import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
-interface ScrollAnchor { id: string | undefined; offset: number }
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import {
   Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X, Volume2
@@ -22,13 +20,16 @@ import { useComposerAssist } from '../composables/useComposerAssist'
 import { useSlashCommands } from '../composables/useSlashCommands'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
+import { useMessageScroll } from '../composables/useMessageScroll'
+import { useUnreadDivider } from '../composables/useUnreadDivider'
+import { useNotificationHint } from '../composables/useNotificationHint'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { continuationIds } from '../lib/messageGrouping'
 import { durationLabel } from '../lib/moderation'
-import { firstUnreadId, typingLine } from '../lib/chatLogic'
+import { typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
-import { t, locale } from '../i18n'
+import { t } from '../i18n'
 
 // panel: the voice channel's chat under its Talk (VoiceChatPanel): a compact
 // header with a close button, Discord's welcome texts, no member toggle.
@@ -71,203 +72,11 @@ const { editingId: editingMessageId, pickerId: activeReactionPickerMsgId, isUplo
 const menu = useMessageMenu({ actions, reply: startReply })
 const contextMenu = menu.state
 
-// ---- Scrolling, infinite history & jump-to-message ----
-
-// Start loading the next page when this close (px) to either end.
-const LOAD_THRESHOLD_PX = 600
-// "At the bottom" for auto-stick on new messages.
-const STICK_THRESHOLD_PX = 80
-
-const showUnreadPill = ref(false)
-const highlightedId = ref<string | null>(null)
-let highlightTimer: ReturnType<typeof setTimeout> | undefined
-let scrollFrame = 0
-
-function distanceFromBottom(el: HTMLElement) {
-  return el.scrollHeight - el.scrollTop - el.clientHeight
-}
-
-function isAtBottom() {
-  const el = messageContainer.value
-  return !el || distanceFromBottom(el) <= STICK_THRESHOLD_PX
-}
-
-function scrollToBottomNow() {
-  const el = messageContainer.value
-  if (el) el.scrollTop = el.scrollHeight
-  stickToBottom = true
-  showUnreadPill.value = false
-}
-
-function scrollToBottom() {
-  nextTick(scrollToBottomNow)
-}
-
-function findRow(id: string | undefined) {
-  for (const row of messageRows()) if (row.dataset.msgId === id) return row
-  return null
-}
-
-// Remember where the first visible messages sit so the view can be put back
-// exactly after rows are added/removed above or below (prepend, trims).
-function captureAnchor() {
-  const el = messageContainer.value
-  if (!el) return []
-  const top = el.getBoundingClientRect().top
-  const anchors: ScrollAnchor[] = []
-  for (const row of messageRows()) {
-    const rect = row.getBoundingClientRect()
-    if (rect.bottom <= top) continue
-    anchors.push({ id: row.dataset.msgId, offset: rect.top - top })
-    if (anchors.length >= 5) break
-  }
-  return anchors
-}
-
-function restoreAnchor(anchors: ScrollAnchor[]) {
-  const el = messageContainer.value
-  if (!el) return
-  const top = el.getBoundingClientRect().top
-  for (const a of anchors) {
-    const row = findRow(a.id)
-    if (!row) continue
-    const delta = row.getBoundingClientRect().top - top - a.offset
-    if (delta) el.scrollTop += delta
-    return
-  }
-}
-
-function flashMessage(id: string) {
-  clearTimeout(highlightTimer)
-  highlightedId.value = null
-  // Re-render without the class first so the animation restarts on repeat jumps.
-  requestAnimationFrame(() => {
-    highlightedId.value = id
-    highlightTimer = setTimeout(() => { highlightedId.value = null }, 2000)
-  })
-}
-
-function scrollToMessage(id: string) {
-  const row = findRow(id)
-  if (!row) return
-  row.scrollIntoView({ block: 'center' })
-  flashMessage(id)
-}
-
-function maybeLoadMore() {
-  const el = messageContainer.value
-  if (!el || !chatStore.messages.length || chatStore.isLoadingWindow) return
-  if (el.scrollTop < LOAD_THRESHOLD_PX && chatStore.hasMoreBefore && !chatStore.isLoadingBefore) {
-    chatStore.loadOlder()
-  }
-  if (distanceFromBottom(el) < LOAD_THRESHOLD_PX && chatStore.hasMoreAfter && !chatStore.isLoadingAfter) {
-    chatStore.loadNewer()
-  }
-}
-
-// Whether the user is parked at the bottom. Kept across layout changes
-// (window resize, panel drag, member list / thread toggle, reply bar) so a
-// shrinking viewport doesn't leave the newest message behind the composer.
-let stickToBottom = true
-let lastSize = { w: 0, h: 0 }
-let resizeObserver: ResizeObserver | null = null
-
-function sizeChangedSinceObserved(el: HTMLElement) {
-  return el.clientWidth !== lastSize.w || el.clientHeight !== lastSize.h
-}
-
-function handleContainerResize() {
-  const el = messageContainer.value
-  if (!el) return
-  const changed = sizeChangedSinceObserved(el)
-  lastSize = { w: el.clientWidth, h: el.clientHeight }
-  if (changed && stickToBottom) el.scrollTop = el.scrollHeight
-}
-
-function handleScroll() {
-  if (scrollFrame) return
-  scrollFrame = requestAnimationFrame(() => {
-    scrollFrame = 0
-    const el = messageContainer.value
-    // Scroll events caused by a pending resize (scrollTop clamping) must not
-    // clear the stick flag before the ResizeObserver re-pins the view.
-    if (el && !sizeChangedSinceObserved(el)) stickToBottom = isAtBottom()
-    if (isAtBottom() && !chatStore.hasMoreAfter) showUnreadPill.value = false
-    maybeLoadMore()
-  })
-}
-
-// One pre-render hook for every window change: decide what caused it, then
-// after the DOM updated scroll to the bottom, to a jump target, or put the
-// previously visible messages back where they were.
-let seenLatest = chatStore.latestLoadSeq
-let seenLive = chatStore.liveAppendSeq
-let seenJump = chatStore.jumpTarget?.seq ?? 0
-
-watch(
-  () => [chatStore.messages, chatStore.latestLoadSeq, chatStore.liveAppendSeq, chatStore.jumpTarget],
-  () => {
-    const anchors = captureAnchor()
-    const wasAtBottom = isAtBottom()
-    const latest = chatStore.latestLoadSeq !== seenLatest
-    const live = chatStore.liveAppendSeq !== seenLive
-    const jump = chatStore.jumpTarget && chatStore.jumpTarget.seq !== seenJump ? chatStore.jumpTarget : null
-    seenLatest = chatStore.latestLoadSeq
-    seenLive = chatStore.liveAppendSeq
-    seenJump = chatStore.jumpTarget?.seq ?? 0
-
-    nextTick(() => {
-      const last = chatStore.messages[chatStore.messages.length - 1]
-      const mine = live && last?.user_id && last.user_id === authStore.user?.id
-      if (jump) {
-        scrollToMessage(jump.id)
-      } else if (latest) {
-        scrollToBottomNow()
-      } else if (live && (wasAtBottom || mine)) {
-        scrollToBottomNow()
-      } else {
-        restoreAnchor(anchors)
-        if (live) showUnreadPill.value = true
-      }
-      maybeLoadMore()
-    })
-  },
-  { flush: 'pre' }
-)
-
-// ---- "New since" divider ----
-
-// Last-read time captured when the channel was opened: the divider stays put
-// while the channel is open, even though the server marks it read meanwhile.
-const dividerSince = ref<string | null>(null)
-watch(
-  () => [chatStore.activeChannel?.id, chatStore.activeChannelLastReadAt],
-  () => { dividerSince.value = chatStore.activeChannelLastReadAt },
-  { immediate: true }
-)
-const dividerBeforeId = computed(() =>
-  firstUnreadId(chatStore.messages, dividerSince.value, authStore.user?.id, chatStore.hasMoreBefore)
-)
-
-function dividerLabel() {
-  const d = new Date(dividerSince.value ?? 0)
-  const sameDay = d.toDateString() === new Date().toDateString()
-  const time = sameDay
-    ? d.toLocaleTimeString([locale.value], { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleString([locale.value], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  return t('chat.newSinceDivider', { time })
-}
-
-// Esc in the channel: mark everything read and drop the divider.
-function markAllRead() {
-  const id = chatStore.activeChannel?.id
-  if (!id) return false
-  const st = chatStore.readStates[id]
-  if (!dividerBeforeId.value && !((st?.unread_count ?? 0) > 0) && !((st?.mention_count ?? 0) > 0)) return false
-  dividerSince.value = null
-  chatStore.markChannelRead(id)
-  return true
-}
+const {
+  showUnreadPill, highlightedId, messageRows, scrollToBottom, scrollToBottomNow,
+  handleScroll, resetUnreadPill
+} = useMessageScroll(messageContainer)
+const { dividerBeforeId, dividerLabel, markAllRead } = useUnreadDivider()
 
 // ---- Typing indicator ----
 
@@ -280,51 +89,18 @@ function handleComposerInput() {
   if (inputMessage.value.trim()) chatStore.sendTyping(chatStore.activeChannel?.id)
 }
 
-// ---- Desktop notifications ----
-
-const NOTIF_HINT_KEY = 'mnema_notif_hint_dismissed'
-function readHintDismissed() {
-  try { return localStorage.getItem(NOTIF_HINT_KEY) === '1' } catch { return false }
-}
-const notifHintDismissed = ref(readHintDismissed())
-const showNotifHint = computed(() =>
-  !props.panel && chatStore.notificationPermission === 'default' && !notifHintDismissed.value
-)
-
-function dismissNotifHint() {
-  notifHintDismissed.value = true
-  try { localStorage.setItem(NOTIF_HINT_KEY, '1') } catch { /* private mode: dismissed for this session only */ }
-}
-
-// Asked on a click, never on page load.
-async function enableNotifications() {
-  const result = await chatStore.requestNotificationPermission()
-  if (result === 'granted') toasts.success(t('notifications.granted'))
-  else if (result === 'denied') toasts.error(t('notifications.denied'))
-  if (result !== 'default') dismissNotifHint()
-}
+const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
 
 function openNotificationMenu(e: MouseEvent) {
   const channel = chatStore.activeChannel
   if (!channel) return
   if (!(e.currentTarget instanceof Element)) return
   const rect = e.currentTarget.getBoundingClientRect()
-  const current = chatStore.notificationLevel(channel.id)
-  const levels: { level: NotifyLevel; icon: Component }[] = [
-    { level: 'all', icon: Bell },
-    { level: 'mentions', icon: AtSign },
-    { level: 'mute', icon: BellOff }
-  ]
-  menu.show(Math.max(8, rect.right - 200), rect.bottom + 4, levels.map(({ level, icon }) => ({
-    label: t(`notifications.${level}`),
-    icon,
-    shortcut: current === level ? '✓' : '',
-    action: () => chatStore.setNotificationLevel(channel.id, level)
-  })))
+  menu.show(Math.max(8, rect.right - 200), rect.bottom + 4, notificationMenuItems(channel.id))
 }
 
 watch(() => chatStore.activeChannel?.id, () => {
-  showUnreadPill.value = false
+  resetUnreadPill()
   replyingTo.value = null
   actions.cancelEdit()
   nextTick(() => textAreaEl.value?.focus())
@@ -365,10 +141,6 @@ watch(() => chatStore.pendingMention, (newVal) => {
 // Immediate: a mention that opened the Talk's chat lands in its composer.
 }, { immediate: true })
 
-function messageRows() {
-  return messageContainer.value ? messageContainer.value.querySelectorAll<HTMLElement>('[data-msg-id]') : []
-}
-
 function onMessageKeydown(e: KeyboardEvent, msg: Message) {
   handleMessageKeydown(e, {
     rows: messageRows,
@@ -401,20 +173,12 @@ function onGlobalKeydown(e: KeyboardEvent) {
 }
 
 onMounted(() => {
-  scrollToBottom()
   textAreaEl.value?.focus()
   window.addEventListener('keydown', onGlobalKeydown)
-  if (typeof ResizeObserver !== 'undefined' && messageContainer.value) {
-    resizeObserver = new ResizeObserver(handleContainerResize)
-    resizeObserver.observe(messageContainer.value)
-  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', onGlobalKeydown)
-  resizeObserver?.disconnect()
-  clearTimeout(highlightTimer)
-  if (scrollFrame) cancelAnimationFrame(scrollFrame)
 })
 
 // After sending while viewing older history, jump to the present.
