@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/msch128/mnema-talk/compare/v0.8.3...v0.8.4) (2026-10-18)
+
+
+### Code Refactoring
+
+* behaviour test suites, one platform adapter, coverage gates at 90/80 ([#209](https://github.com/msch128/mnema-talk/issues/209)) ([c136d1c](https://github.com/msch128/mnema-talk/commit/c136d1c1ef7663b7951d2471b972b3b24178a1cc))
+
 ## [0.8.3](https://github.com/msch128/mnema-talk/compare/v0.8.2...v0.8.3) (2026-10-18)
 
 
