@@ -1,0 +1,29 @@
+web/src/composables/webrtc/remoteAudio.ts
+  s_06fcde5dbef956::t_b1c4a66a512962 95,98-128
+  s_06fcde5dbef956::t_f1681046d7d930 59-73
+  s_06fcde5dbef956::t_725817a8c16bdf 20-58,74-94,96-97,129-155,157-209
+  s_06fcde5dbef956::t_0e7148d7f5d94a 1-19
+  s_06fcde5dbef956::t_e065c7e7f59f89 156
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_a6ef15aa83f74b 1745,1756
+  s_06fcde5dbef956::t_a3866e3959fe7c 31-32,119,1759-1763
+  s_06fcde5dbef956::t_5991412371701a 240
+web/src/composables/webrtc/streamIds.ts
+  s_06fcde5dbef956::t_f28cce5407aafe 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c9f367c10b6716405cfa044ca277f5b7bad5cfe6",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
