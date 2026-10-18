@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.5](https://github.com/msch128/mnema-talk/compare/v0.8.4...v0.8.5) (2026-10-18)
+
+
+### Code Refactoring
+
+* clean-code pass on the web client ([#218](https://github.com/msch128/mnema-talk/issues/218)) ([be5d30d](https://github.com/msch128/mnema-talk/commit/be5d30d450005e306f2cac1282d4660b46087baa))
+
 ## [0.8.4](https://github.com/msch128/mnema-talk/compare/v0.8.3...v0.8.4) (2026-10-18)
 
 
