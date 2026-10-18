@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import type { TalkParticipant } from './presentationTypes'
+import { talkTileProps, type TalkTileEmits } from './talkTileProps'
 import { computed, ref } from 'vue'
 import { useVideoGrid } from '../composables/useVideoGrid'
 import TalkTile from './TalkTile.vue'
@@ -9,18 +8,10 @@ import TalkTile from './TalkTile.vue'
 // like Discord. Tiles without any camera stay smaller: a huge avatar tile
 // only looks empty.
 const props = defineProps({
-  users: { type: Array as PropType<TalkParticipant[]>, required: true },
-  connected: { type: Boolean, default: false },
-  streamOf: { type: Function as PropType<(user: TalkParticipant) => MediaStream | null>, required: true },
-  canFocusCamera: { type: Function as PropType<(user: TalkParticipant) => boolean>, required: true },
-  isCameraFocused: { type: Function as PropType<(user: TalkParticipant) => boolean>, required: true }
+  ...talkTileProps,
+  connected: { type: Boolean, default: false }
 })
-const emit = defineEmits<{
-  'focus-camera': [user: TalkParticipant]
-  'fullscreen-camera': [userId: string]
-  'watch-stream': [userId: string]
-  menu: [event: MouseEvent | KeyboardEvent, user: TalkParticipant]
-}>()
+const emit = defineEmits<TalkTileEmits>()
 
 const gridArea = ref<HTMLElement | null>(null)
 const GRID_GAP = 12

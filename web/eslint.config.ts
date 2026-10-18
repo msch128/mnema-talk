@@ -90,6 +90,13 @@ export default tseslint.config(
     ],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off', 'no-restricted-properties': 'off', 'no-restricted-syntax': 'off' }
   },
+  // Production source files stay under 400 lines (cognitive load): split by
+  // responsibility, centralise duplicates. Generated files and tests are exempt.
+  {
+    files: ['**/web/src/**/*.{ts,vue}'],
+    ignores: ['**/*.test.ts', '**/*.fixture.ts', '**/web/src/types/rest.ts', '**/web/src/third_party/**'],
+    rules: { 'max-lines': ['error', { max: 400, skipBlankLines: false, skipComments: false }] }
+  },
   {
     files: ['**/*.ts', '**/*.vue'],
     rules: {

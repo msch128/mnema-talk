@@ -2,10 +2,10 @@
 // What I receive of a screen share I watch: Auto or one of its layers (see
 // useScreenLayerMenu). A button on the stage, shown only when the share has
 // more than one layer.
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { Layers } from '@lucide/vue'
 import ContextMenu from './ContextMenu.vue'
-import { useMenuState } from '../composables/useNavMenus'
+import { useButtonMenu } from '../composables/useButtonMenu'
 import { useScreenLayerMenu } from '../composables/useScreenLayerMenu'
 import { t } from '../i18n'
 
@@ -20,24 +20,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{ 'open-change': [open: boolean] }>()
 
 const layerMenu = useScreenLayerMenu(() => props.userId)
-const menu = useMenuState()
-const button = ref<HTMLButtonElement | null>(null)
-// The menu closes on pointer down outside it (also on this button): a click
-// on the button while it was open only closes it.
-let wasOpen = false
-
-function onPointerDown() {
-  wasOpen = menu.state.open
-}
-
-function toggle() {
-  if (wasOpen || menu.state.open) {
-    wasOpen = false
-    menu.state.open = false
-    return
-  }
-  menu.show({ currentTarget: button.value }, () => layerMenu.menuItems())
-}
+const { menu, button, onPointerDown, toggle } = useButtonMenu(() => layerMenu.menuItems())
 
 watch(() => menu.state.open, open => emit('open-change', open))
 // A share that loses its layers closes the menu.
