@@ -137,9 +137,16 @@ func cleanActivity(s string) string {
 	return s
 }
 
-// setPresence stores a bot's presence and reports it to OnStatus.
+// setPresence stores a bot's presence and reports it to OnStatus. A status
+// set after the bot's last session ended is dropped: nothing would clear it.
 func (g *Gateway) setPresence(userID uuid.UUID, p Presence) {
+	g.pcb.Lock()
+	defer g.pcb.Unlock()
 	g.mu.Lock()
+	if !g.hasSessionLocked(userID, nil) {
+		g.mu.Unlock()
+		return
+	}
 	if g.pres == nil {
 		g.pres = map[uuid.UUID]Presence{}
 	}
@@ -148,4 +155,45 @@ func (g *Gateway) setPresence(userID uuid.UUID, p Presence) {
 	if g.OnStatus != nil {
 		g.OnStatus(userID, p.Status, p.Activity)
 	}
+}
+
+// resetIdlePresence returns a bot that identified without a presence of its
+// own to online, unless another connection of it is live: the status of its
+// earlier, detached session is not meant for a new one.
+func (g *Gateway) resetIdlePresence(s *session) {
+	g.pcb.Lock()
+	defer g.pcb.Unlock()
+	g.mu.Lock()
+	_, had := g.pres[s.userID]
+	if !had || g.liveSessionLocked(s.userID, s) {
+		g.mu.Unlock()
+		return
+	}
+	delete(g.pres, s.userID)
+	g.mu.Unlock()
+	if g.OnStatus != nil {
+		g.OnStatus(s.userID, StatusOnline, nil)
+	}
+}
+
+// hasSessionLocked reports whether the bot has a session, live or detached,
+// other than except.
+func (g *Gateway) hasSessionLocked(userID uuid.UUID, except *session) bool {
+	for _, s := range g.sessions {
+		if s.userID == userID && s != except {
+			return true
+		}
+	}
+	return false
+}
+
+// liveSessionLocked reports whether the bot has a connected session other
+// than except.
+func (g *Gateway) liveSessionLocked(userID uuid.UUID, except *session) bool {
+	for _, s := range g.sessions {
+		if s.userID == userID && s != except && s.live() {
+			return true
+		}
+	}
+	return false
 }
