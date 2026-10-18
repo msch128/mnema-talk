@@ -48,7 +48,7 @@ mentions; stored, not used yet).
 | Send messages | Post, reply, edit own messages | yes |
 | Attach files | Upload files with a message | yes |
 | Add reactions | Add a reaction (taking back your own always works) | yes |
-| Manage messages | Delete other members' messages | yes |
+| Manage messages | Delete other members' messages (with a reason, or a member's latest ones in bulk), pin messages, exempt from slow mode | yes |
 | Mention everyone | `@all` and `@here` notify people | yes |
 | Connect | Join a Talk | yes |
 | Speak | Send audio in a Talk | yes |

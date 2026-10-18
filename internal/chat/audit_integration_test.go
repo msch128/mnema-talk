@@ -21,5 +21,5 @@ func TestAuditSnapshotOfAMissingMessageIsEmpty(t *testing.T) {
 	}
 	// An edit or delete without a snapshot is simply not described further.
 	h.auditEdit(context.Background(), f.m, nil, "x")
-	h.auditDelete(context.Background(), f.u, f.m, nil)
+	h.auditDelete(context.Background(), f.u, f.m, nil, "")
 }

@@ -14,7 +14,10 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"math"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // Stable machine-readable error codes. Clients branch on these strings, so
@@ -44,6 +47,8 @@ type APIError struct {
 	Code string `json:"code" enums:"INVALID_INPUT,UNAUTHORIZED,INVALID_CREDENTIALS,FORBIDDEN,ACCOUNT_DISABLED,NOT_FOUND,CONFLICT,PAYLOAD_TOO_LARGE,UNSUPPORTED_MEDIA_TYPE,RATE_LIMITED,UNAVAILABLE,INTERNAL_ERROR"`
 	// Message is a human-readable English message.
 	Message string `json:"message"`
+	// RetryAfter, when set, is sent as the Retry-After header (seconds).
+	RetryAfter time.Duration `json:"-"`
 }
 
 // ErrorResponse is the JSON envelope every error response carries.
@@ -127,6 +132,9 @@ func WriteError(w http.ResponseWriter, err error) {
 	ae, ok := AsAPIError(err)
 	if !ok {
 		ae = ErrServer(err)
+	}
+	if ae.RetryAfter > 0 {
+		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(ae.RetryAfter.Seconds()))))
 	}
 	WriteJSON(w, ae.Status, ErrorResponse{Error: ae})
 }

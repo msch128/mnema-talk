@@ -24,6 +24,7 @@ import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
 import { continuationIds } from '../lib/messageGrouping'
+import { durationLabel } from '../lib/moderation'
 import { firstUnreadId, typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -494,6 +495,12 @@ const groupedIds = computed(() => {
         <span v-if="chatStore.activeChannel?.topic && !panel" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
           {{ chatStore.activeChannel.topic }}
         </span>
+        <span
+          v-if="chatStore.activeChannel?.slow_mode_seconds"
+          data-testid="slow-mode-chip"
+          class="flex-shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
+          v-tooltip="$t('moderation.slowModeHint')"
+        >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
       </div>
 
       <!-- Right: Badges & member list toggle -->

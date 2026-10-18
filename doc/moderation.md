@@ -68,6 +68,36 @@ of the ban; with a wrong password the answer does not reveal the ban. The
 admin console has a **Bans** tab (for *Ban members*) listing active bans with
 reason, moderator and end, and **Unban**.
 
+## Slow mode
+
+A text or Talk-chat channel can make members wait between two messages
+(`slow_mode_seconds`, 0 to 21600, set with the channel edit by *Manage
+channels*; a channel chip shows it). It counts posts, thread replies and
+uploads of one member in that channel. Anyone who holds *Manage messages* in
+the channel (the Owner always) is exempt, and so are webhooks. The refusal is
+`429 RATE_LIMITED` with `Retry-After`. The check and the insert share a
+transaction and concurrent posts of one member in one channel are serialized
+with an advisory lock, so a burst cannot slip several messages through the same
+gap.
+
+## Message moderation
+
+Holders of *Manage messages* in a channel can:
+
+- **Pin and unpin** a message (`PUT` / `DELETE
+  /api/channels/{channelID}/messages/{messageID}/pin`); a pin icon marks it.
+- **Delete with a reason**: `DELETE /api/channels/{channelID}/messages/{messageID}`
+  takes an optional JSON body `{"reason": "..."}`. The author is told through a
+  `moderation_notice`; the audit entry (`message.delete`, `moderator: true`)
+  holds the full text and the reason. The Owner's messages can still only be
+  deleted by the Owner.
+- **Delete a member's latest messages** (`POST
+  /api/channels/{channelID}/messages/bulk-delete` with `user_id`, `count` 1 to
+  100 and a reason): replies and attachments go with them. It needs a higher
+  role than the member (checked in the same transaction as the delete) and
+  leaves threads that hold a reply of the Owner alone. Every message gets its own
+  audit entry with its text, plus one `moderation.bulk_delete` summary.
+
 ## Audit log
 
 An append-only record of what was done to the instance and by whom.

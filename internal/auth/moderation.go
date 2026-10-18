@@ -355,17 +355,12 @@ func (h *Handler) listBans(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-	bans := []Ban{}
-	for rows.Next() {
-		var b Ban
-		if err := rows.Scan(&b.UserID, &b.Username, &b.DisplayName, &b.Reason, &b.BannedAt, &b.BannedUntil, &b.BannedBy); err != nil {
-			return err
-		}
-		bans = append(bans, b)
-	}
-	if err := rows.Err(); err != nil {
+	bans, err := pgx.CollectRows(rows, pgx.RowToStructByPos[Ban])
+	if err != nil {
 		return err
+	}
+	if bans == nil {
+		bans = []Ban{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, bans)
 	return nil

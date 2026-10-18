@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { apiFetch, responseString, trackPeerConnections } from './helpers'
+import { apiFetch, awaitApiBudget, responseString, trackPeerConnections } from './helpers'
 import { randomBytes } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 
@@ -42,6 +42,8 @@ test('login, chat and talk', async ({ browser }) => {
 
   // 1. Admin logs in through the UI (account seeded from ADMIN_INITIAL_PASSWORD).
   await signIn(admin, ADMIN_USER, ADMIN_PASSWORD)
+  // Earlier specs share the Owner's request budget; wait out an exhausted window.
+  if (await awaitApiBudget(admin)) await admin.reload()
 
   // 2. Fresh instance has no channels: create a text and a voice channel via the API.
   const text = await apiFetch(admin, 'POST', '/api/admin/channels', { name: TEXT_CHANNEL, type: 'text' })

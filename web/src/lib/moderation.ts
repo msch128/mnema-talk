@@ -75,16 +75,22 @@ export function formatRemaining(ms: number): string {
 }
 
 export interface ModerationNotice {
-  kind: 'timeout' | 'timeout_removed' | 'ban'
+  kind: 'timeout' | 'timeout_removed' | 'ban' | 'message_deleted' | 'messages_deleted'
   until?: string
   duration_seconds?: number
   reason: string
+  /** The channel a message was removed from. */
+  channel_name?: string
+  /** How many messages a bulk delete removed. */
+  count?: number
 }
 
 /** The sentence a member reads about a moderation action against them. */
 export function noticeText(n: ModerationNotice): string {
   const reason = n.reason ? `: ${n.reason}` : ''
   if (n.kind === 'timeout_removed') return t('moderation.noticeTimeoutRemoved')
+  if (n.kind === 'message_deleted') return t('moderation.noticeMessageDeleted', { channel: n.channel_name ?? '' }) + reason
+  if (n.kind === 'messages_deleted') return t('moderation.noticeMessagesDeleted', { count: n.count ?? 0, channel: n.channel_name ?? '' }) + reason
   if (n.kind === 'ban') return t('moderation.noticeBan') + reason
   const duration = n.duration_seconds ? durationLabel(n.duration_seconds) : ''
   return t('moderation.noticeTimeout', { duration }) + reason

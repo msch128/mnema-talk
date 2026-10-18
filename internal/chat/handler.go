@@ -75,6 +75,7 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/channels/{channelID}/messages", httpx.Handle(h.createMessage))
 	r.Put("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.editMessage))
 	r.Delete("/channels/{channelID}/messages/{messageID}", httpx.Handle(h.deleteMessage))
+	h.mountModeration(r)
 	r.Post("/messages/{messageID}/reactions", httpx.Handle(h.toggleReaction))
 	r.Get("/messages/{messageID}/thread", httpx.Handle(h.getThread))
 	r.Get("/messages/by-number/{number}", httpx.Handle(h.getMessageByNumber))
@@ -362,13 +363,14 @@ func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
 // deleteMessage handles DELETE /api/channels/{channelID}/messages/{messageID}.
 //
 // @Summary Delete a message
-// @Description The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. Broadcasts message_delete.
+// @Description The author, or a member with the Manage messages permission in the channel (the Owner always). Also deletes the message's thread replies and attachments. A moderator may send a JSON body {"reason": "..."} (up to 200 characters); the reason goes to the audit log and to the author, who is told through a moderation_notice event. Broadcasts message_delete.
 // @ID deleteMessage
 // @Tags Messages
 // @Produce json
 // @Security cookieAuth
 // @Param channelID path string true "Channel ID." Format(uuid)
 // @Param messageID path string true "Message ID." Format(uuid)
+// @Param request body DeleteMessageRequest false "Optional body with a reason."
 // @Success 204 "Success, no content."
 // @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
 // @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
@@ -391,12 +393,17 @@ func (h *Handler) deleteMessage(w http.ResponseWriter, r *http.Request) error {
 	if !p.Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
+	reason, err := deleteReason(r)
+	if err != nil {
+		return err
+	}
 	snap := h.snapshotMessage(r.Context(), msgID, true)
 	keys, err := DeleteMessageAs(r.Context(), h.DB, msgID, user, p.Has(perm.ManageMessages))
 	if err != nil {
 		return err
 	}
-	h.auditDelete(r.Context(), user, msgID, snap)
+	h.auditDelete(r.Context(), user, msgID, snap, reason)
+	h.tellAuthor(snap, user, reason)
 	h.deleteObjects(r.Context(), keys)
 	h.Events.BroadcastChannel(ref.ChannelID, "message_delete", map[string]any{"id": msgID, "channel_id": ref.ChannelID, "parent_id": ref.ParentID})
 	w.WriteHeader(http.StatusNoContent)
@@ -991,7 +998,7 @@ func (h *Handler) updateChannel(w http.ResponseWriter, r *http.Request) error {
 	if err := h.require(r, id, perm.ViewChannel); err != nil {
 		return err
 	}
-	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit)
+	ch, err := UpdateChannel(r.Context(), h.DB, id, req.Name, req.Topic, req.UserLimit, req.SlowModeSeconds)
 	if err != nil {
 		return err
 	}
@@ -1182,6 +1189,10 @@ type UpdateChannelRequest struct {
 	Topic *string `json:"topic" maxLength:"255" binding:"optional"`
 	// UserLimit caps a voice channel's members at once; 0 removes the limit.
 	UserLimit *int `json:"user_limit" minimum:"0" maximum:"999" binding:"optional"`
+	// SlowModeSeconds sets the least time between two messages of one member
+	// in the channel (0 turns slow mode off). Members who may manage messages
+	// in the channel are exempt.
+	SlowModeSeconds *int `json:"slow_mode_seconds" minimum:"0" maximum:"21600" binding:"optional"`
 }
 
 // LayoutRequest is the body of PUT /api/admin/layout: at most 500 entries in

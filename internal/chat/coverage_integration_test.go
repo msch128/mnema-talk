@@ -84,7 +84,7 @@ func TestChatCanceledDatabaseOperations(t *testing.T) {
 		{"channel category check", func() error { _, e := CreateChannel(ctx, f.p, &f.c.ID, "new", ChannelTypeText, "", 0); return e }},
 		{"channel creation", func() error { _, e := CreateChannel(ctx, f.p, nil, "new", ChannelTypeText, "", 0); return e }},
 		{"category deletion", func() error { return DeleteCategory(ctx, f.p, f.c.ID) }},
-		{"channel update", func() error { _, e := UpdateChannel(ctx, f.p, f.c.ID, &name, &topic, &limit); return e }},
+		{"channel update", func() error { _, e := UpdateChannel(ctx, f.p, f.c.ID, &name, &topic, &limit, nil); return e }},
 		{"category rename", func() error { return RenameCategory(ctx, f.p, f.c.ID, name) }},
 		{"members", func() error { _, e := GetAllMembers(ctx, f.p); return e }},
 		{"resolve mentions", func() error { _, e := ResolveMentions(ctx, f.p, "@all", f.u.ID, nil); return e }},
@@ -327,12 +327,12 @@ func TestChatValidationAndReadMarkerBoundaries(t *testing.T) {
 		},
 		func() error {
 			topic := strings.Repeat("a", 256)
-			_, e := UpdateChannel(ctx, f.p, f.c.ID, nil, &topic, nil)
+			_, e := UpdateChannel(ctx, f.p, f.c.ID, nil, &topic, nil, nil)
 			return e
 		},
 		func() error { return RenameCategory(ctx, f.p, uuid.New(), "new") },
 		func() error { return ApplyLayout(ctx, f.p, nil, []ChannelPlacement{{ID: uuid.New()}}) },
-		func() error { _, e := UpdateChannel(ctx, f.p, uuid.New(), nil, nil, nil); return e },
+		func() error { _, e := UpdateChannel(ctx, f.p, uuid.New(), nil, nil, nil, nil); return e },
 	} {
 		if err := run(); err == nil {
 			t.Fatal("invalid resource accepted")

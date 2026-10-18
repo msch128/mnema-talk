@@ -396,7 +396,8 @@ details and the limits.
   and overwrites cannot undo it. A ban is a separate state from a disabled
   account and is checked wherever an account may act (sign-in, sessions,
   WebSockets, native sessions). The checks and the writes happen in one
-  transaction under the permission lock. See doc/moderation.md.
+  transaction under the permission lock. Slow mode is enforced in the message
+  insert's transaction. See doc/moderation.md.
 - **Audit log.** Administrative actions (roles, permissions, channels,
   invites, members, webhooks, settings, updates) and, in later entries,
   moderation actions, logins, Talk joins and leaves and message deletions and

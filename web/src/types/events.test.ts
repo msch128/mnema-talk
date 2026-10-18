@@ -41,6 +41,8 @@ const examples: Record<ServerEventType, unknown[]> = {
     { kind: 'timeout', until: FIXTURE_TIMESTAMP, duration_seconds: 3600, reason: 'spam' },
     { kind: 'timeout_removed', reason: '' },
     { kind: 'ban', reason: 'no' },
+    { kind: 'message_deleted', reason: 'rude', channel_name: 'general' },
+    { kind: 'messages_deleted', reason: '', channel_name: 'general', count: 3 },
   ],
   webrtc_offer: [{ type: 'offer', sdp: 'v=0\r\n' }],
   webrtc_candidate: [{ candidate: '' }, { candidate: 'candidate:synthetic', sdpMid: '0', sdpMLineIndex: 0, usernameFragment: 'synthetic' }],

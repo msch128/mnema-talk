@@ -91,7 +91,8 @@
       "usernameFormat": "Username: 3–32 characters, letters, digits, _ . or - only",
       "fieldMax": "{field}: at most {count} characters",
       "fileTooBig": "The file is larger than {size} MB",
-      "missingPermission": "You don’t have permission to do that."
+      "missingPermission": "You don’t have permission to do that.",
+      "slowMode": "Slow mode: wait {seconds} s before posting again"
     },
     "field": {
       "content": "Message",
@@ -1328,7 +1329,9 @@
       },
       "message": {
         "delete": "Message deleted",
-        "edit": "Message edited"
+        "edit": "Message edited",
+        "pin": "Message pinned",
+        "unpin": "Message unpinned"
       },
       "voice": {
         "join": "Joined Talk",
@@ -1350,7 +1353,8 @@
         "timeout_remove": "Timeout ended",
         "ban": "Member banned",
         "unban": "Member unbanned",
-        "ban_expired": "Ban expired"
+        "ban_expired": "Ban expired",
+        "bulk_delete": "Messages deleted in bulk"
       }
     }
   },
@@ -1547,7 +1551,25 @@
       "minutes": "Minutes",
       "hours": "Hours",
       "days": "Days"
-    }
+    },
+    "noticeMessageDeleted": "A moderator removed your message in {channel}",
+    "noticeMessagesDeleted": "A moderator removed {count} of your messages in {channel}",
+    "bulkDeleted": "{count} messages from {name} deleted.",
+    "deleteTitle": "Delete message",
+    "deleteBody": "The author is told, with the reason. The audit log keeps the text.",
+    "bulkTitle": "Delete the latest messages of {name}",
+    "bulkBody": "Removes their latest messages in this channel, replies and attachments included. The audit log keeps every text.",
+    "bulkCount": "How many messages",
+    "bulkRange": "Between 1 and {max}.",
+    "pinMessage": "Pin message",
+    "unpinMessage": "Unpin message",
+    "pinned": "Pinned",
+    "deleteWithReason": "Delete with reason…",
+    "deleteLatest": "Delete latest messages of this member…",
+    "slowMode": "Slow mode",
+    "slowModeOff": "Off",
+    "slowModeHint": "Members wait this long between two messages. Moderators are exempt.",
+    "slowModeChip": "Slow mode {time}"
   },
   "bots": {
     "title": "Bots",

@@ -25,7 +25,23 @@ export async function bounds(locator: Locator): Promise<{ x: number; y: number; 
 export function apiFetch(page: Page, method: 'GET', path: '/api/channels', body?: unknown): Promise<ApiResponse<ChatChannelHierarchy>>
 export function apiFetch(page: Page, method: string, path: string, body?: unknown): Promise<ApiResponse>
 export async function apiFetch(page: Page, method: string, path: string, body?: unknown): Promise<ApiResponse> {
-  const result = await page.evaluate(async ({ method, path, body }) => {
+  // Every spec signs in as the same administrator, so they share one request
+  // budget (600 a minute); a spec that starts inside an exhausted window waits
+  // it out instead of failing.
+  let result = await fetchOnce(page, method, path, body)
+  for (let attempt = 0; attempt < 4 && result.status === 429; attempt++) {
+    await page.waitForTimeout(15_000)
+    result = await fetchOnce(page, method, path, body)
+  }
+  if (method === 'GET' && path === '/api/channels') {
+    if (result.status !== 200) throw new Error(`Expected channel hierarchy, received HTTP ${result.status}`)
+    return { ...result, json: decodeChatChannelHierarchy(result.json) }
+  }
+  return result
+}
+
+function fetchOnce(page: Page, method: string, path: string, body: unknown): Promise<ApiResponse> {
+  return page.evaluate(async ({ method, path, body }) => {
     const response = await fetch(path, {
       method, credentials: 'same-origin',
       ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
@@ -33,11 +49,6 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
     const json: unknown = await response.json().catch(() => null)
     return { status: response.status, json }
   }, { method, path, body })
-  if (method === 'GET' && path === '/api/channels') {
-    if (result.status !== 200) throw new Error(`Expected channel hierarchy, received HTTP ${result.status}`)
-    return { ...result, json: decodeChatChannelHierarchy(result.json) }
-  }
-  return result
 }
 
 // The API allows 600 requests a minute per account and every spec signs in as
