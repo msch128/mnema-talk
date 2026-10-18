@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.8.3](https://github.com/msch128/mnema-talk/compare/v0.8.2...v0.8.3) (2026-10-18)
+
+
+### Features
+
+* **bots:** gateway op 3 presence (online, idle, dnd, invisible) with one activity, kept across RESUME ([0e0b7c6](https://github.com/msch128/mnema-talk/commit/0e0b7c618f66cc8c952be04dcd4d8df9f200339e))
+* **bots:** per-bot managed roles and gateway presence statuses ([#202](https://github.com/msch128/mnema-talk/issues/202)) ([0e0b7c6](https://github.com/msch128/mnema-talk/commit/0e0b7c618f66cc8c952be04dcd4d8df9f200339e))
+
+
+### Bug Fixes
+
+* a new role never lands at or above its creator's highest role ([0e0b7c6](https://github.com/msch128/mnema-talk/commit/0e0b7c618f66cc8c952be04dcd4d8df9f200339e))
+* **bots:** reject a banned or disabled bot's token and close its gateway sessions ([0e0b7c6](https://github.com/msch128/mnema-talk/commit/0e0b7c618f66cc8c952be04dcd4d8df9f200339e))
+
 ## [0.8.2](https://github.com/msch128/mnema-talk/compare/v0.8.1...v0.8.2) (2026-10-18)
 
 
