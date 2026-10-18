@@ -16,45 +16,15 @@ export type { ScreenQuality } from '../lib/streamQuality'
 import { isRecord } from '../types/validation'
 import { usePlaybackPrefs, readJson, writeJson, USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../lib/voicePlayback'
 export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT }
-
-export type InputMode = 'activity' | 'ptt'
-export type NoiseMode = 'ai' | 'ai-lite' | 'browser' | 'off'
-export const NOISE_MODES: readonly NoiseMode[] = ['ai', 'ai-lite', 'browser', 'off']
+export { NOISE_MODES, SOUND_EVENTS } from './voiceSettings'
+export type { InputMode, NoiseMode, SoundEvent } from './voiceSettings'
+import { useVoiceSettings, type NoiseMode } from './voiceSettings'
 
 // Cameras of others are on by default; what I opted out of is remembered.
 const HIDDEN_CAMERAS_KEY = 'mnema_hidden_cameras'
 const ALL_CAMERAS_OFF_KEY = 'mnema_all_cameras_off'
 // "Hide participants without video" in the Talk view (per browser).
 const HIDE_NO_VIDEO_KEY = 'mnema_hide_no_video'
-
-export const SOUND_EVENTS = [
-  'join',
-  'leave',
-  'user_join',
-  'user_leave',
-  'mute',
-  'unmute',
-  'deafen',
-  'undeafen',
-  'ptt_start',
-  'ptt_stop'
-] as const
-export type SoundEvent = typeof SOUND_EVENTS[number]
-
-function defaultSoundEvents() {
-  return {
-    join: true,
-    leave: true,
-    user_join: true,
-    user_leave: true,
-    mute: true,
-    unmute: true,
-    deafen: true,
-    undeafen: true,
-    ptt_start: true,
-    ptt_stop: true
-  }
-}
 
 export const useVoiceStore = defineStore('voice', () => {
   const currentChannelId = ref<string | null>(null)
@@ -99,79 +69,24 @@ export const useVoiceStore = defineStore('voice', () => {
   // a reload); the UI shows a click-to-enable banner.
   const audioBlocked = ref(false)
 
-  // --- Voice Activity & Sensitivity (Noise Gate) Settings ---
-  const inputMode = ref<InputMode>(localStorage.getItem('mnema_input_mode') === 'ptt' ? 'ptt' : 'activity') // 'activity' | 'ptt'
-  const pttKey = ref(localStorage.getItem('mnema_ptt_key') || 'Space')
+  // Persisted settings (inputMode, volumes, devices, noise handling, sound effects)
+  const {
+    inputMode, pttKey, autoSensitivity, sensitivityThreshold, hangoverMs,
+    warnNoAudioDetected, warnSwitchChannel, qosHighPriority,
+    soundEffectsEnabled, soundEffectsVolume, soundEvents,
+    noiseMode, noiseCancelling, autoGainControl, echoCancellation, inputVolume, outputVolume,
+    selectedInputDeviceId, selectedOutputDeviceId,
+    saveSettings, toggleSoundEvent
+  } = useVoiceSettings()
+  // Live voice activity state
   const isPttPressed = ref(false)
-  const autoSensitivity = ref(localStorage.getItem('mnema_auto_sens') === 'true')
-  const sensitivityThreshold = ref(parseInt(localStorage.getItem('mnema_sens_threshold') || '30', 10)) // 0 to 100
   const currentInputLevel = ref(0) // live meter 0-100
-  const hangoverMs = ref(parseInt(localStorage.getItem('mnema_hangover_ms') || '250', 10))
 
   // Mic test loopback state
   const isMicTesting = ref(false)
 
-  // Advanced audio & network settings (Discord parity)
-  const warnNoAudioDetected = ref(localStorage.getItem('mnema_warn_no_audio') !== 'false')
-  const warnSwitchChannel = ref(localStorage.getItem('mnema_warn_switch_channel') !== 'false')
-  const qosHighPriority = ref(localStorage.getItem('mnema_qos_priority') !== 'false')
-  const soundEffectsEnabled = ref(localStorage.getItem('mnema_sounds_enabled') !== 'false')
-  const soundEffectsVolume = ref(parseInt(localStorage.getItem('mnema_sounds_volume') || '80', 10))
-  const soundEvents = ref({
-    ...defaultSoundEvents(),
-    ...readJson('mnema_sound_events')
-  })
-
-  function toggleSoundEvent(eventName: SoundEvent) {
-    soundEvents.value = {
-      ...soundEvents.value,
-      [eventName]: soundEvents.value[eventName] === false
-    }
-    saveSettings()
-  }
-
-  // Hardware Audio Processing Settings
-  // 'ai' (DeepFilterNet3), 'ai-lite' (GTCRN, see lib/noiseSuppressor),
-  // 'browser' (getUserMedia noiseSuppression) or 'off'. Older clients stored
-  // only 'true'/'false'.
-  const storedNoise = localStorage.getItem('mnema_noise')
-  const noiseMode = ref<NoiseMode>(
-    storedNoise === 'ai' || storedNoise === 'ai-lite' || storedNoise === 'browser' || storedNoise === 'off' ? storedNoise : storedNoise === 'false' ? 'off' : 'ai'
-  )
-  const noiseCancelling = computed(() => noiseMode.value !== 'off')
-  const autoGainControl = ref(localStorage.getItem('mnema_agc') === 'true') // Default false to avoid boosting background voices
-  const echoCancellation = ref(localStorage.getItem('mnema_echo') !== 'false')
-  const inputVolume = ref(parseInt(localStorage.getItem('mnema_input_volume') || '100', 10))
-  const outputVolume = ref(parseInt(localStorage.getItem('mnema_output_volume') || '100', 10))
-
-  const selectedInputDeviceId = ref(localStorage.getItem('mnema_input_dev') || '')
-  const selectedOutputDeviceId = ref(localStorage.getItem('mnema_output_dev') || '')
   const availableInputDevices = ref<MediaDeviceInfo[]>([])
   const availableOutputDevices = ref<MediaDeviceInfo[]>([])
-
-  function saveSettings() {
-    localStorage.setItem('mnema_input_mode', inputMode.value)
-    localStorage.setItem('mnema_ptt_key', pttKey.value)
-    localStorage.setItem('mnema_auto_sens', String(autoSensitivity.value))
-    localStorage.setItem('mnema_sens_threshold', String(sensitivityThreshold.value))
-    localStorage.setItem('mnema_hangover_ms', String(hangoverMs.value))
-    localStorage.setItem('mnema_warn_no_audio', String(warnNoAudioDetected.value))
-    localStorage.setItem('mnema_warn_switch_channel', String(warnSwitchChannel.value))
-    localStorage.setItem('mnema_qos_priority', String(qosHighPriority.value))
-    localStorage.setItem('mnema_sounds_enabled', String(soundEffectsEnabled.value))
-    localStorage.setItem('mnema_sounds_volume', String(soundEffectsVolume.value))
-    writeJson('mnema_sound_events', soundEvents.value)
-    localStorage.setItem('mnema_noise', noiseMode.value)
-    localStorage.setItem('mnema_agc', String(autoGainControl.value))
-    localStorage.setItem('mnema_echo', String(echoCancellation.value))
-    localStorage.setItem('mnema_input_volume', String(inputVolume.value))
-    localStorage.setItem('mnema_output_volume', String(outputVolume.value))
-    localStorage.setItem('mnema_input_dev', selectedInputDeviceId.value)
-    localStorage.setItem('mnema_output_dev', selectedOutputDeviceId.value)
-  }
-
-  // Volumes and the output device are remembered as soon as they change.
-  watch([inputVolume, outputVolume, selectedOutputDeviceId], () => saveSettings())
 
   const minPing = computed(() => (pingHistory.value.length ? Math.min(...pingHistory.value) : null))
   const maxPing = computed(() => (pingHistory.value.length ? Math.max(...pingHistory.value) : null))
