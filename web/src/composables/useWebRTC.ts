@@ -2,7 +2,6 @@ import { gamingMicLease } from '../lib/gamingMicLease'
 import { ref, watch, effectScope, toRaw } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { useChatStore } from '../stores/chat'
-import { summarizeStats } from '../lib/rtcStats'
 import * as voiceSession from '../lib/voiceSession'
 import { createMeteringTrack } from '../lib/micMetering'
 import { createNoiseSuppressorNode, isNoiseSuppressionSupported, preloadNoiseSuppressor } from '../lib/noiseSuppressor'
@@ -19,15 +18,14 @@ import { platform } from '../lib/platform'
 import type { FilterNode } from '../lib/dfnNode'
 import type { NoiseModel } from '../lib/dfnTypes'
 import type { MediaStat } from '../lib/mediaStats'
-import type { RTCStatsSample } from '../lib/rtcStats'
 import type { StreamQuality } from '../lib/streamQuality'
 import { declaredLayers, layersKey, planScreenLayers } from '../lib/screenLayers'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO, type FrameSource } from '../lib/media/frame'
-import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/events'
-import { decodeServerICEConfig } from '../types/rest'
+import type { SubscribeRequest, ServerEventPayloads } from '../types/events'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './webrtc/sdp'
-import { streamDiag } from './webrtc/streamDiag'
 import { createPushToTalk } from './webrtc/pushToTalk'
+import { iceServers, loadIceServers } from './webrtc/iceServers'
+import { createStatsPolling } from './webrtc/statsPolling'
 import { applyOutput, applyOutputToRemote, attachRemoteAudio, followOutputDevice, playPausedRemoteAudio, releaseRemoteAudio, resumeRemoteAudio as resumeRemotePlayback, updateRemoteVolume } from './webrtc/remoteAudio'
 import { CAMERA_STREAM_PREFIX, SCREEN_AUDIO_STREAM_PREFIX, publisherId } from './webrtc/streamIds'
 import { announceMediaRekeyed, announceMediaUnprotected, closeMediaRoom, mediaUnprotected, onMediaUnprotected, openMediaRoom, queueMediaWire, resetMediaAnnouncements } from './webrtc/mediaRoom'
@@ -135,70 +133,7 @@ let pendingCandidates: RTCIceCandidateInit[] = []
 // microphone sees the change and backs out instead of finishing.
 let joinGeneration = 0
 
-// ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
-// third-party STUN server learns the user's IP
-let iceServers: RTCIceServer[] = []
-let iceConfigLoaded: Promise<void> | null = null
-
-// Loaded once, on the first voice join rather than at import time.
-function loadIceServers() {
-  if (!iceConfigLoaded) {
-    iceConfigLoaded = fetch('/api/webrtc/config', { credentials: 'same-origin' })
-      .then(async (res): Promise<unknown> => res.ok ? res.json() : null)
-      .then(data => { if (data !== null) iceServers = decodeServerICEConfig(data).ice_servers })
-      .catch(() => { iceConfigLoaded = null })
-  }
-  return iceConfigLoaded
-}
-
-// Connection statistics measured by the browser (RTCPeerConnection.getStats).
-let statsTimer: ReturnType<typeof setInterval> | null = null
-let lastStatsSample: RTCStatsSample | null = null
-let statsPollingGeneration = 0
-
-// Where stream diagnostics go (the server log, via the WebSocket).
-let diagSink: ((payload: Record<string, JsonValue | undefined>) => void) | null = null
-let statsTicks = 0
-const lastVideoBytes = new Map<string, number>()
-
-function startStatsPolling(voiceStore: VoiceStore) {
-  stopStatsPolling(voiceStore)
-  statsTicks = 0
-  lastVideoBytes.clear()
-  const generation = statsPollingGeneration
-  statsTimer = setInterval(async () => {
-    const conn = pc
-    if (!conn) return
-    try {
-      const report = await conn.getStats()
-      // A stopped poll must not restore statistics from a retired connection,
-      // including a restarted poll that happens to use the same connection.
-      if (pc !== conn || generation !== statsPollingGeneration) return
-      const summary = summarizeStats(report.values(), lastStatsSample)
-      lastStatsSample = summary.sample
-      voiceStore.rtcStats = summary
-      // Every 10 s while a screen is shared or watched: what the stream does.
-      if (++statsTicks % 5 === 0 && diagSink && (voiceStore.isScreenSharing || voiceStore.remoteScreenStream)) {
-        const video = streamDiag([...report.values()], lastVideoBytes, 10)
-        if (video.length) {
-          diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, own_audio: voiceStore.isScreenSharing ? screenAudioGuard : undefined, sharing: !!voiceStore.isScreenSharing })
-        }
-      }
-    } catch {
-      // The connection may be closing; the next tick retries.
-    }
-  }, 2000)
-}
-
-function stopStatsPolling(voiceStore: VoiceStore) {
-  statsPollingGeneration++
-  if (statsTimer) {
-    clearInterval(statsTimer)
-    statsTimer = null
-  }
-  lastStatsSample = null
-  if (voiceStore) voiceStore.rtcStats = null
-}
+const statsPolling = createStatsPolling({ connection: () => pc, screenAudioGuard: () => screenAudioGuard })
 
 function captureKey(track: MediaStreamTrack): string {
   const settings = track.getSettings?.()
@@ -230,7 +165,7 @@ function stopCaptureWatch() {
 
 function cleanupPeerConnection(voiceStore: VoiceStore) {
   stopCaptureWatch()
-  stopStatsPolling(voiceStore)
+  statsPolling.stop(voiceStore)
   signalingChain = Promise.resolve()
   pendingCandidates = []
   if (pc) {
@@ -260,14 +195,13 @@ function liveScreenAudioTrack() {
 function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
   cleanupPeerConnection(voiceStore)
 
-  const rtcConfig: RTCConfiguration = { iceServers }
+  const rtcConfig: RTCConfiguration = { iceServers: iceServers() }
   if (voiceStore?.qosHighPriority) {
     rtcConfig.dscp = true
   }
   pc = new RTCPeerConnection(rtcConfig)
   const conn = pc
-  diagSink = (payload) => chatStore.sendWSEvent('webrtc_diag', payload)
-  startStatsPolling(voiceStore)
+  statsPolling.start(voiceStore, payload => chatStore.sendWSEvent('webrtc_diag', payload))
 
   // Connection diagnostics for the server log: what this browser gathers and
   // how the connection develops (candidate types only, never addresses).
@@ -280,7 +214,7 @@ function setupPeerConnection(voiceStore: VoiceStore, chatStore: ChatStore) {
     signaling: pc?.signalingState,
     candidates: diag.candidates,
     errors: diag.errors.slice(-5),
-    ice_servers: (iceServers || []).length,
+    ice_servers: iceServers().length,
     ua: typeof navigator !== 'undefined' ? navigator.userAgent : ''
   })
 
