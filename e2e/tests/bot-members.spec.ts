@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { apiFetch, responseString } from './helpers'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'

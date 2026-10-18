@@ -30,7 +30,8 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
   // it out instead of failing.
   let result = await fetchOnce(page, method, path, body)
   for (let attempt = 0; attempt < 4 && result.status === 429; attempt++) {
-    await page.waitForTimeout(15_000)
+    // The window is fixed, so Retry-After is exactly how long to wait.
+    await page.waitForTimeout((Math.min(result.retryAfter, 65) + 1) * 1000)
     result = await fetchOnce(page, method, path, body)
   }
   if (method === 'GET' && path === '/api/channels') {
@@ -40,14 +41,14 @@ export async function apiFetch(page: Page, method: string, path: string, body?: 
   return result
 }
 
-function fetchOnce(page: Page, method: string, path: string, body: unknown): Promise<ApiResponse> {
+function fetchOnce(page: Page, method: string, path: string, body: unknown): Promise<ApiResponse & { retryAfter: number }> {
   return page.evaluate(async ({ method, path, body }) => {
     const response = await fetch(path, {
       method, credentials: 'same-origin',
       ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
     })
     const json: unknown = await response.json().catch(() => null)
-    return { status: response.status, json }
+    return { status: response.status, json, retryAfter: Number(response.headers.get('Retry-After') ?? '5') || 5 }
   }, { method, path, body })
 }
 
