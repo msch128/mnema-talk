@@ -24,6 +24,9 @@ afterEach(() => { vi.useRealTimers() })
 // to look at it with maintain(), so the real crypto never waits on fake timers.
 const timing: MediaTiming = { rotateMs: 10_000, rotateJitterMs: 2000, absentMs: 4000, heartbeatMs: 1_000_000, maintenanceMs: 1000 }
 const START = Date.UTC(2026, 0, 1)
+// The group also ticks on its own timer. Left real, that tick can fire on a slow machine between
+// two steps of a test, with the stepped clock, and take the commit the test waits to see.
+const FAKED: ('Date' | 'setTimeout' | 'clearTimeout')[] = ['Date', 'setTimeout', 'clearTimeout']
 
 async function open(userId: string, over: Partial<MediaTiming> = {}) {
   const group = await MediaGroup.open(userId, channelId, { ...timing, ...over })
@@ -54,7 +57,7 @@ async function settleCaps(groups: Map<string, MediaGroup>, roster: string[]) {
 }
 
 async function pair(over: Partial<MediaTiming> = {}) {
-  vi.useFakeTimers({ toFake: ['Date'], now: START })
+  vi.useFakeTimers({ toFake: FAKED, now: START })
   const alice = await open(aliceId, over)
   const bob = await open(bobId, over)
   const roster = [aliceId, bobId]
@@ -129,7 +132,7 @@ describe('rotation', () => {
   }, 30_000)
 
   it('draws its delay within the jitter and never rotates a group of one', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    vi.useFakeTimers({ toFake: FAKED, now: START })
     const alice = await open(aliceId, { absentMs: 1e9 })
     await alice.sync([aliceId])
     vi.setSystemTime(START + 10 * timing.rotateMs)
@@ -146,7 +149,7 @@ describe('rotation', () => {
   }, 30_000)
 
   it('is taken over by the next committer on the age of the epoch it holds', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    vi.useFakeTimers({ toFake: FAKED, now: START })
     const alice = await open(aliceId, { absentMs: 1e9 })
     const bob = await open(bobId, { absentMs: 1e9 })
     const carol = await open(carolId, { absentMs: 1e9 })
@@ -381,7 +384,7 @@ describe('review fixes', () => {
   }, 30_000)
 
   it('has exactly one committer among three, also while the lowest is silent', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    vi.useFakeTimers({ toFake: FAKED, now: START })
     const small = { rotateMs: 1e9, absentMs: 4000, maintenanceMs: 1000, heartbeatMs: 1000 }
     const alice = await open(aliceId, small)
     const bob = await open(bobId, small)
@@ -499,7 +502,7 @@ describe('review fixes', () => {
   }, 30_000)
 
   it('counts a leaf swap of the same user id as a removal, on the committer and on a receiver', async () => {
-    vi.useFakeTimers({ toFake: ['Date'], now: START })
+    vi.useFakeTimers({ toFake: FAKED, now: START })
     const small = { rotateMs: 1e9, absentMs: 1e9 }
     const alice = await open(aliceId, small)
     const bob = await open(bobId, small)
