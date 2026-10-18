@@ -1,0 +1,66 @@
+e2e/tests/stage-switch.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 3
+e2e/tests/webhooks-outgoing.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 5
+e2e/tests/webhooks.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 2-3
+e2e/tests/moderation.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/talk-extras.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 3
+e2e/tests/crypto-state.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 4-5
+e2e/tests/sidebar-layout.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 5
+e2e/tests/voice-chat.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 3
+e2e/tests/roles.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/screen-layers.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 4
+e2e/tests/screenshare.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 4
+e2e/tests/smoke.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 4
+e2e/tests/key-lifecycle.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 3
+e2e/tests/helpers.ts
+  s_06fcde5dbef956::t_35cdb6b8f4af3b 33-34,44,51
+e2e/tests/upload-limit.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/audit.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/active-members.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 2
+e2e/tests/message-moderation.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/webhooks-ui.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 2-3
+e2e/tests/bot-members.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 1
+e2e/tests/bots.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 2-3
+e2e/tests/late-join.spec.ts
+  s_06fcde5dbef956::t_54e1e271f7fb81 3
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_b5e1eec7aa8096 11-12,17-19,21-41,44,47,54-61
+  s_06fcde5dbef956::t_08c73c5f2fad17 1-10,14-16,20,42-43,45-46,48-53,62-76,79-82
+  s_06fcde5dbef956::t_6fa7a58d0bee26 13
+  s_06fcde5dbef956::t_951ebc1de21d82 77-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1bf0339f3cee53e3e96d90731a51fada4beb32e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
