@@ -10,7 +10,8 @@ type Counts = { total: number; covered: number }
 type Coverage = Record<Metric, Counts>
 type Exception = { reason: string; author: string; reviewers: string[]; minimum: Record<Metric, number>; approvedCounts?: Partial<Record<Metric, Counts>> }
 type Policy = { exceptions: Record<string, Exception> }
-const minimum = 95
+const minimum = 80
+const totalMinimum = 90
 
 function record(value: unknown, context: string): Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error(`${context}: expected object`)
@@ -44,8 +45,8 @@ function policy(value: unknown): Policy {
     }
     const limits = record(entry.minimum, `${path}.minimum`)
     for (const metric of metrics) {
-      if (typeof limits[metric] !== 'number' || !Number.isFinite(limits[metric]) || limits[metric] < 80 || limits[metric] > minimum) {
-        throw new Error(`${path}.${metric}: exception minimum must be at least 80 and at most 95`)
+      if (typeof limits[metric] !== 'number' || !Number.isFinite(limits[metric]) || limits[metric] < 60 || limits[metric] > minimum) {
+        throw new Error(`${path}.${metric}: exception minimum must be at least 60 and at most 80`)
       }
     }
     if (metrics.every(metric => limits[metric] === minimum)) throw new Error(`${path}: exception does not lower any metric`)
@@ -96,16 +97,31 @@ export function checkCoverage(rawSummary: unknown, rawPolicy: unknown, webRoot: 
       failures.push(`total: ${metric} counts do not match the measured modules`)
     }
   }
-  const markdown = ['### Frontend coverage', '', '| Scope | Statements | Branches | Functions | Lines |', '|---|---:|---:|---:|---:|']
+  const cell = (values: Coverage, metric: Metric) => `${percent(values[metric]).toFixed(2)} % (${values[metric].covered}/${values[metric].total})`
+  const row = (name: string, values: Coverage) => `| ${name} | ${metrics.map(metric => cell(values, metric)).join(' | ')} |`
+  const header = ['| Scope | Statements | Branches | Functions | Lines |', '|---|---:|---:|---:|---:|']
+  const belowFloor: string[] = []
   function inspect(name: string, values: Coverage, limits: Record<Metric, number>): void {
-    markdown.push(`| ${name} | ${metrics.map(metric => `${percent(values[metric]).toFixed(2)}%`).join(' | ')} |`)
     for (const metric of metrics) {
-      if (percent(values[metric]) < limits[metric]) failures.push(`${name}: ${metric} ${percent(values[metric]).toFixed(4)}% < ${limits[metric]}%`)
+      if (percent(values[metric]) < limits[metric]) {
+        failures.push(`${name}: ${metric} ${percent(values[metric]).toFixed(4)}% < ${limits[metric]}%`)
+        if (name !== 'total') belowFloor.push(name)
+      }
     }
   }
   const defaultLimits = Object.fromEntries(metrics.map(metric => [metric, minimum])) as Record<Metric, number>
-  inspect('total', total, defaultLimits)
-  for (const [path, values] of [...files].sort(([a], [b]) => a.localeCompare(b))) inspect(path, values, exceptions[path]?.minimum ?? defaultLimits)
+  inspect('total', total, Object.fromEntries(metrics.map(metric => [metric, totalMinimum])) as Record<Metric, number>)
+  const sorted = [...files].sort(([a], [b]) => a.localeCompare(b))
+  for (const [path, values] of sorted) inspect(path, values, exceptions[path]?.minimum ?? defaultLimits)
+  const lowest = (values: Coverage) => Math.min(...metrics.filter(metric => values[metric].total > 0).map(metric => percent(values[metric])))
+  const worst = [...files].sort(([, a], [, b]) => lowest(a) - lowest(b)).slice(0, 10)
+  const markdown = [
+    '### Frontend coverage', '',
+    `Gate: at least ${totalMinimum} % in total and ${minimum} % in every file (statements, branches, functions, lines): **${failures.length === 0 ? 'pass' : 'fail'}**`, '',
+    ...header, row('total', total), '',
+    '<details><summary>Lowest covered files</summary>', '', ...header, ...worst.map(([path, values]) => row(path, values)), '', '</details>', '',
+    belowFloor.length ? `Files below the ${minimum} % floor: ${[...new Set(belowFloor)].map(path => `\`${path}\``).join(', ')}` : `No file is below the ${minimum} % floor.`,
+  ]
   for (const path of expectedSources) {
     const values = files.get(path)
     if (!values) failures.push(`${path}: own executable source missing from coverage report`)

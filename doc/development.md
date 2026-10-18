@@ -43,6 +43,9 @@ make test-integration  # Go integration tests: starts postgres:18-alpine via Doc
 make test-web          # vitest
 make coverage          # Go (unit + integration) and web coverage: coverage.out,
                        # web/coverage/lcov.info; CI shows the totals in the job summary
+                       # gates for Go and web: at least 90 % in total and 80 % in every file
+                       # (Go: COVERAGE_MIN / COVERAGE_FILE_MIN in the Makefile;
+                       # web: web/scripts/check-coverage.ts, all four metrics)
 make lint              # gofmt, go vet, eslint
 make typecheck-web     # complete frontend source and strict compiler checks
 make contracts-check   # generated frontend REST contract drift check
