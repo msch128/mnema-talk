@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, ref, toRaw } from 'vue'
 import { t } from '../i18n'
-import { invoke } from '@tauri-apps/api/core'
+import { platform } from '../lib/platform'
 import { Mic, MicOff, Headphones, HeadphoneOff, Monitor, X, Settings } from '@lucide/vue'
 import { chordFromKey, chordText, type GamingSettings, type GamingSnapshot } from '../lib/desktopGaming'
-const settingsOnly = Reflect.get(window, '__MNEMA_GAMING_SURFACE__') === 'gaming-settings'
-const interactive = settingsOnly || Reflect.get(window, '__MNEMA_GAMING_SURFACE__') === 'gaming-overlay'
+const settingsOnly = platform.gamingSurface() === 'gaming-settings'
+const interactive = settingsOnly || platform.gamingSurface() === 'gaming-overlay'
 const snapshot = ref<GamingSnapshot | null>(null)
 const labels = computed(() => ({ overlay: t('gaming.overlay'), mute: t('gaming.mute'), deafen: t('gaming.deafen'), ptt: t('gaming.ptt') }))
 const editing = ref(settingsOnly)
@@ -17,11 +17,11 @@ let pending = false; let alive = true
 async function refresh() {
   if (!alive || pending) return
   pending = true
-  try { const next = await invoke<GamingSnapshot>('desktop_gaming_snapshot'); if (alive) { snapshot.value = next; if (settingsOnly && !draft.value) draft.value = structuredClone(next.settings) } }
+  try { const next = await platform.invoke<GamingSnapshot>('desktop_gaming_snapshot'); if (alive) { snapshot.value = next; if (settingsOnly && !draft.value) draft.value = structuredClone(next.settings) } }
   catch { snapshot.value = null } finally { pending = false }
 }
 async function control(action: string) {
-  try { await invoke('desktop_gaming_control', { action }); error.value = false } catch { error.value = true }
+  try { await platform.invoke('desktop_gaming_control', { action }); error.value = false } catch { error.value = true }
 }
 function settings() { draft.value = snapshot.value ? structuredClone(toRaw(snapshot.value.settings)) : null; editing.value = !editing.value; error.value = false }
 function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) {
@@ -31,7 +31,7 @@ function bind(key: 'overlay' | 'mute' | 'deafen' | 'ptt', event: KeyboardEvent) 
 }
 async function save() {
   if (!draft.value) return
-  try { await invoke('desktop_gaming_settings', { settings: draft.value }); editing.value = settingsOnly; error.value = false }
+  try { await platform.invoke('desktop_gaming_settings', { settings: draft.value }); editing.value = settingsOnly; error.value = false }
   catch { error.value = true }
 }
 onMounted(() => {

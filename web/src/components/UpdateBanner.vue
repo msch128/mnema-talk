@@ -6,7 +6,7 @@ import { computed } from 'vue'
 import { Sparkles, X } from '@lucide/vue'
 import { useAppVersionStore } from '../stores/appVersion'
 import { useVoiceStore } from '../stores/voice'
-import { isTrustedDesktop } from '../lib/trustedDesktop'
+import { platform } from '../lib/platform'
 
 const versionStore = useAppVersionStore()
 const voiceStore = useVoiceStore()
@@ -14,7 +14,7 @@ const voiceStore = useVoiceStore()
 const inCall = computed(() => !!voiceStore.currentChannelId)
 // The trusted desktop client runs a bundle it verified; reloading cannot
 // install a different one, so the banner only says the server moved on.
-const trusted = isTrustedDesktop()
+const trusted = platform.isTrustedDesktop()
 
 function reload() {
   window.location.reload()

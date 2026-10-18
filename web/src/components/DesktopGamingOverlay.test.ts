@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import DesktopGamingOverlay from './DesktopGamingOverlay.vue'
 import type { GamingSnapshot } from '../lib/desktopGaming'
 const ipc = vi.hoisted(() => ({ invoke: vi.fn() }))
-vi.mock('@tauri-apps/api/core', () => ({ invoke: ipc.invoke }))
+vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: ipc.invoke }))
 let wrapper: ReturnType<typeof mount<typeof DesktopGamingOverlay>> | undefined
 let snapshot: GamingSnapshot
 const chord = (key: number, alt = false) => ({ key, alt, control: false, shift: false })
