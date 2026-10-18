@@ -5,6 +5,7 @@ import type { MentionSuggestion } from '../lib/mentionQuery'
 // by the composer (useComposerAssist) so focus stays in the textarea.
 import { Users, Radio } from '@lucide/vue'
 import UserAvatar from './UserAvatar.vue'
+import BotBadge from './BotBadge.vue'
 import { useChatStore } from '../stores/chat'
 
 defineProps({
@@ -50,6 +51,7 @@ const chatStore = useChatStore()
       <template v-else>
         <UserAvatar :user="item.user" size="xs" show-status :status="chatStore.presenceOf(item.user.id)" ring-class="bg-mnema-elevated" />
         <span class="truncate font-medium text-mnema-text">{{ item.display_name }}</span>
+        <BotBadge v-if="item.user.is_bot" />
         <span class="truncate font-mono text-xs text-mnema-tertiary">@{{ item.username }}</span>
       </template>
     </div>

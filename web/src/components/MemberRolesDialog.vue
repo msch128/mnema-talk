@@ -26,7 +26,8 @@ const busy = ref(false)
 
 const isOwnerTarget = computed(() => props.user.role === 'admin')
 const isSelf = computed(() => auth.user?.id === props.user.id)
-const roles = computed(() => permissions.roles.filter(r => !r.is_everyone))
+// The managed Bot role belongs to bots; it is never offered for people.
+const roles = computed(() => permissions.roles.filter(r => !r.is_everyone && !r.managed))
 const heldBits = computed(() => (permissions.isOwner ? Object.values(PERMISSION_BITS).reduce((a, b) => a | b, 0) : (permissions.info?.permissions ?? 0)))
 const frozen = computed(() => isOwnerTarget.value || isSelf.value || !permissions.outranksMember(props.user.id))
 

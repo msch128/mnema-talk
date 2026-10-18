@@ -707,6 +707,7 @@ export const decodeChatBotCreateMessageRequest = decoder("chat.BotCreateMessageR
 
 export type ChatBotMember = {
   avatar_url?: string
+  bot?: boolean
   display_name: string
   id: string
   username: string
@@ -715,6 +716,7 @@ export type ChatBotMember = {
 export function isChatBotMember(value: unknown): value is ChatBotMember {
   return isRecord(value)
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
+    && (!hasOwn(value, "bot") || typeof value["bot"] === 'boolean')
     && (hasOwn(value, "display_name") && isString(value["display_name"]))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -1111,11 +1113,13 @@ export function isChatMediaAttachment(value: unknown): value is ChatMediaAttachm
 export const decodeChatMediaAttachment = decoder("chat.MediaAttachment", isChatMediaAttachment)
 
 export type ChatMember = {
+  added_by?: string
   avatar_url?: string
   bio: string
   created_at: string
   display_name: string
   id: string
+  is_bot?: boolean
   locale: string
   message_count?: number
   presence?: "online" | "away" | "dnd" | "focus"
@@ -1129,11 +1133,13 @@ export type ChatMember = {
 
 export function isChatMember(value: unknown): value is ChatMember {
   return isRecord(value)
+    && (!hasOwn(value, "added_by") || isIdentifier(value["added_by"]))
     && (!hasOwn(value, "avatar_url") || isString(value["avatar_url"]))
     && (hasOwn(value, "bio") && isString(value["bio"], 250))
     && (hasOwn(value, "created_at") && isTimestamp(value["created_at"]))
     && (hasOwn(value, "display_name") && isString(value["display_name"], 24))
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "locale") && isString(value["locale"]))
     && (!hasOwn(value, "message_count") || isInteger(value["message_count"]))
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
@@ -1159,6 +1165,7 @@ export type ChatMessage = {
   is_bot?: boolean
   is_edited: boolean
   is_pinned: boolean
+  is_webhook?: boolean
   mentions: Array<string>
   number: number
   parent_id?: string
@@ -1184,6 +1191,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
+    && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
@@ -1297,6 +1305,8 @@ export type ChatReplyPreview = {
   display_name?: string
   has_attachments?: boolean
   id: string
+  is_bot?: boolean
+  is_webhook?: boolean
   user_id?: string
   username?: string
 }
@@ -1309,6 +1319,8 @@ export function isChatReplyPreview(value: unknown): value is ChatReplyPreview {
     && (!hasOwn(value, "display_name") || isString(value["display_name"]))
     && (!hasOwn(value, "has_attachments") || typeof value["has_attachments"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (!hasOwn(value, "is_bot") || typeof value["is_bot"] === 'boolean')
+    && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
     && (!hasOwn(value, "user_id") || isIdentifier(value["user_id"]))
     && (!hasOwn(value, "username") || isString(value["username"]))
 }
@@ -1583,6 +1595,7 @@ export type PermRole = {
   hoist: boolean
   id: string
   is_everyone: boolean
+  managed?: boolean
   max_upload_mb: number | null
   mentionable: boolean
   name: string
@@ -1596,6 +1609,7 @@ export function isPermRole(value: unknown): value is PermRole {
     && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))
     && (hasOwn(value, "is_everyone") && typeof value["is_everyone"] === 'boolean')
+    && (!hasOwn(value, "managed") || typeof value["managed"] === 'boolean')
     && (hasOwn(value, "max_upload_mb") && ((isInteger(value["max_upload_mb"]) && value["max_upload_mb"] >= 1) || value["max_upload_mb"] === null))
     && (hasOwn(value, "mentionable") && typeof value["mentionable"] === 'boolean')
     && (hasOwn(value, "name") && isString(value["name"], 32))

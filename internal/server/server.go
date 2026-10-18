@@ -166,11 +166,12 @@ func NewRouter(d Deps) (*Router, error) {
 	go outgoing.Run(ctx)
 	webhookH := webhook.New(webhook.Handler{DB: d.DB, Events: pub, Media: mediaH, Perms: permSvc, Online: hub, PublicURL: cfg.PublicURL, Outgoing: outgoing, Policy: ssrfPolicy})
 
-	botH := &bot.Handler{DB: d.DB, Perms: permSvc, Media: mediaH}
+	botH := &bot.Handler{DB: d.DB, Perms: permSvc, Media: mediaH, Events: pub}
 	botAuthn := bot.NewAuthenticator(d.DB)
 	cmds := bot.NewCommands(bot.Commands{DB: d.DB, Perms: permSvc, Events: pub, Online: hub})
 	gw := gateway.New(gateway.Config{Auth: botAuthn, Perms: permSvc, DB: d.DB, PublicURL: cfg.PublicURL})
 	botH.OnRevoke = gw.Revoke
+	gw.OnPresence = hub.SetBotPresence
 	cmds.Deliver = gw
 	go gw.Run(ctx)
 	// Both the hub and the gateway learn about permission changes, and the

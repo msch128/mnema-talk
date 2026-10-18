@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { User } from '../types/domain'
+import type { Member } from '../types/domain'
 import { computed } from 'vue'
 import { Crown } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
@@ -43,7 +43,7 @@ const offlineNonAdmins = computed(() => {
 
 const menu = useMenuState()
 
-function openMemberMenu(e: MouseEvent | KeyboardEvent, member: User) {
+function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
   menu.show(e, refresh => buildMemberItems(member, { refresh }))
 }
 

@@ -257,7 +257,8 @@
     "reaction": "Reaction {emoji}",
     "edit": "Edit message",
     "delete": "Delete message",
-    "bot": "Webhook",
+    "bot": "Bot",
+    "webhook": "Webhook",
     "embedImage": "Image",
     "embedThumbnail": "Thumbnail",
     "edited": "(edited)",
@@ -1015,6 +1016,7 @@
     }
   },
   "profile": {
+    "addedBy": "Added by {name}",
     "viewProfile": "View profile",
     "unknown": "Unknown",
     "talk": "Talk",
@@ -1359,6 +1361,8 @@
     }
   },
   "roles": {
+    "managedHint": "Managed role: held by every bot, cannot be removed.",
+    "managedNote": "The Bot role is managed. Every bot holds it automatically and nobody else can; it cannot be renamed, removed from a bot or deleted. You can change its colour, position and whether it is listed separately. It starts with no permissions: a bot can do nothing until you grant it something here or in a channel. Only the Owner can make bots elevated, and nobody can give bots permissions they lack themselves.",
     "title": "Roles",
     "intro": "Roles give members permissions. A higher role outranks a lower one. The Owner always has every permission and cannot be restricted.",
     "new": "New role",
@@ -1618,6 +1622,7 @@
       }
     },
     "roles": {
+      "managed": "Managed: every bot holds this role and it cannot be taken away.",
       "title": "Roles",
       "hint": "A bot does not get @everyone, so it starts with no access at all. Give it roles for what it may do server-wide, and set channel access in each channel's permissions dialog by allowing one of the bot's roles there.",
       "empty": "There are no roles yet. Create one in the Roles tab.",

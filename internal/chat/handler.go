@@ -103,7 +103,7 @@ func (h *Handler) MountAdmin(r chi.Router) {
 // listMembers handles GET /api/members.
 //
 // @Summary List members
-// @Description Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
+// @Description Active accounts, the Owner first, then by display name, with voice_seconds and message_count. Enabled bots are members too (is_bot, added_by) and hold the built-in Bot role; incoming-webhook authors are not listed. Disabled accounts remain available in the admin account list and historical messages. Presence and locale are not filled.
 // @ID listMembers
 // @Tags Users
 // @Produce json
@@ -137,7 +137,8 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	for i, m := range members {
-		out[i] = Member{User: m, RoleIDs: roles[m.ID]}
+		m.RoleIDs = roles[m.ID]
+		out[i] = m
 		if until, ok := timeouts[m.ID]; ok {
 			out[i].TimeoutUntil = &until
 		}

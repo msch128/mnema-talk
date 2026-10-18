@@ -2,9 +2,11 @@
 // caret, rank matching members, and splice the chosen name in.
 
 import type { User } from '../types/domain'
+
+type Mentionable = User & { is_bot?: boolean }
 export type MentionSuggestion =
   | { username: 'here' | 'all'; display_name: string; group: true; user?: never }
-  | { username: string; display_name: string; user: User; group?: false }
+  | { username: string; display_name: string; user: Mentionable; group?: false }
 const NAME_CHARS = /[A-Za-z0-9_.-]/
 
 /**

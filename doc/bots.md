@@ -36,10 +36,46 @@ do too. Rules that keep the power with the Owner:
 
 ## What a bot is
 
-A bot is a hidden member-like account plus a record with its name, avatar,
+A bot is a member-like account (it cannot sign in) plus a record with its name, avatar,
 allowed intents and tokens. Its messages show the author's name and avatar
-and the **BOT** badge, like webhook messages. Bots are not listed among the
-members, are not mentionable, and have no presence in v1.
+and the **BOT** tag. A bot is a **member**: it is listed in the member list,
+can be mentioned, and is online while it has a gateway connection (see
+*Members, presence and the Bot role* below). Incoming webhooks are different:
+their hidden authors are never listed and their messages carry a **Webhook**
+tag instead.
+
+## Members, presence and the Bot role
+
+- **Member list.** Enabled bots appear in `GET /api/members` (`is_bot`,
+  `added_by`) and so in the member list, the profile, the mention picker and
+  reply previews, always with the same **BOT** tag. A disabled bot is hidden.
+  The hidden accounts of incoming webhooks are never listed: a bot has a row
+  in `bots`, a webhook author does not (its username starts with `wh-`), and
+  messages say which it is (`is_bot` for both, plus `is_webhook`).
+- **The Bot role.** One built-in, *managed* role, created by migration and
+  held by **every** bot from its creation (existing bots were backfilled). It
+  cannot be removed from a bot (a role list without it keeps it), cannot be
+  given to a person, cannot be deleted and cannot be renamed. Its colour,
+  position and *hoist* (own group in the member list, on by default) are
+  editable by role managers. See [roles and permissions](roles-and-permissions.md#the-managed-bot-role).
+- **Permissions of the Bot role** start empty, so a bot still **does nothing
+  until an admin grants it something**, either on the Bot role (everything every
+  bot should have, e.g. *View channels* in a channel through an overwrite) or on
+  a role of its own. There is deliberately no default: a sensible minimum
+  differs per community, and an empty default keeps the rule "nothing without a
+  grant". The role editor says so.
+- **Presence.** A bot is **online** while it has at least one live gateway
+  connection (a session that can only be resumed does not count) and offline
+  otherwise. It is announced to members as `presence_update` and is part of the
+  connect-time `presence_snapshot`. Bots have no idle or do-not-disturb, are not
+  counted in the online total and are never reached by `@here`. The gateway does
+  not dispatch presence events to bots in v1.
+- **Mentions.** Mention a bot by its username (`@bot-…`, shown in the picker
+  under its name). The message's `mentions` list then contains the bot's user
+  id, which `READY` gave the bot as `user.id`, so a bot recognises a mention of
+  itself in `MESSAGE_CREATE` (the bot must be able to view the channel, like
+  anyone). `@all` and `@here` never include bots. `GET /members` lists bots too,
+  flagged `bot: true`.
 
 ## Permissions: roles and overwrites
 
@@ -354,7 +390,10 @@ within the 15 minutes makes the token unknown (`404`).
 
 ## In the app
 
-- Bot messages carry the **BOT** badge. Bots are not listed among the members.
+- Bot messages carry the **BOT** tag (webhook messages the **Webhook** tag).
+  Bots are listed in the member list with the same tag, under the Bot role when
+  it is hoisted, online while connected. Their profile shows the tag, their
+  roles and who added them.
 - Typing `/` in a channel lists the slash commands available there; picking one
   shows its options in a bar above the composer (Enter on an empty composer or
   the Run button sends it, Esc drops it). A bot's private reply appears below
@@ -384,4 +423,7 @@ mutation is reported to the audit log.
 | Who creates bots | anyone with a developer account | the Owner and *Manage bots* (Owner-granted) |
 | Ids | snowflakes | UUIDs |
 | Default access | bots get `@everyone` | bots get nothing until given a role |
+| Member list | bots are listed, with a BOT tag | the same; webhook authors are not listed and are tagged Webhook (Discord tags them BOT) |
+| The Bot role | every bot has a managed role named after it (the "integration" role) | one shared, managed role named Bot, held by every bot; it cannot be removed, renamed or deleted, and its permissions follow the bot invariant. There is no per-bot role |
+| Presence | online while connected, plus idle and do-not-disturb | online or offline only, from live gateway connections; no presence events for bots |
 | Admin power | an invite with permissions | only the Owner can give Administrator or admin-area roles |

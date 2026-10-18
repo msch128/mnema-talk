@@ -151,7 +151,7 @@ defineExpose({ el: row })
         >
           {{ msg.display_name || msg.username }}
         </button>
-        <BotBadge v-if="msg.is_bot" />
+        <BotBadge v-if="msg.is_bot" :webhook="msg.is_webhook === true" />
         <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(msg.created_at) }}</span>
         <span v-if="msg.is_edited" class="text-xs text-mnema-tertiary italic flex-shrink-0">{{ $t('chat.edited') }}</span>
         <Pin v-if="msg.is_pinned" data-testid="pinned" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-accent" :aria-label="$t('moderation.pinned')" role="img" />

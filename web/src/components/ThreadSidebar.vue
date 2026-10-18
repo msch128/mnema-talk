@@ -261,7 +261,7 @@ function formatDate(dateStr?: string) {
             >
               {{ chatStore.activeThread.display_name || chatStore.activeThread.username }}
             </button>
-            <BotBadge v-if="chatStore.activeThread.is_bot" />
+            <BotBadge v-if="chatStore.activeThread.is_bot" :webhook="chatStore.activeThread.is_webhook === true" />
             <span class="text-xs text-mnema-tertiary font-mono">
               {{ formatDate(chatStore.activeThread.created_at) }}
             </span>
@@ -408,7 +408,7 @@ function formatDate(dateStr?: string) {
             >
               {{ reply.display_name || reply.username }}
             </button>
-            <BotBadge v-if="reply.is_bot" />
+            <BotBadge v-if="reply.is_bot" :webhook="reply.is_webhook === true" />
             <span class="text-xs text-mnema-tertiary flex-shrink-0 tabular-nums">{{ formatTime(reply.created_at) }}</span>
             <span v-if="reply.is_edited" class="text-xs text-mnema-tertiary italic">{{ $t('chat.edited') }}</span>
           </div>

@@ -41,6 +41,6 @@ test('the owner creates a webhook in the channel menu and a script posts through
   const text = `from the script ${suffix}`
   expect((await script.post(url, { data: { content: text } })).status()).toBe(204)
   await expect(page.getByText(text)).toBeVisible()
-  await expect(page.getByTestId('bot-badge')).toBeVisible()
+  await expect(page.getByTestId('webhook-badge')).toBeVisible()
   await script.dispose()
 })

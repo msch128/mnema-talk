@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import type { User } from '../types/domain'
+import type { Member } from '../types/domain'
 // One member in the member list: avatar with live status, display name and
 // a second line (Talk, status text or presence). Click opens the profile.
 import { computed } from 'vue'
@@ -11,9 +11,10 @@ import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
+import BotBadge from './BotBadge.vue'
 
 const props = defineProps({
-  member: { type: Object as PropType<User>, required: true },
+  member: { type: Object as PropType<Member>, required: true },
   // Talk the member is in, if any.
   voiceChannel: { type: String, default: '' }
 })
@@ -66,6 +67,7 @@ const subline = computed(() => {
           ]"
           :style="nameColor && !offline ? { color: nameColor } : undefined"
         >{{ member.display_name || member.username }}</span>
+        <BotBadge v-if="member.is_bot" />
         <Crown v-if="member.role === 'admin'" class="h-3.5 w-3.5 flex-shrink-0 text-mnema-amber" />
       </div>
 

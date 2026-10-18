@@ -263,10 +263,10 @@ func TestRoleManagementAndHierarchy(t *testing.T) {
 
 	var list []perm.Role
 	mod.get("/api/roles").decode(t, &list)
-	if len(list) != 3 || list[0].ID != top || list[1].ID != vip || !list[2].Everyone {
+	if len(list) != 4 || list[0].ID != top || list[1].ID != vip || !list[2].Managed || !list[3].Everyone {
 		t.Fatalf("roles: %+v", list)
 	}
-	if p := myPerms(t, mod); p.TopPosition != 2 || len(p.RoleIDs) != 1 {
+	if p := myPerms(t, mod); p.TopPosition != 3 || len(p.RoleIDs) != 1 {
 		t.Fatalf("mod position: %+v", p)
 	}
 
@@ -276,7 +276,7 @@ func TestRoleManagementAndHierarchy(t *testing.T) {
 	wantStatus(t, "create below", res, http.StatusCreated)
 	var newcomer perm.Role
 	res.decode(t, &newcomer)
-	if newcomer.Position != 1 {
+	if newcomer.Position != 2 { // just above the Bot role at the bottom
 		t.Fatalf("new roles start at the bottom: %+v", newcomer)
 	}
 	wantStatus(t, "grant what you lack", mod.post("/api/admin/roles", map[string]any{"name": "Sneaky", "permissions": perm.ManageChannels}), http.StatusForbidden)

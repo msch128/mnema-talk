@@ -383,6 +383,9 @@ type BotMember struct {
 	Username    string    `json:"username"`
 	DisplayName string    `json:"display_name"`
 	AvatarURL   string    `json:"avatar_url,omitempty" binding:"optional"`
+	// Bot is true for bot accounts, which are members too. Mention one by its
+	// username like any member; message.mentions then lists its id.
+	Bot bool `json:"bot,omitempty" binding:"optional"`
 }
 
 var errBotMembers = httpx.ErrForbidden("Missing Access: the bot may not ask for the member list (intent GUILD_MEMBERS)")
@@ -410,7 +413,7 @@ func (h *Handler) visibleMembers(r *http.Request) ([]BotMember, error) {
 		sub := m.Subject()
 		for ch := range mine {
 			if snap.Channel(sub, ch).Has(perm.ViewChannel) {
-				out = append(out, BotMember{ID: m.ID, Username: m.Username, DisplayName: m.DisplayName, AvatarURL: m.AvatarURL})
+				out = append(out, BotMember{ID: m.ID, Username: m.Username, DisplayName: m.DisplayName, AvatarURL: m.AvatarURL, Bot: m.IsBot})
 				break
 			}
 		}
