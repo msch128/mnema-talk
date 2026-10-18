@@ -1,0 +1,75 @@
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_f49d554ebb8c5c 94,127,184
+  s_06fcde5dbef956::t_a4370c161ecf12 1-93,95-126,128-183,185-253
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_4e7f02ca75b41d 28
+  s_06fcde5dbef956::t_a4370c161ecf12 1-27,29-63
+web/src/stores/chat/typing.ts
+  s_06fcde5dbef956::t_f49d554ebb8c5c 35,47,66
+  s_06fcde5dbef956::t_a4370c161ecf12 1-34,36-46,48-65,67-71
+web/src/stores/chat/types.ts
+  s_06fcde5dbef956::t_e7f348dabfe1c0 1-22
+web/src/stores/chat/threads.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-17,19-48
+  s_06fcde5dbef956::t_a4fbcce86d8512 18
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_590234af1ed1b5 6-20,25-28,30-32,35-57,59-123
+  s_06fcde5dbef956::t_873accf80deef2 4-5
+web/src/stores/chat/readState.ts
+  s_06fcde5dbef956::t_f49d554ebb8c5c 5,42,101,103,108,121
+  s_06fcde5dbef956::t_fe323510ec9809 57,66
+  s_06fcde5dbef956::t_873accf80deef2 143-154
+  s_06fcde5dbef956::t_a4370c161ecf12 1-4,6-41,43-56,58-65,67-100,102,104-107,109-120,122-142
+web/src/stores/chat/messageWindow.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-57,59,61-62,64-73,75-106,108-127,129-182,184-190,192-276
+  s_06fcde5dbef956::t_fe323510ec9809 58,74,107,128,183
+  s_06fcde5dbef956::t_a4fbcce86d8512 60
+  s_06fcde5dbef956::t_471d8b236d647a 63,191
+web/src/stores/chat/messageActions.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-3,5-14,17-33,35-43,45-47,49-56,59-68,71-77,80-83
+  s_06fcde5dbef956::t_f49d554ebb8c5c 4,16,34,48,58,70,79
+  s_06fcde5dbef956::t_a4fbcce86d8512 15,44,57,69,78
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-71
+web/src/stores/chat/presence.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-4,6-46,48-49,51-72,74-77
+  s_06fcde5dbef956::t_b91e8f20bc850f 78-80,82-85
+  s_06fcde5dbef956::t_873accf80deef2 81
+  s_06fcde5dbef956::t_f49d554ebb8c5c 5,47,50,73
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_471d8b236d647a 155-156,168
+  s_06fcde5dbef956::t_3bd8828cbca810 62
+  s_06fcde5dbef956::t_a4370c161ecf12 1-61,63-85,87-154,157-167,169-174
+  s_06fcde5dbef956::t_b91e8f20bc850f 175-188
+  s_06fcde5dbef956::t_a4fbcce86d8512 86
+web/src/stores/chat/members.ts
+  s_06fcde5dbef956::t_a4fbcce86d8512 47
+  s_06fcde5dbef956::t_a4370c161ecf12 1-21,23-46,48-74,76-115,117-138,140-154
+  s_06fcde5dbef956::t_3bd8828cbca810 75
+  s_06fcde5dbef956::t_f49d554ebb8c5c 22,116,139
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_a5eb9d7366ad5b 5,8,13,119
+  s_06fcde5dbef956::t_f49d554ebb8c5c 143-146
+  s_06fcde5dbef956::t_03c9d56ebfef59 1-4,6-7,9-12,15-118,132-142
+  s_06fcde5dbef956::t_14efebd794bc62 14,120-131
+web/src/stores/chat/channels.ts
+  s_06fcde5dbef956::t_a4370c161ecf12 1-6,8-80,82,84-92,94,96-102,104-105,107-112,115,117-122,125,127-136,138,140-145,147-149,151,153-155
+  s_06fcde5dbef956::t_a4fbcce86d8512 113,123,146
+  s_06fcde5dbef956::t_f49d554ebb8c5c 7,81,83,93,95,103,106,114,116,124,126,137,139,150,152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff6dab90b9be2cff814cf6ff4e9bf4389328b8cd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
