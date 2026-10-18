@@ -11,7 +11,6 @@ import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { browserMediaCall } from '../lib/media/browserCall'
 import { installMediaCallFactory, mediaCall, type MediaNotice } from '../lib/media/api'
-import { playSoundEffect } from '../lib/soundEffects'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
@@ -30,6 +29,7 @@ import type { SubscribeRequest, JsonValue, ServerEventPayloads } from '../types/
 import { decodeServerICEConfig } from '../types/rest'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './webrtc/sdp'
 import { streamDiag } from './webrtc/streamDiag'
+import { createPushToTalk } from './webrtc/pushToTalk'
 
 // Tests install a double first. This only supplies the call when none is installed.
 installMediaCallFactory(browserMediaCall)
@@ -178,6 +178,14 @@ let gamingGainNode: GainNode | null = null
 export function setGamingPttLease(pressed: boolean): void {
   if (gamingGainNode && audioContext) gamingMicLease(gamingGainNode, audioContext, useVoiceStore().inputMode === 'ptt', pressed)
 }
+// Back in view, the browser may have suspended the audio it plays.
+const pushToTalk = createPushToTalk({
+  lease: setGamingPttLease,
+  wake(inCall) {
+    if (audioContext && audioContext.state === 'suspended') audioContext.resume().catch(() => {})
+    if (inCall) remoteAudioElements.forEach(el => { if (el.paused) el.play().catch(() => {}) })
+  }
+})
 let inputGainNode: GainNode | null = null
 // The voice store, for the output device of a lazily created playback context.
 let outputDeviceStore: VoiceStore | null = null
@@ -196,8 +204,6 @@ let pendingCandidates: RTCIceCandidateInit[] = []
 // Bumped by every join and leave: an older join that is still awaiting the
 // microphone sees the change and backs out instead of finishing.
 let joinGeneration = 0
-// Push-to-talk listeners are module-level so any component can remove them.
-let pttStore: VoiceStore | null = null
 
 // ICE servers come from the server (WEBRTC_STUN_URLS); empty by default so no
 // third-party STUN server learns the user's IP
@@ -771,81 +777,6 @@ async function applyQosToSender(sender: RTCRtpSender | null, voiceStore: VoiceSt
   await tuneSender(sender, { priority: prio, networkPriority: prio })
 }
 
-function isTypingTarget(el: EventTarget | null) {
-  if (!(el instanceof HTMLElement)) return false
-  return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable
-}
-
-function handlePttKeyDown(e: KeyboardEvent) {
-  const voiceStore = pttStore
-  if (!voiceStore || voiceStore.inputMode !== 'ptt' || e.repeat) return
-  // Holding the key while typing in the composer must not open the mic.
-  if (isTypingTarget(e.target)) return
-  if ((e.code || e.key) === voiceStore.pttKey) {
-    setGamingPttLease(true)
-    if (!voiceStore.isPttPressed) {
-      voiceStore.isPttPressed = true
-      if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSoundEffect('ptt_start')
-      }
-    }
-  }
-}
-
-function handlePttKeyUp(e: KeyboardEvent) {
-  const voiceStore = pttStore
-  if (!voiceStore || voiceStore.inputMode !== 'ptt') return
-  if ((e.code || e.key) === voiceStore.pttKey) {
-    if (voiceStore.isPttPressed) {
-      voiceStore.isPttPressed = false
-      setGamingPttLease(false)
-      if (voiceStore.isConnected || voiceStore.isMicTesting) {
-        playSoundEffect('ptt_stop')
-      }
-    }
-  }
-}
-
-// A keyup that happens while the window is in the background never arrives;
-// release the key so the mic does not stay open.
-function releasePtt() {
-  if (pttStore) pttStore.isPttPressed = false
-  setGamingPttLease(false)
-}
-
-function onVisibilityChange() {
-  if (document.visibilityState === 'hidden') {
-    releasePtt()
-  } else if (document.visibilityState === 'visible') {
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {})
-    }
-    if (pttStore?.isConnected && pttStore?.currentChannelId) {
-      remoteAudioElements.forEach(el => {
-        if (el.paused) el.play().catch(() => {})
-      })
-    }
-  }
-}
-
-function setupPttListeners(voiceStore: VoiceStore) {
-  removePttListeners()
-  pttStore = voiceStore
-  window.addEventListener('keydown', handlePttKeyDown)
-  window.addEventListener('keyup', handlePttKeyUp)
-  window.addEventListener('blur', releasePtt)
-  document.addEventListener('visibilitychange', onVisibilityChange)
-}
-
-function removePttListeners() {
-  window.removeEventListener('keydown', handlePttKeyDown)
-  window.removeEventListener('keyup', handlePttKeyUp)
-  window.removeEventListener('blur', releasePtt)
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-  releasePtt()
-  pttStore = null
-}
-
 // Test stream for Settings Modal when not connected to a voice channel
 let testAudioStream: MediaStream | null = null
 let testAudioContext: AudioContext | null = null
@@ -1050,8 +981,8 @@ export function useWebRTC() {
       if (voiceStore.isMicTesting) connectLoopback(ctx, biquad)
 
       // Push-to-talk works in the test too, also outside a call.
-      if (!pttStore) {
-        setupPttListeners(voiceStore)
+      if (!pushToTalk.attached()) {
+        pushToTalk.attach(voiceStore)
         testOwnsPtt = true
       }
 
@@ -1154,7 +1085,7 @@ export function useWebRTC() {
     if (testOwnsPtt) {
       testOwnsPtt = false
       // A call that started meanwhile keeps its own listeners.
-      if (!localAudioStream.value) removePttListeners()
+      if (!localAudioStream.value) pushToTalk.detach()
     }
   }
 
@@ -1175,7 +1106,7 @@ export function useWebRTC() {
       speakingInterval = null
     }
 
-    removePttListeners()
+    pushToTalk.detach()
 
     if (localAudioStream.value) {
       localAudioStream.value.getTracks().forEach(t => t.stop())
@@ -1338,7 +1269,7 @@ export function useWebRTC() {
 
     if (sendStream) {
       startSpeakingDetection()
-      setupPttListeners(voiceStore)
+      pushToTalk.attach(voiceStore)
     }
   }
 
