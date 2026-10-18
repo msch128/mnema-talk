@@ -264,14 +264,25 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 		if err != nil {
 			return nil, err
 		}
-		// A new role goes to the bottom, except that it stays above the Bot
-		// role while that sits at the bottom: members who manage bots must
-		// outrank the role every bot holds.
-		at := 1
+		// A new role goes to the bottom, except that it stays above the managed
+		// block (the shared Bot role and the bots' own roles) while that block
+		// sits at the bottom: members who manage bots must outrank the roles
+		// bots hold. Only the unbroken run of managed roles from position 1
+		// counts; once a custom role lies below a managed one, nothing is
+		// skipped. Whatever the block, the role stays below the actor's
+		// highest role.
+		managedAt := map[int]bool{}
 		for _, r := range snap.roles {
-			if r.Managed && r.Position == 1 {
-				at = 2
+			if !r.Everyone && r.Managed {
+				managedAt[r.Position] = true
 			}
+		}
+		at := 1
+		for managedAt[at] {
+			at++
+		}
+		if top := snap.TopPosition(actor); !snap.IsOwner(actor) && top >= 1 && at > top {
+			at = top
 		}
 		if _, err := tx.Exec(ctx, `UPDATE roles SET position = position + 1 WHERE NOT is_everyone AND position >= $1`, at); err != nil {
 			return nil, fmt.Errorf("shift roles: %w", err)
