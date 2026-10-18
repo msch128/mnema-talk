@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 import { createServer } from 'node:http'
 import type { IncomingHttpHeaders } from 'node:http'
 import type { Page } from '@playwright/test'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { apiFetch, responseString } from './helpers'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'

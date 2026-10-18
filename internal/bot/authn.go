@@ -87,8 +87,9 @@ func (a *Authenticator) Lookup(ctx context.Context, token string) (*Credentials,
 	var lastUsed *time.Time
 	err := a.DB.QueryRow(ctx, `
 		SELECT t.id, b.id, b.user_id, b.name, b.allowed_intents, t.last_used_at
-		FROM bot_tokens t JOIN bots b ON b.id = t.bot_id
-		WHERE t.token_hash = $1 AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled`,
+		FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
+		WHERE t.token_hash = $1 AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled
+		  AND `+auth.ActiveSQL("u"),
 		hash).Scan(&c.Bot.TokenID, &c.Bot.BotID, &userID, &c.Bot.Name, &c.Bot.Intents, &lastUsed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errUnauthorized

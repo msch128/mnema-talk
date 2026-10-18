@@ -34,7 +34,7 @@ import { noticeText } from '../lib/moderation'
 import { markPreviewEdited, markPreviewDeleted } from '../lib/replies'
 import { currentRoute, navigate, voiceMessagePath } from '../lib/router'
 import { mentionsUser, shouldNotify, createKeyedThrottle } from '../lib/chatLogic'
-import { snapshotToMap, applyPresenceUpdate, isQuiet, IDLE_AFTER_MS } from '../lib/presence'
+import { snapshotToMap, applyPresenceUpdate, activityOf, isQuiet, IDLE_AFTER_MS } from '../lib/presence'
 import { installGlobalSearch, uninstallGlobalSearch } from '../lib/globalSearch'
 
 const MAX_PENDING_LIVE = 200
@@ -102,6 +102,19 @@ export const useChatStore = defineStore('chat', () => {
   // Live status of every connected user: user_id → online | away | dnd | focus.
   const presenceById = ref<Record<string, Presence>>({})
   const onlineUserIds = computed(() => new Set(Object.keys(presenceById.value)))
+  // What connected bots say they are doing: user_id → activity.
+  const activityById = ref<Record<string, { type: number; name: string }>>({})
+  /** The activity a bot shows, or null. */
+  function activityOfUser(userId: string | null) {
+    return userId ? activityById.value[userId] ?? null : null
+  }
+  function applyActivity(update: { user_id: string; status?: unknown; activity?: unknown }) {
+    const activity = update.status === 'offline' ? null : activityOf(update.activity)
+    const next = { ...activityById.value }
+    if (activity) next[update.user_id] = activity
+    else delete next[update.user_id]
+    activityById.value = next
+  }
   /** Live status of a user; 'offline' when not connected. */
   function presenceOf(userId: string | null) {
     return userId ? presenceById.value[userId] || 'offline' : 'offline'
@@ -823,10 +836,12 @@ export const useChatStore = defineStore('chat', () => {
           delete snapshot[id]
         }
         presenceById.value = snapshot
+        activityById.value = {}
         break
       }
 
       case 'presence_update':
+        if (p) applyActivity(p)
         if (p && disabledMembers.has(p.user_id)) {
           if (p.status === 'offline') suppressedPresence.delete(p.user_id)
           else suppressedPresence.set(p.user_id, p.status)
@@ -1540,6 +1555,7 @@ export const useChatStore = defineStore('chat', () => {
     members.value = []
     usePermissionsStore().reset()
     presenceById.value = {}
+    activityById.value = {}
     disabledMembers.clear()
     suppressedPresence.clear()
     memberProfileUpdates.clear()
@@ -1605,6 +1621,8 @@ export const useChatStore = defineStore('chat', () => {
     members,
     presenceById,
     presenceOf,
+    activityById,
+    activityOfUser,
     onlineUserIds,
     setMyPresence,
     setStatusText,

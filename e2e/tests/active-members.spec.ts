@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import { expect, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 import type { Page } from '@playwright/test'
 import { decodeMessage, decodeUserEnvelope } from '../../web/src/types/domain'
 import { apiFetch, responseString } from './helpers'

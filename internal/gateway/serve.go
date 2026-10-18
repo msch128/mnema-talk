@@ -30,6 +30,8 @@ type Identify struct {
 	// what an admin allowed the bot.
 	Intents    *int64         `json:"intents"`
 	Properties map[string]any `json:"properties"`
+	// Presence is the status and activity to start with, as in PRESENCE_UPDATE.
+	Presence *PresenceUpdate `json:"presence"`
 }
 
 // Resume is the d of RESUME.
@@ -156,6 +158,20 @@ func (g *Gateway) run(r *http.Request, c *connection) {
 				return
 			}
 			deadline = time.Now().Add(tm.Heartbeat * 3 / 2)
+		case OpPresenceUpdate:
+			if sess == nil {
+				c.closeWith(CloseNotAuthenticated, "Not authenticated")
+				return
+			}
+			p, err := parsePresence(f.D)
+			if err != nil {
+				c.closeWith(4002, "Decode error")
+				return
+			}
+			// Over the limit, an update is dropped (Discord does the same).
+			if ok, _ := g.presLimit.Allow(sess.botID.String()); ok {
+				g.setPresence(sess.userID, p)
+			}
 		case OpResume:
 			if sess != nil {
 				c.closeWith(CloseAlreadyIdentified, "Already authenticated")
@@ -231,6 +247,17 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Bot: true, AvatarURL: creds.User.AvatarURL},
 	})
 	s.enqueue("READY", ready)
+	// An invalid or missing presence in IDENTIFY leaves the bot online.
+	set := false
+	if req.Presence != nil {
+		if p, err := req.Presence.validate(); err == nil {
+			g.setPresence(s.userID, p)
+			set = true
+		}
+	}
+	if !set {
+		g.resetIdlePresence(s)
+	}
 	return s
 }
 

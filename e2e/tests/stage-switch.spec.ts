@@ -1,6 +1,6 @@
 import type { Page, Browser } from '@playwright/test'
 import { apiFetch, awaitApiBudget, responseString, responseUserId, suiteMember, trackPeerConnections } from './helpers'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
@@ -84,6 +84,18 @@ async function twoMembers(browser: Browser, tag: string) {
   expect(bId).toBeTruthy()
 
   const sidebarVoice = (page: Page) => page.locator('[data-channel-type="voice"]', { hasText: channel })
+  // The suite shares one API budget per account (see awaitApiBudget): a page
+  // whose channel list was throttled never shows the new Talk, so reload it
+  // until the Talk is listed.
+  for (const page of [a, b]) {
+    await expect(async () => {
+      if (await sidebarVoice(page).count() === 0) {
+        await awaitApiBudget(page)
+        await page.reload()
+      }
+      await expect(sidebarVoice(page)).toBeVisible({ timeout: 5000 })
+    }).toPass({ timeout: 70_000 })
+  }
   await sidebarVoice(a).click()
   await sidebarVoice(b).click()
   for (const page of [a, b]) {

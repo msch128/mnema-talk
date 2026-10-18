@@ -1591,6 +1591,7 @@ export function isPermOverwrite(value: unknown): value is PermOverwrite {
 export const decodePermOverwrite = decoder("perm.Overwrite", isPermOverwrite)
 
 export type PermRole = {
+  bot_user_id?: string
   color: number
   hoist: boolean
   id: string
@@ -1605,6 +1606,7 @@ export type PermRole = {
 
 export function isPermRole(value: unknown): value is PermRole {
   return isRecord(value)
+    && (!hasOwn(value, "bot_user_id") || isIdentifier(value["bot_user_id"]))
     && (hasOwn(value, "color") && (isInteger(value["color"]) && value["color"] >= 0 && value["color"] <= 16777215))
     && (hasOwn(value, "hoist") && typeof value["hoist"] === 'boolean')
     && (hasOwn(value, "id") && isIdentifier(value["id"]))

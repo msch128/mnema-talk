@@ -1,7 +1,8 @@
 import ts from '../../web/node_modules/typescript/lib/typescript.js'
 import { createServer, type Server } from 'node:http'
 import { readFile } from 'node:fs/promises'
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
+import type { Page } from '@playwright/test'
 
 // Tests the persistence boundary in actual Chromium. These synthetic opaque
 // provider states are not an MLS implementation or an E2EE integration proof.

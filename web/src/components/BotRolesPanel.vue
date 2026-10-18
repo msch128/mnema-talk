@@ -23,7 +23,8 @@ const toasts = useToastStore()
 const selected = ref<string[]>([...props.bot.role_ids])
 const busy = ref(false)
 
-const roles = computed(() => permissions.roles.filter(r => !r.is_everyone))
+// Another bot's own role is not offered; this bot's own role is shown ticked.
+const roles = computed(() => permissions.roles.filter(r => !r.is_everyone && (!r.bot_user_id || r.bot_user_id === props.bot.user_id)))
 // Every bot holds the managed Bot role; it is shown ticked and cannot be changed.
 const held = (role: { id: string; managed?: boolean }) => role.managed === true || selected.value.includes(role.id)
 const dirty = computed(() => {
@@ -67,9 +68,9 @@ onMounted(() => { if (!permissions.roles.length) void permissions.loadRoles() })
           <input type="checkbox" class="accent-mnema-accent" :checked="held(role)" :disabled="role.managed" @change="toggle(role.id, ($event.target as HTMLInputElement).checked)" />
           <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
           <span class="truncate">{{ role.name }}</span>
-          <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t('roles.managedHint')" data-testid="bot-role-managed" />
+          <Lock v-if="role.managed" class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t(role.bot_user_id ? 'roles.botRoleHint' : 'roles.managedHint')" data-testid="bot-role-managed" />
         </label>
-        <p v-if="role.managed" class="pl-6 text-xs text-mnema-tertiary">{{ $t('bots.roles.managed') }}</p>
+        <p v-if="role.managed" class="pl-6 text-xs text-mnema-tertiary">{{ $t(role.bot_user_id ? 'bots.roles.managedOwn' : 'bots.roles.managed') }}</p>
         <p v-if="isPowerfulRole(role.permissions)" class="flex items-start gap-1.5 pl-6 text-xs text-mnema-danger" data-testid="bot-role-power">
           <TriangleAlert class="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
           <span>{{ $t('bots.roles.power') }}</span>
