@@ -249,7 +249,7 @@ export function stubDisplayMedia(stream: MediaStream) {
 
 // The SFU's offer from 0.8 on: the lines for the screen's two lower layers
 // follow the four fixed ones.
-export const SFU_LAYER_OFFER = SFU_OFFER.replace(/\r\n$/, '\r\n') + [
+export const SFU_LAYER_OFFER = SFU_OFFER + [
   'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:4', 'a=recvonly',
   'm=video 9 UDP/TLS/RTP/SAVPF 96', 'a=mid:5', 'a=recvonly',
   ''
