@@ -1,0 +1,26 @@
+internal/gateway/presence_sync_test.go
+  s_06fcde5dbef956::t_ae699ba2e204b1 1-164
+internal/gateway/gateway.go
+  s_06fcde5dbef956::t_9125a25766d3df 109-110,112-113,190-193,198-201,204,206,222-223,225,227,232-238,243-245
+internal/gateway/serve.go
+  s_06fcde5dbef956::t_9125a25766d3df 250-251,255,258-259
+  s_06fcde5dbef956::t_2d2c38084b3538 260
+internal/gateway/presence.go
+  s_06fcde5dbef956::t_9125a25766d3df 140-141,143-144,146-149,159-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "92f05fe29686c7f99c8c5ffef7743ab4136d674c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
