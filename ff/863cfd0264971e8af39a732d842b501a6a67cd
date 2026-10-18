@@ -1,0 +1,41 @@
+web/src/lib/media/groupParams.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 1-53
+web/src/lib/media/groupTree.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 1-156
+web/src/lib/crypto/stateStore.ts
+  s_06fcde5dbef956::t_9a8cb8bf0a3f6c 1
+  s_06fcde5dbef956::t_ffcc2ed1ae0f6e 2
+web/src/lib/media/groupSync.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 1-202
+web/src/lib/crypto/stateStoreTypes.ts
+  s_06fcde5dbef956::t_ffcc2ed1ae0f6e 1-20,22-73
+  s_06fcde5dbef956::t_1784c606d91b57 21
+web/src/lib/media/groupEpoch.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 1-285
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 14,17,19-24,36,56,195,214,266,318,339
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_1784c606d91b57 319
+  s_06fcde5dbef956::t_ffcc2ed1ae0f6e 320
+web/src/lib/media/replay.ts
+  s_06fcde5dbef956::t_1784c606d91b57 1-2
+  s_06fcde5dbef956::t_ffcc2ed1ae0f6e 3-96
+web/src/lib/media/groupBase.ts
+  s_06fcde5dbef956::t_42b32ae6d35c91 1-323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff863cfd0264971e8af39a732d842b501a6a67cd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
