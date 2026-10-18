@@ -70,6 +70,32 @@ it, and a bot's role list shows it ticked and fixed. `GET /api/roles` marks it
 with `managed`. Reordering lists it like any role, and a list without it (older
 clients) moves it to the bottom.
 
+### Each bot's own role
+
+Like Discord's integration role, every bot also has a **managed role of its
+own** (`managed: true`, `bot_user_id` set), created with the bot by migration
+0033 (existing bots got an empty one) and held by that bot only. It is named
+after the bot, the name follows a rename of the bot, and it is deleted with the
+bot.
+
+| | |
+|---|---|
+| Held by | exactly one bot, automatically; the database refuses any other holder |
+| Remove from the bot | not possible, like the Bot role |
+| Give to a person or another bot | refused (API and database) |
+| Delete | refused while the bot exists (API and database); goes with the bot |
+| Rename by hand | refused; the bot's name decides |
+| Colour, permissions | editable like any role's by someone above it, permissions only through the central **bot invariant** |
+| Hoist, mentionable | off; bots are grouped by the shared Bot role |
+| Position | in the managed block at the bottom, next to the Bot role (same rank), so everyone who manages bots outranks it. It is not part of the order people arrange: `PUT /api/admin/roles/order` ignores it, and the role editor lists it apart under *Bot roles* |
+| Upload limit | none, like the Bot role |
+| Default permissions | none. The migration does **not** move a bot's existing grants into it, so no bot's effective permissions changed; grants live where they were (the shared Bot role, custom roles, overwrites) and can be moved by hand |
+
+Use the shared Bot role for what every bot should have, the bot's own role for
+what only this bot should have (a role can also carry channel overwrites, so
+the own role is a convenient place for "this bot may post in #alerts").
+`GET /api/roles` marks the role with `managed` and `bot_user_id`.
+
 ### Permissions
 
 | Permission | What it allows | Overwritable per channel |

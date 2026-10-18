@@ -5,6 +5,7 @@
 /** Presences a user can choose, in menu order. Offline is never a choice. */
 import type { ChosenPresence, Presence } from '../types/domain'
 import { isRecord } from '../types/validation'
+import { t } from '../i18n'
 export const CHOOSABLE: readonly ChosenPresence[] = ['online', 'away', 'dnd', 'focus']
 
 /** Every live status, in member-list order. */
@@ -34,6 +35,24 @@ export function snapshotToMap(payload: unknown): Record<string, Presence> {
     if (s !== 'offline') out[id] = s
   }
   return out
+}
+
+/** What a bot is doing, from the presence_update's activity; null for none or anything unexpected. */
+export function activityOf(value: unknown): { type: number; name: string } | null {
+  if (!isRecord(value) || typeof value['name'] !== 'string' || typeof value['type'] !== 'number') return null
+  const name = value['name'].trim()
+  return name && Number.isInteger(value['type']) ? { type: value['type'], name } : null
+}
+
+/** "Playing chess", "Listening to jazz", or the custom text itself. */
+export function activityText(activity: { type: number; name: string }): string {
+  switch (activity.type) {
+    case 0: return t('presence.activity.playing', { name: activity.name })
+    case 2: return t('presence.activity.listening', { name: activity.name })
+    case 3: return t('presence.activity.watching', { name: activity.name })
+    case 5: return t('presence.activity.competing', { name: activity.name })
+    default: return activity.name
+  }
 }
 
 /** Applies one presence_update to a status map, returning a new map. */

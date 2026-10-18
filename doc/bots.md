@@ -58,6 +58,13 @@ tag instead.
   given to a person, cannot be deleted and cannot be renamed. Its colour,
   position and *hoist* (own group in the member list, on by default) are
   editable by role managers. See [roles and permissions](roles-and-permissions.md#the-managed-bot-role).
+- **The bot's own role.** Like Discord's integration role, each bot also gets a
+  managed role named after it, held by that bot only, renamed with the bot and
+  deleted with it. It cannot be given to anyone else, removed from the bot,
+  renamed or deleted by hand; its colour and permissions are editable, with
+  permissions going through the bot invariant. It starts empty (existing bots
+  got an empty one: their current grants did not move). See
+  [roles and permissions](roles-and-permissions.md#each-bots-own-role).
 - **Permissions of the Bot role** start empty, so a bot still **does nothing
   until an admin grants it something**, either on the Bot role (everything every
   bot should have, e.g. *View channels* in a channel through an overwrite) or on
@@ -66,10 +73,13 @@ tag instead.
   grant". The role editor says so.
 - **Presence.** A bot is **online** while it has at least one live gateway
   connection (a session that can only be resumed does not count) and offline
-  otherwise. It is announced to members as `presence_update` and is part of the
-  connect-time `presence_snapshot`. Bots have no idle or do-not-disturb, are not
-  counted in the online total and are never reached by `@here`. The gateway does
-  not dispatch presence events to bots in v1.
+  otherwise. It can set its own status and an activity with the gateway's
+  `PRESENCE_UPDATE` (see [Presence updates](#presence-updates)): *online*,
+  *idle* (shown as away), *do not disturb* or *invisible* (shown offline). It is
+  announced to members as `presence_update` (with `activity` when the bot set
+  one) and is part of the connect-time `presence_snapshot`. Bots are not counted
+  in the online total and are never reached by `@here`. The gateway does not
+  dispatch other members' presence to bots in v1.
 - **Mentions.** Mention a bot by its username (`@bot-…`, shown in the picker
   under its name). The message's `mentions` list then contains the bot's user
   id, which `READY` gave the bot as `user.id`, so a bot recognises a mention of
@@ -189,8 +199,7 @@ security scheme `botAuth`).
 
 Mentions: `@username` notifies members who can view the channel; `@all` and
 `@here` only when the bot may mention everyone **and** `allowed_mentions.parse`
-contains `"everyone"`. Bots do not appear in the member list, have no presence,
-cannot be mentioned, and cannot join Talks (voice) in v1.
+contains `"everyone"`. Bots cannot join Talks (voice) in v1.
 
 ## Gateway
 
@@ -218,6 +227,7 @@ bytes and 120 a minute.
 | 0 | DISPATCH | server | an event, numbered by `s`; the first is `READY` |
 | 1 | HEARTBEAT | bot | send every `heartbeat_interval`; `d` may carry the last `s` |
 | 11 | HEARTBEAT_ACK | server | answer to HEARTBEAT |
+| 3 | PRESENCE_UPDATE | bot | `{"status": "dnd", "activities": [{"name": "chess", "type": 0}]}`, see [Presence updates](#presence-updates) |
 | 6 | RESUME | bot | `{"token": "...", "session_id": "...", "seq": 41}` on a new connection |
 | 9 | INVALID_SESSION | server | `d: false`: the session cannot be resumed; send IDENTIFY on the same connection |
 | 7 | RECONNECT | server | reserved; the server closes instead |
@@ -225,6 +235,33 @@ bytes and 120 a minute.
 `READY` carries `v`, `user` (`id`, `bot_id`, `username`, `bot`, `avatar_url`),
 `session_id`, `intents` (granted), `resume_gateway_url` and
 `heartbeat_interval`.
+
+### Presence updates
+
+A bot sets its own status and activity with op 3, in Discord's format, after
+IDENTIFY (before it, the connection closes with `4003`). IDENTIFY may also carry
+the starting presence as `d.presence` (same shape; an invalid one is ignored).
+
+```json
+{"op": 3, "d": {"since": null, "afk": false, "status": "idle",
+  "activities": [{"name": "chess", "type": 0}]}}
+```
+
+- `status` is required: `online`, `idle`, `dnd` or `invisible` (`offline` is an
+  alias of `invisible`). Members see them as online, away, do not disturb and
+  offline; an invisible bot shows no activity.
+- `activities` is optional; only the **first** is used. `type` is `0` playing,
+  `2` listening, `3` watching, `4` custom (the text is `state`, or `name`) or `5`
+  competing; streaming (`1`) needs a URL and is refused. The text is cleaned
+  (control and formatting characters removed, white space collapsed) and cut to
+  64 characters; an activity with no text left is none. `since` and `afk` are
+  accepted and ignored.
+- A bad `status` or `type`, or an undecodable payload, closes with `4002`.
+- At most **5 updates per 60 seconds per bot** (all its connections together);
+  further updates are dropped without an error, as in Discord.
+- The status belongs to the bot, not to a connection: the last update wins. It
+  ends with the bot's last connection, so a bot that reconnects starts as online
+  without an activity.
 
 **Heartbeats.** A bot that sends nothing for 1.5 intervals after identifying
 is closed with `4009`; one that does not identify within 10 seconds, `4003`.
@@ -270,7 +307,8 @@ and loses a channel's events the moment its access ends.
 | `GUILD_MESSAGE_REACTIONS` | 1024 | `MESSAGE_REACTIONS_UPDATE` (`message_id`, `channel_id`, `reactions`: the new summary) |
 
 The bot's own messages are dispatched to it as well. Message content is always
-included. Not offered in v1: typing, presence, voice, member removal.
+included. Not offered in v1: typing, other members' presence, voice, member
+removal.
 
 ### A minimal client
 
@@ -388,12 +426,33 @@ The bot needs *Send messages* in the channel when it responds; responses never
 notify `@all` or `@here`. Interactions live in the server's memory: a restart
 within the 15 minutes makes the token unknown (`404`).
 
+## Moderation: timeouts and bans
+
+A bot is a member for moderation too. Members with *Timeout members* or *Ban
+members* find both in the member context menu of a bot (the usual rules: a
+higher role than the bot's highest role, never the Owner).
+
+- **Timeout.** A timed-out bot keeps reading (REST and gateway) but loses what
+  a timeout takes from any member: it cannot post, react, attach files or
+  mention everyone. That covers REST posts, uploads, reactions and the
+  responses to slash commands (`403`, code `50013`). Its gateway connection
+  stays open. The timeout ends by itself or when lifted.
+- **Ban.** A banned bot is refused like an unknown token (`401`) while the ban
+  runs, and its open gateway connections and resumable sessions close at once
+  with `4004`. It cannot identify or resume until the ban ends or is lifted;
+  its tokens are untouched, so lifting the ban brings it back. A ban is
+  separate from the bot's own *disabled* switch. Disabling the account in the
+  admin area does the same as a ban.
+
 ## In the app
 
 - Bot messages carry the **BOT** tag (webhook messages the **Webhook** tag).
   Bots are listed in the member list with the same tag, under the Bot role when
   it is hoisted, online while connected. Their profile shows the tag, their
   roles and who added them.
+- A bot's status shows as its presence dot (online, away, do not disturb), and
+  its activity ("Playing chess") as the second line of its member row and in its
+  profile. An invisible bot looks offline.
 - Typing `/` in a channel lists the slash commands available there; picking one
   shows its options in a bar above the composer (Enter on an empty composer or
   the Run button sends it, Esc drops it). A bot's private reply appears below
@@ -409,9 +468,9 @@ mutation is reported to the audit log.
 | Route | Purpose |
 |---|---|
 | `GET`, `POST /bots` | list, create (name, optional intents) |
-| `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete |
+| `GET`, `PATCH`, `DELETE /bots/{id}` | read, change (name, intents, disabled), delete; renaming renames the bot's own role, deleting deletes it |
 | `POST /bots/{id}/avatar` | avatar (multipart, field `avatar`) |
-| `PUT /bots/{id}/roles` | the bot's roles |
+| `PUT /bots/{id}/roles` | the bot's roles (the Bot role and its own role stay, whatever the list says; another bot's own role is refused) |
 | `GET /bots/{id}/access` | effective permissions |
 | `GET`, `POST /bots/{id}/tokens` | list, issue |
 | `POST /bots/{id}/tokens/{tokenID}/regenerate`, `DELETE ...` | rotate, revoke |
@@ -424,6 +483,7 @@ mutation is reported to the audit log.
 | Ids | snowflakes | UUIDs |
 | Default access | bots get `@everyone` | bots get nothing until given a role |
 | Member list | bots are listed, with a BOT tag | the same; webhook authors are not listed and are tagged Webhook (Discord tags them BOT) |
-| The Bot role | every bot has a managed role named after it (the "integration" role) | one shared, managed role named Bot, held by every bot; it cannot be removed, renamed or deleted, and its permissions follow the bot invariant. There is no per-bot role |
-| Presence | online while connected, plus idle and do-not-disturb | online or offline only, from live gateway connections; no presence events for bots |
+| The bot's role | every bot has a managed role named after it (the "integration" role) | the same: each bot has a managed role named after it, held by it only, renamed and deleted with it, with permissions under the bot invariant. Plus one shared managed role named Bot that every bot holds (it groups bots in the member list). Existing bots' grants were not moved into their new role |
+| Presence | online, idle, do-not-disturb, invisible and an activity, set with gateway op 3 (and `presence` in IDENTIFY) | the same statuses, shown as online, away, do not disturb, offline; one activity (playing, listening, watching, custom, competing; no streaming); 5 updates per 60 s per bot, extra ones dropped; no presence events *to* bots |
+| Timeout and ban | apply to bots as to members | the same: a timed-out bot cannot post or respond, a banned bot's token is refused and its gateway sessions close |
 | Admin power | an invite with permissions | only the Owner can give Administrator or admin-area roles |

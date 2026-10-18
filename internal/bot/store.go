@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -181,9 +182,29 @@ func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creato
 		user, name, intents, creator).Scan(&id); err != nil {
 		return uuid.Nil, err
 	}
-	// Every bot holds the managed Bot role from the start.
-	_, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE managed`, user)
+	// Every bot holds the shared Bot role and a managed role of its own from
+	// the start. The own role is empty: the bot can do nothing until it is given
+	// something, and what is given goes through the bot invariant in perm.
+	if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE managed AND bot_user_id IS NULL`, user); err != nil {
+		return uuid.Nil, err
+	}
+	var role uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO roles (name, color, position, permissions, hoist, mentionable, managed, bot_user_id)
+		VALUES ($1, 0, 1, 0, FALSE, FALSE, TRUE, $2) RETURNING id`, roleName(name), user).Scan(&role); err != nil {
+		return uuid.Nil, err
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, user, role)
 	return id, err
+}
+
+// roleName is the name of a bot's own role: the bot's name, except where role
+// names are reserved (@everyone and @here).
+func roleName(bot string) string {
+	if n := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(bot), "@")); n == "everyone" || n == "here" {
+		return bot + " bot"
+	}
+	return bot
 }
 
 // Update changes the name, intents and disabled flag (nil leaves one).
@@ -201,7 +222,11 @@ func Update(ctx context.Context, p *db.Pool, id uuid.UUID, name *string, intents
 			return fmt.Errorf("update bot: %w", err)
 		}
 		if name != nil {
-			_, err = tx.Exec(ctx, `UPDATE users SET display_name = $2, updated_at = NOW() WHERE id = $1`, user, *name)
+			if _, err = tx.Exec(ctx, `UPDATE users SET display_name = $2, updated_at = NOW() WHERE id = $1`, user, *name); err != nil {
+				return err
+			}
+			// The bot's own role follows the rename.
+			_, err = tx.Exec(ctx, `UPDATE roles SET name = $2, updated_at = NOW() WHERE bot_user_id = $1`, user, roleName(*name))
 		}
 		return err
 	})
@@ -218,6 +243,11 @@ func Delete(ctx context.Context, p *db.Pool, id uuid.UUID) error {
 		}
 		if err != nil {
 			return fmt.Errorf("delete bot: %w", err)
+		}
+		// The bot's own role goes with it (the bot row is gone, so the guard
+		// lets it); the assignments go with the role.
+		if _, err := tx.Exec(ctx, `DELETE FROM roles WHERE bot_user_id = $1`, user); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx, `DELETE FROM user_roles WHERE user_id = $1`, user); err != nil {
 			return err

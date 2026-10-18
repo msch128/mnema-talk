@@ -172,6 +172,14 @@ func NewRouter(d Deps) (*Router, error) {
 	gw := gateway.New(gateway.Config{Auth: botAuthn, Perms: permSvc, DB: d.DB, PublicURL: cfg.PublicURL})
 	botH.OnRevoke = gw.Revoke
 	gw.OnPresence = hub.SetBotPresence
+	gw.OnStatus = func(id uuid.UUID, status string, a *gateway.Activity) {
+		var act *ws.BotActivity
+		if a != nil {
+			act = &ws.BotActivity{Type: a.Type, Name: a.Name}
+		}
+		hub.SetBotStatus(id, status, act)
+	}
+	authH.OnAccountEnded = gw.RevokeUser
 	cmds.Deliver = gw
 	go gw.Run(ctx)
 	// Both the hub and the gateway learn about permission changes, and the

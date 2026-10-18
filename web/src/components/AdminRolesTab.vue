@@ -29,12 +29,16 @@ const busy = ref(false)
 const dragging = ref<string | null>(null)
 
 const everyone = computed(() => permissions.roles.find(r => r.is_everyone))
-// Highest rank first, as the server lists them; @everyone is separate.
-const custom = computed(() => permissions.roles.filter(r => !r.is_everyone))
+// Highest rank first, as the server lists them; @everyone is separate, and
+// the managed roles of single bots stay out of the hierarchy people arrange.
+const custom = computed(() => permissions.roles.filter(r => !r.is_everyone && !r.bot_user_id))
+const botRoles = computed(() => permissions.roles.filter(r => !!r.bot_user_id))
 const selected = computed(() => permissions.roles.find(r => r.id === selectedId.value) ?? null)
 const isEveryone = computed(() => !!selected.value?.is_everyone)
-// The built-in Bot role: every bot holds it. It keeps its name and cannot be deleted.
+// The shared Bot role (every bot holds it) and the bot-owned roles: they keep
+// their names and cannot be deleted.
 const isManaged = computed(() => !!selected.value?.managed)
+const isBotRole = computed(() => !!selected.value?.bot_user_id)
 // Roles at or above the member's own rank can be looked at, not changed.
 const readonly = computed(() => !!selected.value && !isEveryone.value && !permissions.outranks(selected.value))
 // Permissions the member does not hold cannot be handed out.
@@ -235,6 +239,22 @@ onMounted(async () => {
               <ChevronDown class="h-4 w-4" />
             </button>
           </li>
+          <template v-if="botRoles.length">
+            <li class="border-t border-mnema-hairline bg-mnema-band px-3 py-1 text-xs font-semibold uppercase tracking-wide text-mnema-tertiary" data-testid="bot-roles-heading">{{ $t('roles.botRoles') }}</li>
+            <li
+              v-for="role in botRoles"
+              :key="role.id"
+              :data-role="role.name"
+              data-bot-role
+              :class="['flex items-center gap-1 border-t border-mnema-hairline', selectedId === role.id ? 'bg-mnema-accent-subtle' : '']"
+            >
+              <button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-sm" :aria-pressed="selectedId === role.id" @click="select(role.id)">
+                <span class="h-3 w-3 flex-shrink-0 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>
+                <span class="truncate text-mnema-text">{{ role.name }}</span>
+                <Lock class="h-3 w-3 flex-shrink-0 text-mnema-tertiary" role="img" :aria-label="$t('roles.botRoleHint')" data-testid="role-managed-icon" />
+              </button>
+            </li>
+          </template>
           <li v-if="everyone" class="border-t border-mnema-hairline">
             <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm" :class="selectedId === everyone.id ? 'bg-mnema-accent-subtle' : ''" :aria-pressed="selectedId === everyone.id" @click="select(everyone.id)">
               <AtSign class="h-3.5 w-3.5 flex-shrink-0 text-mnema-tertiary" />
@@ -250,7 +270,7 @@ onMounted(async () => {
         <p v-if="isEveryone" class="text-sm text-mnema-tertiary">{{ $t('roles.everyoneHint') }}</p>
         <p v-else-if="isManaged" class="flex items-start gap-2 rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary" data-testid="role-managed-note">
           <Lock class="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-          <span>{{ $t('roles.managedNote') }}</span>
+          <span>{{ isBotRole ? $t('roles.botRoleNote', { name: selected.name }) : $t('roles.managedNote') }}</span>
         </p>
         <p v-if="!isEveryone && readonly" class="rounded-md border border-mnema-hairline bg-mnema-surface px-3 py-2 text-sm text-mnema-tertiary">{{ $t('roles.locked') }}</p>
 

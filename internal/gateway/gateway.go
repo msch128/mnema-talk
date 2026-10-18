@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -85,6 +86,11 @@ type Gateway struct {
 	// loses its last live connection (the member list shows it online or
 	// offline). A session that is only resumable does not count as live.
 	OnPresence func(userID uuid.UUID, online bool)
+	// OnStatus, when set before Run, is told when a bot sets its status and
+	// activity (PRESENCE_UPDATE, or IDENTIFY's presence). status is online,
+	// idle, dnd or invisible. The state ends with the bot's last connection:
+	// OnPresence(false) resets it.
+	OnStatus func(userID uuid.UUID, status string, activity *Activity)
 
 	tmu sync.RWMutex
 	tm  Timings
@@ -100,6 +106,10 @@ type Gateway struct {
 	stop     chan struct{}
 	// announced is the set of bots OnPresence last reported online.
 	announced map[uuid.UUID]bool
+	// pres is the status each connected bot last set.
+	pres map[uuid.UUID]Presence
+	// presLimit bounds presence updates per bot.
+	presLimit *httpx.RateLimiter
 }
 
 // Config is what a Gateway needs.
@@ -118,6 +128,7 @@ func New(c Config) *Gateway {
 	g.upgrader = websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096}
 	g.ips = httpx.NewRateLimiter(30, time.Minute).Named("bot_gateway_ip")
 	g.idents = httpx.NewRateLimiter(identifyPerMinute, time.Minute).Named("bot_gateway_identify")
+	g.presLimit = httpx.NewRateLimiter(presencePerMinute, time.Minute).Named("bot_gateway_presence")
 	g.sessions = map[string]*session{}
 	g.byBot = map[uuid.UUID]map[string]*session{}
 	g.stop = make(chan struct{})
@@ -194,6 +205,16 @@ func (g *Gateway) syncPresence() {
 	for id := range g.announced {
 		if !live[id] {
 			changes = append(changes, id)
+			delete(g.pres, id) // a status ends with the last connection
+		}
+	}
+	// A status set by a bot that left before it was ever announced online.
+	for id := range g.pres {
+		if !live[id] {
+			delete(g.pres, id)
+			if !g.announced[id] {
+				changes = append(changes, id)
+			}
 		}
 	}
 	g.announced = live
@@ -312,6 +333,23 @@ func (g *Gateway) Revoke(botID uuid.UUID, tokenID *uuid.UUID) {
 	}
 }
 
+// RevokeUser ends every session of the bot account userID, as Revoke does for a
+// bot: its account was banned or disabled. Open connections get close code 4004.
+func (g *Gateway) RevokeUser(userID uuid.UUID) {
+	g.mu.Lock()
+	var victims []*session
+	for id, s := range g.sessions {
+		if s.userID == userID {
+			victims = append(victims, s)
+			g.removeLocked(id, s)
+		}
+	}
+	g.mu.Unlock()
+	for _, s := range victims {
+		s.closeConn(CloseAuthFailed, "Authentication failed")
+	}
+}
+
 // expire drops detached sessions that were not resumed in time.
 func (g *Gateway) expire() {
 	now, window := time.Now(), g.timings().Resume
@@ -335,12 +373,13 @@ func (g *Gateway) removeLocked(id string, s *session) {
 }
 
 // validTokens returns which of the tokens are still good: not revoked, not
-// expired and of a bot that is not disabled.
+// expired and of a bot that is neither disabled nor banned.
 func (g *Gateway) validTokens(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
 	var live []uuid.UUID
 	rows, err := g.DB.Query(ctx, `
-		SELECT t.id FROM bot_tokens t JOIN bots b ON b.id = t.bot_id
-		WHERE t.id = ANY($1) AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled`, ids)
+		SELECT t.id FROM bot_tokens t JOIN bots b ON b.id = t.bot_id JOIN users u ON u.id = b.user_id
+		WHERE t.id = ANY($1) AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at > NOW()) AND NOT b.disabled
+		  AND `+auth.ActiveSQL("u"), ids)
 	if err == nil {
 		live, err = pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
 	}

@@ -13,6 +13,7 @@ import { useVoiceStore } from '../stores/voice'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
+import { activityText } from '../lib/presence'
 import { t, locale } from '../i18n'
 import { MIN_PASSWORD_LENGTH } from '../lib/passwordPolicy'
 import BaseDialog from './BaseDialog.vue'
@@ -152,6 +153,10 @@ const profileRoles = computed(() => permissions.rolesOf(profileId.value))
 // be opened from a message, so the list is where its bot-ness and creator live.
 const profileMember = computed(() => chatStore.members.find(m => m.id === profileId.value))
 const isBot = computed(() => profileMember.value?.is_bot === true)
+const botActivity = computed(() => {
+  const a = isBot.value && liveStatus.value !== 'offline' ? chatStore.activityOfUser(profileId.value) : null
+  return a ? activityText(a) : ''
+})
 const addedBy = computed(() => {
   const id = profileMember.value?.added_by
   const creator = id ? chatStore.members.find(m => m.id === id) : undefined
@@ -382,6 +387,7 @@ function handleMention() {
                 <PresenceDot :status="liveStatus" :size="8" :ring="false" />
                 <span data-testid="profile-presence">{{ $t(`presence.${liveStatus}`) }}</span>
               </p>
+              <p v-if="botActivity" class="mt-0.5 truncate text-xs text-mnema-tertiary" data-testid="profile-activity">{{ botActivity }}</p>
             </div>
 
             <!-- Role Badge -->
@@ -408,7 +414,7 @@ function handleMention() {
               class="inline-flex items-center gap-1 rounded-md border border-mnema-border px-1.5 py-0.5 text-xs text-mnema-text"
             >
               <span class="h-2 w-2 rounded-full border border-mnema-border-strong" :style="{ background: roleColorCss(role.color) || 'transparent' }"></span>{{ role.name }}
-              <Lock v-if="role.managed" class="h-3 w-3 text-mnema-tertiary" v-tooltip.visual="$t('roles.managedHint')" role="img" :aria-label="$t('roles.managedHint')" />
+              <Lock v-if="role.managed" class="h-3 w-3 text-mnema-tertiary" v-tooltip.visual="$t(role.bot_user_id ? 'roles.botRoleHint' : 'roles.managedHint')" role="img" :aria-label="$t(role.bot_user_id ? 'roles.botRoleHint' : 'roles.managedHint')" />
             </span>
             <button
               v-if="canGiveRoles"

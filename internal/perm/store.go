@@ -220,12 +220,12 @@ func checkColor(c int) error {
 func scanRole(row pgx.Row) (Role, error) {
 	var r Role
 	var perms int64
-	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.Managed, &r.MaxUploadMB)
+	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.Managed, &r.MaxUploadMB, &r.BotUserID)
 	r.Permissions = Set(perms)
 	return r, err
 }
 
-const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb`
+const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id`
 
 // CreateRole adds a role at the bottom of the hierarchy (just above
 // @everyone), so it is always below the actor's own highest role.
@@ -290,8 +290,9 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 
 var (
 	errRoleNotFound = httpx.ErrNotFound("role not found")
-	errManagedName  = httpx.ErrInvalidInput("the Bot role is managed: it cannot be renamed")
-	errManagedHeld  = httpx.ErrInvalidInput("the Bot role is managed: only bots hold it")
+	errManagedName  = httpx.ErrInvalidInput("this role is managed: it cannot be renamed")
+	errManagedHeld  = httpx.ErrInvalidInput("this role is managed: only bots hold it")
+	errOwnRole      = httpx.ErrInvalidInput("a bot's own role belongs to that bot only")
 )
 
 // UpdateRole changes a role. @everyone only has its permissions editable.
@@ -321,7 +322,7 @@ func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, i
 			next.Name = name
 		}
 		if role.Managed && in.MaxUploadMB.Present {
-			return nil, httpx.ErrInvalidInput("the Bot role has no upload limit: bots upload under their own rules")
+			return nil, httpx.ErrInvalidInput("managed bot roles have no upload limit: bots upload under their own rules")
 		}
 		if in.Color != nil {
 			if err := checkColor(*in.Color); err != nil {
@@ -395,7 +396,7 @@ func (s *Service) DeleteRole(ctx context.Context, actor Subject, id uuid.UUID) e
 			return nil, errRoleNotFound
 		}
 		if role.Managed {
-			return nil, httpx.ErrInvalidInput("the Bot role is managed: it cannot be deleted")
+			return nil, httpx.ErrInvalidInput("this role is managed: it cannot be deleted")
 		}
 		if err := snap.CanManageRole(actor, role); err != nil {
 			return nil, err
@@ -419,17 +420,19 @@ func (s *Service) DeleteRole(ctx context.Context, actor Subject, id uuid.UUID) e
 // and only to places below it; roles at or above it keep their position.
 func (s *Service) ReorderRoles(ctx context.Context, actor Subject, ids []uuid.UUID) error {
 	return s.mutate(ctx, actor, ManageRoles, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
+		// A bot's own role is not part of the hierarchy people arrange: it
+		// stays in the managed block at the bottom whatever the list says.
 		custom := 0
 		for _, r := range snap.roles {
-			if !r.Everyone {
+			if !r.Everyone && r.BotUserID == nil {
 				custom++
 			}
 		}
 		// A list written before the Bot role existed leaves it out: it goes to
-		// the bottom, where it started.
-		ids := slices.Clone(ids)
+		// the bottom, where it started. Own roles of bots are ignored.
+		ids = slices.DeleteFunc(slices.Clone(ids), func(id uuid.UUID) bool { return snap.roles[id].BotUserID != nil })
 		for id, r := range snap.roles {
-			if r.Managed && !slices.Contains(ids, id) {
+			if r.Managed && r.BotUserID == nil && !slices.Contains(ids, id) {
 				ids = append(ids, id)
 			}
 		}
@@ -509,6 +512,9 @@ func (s *Service) setRoles(ctx context.Context, actor Subject, need Set, userID 
 			if r.Managed && !bot {
 				return nil, errManagedHeld
 			}
+			if r.BotUserID != nil && *r.BotUserID != userID {
+				return nil, errOwnRole
+			}
 			want[id] = true
 		}
 		have := map[uuid.UUID]bool{}
@@ -516,10 +522,11 @@ func (s *Service) setRoles(ctx context.Context, actor Subject, need Set, userID 
 			have[id] = true
 		}
 		if bot {
-			// Every bot keeps the Bot role, whatever the list says: it cannot
-			// be taken away, so a list without it leaves it in place.
+			// Every bot keeps the Bot role and its own role, whatever the list
+			// says: they cannot be taken away, so a list without them leaves
+			// them in place.
 			for id, r := range snap.roles {
-				if r.Managed {
+				if r.Managed && (r.BotUserID == nil || *r.BotUserID == userID) {
 					want[id] = true
 				}
 			}

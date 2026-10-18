@@ -272,6 +272,9 @@ func (h *Handler) disableUser(w http.ResponseWriter, r *http.Request) error {
 		h.Live.KickFromVoice(id)
 		h.Live.DisconnectUser(id)
 	}
+	if h.OnAccountEnded != nil {
+		h.OnAccountEnded(id)
+	}
 	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
 	w.WriteHeader(http.StatusNoContent)
 	return nil

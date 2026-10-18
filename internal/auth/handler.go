@@ -22,6 +22,10 @@ type Handler struct {
 	Events   events.Publisher
 	// Live acts on users' open connections (voice kick, disconnect); optional.
 	Live LiveControl
+	// OnAccountEnded is told when an account is banned or disabled, after the
+	// change is stored: bots hold no session of the web app, so their gateway
+	// connections are closed through it. Optional.
+	OnAccountEnded func(userID uuid.UUID)
 	// Perms decides who may use the admin routes beyond the Owner. nil means
 	// only the Owner may.
 	Perms *perm.Service
