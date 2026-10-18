@@ -1,0 +1,128 @@
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_f72b71427dba94 264,411
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_d3f71566461a25 710,719,1116,1122,1136,1142,1168,1194,1308-1309,1322-1323,1598,1612
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_f72b71427dba94 154
+web/src/components/MemberRolesDialog.vue
+  s_06fcde5dbef956::t_2c20dabe2f914f 29-30
+doc/bots.md
+  s_06fcde5dbef956::t_c89c5804dafa19 39
+  s_06fcde5dbef956::t_07b2ff67da26dc 41-78,393-396,426-428
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_f72b71427dba94 8,54
+web/src/components/MessageEmbeds.test.ts
+  s_06fcde5dbef956::t_25ac70e83a14b1 75-76
+web/src/components/ReplyPreview.vue
+  s_06fcde5dbef956::t_f72b71427dba94 7,49
+internal/server/server.go
+  s_06fcde5dbef956::t_087c87978ab903 169
+  s_06fcde5dbef956::t_e515fdb72a1a36 174
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_6057159680e432 100-103
+e2e/tests/bot-members.spec.ts
+  s_06fcde5dbef956::t_3b58e18915673e 1-69
+internal/server/botapi_integration_test.go
+  s_06fcde5dbef956::t_5cab6405d42948 418-419,422
+internal/db/migrations/0032_bot_role.sql
+  s_06fcde5dbef956::t_0cc2fe29cedd6f 1-45
+doc/development.md
+  s_06fcde5dbef956::t_584b745930e147 67-72
+internal/ws/hub.go
+  s_06fcde5dbef956::t_e515fdb72a1a36 44-46,124
+web/src/lib/mentionQuery.ts
+  s_06fcde5dbef956::t_f72b71427dba94 5-6,9
+internal/ws/presence.go
+  s_06fcde5dbef956::t_e515fdb72a1a36 76-97,109,113-115
+internal/server/roles_integration_test.go
+  s_06fcde5dbef956::t_b99dcbc13ddbc6 266,269
+  s_06fcde5dbef956::t_5cab6405d42948 279
+e2e/tests/webhooks-ui.spec.ts
+  s_06fcde5dbef956::t_6c1fa734e89ce5 44
+web/src/components/MemberRow.vue
+  s_06fcde5dbef956::t_f72b71427dba94 3,14,17,70
+internal/bot/handler.go
+  s_06fcde5dbef956::t_6c8f4324a990c7 233-244
+  s_06fcde5dbef956::t_087c87978ab903 18,34-43,249,330,335,377
+internal/chat/messages.go
+  s_06fcde5dbef956::t_5d0a3f50889b92 67-69,123-125,160,174,178,196-197
+internal/testutil/db.go
+  s_06fcde5dbef956::t_7adedd9f998d96 109-115
+web/src/components/AdminAuditTab.vue
+  s_06fcde5dbef956::t_9c943b279d3896 13,31-32,143,146
+api/openapi.json
+  s_06fcde5dbef956::t_880a0acbfcf02c 1215-1218,1834-1838,1859-1862,2627-2630,16509
+  s_06fcde5dbef956::t_3b10a0fddb99e3 1973-1976,2196-2202
+internal/chat/handler.go
+  s_06fcde5dbef956::t_64c8f90aa9eba4 106,140-141
+internal/ws/bot_presence_test.go
+  s_06fcde5dbef956::t_a58646e0d165c1 1-51
+web/src/components/UserProfileModal.vue
+  s_06fcde5dbef956::t_dedca9022b61c7 389
+  s_06fcde5dbef956::t_ac1283dd134f18 8,20,151-159,163,371,411,422-423,425
+internal/chat/members.go
+  s_06fcde5dbef956::t_64c8f90aa9eba4 21-25,28-32,34-38,44,46,49
+internal/chat/botapi.go
+  s_06fcde5dbef956::t_45e19769ab1f85 416
+  s_06fcde5dbef956::t_51f7a00a699f0e 386-388
+web/src/components/BotBadge.vue
+  s_06fcde5dbef956::t_f72b71427dba94 2-8,13-15
+e2e/run.sh
+  s_06fcde5dbef956::t_c200bc69b13dd8 9-13,19-42,44-45,86,103
+internal/server/bot_role_integration_test.go
+  s_06fcde5dbef956::t_ebaf2d1850c8fe 1-151,153-201,204-237,241,243-252,254-285
+  s_06fcde5dbef956::t_8b9b71b9299ea7 152,238-240,242,253
+  s_06fcde5dbef956::t_7d6bca4a6a3ad7 202-203
+web/src/components/BotMembers.test.ts
+  s_06fcde5dbef956::t_02cbe95077f095 1-191
+internal/bot/store.go
+  s_06fcde5dbef956::t_30be72adffb06d 188
+  s_06fcde5dbef956::t_6c8f4324a990c7 137-139,142-144,147,152-187
+internal/perm/store_integration_test.go
+  s_06fcde5dbef956::t_5cab6405d42948 77-78,118
+internal/perm/store.go
+  s_06fcde5dbef956::t_c085d717a78c69 294,519-520,522-523
+  s_06fcde5dbef956::t_d8008f20df55c9 267-276,281-282
+  s_06fcde5dbef956::t_ab198137e9f059 399,428-435,526
+  s_06fcde5dbef956::t_d64d8d79b18e2a 74-85,100,126-131,223,228,291-293,295,318-320,323-325,397-398,509-511,518,521,524-525
+e2e/tests/webhooks.spec.ts
+  s_06fcde5dbef956::t_6c1fa734e89ce5 48
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_f72b71427dba94 260-261
+  s_06fcde5dbef956::t_945376db2a5aca 1625
+  s_06fcde5dbef956::t_2c20dabe2f914f 1019,1364-1365
+web/src/components/AdminRolesTab.vue
+  s_06fcde5dbef956::t_2c20dabe2f914f 6,36-37,229,251-255,260,289,306
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_d64d8d79b18e2a 35-36,157,181,196,580-581,583-585
+  s_06fcde5dbef956::t_7a36556e31fcea 37
+web/src/components/MemberList.vue
+  s_06fcde5dbef956::t_f72b71427dba94 2,46
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_07b2ff67da26dc 42-72
+web/src/components/BotRolesPanel.vue
+  s_06fcde5dbef956::t_2c20dabe2f914f 6,27-28,67,70,72
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_945376db2a5aca 1625
+  s_06fcde5dbef956::t_2c20dabe2f914f 1019,1364-1365
+  s_06fcde5dbef956::t_f72b71427dba94 260-261
+internal/gateway/gateway.go
+  s_06fcde5dbef956::t_e515fdb72a1a36 84-87,101-102,163,167,176-203
+  s_06fcde5dbef956::t_be6bd1d476b58a 204-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e299d5ca9f6a4afe2eca8ccb0a568998ac98e23f",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": null
+    }
+  }
+}
