@@ -5,14 +5,11 @@ import App from './App.vue'
 import { useChatStore } from './stores/chat'
 import { useVoiceStore } from './stores/voice'
 import { useAuthStore } from './stores/auth'
-import { initializeNativeContext, connectNative, disconnectNative } from './lib/nativeTransport'
 import { navigate, popRedirectRoute } from './lib/router'
-import { isWebDesktopSelector } from './lib/desktopRuntime'
-import { trustedApp } from './lib/trustedDesktop'
-import { invoke } from '@tauri-apps/api/core'
+import { platform } from './lib/platform'
 
 const address = ref('')
-const verified = trustedApp()
+const verified = platform.trustedApp()
 const addressInput = ref<HTMLInputElement | null>(null)
 const ready = ref(false)
 const busy = ref(false)
@@ -23,7 +20,7 @@ let attempt = 0
 let alive = true
 onBeforeUnmount(() => { alive = false; ++attempt })
 onMounted(async () => {
-  try { if (!isWebDesktopSelector()) await initializeNativeContext(); if (alive) ready.value = true }
+  try { if (!platform.isWebDesktopSelector()) await platform.initializeNative(); if (alive) ready.value = true }
   catch { if (alive) error.value = t('nativeDesktop.contextError') }
 })
 async function connect() {
@@ -32,11 +29,11 @@ async function connect() {
   address.value = submittedAddress
   const current = ++attempt; busy.value = true; error.value = ''
   try {
-    if (isWebDesktopSelector()) {
-      await invoke('desktop_open_instance', { address: submittedAddress })
+    if (platform.isWebDesktopSelector()) {
+      await platform.invoke('desktop_open_instance', { address: submittedAddress })
       return
     }
-    const reply = await connectNative(submittedAddress)
+    const reply = await platform.connectNative(submittedAddress)
     if (current !== attempt) return
     const body = reply.body
     if (reply.status !== 200 || typeof body !== 'object' || body === null || !('origin' in body) || typeof body.origin !== 'string' || !('compatibility' in body) || !['supported', 'deprecated'].includes(String(body.compatibility)) || !('transport_preview' in body) || body.transport_preview !== true || !('content_authorization' in body) || body.content_authorization !== 'unavailable') throw new Error('Unsupported server')
@@ -44,7 +41,7 @@ async function connect() {
     if (url.protocol !== 'https:' || url.origin !== body.origin || url.username || url.password) throw new Error('Invalid origin')
     origin.value = body.origin; connected.value = true
   } catch (cause) {
-    if (current === attempt) error.value = isWebDesktopSelector() && typeof cause === 'string'
+    if (current === attempt) error.value = platform.isWebDesktopSelector() && typeof cause === 'string'
       ? cause.slice(0, 300) : t('nativeDesktop.connectError')
   } finally { if (current === attempt) busy.value = false }
 }
@@ -55,7 +52,7 @@ async function changeServer() {
   useAuthStore().resetLocalSession()
   popRedirectRoute()
   navigate('/', { replace: true })
-  try { await disconnectNative() }
+  try { await platform.disconnectNative() }
   catch { error.value = t('nativeDesktop.disconnectError') }
   finally { busy.value = false; origin.value = '' }
 }

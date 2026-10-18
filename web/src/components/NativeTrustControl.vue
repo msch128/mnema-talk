@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, shallowRef } from 'vue'
 import NativeTrustSetup from './NativeTrustSetup.vue'
-import { captureNativeTrustPresentation } from '../lib/nativeTransport'
+import { platform } from '../lib/platform'
 import type { NativeTrustPresentationPort } from '../lib/nativeTrust'
 import { t } from '../i18n'
 defineProps<{ channelId: string }>()
@@ -12,7 +12,7 @@ const port = shallowRef<NativeTrustPresentationPort | null>(null)
 function open() {
   if (opened.value) return
   error.value = false
-  try { port.value = captureNativeTrustPresentation(); opened.value = true }
+  try { port.value = platform.captureTrustPresentation(); opened.value = true }
   catch { error.value = true }
 }
 function close() { opened.value = false; port.value = null }

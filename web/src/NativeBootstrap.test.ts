@@ -2,7 +2,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 const calls = vi.hoisted(() => ({ open: vi.fn(), initialize: vi.fn(), connect: vi.fn(), disconnect: vi.fn(), closeSocket: vi.fn(), leaveVoice: vi.fn(), resetSession: vi.fn() }))
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: calls.open }))
-vi.mock('./lib/nativeTransport', () => ({ initializeNativeContext: calls.initialize, connectNative: calls.connect, disconnectNative: calls.disconnect }))
+vi.mock('./lib/nativeTransport', async importOriginal => ({ ...await importOriginal<typeof import('./lib/nativeTransport')>(), initializeNativeContext: calls.initialize, connectNative: calls.connect, disconnectNative: calls.disconnect }))
 vi.mock('./App.vue', () => ({ default: { template: '<div data-testid="native-community-app">Community</div>' } }))
 vi.mock('./stores/chat', () => ({ useChatStore: () => ({ resetCommunityState: calls.closeSocket }) }))
 vi.mock('./stores/voice', () => ({ useVoiceStore: () => ({ disconnect: calls.leaveVoice }) }))

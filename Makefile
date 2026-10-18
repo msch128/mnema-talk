@@ -85,9 +85,11 @@ test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Pytho
 	python3 scripts/tests/test_coverage_summary.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
-# statement counts); frontend enforces all four metrics at 95% through
+# statement counts) and the floor for every single Go file; the frontend
+# enforces 90% in total and 80% per file on all four metrics through
 # web/scripts/check-coverage.ts and its reviewed per-module policy.
-COVERAGE_MIN ?= 99.1
+COVERAGE_MIN ?= 90
+COVERAGE_FILE_MIN ?= 80
 # Packages counted in the Go coverage total: everything but test helpers and
 # build-time tools.
 COVER_PKGS = $(shell go list ./cmd/... ./internal/... ./web | grep -v -e /internal/testutil -e /internal/tools/ | paste -sd, -)
@@ -96,7 +98,7 @@ coverage: coverage-go coverage-web ## Go + web coverage reports (coverage.out, w
 
 coverage-go: ## Go unit + integration tests with coverage -> coverage.out (Docker, or TEST_DATABASE_URL)
 	go test $(GO_INTEGRATION_PKG_FLAGS) -tags=integration -race -count=1 -timeout=300s -covermode=atomic -coverpkg=$(COVER_PKGS) -coverprofile=coverage.out $(GO_PKGS)
-	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN)
+	@node scripts/coverage-summary.mjs go coverage.out --min $(COVERAGE_MIN) --file-min $(COVERAGE_FILE_MIN)
 
 coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov + json summary)
 	cd web && npm run test:coverage

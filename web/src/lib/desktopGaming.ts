@@ -1,10 +1,9 @@
 import { watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { useWebRTC, setGamingPttLease } from '../composables/useWebRTC'
-import { trustedApp } from './trustedDesktop'
+import { platform } from './platform'
 
 export interface GamingChord { key: number; alt: boolean; control: boolean; shift: boolean }
 export interface GamingSettings { enabled: boolean; sidepeek_opacity: number; overlay: GamingChord; mute: GamingChord; deafen: GamingChord; ptt: GamingChord; games: string[] }
@@ -12,11 +11,11 @@ export interface GamingMember { id: string; name: string; speaking: boolean; mut
 export interface GamingVoice { clock: number; scope: string | null; connected: boolean; account: string | null; channel: string | null; muted: boolean; deafened: boolean; sharing: boolean; ptt_mode: boolean; members: GamingMember[] }
 export interface GamingSnapshot { active: boolean; overlay: boolean; settings: GamingSettings; voice: GamingVoice }
 export function gamingSurface(): boolean {
-  return ['sidepeek', 'gaming-overlay', 'gaming-settings'].includes(String(Reflect.get(window, '__MNEMA_GAMING_SURFACE__')))
+  return ['sidepeek', 'gaming-overlay', 'gaming-settings'].includes(String(platform.gamingSurface()))
 }
 export function startDesktopGaming(): () => void {
-  const token: unknown = Reflect.get(window, '__MNEMA_GAMING_BRIDGE__')
-  if (typeof token !== 'string' || trustedApp()?.role !== 'instance') return () => {}
+  const token = platform.gamingBridgeToken()
+  if (token === null || platform.trustedApp()?.role !== 'instance') return () => {}
   const auth = useAuthStore(); const chat = useChatStore(); const voice = useVoiceStore()
   const { stopScreenShare } = useWebRTC()
   let alive = true; let pending = false
@@ -59,7 +58,7 @@ export function startDesktopGaming(): () => void {
         sharing: voice.isScreenSharing, ptt_mode: voice.inputMode === 'ptt',
         members: connected ? users.slice(0, 256).map(u => ({ id: u.id, name: (u.display_name || u.username).slice(0, 80), speaking: voice.isSpeaking(u.id), muted: voice.muteStateOf(u.id).muted, sharing: !!voice.mediaState[u.id]?.screen || (u.id === account && voice.isScreenSharing) })) : []
       }
-      await invoke('desktop_gaming_sync', { token, voice: state })
+      await platform.invoke('desktop_gaming_sync', { token, voice: state })
     } catch { releasePtt() } finally { pending = false }
   }
   window.addEventListener('mnema-gaming-command', onControl)

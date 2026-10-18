@@ -11,7 +11,7 @@ import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
 import { useAppVersionStore } from '../stores/appVersion'
 import { usePermissionsStore } from '../stores/permissions'
-import { trustedApp } from '../lib/trustedDesktop'
+import { platform } from '../lib/platform'
 import { useWebRTC } from '../composables/useWebRTC'
 import { locale, SUPPORTED, t } from '../i18n'
 import UserAvatar from './UserAvatar.vue'
@@ -26,7 +26,7 @@ const chatStore = useChatStore()
 const toasts = useToastStore()
 const versionStore = useAppVersionStore()
 // Set only in the trusted desktop client, which runs a bundle it verified.
-const verified = trustedApp()
+const verified = platform.trustedApp()
 const { stopScreenShare } = useWebRTC()
 
 const root = ref<HTMLElement | null>(null)
