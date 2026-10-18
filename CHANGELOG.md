@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.2](https://github.com/msch128/mnema-talk/compare/v0.8.1...v0.8.2) (2026-10-18)
+
+
+### Features
+
+* append-only audit log for administrative actions ([#187](https://github.com/msch128/mnema-talk/issues/187)) ([9a01547](https://github.com/msch128/mnema-talk/commit/9a01547865ea0293c5c4148f4b3e636dddfa638a))
+* audit message deletions and edits, Talk presence and sign-ins ([#188](https://github.com/msch128/mnema-talk/issues/188)) ([1bd8bf8](https://github.com/msch128/mnema-talk/commit/1bd8bf820b791d4d436a8394314f079f08448565))
+* bind the media line into the E2EE frame (version 3) ([#184](https://github.com/msch128/mnema-talk/issues/184)) ([270e454](https://github.com/msch128/mnema-talk/commit/270e454cd347d7a7fc06eefebd5603741966e39e))
+* **bots:** admin Bots tab, slash commands in the composer, e2e ([#191](https://github.com/msch128/mnema-talk/issues/191)) ([3441dcf](https://github.com/msch128/mnema-talk/commit/3441dcf666108944698c44b1690bf54f8d8cda00))
+* **bots:** bot accounts, REST API, gateway and slash commands ([#185](https://github.com/msch128/mnema-talk/issues/185)) ([25fca14](https://github.com/msch128/mnema-talk/commit/25fca14c16659b9a6a4b995cdb565dabcfea4fef))
+* **bots:** built-in Bot role, bots in the member list with presence and a shared BOT tag ([#193](https://github.com/msch128/mnema-talk/issues/193)) ([ea6ff9a](https://github.com/msch128/mnema-talk/commit/ea6ff9adf588d86cce04a5f52a93e48886b9b338))
+* member timeouts and bans ([#190](https://github.com/msch128/mnema-talk/issues/190)) ([8f9cc85](https://github.com/msch128/mnema-talk/commit/8f9cc85577bab5b6df591b6e433e897847e957d0))
+* Owner-editable upload limits, globally and per role ([#183](https://github.com/msch128/mnema-talk/issues/183)) ([d1082cd](https://github.com/msch128/mnema-talk/commit/d1082cd076ed54938035e8a777f2ba5fa39e4ddf))
+* slow mode and message moderation ([#192](https://github.com/msch128/mnema-talk/issues/192)) ([2b9adc6](https://github.com/msch128/mnema-talk/commit/2b9adc651ccb780ea990a499b6bcd130c532c069))
+* **webbundle:** expiry for trust statements, one-command renewal ([#186](https://github.com/msch128/mnema-talk/issues/186)) ([bfbd830](https://github.com/msch128/mnema-talk/commit/bfbd8306e3b6556d612b1e1bf815865922bb19db))
+* **webbundle:** offline root key and signed trust statement for desktop key revocation ([#182](https://github.com/msch128/mnema-talk/issues/182)) ([414fa12](https://github.com/msch128/mnema-talk/commit/414fa12758ea21c4c5195013308a99d167a001c9))
+
+
+### Bug Fixes
+
+* **webbundle:** trust sign verifies the previous statement, shows the result and asks; max_version caps ([#189](https://github.com/msch128/mnema-talk/issues/189)) ([f034695](https://github.com/msch128/mnema-talk/commit/f034695fc63e38a16d5483f503731543d28f52da))
+
 ## [0.8.1](https://github.com/msch128/mnema-talk/compare/v0.8.0...v0.8.1) (2026-10-17)
 
 
