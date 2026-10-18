@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.6](https://github.com/msch128/mnema-talk/compare/v0.8.5...v0.8.6) (2026-10-18)
+
+
+### Code Refactoring
+
+* web client files under 400 lines, one typed call state ([#226](https://github.com/msch128/mnema-talk/issues/226)) ([c2fb710](https://github.com/msch128/mnema-talk/commit/c2fb71031e73b9bb0ef0545db6ff06fe41f80430))
+
 ## [0.8.5](https://github.com/msch128/mnema-talk/compare/v0.8.4...v0.8.5) (2026-10-18)
 
 
