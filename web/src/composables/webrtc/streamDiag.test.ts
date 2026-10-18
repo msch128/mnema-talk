@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { streamDiag } from './useWebRTC'
-import type { MediaStat } from '../lib/mediaStats'
+import { streamDiag } from './streamDiag'
+import type { MediaStat } from '../../lib/mediaStats'
 
 describe('streamDiag', () => {
   it('summarizes sent and received video with bitrate and limits', () => {
