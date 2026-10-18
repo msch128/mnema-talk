@@ -1,0 +1,219 @@
+import { toRaw } from 'vue'
+import { useToastStore } from '../../stores/toast'
+import { trackConstraints, streamTuning } from '../../lib/streamQuality'
+import { confirm } from '../../lib/confirm'
+import { t } from '../../i18n'
+import { platform } from '../../lib/platform'
+import type { MediaStat } from '../../lib/mediaStats'
+import type { StreamQuality } from '../../lib/streamQuality'
+import { mediaUnprotected } from './mediaRoom'
+import type { Cx } from './state'
+import { retuneForCapture, stopCaptureWatch, syncLayers, watchCapture } from './layers'
+import { ensureScreenAudioGuard, screenAudioConstraints, tuneSender } from './senderTuning'
+import { screenSenderParams } from './senders'
+
+// The screen's sound ended (or sharing stopped): its line goes silent.
+async function detachScreenAudio(cx: Cx) {
+  const { voice, st } = cx
+  voice.hasScreenAudio = false
+  if (st.screenAudioSender) await st.screenAudioSender.replaceTrack(null).catch(() => {})
+}
+
+// Asks the browser for a screen, captured in the quality chosen for the share.
+function pickScreen(cx: Cx) {
+  const { voice } = cx
+  return navigator.mediaDevices.getDisplayMedia({
+    video: trackConstraints(voice.screenQuality),
+    audio: screenAudioConstraints()
+  })
+}
+
+// Sends a freshly picked screen (and its sound, on its own line).
+export async function attachScreen(cx: Cx, stream: MediaStream) {
+  const { voice, chat, st } = cx
+  const gen = st.joinGeneration
+  const captureGen = st.screenCaptureGeneration
+  const currentCapture = () => gen === st.joinGeneration && captureGen === st.screenCaptureGeneration && toRaw(st.localScreenStream.value) === stream
+  const videoTrack = stream.getVideoTracks()[0]
+  if (videoTrack) {
+    if ('contentHint' in videoTrack) videoTrack.contentHint = streamTuning(voice.screenQuality).contentHint
+    videoTrack.onended = () => { if (toRaw(st.localScreenStream.value) === stream) stopScreenShare(cx) }
+  }
+  const screenAudio = stream.getAudioTracks()[0] || null
+  const guard = screenAudio ? await ensureScreenAudioGuard(screenAudio) : null
+  if (!currentCapture()) return
+  st.screenAudioGuard = guard
+  if (screenAudio) {
+    // The streamer's mute: a disabled track sends silence.
+    screenAudio.enabled = !voice.isScreenAudioMuted
+    screenAudio.onended = () => { if (toRaw(st.localScreenStream.value) === stream) detachScreenAudio(cx) }
+    if (guard === 'none' && !st.warnedScreenAudioTracks.has(screenAudio)) {
+      st.warnedScreenAudioTracks.add(screenAudio)
+      useToastStore().info(t('talk.screenAudioFeedbackWarning'), {
+        action: {
+          label: t('talk.muteStreamAudio'),
+          onClick: () => {
+            if (!currentCapture()) return
+            voice.isScreenAudioMuted = true
+            screenAudio.enabled = false
+          }
+        }
+      })
+    }
+  }
+  voice.hasScreenAudio = !!screenAudio
+
+  if (st.screenSender && videoTrack) {
+    const sender = st.screenSender
+    const gen = st.joinGeneration
+    const current = () => gen === st.joinGeneration && st.screenSender === sender && toRaw(st.localScreenStream.value) === stream
+    // Set the chosen limits while the negotiated line is dormant. Attaching
+    // first starts an encoder at the previous/default size, then immediately
+    // asks it to reconfigure (particularly expensive for a 4K capture).
+    const dormant = !sender.track
+    if (dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
+    if (!current()) return
+    await sender.replaceTrack(videoTrack).catch(() => {})
+    if (!current()) return
+    if (!dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
+    if (!current()) return
+    chat.sendWSEvent('webrtc_screenshare_start', {})
+    chat.sendWSEvent('webrtc_request_keyframe', {})
+    await syncLayers(cx)
+    watchCapture(cx, videoTrack, () => void retuneForCapture(cx, videoTrack))
+  }
+  if (st.screenAudioSender) await st.screenAudioSender.replaceTrack(screenAudio).catch(() => {})
+  if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
+}
+
+export async function startScreenShare(cx: Cx, quality?: StreamQuality): Promise<void> {
+  const { voice, st } = cx
+  if (platform.isDesktop()) {
+    useToastStore().error(t('nativeDesktop.mediaUnavailable'))
+    return
+  }
+  if (mediaUnprotected()) return
+  if (st.screenCapturePending) return
+  if (st.localScreenStream.value) {
+    const ok = await confirm({
+      title: t('talk.replaceShareTitle'),
+      body: t('talk.replaceShareBody'),
+      confirmLabel: t('talk.replaceShareConfirm'),
+      cancelLabel: t('common.cancel'),
+      danger: false
+    })
+    if (!ok || !st.localScreenStream.value) return
+    return replaceScreenShare(cx)
+  }
+  const gen = st.joinGeneration
+  const captureGen = ++st.screenCaptureGeneration
+  const channelId = voice.currentChannelId
+  if (quality) voice.setScreenQuality(quality)
+  else voice.resetScreenQuality()
+  let stream
+  st.screenCapturePending = true
+  try {
+    stream = await pickScreen(cx)
+  } catch (err) {
+    console.warn('Screen share canceled or failed:', err)
+    return
+  } finally {
+    st.screenCapturePending = false
+  }
+  // Left or switched the call (or started twice) while the picker was open.
+  if (gen !== st.joinGeneration || captureGen !== st.screenCaptureGeneration || voice.currentChannelId !== channelId || st.localScreenStream.value) {
+    stream.getTracks().forEach(tr => tr.stop())
+    return
+  }
+  st.localScreenStream.value = stream
+  voice.localScreenStream = stream
+  voice.isScreenSharing = true
+  await attachScreen(cx, stream)
+}
+
+// Swaps the running share for a newly picked screen on the same lines: no
+// renegotiation, the viewers keep watching, the quality stays as chosen.
+export async function replaceScreenShare(cx: Cx): Promise<void> {
+  const { voice, st } = cx
+  if (st.screenCapturePending) return
+  const old = st.localScreenStream.value
+  if (!old) return startScreenShare(cx)
+  const gen = st.joinGeneration
+  const captureGen = ++st.screenCaptureGeneration
+  let stream
+  st.screenCapturePending = true
+  try {
+    stream = await pickScreen(cx)
+  } catch (err) {
+    console.warn('Screen share canceled or failed:', err)
+    return
+  } finally {
+    st.screenCapturePending = false
+  }
+  // Left, stopped or replaced meanwhile.
+  if (gen !== st.joinGeneration || captureGen !== st.screenCaptureGeneration || st.localScreenStream.value !== old) {
+    stream.getTracks().forEach(tr => tr.stop())
+    return
+  }
+  st.localScreenStream.value = stream
+  voice.localScreenStream = stream
+  await attachScreen(cx, stream)
+  old.getTracks().forEach(tr => {
+    tr.onended = null
+    tr.stop()
+  })
+}
+
+export function stopScreenShare(cx: Cx) {
+  const { voice, chat, st } = cx
+  stopCaptureWatch(cx)
+  st.screenCaptureGeneration++
+  const wasSharing = !!st.localScreenStream.value
+  if (st.screenSender) st.screenSender.replaceTrack(null).catch(() => {})
+  detachScreenAudio(cx)
+  // The next share starts again with its best layer only.
+  voice.layersWanted = null
+  st.declaredKey = ''
+
+  if (st.localScreenStream.value) {
+    st.localScreenStream.value.getTracks().forEach(tr => tr.stop())
+    st.localScreenStream.value = null
+  }
+  voice.localScreenStream = null
+  voice.isScreenSharing = false
+  voice.hasScreenAudio = false
+  voice.isScreenAudioMuted = false
+  voice.resetScreenQuality()
+  if (wasSharing) chat.sendWSEvent('webrtc_screenshare_stop', {})
+  void syncLayers(cx)
+}
+
+// What the screen sender sends right now (RTCRtpSender.getStats), for the
+// streamer's "Advanced" info; null without a share.
+export async function getScreenSendStats(cx: Cx): Promise<MediaStat[] | null> {
+  const { st } = cx
+  if (!st.screenSender?.getStats || !st.localScreenStream.value) return null
+  try {
+    return [...(await st.screenSender.getStats()).values()]
+  } catch {
+    return null
+  }
+}
+
+// A track setting is the capture's configured rate, not measured frame
+// delivery. The advanced menu displays media-source FPS separately.
+export function getScreenCaptureSettings(cx: Cx): MediaTrackSettings | null {
+  const { st } = cx
+  const settings = st.localScreenStream.value?.getVideoTracks()[0]?.getSettings?.()
+  return settings ? {
+    ...(settings.width === undefined ? {} : { width: settings.width }),
+    ...(settings.height === undefined ? {} : { height: settings.height }),
+    ...(settings.frameRate === undefined ? {} : { frameRate: settings.frameRate })
+  } : null
+}
+
+export function toggleScreenShare(cx: Cx) {
+  const { voice } = cx
+  return voice.isScreenSharing ? stopScreenShare(cx) : startScreenShare(cx)
+}
+
