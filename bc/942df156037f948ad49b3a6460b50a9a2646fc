@@ -1,0 +1,21 @@
+internal/server/chat_integration_test.go
+  s_06fcde5dbef956::t_93b251ace2edb8 8
+  s_06fcde5dbef956::t_18c8f8277118ae 167-177,190,206-213,255,260-261,273-276
+  s_06fcde5dbef956::t_3a8e3c3a64bb46 277-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc942df156037f948ad49b3a6460b50a9a2646fc",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
