@@ -6,17 +6,43 @@
 #   E2E_INSTALL_BROWSER=1 also run `playwright install --with-deps chromium`
 #   E2E_WEBRTC_ALL_INTERFACES=1 include VM/VPN interfaces in the browser ICE test
 #   E2E_WEBRTC_UDP_MUX_PORT=0    test legacy per-peer ports instead of the shared UDP port
+# Runs do not collide: the compose project is unique per run (mnema-e2e-<pid>) and
+# the Postgres, S3, app and WebRTC UDP ports are free ports picked at start, so
+# several runs (other worktrees, other agents) can go at the same time. Pin any
+# of them for debugging: E2E_PROJECT, E2E_PG_PORT, E2E_S3_PORT, E2E_APP_PORT,
+# E2E_UDP_PORT (first of a range of 51 UDP ports), E2E_LOG.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 
-PG_PORT="${E2E_PG_PORT:-55432}"
-S3_PORT="${E2E_S3_PORT:-58333}"
-APP_PORT="${E2E_APP_PORT:-58080}"
+# A free port, asked from the kernel (TCP or UDP). Two calls in a row can in
+# theory return the same port, so ports already chosen are skipped.
+CHOSEN=" "
+free_port() {
+  local kind="$1" port
+  for _ in $(seq 1 20); do
+    port="$(python3 -c "import socket,sys; s=socket.socket(socket.AF_INET, socket.SOCK_STREAM if sys.argv[1]=='tcp' else socket.SOCK_DGRAM); s.bind(('127.0.0.1',0)); print(s.getsockname()[1])" "$kind")"
+    case "$CHOSEN" in *" $port "*) continue ;; esac
+    CHOSEN="$CHOSEN$port "
+    echo "$port"
+    return
+  done
+  echo "no free port" >&2
+  exit 1
+}
+
+PG_PORT="${E2E_PG_PORT:-$(free_port tcp)}"
+S3_PORT="${E2E_S3_PORT:-$(free_port tcp)}"
+APP_PORT="${E2E_APP_PORT:-$(free_port tcp)}"
+# WebRTC media: one shared UDP port plus a small range, kept below 65535.
+UDP_MIN="${E2E_UDP_PORT:-$(free_port udp)}"
+if [ "$UDP_MIN" -gt 65480 ]; then UDP_MIN=50100; fi
+UDP_MAX=$((UDP_MIN + 50))
+PROJECT="${E2E_PROJECT:-mnema-e2e-$$}"
 BIN="$ROOT/bin/mnema-talk-e2e"
-LOG="$ROOT/e2e/server.log"
-COMPOSE=(docker compose -p mnema-e2e -f "$ROOT/e2e/docker-compose.yml")
+LOG="${E2E_LOG:-$ROOT/e2e/server.log}"
+COMPOSE=(docker compose -p "$PROJECT" -f "$ROOT/e2e/docker-compose.yml")
 
 # Throwaway values, generated per run; nothing here is a real secret.
 JWT_SECRET="$(openssl rand -hex 32)"
@@ -57,6 +83,7 @@ if [ "${E2E_INSTALL_BROWSER:-0}" = "1" ]; then
   (cd e2e && npx playwright install --with-deps chromium)
 fi
 
+echo "==> project $PROJECT: postgres :$PG_PORT, s3 :$S3_PORT, app :$APP_PORT, udp :$UDP_MIN-$UDP_MAX"
 echo "==> starting postgres + seaweedfs"
 "${COMPOSE[@]}" up -d --wait postgres seaweedfs
 
@@ -73,7 +100,7 @@ env -i PATH="$PATH" HOME="$HOME" \
   S3_ACCESS_KEY="$S3_KEY" S3_SECRET_KEY="$S3_SECRET" S3_FORCE_PATH_STYLE=true \
   WEBHOOK_ALLOW_PRIVATE_TARGETS=127.0.0.0/8 \
   LINK_PREVIEWS_ENABLED=false UPDATE_CHECK_ENABLED=false LOG_LEVEL="${E2E_LOG_LEVEL:-}" \
-  WEBRTC_UDP_PORT_MIN=50100 WEBRTC_UDP_PORT_MAX=50150 \
+  WEBRTC_UDP_PORT_MIN="$UDP_MIN" WEBRTC_UDP_PORT_MAX="$UDP_MAX" \
   WEBRTC_UDP_MUX_PORT="${E2E_WEBRTC_UDP_MUX_PORT:-}" \
   WEBRTC_NAT_1TO1_IP=127.0.0.1 \
   "$BIN" >"$LOG" 2>&1 &

@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/db"
+	"github.com/msch128/mnema-talk/internal/events"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -30,6 +31,16 @@ type Handler struct {
 	// OnRevoke closes live gateway connections: of one token when tokenID is
 	// set, of the whole bot otherwise. nil does nothing.
 	OnRevoke func(botID uuid.UUID, tokenID *uuid.UUID)
+	// Events tells connected members to reload the member list, where bots
+	// appear. nil does nothing.
+	Events events.Publisher
+}
+
+// membersChanged makes every client reload the member list and the roles.
+func (h *Handler) membersChanged() {
+	if h.Events != nil {
+		h.Events.Broadcast("roles_changed", nil)
+	}
 }
 
 // MountAdmin registers the management routes. Every one needs Manage bots
@@ -219,11 +230,23 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) error {
 	if err := checkIntents(req.AllowedIntents); err != nil {
 		return err
 	}
-	b, err := Create(r.Context(), h.DB, name, req.AllowedIntents, auth.UserFrom(r.Context()).ID)
+	// Under the permission lock: the new bot starts with the Bot role and its
+	// overwrites, which must not be more than its creator holds.
+	var id uuid.UUID
+	actor := auth.UserFrom(r.Context())
+	err = h.Perms.LockedCreatingBot(r.Context(), actor.Subject(), func(tx pgx.Tx, _ *perm.Snapshot) (err error) {
+		id, err = createIn(r.Context(), tx, name, req.AllowedIntents, actor.ID)
+		return err
+	})
+	if err != nil {
+		return wrapCreate(err)
+	}
+	b, err := Get(r.Context(), h.DB, id)
 	if err != nil {
 		return err
 	}
 	h.Perms.Changed(nil)
+	h.membersChanged()
 	httpx.WriteJSON(w, http.StatusCreated, b)
 	return nil
 }
@@ -304,10 +327,12 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 		h.OnRevoke(b.ID, nil)
 	}
 	h.Perms.Changed(nil)
+	h.membersChanged()
 	return h.writeCurrent(w, r, b.ID)
 }
 
 func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.UUID) error {
+	h.membersChanged() // avatar and role changes show in the member list
 	cur, err := Get(r.Context(), h.DB, id)
 	if err != nil {
 		return err
@@ -349,6 +374,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) error {
 		h.OnRevoke(b.ID, nil)
 	}
 	h.Perms.Changed(nil)
+	h.membersChanged()
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

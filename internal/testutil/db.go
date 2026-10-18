@@ -106,7 +106,13 @@ func reset(p *db.Pool) error {
 	if _, err := p.Exec(ctx, `DELETE FROM audit_log`); err != nil {
 		return err
 	}
-	if _, err := p.Exec(ctx, `DELETE FROM roles WHERE NOT is_everyone`); err != nil {
+	if _, err := p.Exec(ctx, `DELETE FROM roles WHERE NOT is_everyone AND NOT managed`); err != nil {
+		return err
+	}
+	// The managed Bot role stays too, back at its defaults.
+	if _, err := p.Exec(ctx, `
+		UPDATE roles SET name = 'Bot', color = 0, position = 1, permissions = 0, hoist = TRUE,
+		       mentionable = FALSE, max_upload_mb = NULL WHERE managed`); err != nil {
 		return err
 	}
 	_, err := p.Exec(ctx, `UPDATE roles SET permissions = $1 WHERE is_everyone`, int64(perm.DefaultEveryone))

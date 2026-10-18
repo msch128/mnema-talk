@@ -39,6 +39,37 @@ mentions; stored, not used yet).
 - **Administrator** grants every permission and skips channel overwrites. The
   hierarchy still applies to it, and the Owner-only powers stay with the Owner.
 
+### The managed Bot role
+
+One more role is built in: **Bot** (`managed: true`), created by migration
+0032 at the bottom of the hierarchy, just above `@everyone`, and listed
+separately in the member list (hoisted) so bots read as a group. Every bot
+holds it from its creation, and nobody else can.
+
+| | |
+|---|---|
+| Held by | every bot, automatically; given to existing bots by the migration |
+| Remove from a bot | not possible: `PUT /api/admin/bots/{id}/roles` keeps it, whether the list names it or not |
+| Give to a person | refused (`PUT /api/admin/users/{id}/roles`), and the database refuses it too |
+| Delete | refused (API and database) |
+| Rename | refused; sending the same name is fine |
+| Colour, hoist, mentionable, position | editable like any role by someone above it |
+| Upload limit | none: bots upload under their own rules |
+| Permissions | editable, but only through the central **bot invariant** (below) |
+| Default permissions | none: a bot can do nothing until granted something |
+
+Because the role affects every bot, the invariant covers it even before the
+first bot exists: only the Owner can add *Administrator* or an admin-area
+permission to it (or allow one in a channel for it), nobody can give it
+permissions they lack themselves, and creating a bot is checked against what
+the Bot role and its overwrites give it, so a manager cannot create a bot that
+starts with more than they hold. New roles are placed just above the Bot role
+while it is at the bottom, so whoever manages bots outranks it. The role editor
+shows it with a lock icon and an explanation; the roles of a person never list
+it, and a bot's role list shows it ticked and fixed. `GET /api/roles` marks it
+with `managed`. Reordering lists it like any role, and a list without it (older
+clients) moves it to the bottom.
+
 ### Permissions
 
 | Permission | What it allows | Overwritable per channel |

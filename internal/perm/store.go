@@ -71,6 +71,18 @@ func (o *OptionalInt) UnmarshalJSON(b []byte) error {
 // overwrites, removing a deny, a channel moving between categories) is
 // covered, now and later.
 func (s *Service) Locked(ctx context.Context, actor Subject, fn func(tx pgx.Tx, snap *Snapshot) error) error {
+	return s.locked(ctx, actor, false, fn)
+}
+
+// LockedCreatingBot is Locked for a change that adds a bot: the bot invariant
+// is checked even when no bot existed before, and a new bot counts as having
+// had nothing, so what the Bot role and its overwrites give it is checked
+// against the creator.
+func (s *Service) LockedCreatingBot(ctx context.Context, actor Subject, fn func(tx pgx.Tx, snap *Snapshot) error) error {
+	return s.locked(ctx, actor, true, fn)
+}
+
+func (s *Service) locked(ctx context.Context, actor Subject, always bool, fn func(tx pgx.Tx, snap *Snapshot) error) error {
 	if s.db == nil {
 		return errNoDatabase
 	}
@@ -85,7 +97,7 @@ func (s *Service) Locked(ctx context.Context, actor Subject, fn func(tx pgx.Tx, 
 		if err := fn(tx, snap); err != nil {
 			return err
 		}
-		if snap.IsOwner(actor) || len(snap.bots) == 0 {
+		if snap.IsOwner(actor) || (len(snap.bots) == 0 && !always) {
 			return nil
 		}
 		after := newSnapshot(s.now())
@@ -111,11 +123,15 @@ var (
 func checkBotGrowth(before, after *Snapshot, actor Subject) error {
 	for id := range after.bots {
 		bot := Subject{ID: id}
-		if err := growth(before.Global(bot), after.Global(bot), after.Global(actor)); err != nil {
+		var wasGlobal Set
+		var was map[uuid.UUID]Set
+		if before.bots[id] { // a bot created by this change had nothing before
+			wasGlobal, was = before.Global(bot), before.ChannelPermissions(bot)
+		}
+		if err := growth(wasGlobal, after.Global(bot), after.Global(actor)); err != nil {
 			return err
 		}
 		now := after.ChannelPermissions(bot)
-		was := before.ChannelPermissions(bot)
 		for ch, p := range now {
 			if err := growth(was[ch], p, after.Channel(actor, ch)); err != nil {
 				return err
@@ -204,12 +220,12 @@ func checkColor(c int) error {
 func scanRole(row pgx.Row) (Role, error) {
 	var r Role
 	var perms int64
-	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.MaxUploadMB)
+	err := row.Scan(&r.ID, &r.Name, &r.Color, &r.Position, &perms, &r.Hoist, &r.Mentionable, &r.Everyone, &r.Managed, &r.MaxUploadMB)
 	r.Permissions = Set(perms)
 	return r, err
 }
 
-const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, max_upload_mb`
+const roleColumns = `id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb`
 
 // CreateRole adds a role at the bottom of the hierarchy (just above
 // @everyone), so it is always below the actor's own highest role.
@@ -248,13 +264,22 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 		if err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE roles SET position = position + 1 WHERE NOT is_everyone`); err != nil {
+		// A new role goes to the bottom, except that it stays above the Bot
+		// role while that sits at the bottom: members who manage bots must
+		// outrank the role every bot holds.
+		at := 1
+		for _, r := range snap.roles {
+			if r.Managed && r.Position == 1 {
+				at = 2
+			}
+		}
+		if _, err := tx.Exec(ctx, `UPDATE roles SET position = position + 1 WHERE NOT is_everyone AND position >= $1`, at); err != nil {
 			return nil, fmt.Errorf("shift roles: %w", err)
 		}
 		created, err = scanRole(tx.QueryRow(ctx, `
 			INSERT INTO roles (name, color, position, permissions, hoist, mentionable, max_upload_mb)
-			VALUES ($1, $2, 1, $3, $4, $5, $6) RETURNING `+roleColumns,
-			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable, maxUpload))
+			VALUES ($1, $2, $7, $3, $4, $5, $6) RETURNING `+roleColumns,
+			name, color, int64(perms), in.Hoist != nil && *in.Hoist, in.Mentionable != nil && *in.Mentionable, maxUpload, at))
 		if err != nil {
 			return nil, fmt.Errorf("insert role: %w", err)
 		}
@@ -263,7 +288,11 @@ func (s *Service) CreateRole(ctx context.Context, actor Subject, in RoleInput) (
 	return created, err
 }
 
-var errRoleNotFound = httpx.ErrNotFound("role not found")
+var (
+	errRoleNotFound = httpx.ErrNotFound("role not found")
+	errManagedName  = httpx.ErrInvalidInput("the Bot role is managed: it cannot be renamed")
+	errManagedHeld  = httpx.ErrInvalidInput("the Bot role is managed: only bots hold it")
+)
 
 // UpdateRole changes a role. @everyone only has its permissions editable.
 func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, in RoleInput) (Role, error) {
@@ -286,7 +315,13 @@ func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, i
 			if err != nil {
 				return nil, err
 			}
+			if role.Managed && name != role.Name {
+				return nil, errManagedName
+			}
 			next.Name = name
+		}
+		if role.Managed && in.MaxUploadMB.Present {
+			return nil, httpx.ErrInvalidInput("the Bot role has no upload limit: bots upload under their own rules")
 		}
 		if in.Color != nil {
 			if err := checkColor(*in.Color); err != nil {
@@ -359,6 +394,9 @@ func (s *Service) DeleteRole(ctx context.Context, actor Subject, id uuid.UUID) e
 			}
 			return nil, errRoleNotFound
 		}
+		if role.Managed {
+			return nil, httpx.ErrInvalidInput("the Bot role is managed: it cannot be deleted")
+		}
 		if err := snap.CanManageRole(actor, role); err != nil {
 			return nil, err
 		}
@@ -385,6 +423,14 @@ func (s *Service) ReorderRoles(ctx context.Context, actor Subject, ids []uuid.UU
 		for _, r := range snap.roles {
 			if !r.Everyone {
 				custom++
+			}
+		}
+		// A list written before the Bot role existed leaves it out: it goes to
+		// the bottom, where it started.
+		ids := slices.Clone(ids)
+		for id, r := range snap.roles {
+			if r.Managed && !slices.Contains(ids, id) {
+				ids = append(ids, id)
 			}
 		}
 		if len(ids) != custom {
@@ -460,11 +506,23 @@ func (s *Service) setRoles(ctx context.Context, actor Subject, need Set, userID 
 			if !ok || r.Everyone {
 				return nil, httpx.ErrInvalidInput("unknown role")
 			}
+			if r.Managed && !bot {
+				return nil, errManagedHeld
+			}
 			want[id] = true
 		}
 		have := map[uuid.UUID]bool{}
 		for _, id := range snap.userRoles[userID] {
 			have[id] = true
+		}
+		if bot {
+			// Every bot keeps the Bot role, whatever the list says: it cannot
+			// be taken away, so a list without it leaves it in place.
+			for id, r := range snap.roles {
+				if r.Managed {
+					want[id] = true
+				}
+			}
 		}
 		for id := range want {
 			if !have[id] {

@@ -134,40 +134,56 @@ func List(ctx context.Context, q db.Querier) ([]Bot, error) {
 	})
 }
 
-// Create makes the bot account and the bot in one transaction. creator is
-// recorded and grants nothing.
+// Create makes the bot account and the bot in one transaction, and gives it
+// the built-in Bot role. creator is recorded and grants nothing. Callers that
+// act for a person go through Handler.create, which holds the permission lock.
 func Create(ctx context.Context, p *db.Pool, name string, intents int64, creator uuid.UUID) (*Bot, error) {
-	suffix := make([]byte, 6)
-	_, _ = rand.Read(suffix)
 	var id uuid.UUID
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		var n int
-		if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM bots`).Scan(&n); err != nil {
-			return err
-		}
-		if n >= MaxBots {
-			return httpx.ErrConflict(fmt.Sprintf("at most %d bots are allowed", MaxBots))
-		}
-		var user uuid.UUID
-		// "!" is no password hash: the account can never sign in (login,
-		// sessions and re-authentication skip bots).
-		if err := tx.QueryRow(ctx, `
-			INSERT INTO users (username, display_name, password_hash, role, is_bot)
-			VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
-			"bot-"+hex.EncodeToString(suffix), name).Scan(&user); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, `
-			INSERT INTO bots (user_id, name, allowed_intents, created_by) VALUES ($1, $2, $3, $4) RETURNING id`,
-			user, name, intents, creator).Scan(&id)
+	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) (err error) {
+		id, err = createIn(ctx, tx, name, intents, creator)
+		return err
 	})
 	if err != nil {
-		if _, ok := httpx.AsAPIError(err); ok {
-			return nil, err
-		}
-		return nil, fmt.Errorf("create bot: %w", err)
+		return nil, wrapCreate(err)
 	}
 	return Get(ctx, p, id)
+}
+
+func wrapCreate(err error) error {
+	if _, ok := httpx.AsAPIError(err); ok {
+		return err
+	}
+	return fmt.Errorf("create bot: %w", err)
+}
+
+// createIn inserts the account, the bot and its Bot role in tx.
+func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creator uuid.UUID) (uuid.UUID, error) {
+	suffix := make([]byte, 6)
+	_, _ = rand.Read(suffix)
+	var n int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM bots`).Scan(&n); err != nil {
+		return uuid.Nil, err
+	}
+	if n >= MaxBots {
+		return uuid.Nil, httpx.ErrConflict(fmt.Sprintf("at most %d bots are allowed", MaxBots))
+	}
+	var user, id uuid.UUID
+	// "!" is no password hash: the account can never sign in (login,
+	// sessions and re-authentication skip bots).
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO users (username, display_name, password_hash, role, is_bot)
+		VALUES ($1, $2, '!', 'user', TRUE) RETURNING id`,
+		"bot-"+hex.EncodeToString(suffix), name).Scan(&user); err != nil {
+		return uuid.Nil, err
+	}
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO bots (user_id, name, allowed_intents, created_by) VALUES ($1, $2, $3, $4) RETURNING id`,
+		user, name, intents, creator).Scan(&id); err != nil {
+		return uuid.Nil, err
+	}
+	// Every bot holds the managed Bot role from the start.
+	_, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE managed`, user)
+	return id, err
 }
 
 // Update changes the name, intents and disabled flag (nil leaves one).
