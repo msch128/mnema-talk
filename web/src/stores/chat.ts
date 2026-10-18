@@ -1,7 +1,4 @@
-import { NativeSocket } from '../lib/nativeTransport'
-import { isTrustedDesktop } from '../lib/trustedDesktop'
-import { TrustedSocket } from '../lib/trustedSocket'
-import { isDesktopRuntime } from '../lib/desktopRuntime'
+import { platform, type PlatformSocket } from '../lib/platform'
 import { defineStore } from 'pinia'
 import { ref, shallowRef, computed } from 'vue'
 import type { Category, Channel, Member, Message, User, UserUpdate, Presence, ChosenPresence, ReadState, NotifyLevel, CreateMessageRequest } from '../types/domain'
@@ -84,7 +81,7 @@ export const useChatStore = defineStore('chat', () => {
   const activeThread = ref<ThreadRoot | null>(null)
   const threadReplies = ref<Message[]>([])
   const isThreadLoading = ref(false)
-  const ws = shallowRef<WebSocket | NativeSocket | TrustedSocket | null>(null)
+  const ws = shallowRef<PlatformSocket | null>(null)
   const isConnected = ref(false)
 
   // Community members & real-time presence
@@ -673,11 +670,7 @@ export const useChatStore = defineStore('chat', () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     // The trusted desktop client cannot reach the server from its own origin:
     // its host opens the socket (doc/desktop-trusted-client.md).
-    const socket = isDesktopRuntime()
-      ? new NativeSocket()
-      : isTrustedDesktop()
-        ? new TrustedSocket()
-        : new WebSocket(`${protocol}//${window.location.host}/api/ws`)
+    const socket = platform.openSocket(`${protocol}//${window.location.host}/api/ws`)
 
     const currentSocket = () => ws.value === socket && socketGeneration === generation
     const currentAccount = () => authStore.user?.id === accountId

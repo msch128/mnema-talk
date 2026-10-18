@@ -17,7 +17,7 @@ import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
-import { isDesktopRuntime } from '../lib/desktopRuntime'
+import { platform } from '../lib/platform'
 import type { FilterNode } from '../lib/dfnNode'
 import type { NoiseModel } from '../lib/dfnTypes'
 import type { MediaStat } from '../lib/mediaStats'
@@ -1463,7 +1463,7 @@ export function useWebRTC() {
     }
     // The native transport has no qualified protected-media owner yet.
     // Reject before changing connection state or requesting physical capture.
-    if (isDesktopRuntime()) {
+    if (platform.isDesktop()) {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
@@ -1550,7 +1550,7 @@ export function useWebRTC() {
   // peer; start a fresh connection and announce the join again. The server
   // treats it as a resume (no leave/join for the others) within its grace time.
   function rejoinAfterReconnect() {
-    if (isDesktopRuntime()) return
+    if (platform.isDesktop()) return
     const channelId = voiceStore.currentChannelId
     if (!channelId) return
     // The server keeps the roster across a short disconnect, so nobody else
@@ -1646,7 +1646,7 @@ export function useWebRTC() {
       ctx = new AudioCtx({ latencyHint: 'interactive', sampleRate: 48000 })
     } catch (err) {
       console.warn('AudioContext setup error:', err)
-      if (typeof Reflect.get(window, '__MNEMA_GAMING_BRIDGE__') === 'string') { stream.getTracks().forEach(track => track.stop()); return null }
+      if (platform.gamingBridgeToken() !== null) { stream.getTracks().forEach(track => track.stop()); return null }
       return stream
     }
     audioContext = ctx
@@ -1701,7 +1701,7 @@ export function useWebRTC() {
 
     // Only the desktop gaming bridge needs a native-key lease. The sent
     // microphone passes this gain even at 100% volume and without an AI filter.
-    if (typeof Reflect.get(window, '__MNEMA_GAMING_BRIDGE__') === 'string' && window.location.protocol === 'https:') {
+    if (platform.gamingBridgeToken() !== null && window.location.protocol === 'https:') {
       try {
         const gain = ctx.createGain()
         const destination = ctx.createMediaStreamDestination()
@@ -1995,7 +1995,7 @@ export function useWebRTC() {
   }
 
   async function startScreenShare(quality?: StreamQuality): Promise<void> {
-    if (isDesktopRuntime()) {
+    if (platform.isDesktop()) {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
@@ -2150,7 +2150,7 @@ export function useWebRTC() {
   }
 
   async function startCamera() {
-    if (isDesktopRuntime()) {
+    if (platform.isDesktop()) {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
@@ -2246,7 +2246,7 @@ export function useWebRTC() {
   // Rejoins the channel of a call interrupted by a reload less than 30 s ago.
   // Must run once the WebSocket is connected (voice_join goes over it).
   async function resumeVoiceSession() {
-    if (isDesktopRuntime()) return false
+    if (platform.isDesktop()) return false
     const channelId = voiceSession.recent()
     if (!channelId || voiceStore.currentChannelId) return false
     if (!chatStore.isVoiceChannel(channelId)) {

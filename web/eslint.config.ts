@@ -45,6 +45,51 @@ export default tseslint.config(
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser, parserOptions: { parser: tseslint.parser } }
   },
+  // The desktop client's window globals, IPC and native transports are reached
+  // only through lib/platform.ts (doc/desktop-trusted-client.md). Everything
+  // else stays platform-agnostic.
+  {
+    files: ['**/*.ts', '**/*.vue'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['@tauri-apps/*'], message: 'Reach the desktop host through lib/platform.' },
+          { group: ['**/nativeTransport', '**/trustedDesktop', '**/trustedSocket', '**/desktopRuntime'], message: 'Use lib/platform instead of the desktop adapter internals.' }
+        ]
+      }],
+      'no-restricted-globals': ['error',
+        { name: '__TAURI__', message: 'Use lib/platform.' },
+        { name: '__TAURI_INTERNALS__', message: 'Use lib/platform.' },
+        { name: '__MNEMA_TRUSTED_APP__', message: 'Use lib/platform.' }
+      ],
+      'no-restricted-properties': ['error',
+        { object: 'window', property: 'isTauri', message: 'Use lib/platform.' },
+        { object: 'window', property: '__TAURI__', message: 'Use lib/platform.' },
+        { object: 'window', property: '__TAURI_INTERNALS__', message: 'Use lib/platform.' },
+        { object: 'window', property: '__MNEMA_TRUSTED_APP__', message: 'Use lib/platform.' }
+      ],
+      'no-restricted-syntax': ['error', {
+        selector: "Literal[value=/^__(TAURI|TAURI_INTERNALS|MNEMA_TRUSTED_APP|MNEMA_WEB_DESKTOP|MNEMA_GAMING_BRIDGE|MNEMA_GAMING_SURFACE)(__)?$/]",
+        message: 'Desktop window globals are read only in lib/platform and its adapter modules.'
+      }, {
+        selector: "MemberExpression[property.name='isTauri']",
+        message: 'Ask lib/platform whether this is the desktop client.'
+      }]
+    }
+  },
+  {
+    files: [
+      '**/*.test.ts',
+      '**/*.fixture.ts',
+      '**/*.config.ts',
+      '**/src/lib/platform.ts',
+      '**/src/lib/desktopRuntime.ts',
+      '**/src/lib/trustedDesktop.ts',
+      '**/src/lib/trustedSocket.ts',
+      '**/src/lib/nativeTransport.ts'
+    ],
+    rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off', 'no-restricted-properties': 'off', 'no-restricted-syntax': 'off' }
+  },
   {
     files: ['**/*.ts', '**/*.vue'],
     rules: {
