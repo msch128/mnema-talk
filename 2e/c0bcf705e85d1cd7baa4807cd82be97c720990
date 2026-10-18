@@ -1,0 +1,61 @@
+web/src/composables/useWebRTC.ts
+  s_06fcde5dbef956::t_b2b5603020601c 20,1466,1553,1649,1704,1998,2153,2249
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_f14b8b8122c77b 1,84
+  s_06fcde5dbef956::t_b2b5603020601c 673
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_f6891d4a7b030e 1-42,45-46,48-67,69-96,98,100-102
+  s_06fcde5dbef956::t_4825cbe92f31d9 43
+  s_06fcde5dbef956::t_51d79463b10fad 44,68,97
+  s_06fcde5dbef956::t_8774ab9150ee59 47,99
+web/src/lib/desktopGaming.ts
+  s_06fcde5dbef956::t_b2b5603020601c 6,14,17-18,61
+web/src/lib/desktopApi.test.ts
+  s_06fcde5dbef956::t_e0019fb5c168f8 4
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_b2b5603020601c 1,180-181
+web/src/NativeBootstrap.vue
+  s_06fcde5dbef956::t_b2b5603020601c 9,12,23,32-33,36,44,55
+web/src/components/AccountMenu.vue
+  s_06fcde5dbef956::t_b2b5603020601c 14,29
+web/src/main.ts
+  s_06fcde5dbef956::t_b2b5603020601c 13,23
+web/src/components/NativeTrustControl.vue
+  s_06fcde5dbef956::t_b2b5603020601c 4,15
+web/src/lib/platform.test.ts
+  s_06fcde5dbef956::t_f8caa5915c1a09 1-105
+web/src/App.vue
+  s_06fcde5dbef956::t_b2b5603020601c 16,427,444
+web/src/components/UpdateBanner.vue
+  s_06fcde5dbef956::t_b2b5603020601c 9,17
+web/src/lib/desktopGaming.test.ts
+  s_06fcde5dbef956::t_e0019fb5c168f8 4-5
+web/eslint.config.ts
+  s_06fcde5dbef956::t_f14b8b8122c77b 48-73,77-78,92
+  s_06fcde5dbef956::t_723cc50f82e208 79-84,90-91
+  s_06fcde5dbef956::t_faf8dfbcc2713c 85-89
+  s_06fcde5dbef956::t_34764cac671565 74-76
+web/src/NativeBootstrap.test.ts
+  s_06fcde5dbef956::t_e0019fb5c168f8 5
+web/src/components/DesktopGamingOverlay.vue
+  s_06fcde5dbef956::t_4e5edcb1b72ba3 20
+  s_06fcde5dbef956::t_b2b5603020601c 4,7-8,24,34
+web/src/components/DesktopGamingOverlay.test.ts
+  s_06fcde5dbef956::t_e0019fb5c168f8 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2ec0bcf705e85d1cd7baa4807cd82be97c720990",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
