@@ -1,0 +1,21 @@
+web/src/lib/voicePlayback.ts
+  s_06fcde5dbef956::t_16d1d4ebf2e52a 1-130
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_16d1d4ebf2e52a 17-18,260-262
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ae7a4afcf05104f7c8f7b034714ca63f5c8d3a36",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
