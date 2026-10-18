@@ -1,5 +1,6 @@
 import type { Browser, Page } from '@playwright/test'
-import { test, expect, request } from '@playwright/test'
+import { test, expect } from './fixtures'
+import { request } from '@playwright/test'
 import { apiFetch, responseString, responseUserId, suiteMember } from './helpers'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'

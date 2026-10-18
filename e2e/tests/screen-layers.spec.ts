@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { apiFetch, responseString, suiteMember } from './helpers'
 import { randomBytes } from 'node:crypto'
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? ''
