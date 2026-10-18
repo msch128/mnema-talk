@@ -43,6 +43,12 @@
       "away": "Away from the keyboard",
       "dnd": "No notifications",
       "focus": "No notifications, heads down"
+    },
+    "activity": {
+      "playing": "Playing {name}",
+      "listening": "Listening to {name}",
+      "watching": "Watching {name}",
+      "competing": "Competing in {name}"
     }
   },
   "user": {
@@ -1398,7 +1404,10 @@
     "uploadLimit": "Max upload size",
     "uploadInherit": "Inherit",
     "uploadHint": "Leave empty to use the global limit. A member gets the highest limit of their roles, never above the server maximum.",
-    "uploadInvalid": "Enter a whole number of MB, or leave it empty."
+    "uploadInvalid": "Enter a whole number of MB, or leave it empty.",
+    "botRoles": "Bot roles",
+    "botRoleHint": "Managed role of one bot: it cannot be removed.",
+    "botRoleNote": "\"{name}\" is a bot's own role. It is created with the bot, follows its name and is deleted with it; only that bot holds it, and it cannot be renamed, given to anyone else, removed from the bot or deleted by hand. You can change its colour and permissions. Nobody can give a bot permissions they lack themselves, and only the Owner can make a bot elevated."
   },
   "memberRoles": {
     "title": "Roles of {name}",
@@ -1629,7 +1638,8 @@
       "power": "Gives the bot administrator power. Only the Owner may assign this role.",
       "powerSelected": "A selected role gives the bot administrator power. Only hand this to a program you fully trust.",
       "save": "Save roles",
-      "saved": "Roles saved."
+      "saved": "Roles saved.",
+      "managedOwn": "Managed: this is the bot's own role and it cannot be taken away."
     },
     "access": {
       "title": "Effective access",

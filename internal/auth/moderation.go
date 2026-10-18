@@ -261,6 +261,9 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	// is written. Their sessions are already dead, so nothing can be done
 	// with the socket meanwhile.
 	h.notify(id, notice{Kind: "ban", Until: until, Reason: reason})
+	if h.OnAccountEnded != nil {
+		h.OnAccountEnded(id)
+	}
 	if h.Live != nil {
 		h.Live.KickFromVoice(id)
 		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })

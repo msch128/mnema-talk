@@ -13,7 +13,7 @@ const examples: Record<ServerEventType, unknown[]> = {
   server_info: [{ version: '0.4.4' }, { version: '0.8.0', screen_layers: 3 }, { version: '0.8.0', screen_layers: 0 }],
   system_update: [{ version: '0.5.0' }],
   presence_snapshot: [[], [id], {}, { [id]: 'online' }, { [id]: 'offline' }],
-  presence_update: [{ user_id: id, status: 'focus' }],
+  presence_update: [{ user_id: id, status: 'focus' }, { user_id: id, status: 'dnd', activity: { type: 0, name: 'chess' } }],
   member_joined: [userFixture()],
   channels_changed: [null],
   permissions_changed: [null],

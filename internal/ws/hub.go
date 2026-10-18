@@ -44,6 +44,8 @@ type Hub struct {
 	// botLive holds the bots with a live gateway connection; they are online
 	// without a WebSocket client (see SetBotPresence).
 	botLive map[uuid.UUID]bool
+	// botState is the status and activity a connected bot set itself.
+	botState map[uuid.UUID]botState
 	// active counts each user's connections that are not idle, so a user's
 	// status is O(1) to derive instead of a scan of every client.
 	active map[uuid.UUID]int
@@ -122,6 +124,7 @@ func NewHub(p *db.Pool, sessions Authenticator, voiceSFU *sfu.SFU, origins []str
 		pending:  map[*Client]struct{}{},
 		online:   map[uuid.UUID]int{},
 		botLive:  map[uuid.UUID]bool{},
+		botState: map[uuid.UUID]botState{},
 		active:   map[uuid.UUID]int{},
 		chosen:   map[uuid.UUID]string{},
 		profiles: map[uuid.UUID]auth.User{},

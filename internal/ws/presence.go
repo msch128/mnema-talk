@@ -73,25 +73,100 @@ func (h *Hub) setIdle(c *Client, idle bool) {
 	}
 }
 
+// BotActivity is what a bot says it is doing (Discord's activity types).
+type BotActivity struct {
+	Type int    `json:"type"`
+	Name string `json:"name"`
+}
+
+// botState is the status a bot set itself: online, idle, dnd or invisible
+// (Discord's names), and an optional activity.
+type botState struct {
+	status   string
+	activity *BotActivity
+}
+
+// botVisibleLocked is the live status members see for a bot, and its
+// activity: offline without a gateway connection and when the bot is
+// invisible; idle is shown as away. Callers hold h.mu.
+func (h *Hub) botVisibleLocked(id uuid.UUID) (string, *BotActivity) {
+	if !h.botLive[id] {
+		return StatusOffline, nil
+	}
+	st := h.botState[id]
+	switch st.status {
+	case "invisible":
+		return StatusOffline, nil
+	case "idle":
+		return auth.PresenceAway, st.activity
+	case auth.PresenceDND:
+		return auth.PresenceDND, st.activity
+	}
+	return auth.PresenceOnline, st.activity
+}
+
+func botPresenceEvent(id uuid.UUID, status string, activity *BotActivity) map[string]any {
+	ev := map[string]any{"user_id": id, "status": status}
+	if activity != nil {
+		ev["activity"] = activity
+	}
+	return ev
+}
+
 // SetBotPresence records whether a bot has a live gateway connection and
-// announces the change. Bots are online or offline only; they are not counted
-// by OnlineCount or OnlineUserIDs, so @here and the user count stay about
-// people.
+// announces the change. A bot is online unless it set another status; it is
+// not counted by OnlineCount or OnlineUserIDs, so @here and the user count
+// stay about people. The status it set ends with its last connection.
 func (h *Hub) SetBotPresence(userID uuid.UUID, online bool) {
 	h.mu.Lock()
-	had := h.botLive[userID]
+	before, beforeAct := h.botVisibleLocked(userID)
 	if online {
 		h.botLive[userID] = true
 	} else {
 		delete(h.botLive, userID)
+		delete(h.botState, userID)
 	}
+	after, act := h.botVisibleLocked(userID)
 	h.mu.Unlock()
-	if had != online {
-		status := StatusOffline
-		if online {
-			status = auth.PresenceOnline
+	if before != after || !sameActivity(beforeAct, act) {
+		h.Broadcast("presence_update", botPresenceEvent(userID, after, act))
+	}
+}
+
+// SetBotStatus applies the status a bot set itself (online, idle, dnd or
+// invisible) with an optional activity, and announces what members see. It
+// may arrive before the bot counts as connected; the state is then kept.
+func (h *Hub) SetBotStatus(userID uuid.UUID, status string, activity *BotActivity) {
+	h.mu.Lock()
+	before, beforeAct := h.botVisibleLocked(userID)
+	h.botState[userID] = botState{status: status, activity: activity}
+	after, act := h.botVisibleLocked(userID)
+	h.mu.Unlock()
+	if before != after || !sameActivity(beforeAct, act) {
+		h.Broadcast("presence_update", botPresenceEvent(userID, after, act))
+	}
+}
+
+func sameActivity(a, b *BotActivity) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+// sendBotActivities tells a new connection what the connected bots are doing:
+// the presence snapshot only carries statuses.
+func (h *Hub) sendBotActivities(c *Client) {
+	h.mu.RLock()
+	events := make([]map[string]any, 0, len(h.botState))
+	for id := range h.botState {
+		if status, act := h.botVisibleLocked(id); act != nil {
+			events = append(events, botPresenceEvent(id, status, act))
 		}
-		h.Broadcast("presence_update", map[string]any{"user_id": userID, "status": status})
+	}
+	h.mu.RUnlock()
+	for _, ev := range events {
+		c.SendEvent("presence_update", ev)
 	}
 }
 
@@ -111,7 +186,9 @@ func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
 		out[id] = h.statusLocked(id)
 	}
 	for id := range h.botLive {
-		out[id] = auth.PresenceOnline
+		if status, _ := h.botVisibleLocked(id); status != StatusOffline {
+			out[id] = status
+		}
 	}
 	return out
 }

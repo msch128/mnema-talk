@@ -50,7 +50,7 @@ const (
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
 // @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.
-// @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline.
+// @Description - `presence_update`: `{user_id, status}` where status is online, away, dnd, focus or offline; for a bot that set an activity also `activity: {type, name}` (Discord activity type).
 // @Description - `voice_state_update`: `{action: "join", channel_id, user, started_at}` or `{action: "leave", channel_id, user_id}`.
 // @Description - `typing`: `{channel_id, user_id}` (to everyone except the typist).
 // @Description
@@ -249,6 +249,7 @@ func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	h.announcePresence(c.User.ID, before, after)
 	c.SendEvent("server_info", h.serverInfo())
 	c.SendEvent("presence_snapshot", h.presenceSnapshot())
+	h.sendBotActivities(c)
 	// Talks the member may not view stay invisible: who sits in them, since
 	// when and what they share.
 	snap, ok := h.permSnapshot(uuid.Nil)

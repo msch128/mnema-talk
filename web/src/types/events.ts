@@ -27,6 +27,17 @@ export type ReadStateUpdate =
   | Pick<ReadState, 'channel_id' | 'notify_level'>
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
+/** What a bot says it is doing: Discord's activity type (0 playing, 2 listening, 3 watching, 4 custom, 5 competing) and a short text. */
+export interface BotActivity {
+  type: number
+  name: string
+}
+
+function isBotActivity(value: unknown): value is BotActivity {
+  return isRecord(value) && isInteger(value['type']) && value['type'] >= 0 && value['type'] <= 5
+    && isString(value['name'], 128) && value['name'] !== ''
+}
+
 export interface InteractionResponse {
   channel_id: string
   bot_id: string
@@ -42,7 +53,8 @@ export interface ServerEventPayloads {
   server_info: { version: string; screen_layers?: number }
   system_update: { version: string }
   presence_snapshot: Record<string, Presence> | string[]
-  presence_update: { user_id: string; status: Presence }
+  /** A bot that set an activity (PRESENCE_UPDATE of the bot gateway) also sends it. */
+  presence_update: { user_id: string; status: Presence; activity?: BotActivity }
   member_joined: User
   channels_changed: null
   /** Roles, assignments or overwrites changed for this user: refetch GET /api/permissions and /api/channels. */
@@ -169,6 +181,7 @@ export function isServerEvent(value: unknown): value is ServerEvent {
       && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))
     case 'system_update': return isString(payload['version'], 64)
     case 'presence_update': return isIdentifier(payload['user_id']) && isPresence(payload['status'])
+      && (!hasOwn(payload, 'activity') || isBotActivity(payload['activity']))
     case 'typing': return roomUser(payload)
     case 'read_state':
       if (!isIdentifier(payload['channel_id'])) return false

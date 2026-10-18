@@ -20,7 +20,7 @@ func botRoleOf(t *testing.T, c *client) perm.Role {
 	var list []perm.Role
 	c.get("/api/roles").decode(t, &list)
 	for _, r := range list {
-		if r.Managed {
+		if r.Managed && r.BotUserID == nil {
 			return r
 		}
 	}
@@ -103,7 +103,7 @@ func TestBotRoleBackfillAndNewRolesStayAboveIt(t *testing.T) {
 	}
 	if _, err := a.db.Exec(t.Context(), `
 		INSERT INTO user_roles (user_id, role_id)
-		SELECT b.user_id, r.id FROM bots b CROSS JOIN roles r WHERE r.managed
+		SELECT b.user_id, r.id FROM bots b CROSS JOIN roles r WHERE r.managed AND r.bot_user_id IS NULL
 		ON CONFLICT DO NOTHING`); err != nil {
 		t.Fatal(err)
 	}

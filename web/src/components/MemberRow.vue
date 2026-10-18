@@ -9,6 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import { usePermissionsStore } from '../stores/permissions'
 import { t } from '../i18n'
+import { activityText } from '../lib/presence'
 import UserAvatar from './UserAvatar.vue'
 import ActivityStats from './ActivityStats.vue'
 import BotBadge from './BotBadge.vue'
@@ -28,8 +29,10 @@ const nameColor = computed(() => permissions.nameColor(props.member.id))
 
 const status = computed(() => chatStore.presenceOf(props.member.id))
 const offline = computed(() => status.value === 'offline')
+const activity = computed(() => (props.member.is_bot ? chatStore.activityOfUser(props.member.id) : null))
 const subline = computed(() => {
   if (offline.value) return ''
+  if (activity.value) return activityText(activity.value)
   return props.member.status_text || (props.member.role === 'admin' ? t(`presence.${status.value}`) : '')
 })
 </script>
@@ -75,7 +78,7 @@ const subline = computed(() => {
         <Volume2 class="h-3.5 w-3.5 flex-shrink-0" />
         <span class="truncate">{{ voiceChannel }}</span>
       </div>
-      <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary">{{ subline }}</span>
+      <span v-else-if="subline" class="truncate text-xs text-mnema-tertiary" :data-testid="activity ? 'member-activity' : undefined">{{ subline }}</span>
     </div>
 
     <ActivityStats :user="member" />

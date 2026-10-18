@@ -279,7 +279,7 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) error {
 // update handles PATCH /api/admin/bots/{id}.
 //
 // @Summary Change a bot
-// @Description Name, allowed gateway intents, or disabled. Disabling closes its gateway connections at once and refuses all its tokens.
+// @Description Name (the bot's own managed role is renamed with it), allowed gateway intents, or disabled. Disabling closes its gateway connections at once and refuses all its tokens.
 // @ID updateBot
 // @Tags Bots
 // @Accept json
@@ -349,7 +349,7 @@ func (h *Handler) writeCurrent(w http.ResponseWriter, r *http.Request, id uuid.U
 // delete handles DELETE /api/admin/bots/{id}.
 //
 // @Summary Delete a bot
-// @Description Its tokens stop working and its gateway connections close at once. Messages it posted stay, with its name.
+// @Description Its tokens stop working and its gateway connections close at once, and its own managed role is deleted. Messages it posted stay, with its name.
 // @ID deleteBot
 // @Tags Bots
 // @Security cookieAuth
@@ -419,7 +419,7 @@ func (h *Handler) avatar(w http.ResponseWriter, r *http.Request) error {
 // setRoles handles PUT /api/admin/bots/{id}/roles.
 //
 // @Summary Set a bot's roles
-// @Description Replaces the bot's roles. The usual hierarchy applies: only roles below the caller's highest role, and no permission the caller lacks. A role with Administrator or any admin-area permission can only be given by the Owner. The bot never inherits @everyone.
+// @Description Replaces the bot's roles. The usual hierarchy applies: only roles below the caller's highest role, and no permission the caller lacks. A role with Administrator or any admin-area permission can only be given by the Owner. The bot never inherits @everyone, always keeps the shared Bot role and its own managed role, and another bot's own role is refused.
 // @ID setBotRoles
 // @Tags Bots
 // @Accept json

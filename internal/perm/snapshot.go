@@ -32,9 +32,13 @@ type Role struct {
 	Hoist       bool      `json:"hoist"`
 	Mentionable bool      `json:"mentionable"`
 	Everyone    bool      `json:"is_everyone"`
-	// Managed marks the built-in Bot role: every bot holds it and no one else
-	// can; it cannot be renamed, removed from a bot or deleted.
+	// Managed marks a role the server maintains: the shared Bot role (every
+	// bot holds it) and each bot's own role (BotUserID). Only bots hold them;
+	// they cannot be renamed by hand, removed from a bot or deleted.
 	Managed bool `json:"managed,omitempty" binding:"optional"`
+	// BotUserID is set on a bot's own managed role: the account of the one bot
+	// that holds it. The role is named after the bot and goes with it.
+	BotUserID *uuid.UUID `json:"bot_user_id,omitempty" binding:"optional" format:"uuid"`
 	// MaxUploadMB overrides the upload limit of this role's members; null
 	// inherits the global limit. A member gets the highest override of their
 	// roles (@everyone included), never above the server's ceiling.
@@ -156,6 +160,7 @@ type roleRow struct {
 	Everyone    bool
 	Managed     bool
 	MaxUploadMB *int
+	BotUserID   *uuid.UUID
 }
 
 type userRoleRow struct{ UserID, RoleID uuid.UUID }
@@ -178,7 +183,7 @@ type overwriteRow struct {
 
 func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	r := &reader{ctx: ctx, q: q}
-	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb FROM roles`, pgx.RowToStructByPos[roleRow])
+	roles := load(r, `SELECT id, name, color, position, permissions, hoist, mentionable, is_everyone, managed, max_upload_mb, bot_user_id FROM roles`, pgx.RowToStructByPos[roleRow])
 	assigned := load(r, `SELECT user_id, role_id FROM user_roles`, pgx.RowToStructByPos[userRoleRow])
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
@@ -193,7 +198,7 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 
 	for _, row := range roles {
 		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
-			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB}
+			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB, BotUserID: row.BotUserID}
 		s.roles[role.ID] = role
 		if role.Everyone {
 			s.everyoneID, s.everyone = role.ID, role.Permissions
