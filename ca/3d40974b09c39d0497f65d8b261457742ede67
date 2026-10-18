@@ -1,0 +1,21 @@
+internal/perm/create_role_position_integration_test.go
+  s_06fcde5dbef956::t_d29b5f71eed163 1-87
+internal/perm/store.go
+  s_06fcde5dbef956::t_92cd044a836edd 267-274,276-277,280-286
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca3d40974b09c39d0497f65d8b261457742ede67",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
