@@ -48,9 +48,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Backfill: one empty role per existing bot, held by it.
+-- Backfill: one empty role per existing bot, held by it. Reserved role names
+-- (@everyone, @here) get the same " bot" suffix as bot.roleName.
 INSERT INTO roles (name, color, position, permissions, hoist, mentionable, managed, bot_user_id)
-SELECT left(b.name, 32), 0, 1, 0, FALSE, FALSE, TRUE, b.user_id FROM bots b;
+SELECT left(CASE WHEN lower(regexp_replace(btrim(b.name), '^@', '')) IN ('everyone', 'here') THEN b.name || ' bot' ELSE b.name END, 32), 0, 1, 0, FALSE, FALSE, TRUE, b.user_id FROM bots b;
 
 INSERT INTO user_roles (user_id, role_id)
 SELECT r.bot_user_id, r.id FROM roles r WHERE r.bot_user_id IS NOT NULL
