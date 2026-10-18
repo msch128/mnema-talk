@@ -2,31 +2,22 @@
 import type { Message } from '../types/domain'
 import { caughtErrorMessage } from '../lib/api'
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
-import {
-  Hash, Plus, ArrowUp, ArrowDown, Users, Loader2, Bell, BellOff, AtSign, X, Volume2
-} from '@lucide/vue'
+import { Hash, ArrowDown, Loader2, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
-import ReplyComposerBar from './ReplyComposerBar.vue'
+import ChatHeader from './ChatHeader.vue'
+import ChatComposer from './ChatComposer.vue'
 import ImageLightbox from './ImageLightbox.vue'
 import ContextMenu from './ContextMenu.vue'
-import EmojiButton from './EmojiButton.vue'
-import MentionSuggestions from './MentionSuggestions.vue'
-import SlashSuggestions from './SlashSuggestions.vue'
-import SlashCommandBar from './SlashCommandBar.vue'
 import EphemeralNotes from './EphemeralNotes.vue'
 import MessageRow from './MessageRow.vue'
-import { useComposerAssist } from '../composables/useComposerAssist'
-import { useSlashCommands } from '../composables/useSlashCommands'
 import { useMessageActions } from '../composables/useMessageActions'
 import { useMessageMenu } from '../composables/useMessageMenu'
 import { useMessageScroll } from '../composables/useMessageScroll'
 import { useUnreadDivider } from '../composables/useUnreadDivider'
-import { useNotificationHint } from '../composables/useNotificationHint'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
-import { handleComposerKeydown, useEscapeMarksRead } from '../composables/useComposerKeys'
+import { useEscapeMarksRead } from '../composables/useComposerKeys'
 import { continuationIds } from '../lib/messageGrouping'
-import { durationLabel } from '../lib/moderation'
 import { typingLine } from '../lib/chatLogic'
 import { useToastStore } from '../stores/toast'
 import { usePermissionsStore } from '../stores/permissions'
@@ -58,10 +49,8 @@ const placeholder = computed(() => (canSend.value
 
 const inputMessage = ref('')
 const messageContainer = ref<HTMLElement | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
-const textAreaEl = ref<HTMLTextAreaElement | null>(null)
-const assist = useComposerAssist(textAreaEl, inputMessage)
-const slash = useSlashCommands(inputMessage, () => chatStore.activeChannel?.id)
+const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
+const textAreaEl = computed(() => composer.value?.textArea ?? null)
 const isSending = ref(false)
 const selectedImage = ref<string | null>(null)
 // Message the composer is currently replying to.
@@ -86,25 +75,11 @@ const typingText = computed(() => {
   return line ? t(line.key, line.params) : ''
 })
 
-function handleComposerInput() {
-  if (inputMessage.value.trim()) chatStore.sendTyping(chatStore.activeChannel?.id)
-}
-
-const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
-
-function openNotificationMenu(e: MouseEvent) {
-  const channel = chatStore.activeChannel
-  if (!channel) return
-  if (!(e.currentTarget instanceof Element)) return
-  const rect = e.currentTarget.getBoundingClientRect()
-  menu.show(Math.max(8, rect.right - 200), rect.bottom + 4, notificationMenuItems(channel.id))
-}
-
 watch(() => chatStore.activeChannel?.id, () => {
   resetUnreadPill()
   replyingTo.value = null
   actions.cancelEdit()
-  nextTick(() => textAreaEl.value?.focus())
+  nextTick(() => composer.value?.focus())
 })
 
 async function handleJumpToPresent() {
@@ -116,7 +91,7 @@ async function handleJumpToPresent() {
 function startReply(msg: Message) {
   replyingTo.value = msg
   activeReactionPickerMsgId.value = null
-  nextTick(() => textAreaEl.value?.focus())
+  nextTick(() => composer.value?.focus())
 }
 
 function cancelReply() {
@@ -136,7 +111,7 @@ watch(() => chatStore.pendingMention, (newVal) => {
     inputMessage.value = `${inputMessage.value ? inputMessage.value.trim() + ' ' : ''}@${newVal} `
     chatStore.pendingMention = ''
     nextTick(() => {
-      textAreaEl.value?.focus()
+      composer.value?.focus()
     })
   }
 // Immediate: a mention that opened the Talk's chat lands in its composer.
@@ -174,7 +149,7 @@ useEscapeMarksRead({
   markAllRead
 })
 
-onMounted(() => textAreaEl.value?.focus())
+onMounted(() => composer.value?.focus())
 
 // After sending while viewing older history, jump to the present.
 async function revealOwnMessage() {
@@ -197,10 +172,6 @@ async function handleSend() {
   } finally {
     isSending.value = false
   }
-}
-
-function handleKeyDown(e: KeyboardEvent) {
-  handleComposerKeydown(e, { consumers: [slash.onKeydown, assist.onKeydown], replying: () => !!replyingTo.value, cancelReply, send: handleSend })
 }
 
 async function handleFileUpload(e: Event) {
@@ -226,104 +197,7 @@ const groupedIds = computed(() => {
     :aria-label="panel ? $t('talk.chatPanel', { channel: channelName }) : undefined"
     class="flex-1 min-w-0 bg-mnema-canvas flex flex-col h-full overflow-hidden"
   >
-    <!-- Channel Header (48px, aligned with the side columns; 40px in the Talk's chat) -->
-    <header
-      :class="[
-        'px-4 border-b border-mnema-hairline bg-mnema-canvas flex items-center justify-between gap-3 flex-shrink-0 z-10',
-        panel ? 'h-10' : 'h-12'
-      ]"
-    >
-      <!-- Left: Channel name & topic -->
-      <div :class="['flex items-center gap-2 min-w-0', panel ? 'flex-1' : '']">
-        <component :is="channelIcon" class="w-5 h-5 text-mnema-tertiary flex-shrink-0" />
-        <span
-          data-testid="chat-channel-name"
-          :class="['font-semibold text-base text-mnema-text truncate', panel ? 'min-w-0' : 'flex-shrink-0 max-w-[60%]']"
-        >
-          {{ chatStore.activeChannel?.name || $t('chat.selectChannel') }}
-        </span>
-        <span v-if="chatStore.activeChannel?.topic && !panel" class="text-sm text-mnema-muted pl-3 ml-1 border-l border-mnema-border truncate min-w-0">
-          {{ chatStore.activeChannel.topic }}
-        </span>
-        <span
-          v-if="chatStore.activeChannel?.slow_mode_seconds"
-          data-testid="slow-mode-chip"
-          class="flex-shrink-0 rounded-md border border-mnema-border px-1.5 py-0.5 font-mono text-xs text-mnema-muted"
-          v-tooltip="$t('moderation.slowModeHint')"
-        >{{ $t('moderation.slowModeChip', { time: durationLabel(chatStore.activeChannel.slow_mode_seconds) }) }}</span>
-      </div>
-
-      <!-- Right: Badges & member list toggle -->
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <button
-          v-if="chatStore.activeChannel"
-          @click="openNotificationMenu"
-          class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
-          v-tooltip="$t('notifications.channelSettings')"
-          aria-haspopup="menu"
-        >
-          <BellOff v-if="chatStore.notificationLevel(chatStore.activeChannel.id) === 'mute'" class="w-5 h-5" />
-          <AtSign v-else-if="chatStore.notificationLevel(chatStore.activeChannel.id) === 'mentions'" class="w-5 h-5" />
-          <Bell v-else class="w-5 h-5" />
-        </button>
-        <!-- The Talk's chat closes; the member list has its toggle in the Talk header -->
-        <button
-          v-if="panel"
-          type="button"
-          data-testid="voice-chat-close"
-          @click="emit('close')"
-          class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
-          v-tooltip="$t('talk.closeChat')"
-          :aria-label="$t('talk.closeChat')"
-        >
-          <X class="w-5 h-5" />
-        </button>
-        <button
-          v-else
-          @click="chatStore.showMemberList = !chatStore.showMemberList"
-          :class="[
-            'w-8 h-8 flex items-center justify-center rounded-md transition',
-            chatStore.showMemberList
-              ? 'text-mnema-accent bg-mnema-surface'
-              : 'text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface'
-          ]"
-          v-tooltip="$t('members.toggle')"
-          :aria-pressed="chatStore.showMemberList ? 'true' : 'false'"
-        >
-          <Users class="w-5 h-5" />
-        </button>
-      </div>
-    </header>
-
-    <!-- Desktop notification opt-in: shown until answered or dismissed -->
-    <div
-      v-if="showNotifHint"
-      class="px-4 py-2 border-b border-mnema-hairline bg-mnema-raised flex items-center gap-3 text-sm flex-shrink-0"
-      role="region"
-      :aria-label="$t('notifications.hintTitle')"
-    >
-      <Bell class="w-4 h-4 text-mnema-accent flex-shrink-0" />
-      <p class="min-w-0 flex-1 text-mnema-muted">
-        <span class="font-medium text-mnema-text">{{ $t('notifications.hintTitle') }}</span>
-        <span class="ml-2">{{ $t('notifications.hintBody') }}</span>
-      </p>
-      <button
-        type="button"
-        class="px-2.5 py-1 rounded-md bg-mnema-accent text-mnema-accent-ink font-semibold hover:bg-mnema-accent-hover transition flex-shrink-0"
-        @click="enableNotifications"
-      >
-        {{ $t('notifications.enable') }}
-      </button>
-      <button
-        type="button"
-        class="p-1 rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition flex-shrink-0"
-        :aria-label="$t('notifications.notNow')"
-        v-tooltip="$t('notifications.notNow')"
-        @click="dismissNotifHint"
-      >
-        <X class="w-4 h-4" />
-      </button>
-    </div>
+    <ChatHeader :panel="panel" @close="emit('close')" @menu="(x, y, items) => menu.show(x, y, items)" />
 
     <!-- Message timeline (72px gutter, 40px avatars) -->
     <div class="relative flex-1 min-h-0 flex flex-col">
@@ -443,100 +317,20 @@ const groupedIds = computed(() => {
 
     <EphemeralNotes v-if="chatStore.activeChannel" :channel-id="chatStore.activeChannel.id" />
 
-    <!-- Composer -->
-    <div class="px-4 pb-1 flex-shrink-0">
-      <SlashCommandBar
-        v-if="slash.picked.value && canSend"
-        :command="slash.picked.value"
-        :values="slash.values"
-        :running="slash.running.value"
-        @set="(name, value) => (slash.values[name] = value)"
-        @run="slash.run()"
-        @cancel="slash.cancel(); textAreaEl?.focus()"
-      />
-      <ReplyComposerBar v-if="replyingTo" :target="replyingTo" @cancel="cancelReply" />
-      <div
-        :class="[
-          'relative min-h-[52px] bg-mnema-elevated border border-mnema-border pl-2 pr-2.5 py-2.5 flex items-center gap-2 shadow-sm focus-within:border-mnema-accent focus-within:ring-1 focus-within:ring-mnema-accent transition',
-          replyingTo ? 'rounded-b-lg' : 'rounded-lg'
-        ]"
-      >
-        <SlashSuggestions
-          v-if="slash.open.value && canSend"
-          id="chat-slash"
-          :items="slash.suggestions.value"
-          :active="slash.active.value"
-          @pick="slash.pick"
-          @hover="slash.active.value = $event"
-        />
-        <MentionSuggestions
-          v-if="assist.open.value"
-          id="chat-mentions"
-          :items="assist.suggestions.value"
-          :active="assist.active.value"
-          @pick="assist.pick"
-          @hover="assist.active.value = $event"
-        />
-
-        <!-- Hidden File Input -->
-        <input 
-          ref="fileInput" 
-          type="file" 
-          class="hidden" 
-          @change="handleFileUpload" 
-          accept="image/*,video/*"
-        />
-
-        <!-- Attachment Button -->
-        <button
-          v-if="canAttach"
-          @click="fileInput?.click()"
-          :disabled="isUploading || isSending"
-          class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-full hover:bg-mnema-surface text-mnema-tertiary hover:text-mnema-text transition disabled:opacity-50"
-          v-tooltip="$t('chat.upload')"
-        >
-          <Plus class="w-5 h-5" />
-        </button>
-
-        <!-- Text Input -->
-        <textarea
-          ref="textAreaEl"
-          v-model="inputMessage"
-          @keydown="handleKeyDown"
-          @input="handleComposerInput(); assist.onInput(); slash.onInput()"
-          @click="assist.onInput"
-          @keyup.left="assist.onInput"
-          @keyup.right="assist.onInput"
-          @blur="assist.close(); slash.close()"
-          aria-autocomplete="list"
-          :aria-expanded="assist.open.value ? 'true' : 'false'"
-          :aria-controls="assist.open.value ? 'chat-mentions' : undefined"
-          :aria-activedescendant="assist.open.value ? `chat-mentions-${assist.active.value}` : undefined"
-          :placeholder="placeholder"
-          :disabled="!canSend"
-          :aria-label="placeholder"
-          rows="1"
-          class="bg-transparent flex-1 min-w-0 resize-none outline-none text-message py-0.5 text-mnema-text placeholder-mnema-tertiary"
-        ></textarea>
-
-        <EmojiButton :disabled="isSending || !canSend" @pick="assist.insertText" />
-
-        <!-- Send Button -->
-        <button
-          @click="handleSend"
-          :disabled="!canSend || !inputMessage.trim() || isUploading || isSending"
-          class="w-8 h-8 flex items-center justify-center flex-shrink-0 rounded-md bg-mnema-accent text-mnema-accent-ink hover:bg-mnema-accent-hover font-semibold transition disabled:opacity-20 disabled:bg-mnema-surface disabled:text-mnema-tertiary"
-          v-tooltip="$t('chat.send')"
-        >
-          <ArrowUp class="w-4 h-4" />
-        </button>
-      </div>
-
-      <!-- Who is typing (keeps its height so the layout doesn't jump) -->
-      <div class="h-5 px-1 pt-0.5 text-xs text-mnema-tertiary truncate" role="status" aria-live="polite">
-        {{ typingText }}
-      </div>
-    </div>
+    <ChatComposer
+      ref="composer"
+      v-model="inputMessage"
+      :replying-to="replyingTo"
+      :can-send="canSend"
+      :can-attach="canAttach"
+      :placeholder="placeholder"
+      :uploading="isUploading"
+      :sending="isSending"
+      :typing-text="typingText"
+      @send="handleSend"
+      @cancel-reply="cancelReply"
+      @file="handleFileUpload"
+    />
 
     <!-- Image lightbox -->
     <ImageLightbox v-if="selectedImage" :src="selectedImage" @close="selectedImage = null" />
