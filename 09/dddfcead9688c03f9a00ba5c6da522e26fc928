@@ -1,0 +1,23 @@
+.release-please-manifest.json
+  s_06fcde5dbef956::t_20e57477e66c9b 1
+CHANGELOG.md
+  s_06fcde5dbef956::t_060dd73bad3717 3-9
+version.txt
+  s_06fcde5dbef956::t_d35d71493923f3 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "09dddfcead9688c03f9a00ba5c6da522e26fc928",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
