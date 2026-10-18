@@ -10,7 +10,7 @@ import { useToastStore } from '../stores/toast'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
 import { browserMediaCall } from '../lib/media/browserCall'
-import { installMediaCallFactory, mediaCall, type MediaNotice } from '../lib/media/api'
+import { installMediaCallFactory, mediaCall } from '../lib/media/api'
 import { applyOutputDevice } from '../lib/audioOutput'
 import { createVoiceGate } from '../lib/levelMeter'
 import { trackConstraints, streamEncoding, streamTuning, STREAM_MAX_BITRATE } from '../lib/streamQuality'
@@ -30,6 +30,7 @@ import { decodeServerICEConfig } from '../types/rest'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './webrtc/sdp'
 import { streamDiag } from './webrtc/streamDiag'
 import { createPushToTalk } from './webrtc/pushToTalk'
+import { announceMediaRekeyed, announceMediaUnprotected, closeMediaRoom, mediaUnprotected, onMediaUnprotected, openMediaRoom, queueMediaWire, resetMediaAnnouncements } from './webrtc/mediaRoom'
 
 // Tests install a double first. This only supplies the call when none is installed.
 installMediaCallFactory(browserMediaCall)
@@ -56,51 +57,6 @@ function publisherId(streamId: string | undefined): string | null {
       ? streamId.slice(SCREEN_AUDIO_STREAM_PREFIX.length)
       : streamId
   return id || null
-}
-
-let mediaUnprotectedAnnounced = false
-let mediaRekeyAnnounced = false
-// The hub relays a handshake only to members of the voice room, and drops one
-// that arrives before voice_join. The call starts while the microphone is still
-// opening, so its first wires wait here until voice_join is sent.
-let mediaRoomOpen = false
-const heldMediaWires: { channelId: string, wire: string }[] = []
-
-function closeMediaRoom() {
-  mediaRoomOpen = false
-  heldMediaWires.length = 0
-}
-
-function sendMediaWire(channelId: string, wire: string) {
-  if (useVoiceStore().currentChannelId !== channelId) return
-  useChatStore().sendWSEvent('media_handshake', { channel_id: channelId, wire })
-}
-
-function openMediaRoom() {
-  mediaRoomOpen = true
-  for (const held of heldMediaWires.splice(0)) sendMediaWire(held.channelId, held.wire)
-}
-
-function queueMediaWire(channelId: string, wire: string) {
-  if (mediaRoomOpen) sendMediaWire(channelId, wire)
-  else heldMediaWires.push({ channelId, wire })
-}
-let releaseUnprotectedCapture: () => void = () => {}
-
-// The group dropped this member without being asked: whoever relays the call
-// can do that, so say so once per call.
-function announceMediaRekeyed(notice: MediaNotice) {
-  if (mediaRekeyAnnounced) return
-  mediaRekeyAnnounced = true
-  // A member dropped after its own browser slept was not removed by anyone hostile.
-  useToastStore().info(t(notice === 'absent' ? 'voice.mediaRefreshed' : 'voice.mediaRekeyed'))
-}
-
-function announceMediaUnprotected() {
-  if (mediaUnprotectedAnnounced) return
-  mediaUnprotectedAnnounced = true
-  releaseUnprotectedCapture()
-  useToastStore().error(t('voice.mediaUnprotected'))
 }
 
 // Module-level shared singletons across all components
@@ -825,11 +781,11 @@ function setNodeGain(gainNode: GainNode | null, val: number, time = 0) {
 export function useWebRTC() {
   const voiceStore = useVoiceStore()
   const chatStore = useChatStore()
-  releaseUnprotectedCapture = () => {
+  onMediaUnprotected(() => {
     stopScreenShare()
     stopCamera()
     cleanupVoiceAudio()
-  }
+  })
 
   async function refreshAudioDevices() {
     try {
@@ -1204,8 +1160,7 @@ export function useWebRTC() {
     if (channelId === voiceStore.currentChannelId && localAudioStream.value) {
       return
     }
-    mediaUnprotectedAnnounced = false
-    mediaRekeyAnnounced = false
+    resetMediaAnnouncements()
     closeMediaRoom()
 
     // Stop standalone mic test before joining voice
@@ -1732,10 +1687,7 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
-    if (mediaUnprotectedAnnounced) {
-      announceMediaUnprotected()
-      return
-    }
+    if (mediaUnprotected()) return
     if (screenCapturePending) return
     if (localScreenStream.value) {
       const ok = await confirm({
@@ -1887,10 +1839,7 @@ export function useWebRTC() {
       useToastStore().error(t('nativeDesktop.mediaUnavailable'))
       return
     }
-    if (mediaUnprotectedAnnounced) {
-      announceMediaUnprotected()
-      return
-    }
+    if (mediaUnprotected()) return
     if (!voiceStore.currentChannelId || localCameraStream.value) return
     const gen = joinGeneration
     const captureGen = cameraCaptureGeneration
@@ -1950,7 +1899,7 @@ export function useWebRTC() {
   // unset, so neither a reload nor a reconnect rejoins it.
   function endCall({ notifyServer }: { notifyServer: boolean }) {
     joinGeneration++
-    mediaUnprotectedAnnounced = false
+    resetMediaAnnouncements()
     closeMediaRoom()
     mediaCall().stop()
     voiceSession.forget()
