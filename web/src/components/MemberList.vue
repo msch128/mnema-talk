@@ -1,65 +1,19 @@
 <script setup lang="ts">
 import type { Member } from '../types/domain'
-import { computed } from 'vue'
 import { Crown } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
-import { useVoiceStore } from '../stores/voice'
-import { usePermissionsStore } from '../stores/permissions'
 import { roleColorCss } from '../lib/permissions'
 import MemberRow from './MemberRow.vue'
 import ContextMenu from './ContextMenu.vue'
 import { useMenuState, buildMemberItems } from '../composables/useNavMenus'
-import { t } from '../i18n'
+import { useMemberGroups } from '../composables/useMemberGroups'
 
 const chatStore = useChatStore()
-const voiceStore = useVoiceStore()
-const permissions = usePermissionsStore()
-
-// Group members into admins, online members and offline members
-const admins = computed(() => {
-  return chatStore.members.filter(m => m.role === 'admin')
-})
-
-const onlineOthers = computed(() => chatStore.onlineMembers.filter(m => m.role !== 'admin'))
-
-// Online members whose highest hoisted role gets a group of its own, in the
-// rank order of the roles; everyone else online stays in "Online".
-const roleGroups = computed(() => {
-  const hoistedOf = (id: string) => permissions.rolesOf(id).find(role => role.hoist)
-  return permissions.roles
-    .filter(role => role.hoist && !role.is_everyone)
-    .map(role => ({ role, members: onlineOthers.value.filter(m => hoistedOf(m.id)?.id === role.id) }))
-    .filter(group => group.members.length > 0)
-})
-
-const onlineNonAdmins = computed(() => {
-  const grouped = new Set(roleGroups.value.flatMap(group => group.members.map(m => m.id)))
-  return onlineOthers.value.filter(m => !grouped.has(m.id))
-})
-
-const offlineNonAdmins = computed(() => {
-  return chatStore.offlineMembers.filter(m => m.role !== 'admin')
-})
-
+const { admins, roleGroups, onlineNonAdmins, offlineNonAdmins, voiceChannelName } = useMemberGroups()
 const menu = useMenuState()
 
 function openMemberMenu(e: MouseEvent | KeyboardEvent, member: Member) {
   menu.show(e, refresh => buildMemberItems(member, { refresh }))
-}
-
-function getUserVoiceChannel(userId: string) {
-  for (const [chId, users] of Object.entries(voiceStore.channelUsers)) {
-    if (users && users[userId]) {
-      for (const cat of chatStore.categories) {
-        const ch = cat.channels?.find(c => c.id === chId)
-        if (ch) return ch.name
-      }
-      const uncat = chatStore.uncategorized?.find(c => c.id === chId)
-      if (uncat) return uncat.name
-      return t('voice.channelFallback')
-    }
-  }
-  return null
 }
 </script>
 
@@ -88,7 +42,7 @@ function getUserVoiceChannel(userId: string) {
           v-for="member in admins"
           :key="member.id"
           :member="member"
-          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          :voice-channel="voiceChannelName(member.id) || ''"
           @menu="openMemberMenu($event, member)"
         />
       </section>
@@ -103,7 +57,7 @@ function getUserVoiceChannel(userId: string) {
           v-for="member in group.members"
           :key="member.id"
           :member="member"
-          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          :voice-channel="voiceChannelName(member.id) || ''"
           @menu="openMemberMenu($event, member)"
         />
       </section>
@@ -117,7 +71,7 @@ function getUserVoiceChannel(userId: string) {
           v-for="member in onlineNonAdmins"
           :key="member.id"
           :member="member"
-          :voice-channel="getUserVoiceChannel(member.id) || ''"
+          :voice-channel="voiceChannelName(member.id) || ''"
           @menu="openMemberMenu($event, member)"
         />
       </section>
