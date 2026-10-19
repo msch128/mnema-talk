@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 // NativeMetadataWebSocketHandler uses the qualified native lease/admission/Hub
@@ -17,59 +16,10 @@ import (
 // voice, content or cryptographic controls without a separately verified Core
 // grant. The existing full native handler remains unmounted.
 func (h *Hub) NativeMetadataWebSocketHandler(a NativeAuthenticator) http.Handler {
-	connectionsPerIP := httpx.NewRateLimiter(30, time.Minute)
-	upgrader := websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: nativeHandshakeAllowed}
-	core := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		if a == nil || h.isClosed() {
-			httpx.WriteError(w, httpx.ErrUnavailable("native socket unavailable"))
-			return
-		}
-		if !nativeHandshakeAllowed(r) {
-			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
-			return
-		}
-		if r.Body != nil {
-			var one [1]byte
-			if n, err := r.Body.Read(one[:]); n != 0 || err != io.EOF {
-				httpx.WriteError(w, httpx.ErrInvalidInput("native socket body must be empty"))
-				return
-			}
-		}
-		original, err := a.AuthenticateNativeRequest(r)
-		if err != nil {
-			writeNativeAuthError(w, err)
-			return
-		}
-		if h.isClosed() {
-			httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
-			return
-		}
-		conn, err := upgrader.Upgrade(w, r, http.Header{"Cache-Control": []string{"no-store"}})
-		if err != nil {
-			return
-		} // Gorilla already answered; never log request/header data.
-		principal := original.Principal()
-		c := newClient(h, conn, principal.User(), principal.TokenVersion())
-		c.native = newNativeSocketState(a, original)
-		if ok, _ := h.registerPending(c); !ok {
-			c.shutdown()
-			c.close()
-			return
-		}
-		fresh, err := a.RevalidateNativeLease(r.Context(), principal)
-		if err != nil || !principal.SameNativeAccess(fresh.Principal()) || !c.native.install(1, fresh, false) || !h.registerVerified(c, ptrNativeUser(fresh.Principal())) {
-			h.cancelPending(c)
-			return
-		}
+	return h.nativeSocketHandler(a, func(c *Client) {
 		go c.nativeMetadataWritePump()
 		go c.nativeMetadataReadPump()
 		go c.nativeWatchdog()
-	})
-	limited := connectionsPerIP.PerIP(core)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "no-store")
-		limited.ServeHTTP(w, r)
 	})
 }
 
@@ -81,34 +31,39 @@ func (c *Client) nativeMetadataReadPump() {
 	var budget eventBudget
 	for {
 		kind, frame, err := c.conn.ReadMessage()
-		if err != nil {
+		if err != nil || !c.dispatchMetadataFrame(&budget, kind, frame) {
 			return
 		}
-		if kind != websocket.TextMessage || !c.nativeLive() {
-			c.hub.terminateNativeClient(c)
-			return
-		}
-		now := time.Now()
-		if !budget.allowFrame(now) {
-			continue
-		}
-		eventType, payload, valid := parseNativeMetadataFrame(frame)
-		if !valid {
-			c.hub.terminateNativeClient(c)
-			return
-		}
-		if c.handleNativeControl(eventType, frame) {
-			continue
-		}
-		if eventType != "ping" && eventType != "presence_idle" {
-			c.hub.terminateNativeClient(c)
-			return
-		}
-		if !budget.allowEvent(eventType, len(payload), now) {
-			continue
-		}
+	}
+}
+
+// dispatchMetadataFrame routes one frame of a metadata session. It reports
+// false when the connection was terminated.
+func (c *Client) dispatchMetadataFrame(budget *eventBudget, kind int, frame []byte) bool {
+	if kind != websocket.TextMessage || !c.nativeLive() {
+		c.hub.terminateNativeClient(c)
+		return false
+	}
+	now := time.Now()
+	if !budget.allowFrame(now) {
+		return true
+	}
+	eventType, payload, valid := parseNativeMetadataFrame(frame)
+	if !valid {
+		c.hub.terminateNativeClient(c)
+		return false
+	}
+	if c.handleNativeControl(eventType, frame) {
+		return true
+	}
+	if eventType != "ping" && eventType != "presence_idle" {
+		c.hub.terminateNativeClient(c)
+		return false
+	}
+	if budget.allowEvent(eventType, len(payload), now) {
 		c.handle(eventType, payload)
 	}
+	return true
 }
 
 // Metadata sessions are members of the same Hub but must not receive browser

@@ -233,10 +233,9 @@ func (h *Hub) expireNativeClient(c *Client) bool {
 func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
 	h := c.hub
 	if c.native == nil && view == uuid.Nil && !excludeSelf {
-		switch {
-		case voice != nil:
+		if voice != nil {
 			h.sendToVoiceRoom(*voice, eventType, payload)
-		default:
+		} else {
 			h.Broadcast(eventType, payload)
 		}
 		return
@@ -245,10 +244,13 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	if data == nil {
 		return
 	}
-	var snap *perm.Snapshot
+	scope := eventScope{excludeUser: uuid.Nil, voice: voice, view: view}
+	if excludeSelf {
+		scope.excludeUser = c.User.ID
+	}
 	if view != uuid.Nil {
 		var ok bool
-		if snap, ok = h.permSnapshot(view); !ok {
+		if scope.snap, ok = h.permSnapshot(view); !ok {
 			return
 		}
 	}
@@ -263,18 +265,29 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 		h.tapped(view, eventType, payload)
 	}
 	for recipient := range h.clients {
-		if excludeSelf && recipient.User.ID == c.User.ID {
-			continue
+		if scope.admits(recipient) {
+			recipient.deliver(data)
 		}
-		if voice != nil {
-			current := recipient.currentVoice()
-			if current == nil || *current != *voice {
-				continue
-			}
-		}
-		if view != uuid.Nil && !recipient.can(snap, view, perm.ViewChannel) {
-			continue
-		}
-		recipient.deliver(data)
 	}
+}
+
+// eventScope narrows an application event to its audience.
+type eventScope struct {
+	excludeUser uuid.UUID      // uuid.Nil: nobody is left out
+	voice       *uuid.UUID     // only connections in this voice room
+	view        uuid.UUID      // only users who may view this channel
+	snap        *perm.Snapshot // permissions to check view against
+}
+
+func (s eventScope) admits(recipient *Client) bool {
+	if s.excludeUser != uuid.Nil && recipient.User.ID == s.excludeUser {
+		return false
+	}
+	if s.voice != nil {
+		current := recipient.currentVoice()
+		if current == nil || *current != *s.voice {
+			return false
+		}
+	}
+	return s.view == uuid.Nil || recipient.can(s.snap, s.view, perm.ViewChannel)
 }

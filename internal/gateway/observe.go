@@ -56,38 +56,46 @@ func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
 	if err != nil {
 		return // fail closed
 	}
-	var data json.RawMessage
 	switch {
 	case channel != uuid.Nil:
-		raw, err := json.Marshal(payload)
-		if err != nil {
-			return
-		}
-		data = raw
-		for _, s := range targets {
-			if snap.Channel(perm.Subject{ID: s.userID}, channel).Has(perm.ViewChannel) {
-				s.enqueue(name, data)
-			}
-		}
+		enqueueChannelEvent(snap, targets, channel, name, payload)
 	case name == EventChannelsUpdate:
 		// The layout or someone's access changed: bots refetch /channels.
 		for _, s := range targets {
 			s.enqueue(name, json.RawMessage(`{}`))
 		}
 	case name == EventGuildMemberAdd:
-		member, ok := memberOf(payload)
-		if !ok {
-			return
+		enqueueMemberAdd(snap, targets, name, payload)
+	}
+}
+
+// enqueueChannelEvent queues a channel's event for the bots that may view it.
+func enqueueChannelEvent(snap *perm.Snapshot, targets []*session, channel uuid.UUID, name string, payload any) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	for _, s := range targets {
+		if snap.Channel(perm.Subject{ID: s.userID}, channel).Has(perm.ViewChannel) {
+			s.enqueue(name, data)
 		}
-		data, _ = json.Marshal(member)
-		// Only for bots that share a channel with the new member.
-		theirs := snap.ChannelPermissions(perm.Subject{ID: member.ID})
-		for _, s := range targets {
-			for ch := range snap.ChannelPermissions(perm.Subject{ID: s.userID}) {
-				if _, shared := theirs[ch]; shared {
-					s.enqueue(name, data)
-					break
-				}
+	}
+}
+
+// enqueueMemberAdd queues a new member only for the bots that share a channel
+// with them.
+func enqueueMemberAdd(snap *perm.Snapshot, targets []*session, name string, payload any) {
+	member, ok := memberOf(payload)
+	if !ok {
+		return
+	}
+	data, _ := json.Marshal(member)
+	theirs := snap.ChannelPermissions(perm.Subject{ID: member.ID})
+	for _, s := range targets {
+		for ch := range snap.ChannelPermissions(perm.Subject{ID: s.userID}) {
+			if _, shared := theirs[ch]; shared {
+				s.enqueue(name, data)
+				break
 			}
 		}
 	}

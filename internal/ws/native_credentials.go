@@ -17,32 +17,20 @@ func (h *Hub) DisconnectNativeCredentials(id uuid.UUID) {
 	selected := make([]*Client, 0)
 	for c := range h.clients {
 		if c.User.ID == id {
-			if c.native != nil {
-				c.native.securityClosed.Store(true)
-			}
-			c.shutdown()
+			sealForCredentialChange(c)
 			selected = append(selected, c)
 		}
 	}
 	for c := range h.pending {
 		if c.User.ID == id {
 			delete(h.pending, c)
-			if c.native != nil {
-				c.native.securityClosed.Store(true)
-			}
-			c.shutdown()
+			sealForCredentialChange(c)
 			selected = append(selected, c)
 		}
 	}
 	h.mu.Unlock()
 	for _, c := range selected {
-		if c.conn != nil {
-			transport := c.conn.UnderlyingConn()
-			if tlsTransport, ok := transport.(interface{ NetConn() net.Conn }); ok {
-				transport = tlsTransport.NetConn()
-			}
-			_ = transport.Close()
-		}
+		closeTransport(c)
 		c.close()
 	}
 	go func() {
@@ -50,4 +38,26 @@ func (h *Hub) DisconnectNativeCredentials(id uuid.UUID) {
 			h.leaveCurrentVoice(c)
 		}
 	}()
+}
+
+// sealForCredentialChange stops c's native packet gate and its sends. Callers
+// hold h.mu.
+func sealForCredentialChange(c *Client) {
+	if c.native != nil {
+		c.native.securityClosed.Store(true)
+	}
+	c.shutdown()
+}
+
+// closeTransport closes the raw network connection beneath c's websocket (and
+// TLS), so a blocked write cannot keep the socket open.
+func closeTransport(c *Client) {
+	if c.conn == nil {
+		return
+	}
+	transport := c.conn.UnderlyingConn()
+	if tlsTransport, ok := transport.(interface{ NetConn() net.Conn }); ok {
+		transport = tlsTransport.NetConn()
+	}
+	_ = transport.Close()
 }
