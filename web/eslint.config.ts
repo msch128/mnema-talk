@@ -177,19 +177,6 @@ export default tseslint.config(
     ],
     rules: { 'max-lines-per-function': 'off', 'sonarjs/cognitive-complexity': 'off' }
   },
-  // TODO(limits): shrinking allowlist of test files still above 800 lines. Split
-  // them by behaviour, then delete the entry. Never add entries.
-  {
-    files: [
-      'web/src/components/Sidebar.test.ts',
-      'web/src/components/VoiceStage.test.ts',
-      'web/src/composables/useWebRTC.audio.test.ts',
-      'web/src/lib/media/group.test.ts',
-      'web/src/stores/chatStoreBehaviour.test.ts',
-      'web/src/stores/voice.test.ts'
-    ],
-    rules: { 'max-lines': 'off' }
-  },
   {
     files: ['**/*.ts', '**/*.vue'],
     rules: {
