@@ -13,8 +13,6 @@ internal/auth Register
 internal/auth RevokeFamily
 internal/auth RotateRefresh
 internal/auth WithAuthorizedTransaction
-internal/bot checkValue
-internal/bot Clean
 internal/chat bulkDelete
 internal/chat checkLayout
 internal/chat DuplicateChannel
@@ -71,15 +69,6 @@ internal/tools/openapifix fixOperation
 internal/tools/openapifix run
 internal/tools/openapifix walk
 internal/update fetch
-internal/webbundle Build
-internal/webbundle check
-internal/webbundle runBuild
-internal/webbundle runTrustSign
-internal/webbundle Validate
-internal/webbundle Verify
-internal/webhook build
-internal/webhook mentionPolicy
-internal/webhook readMultipart
 internal/ws DisconnectNativeCredentials
 internal/ws emitApplicationEvent
 internal/ws handle
