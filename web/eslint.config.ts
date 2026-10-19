@@ -115,18 +115,6 @@ export default tseslint.config(
   // add entries or raise a limit.
   {
     files: [
-      'web/src/composables/useAppRouting.ts',
-      'web/src/composables/useChannelLayout.ts',
-      'web/src/composables/useMessageActions.ts',
-      'web/src/composables/useMessageMenu.ts',
-      'web/src/composables/useMessageScroll.ts',
-      'web/src/composables/useNavMenus.ts',
-      'web/src/composables/usePictureInPicture.ts',
-      'web/src/composables/useResizable.ts',
-      'web/src/composables/useSidebarReorder.ts',
-      'web/src/composables/useSlashCommands.ts',
-      'web/src/composables/useSortableDrag.ts',
-      'web/src/composables/useStreamQuality.ts',
       'web/src/composables/webrtc/layers.ts',
       'web/src/composables/webrtc/micPipeline.ts',
       'web/src/composables/webrtc/micTest.ts',
