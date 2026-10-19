@@ -1,0 +1,14 @@
+doc/moderation.md
+  h_0ff4f4713441f4 241-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc4def448035337b6e984b35456693f29e9ecad9",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

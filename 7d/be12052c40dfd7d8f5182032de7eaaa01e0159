@@ -1,0 +1,14 @@
+web/src/lib/crypto/stateStore.boundary.test.ts
+  h_0ff4f4713441f4 1-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7dbe12052c40dfd7d8f5182032de7eaaa01e0159",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

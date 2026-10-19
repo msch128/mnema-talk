@@ -1,0 +1,18 @@
+doc/roles-and-permissions.md
+  h_0ff4f4713441f4 129-152
+internal/db/migrations/0034_starter_roles.sql
+  h_0ff4f4713441f4 1-35
+internal/db/starter_roles_integration_test.go
+  h_0ff4f4713441f4 1-306
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd3b08bbf6b5f195fa39730f0a0f073b48dab86c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
