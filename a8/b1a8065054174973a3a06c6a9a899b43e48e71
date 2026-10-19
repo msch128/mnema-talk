@@ -1,0 +1,14 @@
+internal/server/bypass_integration_test.go
+  h_0ff4f4713441f4 7,9,100-114,141,151
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a8b1a8065054174973a3a06c6a9a899b43e48e71",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
