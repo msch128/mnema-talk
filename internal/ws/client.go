@@ -20,8 +20,8 @@ type Client struct {
 	User auth.User
 
 	tokenVersion int
-	native       *nativeSocketState
-	closeOnce    sync.Once
+	nativeSession
+	closeOnce sync.Once
 	// closing is set by the first deliver that finds the buffer full, so a
 	// slow client's later events don't each start another close.
 	closing atomic.Bool
@@ -87,9 +87,7 @@ func (c *Client) close() {
 func (c *Client) shutdown() {
 	c.doneOnce.Do(func() {
 		c.closed.Store(true)
-		if c.native != nil {
-			c.native.cancel()
-		}
+		c.cancelNativeSession()
 		if c.done != nil {
 			close(c.done)
 		}

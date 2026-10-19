@@ -35,8 +35,7 @@ func (c *Client) readPump() {
 // dispatchFrame routes one received frame. It reports false when the
 // connection must end.
 func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []byte) bool {
-	if c.native != nil && messageType != websocket.TextMessage {
-		c.hub.terminateNativeClient(c)
+	if c.rejectNativeBinary(messageType) {
 		return false
 	}
 	// Per-connection flood guard: excess events are dropped.
@@ -51,7 +50,7 @@ func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []b
 	if err := json.Unmarshal(message, &ev); err != nil {
 		return true
 	}
-	if c.native != nil && !c.commandsAllowed() {
+	if !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -97,22 +96,17 @@ func (c *Client) writePump() {
 
 // writeQueued sends one queued message; false ends the connection.
 func (c *Client) writeQueued(msg []byte) bool {
-	if c.native != nil && !c.commandsAllowed() {
+	if !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
-	deadline := time.Now().Add(writeWait)
-	if c.native != nil {
-		_, _, leaseDeadline := c.native.snapshot()
-		deadline = minTime(deadline, leaseDeadline)
-	}
-	_ = c.conn.SetWriteDeadline(deadline)
+	_ = c.conn.SetWriteDeadline(c.leaseWriteDeadline(time.Now().Add(writeWait)))
 	return c.conn.WriteMessage(websocket.TextMessage, msg) == nil
 }
 
 // writePing sends a keep-alive ping; false ends the connection.
 func (c *Client) writePing() bool {
-	if c.native != nil && !c.commandsAllowed() {
+	if !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -125,7 +119,7 @@ func (c *Client) writePing() bool {
 // the socket and reports false when the session was revoked. Native
 // connections have their own lease and are not checked here.
 func (c *Client) sessionStillValid() bool {
-	if c.native != nil {
+	if c.hasNativeLease() {
 		return true
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

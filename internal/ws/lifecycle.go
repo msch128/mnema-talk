@@ -160,7 +160,7 @@ func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 		return false, nil
 	}
 	var evicted []*Client
-	if c.native == nil {
+	if !c.hasNativeLease() {
 		evicted = h.browserOverflowLocked(c)
 	} else if h.nativeFamilyCountLocked(c) >= 4 {
 		return false, nil
@@ -175,7 +175,7 @@ func (h *Hub) browserOverflowLocked(c *Client) []*Client {
 	var mine []*Client
 	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
 		for existing := range set {
-			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
+			if !existing.hasNativeLease() && existing.User.ID == c.User.ID && !existing.closed.Load() {
 				mine = append(mine, existing)
 			}
 		}
@@ -187,20 +187,6 @@ func (h *Hub) browserOverflowLocked(c *Client) []*Client {
 		mine = mine[1:]
 	}
 	return evicted
-}
-
-// nativeFamilyCountLocked counts the open and pending connections of c's
-// native credential family. Callers hold h.mu.
-func (h *Hub) nativeFamilyCountLocked(c *Client) int {
-	count := 0
-	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
-		for existing := range set {
-			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
-				count++
-			}
-		}
-	}
-	return count
 }
 
 func (h *Hub) cancelPending(c *Client) {
@@ -341,7 +327,7 @@ func (h *Hub) recordLastSeen(ids ...uuid.UUID) {
 }
 
 func (h *Hub) unregister(c *Client) {
-	if c.native != nil && c.native.securityClosed.Load() {
+	if c.leaseSealed() {
 		h.leaveCurrentVoice(c)
 	} else {
 		h.dropVoiceForGrace(c)
