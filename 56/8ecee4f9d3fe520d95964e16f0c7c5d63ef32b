@@ -1,0 +1,35 @@
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_5527437b36848f 1-196
+internal/chat/handler_readstate.go
+  s_06fcde5dbef956::t_5527437b36848f 1-190
+internal/chat/handler_channels.go
+  s_06fcde5dbef956::t_5527437b36848f 1-380
+internal/chat/botapi_members.go
+  s_06fcde5dbef956::t_5527437b36848f 1-112
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_5527437b36848f 1-188
+internal/chat/botapi_reactions.go
+  s_06fcde5dbef956::t_5527437b36848f 1-95
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_5527437b36848f 1-150
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_482c1f39dee5e1 1-241
+internal/chat/handler_messages.go
+  s_06fcde5dbef956::t_5527437b36848f 1-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "568ecee4f9d3fe520d95964e16f0c7c5d63ef32b",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
