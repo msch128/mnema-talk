@@ -97,60 +97,21 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 	if err != nil {
 		return nil, err
 	}
-	lifetime := time.Duration(deps.Config.SessionExpiryHours) * time.Hour
-	sessions, err := auth.NewNativeSessions(deps.DB, auth.NativePolicy{SessionLifetime: lifetime, FamilyLifetime: min(lifetime, 30*24*time.Hour)})
+	native, sessions, err := newNativeAuth(deps, browser)
 	if err != nil {
-		browser.Close()
-		return nil, err
-	}
-	native, err := auth.NewNativeHandler(browser.preview.accounts, sessions)
-	if err != nil {
-		browser.Close()
-		return nil, err
-	}
-	if err = sessions.BindNativeFamilyControl(browser.Hub); err != nil {
 		browser.Close()
 		return nil, err
 	}
 	result := &NativePreviewRouter{Router: browser, Native: native, Sessions: sessions, options: options}
-	nativeRoutes := chi.NewRouter()
-	trusted := browser.preview.trusted
-	nativeRoutes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), result.boundary)
-	nativeRoutes.Get("/ws", browser.Hub.NativeMetadataWebSocketHandler(native).ServeHTTP)
-	nativeAuth := native.Handler()
-	authDispatch := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// A fresh chi route context preserves the fixed relative /auth path and
-		// existing request/IP context without inheriting the enclosing matcher.
-		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
-		nativeAuth.ServeHTTP(w, r.WithContext(ctx))
-	})
-	nativeRoutes.Method(http.MethodPost, "/auth/login", authDispatch)
-	nativeRoutes.Method(http.MethodPost, "/auth/refresh", authDispatch)
-	nativeRoutes.Method(http.MethodGet, "/auth/me", authDispatch)
-	nativeRoutes.Method(http.MethodPost, "/auth/logout", authDispatch)
-	metadataHandlers, err := nativeMetadataHandlers(browser.preview)
+	nativeRoutes, err := result.nativeRoutes(deps)
 	if err != nil {
 		browser.Close()
 		return nil, err
 	}
-	nativeRoutes.Group(func(metadata chi.Router) {
-		metadata.Use(native.RequireUser, result.instanceContext, browser.preview.perUser.By(auth.UserKey), httpx.MaxBody(httpx.DefaultMaxBody))
-		metadata.Method(http.MethodGet, "/health", nativeMetadataEmptyBody(health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version)))
-		metadata.Method(http.MethodGet, "/legal", nativeMetadataEmptyBody(legal(deps.Config)))
-		for _, route := range nativeMetadataRoutes {
-			handler := metadataHandlers[route.Method+" "+route.Path]
-			if strings.HasPrefix(route.Path, "/admin/") {
-				handler = auth.RequireOwner(handler)
-			}
-			metadata.Method(route.Method, route.Path, handler)
-		}
-		metadata.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			httpx.WriteError(w, httpx.ErrUnavailable("native content authorization unavailable"))
-		}))
-	})
 	// Keep the browser handler object and routes completely intact. Only this
 	// explicit preview wrapper intercepts the two fixed native/discovery paths.
 	base := browser.Handler
+	trusted := browser.preview.trusted
 	discoveryHandler := httpx.SecurityHeaders(trusted, deps.Config.IsProduction())(http.HandlerFunc(result.discovery))
 	result.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/.well-known/mnema" {
@@ -164,6 +125,66 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 		base.ServeHTTP(w, r)
 	})
 	return result, nil
+}
+
+// newNativeAuth builds the native sessions and handler over the browser
+// router's account handler and binds the hub's family control. The caller
+// closes the browser router on error.
+func newNativeAuth(deps Deps, browser *Router) (*auth.NativeHandler, *auth.NativeSessions, error) {
+	lifetime := time.Duration(deps.Config.SessionExpiryHours) * time.Hour
+	sessions, err := auth.NewNativeSessions(deps.DB, auth.NativePolicy{SessionLifetime: lifetime, FamilyLifetime: min(lifetime, 30*24*time.Hour)})
+	if err != nil {
+		return nil, nil, err
+	}
+	native, err := auth.NewNativeHandler(browser.preview.accounts, sessions)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = sessions.BindNativeFamilyControl(browser.Hub); err != nil {
+		return nil, nil, err
+	}
+	return native, sessions, nil
+}
+
+// nativeRoutes is the router for everything under NativePreviewPrefix: the
+// metadata WebSocket, the native auth endpoints and the metadata routes.
+func (p *NativePreviewRouter) nativeRoutes(deps Deps) (chi.Router, error) {
+	browser, native := p.Router, p.Native
+	trusted := browser.preview.trusted
+	routes := chi.NewRouter()
+	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), p.boundary)
+	routes.Get("/ws", browser.Hub.NativeMetadataWebSocketHandler(native).ServeHTTP)
+	nativeAuth := native.Handler()
+	authDispatch := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// A fresh chi route context preserves the fixed relative /auth path and
+		// existing request/IP context without inheriting the enclosing matcher.
+		ctx := context.WithValue(r.Context(), chi.RouteCtxKey, (*chi.Context)(nil))
+		nativeAuth.ServeHTTP(w, r.WithContext(ctx))
+	})
+	routes.Method(http.MethodPost, "/auth/login", authDispatch)
+	routes.Method(http.MethodPost, "/auth/refresh", authDispatch)
+	routes.Method(http.MethodGet, "/auth/me", authDispatch)
+	routes.Method(http.MethodPost, "/auth/logout", authDispatch)
+	metadataHandlers, err := nativeMetadataHandlers(browser.preview)
+	if err != nil {
+		return nil, err
+	}
+	routes.Group(func(metadata chi.Router) {
+		metadata.Use(native.RequireUser, p.instanceContext, browser.preview.perUser.By(auth.UserKey), httpx.MaxBody(httpx.DefaultMaxBody))
+		metadata.Method(http.MethodGet, "/health", nativeMetadataEmptyBody(health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version)))
+		metadata.Method(http.MethodGet, "/legal", nativeMetadataEmptyBody(legal(deps.Config)))
+		for _, route := range nativeMetadataRoutes {
+			handler := metadataHandlers[route.Method+" "+route.Path]
+			if strings.HasPrefix(route.Path, "/admin/") {
+				handler = auth.RequireOwner(handler)
+			}
+			metadata.Method(route.Method, route.Path, handler)
+		}
+		metadata.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			httpx.WriteError(w, httpx.ErrUnavailable("native content authorization unavailable"))
+		}))
+	})
+	return routes, nil
 }
 
 func nativePreviewHeaderPresent(r *http.Request, name string) bool {

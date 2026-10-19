@@ -1,6 +1,5 @@
 # Functions above cognitive complexity 15 that still need a refactor ("directory function").
 # Shrinking list: never add entries, delete them when the function is split.
-cmd/server runWithContext
 internal/audit list
 internal/audit Middleware
 internal/audit sanitize
@@ -13,9 +12,6 @@ internal/auth Register
 internal/auth RevokeFamily
 internal/auth RotateRefresh
 internal/auth WithAuthorizedTransaction
-internal/config FromEnv
-internal/config validate
-internal/db MigrateFS
 internal/httpx CORS
 internal/perm CreateRole
 internal/perm DeleteRole
@@ -25,16 +21,3 @@ internal/perm ReorderRoles
 internal/perm SetOverwrites
 internal/perm setRoles
 internal/perm UpdateRole
-internal/server decodeNativeCiphertext
-internal/server NewNativePreviewRouter
-internal/server NewRouter
-internal/server parseNativeCiphertextQuery
-internal/server startSelfUpdate
-internal/tools/openapifix fixOperation
-internal/tools/openapifix run
-internal/tools/openapifix walk
-internal/update fetch
-loadtest/viewer BindRemoteStream
-loadtest/viewer mainErr
-loadtest/viewer run
-loadtest/viewer summarize
