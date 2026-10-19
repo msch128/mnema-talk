@@ -20,9 +20,11 @@ setLocale(browserLocale())
 
 const root = gamingSurface()
   ? (await import('./components/DesktopGamingOverlay.vue')).default
-  : platform.isDesktop() || platform.isWebDesktopSelector()
-  ? (await import('./NativeBootstrap.vue')).default
-  : App
+  : platform.isWebDesktopSelector()
+    ? (await import('./components/DesktopSelector.vue')).default
+    : platform.isDesktop()
+      ? (await import('./NativePreviewApp.vue')).default
+      : App
 
 createApp(root)
   .use(createPinia())
