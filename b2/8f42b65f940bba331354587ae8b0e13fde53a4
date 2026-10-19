@@ -1,0 +1,14 @@
+release-please-config.json
+  h_0ff4f4713441f4 12-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b28f42b65f940bba331354587ae8b0e13fde53a4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
