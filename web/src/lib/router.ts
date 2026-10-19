@@ -12,36 +12,26 @@ export interface RouteResolution { redirect: string; reason: 'noAccess' | 'voice
 
 const PENDING_ROUTE_KEY = 'mnema_pending_route'
 
+function parseChatRoute(parts: string[]): Route {
+  const channelId = parts[1] ?? ''
+  if (parts[2] === 'm' && parts[3]) return { view: 'chat', channelId, messageId: parts[3] }
+  if (parts[2] === 't' && parts[3]) return { view: 'chat', channelId, threadId: parts[3] }
+  return { view: 'chat', channelId }
+}
+
+function parseVoiceRoute(parts: string[]): Route {
+  const channelId = parts[1] ?? ''
+  if (parts[2] !== 'chat') return { view: 'voice', channelId, watching: true }
+  // A message in the Talk's chat (search, notification): /v/:id/chat/m/:msgId.
+  if (parts[3] === 'm' && parts[4]) return { view: 'voice', channelId, showChat: true, messageId: parts[4], watching: true }
+  return { view: 'voice', channelId, showChat: true, watching: true }
+}
+
 export function parseRoute(pathname = (typeof window !== 'undefined' ? window.location.pathname : '/')): Route {
   const parts = pathname.split('/').filter(Boolean)
-
-  if (parts[0] === 'c' && parts[1]) {
-    const channelId = parts[1]
-    if (parts[2] === 'm' && parts[3]) {
-      return { view: 'chat', channelId, messageId: parts[3] }
-    }
-    if (parts[2] === 't' && parts[3]) {
-      return { view: 'chat', channelId, threadId: parts[3] }
-    }
-    return { view: 'chat', channelId }
-  }
-
-  if (parts[0] === 'v' && parts[1]) {
-    const channelId = parts[1]
-    if (parts[2] === 'chat') {
-      // /v/:id/chat/m/:msgId: a message in the Talk's chat (search, notification).
-      if (parts[3] === 'm' && parts[4]) {
-        return { view: 'voice', channelId, showChat: true, messageId: parts[4], watching: true }
-      }
-      return { view: 'voice', channelId, showChat: true, watching: true }
-    }
-    return { view: 'voice', channelId, watching: true }
-  }
-
-  if (parts[0] === 'admin') {
-    return { view: 'admin', tab: parts[1] || 'users' }
-  }
-
+  if (parts[0] === 'c' && parts[1]) return parseChatRoute(parts)
+  if (parts[0] === 'v' && parts[1]) return parseVoiceRoute(parts)
+  if (parts[0] === 'admin') return { view: 'admin', tab: parts[1] || 'users' }
   return { view: 'root' }
 }
 
@@ -93,14 +83,17 @@ export function guardRoute(route: Route | null | undefined, { isAdmin = false }:
 export function resolveRoute(route: Route, { isAdmin = false, channels = [] }: RouteOptions = {}): RouteResolution | null {
   const denied = guardRoute(route, { isAdmin })
   if (denied) return { redirect: denied, reason: 'noAccess' }
-  if ((route.view === 'chat' || route.view === 'voice') && route.channelId) {
-    const ch = channels.find(c => c.id === route.channelId)
-    if (!ch) return { redirect: '/', reason: route.view === 'voice' ? 'voiceNotFound' : 'channelNotFound' }
-    if (route.view === 'voice' && ch.type !== 'voice') return { redirect: `/c/${ch.id}`, reason: null }
-    if (route.view === 'chat' && ch.type === 'voice') {
-      // A message link into a voice channel opens it in the Talk's chat.
-      return { redirect: route.messageId ? voiceMessagePath(ch.id, route.messageId) : `/v/${ch.id}`, reason: null }
-    }
+  if ((route.view === 'chat' || route.view === 'voice') && route.channelId) return resolveChannelRoute(route, channels)
+  return null
+}
+
+function resolveChannelRoute(route: Extract<Route, { view: 'chat' | 'voice' }>, channels: NonNullable<RouteOptions['channels']>): RouteResolution | null {
+  const ch = channels.find(c => c.id === route.channelId)
+  if (!ch) return { redirect: '/', reason: route.view === 'voice' ? 'voiceNotFound' : 'channelNotFound' }
+  if (route.view === 'voice' && ch.type !== 'voice') return { redirect: `/c/${ch.id}`, reason: null }
+  if (route.view === 'chat' && ch.type === 'voice') {
+    // A message link into a voice channel opens it in the Talk's chat.
+    return { redirect: route.messageId ? voiceMessagePath(ch.id, route.messageId) : `/v/${ch.id}`, reason: null }
   }
   return null
 }

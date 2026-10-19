@@ -199,20 +199,13 @@ async function jumpToRootMessage(cx: Cx, id: string) {
 export function insertMessage(cx: Cx, msg: Message) {
   const { cs } = cx
   if (msg.parent_id) {
-    if (cs.activeThread.value?.id === msg.parent_id && !cs.threadReplies.value.some(m => m.id === msg.id)) {
-      cs.threadReplies.value.push(msg)
-    }
+    insertThreadReply(cx, msg)
     return
   }
   if (cs.activeChannel.value?.id !== msg.channel_id) return
   if (cs.isLoadingWindow.value || cs.hasMoreAfter.value) {
     // The window doesn't reach the newest end; appending would leave a gap.
-    if (!cs.messages.value.some(m => m.id === msg.id) && !cs.pendingLive.some(m => m.id === msg.id)) {
-      cs.pendingLive.push(msg)
-      if (cs.pendingLive.length > MAX_PENDING_LIVE) cs.pendingLive.shift()
-      // My own messages are not news to me.
-      if (!cs.isLoadingWindow.value && !isOwnMessage(cx, msg)) cs.missedLiveCount.value++
-    }
+    holdLiveMessage(cx, msg)
     return
   }
   const { window: win, status } = appendLive(getWindow(cx), msg, { cap: WINDOW_CAP })
@@ -220,6 +213,21 @@ export function insertMessage(cx: Cx, msg: Message) {
   cs.messages.value = win.messages
   cs.hasMoreBefore.value = win.hasMoreBefore
   cs.liveAppendSeq.value++
+}
+
+function insertThreadReply({ cs }: Cx, msg: Message) {
+  if (cs.activeThread.value?.id === msg.parent_id && !cs.threadReplies.value.some(m => m.id === msg.id)) {
+    cs.threadReplies.value.push(msg)
+  }
+}
+
+function holdLiveMessage(cx: Cx, msg: Message) {
+  const { cs } = cx
+  if (cs.messages.value.some(m => m.id === msg.id) || cs.pendingLive.some(m => m.id === msg.id)) return
+  cs.pendingLive.push(msg)
+  if (cs.pendingLive.length > MAX_PENDING_LIVE) cs.pendingLive.shift()
+  // My own messages are not news to me.
+  if (!cs.isLoadingWindow.value && !isOwnMessage(cx, msg)) cs.missedLiveCount.value++
 }
 
 function isOwnMessage(cx: Cx, msg: Message) {

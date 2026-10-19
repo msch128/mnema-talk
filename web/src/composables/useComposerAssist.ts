@@ -7,6 +7,20 @@ import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
 
+/** Inserts text at the caret (e.g. an emoji) and keeps focus. */
+async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>, str: string) {
+  const value = model.value || ''
+  const start = el ? el.selectionStart ?? value.length : value.length
+  const end = el ? el.selectionEnd ?? value.length : value.length
+  model.value = value.slice(0, start) + str + value.slice(end)
+  await nextTick()
+  if (el) {
+    el.focus()
+    const caret = start + str.length
+    el.setSelectionRange(caret, caret)
+  }
+}
+
 /**
  * textarea: ref to the <textarea>; model: ref holding its text.
  * Wire onInput to @input/@click/@keyup and call onKeydown first in the
@@ -76,20 +90,7 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
     return true
   }
 
-  /** Inserts text at the caret (e.g. an emoji) and keeps focus. */
-  async function insertText(str: string) {
-    const el = textarea.value
-    const value = model.value || ''
-    const start = el ? el.selectionStart ?? value.length : value.length
-    const end = el ? el.selectionEnd ?? value.length : value.length
-    model.value = value.slice(0, start) + str + value.slice(end)
-    await nextTick()
-    if (el) {
-      el.focus()
-      const caret = start + str.length
-      el.setSelectionRange(caret, caret)
-    }
-  }
+  const insertText = (str: string) => insertAtCaret(textarea.value, model, str)
 
   return { suggestions, active, open, onInput, onKeydown, pick, close, insertText }
 }

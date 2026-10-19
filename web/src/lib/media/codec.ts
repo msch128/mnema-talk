@@ -95,6 +95,19 @@ function isPictureType(type: number): boolean {
  * header does not fit.
  */
 function sliceHeaderBytes(nal: Uint8Array): number | null {
+  const { bits, byteOf } = unescapedBits(nal)
+  let at = 0
+  for (let value = 0; value < 3; value++) {
+    const next = skipExpGolomb(bits, at)
+    if (next === null) return null
+    at = next
+  }
+  const last = byteOf[at - 1]
+  return last === undefined ? null : last + 1
+}
+
+/** The slice header bits after the NAL header, with their source byte index. */
+function unescapedBits(nal: Uint8Array): { bits: number[]; byteOf: number[] } {
   const bits: number[] = []
   const byteOf: number[] = []
   let zeros = 0
@@ -110,19 +123,19 @@ function sliceHeaderBytes(nal: Uint8Array): number | null {
       byteOf.push(i)
     }
   }
-  let at = 0
-  for (let value = 0; value < 3; value++) {
-    let leading = 0
-    while (bits[at] === 0) {
-      leading++
-      at++
-      if (leading > UE_MAX_ZEROS) return null
-    }
-    at += 1 + leading
-    if (at > bits.length) return null
+  return { bits, byteOf }
+}
+
+/** Position after one ue(v) code starting at `at`, or null when it does not fit. */
+function skipExpGolomb(bits: number[], at: number): number | null {
+  let leading = 0
+  while (bits[at] === 0) {
+    leading++
+    at++
+    if (leading > UE_MAX_ZEROS) return null
   }
-  const last = byteOf[at - 1]
-  return last === undefined ? null : last + 1
+  at += 1 + leading
+  return at > bits.length ? null : at
 }
 
 /** Inserts 0x03 wherever two zeros would be followed by 0x00..0x03. */
