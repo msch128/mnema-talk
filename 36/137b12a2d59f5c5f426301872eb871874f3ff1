@@ -1,0 +1,65 @@
+AGENTS.md
+  s_06fcde5dbef956::t_03c8d8bd0e30dc 127
+web/src/lib/media/groupEpoch.ts
+  s_06fcde5dbef956::t_e1952cf03c9a81 19-27,84-97,108-111,117-119,166-173,186-191,208,253
+web/src/lib/media/guard.ts
+  s_06fcde5dbef956::t_2f9544dda54247 59-90,98,106,115,141
+web/src/lib/media/mediaFrameWorker.ts
+  s_06fcde5dbef956::t_76e0948af8b5e6 191-215,227-238,272-273,278,284,287-317,319-334
+web/src/lib/nativeAdmin.ts
+  s_06fcde5dbef956::t_1ea79257ee2b5a 24-115,118-119,123-125,129
+web/src/lib/media/callEngine.ts
+  s_06fcde5dbef956::t_18e447340931b9 211
+  s_06fcde5dbef956::t_ffe6d515f62eea 1-210,212-245
+web/src/lib/trustPort.ts
+  s_06fcde5dbef956::t_f8f266ef96f2e5 18-60,62-80,82-120,122-124,126,128,130
+web/src/lib/media/groupVet.ts
+  s_06fcde5dbef956::t_960c182ef1064e 1-45
+web/src/lib/nativeChatApi.ts
+  s_06fcde5dbef956::t_2bbd106936fd3b 65-80,114-115,117,121,127,130,132
+  s_06fcde5dbef956::t_d1586e187aabe8 88-95
+  s_06fcde5dbef956::t_5df4df17f049e2 119,141-145
+  s_06fcde5dbef956::t_0f35cc01dad58e 3,23-64,96-100,131,146-185,190,194-195
+  s_06fcde5dbef956::t_35a2e5a3bc78da 81-87,118,126,136
+web/src/lib/media/browserCall.ts
+  s_06fcde5dbef956::t_1d7077628a4189 1,4-5,13,16,18-20,23-24,27,29-33,35-36,39-40,44-45,48-50
+web/src/lib/crypto/stateStore.ts
+  s_06fcde5dbef956::t_e4e8387f08c57f 1
+  s_06fcde5dbef956::t_2452d3da565894 2-4,10-12,15-38,40-59,61-73,76-83,86-99,102-103,115-126,131-140,142,149-154
+web/src/lib/crypto/stateStorePrimitives.ts
+  s_06fcde5dbef956::t_82ce8a065e4bb6 1-95
+web/src/lib/crypto/stateStoreEngine.ts
+  s_06fcde5dbef956::t_d3a7b44e5cdb0d 1-148
+web/src/lib/media/group.ts
+  s_06fcde5dbef956::t_436dcc1d8a3231 12,14,25,72-85,87-124,127-186,188,191-204,209-221,310-311,317-339
+  s_06fcde5dbef956::t_f9f614d8e97ffa 340
+web/src/lib/media/groupSync.ts
+  s_06fcde5dbef956::t_e1952cf03c9a81 88-89,95-99,109-135,137-138
+web/src/lib/media/frame.ts
+  s_06fcde5dbef956::t_3b6f0dc77014ea 228-238,241-250,273-297
+  s_06fcde5dbef956::t_f2d750174917f9 298
+web/src/lib/media/groupVet.test.ts
+  s_06fcde5dbef956::t_30b73c716c5ad0 1-17,25-28,31-33,35-37,39-41,43-45,49-53,55,57-61,63-64
+  s_06fcde5dbef956::t_cdb56acc36da85 18-24,29-30,34,38,42,46-48,54,56,62
+web/src/lib/nativeTransport.ts
+  s_06fcde5dbef956::t_c2c2c88f7192a1 79-89,92,110-150,152-168,170-185,187,189-191,193-213,215-230,232-233,247,249,252-289,291-299
+  s_06fcde5dbef956::t_cf8559076d02b2 234-237,239-246,251
+web/src/composables/sortableDragParts.test.ts
+  s_06fcde5dbef956::t_8fb98778e43e3c 1-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "36137b12a2d59f5c5f426301872eb871874f3ff1",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
