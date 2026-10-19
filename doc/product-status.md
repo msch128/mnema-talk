@@ -117,6 +117,6 @@ The remaining fixes and acceptance work follow:
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
 
 [Desktop requirements](desktop-app.md), [cryptographic persistence limits](crypto-state.md)
-and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
+(not the shipped media path) and [the native research checkpoint](https://github.com/msch128/mnema-talk-desktop/blob/main/experimental/README.md) describe
 these boundaries in more detail. Existing coverage and security gates remain
 in force.
