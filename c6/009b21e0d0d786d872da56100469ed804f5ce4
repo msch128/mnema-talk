@@ -1,0 +1,14 @@
+web/src/lib/platform.test.ts
+  h_0ff4f4713441f4 28-29,54-62,99-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c6009b21e0d0d786d872da56100469ed804f5ce4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

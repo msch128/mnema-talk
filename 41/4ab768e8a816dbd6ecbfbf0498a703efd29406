@@ -1,0 +1,18 @@
+internal/linkpreview/linkpreview_ssrf.go
+  h_0ff4f4713441f4 8-9,29,46
+internal/ssrf/ssrf.go
+  h_0ff4f4713441f4 34-35,37-64,75,79-92,134-135,147-149
+internal/ssrf/ssrf_test.go
+  h_0ff4f4713441f4 59-93
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "414ab768e8a816dbd6ecbfbf0498a703efd29406",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
