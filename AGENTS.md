@@ -86,6 +86,7 @@ mnema-talk/
 ├── e2e/                     # Playwright browser tests (`make e2e`)
 ├── loadtest/                # Voice/screen-share load test (`make load-test`), see loadtest/README.md
 ├── web/                     # Vue 3 + Pinia + Vite + Tailwind SPA; web.go embeds web/dist
+│   └── src/lib/             # Shared client modules: native/ (desktop IPC) and dfn/ (DeepFilterNet3)
 ├── scripts/git-hooks/       # pre-commit (gitleaks + gofmt); `make install-hooks`
 ├── scripts/smoke-image.sh   # Image smoke test on the production compose file (`make smoke`)
 ├── scripts/backup-drill.sh  # Backup -> restore drill on a throwaway stack (`make backup-drill`)
