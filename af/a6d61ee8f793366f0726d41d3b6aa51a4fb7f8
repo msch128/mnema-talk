@@ -1,0 +1,27 @@
+internal/media/handler_admin.go
+  s_06fcde5dbef956::t_e6b1c514ada77b 1-205
+internal/media/handler_upload.go
+  s_06fcde5dbef956::t_e6b1c514ada77b 1-239
+internal/webhook/execute_request.go
+  s_06fcde5dbef956::t_e6b1c514ada77b 1-146
+internal/webhook/dispatch_delivery.go
+  s_06fcde5dbef956::t_e6b1c514ada77b 1-232
+internal/webhook/dispatch_queue.go
+  s_06fcde5dbef956::t_e6b1c514ada77b 1-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afa6d61ee8f793366f0726d41d3b6aa51a4fb7f8",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
