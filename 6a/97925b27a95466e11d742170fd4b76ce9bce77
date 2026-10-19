@@ -1,0 +1,65 @@
+internal/auth/native_password.go
+  s_06fcde5dbef956::t_515b871fd75f8b 34,38-76,78,83,86,89,93,97,101,103-111,113-178,180
+internal/auth/native_password_handler.go
+  s_06fcde5dbef956::t_1cd65045e9e97b 25,36-55,79
+internal/auth/native_refresh.go
+  s_06fcde5dbef956::t_a763b3884ab779 29,31-33,38,40,42-137,147,155-176,189-210,212,214-221,223-243,245-261,263,265-283
+internal/perm/store_roles.go
+  s_06fcde5dbef956::t_9eccf3e9696597 106,109,112,115-116,118,121,124,126,140,144,147,149,162,164-232,234-247,258,261,267-268,309,317,319
+  s_06fcde5dbef956::t_73a7bed6b2833c 77,85,101-105,107-108,110-111,113-114,117,119-120,122-123,125,127-139,141-143,145-146,148,150,248-250,252,254-255,257,259-260,262-266,288-289,306-308,310-316,318,321
+internal/auth/native_transaction.go
+  s_06fcde5dbef956::t_de3c9f82fb8016 24,26,28,31,35-36
+internal/audit/sanitize.go
+  s_06fcde5dbef956::t_fb2944eab934b8 77,79,89-115
+  s_06fcde5dbef956::t_ecb32791ab22e9 116
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_a7d6fed64474ee 115-116,138-167
+internal/perm/store_overwrites.go
+  s_06fcde5dbef956::t_057437fac7444e 37,65-91,104-106,108-110,112-113,115-124,126-156,158-160,162-224,227-291
+internal/httpx/middleware_origin.go
+  s_06fcde5dbef956::t_3a579231be1998 78,82-83,90,92,104-126
+internal/perm/store_assignments.go
+  s_06fcde5dbef956::t_56b25a9c5c13db 92-106,108,110-118,122-130,133-134,150-169
+  s_06fcde5dbef956::t_5116e90e3b3e5d 55-63,71,75-76,80,84
+  s_06fcde5dbef956::t_18386d01d6ce0a 31-54,64-70,74,77-79,83,85-91,119-120,135-149
+internal/repo/limits_test.go
+  s_06fcde5dbef956::t_dc0f91f191d5d8 29-45
+internal/auth/native_lock.go
+  s_06fcde5dbef956::t_b24dc61a134f86 1-56
+internal/auth/native_session.go
+  s_06fcde5dbef956::t_63c06efb6dcad0 215-217,225-258
+  s_06fcde5dbef956::t_073c91d92d99b1 259-260
+internal/auth/native_handler.go
+  s_06fcde5dbef956::t_b089f13464e2ed 10
+  s_06fcde5dbef956::t_990c27c5bda8e5 124-151,154,158,163-164,166-181,186,189-190,193,197,201
+internal/audit/middleware.go
+  s_06fcde5dbef956::t_ebf380372df73c 129-142
+  s_06fcde5dbef956::t_f4649f3b526d47 76
+  s_06fcde5dbef956::t_7d438bba25e318 5,42-44,46-58,60-64,66-72,74-75,77-85,87-128,143-168
+internal/audit/filter.go
+  s_06fcde5dbef956::t_7dbe348c3681ba 1-109
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_f9875130c6f65b 18,40,44,53-126,128
+  s_06fcde5dbef956::t_3ccbc4d01ab609 127,129
+internal/audit/handler.go
+  s_06fcde5dbef956::t_d670d260a03cee 4,70-72,81,83-85,87-89,91-95,97,104,109,116
+internal/perm/store_roles_order.go
+  s_06fcde5dbef956::t_722788fa7b84ea 22,24-47
+  s_06fcde5dbef956::t_04742439bfede3 1-21,23,48-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6a97925b27a95466e11d742170fd4b76ce9bce77",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
