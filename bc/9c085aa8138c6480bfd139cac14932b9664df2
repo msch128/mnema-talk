@@ -1,0 +1,51 @@
+internal/sfu/room_signal.go
+  s_06fcde5dbef956::t_bd221a8c1cd5ca 66-79,81-86,88,90,92,106-112,118-119,122,125-127,130-131,133-139,141-142,144-192,194-211,215-228,230-232
+  s_06fcde5dbef956::t_fa186d5f624ed4 80,213-214
+  s_06fcde5dbef956::t_2bec031666dc6d 212
+internal/sfu/media_state.go
+  s_06fcde5dbef956::t_7b32f72164c1b9 158,160,162,164,168,179,184-263
+internal/sfu/rtpkey.go
+  s_06fcde5dbef956::t_1479151cf3c5f9 75-114
+  s_06fcde5dbef956::t_5dfd4dd31ded5c 61-62
+internal/sfu/sfu_setup.go
+  s_06fcde5dbef956::t_7c310e1370cea4 141-143,151-152,159,166,169-171
+  s_06fcde5dbef956::t_d3bc1486f5bbfe 173-175
+  s_06fcde5dbef956::t_75c9c07ac8edb1 172,176
+internal/sfu/adapt.go
+  s_06fcde5dbef956::t_b7450fe4d959d5 248,255-287,300,302
+internal/sfu/room_attach.go
+  s_06fcde5dbef956::t_215835e1204b78 170,217,225-226,228,235,242-289
+  s_06fcde5dbef956::t_2c4ec42e3a4de8 21,23,43,47,66-169
+  s_06fcde5dbef956::t_ca8a3425dfcb81 171
+internal/sfu/announce.go
+  s_06fcde5dbef956::t_0b1dd0593ea020 82,94,98-127
+internal/sfu/room_tracks.go
+  s_06fcde5dbef956::t_8a03c125820643 28,33-51
+  s_06fcde5dbef956::t_6aa7fedcb4ba24 8
+  s_06fcde5dbef956::t_0e4e40c85538bc 52-54
+internal/sfu/stats.go
+  s_06fcde5dbef956::t_169b8df3fcf075 3-6
+  s_06fcde5dbef956::t_5db3f296d1b386 26-35,37,42-43,45-61,63-82,84-85
+internal/sfu/viewer_track.go
+  s_06fcde5dbef956::t_aa68fc88ea4516 319,326-364
+  s_06fcde5dbef956::t_784916f68de105 296
+internal/sfu/bwe.go
+  s_06fcde5dbef956::t_7ebef5d0d76874 108,114-128
+  s_06fcde5dbef956::t_3cc7e659420bb5 129-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bc9c085aa8138c6480bfd139cac14932b9664df2",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
