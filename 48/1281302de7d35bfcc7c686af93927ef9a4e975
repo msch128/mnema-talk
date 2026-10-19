@@ -1,0 +1,20 @@
+internal/ws/native_session.go
+  s_7b9f8f5fd35a49::t_a2b813294893cc 1-95
+  s_7b9f8f5fd35a49::t_1a91542e1a8aa9 96-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "481281302de7d35bfcc7c686af93927ef9a4e975",
+  "prompts": {},
+  "sessions": {
+    "s_7b9f8f5fd35a49": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a15518-97f9-7d21-af71-d8c87dc1e7d8",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
