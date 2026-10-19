@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.7](https://github.com/msch128/mnema-talk/compare/v0.8.6...v0.8.7) (2026-10-19)
+
+
+### Code Refactoring
+
+* Go files under 400 lines, size and complexity guards ([#236](https://github.com/msch128/mnema-talk/issues/236)) ([fd8a9f3](https://github.com/msch128/mnema-talk/commit/fd8a9f3b8ff4463782a88ad9ea28208a39d4dcc7))
+
 ## [0.8.6](https://github.com/msch128/mnema-talk/compare/v0.8.5...v0.8.6) (2026-10-18)
 
 
