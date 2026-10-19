@@ -14,11 +14,18 @@ import (
 	"github.com/pion/webrtc/v4"
 )
 
+// clientEvent is the part of a client frame every handler may read.
+type clientEvent struct {
+	ChannelID uuid.UUID `json:"channel_id"`
+	Active    bool      `json:"active"`
+	Idle      bool      `json:"idle"`
+	T         float64   `json:"t"`
+}
+
 func (c *Client) handle(eventType string, payload json.RawMessage) {
 	if !c.nativeLive() {
 		return
 	}
-	h := c.hub
 	parent := context.Background()
 	if c.native != nil {
 		parent = c.native.ctx
@@ -26,136 +33,152 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 
-	var p struct {
-		ChannelID uuid.UUID `json:"channel_id"`
-		Active    bool      `json:"active"`
-		Idle      bool      `json:"idle"`
-		T         float64   `json:"t"`
-	}
+	var p clientEvent
 	_ = json.Unmarshal(payload, &p)
 
 	switch eventType {
 	case "ping":
 		c.SendEvent("pong", map[string]any{"t": p.T})
-
 	case "presence_idle":
-		h.setIdle(c, p.Idle)
-
+		c.hub.setIdle(c, p.Idle)
 	case "voice_join":
-		if !h.voiceGate.take(c.User.ID, time.Now()) {
-			// Over the join/leave allowance: refused, and the client ends
-			// the attempt on voice_kicked.
-			metrics.WSDropped.With("voice_churn").Inc()
-			c.SendEvent("voice_kicked", map[string]any{"channel_id": p.ChannelID})
-			return
-		}
-		if ch, ok := h.voiceChannel(ctx, p.ChannelID); ok {
-			h.joinVoice(c, ch)
-		}
-
+		c.handleVoiceJoin(ctx, p.ChannelID)
 	case "voice_leave":
 		// A leave is always honoured, but it spends from the same allowance
 		// as joins, so leave/join cycles stay bounded.
-		h.voiceGate.take(c.User.ID, time.Now())
-		h.leaveCurrentVoice(c)
-
+		c.hub.voiceGate.take(c.User.ID, time.Now())
+		c.hub.leaveCurrentVoice(c)
 	case "typing":
-		if !c.allowTyping(p.ChannelID, time.Now()) {
-			return
-		}
-		// Only someone who could send a message shows as typing, and only to
-		// those who can see the channel.
-		if snap, ok := h.permSnapshot(p.ChannelID); ok && c.nativeLive() && h.channelKnown(ctx, snap, p.ChannelID) &&
-			c.can(snap, p.ChannelID, perm.ViewChannel|perm.SendMessages) {
-			c.emitApplicationEvent("typing", map[string]any{"channel_id": p.ChannelID, "user_id": c.User.ID}, true, nil, p.ChannelID)
-		}
-
+		c.handleTyping(ctx, p.ChannelID)
 	case "voice_speaking":
-		if cur := c.currentVoice(); cur != nil {
-			// A muted or deafened member is never shown as speaking.
-			active := p.Active && !h.isMuted(c.User.ID, *cur)
-			if c.speakingChanged(active, time.Now()) {
-				c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
-			}
-		}
-
+		c.handleSpeaking(p.Active)
 	case "voice_mute_state":
 		var st MuteState
 		if json.Unmarshal(payload, &st) == nil {
-			h.setMuteState(c, st)
+			c.hub.setMuteState(c, st)
 		}
-
 	case "webrtc_answer":
-		var answer webrtc.SessionDescription
-		if err := json.Unmarshal(payload, &answer); err == nil {
-			if peer := c.peer(); peer != nil && c.nativeLive() {
-				if err := peer.SetAnswer(answer); err != nil {
-					if c.native == nil {
-						slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
-					} else {
-						slog.Warn("native sfu answer rejected", "user", c.User.ID)
-					}
-				}
-			}
-		}
-
+		c.handleAnswer(payload)
 	case "webrtc_candidate":
-		var cand webrtc.ICECandidateInit
-		if err := json.Unmarshal(payload, &cand); err == nil {
-			if c.native == nil {
-				slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
-			}
-			if peer := c.peer(); peer != nil && c.nativeLive() {
-				// Held until the answer is applied; a rejected candidate is
-				// logged by the SFU with its reason (rate-limited).
-				_ = peer.AddRemoteCandidate(cand)
-			}
-		}
-
+		c.handleCandidate(payload)
 	case "webrtc_diag":
-		// A browser's own view of its voice connection, for troubleshooting.
-		if c.native == nil && len(payload) <= 4096 && c.allowDiag(time.Now()) {
-			slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
-		}
-
+		c.handleDiag(payload)
 	case "webrtc_request_keyframe":
-		if cur := c.currentVoice(); cur != nil && h.SFU != nil && c.nativeLive() {
-			if room := h.SFU.Room(*cur); room != nil {
-				room.DispatchKeyframe(c.User.ID)
-			}
+		if room := c.currentRoom(); room != nil {
+			room.DispatchKeyframe(c.User.ID)
 		}
-
 	case "webrtc_subscribe":
 		c.handleSubscribe(payload)
-
 	case "webrtc_layers":
 		c.handleLayers(payload)
-
 	case "webrtc_screenshare_start":
 		// The sharer's own screen needs a fresh keyframe for its viewers
 		// (DispatchKeyframe would ask for the videos the sharer watches).
-		if cur := c.currentVoice(); cur != nil && h.SFU != nil && c.nativeLive() {
-			if room := h.SFU.Room(*cur); room != nil {
-				room.RequestSourceKeyframe(c.User.ID, sfu.SourceScreen)
-			}
+		if room := c.currentRoom(); room != nil {
+			room.RequestSourceKeyframe(c.User.ID, sfu.SourceScreen)
 		}
-
 	case "webrtc_screenshare_stop":
-		if cur := c.currentVoice(); cur != nil && h.SFU != nil && c.nativeLive() {
-			if room := h.SFU.Room(*cur); room != nil {
-				room.RemoveUserSource(c.User.ID, sfu.SourceScreen)
-			}
-		}
-
+		c.removeOwnSource(sfu.SourceScreen)
 	case "webrtc_camera_stop":
-		if cur := c.currentVoice(); cur != nil && h.SFU != nil && c.nativeLive() {
-			if room := h.SFU.Room(*cur); room != nil {
-				room.RemoveUserSource(c.User.ID, sfu.SourceCamera)
-			}
-		}
-
+		c.removeOwnSource(sfu.SourceCamera)
 	case "media_handshake":
 		c.handleMediaHandshake(payload)
+	}
+}
+
+// currentRoom is the SFU room c is seated in, or nil when it is in none, the
+// SFU is off or the connection is no longer live.
+func (c *Client) currentRoom() *sfu.Room {
+	cur := c.currentVoice()
+	if cur == nil || c.hub.SFU == nil || !c.nativeLive() {
+		return nil
+	}
+	return c.hub.SFU.Room(*cur)
+}
+
+func (c *Client) removeOwnSource(source sfu.Source) {
+	if room := c.currentRoom(); room != nil {
+		room.RemoveUserSource(c.User.ID, source)
+	}
+}
+
+func (c *Client) handleVoiceJoin(ctx context.Context, channelID uuid.UUID) {
+	h := c.hub
+	if !h.voiceGate.take(c.User.ID, time.Now()) {
+		// Over the join/leave allowance: refused, and the client ends
+		// the attempt on voice_kicked.
+		metrics.WSDropped.With("voice_churn").Inc()
+		c.SendEvent("voice_kicked", map[string]any{"channel_id": channelID})
+		return
+	}
+	if ch, ok := h.voiceChannel(ctx, channelID); ok {
+		h.joinVoice(c, ch)
+	}
+}
+
+func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
+	if !c.allowTyping(channelID, time.Now()) {
+		return
+	}
+	// Only someone who could send a message shows as typing, and only to
+	// those who can see the channel.
+	h := c.hub
+	if snap, ok := h.permSnapshot(channelID); ok && c.nativeLive() && h.channelKnown(ctx, snap, channelID) &&
+		c.can(snap, channelID, perm.ViewChannel|perm.SendMessages) {
+		c.emitApplicationEvent("typing", map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
+	}
+}
+
+func (c *Client) handleSpeaking(active bool) {
+	cur := c.currentVoice()
+	if cur == nil {
+		return
+	}
+	// A muted or deafened member is never shown as speaking.
+	active = active && !c.hub.isMuted(c.User.ID, *cur)
+	if c.speakingChanged(active, time.Now()) {
+		c.emitApplicationEvent("voice_speaking", map[string]any{"channel_id": *cur, "user_id": c.User.ID, "active": active}, false, cur, uuid.Nil)
+	}
+}
+
+func (c *Client) handleAnswer(payload json.RawMessage) {
+	var answer webrtc.SessionDescription
+	if json.Unmarshal(payload, &answer) != nil {
+		return
+	}
+	peer := c.peer()
+	if peer == nil || !c.nativeLive() {
+		return
+	}
+	if err := peer.SetAnswer(answer); err != nil {
+		if c.native == nil {
+			slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
+		} else {
+			slog.Warn("native sfu answer rejected", "user", c.User.ID)
+		}
+	}
+}
+
+func (c *Client) handleCandidate(payload json.RawMessage) {
+	var cand webrtc.ICECandidateInit
+	if json.Unmarshal(payload, &cand) != nil {
+		return
+	}
+	if c.native == nil {
+		slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
+	}
+	if peer := c.peer(); peer != nil && c.nativeLive() {
+		// Held until the answer is applied; a rejected candidate is
+		// logged by the SFU with its reason (rate-limited).
+		_ = peer.AddRemoteCandidate(cand)
+	}
+}
+
+// handleDiag logs a browser's own view of its voice connection, for
+// troubleshooting.
+func (c *Client) handleDiag(payload json.RawMessage) {
+	if c.native == nil && len(payload) <= 4096 && c.allowDiag(time.Now()) {
+		slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 	}
 }
 

@@ -3,8 +3,6 @@ package gateway
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"net"
 	"net/http"
 	"time"
 
@@ -89,107 +87,6 @@ func (g *Gateway) serve(w http.ResponseWriter, r *http.Request) {
 	g.run(r, c)
 	c.closeWith(websocket.CloseNormalClosure, "")
 	<-c.done
-}
-
-// run is the read loop of one connection.
-func (g *Gateway) run(r *http.Request, c *connection) {
-	tm := g.timings()
-	c.trySend(marshal(OpHello, Hello{HeartbeatInterval: int(tm.Heartbeat / time.Millisecond)}))
-
-	// A bot that can set headers authenticates the upgrade itself; others
-	// send the token in IDENTIFY. Either way the token is checked before
-	// anything is sent but HELLO.
-	var header *bot.Credentials
-	if tok, ok := bot.BearerToken(r); ok {
-		creds, err := g.Auth.Lookup(r.Context(), tok)
-		if err != nil {
-			c.closeWith(CloseAuthFailed, "Authentication failed")
-			return
-		}
-		header = creds
-	}
-
-	var sess *session
-	defer func() {
-		if sess != nil {
-			sess.detach(c)
-		}
-	}()
-	ws := c.ws
-	ws.SetReadLimit(maxFrameBytes)
-	deadline := time.Now().Add(tm.Identify)
-	var frames frameLimiter
-	for {
-		_ = ws.SetReadDeadline(deadline)
-		_, msg, err := ws.ReadMessage()
-		if err != nil {
-			var ne net.Error
-			switch {
-			case errors.As(err, &ne) && ne.Timeout() && sess == nil:
-				c.closeWith(CloseNotAuthenticated, "Not authenticated")
-			case errors.As(err, &ne) && ne.Timeout():
-				c.closeWith(CloseSessionTimeout, "Session timed out")
-			case errors.Is(err, websocket.ErrReadLimit):
-				c.closeWith(websocket.CloseMessageTooBig, "frame too large")
-			}
-			return
-		}
-		if !frames.allow(time.Now()) {
-			c.closeWith(CloseRateLimited, "Rate limited")
-			return
-		}
-		var f frame
-		if json.Unmarshal(msg, &f) != nil {
-			c.closeWith(4002, "Decode error")
-			return
-		}
-		switch f.Op {
-		case OpHeartbeat:
-			c.trySend(marshal(OpHeartbeatAck, nil))
-			if sess != nil {
-				deadline = time.Now().Add(tm.Heartbeat * 3 / 2)
-			}
-		case OpIdentify:
-			if sess != nil {
-				c.closeWith(CloseAlreadyIdentified, "Already authenticated")
-				return
-			}
-			if sess = g.identify(c, f.D, header); sess == nil {
-				return
-			}
-			deadline = time.Now().Add(tm.Heartbeat * 3 / 2)
-		case OpPresenceUpdate:
-			if sess == nil {
-				c.closeWith(CloseNotAuthenticated, "Not authenticated")
-				return
-			}
-			p, err := parsePresence(f.D)
-			if err != nil {
-				c.closeWith(4002, "Decode error")
-				return
-			}
-			// Over the limit, an update is dropped (Discord does the same).
-			if ok, _ := g.presLimit.Allow(sess.botID.String()); ok {
-				g.setPresence(sess.userID, p)
-			}
-		case OpResume:
-			if sess != nil {
-				c.closeWith(CloseAlreadyIdentified, "Already authenticated")
-				return
-			}
-			s, fatal := g.resume(c, f.D, header)
-			if fatal {
-				return
-			}
-			if s != nil {
-				sess = s
-				deadline = time.Now().Add(tm.Heartbeat * 3 / 2)
-			}
-		default:
-			c.closeWith(4001, "Unknown opcode")
-			return
-		}
-	}
 }
 
 // credentials resolves the token of IDENTIFY or RESUME (or the header's).

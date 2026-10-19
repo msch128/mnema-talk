@@ -37,24 +37,24 @@ func nativeHandshakeAllowed(r *http.Request) bool {
 // NativeWebSocketHandler is explicitly unmounted in the production server.
 // Its constructor shares Hub membership, while using native-only authorization.
 func (h *Hub) NativeWebSocketHandler(a NativeAuthenticator) http.Handler {
+	return h.nativeSocketHandler(a, func(c *Client) {
+		go c.writePump()
+		go c.readPump()
+		go c.nativeWatchdog()
+	})
+}
+
+// nativeSocketHandler admits a native connection (rate limit, handshake
+// checks, lease authentication, upgrade, pending registration, lease
+// revalidation) and then hands the verified client to start, which launches
+// its pumps.
+func (h *Hub) nativeSocketHandler(a NativeAuthenticator, start func(*Client)) http.Handler {
 	connectionsPerIP := httpx.NewRateLimiter(30, time.Minute)
 	upgrader := websocket.Upgrader{ReadBufferSize: 4096, WriteBufferSize: 4096, CheckOrigin: nativeHandshakeAllowed}
 	core := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		if a == nil || h.isClosed() {
-			httpx.WriteError(w, httpx.ErrUnavailable("native socket unavailable"))
+		if !h.nativeRequestAcceptable(a, w, r) {
 			return
-		}
-		if !nativeHandshakeAllowed(r) {
-			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
-			return
-		}
-		if r.Body != nil {
-			var one [1]byte
-			if n, err := r.Body.Read(one[:]); n != 0 || err != io.EOF {
-				httpx.WriteError(w, httpx.ErrInvalidInput("native socket body must be empty"))
-				return
-			}
 		}
 		original, err := a.AuthenticateNativeRequest(r)
 		if err != nil {
@@ -82,15 +82,34 @@ func (h *Hub) NativeWebSocketHandler(a NativeAuthenticator) http.Handler {
 			h.cancelPending(c)
 			return
 		}
-		go c.writePump()
-		go c.readPump()
-		go c.nativeWatchdog()
+		start(c)
 	})
 	limited := connectionsPerIP.PerIP(core)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		limited.ServeHTTP(w, r)
 	})
+}
+
+// nativeRequestAcceptable rejects, with the matching error, a handshake that
+// is not a bare native upgrade; it reports whether the request may proceed.
+func (h *Hub) nativeRequestAcceptable(a NativeAuthenticator, w http.ResponseWriter, r *http.Request) bool {
+	if a == nil || h.isClosed() {
+		httpx.WriteError(w, httpx.ErrUnavailable("native socket unavailable"))
+		return false
+	}
+	if !nativeHandshakeAllowed(r) {
+		httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
+		return false
+	}
+	if r.Body != nil {
+		var one [1]byte
+		if n, err := r.Body.Read(one[:]); n != 0 || err != io.EOF {
+			httpx.WriteError(w, httpx.ErrInvalidInput("native socket body must be empty"))
+			return false
+		}
+	}
+	return true
 }
 
 func ptrNativeUser(p auth.NativePrincipal) *auth.User { u := p.User(); return &u }

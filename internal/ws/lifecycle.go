@@ -161,41 +161,46 @@ func (h *Hub) registerPending(c *Client) (bool, []*Client) {
 	}
 	var evicted []*Client
 	if c.native == nil {
-		var mine []*Client
-		for existing := range h.clients {
-			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
-				mine = append(mine, existing)
-			}
-		}
-		for existing := range h.pending {
-			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
-				mine = append(mine, existing)
-			}
-		}
-		sort.Slice(mine, func(i, j int) bool { return mine[i].connectedAt.Before(mine[j].connectedAt) })
-		for len(mine) >= maxBrowserSockets {
-			evicted = append(evicted, mine[0])
-			mine = mine[1:]
-		}
-	}
-	if c.native != nil {
-		count := 0
-		for existing := range h.clients {
-			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
-				count++
-			}
-		}
-		for existing := range h.pending {
-			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
-				count++
-			}
-		}
-		if count >= 4 {
-			return false, nil
-		}
+		evicted = h.browserOverflowLocked(c)
+	} else if h.nativeFamilyCountLocked(c) >= 4 {
+		return false, nil
 	}
 	h.pending[c] = struct{}{}
 	return true, evicted
+}
+
+// browserOverflowLocked returns the oldest connections (open or pending) of
+// c's user that must go for c to fit under maxBrowserSockets. Callers hold h.mu.
+func (h *Hub) browserOverflowLocked(c *Client) []*Client {
+	var mine []*Client
+	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
+		for existing := range set {
+			if existing.native == nil && existing.User.ID == c.User.ID && !existing.closed.Load() {
+				mine = append(mine, existing)
+			}
+		}
+	}
+	sort.Slice(mine, func(i, j int) bool { return mine[i].connectedAt.Before(mine[j].connectedAt) })
+	var evicted []*Client
+	for len(mine) >= maxBrowserSockets {
+		evicted = append(evicted, mine[0])
+		mine = mine[1:]
+	}
+	return evicted
+}
+
+// nativeFamilyCountLocked counts the open and pending connections of c's
+// native credential family. Callers hold h.mu.
+func (h *Hub) nativeFamilyCountLocked(c *Client) int {
+	count := 0
+	for _, set := range []map[*Client]struct{}{h.clients, h.pending} {
+		for existing := range set {
+			if existing.native != nil && existing.native.binding.FamilyID() == c.native.binding.FamilyID() {
+				count++
+			}
+		}
+	}
+	return count
 }
 
 func (h *Hub) cancelPending(c *Client) {

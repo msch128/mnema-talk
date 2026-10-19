@@ -174,26 +174,34 @@ func (c *connection) writeLoop() {
 	for {
 		select {
 		case b := <-c.send:
-			_ = c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-			if c.ws.WriteMessage(websocket.TextMessage, b) != nil {
+			if !c.writeText(b) {
 				c.closeWith(websocket.CloseAbnormalClosure, "")
 				return
 			}
 		case <-c.done:
-			for {
-				select {
-				case b := <-c.send:
-					_ = c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-					if c.ws.WriteMessage(websocket.TextMessage, b) != nil {
-						return
-					}
-					continue
-				default:
-				}
-				break
+			if c.flush() {
+				_ = c.ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(c.closeCode, c.closeReason), time.Now().Add(writeWait))
 			}
-			_ = c.ws.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(c.closeCode, c.closeReason), time.Now().Add(writeWait))
 			return
+		}
+	}
+}
+
+func (c *connection) writeText(b []byte) bool {
+	_ = c.ws.SetWriteDeadline(time.Now().Add(writeWait))
+	return c.ws.WriteMessage(websocket.TextMessage, b) == nil
+}
+
+// flush writes what is still queued; false means a write failed.
+func (c *connection) flush() bool {
+	for {
+		select {
+		case b := <-c.send:
+			if !c.writeText(b) {
+				return false
+			}
+		default:
+			return true
 		}
 	}
 }
