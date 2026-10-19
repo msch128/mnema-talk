@@ -3,15 +3,9 @@
 package config
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
-	"log/slog"
-	"net"
 	"net/netip"
-	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -89,82 +83,6 @@ type Config struct {
 	LegalOperatorCountry string
 	LegalProjectNotice   string
 }
-
-// Placeholder values shipped in .env.example (and older versions of it). They
-// are public, so they must never be accepted as real secrets. Any value
-// starting with "replace_with_" counts as a placeholder as well.
-var examplePlaceholders = map[string]bool{
-	"replace_with_a_secure_random_string_in_production": true,
-	"change_this_password_immediately":                  true,
-	"replace_with_access_key":                           true,
-	"replace_with_secret_key":                           true,
-	"replace_with_a_random_database_password":           true,
-}
-
-// isPlaceholder reports whether v is one of the public example values.
-func isPlaceholder(v string) bool {
-	return examplePlaceholders[v] || strings.HasPrefix(strings.ToLower(v), "replace_with_")
-}
-
-// defaultTrustedProxies is loopback only: a reverse proxy on the same host.
-// A proxy in a Docker network or elsewhere in the LAN must be listed
-// explicitly in TRUSTED_PROXY_CIDRS, otherwise any host in those private
-// ranges could spoof X-Forwarded-For.
-var defaultTrustedProxies = "127.0.0.0/8,::1/128"
-
-// IsLoopbackAddr reports whether host is "localhost" or a loopback IP.
-func IsLoopbackAddr(host string) bool {
-	host = strings.Trim(host, "[]")
-	if strings.EqualFold(host, "localhost") {
-		return true
-	}
-	ip := net.ParseIP(host)
-	return ip != nil && ip.IsLoopback()
-}
-
-// resolveBindAddr applies the BIND_ADDR default and the development rule.
-// Development logs the generated admin password and uses a random JWT
-// secret, so it must never face a network: it defaults to loopback and
-// refuses any other address. All other environments default to 0.0.0.0.
-func (c *Config) resolveBindAddr() error {
-	dev := c.AppEnv == "development" || c.AppEnv == "dev"
-	if c.BindAddr == "" {
-		if dev {
-			c.BindAddr = "127.0.0.1"
-		} else {
-			c.BindAddr = "0.0.0.0"
-		}
-		return nil
-	}
-	if dev && !IsLoopbackAddr(c.BindAddr) {
-		return fmt.Errorf("BIND_ADDR=%s is not allowed with APP_ENV=development: development logs the generated admin password and uses a random JWT secret, so it may only listen on loopback; set APP_ENV=production (with real secrets) to listen on a network address", c.BindAddr)
-	}
-	return nil
-}
-
-// BroadTrustedProxies lists TRUSTED_PROXY_CIDRS entries that are not
-// loopback and cover more than a small network (IPv4 shorter than /24, IPv6
-// shorter than /64). Any host in such a range can forge X-Forwarded-For.
-func (c *Config) BroadTrustedProxies() []string {
-	var out []string
-	for _, p := range c.TrustedProxies {
-		_, n, err := net.ParseCIDR(p)
-		if err != nil || n.IP.IsLoopback() {
-			continue
-		}
-		ones, bits := n.Mask.Size()
-		if (bits == 32 && ones < 24) || (bits == 128 && ones < 64) {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// maxSessionExpiryHours caps SESSION_EXPIRY_HOURS at one year.
-const maxSessionExpiryHours = 8760
-
-// validLogLevels are the accepted LOG_LEVEL values ("" = by environment).
-var validLogLevels = map[string]bool{"": true, "debug": true, "info": true, "warn": true, "error": true}
 
 func Load() (*Config, error) {
 	// A local .env is optional; in production the variables come from the environment.
@@ -311,128 +229,6 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	return cfg, nil
 }
 
-func (c *Config) validate(portMin, portMax uint16) error {
-	if c.DatabaseURL == "" {
-		return fmt.Errorf("DATABASE_URL is required")
-	}
-	if err := c.resolveBindAddr(); err != nil {
-		return err
-	}
-	if isPlaceholder(c.AdminInitialPassword) {
-		return fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
-	}
-	u, err := url.Parse(c.PublicURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return fmt.Errorf("PUBLIC_URL must be an absolute http(s) URL, got %q", c.PublicURL)
-	}
-	if portMin < 1 || portMin > portMax {
-		return fmt.Errorf("invalid WebRTC UDP port range %d-%d", portMin, portMax)
-	}
-	c.WebRTCUDPPortMin, c.WebRTCUDPPortMax = portMin, portMax
-	if c.Port == "0" {
-		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
-	}
-	if c.SessionExpiryHours < 1 || c.SessionExpiryHours > maxSessionExpiryHours {
-		return fmt.Errorf("SESSION_EXPIRY_HOURS must be between 1 and %d", maxSessionExpiryHours)
-	}
-	if !validLogLevels[c.LogLevel] {
-		return fmt.Errorf("LOG_LEVEL must be debug, info, warn or error (or empty), got %q", c.LogLevel)
-	}
-	if c.AuditRetentionDays < 0 {
-		return fmt.Errorf("AUDIT_RETENTION_DAYS must be 0 (keep forever) or a positive number of days")
-	}
-	if c.MediaRetentionDays < 0 {
-		return fmt.Errorf("MEDIA_RETENTION_DAYS must be 0 (disabled) or a positive number of days")
-	}
-	if c.MaxUploadMB < 1 || c.MaxUploadMB > 2048 {
-		return fmt.Errorf("MAX_UPLOAD_SIZE_MB must be between 1 and 2048")
-	}
-	for _, p := range c.TrustedProxies {
-		if _, _, err := net.ParseCIDR(p); err != nil && net.ParseIP(p) == nil {
-			return fmt.Errorf("TRUSTED_PROXY_CIDRS contains an invalid entry %q", p)
-		}
-	}
-
-	switch c.AppEnv {
-	case "prod":
-		c.AppEnv = "production"
-	case "dev":
-		c.AppEnv = "development"
-	case "production", "staging", "development", "test":
-	default:
-		return fmt.Errorf("APP_ENV must be production, staging, development or test, got %q", c.AppEnv)
-	}
-
-	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
-		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
-	}
-
-	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
-		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
-	}
-
-	if err := c.validateUpdater(); err != nil {
-		return err
-	}
-
-	if c.IsProduction() {
-		if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
-			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
-		}
-		if c.S3AccessKey == "" || c.S3SecretKey == "" {
-			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
-		}
-		if isPlaceholder(c.S3AccessKey) || isPlaceholder(c.S3SecretKey) {
-			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY still use the public example values; set your own")
-		}
-		if u, err := url.Parse(c.DatabaseURL); err == nil && u.User != nil {
-			if pw, ok := u.User.Password(); ok && isPlaceholder(pw) {
-				return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
-			}
-		}
-		if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
-			return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
-		}
-	} else if c.JWTSecret == "" {
-		// Development only: a per-process random secret (sessions reset on restart).
-		c.JWTSecret = RandomHex(32)
-		slog.Warn("JWT_SECRET not set, using a random secret for this process (development only)")
-	}
-	return nil
-}
-
-// DefaultUpdaterURL is the updater sidecar's address on the compose network.
-const DefaultUpdaterURL = "http://mnema-updater:8080"
-
-// minUpdaterTokenLen is the least UPDATER_TOKEN length: the token lets its
-// holder restart the app with a freshly pulled image.
-const minUpdaterTokenLen = 32
-
-var updaterTokenPattern = regexp.MustCompile(`^[A-Za-z0-9._~+/=-]+$`)
-
-// validateUpdater checks the self-update settings. Without UPDATER_TOKEN the
-// feature is off and UPDATER_URL is ignored.
-func (c *Config) validateUpdater() error {
-	if c.UpdaterToken == "" {
-		c.UpdaterURL = ""
-		return nil
-	}
-	if isPlaceholder(c.UpdaterToken) {
-		return fmt.Errorf("UPDATER_TOKEN still uses the public example value; generate one with: openssl rand -hex 32")
-	}
-	if len(c.UpdaterToken) < minUpdaterTokenLen || !updaterTokenPattern.MatchString(c.UpdaterToken) {
-		return fmt.Errorf("UPDATER_TOKEN must be at least %d characters of letters, digits and . _ ~ + / = -", minUpdaterTokenLen)
-	}
-	if c.UpdaterURL == "" {
-		c.UpdaterURL = DefaultUpdaterURL
-	}
-	u, err := url.Parse(c.UpdaterURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
-		return fmt.Errorf("UPDATER_URL must be an http(s) URL without credentials, query or fragment, got %q", c.UpdaterURL)
-	}
-	return nil
-}
-
 // SelfUpdateConfigured reports whether the updater sidecar may be called.
 func (c *Config) SelfUpdateConfigured() bool { return c.UpdaterToken != "" && c.UpdaterURL != "" }
 
@@ -454,39 +250,3 @@ func (c *Config) IsProduction() bool { return c.AppEnv == "production" || c.AppE
 
 // SecureCookies reports whether cookies must carry the Secure flag (HTTPS deployments).
 func (c *Config) SecureCookies() bool { return strings.HasPrefix(c.PublicURL, "https://") }
-
-// RandomHex returns a cryptographically random hex string of n bytes.
-func RandomHex(n int) string {
-	b := make([]byte, n)
-	_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
-	return hex.EncodeToString(b)
-}
-
-// normalizeURL trims the URL and a trailing slash, lower-cases scheme and host
-// and drops the default port (:443 for https, :80 for http), so it compares
-// equal to the Origin header browsers send. Unparsable input is returned
-// trimmed; validation reports it.
-func normalizeURL(raw string) string {
-	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
-	u, err := url.Parse(raw)
-	if err != nil || u.Scheme == "" || u.Host == "" {
-		return raw
-	}
-	u.Scheme = strings.ToLower(u.Scheme)
-	u.Host = strings.ToLower(u.Host)
-	if p := u.Port(); (u.Scheme == "https" && p == "443") || (u.Scheme == "http" && p == "80") {
-		u.Host = strings.TrimSuffix(u.Host, ":"+p)
-	}
-	return strings.TrimRight(u.String(), "/")
-}
-
-// SplitList splits a comma-separated list, dropping empty entries.
-func SplitList(s string) []string {
-	var out []string
-	for _, part := range strings.Split(s, ",") {
-		if p := strings.TrimSpace(part); p != "" {
-			out = append(out, p)
-		}
-	}
-	return out
-}
