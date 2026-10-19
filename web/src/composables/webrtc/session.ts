@@ -19,6 +19,42 @@ import { cleanupPeerConnection, handleRemoteCandidate, handleRemoteOffer, setupP
 import { stopScreenShare } from './screen'
 import { cleanupVoiceAudio, startSpeakingDetection } from './voiceAudio'
 
+function registerSignalingHandlers(cx: Cx) {
+  const { voice, chat } = cx
+  chat.setWebRTCHandlers({
+    onOffer: offer => handleRemoteOffer(cx, offer),
+    onCandidate: candidate => handleRemoteCandidate(cx, candidate),
+    onKicked: payload => handleKicked(cx, payload),
+    onMedia(payload) {
+      if (payload.channel_id !== voice.currentChannelId) return
+      mediaCall().receive(payload.user_id, payload.wire)
+    }
+  })
+}
+
+function startMediaCall({ voice }: Cx, channelId: string) {
+  const mediaUser = useAuthStore().user?.id
+  if (mediaUser) {
+    mediaCall().start(channelId, mediaUser)
+    // Whoever the Talk already lists (also members whose reload is still in
+    // its grace period): the group must not take the room for empty and
+    // found its own before the roster changes for the first time.
+    mediaCall().roster(Object.keys(voice.channelUsers[channelId] || {}))
+  }
+}
+
+async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
+  const model = aiModel(cx.voice.noiseMode)
+  if (model) preloadNoiseSuppressor(model)
+  try {
+    await refreshAudioDevices(cx)
+    return await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
+  } catch (err) {
+    console.warn('Microphone access denied or unavailable:', err)
+    return null
+  }
+}
+
 export async function joinVoiceChannel(cx: Cx, channelId: string) {
   const { voice, chat, st } = cx
   // The server refuses it too; saying so up front avoids a half-started call.
@@ -45,39 +81,15 @@ export async function joinVoiceChannel(cx: Cx, channelId: string) {
   // Clean up any previous voice session to prevent audio thread leak
   cleanupVoiceAudio(cx)
 
-  chat.setWebRTCHandlers({
-    onOffer: offer => handleRemoteOffer(cx, offer),
-    onCandidate: candidate => handleRemoteCandidate(cx, candidate),
-    onKicked: payload => handleKicked(cx, payload),
-    onMedia(payload) {
-      if (payload.channel_id !== voice.currentChannelId) return
-      mediaCall().receive(payload.user_id, payload.wire)
-    }
-  })
-
+  registerSignalingHandlers(cx)
   const gen = ++st.joinGeneration
   voice.setChannel(channelId)
-  const mediaUser = useAuthStore().user?.id
-  if (mediaUser) {
-    mediaCall().start(channelId, mediaUser)
-    // Whoever the Talk already lists (also members whose reload is still in
-    // its grace period): the group must not take the room for empty and
-    // found its own before the roster changes for the first time.
-    mediaCall().roster(Object.keys(voice.channelUsers[channelId] || {}))
-  }
+  startMediaCall(cx, channelId)
   voiceSession.track(channelId)
   await loadIceServers()
   if (gen !== st.joinGeneration) return
 
-  const model = aiModel(voice.noiseMode)
-  if (model) preloadNoiseSuppressor(model)
-  let stream = null
-  try {
-    await refreshAudioDevices(cx)
-    stream = await navigator.mediaDevices.getUserMedia({ audio: getAudioConstraints(cx) })
-  } catch (err) {
-    console.warn('Microphone access denied or unavailable:', err)
-  }
+  const stream = await captureMicrophone(cx)
   // Left (or joined elsewhere) while the browser was asking for the mic.
   if (gen !== st.joinGeneration) {
     stream?.getTracks().forEach(t => t.stop())

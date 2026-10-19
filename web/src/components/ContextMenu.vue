@@ -205,58 +205,71 @@ function handleSelect(item: ContextMenuItem) {
 
 function handleKeydown(e: KeyboardEvent) {
   const panel = currentPanel()
+  if (handleLeaveKey(e, panel) || handleSubmenuKey(e)) return
+  const list = rows(panel)
+  if (!list.length) return
+  const cur = list.findIndex(el => el === document.activeElement)
+  if (!handleRowKey(e, panel, cur)) typeAhead(e, list, cur)
+}
+
+// Escape, Tab and ArrowLeft leave the menu or the open submenu.
+function handleLeaveKey(e: KeyboardEvent, panel: HTMLElement | null): boolean {
   const inSub = !!panel && panel !== menuEl.value
   if (e.key === 'Escape') {
     e.preventDefault()
     e.stopPropagation()
     if (inSub) closeSubmenu({ focusTrigger: true })
     else close({ focus: true })
-    return
+    return true
   }
   if (e.key === 'Tab') {
     // Leave the menu; focus continues from the opener.
     close({ focus: true })
-    return
+    return true
   }
   if (e.key === 'ArrowLeft' && inSub) {
     e.preventDefault()
     closeSubmenu({ focusTrigger: true })
-    return
+    return true
   }
+  return false
+}
+
+function handleSubmenuKey(e: KeyboardEvent): boolean {
   const trigger = document.activeElement?.closest?.('[data-submenu-trigger]')
-  if (e.key === 'ArrowRight' && trigger && menuEl.value?.contains(trigger)) {
-    e.preventDefault()
-    const item = props.items.find(i => i.type === 'submenu' && String(i.id) === trigger.getAttribute('data-submenu-trigger'))
-    if (item?.type === 'submenu') openSubmenu(item, { focus: true })
-    return
-  }
+  if (e.key !== 'ArrowRight' || !trigger || !menuEl.value?.contains(trigger)) return false
+  e.preventDefault()
+  const item = props.items.find(i => i.type === 'submenu' && String(i.id) === trigger.getAttribute('data-submenu-trigger'))
+  if (item?.type === 'submenu') openSubmenu(item, { focus: true })
+  return true
+}
 
-  const list = rows(panel)
-  if (!list.length) return
-  const cur = list.findIndex(el => el === document.activeElement)
+function handleRowKey(e: KeyboardEvent, panel: HTMLElement | null, cur: number): boolean {
+  const target = rowTarget(e.key, cur)
+  if (target === null) return false
+  e.preventDefault()
+  focusRow(target, panel)
+  return true
+}
 
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    focusRow(cur < 0 ? 0 : cur + 1, panel)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    focusRow(cur < 0 ? -1 : cur - 1, panel)
-  } else if (e.key === 'Home') {
-    e.preventDefault()
-    focusRow(0, panel)
-  } else if (e.key === 'End') {
-    e.preventDefault()
-    focusRow(-1, panel)
-  } else if (e.key.length === 1 && /\S/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    // Type-ahead: next row whose label starts with the typed letter.
-    const ch = e.key.toLowerCase()
-    const n = list.length
-    for (let k = 1; k <= n; k++) {
-      const el = list[(Math.max(cur, -1) + k) % n]
-      if (el?.textContent?.trim().toLowerCase().startsWith(ch)) {
-        el.focus()
-        break
-      }
+function rowTarget(key: string, cur: number): number | null {
+  if (key === 'ArrowDown') return cur < 0 ? 0 : cur + 1
+  if (key === 'ArrowUp') return cur < 0 ? -1 : cur - 1
+  if (key === 'Home') return 0
+  if (key === 'End') return -1
+  return null
+}
+
+// Type-ahead: next row whose label starts with the typed letter.
+function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
+  if (e.key.length !== 1 || !/\S/.test(e.key) || e.ctrlKey || e.metaKey || e.altKey) return
+  const ch = e.key.toLowerCase()
+  const n = list.length
+  for (let k = 1; k <= n; k++) {
+    const el = list[(Math.max(cur, -1) + k) % n]
+    if (el?.textContent?.trim().toLowerCase().startsWith(ch)) {
+      el.focus()
+      break
     }
   }
 }

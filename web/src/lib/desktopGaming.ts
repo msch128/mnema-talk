@@ -30,8 +30,7 @@ export function startDesktopGaming(): () => void {
     if (!detail || typeof detail !== 'object' || Reflect.get(detail, 'token') !== token) return
     const action: unknown = Reflect.get(detail, 'action')
     if (action === 'ptt-release') { releasePtt(); return }
-    const issued: unknown = Reflect.get(detail, 'issued'); const expires: unknown = Reflect.get(detail, 'expires'); const now = performance.now()
-    if (typeof issued !== 'number' || typeof expires !== 'number' || !Number.isFinite(issued) || !Number.isFinite(expires) || expires <= issued || expires - issued > 151 || now < issued || now >= expires) return
+    if (!leaseIsLive(detail, performance.now())) return
     if (Reflect.get(detail, 'scope') !== scope || !ready()) return
     if (action === 'mute') voice.toggleMute()
     else if (action === 'deafen') voice.toggleDeafen()
@@ -66,6 +65,15 @@ export function startDesktopGaming(): () => void {
   const timer = setInterval(() => { void sync() }, 500)
   void sync()
   return () => { alive = false; stopScope(); clearInterval(timer); releasePtt(); window.removeEventListener('mnema-gaming-command', onControl); window.removeEventListener('pagehide', releasePtt) }
+}
+// A command carries the host's issue/expiry stamps (performance.now clock); it
+// is honoured only inside a short, well-formed window.
+function leaseIsLive(detail: object, now: number): boolean {
+  const issued: unknown = Reflect.get(detail, 'issued')
+  const expires: unknown = Reflect.get(detail, 'expires')
+  if (typeof issued !== 'number' || typeof expires !== 'number') return false
+  if (!Number.isFinite(issued) || !Number.isFinite(expires) || expires <= issued || expires - issued > 151) return false
+  return now >= issued && now < expires
 }
 export function chordText(chord: GamingChord): string {
   const key = chord.key === 32 ? 'Space' : chord.key >= 112 && chord.key <= 135 ? `F${chord.key - 111}` : String.fromCharCode(chord.key)

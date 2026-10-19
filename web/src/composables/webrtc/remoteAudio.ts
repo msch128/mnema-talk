@@ -155,47 +155,14 @@ function tagRemoteAudio(el: RemoteAudioElement, streamId: string) {
 // same track (transceiver reused for someone else) only retags its element.
 export function attachRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrack, stream: MediaStream | undefined) {
   const streamId = stream?.id || ''
-  // A source can return on a different receiver track after renegotiation.
-  // Its previous HTML/WebAudio sink must leave before the replacement plays;
-  // microphone and screen audio stay distinct through their stream prefixes.
-  for (const [trackId, el] of remoteAudioElements) {
-    const sameSource = streamId && el.dataset.streamId === streamId
-    const replacedTrack = trackId === track.id && el.srcObject?.getAudioTracks()[0] !== track
-    if ((sameSource && trackId !== track.id) || replacedTrack) removeRemoteAudio(trackId)
-  }
-  let audioEl = remoteAudioElements.get(track.id)
-  if (audioEl) {
-    tagRemoteAudio(audioEl, streamId)
-    applyRemoteGain(voiceStore, audioEl)
-    if (audioEl.paused) audioEl.play?.().catch(() => {})
+  removeSupersededAudio(track, streamId)
+  const existing = remoteAudioElements.get(track.id)
+  if (existing) {
+    tagRemoteAudio(existing, streamId)
+    applyRemoteGain(voiceStore, existing)
+    if (existing.paused) existing.play?.().catch(() => {})
   } else {
-    audioEl = new Audio() as RemoteAudioElement
-    audioEl.srcObject = new MediaStream([track])
-    audioEl.autoplay = true
-    tagRemoteAudio(audioEl, streamId)
-    applyOutput(voiceStore, audioEl)
-    applyRemoteGain(voiceStore, audioEl)
-    audioEl.play().catch(e => {
-      // After a reload without a user gesture the browser may refuse to play;
-      // the UI then offers a click to enable sound (resumeRemoteAudio).
-      if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
-      console.warn('[WebRTC] Audio auto-play warning:', e)
-    })
-    if (typeof document !== 'undefined' && document.body) {
-      let sink = document.getElementById('mnema-audio-sink')
-      if (!sink) {
-        sink = document.createElement('div')
-        sink.id = 'mnema-audio-sink'
-        sink.style.display = 'none'
-        document.body.appendChild(sink)
-      }
-      sink.appendChild(audioEl)
-    }
-    remoteAudioElements.set(track.id, audioEl)
-    track.onended = () => {
-      const current = remoteAudioElements.get(track.id)
-      if (current?.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-    }
+    startRemoteAudio(voiceStore, track, streamId)
   }
 
   // When the SFU stops forwarding, the browser removes the track from its
@@ -206,4 +173,48 @@ export function attachRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrac
     const el = remoteAudioElements.get(track.id)
     if (el && (el.dataset.streamId || '') === streamId && el.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
   })
+}
+
+// A source can return on a different receiver track after renegotiation.
+// Its previous HTML/WebAudio sink must leave before the replacement plays;
+// microphone and screen audio stay distinct through their stream prefixes.
+function removeSupersededAudio(track: MediaStreamTrack, streamId: string) {
+  for (const [trackId, el] of remoteAudioElements) {
+    const sameSource = streamId && el.dataset.streamId === streamId
+    const replacedTrack = trackId === track.id && el.srcObject?.getAudioTracks()[0] !== track
+    if ((sameSource && trackId !== track.id) || replacedTrack) removeRemoteAudio(trackId)
+  }
+}
+
+function audioSink(): HTMLElement | null {
+  if (typeof document === 'undefined' || !document.body) return null
+  let sink = document.getElementById('mnema-audio-sink')
+  if (!sink) {
+    sink = document.createElement('div')
+    sink.id = 'mnema-audio-sink'
+    sink.style.display = 'none'
+    document.body.appendChild(sink)
+  }
+  return sink
+}
+
+function startRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrack, streamId: string) {
+  const audioEl = new Audio() as RemoteAudioElement
+  audioEl.srcObject = new MediaStream([track])
+  audioEl.autoplay = true
+  tagRemoteAudio(audioEl, streamId)
+  applyOutput(voiceStore, audioEl)
+  applyRemoteGain(voiceStore, audioEl)
+  audioEl.play().catch(e => {
+    // After a reload without a user gesture the browser may refuse to play;
+    // the UI then offers a click to enable sound (resumeRemoteAudio).
+    if (e?.name === 'NotAllowedError') voiceStore.audioBlocked = true
+    console.warn('[WebRTC] Audio auto-play warning:', e)
+  })
+  audioSink()?.appendChild(audioEl)
+  remoteAudioElements.set(track.id, audioEl)
+  track.onended = () => {
+    const current = remoteAudioElements.get(track.id)
+    if (current?.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
+  }
 }
