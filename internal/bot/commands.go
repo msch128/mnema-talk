@@ -81,30 +81,39 @@ func (in CommandInput) Clean() (CommandInput, error) {
 	if in.Options == nil {
 		in.Options = []Option{}
 	}
+	if err := cleanOptions(in.Options); err != nil {
+		return in, err
+	}
+	return in, nil
+}
+
+// cleanOptions validates option names, descriptions, types and order, and
+// normalizes the descriptions in place.
+func cleanOptions(opts []Option) error {
 	seen := map[string]bool{}
 	optional := false
-	for i, o := range in.Options {
+	for i, o := range opts {
 		if !nameRE.MatchString(o.Name) || seen[o.Name] {
-			return in, httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
+			return httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
 		}
 		seen[o.Name] = true
 		d, err := httpx.CleanText("option description", o.Description, 100, true)
 		if err != nil {
-			return in, err
+			return err
 		}
-		in.Options[i].Description = d
+		opts[i].Description = d
 		switch o.Type {
 		case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
 		default:
-			return in, httpx.ErrInvalidInput("unknown option type")
+			return httpx.ErrInvalidInput("unknown option type")
 		}
 		// As in Discord, required options come first.
 		if o.Required && optional {
-			return in, httpx.ErrInvalidInput("required options must come before optional ones")
+			return httpx.ErrInvalidInput("required options must come before optional ones")
 		}
 		optional = optional || !o.Required
 	}
-	return in, nil
+	return nil
 }
 
 const commandColumns = `id, bot_id, name, description, options, disabled, created_at`

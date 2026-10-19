@@ -1,10 +1,12 @@
 package webhook
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"strings"
 
@@ -80,13 +82,6 @@ func (h *Handler) readMultipart(r *http.Request, req *request) error {
 		return formError("invalid multipart form")
 	}
 	ctx := r.Context()
-	fail := func(err error) error {
-		for _, f := range req.files {
-			h.Media.DiscardFile(ctx, f)
-		}
-		req.files = nil
-		return err
-	}
 	form := map[string]string{}
 	var jsonPart bool
 	for {
@@ -95,42 +90,72 @@ func (h *Handler) readMultipart(r *http.Request, req *request) error {
 			break
 		}
 		if err != nil {
-			return fail(h.Media.FormError(ctx, err))
+			return h.discardFiles(ctx, req, h.Media.FormError(ctx, err))
 		}
-		switch {
-		case part.FileName() != "":
-			if len(req.files) >= maxFiles {
-				return fail(formError("at most 10 files are allowed"))
-			}
-			f, err := h.Media.StoreFilePart(ctx, part)
-			if err != nil {
-				return fail(err)
-			}
-			req.files = append(req.files, f)
-		case part.FormName() == "payload_json":
-			b, err := io.ReadAll(io.LimitReader(part, maxPayloadJSON+1))
-			if err != nil {
-				return fail(h.Media.FormError(ctx, err))
-			}
-			if len(b) > maxPayloadJSON {
-				return fail(httpx.ErrPayloadTooLarge("payload_json too large"))
-			}
-			if err := decodeLenient(strings.NewReader(string(b)), &req.payload); err != nil {
-				return fail(formError("payload_json is not a valid JSON object"))
-			}
-			jsonPart = true
-		case part.FormName() == "content" || part.FormName() == "username":
-			b, err := io.ReadAll(io.LimitReader(part, chat.MaxMessageLen*4+1))
-			if err != nil {
-				return fail(h.Media.FormError(ctx, err))
-			}
-			form[part.FormName()] = string(b)
+		isJSON, err := h.readPart(ctx, part, req, form)
+		if err != nil {
+			return h.discardFiles(ctx, req, err)
 		}
+		jsonPart = jsonPart || isJSON
 	}
 	// Plain form fields stand in for a missing payload_json, as at Discord.
 	if !jsonPart {
 		req.payload.Content = form["content"]
 		req.payload.Username = form["username"]
+	}
+	return nil
+}
+
+// discardFiles removes the files stored so far and passes err through.
+func (h *Handler) discardFiles(ctx context.Context, req *request, err error) error {
+	for _, f := range req.files {
+		h.Media.DiscardFile(ctx, f)
+	}
+	req.files = nil
+	return err
+}
+
+// readPart handles one multipart part: a file, the payload_json document, or
+// a plain content/username field (collected in form). It reports whether the
+// part was payload_json.
+func (h *Handler) readPart(ctx context.Context, part *multipart.Part, req *request, form map[string]string) (bool, error) {
+	switch {
+	case part.FileName() != "":
+		return false, h.storePartFile(ctx, part, req)
+	case part.FormName() == "payload_json":
+		return true, h.readPayloadJSON(ctx, part, req)
+	case part.FormName() == "content" || part.FormName() == "username":
+		b, err := io.ReadAll(io.LimitReader(part, chat.MaxMessageLen*4+1))
+		if err != nil {
+			return false, h.Media.FormError(ctx, err)
+		}
+		form[part.FormName()] = string(b)
+	}
+	return false, nil
+}
+
+func (h *Handler) storePartFile(ctx context.Context, part *multipart.Part, req *request) error {
+	if len(req.files) >= maxFiles {
+		return formError("at most 10 files are allowed")
+	}
+	f, err := h.Media.StoreFilePart(ctx, part)
+	if err != nil {
+		return err
+	}
+	req.files = append(req.files, f)
+	return nil
+}
+
+func (h *Handler) readPayloadJSON(ctx context.Context, part *multipart.Part, req *request) error {
+	b, err := io.ReadAll(io.LimitReader(part, maxPayloadJSON+1))
+	if err != nil {
+		return h.Media.FormError(ctx, err)
+	}
+	if len(b) > maxPayloadJSON {
+		return httpx.ErrPayloadTooLarge("payload_json too large")
+	}
+	if err := decodeLenient(strings.NewReader(string(b)), &req.payload); err != nil {
+		return formError("payload_json is not a valid JSON object")
 	}
 	return nil
 }

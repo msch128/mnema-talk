@@ -64,25 +64,31 @@ func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.U
 		}
 		return b, nil
 	case OptionUser, OptionChannel:
-		s, ok := v.(string)
-		id, err := uuid.Parse(s)
-		if !ok || err != nil {
-			return bad("an ID")
-		}
-		if o.Type == OptionChannel {
-			if !snap.Channel(user.Subject(), id).Has(perm.ViewChannel) {
-				return bad("a channel you can see")
-			}
-			return id, nil
-		}
-		var ok2 bool
-		if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND NOT is_bot AND disabled_at IS NULL)`, id).Scan(&ok2); err != nil {
-			return nil, err
-		}
-		if !ok2 || !snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) {
-			return bad("a member of this channel")
+		return c.checkReference(r, snap, user, ch, o.Type, v, bad)
+	}
+	return bad("valid")
+}
+
+// checkReference validates a user or channel option: an ID of a channel the
+// invoker can see, or of a member who can see the invocation channel.
+func (c *Commands) checkReference(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, typ int, v any, bad func(string) (any, error)) (any, error) {
+	s, ok := v.(string)
+	id, err := uuid.Parse(s)
+	if !ok || err != nil {
+		return bad("an ID")
+	}
+	if typ == OptionChannel {
+		if !snap.Channel(user.Subject(), id).Has(perm.ViewChannel) {
+			return bad("a channel you can see")
 		}
 		return id, nil
 	}
-	return bad("valid")
+	var exists bool
+	if err := c.DB.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM users WHERE id = $1 AND NOT is_bot AND disabled_at IS NULL)`, id).Scan(&exists); err != nil {
+		return nil, err
+	}
+	if !exists || !snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) {
+		return bad("a member of this channel")
+	}
+	return id, nil
 }

@@ -268,18 +268,12 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 	if err != nil {
 		return nil, chat.MentionPolicy{}, formError(err.Error())
 	}
-	name := rec.Name
-	// Without the setting the sender's username is ignored, like avatar_url.
-	if rec.AllowIdentityOverride && strings.TrimSpace(p.Username) != "" {
-		if name, err = cleanName("username", p.Username); err != nil {
-			return nil, chat.MentionPolicy{}, formError(err.Error())
-		}
+	name, err := senderName(rec, p)
+	if err != nil {
+		return nil, chat.MentionPolicy{}, err
 	}
-	if !rec.AllowEmbeds && len(p.Embeds) > 0 {
-		return nil, chat.MentionPolicy{}, formError("embeds are not allowed for this webhook")
-	}
-	if !rec.AllowAttachments && len(req.files) > 0 {
-		return nil, chat.MentionPolicy{}, formError("attachments are not allowed for this webhook")
+	if err := checkAllowed(rec, req); err != nil {
+		return nil, chat.MentionPolicy{}, err
 	}
 	embeds, err := sanitizeEmbeds(p.Embeds)
 	if err != nil {
@@ -288,16 +282,9 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 	if content == "" && len(embeds) == 0 && len(req.files) == 0 {
 		return nil, chat.MentionPolicy{}, emptyMessage{}
 	}
-	var parent *uuid.UUID
-	if raw := r.URL.Query().Get("thread_id"); raw != "" {
-		id, err := uuid.Parse(raw)
-		if err != nil {
-			return nil, chat.MentionPolicy{}, unknownThread{}
-		}
-		if err := chat.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
-			return nil, chat.MentionPolicy{}, unknownThread{}
-		}
-		parent = &id
+	parent, err := h.threadParent(ctx, r, rec)
+	if err != nil {
+		return nil, chat.MentionPolicy{}, err
 	}
 	policy, err := h.mentionPolicy(ctx, rec, p.AllowedMentions)
 	if err != nil {
@@ -309,6 +296,47 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 	}, policy, nil
 }
 
+// senderName is the webhook's name, or the request's username when the
+// webhook allows overriding it. Without the setting the username is ignored,
+// like avatar_url.
+func senderName(rec *record, p rawPayload) (string, error) {
+	if !rec.AllowIdentityOverride || strings.TrimSpace(p.Username) == "" {
+		return rec.Name, nil
+	}
+	name, err := cleanName("username", p.Username)
+	if err != nil {
+		return "", formError(err.Error())
+	}
+	return name, nil
+}
+
+// checkAllowed rejects embeds and attachments the webhook does not accept.
+func checkAllowed(rec *record, req *request) error {
+	if !rec.AllowEmbeds && len(req.payload.Embeds) > 0 {
+		return formError("embeds are not allowed for this webhook")
+	}
+	if !rec.AllowAttachments && len(req.files) > 0 {
+		return formError("attachments are not allowed for this webhook")
+	}
+	return nil
+}
+
+// threadParent resolves the optional thread_id query parameter.
+func (h *Handler) threadParent(ctx context.Context, r *http.Request, rec *record) (*uuid.UUID, error) {
+	raw := r.URL.Query().Get("thread_id")
+	if raw == "" {
+		return nil, nil
+	}
+	id, err := uuid.Parse(raw)
+	if err != nil {
+		return nil, unknownThread{}
+	}
+	if err := chat.ValidateParent(ctx, h.DB, rec.ChannelID, &id); err != nil {
+		return nil, unknownThread{}
+	}
+	return &id, nil
+}
+
 // mentionPolicy turns the webhook's settings and allowed_mentions into the
 // policy for the message. The settings limit what a sender can ask for: with
 // the defaults @username notifies members and @all and @here do not. The
@@ -317,20 +345,9 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMentions) (chat.MentionPolicy, error) {
 	policy := chat.MentionPolicy{NoEveryone: true, NoUsers: !rec.AllowUserMentions}
 	if am != nil {
-		wantUsers := slices.Contains(am.Parse, "users")
-		wantEveryone := slices.Contains(am.Parse, "everyone")
-		if wantUsers && len(am.Users) > 0 {
-			return policy, formError("allowed_mentions: users cannot be in parse and listed at once")
+		if err := narrowMentions(&policy, rec, am); err != nil {
+			return policy, err
 		}
-		if !wantUsers && rec.AllowUserMentions {
-			policy.NoUsers = true
-			for _, raw := range am.Users {
-				if id, err := uuid.Parse(raw); err == nil {
-					policy.AllowUsers = append(policy.AllowUsers, id)
-				}
-			}
-		}
-		policy.NoEveryone = !wantEveryone
 	}
 	// @all and @here need both the sender's request and the webhook's setting.
 	policy.NoEveryone = policy.NoEveryone || !rec.AllowEveryone
@@ -344,4 +361,22 @@ func (h *Handler) mentionPolicy(ctx context.Context, rec *record, am *AllowedMen
 	ch := rec.ChannelID
 	policy.CanView = func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) }
 	return policy, nil
+}
+
+// narrowMentions applies the request's allowed_mentions to the policy.
+func narrowMentions(policy *chat.MentionPolicy, rec *record, am *AllowedMentions) error {
+	wantUsers := slices.Contains(am.Parse, "users")
+	if wantUsers && len(am.Users) > 0 {
+		return formError("allowed_mentions: users cannot be in parse and listed at once")
+	}
+	if !wantUsers && rec.AllowUserMentions {
+		policy.NoUsers = true
+		for _, raw := range am.Users {
+			if id, err := uuid.Parse(raw); err == nil {
+				policy.AllowUsers = append(policy.AllowUsers, id)
+			}
+		}
+	}
+	policy.NoEveryone = !slices.Contains(am.Parse, "everyone")
+	return nil
 }
