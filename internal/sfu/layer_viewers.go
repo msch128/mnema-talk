@@ -1,0 +1,149 @@
+package sfu
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/pion/rtp"
+	"github.com/pion/webrtc/v4"
+)
+
+func (g *layerGroup) viewerListLocked() []*viewerTrack {
+	out := make([]*viewerTrack, 0, len(g.viewers))
+	for _, vt := range g.viewers {
+		out = append(out, vt)
+	}
+	return out
+}
+
+func (g *layerGroup) publishViewersLocked() {
+	list := g.viewerListLocked()
+	g.snapshot.Store(&list)
+}
+
+// representative is a live layer's info, the best one; nil when none is live.
+func (g *layerGroup) representative() *TrackInfo {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for _, info := range g.infos {
+		if info != nil {
+			return info
+		}
+	}
+	return nil
+}
+
+// newViewer makes the outgoing track one viewer gets for the group. pref is
+// the viewer's choice, -1 for automatic. It receives nothing until addViewer.
+func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID string) *viewerTrack {
+	// NewTrackLocalStaticRTP never fails.
+	local, _ := webrtc.NewTrackLocalStaticRTP(g.codec, trackID, streamID)
+	vt := &viewerTrack{TrackLocalStaticRTP: local, group: g, since: layerNow(), viewer: viewer, pref: pref, cur: -1, eff: -1, sink: local.WriteRTP}
+	if pref < 0 {
+		vt.ad = newAdapter(layerNow(), g.floor())
+	}
+	vt.want = vt.chosenLayer()
+	vt.curA.Store(-1)
+	vt.wantA.Store(int32(vt.want))
+	return vt
+}
+
+// addViewer starts delivering to vt and asks for the keyframe it waits for.
+func (g *layerGroup) addViewer(vt *viewerTrack) {
+	g.mu.Lock()
+	old := g.viewers[vt.viewer]
+	g.viewers[vt.viewer] = vt
+	g.publishViewersLocked()
+	g.mu.Unlock()
+	if old != nil && old != vt {
+		old.close()
+	}
+	vt.retarget()
+	g.refreshWanted()
+}
+
+// removeViewer stops delivering to vt.
+func (g *layerGroup) removeViewer(vt *viewerTrack) {
+	g.mu.Lock()
+	if g.viewers[vt.viewer] == vt {
+		delete(g.viewers, vt.viewer)
+		g.publishViewersLocked()
+	}
+	g.mu.Unlock()
+	vt.close()
+	g.refreshWanted()
+}
+
+// viewerFor is viewer's outgoing track of the group, nil if it has none.
+func (g *layerGroup) viewerFor(viewer uuid.UUID) *viewerTrack {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.viewers[viewer]
+}
+
+// write hands one packet of layer idx to every viewer.
+func (g *layerGroup) write(idx int, p *rtp.Packet) {
+	g.lastPkt[idx].Store(layerNow().UnixNano())
+	g.sent[idx].Add(uint64(rtpHeaderSize + len(p.Payload)))
+	list := g.snapshot.Load()
+	if list == nil {
+		return
+	}
+	for _, vt := range *list {
+		vt.write(idx, p)
+	}
+}
+
+// rateEvery is the shortest time between two measurements of the layers'
+// bitrates, whatever the number of viewers asking.
+const rateEvery = 900 * time.Millisecond
+
+// rtpHeaderSize is the size counted for an RTP header (no extensions).
+const rtpHeaderSize = 12
+
+// sampleRates measures the layers' bitrates from the bytes received since the
+// last measurement, smoothing over about three of them. It is cheap and
+// lock free: of many viewers asking at once, one measures.
+func (g *layerGroup) sampleRates(now time.Time) {
+	if !g.rateMu.TryLock() {
+		return
+	}
+	defer g.rateMu.Unlock()
+	at, t := g.rateAt, now.UnixNano()
+	if at != 0 && t-at < int64(rateEvery) {
+		return
+	}
+	g.rateAt = t
+	secs := float64(t-at) / float64(time.Second)
+	for i := range g.sent {
+		total := g.sent[i].Load()
+		delta := total - g.seen[i]
+		g.seen[i] = total
+		if at == 0 {
+			continue
+		}
+		if delta == 0 {
+			g.rate[i].Store(0)
+			continue
+		}
+		bps := int64(float64(delta) * 8 / secs)
+		if old := g.rate[i].Load(); old > 0 {
+			bps = (2*old + bps) / 3
+		}
+		bps = max(bps, 1)
+		g.rate[i].Store(bps)
+		g.last[i].Store(bps)
+	}
+}
+
+// layerWriter feeds one layer's packets into its group. It is the "local
+// track" of that layer's forwarding loop.
+type layerWriter struct {
+	group *layerGroup
+	layer int
+}
+
+func (w layerWriter) WriteRTP(p *rtp.Packet) error {
+	w.group.write(w.layer, p)
+	return nil
+}
