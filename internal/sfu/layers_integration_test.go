@@ -290,12 +290,15 @@ func TestLayersAreAnnouncedAndWithdrawn(t *testing.T) {
 
 func waitFor(t *testing.T, cond func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
+	timeout := time.After(10 * time.Second)
+	for {
 		if cond() {
 			return
 		}
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-timeout:
+			t.Fatal("condition never became true")
+		case <-time.After(10 * time.Millisecond):
+		}
 	}
-	t.Fatal("condition never became true")
 }
