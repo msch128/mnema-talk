@@ -76,19 +76,20 @@ async function call(command: string, payload: Record<string, unknown> = {}, sign
     return value
   } finally { signal?.removeEventListener('abort', abort) }
 }
+// A lost Connect response may have selected a native profile. Read its
+// public comparator for a new explicit connection attempt, never for login.
+async function adoptPublicDescriptor() {
+  const owner = context; const generation = profileGeneration; const captured = port
+  const state = await captured.invoke('native_context')
+  if (context !== owner || generation !== profileGeneration || captured !== port) throw cancelled()
+  if (!object(state) || state['context'] !== owner || state['content_authorization'] !== 'unavailable' || state['remembered_login'] !== false || (state['profile_intent'] !== null && (typeof state['profile_intent'] !== 'string' || !UUID.test(state['profile_intent']) || state['profile_intent'] === '00000000-0000-0000-0000-000000000000'))) throw new Error('Native profile descriptor unavailable')
+  if (state['authentication_intent'] !== null && !canonicalId(state['authentication_intent'])) throw new Error('Native authentication descriptor unavailable')
+  profileIntent = typeof state['profile_intent'] === 'string' ? state['profile_intent'] : null
+  authenticationIntent = typeof state['authentication_intent'] === 'string' ? state['authentication_intent'] : null
+}
 export async function connectNative(address: string, signal?: AbortSignal): Promise<NativeReply> {
   if (new TextEncoder().encode(address).length > 2048) throw new Error(t('nativeDesktop.addressTooLong'))
-  if (profileIntent === null) {
-    // A lost Connect response may have selected a native profile. Read its
-    // public comparator for a new explicit connection attempt, never for login.
-    const owner = context; const generation = profileGeneration; const captured = port
-    const state = await captured.invoke('native_context')
-    if (context !== owner || generation !== profileGeneration || captured !== port) throw cancelled()
-    if (!object(state) || state['context'] !== owner || state['content_authorization'] !== 'unavailable' || state['remembered_login'] !== false || (state['profile_intent'] !== null && (typeof state['profile_intent'] !== 'string' || !UUID.test(state['profile_intent']) || state['profile_intent'] === '00000000-0000-0000-0000-000000000000'))) throw new Error('Native profile descriptor unavailable')
-    if (state['authentication_intent'] !== null && !canonicalId(state['authentication_intent'])) throw new Error('Native authentication descriptor unavailable')
-    profileIntent = typeof state['profile_intent'] === 'string' ? state['profile_intent'] : null
-    authenticationIntent = typeof state['authentication_intent'] === 'string' ? state['authentication_intent'] : null
-  }
+  if (profileIntent === null) await adoptPublicDescriptor()
   const previous = profileIntent; const previousAuthentication = authenticationIntent
   profileIntent = null; authenticationIntent = null; authenticationUncertain = false; typedChatApi.clear(); profileGeneration++; retireSockets()
   const reply = await call('native_connect', { address, profileIntent: previous, authenticationIntent: previousAuthentication }, signal, false)
@@ -106,156 +107,196 @@ export async function disconnectNative(): Promise<void> {
   const value = await port.invoke('native_disconnect', { context: owner, profileIntent: expectedProfile, authenticationIntent: expectedAuthentication })
   if (!validReply(value, owner) || value.status !== 204) throw new Error('Native disconnect unavailable')
 }
+type NativeRequest = Parameters<ApiTransport>[1]
+type NativeResponse = Awaited<ReturnType<ApiTransport>>
+type Route = (path: string, request: NativeRequest) => Promise<NativeResponse> | null
+
+/** Runs a native command for the request and hands back its status and body. */
+async function viaNative(command: string, payload: Record<string, unknown>, request: NativeRequest): Promise<NativeResponse> {
+  const reply = await call(command, payload, request.signal)
+  return { status: reply.status, body: reply.body }
+}
+
+function nativeUserId(body: unknown): string {
+  if (!object(body) || !object(body['user']) || typeof body['user']['id'] !== 'string' || !UUID.test(body['user']['id']) || body['user']['id'] === '00000000-0000-0000-0000-000000000000') throw new Error('Invalid native user acknowledgement')
+  return body['user']['id']
+}
+
+/** What registration learns about its login on the way, for the outcome and the cleanup. */
+interface RegistrationAttempt {
+  acceptedLoginIntent: string | null
+  loginAttempted: boolean
+}
+
+async function nativeRegister(request: NativeRequest, input: Record<string, unknown>): Promise<NativeResponse> {
+  if (Object.keys(input).length !== 4 || !['username', 'display_name', 'password', 'invite_code'].every(k => typeof input[k] === 'string')) return unavailable()
+  const username = input['username']; const displayName = input['display_name']; const password = input['password']; const inviteCode = input['invite_code']
+  if (typeof username !== 'string' || typeof displayName !== 'string' || typeof password !== 'string' || typeof inviteCode !== 'string') return unavailable()
+  typedChatApi.clear(); authenticationRevision++; retireSockets()
+  const owner = context; const selected = profileIntent; const lineage = authenticationIntent; const generation = profileGeneration; const revision = authenticationRevision; const captured = port
+  if (!owner || !selected) throw new Error('Native profile unavailable')
+  const attempt: RegistrationAttempt = { acceptedLoginIntent: null, loginAttempted: false }
+  const current = () => context === owner && profileIntent === selected && authenticationIntent === lineage && profileGeneration === generation && authenticationRevision === revision && port === captured && !request.signal?.aborted
+  const result = await registerThenLogin({
+    isCurrent: current,
+    call: async (command, values) => {
+      if (!current()) throw cancelled()
+      if (command === 'native_auth_login') attempt.loginAttempted = true
+      const reply = await call(command, command === 'native_auth_register'
+        ? { username: values['username'], displayName: values['display_name'], password: values['password'], inviteCode: values['invite_code'] }
+        : values, request.signal)
+      if (command === 'native_auth_login' && reply.status === 200) {
+        if (!object(reply.body) || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
+        attempt.acceptedLoginIntent = reply.body['authentication_intent']
+      }
+      return reply
+    },
+    retireCaptured: async () => {
+      if (!current()) throw cancelled()
+      // Identity-mismatch cleanup targets exactly the just-acknowledged native
+      // login family, not the old unauthenticated selector or a later login.
+      if (!attempt.acceptedLoginIntent) throw new Error('Native captured session unavailable')
+      const value = await captured.invoke('native_auth_logout', { context: owner, profileIntent: selected, authenticationIntent: attempt.acceptedLoginIntent, requestId: crypto.randomUUID() })
+      if (!validReply(value, owner) || value.status !== 204) throw new Error('Native captured logout unavailable')
+    },
+    userId: nativeUserId
+  }, { username, display_name: displayName, password, invite_code: inviteCode })
+  if (!current()) throw cancelled()
+  if (result.kind === 'authenticated') {
+    if (!object(result.reply.body) || !canonicalId(result.reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
+    authenticationIntent = result.reply.body['authentication_intent']
+    return { status: result.reply.status, body: result.reply.body }
+  }
+  if (result.kind === 'rejected') return { status: result.reply.status, body: result.reply.body }
+  if (attempt.loginAttempted) { authenticationIntent = null; authenticationUncertain = true }
+  return { status: 503, body: { error: { code: 'LOGIN_REQUIRED', message: t('nativeDesktop.loginRequired') } } }
+}
+
+async function nativePassword(request: NativeRequest, input: Record<string, unknown>): Promise<NativeResponse> {
+  if (Object.keys(input).length !== 2 || typeof input['current_password'] !== 'string' || typeof input['new_password'] !== 'string') return unavailable()
+  typedChatApi.clear(); authenticationRevision++; retireSockets()
+  const oldIntent = authenticationIntent; const oldProfile = profileIntent; const oldContext = context; const oldGeneration = profileGeneration; const revision = authenticationRevision
+  try {
+    const reply = await call('native_auth_password', { currentPassword: input['current_password'], newPassword: input['new_password'] }, request.signal)
+    if (reply.status === 200) {
+      if (!object(reply.body) || Object.keys(reply.body).length !== 1 || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native password acknowledgement')
+      authenticationIntent = reply.body['authentication_intent']
+      authenticationUncertain = false
+      return { status: 204, body: null }
+    }
+    authenticationIntent = null
+    return { status: reply.status, body: reply.body }
+  } catch (error) {
+    if (context === oldContext && profileIntent === oldProfile && profileGeneration === oldGeneration && authenticationRevision === revision && authenticationIntent === oldIntent) { authenticationIntent = null; authenticationUncertain = true }
+    throw error
+  }
+}
+
+async function nativeLogin(request: NativeRequest, input: Record<string, unknown>): Promise<NativeResponse> {
+  const { username, password } = input
+  if (typeof username !== 'string' || typeof password !== 'string' || Object.keys(input).length !== 2) return unavailable()
+  typedChatApi.clear(); authenticationRevision++; retireSockets()
+  const selectedContext = context; const selectedProfile = profileIntent; const selectedGeneration = profileGeneration; const selectedRevision = authenticationRevision; const selectedPort = port
+  if (authenticationUncertain) await recoverAuthenticationForExplicitLogin(request.signal)
+  if (context !== selectedContext || profileIntent !== selectedProfile || profileGeneration !== selectedGeneration || authenticationRevision !== selectedRevision || port !== selectedPort) throw cancelled()
+  const oldIntent = authenticationIntent; const oldProfile = profileIntent; const oldContext = context; const oldGeneration = profileGeneration; const revision = authenticationRevision
+  try {
+    const reply = await call('native_auth_login', { username, password }, request.signal)
+    if (reply.status === 200) {
+      if (!object(reply.body) || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
+      authenticationIntent = reply.body['authentication_intent']
+      authenticationUncertain = false
+    } else authenticationIntent = null
+    return { status: reply.status, body: reply.body }
+  } catch (error) {
+    if (context === oldContext && profileIntent === oldProfile && profileGeneration === oldGeneration && authenticationRevision === revision && authenticationIntent === oldIntent) { authenticationIntent = null; authenticationUncertain = true }
+    throw error
+  }
+}
+
+async function nativeLogout(request: NativeRequest): Promise<NativeResponse> {
+  typedChatApi.clear(); authenticationRevision++; retireSockets()
+  const owner = context; const profile = profileIntent; const generation = profileGeneration; const revision = authenticationRevision; const intent = authenticationIntent; const captured = port
+  const current = () => context === owner && profileIntent === profile && profileGeneration === generation && authenticationRevision === revision && authenticationIntent === intent && port === captured
+  try {
+    const reply = await call('native_auth_logout', {}, request.signal)
+    if (current()) { authenticationIntent = null; authenticationUncertain = reply.status !== 204 }
+    return { status: reply.status, body: reply.body }
+  } catch (error) {
+    // An unknown ACK may follow a committed native logout. Burn only this
+    // captured comparison selector; a later explicit Login reads context.
+    // Never replay Logout or clear a newer accepted account/session.
+    if (current()) { authenticationIntent = null; authenticationUncertain = true }
+    throw error
+  }
+}
+
+/** The operation a PUT of the member's own profile, locale, presence or status stands for, or null. */
+function personalUpdate(path: string, input: Record<string, unknown>): Record<string, unknown> | null {
+  const keys = Object.keys(input)
+  const text = (name: string, maximum: number) => typeof input[name] === 'string' && Array.from(input[name]).length <= maximum
+  let personal: Record<string, unknown> | null = null
+  if (path === '/api/users/me/profile' && keys.length === 2 && text('display_name', 24) && text('bio', 250)) personal = { operation: 'profile', display_name: input['display_name'], bio: input['bio'] }
+  if (path === '/api/users/me/locale' && keys.length === 1 && (input['locale'] === 'de' || input['locale'] === 'en')) personal = { operation: 'locale', locale: input['locale'] }
+  if (path === '/api/users/me/presence' && keys.length === 1 && typeof input['presence'] === 'string' && ['online', 'away', 'dnd', 'focus'].includes(input['presence'])) personal = { operation: 'presence', presence: input['presence'] }
+  if (path === '/api/users/me/status' && keys.length === 1 && text('status_text', 32)) personal = { operation: 'status', status_text: input['status_text'] }
+  return personal
+}
+
+/** The metadata operation a user read or a personal update stands for, or null. */
+function personalOperation(path: string, request: NativeRequest): Record<string, unknown> | null {
+  const userPath = /^\/api\/users\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.exec(path)
+  let personal: Record<string, unknown> | null = null
+  if (userPath?.[1] && request.method === 'GET' && request.json === undefined) personal = { operation: 'user', user_id: userPath[1] }
+  if (request.method === 'PUT' && object(request.json)) personal = personalUpdate(path, request.json) ?? personal
+  return personal
+}
+
+async function nativeTypedChat(path: string, request: NativeRequest): Promise<NativeResponse> {
+  const owner = context; const expectedProfile = profileIntent; const expectedAuthentication = authenticationIntent; const generation = profileGeneration; const revision = authenticationRevision; const captured = port
+  if (!owner || !expectedProfile || !expectedAuthentication || !captured.chatChannel || authenticationUncertain) return unavailable()
+  const current = () => context === owner && profileIntent === expectedProfile && authenticationIntent === expectedAuthentication && profileGeneration === generation && authenticationRevision === revision && port === captured
+  const reply = await typedChatApi.handle(path, request, {
+    context: owner, isCurrent: current, channel: captured.chatChannel,
+    call: (command, args, signal) => { if (!current()) throw cancelled(); return call(command, args, signal) }
+  })
+  return reply ?? unavailable()
+}
+
+const METADATA_RESOURCES: Readonly<Record<string, string>> = {
+  '/api/channels': 'channels', '/api/members': 'members',
+  '/api/read-state': 'read_state', '/api/health': 'health', '/api/legal': 'legal'
+}
+
+// Routes in the order they are tried; the first that matches the request answers it.
+const ROUTES: readonly Route[] = [
+  (path, request) => path === '/api/auth/register' && request.method === 'POST' && object(request.json) ? nativeRegister(request, request.json) : null,
+  (path, request) => path === '/api/auth/password' && request.method === 'PUT' && object(request.json) ? nativePassword(request, request.json) : null,
+  (path, request) => {
+    const admin = mapAdminOperation(path, request)
+    return admin ? viaNative('native_admin_request', { input: admin }, request) : null
+  },
+  (path, request) => path === '/api/auth/login' && request.method === 'POST' && object(request.json) ? nativeLogin(request, request.json) : null,
+  (path, request) => path === '/api/auth/me' && request.method === 'GET' ? viaNative('native_auth_me', {}, request) : null,
+  (path, request) => path === '/api/auth/logout' && request.method === 'POST' ? nativeLogout(request) : null,
+  (path, request) => {
+    const personal = personalOperation(path, request)
+    return personal ? viaNative('native_personal_metadata_request', { input: personal }, request) : null
+  },
+  (path, request) => isNativeTypedChatPath(path) ? nativeTypedChat(path, request) : null,
+  (path, request) => {
+    const resource = METADATA_RESOURCES[path]
+    if (!resource || request.method !== 'GET' || request.json !== undefined) return null
+    const command = resource === 'legal' || resource === 'health' ? 'native_public_metadata_request' : 'native_metadata_request'
+    return viaNative(command, { resource }, request)
+  }
+]
+
 export const nativeApiTransport: ApiTransport = async (path, request) => {
   if (request.form) return unavailable()
-  if (path === '/api/auth/register' && request.method === 'POST' && object(request.json)) {
-    const input = request.json
-    if (Object.keys(input).length !== 4 || !['username', 'display_name', 'password', 'invite_code'].every(k => typeof input[k] === 'string')) return unavailable()
-    const username = input['username']; const displayName = input['display_name']; const password = input['password']; const inviteCode = input['invite_code']
-    if (typeof username !== 'string' || typeof displayName !== 'string' || typeof password !== 'string' || typeof inviteCode !== 'string') return unavailable()
-    typedChatApi.clear(); authenticationRevision++; retireSockets()
-    const owner = context; const selected = profileIntent; const lineage = authenticationIntent; const generation = profileGeneration; const revision = authenticationRevision; const captured = port
-    if (!owner || !selected) throw new Error('Native profile unavailable')
-    let acceptedLoginIntent: string | null = null
-    let loginAttempted = false
-    const current = () => context === owner && profileIntent === selected && authenticationIntent === lineage && profileGeneration === generation && authenticationRevision === revision && port === captured && !request.signal?.aborted
-    const result = await registerThenLogin({
-      isCurrent: current,
-      call: async (command, values) => {
-        if (!current()) throw cancelled()
-        if (command === 'native_auth_login') loginAttempted = true
-        const reply = await call(command, command === 'native_auth_register'
-          ? { username: values['username'], displayName: values['display_name'], password: values['password'], inviteCode: values['invite_code'] }
-          : values, request.signal)
-        if (command === 'native_auth_login' && reply.status === 200) {
-          if (!object(reply.body) || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
-          acceptedLoginIntent = reply.body['authentication_intent']
-        }
-        return reply
-      },
-      retireCaptured: async () => {
-        if (!current()) throw cancelled()
-        // Identity-mismatch cleanup targets exactly the just-acknowledged native
-        // login family, not the old unauthenticated selector or a later login.
-        if (!acceptedLoginIntent) throw new Error('Native captured session unavailable')
-        const value = await captured.invoke('native_auth_logout', { context: owner, profileIntent: selected, authenticationIntent: acceptedLoginIntent, requestId: crypto.randomUUID() })
-        if (!validReply(value, owner) || value.status !== 204) throw new Error('Native captured logout unavailable')
-      },
-      userId: body => {
-        if (!object(body) || !object(body['user']) || typeof body['user']['id'] !== 'string' || !UUID.test(body['user']['id']) || body['user']['id'] === '00000000-0000-0000-0000-000000000000') throw new Error('Invalid native user acknowledgement')
-        return body['user']['id']
-      }
-    }, { username, display_name: displayName, password, invite_code: inviteCode })
-    if (!current()) throw cancelled()
-    if (result.kind === 'authenticated') {
-      if (!object(result.reply.body) || !canonicalId(result.reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
-      authenticationIntent = result.reply.body['authentication_intent']
-      return { status: result.reply.status, body: result.reply.body }
-    }
-    if (result.kind === 'rejected') return { status: result.reply.status, body: result.reply.body }
-    if (loginAttempted) { authenticationIntent = null; authenticationUncertain = true }
-    return { status: 503, body: { error: { code: 'LOGIN_REQUIRED', message: t('nativeDesktop.loginRequired') } } }
-  }
-  if (path === '/api/auth/password' && request.method === 'PUT' && object(request.json)) {
-    const input = request.json
-    if (Object.keys(input).length !== 2 || typeof input['current_password'] !== 'string' || typeof input['new_password'] !== 'string') return unavailable()
-    typedChatApi.clear(); authenticationRevision++; retireSockets()
-    const oldIntent = authenticationIntent; const oldProfile = profileIntent; const oldContext = context; const oldGeneration = profileGeneration; const revision = authenticationRevision
-    try {
-      const reply = await call('native_auth_password', { currentPassword: input['current_password'], newPassword: input['new_password'] }, request.signal)
-      if (reply.status === 200) {
-        if (!object(reply.body) || Object.keys(reply.body).length !== 1 || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native password acknowledgement')
-        authenticationIntent = reply.body['authentication_intent']
-        authenticationUncertain = false
-        return { status: 204, body: null }
-      }
-      authenticationIntent = null
-      return { status: reply.status, body: reply.body }
-    } catch (error) {
-      if (context === oldContext && profileIntent === oldProfile && profileGeneration === oldGeneration && authenticationRevision === revision && authenticationIntent === oldIntent) { authenticationIntent = null; authenticationUncertain = true }
-      throw error
-    }
-  }
-  const admin = mapAdminOperation(path, request)
-  if (admin) {
-    const reply = await call('native_admin_request', { input: admin }, request.signal)
-    return { status: reply.status, body: reply.body }
-  }
-  if (path === '/api/auth/login' && request.method === 'POST' && object(request.json)) {
-    const { username, password } = request.json
-    if (typeof username !== 'string' || typeof password !== 'string' || Object.keys(request.json).length !== 2) return unavailable()
-    typedChatApi.clear(); authenticationRevision++; retireSockets()
-    const selectedContext = context; const selectedProfile = profileIntent; const selectedGeneration = profileGeneration; const selectedRevision = authenticationRevision; const selectedPort = port
-    if (authenticationUncertain) await recoverAuthenticationForExplicitLogin(request.signal)
-    if (context !== selectedContext || profileIntent !== selectedProfile || profileGeneration !== selectedGeneration || authenticationRevision !== selectedRevision || port !== selectedPort) throw cancelled()
-    const oldIntent = authenticationIntent; const oldProfile = profileIntent; const oldContext = context; const oldGeneration = profileGeneration; const revision = authenticationRevision
-    try {
-      const reply = await call('native_auth_login', { username, password }, request.signal)
-      if (reply.status === 200) {
-        if (!object(reply.body) || !canonicalId(reply.body['authentication_intent'])) throw new Error('Invalid native login acknowledgement')
-        authenticationIntent = reply.body['authentication_intent']
-        authenticationUncertain = false
-      } else authenticationIntent = null
-      return { status: reply.status, body: reply.body }
-    } catch (error) {
-      if (context === oldContext && profileIntent === oldProfile && profileGeneration === oldGeneration && authenticationRevision === revision && authenticationIntent === oldIntent) { authenticationIntent = null; authenticationUncertain = true }
-      throw error
-    }
-  }
-  if (path === '/api/auth/me' && request.method === 'GET') {
-    const reply = await call('native_auth_me', {}, request.signal); return { status: reply.status, body: reply.body }
-  }
-  if (path === '/api/auth/logout' && request.method === 'POST') {
-    typedChatApi.clear(); authenticationRevision++; retireSockets()
-    const owner = context; const profile = profileIntent; const generation = profileGeneration; const revision = authenticationRevision; const intent = authenticationIntent; const captured = port
-    const current = () => context === owner && profileIntent === profile && profileGeneration === generation && authenticationRevision === revision && authenticationIntent === intent && port === captured
-    try {
-      const reply = await call('native_auth_logout', {}, request.signal)
-      if (current()) { authenticationIntent = null; authenticationUncertain = reply.status !== 204 }
-      return { status: reply.status, body: reply.body }
-    } catch (error) {
-      // An unknown ACK may follow a committed native logout. Burn only this
-      // captured comparison selector; a later explicit Login reads context.
-      // Never replay Logout or clear a newer accepted account/session.
-      if (current()) { authenticationIntent = null; authenticationUncertain = true }
-      throw error
-    }
-  }
-  let personal: Record<string, unknown> | null = null
-  const userPath = /^\/api\/users\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/.exec(path)
-  if (userPath?.[1] && request.method === 'GET' && request.json === undefined) personal = { operation: 'user', user_id: userPath[1] }
-  if (request.method === 'PUT' && object(request.json)) {
-    const input = request.json
-    const keys = Object.keys(input)
-    const text = (name: string, maximum: number) => typeof input[name] === 'string' && Array.from(input[name]).length <= maximum
-    if (path === '/api/users/me/profile' && keys.length === 2 && text('display_name', 24) && text('bio', 250)) personal = { operation: 'profile', display_name: input['display_name'], bio: input['bio'] }
-    if (path === '/api/users/me/locale' && keys.length === 1 && (input['locale'] === 'de' || input['locale'] === 'en')) personal = { operation: 'locale', locale: input['locale'] }
-    if (path === '/api/users/me/presence' && keys.length === 1 && typeof input['presence'] === 'string' && ['online', 'away', 'dnd', 'focus'].includes(input['presence'])) personal = { operation: 'presence', presence: input['presence'] }
-    if (path === '/api/users/me/status' && keys.length === 1 && text('status_text', 32)) personal = { operation: 'status', status_text: input['status_text'] }
-  }
-  if (personal) {
-    const reply = await call('native_personal_metadata_request', { input: personal }, request.signal)
-    return { status: reply.status, body: reply.body }
-  }
-  if (isNativeTypedChatPath(path)) {
-    const owner = context; const expectedProfile = profileIntent; const expectedAuthentication = authenticationIntent; const generation = profileGeneration; const revision = authenticationRevision; const captured = port
-    if (!owner || !expectedProfile || !expectedAuthentication || !captured.chatChannel || authenticationUncertain) return unavailable()
-    const current = () => context === owner && profileIntent === expectedProfile && authenticationIntent === expectedAuthentication && profileGeneration === generation && authenticationRevision === revision && port === captured
-    const reply = await typedChatApi.handle(path,request,{
-      context:owner,isCurrent:current,channel:captured.chatChannel,
-      call:(command,args,signal)=>{if(!current())throw cancelled();return call(command,args,signal)},
-    })
-    return reply ?? unavailable()
-  }
-  const metadata: Readonly<Record<string, string>> = {
-    '/api/channels': 'channels', '/api/members': 'members',
-    '/api/read-state': 'read_state', '/api/health': 'health', '/api/legal': 'legal'
-  }
-  const resource = metadata[path]
-  if (resource && request.method === 'GET' && request.json === undefined) {
-    const command = resource === 'legal' || resource === 'health' ? 'native_public_metadata_request' : 'native_metadata_request'
-    const reply = await call(command, { resource }, request.signal)
-    return { status: reply.status, body: reply.body }
+  for (const route of ROUTES) {
+    const answer = route(path, request)
+    if (answer) return answer
   }
   return unavailable()
 }

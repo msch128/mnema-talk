@@ -21,67 +21,110 @@ function text(v: unknown, max: number, required = false): v is string { return t
 function integer(v: unknown, min: number, max: number): v is number { return typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max }
 function order(v: unknown): v is number { return integer(v, -2147483648, 2147483647) }
 const empty = (r: UiAdminRequest) => r.json === undefined
+type Resource = 'invites' | 'users' | 'categories' | 'channels'
+
+const LIST_OPERATIONS: Readonly<Record<string, 'invites' | 'users' | 'system' | 'system_update'>> = { '/api/admin/invites': 'invites', '/api/admin/users': 'users', '/api/admin/system': 'system', '/api/admin/system/update': 'system_update' }
+const DELETE_OPERATIONS: Readonly<Record<string, 'delete_invite' | 'delete_category' | 'delete_channel'>> = { invites: 'delete_invite', categories: 'delete_category', channels: 'delete_channel' }
+const USER_OPERATIONS: Readonly<Record<string, 'disable_user' | 'enable_user' | 'revoke_user_sessions' | 'kick_user'>> = { disable: 'disable_user', enable: 'enable_user', 'sessions/revoke': 'revoke_user_sessions', kick: 'kick_user' }
+
+/** GET of a fixed admin listing. */
+function listOperation(path: string, request: UiAdminRequest): AdminOperation | null {
+  if (request.method !== 'GET' || !empty(request)) return null
+  const operation = Object.hasOwn(LIST_OPERATIONS, path) ? LIST_OPERATIONS[path] : undefined
+  return operation ? { operation } : null
+}
+
+function deleteTarget(request: UiAdminRequest, resource: Resource, suffix: string | undefined, targetId: string): AdminOperation | null {
+  if (request.method !== 'DELETE' || suffix !== undefined || !empty(request)) return null
+  const operation = DELETE_OPERATIONS[resource]
+  return operation ? { operation, id: targetId } : null
+}
+
+function postTarget(request: UiAdminRequest, resource: Resource, suffix: string | undefined, targetId: string): AdminOperation | null {
+  if (request.method !== 'POST' || !empty(request)) return null
+  if (resource === 'users') {
+    const operation = suffix ? USER_OPERATIONS[suffix] : undefined
+    if (operation) return { operation, id: targetId }
+  }
+  if (resource === 'channels' && suffix === 'duplicate') return { operation: 'duplicate_channel', id: targetId }
+  return null
+}
+
+function updateChannel(targetId: string, input: Record<string, unknown>): AdminOperation | null {
+  const name = input['name'] ?? null; const topic = input['topic'] ?? null; const limit = input['user_limit'] ?? null
+  if ((name === null || text(name, 64, true)) && (topic === null || text(topic, 255)) && (limit === null || integer(limit, 0, 999))) return { operation: 'update_channel', id: targetId, name, topic, user_limit: limit }
+  return null
+}
+
+/** A user status, a category rename or a channel update, by the resource it targets. */
+function updateTarget(request: UiAdminRequest, resource: Resource, suffix: string | undefined, targetId: string): AdminOperation | null {
+  const input = request.json
+  if (!record(input)) return null
+  if (resource === 'users' && suffix === 'status' && request.method === 'PUT' && keys(input, ['status_text'], ['status_text']) && text(input['status_text'], 32)) return { operation: 'user_status', id: targetId, status_text: input['status_text'] }
+  if (resource === 'categories' && suffix === undefined && request.method === 'PATCH' && keys(input, ['name'], ['name']) && text(input['name'], 64, true)) return { operation: 'rename_category', id: targetId, name: input['name'] }
+  if (resource === 'channels' && suffix === undefined && request.method === 'PATCH' && keys(input, ['name', 'topic', 'user_limit'])) return updateChannel(targetId, input)
+  return null
+}
+
+function createInvite(input: Record<string, unknown>): AdminOperation | null {
+  if (!keys(input, ['code', 'max_uses', 'expires_in_hours'])) return null
+  const code = input['code'] ?? ''; const uses = input['max_uses'] ?? null; const hours = input['expires_in_hours'] ?? null
+  if (typeof code === 'string' && (code.trim() === '' || /^[A-Za-z0-9_-]{6,64}$/.test(code.trim())) && (uses === null || integer(uses, 1, 1000)) && (hours === null || integer(hours, 1, 8760))) return { operation: 'create_invite', code, max_uses: uses, expires_in_hours: hours }
+  return null
+}
+
+function createCategory(input: Record<string, unknown>): AdminOperation | null {
+  if (!keys(input, ['name', 'sort_order'], ['name']) || !text(input['name'], 64, true)) return null
+  const position = input['sort_order'] ?? 0
+  return order(position) ? { operation: 'create_category', name: input['name'], sort_order: position } : null
+}
+
+function createChannel(input: Record<string, unknown>): AdminOperation | null {
+  if (!keys(input, ['category_id', 'name', 'type', 'topic', 'sort_order'], ['name']) || !text(input['name'], 64, true)) return null
+  const category = input['category_id'] ?? null; const kind = input['type'] ?? 'text'; const topic = input['topic'] ?? ''; const position = input['sort_order'] ?? 0
+  if ((category === null || id(category)) && (kind === 'text' || kind === 'voice') && text(topic, 255) && order(position)) return { operation: 'create_channel', category_id: category, name: input['name'], kind, topic, sort_order: position }
+  return null
+}
+
+/** The whole sidebar layout: every row exactly once, at most 500 rows. */
+function replaceLayout(input: Record<string, unknown>): AdminOperation | null {
+  if (!keys(input, ['categories', 'channels'], ['categories', 'channels']) || !Array.isArray(input['categories']) || !Array.isArray(input['channels']) || input['categories'].length + input['channels'].length > 500) return null
+  const categories: CategoryOrder[] = []; const channels: ChannelPlacement[] = []; const seen = new Set<string>()
+  for (const row of input['categories'] as unknown[]) {
+    if (!record(row) || !keys(row, ['id', 'sort_order'], ['id', 'sort_order']) || !id(row['id']) || !order(row['sort_order']) || seen.has(row['id'])) return null
+    seen.add(row['id']); categories.push({ id: row['id'], sort_order: row['sort_order'] })
+  }
+  seen.clear()
+  for (const row of input['channels'] as unknown[]) {
+    if (!record(row) || !keys(row, ['id', 'category_id', 'sort_order'], ['id', 'sort_order']) || !id(row['id']) || !order(row['sort_order']) || seen.has(row['id'])) return null
+    const category = row['category_id'] ?? null
+    if (category !== null && !id(category)) return null
+    seen.add(row['id']); channels.push({ id: row['id'], category_id: category, sort_order: row['sort_order'] })
+  }
+  return { operation: 'layout', categories, channels }
+}
+
+/** Creating or rearranging by body, for the collection paths. */
+function collectionOperation(path: string, method: string, input: Record<string, unknown>): AdminOperation | null {
+  if (path === '/api/admin/invites' && method === 'POST') return createInvite(input)
+  if (path === '/api/admin/categories' && method === 'POST') return createCategory(input)
+  if (path === '/api/admin/channels' && method === 'POST') return createChannel(input)
+  if (path === '/api/admin/layout' && method === 'PUT') return replaceLayout(input)
+  return null
+}
+
 export function mapAdminOperation(path: string, request: UiAdminRequest): AdminOperation | null {
   if (request.form !== undefined) return null
-  if (request.method === 'GET' && empty(request)) {
-    const action: Readonly<Record<string, 'invites' | 'users' | 'system' | 'system_update'>> = { '/api/admin/invites': 'invites', '/api/admin/users': 'users', '/api/admin/system': 'system', '/api/admin/system/update': 'system_update' }
-    const operation = Object.hasOwn(action, path) ? action[path] : undefined
-    if (operation) return { operation }
-  }
+  const listed = listOperation(path, request)
+  if (listed) return listed
   const target = /^\/api\/admin\/(invites|users|categories|channels)\/([^/]+)(?:\/(disable|enable|sessions\/revoke|kick|status|duplicate))?$/.exec(path)
   const targetId = target?.[2]
   if (target && id(targetId)) {
-    const resource = target[1]; const suffix = target[3]
-    if (request.method === 'DELETE' && suffix === undefined && empty(request)) {
-      if (resource === 'invites') return { operation: 'delete_invite', id: targetId }
-      if (resource === 'categories') return { operation: 'delete_category', id: targetId }
-      if (resource === 'channels') return { operation: 'delete_channel', id: targetId }
-    }
-    if (request.method === 'POST' && empty(request)) {
-      if (resource === 'users') {
-        const operations: Readonly<Record<string, 'disable_user' | 'enable_user' | 'revoke_user_sessions' | 'kick_user'>> = { disable: 'disable_user', enable: 'enable_user', 'sessions/revoke': 'revoke_user_sessions', kick: 'kick_user' }
-        if (suffix && operations[suffix]) return { operation: operations[suffix], id: targetId }
-      }
-      if (resource === 'channels' && suffix === 'duplicate') return { operation: 'duplicate_channel', id: targetId }
-    }
-    const input = request.json
-    if (record(input)) {
-      if (resource === 'users' && suffix === 'status' && request.method === 'PUT' && keys(input, ['status_text'], ['status_text']) && text(input['status_text'], 32)) return { operation: 'user_status', id: targetId, status_text: input['status_text'] }
-      if (resource === 'categories' && suffix === undefined && request.method === 'PATCH' && keys(input, ['name'], ['name']) && text(input['name'], 64, true)) return { operation: 'rename_category', id: targetId, name: input['name'] }
-      if (resource === 'channels' && suffix === undefined && request.method === 'PATCH' && keys(input, ['name', 'topic', 'user_limit'])) {
-        const name = input['name'] ?? null; const topic = input['topic'] ?? null; const limit = input['user_limit'] ?? null
-        if ((name === null || text(name, 64, true)) && (topic === null || text(topic, 255)) && (limit === null || integer(limit, 0, 999))) return { operation: 'update_channel', id: targetId, name, topic, user_limit: limit }
-      }
-    }
+    const resource = target[1] as Resource; const suffix = target[3]
+    const mapped = deleteTarget(request, resource, suffix, targetId) ?? postTarget(request, resource, suffix, targetId) ?? updateTarget(request, resource, suffix, targetId)
+    if (mapped) return mapped
   }
   const input = request.json
   if (!record(input)) return null
-  if (path === '/api/admin/invites' && request.method === 'POST' && keys(input, ['code', 'max_uses', 'expires_in_hours'])) {
-    const code = input['code'] ?? ''; const uses = input['max_uses'] ?? null; const hours = input['expires_in_hours'] ?? null
-    if (typeof code === 'string' && (code.trim() === '' || /^[A-Za-z0-9_-]{6,64}$/.test(code.trim())) && (uses === null || integer(uses, 1, 1000)) && (hours === null || integer(hours, 1, 8760))) return { operation: 'create_invite', code, max_uses: uses, expires_in_hours: hours }
-  }
-  if (path === '/api/admin/categories' && request.method === 'POST' && keys(input, ['name', 'sort_order'], ['name']) && text(input['name'], 64, true)) {
-    const position = input['sort_order'] ?? 0
-    if (order(position)) return { operation: 'create_category', name: input['name'], sort_order: position }
-  }
-  if (path === '/api/admin/channels' && request.method === 'POST' && keys(input, ['category_id', 'name', 'type', 'topic', 'sort_order'], ['name']) && text(input['name'], 64, true)) {
-    const category = input['category_id'] ?? null; const kind = input['type'] ?? 'text'; const topic = input['topic'] ?? ''; const position = input['sort_order'] ?? 0
-    if ((category === null || id(category)) && (kind === 'text' || kind === 'voice') && text(topic, 255) && order(position)) return { operation: 'create_channel', category_id: category, name: input['name'], kind, topic, sort_order: position }
-  }
-  if (path === '/api/admin/layout' && request.method === 'PUT' && keys(input, ['categories', 'channels'], ['categories', 'channels']) && Array.isArray(input['categories']) && Array.isArray(input['channels']) && input['categories'].length + input['channels'].length <= 500) {
-    const categories: CategoryOrder[] = []; const channels: ChannelPlacement[] = []; const seen = new Set<string>()
-    for (const row of input['categories'] as unknown[]) {
-      if (!record(row) || !keys(row, ['id', 'sort_order'], ['id', 'sort_order']) || !id(row['id']) || !order(row['sort_order']) || seen.has(row['id'])) return null
-      seen.add(row['id']); categories.push({ id: row['id'], sort_order: row['sort_order'] })
-    }
-    seen.clear()
-    for (const row of input['channels'] as unknown[]) {
-      if (!record(row) || !keys(row, ['id', 'category_id', 'sort_order'], ['id', 'sort_order']) || !id(row['id']) || !order(row['sort_order']) || seen.has(row['id'])) return null
-      const category = row['category_id'] ?? null
-      if (category !== null && !id(category)) return null
-      seen.add(row['id']); channels.push({ id: row['id'], category_id: category, sort_order: row['sort_order'] })
-    }
-    return { operation: 'layout', categories, channels }
-  }
-  return null
+  return collectionOperation(path, request.method, input)
 }

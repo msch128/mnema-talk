@@ -110,26 +110,6 @@ export default tseslint.config(
     files: ['**/*.test.ts', '**/*.fixture.ts', '**/e2e/**/*.ts'],
     rules: { 'max-lines': ['error', { max: 800, skipBlankLines: false, skipComments: false }] }
   },
-  // TODO(limits): shrinking allowlist of files that still exceed the function
-  // length / cognitive complexity limits. Refactor, then delete the entry. Never
-  // add entries or raise a limit.
-  {
-    files: [
-      'web/src/lib/crypto/stateStore.ts',
-      'web/src/lib/media/browserCall.ts',
-      'web/src/lib/media/frame.ts',
-      'web/src/lib/media/group.ts',
-      'web/src/lib/media/groupEpoch.ts',
-      'web/src/lib/media/groupSync.ts',
-      'web/src/lib/media/guard.ts',
-      'web/src/lib/media/mediaFrameWorker.ts',
-      'web/src/lib/nativeAdmin.ts',
-      'web/src/lib/nativeChatApi.ts',
-      'web/src/lib/nativeTransport.ts',
-      'web/src/lib/trustPort.ts'
-    ],
-    rules: { 'max-lines-per-function': 'off', 'sonarjs/cognitive-complexity': 'off' }
-  },
   {
     files: ['**/*.ts', '**/*.vue'],
     rules: {

@@ -85,23 +85,18 @@ export abstract class GroupSync extends GroupEpoch {
     }, wait)
   }
 
-  protected async syncNow(roster: readonly string[], resend: boolean): Promise<MediaStep> {
-    if (this.closed) return this.step()
-    const wires: Uint8Array[] = []
+  /** Takes the roster: who else is reachable now, remembering when that changed. */
+  private refreshRoom(roster: readonly string[]): string[] {
     this.lastRoster = roster
     const others = this.reachable(this.others(roster))
     if (others.length !== this.room.length || others.some(id => !this.room.includes(id))) this.lastRosterAt = clock.now()
     this.room = others
     for (const id of [...this.relayed.keys()]) if (!others.includes(id)) this.relayed.delete(id)
-    const state = this.state
-    // A group is never given up because a lower id arrives: the newcomer
-    // offers its package and is let in. Only a group of one, which nobody
-    // else depends on, steps aside for a lower id, so that two members who
-    // each found an empty room end up in one group.
-    const lead = lowest(others)
-    if (state && lead !== null && lead < this.userId && treeMembers(state).size === 1) {
-      await this.leave()
-    }
+    return others
+  }
+
+  /** Founds a group when everyone offered and nobody is lower, or offers a package again. */
+  private async establishGroup(others: string[], resend: boolean, wires: Uint8Array[]) {
     if (!this.state && (others.length === 0 || this.allOffered(others))) {
       const created = await this.createOwn()
       if (created) wires.push(...created)
@@ -111,17 +106,36 @@ export abstract class GroupSync extends GroupEpoch {
       if (resend && this.offeredFor !== null) await this.rekey()
       wires.push(...this.offer(others))
     }
-    // A group of one tells the room about itself: I may be someone the others
-    // still hold an old leaf of (a reload that found the room empty for a
-    // moment). They swap me in, and I take that welcome.
-    if (this.state && treeMembers(this.state).size === 1 && others.length) {
-      const key = others.slice().sort().join(',')
-      const hello = this.announcedFor === key ? null : this.hello()
-      if (hello) {
-        this.announcedFor = key
-        wires.push(hello)
-      }
+  }
+
+  // A group of one tells the room about itself: I may be someone the others
+  // still hold an old leaf of (a reload that found the room empty for a
+  // moment). They swap me in, and I take that welcome.
+  private announceGroupOfOne(others: string[], wires: Uint8Array[]) {
+    if (!this.state || treeMembers(this.state).size !== 1 || !others.length) return
+    const key = others.slice().sort().join(',')
+    const hello = this.announcedFor === key ? null : this.hello()
+    if (hello) {
+      this.announcedFor = key
+      wires.push(hello)
     }
+  }
+
+  protected async syncNow(roster: readonly string[], resend: boolean): Promise<MediaStep> {
+    if (this.closed) return this.step()
+    const wires: Uint8Array[] = []
+    const others = this.refreshRoom(roster)
+    const state = this.state
+    // A group is never given up because a lower id arrives: the newcomer
+    // offers its package and is let in. Only a group of one, which nobody
+    // else depends on, steps aside for a lower id, so that two members who
+    // each found an empty room end up in one group.
+    const lead = lowest(others)
+    if (state && lead !== null && lead < this.userId && treeMembers(state).size === 1) {
+      await this.leave()
+    }
+    await this.establishGroup(others, resend, wires)
+    this.announceGroupOfOne(others, wires)
     if (this.canCommit(others)) {
       wires.push(...await this.commitRemoves(others))
       wires.push(...await this.commitAdds(others))
