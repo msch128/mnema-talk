@@ -166,7 +166,7 @@ func (c *Client) allowTyping(chID uuid.UUID, now time.Time) bool {
 func (c *Client) speakingChanged(active bool, now time.Time) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.nativeLive() {
+	if !c.commandsAllowed() {
 		return false
 	}
 	if active == c.speaking {

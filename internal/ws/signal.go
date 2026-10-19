@@ -40,11 +40,11 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 		return
 	}
 	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil || !c.nativeLive() {
+	if cur == nil || c.hub.SFU == nil || !c.commandsAllowed() {
 		return
 	}
 	room := c.hub.SFU.Room(*cur)
-	if room == nil || !c.nativeLive() {
+	if room == nil || !c.commandsAllowed() {
 		return
 	}
 	// The layer is chosen first, so the viewer's track starts on it.

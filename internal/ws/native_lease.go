@@ -59,7 +59,11 @@ func minTime(first time.Time, others ...time.Time) time.Time {
 	return first
 }
 
-func (c *Client) nativeLive() bool {
+// commandsAllowed reports whether this socket may still handle commands.
+// A nil lease, which is every browser socket, stays allowed. A native
+// socket is allowed only while its lease is unexpired and securityClosed
+// is false.
+func (c *Client) commandsAllowed() bool {
 	if c.native == nil {
 		return true
 	}
@@ -256,7 +260,7 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	if !c.nativeLive() {
+	if !c.commandsAllowed() {
 		return
 	}
 	// Outgoing webhooks only hear what is really published: after the

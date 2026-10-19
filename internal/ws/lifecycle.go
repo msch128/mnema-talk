@@ -219,7 +219,7 @@ func (h *Hub) register(c *Client) bool {
 // case registers the in-memory clients used by internal hub callers.
 func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
 	h.mu.Lock()
-	if h.closed || c.closed.Load() || !c.nativeLive() {
+	if h.closed || c.closed.Load() || !c.commandsAllowed() {
 		h.mu.Unlock()
 		return false
 	}
