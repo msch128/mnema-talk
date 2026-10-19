@@ -44,15 +44,29 @@ func TestConnectionKeepsCookieTokenVersion(t *testing.T) {
 	}
 	defer conn.Close()
 
-	deadline := time.Now().Add(2 * time.Second)
+	// Dial returns at the upgrade, before the handler finishes registering.
+	// The first frame is sent only after that, so wait for it.
+	incoming := make(chan error, 1)
+	go func() {
+		_, _, err := conn.ReadMessage()
+		incoming <- err
+	}()
+	timeout := time.After(2 * time.Second)
 	for {
-		h.mu.RLock()
-		var got *Client
-		for c := range h.clients {
-			got = c
-		}
-		h.mu.RUnlock()
-		if got != nil {
+		select {
+		case err := <-incoming:
+			if err != nil {
+				t.Fatalf("client never registered: %v", err)
+			}
+			h.mu.RLock()
+			var got *Client
+			for c := range h.clients {
+				got = c
+			}
+			h.mu.RUnlock()
+			if got == nil {
+				t.Fatal("client never registered")
+			}
 			if got.tokenVersion != 7 {
 				t.Fatalf("tokenVersion = %d, want the cookie's 7", got.tokenVersion)
 			}
@@ -60,11 +74,9 @@ func TestConnectionKeepsCookieTokenVersion(t *testing.T) {
 				t.Fatalf("authentication checks = %d, want 2", n)
 			}
 			return
-		}
-		if time.Now().After(deadline) {
+		case <-timeout:
 			t.Fatal("client never registered")
 		}
-		time.Sleep(10 * time.Millisecond)
 	}
 }
 

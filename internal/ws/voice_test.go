@@ -114,7 +114,7 @@ func TestVoiceTimeAndMuteArePerRoom(t *testing.T) {
 
 	h.joinVoice(a, ch1)
 	first := h.voiceSnapshot()[ch1.ID][user.ID].JoinedAt
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond) // the two rooms' join times must differ
 	h.joinVoice(b, ch2)
 	a.handle("voice_mute_state", []byte(`{"muted":true}`))
 
