@@ -88,50 +88,60 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		idx[m.ID] = i
 		ids[i] = m.ID
 	}
+	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
+		loadAttachments, loadReactions, loadMentions,
+	} {
+		if err := load(ctx, p, msgs, idx, ids); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
+// loadAttachments fills msgs[].Attachments; idx maps a message ID to its
+// position in msgs.
+func loadAttachments(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
 	rows, err := p.Query(ctx, `
 		SELECT id, message_id, original_filename, mime_type, size_bytes, is_deleted
 		FROM media WHERE message_id = ANY($1) ORDER BY created_at`, ids)
 	if err != nil {
 		return fmt.Errorf("load attachments: %w", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var a MediaAttachment
 		var msgID uuid.UUID
 		if err := rows.Scan(&a.ID, &msgID, &a.OriginalFilename, &a.MimeType, &a.SizeBytes, &a.IsDeleted); err != nil {
-			rows.Close()
 			return err
 		}
 		a.URL = "/api/media/" + a.ID.String()
 		msgs[idx[msgID]].Attachments = append(msgs[idx[msgID]].Attachments, a)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
+	return rows.Err()
+}
 
-	rows, err = p.Query(ctx, `
+func loadReactions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+	rows, err := p.Query(ctx, `
 		SELECT message_id, emoji, COUNT(*), array_agg(user_id ORDER BY created_at)
 		FROM message_reactions WHERE message_id = ANY($1)
 		GROUP BY message_id, emoji ORDER BY MIN(created_at)`, ids)
 	if err != nil {
 		return fmt.Errorf("load reactions: %w", err)
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var r ReactionSummary
 		var msgID uuid.UUID
 		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Users); err != nil {
-			rows.Close()
 			return err
 		}
 		msgs[idx[msgID]].Reactions = append(msgs[idx[msgID]].Reactions, r)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
+	return rows.Err()
+}
 
-	rows, err = p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
+func loadMentions(ctx context.Context, p *db.Pool, msgs []Message, idx map[uuid.UUID]int, ids []uuid.UUID) error {
+	rows, err := p.Query(ctx, `SELECT message_id, user_id FROM message_mentions WHERE message_id = ANY($1)`, ids)
 	if err != nil {
 		return fmt.Errorf("load mentions: %w", err)
 	}

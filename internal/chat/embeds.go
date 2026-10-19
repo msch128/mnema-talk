@@ -115,98 +115,144 @@ func SanitizeEmbeds(in []InEmbed) ([]Embed, error) {
 	return out, nil
 }
 
-func sanitizeOneEmbed(at string, e InEmbed) (Embed, int, error) {
-	var em Embed
-	var err error
-	n := 0
-	count := func(s string) { n += utf8.RuneCountInString(s) }
+// embedBuilder validates one embed field by field and counts the characters
+// that add up to the per-message text budget.
+type embedBuilder struct {
+	at    string
+	em    Embed
+	chars int
+}
 
-	if em.Title, err = embedText(at+".title", e.Title, 256); err != nil {
-		return em, 0, err
+func (b *embedBuilder) count(s string) { b.chars += utf8.RuneCountInString(s) }
+
+func sanitizeOneEmbed(at string, e InEmbed) (Embed, int, error) {
+	b := &embedBuilder{at: at}
+	steps := []func(InEmbed) error{
+		b.heading, b.color, b.timestamp, b.footer, b.image, b.thumbnail, b.author, b.fields,
 	}
-	if em.Description, err = embedText(at+".description", e.Description, 4096); err != nil {
-		return em, 0, err
-	}
-	count(em.Title)
-	count(em.Description)
-	if em.URL, err = embedLink(at+".url", e.URL); err != nil {
-		return em, 0, err
-	}
-	if e.Color != nil {
-		if *e.Color < 0 || *e.Color > 0xFFFFFF {
-			return em, 0, FormError(at + ".color must be between 0 and 16777215")
-		}
-		c := *e.Color
-		em.Color = &c
-	}
-	if ts := strings.TrimSpace(e.Timestamp); ts != "" {
-		t, err := time.Parse(time.RFC3339, ts)
-		if err != nil {
-			return em, 0, FormError(at + ".timestamp must be an ISO 8601 timestamp")
-		}
-		em.Timestamp = t.UTC().Format(time.RFC3339)
-	}
-	if e.Footer != nil {
-		t, err := embedText(at+".footer.text", e.Footer.Text, 2048)
-		if err != nil {
-			return em, 0, err
-		}
-		if t != "" {
-			em.Footer = &EmbedFooter{Text: t}
-			count(t)
+	for _, step := range steps {
+		if err := step(e); err != nil {
+			return b.em, 0, err
 		}
 	}
-	if e.Image != nil {
-		u, err := embedLink(at+".image.url", e.Image.URL)
-		if err != nil {
-			return em, 0, err
-		}
-		if u != "" {
-			em.Image = &EmbedMedia{URL: u}
-		}
+	return b.em, b.chars, nil
+}
+
+func (b *embedBuilder) heading(e InEmbed) (err error) {
+	if b.em.Title, err = embedText(b.at+".title", e.Title, 256); err != nil {
+		return err
 	}
-	if e.Thumbnail != nil {
-		u, err := embedLink(at+".thumbnail.url", e.Thumbnail.URL)
-		if err != nil {
-			return em, 0, err
-		}
-		if u != "" {
-			em.Thumbnail = &EmbedMedia{URL: u}
-		}
+	if b.em.Description, err = embedText(b.at+".description", e.Description, 4096); err != nil {
+		return err
 	}
-	if e.Author != nil {
-		name, err := embedText(at+".author.name", e.Author.Name, 256)
-		if err != nil {
-			return em, 0, err
-		}
-		u, err := embedLink(at+".author.url", e.Author.URL)
-		if err != nil {
-			return em, 0, err
-		}
-		if name != "" {
-			em.Author = &EmbedAuthor{Name: name, URL: u}
-			count(name)
-		}
+	b.count(b.em.Title)
+	b.count(b.em.Description)
+	b.em.URL, err = embedLink(b.at+".url", e.URL)
+	return err
+}
+
+func (b *embedBuilder) color(e InEmbed) error {
+	if e.Color == nil {
+		return nil
 	}
+	if *e.Color < 0 || *e.Color > 0xFFFFFF {
+		return FormError(b.at + ".color must be between 0 and 16777215")
+	}
+	c := *e.Color
+	b.em.Color = &c
+	return nil
+}
+
+func (b *embedBuilder) timestamp(e InEmbed) error {
+	ts := strings.TrimSpace(e.Timestamp)
+	if ts == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return FormError(b.at + ".timestamp must be an ISO 8601 timestamp")
+	}
+	b.em.Timestamp = t.UTC().Format(time.RFC3339)
+	return nil
+}
+
+func (b *embedBuilder) footer(e InEmbed) error {
+	if e.Footer == nil {
+		return nil
+	}
+	t, err := embedText(b.at+".footer.text", e.Footer.Text, 2048)
+	if err != nil || t == "" {
+		return err
+	}
+	b.em.Footer = &EmbedFooter{Text: t}
+	b.count(t)
+	return nil
+}
+
+// mediaLink validates the URL of an image or thumbnail; an empty URL yields no media.
+func (b *embedBuilder) mediaLink(field, raw string) (*EmbedMedia, error) {
+	u, err := embedLink(b.at+field, raw)
+	if err != nil || u == "" {
+		return nil, err
+	}
+	return &EmbedMedia{URL: u}, nil
+}
+
+func (b *embedBuilder) image(e InEmbed) (err error) {
+	if e.Image == nil {
+		return nil
+	}
+	b.em.Image, err = b.mediaLink(".image.url", e.Image.URL)
+	return err
+}
+
+func (b *embedBuilder) thumbnail(e InEmbed) (err error) {
+	if e.Thumbnail == nil {
+		return nil
+	}
+	b.em.Thumbnail, err = b.mediaLink(".thumbnail.url", e.Thumbnail.URL)
+	return err
+}
+
+func (b *embedBuilder) author(e InEmbed) error {
+	if e.Author == nil {
+		return nil
+	}
+	name, err := embedText(b.at+".author.name", e.Author.Name, 256)
+	if err != nil {
+		return err
+	}
+	u, err := embedLink(b.at+".author.url", e.Author.URL)
+	if err != nil {
+		return err
+	}
+	if name != "" {
+		b.em.Author = &EmbedAuthor{Name: name, URL: u}
+		b.count(name)
+	}
+	return nil
+}
+
+func (b *embedBuilder) fields(e InEmbed) error {
 	if len(e.Fields) > maxEmbedFields {
-		return em, 0, FormError(fmt.Sprintf("%s.fields: at most %d fields are allowed", at, maxEmbedFields))
+		return FormError(fmt.Sprintf("%s.fields: at most %d fields are allowed", b.at, maxEmbedFields))
 	}
 	for j, f := range e.Fields {
-		fat := fmt.Sprintf("%s.fields[%d]", at, j)
+		fat := fmt.Sprintf("%s.fields[%d]", b.at, j)
 		name, err := embedText(fat+".name", f.Name, 256)
 		if err != nil {
-			return em, 0, err
+			return err
 		}
 		value, err := embedText(fat+".value", f.Value, 1024)
 		if err != nil {
-			return em, 0, err
+			return err
 		}
 		if name == "" || value == "" {
-			return em, 0, FormError(fat + " needs a name and a value")
+			return FormError(fat + " needs a name and a value")
 		}
-		em.Fields = append(em.Fields, EmbedField{Name: name, Value: value, Inline: f.Inline})
-		count(name)
-		count(value)
+		b.em.Fields = append(b.em.Fields, EmbedField{Name: name, Value: value, Inline: f.Inline})
+		b.count(name)
+		b.count(value)
 	}
-	return em, n, nil
+	return nil
 }

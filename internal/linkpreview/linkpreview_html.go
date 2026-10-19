@@ -26,29 +26,7 @@ func parseHTML(body []byte, base *url.URL) *Preview {
 			case "title":
 				inTitle = true
 			case "meta":
-				var key, content string
-				for _, a := range tok.Attr {
-					switch strings.ToLower(a.Key) {
-					case "property", "name":
-						key = strings.ToLower(a.Val)
-					case "content":
-						content = a.Val
-					}
-				}
-				switch key {
-				case "og:title":
-					p.Title = content
-				case "og:description":
-					p.Description = content
-				case "og:site_name":
-					p.SiteName = content
-				case "og:image", "og:image:url":
-					if p.Image == "" {
-						p.Image = content
-					}
-				case "description":
-					desc = content
-				}
+				applyMeta(p, &desc, tok)
 			case "body":
 				// Everything needed lives in <head>.
 				return finish(p, title, desc, base)
@@ -62,6 +40,34 @@ func parseHTML(body []byte, base *url.URL) *Preview {
 				inTitle = false
 			}
 		}
+	}
+}
+
+// applyMeta stores the value of one <meta> tag: Open Graph fields on the
+// preview, the plain description as fallback in desc.
+func applyMeta(p *Preview, desc *string, tok html.Token) {
+	var key, content string
+	for _, a := range tok.Attr {
+		switch strings.ToLower(a.Key) {
+		case "property", "name":
+			key = strings.ToLower(a.Val)
+		case "content":
+			content = a.Val
+		}
+	}
+	switch key {
+	case "og:title":
+		p.Title = content
+	case "og:description":
+		p.Description = content
+	case "og:site_name":
+		p.SiteName = content
+	case "og:image", "og:image:url":
+		if p.Image == "" {
+			p.Image = content
+		}
+	case "description":
+		*desc = content
 	}
 }
 

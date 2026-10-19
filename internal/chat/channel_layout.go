@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -76,69 +77,85 @@ func lockChannelLayout(ctx context.Context, tx pgx.Tx) error {
 // per-user state (read position, notification level) are not copied. Channel
 // names need not be unique, so the copy keeps the source name unchanged.
 func DuplicateChannel(ctx context.Context, p *db.Pool, sourceID uuid.UUID) (*Channel, error) {
-	var ch Channel
+	var ch *Channel
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		if err := lockChannelLayout(ctx, tx); err != nil {
 			return err
 		}
-		var src Channel
-		err := tx.QueryRow(ctx, `
-			SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
-			FROM channels WHERE id = $1 FOR UPDATE`, sourceID).
-			Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errChannelNotFound
-		}
-		if err != nil {
-			return fmt.Errorf("lock channel: %w", err)
-		}
-
-		// The source's group, in the order GET /api/channels lists it.
-		ids, orders, err := lockChannelGroup(ctx, tx, src.CategoryID)
+		src, err := lockSourceChannel(ctx, tx, sourceID)
 		if err != nil {
 			return err
 		}
-		srcIdx := -1
-		for i, id := range ids {
-			if id == src.ID {
-				srcIdx = i
-				break
-			}
-		}
-		if srcIdx < 0 { // cannot happen: the source row is locked
-			return errChannelNotFound
-		}
-
-		newOrder, shifted := placeBelow(orders, srcIdx)
-		batch := &pgx.Batch{}
-		for i, order := range shifted {
-			batch.Queue(`UPDATE channels SET sort_order = $2 WHERE id = $1`, ids[srcIdx+1+i], order)
-		}
-		if batch.Len() > 0 {
-			if err := tx.SendBatch(ctx, batch).Close(); err != nil {
-				return fmt.Errorf("shift channels: %w", err)
-			}
-		}
-
-		err = tx.QueryRow(ctx, `
-			INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
-			RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
-			src.CategoryID, src.Name, src.Type, src.Topic, newOrder, src.UserLimit, src.SlowModeSeconds).
-			Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+		newOrder, err := makeRoomBelow(ctx, tx, src)
 		if err != nil {
-			return fmt.Errorf("duplicate channel: %w", err)
+			return err
 		}
-		// A copy of a private channel stays private.
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
-			SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,
-			ch.ID, src.ID); err != nil {
-			return fmt.Errorf("copy permissions: %w", err)
-		}
-		return nil
+		ch, err = insertChannelCopy(ctx, tx, src, newOrder)
+		return err
 	})
 	if err != nil {
 		return nil, err
+	}
+	return ch, nil
+}
+
+func lockSourceChannel(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*Channel, error) {
+	var src Channel
+	err := tx.QueryRow(ctx, `
+		SELECT id, category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds
+		FROM channels WHERE id = $1 FOR UPDATE`, id).
+		Scan(&src.ID, &src.CategoryID, &src.Name, &src.Type, &src.Topic, &src.SortOrder, &src.UserLimit, &src.SlowModeSeconds)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errChannelNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lock channel: %w", err)
+	}
+	return &src, nil
+}
+
+// makeRoomBelow shifts the channels after src in its group (in the order
+// GET /api/channels lists it) down and returns the sort order for the copy.
+func makeRoomBelow(ctx context.Context, tx pgx.Tx, src *Channel) (int, error) {
+	ids, orders, err := lockChannelGroup(ctx, tx, src.CategoryID)
+	if err != nil {
+		return 0, err
+	}
+	srcIdx := slices.Index(ids, src.ID)
+	if srcIdx < 0 { // cannot happen: the source row is locked
+		return 0, errChannelNotFound
+	}
+
+	newOrder, shifted := placeBelow(orders, srcIdx)
+	batch := &pgx.Batch{}
+	for i, order := range shifted {
+		batch.Queue(`UPDATE channels SET sort_order = $2 WHERE id = $1`, ids[srcIdx+1+i], order)
+	}
+	if batch.Len() > 0 {
+		if err := tx.SendBatch(ctx, batch).Close(); err != nil {
+			return 0, fmt.Errorf("shift channels: %w", err)
+		}
+	}
+	return newOrder, nil
+}
+
+// insertChannelCopy creates the copy of src at sortOrder, with the same
+// permission overwrites: a copy of a private channel stays private.
+func insertChannelCopy(ctx context.Context, tx pgx.Tx, src *Channel, sortOrder int) (*Channel, error) {
+	var ch Channel
+	err := tx.QueryRow(ctx, `
+		INSERT INTO channels (category_id, name, type, topic, sort_order, user_limit, slow_mode_seconds) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds`,
+		src.CategoryID, src.Name, src.Type, src.Topic, sortOrder, src.UserLimit, src.SlowModeSeconds).
+		Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds)
+	if err != nil {
+		return nil, fmt.Errorf("duplicate channel: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO permission_overwrites (channel_id, role_id, user_id, allow, deny)
+		SELECT $1, role_id, user_id, allow, deny FROM permission_overwrites WHERE channel_id = $2`,
+		ch.ID, src.ID); err != nil {
+		return nil, fmt.Errorf("copy permissions: %w", err)
 	}
 	return &ch, nil
 }

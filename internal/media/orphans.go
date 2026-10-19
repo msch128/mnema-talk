@@ -34,70 +34,89 @@ const orphanBatch = 1000
 // remove it deletes them as well. A media row marked deleted (pruned) no
 // longer refers to its object, so a leftover object of it counts too.
 func FindOrphans(ctx context.Context, p *db.Pool, store Store, remove bool) (*Orphans, error) {
-	res := &Orphans{}
+	sc := &orphanScan{ctx: ctx, pool: p, store: store, remove: remove, res: &Orphans{}}
 	cutoff := time.Now().Add(-orphanMinAge)
-	var batch []ObjectInfo
-	flush := func() error {
-		if len(batch) == 0 {
-			return nil
-		}
-		keys := make([]string, len(batch))
-		for i, o := range batch {
-			keys[i] = o.Key
-		}
-		rows, err := p.Query(ctx, `SELECT s3_key FROM media WHERE s3_key = ANY($1) AND NOT is_deleted`, keys)
-		if err != nil {
-			return fmt.Errorf("look up media keys: %w", err)
-		}
-		known := map[string]bool{}
-		for rows.Next() {
-			var k string
-			if err := rows.Scan(&k); err != nil {
-				rows.Close()
-				return err
-			}
-			known[k] = true
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return err
-		}
-		var orphans []string
-		for _, o := range batch {
-			if !known[o.Key] {
-				orphans = append(orphans, o.Key)
-				res.Count++
-				res.Bytes += o.Size
-			}
-		}
-		batch = batch[:0]
-		if remove && len(orphans) > 0 {
-			if err := store.DeleteBatch(ctx, orphans); err != nil {
-				return fmt.Errorf("delete orphaned objects: %w", err)
-			}
-			res.Deleted += int64(len(orphans))
-		}
-		return nil
-	}
 	for _, prefix := range orphanPrefixes {
 		err := store.List(ctx, prefix, func(o ObjectInfo) error {
 			if o.LastModified.After(cutoff) {
 				return nil
 			}
-			batch = append(batch, o)
-			if len(batch) >= orphanBatch {
-				return flush()
+			sc.batch = append(sc.batch, o)
+			if len(sc.batch) >= orphanBatch {
+				return sc.flush()
 			}
 			return nil
 		})
 		if err != nil {
-			return res, err
+			return sc.res, err
 		}
-		if err := flush(); err != nil {
-			return res, err
+		if err := sc.flush(); err != nil {
+			return sc.res, err
 		}
 	}
-	return res, nil
+	return sc.res, nil
+}
+
+// orphanScan collects listed objects in batches and checks each batch
+// against the media table.
+type orphanScan struct {
+	ctx    context.Context
+	pool   *db.Pool
+	store  Store
+	remove bool
+	batch  []ObjectInfo
+	res    *Orphans
+}
+
+// flush resolves the pending batch: counts the unreferenced objects and,
+// when removing, deletes them.
+func (sc *orphanScan) flush() error {
+	if len(sc.batch) == 0 {
+		return nil
+	}
+	known, err := sc.referencedKeys()
+	if err != nil {
+		return err
+	}
+	var orphans []string
+	for _, o := range sc.batch {
+		if !known[o.Key] {
+			orphans = append(orphans, o.Key)
+			sc.res.Count++
+			sc.res.Bytes += o.Size
+		}
+	}
+	sc.batch = sc.batch[:0]
+	if !sc.remove || len(orphans) == 0 {
+		return nil
+	}
+	if err := sc.store.DeleteBatch(sc.ctx, orphans); err != nil {
+		return fmt.Errorf("delete orphaned objects: %w", err)
+	}
+	sc.res.Deleted += int64(len(orphans))
+	return nil
+}
+
+// referencedKeys returns the batch keys that a live media row points at.
+func (sc *orphanScan) referencedKeys() (map[string]bool, error) {
+	keys := make([]string, len(sc.batch))
+	for i, o := range sc.batch {
+		keys[i] = o.Key
+	}
+	rows, err := sc.pool.Query(sc.ctx, `SELECT s3_key FROM media WHERE s3_key = ANY($1) AND NOT is_deleted`, keys)
+	if err != nil {
+		return nil, fmt.Errorf("look up media keys: %w", err)
+	}
+	defer rows.Close()
+	known := map[string]bool{}
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			return nil, err
+		}
+		known[k] = true
+	}
+	return known, rows.Err()
 }
 
 // orphanScanFirstRun leaves startup alone; the scan then repeats daily.

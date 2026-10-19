@@ -220,29 +220,49 @@ func (h *Handler) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.deleteObjects(ctx, keys)
-	for _, m := range gone {
+	h.announceBulkDelete(ctx, bulkDeleteReport{
+		chID: chID, channelName: channelName, targetName: targetName, actor: actor,
+		req: req, reason: reason, gone: gone,
+	})
+	httpx.WriteJSON(w, http.StatusOK, BulkDeleteResult{Deleted: len(gone)})
+	return nil
+}
+
+// bulkDeleteReport is what a finished bulk delete tells the live clients,
+// the audit log and the member whose messages went.
+type bulkDeleteReport struct {
+	chID        uuid.UUID
+	channelName string
+	targetName  string
+	actor       *auth.User
+	req         BulkDeleteRequest
+	reason      string
+	gone        []deletedMessage
+}
+
+func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) {
+	chID, req := rep.chID, rep.req
+	for _, m := range rep.gone {
 		h.Events.BroadcastChannel(chID, "message_delete", map[string]any{"id": m.id, "channel_id": chID, "parent_id": m.parentID})
 		d := map[string]any{
-			"channel_id": chID, "channel_name": channelName, "author_id": req.UserID, "author_name": targetName,
+			"channel_id": chID, "channel_name": rep.channelName, "author_id": req.UserID, "author_name": rep.targetName,
 			"content": audit.Content(m.content), "attachments": m.attachments, "sent_at": m.createdAt,
-			"moderator": req.UserID != actor.ID, "bulk": true, "reason": reason,
+			"moderator": req.UserID != rep.actor.ID, "bulk": true, "reason": rep.reason,
 		}
 		if m.parentID != nil {
 			d["parent_id"] = *m.parentID
 		}
-		h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: channelName, ChannelID: &chID, Details: d})
+		h.Audit.RecordOrLog(ctx, audit.Entry{Action: "message.delete", TargetType: "message", TargetID: m.id.String(), TargetName: rep.channelName, ChannelID: &chID, Details: d})
 	}
 	h.Audit.RecordOrLog(ctx, audit.Entry{
-		Action: "moderation.bulk_delete", TargetType: "user", TargetID: req.UserID.String(), TargetName: targetName, ChannelID: &chID,
-		Details: map[string]any{"channel_id": chID, "channel_name": channelName, "requested": req.Count, "deleted": len(gone), "reason": reason},
+		Action: "moderation.bulk_delete", TargetType: "user", TargetID: req.UserID.String(), TargetName: rep.targetName, ChannelID: &chID,
+		Details: map[string]any{"channel_id": chID, "channel_name": rep.channelName, "requested": req.Count, "deleted": len(rep.gone), "reason": rep.reason},
 	})
-	if len(gone) > 0 && req.UserID != actor.ID && h.Events != nil {
+	if len(rep.gone) > 0 && req.UserID != rep.actor.ID && h.Events != nil {
 		h.Events.SendToUsers([]uuid.UUID{req.UserID}, "moderation_notice", map[string]any{
-			"kind": "messages_deleted", "reason": reason, "channel_name": channelName, "count": len(gone),
+			"kind": "messages_deleted", "reason": rep.reason, "channel_name": rep.channelName, "count": len(rep.gone),
 		})
 	}
-	httpx.WriteJSON(w, http.StatusOK, BulkDeleteResult{Deleted: len(gone)})
-	return nil
 }
 
 // takeLatestMessages deletes the n latest messages of a member in a channel
@@ -267,43 +287,54 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 	if err != nil {
 		return nil, nil, fmt.Errorf("select messages: %w", err)
 	}
+	if len(gone) == 0 {
+		return gone, nil, nil
+	}
 	ids := make([]uuid.UUID, len(gone))
 	for i, m := range gone {
 		ids[i] = m.id
 	}
-	var keys []string
-	if len(ids) > 0 {
-		media, err := tx.Query(ctx, `
-			SELECT message_id, id, original_filename, mime_type, size_bytes, s3_key FROM media
-			WHERE message_id = ANY($1) OR message_id IN (SELECT id FROM messages WHERE parent_id = ANY($1))`, ids)
-		if err != nil {
-			return nil, nil, fmt.Errorf("select attachments: %w", err)
-		}
-		defer media.Close()
-		byMessage := map[uuid.UUID][]map[string]any{}
-		for media.Next() {
-			var msgID, id uuid.UUID
-			var name, mime, key string
-			var size int64
-			if err := media.Scan(&msgID, &id, &name, &mime, &size, &key); err != nil {
-				return nil, nil, err
-			}
-			keys = append(keys, key)
-			byMessage[msgID] = append(byMessage[msgID], map[string]any{"id": id, "filename": name, "mime_type": mime, "size_bytes": size})
-		}
-		if err := media.Err(); err != nil {
-			return nil, nil, err
-		}
-		media.Close()
-		for i := range gone {
-			gone[i].attachments = byMessage[gone[i].id]
-			if gone[i].attachments == nil {
-				gone[i].attachments = []map[string]any{}
-			}
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
-			return nil, nil, fmt.Errorf("delete messages: %w", err)
+	byMessage, keys, err := loadDeletedAttachments(ctx, tx, ids)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range gone {
+		gone[i].attachments = byMessage[gone[i].id]
+		if gone[i].attachments == nil {
+			gone[i].attachments = []map[string]any{}
 		}
 	}
+	if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
+		return nil, nil, fmt.Errorf("delete messages: %w", err)
+	}
 	return gone, keys, nil
+}
+
+// loadDeletedAttachments returns the attachments of the messages ids (and of
+// their replies) grouped by message, and all their storage keys.
+func loadDeletedAttachments(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) (map[uuid.UUID][]map[string]any, []string, error) {
+	media, err := tx.Query(ctx, `
+		SELECT message_id, id, original_filename, mime_type, size_bytes, s3_key FROM media
+		WHERE message_id = ANY($1) OR message_id IN (SELECT id FROM messages WHERE parent_id = ANY($1))`, ids)
+	if err != nil {
+		return nil, nil, fmt.Errorf("select attachments: %w", err)
+	}
+	defer media.Close()
+	var keys []string
+	byMessage := map[uuid.UUID][]map[string]any{}
+	for media.Next() {
+		var msgID, id uuid.UUID
+		var name, mime, key string
+		var size int64
+		if err := media.Scan(&msgID, &id, &name, &mime, &size, &key); err != nil {
+			return nil, nil, err
+		}
+		keys = append(keys, key)
+		byMessage[msgID] = append(byMessage[msgID], map[string]any{"id": id, "filename": name, "mime_type": mime, "size_bytes": size})
+	}
+	if err := media.Err(); err != nil {
+		return nil, nil, err
+	}
+	media.Close()
+	return byMessage, keys, nil
 }

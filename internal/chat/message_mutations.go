@@ -151,27 +151,32 @@ func ToggleReactionAs(ctx context.Context, p *db.Pool, messageID, userID uuid.UU
 		if !canAdd {
 			return httpx.ErrForbidden("missing permission: add reactions")
 		}
-		var mine, distinct int
-		var emojiPresent bool
-		if err := tx.QueryRow(ctx, `
-			SELECT COUNT(*) FILTER (WHERE user_id = $2), COUNT(DISTINCT emoji), COALESCE(BOOL_OR(emoji = $3), FALSE)
-			FROM message_reactions WHERE message_id = $1`, messageID, userID, emoji).Scan(&mine, &distinct, &emojiPresent); err != nil {
-			return fmt.Errorf("count reactions: %w", err)
-		}
-		if mine >= MaxReactionsPerUser || (!emojiPresent && distinct >= MaxEmojiPerMessage) {
-			return httpx.ErrConflict(errTooManyReactionsMsg)
-		}
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)
-			ON CONFLICT (message_id, user_id, emoji) DO NOTHING`, messageID, userID, emoji); err != nil {
-			return fmt.Errorf("add reaction: %w", err)
-		}
-		return nil
+		return addReaction(ctx, tx, messageID, userID, emoji)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return reactionSummary(ctx, p, messageID)
+}
+
+// addReaction adds the reaction unless the user or the message is at its limit.
+func addReaction(ctx context.Context, tx pgx.Tx, messageID, userID uuid.UUID, emoji string) error {
+	var mine, distinct int
+	var emojiPresent bool
+	if err := tx.QueryRow(ctx, `
+		SELECT COUNT(*) FILTER (WHERE user_id = $2), COUNT(DISTINCT emoji), COALESCE(BOOL_OR(emoji = $3), FALSE)
+		FROM message_reactions WHERE message_id = $1`, messageID, userID, emoji).Scan(&mine, &distinct, &emojiPresent); err != nil {
+		return fmt.Errorf("count reactions: %w", err)
+	}
+	if mine >= MaxReactionsPerUser || (!emojiPresent && distinct >= MaxEmojiPerMessage) {
+		return httpx.ErrConflict(errTooManyReactionsMsg)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO message_reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)
+		ON CONFLICT (message_id, user_id, emoji) DO NOTHING`, messageID, userID, emoji); err != nil {
+		return fmt.Errorf("add reaction: %w", err)
+	}
+	return nil
 }
 
 // reactionSummary loads one message's reactions, in the order they were first given.

@@ -235,28 +235,12 @@ const MaxSlowModeSeconds = 21600
 // (voice channels only; 0 removes it) and/or its slow mode (0 turns it off);
 // nil keeps a field.
 func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *string, userLimit, slowMode *int) (*Channel, error) {
-	if slowMode != nil && (*slowMode < 0 || *slowMode > MaxSlowModeSeconds) {
-		return nil, httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
-	}
-	if userLimit != nil && (*userLimit < 0 || *userLimit > MaxUserLimit) {
-		return nil, httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
-	}
-	if name != nil {
-		n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
-		if err != nil {
-			return nil, err
-		}
-		name = &n
-	}
-	if topic != nil {
-		t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
-		if err != nil {
-			return nil, err
-		}
-		topic = &t
+	name, topic, err := validateChannelEdit(name, topic, userLimit, slowMode)
+	if err != nil {
+		return nil, err
 	}
 	var ch Channel
-	err := p.QueryRow(ctx, `
+	err = p.QueryRow(ctx, `
 		UPDATE channels SET name = COALESCE($2, name), topic = COALESCE($3, topic),
 			user_limit = COALESCE($4, user_limit), slow_mode_seconds = COALESCE($5, slow_mode_seconds)
 		WHERE id = $1 AND ($4::int IS NULL OR $4 = 0 OR type = 'voice')
@@ -274,6 +258,32 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 		return nil, fmt.Errorf("update channel: %w", err)
 	}
 	return &ch, nil
+}
+
+// validateChannelEdit checks the fields of a channel update and returns the
+// cleaned name and topic (nil stays nil).
+func validateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string, *string, error) {
+	if slowMode != nil && (*slowMode < 0 || *slowMode > MaxSlowModeSeconds) {
+		return nil, nil, httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
+	}
+	if userLimit != nil && (*userLimit < 0 || *userLimit > MaxUserLimit) {
+		return nil, nil, httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
+	}
+	if name != nil {
+		n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
+		if err != nil {
+			return nil, nil, err
+		}
+		name = &n
+	}
+	if topic != nil {
+		t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
+		if err != nil {
+			return nil, nil, err
+		}
+		topic = &t
+	}
+	return name, topic, nil
 }
 
 // RenameCategory changes a category's name.
