@@ -47,81 +47,128 @@ func nativeCiphertextHeaderValues(r *http.Request, name string) []string {
 	}
 	return out
 }
-func decodeNativeCiphertext(w http.ResponseWriter, r *http.Request, channel uuid.UUID) (chat.OpaqueCiphertextRequest, error) {
-	empty := chat.OpaqueCiphertextRequest{}
+
+// errNativeCiphertextShape marks a body that is valid JSON of the wrong shape.
+var errNativeCiphertextShape = errors.New("native ciphertext body has the wrong shape")
+
+// nativeCiphertextBodyError maps a body failure to the response: too large
+// when the size cap was hit, invalid otherwise.
+func nativeCiphertextBodyError(err error) error {
+	var max *http.MaxBytesError
+	if errors.As(err, &max) {
+		return httpx.ErrPayloadTooLarge("request body too large")
+	}
+	return httpx.ErrInvalidInput("invalid native ciphertext body")
+}
+
+// checkNativeCiphertextRequest accepts only a single plain application/json
+// body that is not known to be too large.
+func checkNativeCiphertextRequest(r *http.Request) error {
 	types := nativeCiphertextHeaderValues(r, "Content-Type")
 	if len(types) != 1 {
-		return empty, httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
+		return httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
 	}
 	kind, _, err := mime.ParseMediaType(types[0])
 	if err != nil || kind != "application/json" || nativePreviewHeaderPresent(r, "Content-Encoding") {
-		return empty, httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
+		return httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
 	}
 	if r.ContentLength > nativeCiphertextBodyMax {
-		return empty, httpx.ErrPayloadTooLarge("request body too large")
+		return httpx.ErrPayloadTooLarge("request body too large")
 	}
 	if r.Body == nil {
-		return empty, httpx.ErrInvalidInput("invalid native ciphertext body")
+		return httpx.ErrInvalidInput("invalid native ciphertext body")
+	}
+	return nil
+}
+
+func decodeNativeCiphertext(w http.ResponseWriter, r *http.Request, channel uuid.UUID) (chat.OpaqueCiphertextRequest, error) {
+	empty := chat.OpaqueCiphertextRequest{}
+	if err := checkNativeCiphertextRequest(r); err != nil {
+		return empty, err
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, nativeCiphertextBodyMax)
-	invalid := func(err error) (chat.OpaqueCiphertextRequest, error) {
-		var max *http.MaxBytesError
-		if errors.As(err, &max) {
-			return empty, httpx.ErrPayloadTooLarge("request body too large")
-		}
-		return empty, httpx.ErrInvalidInput("invalid native ciphertext body")
+	fields, err := readNativeCiphertextFields(json.NewDecoder(r.Body))
+	if err != nil {
+		return empty, nativeCiphertextBodyError(err)
 	}
-	decoder := json.NewDecoder(r.Body)
+	event, err := uuid.Parse(fields["client_event_id"])
+	if err != nil || event == uuid.Nil || event.String() != fields["client_event_id"] {
+		return empty, nativeCiphertextBodyError(nil)
+	}
+	group, ok := decodeCanonicalBase64(fields["group_id"], 1, 128)
+	if !ok {
+		return empty, nativeCiphertextBodyError(nil)
+	}
+	ciphertext, ok := decodeCanonicalBase64(fields["ciphertext"], 1, 65536)
+	if !ok {
+		return empty, nativeCiphertextBodyError(nil)
+	}
+	return chat.OpaqueCiphertextRequest{ChannelID: channel, ClientEventID: event, GroupID: group, Ciphertext: ciphertext}, nil
+}
+
+// readNativeCiphertextFields reads exactly one JSON object with the string
+// fields client_event_id, group_id and ciphertext, each once and nothing
+// else, followed by the end of the body.
+func readNativeCiphertextFields(decoder *json.Decoder) (map[string]string, error) {
 	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
-		return invalid(err)
+		return nil, errOrShape(err)
 	}
 	fields := make(map[string]string, 3)
 	for decoder.More() {
-		token, err := decoder.Token()
+		key, err := readNativeCiphertextKey(decoder, fields)
 		if err != nil {
-			return invalid(err)
-		}
-		key, _ := token.(string) // a decoder always yields a string where an object key is due
-		if key != "client_event_id" && key != "group_id" && key != "ciphertext" {
-			return invalid(nil)
-		}
-		if _, duplicate := fields[key]; duplicate {
-			return invalid(nil)
+			return nil, err
 		}
 		value, err := decoder.Token()
 		if err != nil {
-			return invalid(err)
+			return nil, err
 		}
 		text, ok := value.(string)
 		if !ok {
-			return invalid(nil)
+			return nil, errNativeCiphertextShape
 		}
 		fields[key] = text
 	}
 	if token, err := decoder.Token(); err != nil || token != json.Delim('}') || len(fields) != 3 {
-		return invalid(err)
+		return nil, errOrShape(err)
 	}
 	if _, err := decoder.Token(); err != io.EOF {
-		return invalid(err)
+		return nil, errOrShape(err)
 	}
-	event, err := uuid.Parse(fields["client_event_id"])
-	if err != nil || event == uuid.Nil || event.String() != fields["client_event_id"] {
-		return invalid(nil)
+	return fields, nil
+}
+
+// readNativeCiphertextKey reads the next object key, which must be one of the
+// three fields and not seen before.
+func readNativeCiphertextKey(decoder *json.Decoder, seen map[string]string) (string, error) {
+	token, err := decoder.Token()
+	if err != nil {
+		return "", err
 	}
-	decode := func(value string, min, max int) ([]byte, bool) {
-		if len(value) > base64.StdEncoding.EncodedLen(max) {
-			return nil, false
-		}
-		raw, err := base64.StdEncoding.Strict().DecodeString(value)
-		return raw, err == nil && len(raw) >= min && len(raw) <= max && base64.StdEncoding.EncodeToString(raw) == value
+	key, _ := token.(string) // a decoder always yields a string where an object key is due
+	if key != "client_event_id" && key != "group_id" && key != "ciphertext" {
+		return "", errNativeCiphertextShape
 	}
-	group, ok := decode(fields["group_id"], 1, 128)
-	if !ok {
-		return invalid(nil)
+	if _, duplicate := seen[key]; duplicate {
+		return "", errNativeCiphertextShape
 	}
-	ciphertext, ok := decode(fields["ciphertext"], 1, 65536)
-	if !ok {
-		return invalid(nil)
+	return key, nil
+}
+
+// errOrShape is err, or the shape error when there is none.
+func errOrShape(err error) error {
+	if err != nil {
+		return err
 	}
-	return chat.OpaqueCiphertextRequest{ChannelID: channel, ClientEventID: event, GroupID: group, Ciphertext: ciphertext}, nil
+	return errNativeCiphertextShape
+}
+
+// decodeCanonicalBase64 decodes standard padded base64 of min..max bytes that
+// re-encodes to exactly the input.
+func decodeCanonicalBase64(value string, min, max int) ([]byte, bool) {
+	if len(value) > base64.StdEncoding.EncodedLen(max) {
+		return nil, false
+	}
+	raw, err := base64.StdEncoding.Strict().DecodeString(value)
+	return raw, err == nil && len(raw) >= min && len(raw) <= max && base64.StdEncoding.EncodeToString(raw) == value
 }

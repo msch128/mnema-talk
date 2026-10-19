@@ -26,95 +26,115 @@ func (s *NativeSessions) RotateRefresh(ctx context.Context, encoded string) (Iss
 	if err != nil {
 		return IssuedNative{}, nativeStoreFailure(err)
 	}
-	var result IssuedNative
-	var outcome error
+	var rotation nativeRotation
 	err = s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		user, version, disabled, err := lockNativeUser(ctx, tx, userID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		family, err := lockNativeFamily(ctx, tx, familyID, userID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		var sequence int64
-		var expiry time.Time
-		var consumed *time.Time
-		if err := tx.QueryRow(ctx, `SELECT sequence,expires_at,consumed_at FROM native_refresh_tokens
-			WHERE token_hash=$1 AND family_id=$2 FOR UPDATE`, hash[:], familyID).Scan(&sequence, &expiry, &consumed); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return ErrNativeUnauthorized
-			}
-			return nativeStoreFailure(err)
-		}
-		now, err := nativeClock(ctx, tx)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if disabled || family.revokedAt != nil || !now.Before(family.expiresAt) {
-			return ErrNativeUnauthorized
-		}
-		reason := ""
-		if version != family.version {
-			reason = "version_mismatch"
-		} else if consumed != nil {
-			reason = "refresh_reuse"
-		}
-		if reason == "" && sequence >= nativeMaxSequence {
-			reason = "rotation_limit"
-		}
-		if reason != "" {
-			if err := revokeNativeFamily(ctx, tx, familyID, now, reason); err != nil {
-				return nativeStoreFailure(err)
-			}
-			// The auth error is an outcome AFTER commit, not a callback error
-			// that would roll the security transition back.
-			outcome = ErrNativeUnauthorized
-			return nil
-		}
-		if !expiry.Equal(family.expiresAt) || !now.Before(expiry) {
-			return ErrNativeUnauthorized
-		}
-		if now.Before(family.refreshAfter) {
-			return ErrNativeRefreshWait
-		}
-		access, refresh, err := generateNativeSecrets(s.random)
-		if err != nil {
-			return err
-		}
-		tag, err := tx.Exec(ctx, `UPDATE native_refresh_tokens SET consumed_at=$2
-			WHERE token_hash=$1 AND consumed_at IS NULL`, hash[:], now)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if tag.RowsAffected() != 1 {
-			return ErrNativeUnauthorized
-		}
-		accessExpiry, err := insertNativeTokens(ctx, tx, familyID, sequence+1, now, family.expiresAt, access, refresh)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if _, err := tx.Exec(ctx, `UPDATE native_session_families SET refresh_after=$2 WHERE id=$1`, familyID, now.Add(nativeRefreshInterval)); err != nil {
-			return nativeStoreFailure(err)
-		}
-		result = IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: family.instanceID,
-			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: family.expiresAt, accessHash: access.digest()}, access: access, refresh: refresh, refreshSequence: uint64(sequence + 1)}
-		return nil
+		var err error
+		rotation, err = s.rotate(ctx, tx, hash, familyID, userID)
+		return err
 	})
 	if err != nil {
 		return IssuedNative{}, err
 	}
-	if outcome != nil {
+	if rotation.familyRevoked {
 		s.disconnectNativeFamily(familyID)
-		return IssuedNative{}, outcome
+		return IssuedNative{}, ErrNativeUnauthorized
 	}
-	return result, nil
+	return rotation.issued, nil
+}
+
+// nativeRotation is what a refresh attempt committed: either the successor
+// tokens or the revocation of the whole family.
+type nativeRotation struct {
+	issued IssuedNative
+	// familyRevoked reports a committed revocation. The unauthorized error is
+	// an outcome AFTER commit, not a callback error that would roll the
+	// security transition back.
+	familyRevoked bool
+}
+
+// refreshToken is the stored state of a presented refresh token.
+type refreshToken struct {
+	sequence int64
+	expiry   time.Time
+	consumed *time.Time
+}
+
+// rotate redeems a refresh token under the user-first locks. A token that
+// shows reuse, a version mismatch or an exhausted rotation budget revokes the
+// whole family instead.
+func (s *NativeSessions) rotate(ctx context.Context, tx pgx.Tx, hash [32]byte, familyID, userID uuid.UUID) (nativeRotation, error) {
+	locked, err := lockNativeSession(ctx, tx, userID, familyID)
+	if err != nil {
+		return nativeRotation{}, err
+	}
+	var token refreshToken
+	if err := tx.QueryRow(ctx, `SELECT sequence,expires_at,consumed_at FROM native_refresh_tokens
+		WHERE token_hash=$1 AND family_id=$2 FOR UPDATE`, hash[:], familyID).Scan(&token.sequence, &token.expiry, &token.consumed); err != nil {
+		return nativeRotation{}, nativeLockFailure(err)
+	}
+	now, err := nativeClock(ctx, tx)
+	if err != nil {
+		return nativeRotation{}, nativeStoreFailure(err)
+	}
+	family := locked.family
+	if locked.disabled || family.revokedAt != nil || !now.Before(family.expiresAt) {
+		return nativeRotation{}, ErrNativeUnauthorized
+	}
+	if reason := refreshRevocationReason(locked, token); reason != "" {
+		if err := revokeNativeFamily(ctx, tx, familyID, now, reason); err != nil {
+			return nativeRotation{}, nativeStoreFailure(err)
+		}
+		return nativeRotation{familyRevoked: true}, nil
+	}
+	if !token.expiry.Equal(family.expiresAt) || !now.Before(token.expiry) {
+		return nativeRotation{}, ErrNativeUnauthorized
+	}
+	if now.Before(family.refreshAfter) {
+		return nativeRotation{}, ErrNativeRefreshWait
+	}
+	issued, err := s.issueSuccessor(ctx, tx, hash, locked, familyID, token.sequence, now)
+	return nativeRotation{issued: issued}, err
+}
+
+// refreshRevocationReason names why a presented refresh token must revoke its
+// family, or is empty when it is a legitimate next rotation.
+func refreshRevocationReason(locked lockedNativeSession, token refreshToken) string {
+	switch {
+	case locked.version != locked.family.version:
+		return "version_mismatch"
+	case token.consumed != nil:
+		return "refresh_reuse"
+	case token.sequence >= nativeMaxSequence:
+		return "rotation_limit"
+	}
+	return ""
+}
+
+// issueSuccessor consumes the presented refresh token and stores the next
+// access/refresh pair of the family.
+func (s *NativeSessions) issueSuccessor(ctx context.Context, tx pgx.Tx, hash [32]byte, locked lockedNativeSession, familyID uuid.UUID, sequence int64, now time.Time) (IssuedNative, error) {
+	access, refresh, err := generateNativeSecrets(s.random)
+	if err != nil {
+		return IssuedNative{}, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE native_refresh_tokens SET consumed_at=$2
+		WHERE token_hash=$1 AND consumed_at IS NULL`, hash[:], now)
+	if err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	if tag.RowsAffected() != 1 {
+		return IssuedNative{}, ErrNativeUnauthorized
+	}
+	family := locked.family
+	accessExpiry, err := insertNativeTokens(ctx, tx, familyID, sequence+1, now, family.expiresAt, access, refresh)
+	if err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE native_session_families SET refresh_after=$2 WHERE id=$1`, familyID, now.Add(nativeRefreshInterval)); err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	return IssuedNative{principal: NativePrincipal{user: *locked.user, familyID: familyID, instanceID: family.instanceID,
+		tokenVersion: locked.version, accessExpiresAt: accessExpiry, familyExpiresAt: family.expiresAt, accessHash: access.digest()}, access: access, refresh: refresh, refreshSequence: uint64(sequence + 1)}, nil
 }
 
 func (s *NativeSessions) RevokeFamily(ctx context.Context, principal NativePrincipal) error {
@@ -124,37 +144,34 @@ func (s *NativeSessions) RevokeFamily(ctx context.Context, principal NativePrinc
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)
 	defer cancel()
 	err := s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		user, version, disabled, err := lockNativeUser(ctx, tx, principal.user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		family, err := lockNativeFamily(ctx, tx, principal.familyID, user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		now, err := nativeClock(ctx, tx)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if disabled || version != principal.tokenVersion || family.version != version ||
-			family.instanceID != principal.instanceID || !now.Before(principal.accessExpiresAt) || !now.Before(family.expiresAt) {
-			return ErrNativeUnauthorized
-		}
-		if err := revokeNativeFamily(ctx, tx, principal.familyID, now, "logout"); err != nil {
-			return nativeStoreFailure(err)
-		}
-		return nil
+		return revokeAuthenticatedFamily(ctx, tx, principal)
 	})
 	if err == nil {
 		s.disconnectNativeFamily(principal.familyID)
 	}
 	return err
+}
+
+// revokeAuthenticatedFamily logs a session out, provided the principal still
+// matches the locked account and family.
+func revokeAuthenticatedFamily(ctx context.Context, tx pgx.Tx, principal NativePrincipal) error {
+	locked, err := lockNativeSession(ctx, tx, principal.user.ID, principal.familyID)
+	if err != nil {
+		return err
+	}
+	now, err := nativeClock(ctx, tx)
+	if err != nil {
+		return nativeStoreFailure(err)
+	}
+	family := locked.family
+	if locked.disabled || locked.version != principal.tokenVersion || family.version != locked.version ||
+		family.instanceID != principal.instanceID || !now.Before(principal.accessExpiresAt) || !now.Before(family.expiresAt) {
+		return ErrNativeUnauthorized
+	}
+	if err := revokeNativeFamily(ctx, tx, principal.familyID, now, "logout"); err != nil {
+		return nativeStoreFailure(err)
+	}
+	return nil
 }
 
 // Cleanup counts deleted family/access rows, not cascaded child rows. Consumed
@@ -169,68 +186,99 @@ func (s *NativeSessions) Cleanup(ctx context.Context, batch int) (int, error) {
 	defer cancel()
 	deleted := 0
 	err := s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT f.id,f.user_id FROM native_session_families f JOIN users u ON u.id=f.user_id
-			WHERE f.revoked_at IS NOT NULL OR f.expires_at<=clock_timestamp()
-			OR f.issued_token_version<>u.token_version OR `+InactiveSQL("u")+`
-			ORDER BY f.user_id,f.id LIMIT $1`, batch)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		type locator struct{ familyID, userID uuid.UUID }
-		var locators []locator
-		for rows.Next() {
-			var item locator
-			if err := rows.Scan(&item.familyID, &item.userID); err != nil {
-				rows.Close()
-				return nativeStoreFailure(err)
-			}
-			locators = append(locators, item)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return nativeStoreFailure(err)
-		}
-		for _, item := range locators {
-			_, version, disabled, err := lockNativeUser(ctx, tx, item.userID, true)
-			if errors.Is(err, pgx.ErrNoRows) {
-				continue
-			}
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			family, err := lockNativeFamily(ctx, tx, item.familyID, item.userID, true)
-			if errors.Is(err, pgx.ErrNoRows) {
-				continue
-			}
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			now, err := nativeClock(ctx, tx)
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			if family.revokedAt == nil && now.Before(family.expiresAt) && version == family.version && !disabled {
-				continue
-			}
-			tag, err := tx.Exec(ctx, `DELETE FROM native_session_families WHERE id=$1`, item.familyID)
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			deleted += int(tag.RowsAffected())
-		}
-		if deleted < batch {
-			tag, err := tx.Exec(ctx, `DELETE FROM native_access_tokens WHERE token_hash IN
-				(SELECT token_hash FROM native_access_tokens WHERE expires_at<=clock_timestamp()
-				ORDER BY expires_at,token_hash LIMIT $1 FOR UPDATE SKIP LOCKED)`, batch-deleted)
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			deleted += int(tag.RowsAffected())
-		}
-		return nil
+		var err error
+		deleted, err = cleanupNativeBatch(ctx, tx, batch)
+		return err
 	})
 	if err != nil {
 		return 0, err
 	}
 	return deleted, nil
+}
+
+type familyLocator struct{ familyID, userID uuid.UUID }
+
+// cleanupNativeBatch deletes dead families and, with the budget left, expired
+// access tokens. It returns how many rows it deleted.
+func cleanupNativeBatch(ctx context.Context, tx pgx.Tx, batch int) (int, error) {
+	locators, err := deadFamilyCandidates(ctx, tx, batch)
+	if err != nil {
+		return 0, err
+	}
+	deleted := 0
+	for _, item := range locators {
+		n, err := deleteFamilyIfDead(ctx, tx, item)
+		if err != nil {
+			return 0, err
+		}
+		deleted += n
+	}
+	if deleted < batch {
+		tag, err := tx.Exec(ctx, `DELETE FROM native_access_tokens WHERE token_hash IN
+			(SELECT token_hash FROM native_access_tokens WHERE expires_at<=clock_timestamp()
+			ORDER BY expires_at,token_hash LIMIT $1 FOR UPDATE SKIP LOCKED)`, batch-deleted)
+		if err != nil {
+			return 0, nativeStoreFailure(err)
+		}
+		deleted += int(tag.RowsAffected())
+	}
+	return deleted, nil
+}
+
+// deadFamilyCandidates lists families that look revoked, expired or outdated;
+// each is re-checked under its locks before deletion.
+func deadFamilyCandidates(ctx context.Context, tx pgx.Tx, batch int) ([]familyLocator, error) {
+	rows, err := tx.Query(ctx, `SELECT f.id,f.user_id FROM native_session_families f JOIN users u ON u.id=f.user_id
+		WHERE f.revoked_at IS NOT NULL OR f.expires_at<=clock_timestamp()
+		OR f.issued_token_version<>u.token_version OR `+InactiveSQL("u")+`
+		ORDER BY f.user_id,f.id LIMIT $1`, batch)
+	if err != nil {
+		return nil, nativeStoreFailure(err)
+	}
+	var locators []familyLocator
+	for rows.Next() {
+		var item familyLocator
+		if err := rows.Scan(&item.familyID, &item.userID); err != nil {
+			rows.Close()
+			return nil, nativeStoreFailure(err)
+		}
+		locators = append(locators, item)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, nativeStoreFailure(err)
+	}
+	return locators, nil
+}
+
+// deleteFamilyIfDead locks the account and family (skipping rows other
+// transactions hold) and deletes the family when it is revoked, expired,
+// outdated or its account is disabled. It returns the rows deleted.
+func deleteFamilyIfDead(ctx context.Context, tx pgx.Tx, item familyLocator) (int, error) {
+	_, version, disabled, err := lockNativeUser(ctx, tx, item.userID, true)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, nativeStoreFailure(err)
+	}
+	family, err := lockNativeFamily(ctx, tx, item.familyID, item.userID, true)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, nativeStoreFailure(err)
+	}
+	now, err := nativeClock(ctx, tx)
+	if err != nil {
+		return 0, nativeStoreFailure(err)
+	}
+	if family.revokedAt == nil && now.Before(family.expiresAt) && version == family.version && !disabled {
+		return 0, nil
+	}
+	tag, err := tx.Exec(ctx, `DELETE FROM native_session_families WHERE id=$1`, item.familyID)
+	if err != nil {
+		return 0, nativeStoreFailure(err)
+	}
+	return int(tag.RowsAffected()), nil
 }

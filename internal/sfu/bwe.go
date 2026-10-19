@@ -105,20 +105,27 @@ func (b *bweInterceptor) BindRTCPReader(r interceptor.RTCPReader) interceptor.RT
 		}
 		attr.Set(bweKey{}, bandwidthSource(b))
 		if n > 0 && hasTransportFeedback(buf[:n]) {
-			// Unmarshal copies what it keeps, and the estimator gets only
-			// the transport-wide feedback.
-			if pkts, err := rtcp.Unmarshal(buf[:n]); err == nil {
-				for _, p := range pkts {
-					if fb, ok := p.(*rtcp.TransportLayerCC); ok {
-						b.feedback.Add(1)
-						// An estimator that cannot use a feedback must not stop the reader.
-						_ = b.est.WriteRTCP([]rtcp.Packet{fb}, attr)
-					}
-				}
-			}
+			b.feedEstimator(buf[:n], attr)
 		}
 		return n, attr, nil
 	})
+}
+
+// feedEstimator hands the transport-wide feedback in the compound RTCP packet
+// to the bandwidth estimator. Unmarshal copies what it keeps, and the
+// estimator gets nothing else.
+func (b *bweInterceptor) feedEstimator(compound []byte, attr interceptor.Attributes) {
+	pkts, err := rtcp.Unmarshal(compound)
+	if err != nil {
+		return
+	}
+	for _, p := range pkts {
+		if fb, ok := p.(*rtcp.TransportLayerCC); ok {
+			b.feedback.Add(1)
+			// An estimator that cannot use a feedback must not stop the reader.
+			_ = b.est.WriteRTCP([]rtcp.Packet{fb}, attr)
+		}
+	}
 }
 
 func (b *bweInterceptor) Close() error {

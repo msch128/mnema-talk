@@ -2,17 +2,10 @@ package media
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log/slog"
-	"mime"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/db"
@@ -135,69 +128,18 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var key, mimeType, filename string
-	var size int64
-	var deleted bool
-	var channelID *uuid.UUID
-	err = h.DB.QueryRow(r.Context(), `
-		SELECT s3_key, mime_type, original_filename, size_bytes, is_deleted, channel_id FROM media WHERE id = $1`, id).
-		Scan(&key, &mimeType, &filename, &size, &deleted, &channelID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return httpx.ErrNotFound("media not found")
-	}
+	m, err := h.lookupServed(r, id)
 	if err != nil {
 		return err
 	}
-	// An attachment belongs to its channel: whoever cannot view the channel
-	// cannot fetch the file either. Avatars have no channel.
-	if channelID != nil {
-		if err := h.Perms.RequireChannel(r.Context(), auth.UserFrom(r.Context()).Subject(), *channelID, perm.ViewChannel); err != nil {
-			if _, denied := httpx.AsAPIError(err); denied {
-				return httpx.ErrNotFound("media not found")
-			}
-			return err
-		}
-	}
-	if deleted {
-		return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media has expired or was deleted")
-	}
 
 	etag := `"` + id.String() + `"`
-	obj := &objectReader{ctx: r.Context(), store: h.Store, key: key, size: size}
+	obj := &objectReader{ctx: r.Context(), store: h.Store, key: m.key, size: m.size}
 	defer obj.Close()
-	// Fetch before any header is written: once ServeContent has sent 200, a
-	// missing object could only end in a truncated body. A revalidation that
-	// ServeContent answers with 304 needs no fetch.
-	if inm := r.Header.Get("If-None-Match"); !strings.Contains(inm, etag) && strings.TrimSpace(inm) != "*" {
-		if err := obj.open(rangeStart(r.Header.Get("Range"), size)); err != nil {
-			if isMissingObject(err) {
-				slog.Warn("media object missing from storage", "media_id", id, "key", key)
-				return httpx.NewAPIError(http.StatusGone, httpx.CodeNotFound, "media file is missing from storage")
-			}
-			return fmt.Errorf("fetch media object: %w", err)
-		}
+	if err := prefetchObject(r, obj, etag, m); err != nil {
+		return err
 	}
-
-	disposition := "attachment"
-	if inlineMIME[mimeType] {
-		disposition = "inline"
-	}
-	hdr := w.Header()
-	hdr.Set("Content-Type", mimeType)
-	hdr.Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": filename}))
-	hdr.Set("X-Content-Type-Options", "nosniff")
-	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
-	// Attachments are revalidated on every use (the ETag answers 304 after the
-	// permission and deletion checks above), so a removed file or a revoked
-	// channel stops working at once instead of living on in the browser cache.
-	// Avatars belong to no channel and are replaced under a new ID, so they
-	// may be cached; private keeps shared caches out in both cases.
-	if channelID == nil {
-		hdr.Set("Cache-Control", "private, max-age=86400, immutable")
-	} else {
-		hdr.Set("Cache-Control", "private, no-cache")
-	}
-	hdr.Set("ETag", etag)
+	setServeHeaders(w.Header(), m, etag)
 	// ServeContent answers Range (206, video seeking), If-None-Match and HEAD.
 	http.ServeContent(w, r, "", time.Time{}, obj)
 	return nil

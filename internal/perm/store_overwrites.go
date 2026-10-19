@@ -34,18 +34,8 @@ func (s *Service) Overwrites(ctx context.Context, kind string, id uuid.UUID) ([]
 	if !ok {
 		return nil, httpx.ErrInvalidInput("unknown target")
 	}
-	snap, err := s.Snapshot(ctx)
-	if err != nil {
+	if err := s.requireTarget(ctx, kind, id); err != nil {
 		return nil, err
-	}
-	if kind == TargetChannel && !snap.KnowsChannel(id) || kind == TargetCategory && !snap.KnowsCategory(id) {
-		snap, err = s.reload(ctx, true)
-		if err != nil {
-			return nil, err
-		}
-		if kind == TargetChannel && !snap.KnowsChannel(id) || kind == TargetCategory && !snap.KnowsCategory(id) {
-			return nil, httpx.ErrNotFound(kind + " not found")
-		}
 	}
 	rows, err := s.db.Query(ctx, `SELECT role_id, user_id, allow, deny FROM permission_overwrites WHERE `+col+` = $1 ORDER BY id`, id)
 	if err != nil {
@@ -72,6 +62,33 @@ func (s *Service) Overwrites(ctx context.Context, kind string, id uuid.UUID) ([]
 	return out, nil
 }
 
+// requireTarget checks that the category or channel exists, reloading the
+// snapshot once when it is not known yet.
+func (s *Service) requireTarget(ctx context.Context, kind string, id uuid.UUID) error {
+	snap, err := s.Snapshot(ctx)
+	if err != nil {
+		return err
+	}
+	if knowsTarget(snap, kind, id) {
+		return nil
+	}
+	snap, err = s.reload(ctx, true)
+	if err != nil {
+		return err
+	}
+	if !knowsTarget(snap, kind, id) {
+		return httpx.ErrNotFound(kind + " not found")
+	}
+	return nil
+}
+
+func knowsTarget(snap *Snapshot, kind string, id uuid.UUID) bool {
+	if kind == TargetChannel {
+		return snap.KnowsChannel(id)
+	}
+	return snap.KnowsCategory(id)
+}
+
 // SetOverwrites replaces the overwrites of a category or channel. The actor
 // needs ManageChannels and must see the target; they can only allow what
 // they hold there themselves, and the Owner cannot be the subject of one.
@@ -84,138 +101,192 @@ func (s *Service) SetOverwrites(ctx context.Context, actor Subject, kind string,
 		return httpx.ErrInvalidInput("too many overwrites")
 	}
 	return s.mutate(ctx, actor, ManageChannels, func(tx pgx.Tx, snap *Snapshot) ([]uuid.UUID, error) {
-		var existing *scope
-		var held Set
-		if kind == TargetChannel {
-			if !snap.KnowsChannel(id) {
-				return nil, httpx.ErrNotFound("channel not found")
-			}
-			held = snap.Channel(actor, id)
-			if !held.Has(ViewChannel) {
-				return nil, ErrChannelHidden
-			}
-			existing = snap.channelOv[id]
-		} else {
-			if !snap.KnowsCategory(id) {
-				return nil, httpx.ErrNotFound("category not found")
-			}
-			// Hidden channels inside would be affected without the actor seeing them.
-			if !snap.CategoryVisible(actor, id) || !snap.CanSeeAllChannelsIn(actor, id) {
-				return nil, httpx.ErrNotFound("category not found")
-			}
-			held = snap.CategoryHeld(actor, id)
-			existing = snap.categoryOv[id]
+		held, existing, err := overwriteTarget(snap, actor, kind, id)
+		if err != nil {
+			return nil, err
 		}
-		type key struct {
-			typ string
-			id  uuid.UUID
+		next, err := validateOverwrites(ctx, tx, snap, list)
+		if err != nil {
+			return nil, err
 		}
-		dup := map[key]bool{}
-		next := map[key]overwrite{}
-		for _, o := range list {
-			k := key{o.Type, o.ID}
-			if dup[k] {
-				return nil, httpx.ErrInvalidInput("duplicate overwrite")
-			}
-			dup[k] = true
-			if !o.Allow.Valid() || !o.Deny.Valid() || (o.Allow|o.Deny)&^ChannelScoped != 0 {
-				return nil, httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
-			}
-			if o.Allow&o.Deny != 0 {
-				return nil, httpx.ErrInvalidInput("a permission cannot be both allowed and denied")
-			}
-			switch o.Type {
-			case "role":
-				if _, ok := snap.roles[o.ID]; !ok {
-					return nil, httpx.ErrInvalidInput("unknown role")
-				}
-			case "member":
-				var role string
-				err := tx.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, o.ID).Scan(&role)
-				if errors.Is(err, pgx.ErrNoRows) {
-					return nil, httpx.ErrInvalidInput("unknown member")
-				}
-				if err != nil {
-					return nil, fmt.Errorf("load member: %w", err)
-				}
-				if role == "admin" || snap.owners[o.ID] {
-					return nil, ErrOwnerProtected
-				}
-			default:
-				return nil, httpx.ErrInvalidInput("type must be role or member")
-			}
-			if o.Allow != 0 || o.Deny != 0 {
-				next[k] = overwrite{allow: o.Allow, deny: o.Deny}
-			}
+		if err := authorizeOverwriteChanges(snap, actor, held, diffOverwrites(existing, next)); err != nil {
+			return nil, err
 		}
-		// Whatever changes (an entry added, changed or removed) needs the
-		// actor's authority over its subject and over the permissions that
-		// change, allowed or denied.
-		old := map[key]overwrite{}
-		if existing != nil {
-			for rid, ow := range existing.roles {
-				old[key{"role", rid}] = ow
-			}
-			for uid, ow := range existing.members {
-				old[key{"member", uid}] = ow
-			}
-		}
-		changed := map[key]Set{}
-		for k, ow := range next {
-			if prev := old[k]; prev != ow {
-				changed[k] = (prev.allow ^ ow.allow) | (prev.deny ^ ow.deny)
-			}
-		}
-		for k, prev := range old {
-			if _, kept := next[k]; !kept {
-				changed[k] = prev.allow | prev.deny
-			}
-		}
-		for k, bits := range changed {
-			if k.typ == "role" {
-				// @everyone sits at position 0 and is open to anyone who may
-				// manage this channel; every other role must be below the actor.
-				if role := snap.roles[k.id]; !role.Everyone {
-					if err := snap.CanManageRole(actor, role); err != nil {
-						return nil, err
-					}
-				}
-			} else {
-				// Nobody lifts a restriction from themselves (or sets one up
-				// to bargain with); that is for someone above them.
-				if k.id == actor.ID && !snap.IsOwner(actor) {
-					return nil, httpx.ErrForbidden("you cannot change your own overwrite")
-				}
-				if err := snap.CanModerate(actor, Subject{ID: k.id}); err != nil {
-					return nil, err
-				}
-			}
-			if name := held.MissingName(bits); name != "" {
-				return nil, httpx.ErrForbidden("cannot change a permission you do not have: " + name)
-			}
-			// Elevated channel permissions (Disconnect members) for a bot are
-			// the Owner's to give, as are administrator roles.
-			if added := next[k].allow &^ old[k].allow; added.HasAny(Elevated) && !snap.IsOwner(actor) &&
-				(k.typ == "member" && snap.bots[k.id] || k.typ == "role" && snap.RoleHeldByBot(k.id)) {
-				return nil, httpx.ErrForbidden("only the Owner can allow a bot administrator or admin-area permissions")
-			}
-		}
-		if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {
-			return nil, fmt.Errorf("clear overwrites: %w", err)
-		}
-		for _, o := range list {
-			if o.Allow == 0 && o.Deny == 0 {
-				continue
-			}
-			roleCol := "role_id"
-			if o.Type == "member" {
-				roleCol = "user_id"
-			}
-			if _, err := tx.Exec(ctx, `INSERT INTO permission_overwrites (`+col+`, `+roleCol+`, allow, deny) VALUES ($1, $2, $3, $4)`,
-				id, o.ID, int64(o.Allow), int64(o.Deny)); err != nil {
-				return nil, fmt.Errorf("insert overwrite: %w", err)
-			}
-		}
-		return nil, nil
+		return nil, replaceOverwrites(ctx, tx, col, id, list)
 	})
+}
+
+// overwriteTarget returns what the actor holds on the category or channel and
+// the overwrites it has now. A target the actor cannot see does not exist for them.
+func overwriteTarget(snap *Snapshot, actor Subject, kind string, id uuid.UUID) (Set, *scope, error) {
+	if kind == TargetChannel {
+		if !snap.KnowsChannel(id) {
+			return 0, nil, httpx.ErrNotFound("channel not found")
+		}
+		held := snap.Channel(actor, id)
+		if !held.Has(ViewChannel) {
+			return 0, nil, ErrChannelHidden
+		}
+		return held, snap.channelOv[id], nil
+	}
+	if !snap.KnowsCategory(id) {
+		return 0, nil, httpx.ErrNotFound("category not found")
+	}
+	// Hidden channels inside would be affected without the actor seeing them.
+	if !snap.CategoryVisible(actor, id) || !snap.CanSeeAllChannelsIn(actor, id) {
+		return 0, nil, httpx.ErrNotFound("category not found")
+	}
+	return snap.CategoryHeld(actor, id), snap.categoryOv[id], nil
+}
+
+// overwriteKey identifies the subject (role or member) of one overwrite.
+type overwriteKey struct {
+	typ string
+	id  uuid.UUID
+}
+
+// validateOverwrites checks the submitted list and returns the entries that
+// actually allow or deny something, by subject.
+func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []Overwrite) (map[overwriteKey]overwrite, error) {
+	seen := map[overwriteKey]bool{}
+	next := map[overwriteKey]overwrite{}
+	for _, o := range list {
+		k := overwriteKey{o.Type, o.ID}
+		if seen[k] {
+			return nil, httpx.ErrInvalidInput("duplicate overwrite")
+		}
+		seen[k] = true
+		if !o.Allow.Valid() || !o.Deny.Valid() || (o.Allow|o.Deny)&^ChannelScoped != 0 {
+			return nil, httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
+		}
+		if o.Allow&o.Deny != 0 {
+			return nil, httpx.ErrInvalidInput("a permission cannot be both allowed and denied")
+		}
+		if err := checkOverwriteSubject(ctx, tx, snap, o); err != nil {
+			return nil, err
+		}
+		if o.Allow != 0 || o.Deny != 0 {
+			next[k] = overwrite{allow: o.Allow, deny: o.Deny}
+		}
+	}
+	return next, nil
+}
+
+// checkOverwriteSubject makes sure the role or member exists and is not the Owner.
+func checkOverwriteSubject(ctx context.Context, tx pgx.Tx, snap *Snapshot, o Overwrite) error {
+	switch o.Type {
+	case "role":
+		if _, ok := snap.roles[o.ID]; !ok {
+			return httpx.ErrInvalidInput("unknown role")
+		}
+	case "member":
+		var role string
+		err := tx.QueryRow(ctx, `SELECT role FROM users WHERE id = $1`, o.ID).Scan(&role)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrInvalidInput("unknown member")
+		}
+		if err != nil {
+			return fmt.Errorf("load member: %w", err)
+		}
+		if role == "admin" || snap.owners[o.ID] {
+			return ErrOwnerProtected
+		}
+	default:
+		return httpx.ErrInvalidInput("type must be role or member")
+	}
+	return nil
+}
+
+// overwriteChange is one subject whose overwrite is added, changed or removed.
+type overwriteChange struct {
+	// bits are the permissions that change, allowed or denied.
+	bits Set
+	// added are the permissions that are newly allowed.
+	added Set
+}
+
+// diffOverwrites compares the stored overwrites with the new ones.
+func diffOverwrites(existing *scope, next map[overwriteKey]overwrite) map[overwriteKey]overwriteChange {
+	old := map[overwriteKey]overwrite{}
+	if existing != nil {
+		for rid, ow := range existing.roles {
+			old[overwriteKey{"role", rid}] = ow
+		}
+		for uid, ow := range existing.members {
+			old[overwriteKey{"member", uid}] = ow
+		}
+	}
+	changed := map[overwriteKey]overwriteChange{}
+	for k, ow := range next {
+		if prev := old[k]; prev != ow {
+			changed[k] = overwriteChange{
+				bits:  (prev.allow ^ ow.allow) | (prev.deny ^ ow.deny),
+				added: ow.allow &^ prev.allow,
+			}
+		}
+	}
+	for k, prev := range old {
+		if _, kept := next[k]; !kept {
+			changed[k] = overwriteChange{bits: prev.allow | prev.deny}
+		}
+	}
+	return changed
+}
+
+// authorizeOverwriteChanges demands the actor's authority over every changed
+// subject and over the permissions that change, allowed or denied.
+func authorizeOverwriteChanges(snap *Snapshot, actor Subject, held Set, changed map[overwriteKey]overwriteChange) error {
+	for k, c := range changed {
+		if err := authorizeOverwriteSubject(snap, actor, k); err != nil {
+			return err
+		}
+		if name := held.MissingName(c.bits); name != "" {
+			return httpx.ErrForbidden("cannot change a permission you do not have: " + name)
+		}
+		// Elevated channel permissions (Disconnect members) for a bot are
+		// the Owner's to give, as are administrator roles.
+		if c.added.HasAny(Elevated) && !snap.IsOwner(actor) &&
+			(k.typ == "member" && snap.bots[k.id] || k.typ == "role" && snap.RoleHeldByBot(k.id)) {
+			return httpx.ErrForbidden("only the Owner can allow a bot administrator or admin-area permissions")
+		}
+	}
+	return nil
+}
+
+func authorizeOverwriteSubject(snap *Snapshot, actor Subject, k overwriteKey) error {
+	if k.typ == "role" {
+		// @everyone sits at position 0 and is open to anyone who may
+		// manage this channel; every other role must be below the actor.
+		if role := snap.roles[k.id]; !role.Everyone {
+			return snap.CanManageRole(actor, role)
+		}
+		return nil
+	}
+	// Nobody lifts a restriction from themselves (or sets one up
+	// to bargain with); that is for someone above them.
+	if k.id == actor.ID && !snap.IsOwner(actor) {
+		return httpx.ErrForbidden("you cannot change your own overwrite")
+	}
+	return snap.CanModerate(actor, Subject{ID: k.id})
+}
+
+// replaceOverwrites rewrites the stored overwrites of the target with the list.
+func replaceOverwrites(ctx context.Context, tx pgx.Tx, col string, id uuid.UUID, list []Overwrite) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM permission_overwrites WHERE `+col+` = $1`, id); err != nil {
+		return fmt.Errorf("clear overwrites: %w", err)
+	}
+	for _, o := range list {
+		if o.Allow == 0 && o.Deny == 0 {
+			continue
+		}
+		subjectCol := "role_id"
+		if o.Type == "member" {
+			subjectCol = "user_id"
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO permission_overwrites (`+col+`, `+subjectCol+`, allow, deny) VALUES ($1, $2, $3, $4)`,
+			id, o.ID, int64(o.Allow), int64(o.Deny)); err != nil {
+			return fmt.Errorf("insert overwrite: %w", err)
+		}
+	}
+	return nil
 }

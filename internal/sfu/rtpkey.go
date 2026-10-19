@@ -58,38 +58,9 @@ func parseVP8(payload []byte) (vp8Descriptor, bool) {
 	first := payload[0]
 	at := 1
 	if first&0x80 != 0 { // X: extension byte follows
-		if len(payload) < 2 {
+		var ok bool
+		if at, ok = d.parseExtension(payload); !ok {
 			return d, false
-		}
-		ext := payload[1]
-		at = 2
-		if ext&0x80 != 0 { // I: picture ID
-			if len(payload) <= at {
-				return d, false
-			}
-			d.picPos = at
-			if payload[at]&0x80 != 0 {
-				if len(payload) < at+2 {
-					return d, false
-				}
-				d.pic16 = true
-				d.pic = binary.BigEndian.Uint16(payload[at:]) & 0x7fff
-				at += 2
-			} else {
-				d.pic = uint16(payload[at])
-				at++
-			}
-		}
-		if ext&0x40 != 0 { // L: TL0PICIDX
-			if len(payload) <= at {
-				return d, false
-			}
-			d.tl0Pos = at
-			d.tl0 = payload[at]
-			at++
-		}
-		if ext&0x30 != 0 { // T or K: TID/Y/KEYIDX byte
-			at++
 		}
 	}
 	if len(payload) <= at {
@@ -99,6 +70,46 @@ func parseVP8(payload []byte) (vp8Descriptor, bool) {
 	// The first payload byte is the frame tag; bit 0 clear is a keyframe.
 	d.key = d.start && payload[at]&0x01 == 0
 	return d, true
+}
+
+// parseExtension reads the optional fields announced by the extension byte
+// payload[1] into d and returns the offset of the first byte after them.
+// False when the payload is too short.
+func (d *vp8Descriptor) parseExtension(payload []byte) (at int, ok bool) {
+	if len(payload) < 2 {
+		return 0, false
+	}
+	ext := payload[1]
+	at = 2
+	if ext&0x80 != 0 { // I: picture ID
+		if len(payload) <= at {
+			return 0, false
+		}
+		d.picPos = at
+		if payload[at]&0x80 != 0 {
+			if len(payload) < at+2 {
+				return 0, false
+			}
+			d.pic16 = true
+			d.pic = binary.BigEndian.Uint16(payload[at:]) & 0x7fff
+			at += 2
+		} else {
+			d.pic = uint16(payload[at])
+			at++
+		}
+	}
+	if ext&0x40 != 0 { // L: TL0PICIDX
+		if len(payload) <= at {
+			return 0, false
+		}
+		d.tl0Pos = at
+		d.tl0 = payload[at]
+		at++
+	}
+	if ext&0x30 != 0 { // T or K: TID/Y/KEYIDX byte
+		at++
+	}
+	return at, true
 }
 
 // h264Start reports what an H.264 payload (RFC 6184) starts: sps when it

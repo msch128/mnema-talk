@@ -75,31 +75,21 @@ const CORSAllowedMethods = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
 // CORS answers allowlisted origins, echoing the allowlist entry rather than the
 // raw Origin header, and rejects foreign preflights with 403.
 func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
-	allowed := make(map[string]string, len(allowedOrigins))
-	for _, o := range allowedOrigins {
-		if n := normalizeOrigin(o); n != "" {
-			allowed[n] = n
-		} else {
-			slog.Warn("CORS: ignoring origin with no scheme/host", "origin", o)
-		}
-	}
+	allowed := normalizedOrigins(allowedOrigins)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Add("Vary", "Origin")
-			if r.Method == http.MethodOptions {
+			preflight := r.Method == http.MethodOptions
+			if preflight {
 				w.Header().Add("Vary", "Access-Control-Request-Method")
 				w.Header().Add("Vary", "Access-Control-Request-Headers")
 			}
 			rawOrigin := r.Header.Get("Origin")
 			safeOrigin, ok := allowed[normalizeOrigin(rawOrigin)]
 			if ok {
-				w.Header().Set("Access-Control-Allow-Origin", safeOrigin)
-				w.Header().Set("Access-Control-Allow-Credentials", "true")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type,X-Request-Id")
-				w.Header().Set("Access-Control-Allow-Methods", CORSAllowedMethods)
-				w.Header().Set("Access-Control-Max-Age", "86400")
+				setCORSHeaders(w.Header(), safeOrigin)
 			}
-			if r.Method == http.MethodOptions {
+			if preflight {
 				if rawOrigin != "" && !ok {
 					w.WriteHeader(http.StatusForbidden)
 					return
@@ -110,4 +100,27 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// normalizedOrigins maps each usable origin to its normal form and warns about
+// the ones without scheme and host.
+func normalizedOrigins(origins []string) map[string]string {
+	allowed := make(map[string]string, len(origins))
+	for _, o := range origins {
+		n := normalizeOrigin(o)
+		if n == "" {
+			slog.Warn("CORS: ignoring origin with no scheme/host", "origin", o)
+			continue
+		}
+		allowed[n] = n
+	}
+	return allowed
+}
+
+func setCORSHeaders(h http.Header, origin string) {
+	h.Set("Access-Control-Allow-Origin", origin)
+	h.Set("Access-Control-Allow-Credentials", "true")
+	h.Set("Access-Control-Allow-Headers", "Content-Type,X-Request-Id")
+	h.Set("Access-Control-Allow-Methods", CORSAllowedMethods)
+	h.Set("Access-Control-Max-Age", "86400")
 }

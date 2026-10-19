@@ -179,15 +179,13 @@ func nativeCiphertextError(err error) error {
 }
 func parseNativeCiphertextQuery(method string, target *url.URL) (nativeCiphertextPaging, error) {
 	paging := nativeCiphertextPaging{Limit: 25}
-	invalid := func() (nativeCiphertextPaging, error) {
-		return paging, httpx.ErrInvalidInput("invalid native relay pagination")
-	}
+	errInvalid := httpx.ErrInvalidInput("invalid native relay pagination")
 	if target.ForceQuery && target.RawQuery == "" {
-		return invalid()
+		return paging, errInvalid
 	}
 	if method != http.MethodGet {
 		if target.RawQuery != "" {
-			return invalid()
+			return paging, errInvalid
 		}
 		return paging, nil
 	}
@@ -195,39 +193,41 @@ func parseNativeCiphertextQuery(method string, target *url.URL) (nativeCiphertex
 		return paging, nil
 	}
 	values, err := url.ParseQuery(target.RawQuery)
-	if err != nil {
-		return invalid()
-	}
-	if len(values) > 2 {
-		return invalid()
+	if err != nil || len(values) > 2 {
+		return paging, errInvalid
 	}
 	for key, value := range values {
-		if len(value) != 1 {
-			return invalid()
-		}
-		switch key {
-		case "after":
-			n, ok := nativeCiphertextDecimal(value[0], 0, 9223372036854775807)
-			if !ok {
-				return invalid()
-			}
-			paging.After = n
-		case "limit":
-			n, ok := nativeCiphertextDecimal(value[0], 1, 100)
-			// Keep the narrowing bounds at the conversion site as well as in
-			// the shared decimal parser, including on 32-bit targets.
-			if !ok || n < 1 || n > 100 {
-				return invalid()
-			}
-			paging.Limit = int(n)
-		default:
-			return invalid()
+		if len(value) != 1 || !paging.set(key, value[0]) {
+			return paging, errInvalid
 		}
 	}
 	// Requiring canonical encoding also denies empty separators, encoded field
 	// names/numbers and equivalent spellings before the native query is stripped.
 	if values.Encode() != target.RawQuery {
-		return invalid()
+		return paging, errInvalid
 	}
 	return paging, nil
+}
+
+// set applies one query parameter and reports whether it is a known one with
+// a valid value.
+func (p *nativeCiphertextPaging) set(key, value string) bool {
+	switch key {
+	case "after":
+		n, ok := nativeCiphertextDecimal(value, 0, 9223372036854775807)
+		if ok {
+			p.After = n
+		}
+		return ok
+	case "limit":
+		n, ok := nativeCiphertextDecimal(value, 1, 100)
+		// Keep the narrowing bounds at the conversion site as well as in
+		// the shared decimal parser, including on 32-bit targets.
+		if !ok || n < 1 || n > 100 {
+			return false
+		}
+		p.Limit = int(n)
+		return true
+	}
+	return false
 }

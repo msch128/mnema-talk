@@ -53,11 +53,10 @@ func (h *Handler) readUpload(r *http.Request, chID uuid.UUID) (*storedUpload, *u
 		return nil, nil, httpx.ErrInvalidInput("invalid multipart form")
 	}
 	ctx := r.Context()
-	fields := map[string]string{}
-	var stored *storedUpload
+	form := &uploadForm{h: h, ctx: ctx, chID: chID, fields: map[string]string{}}
 	fail := func(err error) (*storedUpload, *uploadTarget, error) {
-		if stored != nil {
-			h.discard(ctx, stored.key)
+		if form.stored != nil {
+			h.discard(ctx, form.stored.key)
 		}
 		return nil, nil, err
 	}
@@ -70,38 +69,59 @@ func (h *Handler) readUpload(r *http.Request, chID uuid.UUID) (*storedUpload, *u
 		if err != nil {
 			return fail(h.formError(ctx, err))
 		}
-		name := part.FormName()
-		switch {
-		case name == "file":
-			if stored != nil {
-				return fail(httpx.ErrInvalidInput("only one file per upload"))
-			}
-			if _, err := h.validateTarget(ctx, chID, fields); err != nil {
-				return fail(err)
-			}
-			if stored, err = h.storePart(ctx, part); err != nil {
-				return fail(err)
-			}
-		case uploadFields[name]:
-			b, err := io.ReadAll(io.LimitReader(part, maxFieldBytes+1))
-			if err != nil {
-				return fail(h.formError(ctx, err))
-			}
-			if len(b) > maxFieldBytes {
-				return fail(httpx.ErrInvalidInput(name + " is too long"))
-			}
-			fields[name] = string(b)
+		if err := form.addPart(part); err != nil {
+			return fail(err)
 		}
-		// Unknown parts are skipped; NextPart discards what is left of them.
 	}
-	if stored == nil {
+	if form.stored == nil {
 		return nil, nil, httpx.ErrInvalidInput("file file is required")
 	}
-	target, err := h.validateTarget(ctx, chID, fields)
+	target, err := h.validateTarget(ctx, chID, form.fields)
 	if err != nil {
 		return fail(err)
 	}
-	return stored, target, nil
+	return form.stored, target, nil
+}
+
+// uploadForm accumulates the parts of an upload form as they stream in.
+type uploadForm struct {
+	h      *Handler
+	ctx    context.Context
+	chID   uuid.UUID
+	fields map[string]string
+	stored *storedUpload
+}
+
+// addPart handles one form part: the file is validated against the fields
+// seen so far and stored, known text fields are kept, unknown parts are
+// skipped (NextPart discards what is left of them).
+func (f *uploadForm) addPart(part *multipart.Part) error {
+	name := part.FormName()
+	switch {
+	case name == "file":
+		return f.storeFile(part)
+	case uploadFields[name]:
+		b, err := io.ReadAll(io.LimitReader(part, maxFieldBytes+1))
+		if err != nil {
+			return f.h.formError(f.ctx, err)
+		}
+		if len(b) > maxFieldBytes {
+			return httpx.ErrInvalidInput(name + " is too long")
+		}
+		f.fields[name] = string(b)
+	}
+	return nil
+}
+
+func (f *uploadForm) storeFile(part *multipart.Part) (err error) {
+	if f.stored != nil {
+		return httpx.ErrInvalidInput("only one file per upload")
+	}
+	if _, err := f.h.validateTarget(f.ctx, f.chID, f.fields); err != nil {
+		return err
+	}
+	f.stored, err = f.h.storePart(f.ctx, part)
+	return err
 }
 
 // validateTarget checks the caption and the thread/reply target.

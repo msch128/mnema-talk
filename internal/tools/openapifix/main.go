@@ -20,7 +20,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"iter"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -38,16 +41,9 @@ func main() {
 }
 
 func run(in, out string) error {
-	raw, err := os.ReadFile(in)
+	doc, err := readDocument(in)
 	if err != nil {
 		return err
-	}
-	var doc obj
-	if err := json.Unmarshal(raw, &doc); err != nil {
-		return fmt.Errorf("parse %s: %w", in, err)
-	}
-	if v, _ := doc["openapi"].(string); len(v) < 4 || v[:4] != "3.1." {
-		return fmt.Errorf("openapi = %q, want 3.1.x", v)
 	}
 	if ed, ok := doc["externalDocs"].(obj); ok && ed["url"] == "" {
 		delete(doc, "externalDocs")
@@ -56,14 +52,7 @@ func run(in, out string) error {
 		return err
 	}
 	if paths, ok := doc["paths"].(obj); ok {
-		// swag's route syntax has no '@': routes with a literal "@me" segment
-		// are annotated as "/at_me" and renamed here.
-		for p, item := range paths {
-			if renamed := strings.ReplaceAll(p, "/at_me", "/@me"); renamed != p {
-				delete(paths, p)
-				paths[renamed] = item
-			}
-		}
+		renameAtMe(paths)
 		for _, item := range paths {
 			for _, op := range item.(obj) {
 				if op, ok := op.(obj); ok {
@@ -72,6 +61,26 @@ func run(in, out string) error {
 			}
 		}
 	}
+	return writeDocument(out, doc)
+}
+
+// readDocument parses swag's output and checks that it is OpenAPI 3.1.
+func readDocument(in string) (obj, error) {
+	raw, err := os.ReadFile(in)
+	if err != nil {
+		return nil, err
+	}
+	var doc obj
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", in, err)
+	}
+	if v, _ := doc["openapi"].(string); len(v) < 4 || v[:4] != "3.1." {
+		return nil, fmt.Errorf("openapi = %q, want 3.1.x", v)
+	}
+	return doc, nil
+}
+
+func writeDocument(out string, doc obj) error {
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
 	enc.SetEscapeHTML(false)
@@ -82,31 +91,52 @@ func run(in, out string) error {
 	return os.WriteFile(out, buf.Bytes(), 0o644)
 }
 
+// renameAtMe renames the paths swag could not spell: its route syntax has no
+// '@', so routes with a literal "@me" segment are annotated as "/at_me".
+func renameAtMe(paths obj) {
+	for p, item := range paths {
+		if renamed := strings.ReplaceAll(p, "/at_me", "/@me"); renamed != p {
+			delete(paths, p)
+			paths[renamed] = item
+		}
+	}
+}
+
 // walk applies the schema-level fixes to every object in the document.
 func walk(v any) error {
 	switch v := v.(type) {
 	case obj:
 		delete(v, "uniqueItems")
-		if n, _ := v["x-nullable"].(bool); n {
-			delete(v, "x-nullable")
-			t, ok := v["type"].(string)
-			if !ok {
-				return fmt.Errorf("x-nullable on a schema without a plain type: %v", v)
-			}
-			v["type"] = []any{t, "null"}
+		if err := makeNullable(v); err != nil {
+			return err
 		}
-		for _, c := range v {
-			if err := walk(c); err != nil {
-				return err
-			}
-		}
+		return walkAll(maps.Values(v))
 	case []any:
-		for _, c := range v {
-			if err := walk(c); err != nil {
-				return err
-			}
+		return walkAll(slices.Values(v))
+	}
+	return nil
+}
+
+func walkAll(children iter.Seq[any]) error {
+	for c := range children {
+		if err := walk(c); err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+// makeNullable turns a schema tagged x-nullable into type: [T, "null"].
+func makeNullable(schema obj) error {
+	if n, _ := schema["x-nullable"].(bool); !n {
+		return nil
+	}
+	delete(schema, "x-nullable")
+	t, ok := schema["type"].(string)
+	if !ok {
+		return fmt.Errorf("x-nullable on a schema without a plain type: %v", schema)
+	}
+	schema["type"] = []any{t, "null"}
 	return nil
 }
 
@@ -115,36 +145,35 @@ func fixOperation(op obj) {
 		op["security"] = []any{}
 	}
 	if rb, ok := op["requestBody"].(obj); ok {
-		if content, ok := rb["content"].(obj); ok {
-			for _, mt := range content {
-				s, ok := mt.(obj)["schema"].(obj)
-				if !ok {
-					continue
-				}
-				if s["$ref"] != nil {
-					delete(s, "summary")
-					delete(s, "description")
-				}
-				if req, _ := s["required"].([]any); len(req) > 0 {
-					rb["required"] = true
-				}
-			}
-		}
+		fixRequestBody(rb)
 	}
 	responses, _ := op["responses"].(obj)
 	for _, r := range responses {
 		r, _ := r.(obj)
 		content, _ := r["content"].(obj)
-		if len(content) < 2 {
-			if len(content) == 1 {
-				fixErrorBody(content)
-			}
-			continue
-		}
 		fixErrorBody(content)
 		if len(content) > 1 && plainString(content) {
 			// A string body is never JSON; keep the non-JSON media types.
 			delete(content, "application/json")
+		}
+	}
+}
+
+// fixRequestBody drops the siblings swag adds to $ref schemas and marks a
+// body with required properties (multipart forms) as required.
+func fixRequestBody(rb obj) {
+	content, _ := rb["content"].(obj)
+	for _, mt := range content {
+		s, ok := mt.(obj)["schema"].(obj)
+		if !ok {
+			continue
+		}
+		if s["$ref"] != nil {
+			delete(s, "summary")
+			delete(s, "description")
+		}
+		if req, _ := s["required"].([]any); len(req) > 0 {
+			rb["required"] = true
 		}
 	}
 }

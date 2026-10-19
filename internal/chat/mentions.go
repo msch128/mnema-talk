@@ -80,33 +80,13 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 		return nil, nil
 	}
 	policy := mentionPolicyFrom(ctx)
-	var all, here bool
-	usernames := make([]string, 0, len(names))
-	for _, n := range names {
-		switch n {
-		case MentionAll:
-			all = !policy.NoEveryone
-		case MentionHere:
-			here = !policy.NoEveryone
-		default:
-			usernames = append(usernames, n)
-		}
-	}
+	targets := splitMentionTargets(names, policy)
 
 	ids := map[uuid.UUID]bool{}
-	if all || len(usernames) > 0 || (here && len(online) > 0) {
-		rows, err := q.Query(ctx, `
-			SELECT id FROM users
-			WHERE `+auth.ActiveSQL("")+` AND (
-			    (NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[]))))
-			    -- a bot is mentioned by name only, never by @all or @here
-			    OR (LOWER(username) = ANY($2) AND EXISTS (SELECT 1 FROM bots b WHERE b.user_id = users.id AND NOT b.disabled)))`, all, usernames, here, online)
+	if targets.all || len(targets.usernames) > 0 || (targets.here && len(online) > 0) {
+		found, err := queryMentioned(ctx, q, targets, online)
 		if err != nil {
-			return nil, fmt.Errorf("resolve mentions: %w", err)
-		}
-		found, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-		if err != nil {
-			return nil, fmt.Errorf("resolve mentions: %w", err)
+			return nil, err
 		}
 		for _, id := range found {
 			ids[id] = true
@@ -115,7 +95,7 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	delete(ids, authorID)
 	out := make([]uuid.UUID, 0, len(ids))
 	for id := range ids {
-		if policy.NoUsers && !all && !here && !slices.Contains(policy.AllowUsers, id) {
+		if policy.NoUsers && !targets.all && !targets.here && !slices.Contains(policy.AllowUsers, id) {
 			continue
 		}
 		if policy.CanView != nil && !policy.CanView(id) {
@@ -124,6 +104,47 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 		out = append(out, id)
 	}
 	return out, nil
+}
+
+// mentionTargets is what the parsed names of a message address: everyone,
+// the online members, and named users.
+type mentionTargets struct {
+	all, here bool
+	usernames []string
+}
+
+// splitMentionTargets sorts names into @all, @here and usernames; the
+// policy can switch the two group mentions off.
+func splitMentionTargets(names []string, policy MentionPolicy) mentionTargets {
+	t := mentionTargets{usernames: make([]string, 0, len(names))}
+	for _, n := range names {
+		switch n {
+		case MentionAll:
+			t.all = !policy.NoEveryone
+		case MentionHere:
+			t.here = !policy.NoEveryone
+		default:
+			t.usernames = append(t.usernames, n)
+		}
+	}
+	return t
+}
+
+func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online []uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.Query(ctx, `
+		SELECT id FROM users
+		WHERE `+auth.ActiveSQL("")+` AND (
+		    (NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[]))))
+		    -- a bot is mentioned by name only, never by @all or @here
+		    OR (LOWER(username) = ANY($2) AND EXISTS (SELECT 1 FROM bots b WHERE b.user_id = users.id AND NOT b.disabled)))`, t.all, t.usernames, t.here, online)
+	if err != nil {
+		return nil, fmt.Errorf("resolve mentions: %w", err)
+	}
+	found, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("resolve mentions: %w", err)
+	}
+	return found, nil
 }
 
 // SaveMentions replaces the stored mentions of messageID with userIDs.

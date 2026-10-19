@@ -206,26 +206,9 @@ func (c *Checker) Check(ctx context.Context) error {
 // fetch performs one request. Errors are short and safe to show to admins
 // (no response bodies, no internal addresses).
 func (c *Checker) fetch(ctx context.Context, etag string) (rel *Release, newETag string, notModified bool, retryAt time.Time, err error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
+	res, err := c.send(ctx, etag)
 	if err != nil {
-		return nil, "", false, time.Time{}, fmt.Errorf("build request: %w", err)
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
-	req.Header.Set("User-Agent", c.userAgent)
-	if etag != "" {
-		req.Header.Set("If-None-Match", etag)
-	}
-	res, err := c.client.Do(req)
-	if err != nil {
-		if ctx.Err() != nil {
-			return nil, "", false, time.Time{}, ctx.Err()
-		}
-		var ue *url.Error
-		if errors.As(err, &ue) && ue.Timeout() {
-			return nil, "", false, time.Time{}, errors.New("GitHub did not answer in time")
-		}
-		return nil, "", false, time.Time{}, errors.New("GitHub is not reachable")
+		return nil, "", false, time.Time{}, err
 	}
 	defer res.Body.Close()
 	// Drain a little so the connection can be reused, never more than the cap.
@@ -242,21 +225,53 @@ func (c *Checker) fetch(ctx context.Context, etag string) (rel *Release, newETag
 		return nil, "", false, time.Time{}, fmt.Errorf("unexpected answer from GitHub (HTTP %d)", res.StatusCode)
 	}
 
-	if mt, _, err := mime.ParseMediaType(res.Header.Get("Content-Type")); err != nil || (mt != "application/json" && !strings.HasSuffix(mt, "+json")) {
-		return nil, "", false, time.Time{}, errors.New("GitHub answered with something other than JSON")
-	}
-	body, err := io.ReadAll(io.LimitReader(res.Body, maxResponseBytes+1))
-	if err != nil {
-		return nil, "", false, time.Time{}, errors.New("reading GitHub's answer failed")
-	}
-	if len(body) > maxResponseBytes {
-		return nil, "", false, time.Time{}, errors.New("GitHub's answer is too large")
-	}
-	rel, err = parseRelease(body)
+	rel, err = readRelease(res)
 	if err != nil {
 		return nil, "", false, time.Time{}, err
 	}
 	return rel, res.Header.Get("ETag"), false, time.Time{}, nil
+}
+
+// send issues the request, mapping transport failures to short messages.
+func (c *Checker) send(ctx context.Context, etag string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("User-Agent", c.userAgent)
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		var ue *url.Error
+		if errors.As(err, &ue) && ue.Timeout() {
+			return nil, errors.New("GitHub did not answer in time")
+		}
+		return nil, errors.New("GitHub is not reachable")
+	}
+	return res, nil
+}
+
+// readRelease parses a 200 answer: JSON content type, at most
+// maxResponseBytes.
+func readRelease(res *http.Response) (*Release, error) {
+	if mt, _, err := mime.ParseMediaType(res.Header.Get("Content-Type")); err != nil || (mt != "application/json" && !strings.HasSuffix(mt, "+json")) {
+		return nil, errors.New("GitHub answered with something other than JSON")
+	}
+	body, err := io.ReadAll(io.LimitReader(res.Body, maxResponseBytes+1))
+	if err != nil {
+		return nil, errors.New("reading GitHub's answer failed")
+	}
+	if len(body) > maxResponseBytes {
+		return nil, errors.New("GitHub's answer is too large")
+	}
+	return parseRelease(body)
 }
 
 // backoffUntil reads Retry-After or, for an exhausted quota, X-RateLimit-Reset.

@@ -217,44 +217,9 @@ func Build(o BuildOptions) (*Bundle, error) {
 	if err := o.Compat.within(o.Version); err != nil {
 		return nil, err
 	}
-	contents := map[string][]byte{}
-	var total int64
-	err := filepath.WalkDir(o.Dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return fmt.Errorf("%s: not a regular file", path)
-		}
-		rel, _ := filepath.Rel(o.Dir, path) // path is below o.Dir by construction
-		rel = filepath.ToSlash(rel)
-		for _, suffix := range o.Exclude {
-			if strings.HasSuffix(rel, suffix) {
-				return nil
-			}
-		}
-		if !ValidPath(rel) {
-			return fmt.Errorf("%s: invalid bundle path", rel)
-		}
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		total += int64(len(data))
-		if len(data) > MaxFileSize || total > MaxTotalSize || len(contents) >= MaxEntries {
-			return fmt.Errorf("%s: bundle exceeds the size limits", rel)
-		}
-		contents[rel] = data
-		return nil
-	})
+	contents, err := readWebApp(o)
 	if err != nil {
 		return nil, err
-	}
-	if _, ok := contents["index.html"]; !ok {
-		return nil, errors.New("index.html is missing from the web app")
 	}
 	paths := make([]string, 0, len(contents))
 	for p := range contents {
@@ -278,7 +243,68 @@ func Build(o BuildOptions) (*Bundle, error) {
 	manifest, _ := json.MarshalIndent(m, "", "  ") // plain data cannot fail to marshal
 	manifest = append(manifest, '\n')
 	sig := []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(o.Key, manifest)) + "\n")
+	return &Bundle{Zip: packZip(manifest, sig, paths, contents), Manifest: manifest, Signature: sig, Info: m}, nil
+}
 
+// readWebApp loads every file below o.Dir (minus excluded suffixes), within
+// the bundle's size limits. It requires an index.html.
+func readWebApp(o BuildOptions) (map[string][]byte, error) {
+	contents := map[string][]byte{}
+	var total int64
+	err := filepath.WalkDir(o.Dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("%s: not a regular file", path)
+		}
+		rel, _ := filepath.Rel(o.Dir, path) // path is below o.Dir by construction
+		rel = filepath.ToSlash(rel)
+		if hasAnySuffix(rel, o.Exclude) {
+			return nil
+		}
+		data, err := readAppFile(path, rel)
+		if err != nil {
+			return err
+		}
+		total += int64(len(data))
+		if len(data) > MaxFileSize || total > MaxTotalSize || len(contents) >= MaxEntries {
+			return fmt.Errorf("%s: bundle exceeds the size limits", rel)
+		}
+		contents[rel] = data
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := contents["index.html"]; !ok {
+		return nil, errors.New("index.html is missing from the web app")
+	}
+	return contents, nil
+}
+
+// readAppFile reads one file whose bundle path is rel.
+func readAppFile(path, rel string) ([]byte, error) {
+	if !ValidPath(rel) {
+		return nil, fmt.Errorf("%s: invalid bundle path", rel)
+	}
+	return os.ReadFile(path)
+}
+
+func hasAnySuffix(s string, suffixes []string) bool {
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(s, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+// packZip writes the manifest, signature and app files in a fixed order.
+func packZip(manifest, sig []byte, paths []string, contents map[string][]byte) []byte {
 	// Writing to memory cannot fail, so the zip writer's errors are dropped.
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
@@ -292,5 +318,5 @@ func Build(o BuildOptions) (*Bundle, error) {
 		add(appPrefix+p, contents[p])
 	}
 	_ = zw.Close()
-	return &Bundle{Zip: buf.Bytes(), Manifest: manifest, Signature: sig, Info: m}, nil
+	return buf.Bytes()
 }

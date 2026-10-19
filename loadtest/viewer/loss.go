@@ -44,22 +44,31 @@ func (l *lossInterceptor) BindRemoteStream(_ *interceptor.StreamInfo, reader int
 			if err != nil {
 				return n, attr, err
 			}
-			if l.jitter > 0 {
-				time.Sleep(time.Duration(rand.Int64N(int64(l.jitter))))
+			if l.impair(n) {
+				return n, attr, nil
 			}
-			if l.loss > 0 && rand.Float64() < l.loss {
-				continue
-			}
-			if l.link != nil {
-				wait, ok := l.link.admit(time.Now(), n)
-				if !ok {
-					continue
-				}
-				time.Sleep(wait)
-			}
-			return n, attr, nil
 		}
 	})
+}
+
+// impair applies jitter, loss and the bandwidth limit to one packet of n
+// bytes and reports whether it is delivered.
+func (l *lossInterceptor) impair(n int) bool {
+	if l.jitter > 0 {
+		time.Sleep(time.Duration(rand.Int64N(int64(l.jitter))))
+	}
+	if l.loss > 0 && rand.Float64() < l.loss {
+		return false
+	}
+	if l.link == nil {
+		return true
+	}
+	wait, ok := l.link.admit(time.Now(), n)
+	if !ok {
+		return false
+	}
+	time.Sleep(wait)
+	return true
 }
 
 func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {

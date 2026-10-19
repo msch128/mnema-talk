@@ -25,32 +25,7 @@ const (
 // funcLengthAllowlist lists functions that still exceed maxFuncLines. It only
 // shrinks (entries are "directory function"): the test fails when an entry no longer needs to be listed.
 // TODO: refactor these and delete the entries.
-var funcLengthAllowlist = map[string]bool{
-	"cmd/server runWithContext":              true,
-	"internal/audit list":                    true,
-	"internal/audit Middleware":              true,
-	"internal/auth changePasswordAndReissue": true,
-	"internal/auth RotateRefresh":            true,
-	"internal/auth Register":                 true,
-	"internal/chat sanitizeOneEmbed":         true,
-	"internal/config FromEnv":                true,
-	"internal/config validate":               true,
-	"internal/db MigrateFS":                  true,
-	"internal/gateway run":                   true,
-	"internal/perm setRoles":                 true,
-	"internal/perm SetOverwrites":            true,
-	"internal/server NewRouter":              true,
-	"internal/sfu attachPeer":                true,
-	"internal/sfu signalPeer":                true,
-	"internal/sfu notifyMedia":               true,
-	"internal/webbundle runTrustSign":        true,
-	"internal/webbundle Build":               true,
-	"internal/webbundle Verify":              true,
-	"internal/ws handle":                     true,
-	"internal/ws joinVoice":                  true,
-	"loadtest/viewer run":                    true,
-	"loadtest/viewer mainErr":                true,
-}
+var funcLengthAllowlist = map[string]bool{}
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
 

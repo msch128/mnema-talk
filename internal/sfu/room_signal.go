@@ -63,12 +63,33 @@ func (r *Room) signalPeer(peer *Peer) {
 	// request stays pending for the completion/answer path; earlier requests
 	// are reflected in the snapshot below.
 	peer.negotiationPending.Store(false)
-	r.mu.RLock()
-	if r.peers[peer.ID] != peer {
-		r.mu.RUnlock()
+	desired, ok := r.desiredTracks(peer)
+	if !ok {
 		return
 	}
-	desired := make(map[string]*TrackInfo)
+	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		return
+	}
+	if peer.PC.SignalingState() != webrtc.SignalingStateStable {
+		peer.negotiationPending.Store(true)
+		return
+	}
+	existing, removed := removeStaleSenders(peer, desired)
+	added := r.addMissingSenders(peer, desired, existing)
+	if removed || added || !peer.offerSent {
+		negotiateOffer(peer)
+	}
+}
+
+// desiredTracks returns the tracks the peer should receive, keyed by the ID
+// the viewer sees. ok is false when the peer is no longer in the room.
+func (r *Room) desiredTracks(peer *Peer) (desired map[string]*TrackInfo, ok bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	if r.peers[peer.ID] != peer {
+		return nil, false
+	}
+	desired = make(map[string]*TrackInfo)
 	for id, info := range r.trackLocals {
 		if !r.wantsLocked(peer.ID, info) {
 			continue
@@ -82,104 +103,133 @@ func (r *Room) signalPeer(peer *Peer) {
 		}
 		desired[id] = info
 	}
-	r.mu.RUnlock()
-	if peer.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
-		return
-	}
-	if peer.PC.SignalingState() != webrtc.SignalingStateStable {
-		peer.negotiationPending.Store(true)
-		return
-	}
-	existingSenders := make(map[string]bool)
-	needRenegotiate := false
+	return desired, true
+}
+
+// removeStaleSenders drops the senders whose track the peer no longer wants.
+// It returns the track IDs still sent and whether any sender was removed.
+func removeStaleSenders(peer *Peer, desired map[string]*TrackInfo) (existing map[string]bool, removed bool) {
+	existing = make(map[string]bool)
 	for _, sender := range peer.PC.GetSenders() {
 		if sender.Track() == nil {
 			continue
 		}
 		trackID := sender.Track().ID()
-		existingSenders[trackID] = true
-
-		if _, ok := desired[trackID]; !ok {
-			if err := peer.PC.RemoveTrack(sender); err == nil {
-				needRenegotiate = true
-				if vt := peer.takeViewerTrack(trackID); vt != nil {
-					vt.group.removeViewer(vt)
-				}
-			}
+		existing[trackID] = true
+		if _, ok := desired[trackID]; ok {
+			continue
+		}
+		if err := peer.PC.RemoveTrack(sender); err != nil {
+			continue
+		}
+		removed = true
+		if vt := peer.takeViewerTrack(trackID); vt != nil {
+			vt.group.removeViewer(vt)
 		}
 	}
+	return existing, removed
+}
 
+// addMissingSenders adds every desired track the peer is not yet sent and
+// reports whether it added any.
+func (r *Room) addMissingSenders(peer *Peer, desired map[string]*TrackInfo, existing map[string]bool) bool {
+	added := false
 	for trackID, info := range desired {
-		if existingSenders[trackID] {
+		if existing[trackID] {
 			continue
 		}
-		var recipientTrack webrtc.TrackLocal = info.Track
-		var vt *viewerTrack
-		if info.group != nil {
-			r.mu.RLock()
-			pref := r.subs[peer.ID].screenQuality(info.SenderID)
-			r.mu.RUnlock()
-			vt = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
-			recipientTrack = vt
-		}
-		if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
-			var source func() bool
-			if info.publisher != nil && info.publisher.authorizeMedia != nil {
-				source = info.publisher.mediaAuthorized
-			}
-			recipientTrack = &authorizedTrack{TrackLocal: recipientTrack, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
-		}
-		sender, err := peer.PC.AddTrack(recipientTrack)
-		if err != nil {
-			// E.g. the viewer's browser cannot receive the publisher's codec:
-			// it then gets no media from this track.
-			if !peer.addTrackFailed[trackID] {
-				if peer.addTrackFailed == nil {
-					peer.addTrackFailed = make(map[string]bool)
-				}
-				peer.addTrackFailed[trackID] = true
-				slog.Warn("sfu add track", "viewer", peer.ID, "publisher", info.SenderID, "source", string(info.Source),
-					"codec", info.codecMime(), "err", err)
-			}
-			continue
-		}
-		delete(peer.addTrackFailed, trackID)
-		needRenegotiate = true
-		if vt != nil {
-			peer.putViewerTrack(trackID, vt)
-			// The new viewer waits for a keyframe of its layer, which
-			// addViewer asks for.
-			info.group.addViewer(vt)
-			go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
-			continue
-		}
-		go r.forwardRTCP(sender, info.requestKeyframe, nil)
-		if info.Kind == webrtc.RTPCodecTypeVideo {
-			// A new viewer needs a keyframe to start decoding.
-			info.requestKeyframe()
+		if r.addSender(peer, trackID, info) {
+			added = true
 		}
 	}
+	return added
+}
 
-	if needRenegotiate || !peer.offerSent {
-		offer, err := peer.PC.CreateOffer(nil)
-		if err != nil {
-			slog.Error("sfu create offer", "err", err)
-			return
-		}
-		if err := peer.PC.SetLocalDescription(offer); err != nil {
-			slog.Error("sfu set local description", "err", err)
-			return
-		}
-		peer.offerSent = true
-		gen := peer.offerGen.Add(1)
-		peer.watchOffer(gen, 1)
-		if peer.SendOffer != nil {
-			peer.SendOffer(offer)
-		}
-		// Gathering started with SetLocalDescription, so candidates may be
-		// waiting; the client must see them after the offer.
-		peer.offerDelivered()
+// addSender adds one track to the peer and starts its RTCP and keyframe
+// handling. It reports whether the track was added.
+func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
+	recipientTrack, vt := r.recipientTrack(peer, trackID, info)
+	sender, err := peer.PC.AddTrack(recipientTrack)
+	if err != nil {
+		// E.g. the viewer's browser cannot receive the publisher's codec:
+		// it then gets no media from this track.
+		peer.noteAddTrackFailure(trackID, info, err)
+		return false
 	}
+	delete(peer.addTrackFailed, trackID)
+	if vt != nil {
+		peer.putViewerTrack(trackID, vt)
+		// The new viewer waits for a keyframe of its layer, which
+		// addViewer asks for.
+		info.group.addViewer(vt)
+		go r.forwardRTCP(sender, vt.viewerKeyframe, vt.observeReportWithBandwidth)
+		return true
+	}
+	go r.forwardRTCP(sender, info.requestKeyframe, nil)
+	if info.Kind == webrtc.RTPCodecTypeVideo {
+		// A new viewer needs a keyframe to start decoding.
+		info.requestKeyframe()
+	}
+	return true
+}
+
+// recipientTrack picks what the peer's PeerConnection gets for info: the
+// shared track, a per-viewer layer switcher for screen shares, and an
+// authorization wrapper when either end requires media authorization.
+func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webrtc.TrackLocal, *viewerTrack) {
+	var recipientTrack webrtc.TrackLocal = info.Track
+	var vt *viewerTrack
+	if info.group != nil {
+		r.mu.RLock()
+		pref := r.subs[peer.ID].screenQuality(info.SenderID)
+		r.mu.RUnlock()
+		vt = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
+		recipientTrack = vt
+	}
+	if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
+		var source func() bool
+		if info.publisher != nil && info.publisher.authorizeMedia != nil {
+			source = info.publisher.mediaAuthorized
+		}
+		recipientTrack = &authorizedTrack{TrackLocal: recipientTrack, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
+	}
+	return recipientTrack, vt
+}
+
+// noteAddTrackFailure logs the first failure to add a track and remembers it,
+// so a track the browser cannot receive does not log on every round.
+func (p *Peer) noteAddTrackFailure(trackID string, info *TrackInfo, err error) {
+	if p.addTrackFailed[trackID] {
+		return
+	}
+	if p.addTrackFailed == nil {
+		p.addTrackFailed = make(map[string]bool)
+	}
+	p.addTrackFailed[trackID] = true
+	slog.Warn("sfu add track", "viewer", p.ID, "publisher", info.SenderID, "source", string(info.Source),
+		"codec", info.codecMime(), "err", err)
+}
+
+// negotiateOffer creates and sets the local offer and hands it to the client.
+func negotiateOffer(peer *Peer) {
+	offer, err := peer.PC.CreateOffer(nil)
+	if err != nil {
+		slog.Error("sfu create offer", "err", err)
+		return
+	}
+	if err := peer.PC.SetLocalDescription(offer); err != nil {
+		slog.Error("sfu set local description", "err", err)
+		return
+	}
+	peer.offerSent = true
+	gen := peer.offerGen.Add(1)
+	peer.watchOffer(gen, 1)
+	if peer.SendOffer != nil {
+		peer.SendOffer(offer)
+	}
+	// Gathering started with SetLocalDescription, so candidates may be
+	// waiting; the client must see them after the offer.
+	peer.offerDelivered()
 }
 
 // watchOffer arms the watchdog for offer gen: if it is still unanswered

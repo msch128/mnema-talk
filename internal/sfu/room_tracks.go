@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pion/interceptor"
 	"github.com/pion/rtcp"
 	"github.com/pion/webrtc/v4"
 )
@@ -24,22 +25,30 @@ func (r *Room) forwardRTCP(sender *webrtc.RTPSender, keyframe func(), report fun
 			return
 		}
 		for _, p := range pkts {
-			switch p := p.(type) {
-			case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
-				keyframe()
-			case *rtcp.ReceiverReport:
-				if report == nil {
-					continue
-				}
-				if loss, rtt, ok := receiverReportOf(p, ssrc, layerNow()); ok {
-					bandwidth := 0
-					if src, ok := attrs.Get(bweKey{}).(bandwidthSource); ok {
-						bandwidth = src.bandwidth()
-					}
-					report(loss, rtt, bandwidth)
-				}
-			}
+			handleFeedback(p, attrs, ssrc, keyframe, report)
 		}
+	}
+}
+
+// handleFeedback acts on one RTCP packet from a subscriber: keyframe requests
+// go to keyframe, receiver reports for ssrc to report (when set).
+func handleFeedback(p rtcp.Packet, attrs interceptor.Attributes, ssrc uint32, keyframe func(), report func(loss float64, rtt time.Duration, bandwidth int)) {
+	switch p := p.(type) {
+	case *rtcp.PictureLossIndication, *rtcp.FullIntraRequest:
+		keyframe()
+	case *rtcp.ReceiverReport:
+		if report == nil {
+			return
+		}
+		loss, rtt, ok := receiverReportOf(p, ssrc, layerNow())
+		if !ok {
+			return
+		}
+		bandwidth := 0
+		if src, ok := attrs.Get(bweKey{}).(bandwidthSource); ok {
+			bandwidth = src.bandwidth()
+		}
+		report(loss, rtt, bandwidth)
 	}
 }
 

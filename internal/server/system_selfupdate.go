@@ -100,18 +100,9 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if h.self.updater == nil {
-		return httpx.ErrConflict("self-update is not configured (UPDATER_TOKEN and the autoupdate profile)")
-	}
-	upd := h.updateStatus()
-	if !upd.UpdateAvailable {
-		return httpx.ErrConflict("no update available")
-	}
-	if req.TargetVersion != upd.LatestVersion {
-		return httpx.ErrConflict("the latest release changed; reload the System tab")
-	}
-	if reach, _ := update.ImageReach(h.cfg.AppImage, upd.LatestVersion); reach == update.ReachNo {
-		return httpx.ErrConflict("the configured image tag cannot reach this release; update manually")
+	upd, err := h.checkSelfUpdateTarget(req)
+	if err != nil {
+		return err
 	}
 	// Cheap checks first: no bcrypt work while the cooldown runs.
 	if retry, busy := h.selfUpdateBlocked(); busy {
@@ -134,21 +125,12 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 		return err
 	}
 
-	// Reserve the slot; a concurrent request may have taken it meanwhile.
-	h.selfMu.Lock()
-	if h.self.inFlight || (!h.self.lastCall.IsZero() && h.self.now().Before(h.self.lastCall.Add(selfUpdateCooldown))) {
-		h.selfMu.Unlock()
+	release, ok := h.reserveSelfUpdate()
+	if !ok {
 		httpx.WriteRateLimited(w, selfUpdateCooldown)
 		return nil
 	}
-	h.self.inFlight = true
-	h.self.lastCall = h.self.now()
-	h.selfMu.Unlock()
-	defer func() {
-		h.selfMu.Lock()
-		h.self.inFlight = false
-		h.selfMu.Unlock()
-	}()
+	defer release()
 
 	log.Info("self-update requested")
 	// The admin closing the tab must not cut the request short.
@@ -167,6 +149,44 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, SelfUpdateStarted{Status: "started", FromVersion: h.version, TargetVersion: upd.LatestVersion})
 	return nil
+}
+
+// checkSelfUpdateTarget rejects a request when self-update is not configured,
+// no newer release is known, the request names another version or the image
+// tag cannot reach the release. It returns the update status it checked.
+func (h *systemHandler) checkSelfUpdateTarget(req SelfUpdateRequest) (UpdateStatus, error) {
+	if h.self.updater == nil {
+		return UpdateStatus{}, httpx.ErrConflict("self-update is not configured (UPDATER_TOKEN and the autoupdate profile)")
+	}
+	upd := h.updateStatus()
+	if !upd.UpdateAvailable {
+		return upd, httpx.ErrConflict("no update available")
+	}
+	if req.TargetVersion != upd.LatestVersion {
+		return upd, httpx.ErrConflict("the latest release changed; reload the System tab")
+	}
+	if reach, _ := update.ImageReach(h.cfg.AppImage, upd.LatestVersion); reach == update.ReachNo {
+		return upd, httpx.ErrConflict("the configured image tag cannot reach this release; update manually")
+	}
+	return upd, nil
+}
+
+// reserveSelfUpdate takes the update slot, which a concurrent request may
+// have taken meanwhile. The returned function frees it again.
+func (h *systemHandler) reserveSelfUpdate() (release func(), ok bool) {
+	h.selfMu.Lock()
+	if h.self.inFlight || (!h.self.lastCall.IsZero() && h.self.now().Before(h.self.lastCall.Add(selfUpdateCooldown))) {
+		h.selfMu.Unlock()
+		return nil, false
+	}
+	h.self.inFlight = true
+	h.self.lastCall = h.self.now()
+	h.selfMu.Unlock()
+	return func() {
+		h.selfMu.Lock()
+		h.self.inFlight = false
+		h.selfMu.Unlock()
+	}, true
 }
 
 // selfUpdateBlocked reports whether an update ran (or runs) within the cooldown.

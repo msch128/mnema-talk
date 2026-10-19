@@ -74,60 +74,89 @@ func runBuild(args []string, getenv func(string) string, stdout, stderr io.Write
 	if *out == "" {
 		return errors.New("-out is required")
 	}
-	pemKey := []byte(getenv(*keyEnv))
-	if *keyFile != "" {
-		b, err := os.ReadFile(*keyFile)
+	key, err := loadSigningKey(*keyFile, *keyEnv, getenv)
+	if err != nil {
+		return err
+	}
+	c, err := loadCompatWithFloor(*compat, *floor)
+	if err != nil {
+		return err
+	}
+	b, err := Build(BuildOptions{Dir: *dir, Compat: c, Version: *version, Commit: *commit, Key: key, Exclude: splitSuffixes(*exclude)})
+	if err != nil {
+		return err
+	}
+	if err := writeBundle(*out, *version, b); err != nil {
+		return err
+	}
+	_, _ = fmt.Fprintf(stdout, "bundle %s: %d files, %d bytes, key %s\n", b.Info.Version, len(b.Info.Files), len(b.Zip), b.Info.KeyID)
+	return nil
+}
+
+// loadSigningKey reads the PKCS#8 PEM key from keyFile, or from the
+// environment variable keyEnv when no file is given.
+func loadSigningKey(keyFile, keyEnv string, getenv func(string) string) (ed25519.PrivateKey, error) {
+	pemKey := []byte(getenv(keyEnv))
+	if keyFile != "" {
+		b, err := os.ReadFile(keyFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		pemKey = b
 	}
 	if len(pemKey) == 0 {
-		return fmt.Errorf("no signing key: set %s or pass -key-file", *keyEnv)
+		return nil, fmt.Errorf("no signing key: set %s or pass -key-file", keyEnv)
 	}
-	key, err := ParsePrivateKeyPEM(pemKey)
+	return ParsePrivateKeyPEM(pemKey)
+}
+
+// loadCompatWithFloor loads the compat file and raises its security floor to
+// floor when that is higher; it never lowers it.
+func loadCompatWithFloor(path, floor string) (Compat, error) {
+	c, err := LoadCompat(path)
 	if err != nil {
-		return err
+		return c, err
 	}
-	c, err := LoadCompat(*compat)
+	if floor == "" {
+		return c, nil
+	}
+	n, err := CompareVersions(floor, c.SecurityFloor)
 	if err != nil {
-		return err
+		return c, fmt.Errorf("-security-floor: %w", err)
 	}
-	if *floor != "" {
-		n, err := CompareVersions(*floor, c.SecurityFloor)
-		if err != nil {
-			return fmt.Errorf("-security-floor: %w", err)
-		}
-		if n > 0 {
-			c.SecurityFloor = *floor
-		}
+	if n > 0 {
+		c.SecurityFloor = floor
 	}
+	return c, nil
+}
+
+func splitSuffixes(list string) []string {
 	var suffixes []string
-	for _, s := range strings.Split(*exclude, ",") {
+	for _, s := range strings.Split(list, ",") {
 		if s = strings.TrimSpace(s); s != "" {
 			suffixes = append(suffixes, s)
 		}
 	}
-	b, err := Build(BuildOptions{Dir: *dir, Compat: c, Version: *version, Commit: *commit, Key: key, Exclude: suffixes})
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(*out, 0o755); err != nil {
+	return suffixes
+}
+
+// writeBundle stores the zip, manifest and signature in out.
+func writeBundle(out, version string, b *Bundle) error {
+	if err := os.MkdirAll(out, 0o755); err != nil {
 		return err
 	}
 	for _, f := range []struct {
 		name string
 		data []byte
 	}{
-		{"mnema-web-" + *version + ".zip", b.Zip},
+		{"mnema-web-" + version + ".zip", b.Zip},
 		{manifestName, b.Manifest},
 		{sigName, b.Signature},
 	} {
-		if err := os.WriteFile(filepath.Join(*out, f.name), f.data, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(out, f.name), f.data, 0o644); err != nil {
 			return err
 		}
 	}
-	_, _ = fmt.Fprintf(stdout, "bundle %s: %d files, %d bytes, key %s\n", b.Info.Version, len(b.Info.Files), len(b.Zip), b.Info.KeyID)
 	return nil
 }
 

@@ -15,22 +15,9 @@ import (
 
 // Register creates a regular user, consuming one use of a valid invite code.
 func Register(ctx context.Context, p *db.Pool, username, displayName, password, inviteCode string) (*User, error) {
-	if err := ValidateUsername(username); err != nil {
-		return nil, err
-	}
-	if err := ValidatePassword(password); err != nil {
-		return nil, err
-	}
-	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	displayName, inviteCode, err := cleanRegistration(username, displayName, password, inviteCode)
 	if err != nil {
 		return nil, err
-	}
-	if displayName == "" {
-		displayName = defaultDisplayName(username)
-	}
-	inviteCode = strings.TrimSpace(inviteCode)
-	if inviteCode == "" || len(inviteCode) > maxInviteCodeChars {
-		return nil, ErrInvalidInvite
 	}
 
 	// Cheap pre-check so unauthenticated guesses never cost a bcrypt hash;
@@ -50,51 +37,91 @@ func Register(ctx context.Context, p *db.Pool, username, displayName, password, 
 
 	var user *User
 	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		var inviteID uuid.UUID
-		var maxUses *int
-		var usesCount int
-		var expiresAt *time.Time
-		err := tx.QueryRow(ctx,
-			`SELECT id, max_uses, uses_count, expires_at FROM invites WHERE code = $1 FOR UPDATE`,
-			inviteCode).Scan(&inviteID, &maxUses, &usesCount, &expiresAt)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrInvalidInvite
-		}
+		inviteID, err := claimInvite(ctx, tx, inviteCode)
 		if err != nil {
-			return fmt.Errorf("invite lookup: %w", err)
-		}
-		if expiresAt != nil && time.Now().After(*expiresAt) {
-			return ErrInviteExpired
-		}
-		if maxUses != nil && usesCount >= *maxUses {
-			return ErrInviteExhausted
-		}
-
-		var taken bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))`, username).Scan(&taken); err != nil {
 			return err
 		}
-		if taken {
-			return ErrUsernameTaken
-		}
-
-		user, err = scanUser(tx.QueryRow(ctx, `
-			INSERT INTO users (username, display_name, password_hash, role, invite_id)
-			VALUES ($1, $2, $3, 'user', $4)
-			RETURNING `+userColumns, username, displayName, hash, inviteID))
-		if err != nil {
-			// Also covers a concurrent sign-up racing past the check above,
-			// whichever unique index on the username catches it.
-			if isUniqueViolation(err) {
-				return ErrUsernameTaken
-			}
-			return fmt.Errorf("insert user: %w", err)
-		}
-
-		_, err = tx.Exec(ctx, `UPDATE invites SET uses_count = uses_count + 1 WHERE id = $1`, inviteID)
+		user, err = insertInvitedUser(ctx, tx, username, displayName, hash, inviteID)
 		return err
 	})
 	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// cleanRegistration validates the sign-up fields and returns the display name
+// (defaulted from the username) and invite code (trimmed) to use.
+func cleanRegistration(username, displayName, password, inviteCode string) (string, string, error) {
+	if err := ValidateUsername(username); err != nil {
+		return "", "", err
+	}
+	if err := ValidatePassword(password); err != nil {
+		return "", "", err
+	}
+	displayName, err := httpx.CleanText("display_name", displayName, MaxDisplayNameLen, false)
+	if err != nil {
+		return "", "", err
+	}
+	if displayName == "" {
+		displayName = defaultDisplayName(username)
+	}
+	inviteCode = strings.TrimSpace(inviteCode)
+	if inviteCode == "" || len(inviteCode) > maxInviteCodeChars {
+		return "", "", ErrInvalidInvite
+	}
+	return displayName, inviteCode, nil
+}
+
+// claimInvite locks the invite, checks that it is still usable and returns its
+// ID. The use itself is counted by insertInvitedUser.
+func claimInvite(ctx context.Context, tx pgx.Tx, code string) (uuid.UUID, error) {
+	var inviteID uuid.UUID
+	var maxUses *int
+	var usesCount int
+	var expiresAt *time.Time
+	err := tx.QueryRow(ctx,
+		`SELECT id, max_uses, uses_count, expires_at FROM invites WHERE code = $1 FOR UPDATE`,
+		code).Scan(&inviteID, &maxUses, &usesCount, &expiresAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, ErrInvalidInvite
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invite lookup: %w", err)
+	}
+	if expiresAt != nil && time.Now().After(*expiresAt) {
+		return uuid.Nil, ErrInviteExpired
+	}
+	if maxUses != nil && usesCount >= *maxUses {
+		return uuid.Nil, ErrInviteExhausted
+	}
+	return inviteID, nil
+}
+
+// insertInvitedUser creates the account and counts one use of its invite.
+func insertInvitedUser(ctx context.Context, tx pgx.Tx, username, displayName, hash string, inviteID uuid.UUID) (*User, error) {
+	var taken bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE LOWER(username) = LOWER($1))`, username).Scan(&taken); err != nil {
+		return nil, err
+	}
+	if taken {
+		return nil, ErrUsernameTaken
+	}
+
+	user, err := scanUser(tx.QueryRow(ctx, `
+		INSERT INTO users (username, display_name, password_hash, role, invite_id)
+		VALUES ($1, $2, $3, 'user', $4)
+		RETURNING `+userColumns, username, displayName, hash, inviteID))
+	if err != nil {
+		// Also covers a concurrent sign-up racing past the check above,
+		// whichever unique index on the username catches it.
+		if isUniqueViolation(err) {
+			return nil, ErrUsernameTaken
+		}
+		return nil, fmt.Errorf("insert user: %w", err)
+	}
+
+	if _, err = tx.Exec(ctx, `UPDATE invites SET uses_count = uses_count + 1 WHERE id = $1`, inviteID); err != nil {
 		return nil, err
 	}
 	return user, nil

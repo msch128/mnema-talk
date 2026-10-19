@@ -245,34 +245,46 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 	}
 	trouble := severe || a.highStreak >= 2 || rise || flooded || recent >= adaptPLIs || narrow
 	if trouble {
-		a.cleanSince = now
-		if a.layer >= a.floor {
-			// Nowhere lower to go.
-			a.highStreak = 0
-			return a.layer, false
-		}
-		failedProbe := now.Before(a.probeEnd)
-		a.layer++
-		a.graceUntil = now.Add(adaptGrace)
-		a.highStreak = 0
-		a.bwLow, a.bwHigh = 0, 0
-		if narrow {
-			a.capUntil = now.Add(adaptCapHold)
-			a.narrowed = true
-		}
-		a.resetPLIs()
-		if failedProbe {
-			a.backoff = min(a.backoff*2, adaptBackoffMax)
-		}
-		a.holdUntil = now.Add(a.backoff)
-		a.probeEnd = time.Time{}
-		return a.layer, true
+		return a.layer, a.stepDown(now, narrow)
 	}
 	if loss >= adaptLossClear {
 		// Not trouble, but not clean either: the wait for the next try restarts.
 		a.cleanSince = now
 		return a.layer, false
 	}
+	return a.layer, a.tryStepUp(now)
+}
+
+// stepDown moves the viewer to the next lower layer after trouble, unless it
+// is on the lowest one allowed. It reports whether the layer changed.
+func (a *adapter) stepDown(now time.Time, narrow bool) bool {
+	a.cleanSince = now
+	if a.layer >= a.floor {
+		// Nowhere lower to go.
+		a.highStreak = 0
+		return false
+	}
+	failedProbe := now.Before(a.probeEnd)
+	a.layer++
+	a.graceUntil = now.Add(adaptGrace)
+	a.highStreak = 0
+	a.bwLow, a.bwHigh = 0, 0
+	if narrow {
+		a.capUntil = now.Add(adaptCapHold)
+		a.narrowed = true
+	}
+	a.resetPLIs()
+	if failedProbe {
+		a.backoff = min(a.backoff*2, adaptBackoffMax)
+	}
+	a.holdUntil = now.Add(a.backoff)
+	a.probeEnd = time.Time{}
+	return true
+}
+
+// tryStepUp moves the viewer to the next better layer once it has been clean
+// long enough and nothing holds it back. It reports whether the layer changed.
+func (a *adapter) tryStepUp(now time.Time) bool {
 	if !a.probeEnd.IsZero() && !now.Before(a.probeEnd) {
 		// The last move up held: the next attempt may come as soon as usual.
 		a.backoff = adaptCleanFor
@@ -285,9 +297,9 @@ func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, 
 		a.probeEnd = now.Add(adaptProbe)
 		a.holdUntil = now.Add(a.backoff)
 		a.cleanSince = now
-		return a.layer, true
+		return true
 	}
-	return a.layer, false
+	return false
 }
 
 // recordRTT adds a sample and reports whether the round trip time rose far

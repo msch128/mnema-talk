@@ -1,6 +1,7 @@
 import js from '@eslint/js'
 import vue from 'eslint-plugin-vue'
 import globals from 'globals'
+import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import vueParser from 'vue-eslint-parser'
 
@@ -9,6 +10,7 @@ export default tseslint.config(
   { ignores: ['**/.codex/**', '**/dist/**', '**/node_modules/**', '**/coverage/**', '**/src/third_party/deepfilternet3/{worklet,worker-glue}.js'] },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
+  { plugins: { sonarjs } },
   {
     languageOptions: {
       ecmaVersion: 'latest',
@@ -95,7 +97,77 @@ export default tseslint.config(
   {
     files: ['**/web/src/**/*.{ts,vue}'],
     ignores: ['**/*.test.ts', '**/*.fixture.ts', '**/web/src/types/rest.ts', '**/web/src/third_party/**'],
-    rules: { 'max-lines': ['error', { max: 400, skipBlankLines: false, skipComments: false }] }
+    rules: {
+      'max-lines': ['error', { max: 400, skipBlankLines: false, skipComments: false }],
+      // Same limits as the Go guard (internal/repo/limits_test.go): raw line
+      // span of a function (blanks and comments count), cognitive complexity 15.
+      'max-lines-per-function': ['error', { max: 80, skipBlankLines: false, skipComments: false, IIFEs: true }],
+      'sonarjs/cognitive-complexity': ['error', 15]
+    }
+  },
+  // Tests, fixtures and e2e specs may be up to 800 lines (same as Go _test.go).
+  {
+    files: ['**/*.test.ts', '**/*.fixture.ts', '**/e2e/**/*.ts'],
+    rules: { 'max-lines': ['error', { max: 800, skipBlankLines: false, skipComments: false }] }
+  },
+  // TODO(limits): shrinking allowlist of files that still exceed the function
+  // length / cognitive complexity limits. Refactor, then delete the entry. Never
+  // add entries or raise a limit.
+  {
+    files: [
+      'web/src/composables/useAppRouting.ts',
+      'web/src/composables/useChannelLayout.ts',
+      'web/src/composables/useMessageActions.ts',
+      'web/src/composables/useMessageMenu.ts',
+      'web/src/composables/useMessageScroll.ts',
+      'web/src/composables/useNavMenus.ts',
+      'web/src/composables/usePictureInPicture.ts',
+      'web/src/composables/useResizable.ts',
+      'web/src/composables/useSidebarReorder.ts',
+      'web/src/composables/useSlashCommands.ts',
+      'web/src/composables/useSortableDrag.ts',
+      'web/src/composables/useStreamQuality.ts',
+      'web/src/composables/webrtc/layers.ts',
+      'web/src/composables/webrtc/micPipeline.ts',
+      'web/src/composables/webrtc/micTest.ts',
+      'web/src/composables/webrtc/peer.ts',
+      'web/src/composables/webrtc/screen.ts',
+      'web/src/composables/webrtc/sdp.ts',
+      'web/src/composables/webrtc/senders.ts',
+      'web/src/composables/webrtc/streamDiag.ts',
+      'web/src/composables/webrtc/voiceAudio.ts',
+      'web/src/lib/api.ts',
+      'web/src/lib/channelLayout.ts',
+      'web/src/lib/crypto/stateStore.ts',
+      'web/src/lib/desktopGaming.ts',
+      'web/src/lib/dfnBridgeWorklet.ts',
+      'web/src/lib/media/browserCall.ts',
+      'web/src/lib/media/frame.ts',
+      'web/src/lib/media/group.ts',
+      'web/src/lib/media/groupEpoch.ts',
+      'web/src/lib/media/groupSync.ts',
+      'web/src/lib/media/guard.ts',
+      'web/src/lib/media/mediaFrameWorker.ts',
+      'web/src/lib/nativeAdmin.ts',
+      'web/src/lib/nativeChatApi.ts',
+      'web/src/lib/nativeTransport.ts',
+      'web/src/lib/rtcStats.ts',
+      'web/src/lib/soundEffects.ts',
+      'web/src/lib/streamQuality.ts',
+      'web/src/lib/trustPort.ts',
+      'web/src/lib/voicePlayback.ts',
+      'web/src/stores/auth.ts',
+      'web/src/stores/chat.ts',
+      'web/src/stores/chat/events.ts',
+      'web/src/stores/chat/members.ts',
+      'web/src/stores/chat/state.ts',
+      'web/src/stores/permissions.ts',
+      'web/src/stores/voice.ts',
+      'web/src/stores/voice/room.ts',
+      'web/src/stores/voice/state.ts',
+      'web/src/types/events.ts'
+    ],
+    rules: { 'max-lines-per-function': 'off', 'sonarjs/cognitive-complexity': 'off' }
   },
   {
     files: ['**/*.ts', '**/*.vue'],

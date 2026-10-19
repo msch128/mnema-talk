@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -22,37 +21,18 @@ func (s *NativeSessions) WithAuthorizedTransaction(ctx context.Context, principa
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)
 	defer cancel()
 	return s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		user, version, disabled, err := lockNativeUser(ctx, tx, principal.user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
+		locked, err := lockNativeSession(ctx, tx, principal.user.ID, principal.familyID)
 		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		family, err := lockNativeFamily(ctx, tx, principal.familyID, user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		valid := func() error {
-			now, err := nativeClock(ctx, tx)
-			if err != nil {
-				return nativeStoreFailure(err)
-			}
-			if disabled || version != principal.tokenVersion || family.version != version || family.instanceID != principal.instanceID || family.revokedAt != nil || !now.Before(family.expiresAt) || !now.Before(principal.familyExpiresAt) || !now.Before(principal.accessExpiresAt) {
-				return ErrNativeUnauthorized
-			}
-			return nil
-		}
-		if err := valid(); err != nil {
 			return err
 		}
-		if err := action(ctx, tx, *user); err != nil {
+		if _, err := locked.checkLease(ctx, tx, principal); err != nil {
+			return err
+		}
+		if err := action(ctx, tx, *locked.user); err != nil {
 			return err
 		}
 		// A blocked action must not commit using a lease that expired during its SQL.
-		return valid()
+		_, err = locked.checkLease(ctx, tx, principal)
+		return err
 	})
 }

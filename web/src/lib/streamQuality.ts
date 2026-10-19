@@ -153,14 +153,13 @@ export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined
   const bytes = out.bytesSent || 0
   const ts = out.timestamp || 0
   const sameStream = previous && (previous.id === undefined || previous.id === out.id)
-  let kbps = null
-  if (sameStream && ts > previous.ts && bytes >= previous.bytes) {
-    kbps = Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
-  }
-  let fps = isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
-  let encodeMs = null
   const frames = out.framesEncoded
   const encodeTime = out.totalEncodeTime
+  const kbps = sameStream && ts > previous.ts && bytes >= previous.bytes
+    ? Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
+    : null
+  let fps = isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
+  let encodeMs: number | null = null
   if (sameStream && ts > previous.ts && isFiniteNumber(frames) && isFiniteNumber(previous.frames)) {
     const count = frames - previous.frames
     if (count >= 0 && fps === null) fps = Math.round(count * 1000 / (ts - previous.ts))

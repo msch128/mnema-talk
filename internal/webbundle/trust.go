@@ -147,38 +147,69 @@ func (t *Trust) Validate() error {
 	if !expires.After(issued) || expires.Sub(issued) > MaxTrustValidity {
 		return errors.New("expires_at must be after issued_at, within 400 days")
 	}
-	revokedBundle := map[string]bool{}
-	for _, id := range t.RevokedBundleKeys {
+	if err := t.validateBundleKeys(); err != nil {
+		return err
+	}
+	if err := t.validateUpdaterKeys(); err != nil {
+		return err
+	}
+	if err := t.validateMaxVersions(); err != nil {
+		return err
+	}
+	if len(t.BundleKeys) == 0 {
+		return errors.New("bundle_keys must not be empty")
+	}
+	return nil
+}
+
+// revokedSet validates revoked key ids and returns them as a set; kind names
+// the key family in the error.
+func revokedSet(ids []string, kind string) (map[string]bool, error) {
+	set := map[string]bool{}
+	for _, id := range ids {
 		if !validID(id) {
-			return fmt.Errorf("revoked bundle key id %q is not 16 lowercase hex digits", id)
+			return nil, fmt.Errorf("revoked %s key id %q is not 16 lowercase hex digits", kind, id)
 		}
-		revokedBundle[id] = true
+		set[id] = true
+	}
+	return set, nil
+}
+
+func (t *Trust) validateBundleKeys() error {
+	revoked, err := revokedSet(t.RevokedBundleKeys, "bundle")
+	if err != nil {
+		return err
 	}
 	for _, h := range t.BundleKeys {
 		raw, err := hex.DecodeString(h)
 		if err != nil || len(raw) != ed25519.PublicKeySize || h != strings.ToLower(h) {
 			return fmt.Errorf("bundle key %q is not a 32 byte lowercase hex key", h)
 		}
-		if revokedBundle[KeyID(raw)] {
+		if revoked[KeyID(raw)] {
 			return fmt.Errorf("bundle key %s is both allowed and revoked", KeyID(raw))
 		}
 	}
-	revokedUpdater := map[string]bool{}
-	for _, id := range t.RevokedUpdaterKeys {
-		if !validID(id) {
-			return fmt.Errorf("revoked updater key id %q is not 16 lowercase hex digits", id)
-		}
-		revokedUpdater[id] = true
+	return nil
+}
+
+func (t *Trust) validateUpdaterKeys() error {
+	revoked, err := revokedSet(t.RevokedUpdaterKeys, "updater")
+	if err != nil {
+		return err
 	}
 	for _, k := range t.UpdaterKeys {
 		id, err := UpdaterKeyID(k)
 		if err != nil {
 			return err
 		}
-		if revokedUpdater[id] {
+		if revoked[id] {
 			return fmt.Errorf("updater key %s is both allowed and revoked", id)
 		}
 	}
+	return nil
+}
+
+func (t *Trust) validateMaxVersions() error {
 	for api, v := range t.MaxVersion {
 		if n, err := strconv.ParseUint(api, 10, 32); err != nil || n < 1 || api != strconv.FormatUint(n, 10) {
 			return fmt.Errorf("max_version key %q is not a web client API number", api)
@@ -186,9 +217,6 @@ func (t *Trust) Validate() error {
 		if _, err := ParseVersion(v); err != nil {
 			return fmt.Errorf("max_version %s: %w", api, err)
 		}
-	}
-	if len(t.BundleKeys) == 0 {
-		return errors.New("bundle_keys must not be empty")
 	}
 	return nil
 }

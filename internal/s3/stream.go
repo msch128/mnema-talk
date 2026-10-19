@@ -56,36 +56,60 @@ func uploadStream(ctx context.Context, api objectAPI, bucket, key string, body i
 		return err
 	}
 
-	created, err := api.CreateMultipartUpload(ctx, &s3svc.CreateMultipartUploadInput{
-		Bucket:      aws.String(bucket),
-		Key:         aws.String(key),
+	mp := &multipartUpload{api: api, bucket: bucket, key: key}
+	if err := mp.start(ctx, mimeType); err != nil {
+		return err
+	}
+	return mp.run(ctx, body, buf, n)
+}
+
+// multipartUpload is one S3 multipart upload in progress.
+type multipartUpload struct {
+	api      objectAPI
+	bucket   string
+	key      string
+	uploadID *string
+}
+
+func (m *multipartUpload) start(ctx context.Context, mimeType string) error {
+	created, err := m.api.CreateMultipartUpload(ctx, &s3svc.CreateMultipartUploadInput{
+		Bucket:      aws.String(m.bucket),
+		Key:         aws.String(m.key),
 		ContentType: aws.String(mimeType),
 	})
 	if err != nil {
-		return fmt.Errorf("start multipart upload %s: %w", key, err)
+		return fmt.Errorf("start multipart upload %s: %w", m.key, err)
 	}
-	abort := func(cause error) error {
-		// The request may already be cancelled; the parts must go anyway.
-		if _, aerr := api.AbortMultipartUpload(context.WithoutCancel(ctx), &s3svc.AbortMultipartUploadInput{
-			Bucket: aws.String(bucket), Key: aws.String(key), UploadId: created.UploadId,
-		}); aerr != nil {
-			slog.Warn("abort multipart upload", "key", key, "err", aerr)
-		}
-		return cause
-	}
+	m.uploadID = created.UploadId
+	return nil
+}
 
+// abort drops the parts uploaded so far and returns cause.
+func (m *multipartUpload) abort(ctx context.Context, cause error) error {
+	// The request may already be cancelled; the parts must go anyway.
+	if _, aerr := m.api.AbortMultipartUpload(context.WithoutCancel(ctx), &s3svc.AbortMultipartUploadInput{
+		Bucket: aws.String(m.bucket), Key: aws.String(m.key), UploadId: m.uploadID,
+	}); aerr != nil {
+		slog.Warn("abort multipart upload", "key", m.key, "err", aerr)
+	}
+	return cause
+}
+
+// run uploads the first n bytes of buf and then the rest of body part by
+// part, completes the upload and aborts it on any failure.
+func (m *multipartUpload) run(ctx context.Context, body io.Reader, buf []byte, n int) error {
 	var parts []types.CompletedPart
 	for num := int32(1); ; num++ {
-		out, err := api.UploadPart(ctx, &s3svc.UploadPartInput{
-			Bucket:        aws.String(bucket),
-			Key:           aws.String(key),
-			UploadId:      created.UploadId,
+		out, err := m.api.UploadPart(ctx, &s3svc.UploadPartInput{
+			Bucket:        aws.String(m.bucket),
+			Key:           aws.String(m.key),
+			UploadId:      m.uploadID,
 			PartNumber:    aws.Int32(num),
 			Body:          bytes.NewReader(buf[:n]),
 			ContentLength: aws.Int64(int64(n)),
 		})
 		if err != nil {
-			return abort(fmt.Errorf("upload part %d of %s: %w", num, key, err))
+			return m.abort(ctx, fmt.Errorf("upload part %d of %s: %w", num, m.key, err))
 		}
 		parts = append(parts, types.CompletedPart{ETag: out.ETag, PartNumber: aws.Int32(num)})
 		if n < partSize {
@@ -96,17 +120,17 @@ func uploadStream(ctx context.Context, api objectAPI, bucket, key string, body i
 			break // the body ended exactly on a part boundary
 		}
 		if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
-			return abort(err)
+			return m.abort(ctx, err)
 		}
 	}
 
-	if _, err := api.CompleteMultipartUpload(ctx, &s3svc.CompleteMultipartUploadInput{
-		Bucket:          aws.String(bucket),
-		Key:             aws.String(key),
-		UploadId:        created.UploadId,
+	if _, err := m.api.CompleteMultipartUpload(ctx, &s3svc.CompleteMultipartUploadInput{
+		Bucket:          aws.String(m.bucket),
+		Key:             aws.String(m.key),
+		UploadId:        m.uploadID,
 		MultipartUpload: &types.CompletedMultipartUpload{Parts: parts},
 	}); err != nil {
-		return abort(fmt.Errorf("complete multipart upload %s: %w", key, err))
+		return m.abort(ctx, fmt.Errorf("complete multipart upload %s: %w", m.key, err))
 	}
 	return nil
 }

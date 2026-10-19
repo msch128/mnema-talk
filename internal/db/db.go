@@ -79,44 +79,19 @@ func (p *Pool) MigrateFS(ctx context.Context, fsys fs.FS) error {
 	}
 	defer conn.Release()
 
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrationLockID); err != nil {
-		return fmt.Errorf("acquire migration lock: %w", err)
-	}
-	defer func() {
-		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrationLockID)
-	}()
-
-	if _, err := conn.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS schema_migrations (
-			filename   TEXT PRIMARY KEY,
-			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		)`); err != nil {
-		return fmt.Errorf("create schema_migrations: %w", err)
-	}
-	// Added after the first releases; rows from before stay NULL until they
-	// are backfilled below.
-	if _, err := conn.Exec(ctx, `ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT`); err != nil {
-		return fmt.Errorf("add schema_migrations.checksum: %w", err)
-	}
-
-	applied := map[string]string{} // filename -> checksum ("" = not recorded yet)
-	rows, err := conn.Query(ctx, `SELECT filename, COALESCE(checksum, '') FROM schema_migrations`)
+	unlock, err := lockMigrations(ctx, conn)
 	if err != nil {
-		return fmt.Errorf("read schema_migrations: %w", err)
-	}
-	for rows.Next() {
-		var name, sum string
-		if err := rows.Scan(&name, &sum); err != nil {
-			rows.Close()
-			return err
-		}
-		applied[name] = sum
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return err
 	}
+	defer unlock()
 
+	if err := ensureMigrationTable(ctx, conn); err != nil {
+		return err
+	}
+	applied, err := appliedMigrations(ctx, conn)
+	if err != nil {
+		return err
+	}
 	files, err := listMigrations(fsys)
 	if err != nil {
 		return err
@@ -135,31 +110,97 @@ func (p *Pool) MigrateFS(ctx context.Context, fsys fs.FS) error {
 	if err != nil {
 		return err
 	}
-	for _, name := range backfill {
-		if _, err := conn.Exec(ctx, `UPDATE schema_migrations SET checksum = $2 WHERE filename = $1 AND checksum IS NULL`, name, sums[name]); err != nil {
-			return fmt.Errorf("record checksum of %s: %w", name, err)
-		}
+	if err := recordChecksums(ctx, conn, backfill, sums); err != nil {
+		return err
 	}
-	if len(backfill) > 0 {
-		slog.Info("migration checksums recorded", "count", len(backfill))
-	}
-
 	for _, name := range files {
 		if _, ok := applied[name]; ok {
 			continue
 		}
-		err = pgx.BeginFunc(ctx, conn, func(tx pgx.Tx) error {
-			if _, err := tx.Exec(ctx, string(contents[name])); err != nil {
-				return err
-			}
-			_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2)`, name, sums[name])
+		if err := applyMigration(ctx, conn, name, contents[name], sums[name]); err != nil {
 			return err
-		})
-		if err != nil {
-			return fmt.Errorf("apply migration %s: %w", name, err)
 		}
-		slog.Info("migration applied", "file", name)
 	}
+	return nil
+}
+
+// lockMigrations takes the advisory lock and returns the function that
+// releases it.
+func lockMigrations(ctx context.Context, conn *pgxpool.Conn) (unlock func(), err error) {
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock($1)`, migrationLockID); err != nil {
+		return nil, fmt.Errorf("acquire migration lock: %w", err)
+	}
+	return func() {
+		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrationLockID)
+	}, nil
+}
+
+func ensureMigrationTable(ctx context.Context, conn *pgxpool.Conn) error {
+	if _, err := conn.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			filename   TEXT PRIMARY KEY,
+			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)`); err != nil {
+		return fmt.Errorf("create schema_migrations: %w", err)
+	}
+	// Added after the first releases; rows from before stay NULL until they
+	// are backfilled.
+	if _, err := conn.Exec(ctx, `ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum TEXT`); err != nil {
+		return fmt.Errorf("add schema_migrations.checksum: %w", err)
+	}
+	return nil
+}
+
+// appliedMigrations maps each applied file name to its recorded checksum
+// ("" = not recorded yet).
+func appliedMigrations(ctx context.Context, conn *pgxpool.Conn) (map[string]string, error) {
+	applied := map[string]string{}
+	rows, err := conn.Query(ctx, `SELECT filename, COALESCE(checksum, '') FROM schema_migrations`)
+	if err != nil {
+		return nil, fmt.Errorf("read schema_migrations: %w", err)
+	}
+	for rows.Next() {
+		var name, sum string
+		if err := rows.Scan(&name, &sum); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		applied[name] = sum
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return applied, nil
+}
+
+// recordChecksums stores the checksums of migrations applied before
+// checksums were recorded.
+func recordChecksums(ctx context.Context, conn *pgxpool.Conn, names []string, sums map[string]string) error {
+	for _, name := range names {
+		if _, err := conn.Exec(ctx, `UPDATE schema_migrations SET checksum = $2 WHERE filename = $1 AND checksum IS NULL`, name, sums[name]); err != nil {
+			return fmt.Errorf("record checksum of %s: %w", name, err)
+		}
+	}
+	if len(names) > 0 {
+		slog.Info("migration checksums recorded", "count", len(names))
+	}
+	return nil
+}
+
+// applyMigration runs one migration file and records it, in one transaction.
+func applyMigration(ctx context.Context, conn *pgxpool.Conn, name string, content []byte, sum string) error {
+	err := pgx.BeginFunc(ctx, conn, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, string(content)); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2)`, name, sum)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("apply migration %s: %w", name, err)
+	}
+	slog.Info("migration applied", "file", name)
 	return nil
 }
 

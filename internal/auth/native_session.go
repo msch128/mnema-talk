@@ -212,46 +212,50 @@ func (s *NativeSessions) IssueVerified(ctx context.Context, proof verifiedNative
 	}
 	var result IssuedNative
 	err = s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		user, version, disabled, err := lockNativeUser(ctx, tx, proof.userID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if disabled || version != proof.tokenVersion {
-			return ErrNativeUnauthorized
-		}
-		now, err := nativeClock(ctx, tx)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		var count int
-		if err := tx.QueryRow(ctx, `SELECT count(*) FROM native_session_families WHERE user_id=$1
-			AND issued_token_version=$2 AND revoked_at IS NULL AND expires_at>$3`, user.ID, version, now).Scan(&count); err != nil {
-			return nativeStoreFailure(err)
-		}
-		if count >= nativeMaxFamilies {
-			return ErrNativeLimit
-		}
-		expiry := now.Add(s.policy.FamilyLifetime)
-		if _, err := tx.Exec(ctx, `INSERT INTO native_session_families
-			(id,user_id,client_instance_id,issued_token_version,created_at,expires_at,refresh_after)
-			VALUES($1,$2,$3,$4,$5,$6,$7)`, familyID, user.ID, instanceID, version, now, expiry, now.Add(nativeRefreshInterval)); err != nil {
-			return nativeStoreFailure(err)
-		}
-		accessExpiry, err := insertNativeTokens(ctx, tx, familyID, 0, now, expiry, access, refresh)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		result = IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: instanceID,
-			tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: expiry, accessHash: access.digest()}, access: access, refresh: refresh}
-		return nil
+		var err error
+		result, err = s.openFamily(ctx, tx, proof, instanceID, familyID, access, refresh)
+		return err
 	})
 	if err != nil {
 		return IssuedNative{}, err
 	}
 	return result, nil
+}
+
+// openFamily stores a new initial family for the verified login, unless the
+// account changed since or already holds the maximum number of live families.
+func (s *NativeSessions) openFamily(ctx context.Context, tx pgx.Tx, proof verifiedNativeLogin, instanceID, familyID uuid.UUID, access, refresh nativeSecret) (IssuedNative, error) {
+	user, version, disabled, err := lockNativeUser(ctx, tx, proof.userID, false)
+	if err != nil {
+		return IssuedNative{}, nativeLockFailure(err)
+	}
+	if disabled || version != proof.tokenVersion {
+		return IssuedNative{}, ErrNativeUnauthorized
+	}
+	now, err := nativeClock(ctx, tx)
+	if err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	var count int
+	if err := tx.QueryRow(ctx, `SELECT count(*) FROM native_session_families WHERE user_id=$1
+		AND issued_token_version=$2 AND revoked_at IS NULL AND expires_at>$3`, user.ID, version, now).Scan(&count); err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	if count >= nativeMaxFamilies {
+		return IssuedNative{}, ErrNativeLimit
+	}
+	expiry := now.Add(s.policy.FamilyLifetime)
+	if _, err := tx.Exec(ctx, `INSERT INTO native_session_families
+		(id,user_id,client_instance_id,issued_token_version,created_at,expires_at,refresh_after)
+		VALUES($1,$2,$3,$4,$5,$6,$7)`, familyID, user.ID, instanceID, version, now, expiry, now.Add(nativeRefreshInterval)); err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	accessExpiry, err := insertNativeTokens(ctx, tx, familyID, 0, now, expiry, access, refresh)
+	if err != nil {
+		return IssuedNative{}, nativeStoreFailure(err)
+	}
+	return IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: instanceID,
+		tokenVersion: version, accessExpiresAt: accessExpiry, familyExpiresAt: expiry, accessHash: access.digest()}, access: access, refresh: refresh}, nil
 }
 
 func (s *NativeSessions) AuthenticateAccess(ctx context.Context, encoded string) (NativePrincipal, error) {
