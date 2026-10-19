@@ -1,9 +1,8 @@
 package audit
 
 import (
+	"context"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -68,55 +67,9 @@ func (l *Log) Mount(r chi.Router) {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/audit-log [get]
 func (l *Log) list(w http.ResponseWriter, r *http.Request) error {
-	q := r.URL.Query()
-	var (
-		where []string
-		args  []any
-	)
-	add := func(cond string, v any) {
-		args = append(args, v)
-		where = append(where, strings.ReplaceAll(cond, "?", "$"+strconv.Itoa(len(args))))
-	}
-	if v := q.Get("actor"); v != "" {
-		id, err := uuid.Parse(v)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid actor")
-		}
-		add("actor_id = ?", id)
-	}
-	if v := q.Get("action"); v != "" {
-		if len(v) > 64 {
-			return httpx.ErrInvalidInput("invalid action")
-		}
-		args = append(args, v, v+".%")
-		where = append(where, "(action = $"+strconv.Itoa(len(args)-1)+" OR action LIKE $"+strconv.Itoa(len(args))+")")
-	}
-	if v := q.Get("target_type"); v != "" {
-		add("target_type = ?", v)
-	}
-	if v := q.Get("target_id"); v != "" {
-		add("target_id = ?", v)
-	}
-	if v := q.Get("from"); v != "" {
-		t, err := parseTime(v, false)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid from")
-		}
-		add("created_at >= ?", t)
-	}
-	if v := q.Get("to"); v != "" {
-		t, err := parseTime(v, true)
-		if err != nil {
-			return httpx.ErrInvalidInput("invalid to")
-		}
-		add("created_at < ?", t)
-	}
-	if v := q.Get("before"); v != "" {
-		n, err := strconv.ParseInt(v, 10, 64)
-		if err != nil || n < 1 {
-			return httpx.ErrInvalidInput("invalid before")
-		}
-		add("id < ?", n)
+	var f filter
+	if err := f.parse(r.URL.Query()); err != nil {
+		return err
 	}
 	var viewer Viewer
 	if l.Viewer != nil {
@@ -125,48 +78,42 @@ func (l *Log) list(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	if !viewer.Privileged {
-		// Class VisPrivileged is hidden; VisChannel only for channels the
-		// reader may view right now.
-		add("action NOT LIKE ALL(?)", patterns(VisPrivileged))
-		ids := make([]string, len(viewer.Channels))
-		for i, c := range viewer.Channels {
-			ids[i] = c.String()
-		}
-		args = append(args, patterns(VisChannel), ids)
-		where = append(where, "(action NOT LIKE ALL($"+strconv.Itoa(len(args)-1)+") OR channel_id::text = ANY($"+strconv.Itoa(len(args))+"))")
-	}
+	f.restrictTo(viewer)
 	limit := httpx.QueryLimit(r, "limit", 50, 200)
-	sql := `SELECT id, created_at, actor_id, actor_name, action, target_type, target_id, target_name, details, request_id FROM audit_log`
-	if len(where) > 0 {
-		sql += " WHERE " + strings.Join(where, " AND ")
-	}
-	args = append(args, limit+1)
-	sql += " ORDER BY id DESC LIMIT $" + strconv.Itoa(len(args))
-
-	rows, err := l.DB.Query(r.Context(), sql, args...)
+	page, err := l.page(r.Context(), f, limit)
 	if err != nil {
 		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, page)
+	return nil
+}
+
+// page reads the newest entries matching the filter, one more than limit to
+// learn whether another page follows.
+func (l *Log) page(ctx context.Context, f filter, limit int) (Page, error) {
+	sql, args := f.query(limit + 1)
+	rows, err := l.DB.Query(ctx, sql, args...)
+	if err != nil {
+		return Page{}, err
 	}
 	defer rows.Close()
 	page := Page{Entries: []Item{}}
 	for rows.Next() {
 		var it Item
 		if err := rows.Scan(&it.ID, &it.CreatedAt, &it.ActorID, &it.ActorName, &it.Action, &it.TargetType, &it.TargetID, &it.TargetName, &it.Details, &it.RequestID); err != nil {
-			return err
+			return Page{}, err
 		}
 		page.Entries = append(page.Entries, it)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return Page{}, err
 	}
 	if len(page.Entries) > limit {
 		page.Entries = page.Entries[:limit]
 		next := page.Entries[limit-1].ID
 		page.NextBefore = &next
 	}
-	httpx.WriteJSON(w, http.StatusOK, page)
-	return nil
+	return page, nil
 }
 
 func parseTime(s string, endOfDay bool) (time.Time, error) {

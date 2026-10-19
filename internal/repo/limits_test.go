@@ -25,15 +25,7 @@ const (
 // funcLengthAllowlist lists functions that still exceed maxFuncLines. It only
 // shrinks (entries are "directory function"): the test fails when an entry no longer needs to be listed.
 // TODO: refactor these and delete the entries.
-var funcLengthAllowlist = map[string]bool{
-	"internal/audit list":                    true,
-	"internal/audit Middleware":              true,
-	"internal/auth changePasswordAndReissue": true,
-	"internal/auth RotateRefresh":            true,
-	"internal/auth Register":                 true,
-	"internal/perm setRoles":                 true,
-	"internal/perm SetOverwrites":            true,
-}
+var funcLengthAllowlist = map[string]bool{}
 
 var generatedHeader = regexp.MustCompile(`^// Code generated .* DO NOT EDIT\.$`)
 

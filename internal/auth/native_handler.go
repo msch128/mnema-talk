@@ -7,6 +7,7 @@ import (
 	"io"
 	"mime"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -120,71 +121,86 @@ func noNativeAuthorization(r *http.Request) error {
 // Parse a small object of exactly known string fields, rejecting duplicate keys,
 // null, non-object roots and trailing values without echoing decoder errors.
 func decodeNativeStrings(w http.ResponseWriter, r *http.Request, fields ...string) (map[string]string, error) {
-	contentTypes := nativeHeaderValues(r, "Content-Type")
-	if len(contentTypes) != 1 {
-		return nil, httpx.ErrUnsupportedMediaType("native authentication requires JSON")
-	}
-	mediaType, _, typeErr := mime.ParseMediaType(contentTypes[0])
-	if typeErr != nil || mediaType != "application/json" {
-		return nil, httpx.ErrUnsupportedMediaType("native authentication requires JSON")
-	}
-	if r.Body == nil {
-		return nil, httpx.ErrInvalidInput("invalid native JSON body")
-	}
-	if r.ContentLength > nativeAuthMaxBody {
-		return nil, httpx.ErrPayloadTooLarge("request body too large")
+	if err := checkNativeJSONRequest(r); err != nil {
+		return nil, err
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, nativeAuthMaxBody)
 	decoder := json.NewDecoder(r.Body)
-	invalid := func(err error) error {
-		var maxErr *http.MaxBytesError
-		if errors.As(err, &maxErr) {
-			return httpx.ErrPayloadTooLarge("request body too large")
-		}
-		return httpx.ErrInvalidInput("invalid native JSON body")
-	}
 	token, err := decoder.Token()
 	if err != nil || token != json.Delim('{') {
-		return nil, invalid(err)
+		return nil, invalidNativeBody(err)
 	}
+	values, err := readNativeFields(decoder, fields)
+	if err != nil {
+		return nil, err
+	}
+	if token, err = decoder.Token(); err != nil || token != json.Delim('}') {
+		return nil, invalidNativeBody(err)
+	}
+	if _, err = decoder.Token(); !errors.Is(err, io.EOF) {
+		return nil, invalidNativeBody(err)
+	}
+	if len(values) != len(fields) {
+		return nil, invalidNativeBody(nil)
+	}
+	return values, nil
+}
+
+// checkNativeJSONRequest accepts only a request with exactly one JSON content
+// type and a body within the native authentication size limit.
+func checkNativeJSONRequest(r *http.Request) error {
+	contentTypes := nativeHeaderValues(r, "Content-Type")
+	if len(contentTypes) != 1 {
+		return httpx.ErrUnsupportedMediaType("native authentication requires JSON")
+	}
+	mediaType, _, typeErr := mime.ParseMediaType(contentTypes[0])
+	if typeErr != nil || mediaType != "application/json" {
+		return httpx.ErrUnsupportedMediaType("native authentication requires JSON")
+	}
+	if r.Body == nil {
+		return httpx.ErrInvalidInput("invalid native JSON body")
+	}
+	if r.ContentLength > nativeAuthMaxBody {
+		return httpx.ErrPayloadTooLarge("request body too large")
+	}
+	return nil
+}
+
+// invalidNativeBody is the one error for a malformed body; only the size limit
+// is told apart, and nothing of the decoder's own message is echoed.
+func invalidNativeBody(err error) error {
+	var maxErr *http.MaxBytesError
+	if errors.As(err, &maxErr) {
+		return httpx.ErrPayloadTooLarge("request body too large")
+	}
+	return httpx.ErrInvalidInput("invalid native JSON body")
+}
+
+// readNativeFields reads the members of an object whose opening brace is
+// consumed: each key must be one of fields, appear once and carry a string.
+func readNativeFields(decoder *json.Decoder, fields []string) (map[string]string, error) {
 	values := make(map[string]string, len(fields))
 	for decoder.More() {
 		token, err := decoder.Token()
 		if err != nil {
-			return nil, invalid(err)
+			return nil, invalidNativeBody(err)
 		}
 		key, _ := token.(string) // a decoder always yields a string where an object key is due
-		known := false
-		for _, allowed := range fields {
-			if key == allowed {
-				known = true
-				break
-			}
-		}
-		if !known {
-			return nil, invalid(nil)
+		if !slices.Contains(fields, key) {
+			return nil, invalidNativeBody(nil)
 		}
 		if _, duplicate := values[key]; duplicate {
-			return nil, invalid(nil)
+			return nil, invalidNativeBody(nil)
 		}
 		token, err = decoder.Token()
 		if err != nil {
-			return nil, invalid(err)
+			return nil, invalidNativeBody(err)
 		}
 		value, ok := token.(string)
 		if !ok {
-			return nil, invalid(nil)
+			return nil, invalidNativeBody(nil)
 		}
 		values[key] = value
-	}
-	if token, err = decoder.Token(); err != nil || token != json.Delim('}') {
-		return nil, invalid(err)
-	}
-	if _, err = decoder.Token(); !errors.Is(err, io.EOF) {
-		return nil, invalid(err)
-	}
-	if len(values) != len(fields) {
-		return nil, invalid(nil)
 	}
 	return values, nil
 }

@@ -16,7 +16,7 @@ found="$( (go run "github.com/uudashr/gocognit/cmd/gocognit@${version}" -over 15
 	awk '{ fn = $3; sub(/^\([^)]*\)\./, "", fn); path = $4; sub(/:[0-9]+:[0-9]+$/, "", path); sub(/\/[^\/]*$/, "", path); print path " " fn }' |
 	sort -u)"
 
-expected="$(grep -v '^#' "$allow" | sed '/^$/d' | sort -u)"
+expected="$( (grep -v '^#' "$allow" || true) | sed '/^$/d' | sort -u)"
 
 new="$(comm -23 <(printf '%s\n' "$found") <(printf '%s\n' "$expected") | sed '/^$/d')"
 stale="$(comm -13 <(printf '%s\n' "$found") <(printf '%s\n' "$expected") | sed '/^$/d')"

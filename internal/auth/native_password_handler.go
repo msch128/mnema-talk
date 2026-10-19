@@ -22,15 +22,7 @@ func (h *NativeHandler) PasswordChangeHandler() (http.Handler, error) {
 	}
 	r := chi.NewRouter()
 	r.Use(nativeRequestBoundary)
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-			if request.URL.ForceQuery || request.URL.RawPath != "" {
-				httpx.WriteError(w, httpx.ErrInvalidInput("invalid native password target"))
-				return
-			}
-			next.ServeHTTP(w, request)
-		})
-	})
+	r.Use(rejectNativePasswordQuery)
 	r.NotFound(func(w http.ResponseWriter, request *http.Request) {
 		httpx.WriteError(w, httpx.ErrNotFound("native password route not found"))
 	})
@@ -41,7 +33,26 @@ func (h *NativeHandler) PasswordChangeHandler() (http.Handler, error) {
 	// lockout; constructing the router once preserves their state across calls.
 	ip := httpx.NewRateLimiter(60, time.Minute)
 	user := httpx.NewRateLimiter(60, time.Minute)
-	r.With(ip.PerIP, h.RequireUser, user.By(func(r *http.Request) string { return UserFrom(r.Context()).ID.String() })).Put("/auth/password", httpx.Handle(func(w http.ResponseWriter, request *http.Request) error {
+	r.With(ip.PerIP, h.RequireUser, user.By(func(r *http.Request) string { return UserFrom(r.Context()).ID.String() })).
+		Put("/auth/password", httpx.Handle(h.changePassword(control)))
+	return r, nil
+}
+
+// rejectNativePasswordQuery refuses targets with a bare "?" or an escaped path.
+func rejectNativePasswordQuery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if request.URL.ForceQuery || request.URL.RawPath != "" {
+			httpx.WriteError(w, httpx.ErrInvalidInput("invalid native password target"))
+			return
+		}
+		next.ServeHTTP(w, request)
+	})
+}
+
+// changePassword is the PUT /auth/password handler: it counts wrong passwords
+// toward the account lockout and answers with a fresh native grant.
+func (h *NativeHandler) changePassword(control NativeCredentialControl) func(http.ResponseWriter, *http.Request) error {
+	return func(w http.ResponseWriter, request *http.Request) error {
 		fields, err := decodeNativeStrings(w, request, "current_password", "new_password")
 		if err != nil {
 			return nativeHandlerError(err)
@@ -65,6 +76,5 @@ func (h *NativeHandler) PasswordChangeHandler() (http.Handler, error) {
 		h.accounts.passwordFails.ResetFailures(key)
 		writeNativeGrant(w, grant)
 		return nil
-	}))
-	return r, nil
+	}
 }

@@ -31,118 +31,151 @@ func (s *NativeSessions) changePasswordAndReissue(ctx context.Context, expected 
 	}
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)
 	defer cancel()
-	actual, _, err := s.authenticateNativeHash(ctx, expected.accessHash)
+	change, err := s.prepareReissue(ctx, expected, current, next)
 	if err != nil {
 		return IssuedNative{}, err
 	}
-	if !expected.SameNativeAccess(actual) {
-		return IssuedNative{}, ErrNativeUnauthorized
-	}
-	var capturedHash string
-	err = s.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1 AND token_version=$2 AND `+ActiveSQL(""), expected.user.ID, expected.tokenVersion).Scan(&capturedHash)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return IssuedNative{}, ErrNativeUnauthorized
-	}
-	if err != nil {
-		return IssuedNative{}, nativeStoreFailure(err)
-	}
-	if !CheckPassword(current, capturedHash) {
-		return IssuedNative{}, ErrWrongPassword
-	}
-	newHash, err := HashPassword(next)
-	if err != nil {
-		return IssuedNative{}, nativeStoreFailure(err)
-	}
-	access, refresh, err := generateNativeSecrets(s.random)
-	if err != nil {
-		return IssuedNative{}, err
-	}
-	familyID, err := uuid.NewRandomFromReader(s.random)
-	if err != nil {
-		return IssuedNative{}, errNativeEntropy
-	}
-	var result IssuedNative
-	wrote := false
 	defer func() {
 		// A failed COMMIT acknowledgement can mean that PostgreSQL committed.
 		// Return no grant, and seal old transports conservatively after any
 		// successful credential write. A pre-write stale loser must not close
 		// a concurrent winner's new family. Never retry this transition.
-		if wrote {
+		if change.wrote {
 			control.DisconnectNativeCredentials(expected.user.ID)
 		}
 	}()
-	err = s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		user, version, disabled, err := lockNativeUser(ctx, tx, expected.user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		family, err := lockNativeFamily(ctx, tx, expected.familyID, user.ID, false)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		}
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		valid := func() (time.Time, error) {
-			now, err := nativeClock(ctx, tx)
-			if err != nil {
-				return time.Time{}, nativeStoreFailure(err)
-			}
-			if disabled || version != expected.tokenVersion || family.version != version || family.instanceID != expected.instanceID || family.revokedAt != nil || !family.expiresAt.Equal(expected.familyExpiresAt) || !now.Before(family.expiresAt) || !now.Before(expected.accessExpiresAt) {
-				return time.Time{}, ErrNativeUnauthorized
-			}
-			return now, nil
-		}
-		now, err := valid()
-		if err != nil {
-			return err
-		}
-		var lockedHash string
-		if err = tx.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1`, user.ID).Scan(&lockedHash); err != nil {
-			return nativeStoreFailure(err)
-		}
-		if lockedHash != capturedHash {
-			return ErrNativeUnauthorized
-		}
-		var accessExpiry time.Time
-		if err = tx.QueryRow(ctx, `SELECT expires_at FROM native_access_tokens WHERE token_hash=$1 AND family_id=$2`, expected.accessHash[:], expected.familyID).Scan(&accessExpiry); errors.Is(err, pgx.ErrNoRows) {
-			return ErrNativeUnauthorized
-		} else if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if !accessExpiry.Equal(expected.accessExpiresAt) {
-			return ErrNativeUnauthorized
-		}
-		var nextVersion int
-		if err = tx.QueryRow(ctx, `UPDATE users SET password_hash=$1,token_version=token_version+1,updated_at=NOW() WHERE id=$2 RETURNING token_version`, newHash, user.ID).Scan(&nextVersion); err != nil {
-			return nativeStoreFailure(err)
-		}
-		wrote = true
-		// Existing version_mismatch is the accurate reason for these old
-		// families; no applied migration or revocation enum is changed.
-		if _, err = tx.Exec(ctx, `UPDATE native_session_families SET revoked_at=$2,revoke_reason='version_mismatch' WHERE user_id=$1 AND revoked_at IS NULL`, user.ID, now); err != nil {
-			return nativeStoreFailure(err)
-		}
-		expiry := now.Add(s.policy.FamilyLifetime)
-		if _, err = tx.Exec(ctx, `INSERT INTO native_session_families(id,user_id,client_instance_id,issued_token_version,created_at,expires_at,refresh_after) VALUES($1,$2,$3,$4,$5,$6,$7)`, familyID, user.ID, expected.instanceID, nextVersion, now, expiry, now.Add(nativeRefreshInterval)); err != nil {
-			return nativeStoreFailure(err)
-		}
-		accessExpiry, err = insertNativeTokens(ctx, tx, familyID, 0, now, expiry, access, refresh)
-		if err != nil {
-			return nativeStoreFailure(err)
-		}
-		if _, err = valid(); err != nil {
-			return err
-		}
-		result = IssuedNative{principal: NativePrincipal{user: *user, familyID: familyID, instanceID: expected.instanceID, tokenVersion: nextVersion, accessExpiresAt: accessExpiry, familyExpiresAt: expiry, accessHash: access.digest()}, access: access, refresh: refresh}
-		return nil
-	})
-	if err != nil {
+	if err := s.transact(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		return s.reissue(ctx, tx, change)
+	}); err != nil {
 		return IssuedNative{}, err
 	}
-	return result, nil
+	return change.result, nil
+}
+
+// passwordReissue is one password change: what was checked before the
+// transaction and, once it ran, what it produced.
+type passwordReissue struct {
+	expected     NativePrincipal
+	capturedHash string
+	newHash      string
+	familyID     uuid.UUID
+	access       nativeSecret
+	refresh      nativeSecret
+	// wrote is set once the new credentials are written.
+	wrote  bool
+	result IssuedNative
+}
+
+// prepareReissue authenticates the caller's access token, checks the current
+// password and prepares the hash, family ID and tokens of the new session, all
+// before the transaction opens.
+func (s *NativeSessions) prepareReissue(ctx context.Context, expected NativePrincipal, current, next string) (*passwordReissue, error) {
+	actual, _, err := s.authenticateNativeHash(ctx, expected.accessHash)
+	if err != nil {
+		return nil, err
+	}
+	if !expected.SameNativeAccess(actual) {
+		return nil, ErrNativeUnauthorized
+	}
+	var capturedHash string
+	err = s.pool.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1 AND token_version=$2 AND `+ActiveSQL(""), expected.user.ID, expected.tokenVersion).Scan(&capturedHash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNativeUnauthorized
+	}
+	if err != nil {
+		return nil, nativeStoreFailure(err)
+	}
+	if !CheckPassword(current, capturedHash) {
+		return nil, ErrWrongPassword
+	}
+	newHash, err := HashPassword(next)
+	if err != nil {
+		return nil, nativeStoreFailure(err)
+	}
+	access, refresh, err := generateNativeSecrets(s.random)
+	if err != nil {
+		return nil, err
+	}
+	familyID, err := uuid.NewRandomFromReader(s.random)
+	if err != nil {
+		return nil, errNativeEntropy
+	}
+	return &passwordReissue{expected: expected, capturedHash: capturedHash, newHash: newHash, familyID: familyID, access: access, refresh: refresh}, nil
+}
+
+// reissue re-validates the session and the captured password hash under the
+// user-first locks, writes the new password, revokes every family of the
+// account and opens the new one.
+func (s *NativeSessions) reissue(ctx context.Context, tx pgx.Tx, change *passwordReissue) error {
+	expected := change.expected
+	locked, err := lockNativeSession(ctx, tx, expected.user.ID, expected.familyID)
+	if err != nil {
+		return err
+	}
+	now, err := locked.checkReissueLease(ctx, tx, expected)
+	if err != nil {
+		return err
+	}
+	if err := change.checkUnchanged(ctx, tx, locked.user.ID); err != nil {
+		return err
+	}
+	var nextVersion int
+	if err = tx.QueryRow(ctx, `UPDATE users SET password_hash=$1,token_version=token_version+1,updated_at=NOW() WHERE id=$2 RETURNING token_version`, change.newHash, locked.user.ID).Scan(&nextVersion); err != nil {
+		return nativeStoreFailure(err)
+	}
+	change.wrote = true
+	// Existing version_mismatch is the accurate reason for these old
+	// families; no applied migration or revocation enum is changed.
+	if _, err = tx.Exec(ctx, `UPDATE native_session_families SET revoked_at=$2,revoke_reason='version_mismatch' WHERE user_id=$1 AND revoked_at IS NULL`, locked.user.ID, now); err != nil {
+		return nativeStoreFailure(err)
+	}
+	expiry := now.Add(s.policy.FamilyLifetime)
+	if _, err = tx.Exec(ctx, `INSERT INTO native_session_families(id,user_id,client_instance_id,issued_token_version,created_at,expires_at,refresh_after) VALUES($1,$2,$3,$4,$5,$6,$7)`, change.familyID, locked.user.ID, expected.instanceID, nextVersion, now, expiry, now.Add(nativeRefreshInterval)); err != nil {
+		return nativeStoreFailure(err)
+	}
+	accessExpiry, err := insertNativeTokens(ctx, tx, change.familyID, 0, now, expiry, change.access, change.refresh)
+	if err != nil {
+		return nativeStoreFailure(err)
+	}
+	if _, err = locked.checkReissueLease(ctx, tx, expected); err != nil {
+		return err
+	}
+	change.result = IssuedNative{principal: NativePrincipal{user: *locked.user, familyID: change.familyID, instanceID: expected.instanceID, tokenVersion: nextVersion, accessExpiresAt: accessExpiry, familyExpiresAt: expiry, accessHash: change.access.digest()}, access: change.access, refresh: change.refresh}
+	return nil
+}
+
+// checkReissueLease verifies, at the database clock, that the session still is
+// the one the caller authenticated: same account version, family, instance and
+// deadlines, and not revoked. It returns the clock reading it used.
+func (l lockedNativeSession) checkReissueLease(ctx context.Context, tx pgx.Tx, expected NativePrincipal) (time.Time, error) {
+	now, err := nativeClock(ctx, tx)
+	if err != nil {
+		return time.Time{}, nativeStoreFailure(err)
+	}
+	f := l.family
+	if l.disabled || l.version != expected.tokenVersion || f.version != l.version || f.instanceID != expected.instanceID || f.revokedAt != nil ||
+		!f.expiresAt.Equal(expected.familyExpiresAt) || !now.Before(f.expiresAt) || !now.Before(expected.accessExpiresAt) {
+		return time.Time{}, ErrNativeUnauthorized
+	}
+	return now, nil
+}
+
+// checkUnchanged verifies under lock that neither the password hash nor the
+// access token's expiry moved since the caller was authenticated.
+func (c *passwordReissue) checkUnchanged(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {
+	var lockedHash string
+	if err := tx.QueryRow(ctx, `SELECT password_hash FROM users WHERE id=$1`, userID).Scan(&lockedHash); err != nil {
+		return nativeStoreFailure(err)
+	}
+	if lockedHash != c.capturedHash {
+		return ErrNativeUnauthorized
+	}
+	var accessExpiry time.Time
+	if err := tx.QueryRow(ctx, `SELECT expires_at FROM native_access_tokens WHERE token_hash=$1 AND family_id=$2`, c.expected.accessHash[:], c.expected.familyID).Scan(&accessExpiry); err != nil {
+		return nativeLockFailure(err)
+	}
+	if !accessExpiry.Equal(c.expected.accessExpiresAt) {
+		return ErrNativeUnauthorized
+	}
+	return nil
 }

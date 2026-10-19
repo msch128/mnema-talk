@@ -112,22 +112,8 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		return r.err
 	}
 
-	for _, row := range roles {
-		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
-			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB, BotUserID: row.BotUserID}
-		s.roles[role.ID] = role
-		if role.Everyone {
-			s.everyoneID, s.everyone = role.ID, role.Permissions
-		}
-	}
-	for _, row := range assigned {
-		s.userRoles[row.UserID] = append(s.userRoles[row.UserID], row.RoleID)
-	}
-	for id, list := range s.userRoles {
-		// Highest role first, so RoleIDs reads as the member's hierarchy.
-		slices.SortFunc(list, func(a, b uuid.UUID) int { return s.roles[b].Position - s.roles[a].Position })
-		s.userRoles[id] = list
-	}
+	s.addRoles(roles)
+	s.addAssignments(assigned)
 	if len(settings) > 0 {
 		s.globalUploadMB = settings[0]
 	}
@@ -149,7 +135,36 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 			s.channelCat[c.ID] = *c.Category
 		}
 	}
-	for _, o := range ows {
+	s.addOverwrites(ows)
+	return nil
+}
+
+func (s *Snapshot) addRoles(rows []roleRow) {
+	for _, row := range rows {
+		role := Role{ID: row.ID, Name: row.Name, Color: row.Color, Position: row.Position,
+			Permissions: Set(row.Permissions), Hoist: row.Hoist, Mentionable: row.Mentionable, Everyone: row.Everyone, Managed: row.Managed, MaxUploadMB: row.MaxUploadMB, BotUserID: row.BotUserID}
+		s.roles[role.ID] = role
+		if role.Everyone {
+			s.everyoneID, s.everyone = role.ID, role.Permissions
+		}
+	}
+}
+
+// addAssignments records who holds which role, each member's roles ordered
+// highest first.
+func (s *Snapshot) addAssignments(rows []userRoleRow) {
+	for _, row := range rows {
+		s.userRoles[row.UserID] = append(s.userRoles[row.UserID], row.RoleID)
+	}
+	for id, list := range s.userRoles {
+		// Highest role first, so RoleIDs reads as the member's hierarchy.
+		slices.SortFunc(list, func(a, b uuid.UUID) int { return s.roles[b].Position - s.roles[a].Position })
+		s.userRoles[id] = list
+	}
+}
+
+func (s *Snapshot) addOverwrites(rows []overwriteRow) {
+	for _, o := range rows {
 		target, id := s.channelOv, o.Channel
 		if id == nil {
 			target, id = s.categoryOv, o.Category
@@ -166,5 +181,4 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 			sc.members[*o.User] = ow
 		}
 	}
-	return nil
 }
