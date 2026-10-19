@@ -1,0 +1,143 @@
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_b8bc7be873315c 249-250,252,254-255,264-265,271-280,282-283,285-299,307-308,316-348,350-365
+web/src/composables/useMessageActions.ts
+  s_06fcde5dbef956::t_135cf6dc3ee5ac 24-27,38-102,115-116,166,178
+  s_06fcde5dbef956::t_dd14b0f7f5f3c3 28-37,173
+web/src/composables/useAppRouting.ts
+  s_06fcde5dbef956::t_dfcc20bb0f2abf 94
+  s_06fcde5dbef956::t_641270200f3b9f 47-54
+  s_06fcde5dbef956::t_88fc43cab52562 2-4,10-45,74-91,95,98,124,131-132,134
+  s_06fcde5dbef956::t_faeb48667a6aba 46
+web/src/composables/useSidebarReorder.ts
+  s_06fcde5dbef956::t_813ef0ccddc8c7 170-181,226,246-247,249-262,264-266,284-285
+  s_06fcde5dbef956::t_bc434aba3c13a7 36-40,42-49,51-61,63-64,66-72,74-119,136-169,182,186,275,280-281,292,294,298-299,302,323-324,329
+  s_06fcde5dbef956::t_aaf97c7cf0f0dc 183-185,286
+  s_06fcde5dbef956::t_1f98a7e764760d 13,21-22
+web/src/composables/useMessageScroll.ts
+  s_06fcde5dbef956::t_caa8cd2f46a343 15-17,19-21,23-26,28-41,43-51,53,55-59,61-62,64,66-69,80-81,121-135,143-144,156,158,160,162-163,165,170-175,183,185,192,196,199,203,214-224,238
+  s_06fcde5dbef956::t_df24f363587756 83-91,105-117,119,178,190,212,233,237
+  s_06fcde5dbef956::t_3e9f6bbaf709cc 176-177,179-182,184,186-189,191,193-195,197-198,200-202,204-211,213
+web/src/composables/usePictureInPicture.ts
+  s_06fcde5dbef956::t_0fbb257bd020f4 59-96,104,108,112,120
+web/src/composables/sortableDragParts.ts
+  s_06fcde5dbef956::t_1fd3c6c2593d7e 1-98
+web/src/composables/useStreamQuality.ts
+  s_06fcde5dbef956::t_e8c6bcda935b8f 33-34,63-68,70-157,163,170,188
+web/src/composables/useChannelLayout.ts
+  s_06fcde5dbef956::t_a47c63b215176a 14,27-79,90-91,104,106,108
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_caa7af0085cdd6 18-128,133,156
+web/src/composables/useResizable.ts
+  s_06fcde5dbef956::t_c042ef1837a519 1,157-235,280-291
+  s_06fcde5dbef956::t_ba5a0aee05e86c 128-156,247,297-299,301
+web/src/composables/useSortableDrag.ts
+  s_06fcde5dbef956::t_1fd3c6c2593d7e 21-22,48-60,62-68,71-72,74-77,79-82,84-99,101-115,117-120,122-125,127-132,134-140,142,144-151,153-156,159-164,166-174,176-179,181-188,190-195,197-203,205-207,209,211-215,217-219,221-231,233-243,245-250,274,276-277,279-286,291-292,296-310
+  s_06fcde5dbef956::t_8599f13649a745 157,272
+  s_06fcde5dbef956::t_54851c4673bc14 47
+  s_06fcde5dbef956::t_2e81de0a2cad8c 273,275
+  s_06fcde5dbef956::t_d27f4555e27d23 278
+  s_06fcde5dbef956::t_f1a7ebb52a26de 70
+  s_06fcde5dbef956::t_faeb8b0f69aa29 269-271
+  s_6b260cd160a1ac::t_f4b3a4ec87d2f1 252-268
+web/src/composables/useSlashCommands.ts
+  s_06fcde5dbef956::t_1e8676f415eb1d 19-20,38-70,122-125
+web/src/composables/appRoutingApply.ts
+  s_06fcde5dbef956::t_0697bc8ceefc21 1-182
+web/src/composables/webrtc/micTest.ts
+  s_06fcde5dbef956::t_71f58d2381c18b 8-103,122-123,127
+web/src/composables/webrtc/voiceAudio.ts
+  s_06fcde5dbef956::t_7947f4cd853d7a 15-16,18-28,30-34,36-46,48-57,59-63,65-73,75-79,81-85,87,89-94,96-99,101,103-107,109-112,114-128
+  s_06fcde5dbef956::t_c2477a7df6f64e 17
+web/src/composables/webrtc/senders.ts
+  s_06fcde5dbef956::t_7947f4cd853d7a 84-115,126-129,131-133,135,139
+web/src/composables/webrtc/screen.ts
+  s_06fcde5dbef956::t_1a183024900857 31-80,83,88,93,96
+web/src/composables/webrtc/peer.ts
+  s_06fcde5dbef956::t_71f58d2381c18b 32-35,49,57,61-62,65-96,98-126,128,157-181,200,208
+web/src/composables/webrtc/layers.ts
+  s_06fcde5dbef956::t_18897764cb9c2e 54-91,93,99,109,111,114,117
+web/src/composables/webrtc/streamDiag.ts
+  s_06fcde5dbef956::t_7947f4cd853d7a 3-20,24-25,36,48
+  s_06fcde5dbef956::t_c2477a7df6f64e 21-23,47
+web/src/composables/webrtc/micPipeline.ts
+  s_06fcde5dbef956::t_18897764cb9c2e 76-80,83,86,88,90-96,98-104,106-118,120-122,124-134,136-141,143,145-164,166,168-171,176,192-220
+web/src/composables/webrtc/sdp.ts
+  s_06fcde5dbef956::t_1a183024900857 13,28-38,65-108,119-123,139,142,148-193
+  s_06fcde5dbef956::t_d12af7c91a7ae7 194
+web/src/stores/voice/room.ts
+  s_06fcde5dbef956::t_d15ca70d6bb584 37,39,42-49,51-57,61-71,73-82,89-91,93
+  s_06fcde5dbef956::t_e901dabb38be96 31-35,50,58-60,87
+  s_06fcde5dbef956::t_148cc64c8a9a67 83-86
+web/src/stores/voice.ts
+  s_06fcde5dbef956::t_d15ca70d6bb584 15-16,67-112,124,126-131
+web/src/stores/auth/session.ts
+  s_06fcde5dbef956::t_816bd1849900f7 1-88
+web/src/lib/voicePlayback.ts
+  s_06fcde5dbef956::t_a51eaf3581175e 37-38,64-77,87-92,102,112,114,116-118,131-132,134-135
+web/src/lib/rtcStats.ts
+  s_06fcde5dbef956::t_51d572754a08b1 10-11,13-27,30-35,37,39,44-45,47-48,50-51,57-58,60-85,92,105-109,112
+web/src/stores/auth/locale.ts
+  s_06fcde5dbef956::t_38e88e518cf103 1-57
+web/eslint.config.ts
+  s_06fcde5dbef956::t_8f648bd1999d1a 129
+web/src/lib/streamQuality.ts
+  s_06fcde5dbef956::t_a51eaf3581175e 135-160,171,178,181,184
+web/src/lib/channelLayout.test.ts
+  s_06fcde5dbef956::t_1f98a7e764760d 9,11
+web/src/stores/voice/state.ts
+  s_06fcde5dbef956::t_d15ca70d6bb584 34-61,100
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_1642951ac5f65d 5,22-23,44-72,122-134
+web/src/lib/desktopGaming.ts
+  s_06fcde5dbef956::t_500b6de2e1807d 27-34,55
+  s_06fcde5dbef956::t_4e2f13367f9abf 16-26,84
+  s_06fcde5dbef956::t_1994a97ac5c60b 35-47,59-62,71
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_2040f372e990cb 1,17-18,20-30,32-41,43-55,57-58,60-74,76-77,79-84,86,88-90,92-97,99-102,104-112,114-123,125-194,198-199,201-202
+  s_06fcde5dbef956::t_77ae084598b7cf 200
+web/src/lib/soundEffects.ts
+  s_06fcde5dbef956::t_51d572754a08b1 76-147,171,173
+web/src/stores/auth/credentials.ts
+  s_06fcde5dbef956::t_31fec528cb5460 1-119
+web/src/stores/auth.ts
+  s_06fcde5dbef956::t_7def476b3fc8cc 2-7,16-18,28,32,37,43,51,53-54,57-59
+web/src/stores/chat/members.ts
+  s_06fcde5dbef956::t_543d034bc5b969 79,94,104
+  s_06fcde5dbef956::t_9acd39ea3862a7 78,80-87,89-90,92-93,95-103,105-112,115-123
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_def6effcdfaaa8 107-130,148,152
+web/src/stores/permissions.ts
+  s_06fcde5dbef956::t_4c4359d898ced3 3,15-72,87,138,141,149
+web/src/lib/dfnBridgeWorklet.ts
+  s_06fcde5dbef956::t_500b6de2e1807d 98-108,110-126,131-135,138,141-144
+web/src/lib/channelDrop.ts
+  s_06fcde5dbef956::t_3d726c039c1a5c 1-157
+web/src/types/events.ts
+  s_06fcde5dbef956::t_db137266a59a82 164-245,249-250,252
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_29b7a18c5918b5 12-14,36-38,40-42,79-81,83-85,94-96,98-100,136-145
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a7b24093ebd2c4f42b1f59ec3faca1072b48a13",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_6b260cd160a1ac": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a97d78b8259d00648",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
