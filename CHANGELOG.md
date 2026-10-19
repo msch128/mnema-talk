@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.8](https://github.com/msch128/mnema-talk/compare/v0.8.7...v0.8.8) (2026-10-19)
+
+
+### Code Refactoring
+
+* function size and complexity limits for Go and TypeScript ([#247](https://github.com/msch128/mnema-talk/issues/247)) ([8320469](https://github.com/msch128/mnema-talk/commit/832046995e1cc927a575b05c9e71eea32fffe8a1))
+
 ## [0.8.7](https://github.com/msch128/mnema-talk/compare/v0.8.6...v0.8.7) (2026-10-19)
 
 
