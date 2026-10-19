@@ -1,0 +1,20 @@
+internal/nativepreview/native_preview.go
+  s_96fdbc7376f874::t_c24d4ae837c30a 79-165
+  s_96fdbc7376f874::t_8bcf797deacdcf 1,15,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce32b88bfa8ac7c79957e20168ae1bb106e7e89a",
+  "prompts": {},
+  "sessions": {
+    "s_96fdbc7376f874": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0b059067-c1ff-4a45-9159-d7f274b6e6a0",
+        "model": "grok-4.6"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
