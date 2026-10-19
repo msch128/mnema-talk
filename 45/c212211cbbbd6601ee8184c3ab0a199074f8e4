@@ -1,0 +1,44 @@
+internal/ws/client.go
+  h_0ff4f4713441f4 169
+internal/ws/handle.go
+  h_0ff4f4713441f4 26,90,93,126,150,170
+internal/ws/layers.go
+  h_0ff4f4713441f4 69,73
+internal/ws/lifecycle.go
+  h_0ff4f4713441f4 222
+internal/ws/lifecycle_pumps.go
+  h_0ff4f4713441f4 54,100,115
+internal/ws/native_credentials_integration_test.go
+  h_0ff4f4713441f4 113
+internal/ws/native_failure_integration_test.go
+  h_0ff4f4713441f4 52,98,208,223,228,360
+internal/ws/native_integration_test.go
+  h_0ff4f4713441f4 369-370,429
+internal/ws/native_lease.go
+  h_0ff4f4713441f4 62-66,263
+internal/ws/native_media_probe_integration_test.go
+  h_0ff4f4713441f4 413
+internal/ws/native_metadata_admission.go
+  h_0ff4f4713441f4 43,90
+internal/ws/native_protocol.go
+  h_0ff4f4713441f4 26
+internal/ws/presence.go
+  h_0ff4f4713441f4 56
+internal/ws/signal.go
+  h_0ff4f4713441f4 43,47
+internal/ws/voice_join.go
+  h_0ff4f4713441f4 21,100,161
+internal/ws/voice_mute.go
+  h_0ff4f4713441f4 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45c212211cbbbd6601ee8184c3ab0a199074f8e4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}

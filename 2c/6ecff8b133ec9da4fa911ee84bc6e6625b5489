@@ -1,0 +1,20 @@
+internal/ws/auth_test.go
+  h_0ff4f4713441f4 47-54,56-69,77
+internal/ws/hub_test.go
+  h_0ff4f4713441f4 216-217,244-245,252-253
+internal/ws/screen_viewers_test.go
+  h_0ff4f4713441f4 108-112,115-117
+internal/ws/voice_test.go
+  h_0ff4f4713441f4 117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2c6ecff8b133ec9da4fa911ee84bc6e6625b5489",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
