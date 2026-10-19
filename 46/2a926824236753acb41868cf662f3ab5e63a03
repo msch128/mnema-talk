@@ -1,0 +1,36 @@
+Makefile
+  s_06fcde5dbef956::t_91d86985255cd5 6,16,110,115,118-119
+  s_06fcde5dbef956::t_ac8b0dddcffbce 120
+scripts/complexity-check.sh
+  s_06fcde5dbef956::t_2dd3f90ee1effb 1-15,17-35
+  s_06fcde5dbef956::t_d1f11a404422d3 16
+AGENTS.md
+  s_06fcde5dbef956::t_91d86985255cd5 124-125
+internal/repo/limits_test.go
+  s_06fcde5dbef956::t_04815b663c1495 1-25,27,54-159,161-172
+  s_06fcde5dbef956::t_2ead73160039f8 26,28,32,53,160
+  s_06fcde5dbef956::t_74aeaaaa53d2f0 29-31,33-52
+internal/auth/native_session_faults_integration_test.go
+  s_06fcde5dbef956::t_74aeaaaa53d2f0 1-603
+scripts/complexity-allowlist.txt
+  s_06fcde5dbef956::t_09578681f03f61 1-2
+  s_06fcde5dbef956::t_d1f11a404422d3 3-97
+.github/workflows/ci.yml
+  s_06fcde5dbef956::t_91d86985255cd5 120-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "462a926824236753acb41868cf662f3ab5e63a03",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
