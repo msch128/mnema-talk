@@ -81,6 +81,38 @@ export function applyScreenQuality(cx: Cx) {
   return st.qualityChain
 }
 
+/** Switches the offer's own transceiver with this mid to send, protected for its source. */
+function bindTransceiver(conn: RTCPeerConnection, mid: string | null | undefined, track: MediaStreamTrack | null | undefined, source: FrameSource, layer?: number) {
+  const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
+  if (!tr) return null
+  if (!mediaCall().protectSender(tr.sender, source, layer)) {
+    announceMediaUnprotected()
+    return null
+  }
+  tr.direction = 'sendrecv'
+  if (track) tr.sender.replaceTrack(track).catch(() => {})
+  return tr.sender
+}
+
+type Bound = { screen: boolean; camera: boolean; fresh: BoundSenders }
+
+/** Binds the sender slot if it is still empty. Resolves to whether it is bound now. */
+function bindSlot(
+  cx: Cx,
+  conn: RTCPeerConnection,
+  slot: 'audioSender' | 'screenSender' | 'cameraSender' | 'screenAudioSender',
+  freshKey: 'audio' | 'screen' | 'camera' | 'screenAudio',
+  line: { mid: string | null | undefined; track: MediaStreamTrack | null | undefined; source: FrameSource; layer?: number },
+  bound: Bound
+) {
+  const { st } = cx
+  if (st[slot]) return false
+  const sender = bindTransceiver(conn, line.mid, line.track, line.source, line.layer)
+  st[slot] = sender
+  if (sender) bound.fresh[freshKey] = sender
+  return !!sender
+}
+
 /**
  * Sends on the SFU's receive lines. Transceivers created locally with
  * addTransceiver are never matched to a remote offer's m-lines, so media put
@@ -90,41 +122,21 @@ export function applyScreenQuality(cx: Cx) {
 export function bindPublishSenders(cx: Cx, conn: RTCPeerConnection, sdp: string, layerLines = 0) {
   const { st } = cx
   const mids = publishMids(sdp, layerLines)
-  const bind = (mid: string | null | undefined, track: MediaStreamTrack | null | undefined, source: FrameSource, layer?: number) => {
-    const tr = mid === null || mid === undefined ? null : conn.getTransceivers().find(t => t.mid === mid)
-    if (!tr) return null
-    if (!mediaCall().protectSender(tr.sender, source, layer)) {
-      announceMediaUnprotected()
-      return null
-    }
-    tr.direction = 'sendrecv'
-    if (track) tr.sender.replaceTrack(track).catch(() => {})
-    return tr.sender
-  }
   // fresh: senders bound by this call, which still need their parameters.
-  const bound: { screen: boolean; camera: boolean; fresh: BoundSenders } = { screen: false, camera: false, fresh: {} }
-  if (!st.audioSender) {
-    st.audioSender = bind(mids.audio, activeAudioTrack(cx), SOURCE_MIC)
-    if (st.audioSender) bound.fresh.audio = st.audioSender
+  const bound: Bound = { screen: false, camera: false, fresh: {} }
+  bindSlot(cx, conn, 'audioSender', 'audio', { mid: mids.audio, track: activeAudioTrack(cx), source: SOURCE_MIC }, bound)
+  if (bindSlot(cx, conn, 'screenSender', 'screen', { mid: mids.video[0], track: null, source: SOURCE_SCREEN, layer: 0 }, bound)) {
+    bound.screen = !!st.localScreenStream.value
   }
-  if (!st.screenSender) {
-    st.screenSender = bind(mids.video[0], null, SOURCE_SCREEN, 0)
-    bound.screen = !!st.screenSender && !!st.localScreenStream.value
-    if (st.screenSender) bound.fresh.screen = st.screenSender
+  const cameraTrack = st.localCameraStream.value?.getVideoTracks()[0]
+  if (bindSlot(cx, conn, 'cameraSender', 'camera', { mid: mids.video[1], track: cameraTrack, source: SOURCE_CAMERA }, bound)) {
+    bound.camera = !!st.localCameraStream.value
   }
-  if (!st.cameraSender) {
-    st.cameraSender = bind(mids.video[1], st.localCameraStream.value?.getVideoTracks()[0], SOURCE_CAMERA)
-    bound.camera = !!st.cameraSender && !!st.localCameraStream.value
-    if (st.cameraSender) bound.fresh.camera = st.cameraSender
-  }
-  if (!st.screenAudioSender) {
-    st.screenAudioSender = bind(mids.screenAudio, liveScreenAudioTrack(cx), SOURCE_SCREEN_AUDIO)
-    if (st.screenAudioSender) bound.fresh.screenAudio = st.screenAudioSender
-  }
+  bindSlot(cx, conn, 'screenAudioSender', 'screenAudio', { mid: mids.screenAudio, track: liveScreenAudioTrack(cx), source: SOURCE_SCREEN_AUDIO }, bound)
   // The lower layers of the screen share: lines an older server does not offer.
   for (let i = 0; i < Math.min(st.layerSenders.length, layerLines); i++) {
     if (st.layerSenders[i]) continue
-    const sender = bind(mids.video[2 + i], null, SOURCE_SCREEN, i + 1)
+    const sender = bindTransceiver(conn, mids.video[2 + i], null, SOURCE_SCREEN, i + 1)
     st.layerSenders[i] = sender
     if (sender) (bound.fresh.layers ??= []).push(sender)
   }
