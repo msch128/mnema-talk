@@ -126,9 +126,30 @@ change meaning (`perm.Catalog` and its test freeze them).
 
 ### Defaults
 
-`@everyone` holds *View channels, Send messages, Attach files, Add reactions,
-Mention everyone, Connect, Speak, Video*. Before roles existed every member
-could do exactly this, and only the admin could do the rest.
+Member is `@everyone`. There is no User or Member role. The Owner is not a
+role either: it is the one account with `users.role = 'admin'`.
+
+| Who | What it is | Permissions |
+|---|---|---|
+| Member | `@everyone` (position 0, every member has it) | *View channels, Send messages, Attach files, Add reactions, Mention everyone, Connect, Speak, Video* (`perm.DefaultEveryone`) |
+| Moderator | Seeded role, hoisted, not managed, not mentionable | *Manage messages, Disconnect members, Timeout members, View audit log* |
+| Admin | Seeded role, hoisted, not managed, not mentionable, above Moderator when both are new | Moderator's permissions, plus *Manage channels, Manage roles, Manage invites, Manage members, Ban members* |
+| Owner | The account `users.role = 'admin'`, not a role | Every permission, plus the Owner-only powers |
+
+Neither seeded role has *Administrator*, *Manage bots* or *Manage webhooks*.
+*Administrator* grants every permission and ignores channel overwrites, so it
+is not how Admin is modelled.
+
+Migration 0034 inserts the two roles on a fresh install and on an upgrade.
+Nobody is assigned, including the Owner, so the upgrade does not grant those
+permissions. `@everyone` is left as it was. A role already named Moderator or
+Admin is skipped: its permissions, position and members stay, and roles that
+already exist are not reordered. A missing name is inserted at
+`max(position) + 1`, Moderator first and then Admin. They are ordinary roles,
+so the Owner can rename or delete them.
+
+Before roles existed every member could do exactly what `@everyone` holds,
+and only the admin account could do the rest.
 
 ## Channel and category overwrites
 
