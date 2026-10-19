@@ -1,0 +1,24 @@
+web/src/NativePreviewApp.test.ts
+  h_0ff4f4713441f4 2-3,9,15,26,31,38,51-57,61,70,78,83,87,96,106
+web/src/NativePreviewApp.vue
+  h_0ff4f4713441f4 22,25-42,51-55,57,89
+web/src/components/DesktopSelector.test.ts
+  h_0ff4f4713441f4 1-68
+web/src/components/DesktopSelector.vue
+  h_0ff4f4713441f4 1-66
+web/src/main.test.ts
+  h_0ff4f4713441f4 40,48-61
+web/src/main.ts
+  h_0ff4f4713441f4 23-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e65880a1de27818bd9fbf2c271ea8c28bf8bfe32",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
