@@ -49,7 +49,7 @@ func TestNativeWSSDatabaseTimeoutClosesActualSocket(t *testing.T) {
 		}
 		break
 	}
-	if client.nativeLive() || !client.native.securityClosed.Load() {
+	if client.commandsAllowed() || !client.native.securityClosed.Load() {
 		t.Fatal("DB failure retained native authorization")
 	}
 }
@@ -95,7 +95,7 @@ func TestNativeWSSOldRealQueryCompletionCannotKillRenewedGeneration(t *testing.T
 			case <-time.After(2 * time.Second):
 				t.Fatal("old validation did not finish")
 			}
-			if !client.nativeLive() {
+			if !client.commandsAllowed() {
 				t.Fatal("old real query killed renewed generation")
 			}
 			a.hub.Broadcast("after-old-query", nil)
@@ -205,7 +205,7 @@ func TestNativeWSSRenewDoesNotExtendOriginalHardDeadlines(t *testing.T) {
 	client.native = state
 	state.mu.Lock()
 	done := make(chan bool, 1)
-	go func() { done <- client.nativeLive() }()
+	go func() { done <- client.commandsAllowed() }()
 	select {
 	case live := <-done:
 		if !live {
@@ -220,12 +220,12 @@ func TestNativeWSSRenewDoesNotExtendOriginalHardDeadlines(t *testing.T) {
 		t.Fatal("obsolete expiry timer killed current live lease")
 	}
 	a.hub.terminateNativeGeneration(client, 1)
-	if !client.nativeLive() {
+	if !client.commandsAllowed() {
 		t.Fatal("obsolete query error killed current generation")
 	}
 	a.hub.terminateNativeClient(&Client{}) // browser/default path must remain unaffected.
 	state.securityClosed.Store(true)
-	if client.nativeLive() {
+	if client.commandsAllowed() {
 		t.Fatal("atomic terminal cutoff failed")
 	}
 	// A queued application frame after the seal must not consume typing state.
@@ -357,7 +357,7 @@ func TestNativeWSSPendingQuotaAndShutdownUsesActualHub(t *testing.T) {
 					defer a.hub.mu.RUnlock()
 					return len(a.hub.clients) == 0 && len(a.hub.pending) == 0
 				}, "shutdown pending candidate leaked")
-				if candidate.nativeLive() {
+				if candidate.commandsAllowed() {
 					t.Fatal("shutdown candidate retained native authorization")
 				}
 				return

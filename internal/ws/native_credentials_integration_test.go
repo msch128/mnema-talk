@@ -110,7 +110,7 @@ func TestNativeCredentialsActualTLSBulkAccountCutoffPendingAndHeldVoiceCleanup(t
 		t.Fatal("current initial replacement grant invalid")
 	}
 	for _, c := range []*Client{firstClient, secondClient, pending} {
-		if c.nativeLive() || !c.native.securityClosed.Load() {
+		if c.commandsAllowed() || !c.native.securityClosed.Load() {
 			t.Fatal("account native packet gate survived credential response")
 		}
 	}

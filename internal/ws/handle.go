@@ -23,7 +23,7 @@ type clientEvent struct {
 }
 
 func (c *Client) handle(eventType string, payload json.RawMessage) {
-	if !c.nativeLive() {
+	if !c.commandsAllowed() {
 		return
 	}
 	parent := context.Background()
@@ -87,10 +87,10 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 }
 
 // currentRoom is the SFU room c is seated in, or nil when it is in none, the
-// SFU is off or the connection is no longer live.
+// SFU is off, or the lease no longer allows commands.
 func (c *Client) currentRoom() *sfu.Room {
 	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil || !c.nativeLive() {
+	if cur == nil || c.hub.SFU == nil || !c.commandsAllowed() {
 		return nil
 	}
 	return c.hub.SFU.Room(*cur)
@@ -123,7 +123,7 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
 	h := c.hub
-	if snap, ok := h.permSnapshot(channelID); ok && c.nativeLive() && h.channelKnown(ctx, snap, channelID) &&
+	if snap, ok := h.permSnapshot(channelID); ok && c.commandsAllowed() && h.channelKnown(ctx, snap, channelID) &&
 		c.can(snap, channelID, perm.ViewChannel|perm.SendMessages) {
 		c.emitApplicationEvent("typing", map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
 	}
@@ -147,7 +147,7 @@ func (c *Client) handleAnswer(payload json.RawMessage) {
 		return
 	}
 	peer := c.peer()
-	if peer == nil || !c.nativeLive() {
+	if peer == nil || !c.commandsAllowed() {
 		return
 	}
 	if err := peer.SetAnswer(answer); err != nil {
@@ -167,7 +167,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 	if c.native == nil {
 		slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 	}
-	if peer := c.peer(); peer != nil && c.nativeLive() {
+	if peer := c.peer(); peer != nil && c.commandsAllowed() {
 		// Held until the answer is applied; a rejected candidate is
 		// logged by the SFU with its reason (rate-limited).
 		_ = peer.AddRemoteCandidate(cand)

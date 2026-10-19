@@ -366,8 +366,8 @@ func TestNativeWSSFamilyIsolationRenewAndActualSendCutoff(t *testing.T) {
 			t.Fatal("revoked native socket wrote post-revoke private event")
 		}
 	}
-	if client.nativeLive() || len(client.send) > 0 { // previously queued data can remain physically buffered but never written
-		if client.nativeLive() {
+	if client.commandsAllowed() || len(client.send) > 0 { // previously queued data can remain physically buffered but never written
+		if client.commandsAllowed() {
 			t.Fatal("revoked native lease remained active")
 		}
 	}
@@ -426,7 +426,7 @@ func TestNativeWSSAccessExpiryAndStaleQueryCannotExtendLease(t *testing.T) {
 	}
 	expectNativeClosed(t, c)
 	a.hub.Broadcast("expired-private", nil)
-	if client.nativeLive() {
+	if client.commandsAllowed() {
 		t.Fatal("expired native connection still authorized")
 	}
 	// No fake authorization: acquire genuine DB-backed leases for both tokens,

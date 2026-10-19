@@ -18,7 +18,7 @@ import (
 func (h *Hub) joinVoice(c *Client, ch *chat.ChannelInfo) {
 	c.voiceMu.Lock()
 	defer c.voiceMu.Unlock()
-	if c.closed.Load() || !c.nativeLive() {
+	if c.closed.Load() || !c.commandsAllowed() {
 		return
 	}
 	snap, ok := h.permSnapshot(ch.ID)
@@ -97,7 +97,7 @@ type voiceSeat struct {
 func (h *Hub) takeSeat(c *Client, ch *chat.ChannelInfo, rejoin bool) (voiceSeat, bool) {
 	key := voiceKey{c.User.ID, ch.ID}
 	h.mu.Lock()
-	if h.closed || !c.nativeLive() {
+	if h.closed || !c.commandsAllowed() {
 		h.mu.Unlock()
 		return voiceSeat{}, false
 	}
@@ -158,7 +158,7 @@ func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 	if c.native == nil {
 		_, peer, err = h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
 	} else {
-		_, peer, err = h.SFU.JoinWithAuthorization(chID, c.User.ID, sendOffer, sendICE, c.nativeLive)
+		_, peer, err = h.SFU.JoinWithAuthorization(chID, c.User.ID, sendOffer, sendICE, c.commandsAllowed)
 	}
 	if err != nil {
 		slog.Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)

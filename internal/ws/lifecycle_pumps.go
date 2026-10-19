@@ -51,7 +51,7 @@ func (c *Client) dispatchFrame(budget *eventBudget, messageType int, message []b
 	if err := json.Unmarshal(message, &ev); err != nil {
 		return true
 	}
-	if c.native != nil && !c.nativeLive() {
+	if c.native != nil && !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -97,7 +97,7 @@ func (c *Client) writePump() {
 
 // writeQueued sends one queued message; false ends the connection.
 func (c *Client) writeQueued(msg []byte) bool {
-	if c.native != nil && !c.nativeLive() {
+	if c.native != nil && !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -112,7 +112,7 @@ func (c *Client) writeQueued(msg []byte) bool {
 
 // writePing sends a keep-alive ping; false ends the connection.
 func (c *Client) writePing() bool {
-	if c.native != nil && !c.nativeLive() {
+	if c.native != nil && !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}

@@ -50,7 +50,7 @@ func (h *Hub) setMuteState(c *Client, st MuteState) {
 	}
 	key := voiceKey{c.User.ID, *cur}
 	h.mu.Lock()
-	if !c.nativeLive() {
+	if !c.commandsAllowed() {
 		h.mu.Unlock()
 		return
 	}

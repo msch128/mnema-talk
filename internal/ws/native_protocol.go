@@ -23,7 +23,7 @@ func (c *Client) handleNativeControl(eventType string, raw []byte) bool {
 	allowed := s.renewCount <= 4
 	s.mu.Unlock()
 	token, valid := parseNativeRenewFrame(raw)
-	if !allowed || !valid || !c.nativeLive() {
+	if !allowed || !valid || !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return true
 	}

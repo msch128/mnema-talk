@@ -40,7 +40,7 @@ func (c *Client) nativeMetadataReadPump() {
 // dispatchMetadataFrame routes one frame of a metadata session. It reports
 // false when the connection was terminated.
 func (c *Client) dispatchMetadataFrame(budget *eventBudget, kind int, frame []byte) bool {
-	if kind != websocket.TextMessage || !c.nativeLive() {
+	if kind != websocket.TextMessage || !c.commandsAllowed() {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -87,7 +87,7 @@ func (c *Client) nativeMetadataWritePump() {
 	ping := time.NewTicker(c.hub.pingEvery())
 	defer func() { ping.Stop(); c.close() }()
 	write := func(kind int, payload []byte) bool {
-		if !c.nativeLive() {
+		if !c.commandsAllowed() {
 			c.hub.terminateNativeClient(c)
 			return false
 		}

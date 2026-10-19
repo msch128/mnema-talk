@@ -410,7 +410,7 @@ func TestNativeMediaProbeBulkFamilyCutoffWhileBothVoiceLocksHeld(t *testing.T) {
 	if browser.count(0x21) <= controlBefore {
 		t.Fatal("other-family native publisher/browser receiver stopped")
 	}
-	if !a.client(t, goodGrant.Family).nativeLive() || !a.client(t, otherGrant.Family).nativeLive() {
+	if !a.client(t, goodGrant.Family).commandsAllowed() || !a.client(t, otherGrant.Family).commandsAllowed() {
 		t.Fatal("family isolation failed")
 	}
 	for _, c := range selected {
