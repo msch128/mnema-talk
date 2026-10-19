@@ -1,0 +1,18 @@
+README.md
+  h_0ff4f4713441f4 217-218
+doc/architecture.md
+  h_0ff4f4713441f4 213-215
+doc/product-status.md
+  h_0ff4f4713441f4 120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdea7a133d342846a7fa1939776212b6c21c63e3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
