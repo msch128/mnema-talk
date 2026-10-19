@@ -225,40 +225,29 @@ export async function sealFrame(frame: FrameSeal): Promise<Uint8Array | null> {
   return packet
 }
 
-/**
- * Returns null when the packet, epoch, sender, signature or tag does not
- * match, or when the replay window has seen the unit.
- */
-export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
-  const packet = frame.packet
-  if (packet.byteLength < FRAME_OVERHEAD_BYTES || packet[0] !== MAGIC_0) return null
-  const v3 = packet[1] === MAGIC_1_V3
-  if (!v3 && packet[1] !== MAGIC_1) return null
-  if (v3 && packet.byteLength < FRAME_OVERHEAD_BYTES + 1) return null
-  const header = v3 ? HEADER_BYTES_V3 : HEADER_BYTES
-  const line = v3 ? packet[NONCE_OFFSET] : undefined
-  if (line !== undefined) {
-    // The unit must be what the line it arrived on carries: same source, and
-    // a screen's layer is the one its stream was made for.
-    const source = line >> 4
-    if (!isFrameSource(source) || frame.source === undefined || frame.source === null || source !== frame.source) return null
-    if ((line & ~(0xf0 | LAYER_MASK)) !== 0) return null
-    if (source !== SOURCE_SCREEN && (line & LAYER_MASK) !== 0) return null
-  }
-  const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength)
-  const epoch = view.getUint32(EPOCH_OFFSET)
-  const stream = view.getUint32(STREAM_OFFSET)
-  const counter = view.getUint32(COUNTER_OFFSET)
-  if (!v3 && frame.acceptV2 && !frame.acceptV2(epoch)) return null
+// The unit must be what the line it arrived on carries: same source, and
+// a screen's layer is the one its stream was made for.
+function lineAgrees(line: number, expected: FrameOpen['source']): boolean {
+  const source = line >> 4
+  if (!isFrameSource(source) || expected === undefined || expected === null || source !== expected) return false
+  if ((line & ~(0xf0 | LAYER_MASK)) !== 0) return false
+  return source === SOURCE_SCREEN || (line & LAYER_MASK) === 0
+}
+
+/** The keys of the epoch (this one and the one right before it) that hold the sender's verifier. */
+function keyCandidates(frame: FrameOpen, epoch: number): EpochKeys[] {
   const candidates = [frame.keys.get(epoch), frame.previous?.get(epoch)]
     .filter((keys): keys is EpochKeys => keys !== undefined && keys.verifiers.has(frame.senderId))
-  if (!candidates.length) {
-    if (!frame.keys.has(epoch) && !frame.previous?.has(epoch)) frame.onUnknownEpoch?.(epoch)
-    return null
-  }
-  if (line !== undefined && line >> 4 === SOURCE_SCREEN && (stream & LAYER_MASK) !== (line & LAYER_MASK)) return null
-  if (!frame.replay.fresh(epoch, stream, counter)) return null
-  const aad = bindFrameAad(frame.channelId, frame.senderId, epoch, stream, counter, frame.clear, line)
+  if (!candidates.length && !frame.keys.has(epoch) && !frame.previous?.has(epoch)) frame.onUnknownEpoch?.(epoch)
+  return candidates
+}
+
+interface FrameUnit { epoch: number, stream: number, counter: number, aad: Uint8Array, v3: boolean, header: number }
+
+/** Verifies the signature, then opens the unit, under each candidate key in turn. */
+async function openWithKeys(frame: FrameOpen, candidates: EpochKeys[], unit: FrameUnit): Promise<Uint8Array | null> {
+  const { epoch, stream, counter, aad, v3, header } = unit
+  const packet = frame.packet
   const bodyEnd = packet.byteLength - SIGNATURE_BYTES
   const body = packet.subarray(0, bodyEnd)
   for (const keys of candidates) {
@@ -279,6 +268,32 @@ export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
     }
   }
   return null
+}
+
+/**
+ * Returns null when the packet, epoch, sender, signature or tag does not
+ * match, or when the replay window has seen the unit.
+ */
+export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
+  const packet = frame.packet
+  if (packet.byteLength < FRAME_OVERHEAD_BYTES || packet[0] !== MAGIC_0) return null
+  const v3 = packet[1] === MAGIC_1_V3
+  if (!v3 && packet[1] !== MAGIC_1) return null
+  if (v3 && packet.byteLength < FRAME_OVERHEAD_BYTES + 1) return null
+  const header = v3 ? HEADER_BYTES_V3 : HEADER_BYTES
+  const line = v3 ? packet[NONCE_OFFSET] : undefined
+  if (line !== undefined && !lineAgrees(line, frame.source)) return null
+  const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength)
+  const epoch = view.getUint32(EPOCH_OFFSET)
+  const stream = view.getUint32(STREAM_OFFSET)
+  const counter = view.getUint32(COUNTER_OFFSET)
+  if (!v3 && frame.acceptV2 && !frame.acceptV2(epoch)) return null
+  const candidates = keyCandidates(frame, epoch)
+  if (!candidates.length) return null
+  if (line !== undefined && line >> 4 === SOURCE_SCREEN && (stream & LAYER_MASK) !== (line & LAYER_MASK)) return null
+  if (!frame.replay.fresh(epoch, stream, counter)) return null
+  const aad = bindFrameAad(frame.channelId, frame.senderId, epoch, stream, counter, frame.clear, line)
+  return openWithKeys(frame, candidates, { epoch, stream, counter, aad, v3, header })
 }
 
 // A screen share's layers are sealed by transforms of their own (one per

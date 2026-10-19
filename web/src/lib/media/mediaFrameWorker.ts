@@ -188,34 +188,31 @@ interface Line {
   layer: number
 }
 
-async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | null> {
-  const { direction, channelId, senderId } = line
-  // A receiver whose publisher is not known yet opens nothing.
-  if (senderId === null) return null
-  const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
-  // A video frame of another type is not one this worker can seal.
-  if (frame.type !== undefined && kind === undefined) return null
-  const codec = kind === undefined ? null : videoCodecOf(frame.getMetadata?.().mimeType)
-  const data = new Uint8Array(frame.data)
-  if (direction === 'send') {
-    if (sendEpoch === null) return null
-    const now = clock.now()
-    if (staleSince !== null && now - staleSince > STALE_SEAL_MS) return null
-    dropExpired()
-    const hold = sendHold
-    if (hold && now >= hold.until) sendHold = null
-    const epoch = hold && now < hold.until && keys.has(hold.epoch) ? hold.epoch : sendEpoch
-    const epochKeys = keys.get(epoch)
-    const stream = line.stream
-    if (!epochKeys || !stream) return null
-    const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => {
-      const counter = stream.next()
-      return counter === null
-        ? Promise.resolve(null)
-        : sealFrame({ keys: epochKeys, epoch, stream: stream.id, counter, channelId, senderId, plaintext, clear, version: v3Epochs.has(epoch) ? 3 : 2, source: line.source as FrameSource, layer: line.layer })
-    })
-    return sealed ? packet(sealed) : null
-  }
+/** Seals one frame of a sending line under the epoch it is to go out in. */
+async function sealOutgoing(data: Uint8Array, kind: FrameKind, codec: ReturnType<typeof videoCodecOf> | null, line: Line, senderId: string): Promise<ArrayBuffer | null> {
+  const { channelId } = line
+  if (sendEpoch === null) return null
+  const now = clock.now()
+  if (staleSince !== null && now - staleSince > STALE_SEAL_MS) return null
+  dropExpired()
+  const hold = sendHold
+  if (hold && now >= hold.until) sendHold = null
+  const epoch = hold && now < hold.until && keys.has(hold.epoch) ? hold.epoch : sendEpoch
+  const epochKeys = keys.get(epoch)
+  const stream = line.stream
+  if (!epochKeys || !stream) return null
+  const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => {
+    const counter = stream.next()
+    return counter === null
+      ? Promise.resolve(null)
+      : sealFrame({ keys: epochKeys, epoch, stream: stream.id, counter, channelId, senderId, plaintext, clear, version: v3Epochs.has(epoch) ? 3 : 2, source: line.source as FrameSource, layer: line.layer })
+  })
+  return sealed ? packet(sealed) : null
+}
+
+/** Opens one frame of a receiving line, and counts what it learns about the publisher's epoch. */
+async function openIncoming(data: Uint8Array, kind: FrameKind, codec: ReturnType<typeof videoCodecOf> | null, line: Line, senderId: string): Promise<ArrayBuffer | null> {
+  const { channelId } = line
   const replay = replayOf(senderId)
   dropExpired()
   let unknown = -1
@@ -225,6 +222,18 @@ async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | n
   }))
   count(senderId, opened !== null, unknown)
   return opened ? packet(opened) : null
+}
+
+async function protect(frame: EncodedFrame, line: Line): Promise<ArrayBuffer | null> {
+  const { direction, senderId } = line
+  // A receiver whose publisher is not known yet opens nothing.
+  if (senderId === null) return null
+  const kind: FrameKind = frame.type === 'key' || frame.type === 'delta' ? frame.type : undefined
+  // A video frame of another type is not one this worker can seal.
+  if (frame.type !== undefined && kind === undefined) return null
+  const codec = kind === undefined ? null : videoCodecOf(frame.getMetadata?.().mimeType)
+  const data = new Uint8Array(frame.data)
+  return direction === 'send' ? sealOutgoing(data, kind, codec, line, senderId) : openIncoming(data, kind, codec, line, senderId)
 }
 
 // What the call needs to judge whether it fell behind: per publisher, how many
@@ -260,55 +269,69 @@ const scope = self as typeof self & {
   onrtctransform: ((event: Event & { transformer?: RtpTransformer }) => void) | null
 }
 
-scope.onrtctransform = (event) => {
-  const transformer = event.transformer
-  const options = transformer?.options
-  const port = options?.port
+/** The line a transform serves, or null when its options are not ones this worker will seal or open for. */
+function lineFrom(options: TransformOptions | undefined): Line | null {
   const direction = directionOf(options?.direction)
   const channelId = options?.channelId
   // A receiver may be armed before the SFU says who publishes on its line.
   const senderId = typeof options?.senderId === 'string' && options.senderId ? options.senderId : null
-  if (!transformer || !port || !direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return
+  if (!direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return null
   // Every sending transform starts a fresh stream; a screen share's layers
   // carry their layer in the stream ID, so they cannot share one.
   const layer = options?.layer
   const source = isFrameSource(options?.source) ? options.source : null
   // Every sending line says what it carries; without that nothing is sealed.
-  if (direction === 'send' && source === null) return
+  if (direction === 'send' && source === null) return null
   const layerNo = typeof layer === 'number' && Number.isInteger(layer) && layer >= 0 && layer <= LAYER_STREAM_MASK ? layer : source === SOURCE_SCREEN ? 0 : undefined
   const layerId = layerNo === undefined ? undefined : layerStreamId(layerNo)
-  const line: Line = { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null, source, layer: layerNo ?? 0 }
-  port.onmessage = (message: MessageEvent<unknown>) => {
-    const data = message.data
-    if (!data || typeof data !== 'object') return
-    if ('type' in data && data.type === 'drop') {
-      forget()
-      return
-    }
-    if ('type' in data && data.type === 'stale') {
-      staleSince ??= clock.now()
-      return
-    }
-    if (direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
-      line.senderId = data.senderId
-      // A reused receiver may now carry another source.
-      line.source = 'source' in data && isFrameSource(data.source) ? data.source : null
-      return
-    }
-    if ('type' in data && data.type === 'key' && 'epoch' in data && 'key' in data && isEpoch(data.epoch) && isEpochKeys(data.key)) {
-      const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-      remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true, 'caps' in data && isCaps(data.caps) ? data.caps : null)
-      return
-    }
-    if ('type' in data && data.type === 'caps' && 'epoch' in data && 'caps' in data && isEpoch(data.epoch) && isCaps(data.caps)) {
-      const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-      if (seq !== null) {
-        if (seq <= lastSeq) return
-        lastSeq = seq
-      }
-      applyCaps(data.epoch, data.caps)
-    }
+  return { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null, source, layer: layerNo ?? 0 }
+}
+
+/** The key message of the call: applied once however many lines deliver it. */
+function onKeyMessage(data: object & { epoch?: unknown, key?: unknown }): boolean {
+  if (!('type' in data) || data.type !== 'key' || !('epoch' in data) || !('key' in data) || !isEpoch(data.epoch) || !isEpochKeys(data.key)) return false
+  const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
+  remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true, 'caps' in data && isCaps(data.caps) ? data.caps : null)
+  return true
+}
+
+function onCapsMessage(data: object) {
+  if (!('type' in data) || data.type !== 'caps' || !('epoch' in data) || !('caps' in data) || !isEpoch(data.epoch) || !isCaps(data.caps)) return
+  const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
+  if (seq !== null) {
+    if (seq <= lastSeq) return
+    lastSeq = seq
   }
+  applyCaps(data.epoch, data.caps)
+}
+
+/** What the call tells a line over its port: drop, stale, who publishes, a key or capabilities. */
+function onLineMessage(line: Line, data: unknown) {
+  if (!data || typeof data !== 'object') return
+  if ('type' in data && data.type === 'drop') {
+    forget()
+    return
+  }
+  if ('type' in data && data.type === 'stale') {
+    staleSince ??= clock.now()
+    return
+  }
+  if (line.direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
+    line.senderId = data.senderId
+    // A reused receiver may now carry another source.
+    line.source = 'source' in data && isFrameSource(data.source) ? data.source : null
+    return
+  }
+  if (onKeyMessage(data)) return
+  onCapsMessage(data)
+}
+
+scope.onrtctransform = (event) => {
+  const transformer = event.transformer
+  const port = transformer?.options?.port
+  const line = lineFrom(transformer?.options)
+  if (!transformer || !port || !line) return
+  port.onmessage = (message: MessageEvent<unknown>) => onLineMessage(line, message.data)
   transformer.readable.pipeThrough(new TransformStream<EncodedFrame, EncodedFrame>({
     async transform(frame, controller) {
       try {
