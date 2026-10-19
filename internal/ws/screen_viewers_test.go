@@ -105,15 +105,16 @@ func startShare(t *testing.T, voiceSFU *sfu.SFU, chID uuid.UUID, c *Client, room
 	if err := room.PublishTestVideo(c.User.ID, sfu.SourceScreen); err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(viewersWait)
-	for !room.MediaStates()[c.User.ID].Screen {
-		if time.Now().After(deadline) {
-			t.Fatal("share never became live")
+	// Signaling announces the share on its own goroutine. Wait for that event,
+	// then forget it so later assertions see only what the test does next.
+	for _, m := range roomMembers {
+		if _, ok := nextEventOf(m, "webrtc_media_state", viewersWait); !ok {
+			t.Fatalf("%s never heard the share start", m.User.Username)
 		}
-		time.Sleep(5 * time.Millisecond)
 	}
-	// Let the start announcement go out, then forget it.
-	time.Sleep(quietWait)
+	if !room.MediaStates()[c.User.ID].Screen {
+		t.Fatal("share never became live")
+	}
 	for _, m := range roomMembers {
 		drainTypes(t, m)
 	}

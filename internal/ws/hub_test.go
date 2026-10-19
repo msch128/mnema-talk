@@ -213,6 +213,8 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 	h.VoiceGrace = 200 * time.Millisecond
 	chID := uuid.New()
 	user := auth.User{ID: uuid.New(), Username: "reloader"}
+	// Hears the leave the grace timer broadcasts; the dropped socket is already gone.
+	watcher := testClient(h, auth.User{ID: uuid.New(), Username: "watcher"})
 
 	c := &Client{
 		hub:  h,
@@ -239,20 +241,16 @@ func TestHubVoiceGracePeriod(t *testing.T) {
 		t.Fatalf("user should remain in room during grace period")
 	}
 
-	// Wait for the grace period to expire; poll instead of sleeping a fixed
-	// time so a loaded -race run cannot beat the timer.
+	// The grace timer runs later. A loaded -race run can delay it, so wait for
+	// the leave it announces instead of sleeping VoiceGrace.
 	inRoom := func() bool {
 		h.mu.RLock()
 		defer h.mu.RUnlock()
 		_, ok := h.voice[chID][user.ID]
 		return ok
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for inRoom() && time.Now().Before(deadline) {
-		time.Sleep(5 * time.Millisecond)
-	}
-	if inRoom() {
-		t.Fatalf("user should be removed from room after grace period expires")
+	if _, ok := nextEventOf(watcher, "voice_state_update", 5*time.Second); !ok || inRoom() {
+		t.Fatal("user should be removed from room after grace period expires")
 	}
 }
 
