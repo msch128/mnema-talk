@@ -75,6 +75,39 @@ func diagnoseAll(members []*member, limit time.Duration) {
 	}
 }
 
+// firstVideoMs is the join -> first video byte time, if any video arrived.
+func firstVideoMs(m *member) (int64, bool) {
+	v := m.videoMs.Load()
+	return max(v-1, 0), v > 0
+}
+
+// newMemberResult reads one member's counters and diagnostics. The ICE
+// details are kept only for members that never connected.
+func newMemberResult(m *member) memberResult {
+	mr := memberResult{
+		ID: m.id, Connected: m.connected.Load(), EverConnected: m.everConn.Load(),
+		ConnectMs: m.connMs.Load(), VideoBytes: m.videoB.Load(), AudioTracks: m.audioT.Load(),
+		Offers: m.offers.Load(), Flaps: m.flaps.Load(), CandSent: m.candSent.Load(),
+		CandRecv: m.candRecv.Load(), CandErrors: m.candErr.Load(), MaxStallMs: m.maxStallMs.Load(),
+		TimedOut: m.timedOut.Load(),
+	}
+	mr.FirstVideoMs, _ = firstVideoMs(m)
+	if f, ok := m.failed.Load().(string); ok {
+		mr.Error = f
+	}
+	m.diagMu.Lock()
+	defer m.diagMu.Unlock()
+	if m.snapshot != nil {
+		mr.SelectedPair = m.snapshot.SelectedPair
+	}
+	if !mr.EverConnected {
+		mr.Timeline = append([]string(nil), m.timeline...)
+		mr.ServerCandidates = append([]string(nil), m.remoteSeen...)
+		mr.ICE = m.snapshot
+	}
+	return mr
+}
+
 // summarize turns the members' counters and diagnostics into the result.
 func summarize(members []*member, loss float64, jitter time.Duration) result {
 	res := result{Members: len(members), Loss: loss, JitterMs: jitter.Milliseconds()}
@@ -82,31 +115,13 @@ func summarize(members []*member, loss float64, jitter time.Duration) result {
 	var kbps float64
 	var kbpsN int
 	for _, m := range members {
-		mr := memberResult{
-			ID: m.id, Connected: m.connected.Load(), EverConnected: m.everConn.Load(),
-			ConnectMs: m.connMs.Load(), VideoBytes: m.videoB.Load(), AudioTracks: m.audioT.Load(),
-			Offers: m.offers.Load(), Flaps: m.flaps.Load(), CandSent: m.candSent.Load(),
-			CandRecv: m.candRecv.Load(), CandErrors: m.candErr.Load(), MaxStallMs: m.maxStallMs.Load(),
-			TimedOut: m.timedOut.Load(),
-		}
-		if v := m.videoMs.Load(); v > 0 {
-			mr.FirstVideoMs = v - 1
+		mr := newMemberResult(m)
+		if _, ok := firstVideoMs(m); ok {
 			firsts = append(firsts, mr.FirstVideoMs)
 		}
-		if f, ok := m.failed.Load().(string); ok {
-			mr.Error = f
+		if mr.Error != "" {
 			res.Failed++
 		}
-		m.diagMu.Lock()
-		if m.snapshot != nil {
-			mr.SelectedPair = m.snapshot.SelectedPair
-		}
-		if !mr.EverConnected {
-			mr.Timeline = append([]string(nil), m.timeline...)
-			mr.ServerCandidates = append([]string(nil), m.remoteSeen...)
-			mr.ICE = m.snapshot
-		}
-		m.diagMu.Unlock()
 		if !mr.EverConnected {
 			res.NeverConnected++
 		} else {

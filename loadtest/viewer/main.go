@@ -42,7 +42,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -50,7 +49,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -76,134 +74,6 @@ func runBounded(fns []func(), limit time.Duration) int {
 	return int(done.Load())
 }
 
-func run(api *webrtc.API, base *url.URL, tk token, channel, sharer string, m *member) error {
-	scheme, cookie := "ws", "mnema_session"
-	if base.Scheme == "https" {
-		scheme, cookie = "wss", "__Host-mnema_session"
-	}
-	h := http.Header{}
-	h.Set("Origin", base.Scheme+"://"+base.Host)
-	h.Set("Cookie", cookie+"="+tk.Token)
-	conn, resp, err := websocket.DefaultDialer.Dial(scheme+"://"+base.Host+"/api/ws", h)
-	if err != nil {
-		if resp != nil {
-			return fmt.Errorf("dial: %w (%s)", err, resp.Status)
-		}
-		return fmt.Errorf("dial: %w", err)
-	}
-	m.conn = conn
-	pc, err := api.NewPeerConnection(webrtc.Configuration{})
-	if err != nil {
-		return err
-	}
-	m.pc = pc
-	pc.OnICECandidate(func(c *webrtc.ICECandidate) {
-		if c != nil {
-			m.event("local candidate %s %s %s:%d", c.Protocol, c.Typ, c.Address, c.Port)
-			m.sendCandidate(c.ToJSON())
-		}
-	})
-	pc.OnICEGatheringStateChange(func(s webrtc.ICEGatheringState) { m.event("gathering %s", s) })
-	pc.OnICEConnectionStateChange(func(s webrtc.ICEConnectionState) { m.event("ice %s", s) })
-	pc.OnSignalingStateChange(func(s webrtc.SignalingState) { m.event("signaling %s", s) })
-	pc.OnConnectionStateChange(func(s webrtc.PeerConnectionState) {
-		m.event("connection %s", s)
-		ok := s == webrtc.PeerConnectionStateConnected
-		if !ok && m.connected.Load() {
-			m.flaps.Add(1)
-		}
-		if ok && !m.everConn.Swap(true) {
-			m.connMs.Store(time.Since(m.startedAt).Milliseconds())
-		}
-		m.connected.Store(ok)
-	})
-	pc.OnTrack(func(tr *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
-		video := tr.Kind() == webrtc.RTPCodecTypeVideo
-		if !video {
-			m.audioT.Add(1)
-		}
-		buf := make([]byte, 1600)
-		for {
-			n, _, err := tr.Read(buf)
-			if err != nil {
-				return
-			}
-			if video {
-				m.videoMs.CompareAndSwap(0, time.Since(m.startedAt).Milliseconds()+1)
-				m.videoB.Add(int64(n))
-			} else {
-				m.audioB.Add(int64(n))
-			}
-		}
-	})
-	if os.Getenv("LEGACY_SIGNALLING") == "1" {
-		m.candMu.Lock()
-		m.remoteSet, m.answerSent = true, true
-		m.candMu.Unlock()
-	}
-	m.startedAt = time.Now()
-	m.send("voice_join", map[string]any{"channel_id": channel})
-	if d := iceTimeout(); d > 0 {
-		go m.watchConnect(d)
-	}
-	m.send("voice_mute_state", map[string]any{"muted": true, "deafened": false})
-	go func() {
-		t := time.NewTicker(5 * time.Second)
-		defer t.Stop()
-		for {
-			sub := map[string]any{"kind": "screen", "user_id": sharer, "on": true}
-			if q := m.quality(); q != nil {
-				sub["quality"] = q
-			}
-			m.send("webrtc_subscribe", sub)
-			select {
-			case <-t.C:
-			case <-m.stop:
-				return
-			}
-		}
-	}()
-	for {
-		var ev struct {
-			Type    string          `json:"type"`
-			Payload json.RawMessage `json:"payload"`
-		}
-		if err := conn.ReadJSON(&ev); err != nil {
-			return fmt.Errorf("read: %w", err)
-		}
-		switch ev.Type {
-		case "webrtc_offer":
-			m.offers.Add(1)
-			m.event("offer %d received", m.offers.Load())
-			var offer webrtc.SessionDescription
-			if json.Unmarshal(ev.Payload, &offer) != nil {
-				continue
-			}
-			if err := pc.SetRemoteDescription(offer); err != nil {
-				continue
-			}
-			m.remoteApplied()
-			answer, err := pc.CreateAnswer(nil)
-			if err != nil {
-				continue
-			}
-			if err := pc.SetLocalDescription(answer); err != nil {
-				continue
-			}
-			m.send("webrtc_answer", pc.LocalDescription())
-			m.event("answer sent")
-			m.answerWasSent()
-		case "webrtc_candidate":
-			var c webrtc.ICECandidateInit
-			if json.Unmarshal(ev.Payload, &c) == nil {
-				m.addRemote(c)
-			}
-		case "voice_kicked":
-			return fmt.Errorf("kicked: %s", ev.Payload)
-		}
-	}
-}
-
 func envInt(k string, def int) int {
 	if v, err := strconv.Atoi(os.Getenv(k)); err == nil {
 		return v
@@ -218,40 +88,53 @@ func main() {
 	}
 }
 
-func mainErr() error {
+// viewerConfig is what the environment asks of this run.
+type viewerConfig struct {
+	base            *url.URL
+	tokens          []token
+	from, to        int
+	hold, spacing   time.Duration
+	loss            float64
+	jitter          time.Duration
+	channel, sharer string
+}
+
+func loadConfig() (viewerConfig, error) {
+	var c viewerConfig
 	base, err := url.Parse(os.Getenv("BASE_URL"))
 	if err != nil || base.Host == "" {
-		return errors.New("BASE_URL is required")
+		return c, errors.New("BASE_URL is required")
 	}
-	var tokens []token
+	c.base = base
 	raw, err := os.ReadFile(os.Getenv("TOKENS"))
 	if err != nil {
-		return fmt.Errorf("TOKENS: %w", err)
+		return c, fmt.Errorf("TOKENS: %w", err)
 	}
-	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return fmt.Errorf("TOKENS: %w", err)
+	if err := json.Unmarshal(raw, &c.tokens); err != nil {
+		return c, fmt.Errorf("TOKENS: %w", err)
 	}
-	from := envInt("FROM", 0)
-	to := min(envInt("TO", len(tokens)), len(tokens))
-	hold := time.Duration(envInt("HOLD_S", 60)) * time.Second
-	spacing := time.Duration(envInt("SPACING_MS", 300)) * time.Millisecond
-	loss, _ := strconv.ParseFloat(os.Getenv("LOSS"), 64)
-	jitter := time.Duration(envInt("JITTER_MS", 0)) * time.Millisecond
-	channel, sharer := os.Getenv("CHANNEL_ID"), os.Getenv("SHARER_ID")
-	if channel == "" || sharer == "" {
-		return errors.New("CHANNEL_ID and SHARER_ID are required")
+	c.from = envInt("FROM", 0)
+	c.to = min(envInt("TO", len(c.tokens)), len(c.tokens))
+	c.hold = time.Duration(envInt("HOLD_S", 60)) * time.Second
+	c.spacing = time.Duration(envInt("SPACING_MS", 300)) * time.Millisecond
+	c.loss, _ = strconv.ParseFloat(os.Getenv("LOSS"), 64)
+	c.jitter = time.Duration(envInt("JITTER_MS", 0)) * time.Millisecond
+	c.channel, c.sharer = os.Getenv("CHANNEL_ID"), os.Getenv("SHARER_ID")
+	if c.channel == "" || c.sharer == "" {
+		return c, errors.New("CHANNEL_ID and SHARER_ID are required")
 	}
-	api, err := newAPI(loss, jitter)
-	if err != nil {
-		return err
-	}
+	return c, nil
+}
 
+// startMembers starts one member per token in the configured slice, spaced
+// apart.
+func startMembers(api *webrtc.API, c viewerConfig) []*member {
 	var members []*member
-	for i := from; i < to; i++ {
-		m := &member{id: tokens[i].ID, index: i, stop: make(chan struct{})}
+	for i := c.from; i < c.to; i++ {
+		m := &member{id: c.tokens[i].ID, index: i, stop: make(chan struct{})}
 		members = append(members, m)
 		go func() {
-			if err := run(api, base, tokens[i], channel, sharer, m); err != nil {
+			if err := run(api, c.base, c.tokens[i], c.channel, c.sharer, m); err != nil {
 				select {
 				case <-m.stop: // closing at the end
 				default:
@@ -259,86 +142,35 @@ func mainErr() error {
 				}
 			}
 		}()
-		time.Sleep(spacing)
+		time.Sleep(c.spacing)
 	}
+	return members
+}
 
-	// Sample every 250 ms: stall = longest stretch without new video bytes
-	// after the first ones.
-	start := time.Now()
-	last := map[*member]int64{}
-	lastGrow := map[*member]time.Time{}
-	next := start.Add(10 * time.Second)
-	stopFile := os.Getenv("STOP_FILE")
-	for time.Since(start) < hold {
-		time.Sleep(250 * time.Millisecond)
-		now := time.Now()
-		if stopFile != "" {
-			if _, err := os.Stat(stopFile); err == nil {
-				break
-			}
-		}
-		for _, m := range members {
-			v := m.videoB.Load()
-			g, started := lastGrow[m]
-			if v > last[m] {
-				last[m] = v
-				lastGrow[m] = now
-			}
-			if started {
-				if d := now.Sub(g).Milliseconds(); d > m.maxStallMs.Load() {
-					m.maxStallMs.Store(d)
-				}
-			}
-		}
-		if now.Before(next) {
-			continue
-		}
-		next = now.Add(10 * time.Second)
-		var connected, failed, receiving int
-		var offers int64
-		for _, m := range members {
-			if m.connected.Load() {
-				connected++
-			}
-			if g, ok := lastGrow[m]; ok && now.Sub(g) < 3*time.Second {
-				receiving++
-			}
-			offers += m.offers.Load()
-			if m.failed.Load() != nil {
-				failed++
-			}
-		}
-		fmt.Printf("%s viewers=%d connected=%d receivingScreen=%d failed=%d offers=%d\n",
-			now.Format("15:04:05"), len(members), connected, receiving, failed, offers)
+func mainErr() error {
+	c, err := loadConfig()
+	if err != nil {
+		return err
 	}
+	api, err := newAPI(c.loss, c.jitter)
+	if err != nil {
+		return err
+	}
+	members := startMembers(api, c)
+	watchMembers(members, c.hold, os.Getenv("STOP_FILE"))
 
 	// Take every member's ICE snapshot (bounded: Pion's statistics can block on
 	// a stuck connection) before anything is closed, then write the result,
 	// and only then tear down.
 	diagnoseAll(members, 5*time.Second)
-	res := summarize(members, loss, jitter)
+	res := summarize(members, c.loss, c.jitter)
 	if out := os.Getenv("OUT"); out != "" {
 		b, _ := json.MarshalIndent(res, "", " ")
 		if err := os.WriteFile(out, b, 0o600); err != nil {
 			return err
 		}
 	}
-	for _, mr := range res.PerMember {
-		if mr.EverConnected {
-			continue
-		}
-		fmt.Printf("member %s never connected (err=%s)\n", mr.ID[:min(8, len(mr.ID))], mr.Error)
-		for _, m := range members {
-			if m.id == mr.ID {
-				for _, l := range m.diagLines() {
-					fmt.Println(l)
-				}
-			}
-		}
-	}
-	fmt.Printf("viewers=%d neverConnected=%d iceTimedOut=%d neverReceived=%d failed=%d flaps=%d connect p50/p95=%d/%dms firstVideo p50/p95=%d/%dms maxStall=%dms avgKbps=%.0f\n",
-		res.Members, res.NeverConnected, res.ICETimedOut, res.NeverReceived, res.Failed, res.Flaps,
-		res.ConnectMsP50, res.ConnectMsP95, res.FirstVideoMsP50, res.FirstVideoMsP95, res.MaxStallMs, res.AvgVideoKbps)
+	printReport(members, res)
 
 	// Closing is bounded: a Pion Close can wait forever on a connection whose
 	// ICE start never finishes. The process exits right after, which drops

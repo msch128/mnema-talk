@@ -15,6 +15,35 @@ const maxSessionExpiryHours = 8760
 var validLogLevels = map[string]bool{"": true, "debug": true, "info": true, "warn": true, "error": true}
 
 func (c *Config) validate(portMin, portMax uint16) error {
+	if err := c.validateBasics(portMin, portMax); err != nil {
+		return err
+	}
+	if err := c.normalizeAppEnv(); err != nil {
+		return err
+	}
+	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
+		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
+	}
+	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
+		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
+	}
+	if err := c.validateUpdater(); err != nil {
+		return err
+	}
+	if c.IsProduction() {
+		return c.validateProductionSecrets()
+	}
+	if c.JWTSecret == "" {
+		// Development only: a per-process random secret (sessions reset on restart).
+		c.JWTSecret = RandomHex(32)
+		slog.Warn("JWT_SECRET not set, using a random secret for this process (development only)")
+	}
+	return nil
+}
+
+// validateBasics checks the settings every environment needs, stores the
+// WebRTC UDP port range and then checks the limits.
+func (c *Config) validateBasics(portMin, portMax uint16) error {
 	if c.DatabaseURL == "" {
 		return fmt.Errorf("DATABASE_URL is required")
 	}
@@ -35,6 +64,11 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	if c.Port == "0" {
 		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
 	}
+	return c.validateLimits()
+}
+
+// validateLimits checks the numeric and list settings.
+func (c *Config) validateLimits() error {
 	if c.SessionExpiryHours < 1 || c.SessionExpiryHours > maxSessionExpiryHours {
 		return fmt.Errorf("SESSION_EXPIRY_HOURS must be between 1 and %d", maxSessionExpiryHours)
 	}
@@ -55,7 +89,11 @@ func (c *Config) validate(portMin, portMax uint16) error {
 			return fmt.Errorf("TRUSTED_PROXY_CIDRS contains an invalid entry %q", p)
 		}
 	}
+	return nil
+}
 
+// normalizeAppEnv expands the short APP_ENV names and rejects unknown ones.
+func (c *Config) normalizeAppEnv() error {
 	switch c.AppEnv {
 	case "prod":
 		c.AppEnv = "production"
@@ -65,41 +103,28 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	default:
 		return fmt.Errorf("APP_ENV must be production, staging, development or test, got %q", c.AppEnv)
 	}
+	return nil
+}
 
-	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
-		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
+// validateProductionSecrets rejects missing, short and public example
+// secrets in production-like deployments.
+func (c *Config) validateProductionSecrets() error {
+	if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
+		return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
 	}
-
-	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
-		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
+	if c.S3AccessKey == "" || c.S3SecretKey == "" {
+		return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
 	}
-
-	if err := c.validateUpdater(); err != nil {
-		return err
+	if isPlaceholder(c.S3AccessKey) || isPlaceholder(c.S3SecretKey) {
+		return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY still use the public example values; set your own")
 	}
-
-	if c.IsProduction() {
-		if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
-			return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
+	if u, err := url.Parse(c.DatabaseURL); err == nil && u.User != nil {
+		if pw, ok := u.User.Password(); ok && isPlaceholder(pw) {
+			return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
 		}
-		if c.S3AccessKey == "" || c.S3SecretKey == "" {
-			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
-		}
-		if isPlaceholder(c.S3AccessKey) || isPlaceholder(c.S3SecretKey) {
-			return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY still use the public example values; set your own")
-		}
-		if u, err := url.Parse(c.DatabaseURL); err == nil && u.User != nil {
-			if pw, ok := u.User.Password(); ok && isPlaceholder(pw) {
-				return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
-			}
-		}
-		if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
-			return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
-		}
-	} else if c.JWTSecret == "" {
-		// Development only: a per-process random secret (sessions reset on restart).
-		c.JWTSecret = RandomHex(32)
-		slog.Warn("JWT_SECRET not set, using a random secret for this process (development only)")
+	}
+	if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
+		return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
 	}
 	return nil
 }

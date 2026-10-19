@@ -1,0 +1,136 @@
+package config
+
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/msch128/mnema-talk/internal/ssrf"
+)
+
+// FromEnv builds a Config from a lookup function, which keeps it testable.
+func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
+	r := &envReader{lookup: lookup}
+	cfg := r.textSettings()
+	portMin, portMax := r.numericSettings(cfg)
+	if r.err != nil {
+		return nil, r.err
+	}
+	for _, o := range SplitList(r.get("CORS_ALLOWED_ORIGINS", cfg.PublicURL)) {
+		cfg.AllowedOrigins = append(cfg.AllowedOrigins, normalizeURL(o))
+	}
+	if err := cfg.validate(portMin, portMax); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+// envReader reads typed settings from a lookup function. A malformed value
+// is remembered in err (the first one wins) and read as the zero value, so
+// the caller reads everything and checks err once.
+type envReader struct {
+	lookup func(string) (string, bool)
+	err    error
+}
+
+func (r *envReader) fail(err error) {
+	if r.err == nil {
+		r.err = err
+	}
+}
+
+func (r *envReader) get(key, def string) string {
+	if v, ok := r.lookup(key); ok && strings.TrimSpace(v) != "" {
+		return strings.TrimSpace(v)
+	}
+	return def
+}
+
+func (r *envReader) int(key string, def int) int {
+	raw := r.get(key, strconv.Itoa(def))
+	v, err := strconv.Atoi(raw)
+	if err != nil {
+		r.fail(fmt.Errorf("%s must be an integer, got %q", key, raw))
+		return 0
+	}
+	return v
+}
+
+func (r *envReader) bool(key string, def bool) bool {
+	raw := r.get(key, strconv.FormatBool(def))
+	v, err := strconv.ParseBool(raw)
+	if err != nil {
+		r.fail(fmt.Errorf("%s must be true or false, got %q", key, raw))
+		return false
+	}
+	return v
+}
+
+func (r *envReader) port(key string, def uint16) uint16 {
+	raw := r.get(key, strconv.Itoa(int(def)))
+	v, err := strconv.ParseUint(raw, 10, 16)
+	if err != nil {
+		r.fail(fmt.Errorf("%s must be a port number (1-65535), got %q", key, raw))
+		return 0
+	}
+	return uint16(v)
+}
+
+// textSettings reads every setting that cannot be malformed.
+func (r *envReader) textSettings() *Config {
+	return &Config{
+		BindAddr:             r.get("BIND_ADDR", ""),
+		AppEnv:               strings.ToLower(r.get("APP_ENV", "development")),
+		LogLevel:             strings.ToLower(r.get("LOG_LEVEL", "")),
+		PublicURL:            normalizeURL(r.get("PUBLIC_URL", "http://localhost:8080")),
+		TrustedProxies:       SplitList(r.get("TRUSTED_PROXY_CIDRS", defaultTrustedProxies)),
+		JWTSecret:            r.get("JWT_SECRET", ""),
+		AdminUsername:        r.get("ADMIN_USERNAME", "Herzog"),
+		AdminInitialPassword: r.get("ADMIN_INITIAL_PASSWORD", ""),
+		DatabaseURL:          r.get("DATABASE_URL", ""),
+		S3Endpoint:           r.get("S3_ENDPOINT", "http://localhost:8333"),
+		S3Region:             r.get("S3_REGION", "us-east-1"),
+		S3Bucket:             r.get("S3_BUCKET", "mnema-media"),
+		S3AccessKey:          r.get("S3_ACCESS_KEY", ""),
+		S3SecretKey:          r.get("S3_SECRET_KEY", ""),
+		UpdaterURL:           r.get("UPDATER_URL", ""),
+		UpdaterToken:         r.get("UPDATER_TOKEN", ""),
+		AppImage:             r.get("MNEMA_IMAGE", ""),
+		WebRTCTURNURLs:       SplitList(r.get("WEBRTC_TURN_URLS", "")),
+		WebRTCTURNSecret:     r.get("WEBRTC_TURN_SECRET", ""),
+		MetricsToken:         r.get("METRICS_TOKEN", ""),
+		WebRTCAnnounce:       SplitList(r.get("WEBRTC_NAT_1TO1_IP", "")),
+		WebRTCSTUNURLs:       SplitList(r.get("WEBRTC_STUN_URLS", "")),
+		LegalOperatorName:    r.get("LEGAL_OPERATOR_NAME", "Community Operator"),
+		LegalOperatorEmail:   r.get("LEGAL_OPERATOR_EMAIL", "admin@example.com"),
+		LegalOperatorCountry: r.get("LEGAL_OPERATOR_COUNTRY", "Deutschland"),
+		LegalProjectNotice:   r.get("LEGAL_PROJECT_NOTICE", "Privates, nicht-kommerzielles Projekt"),
+	}
+}
+
+// numericSettings reads the numbers, switches and ports into cfg and returns
+// the WebRTC UDP port range, which validate stores once it has checked it.
+func (r *envReader) numericSettings(cfg *Config) (portMin, portMax uint16) {
+	cfg.SessionExpiryHours = r.int("SESSION_EXPIRY_HOURS", 720)
+	// 0 (default) disables automatic media pruning entirely.
+	cfg.MediaRetentionDays = r.int("MEDIA_RETENTION_DAYS", 0)
+	cfg.AuditRetentionDays = r.int("AUDIT_RETENTION_DAYS", 0)
+	cfg.MaxUploadMB = r.int("MAX_UPLOAD_SIZE_MB", 50)
+	portMin = r.port("WEBRTC_UDP_PORT_MIN", 50000)
+	portMax = r.port("WEBRTC_UDP_PORT_MAX", 50050)
+	cfg.WebRTCUDPMuxPort = r.port("WEBRTC_UDP_MUX_PORT", portMin)
+	if m := cfg.WebRTCUDPMuxPort; m != 0 && (m < portMin || m > portMax) {
+		r.fail(fmt.Errorf("WEBRTC_UDP_MUX_PORT must be 0 or inside WEBRTC_UDP_PORT_MIN/MAX"))
+	}
+	cfg.Port = strconv.Itoa(int(r.port("PORT", 8080)))
+	cfg.S3ForcePathStyle = r.bool("S3_FORCE_PATH_STYLE", true)
+	cfg.LinkPreviews = r.bool("LINK_PREVIEWS_ENABLED", true)
+	allow, err := ssrf.ParseAllow(r.get("WEBHOOK_ALLOW_PRIVATE_TARGETS", ""))
+	if err != nil {
+		r.fail(fmt.Errorf("WEBHOOK_ALLOW_PRIVATE_TARGETS: %w", err))
+	}
+	cfg.WebhookAllowPrivateTargets = allow
+	cfg.APIDocs = r.bool("API_DOCS_ENABLED", false)
+	cfg.UpdateCheck = r.bool("UPDATE_CHECK_ENABLED", true)
+	return portMin, portMax
+}

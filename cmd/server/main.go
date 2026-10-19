@@ -46,18 +46,8 @@ func runWithContext(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	level := logLevel(cfg)
-	if cfg.LogLevel == "debug" && os.Getenv("PION_LOG_DEBUG") == "" {
-		// Pion's ICE agent then logs every candidate pair it checks.
-		_ = os.Setenv("PION_LOG_DEBUG", "ice")
-	}
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
-	slog.Info("starting mnema-talk", "version", version.Current(), "revision", version.Commit(), "env", cfg.AppEnv)
-	if broad := cfg.BroadTrustedProxies(); len(broad) > 0 && !config.IsLoopbackAddr(cfg.BindAddr) {
-		slog.Warn("TRUSTED_PROXY_CIDRS contains broad ranges and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only your reverse proxy's address",
-			"ranges", broad)
-		opwarn.Raise(opwarn.TrustedProxyBroad, len(broad))
-	}
+	setupLogging(cfg)
+	warnBroadTrustedProxies(cfg)
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -81,45 +71,13 @@ func runWithContext(ctx context.Context) error {
 	media.StartRetentionWorker(ctx, pool, store, cfg.MediaRetentionDays)
 	media.StartOrphanScan(ctx, pool, store)
 
-	// Addresses browsers send media to: typically the public IP (or a
-	// dynamic-DNS name for it) plus the LAN IP.
-	announce, err := sfu.ResolveAnnounce(ctx, cfg.WebRTCAnnounce)
+	voice, closeVoice, err := startVoice(ctx, cfg)
 	if err != nil {
 		return err
 	}
-	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs, sfu.WithUDPMuxPort(cfg.WebRTCUDPMuxPort))
-	if err != nil {
-		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
-		voice = nil
-		opwarn.Raise(opwarn.VoiceUnavailable, 0)
-	} else {
-		defer func() {
-			if err := voice.Close(); err != nil {
-				slog.Warn("close SFU", "err", err)
-			}
-		}()
-		slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
-		if w := cfg.WebRTCReachabilityWarning(); w != "" {
-			slog.Warn(w)
-			opwarn.Raise(opwarn.WebRTCReachability, 0)
-		}
-		if cfg.WebRTCUDPMuxPort == 0 {
-			// Each peer takes its own port(s) from the range, so the range
-			// bounds how many people can be in calls at once.
-			slog.Warn("WEBRTC_UDP_MUX_PORT=0: every media peer takes its own UDP port(s) from the range, which caps how many people can be in calls at once; leave it empty to share one port",
-				"ports", int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
-			opwarn.Raise(opwarn.WebRTCUDPMuxDisabled, int(cfg.WebRTCUDPPortMax)-int(cfg.WebRTCUDPPortMin)+1)
-		}
-		voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
-	}
+	defer closeVoice()
 
-	// Release check against GitHub (admin System tab). Disabled with
-	// UPDATE_CHECK_ENABLED=false: then the server makes no request at all.
-	var updates *update.Checker
-	if cfg.UpdateCheck {
-		updates = update.NewChecker(update.DefaultReleaseURL, version.Current())
-		go updates.Run(ctx, 30*time.Second)
-	}
+	updates := startUpdateChecker(ctx, cfg)
 
 	router, err := server.NewRouter(server.Deps{Config: cfg, DB: pool, Store: store, StorageReady: store.Ready, SFU: voice, Version: version.Current(), Updates: updates, Context: ctx})
 	if err != nil {
@@ -127,6 +85,78 @@ func runWithContext(ctx context.Context) error {
 	}
 	defer router.Close()
 	return server.Run(ctx, cfg, router)
+}
+
+// setupLogging installs the JSON logger and announces the start.
+func setupLogging(cfg *config.Config) {
+	if cfg.LogLevel == "debug" && os.Getenv("PION_LOG_DEBUG") == "" {
+		// Pion's ICE agent then logs every candidate pair it checks.
+		_ = os.Setenv("PION_LOG_DEBUG", "ice")
+	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel(cfg)})))
+	slog.Info("starting mnema-talk", "version", version.Current(), "revision", version.Commit(), "env", cfg.AppEnv)
+}
+
+// warnBroadTrustedProxies flags trusted proxy ranges that let any host in them
+// forge X-Forwarded-For when the listener is reachable from outside.
+func warnBroadTrustedProxies(cfg *config.Config) {
+	broad := cfg.BroadTrustedProxies()
+	if len(broad) == 0 || config.IsLoopbackAddr(cfg.BindAddr) {
+		return
+	}
+	slog.Warn("TRUSTED_PROXY_CIDRS contains broad ranges and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only your reverse proxy's address",
+		"ranges", broad)
+	opwarn.Raise(opwarn.TrustedProxyBroad, len(broad))
+}
+
+// startVoice starts the SFU and returns it with the function that closes it.
+// When it cannot start, voice is disabled: the SFU is nil and the close
+// function does nothing.
+func startVoice(ctx context.Context, cfg *config.Config) (*sfu.SFU, func(), error) {
+	// Addresses browsers send media to: typically the public IP (or a
+	// dynamic-DNS name for it) plus the LAN IP.
+	announce, err := sfu.ResolveAnnounce(ctx, cfg.WebRTCAnnounce)
+	if err != nil {
+		return nil, nil, err
+	}
+	voice, err := sfu.NewSFU(cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax, announce, cfg.WebRTCSTUNURLs, sfu.WithUDPMuxPort(cfg.WebRTCUDPMuxPort))
+	if err != nil {
+		slog.Warn("webrtc sfu unavailable, voice disabled", "err", err)
+		opwarn.Raise(opwarn.VoiceUnavailable, 0)
+		return nil, func() {}, nil
+	}
+	closeVoice := func() {
+		if err := voice.Close(); err != nil {
+			slog.Warn("close SFU", "err", err)
+		}
+	}
+	slog.Info("webrtc announce", "ips", announce, "ports", fmt.Sprintf("%d-%d", cfg.WebRTCUDPPortMin, cfg.WebRTCUDPPortMax), "udp_mux_port", cfg.WebRTCUDPMuxPort)
+	if w := cfg.WebRTCReachabilityWarning(); w != "" {
+		slog.Warn(w)
+		opwarn.Raise(opwarn.WebRTCReachability, 0)
+	}
+	if cfg.WebRTCUDPMuxPort == 0 {
+		// Each peer takes its own port(s) from the range, so the range
+		// bounds how many people can be in calls at once.
+		ports := int(cfg.WebRTCUDPPortMax) - int(cfg.WebRTCUDPPortMin) + 1
+		slog.Warn("WEBRTC_UDP_MUX_PORT=0: every media peer takes its own UDP port(s) from the range, which caps how many people can be in calls at once; leave it empty to share one port",
+			"ports", ports)
+		opwarn.Raise(opwarn.WebRTCUDPMuxDisabled, ports)
+	}
+	voice.KeepAnnounceCurrent(ctx, cfg.WebRTCAnnounce, 5*time.Minute)
+	return voice, closeVoice, nil
+}
+
+// startUpdateChecker starts the release check against GitHub (admin System
+// tab). Disabled with UPDATE_CHECK_ENABLED=false: then the server makes no
+// request at all and the checker is nil.
+func startUpdateChecker(ctx context.Context, cfg *config.Config) *update.Checker {
+	if !cfg.UpdateCheck {
+		return nil
+	}
+	updates := update.NewChecker(update.DefaultReleaseURL, version.Current())
+	go updates.Run(ctx, 30*time.Second)
+	return updates
 }
 
 // logLevel maps LOG_LEVEL (validated by config) to a slog level; empty means
