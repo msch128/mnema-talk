@@ -196,6 +196,56 @@ taken away closes them. The Owner and Administrators see everything. Deleted
 thread replies are recorded by id only; a reply deleted on its own has its own
 entry with its text. The audit log is not sent to outgoing webhooks.
 
+The `admin.%` row in `audit.Classes` is mapped to Owner and Administrators on
+purpose (`VisPrivileged`): unlisted admin routes are not known to be harmless.
+The parenthetical on `admin.*` in the table above is that catch-all.
+`TestClassesPinTheVisibilityOfEveryAction` pins `admin.post` to that class, and
+`TestAuditCoversEveryMutatingAdminRoute` checks the named mutating `/api/admin`
+routes. The catch-all stays.
+
+### Who may send, talk and moderate
+
+Each cell is the function that enforces the action for that actor, and a test
+that already exercises it. `gap` means that pair is absent. The role bits are
+the [Defaults](roles-and-permissions.md#defaults) section: Member is
+`@everyone` with `perm.DefaultEveryone`, Moderator and Admin are the seeded
+roles, and the Owner is the account `users.role = 'admin'`. There is no User
+role and no Owner role. Neither seeded role holds the *Administrator* bit.
+`TestStarterRolesAreSeededEmpty` checks those bits.
+
+`TestTimeoutTakesPostingAndSpeakingButNotReading` builds its own "admin" with
+the *Administrator* bit. That user is separate from the seeded Admin role.
+`Snapshot.silence` still strips `perm.TimeoutMask` from every non-owner while
+a timeout is in the future, and `Snapshot.Channel` applies that after
+overwrites, so an overwrite cannot hand the mask back. `Snapshot.Channel`
+returns every permission for the Owner before that step.
+
+Slow mode runs in `InsertMessage` unless the message has a `WebhookID` or the
+context is exempt. `sendContext` sets the exemption when the caller has
+*Manage messages*. `botCreateMessage` calls `InsertMessage` without that
+exemption, so a bot token is subject to slow mode. `build` sets `WebhookID`
+for an incoming webhook, so `InsertMessage` skips slow mode for it.
+`TestBotAPIMessages` and `TestWebhookStandsOnItsOwn` reach `InsertMessage`;
+neither turns slow mode on. `TestSlowModeHoldsBackMembersButNotModerators`
+covers a member, a holder of *Manage messages*, and the Owner.
+
+A ban or a disable stops an account through `auth.ActiveSQL` (`disabled_at`,
+or a `banned_at` that is still in force). `sessionUser` loads a member session
+with that condition. `TestActiveConditionsQualifyTheTable` pins both columns.
+
+Posting, reacting and uploading do not write an audit entry. The audit cell is
+the class of the entries that path does record.
+
+| Actor | Send message | Upload | React | Edit or delete own message | Join a Talk | Slow mode | Timeout mask | Ban or disable | Per-route rate limit | Audit class |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Member (`@everyone`) | `sendContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `UploadContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `toggleReaction` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `EditMessage`, `DeleteMessageAs` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `joinVoice` (`TestJoinNeedsViewAndConnect`); [Defaults](roles-and-permissions.md#defaults) | `InsertMessage` (`TestSlowModeHoldsBackMembersButNotModerators`); [Defaults](roles-and-permissions.md#defaults) | `Snapshot.silence` (`TestTimeoutTakesPostingAndSpeakingButNotReading`) | `sessionUser` (`TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores`, `TestAdminDisablesAndEnablesUsers`) | gap | `ClassOf` (`TestClassesPinTheVisibilityOfEveryAction`) |
+| Moderator (seeded set) | `sendContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `UploadContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `toggleReaction` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `EditMessage`, `DeleteMessageAs` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `joinVoice` (`TestJoinNeedsViewAndConnect`); [Defaults](roles-and-permissions.md#defaults) | `sendContext` (`TestSlowModeHoldsBackMembersButNotModerators`); [Defaults](roles-and-permissions.md#defaults) | `Snapshot.silence` (`TestTimeoutTakesPostingAndSpeakingButNotReading`) | `sessionUser` (`TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores`, `TestAdminDisablesAndEnablesUsers`) | gap | `ClassOf` (`TestClassesPinTheVisibilityOfEveryAction`) |
+| Admin (seeded set) | `sendContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `UploadContext` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `toggleReaction` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `EditMessage`, `DeleteMessageAs` (`TestChannelPermissionsGateTheirActions`); [Defaults](roles-and-permissions.md#defaults) | `joinVoice` (`TestJoinNeedsViewAndConnect`); [Defaults](roles-and-permissions.md#defaults) | `sendContext` (`TestSlowModeHoldsBackMembersButNotModerators`); [Defaults](roles-and-permissions.md#defaults) | `Snapshot.silence` (`TestTimeoutTakesPostingAndSpeakingButNotReading`) | `sessionUser` (`TestBanBlocksSessionsLoginAndSocketsAndUnbanRestores`, `TestAdminDisablesAndEnablesUsers`) | gap | `ClassOf` (`TestClassesPinTheVisibilityOfEveryAction`) |
+| Owner (the account) | `sendContext` (`TestTheOwnerCannotBeTouched`); [Defaults](roles-and-permissions.md#defaults) | `UploadContext` (`TestPrivateChannelIsInvisibleEverywhereToOutsiders`); [Defaults](roles-and-permissions.md#defaults) | `toggleReaction` (`TestGatewayDeliversOnlyWhatTheBotMaySee`); [Defaults](roles-and-permissions.md#defaults) | `EditMessage` (`TestGatewayDeliversOnlyWhatTheBotMaySee`); `DeleteMessageAs` (`TestModeratorsCannotDeleteTheOwnersMessages`) | `joinVoice` (`TestJoinNeedsViewAndConnect`) | `sendContext` (`TestSlowModeHoldsBackMembersButNotModerators`) | `Snapshot.Channel` (`TestTimeoutTakesPostingAndSpeakingButNotReading`) | `checkTarget` (`TestModerationRespectsHierarchyAndPermissions`); `targetUser` (`TestTheOwnerCannotBeTouched`) | gap | `ClassOf` (`TestClassesPinTheVisibilityOfEveryAction`) |
+| Bot token | `botCreateMessage` (`TestBotAPIMessages`) | `botUpload` (`TestBotAPIUpload`) | `setBotReaction` (`TestBotAPIReactions`) | `botEditMessage`, `botDeleteMessage` (`TestBotAPIMessages`) | gap | `InsertMessage` (`TestBotAPIMessages`) | `Snapshot.silence` (`TestTimedOutBotCannotSpeak`) | `Lookup` (`TestBannedBotIsRefusedAndDisconnected`) | `LimitSends` (`TestBotAPIRateLimits`) | gap |
+| Incoming webhook | `post` (`TestWebhookStandsOnItsOwn`) | `checkAllowed` (`TestExecuteAppliesTheWebhooksSettings`) | gap | gap | gap | `InsertMessage` (`TestWebhookStandsOnItsOwn`) | gap | gap | `execute` (`TestWebhookRateLimits`) | gap |
+| Bot gateway | gap | gap | gap | gap | gap | gap | gap | `validTokens` (`TestBannedBotIsRefusedAndDisconnected`) | `frameLimiter.allow` (`TestGatewayFrameRateLimit`) | gap |
+
 ### API
 
 `GET /api/admin/audit-log` takes the filters `actor` (user id), `action` (exact
