@@ -18,6 +18,8 @@
 // pointer.
 import { shallowReactive, toValue, getCurrentScope, onScopeDispose } from 'vue'
 import type { MaybeRefOrGetter } from 'vue'
+import type { FrameHandle } from './sortableDragParts'
+import { createClickGuard, createWindowListeners, cancelFrame, edgeScrollSpeed, isDragPress, requestFrame } from './sortableDragParts'
 
 export interface DragContext<Item> { x: number; y: number; item: Item; element: Element | null }
 export interface SortableDragOptions<Item, Target> {
@@ -42,7 +44,210 @@ export const DRAG_DEFAULTS = Object.freeze({
   clickGuardMs: 400 // how long to wait for the click that follows a drag
 })
 
-const CLICK_EVENTS = ['click', 'mousedown', 'mouseup']
+type Options<Item, Target> = SortableDragOptions<Item, Target> & Record<keyof typeof DRAG_DEFAULTS, number>
+
+/** What the one press or drag in progress remembers. */
+interface Session {
+  pointerId: number | null
+  source: Element | null
+  startX: number
+  startY: number
+  pickX: number
+  pickY: number
+  moved: boolean
+  timer: ReturnType<typeof setTimeout> | undefined
+  frame: FrameHandle | null
+}
+
+interface DragCtx<Item, Target> {
+  opts: Options<Item, Target>
+  state: DragState<Item, Target>
+  s: Session
+  clickGuard: ReturnType<typeof createClickGuard>
+  listeners: ReturnType<typeof createWindowListeners>
+}
+
+function isTouch(c: { state: { pointerType: string } }) {
+  return c.state.pointerType === 'touch'
+}
+
+function hitTest<Item, Target>({ opts }: DragCtx<Item, Target>, x: number, y: number) {
+  if (opts.hitTest) return opts.hitTest(x, y)
+  return typeof document !== 'undefined' && document.elementFromPoint ? document.elementFromPoint(x, y) : null
+}
+
+/** Events of another pointer than the one that started the press are not ours. */
+function foreignPointer<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) {
+  return c.s.pointerId !== null && e.pointerId !== undefined && e.pointerId !== c.s.pointerId
+}
+
+function pointerDown<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent, item: Item) {
+  const { state, s, opts } = c
+  if (!toValue(opts.enabled ?? true) || state.phase !== 'idle') return
+  if (e.isPrimary === false) return
+  const type = e.pointerType || 'mouse'
+  if (!isDragPress(e, type)) return
+
+  s.pointerId = e.pointerId ?? null
+  s.source = e.currentTarget instanceof Element ? e.currentTarget : null
+  s.startX = state.x = e.clientX
+  s.startY = state.y = e.clientY
+  s.moved = false
+  Object.assign(state, { phase: 'pending', item, target: null, pointerType: type })
+  c.listeners.listen()
+  if (type === 'touch') s.timer = setTimeout(() => begin(c), opts.longPressMs)
+}
+
+function begin<Item, Target>(c: DragCtx<Item, Target>) {
+  const { state, s } = c
+  clearTimeout(s.timer)
+  s.timer = undefined
+  if (state.phase !== 'pending' || state.item === null) return
+  state.phase = 'dragging'
+  s.pickX = state.x
+  s.pickY = state.y
+  if (isTouch(c)) navigator.vibrate?.(10)
+  else s.moved = true
+  // Keeps pointerup coming when the mouse is released outside the window.
+  try {
+    if (s.pointerId !== null) s.source?.setPointerCapture?.(s.pointerId)
+  } catch {
+    // the pointer is gone already
+  }
+  try {
+    globalThis.getSelection?.()?.removeAllRanges?.()
+  } catch {
+    // nothing selected
+  }
+  document.documentElement.classList.add('mnema-dragging')
+  c.opts.onStart?.(state.item)
+  update(c)
+}
+
+function update<Item, Target>(c: DragCtx<Item, Target>) {
+  const { state, opts } = c
+  if (state.phase !== 'dragging' || state.item === null) return
+  state.target = opts.resolve({ x: state.x, y: state.y, item: state.item, element: hitTest(c, state.x, state.y) }) ?? null
+  scheduleScroll(c)
+}
+
+/** A pending press either turns into a drag (mouse moved enough) or gives up (touch scrolled). */
+function movePending<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) {
+  const dist = Math.hypot(e.clientX - c.s.startX, e.clientY - c.s.startY)
+  if (isTouch(c)) {
+    if (dist > c.opts.touchSlop) reset(c) // a scroll, not a long press
+  } else if (dist >= c.opts.mouseThreshold) {
+    begin(c)
+  }
+}
+
+function onPointerMove<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) {
+  if (foreignPointer(c, e)) return
+  const { state, s } = c
+  state.x = e.clientX
+  state.y = e.clientY
+  if (state.phase === 'pending') {
+    movePending(c, e)
+    return
+  }
+  if (state.phase !== 'dragging') return
+  if (!s.moved && Math.hypot(e.clientX - s.pickX, e.clientY - s.pickY) > c.opts.touchSlop) s.moved = true
+  if (e.cancelable) e.preventDefault()
+  update(c)
+}
+
+function onPointerUp<Item, Target>(c: DragCtx<Item, Target>, e: PointerEvent) {
+  if (foreignPointer(c, e)) return
+  const { state, opts } = c
+  if (state.phase === 'pending') {
+    reset(c) // a click or a tap
+    return
+  }
+  if (state.phase !== 'dragging') return
+  const { item, target } = state
+  if (item === null) return
+  c.clickGuard.arm()
+  if (isTouch(c) && !c.s.moved) {
+    reset(c)
+    opts.onEnd?.(item, false)
+    opts.onLongPress?.(item, e)
+    return
+  }
+  reset(c)
+  if (target) opts.onDrop(item, target)
+  opts.onEnd?.(item, !!target)
+}
+
+/** Ends a drag (or a pending press) without dropping. */
+function cancel<Item, Target>(c: DragCtx<Item, Target>) {
+  const { item, phase } = c.state
+  if (phase === 'idle') return
+  if (phase === 'dragging') c.clickGuard.arm()
+  reset(c)
+  if (phase === 'dragging' && item !== null) c.opts.onEnd?.(item, false)
+}
+
+function onKeydown<Item, Target>(c: DragCtx<Item, Target>, e: KeyboardEvent) {
+  if (e.key !== 'Escape' || c.state.phase === 'idle') return
+  e.preventDefault()
+  e.stopPropagation()
+  cancel(c)
+}
+
+// A long press on touch fires contextmenu on some platforms; while an item
+// is held that belongs to the drag (see onLongPress).
+function onContextMenu<Item, Target>(c: DragCtx<Item, Target>, e: MouseEvent) {
+  if (c.state.phase === 'idle') return
+  if (c.state.phase === 'pending' && !isTouch(c)) {
+    reset(c)
+    return
+  }
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+// ---- Auto-scroll ----
+
+function scrollSpeed<Item, Target>({ opts, state }: DragCtx<Item, Target>) {
+  const el = toValue(opts.scrollContainer)
+  if (!el || state.phase !== 'dragging') return 0
+  return edgeScrollSpeed(el, state.y, opts.edge, opts.maxScrollSpeed)
+}
+
+function scheduleScroll<Item, Target>(c: DragCtx<Item, Target>) {
+  if (c.s.frame === null && scrollSpeed(c) !== 0) c.s.frame = requestFrame(() => scrollStep(c))
+}
+
+function scrollStep<Item, Target>(c: DragCtx<Item, Target>) {
+  c.s.frame = null
+  const speed = scrollSpeed(c)
+  if (!speed) return
+  const el = toValue(c.opts.scrollContainer)
+  if (!el) return
+  const before = el.scrollTop
+  el.scrollTop = before + speed
+  if (el.scrollTop === before) return // at the end already
+  update(c) // the content moved under the pointer
+}
+
+function reset<Item, Target>(c: DragCtx<Item, Target>) {
+  const { s } = c
+  clearTimeout(s.timer)
+  s.timer = undefined
+  if (s.frame !== null) cancelFrame(s.frame)
+  s.frame = null
+  c.listeners.unlisten()
+  try {
+    if (s.pointerId !== null && s.source?.hasPointerCapture?.(s.pointerId)) s.source.releasePointerCapture(s.pointerId)
+  } catch {
+    // released already
+  }
+  s.pointerId = null
+  s.source = null
+  s.moved = false
+  if (typeof document !== 'undefined') document.documentElement.classList.remove('mnema-dragging')
+  Object.assign(c.state, { phase: 'idle', item: null, target: null, pointerType: '' })
+}
 
 /**
  * options:
@@ -56,7 +261,6 @@ const CLICK_EVENTS = ['click', 'mousedown', 'mouseup']
  *   ...DRAG_DEFAULTS overrides
  */
 export function useSortableDrag<Item, Target>(options: SortableDragOptions<Item, Target>) {
-  const opts = { ...DRAG_DEFAULTS, ...options }
   // Targets and items are replaced as a unit; preserve their original identities.
   const state = shallowReactive<DragState<Item, Target>>({
     phase: 'idle', // 'idle' | 'pending' | 'dragging'
@@ -66,274 +270,43 @@ export function useSortableDrag<Item, Target>(options: SortableDragOptions<Item,
     x: 0,
     y: 0
   })
-
-  let pointerId: number | null = null
-  let source: Element | null = null
-  let startX = 0
-  let startY = 0
-  let pickX = 0
-  let pickY = 0
-  let moved = false
-  let timer: ReturnType<typeof setTimeout> | undefined
-  let frame: { kind: 'raf'; id: number } | { kind: 'timer'; id: ReturnType<typeof setTimeout> } | null = null
-  let listening = false
-  let releaseClickGuard: (() => void) | null = null
-
-  const raf = (cb: () => void): NonNullable<typeof frame> => globalThis.requestAnimationFrame ? { kind: 'raf', id: globalThis.requestAnimationFrame(cb) } : { kind: 'timer', id: setTimeout(cb, 16) }
-  const cancelRaf = (handle: NonNullable<typeof frame>) => handle.kind === 'raf' ? globalThis.cancelAnimationFrame(handle.id) : clearTimeout(handle.id)
-
-  function hitTest(x: number, y: number) {
-    if (opts.hitTest) return opts.hitTest(x, y)
-    return typeof document !== 'undefined' && document.elementFromPoint ? document.elementFromPoint(x, y) : null
-  }
-
-  function isTouch() {
-    return state.pointerType === 'touch'
-  }
-
-  /** Bind to pointerdown of a draggable element: @pointerdown="drag.pointerDown($event, item)". */
-  function pointerDown(e: PointerEvent, item: Item) {
-    if (!toValue(opts.enabled ?? true) || state.phase !== 'idle') return
-    if (e.isPrimary === false) return
-    const type = e.pointerType || 'mouse'
-    if (type !== 'touch' && (e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)) return
-    if (e.target instanceof Element && e.target.closest('[data-no-drag]')) return
-
-    pointerId = e.pointerId ?? null
-    source = e.currentTarget instanceof Element ? e.currentTarget : null
-    startX = state.x = e.clientX
-    startY = state.y = e.clientY
-    moved = false
-    Object.assign(state, { phase: 'pending', item, target: null, pointerType: type })
-    listen()
-    if (type === 'touch') timer = setTimeout(begin, opts.longPressMs)
-  }
-
-  function begin() {
-    clearTimeout(timer)
-    timer = undefined
-    if (state.phase !== 'pending' || state.item === null) return
-    state.phase = 'dragging'
-    pickX = state.x
-    pickY = state.y
-    if (isTouch()) navigator.vibrate?.(10)
-    else moved = true
-    // Keeps pointerup coming when the mouse is released outside the window.
-    try {
-      if (pointerId !== null) source?.setPointerCapture?.(pointerId)
-    } catch {
-      // the pointer is gone already
-    }
-    try {
-      globalThis.getSelection?.()?.removeAllRanges?.()
-    } catch {
-      // nothing selected
-    }
-    document.documentElement.classList.add('mnema-dragging')
-    opts.onStart?.(state.item)
-    update()
-  }
-
-  function update() {
-    if (state.phase !== 'dragging' || state.item === null) return
-    state.target = opts.resolve({ x: state.x, y: state.y, item: state.item, element: hitTest(state.x, state.y) }) ?? null
-    scheduleScroll()
-  }
-
-  function onPointerMove(e: PointerEvent) {
-    if (pointerId !== null && e.pointerId !== undefined && e.pointerId !== pointerId) return
-    state.x = e.clientX
-    state.y = e.clientY
-    if (state.phase === 'pending') {
-      const dist = Math.hypot(e.clientX - startX, e.clientY - startY)
-      if (isTouch()) {
-        if (dist > opts.touchSlop) reset() // a scroll, not a long press
-      } else if (dist >= opts.mouseThreshold) {
-        begin()
-      }
-      return
-    }
-    if (state.phase !== 'dragging') return
-    if (!moved && Math.hypot(e.clientX - pickX, e.clientY - pickY) > opts.touchSlop) moved = true
-    if (e.cancelable) e.preventDefault()
-    update()
-  }
-
-  function onPointerUp(e: PointerEvent) {
-    if (pointerId !== null && e.pointerId !== undefined && e.pointerId !== pointerId) return
-    if (state.phase === 'pending') {
-      reset() // a click or a tap
-      return
-    }
-    if (state.phase !== 'dragging') return
-    const { item, target } = state
-    if (item === null) return
-    guardClick()
-    if (isTouch() && !moved) {
-      reset()
-      opts.onEnd?.(item, false)
-      opts.onLongPress?.(item, e)
-      return
-    }
-    reset()
-    if (target) opts.onDrop(item, target)
-    opts.onEnd?.(item, !!target)
-  }
-
-  /** Ends a drag (or a pending press) without dropping. */
-  function cancel() {
-    if (state.phase === 'idle') return
-    const { item, phase } = state
-    if (phase === 'dragging') guardClick()
-    reset()
-    if (phase === 'dragging' && item !== null) opts.onEnd?.(item, false)
-  }
-
-  function onKeydown(e: KeyboardEvent) {
-    if (e.key !== 'Escape' || state.phase === 'idle') return
-    e.preventDefault()
-    e.stopPropagation()
-    cancel()
-  }
-
-  // While a finger drags, the page must not scroll; while it only presses,
-  // scrolling stays possible (and gives up the press, see onPointerMove).
-  // Bind it as a (non-passive) touchmove listener on the list element:
-  // browsers decide whether a touch may scroll when it starts, so a listener
-  // added once the drag began would come too late.
-  function touchMove(e: TouchEvent) {
-    if (state.phase === 'dragging' && e.cancelable) e.preventDefault()
-  }
-
-  // A long press on touch fires contextmenu on some platforms; while an item
-  // is held that belongs to the drag (see onLongPress).
-  function onContextMenu(e: MouseEvent) {
-    if (state.phase === 'idle') return
-    if (state.phase === 'pending' && !isTouch()) {
-      reset()
-      return
-    }
-    e.preventDefault()
-    e.stopPropagation()
-  }
-
-  function onVisibility() {
-    if (document.visibilityState === 'hidden') cancel()
-  }
-
-  // ---- Auto-scroll ----
-
-  function scrollSpeed() {
-    const el = toValue(opts.scrollContainer)
-    if (!el || state.phase !== 'dragging') return 0
-    const r = el.getBoundingClientRect()
-    if (!r.height) return 0
-    const edge = Math.min(opts.edge, r.height / 3)
-    const ratio = (d: number) => Math.min(1, Math.max(0, d) / edge)
-    if (state.y < r.top + edge) return -Math.ceil(opts.maxScrollSpeed * ratio(r.top + edge - state.y))
-    if (state.y > r.bottom - edge) return Math.ceil(opts.maxScrollSpeed * ratio(state.y - (r.bottom - edge)))
-    return 0
-  }
-
-  function scheduleScroll() {
-    if (frame === null && scrollSpeed() !== 0) frame = raf(scrollStep)
-  }
-
-  function scrollStep() {
-    frame = null
-    const speed = scrollSpeed()
-    if (!speed) return
-    const el = toValue(opts.scrollContainer)
-    if (!el) return
-    const before = el.scrollTop
-    el.scrollTop = before + speed
-    if (el.scrollTop === before) return // at the end already
-    update() // the content moved under the pointer
-  }
-
-  // ---- Click guard ----
-
-  // The click (and on some touch browsers the synthesized mouse events) that
-  // follows the drag must not reach the row below the pointer. Not every
-  // browser sends that click (Chromium doesn't after a captured drag), so the
-  // guard also ends with the next press: that is a new click of its own, e.g.
-  // on the toast's "Undo" right after the drop.
-  function guardClick() {
-    if (typeof window === 'undefined') return
-    releaseClickGuard?.()
-    const swallow = (e: Event) => {
-      e.preventDefault()
-      e.stopPropagation()
-      e.stopImmediatePropagation?.()
-      if (e.type === 'click') done()
-    }
-    const stopTimer = setTimeout(done, opts.clickGuardMs)
-    function done() {
-      clearTimeout(stopTimer)
-      releaseClickGuard = null
-      for (const type of CLICK_EVENTS) window.removeEventListener(type, swallow, true)
-      window.removeEventListener('pointerdown', done, true)
-    }
-    for (const type of CLICK_EVENTS) window.addEventListener(type, swallow, true)
-    window.addEventListener('pointerdown', done, true)
-    releaseClickGuard = done
-  }
-
-  // ---- Listener bookkeeping ----
-
-  function listen() {
-    if (listening || typeof window === 'undefined') return
-    listening = true
-    window.addEventListener('pointermove', onPointerMove, { passive: false })
-    window.addEventListener('pointerup', onPointerUp)
-    window.addEventListener('pointercancel', cancel)
-    window.addEventListener('keydown', onKeydown, true)
-    window.addEventListener('contextmenu', onContextMenu, true)
-    window.addEventListener('blur', cancel)
-    document.addEventListener('visibilitychange', onVisibility)
-  }
-
-  function unlisten() {
-    if (!listening) return
-    listening = false
-    window.removeEventListener('pointermove', onPointerMove)
-    window.removeEventListener('pointerup', onPointerUp)
-    window.removeEventListener('pointercancel', cancel)
-    window.removeEventListener('keydown', onKeydown, true)
-    window.removeEventListener('contextmenu', onContextMenu, true)
-    window.removeEventListener('blur', cancel)
-    document.removeEventListener('visibilitychange', onVisibility)
-  }
-
-  function reset() {
-    clearTimeout(timer)
-    timer = undefined
-    if (frame !== null) cancelRaf(frame)
-    frame = null
-    unlisten()
-    try {
-      if (pointerId !== null && source?.hasPointerCapture?.(pointerId)) source.releasePointerCapture(pointerId)
-    } catch {
-      // released already
-    }
-    pointerId = null
-    source = null
-    moved = false
-    if (typeof document !== 'undefined') document.documentElement.classList.remove('mnema-dragging')
-    Object.assign(state, { phase: 'idle', item: null, target: null, pointerType: '' })
+  const opts = { ...DRAG_DEFAULTS, ...options }
+  const c: DragCtx<Item, Target> = {
+    opts,
+    state,
+    s: { pointerId: null, source: null, startX: 0, startY: 0, pickX: 0, pickY: 0, moved: false, timer: undefined, frame: null },
+    clickGuard: createClickGuard(opts.clickGuardMs),
+    listeners: createWindowListeners({
+      move: e => onPointerMove(c, e),
+      up: e => onPointerUp(c, e),
+      cancel: () => cancel(c),
+      keydown: e => onKeydown(c, e),
+      contextmenu: e => onContextMenu(c, e),
+      visibility: () => { if (document.visibilityState === 'hidden') cancel(c) }
+    })
   }
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
-      reset()
-      releaseClickGuard?.()
+      reset(c)
+      c.clickGuard.release()
     })
   }
 
-  /** Re-resolves the target at the current pointer, e.g. after the list changed. */
-  function refresh() {
-    update()
+  return {
+    state,
+    /** Bind to pointerdown of a draggable element: @pointerdown="drag.pointerDown($event, item)". */
+    pointerDown: (e: PointerEvent, item: Item) => pointerDown(c, e, item),
+    // While a finger drags, the page must not scroll; while it only presses,
+    // scrolling stays possible (and gives up the press, see onPointerMove).
+    // Bind it as a (non-passive) touchmove listener on the list element:
+    // browsers decide whether a touch may scroll when it starts, so a listener
+    // added once the drag began would come too late.
+    touchMove(e: TouchEvent) {
+      if (state.phase === 'dragging' && e.cancelable) e.preventDefault()
+    },
+    cancel: () => cancel(c),
+    /** Re-resolves the target at the current pointer, e.g. after the list changed. */
+    refresh: () => update(c)
   }
-
-  return { state, pointerDown, touchMove, cancel, refresh }
 }

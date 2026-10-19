@@ -30,29 +30,8 @@ export function frameRateLabel(fps: StreamFrameRate) {
   return t('talk.quality.fps', { fps })
 }
 
-/**
- * getStats: async () => RTCStatsReport values of the screen sender (or null);
- * see useWebRTC().getScreenSendStats.
- */
-export function useStreamQuality({ getStats, getCaptureSettings }: StreamQualityOptions = {}) {
-  const voiceStore = useVoiceStore()
-  const quality = computed(() => normalizeQuality(voiceStore.screenQuality))
-  const mode = computed(() => streamModeOf(voiceStore.screenQuality))
-
-  function setMode(m: StreamMode) {
-    // The presets set both values; Custom keeps the current ones.
-    if (m === 'gaming' || m === 'screen') voiceStore.setScreenQuality({ ...STREAM_PRESETS[m] })
-    else if (m === 'custom') voiceStore.setScreenQuality({ ...quality.value, custom: true })
-  }
-  // A value that matches no preset makes the mode Custom (see streamModeOf).
-  function setResolution(resolution: StreamResolution) {
-    voiceStore.setScreenQuality({ ...quality.value, resolution })
-  }
-  function setFrameRate(fps: StreamFrameRate) {
-    voiceStore.setScreenQuality({ ...quality.value, fps })
-  }
-
-  // --- What is being sent, sampled while "Advanced" is open ---
+/** Samples what is being sent while "Advanced" is open. */
+function useSendStatsSampler({ getStats, getCaptureSettings }: StreamQualityOptions) {
   const sendStats = ref<SendStatsSummary | null>(null)
   const captureSettings = ref<MediaTrackSettings | null>(null)
   let timer: ReturnType<typeof setInterval> | null = null
@@ -74,12 +53,6 @@ export function useStreamQuality({ getStats, getCaptureSettings }: StreamQuality
     sendStats.value = summary
   }
 
-  function startStats() {
-    stopStats()
-    timer = setInterval(sample, STATS_INTERVAL_MS)
-    return sample()
-  }
-
   function stopStats() {
     sampling++
     if (timer) clearInterval(timer)
@@ -87,61 +60,114 @@ export function useStreamQuality({ getStats, getCaptureSettings }: StreamQuality
     previous = null
   }
 
+  function startStats() {
+    stopStats()
+    timer = setInterval(sample, STATS_INTERVAL_MS)
+    return sample()
+  }
+
   if (getCurrentInstance()) onBeforeUnmount(stopStats)
+  return { sendStats, captureSettings, startStats, stopStats }
+}
+
+function radioItem(id: string, label: string, checked: boolean, action: () => void, subtitle?: string): ContextMenuItem {
+  return {
+    id,
+    type: 'radio',
+    label,
+    ...(subtitle === undefined ? {} : { subtitle }),
+    checked,
+    keepOpen: true,
+    action
+  }
+}
+
+interface QualityActions {
+  setMode(m: StreamMode): void
+  setResolution(r: StreamResolution): void
+  setFrameRate(fps: StreamFrameRate): void
+}
+
+function resolutionAndRateItems(q: { resolution: StreamResolution; fps: StreamFrameRate }, actions: QualityActions): ContextMenuItem[] {
+  return [
+    {
+      id: 'resolution',
+      type: 'submenu',
+      label: t('talk.quality.resolution'),
+      value: resolutionLabel(q.resolution),
+      minWidth: 150,
+      items: STREAM_RESOLUTIONS.map(r => radioItem(`resolution-${r}`, resolutionLabel(r), q.resolution === r, () => actions.setResolution(r)))
+    },
+    {
+      id: 'fps',
+      type: 'submenu',
+      label: t('talk.quality.frameRate'),
+      value: frameRateLabel(q.fps),
+      minWidth: 150,
+      items: STREAM_FRAME_RATES.map(fps => radioItem(`fps-${fps}`, frameRateLabel(fps), q.fps === fps, () => actions.setFrameRate(fps)))
+    }
+  ]
+}
+
+/** The read-only rows of "Advanced": what is actually being sent and captured. */
+function advancedInfoItems(fps: StreamFrameRate, sendStats: SendStatsSummary | null, captureSettings: MediaTrackSettings | null): ContextMenuItem[] {
+  const shown = formatSendStats(sendStats)
+  const diagnosis = formatStreamDiagnostics(sendStats, captureSettings)
+  const limitation = sendStats?.limitation
+  const efficient = sendStats?.efficientEncoder
+  const info = (id: string, label: string, value: string): ContextMenuItem => ({ id, type: 'info', label: t(label), value })
+  return [
+    info('codec', 'talk.quality.codec', shown.codec),
+    info('codec-profile', 'talk.quality.codecProfile', diagnosis.codecProfile),
+    info('target-fps', 'talk.quality.targetFps', frameRateLabel(fps)),
+    info('capture-setting', 'talk.quality.captureSetting', diagnosis.captureSetting),
+    info('capture-fps', 'talk.quality.captureFps', diagnosis.captureFps),
+    info('size', 'talk.quality.resolution', shown.resolution),
+    info('fps', 'talk.quality.encodedFps', shown.fps),
+    info('bitrate', 'talk.quality.bitrate', shown.bitrate),
+    info('encoder', 'talk.quality.encoder', diagnosis.encoder),
+    info('efficient-encoder', 'talk.quality.efficientEncoder', efficient === null || efficient === undefined ? '–' : t(`talk.quality.${efficient ? 'yes' : 'no'}`)),
+    info('encode-time', 'talk.quality.encodeTime', diagnosis.encodeTime),
+    info('limitation', 'talk.quality.limitation', limitation ? t(`talk.quality.limit_${limitation}`) : '–'),
+    { type: 'label', label: t('talk.quality.fpsNote') }
+  ]
+}
+
+/**
+ * getStats: async () => RTCStatsReport values of the screen sender (or null);
+ * see useWebRTC().getScreenSendStats.
+ */
+export function useStreamQuality(options: StreamQualityOptions = {}) {
+  const voiceStore = useVoiceStore()
+  const quality = computed(() => normalizeQuality(voiceStore.screenQuality))
+  const mode = computed(() => streamModeOf(voiceStore.screenQuality))
+  const { sendStats, captureSettings, startStats, stopStats } = useSendStatsSampler(options)
+
+  function setMode(m: StreamMode) {
+    // The presets set both values; Custom keeps the current ones.
+    if (m === 'gaming' || m === 'screen') voiceStore.setScreenQuality({ ...STREAM_PRESETS[m] })
+    else if (m === 'custom') voiceStore.setScreenQuality({ ...quality.value, custom: true })
+  }
+  // A value that matches no preset makes the mode Custom (see streamModeOf).
+  function setResolution(resolution: StreamResolution) {
+    voiceStore.setScreenQuality({ ...quality.value, resolution })
+  }
+  function setFrameRate(fps: StreamFrameRate) {
+    voiceStore.setScreenQuality({ ...quality.value, fps })
+  }
 
   /** ContextMenu items; read reactively, so the open menu follows every change. */
   function menuItems({ onChangeSource }: { onChangeSource?: () => void } = {}): ContextMenuItem[] {
     const q = quality.value
     const m = mode.value
-    const shown = formatSendStats(sendStats.value)
-    const diagnosis = formatStreamDiagnostics(sendStats.value, captureSettings.value)
-    const limitation = sendStats.value?.limitation
-    const efficient = sendStats.value?.efficientEncoder
-    const modeItem = (id: StreamMode, subtitle?: string): ContextMenuItem => ({
-      id: `mode-${id}`,
-      type: 'radio',
-      label: t(`talk.quality.${id}`),
-      ...(subtitle === undefined ? {} : { subtitle }),
-      checked: m === id,
-      keepOpen: true,
-      action: () => setMode(id)
-    })
+    const modeItem = (id: StreamMode, subtitle?: string) => radioItem(`mode-${id}`, t(`talk.quality.${id}`), m === id, () => setMode(id), subtitle)
     const items: ContextMenuItem[] = [
       { type: 'label', label: t('talk.quality.mode') },
       modeItem('gaming', t('talk.quality.gamingHint')),
       modeItem('screen', t('talk.quality.screenHint')),
       modeItem('custom'),
       { type: 'separator' },
-      {
-        id: 'resolution',
-        type: 'submenu',
-        label: t('talk.quality.resolution'),
-        value: resolutionLabel(q.resolution),
-        minWidth: 150,
-        items: STREAM_RESOLUTIONS.map(r => ({
-          id: `resolution-${r}`,
-          type: 'radio',
-          label: resolutionLabel(r),
-          checked: q.resolution === r,
-          keepOpen: true,
-          action: () => setResolution(r)
-        }))
-      },
-      {
-        id: 'fps',
-        type: 'submenu',
-        label: t('talk.quality.frameRate'),
-        value: frameRateLabel(q.fps),
-        minWidth: 150,
-        items: STREAM_FRAME_RATES.map(fps => ({
-          id: `fps-${fps}`,
-          type: 'radio',
-          label: frameRateLabel(fps),
-          checked: q.fps === fps,
-          keepOpen: true,
-          action: () => setFrameRate(fps)
-        }))
-      },
+      ...resolutionAndRateItems(q, { setMode, setResolution, setFrameRate }),
       { type: 'separator' },
       {
         id: 'mute-sound',
@@ -159,21 +185,7 @@ export function useStreamQuality({ getStats, getCaptureSettings }: StreamQuality
         minWidth: 290,
         onOpen: () => { startStats() },
         onClose: stopStats,
-        items: [
-          { id: 'codec', type: 'info', label: t('talk.quality.codec'), value: shown.codec },
-          { id: 'codec-profile', type: 'info', label: t('talk.quality.codecProfile'), value: diagnosis.codecProfile },
-          { id: 'target-fps', type: 'info', label: t('talk.quality.targetFps'), value: frameRateLabel(q.fps) },
-          { id: 'capture-setting', type: 'info', label: t('talk.quality.captureSetting'), value: diagnosis.captureSetting },
-          { id: 'capture-fps', type: 'info', label: t('talk.quality.captureFps'), value: diagnosis.captureFps },
-          { id: 'size', type: 'info', label: t('talk.quality.resolution'), value: shown.resolution },
-          { id: 'fps', type: 'info', label: t('talk.quality.encodedFps'), value: shown.fps },
-          { id: 'bitrate', type: 'info', label: t('talk.quality.bitrate'), value: shown.bitrate },
-          { id: 'encoder', type: 'info', label: t('talk.quality.encoder'), value: diagnosis.encoder },
-          { id: 'efficient-encoder', type: 'info', label: t('talk.quality.efficientEncoder'), value: efficient === null || efficient === undefined ? '–' : t(`talk.quality.${efficient ? 'yes' : 'no'}`) },
-          { id: 'encode-time', type: 'info', label: t('talk.quality.encodeTime'), value: diagnosis.encodeTime },
-          { id: 'limitation', type: 'info', label: t('talk.quality.limitation'), value: limitation ? t(`talk.quality.limit_${limitation}`) : '–' },
-          { type: 'label', label: t('talk.quality.fpsNote') }
-        ]
+        items: advancedInfoItems(q.fps, sendStats.value, captureSettings.value)
       }
     ]
     if (onChangeSource) {

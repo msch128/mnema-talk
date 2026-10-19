@@ -1,3 +1,4 @@
+import type { Ref } from 'vue'
 import { reactive, ref, computed, onScopeDispose } from 'vue'
 
 export type PanelSide = 'left' | 'right' | 'top' | 'bottom'
@@ -124,6 +125,114 @@ function currentViewportSize(axis: PanelAxis) {
   return axis === 'y' ? window.innerHeight : window.innerWidth
 }
 
+/** The window's width or height, updated once per frame while it is resized. */
+function useViewportSize(axis: PanelAxis) {
+  const viewport = ref(currentViewportSize(axis))
+  let resizeFrame = 0
+  function onWindowResize() {
+    if (resizeFrame) return
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = 0
+      viewport.value = currentViewportSize(axis)
+    })
+  }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', onWindowResize)
+    onScopeDispose(() => {
+      window.removeEventListener('resize', onWindowResize)
+      if (resizeFrame) cancelAnimationFrame(resizeFrame)
+    })
+  }
+  return viewport
+}
+
+// The width a key press asks for (Home, End or an arrow), or null for any other key.
+function keyboardWidth(e: KeyboardEvent, def: PanelDefinition, current: number, max: number) {
+  if (e.key === 'Home') return def.min
+  if (e.key === 'End') return max
+  const delta = keyboardDelta(e.key, e.shiftKey, def.side)
+  return delta ? current + delta : null
+}
+
+interface PanelDrag {
+  event: PointerEvent
+  handle: Element
+  def: PanelDefinition
+  axis: PanelAxis
+  startWidth: number
+  max: number
+  dragging: Ref<string | null>
+  /** Shows a width without persisting it. */
+  setWidth: (width: number) => void
+  /** Persists the width the drag ended on. */
+  commit: () => void
+  onFinish: () => void
+}
+
+/** Follows one pointer on a separator until it is released. Returns the function that ends the drag. */
+function beginPanelDrag({ event: e, handle, def, axis, startWidth, max, dragging, setWidth, commit, onFinish }: PanelDrag) {
+  const pointerId = e.pointerId
+  e.preventDefault()
+  try {
+    handle.setPointerCapture(pointerId)
+  } catch {
+    // Capture is best effort (e.g. synthetic events).
+  }
+
+  const coord = (ev: PointerEvent) => (axis === 'y' ? ev.clientY : ev.clientX)
+  const startX = coord(e)
+  let lastX = startX
+  let frame = 0
+  let ended = false
+
+  const body = document.body
+  const prevUserSelect = body.style.userSelect
+  const prevCursor = body.style.cursor
+  body.style.userSelect = 'none'
+  body.style.cursor = axis === 'y' ? 'row-resize' : 'col-resize'
+  dragging.value = def.name
+
+  const apply = () => {
+    frame = 0
+    setWidth(clamp(Math.round(dragWidth(startWidth, startX, lastX, def.side)), def.min, max))
+  }
+  const onMove = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return
+    lastX = coord(ev)
+    if (!frame) frame = requestAnimationFrame(apply)
+  }
+  const finish = () => {
+    if (ended) return
+    ended = true
+    onFinish()
+    if (frame) cancelAnimationFrame(frame)
+    apply()
+    commit()
+    dragging.value = null
+    body.style.userSelect = prevUserSelect
+    body.style.cursor = prevCursor
+    handle.removeEventListener('pointermove', onMove as EventListener)
+    handle.removeEventListener('pointerup', onEnd as EventListener)
+    handle.removeEventListener('pointercancel', onEnd as EventListener)
+    handle.removeEventListener('lostpointercapture', onEnd as EventListener)
+    try {
+      if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId)
+    } catch {
+      // already released
+    }
+  }
+  const onEnd = (ev: PointerEvent) => {
+    if (ev.pointerId !== pointerId) return
+    if (ev.type === 'pointerup') lastX = coord(ev)
+    finish()
+  }
+  handle.addEventListener('pointermove', onMove as EventListener)
+  handle.addEventListener('pointerup', onEnd as EventListener)
+  handle.addEventListener('pointercancel', onEnd as EventListener)
+  handle.addEventListener('lostpointercapture', onEnd as EventListener)
+  return finish
+}
+
 /**
  * @param {Array<{name: string, side: 'left'|'right'|'top'|'bottom', defaultWidth: number, min: number, max: number, visible?: () => boolean}>} defs
  *   Panels in shrink-priority order (the last one is squeezed first). For
@@ -135,7 +244,7 @@ function currentViewportSize(axis: PanelAxis) {
  */
 export function useResizable<const Name extends string>(defs: readonly PanelDefinition<Name>[], { centerMin = 400, storage = defaultStorage(), axis = 'x' }: { centerMin?: number; storage?: Storage | null; axis?: PanelAxis } = {}): Record<Name, ResizePanel> {
   const dimension = axis === 'y' ? 'height' : 'width'
-  const viewport = ref(currentViewportSize(axis))
+  const viewport = useViewportSize(axis)
   const dragging = ref<string | null>(null)
   let finishDrag: (() => void) | null = null
   onScopeDispose(() => finishDrag?.())
@@ -157,22 +266,6 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
     return def ? availableMax(index, effective.value, def, viewport.value, centerMin) : 0
   }
 
-  let resizeFrame = 0
-  function onWindowResize() {
-    if (resizeFrame) return
-    resizeFrame = requestAnimationFrame(() => {
-      resizeFrame = 0
-      viewport.value = currentViewportSize(axis)
-    })
-  }
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', onWindowResize)
-    onScopeDispose(() => {
-      window.removeEventListener('resize', onWindowResize)
-      if (resizeFrame) cancelAnimationFrame(resizeFrame)
-    })
-  }
-
   function setWidth(def: PanelDefinition, width: number, persist: boolean) {
     preferred[def.name] = width
     if (persist) saveWidth(def.name, width, storage, dimension)
@@ -184,83 +277,28 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
     const handle = e.currentTarget
     if (!def || !(handle instanceof Element)) return
     finishDrag?.()
-    const pointerId = e.pointerId
-    e.preventDefault()
-    try {
-      handle.setPointerCapture(pointerId)
-    } catch {
-      // Capture is best effort (e.g. synthetic events).
-    }
-
-    const coord = (ev: PointerEvent) => (axis === 'y' ? ev.clientY : ev.clientX)
-    const startX = coord(e)
-    const startWidth = effective.value[index] ?? def.defaultWidth
-    const max = maxFor(index)
-    let lastX = startX
-    let frame = 0
-    let ended = false
-
-    const body = document.body
-    const prevUserSelect = body.style.userSelect
-    const prevCursor = body.style.cursor
-    body.style.userSelect = 'none'
-    body.style.cursor = axis === 'y' ? 'row-resize' : 'col-resize'
-    dragging.value = def.name
-
-    const apply = () => {
-      frame = 0
-      setWidth(def, clamp(Math.round(dragWidth(startWidth, startX, lastX, def.side)), def.min, max), false)
-    }
-    const onMove = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return
-      lastX = coord(ev)
-      if (!frame) frame = requestAnimationFrame(apply)
-    }
-    const finish = () => {
-      if (ended) return
-      ended = true
-      finishDrag = null
-      if (frame) cancelAnimationFrame(frame)
-      apply()
-      saveWidth(def.name, preferred[def.name] ?? def.defaultWidth, storage, dimension)
-      dragging.value = null
-      body.style.userSelect = prevUserSelect
-      body.style.cursor = prevCursor
-      handle.removeEventListener('pointermove', onMove as EventListener)
-      handle.removeEventListener('pointerup', onEnd as EventListener)
-      handle.removeEventListener('pointercancel', onEnd as EventListener)
-      handle.removeEventListener('lostpointercapture', onEnd as EventListener)
-      try {
-        if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId)
-      } catch {
-        // already released
-      }
-    }
-    const onEnd = (ev: PointerEvent) => {
-      if (ev.pointerId !== pointerId) return
-      if (ev.type === 'pointerup') lastX = coord(ev)
-      finish()
-    }
-    finishDrag = finish
-    handle.addEventListener('pointermove', onMove as EventListener)
-    handle.addEventListener('pointerup', onEnd as EventListener)
-    handle.addEventListener('pointercancel', onEnd as EventListener)
-    handle.addEventListener('lostpointercapture', onEnd as EventListener)
+    finishDrag = beginPanelDrag({
+      event: e,
+      handle,
+      def,
+      axis,
+      startWidth: effective.value[index] ?? def.defaultWidth,
+      max: maxFor(index),
+      dragging,
+      setWidth: width => setWidth(def, width, false),
+      commit: () => saveWidth(def.name, preferred[def.name] ?? def.defaultWidth, storage, dimension),
+      onFinish: () => { finishDrag = null }
+    })
   }
 
   function onKeydown(index: number, e: KeyboardEvent) {
     const def = defs[index]
     if (!def) return
-    let next
-    if (e.key === 'Home') next = def.min
-    else if (e.key === 'End') next = maxFor(index)
-    else {
-      const delta = keyboardDelta(e.key, e.shiftKey, def.side)
-      if (!delta) return
-      next = (effective.value[index] ?? def.defaultWidth) + delta
-    }
+    const max = maxFor(index)
+    const next = keyboardWidth(e, def, effective.value[index] ?? def.defaultWidth, max)
+    if (next === null) return
     e.preventDefault()
-    setWidth(def, clamp(next, def.min, maxFor(index)), true)
+    setWidth(def, clamp(next, def.min, max), true)
   }
 
   function reset(index: number) {
