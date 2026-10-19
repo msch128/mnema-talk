@@ -2,8 +2,8 @@
 import { ref, onBeforeUnmount, watch } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import { t } from '../i18n'
-import { decodeTrustPreview, decodeTrustStatus, trustOperationId } from '../lib/nativeTrust'
-import type { NativeTrustPresentationPort, TrustPreview, TrustStatus } from '../lib/nativeTrust'
+import { decodeTrustPreview, decodeTrustStatus, trustOperationId } from '../lib/native/nativeTrust'
+import type { NativeTrustPresentationPort, TrustPreview, TrustStatus } from '../lib/native/nativeTrust'
 const props = defineProps<{ channelId: string; port: NativeTrustPresentationPort }>()
 const emit = defineEmits<{ close: []; status: [state: TrustStatus['state']] }>()
 const preview = ref<TrustPreview | null>(null)

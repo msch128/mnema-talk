@@ -32,13 +32,13 @@ npm package.
 
 Replace the upstream assets and update the checksums above. Regenerate the
 adapted `worker-glue.js` from the matching licensed WASM glue, retaining its
-license header and exports consumed by `web/src/lib/dfnWorker.js`. Verify
+license header and exports consumed by `web/src/lib/dfn/dfnWorker.ts`. Verify
 the WASM API, 480-sample frame length, model compatibility and actual Worker
 output in browser tests. Keep the `deepfilter-worker-bridge` processor name
-consistent between `web/src/lib/dfnBridgeWorklet.js` and `dfnNode.js`.
+consistent between `web/src/lib/dfn/dfnBridgeWorklet.ts` and `dfnNode.ts`.
 
 The active DFN3 pipeline uses `worker-glue.js` in a dedicated Worker for model
-initialization and inference. A small `web/src/lib/dfnBridgeWorklet.js` only
+initialization and inference. A small `web/src/lib/dfn/dfnBridgeWorklet.ts` only
 copies mono PCM; it does not decompress weights or run the neural network on
 the audio rendering thread. At 48 kHz it sends 480-sample frames, limits
 in-flight work and queued output to three frames, and discards output beyond

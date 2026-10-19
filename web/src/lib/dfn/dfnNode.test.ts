@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDeepFilterNode } from './dfnNode'
 import type { DfnWorkerCommand, DeepFilterAssets } from './dfnTypes'
-import { present } from '../media-test.fixture'
+import { present } from '../../media-test.fixture'
 
 class FakePort {
   onmessage = (_event: { data: unknown }) => {}

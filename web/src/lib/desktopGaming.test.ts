@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
 const mocks = vi.hoisted(() => ({ invoke: vi.fn(), mute: vi.fn(), deafen: vi.fn(), save: vi.fn(), stop: vi.fn(), lease: vi.fn(), trusted: vi.fn() }))
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: mocks.invoke }))
-vi.mock('./trustedDesktop', async importOriginal => ({ ...await importOriginal<typeof import('./trustedDesktop')>(), trustedApp: mocks.trusted }))
+vi.mock('./native/trustedDesktop', async importOriginal => ({ ...await importOriginal<typeof import('./native/trustedDesktop')>(), trustedApp: mocks.trusted }))
 const account = '11111111-1111-4111-8111-111111111111'
 const channel = '22222222-2222-4222-8222-222222222222'
 const auth = reactive({ user: { id: account } as { id: string } | null })

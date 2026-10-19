@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DfnFrame, DfnFrameReply, DfnWorkerReply } from './dfnTypes'
-import { present } from '../media-test.fixture'
+import { present } from '../../media-test.fixture'
 
 const glue = vi.hoisted(() => ({
   initSync: vi.fn(), df_create: vi.fn(), df_get_frame_length: vi.fn(), df_process_frame: vi.fn()
 }))
-vi.mock('../third_party/deepfilternet3/worker-glue.js', () => glue)
+vi.mock('../../third_party/deepfilternet3/worker-glue.js', () => glue)
 let worker: { onmessage: (event: { data: unknown }) => void; postMessage: ReturnType<typeof vi.fn> }
 function send(data: unknown) { worker.onmessage({ data }) }
 const module = new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]))

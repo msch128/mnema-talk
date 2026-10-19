@@ -1,7 +1,7 @@
-import { t } from '../i18n'
-import type { ApiReply, ApiRequest } from './api'
+import { t } from '../../i18n'
+import type { ApiReply, ApiRequest } from '../api'
 import { NativeChatView, nativeReceiptId, type NativeTextRow } from './nativeChatView'
-import type { StatusChannel } from './trustPort'
+import type { StatusChannel } from '../trustPort'
 
 interface Reply extends ApiReply { context: string }
 export interface NativeTypedChatBridge {

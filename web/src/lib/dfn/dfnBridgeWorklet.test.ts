@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { DfnFrame, DfnBridgeReport } from './dfnTypes'
-import { present } from '../media-test.fixture'
+import { present } from '../../media-test.fixture'
 
 interface TestBridge {
   port: { onmessage: (event: { data: unknown }) => void }

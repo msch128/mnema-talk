@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
 
 const native = vi.hoisted(() => vi.fn())
-vi.mock('./nativeTransport', async importOriginal => ({ ...await importOriginal<typeof import('./nativeTransport')>(), nativeApiTransport: native }))
+vi.mock('./native/nativeTransport', async importOriginal => ({ ...await importOriginal<typeof import('./native/nativeTransport')>(), nativeApiTransport: native }))
 import { api } from './api'
 
 afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks() })

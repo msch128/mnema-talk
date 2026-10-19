@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { initializeNativeContext, installNativePort, nativeApiTransport } from './nativeTransport'
+import { initializeNativeContext, installNativePort, nativeApiTransport } from './native/nativeTransport'
 const CONTEXT='10000000-0000-4000-8000-000000000001'
 const PROFILE='20000000-0000-4000-8000-000000000001'
 const FIRST='50000000-0000-4000-8000-000000000001'
