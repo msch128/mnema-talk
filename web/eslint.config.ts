@@ -115,11 +115,9 @@ export default tseslint.config(
   // add entries or raise a limit.
   {
     files: [
-      'web/src/components/ContextMenu.vue',
       'web/src/composables/useAppRouting.ts',
       'web/src/composables/useChannelLayout.ts',
       'web/src/composables/useMessageActions.ts',
-      'web/src/composables/useMessageKeyboard.ts',
       'web/src/composables/useMessageMenu.ts',
       'web/src/composables/useMessageScroll.ts',
       'web/src/composables/useNavMenus.ts',
