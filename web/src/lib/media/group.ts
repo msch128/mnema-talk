@@ -9,7 +9,9 @@ import {
   type ClientState,
   type Credential,
   type IncomingMessageCallback,
+  type KeyPackage,
   type PublicMessage,
+  type Welcome,
 } from 'ts-mls'
 import { HANDSHAKE_MAX_BYTES, mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
 import { clock } from './clock'
@@ -20,6 +22,7 @@ import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
 import { GroupSync } from './groupSync'
+import { scanCommitProposals, type CommitProposals } from './groupVet'
 export { frameVerifiers, onlyRenewsLeaf, keepsEveryLeaf } from './groupTree'
 export type { MediaStep } from './groupParams'
 
@@ -66,126 +69,154 @@ export class MediaGroup extends GroupSync {
     this.heard.add(from)
     this.lastHandshakeAt = clock.now()
     const members = this.state ? treeMembers(this.state) : null
+    if (message.wireformat === 'mls_key_package') return this.receiveKeyPackage(from, wire, message.keyPackage, members, batch)
+    if (message.wireformat === 'mls_welcome') return this.receiveWelcome(from, message.welcome, members)
+    if (message.wireformat === 'mls_public_message' && this.state) return this.receivePublic(from, message.publicMessage, members)
+    return this.step()
+  }
+
+  /** A member's key package: kept for the next commit, or, from a member coming back, swapped in. */
+  protected async receiveKeyPackage(from: string, wire: Uint8Array, keyPackage: KeyPackage, members: Map<string, number> | null, batch: boolean): Promise<MediaStep> {
+    const id = credentialIdentity(keyPackage.leafNode.credential)
+    if (id !== from) return this.step()
+    this.relay(from, keyPackage)
+    const known = this.state ? treeLeafSigner(this.state, from) : null
+    const same = known !== null && sameBytes(known, keyPackage.leafNode.signaturePublicKey)
+    if (members?.has(from)) return this.receiveReturningMember(from, wire, keyPackage, same)
     const wires: Uint8Array[] = []
-    if (message.wireformat === 'mls_key_package') {
-      const id = credentialIdentity(message.keyPackage.leafNode.credential)
-      if (id !== from) return this.step()
-      this.relay(from, message.keyPackage)
-      const known = this.state ? treeLeafSigner(this.state, from) : null
-      const same = known !== null && sameBytes(known, message.keyPackage.leafNode.signaturePublicKey)
-      if (members?.has(from)) {
-        // The same package again is a duplicate. Another one is the member
-        // coming back (a reload): swap the old leaf for the new one in a single
-        // commit. If it was the committer, the next one does it. Only a member
-        // the roster says is still here, and not again and again.
-        if (same || !this.room.includes(from) || this.seen(from, wire)) return this.step()
-        if (from === this.committer(this.room)) this.restarting.add(from)
-        if (!this.canCommit(this.room) || !this.swaps.allow(from)) return this.step()
-        this.remember(from, wire)
-        wires.push(...await this.replaceMember(from, message.keyPackage))
-        return this.step(wires)
-      }
-      this.remember(from, wire)
-      this.pending.set(from, message.keyPackage)
-      // A package from someone the roster does not list waits until it does.
-      if (!batch && this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
-      return this.step(wires)
-    }
-    if (message.wireformat === 'mls_welcome') {
-      // Without a group, or with one of my own that nobody joined yet (I
-      // founded while this welcome was on its way): the group that lets me in
-      // is the one everybody else is in. A group others are in is given up
-      // only for a rival that proves itself below: a welcome from a lower id
-      // outside my group that opens with my own key package and passes the
-      // committer rule. Nothing unauthenticated (a message that merely parses)
-      // ever discards a group.
-      const previous = this.state
-      const rival = previous !== null && members !== null && from < this.userId && !members.has(from)
-      if (previous && treeMembers(previous).size > 1 && !rival) return this.step()
-      // Whoever commits for the group I offered to lets me in.
-      if (!this.room.includes(from)) return this.step()
-      if (rival && !this.rivals.allow(from)) return this.step()
-      try {
-        const joined = await joinGroup(message.welcome, this.own.publicPackage, this.own.privatePackage, emptyPskIndex, this.cs)
-        // Only the group's committer welcomes: the lowest of its members the
-        // roster lists, leaving me out (I may be the committer coming back).
-        const committer = lowest([...treeMembers(joined).keys()].filter(id => id !== this.userId && this.room.includes(id)))
-        if (committer !== from) {
-          this.wipeRejected(joined)
-          return this.step()
-        }
-        if (rival) this.discard()
-        if (await this.adopt(joined)) {
-          this.offeredFor = null
-          if (previous) this.wipeRejected(previous)
-        }
-      } catch {
-        return this.step()
-      }
+    this.remember(from, wire)
+    this.pending.set(from, keyPackage)
+    // A package from someone the roster does not list waits until it does.
+    if (!batch && this.room.includes(from) && this.canCommit(this.room)) wires.push(...await this.commitAdds([from]))
+    return this.step(wires)
+  }
+
+  protected async receiveReturningMember(from: string, wire: Uint8Array, keyPackage: KeyPackage, same: boolean): Promise<MediaStep> {
+    const wires: Uint8Array[] = []
+    // The same package again is a duplicate. Another one is the member
+    // coming back (a reload): swap the old leaf for the new one in a single
+    // commit. If it was the committer, the next one does it. Only a member
+    // the roster says is still here, and not again and again.
+    if (same || !this.room.includes(from) || this.seen(from, wire)) return this.step()
+    if (from === this.committer(this.room)) this.restarting.add(from)
+    if (!this.canCommit(this.room) || !this.swaps.allow(from)) return this.step()
+    this.remember(from, wire)
+    wires.push(...await this.replaceMember(from, keyPackage))
+    return this.step(wires)
+  }
+
+  protected async receiveWelcome(from: string, welcome: Welcome, members: Map<string, number> | null): Promise<MediaStep> {
+    // Without a group, or with one of my own that nobody joined yet (I
+    // founded while this welcome was on its way): the group that lets me in
+    // is the one everybody else is in. A group others are in is given up
+    // only for a rival that proves itself below: a welcome from a lower id
+    // outside my group that opens with my own key package and passes the
+    // committer rule. Nothing unauthenticated (a message that merely parses)
+    // ever discards a group.
+    const previous = this.state
+    const rival = previous !== null && members !== null && from < this.userId && !members.has(from)
+    if (previous && treeMembers(previous).size > 1 && !rival) return this.step()
+    // Whoever commits for the group I offered to lets me in.
+    if (!this.room.includes(from)) return this.step()
+    if (rival && !this.rivals.allow(from)) return this.step()
+    try {
+      await this.joinFromWelcome(from, welcome, previous, rival)
+    } catch {
       return this.step()
     }
-    if (message.wireformat === 'mls_public_message' && this.state) {
-      const previous = this.state
-      const framed = message.publicMessage.content
-      // A commit for an epoch I have not reached means I missed one: nothing
-      // that follows can be processed, so start over instead of waiting.
-      // It counts only from a member of this group, for this group, and ahead.
-      // Its signature cannot be checked (the epoch is not mine), so it counts
-      // only from a member who may be committing: it names that member's own
-      // leaf and the member is among the two lowest live ones.
-      if (framed.contentType === 'commit' && framed.sender.senderType === 'member'
-        && sameBytes(framed.groupId, this.groupId) && framed.epoch > previous.groupContext.epoch
-        && members?.get(from) === framed.sender.leafIndex && this.mayCommit(from)) {
-        return this.recoverNow()
-      }
-      const saved = this.selfUpdate
-      if (saved && framed.contentType === 'commit' && framed.sender.senderType === 'member'
-        && sameBytes(framed.groupId, this.groupId) && framed.epoch === saved.state.groupContext.epoch && from !== saved.sender) {
-        return this.conflictNow(saved, message.publicMessage, from)
-      }
-      const isUpdate = framed.contentType === 'commit' && framed.commit.proposals.length === 0 && this.committer(this.listed()) !== from
-      try {
-        const processed = await processPublicMessage(previous, message.publicMessage, emptyPskIndex, this.cs, this.validator(previous, from))
-        // Rejected by the rules above (or a proposal, which this group never
-        // uses): the sender is not trusted with it, and nothing is thrown away.
-        if (processed.actionTaken === 'reject') return this.step()
-        // Only a commit that verified against this group's tree shows its member alive.
-        this.alive.set(from, clock.now())
-        // Every commit funnels through this: nobody's identity or signature key may change, and no
-        // leaf but the sender's own may get a new encryption key, except leaves the commit removes.
-        if (!onlyRenewsLeaf(previous, processed.newState, members?.get(from) as number, this.vetted)) {
-          wipeConsumed(processed.consumed)
-          this.wipeRejected(processed.newState)
-          return this.step()
-        }
-        if (isUpdate) {
-          this.updates.set(from, clock.now())
-          return this.adoptUpdate(previous, processed.newState, processed.consumed, from)
-        }
+    return this.step()
+  }
+
+  protected async joinFromWelcome(from: string, welcome: Welcome, previous: ClientState | null, rival: boolean): Promise<void> {
+    const joined = await joinGroup(welcome, this.own.publicPackage, this.own.privatePackage, emptyPskIndex, this.cs)
+    // Only the group's committer welcomes: the lowest of its members the
+    // roster lists, leaving me out (I may be the committer coming back).
+    const committer = lowest([...treeMembers(joined).keys()].filter(id => id !== this.userId && this.room.includes(id)))
+    if (committer !== from) {
+      this.wipeRejected(joined)
+      return
+    }
+    if (rival) this.discard()
+    if (await this.adopt(joined)) {
+      this.offeredFor = null
+      if (previous) this.wipeRejected(previous)
+    }
+  }
+
+  /**
+   * A commit for an epoch I have not reached means I missed one: nothing
+   * that follows can be processed, so start over instead of waiting.
+   * It counts only from a member of this group, for this group, and ahead.
+   * Its signature cannot be checked (the epoch is not mine), so it counts
+   * only from a member who may be committing: it names that member's own
+   * leaf and the member is among the two lowest live ones.
+   */
+  protected isCommitAhead(framed: PublicMessage['content'], previous: ClientState, members: Map<string, number> | null, from: string): boolean {
+    return framed.contentType === 'commit' && framed.sender.senderType === 'member'
+      && sameBytes(framed.groupId, this.groupId) && framed.epoch > previous.groupContext.epoch
+      && members?.get(from) === framed.sender.leafIndex && this.mayCommit(from)
+  }
+
+  /** A commit for the epoch I left with a self-update, from someone else. */
+  protected isCommitForUpdatedEpoch(framed: PublicMessage['content'], saved: NonNullable<GroupBase['selfUpdate']>, from: string): boolean {
+    return framed.contentType === 'commit' && framed.sender.senderType === 'member'
+      && sameBytes(framed.groupId, this.groupId) && framed.epoch === saved.state.groupContext.epoch && from !== saved.sender
+  }
+
+  protected async receivePublic(from: string, publicMessage: PublicMessage, members: Map<string, number> | null): Promise<MediaStep> {
+    const previous = this.state as ClientState
+    const framed = publicMessage.content
+    if (this.isCommitAhead(framed, previous, members, from)) return this.recoverNow()
+    const saved = this.selfUpdate
+    if (saved && this.isCommitForUpdatedEpoch(framed, saved, from)) return this.conflictNow(saved, publicMessage, from)
+    const isUpdate = framed.contentType === 'commit' && framed.commit.proposals.length === 0 && this.committer(this.listed()) !== from
+    return this.processCommit(previous, publicMessage, from, members, isUpdate)
+  }
+
+  protected async processCommit(previous: ClientState, publicMessage: PublicMessage, from: string, members: Map<string, number> | null, isUpdate: boolean): Promise<MediaStep> {
+    try {
+      const processed = await processPublicMessage(previous, publicMessage, emptyPskIndex, this.cs, this.validator(previous, from))
+      // Rejected by the rules above (or a proposal, which this group never
+      // uses): the sender is not trusted with it, and nothing is thrown away.
+      if (processed.actionTaken === 'reject') return this.step()
+      // Only a commit that verified against this group's tree shows its member alive.
+      this.alive.set(from, clock.now())
+      // Every commit funnels through this: nobody's identity or signature key may change, and no
+      // leaf but the sender's own may get a new encryption key, except leaves the commit removes.
+      if (!onlyRenewsLeaf(previous, processed.newState, members?.get(from) as number, this.vetted)) {
         wipeConsumed(processed.consumed)
-        // A commit that removes a member who is still here was not asked for:
-        // say so, and offer again, but not in a loop.
-        if (!treeMembers(processed.newState).has(this.userId)) {
-          this.wipeRejected(processed.newState)
-          const absent = this.sleptRecently()
-          this.discard()
-          this.notice(absent ? 'absent' : 'removed')
-          if (!this.resets.allow('self')) {
-            this.defer(() => this.reofferNow())
-            return this.step()
-          }
-          await this.rekey()
-          return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
-        }
-        if (!await this.adopt(processed.newState, keepsEveryLeaf(previous, processed.newState) ? 'soft' : 'commit')) {
-          // The epoch was refused (for instance a leaf identity held twice): this group is out of step.
-          return this.recoverNow()
-        }
-      } catch {
+        this.wipeRejected(processed.newState)
         return this.step()
       }
+      if (isUpdate) {
+        this.updates.set(from, clock.now())
+        return this.adoptUpdate(previous, processed.newState, processed.consumed, from)
+      }
+      wipeConsumed(processed.consumed)
+      // A commit that removes a member who is still here was not asked for:
+      // say so, and offer again, but not in a loop.
+      if (!treeMembers(processed.newState).has(this.userId)) return await this.removedFromGroup(processed.newState)
+      if (!await this.adopt(processed.newState, keepsEveryLeaf(previous, processed.newState) ? 'soft' : 'commit')) {
+        // The epoch was refused (for instance a leaf identity held twice): this group is out of step.
+        return this.recoverNow()
+      }
+    } catch {
+      return this.step()
     }
     return this.step()
+  }
+
+  protected async removedFromGroup(rejected: ClientState): Promise<MediaStep> {
+    this.wipeRejected(rejected)
+    const absent = this.sleptRecently()
+    this.discard()
+    this.notice(absent ? 'absent' : 'removed')
+    if (!this.resets.allow('self')) {
+      this.defer(() => this.reofferNow())
+      return this.step()
+    }
+    await this.rekey()
+    return { wires: this.offer(this.room), epoch: null, key: null, verification: null }
   }
 
   /**
@@ -276,42 +307,35 @@ export class MediaGroup extends GroupSync {
         // more than twice per rotation period.
         return proposals.length === 0 && this.mayUpdate(from) ? 'accept' : 'reject'
       }
-      const identityOf = new Map<number, string>()
-      for (const [id, leaf] of members) identityOf.set(leaf, id)
-      // Newest roster: who is listed now. Adds also accept the last synced room.
-      const room = new Set(this.hinted)
-      room.add(this.userId)
-      const roomOrLast = new Set([...room, ...this.room])
-      const now = clock.now()
-      const slack = Math.max(10, this.timing.maintenanceMs)
-      const slept = this.sleptRecently()
-      const removed = new Set<string>()
-      const added = new Set<string>()
-      const removedAt = new Set<number>()
-      for (const { proposal } of proposals) {
-        if (proposal.proposalType === 'remove') {
-          const id = identityOf.get(proposal.remove.removed)
-          if (id === undefined) return 'reject'
-          removed.add(id)
-          removedAt.add(proposal.remove.removed)
-        } else if (proposal.proposalType === 'add') {
-          const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
-          if (id === null || id === from || added.has(id) || !roomOrLast.has(id) || !this.wasRelayed(id, proposal.add.keyPackage)) return 'reject'
-          added.add(id)
-        } else {
-          return 'reject'
-        }
-      }
-      for (const id of added) if (members.has(id) && !removed.has(id)) return 'reject'
-      for (const id of removed) {
-        // My own removal is the committer's word about me (my link dropped, I
-        // slept): I cannot judge it, and taking it means a notice and a rejoin.
-        if (added.has(id) || slept || id === this.userId || !room.has(id)) continue
-        if (now - (this.alive.get(id) as number) <= this.timing.absentMs - slack) return 'reject'
-      }
+      const removedAt = this.vetCommitterProposals(members, proposals, from)
+      if (!removedAt) return 'reject'
       this.vetted = removedAt
       return 'accept'
     }
+  }
+
+  /** The leaves a committer's commit removes, if what it adds and removes is acceptable; otherwise null. */
+  protected vetCommitterProposals(members: Map<string, number>, proposals: CommitProposals, from: string): Set<number> | null {
+    const identityOf = new Map<number, string>()
+    for (const [id, leaf] of members) identityOf.set(leaf, id)
+    // Newest roster: who is listed now. Adds also accept the last synced room.
+    const room = new Set(this.hinted)
+    room.add(this.userId)
+    const roomOrLast = new Set([...room, ...this.room])
+    const now = clock.now()
+    const slack = Math.max(10, this.timing.maintenanceMs)
+    const slept = this.sleptRecently()
+    const effects = scanCommitProposals(proposals, identityOf, from, roomOrLast, (id, keyPackage) => this.wasRelayed(id, keyPackage))
+    if (!effects) return null
+    const { removed, added, removedAt } = effects
+    for (const id of added) if (members.has(id) && !removed.has(id)) return null
+    for (const id of removed) {
+      // My own removal is the committer's word about me (my link dropped, I
+      // slept): I cannot judge it, and taking it means a notice and a rejoin.
+      if (added.has(id) || slept || id === this.userId || !room.has(id)) continue
+      if (now - (this.alive.get(id) as number) <= this.timing.absentMs - slack) return null
+    }
+    return removedAt
   }
 
   /** A heartbeat counts when this epoch's member signed it, and it is newer than the last. */

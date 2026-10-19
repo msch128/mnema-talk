@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import type { Ref } from 'vue'
 import { api } from '../lib/api'
 import { arrayDecoder } from '../types/validation'
 import { isPermRole } from '../types/rest'
@@ -10,6 +11,64 @@ import { ADMIN_AREA_KEYS, DEFAULT_EVERYONE, hasPermission, roleColorCss } from '
 import type { PermissionKey } from '../lib/permissions'
 
 const decodeRoles = arrayDecoder('roles', isPermRole)
+
+/** What the server's answer says, as the computed values the interface reads. */
+function infoViews(info: Ref<PermissionsInfo | null>) {
+  return {
+    loaded: computed(() => info.value !== null),
+    global: computed(() => (info.value ? info.value.permissions : DEFAULT_EVERYONE)),
+    channelPermissions: computed(() => new Map((info.value?.channels ?? []).map(c => [c.channel_id, c.permissions]))),
+    topPosition: computed(() => info.value?.top_position ?? 0),
+    myRoleIds: computed(() => info.value?.role_ids ?? []),
+    // A running timeout, as milliseconds since the epoch; null without one.
+    timeoutUntil: computed(() => {
+      const until = info.value?.timeout_until
+      return until ? Date.parse(until) : null
+    }),
+    timeoutReason: computed(() => info.value?.timeout_reason ?? ''),
+    /** The largest file the member may upload, in MB; null until known. */
+    maxUploadMb: computed(() => info.value?.max_upload_mb ?? null)
+  }
+}
+
+/** Loading permissions and roles from the server; the newest permissions request wins. */
+function useServerLoading(info: Ref<PermissionsInfo | null>, roles: Ref<Role[]>) {
+  let loadSeq = 0
+  // The newest request: a load that was superseded by a later one (the socket
+  // opening refreshes too) must not report "done" before that one has landed,
+  // or a caller that waits for the permissions (the deep link into the admin
+  // area) would look at nothing.
+  let latest: Promise<void> = Promise.resolve()
+
+  async function fetchPermissions(seq: number) {
+    try {
+      const data = await api('/api/permissions', { decode: decodePermissionsInfo })
+      if (seq === loadSeq) info.value = data
+    } catch (e) {
+      console.error('Failed to fetch permissions:', e)
+    }
+  }
+
+  async function load() {
+    const run = fetchPermissions(++loadSeq)
+    latest = run
+    let waited: Promise<void>
+    do {
+      waited = latest
+      await waited
+    } while (waited !== latest)
+  }
+
+  async function loadRoles() {
+    try {
+      roles.value = await api('/api/roles', { decode: decodeRoles })
+    } catch (e) {
+      console.error('Failed to fetch roles:', e)
+    }
+  }
+
+  return { load, loadRoles, invalidate: () => { ++loadSeq } }
+}
 
 // What the signed-in member may do, as the server reports it (GET
 // /api/permissions), plus the roles (GET /api/roles). The server is the
@@ -23,22 +82,9 @@ export const usePermissionsStore = defineStore('permissions', () => {
   const roles = ref<Role[]>([])
   // Role IDs of the other members, highest first (from GET /api/members).
   const memberRoles = ref<Record<string, string[]>>({})
-  let loadSeq = 0
 
   const isOwner = computed(() => auth.isAdmin)
-  const loaded = computed(() => info.value !== null)
-  const global = computed(() => (info.value ? info.value.permissions : DEFAULT_EVERYONE))
-  const channelPermissions = computed(() => new Map((info.value?.channels ?? []).map(c => [c.channel_id, c.permissions])))
-  const topPosition = computed(() => info.value?.top_position ?? 0)
-  const myRoleIds = computed(() => info.value?.role_ids ?? [])
-  // A running timeout, as milliseconds since the epoch; null without one.
-  const timeoutUntil = computed(() => {
-    const until = info.value?.timeout_until
-    return until ? Date.parse(until) : null
-  })
-  const timeoutReason = computed(() => info.value?.timeout_reason ?? '')
-  /** The largest file the member may upload, in MB; null until known. */
-  const maxUploadMb = computed(() => info.value?.max_upload_mb ?? null)
+  const { loaded, global, channelPermissions, topPosition, myRoleIds, timeoutUntil, timeoutReason, maxUploadMb } = infoViews(info)
 
   /** Does the member hold a server-wide permission? */
   function can(key: PermissionKey): boolean {
@@ -89,41 +135,10 @@ export const usePermissionsStore = defineStore('permissions', () => {
     memberRoles.value = Object.fromEntries(members.map(m => [m.id, m.role_ids ?? []]))
   }
 
-  // The newest request: a load that was superseded by a later one (the socket
-  // opening refreshes too) must not report "done" before that one has landed,
-  // or a caller that waits for the permissions (the deep link into the admin
-  // area) would look at nothing.
-  let latest: Promise<void> = Promise.resolve()
-
-  async function fetchPermissions(seq: number) {
-    try {
-      const data = await api('/api/permissions', { decode: decodePermissionsInfo })
-      if (seq === loadSeq) info.value = data
-    } catch (e) {
-      console.error('Failed to fetch permissions:', e)
-    }
-  }
-
-  async function load() {
-    const run = fetchPermissions(++loadSeq)
-    latest = run
-    let waited: Promise<void>
-    do {
-      waited = latest
-      await waited
-    } while (waited !== latest)
-  }
-
-  async function loadRoles() {
-    try {
-      roles.value = await api('/api/roles', { decode: decodeRoles })
-    } catch (e) {
-      console.error('Failed to fetch roles:', e)
-    }
-  }
+  const loader = useServerLoading(info, roles)
 
   function reset() {
-    ++loadSeq
+    loader.invalidate()
     info.value = null
     roles.value = []
     memberRoles.value = {}
@@ -131,6 +146,6 @@ export const usePermissionsStore = defineStore('permissions', () => {
 
   return {
     info, roles, memberRoles, maxUploadMb, isOwner, loaded, topPosition, myRoleIds, timeoutUntil, timeoutReason, canOpenAdmin,
-    can, canIn, outranks, outranksMember, roleById, rolesOf, nameColor, setMemberRoles, load, loadRoles, reset
+    can, canIn, outranks, outranksMember, roleById, rolesOf, nameColor, setMemberRoles, load: loader.load, loadRoles: loader.loadRoles, reset
   }
 })

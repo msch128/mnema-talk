@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { useVoiceStore } from './voice'
 import type { ClientEventPayloads } from '../types/events'
-import { createChatState, type Cx } from './chat/state'
+import { createChatState, type ChatState, type Cx } from './chat/state'
 import { createCategory, createChannel, deleteCategory, deleteChannel, duplicateChannel, fetchChannels, isVoiceChannel, selectChannel, updateCategory, updateChannel } from './chat/channels'
 import { activityOfUser, closeUserProfile, fetchMembers, insertMention, openUserProfile, presenceOf } from './chat/members'
 import { installActivityListeners, setMyPresence, setStatusText } from './chat/presence'
@@ -19,30 +19,16 @@ import { dismissEphemeral, resetCommunityState } from './chat/reset'
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
 export { MARK_READ_INTERVAL_MS, TYPING_EXPIRY_MS } from './chat/types'
 
-export const useChatStore = defineStore('chat', () => {
-  const authStore = useAuthStore()
-  const voiceStore = useVoiceStore()
-  const cx: Cx = { cs: createChatState(channelId => markChannelRead(cx, channelId)), authStore, voiceStore }
-  const cs = cx.cs
-  // Each module function takes the context first; the store exposes them without it.
-  const bind = <A extends unknown[], R>(fn: (cx: Cx, ...args: A) => R) => (...args: A): R => fn(cx, ...args)
-
-  installVisibilityRetry(cx)
-  installActivityListeners(cx)
-  setReturnToTabHandler(() => markActiveChannelReadIfReading(cx))
-
+/** What the store shows of the chat state, as the refs the modules update. */
+function exposedState(cs: ChatState) {
   return {
-    resetCommunityState: bind(resetCommunityState),
     reconnectCount: cs.reconnectCount,
     wasConnected: cs.wasConnected,
     reconnectAttempt: cs.reconnectAttempt,
     nextRetryAt: cs.nextRetryAt,
-    retryNow: bind(retryNow),
     categories: cs.categories,
     allChannels: cs.allChannels,
     ephemeral: cs.ephemeral,
-    dismissEphemeral: bind(dismissEphemeral),
-    isVoiceChannel: bind(isVoiceChannel),
     uncategorized: cs.uncategorized,
     activeChannel: cs.activeChannel,
     messages: cs.messages,
@@ -55,28 +41,47 @@ export const useChatStore = defineStore('chat', () => {
     liveAppendSeq: cs.liveAppendSeq,
     latestLoadSeq: cs.latestLoadSeq,
     jumpTarget: cs.jumpTarget,
+    isConnected: cs.isConnected,
+    members: cs.members,
+    presenceById: cs.presenceById,
+    activityById: cs.activityById,
+    onlineUserIds: cs.onlineUserIds,
+    onlineMembers: cs.onlineMembers,
+    offlineMembers: cs.offlineMembers,
+    showMemberList: cs.showMemberList,
+    selectedUserProfile: cs.selectedUserProfile,
+    pendingMention: cs.pendingMention,
+    readStates: cs.readStates,
+    activeChannelLastReadAt: cs.activeChannelLastReadAt,
+    voiceChatReading: cs.voiceChatReading,
+    notificationPermission: cs.notificationPermission,
+    typingByChannel: cs.typingByChannel,
+    activeThread: cs.activeThread,
+    threadReplies: cs.threadReplies,
+    isThreadLoading: cs.isThreadLoading
+  }
+}
+
+/** The module functions as store actions; each takes the context first, the store exposes them without it. */
+function exposedActions(cx: Cx) {
+  const bind = <A extends unknown[], R>(fn: (cx: Cx, ...args: A) => R) => (...args: A): R => fn(cx, ...args)
+  return {
+    resetCommunityState: bind(resetCommunityState),
+    retryNow: bind(retryNow),
+    dismissEphemeral: bind(dismissEphemeral),
+    isVoiceChannel: bind(isVoiceChannel),
     showToast,
     loadOlder: bind(loadOlder),
     loadNewer: bind(loadNewer),
     jumpToLatest: bind(jumpToLatest),
     jumpToMessage: bind(jumpToMessage),
-    isConnected: cs.isConnected,
-    members: cs.members,
-    presenceById: cs.presenceById,
     presenceOf: bind(presenceOf),
-    activityById: cs.activityById,
     activityOfUser: bind(activityOfUser),
-    onlineUserIds: cs.onlineUserIds,
     setMyPresence: bind(setMyPresence),
     setStatusText: bind(setStatusText),
     messageMentionsMe: bind(messageMentionsMe),
-    onlineMembers: cs.onlineMembers,
-    offlineMembers: cs.offlineMembers,
-    showMemberList: cs.showMemberList,
-    selectedUserProfile: cs.selectedUserProfile,
     openUserProfile: bind(openUserProfile),
     closeUserProfile: bind(closeUserProfile),
-    pendingMention: cs.pendingMention,
     insertMention: bind(insertMention),
     fetchChannels: bind(fetchChannels),
     fetchMembers: bind(fetchMembers),
@@ -95,23 +100,15 @@ export const useChatStore = defineStore('chat', () => {
     createCategory: bind(createCategory),
     deleteCategory: bind(deleteCategory),
     updateCategory: bind(updateCategory),
-    readStates: cs.readStates,
-    activeChannelLastReadAt: cs.activeChannelLastReadAt,
-    voiceChatReading: cs.voiceChatReading,
     setVoiceChatReading: bind(setVoiceChatReading),
     fetchReadState: bind(fetchReadState),
     markChannelRead: bind(markChannelRead),
     markChannelUnread: bind(markChannelUnread),
     setNotificationLevel: bind(setNotificationLevel),
     notificationLevel: bind(notificationLevel),
-    notificationPermission: cs.notificationPermission,
     goToMessage: bind(goToMessage),
-    typingByChannel: cs.typingByChannel,
     sendTyping: bind(sendTyping),
     requestNotificationPermission: bind(requestNotificationPermission),
-    activeThread: cs.activeThread,
-    threadReplies: cs.threadReplies,
-    isThreadLoading: cs.isThreadLoading,
     openThread: bind(openThread),
     closeThread: bind(closeThread),
     sendThreadReply: bind(sendThreadReply),
@@ -122,6 +119,19 @@ export const useChatStore = defineStore('chat', () => {
     setWebRTCHandlers: bind(setWebRTCHandlers),
     handleWSEvent: bind(handleWSEvent)
   }
+}
+
+export const useChatStore = defineStore('chat', () => {
+  const authStore = useAuthStore()
+  const voiceStore = useVoiceStore()
+  const cx: Cx = { cs: createChatState(channelId => markChannelRead(cx, channelId)), authStore, voiceStore }
+  const cs = cx.cs
+
+  installVisibilityRetry(cx)
+  installActivityListeners(cx)
+  setReturnToTabHandler(() => markActiveChannelReadIfReading(cx))
+
+  return { ...exposedState(cs), ...exposedActions(cx) }
 })
 
 export type ChatStore = ReturnType<typeof useChatStore>

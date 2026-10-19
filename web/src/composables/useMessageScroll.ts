@@ -12,79 +12,61 @@ const LOAD_THRESHOLD_PX = 600
 // "At the bottom" for auto-stick on new messages.
 const STICK_THRESHOLD_PX = 80
 
-export function useMessageScroll(container: Ref<HTMLElement | null>) {
-  const chatStore = useChatStore()
-  const authStore = useAuthStore()
+function distanceFromBottom(el: HTMLElement) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight
+}
 
-  const showUnreadPill = ref(false)
+function rowsIn(el: HTMLElement | null) {
+  return el ? el.querySelectorAll<HTMLElement>('[data-msg-id]') : []
+}
+
+function findRow(el: HTMLElement | null, id: string | undefined) {
+  for (const row of rowsIn(el)) if (row.dataset.msgId === id) return row
+  return null
+}
+
+// Remember where the first visible messages sit so the view can be put back
+// exactly after rows are added/removed above or below (prepend, trims).
+function captureAnchors(el: HTMLElement | null) {
+  if (!el) return []
+  const top = el.getBoundingClientRect().top
+  const anchors: ScrollAnchor[] = []
+  for (const row of rowsIn(el)) {
+    const rect = row.getBoundingClientRect()
+    if (rect.bottom <= top) continue
+    anchors.push({ id: row.dataset.msgId, offset: rect.top - top })
+    if (anchors.length >= 5) break
+  }
+  return anchors
+}
+
+function restoreAnchors(el: HTMLElement | null, anchors: ScrollAnchor[]) {
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  for (const a of anchors) {
+    const row = findRow(el, a.id)
+    if (!row) continue
+    const delta = row.getBoundingClientRect().top - top - a.offset
+    if (delta) el.scrollTop += delta
+    return
+  }
+}
+
+/** Loads the next page of history when the view is close to either end. */
+function loadMoreNearEdges(el: HTMLElement | null, chatStore: ReturnType<typeof useChatStore>) {
+  if (!el || !chatStore.messages.length || chatStore.isLoadingWindow) return
+  if (el.scrollTop < LOAD_THRESHOLD_PX && chatStore.hasMoreBefore && !chatStore.isLoadingBefore) {
+    chatStore.loadOlder()
+  }
+  if (distanceFromBottom(el) < LOAD_THRESHOLD_PX && chatStore.hasMoreAfter && !chatStore.isLoadingAfter) {
+    chatStore.loadNewer()
+  }
+}
+
+/** The briefly highlighted message after a jump. */
+function useHighlight() {
   const highlightedId = ref<string | null>(null)
   let highlightTimer: ReturnType<typeof setTimeout> | undefined
-  let scrollFrame = 0
-
-  // Whether the user is parked at the bottom. Kept across layout changes
-  // (window resize, panel drag, member list / thread toggle, reply bar) so a
-  // shrinking viewport doesn't leave the newest message behind the composer.
-  let stickToBottom = true
-  let lastSize = { w: 0, h: 0 }
-  let resizeObserver: ResizeObserver | null = null
-
-  function distanceFromBottom(el: HTMLElement) {
-    return el.scrollHeight - el.scrollTop - el.clientHeight
-  }
-
-  function isAtBottom() {
-    const el = container.value
-    return !el || distanceFromBottom(el) <= STICK_THRESHOLD_PX
-  }
-
-  function messageRows() {
-    return container.value ? container.value.querySelectorAll<HTMLElement>('[data-msg-id]') : []
-  }
-
-  function scrollToBottomNow() {
-    const el = container.value
-    if (el) el.scrollTop = el.scrollHeight
-    stickToBottom = true
-    showUnreadPill.value = false
-  }
-
-  function scrollToBottom() {
-    nextTick(scrollToBottomNow)
-  }
-
-  function findRow(id: string | undefined) {
-    for (const row of messageRows()) if (row.dataset.msgId === id) return row
-    return null
-  }
-
-  // Remember where the first visible messages sit so the view can be put back
-  // exactly after rows are added/removed above or below (prepend, trims).
-  function captureAnchor() {
-    const el = container.value
-    if (!el) return []
-    const top = el.getBoundingClientRect().top
-    const anchors: ScrollAnchor[] = []
-    for (const row of messageRows()) {
-      const rect = row.getBoundingClientRect()
-      if (rect.bottom <= top) continue
-      anchors.push({ id: row.dataset.msgId, offset: rect.top - top })
-      if (anchors.length >= 5) break
-    }
-    return anchors
-  }
-
-  function restoreAnchor(anchors: ScrollAnchor[]) {
-    const el = container.value
-    if (!el) return
-    const top = el.getBoundingClientRect().top
-    for (const a of anchors) {
-      const row = findRow(a.id)
-      if (!row) continue
-      const delta = row.getBoundingClientRect().top - top - a.offset
-      if (delta) el.scrollTop += delta
-      return
-    }
-  }
 
   function flashMessage(id: string) {
     clearTimeout(highlightTimer)
@@ -95,24 +77,18 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
       highlightTimer = setTimeout(() => { highlightedId.value = null }, 2000)
     })
   }
+  return { highlightedId, flashMessage, clearHighlightTimer: () => clearTimeout(highlightTimer) }
+}
 
-  function scrollToMessage(id: string) {
-    const row = findRow(id)
-    if (!row) return
-    row.scrollIntoView({ block: 'center' })
-    flashMessage(id)
-  }
-
-  function maybeLoadMore() {
-    const el = container.value
-    if (!el || !chatStore.messages.length || chatStore.isLoadingWindow) return
-    if (el.scrollTop < LOAD_THRESHOLD_PX && chatStore.hasMoreBefore && !chatStore.isLoadingBefore) {
-      chatStore.loadOlder()
-    }
-    if (distanceFromBottom(el) < LOAD_THRESHOLD_PX && chatStore.hasMoreAfter && !chatStore.isLoadingAfter) {
-      chatStore.loadNewer()
-    }
-  }
+/**
+ * Whether the user is parked at the bottom. Kept across layout changes
+ * (window resize, panel drag, member list / thread toggle, reply bar) so a
+ * shrinking viewport doesn't leave the newest message behind the composer.
+ */
+function useStickyBottom(container: Ref<HTMLElement | null>) {
+  let stickToBottom = true
+  let lastSize = { w: 0, h: 0 }
+  let resizeObserver: ResizeObserver | null = null
 
   function sizeChangedSinceObserved(el: HTMLElement) {
     return el.clientWidth !== lastSize.w || el.clientHeight !== lastSize.h
@@ -126,22 +102,37 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
     if (changed && stickToBottom) el.scrollTop = el.scrollHeight
   }
 
-  function handleScroll() {
-    if (scrollFrame) return
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = 0
-      const el = container.value
-      // Scroll events caused by a pending resize (scrollTop clamping) must not
-      // clear the stick flag before the ResizeObserver re-pins the view.
-      if (el && !sizeChangedSinceObserved(el)) stickToBottom = isAtBottom()
-      if (isAtBottom() && !chatStore.hasMoreAfter) showUnreadPill.value = false
-      maybeLoadMore()
-    })
+  return {
+    pin() { stickToBottom = true },
+    // Scroll events caused by a pending resize (scrollTop clamping) must not
+    // clear the stick flag before the ResizeObserver re-pins the view.
+    syncFromScroll(el: HTMLElement, atBottom: boolean) {
+      if (!sizeChangedSinceObserved(el)) stickToBottom = atBottom
+    },
+    observe() {
+      if (typeof ResizeObserver === 'undefined' || !container.value) return
+      resizeObserver = new ResizeObserver(handleContainerResize)
+      resizeObserver.observe(container.value)
+    },
+    disconnect() { resizeObserver?.disconnect() }
   }
+}
 
-  // One pre-render hook for every window change: decide what caused it, then
-  // after the DOM updated scroll to the bottom, to a jump target, or put the
-  // previously visible messages back where they were.
+/** What a window change of the message list needs the view to do afterwards. */
+interface WindowScrollOps {
+  isAtBottom: () => boolean
+  container: () => HTMLElement | null
+  scrollToBottomNow: () => void
+  scrollToMessage: (id: string) => void
+  markUnread: () => void
+}
+
+// One pre-render hook for every window change: decide what caused it, then
+// after the DOM updated scroll to the bottom, to a jump target, or put the
+// previously visible messages back where they were.
+function watchWindowChanges(ops: WindowScrollOps) {
+  const chatStore = useChatStore()
+  const authStore = useAuthStore()
   let seenLatest = chatStore.latestLoadSeq
   let seenLive = chatStore.liveAppendSeq
   let seenJump = chatStore.jumpTarget?.seq ?? 0
@@ -149,8 +140,8 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
   watch(
     () => [chatStore.messages, chatStore.latestLoadSeq, chatStore.liveAppendSeq, chatStore.jumpTarget],
     () => {
-      const anchors = captureAnchor()
-      const wasAtBottom = isAtBottom()
+      const anchors = captureAnchors(ops.container())
+      const wasAtBottom = ops.isAtBottom()
       const latest = chatStore.latestLoadSeq !== seenLatest
       const live = chatStore.liveAppendSeq !== seenLive
       const jump = chatStore.jumpTarget && chatStore.jumpTarget.seq !== seenJump ? chatStore.jumpTarget : null
@@ -162,20 +153,75 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
         const last = chatStore.messages[chatStore.messages.length - 1]
         const mine = live && last?.user_id && last.user_id === authStore.user?.id
         if (jump) {
-          scrollToMessage(jump.id)
+          ops.scrollToMessage(jump.id)
         } else if (latest) {
-          scrollToBottomNow()
+          ops.scrollToBottomNow()
         } else if (live && (wasAtBottom || mine)) {
-          scrollToBottomNow()
+          ops.scrollToBottomNow()
         } else {
-          restoreAnchor(anchors)
-          if (live) showUnreadPill.value = true
+          restoreAnchors(ops.container(), anchors)
+          if (live) ops.markUnread()
         }
-        maybeLoadMore()
+        loadMoreNearEdges(ops.container(), chatStore)
       })
     },
     { flush: 'pre' }
   )
+}
+
+export function useMessageScroll(container: Ref<HTMLElement | null>) {
+  const chatStore = useChatStore()
+  const showUnreadPill = ref(false)
+  const { highlightedId, flashMessage, clearHighlightTimer } = useHighlight()
+  let scrollFrame = 0
+
+  const sticky = useStickyBottom(container)
+
+  function isAtBottom() {
+    const el = container.value
+    return !el || distanceFromBottom(el) <= STICK_THRESHOLD_PX
+  }
+
+  const messageRows = () => rowsIn(container.value)
+
+  function scrollToBottomNow() {
+    const el = container.value
+    if (el) el.scrollTop = el.scrollHeight
+    sticky.pin()
+    showUnreadPill.value = false
+  }
+
+  function scrollToBottom() {
+    nextTick(scrollToBottomNow)
+  }
+
+  function scrollToMessage(id: string) {
+    const row = findRow(container.value, id)
+    if (!row) return
+    row.scrollIntoView({ block: 'center' })
+    flashMessage(id)
+  }
+
+  function handleScroll() {
+    if (scrollFrame) return
+    scrollFrame = requestAnimationFrame(() => {
+      scrollFrame = 0
+      const el = container.value
+      // Scroll events caused by a pending resize (scrollTop clamping) must not
+      // clear the stick flag before the ResizeObserver re-pins the view.
+      if (el) sticky.syncFromScroll(el, isAtBottom())
+      if (isAtBottom() && !chatStore.hasMoreAfter) showUnreadPill.value = false
+      loadMoreNearEdges(container.value, chatStore)
+    })
+  }
+
+  watchWindowChanges({
+    isAtBottom,
+    container: () => container.value,
+    scrollToBottomNow,
+    scrollToMessage,
+    markUnread: () => { showUnreadPill.value = true }
+  })
 
   // The channel changed: nothing is unread relative to the new view.
   function resetUnreadPill() {
@@ -184,15 +230,12 @@ export function useMessageScroll(container: Ref<HTMLElement | null>) {
 
   onMounted(() => {
     scrollToBottom()
-    if (typeof ResizeObserver !== 'undefined' && container.value) {
-      resizeObserver = new ResizeObserver(handleContainerResize)
-      resizeObserver.observe(container.value)
-    }
+    sticky.observe()
   })
 
   onUnmounted(() => {
-    resizeObserver?.disconnect()
-    clearTimeout(highlightTimer)
+    sticky.disconnect()
+    clearHighlightTimer()
     if (scrollFrame) cancelAnimationFrame(scrollFrame)
   })
 

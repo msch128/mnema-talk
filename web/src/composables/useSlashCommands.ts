@@ -16,20 +16,11 @@ import { t } from '../i18n'
 /** How long the commands of a channel are reused before they are asked for again. */
 const FRESH_MS = 60_000
 
-export function useSlashCommands(model: Ref<string>, channelId: () => string | undefined) {
-  const toasts = useToastStore()
+/** The commands of the channel on screen, reused for FRESH_MS. */
+function useChannelCommands() {
   const commands = ref<BotChannelCommand[]>([])
   let loadedFor = ''
   let loadedAt = 0
-  const query = ref<string | null>(null)
-  const active = ref(0)
-  const picked = ref<BotChannelCommand | null>(null)
-  const values = reactive<OptionValues>({})
-  const running = ref(false)
-  const dismissed = ref(false)
-
-  const suggestions = computed(() => (query.value === null || dismissed.value ? [] : filterCommands(commands.value, query.value)))
-  const open = computed(() => suggestions.value.length > 0)
 
   async function load(id: string) {
     if (loadedFor === id && Date.now() - loadedAt < FRESH_MS) return
@@ -44,6 +35,39 @@ export function useSlashCommands(model: Ref<string>, channelId: () => string | u
       commands.value = []
     }
   }
+  return { commands, load }
+}
+
+/** Arrow keys, Enter/Tab and Escape while the suggestion list is open; true if consumed. */
+function onListKey(
+  e: KeyboardEvent,
+  { active, suggestions, pick, dismissed }: {
+    active: Ref<number>
+    suggestions: BotChannelCommand[]
+    pick: (command: BotChannelCommand | undefined) => void
+    dismissed: Ref<boolean>
+  }
+) {
+  const n = suggestions.length
+  if (e.key === 'ArrowDown') { e.preventDefault(); active.value = (active.value + 1) % n; return true }
+  if (e.key === 'ArrowUp') { e.preventDefault(); active.value = (active.value + n - 1) % n; return true }
+  if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(suggestions[active.value]); return true }
+  if (e.key === 'Escape') { e.preventDefault(); dismissed.value = true; return true }
+  return false
+}
+
+export function useSlashCommands(model: Ref<string>, channelId: () => string | undefined) {
+  const toasts = useToastStore()
+  const { commands, load } = useChannelCommands()
+  const query = ref<string | null>(null)
+  const active = ref(0)
+  const picked = ref<BotChannelCommand | null>(null)
+  const values = reactive<OptionValues>({})
+  const running = ref(false)
+  const dismissed = ref(false)
+
+  const suggestions = computed(() => (query.value === null || dismissed.value ? [] : filterCommands(commands.value, query.value)))
+  const open = computed(() => suggestions.value.length > 0)
 
   /** Call from the textarea's input handler. */
   function onInput() {
@@ -95,18 +119,10 @@ export function useSlashCommands(model: Ref<string>, channelId: () => string | u
 
   /** Handles keys while the list or a picked command is up; true if consumed. */
   function onKeydown(e: KeyboardEvent) {
-    if (open.value) {
-      const n = suggestions.value.length
-      if (e.key === 'ArrowDown') { e.preventDefault(); active.value = (active.value + 1) % n; return true }
-      if (e.key === 'ArrowUp') { e.preventDefault(); active.value = (active.value + n - 1) % n; return true }
-      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(suggestions.value[active.value]); return true }
-      if (e.key === 'Escape') { e.preventDefault(); dismissed.value = true; return true }
-      return false
-    }
-    if (picked.value) {
-      if (e.key === 'Escape') { e.preventDefault(); cancel(); return true }
-      if (e.key === 'Enter' && !e.shiftKey && !model.value.trim()) { e.preventDefault(); void run(); return true }
-    }
+    if (open.value) return onListKey(e, { active, suggestions: suggestions.value, pick, dismissed })
+    if (!picked.value) return false
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); return true }
+    if (e.key === 'Enter' && !e.shiftKey && !model.value.trim()) { e.preventDefault(); void run(); return true }
     return false
   }
 

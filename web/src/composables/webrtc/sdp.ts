@@ -10,10 +10,7 @@ export function publishMids(sdp: string | null | undefined, layerLines = 0) {
   let kind: string | undefined | null = null
   let mid: string | null = null
   const flush = () => {
-    if (!kind || mid === null) return
-    if (kind === 'audio' && out.audio === null) out.audio = mid
-    else if (kind === 'audio' && out.screenAudio === null) out.screenAudio = mid
-    else if (kind === 'video' && out.video.length < 2 + layerLines) out.video.push(mid)
+    if (kind && mid !== null) assignMid(out, kind, mid, 2 + layerLines)
   }
   for (const line of String(sdp || '').split(/\r?\n/)) {
     if (line.startsWith('m=')) {
@@ -26,6 +23,17 @@ export function publishMids(sdp: string | null | undefined, layerLines = 0) {
   }
   flush()
   return out
+}
+
+// The first two audio lines are the microphone and the screen's sound, the
+// first `videoLines` video lines the screen, camera and lower layers.
+function assignMid(out: { audio: string | null; screenAudio: string | null; video: string[] }, kind: string, mid: string, videoLines: number) {
+  if (kind === 'audio') {
+    if (out.audio === null) out.audio = mid
+    else if (out.screenAudio === null) out.screenAudio = mid
+  } else if (kind === 'video' && out.video.length < videoLines) {
+    out.video.push(mid)
+  }
 }
 
 // How a shared screen starts: the browser's bandwidth estimate opens at a few
@@ -54,6 +62,50 @@ function h264Rank(name: string, fmtp: string) {
 // which exists for these codecs only (see lib/media/codec.ts).
 const SEALABLE_VIDEO = new Set(['vp8', 'h264'])
 
+/** [start, end) of every m= section of an SDP's lines. */
+function sectionBounds(lines: string[]) {
+  const starts: number[] = []
+  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
+  return starts.map((from, n): [number, number] => [from, starts[n + 1] ?? lines.length])
+}
+
+/** payload type -> codec name (lower case) of a section's rtpmap lines. */
+function codecNames(section: string[]) {
+  const names = new Map<string, string>()
+  for (const l of section) {
+    const m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
+    if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
+  }
+  return names
+}
+
+/** payload type -> the payload type it retransmits (fmtp apt=). */
+function retransmitTargets(section: string[]) {
+  const apt = new Map<string, string>()
+  for (const l of section) {
+    const m = /^a=fmtp:(\d+) .*\bapt=(\d+)/.exec(l)
+    if (m?.[1] && m[2]) apt.set(m[1], m[2])
+  }
+  return apt
+}
+
+/** The section without its unsealable codecs, or null if it needs no change. */
+function restrictVideoSection(section: string[]) {
+  if (!section[0]?.startsWith('m=video')) return null
+  const names = codecNames(section)
+  const apt = retransmitTargets(section)
+  const keep = new Set<string>()
+  for (const [pt, name] of names) if (SEALABLE_VIDEO.has(name)) keep.add(pt)
+  for (const [pt, name] of names) if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
+  const listed = section[0].split(' ').slice(3)
+  if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) return null
+  return section.flatMap((l) => {
+    if (l.startsWith('m=')) return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
+    const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
+    return m?.[1] && !keep.has(m[1]) ? [] : [l]
+  })
+}
+
 /**
  * Drops every video codec that cannot be sealed from the offer's video lines
  * (and the retransmission entries that point at them), so neither side ever
@@ -64,33 +116,11 @@ export function restrictVideoCodecs(sdp: string) {
   if (!sdp) return sdp
   const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
   const lines = sdp.split(/\r?\n/)
-  const starts: number[] = []
-  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
-  for (let n = starts.length - 1; n >= 0; n--) {
-    const from = starts[n]
-    if (from === undefined) continue
-    const to = starts[n + 1] ?? lines.length
-    const section = lines.slice(from, to)
-    if (!section[0]?.startsWith('m=video')) continue
-    const names = new Map<string, string>()
-    const apt = new Map<string, string>()
-    for (const l of section) {
-      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
-      if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
-      m = /^a=fmtp:(\d+) .*\bapt=(\d+)/.exec(l)
-      if (m?.[1] && m[2]) apt.set(m[1], m[2])
-    }
-    const keep = new Set<string>()
-    for (const [pt, name] of names) if (SEALABLE_VIDEO.has(name)) keep.add(pt)
-    for (const [pt, name] of names) if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
-    const listed = section[0].split(' ').slice(3)
-    if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) continue
-    const out = section.flatMap((l) => {
-      if (l.startsWith('m=')) return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
-      const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
-      return m?.[1] && !keep.has(m[1]) ? [] : [l]
-    })
-    lines.splice(from, to - from, ...out)
+  const bounds = sectionBounds(lines)
+  for (let n = bounds.length - 1; n >= 0; n--) {
+    const [from, to] = bounds[n] as [number, number]
+    const out = restrictVideoSection(lines.slice(from, to))
+    if (out) lines.splice(from, to - from, ...out)
   }
   return lines.join(eol)
 }
@@ -106,51 +136,60 @@ export function tuneScreenOffer(sdp: string, mid: string | null | undefined, { h
   if (!sdp || mid === null || mid === undefined) return sdp
   const eol = sdp.includes('\r\n') ? '\r\n' : '\n'
   const lines = sdp.split(/\r?\n/)
-  // Section boundaries: [start, end) per m= line.
-  const starts: number[] = []
-  lines.forEach((l, i) => { if (l.startsWith('m=')) starts.push(i) })
-  for (let n = 0; n < starts.length; n++) {
-    const from = starts[n]
-    if (from === undefined) continue
-    const to = starts[n + 1] ?? lines.length
+  for (const [from, to] of sectionBounds(lines)) {
     const section = lines.slice(from, to)
     if (!section[0]?.startsWith('m=video') || !section.includes(`a=mid:${mid}`)) continue
-
-    const names = new Map<string, string>()
-    const fmtps = new Map<string, string>()
-    for (const l of section) {
-      let m = /^a=rtpmap:(\d+) ([^/]+)\//.exec(l)
-      if (m?.[1] && m[2]) names.set(m[1], m[2].toLowerCase())
-      m = /^a=fmtp:(\d+) (.*)$/.exec(l)
-      if (m?.[1] && m[2] !== undefined) fmtps.set(m[1], m[2])
-    }
-    const media = (pt: string) => names.has(pt) && !AUX_CODECS.has(names.get(pt) || '')
-
-    const out = []
-    for (const l of section) {
-      if (l.startsWith('m=') && h264) {
-        const parts = l.split(' ')
-        const pts = parts.slice(3)
-        const rank = (pt: string) => (media(pt) ? h264Rank(names.get(pt) || '', fmtps.get(pt) || '') : 5)
-        const sorted = pts.map((pt, i): [string, number] => [pt, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(e => e[0])
-        out.push([...parts.slice(0, 3), ...sorted].join(' '))
-        continue
-      }
-      let m = startKbps ? /^a=fmtp:(\d+) (.*)$/.exec(l) : null
-      if (m?.[1] && m[2] !== undefined && media(m[1]) && !m[2].includes('x-google-')) {
-        out.push(`${l};x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
-        continue
-      }
-      out.push(l)
-      m = startKbps ? /^a=rtpmap:(\d+) /.exec(l) : null
-      if (m?.[1] && media(m[1]) && !fmtps.has(m[1])) {
-        out.push(`a=fmtp:${m[1]} x-google-start-bitrate=${startKbps};x-google-min-bitrate=${minKbps}`)
-      }
-    }
-    lines.splice(from, to - from, ...out)
+    lines.splice(from, to - from, ...tuneVideoSection(section, h264, startKbps, minKbps))
     break
   }
   return lines.join(eol)
+}
+
+/** payload type -> its fmtp parameters. */
+function fmtpParams(section: string[]) {
+  const fmtps = new Map<string, string>()
+  for (const l of section) {
+    const m = /^a=fmtp:(\d+) (.*)$/.exec(l)
+    if (m?.[1] && m[2] !== undefined) fmtps.set(m[1], m[2])
+  }
+  return fmtps
+}
+
+interface TuneContext {
+  names: Map<string, string>
+  fmtps: Map<string, string>
+  h264: boolean
+  startKbps: number
+  minKbps: number
+}
+
+/** Whether a payload type carries video itself (not retransmission or redundancy). */
+const isMediaCodec = (c: TuneContext, pt: string) => c.names.has(pt) && !AUX_CODECS.has(c.names.get(pt) || '')
+
+/** The m= line with the payload types in preference order: H.264 first. */
+function preferH264(line: string, c: TuneContext) {
+  const parts = line.split(' ')
+  const pts = parts.slice(3)
+  const rank = (pt: string) => (isMediaCodec(c, pt) ? h264Rank(c.names.get(pt) || '', c.fmtps.get(pt) || '') : 5)
+  const sorted = pts.map((pt, i): [string, number] => [pt, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(e => e[0])
+  return [...parts.slice(0, 3), ...sorted].join(' ')
+}
+
+/** One line of the section, with the start and floor bitrate added to the codecs that send video. */
+function tuneLine(l: string, c: TuneContext): string[] {
+  if (l.startsWith('m=') && c.h264) return [preferH264(l, c)]
+  if (!c.startKbps) return [l]
+  const bitrate = `x-google-start-bitrate=${c.startKbps};x-google-min-bitrate=${c.minKbps}`
+  const fmtp = /^a=fmtp:(\d+) (.*)$/.exec(l)
+  if (fmtp?.[1] && fmtp[2] !== undefined && isMediaCodec(c, fmtp[1]) && !fmtp[2].includes('x-google-')) return [`${l};${bitrate}`]
+  const rtpmap = /^a=rtpmap:(\d+) /.exec(l)
+  if (rtpmap?.[1] && isMediaCodec(c, rtpmap[1]) && !c.fmtps.has(rtpmap[1])) return [l, `a=fmtp:${rtpmap[1]} ${bitrate}`]
+  return [l]
+}
+
+function tuneVideoSection(section: string[], h264: boolean, startKbps: number, minKbps: number) {
+  const c: TuneContext = { names: codecNames(section), fmtps: fmtpParams(section), h264, startKbps, minKbps }
+  return section.flatMap(l => tuneLine(l, c))
 }
 
 /** tuneScreenOffer for the screen line and the lines of its lower layers. */

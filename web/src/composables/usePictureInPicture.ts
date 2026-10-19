@@ -56,6 +56,44 @@ function inWindow() {
   return !!hostVideo && typeof document !== 'undefined' && document.pictureInPictureElement === hostVideo
 }
 
+type StageStream = () => MediaStream | null
+
+// The stage may change while metadata loads. Open with the current stage,
+// and wait again if changing its source reset the browser's metadata.
+async function settleOnStage(video: HTMLVideoElement, currentStream: StageStream) {
+  let stream = currentStream()
+  if (!stream) return null
+  while (true) {
+    setSource(video, stream)
+    await metadataLoaded(video)
+    const latest = currentStream()
+    if (!latest) return null
+    if (latest === stream) return stream
+    stream = latest
+  }
+}
+
+// Permission may resolve after the host or call disappeared. Close that
+// late window without undoing a newer opening on the same host.
+async function closeLateWindow(video: HTMLVideoElement, generation: number) {
+  if (latestOpening !== generation) return
+  if (typeof document !== 'undefined' && document.pictureInPictureElement === video) {
+    try { await document.exitPictureInPicture() } catch { /* Already closed. */ }
+  }
+  active.value = false
+  video.srcObject = null
+}
+
+function failOpening(video: HTMLVideoElement, currentStream: StageStream) {
+  if (!currentStream()) return false
+  if (!inWindow()) {
+    active.value = false
+    video.srcObject = null
+  }
+  useToastStore().error(t('talk.pipFailed'))
+  return false
+}
+
 /** Opens the window with the stage. Resolves to whether it opened. */
 async function enter() {
   const voice = useVoiceStore()
@@ -63,34 +101,15 @@ async function enter() {
   if (!video || !voice.stage?.stream || !isPictureInPictureSupported()) return false
   const generation = ++openingGeneration
   latestOpening = generation
-  const currentStream = (): MediaStream | null => generation === openingGeneration && hostVideo === video && voice.isConnected
+  const currentStream: StageStream = () => generation === openingGeneration && hostVideo === video && voice.isConnected
     ? voice.stage?.stream || null : null
   try {
     video.muted = true // the call's audio plays elsewhere
-    // The stage may change while metadata loads. Open with the current stage,
-    // and wait again if changing its source reset the browser's metadata.
-    let stream = currentStream()
-    if (!stream) return false
-    while (true) {
-      setSource(video, stream)
-      await metadataLoaded(video)
-      const latest = currentStream()
-      if (!latest) return false
-      if (latest === stream) break
-      stream = latest
-    }
+    if (!(await settleOnStage(video, currentStream))) return false
     await video.requestPictureInPicture()
     const latest = currentStream()
     if (!latest) {
-      // Permission may resolve after the host or call disappeared. Close that
-      // late window without undoing a newer opening on the same host.
-      if (latestOpening === generation) {
-        if (typeof document !== 'undefined' && document.pictureInPictureElement === video) {
-          try { await document.exitPictureInPicture() } catch { /* Already closed. */ }
-        }
-        active.value = false
-        video.srcObject = null
-      }
+      await closeLateWindow(video, generation)
       return false
     }
     // A stage switch during the browser request follows the stage too.
@@ -98,13 +117,7 @@ async function enter() {
     active.value = true
     return true
   } catch {
-    if (!currentStream()) return false
-    if (!inWindow()) {
-      active.value = false
-      video.srcObject = null
-    }
-    useToastStore().error(t('talk.pipFailed'))
-    return false
+    return failOpening(video, currentStream)
   }
 }
 

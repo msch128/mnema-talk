@@ -21,6 +21,85 @@ export function formatTime(dateStr: string | null | undefined) {
 // don't close the open picker.
 export const PICKER_ANCHOR = 'reaction-picker-anchor'
 
+function errorText(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback
+}
+
+function confirmDelete(msg: Message, titleKey: string) {
+  return confirm({
+    title: t(titleKey),
+    body: t('chat.deleteBody'),
+    excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
+    confirmLabel: t('common.delete'),
+    danger: true
+  })
+}
+
+/** Which reaction picker is open: a message id (hover bar) or `bottom-<id>`. */
+function useReactionPicker(container: MaybeRefOrGetter<HTMLElement | null>) {
+  const chatStore = useChatStore()
+  const pickerId = ref<string | null>(null)
+
+  async function toggleReaction(msgId: string, emoji: string) {
+    pickerId.value = null
+    try {
+      await chatStore.toggleReaction(msgId, emoji)
+    } catch (err) {
+      console.warn('Reaction error:', err)
+    }
+  }
+
+  function togglePicker(id: string) {
+    pickerId.value = pickerId.value === id ? null : id
+  }
+
+  function closePicker() {
+    pickerId.value = null
+  }
+
+  useDismissable(
+    () => toValue(container)?.querySelectorAll(`.${PICKER_ANCHOR}`) ?? [],
+    closePicker,
+    { active: () => pickerId.value !== null }
+  )
+  return { pickerId, toggleReaction, togglePicker, closePicker }
+}
+
+/**
+ * Sends the file chosen in a file input. The input is cleared afterwards
+ * either way, so the same file can be picked again after a failure.
+ * `upload` resolves to whether the upload went through.
+ */
+function useFileUpload() {
+  const toasts = useToastStore()
+  const permissions = usePermissionsStore()
+  const isUploading = ref(false)
+
+  async function upload(input: HTMLInputElement | null, send: (file: File) => unknown | Promise<unknown>) {
+    const file = input?.files?.[0]
+    if (!input || !file) return false
+    const max = permissions.maxUploadMb
+    if (max !== null && file.size > max * 1024 * 1024) {
+      // Refuse early: the server would only read and drop the body.
+      toasts.error(t('chat.uploadTooLarge', { max }), { detail: t('chat.uploadTooLargeDetail', { name: file.name, size: Math.ceil(file.size / (1024 * 1024)) }) })
+      input.value = ''
+      return false
+    }
+    isUploading.value = true
+    try {
+      await send(file)
+      return true
+    } catch (err) {
+      toasts.error(errorText(err, t('chat.uploadFailed')))
+      return false
+    } finally {
+      isUploading.value = false
+      input.value = ''
+    }
+  }
+  return { isUploading, upload }
+}
+
 /**
  * @param options.container ref/getter of the element holding the list; the
  *                          open reaction picker closes on presses outside its
@@ -33,14 +112,12 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   const authStore = useAuthStore()
   const toasts = useToastStore()
   const permissions = usePermissionsStore()
+  const { pickerId, toggleReaction, togglePicker, closePicker } = useReactionPicker(container)
+  const { isUploading, upload } = useFileUpload()
 
   const editingId = ref<string | null>(null)
   const editText = ref('')
   const isSavingEdit = ref(false)
-  // Which reaction picker is open: a message id (hover bar) or `bottom-<id>`
-  // (the add button next to the reactions).
-  const pickerId = ref<string | null>(null)
-  const isUploading = ref(false)
 
   // Leaving the editor drops focus with it: hand it back to the message row
   // so keyboard users stay where they were.
@@ -86,74 +163,19 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
       await chatStore.editMessage(channelOf(msg), msg.id, text)
       cancelEdit()
     } catch (err) {
-      toasts.error(err instanceof Error && err.message ? err.message : t('chat.editFailed'))
+      toasts.error(errorText(err, t('chat.editFailed')))
     } finally {
       isSavingEdit.value = false
     }
   }
 
   async function deleteMessage(msg: Message) {
-    const ok = await confirm({
-      title: t(deleteTitle),
-      body: t('chat.deleteBody'),
-      excerpt: previewText(msg.content).slice(0, 160) || (msg.attachments?.length ? t('chat.attachment') : ''),
-      confirmLabel: t('common.delete'),
-      danger: true
-    })
+    const ok = await confirmDelete(msg, deleteTitle)
     if (!ok) return
     try {
       await chatStore.deleteMessage(channelOf(msg), msg.id)
     } catch (err) {
-      toasts.error(err instanceof Error && err.message ? err.message : t('chat.deleteFailed'))
-    }
-  }
-
-  async function toggleReaction(msgId: string, emoji: string) {
-    pickerId.value = null
-    try {
-      await chatStore.toggleReaction(msgId, emoji)
-    } catch (err) {
-      console.warn('Reaction error:', err)
-    }
-  }
-
-  function togglePicker(id: string) {
-    pickerId.value = pickerId.value === id ? null : id
-  }
-
-  function closePicker() {
-    pickerId.value = null
-  }
-
-  useDismissable(
-    () => toValue(container)?.querySelectorAll(`.${PICKER_ANCHOR}`) ?? [],
-    closePicker,
-    { active: () => pickerId.value !== null }
-  )
-
-  // Sends the file chosen in a file input. The input is cleared afterwards
-  // either way, so the same file can be picked again after a failure.
-  // Resolves to whether the upload went through.
-  async function upload(input: HTMLInputElement | null, send: (file: File) => unknown | Promise<unknown>) {
-    const file = input?.files?.[0]
-    if (!input || !file) return false
-    const max = permissions.maxUploadMb
-    if (max !== null && file.size > max * 1024 * 1024) {
-      // Refuse early: the server would only read and drop the body.
-      toasts.error(t('chat.uploadTooLarge', { max }), { detail: t('chat.uploadTooLargeDetail', { name: file.name, size: Math.ceil(file.size / (1024 * 1024)) }) })
-      input.value = ''
-      return false
-    }
-    isUploading.value = true
-    try {
-      await send(file)
-      return true
-    } catch (err) {
-      toasts.error(err instanceof Error && err.message ? err.message : t('chat.uploadFailed'))
-      return false
-    } finally {
-      isUploading.value = false
-      input.value = ''
+      toasts.error(errorText(err, t('chat.deleteFailed')))
     }
   }
 

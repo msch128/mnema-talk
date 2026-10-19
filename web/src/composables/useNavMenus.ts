@@ -246,23 +246,13 @@ export function isInVoiceWithMe(userId: string) {
   return !!(cur && voiceStore.channelUsers?.[cur]?.[userId])
 }
 
-/** ctx: { refresh } so the volume slider re-renders its value. */
-export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void } = {}): ContextMenuItem[] {
-  const chatStore = useChatStore()
+/** Local audio and camera controls, only for someone I'm in a call with. */
+function localCallItems(member: MenuMember, ctx: { refresh?: () => void }): ContextMenuItem[] {
   const voiceStore = useVoiceStore()
-  const authStore = useAuthStore()
-  const permissions = usePermissionsStore()
-  const isSelf = authStore.user?.id === member.id
+  const muted = !!voiceStore.isUserLocalMuted?.(member.id)
   const items: ContextMenuItem[] = [
-    { id: 'profile', label: t('profile.viewProfile'), icon: User, action: () => chatStore.openUserProfile(member) },
-    { id: 'mention', label: t('profile.mention'), icon: AtSign, disabled: !member.username, action: () => mentionMember(member) }
-  ]
-
-  // Local audio controls only make sense for someone I'm in a call with.
-  if (!isSelf && isInVoiceWithMe(member.id)) {
-    const muted = !!voiceStore.isUserLocalMuted?.(member.id)
-    items.push({ type: 'separator' })
-    items.push({
+    { type: 'separator' },
+    {
       id: 'volume',
       type: 'slider',
       label: t('voice.userVolume'),
@@ -271,46 +261,64 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
       step: 5,
       value: voiceStore.getUserVolume?.(member.id) ?? 100,
       onInput: v => { voiceStore.setUserVolume?.(member.id, v); ctx.refresh?.() }
-    })
-    items.push({
+    },
+    {
       id: 'local-mute',
       label: t(muted ? 'voice.unmuteUser' : 'voice.muteUser'),
       icon: muted ? Volume2 : VolumeX,
       action: () => voiceStore.toggleLocalMute?.(member.id)
+    }
+  ]
+  // Cameras are on by default; with "all cameras off" there is nothing to pick.
+  if (!voiceStore.allCamerasOff) {
+    const hidden = !!voiceStore.hiddenCameras?.[member.id]
+    items.push({
+      id: 'camera-hide',
+      label: t(hidden ? 'talk.showCamera' : 'talk.hideCamera'),
+      icon: hidden ? Eye : EyeOff,
+      action: () => voiceStore.toggleCameraHidden?.(member.id)
     })
-    // Cameras are on by default; with "all cameras off" there is nothing to pick.
-    if (!voiceStore.allCamerasOff) {
-      const hidden = !!voiceStore.hiddenCameras?.[member.id]
-      items.push({
-        id: 'camera-hide',
-        label: t(hidden ? 'talk.showCamera' : 'talk.hideCamera'),
-        icon: hidden ? Eye : EyeOff,
-        action: () => voiceStore.toggleCameraHidden?.(member.id)
-      })
-    }
   }
+  return items
+}
 
-  // Moderation needs the permission and a higher rank than the member; the
-  // Owner is out of reach for everyone.
-  const reachable = !isSelf && member.role !== 'admin' && permissions.outranksMember(member.id)
-  const canKick = reachable && permissions.can('disconnect_members')
-  const canModerate = reachable && permissions.can('manage_members')
-  const offer = moderationOffer(member)
-  if (canKick || canModerate || offer.timeout || offer.ban) {
-    items.push({ type: 'separator' })
-    const inAnyCall = Object.values(voiceStore.channelUsers || {}).some(u => u && u[member.id])
-    if (canKick && inAnyCall) {
-      items.push({
-        id: 'kick',
-        label: t('admin.kickFromVoice'),
-        icon: UserX,
-        danger: true,
-        action: () => adminCall(member, 'kick', {
-          title: 'admin.kickFromVoiceTitle', body: 'admin.kickFromVoiceBody', confirmLabel: 'admin.kickConfirm', done: 'admin.userKicked'
-        })
+function kickItems(member: MenuMember): ContextMenuItem[] {
+  return [{
+    id: 'kick',
+    label: t('admin.kickFromVoice'),
+    icon: UserX,
+    danger: true,
+    action: () => adminCall(member, 'kick', {
+      title: 'admin.kickFromVoiceTitle', body: 'admin.kickFromVoiceBody', confirmLabel: 'admin.kickConfirm', done: 'admin.userKicked'
+    })
+  }]
+}
+
+function sessionItems(member: MenuMember): ContextMenuItem[] {
+  return [
+    {
+      id: 'revoke',
+      label: t('admin.revokeSessions'),
+      icon: LogOut,
+      danger: true,
+      action: () => adminCall(member, 'sessions/revoke', {
+        title: 'admin.revokeSessionsTitle', body: 'admin.revokeSessionsBody', confirmLabel: 'admin.revokeSessionsConfirm', done: 'admin.sessionsRevoked'
+      })
+    },
+    {
+      id: 'disable',
+      label: t('admin.disableUser'),
+      icon: Ban,
+      danger: true,
+      action: () => adminCall(member, 'disable', {
+        title: 'admin.disableUserTitle', body: 'admin.disableUserBody', confirmLabel: 'admin.disableUserConfirm', done: 'admin.userDisabledToast'
       })
     }
-  }
+  ]
+}
+
+function timeoutAndBanItems(member: MenuMember, offer: ReturnType<typeof moderationOffer>): ContextMenuItem[] {
+  const items: ContextMenuItem[] = []
   if (offer.timeout) {
     items.push({ id: 'timeout', label: t('moderation.timeoutAction'), icon: Clock, danger: true, action: () => { void openTimeout(member) } })
   }
@@ -320,25 +328,40 @@ export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void
   if (offer.ban) {
     items.push({ id: 'ban', label: t('moderation.banAction'), icon: Gavel, danger: true, action: () => { void openBan(member) } })
   }
-  if (canModerate) {
-    items.push({
-      id: 'revoke',
-      label: t('admin.revokeSessions'),
-      icon: LogOut,
-      danger: true,
-      action: () => adminCall(member, 'sessions/revoke', {
-        title: 'admin.revokeSessionsTitle', body: 'admin.revokeSessionsBody', confirmLabel: 'admin.revokeSessionsConfirm', done: 'admin.sessionsRevoked'
-      })
-    })
-    items.push({
-      id: 'disable',
-      label: t('admin.disableUser'),
-      icon: Ban,
-      danger: true,
-      action: () => adminCall(member, 'disable', {
-        title: 'admin.disableUserTitle', body: 'admin.disableUserBody', confirmLabel: 'admin.disableUserConfirm', done: 'admin.userDisabledToast'
-      })
-    })
+  return items
+}
+
+/** Kick, timeout, ban, revoke sessions and disable, as far as the viewer may. */
+function moderationItems(member: MenuMember, isSelf: boolean): ContextMenuItem[] {
+  const voiceStore = useVoiceStore()
+  const permissions = usePermissionsStore()
+  // Moderation needs the permission and a higher rank than the member; the
+  // Owner is out of reach for everyone.
+  const reachable = !isSelf && member.role !== 'admin' && permissions.outranksMember(member.id)
+  const canKick = reachable && permissions.can('disconnect_members')
+  const canModerate = reachable && permissions.can('manage_members')
+  const offer = moderationOffer(member)
+  const items: ContextMenuItem[] = []
+  if (canKick || canModerate || offer.timeout || offer.ban) {
+    items.push({ type: 'separator' })
+    const inAnyCall = Object.values(voiceStore.channelUsers || {}).some(u => u && u[member.id])
+    if (canKick && inAnyCall) items.push(...kickItems(member))
   }
+  items.push(...timeoutAndBanItems(member, offer))
+  if (canModerate) items.push(...sessionItems(member))
+  return items
+}
+
+/** ctx: { refresh } so the volume slider re-renders its value. */
+export function buildMemberItems(member: MenuMember, ctx: { refresh?: () => void } = {}): ContextMenuItem[] {
+  const chatStore = useChatStore()
+  const isSelf = useAuthStore().user?.id === member.id
+  const items: ContextMenuItem[] = [
+    { id: 'profile', label: t('profile.viewProfile'), icon: User, action: () => chatStore.openUserProfile(member) },
+    { id: 'mention', label: t('profile.mention'), icon: AtSign, disabled: !member.username, action: () => mentionMember(member) }
+  ]
+  // Local audio controls only make sense for someone I'm in a call with.
+  if (!isSelf && isInVoiceWithMe(member.id)) items.push(...localCallItems(member, ctx))
+  items.push(...moderationItems(member, isSelf))
   return items
 }

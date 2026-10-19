@@ -16,6 +16,15 @@ import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { credentialIdentity, sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers, encodeWire } from './groupTree'
 import { GroupBase } from './groupBase'
 
+/** The wires a created commit goes out as: the welcome for new members, if any, and the public commit. */
+function commitWires(result: Awaited<ReturnType<typeof createCommit>>) {
+  const welcome = result.welcome
+    ? encodeWire({ version: 'mls10', wireformat: 'mls_welcome', welcome: result.welcome })
+    : null
+  const commit = result.commit.wireformat === 'mls_public_message' ? encodeWire(result.commit) : null
+  return { welcome, commit }
+}
+
 export abstract class GroupEpoch extends GroupBase {
   /**
    * 'new' is a group of its own or one joined by a welcome. A 'commit' moves the
@@ -72,6 +81,20 @@ export abstract class GroupEpoch extends GroupBase {
     const { rotateMs, rotateJitterMs } = this.timing
     this.rotateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     const members = treeMembers(state)
+    this.trackLeaves(state, members, now)
+    this.forgetDeparted(members)
+    this.markNewMembers(members, now)
+    if (this.tickTimer === null) {
+      this.lastTick = now
+      this.lastTickWall = clock.wall()
+      this.lastBeat = now
+      this.scheduleTick()
+    }
+  }
+
+  /** Keeps when each member's leaf key was last seen to change, and when my own leaf is due again. */
+  private trackLeaves(state: ClientState, members: Map<string, number>, now: number) {
+    const { rotateMs, rotateJitterMs } = this.timing
     for (const id of [...this.leaves.keys()]) if (!members.has(id)) this.leaves.delete(id)
     for (const id of [...this.updates.keys()]) if (!members.has(id)) this.updates.delete(id)
     for (const [id, index] of members) {
@@ -82,11 +105,18 @@ export abstract class GroupEpoch extends GroupBase {
       // My own leaf is due again after a period of its own, jittered like an epoch's.
       if (id === this.userId) this.updateAfter = Math.max(0, rotateMs + (Math.random() * 2 - 1) * rotateJitterMs)
     }
+  }
+
+  /** Members that left the group take their signs of life with them. */
+  private forgetDeparted(members: Map<string, number>) {
     for (const id of [...this.alive.keys()]) if (!members.has(id)) this.alive.delete(id)
     for (const id of [...this.beats.keys()]) if (!members.has(id)) this.beats.delete(id)
     for (const id of [...this.capable.keys()]) if (!members.has(id)) this.capable.delete(id)
     // A member this one has not advertised to yet is told at the next tick.
     for (const id of [...this.capHeard]) if (!members.has(id)) this.capHeard.delete(id)
+  }
+
+  private markNewMembers(members: Map<string, number>, now: number) {
     for (const id of members.keys()) {
       if (id !== this.userId && !this.capHeard.has(id)) {
         this.capHeard.add(id)
@@ -95,12 +125,6 @@ export abstract class GroupEpoch extends GroupBase {
     }
     // Whoever is new to the group starts with a clean slate: it was let in just now.
     for (const id of members.keys()) if (!this.alive.has(id)) this.alive.set(id, now)
-    if (this.tickTimer === null) {
-      this.lastTick = now
-      this.lastTickWall = clock.wall()
-      this.lastBeat = now
-      this.scheduleTick()
-    }
   }
 
   protected scheduleTick() {
@@ -125,7 +149,6 @@ export abstract class GroupEpoch extends GroupBase {
   }
 
   protected async tickNow(): Promise<MediaStep> {
-    const wires: Uint8Array[] = []
     // Callers hold a group: a state and the keys of its epoch go together.
     const state = this.state as ClientState
     const current = this.current as NonNullable<typeof this.current>
@@ -140,6 +163,14 @@ export abstract class GroupEpoch extends GroupBase {
       for (const id of this.alive.keys()) this.alive.set(id, now)
     }
     const members = treeMembers(state)
+    const wires = await this.livenessWires(current, members, now, slept)
+    wires.push(...await this.maintenanceCommits(members, now, slept))
+    return this.step(wires)
+  }
+
+  /** This member's capability and heartbeat, when they are due and someone else is here to hear them. */
+  private async livenessWires(current: NonNullable<GroupEpoch['current']>, members: Map<string, number>, now: number, slept: boolean): Promise<Uint8Array[]> {
+    const wires: Uint8Array[] = []
     const beatDue = slept || now - this.lastBeat >= this.timing.heartbeatMs
     if (members.size > 1 && (this.capDue || beatDue)) {
       this.capDue = false
@@ -152,6 +183,12 @@ export abstract class GroupEpoch extends GroupBase {
       const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
       if (beat) wires.push(beat)
     }
+    return wires
+  }
+
+  /** The commits a tick may make: a leaf renewal, removing absent members, or rotating an old epoch. */
+  private async maintenanceCommits(members: Map<string, number>, now: number, slept: boolean): Promise<Uint8Array[]> {
+    const wires: Uint8Array[] = []
     // Right after waking up this view is the stalest it will ever be: the
     // messages that arrived meanwhile are still queued behind this tick. The
     // next tick, one maintenance interval later, decides.
@@ -168,7 +205,7 @@ export abstract class GroupEpoch extends GroupBase {
       if (absent.length) wires.push(...await this.commit(absent))
       else if (members.size > 1 && (now - this.epochAt >= this.rotateAfter || this.leafAge(now) >= this.updateAfter)) wires.push(...await this.commit([]))
     }
-    return this.step(wires)
+    return wires
   }
 
   protected leafAge(now: number): number {
@@ -213,10 +250,7 @@ export abstract class GroupEpoch extends GroupBase {
     }
     if (!renewal) wipeConsumed(result.consumed)
     const adding = extraProposals.some(proposal => proposal.proposalType === 'add')
-    const welcome = result.welcome
-      ? encodeWire({ version: 'mls10', wireformat: 'mls_welcome', welcome: result.welcome })
-      : null
-    const commit = result.commit.wireformat === 'mls_public_message' ? encodeWire(result.commit) : null
+    const { welcome, commit } = commitWires(result)
     if (!commit || (adding && !welcome)) {
       if (renewal) wipeConsumed(result.consumed)
       this.wipeRejected(result.newState)

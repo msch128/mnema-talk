@@ -132,6 +132,32 @@ export function streamTuning(q: unknown): { contentHint: string; degradationPref
     : { contentHint: 'detail', degradationPreference: 'maintain-resolution' }
 }
 
+/** The active encoding: the video sender sending the most (only one without simulcast). */
+function activeVideoSender(list: MediaStat[]) {
+  return list
+    .filter(s => s.type === 'outbound-rtp' && (s.kind === 'video' || s.mediaType === 'video'))
+    .sort((a, b) => (b.bytesSent || 0) - (a.bytesSent || 0))[0]
+}
+
+/** Encoded frame rate (the browser's own, else counted since the previous sample) and the encode time per frame. */
+function encodeFrameStats(out: MediaStat, previous: SendStatsSample | null, sameStream: boolean) {
+  const ts = out.timestamp || 0
+  const frames = out.framesEncoded
+  const encodeTime = out.totalEncodeTime
+  let fps = isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
+  let encodeMs: number | null = null
+  if (previous && sameStream && ts > previous.ts && isFiniteNumber(frames) && isFiniteNumber(previous.frames)) {
+    const count = frames - previous.frames
+    if (count >= 0 && fps === null) fps = Math.round(count * 1000 / (ts - previous.ts))
+    if (count > 0 && isFiniteNumber(encodeTime) && isFiniteNumber(previous.encodeTime) && encodeTime >= previous.encodeTime) {
+      encodeMs = (encodeTime - previous.encodeTime) * 1000 / count
+    }
+  } else if (isFiniteNumber(frames) && frames > 0 && isFiniteNumber(encodeTime)) {
+    encodeMs = encodeTime * 1000 / frames
+  }
+  return { fps, encodeMs }
+}
+
 /**
  * What the screen sender actually sends, from RTCRtpSender.getStats():
  * codec, size, frame rate and the bitrate since the previous sample.
@@ -142,33 +168,20 @@ export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined
   const list = [...(stats || [])]
   const codecs = new Map<string, string | undefined>()
   for (const s of list) if (s.type === 'codec') codecs.set(s.id, s.mimeType)
-  // The active encoding: the one sending the most (only one without simulcast).
-  const out = list
-    .filter(s => s.type === 'outbound-rtp' && (s.kind === 'video' || s.mediaType === 'video'))
-    .sort((a, b) => (b.bytesSent || 0) - (a.bytesSent || 0))[0]
+  const out = activeVideoSender(list)
   if (!out) return null
   const source = list.find(s => s.type === 'media-source' && s.id === out.mediaSourceId)
   const codec = list.find(s => s.type === 'codec' && s.id === out.codecId)
   const mime = codecs.get(out.codecId || '') || ''
   const bytes = out.bytesSent || 0
   const ts = out.timestamp || 0
-  const sameStream = previous && (previous.id === undefined || previous.id === out.id)
+  const sameStream = !!previous && (previous.id === undefined || previous.id === out.id)
   const frames = out.framesEncoded
   const encodeTime = out.totalEncodeTime
-  const kbps = sameStream && ts > previous.ts && bytes >= previous.bytes
+  const kbps = previous && sameStream && ts > previous.ts && bytes >= previous.bytes
     ? Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
     : null
-  let fps = isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
-  let encodeMs: number | null = null
-  if (sameStream && ts > previous.ts && isFiniteNumber(frames) && isFiniteNumber(previous.frames)) {
-    const count = frames - previous.frames
-    if (count >= 0 && fps === null) fps = Math.round(count * 1000 / (ts - previous.ts))
-    if (count > 0 && isFiniteNumber(encodeTime) && isFiniteNumber(previous.encodeTime) && encodeTime >= previous.encodeTime) {
-      encodeMs = (encodeTime - previous.encodeTime) * 1000 / count
-    }
-  } else if (isFiniteNumber(frames) && frames > 0 && isFiniteNumber(encodeTime)) {
-    encodeMs = encodeTime * 1000 / frames
-  }
+  const { fps, encodeMs } = encodeFrameStats(out, previous, sameStream)
   return {
     codec: mime.replace(/^video\//i, '').toUpperCase(),
     width: out.frameWidth || 0,

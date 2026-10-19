@@ -34,8 +34,8 @@ export function writeJson(key: string, value: Record<string, unknown>) {
   }
 }
 
-export function usePlaybackPrefs() {
-  // --- Per-user playback (volume 0..200 %, local mute) ---
+/** Per-user playback (volume 0..200 %, local mute). */
+function useUserPlayback() {
   const userVolumes = ref(readJson(USER_VOLUMES_KEY))
   const localMutedUsers = ref(readJson(USER_MUTED_KEY))
 
@@ -61,7 +61,20 @@ export function usePlaybackPrefs() {
     return !!userId && !!localMutedUsers.value[userId]
   }
 
-  // --- The sound of someone's screen share (0..100 %), apart from their voice ---
+  function toggleLocalMute(userId: string | null) {
+    if (!userId) return
+    const next = { ...localMutedUsers.value }
+    if (next[userId]) delete next[userId]
+    else next[userId] = true
+    localMutedUsers.value = next
+    writeJson(USER_MUTED_KEY, next)
+  }
+
+  return { userVolumes, localMutedUsers, getUserVolume, setUserVolume, isUserLocalMuted, toggleLocalMute }
+}
+
+/** The sound of someone's screen share (0..100 %), apart from their voice. */
+function useStreamPlayback() {
   const streamVolumes = ref(readJson(STREAM_VOLUMES_KEY))
   // Muted streams, for this session; the volume is kept for unmuting.
   const mutedStreams = ref<Record<string, boolean>>({})
@@ -69,6 +82,12 @@ export function usePlaybackPrefs() {
   function getStreamVolume(userId: string | null) {
     const v = userId ? streamVolumes.value[userId] : undefined
     return typeof v === 'number' ? v : STREAM_VOLUME_DEFAULT
+  }
+
+  function unmuteStream(userId: string) {
+    const m = { ...mutedStreams.value }
+    delete m[userId]
+    mutedStreams.value = m
   }
 
   // Moving the slider also unmutes, like Discord.
@@ -80,11 +99,7 @@ export function usePlaybackPrefs() {
     const next = { ...streamVolumes.value, [userId]: clamped }
     streamVolumes.value = next
     writeJson(STREAM_VOLUMES_KEY, next)
-    if (mutedStreams.value[userId]) {
-      const m = { ...mutedStreams.value }
-      delete m[userId]
-      mutedStreams.value = m
-    }
+    if (mutedStreams.value[userId]) unmuteStream(userId)
   }
 
   /** Silent: muted, or the volume all the way down. */
@@ -94,15 +109,13 @@ export function usePlaybackPrefs() {
 
   function toggleStreamMute(userId: string | null) {
     if (!userId) return
-    if (isStreamMuted(userId)) {
-      // Unmuting a stream turned all the way down brings it back to the default.
-      if (getStreamVolume(userId) === 0) setStreamVolume(userId, STREAM_VOLUME_DEFAULT)
-      const m = { ...mutedStreams.value }
-      delete m[userId]
-      mutedStreams.value = m
-    } else {
+    if (!isStreamMuted(userId)) {
       mutedStreams.value = { ...mutedStreams.value, [userId]: true }
+      return
     }
+    // Unmuting a stream turned all the way down brings it back to the default.
+    if (getStreamVolume(userId) === 0) setStreamVolume(userId, STREAM_VOLUME_DEFAULT)
+    unmuteStream(userId)
   }
 
   /** What the stage's slider shows: 0 while muted. */
@@ -115,16 +128,9 @@ export function usePlaybackPrefs() {
     return isStreamMuted(userId) ? 0 : getStreamVolume(userId) / 100
   }
 
-  function toggleLocalMute(userId: string | null) {
-    if (!userId) return
-    const next = { ...localMutedUsers.value }
-    if (next[userId]) delete next[userId]
-    else next[userId] = true
-    localMutedUsers.value = next
-    writeJson(USER_MUTED_KEY, next)
-  }
+  return { streamVolumes, mutedStreams, getStreamVolume, setStreamVolume, isStreamMuted, toggleStreamMute, streamVolumeShown, streamGain }
+}
 
-  return {
-    userVolumes, localMutedUsers, streamVolumes, mutedStreams, getUserVolume, setUserVolume, isUserLocalMuted, getStreamVolume, setStreamVolume, isStreamMuted, toggleStreamMute, streamVolumeShown, streamGain, toggleLocalMute
-  }
+export function usePlaybackPrefs() {
+  return { ...useUserPlayback(), ...useStreamPlayback() }
 }

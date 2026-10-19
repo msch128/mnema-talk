@@ -28,60 +28,72 @@ function pickScreen(cx: Cx) {
   })
 }
 
+type CurrentCapture = () => boolean
+
+function prepareScreenVideo(cx: Cx, stream: MediaStream, videoTrack: MediaStreamTrack) {
+  const { voice, st } = cx
+  if ('contentHint' in videoTrack) videoTrack.contentHint = streamTuning(voice.screenQuality).contentHint
+  videoTrack.onended = () => { if (toRaw(st.localScreenStream.value) === stream) stopScreenShare(cx) }
+}
+
+function prepareScreenAudio(cx: Cx, stream: MediaStream, screenAudio: MediaStreamTrack, guard: unknown, currentCapture: CurrentCapture) {
+  const { voice, st } = cx
+  // The streamer's mute: a disabled track sends silence.
+  screenAudio.enabled = !voice.isScreenAudioMuted
+  screenAudio.onended = () => { if (toRaw(st.localScreenStream.value) === stream) detachScreenAudio(cx) }
+  if (guard !== 'none' || st.warnedScreenAudioTracks.has(screenAudio)) return
+  st.warnedScreenAudioTracks.add(screenAudio)
+  useToastStore().info(t('talk.screenAudioFeedbackWarning'), {
+    action: {
+      label: t('talk.muteStreamAudio'),
+      onClick: () => {
+        if (!currentCapture()) return
+        voice.isScreenAudioMuted = true
+        screenAudio.enabled = false
+      }
+    }
+  })
+}
+
+// Puts the picked screen on its negotiated line. Resolves to false when the
+// share was left, stopped or replaced meanwhile.
+async function sendScreenVideo(cx: Cx, stream: MediaStream, sender: RTCRtpSender, videoTrack: MediaStreamTrack) {
+  const { chat, st } = cx
+  const gen = st.joinGeneration
+  const current = () => gen === st.joinGeneration && st.screenSender === sender && toRaw(st.localScreenStream.value) === stream
+  // Set the chosen limits while the negotiated line is dormant. Attaching
+  // first starts an encoder at the previous/default size, then immediately
+  // asks it to reconfigure (particularly expensive for a 4K capture).
+  const dormant = !sender.track
+  if (dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
+  if (!current()) return false
+  await sender.replaceTrack(videoTrack).catch(() => {})
+  if (!current()) return false
+  if (!dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
+  if (!current()) return false
+  chat.sendWSEvent('webrtc_screenshare_start', {})
+  chat.sendWSEvent('webrtc_request_keyframe', {})
+  await syncLayers(cx)
+  watchCapture(cx, videoTrack, () => void retuneForCapture(cx, videoTrack))
+  return true
+}
+
 // Sends a freshly picked screen (and its sound, on its own line).
 export async function attachScreen(cx: Cx, stream: MediaStream) {
-  const { voice, chat, st } = cx
+  const { voice, st } = cx
   const gen = st.joinGeneration
   const captureGen = st.screenCaptureGeneration
   const currentCapture = () => gen === st.joinGeneration && captureGen === st.screenCaptureGeneration && toRaw(st.localScreenStream.value) === stream
   const videoTrack = stream.getVideoTracks()[0]
-  if (videoTrack) {
-    if ('contentHint' in videoTrack) videoTrack.contentHint = streamTuning(voice.screenQuality).contentHint
-    videoTrack.onended = () => { if (toRaw(st.localScreenStream.value) === stream) stopScreenShare(cx) }
-  }
+  if (videoTrack) prepareScreenVideo(cx, stream, videoTrack)
   const screenAudio = stream.getAudioTracks()[0] || null
   const guard = screenAudio ? await ensureScreenAudioGuard(screenAudio) : null
   if (!currentCapture()) return
   st.screenAudioGuard = guard
-  if (screenAudio) {
-    // The streamer's mute: a disabled track sends silence.
-    screenAudio.enabled = !voice.isScreenAudioMuted
-    screenAudio.onended = () => { if (toRaw(st.localScreenStream.value) === stream) detachScreenAudio(cx) }
-    if (guard === 'none' && !st.warnedScreenAudioTracks.has(screenAudio)) {
-      st.warnedScreenAudioTracks.add(screenAudio)
-      useToastStore().info(t('talk.screenAudioFeedbackWarning'), {
-        action: {
-          label: t('talk.muteStreamAudio'),
-          onClick: () => {
-            if (!currentCapture()) return
-            voice.isScreenAudioMuted = true
-            screenAudio.enabled = false
-          }
-        }
-      })
-    }
-  }
+  if (screenAudio) prepareScreenAudio(cx, stream, screenAudio, guard, currentCapture)
   voice.hasScreenAudio = !!screenAudio
 
-  if (st.screenSender && videoTrack) {
-    const sender = st.screenSender
-    const gen = st.joinGeneration
-    const current = () => gen === st.joinGeneration && st.screenSender === sender && toRaw(st.localScreenStream.value) === stream
-    // Set the chosen limits while the negotiated line is dormant. Attaching
-    // first starts an encoder at the previous/default size, then immediately
-    // asks it to reconfigure (particularly expensive for a 4K capture).
-    const dormant = !sender.track
-    if (dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
-    if (!current()) return
-    await sender.replaceTrack(videoTrack).catch(() => {})
-    if (!current()) return
-    if (!dormant) await tuneSender(sender, screenSenderParams(cx, videoTrack))
-    if (!current()) return
-    chat.sendWSEvent('webrtc_screenshare_start', {})
-    chat.sendWSEvent('webrtc_request_keyframe', {})
-    await syncLayers(cx)
-    watchCapture(cx, videoTrack, () => void retuneForCapture(cx, videoTrack))
-  }
+  if (st.screenSender && videoTrack && !(await sendScreenVideo(cx, stream, st.screenSender, videoTrack))) return
   if (st.screenAudioSender) await st.screenAudioSender.replaceTrack(screenAudio).catch(() => {})
   if (!screenAudio) useToastStore().info(t('talk.noAudioInShareTip'))
 }

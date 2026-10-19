@@ -51,46 +51,70 @@ export function syncLayers(cx: Cx) {
   return st.qualityChain
 }
 
-async function runSyncLayers(cx: Cx) {
-  const { voice, chat, st } = cx
-  if (!st.layerSenders.some(Boolean)) return
-  const track = st.localScreenStream.value?.getVideoTracks()[0]
-  const gen = st.joinGeneration
-  const senders = [...st.layerSenders]
-  if (!track || !st.screenSender) {
-    for (const sender of senders) if (sender?.track) await sender.replaceTrack(null).catch(() => {})
-    // The next share starts on its best layer alone, whatever this one was asked for.
-    if (st.screenSender) await tuneSender(st.screenSender, { active: true })
-    st.declaredKey = ''
-    return
-  }
-  const plans = planScreenLayers(voice.screenQuality, track.getSettings?.() || {})
-  const wanted = voice.layersWanted
-  const active = (layer: number) => (wanted === null ? layer === 0 : wanted.includes(layer))
+const dropTrack = async (sender: RTCRtpSender) => {
+  if (sender.track) await sender.replaceTrack(null).catch(() => {})
+}
+
+/** No share (or no best-layer sender): the lower layers go quiet and the next share starts on its best layer alone. */
+async function releaseLayers(cx: Cx, senders: (RTCRtpSender | null | undefined)[]) {
+  const { st } = cx
+  for (const sender of senders) if (sender) await dropTrack(sender)
+  if (st.screenSender) await tuneSender(st.screenSender, { active: true })
+  st.declaredKey = ''
+}
+
+type LayerPlan = ReturnType<typeof planScreenLayers>[number]
+
+/** Tunes one lower layer's sender and feeds it the capture. Resolves to false when the share changed meanwhile. */
+async function feedLayer(cx: Cx, sender: RTCRtpSender, plan: LayerPlan, active: boolean, track: MediaStreamTrack, gen: number) {
+  const { voice, st } = cx
   const prio = qosPriority(cx)
   const { degradationPreference } = streamTuning(voice.screenQuality)
-  await tuneSender(st.screenSender, { active: active(0) })
-  for (let i = 0; i < senders.length; i++) {
-    const sender = senders[i]
-    const plan = plans[i + 1]
-    if (!sender) continue
-    if (!plan) {
-      if (sender.track) await sender.replaceTrack(null).catch(() => {})
-      continue
-    }
-    await tuneSender(sender, {
-      active: active(i + 1), maxBitrate: plan.maxBitrate, maxFramerate: plan.maxFramerate, scaleResolutionDownBy: plan.scale,
-      degradationPreference, priority: prio, networkPriority: prio
-    })
-    if (gen !== st.joinGeneration || toRaw(st.localScreenStream.value)?.getVideoTracks()[0] !== track) return
-    if (sender.track !== track) await sender.replaceTrack(track).catch(() => {})
-  }
-  if (gen !== st.joinGeneration || !plans.length) return
+  await tuneSender(sender, {
+    active, maxBitrate: plan.maxBitrate, maxFramerate: plan.maxFramerate, scaleResolutionDownBy: plan.scale,
+    degradationPreference, priority: prio, networkPriority: prio
+  })
+  if (gen !== st.joinGeneration || toRaw(st.localScreenStream.value)?.getVideoTracks()[0] !== track) return false
+  if (sender.track !== track) await sender.replaceTrack(track).catch(() => {})
+  return true
+}
+
+/** Tells the room which layers exist, when they differ from what it was told last. */
+function declareLayers(cx: Cx, plans: LayerPlan[]) {
+  const { chat, st } = cx
   const declared = declaredLayers(plans)
   const key = layersKey(declared)
   if (key === st.declaredKey) return
   st.declaredKey = key
   chat.sendWSEvent('webrtc_layers', { layers: declared })
+}
+
+async function runSyncLayers(cx: Cx) {
+  const { voice, st } = cx
+  if (!st.layerSenders.some(Boolean)) return
+  const track = st.localScreenStream.value?.getVideoTracks()[0]
+  const gen = st.joinGeneration
+  const senders = [...st.layerSenders]
+  if (!track || !st.screenSender) {
+    await releaseLayers(cx, senders)
+    return
+  }
+  const plans = planScreenLayers(voice.screenQuality, track.getSettings?.() || {})
+  const wanted = voice.layersWanted
+  const active = (layer: number) => (wanted === null ? layer === 0 : wanted.includes(layer))
+  await tuneSender(st.screenSender, { active: active(0) })
+  for (let i = 0; i < senders.length; i++) {
+    const sender = senders[i]
+    if (!sender) continue
+    const plan = plans[i + 1]
+    if (!plan) {
+      await dropTrack(sender)
+      continue
+    }
+    if (!(await feedLayer(cx, sender, plan, active(i + 1), track, gen))) return
+  }
+  if (gen !== st.joinGeneration || !plans.length) return
+  declareLayers(cx, plans)
 }
 
 // The capture changed size or rate: the best layer is sized for the new

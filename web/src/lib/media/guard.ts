@@ -56,6 +56,38 @@ function canArm(): boolean {
   return typeof Worker === 'function' && typeof RTCRtpScriptTransform === 'function' && typeof MessageChannel === 'function'
 }
 
+type KeyMessage = { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, caps?: FrameCaps, seq: number }
+
+function keyMessage(epoch: number, key: EpochKeys, seq: number, replace: boolean, soft: boolean, caps: FrameCaps | undefined): KeyMessage {
+  return {
+    type: 'key' as const, epoch, key, seq,
+    ...(replace ? { replace: true as const } : {}),
+    ...(soft && !replace ? { soft: true as const } : {}),
+    ...(caps ? { caps } : {}),
+  }
+}
+
+/** What a line's transform worker is told about it when it is armed. */
+function transformOptions(port: MessagePort, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number) {
+  return {
+    port,
+    direction,
+    channelId,
+    ...(senderId === null ? {} : { senderId }),
+    ...(source === undefined ? {} : { source }),
+    ...(layer === undefined ? {} : { layer }),
+  }
+}
+
+function spawnWorker(onStats: (senders: Record<string, FrameStats>) => void): Worker {
+  const worker = new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
+  worker.onmessage = (event: MessageEvent<unknown>) => {
+    const senders = readStats(event.data)
+    if (senders) onStats(senders)
+  }
+  return worker
+}
+
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
@@ -63,7 +95,7 @@ export function createMediaGuard(): MediaGuard {
   let armed = new WeakMap<RTCRtpReceiver, KeyedPort>()
   // The last key message, given to a line armed later; seq lets the shared
   // worker apply a message once however many lines deliver it.
-  let current: { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, caps?: FrameCaps, seq: number } | null = null
+  let current: KeyMessage | null = null
   // The newest advertisement, given to a line armed later after the key.
   let currentCaps: { type: 'caps', epoch: number, caps: FrameCaps, seq: number } | null = null
   let seq = 0
@@ -71,13 +103,7 @@ export function createMediaGuard(): MediaGuard {
 
   function sharedWorker(): Worker | null {
     if (!canArm()) return null
-    if (!worker) {
-      worker = new Worker(new URL('./mediaFrameWorker.ts', import.meta.url), { type: 'module' })
-      worker.onmessage = (event: MessageEvent<unknown>) => {
-        const senders = readStats(event.data)
-        if (senders) statsListener?.(senders)
-      }
-    }
+    worker ??= spawnWorker(senders => statsListener?.(senders))
     return worker
   }
 
@@ -86,14 +112,7 @@ export function createMediaGuard(): MediaGuard {
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()
-    target.transform = new RTCRtpScriptTransform(currentWorker, {
-      port: channel.port2,
-      direction,
-      channelId,
-      ...(senderId === null ? {} : { senderId }),
-      ...(source === undefined ? {} : { source }),
-      ...(layer === undefined ? {} : { layer }),
-    }, [channel.port2])
+    target.transform = new RTCRtpScriptTransform(currentWorker, transformOptions(channel.port2, direction, channelId, senderId, source, layer), [channel.port2])
     if (current) channel.port1.postMessage(current)
     if (currentCaps && current && currentCaps.epoch === current.epoch) channel.port1.postMessage(currentCaps)
     ports.push(channel.port1)
@@ -119,12 +138,7 @@ export function createMediaGuard(): MediaGuard {
     armReceiver: armIncoming,
     setKey(epoch, key, replace = false, soft = false, caps) {
       seq += 1
-      const message = {
-        type: 'key' as const, epoch, key, seq,
-        ...(replace ? { replace: true as const } : {}),
-        ...(soft && !replace ? { soft: true as const } : {}),
-        ...(caps ? { caps } : {}),
-      }
+      const message = keyMessage(epoch, key, seq, replace, soft, caps)
       current = message
       currentCaps = null
       for (const port of ports) port.postMessage(message)

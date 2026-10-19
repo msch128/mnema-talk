@@ -11,6 +11,7 @@
 // the pending order is laid over the server data. A channels_changed refetch
 // in between therefore brings new names or channels, but can't flash the old
 // order back.
+import type { ComputedRef, Ref, ShallowRef } from 'vue'
 import { ref, shallowRef, computed, getCurrentScope, onScopeDispose } from 'vue'
 import type { LayoutRequest } from '../types/domain'
 import type { ChannelTree } from '../lib/channelTree'
@@ -23,6 +24,59 @@ import { t } from '../i18n'
 
 export const UNDO_MS = 6000
 
+/** The save queue: what is confirmed, what is queued, and who waits for the outcome. */
+interface SaveQueue {
+  confirmed: LayoutRequest | null // last layout the server has (rollback target)
+  queued: LayoutRequest | null // next payload to send
+  running: boolean
+  waiters: ((value: boolean) => void)[]
+}
+
+interface DrainDeps {
+  serverTree: ComputedRef<ChannelTree>
+  pending: ShallowRef<LayoutRequest | null>
+  saving: Ref<boolean>
+  chatStore: ReturnType<typeof useChatStore>
+  toasts: ReturnType<typeof useToastStore>
+}
+
+/** Sends queued layouts one at a time until nothing is left, then refetches. */
+async function drainQueue(q: SaveQueue, { serverTree, pending, saving, chatStore, toasts }: DrainDeps) {
+  if (q.running) return
+  q.running = true
+  saving.value = true
+  let failure: unknown = null
+  while (q.queued) {
+    // Every move made up to now is part of this payload. Laid over the
+    // latest server data, channels deleted meanwhile drop out instead of
+    // failing the whole save.
+    const payload = toLayoutPayload(applyLayoutPayload(serverTree.value, q.queued))
+    const batch = q.waiters
+    q.queued = null
+    q.waiters = []
+    try {
+      await api('/api/admin/layout', { method: 'PUT', json: payload })
+      q.confirmed = payload
+      batch.forEach(resolve => resolve(true))
+    } catch (e) {
+      failure = e
+      q.queued = null
+      pending.value = q.confirmed
+      ;[...batch, ...q.waiters].forEach(resolve => resolve(false))
+      q.waiters = []
+      break
+    }
+  }
+  q.running = false
+  saving.value = false
+  if (failure) toasts.error(t('sidebar.layoutSaveFailed'), { detail: failure instanceof Error ? failure.message : '' })
+
+  // The server broadcasts channels_changed as well; this fetch makes sure the
+  // store has the saved order before the overlay goes away.
+  await chatStore.fetchChannels()
+  if (!q.running) pending.value = null
+}
+
 export function useChannelLayout({ undoMs = UNDO_MS }: { undoMs?: number } = {}) {
   const chatStore = useChatStore()
   const toasts = useToastStore()
@@ -33,10 +87,8 @@ export function useChannelLayout({ undoMs = UNDO_MS }: { undoMs?: number } = {})
   const layout = computed(() => (pending.value ? applyLayoutPayload(serverTree.value, pending.value) : serverTree.value))
   const saving = ref(false)
 
-  let confirmed: LayoutRequest | null = null // last layout the server has (rollback target)
-  let queued: LayoutRequest | null = null // next payload to send
-  let running = false
-  let waiters: ((value: boolean) => void)[] = []
+  const queue: SaveQueue = { confirmed: null, queued: null, running: false, waiters: [] }
+  const drain = () => drainQueue(queue, { serverTree, pending, saving, chatStore, toasts })
   let seq = 0
   let undoToast: number | null = null
 
@@ -49,53 +101,17 @@ export function useChannelLayout({ undoMs = UNDO_MS }: { undoMs?: number } = {})
     const before = toLayoutPayload(layout.value)
     const payload = toLayoutPayload(next)
     if (samePayload(before, payload)) return Promise.resolve(true)
-    if (!running) confirmed = before
+    if (!queue.running) queue.confirmed = before
     pending.value = payload
-    queued = payload
+    queue.queued = payload
     const id = ++seq
-    const done = new Promise<boolean>(resolve => waiters.push(resolve))
+    const done = new Promise<boolean>(resolve => queue.waiters.push(resolve))
     drain()
     return done.then(ok => {
       // Only the latest move offers an undo; it restores the layout before it.
       if (ok && toast && id === seq) offerUndo(toast, before)
       return ok
     })
-  }
-
-  async function drain() {
-    if (running) return
-    running = true
-    saving.value = true
-    let failure: unknown = null
-    while (queued) {
-      // Every move made up to now is part of this payload. Laid over the
-      // latest server data, channels deleted meanwhile drop out instead of
-      // failing the whole save.
-      const payload = toLayoutPayload(applyLayoutPayload(serverTree.value, queued))
-      const batch = waiters
-      queued = null
-      waiters = []
-      try {
-        await api('/api/admin/layout', { method: 'PUT', json: payload })
-        confirmed = payload
-        batch.forEach(resolve => resolve(true))
-      } catch (e) {
-        failure = e
-        queued = null
-        pending.value = confirmed
-        ;[...batch, ...waiters].forEach(resolve => resolve(false))
-        waiters = []
-        break
-      }
-    }
-    running = false
-    saving.value = false
-    if (failure) toasts.error(t('sidebar.layoutSaveFailed'), { detail: failure instanceof Error ? failure.message : '' })
-
-    // The server broadcasts channels_changed as well; this fetch makes sure the
-    // store has the saved order before the overlay goes away.
-    await chatStore.fetchChannels()
-    if (!running) pending.value = null
   }
 
   function offerUndo(text: string, before: LayoutRequest) {
