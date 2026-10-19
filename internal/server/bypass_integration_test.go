@@ -4,7 +4,9 @@ package server
 
 import (
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/perm"
@@ -95,6 +97,21 @@ func TestOverwritesCannotBeUsedToGainOrDestroy(t *testing.T) {
 	wantStatus(t, "category, lower role", putOverwrites(mod, "categories", cat.ID, overwrite("role", lowRole, 0, perm.SendMessages)), http.StatusNoContent)
 }
 
+func expectVoiceJoin(t *testing.T, w *wsConn, ch uuid.UUID) {
+	t.Helper()
+	deadline := time.Now().Add(soon)
+	for time.Until(deadline) > 0 {
+		payload, ok := w.expect("voice_state_update", time.Until(deadline))
+		if !ok {
+			t.Fatalf("join of %s not announced", ch)
+		}
+		if strings.Contains(string(payload), ch.String()) && strings.Contains(string(payload), `"join"`) {
+			return
+		}
+	}
+	t.Fatalf("timed out waiting for join of %s", ch)
+}
+
 // Removing someone from a Talk needs the permission in that Talk, and a Talk
 // the caller cannot use answers like no Talk at all.
 func TestKickIsScopedToTheTalk(t *testing.T) {
@@ -121,9 +138,7 @@ func TestKickIsScopedToTheTalk(t *testing.T) {
 	kick := "/api/admin/users/" + max.user.ID.String() + "/kick"
 	for _, ch := range []uuid.UUID{quiet, hidden} {
 		conn.send("voice_join", map[string]any{"channel_id": ch})
-		if _, ok := watcher.expect("voice_state_update", soon); !ok {
-			t.Fatal("join not announced")
-		}
+		expectVoiceJoin(t, watcher, ch)
 		res := mod.post(kick, nil)
 		if res.status != http.StatusBadRequest {
 			t.Fatalf("kick in a Talk the caller may not moderate: %d %s", res.status, res.body)
@@ -133,9 +148,7 @@ func TestKickIsScopedToTheTalk(t *testing.T) {
 		}
 	}
 	conn.send("voice_join", map[string]any{"channel_id": open})
-	if _, ok := watcher.expect("voice_state_update", soon); !ok {
-		t.Fatal("join not announced")
-	}
+	expectVoiceJoin(t, watcher, open)
 	wantStatus(t, "kick in Open", mod.post(kick, nil), http.StatusNoContent)
 	if _, ok := conn.expect("voice_kicked", soon); !ok {
 		t.Fatal("kick did not arrive")
