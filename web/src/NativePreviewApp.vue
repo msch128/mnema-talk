@@ -9,7 +9,6 @@ import { navigate, popRedirectRoute } from './lib/router'
 import { platform } from './lib/platform'
 
 const address = ref('')
-const verified = platform.trustedApp()
 const addressInput = ref<HTMLInputElement | null>(null)
 const ready = ref(false)
 const busy = ref(false)
@@ -20,31 +19,42 @@ let attempt = 0
 let alive = true
 onBeforeUnmount(() => { alive = false; ++attempt })
 onMounted(async () => {
-  try { if (!platform.isWebDesktopSelector()) await platform.initializeNative(); if (alive) ready.value = true }
+  try { await platform.initializeNative(); if (alive) ready.value = true }
   catch { if (alive) error.value = t('nativeDesktop.contextError') }
 })
+
+function previewOrigin(status: number, body: unknown): string | null {
+  if (status !== 200 || typeof body !== 'object' || body === null) return null
+  if (!('origin' in body) || typeof body.origin !== 'string') return null
+  if (!('compatibility' in body) || !['supported', 'deprecated'].includes(String(body.compatibility))) return null
+  if (!('transport_preview' in body) || body.transport_preview !== true) return null
+  if (!('content_authorization' in body) || body.content_authorization !== 'unavailable') return null
+  return body.origin
+}
+
+function secureOrigin(value: string): boolean {
+  let url: URL
+  try { url = new URL(value) } catch { return false }
+  if (url.protocol !== 'https:') return false
+  if (url.username !== '' || url.password !== '') return false
+  return url.origin === value
+}
+
 async function connect() {
   if (!ready.value || busy.value) return
   const submittedAddress = addressInput.value?.value ?? address.value
   address.value = submittedAddress
   const current = ++attempt; busy.value = true; error.value = ''
   try {
-    if (platform.isWebDesktopSelector()) {
-      await platform.invoke('desktop_open_instance', { address: submittedAddress })
-      return
-    }
     const reply = await platform.connectNative(submittedAddress)
     if (current !== attempt) return
-    const body = reply.body
-    if (reply.status !== 200 || typeof body !== 'object' || body === null || !('origin' in body) || typeof body.origin !== 'string' || !('compatibility' in body) || !['supported', 'deprecated'].includes(String(body.compatibility)) || !('transport_preview' in body) || body.transport_preview !== true || !('content_authorization' in body) || body.content_authorization !== 'unavailable') throw new Error('Unsupported server')
-    const url = new URL(body.origin)
-    if (url.protocol !== 'https:' || url.origin !== body.origin || url.username || url.password) throw new Error('Invalid origin')
-    origin.value = body.origin; connected.value = true
-  } catch (cause) {
-    if (current === attempt) error.value = platform.isWebDesktopSelector() && typeof cause === 'string'
-      ? cause.slice(0, 300) : t('nativeDesktop.connectError')
-  } finally { if (current === attempt) busy.value = false }
+    const found = previewOrigin(reply.status, reply.body)
+    if (found === null || !secureOrigin(found)) throw new Error('Unsupported server')
+    origin.value = found; connected.value = true
+  } catch { if (current === attempt) error.value = t('nativeDesktop.connectError') }
+  finally { if (current === attempt) busy.value = false }
 }
+
 async function changeServer() {
   ++attempt; connected.value = false; busy.value = true; error.value = ''
   useChatStore().resetCommunityState()
@@ -76,8 +86,7 @@ async function changeServer() {
         <button type="submit" :disabled="!ready || busy">{{ busy ? t('nativeDesktop.checking') : t('nativeDesktop.connect') }}</button>
       </form>
       <p v-if="error" class="native-connect-error" role="alert">{{ error }}</p>
-      <p v-if="verified" class="native-connect-note" data-testid="verified-app">{{ t('trustedApp.verified', { version: verified.version }) }} · {{ t(`trustedApp.${verified.source}`) }}</p>
-      <p v-else class="native-connect-note">{{ t('nativeDesktop.dev') }}</p>
+      <p class="native-connect-note">{{ t('nativeDesktop.dev') }}</p>
     </section>
   </main>
 </template>

@@ -37,7 +37,7 @@ describe('browser application entry', () => {
   it('mounts native discovery with the same plugins inside a real Tauri runtime', async () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
     await import('./main')
-    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativeBootstrap.vue')).default)
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativePreviewApp.vue')).default)
     expect(boot.app.use.mock.calls).toEqual([[boot.pinia], [boot.plugin]])
     expect(boot.app.mount).toHaveBeenCalledWith('#app')
   })
@@ -45,7 +45,20 @@ describe('browser application entry', () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
     vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
     await import('./main')
-    expect(boot.createApp).toHaveBeenCalledWith((await import('./NativeBootstrap.vue')).default)
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopSelector.vue')).default)
+  })
+  it('mounts the instance selector on the legacy Tauri selector page', async () => {
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('http://tauri.localhost/'))
+    vi.stubGlobal('__MNEMA_WEB_DESKTOP__', true)
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopSelector.vue')).default)
+  })
+  it('keeps the gaming surface ahead of the instance selector', async () => {
+    Reflect.set(window, '__MNEMA_GAMING_SURFACE__', 'gaming-overlay')
+    vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
+    vi.stubGlobal('__MNEMA_TRUSTED_APP__', { version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'selector' })
+    await import('./main')
+    expect(boot.createApp).toHaveBeenCalledWith((await import('./components/DesktopGamingOverlay.vue')).default)
   })
   it('mounts the complete App for the verified bundle once an instance is selected', async () => {
     vi.stubGlobal('isTauri', true); vi.stubGlobal('location', new URL('mnema://localhost/'))
