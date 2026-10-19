@@ -1,5 +1,5 @@
-import type { Message, ReactionSummary, ReplyPreview } from '../types/domain'
-import { decodeMessage } from '../types/domain'
+import type { Message, ReactionSummary, ReplyPreview } from '../../types/domain'
+import { decodeMessage } from '../../types/domain'
 
 /** A native typed-event projection, enriched by the same native metadata owner.
  * This closed text schema cannot carry attachment, pin, or server plaintext data.

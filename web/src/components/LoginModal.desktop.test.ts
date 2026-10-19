@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import LoginModal from './LoginModal.vue'
-import { initializeNativeContext, installNativePort } from '../lib/nativeTransport'
+import { initializeNativeContext, installNativePort } from '../lib/native/nativeTransport'
 import { setLocale } from '../i18n'
 
 const context = '00000000-0000-4000-8000-000000000001'

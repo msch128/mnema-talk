@@ -1,4 +1,4 @@
-import type { NoiseModel } from '../../lib/dfnTypes'
+import type { NoiseModel } from '../../lib/dfn/dfnTypes'
 
 // Noise mode -> model in lib/noiseSuppressor (null: no AI filter).
 export function aiModel(noiseMode: string | null | undefined): NoiseModel | null {

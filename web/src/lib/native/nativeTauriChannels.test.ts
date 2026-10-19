@@ -1,6 +1,6 @@
 import { Channel } from '@tauri-apps/api/core'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { createTrustPort } from './trustPort'
+import { createTrustPort } from '../trustPort'
 import { initializeNativeContext, installNativePort, NativeSocket } from './nativeTransport'
 const CONTEXT = '00000000-0000-4000-8000-000000000001'
 const CHANNEL = '00000000-0000-4000-8000-000000000002'

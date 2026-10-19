@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { captureNativeTrustPresentation, connectNative, disconnectNative, initializeNativeContext, installNativePort, nativeApiTransport } from './nativeTransport'
 import type { NativePort } from './nativeTransport'
-import type { StatusChannel } from './trustPort'
+import type { StatusChannel } from '../trustPort'
 const CONTEXT = '00000000-0000-4000-8000-000000000001'
 const CHANNEL = '00000000-0000-4000-8000-000000000002'
 const OPERATION = '00000000-0000-4000-8000-000000000003'

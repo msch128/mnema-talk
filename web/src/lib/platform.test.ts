@@ -14,9 +14,9 @@ const host = vi.hoisted(() => ({
 
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: host.invoke }))
 vi.mock('./desktopRuntime', () => ({ isDesktopRuntime: () => host.desktop, isWebDesktopSelector: () => host.selector }))
-vi.mock('./trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
-vi.mock('./trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
-vi.mock('./nativeTransport', () => ({
+vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
+vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
+vi.mock('./native/nativeTransport', () => ({
   NativeSocket: class NativeSocket { kind = 'native' },
   nativeApiTransport: host.nativeTransport,
   initializeNativeContext: host.initialize,

@@ -1,4 +1,4 @@
-import { decodeTrustPreview, decodeTrustStatus, trustOperationId, type NativeTrustPresentationPort, type TrustStatus } from './nativeTrust.ts'
+import { decodeTrustPreview, decodeTrustStatus, trustOperationId, type NativeTrustPresentationPort, type TrustStatus } from './native/nativeTrust.ts'
 export interface StatusChannel { onmessage: (value: unknown) => void }
 /** Captured document/profile callbacks. These checks protect presentation only;
  * native scope checks and an actual OS callback alone grant cryptographic trust.

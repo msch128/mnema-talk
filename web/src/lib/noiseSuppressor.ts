@@ -9,12 +9,12 @@
 //           works on 16 kHz internally, so voices lose their top end.
 import gtcrnWorkletUrl from '@sapphi-red/web-noise-suppressor/gtcrnWorklet.js?url'
 import gtcrnWasmUrl from '@sapphi-red/web-noise-suppressor/gtcrn.wasm?url'
-import dfnWorkletUrl from './dfnBridgeWorklet.ts?worker&url'
+import dfnWorkletUrl from './dfn/dfnBridgeWorklet.ts?worker&url'
 import dfnWasmUrl from '../third_party/deepfilternet3/df_bg.wasm?url'
 import dfnModelUrl from '../third_party/deepfilternet3/DeepFilterNet3_onnx.tgz?url'
-import { createDeepFilterNode } from './dfnNode'
-import type { FilterNode } from './dfnNode'
-import type { FilterOptions, NoiseModel } from './dfnTypes'
+import { createDeepFilterNode } from './dfn/dfnNode'
+import type { FilterNode } from './dfn/dfnNode'
+import type { FilterOptions, NoiseModel } from './dfn/dfnTypes'
 
 const assetPromises = new Map<string, Promise<ArrayBuffer>>()
 let dfnModulePromise: Promise<WebAssembly.Module> | null = null

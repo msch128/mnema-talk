@@ -1,6 +1,6 @@
 import { useToastStore } from '../../stores/toast'
 import { t } from '../../i18n'
-import type { NoiseModel } from '../../lib/dfnTypes'
+import type { NoiseModel } from '../../lib/dfn/dfnTypes'
 import type { Cx } from './state'
 import { getAudioConstraints, setupMicPipeline, teardownMicPipeline } from './micPipeline'
 import { startMicTest } from './micTest'

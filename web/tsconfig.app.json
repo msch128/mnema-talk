@@ -18,9 +18,9 @@
     "src/**/*.test.ts",
     "src/**/*.fixture.ts",
     "src/test-setup.ts",
-    "src/lib/dfnWorker.ts",
+    "src/lib/dfn/dfnWorker.ts",
     "src/lib/media/mediaFrameWorker.ts",
-    "src/lib/dfnBridgeWorklet.ts",
+    "src/lib/dfn/dfnBridgeWorklet.ts",
     "src/types/audio-worklet.d.ts",
     "src/types/worker-env.d.ts"
   ]

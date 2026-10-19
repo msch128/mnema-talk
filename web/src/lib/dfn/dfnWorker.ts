@@ -1,6 +1,6 @@
 import { isDfnConnect, isDfnInit, isDfnFrameHeader } from './dfnTypes'
 // Model setup and inference run away from the browser's audio rendering thread.
-import { initSync, df_create, df_get_frame_length, df_process_frame } from '../third_party/deepfilternet3/worker-glue.js'
+import { initSync, df_create, df_get_frame_length, df_process_frame } from '../../third_party/deepfilternet3/worker-glue.js'
 
 let handle: number | null = null
 let frameLength = 0

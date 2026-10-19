@@ -86,9 +86,9 @@ export default tseslint.config(
       '**/*.config.ts',
       '**/src/lib/platform.ts',
       '**/src/lib/desktopRuntime.ts',
-      '**/src/lib/trustedDesktop.ts',
-      '**/src/lib/trustedSocket.ts',
-      '**/src/lib/nativeTransport.ts'
+      '**/src/lib/native/trustedDesktop.ts',
+      '**/src/lib/native/trustedSocket.ts',
+      '**/src/lib/native/nativeTransport.ts'
     ],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-globals': 'off', 'no-restricted-properties': 'off', 'no-restricted-syntax': 'off' }
   },

@@ -3,7 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { fixtureId, userFixture } from '../test-fixtures.fixture'
 
 const made = vi.hoisted(() => ({ sockets: [] as { path: string; closed: boolean }[] }))
-vi.mock('../lib/trustedSocket', () => ({
+vi.mock('../lib/native/trustedSocket', () => ({
   TrustedSocket: class {
     onopen: (() => void) | null = null
     onclose: (() => void) | null = null

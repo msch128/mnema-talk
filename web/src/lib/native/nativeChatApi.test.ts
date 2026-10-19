@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest'
 import { NativeTypedChatApi, type NativeTypedChatBridge } from './nativeChatApi'
-import type { StatusChannel } from './trustPort'
+import type { StatusChannel } from '../trustPort'
 
 const context = '10000000-0000-4000-8000-000000000001'
 const channelId = '20000000-0000-4000-8000-000000000001'
