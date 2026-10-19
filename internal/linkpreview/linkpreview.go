@@ -6,7 +6,6 @@
 package linkpreview
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -19,9 +18,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-	"unicode/utf8"
-
-	"golang.org/x/net/html"
 )
 
 const (
@@ -66,15 +62,6 @@ var (
 
 // slotWait is how long a fetch waits for its slots; tests shorten it.
 var slotWait = fetchTimeout
-
-type requesterKey struct{}
-
-// WithRequester tags ctx with who asked for a fetch (a user ID), for the
-// per-requester fetch limit. Untagged fetches only count against the
-// server-wide limit.
-func WithRequester(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, requesterKey{}, id)
-}
 
 // Fetcher fetches and caches previews.
 type Fetcher struct {
@@ -143,127 +130,6 @@ func New() *Fetcher {
 		},
 	}
 	return f
-}
-
-// checkResolvedAddress applies the address policy after DNS resolution.
-// The native dialer calls it for every connection attempt, including redirects.
-func (f *Fetcher) checkResolvedAddress(address string) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		return ErrBlocked
-	}
-	if f.allowPrivate {
-		return nil
-	}
-	ip := net.ParseIP(host)
-	if !publicIP(ip) || f.isDenied(ip) {
-		return ErrBlocked
-	}
-	return nil
-}
-
-// nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but
-// that must never be fetched: shared, documentation, benchmarking and
-// reserved IPv4 space, the deprecated 6to4 relay anycast and IPv6
-// site-local ranges, and IPv6 prefixes that embed an IPv4 address (NAT64,
-// 6to4, Teredo), which could point at a private host.
-var nonPublic = []netip.Prefix{
-	netip.MustParsePrefix("0.0.0.0/8"),
-	netip.MustParsePrefix("100.64.0.0/10"),
-	netip.MustParsePrefix("192.0.0.0/24"),
-	netip.MustParsePrefix("192.0.2.0/24"),
-	netip.MustParsePrefix("192.88.99.0/24"),
-	netip.MustParsePrefix("198.18.0.0/15"),
-	netip.MustParsePrefix("198.51.100.0/24"),
-	netip.MustParsePrefix("203.0.113.0/24"),
-	netip.MustParsePrefix("240.0.0.0/4"),
-	netip.MustParsePrefix("64:ff9b::/96"),
-	netip.MustParsePrefix("64:ff9b:1::/48"),
-	netip.MustParsePrefix("2001::/32"),
-	netip.MustParsePrefix("2001:db8::/32"),
-	netip.MustParsePrefix("2002::/16"),
-	netip.MustParsePrefix("fec0::/10"),
-}
-
-// publicIP reports whether ip is a globally routable unicast address.
-func publicIP(ip net.IP) bool {
-	if ip == nil {
-		return false
-	}
-	if v4 := ip.To4(); v4 != nil {
-		ip = v4
-	}
-	addr, ok := netip.AddrFromSlice(ip)
-	if !ok {
-		return false
-	}
-	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsUnspecified() {
-		return false
-	}
-	for _, p := range nonPublic {
-		if p.Contains(addr) {
-			return false
-		}
-	}
-	return true
-}
-
-// Deny refuses the addresses of these hosts or IPs; each call replaces the
-// list. Host names are resolved now (call Deny again to refresh them). When a
-// lookup fails, the addresses that host resolved to last time stay denied,
-// so a DNS hiccup never opens the server's own public address. Used for the
-// server's own public address.
-func (f *Fetcher) Deny(ctx context.Context, hostsOrIPs ...string) {
-	f.deniedMu.RLock()
-	previous := f.deniedHosts
-	f.deniedMu.RUnlock()
-
-	hosts := map[string][]netip.Addr{}
-	set := map[netip.Addr]bool{}
-	for _, h := range hostsOrIPs {
-		if h == "" {
-			continue
-		}
-		if a, err := netip.ParseAddr(h); err == nil {
-			set[a.Unmap()] = true
-			continue
-		}
-		addrs, err := f.lookup(ctx, h)
-		if err != nil || len(addrs) == 0 {
-			addrs = previous[h]
-		}
-		hosts[h] = addrs
-		for _, a := range addrs {
-			set[a.Unmap()] = true
-		}
-	}
-	f.deniedMu.Lock()
-	f.denied, f.deniedHosts = set, hosts
-	f.deniedMu.Unlock()
-}
-
-func (f *Fetcher) isDenied(ip net.IP) bool {
-	addr, ok := netip.AddrFromSlice(ip)
-	if !ok {
-		return true
-	}
-	f.deniedMu.RLock()
-	defer f.deniedMu.RUnlock()
-	return f.denied[addr.Unmap()]
-}
-
-// checkURL allows only plain http(s) URLs on the default ports.
-func (f *Fetcher) checkURL(u *url.URL) error {
-	if u.Scheme != "http" && u.Scheme != "https" {
-		return ErrBlocked
-	}
-	if u.User != nil || u.Hostname() == "" {
-		return ErrBlocked
-	}
-	if p := u.Port(); p != "" && p != "80" && p != "443" && !f.allowPrivate {
-		return ErrBlocked
-	}
-	return nil
 }
 
 func (f *Fetcher) parse(raw string) (*url.URL, error) {
@@ -350,91 +216,6 @@ func (f *Fetcher) fetchPreview(ctx context.Context, u *url.URL) (*Preview, error
 	return p, nil
 }
 
-// parseHTML reads Open Graph tags with <title> and meta description as
-// fallbacks. Text is plain (entities decoded); the client escapes it.
-func parseHTML(body []byte, base *url.URL) *Preview {
-	p := &Preview{}
-	var title, desc string
-	z := html.NewTokenizer(bytes.NewReader(body))
-	inTitle := false
-	for {
-		switch z.Next() {
-		case html.ErrorToken:
-			return finish(p, title, desc, base)
-		case html.StartTagToken, html.SelfClosingTagToken:
-			tok := z.Token()
-			switch tok.Data {
-			case "title":
-				inTitle = true
-			case "meta":
-				var key, content string
-				for _, a := range tok.Attr {
-					switch strings.ToLower(a.Key) {
-					case "property", "name":
-						key = strings.ToLower(a.Val)
-					case "content":
-						content = a.Val
-					}
-				}
-				switch key {
-				case "og:title":
-					p.Title = content
-				case "og:description":
-					p.Description = content
-				case "og:site_name":
-					p.SiteName = content
-				case "og:image", "og:image:url":
-					if p.Image == "" {
-						p.Image = content
-					}
-				case "description":
-					desc = content
-				}
-			case "body":
-				// Everything needed lives in <head>.
-				return finish(p, title, desc, base)
-			}
-		case html.TextToken:
-			if inTitle && title == "" {
-				title = string(z.Text())
-			}
-		case html.EndTagToken:
-			if tok := z.Token(); tok.Data == "title" {
-				inTitle = false
-			}
-		}
-	}
-}
-
-func finish(p *Preview, title, desc string, base *url.URL) *Preview {
-	if p.Title == "" {
-		p.Title = title
-	}
-	if p.Description == "" {
-		p.Description = desc
-	}
-	p.Title = clip(p.Title, maxTitleRunes)
-	p.Description = clip(p.Description, maxDescRunes)
-	p.SiteName = clip(p.SiteName, 80)
-	if p.Image != "" {
-		if img, err := base.Parse(strings.TrimSpace(p.Image)); err == nil && (img.Scheme == "http" || img.Scheme == "https") {
-			p.Image = img.String()
-		} else {
-			p.Image = ""
-		}
-	}
-	return p
-}
-
-func clip(s string, max int) string {
-	s = strings.Join(strings.Fields(s), " ")
-	if utf8.RuneCountInString(s) <= max {
-		return s
-	}
-	r := []rune(s)
-	return string(r[:max-1]) + "…"
-}
-
 // imageTypes are the formats the proxy passes through, detected by sniffing.
 var imageTypes = map[string]bool{"image/png": true, "image/jpeg": true, "image/gif": true, "image/webp": true}
 
@@ -507,68 +288,4 @@ func (f *Fetcher) store(key string, p *Preview, err error) {
 		ttl = 5 * time.Minute // transient failures are retried sooner
 	}
 	f.cache[key] = cacheEntry{preview: p, err: err, expires: time.Now().Add(ttl)}
-}
-
-// acquire waits up to slotWait for the requester's slot, then for a
-// server-wide one. The requester's slot is taken first, so a member waiting
-// on their own limit never holds a server-wide slot meanwhile.
-func (f *Fetcher) acquire(ctx context.Context) (func(), error) {
-	ctx, cancel := context.WithTimeout(ctx, slotWait)
-	defer cancel()
-	id, _ := ctx.Value(requesterKey{}).(string)
-	releaseRequester := func() {}
-	if id != "" {
-		r, err := f.requester.acquire(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		releaseRequester = r
-	}
-	select {
-	case f.slots <- struct{}{}:
-		return func() { <-f.slots; releaseRequester() }, nil
-	case <-ctx.Done():
-		releaseRequester()
-		return nil, errBusy
-	}
-}
-
-// requesterSlots holds a semaphore of maxFetchesPerRequester per requester
-// with fetches in flight or waiting; idle requesters are dropped.
-type requesterSlots struct {
-	mu sync.Mutex
-	m  map[string]*requesterSlot
-}
-
-type requesterSlot struct {
-	sem  chan struct{}
-	refs int
-}
-
-func (r *requesterSlots) acquire(ctx context.Context, id string) (func(), error) {
-	r.mu.Lock()
-	if r.m == nil {
-		r.m = map[string]*requesterSlot{}
-	}
-	s := r.m[id]
-	if s == nil {
-		s = &requesterSlot{sem: make(chan struct{}, maxFetchesPerRequester)}
-		r.m[id] = s
-	}
-	s.refs++
-	r.mu.Unlock()
-	done := func() {
-		r.mu.Lock()
-		if s.refs--; s.refs == 0 {
-			delete(r.m, id)
-		}
-		r.mu.Unlock()
-	}
-	select {
-	case s.sem <- struct{}{}:
-		return func() { <-s.sem; done() }, nil
-	case <-ctx.Done():
-		done()
-		return nil, errBusy
-	}
 }
