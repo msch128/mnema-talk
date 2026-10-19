@@ -1,6 +1,7 @@
 package sfu
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -35,6 +36,7 @@ func TestSourceSet(t *testing.T) {
 // A user without the right to send something never gets it published, and
 // what they may send is unaffected.
 func TestDeniedSourcesAreNeverPublished(t *testing.T) {
+	logs := captureSFULog(t)
 	s := newTestSFU(t)
 	room := uuid.New()
 
@@ -51,10 +53,14 @@ func TestDeniedSourcesAreNeverPublished(t *testing.T) {
 	})
 	r := s.Room(room)
 	waitSources(t, r, pub.id, SourceScreen, 1)
-	time.Sleep(700 * time.Millisecond)
-	if n := r.sourceCount(pub.id, SourceAudio); n != 0 {
-		t.Fatalf("a denied microphone was published (%d tracks)", n)
-	}
+	// The microphone is handled on its own goroutine. Wait until that handler
+	// has logged the track, and fail immediately if it was published.
+	waitSFUCondition(t, "denied microphone to be handled", func() bool {
+		if n := r.sourceCount(pub.id, SourceAudio); n != 0 {
+			t.Fatalf("a denied microphone was published (%d tracks)", n)
+		}
+		return strings.Contains(logs.String(), "source=audio")
+	})
 }
 
 // Taking a permission away unpublishes the live source and drops its packets;

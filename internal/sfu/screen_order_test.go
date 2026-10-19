@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pion/webrtc/v4"
 )
 
 // Layers of several shares that change together are announced in a fixed
@@ -31,8 +32,11 @@ func TestLayerAnnouncementsAreOrdered(t *testing.T) {
 	for _, pub := range pubs {
 		waitSources(t, r, pub.id, SourceScreen, 3)
 	}
-	// Let everything announced so far settle, then change all at once.
-	time.Sleep(300 * time.Millisecond)
+	// Join announcements run on the signaling goroutines. Wait until those
+	// negotiations are idle so one of them cannot consume the batch below.
+	waitSFUCondition(t, "join announcements to settle", func() bool {
+		return roomSignalingSettled(r)
+	})
 	mu.Lock()
 	order = nil
 	mu.Unlock()
@@ -73,4 +77,26 @@ func TestDispatchKeyframeForCamera(t *testing.T) {
 	drainPLIs(pub)
 	r.DispatchKeyframe(viewer.id)
 	waitPLI(t, pub)
+}
+
+// roomSignalingSettled reports whether every peer has finished the
+// negotiation that published its tracks.
+func roomSignalingSettled(r *Room) bool {
+	r.mu.RLock()
+	peers := make([]*Peer, 0, len(r.peers))
+	for _, peer := range r.peers {
+		peers = append(peers, peer)
+	}
+	r.mu.RUnlock()
+	if len(peers) == 0 {
+		return false
+	}
+	for _, peer := range peers {
+		if peer.negotiationPending.Load() ||
+			peer.PC.ConnectionState() != webrtc.PeerConnectionStateConnected ||
+			peer.PC.SignalingState() != webrtc.SignalingStateStable {
+			return false
+		}
+	}
+	return true
 }

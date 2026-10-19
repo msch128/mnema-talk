@@ -78,14 +78,17 @@ func localAnnounceDNS(t *testing.T) *atomic.Int32 {
 
 func waitSFUCondition(t *testing.T, label string, condition func() bool) {
 	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
+	timeout := time.After(5 * time.Second)
+	for {
 		if condition() {
 			return
 		}
-		time.Sleep(time.Millisecond)
+		select {
+		case <-timeout:
+			t.Fatalf("timed out waiting for %s", label)
+		case <-time.After(time.Millisecond):
+		}
 	}
-	t.Fatalf("timed out waiting for %s", label)
 }
 
 func captureSFULog(t *testing.T) *synchronizedLogCapture {
