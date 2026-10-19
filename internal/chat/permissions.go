@@ -118,49 +118,63 @@ func (h *Handler) visibleHierarchy(r *http.Request, cats []Category, uncat []Cha
 		return cats, uncat, nil
 	}
 	ctx := r.Context()
-	sub := auth.UserFrom(ctx).Subject()
 	snap, err := h.Perms.Snapshot(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-	view := func(ch Channel) (bool, error) {
-		if !snap.KnowsChannel(ch.ID) {
-			if snap, err = h.Perms.ForChannel(ctx, ch.ID); err != nil {
-				return false, err
-			}
-		}
-		return snap.Channel(sub, ch.ID).Has(perm.ViewChannel), nil
-	}
-	filter := func(in []Channel) ([]Channel, error) {
-		out := make([]Channel, 0, len(in))
-		for _, ch := range in {
-			ok, err := view(ch)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				out = append(out, ch)
-			}
-		}
-		return out, nil
-	}
+	v := &hierarchyView{perms: h.Perms, ctx: ctx, sub: auth.UserFrom(ctx).Subject(), snap: snap}
 	outCats := make([]Category, 0, len(cats))
 	for _, cat := range cats {
-		chans, err := filter(cat.Channels)
+		chans, err := v.viewable(cat.Channels)
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(chans) == 0 && !snap.CategoryVisible(sub, cat.ID) {
+		if len(chans) == 0 && !v.snap.CategoryVisible(v.sub, cat.ID) {
 			continue
 		}
 		cat.Channels = chans
 		outCats = append(outCats, cat)
 	}
-	outUncat, err := filter(uncat)
+	outUncat, err := v.viewable(uncat)
 	if err != nil {
 		return nil, nil, err
 	}
 	return outCats, outUncat, nil
+}
+
+// hierarchyView answers "may the caller view this channel" against the
+// permission snapshot, loading a fresher one for a channel it does not know.
+type hierarchyView struct {
+	perms *perm.Service
+	ctx   context.Context
+	sub   perm.Subject
+	snap  *perm.Snapshot
+}
+
+func (v *hierarchyView) canView(ch Channel) (bool, error) {
+	if !v.snap.KnowsChannel(ch.ID) {
+		snap, err := v.perms.ForChannel(v.ctx, ch.ID)
+		if err != nil {
+			return false, err
+		}
+		v.snap = snap
+	}
+	return v.snap.Channel(v.sub, ch.ID).Has(perm.ViewChannel), nil
+}
+
+// viewable returns the channels of in the caller may view.
+func (v *hierarchyView) viewable(in []Channel) ([]Channel, error) {
+	out := make([]Channel, 0, len(in))
+	for _, ch := range in {
+		ok, err := v.canView(ch)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			out = append(out, ch)
+		}
+	}
+	return out, nil
 }
 
 // visibleReadStates keeps the read states of viewable channels.
@@ -227,24 +241,33 @@ func checkLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error
 		}
 	}
 	for _, c := range req.Channels {
-		if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
-			return perm.ErrChannelHidden
+		if err := checkChannelMove(snap, sub, c); err != nil {
+			return err
 		}
-		to := uuid.Nil
-		if c.CategoryID != nil {
-			to = *c.CategoryID
-			if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
-				return errCategoryNotFound
-			}
+	}
+	return nil
+}
+
+// checkChannelMove checks one placement of a layout change: the caller sees
+// the channel and its target category, and may move it between categories.
+func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
+	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
+		return perm.ErrChannelHidden
+	}
+	to := uuid.Nil
+	if c.CategoryID != nil {
+		to = *c.CategoryID
+		if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
+			return errCategoryNotFound
 		}
-		// Moving a channel takes on the permissions of its new category and
-		// drops those of the old one, which could undo a restriction the
-		// caller may not lift: with overwrites on either side, only an
-		// Administrator (or the Owner) moves it.
-		from, _ := snap.CategoryOf(c.ID)
-		if from != to && (snap.HasCategoryOverwrites(from) || snap.HasCategoryOverwrites(to)) && !snap.Global(sub).Has(perm.Administrator) {
-			return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
-		}
+	}
+	// Moving a channel takes on the permissions of its new category and
+	// drops those of the old one, which could undo a restriction the
+	// caller may not lift: with overwrites on either side, only an
+	// Administrator (or the Owner) moves it.
+	from, _ := snap.CategoryOf(c.ID)
+	if from != to && (snap.HasCategoryOverwrites(from) || snap.HasCategoryOverwrites(to)) && !snap.Global(sub).Has(perm.Administrator) {
+		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 	}
 	return nil
 }

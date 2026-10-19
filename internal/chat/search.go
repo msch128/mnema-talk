@@ -99,16 +99,47 @@ func likePattern(term string) string {
 
 // Search returns one page of matching messages and whether more exist.
 func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, error) {
+	sql, args, err := buildSearchSQL(q)
+	if err != nil {
+		return nil, false, err
+	}
+	var msgs []Message
+	err = pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, sql, args...)
+		if err != nil {
+			return err
+		}
+		msgs, err = scanMessages(rows)
+		return err
+	})
+	if err = mapSearchError(err); err != nil {
+		return nil, false, err
+	}
+	more := len(msgs) > q.Limit
+	if more {
+		msgs = msgs[:q.Limit]
+	}
+	if err := enrich(ctx, p, msgs); err != nil {
+		return nil, false, err
+	}
+	return msgs, more, nil
+}
+
+// buildSearchSQL validates the query and turns it into SQL with its arguments.
+func buildSearchSQL(q SearchQuery) (string, []any, error) {
 	text := strings.TrimSpace(q.Text)
 	if utf8.RuneCountInString(text) > maxSearchQueryLen {
-		return nil, false, httpx.ErrInvalidInput("search text is too long")
+		return "", nil, httpx.ErrInvalidInput("search text is too long")
 	}
 	terms := strings.Fields(text)
 	if len(terms) > maxSearchTerms {
 		terms = terms[:maxSearchTerms]
 	}
 	if len(terms) == 0 && q.ChannelID == nil && q.AuthorID == nil && q.Has == "" {
-		return nil, false, httpx.ErrInvalidInput("enter a search term or choose a filter")
+		return "", nil, httpx.ErrInvalidInput("enter a search term or choose a filter")
 	}
 
 	// Every channel's chat is searched, voice channels included. The check
@@ -131,16 +162,12 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	if q.AuthorID != nil {
 		where = append(where, "m.user_id = "+arg(*q.AuthorID))
 	}
-	switch q.Has {
-	case "":
-	case "file":
-		where = append(where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id)")
-	case "image":
-		where = append(where, "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'image/%')")
-	case "link":
-		where = append(where, `m.content ~* 'https?://'`)
-	default:
-		return nil, false, httpx.ErrInvalidInput("has must be file, image or link")
+	has, err := hasCondition(q.Has)
+	if err != nil {
+		return "", nil, err
+	}
+	if has != "" {
+		where = append(where, has)
 	}
 	if q.Before != nil {
 		where = append(where, "(m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = "+arg(*q.Before)+")")
@@ -151,28 +178,20 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	WHERE ` + strings.Join(where, " AND ") + `
 	ORDER BY m.created_at DESC, m.id DESC
 	LIMIT ` + arg(q.Limit+1)
+	return sql, args, nil
+}
 
-	var msgs []Message
-	err := pgx.BeginTxFunc(ctx, p, pgx.TxOptions{AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, "SET LOCAL statement_timeout = '"+searchStatementTimeout+"'"); err != nil {
-			return err
-		}
-		rows, err := tx.Query(ctx, sql, args...)
-		if err != nil {
-			return err
-		}
-		msgs, err = scanMessages(rows)
-		return err
-	})
-	if err = mapSearchError(err); err != nil {
-		return nil, false, err
+// hasCondition is the WHERE condition of the "has" filter ("" for none).
+func hasCondition(has string) (string, error) {
+	switch has {
+	case "":
+		return "", nil
+	case "file":
+		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id)", nil
+	case "image":
+		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'image/%')", nil
+	case "link":
+		return `m.content ~* 'https?://'`, nil
 	}
-	more := len(msgs) > q.Limit
-	if more {
-		msgs = msgs[:q.Limit]
-	}
-	if err := enrich(ctx, p, msgs); err != nil {
-		return nil, false, err
-	}
-	return msgs, more, nil
+	return "", httpx.ErrInvalidInput("has must be file, image or link")
 }

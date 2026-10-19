@@ -32,7 +32,6 @@ var funcLengthAllowlist = map[string]bool{
 	"internal/auth changePasswordAndReissue": true,
 	"internal/auth RotateRefresh":            true,
 	"internal/auth Register":                 true,
-	"internal/chat sanitizeOneEmbed":         true,
 	"internal/config FromEnv":                true,
 	"internal/config validate":               true,
 	"internal/db MigrateFS":                  true,
