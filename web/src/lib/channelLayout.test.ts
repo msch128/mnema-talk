@@ -6,8 +6,9 @@ import {
   containers, channelsIn, locateChannel, locateCategory, moveChannel, moveCategory, gapToIndex,
   moveChannelToGap, moveCategoryToGap, channelStep, stepChannel, stepCategory, removeChannel,
   removeCategory, addCategory, nextSortOrder, toLayoutPayload, samePayload, sameLayout,
-  applyLayoutPayload, resolveChannelDrop, resolveCategoryDrop
+  applyLayoutPayload
 } from './channelLayout'
+import { resolveChannelDrop, resolveCategoryDrop } from './channelDrop'
 
 interface TestChannel extends LayoutChannel { name: string; type: ChannelType }
 interface TestCategory extends LayoutCategory<TestChannel> { name?: string }

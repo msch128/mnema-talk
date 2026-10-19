@@ -12,12 +12,8 @@ export type { InputMode, NoiseMode, SoundEvent } from './voiceSettings'
 export { USER_VOLUME_MIN, USER_VOLUME_MAX, USER_VOLUME_DEFAULT, STREAM_VOLUME_MAX, STREAM_VOLUME_DEFAULT } from '../lib/voicePlayback'
 export { NOISE_MODES, SOUND_EVENTS } from './voiceSettings'
 
-export const useVoiceStore = defineStore('voice', () => {
-  const cs = createVoiceState()
-  // Each module function takes the state first; the store exposes them without it.
-  const bind = <A extends unknown[], R>(fn: (cs: VoiceState, ...args: A) => R) => (...args: A): R => fn(cs, ...args)
-  const stage = installStage(cs)
-
+/** What the store shows of the voice state, as the refs the modules update. */
+function exposedState(cs: VoiceState, stage: ReturnType<typeof installStage>) {
   return {
     currentChannelId: cs.currentChannelId,
     isMuted: cs.isMuted,
@@ -25,13 +21,8 @@ export const useVoiceStore = defineStore('voice', () => {
     isScreenSharing: cs.isScreenSharing,
     isScreenAudioMuted: cs.isScreenAudioMuted,
     hasScreenAudio: cs.hasScreenAudio,
-    toggleScreenAudioMute: bind(toggleScreenAudioMute),
     screenQuality: cs.screenQuality,
-    setScreenQuality: bind(setScreenQuality),
-    resetScreenQuality: bind(resetScreenQuality),
     showScreenShareModal: cs.showScreenShareModal,
-    openScreenShareModal: bind(openScreenShareModal),
-    closeScreenShareModal: bind(closeScreenShareModal),
     isCameraOn: cs.isCameraOn,
     localCameraStream: cs.localCameraStream,
     remoteScreenUserId: cs.remoteScreenUserId,
@@ -40,46 +31,17 @@ export const useVoiceStore = defineStore('voice', () => {
     mediaState: cs.mediaState,
     hiddenCameras: cs.hiddenCameras,
     allCamerasOff: cs.allCamerasOff,
-    setSubscriptionSink: bind(setSubscriptionSink),
-    isCameraHidden: bind(isCameraHidden),
-    setCameraHidden: bind(setCameraHidden),
-    toggleCameraHidden: bind(toggleCameraHidden),
-    setAllCamerasOff: bind(setAllCamerasOff),
     hideNoVideo: cs.hideNoVideo,
-    setHideNoVideo: bind(setHideNoVideo),
-    toggleHideNoVideo: bind(toggleHideNoVideo),
-    resendSubscriptions: bind(resendSubscriptions),
-    watchScreen: bind(watchScreen),
-    unwatchScreen: bind(unwatchScreen),
-    focusScreen: bind(focusScreen),
-    focusOwnScreen: bind(focusOwnScreen),
     ownScreenFocused: cs.ownScreenFocused,
     focusedCamera: cs.focusedCamera,
-    cameraStreamOf: bind(cameraStreamOf),
-    canFocusCamera: bind(canFocusCamera),
-    focusCamera: bind(focusCamera),
-    unfocusCamera: bind(unfocusCamera),
-    toggleCameraFocus: bind(toggleCameraFocus),
     stage,
-    setRemoteScreen: bind(setRemoteScreen),
-    removeRemoteScreen: bind(removeRemoteScreen),
-    handleMediaState: bind(handleMediaState),
     screenViewers: cs.screenViewers,
-    handleScreenViewers: bind(handleScreenViewers),
     screenLayers: cs.screenLayers,
     receivedLayer: cs.receivedLayer,
     screenChoice: cs.screenChoice,
     layersWanted: cs.layersWanted,
     serverScreenLayers: cs.serverScreenLayers,
-    handleScreenLayers: bind(handleScreenLayers),
-    handleScreenQuality: bind(handleScreenQuality),
-    handleLayersWanted: bind(handleLayersWanted),
-    setScreenChoice: bind(setScreenChoice),
-    viewersOf: bind(viewersOf),
-    resetRemoteMedia: bind(resetRemoteMedia),
     userVideoStreams: cs.userVideoStreams,
-    setUserVideoStream: bind(setUserVideoStream),
-    removeUserVideoStream: bind(removeUserVideoStream),
     isConnected: cs.isConnected,
     ping: cs.ping,
     pingHistory: cs.pingHistory,
@@ -88,27 +50,68 @@ export const useVoiceStore = defineStore('voice', () => {
     maxPing: cs.maxPing,
     rtcStats: cs.rtcStats,
     audioBlocked: cs.audioBlocked,
-    recordPing: bind(recordPing),
     showStatsModal: cs.showStatsModal,
     mediaVerification: cs.mediaVerification,
     showAudioSettings: cs.showAudioSettings,
     isPttPressed: cs.isPttPressed,
     currentInputLevel: cs.currentInputLevel,
     isMicTesting: cs.isMicTesting,
-    setNoiseMode: bind(setNoiseMode),
     availableInputDevices: cs.availableInputDevices,
     availableOutputDevices: cs.availableOutputDevices,
-    toggleNoiseCancelling: bind(toggleNoiseCancelling),
     activeView: cs.activeView,
     localScreenStream: cs.localScreenStream,
     localAudioStream: cs.localAudioStream,
     remoteScreenStream: cs.remoteScreenStream,
     channelUsers: cs.channelUsers,
-    updateUser: bind(updateUser),
     roomStartedAt: cs.roomStartedAt,
+    speakingUsers: cs.speakingUsers
+  }
+}
+
+/** The module functions as store actions; each takes the state first, the store exposes them without it. */
+function exposedActions(cs: VoiceState) {
+  const bind = <A extends unknown[], R>(fn: (cs: VoiceState, ...args: A) => R) => (...args: A): R => fn(cs, ...args)
+  return {
+    toggleScreenAudioMute: bind(toggleScreenAudioMute),
+    setScreenQuality: bind(setScreenQuality),
+    resetScreenQuality: bind(resetScreenQuality),
+    openScreenShareModal: bind(openScreenShareModal),
+    closeScreenShareModal: bind(closeScreenShareModal),
+    setSubscriptionSink: bind(setSubscriptionSink),
+    isCameraHidden: bind(isCameraHidden),
+    setCameraHidden: bind(setCameraHidden),
+    toggleCameraHidden: bind(toggleCameraHidden),
+    setAllCamerasOff: bind(setAllCamerasOff),
+    setHideNoVideo: bind(setHideNoVideo),
+    toggleHideNoVideo: bind(toggleHideNoVideo),
+    resendSubscriptions: bind(resendSubscriptions),
+    watchScreen: bind(watchScreen),
+    unwatchScreen: bind(unwatchScreen),
+    focusScreen: bind(focusScreen),
+    focusOwnScreen: bind(focusOwnScreen),
+    cameraStreamOf: bind(cameraStreamOf),
+    canFocusCamera: bind(canFocusCamera),
+    focusCamera: bind(focusCamera),
+    unfocusCamera: bind(unfocusCamera),
+    toggleCameraFocus: bind(toggleCameraFocus),
+    setRemoteScreen: bind(setRemoteScreen),
+    removeRemoteScreen: bind(removeRemoteScreen),
+    handleMediaState: bind(handleMediaState),
+    handleScreenViewers: bind(handleScreenViewers),
+    handleScreenLayers: bind(handleScreenLayers),
+    handleScreenQuality: bind(handleScreenQuality),
+    handleLayersWanted: bind(handleLayersWanted),
+    setScreenChoice: bind(setScreenChoice),
+    viewersOf: bind(viewersOf),
+    resetRemoteMedia: bind(resetRemoteMedia),
+    setUserVideoStream: bind(setUserVideoStream),
+    removeUserVideoStream: bind(removeUserVideoStream),
+    recordPing: bind(recordPing),
+    setNoiseMode: bind(setNoiseMode),
+    toggleNoiseCancelling: bind(toggleNoiseCancelling),
+    updateUser: bind(updateUser),
     setVoiceRooms: bind(setVoiceRooms),
     joinedAtOf: bind(joinedAtOf),
-    speakingUsers: cs.speakingUsers,
     setVoiceSnapshot: bind(setVoiceSnapshot),
     handleVoiceStateUpdate: bind(handleVoiceStateUpdate),
     handleSpeakingEvent: bind(handleSpeakingEvent),
@@ -118,10 +121,14 @@ export const useVoiceStore = defineStore('voice', () => {
     toggleMute: bind(toggleMute),
     toggleDeafen: bind(toggleDeafen),
     setChannel: bind(setChannel),
-    disconnect: bind(disconnect),
-    ...cs.settings,
-    ...cs.playback
+    disconnect: bind(disconnect)
   }
+}
+
+export const useVoiceStore = defineStore('voice', () => {
+  const cs = createVoiceState()
+  const stage = installStage(cs)
+  return { ...exposedState(cs, stage), ...exposedActions(cs), ...cs.settings, ...cs.playback }
 })
 
 export type VoiceStore = ReturnType<typeof useVoiceStore>

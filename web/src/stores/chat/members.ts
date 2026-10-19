@@ -75,41 +75,52 @@ export function refreshMemberStats(cx: Cx) {
   cs.memberStatsTimer = setTimeout(() => fetchMembers(cx), 3000)
 }
 
+type DisabledUpdate = Extract<UserUpdate, { disabled: boolean }>
+type ProfileUpdate = Exclude<UserUpdate, { disabled: boolean }>
+
+function applyDisabledUpdate(cx: Cx, updated: DisabledUpdate, revision: number) {
+  const { cs } = cx
+  if (updated.disabled) {
+    cs.disabledMembers.set(updated.id, revision)
+    cs.suppressedPresence.delete(updated.id)
+    cs.members.value = cs.members.value.filter(member => member.id !== updated.id)
+    cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, { user_id: updated.id, status: 'offline' })
+  } else {
+    confirmActiveMember(cx, updated.id)
+    fetchMembers(cx)
+  }
+}
+
+function applyProfileUpdate({ cs }: Cx, updated: ProfileUpdate, revision: number) {
+  cs.memberProfileUpdates.set(updated.id, { revision, user: updated })
+  const idx = cs.members.value.findIndex(member => member.id === updated.id)
+  const existing = cs.members.value[idx]
+  // Profiles do not establish membership. Registration uses member_joined,
+  // and re-enabling uses the authoritative active-member roster above.
+  if (existing) cs.members.value[idx] = { ...existing, ...updated }
+}
+
+// Disabled updates carry no author fields; full profiles always carry a name.
+function renameAuthorsEverywhere(cx: Cx, updated: ProfileUpdate) {
+  const copy = (target: { avatar_url?: string; display_name?: string }) => {
+    target.display_name = updated.display_name
+    if ('avatar_url' in updated && updated.avatar_url !== undefined) target.avatar_url = updated.avatar_url
+  }
+  for (const list of loadedLists(cx)) {
+    for (const m of list) {
+      if (m.user_id === updated.id) copy(m)
+      if (m.reply_to?.user_id === updated.id) copy(m.reply_to)
+    }
+  }
+}
+
 export function updateUserEverywhere(cx: Cx, updated: UserUpdate) {
   const { cs, authStore, voiceStore } = cx
   if (!updated?.id) return
   const revision = ++cs.memberRevision
-  if ('disabled' in updated) {
-    if (updated.disabled) {
-      cs.disabledMembers.set(updated.id, revision)
-      cs.suppressedPresence.delete(updated.id)
-      cs.members.value = cs.members.value.filter(member => member.id !== updated.id)
-      cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, { user_id: updated.id, status: 'offline' })
-    } else {
-      confirmActiveMember(cx, updated.id)
-      fetchMembers(cx)
-    }
-  } else {
-    cs.memberProfileUpdates.set(updated.id, { revision, user: updated })
-    const idx = cs.members.value.findIndex(member => member.id === updated.id)
-    const existing = cs.members.value[idx]
-    // Profiles do not establish membership. Registration uses member_joined,
-    // and re-enabling uses the authoritative active-member roster above.
-    if (existing) cs.members.value[idx] = { ...existing, ...updated }
-  }
-  // Disabled updates carry no author fields; full profiles always carry a name.
-  if (!('disabled' in updated)) {
-    const copy = (target: { avatar_url?: string; display_name?: string }) => {
-      target.display_name = updated.display_name
-      if ('avatar_url' in updated && updated.avatar_url !== undefined) target.avatar_url = updated.avatar_url
-    }
-    for (const list of loadedLists(cx)) {
-      for (const m of list) {
-        if (m.user_id === updated.id) copy(m)
-        if (m.reply_to?.user_id === updated.id) copy(m.reply_to)
-      }
-    }
-  }
+  if ('disabled' in updated) applyDisabledUpdate(cx, updated, revision)
+  else applyProfileUpdate(cx, updated, revision)
+  if (!('disabled' in updated)) renameAuthorsEverywhere(cx, updated)
   voiceStore.updateUser(updated)
   if (authStore.user?.id === updated.id) authStore.user = { ...authStore.user, ...updated }
   if (cs.selectedUserProfile.value?.id === updated.id) {

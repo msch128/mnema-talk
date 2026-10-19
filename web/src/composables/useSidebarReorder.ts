@@ -10,7 +10,7 @@ import { ref, computed, watch, nextTick, useId, getCurrentScope, onScopeDispose 
 import type { Ref, ComputedRef } from 'vue'
 import type { Category, Channel } from '../types/domain'
 import type { ChannelTree } from '../lib/channelTree'
-import type { DropHit, DropTarget } from '../lib/channelLayout'
+import type { DropHit, DropTarget } from '../lib/channelDrop'
 import type { useChannelLayout } from './useChannelLayout'
 
 type ItemKind = 'channel' | 'category'
@@ -18,10 +18,8 @@ type SidebarItem = { kind: 'channel'; id: string; name: string; type: Channel['t
 interface SidebarTarget extends DropTarget { overHeader?: boolean }
 type SidebarTree = ChannelTree<Channel, Category>
 interface ReorderOptions { layout: ComputedRef<SidebarTree>; commit: ReturnType<typeof useChannelLayout>['commit']; collapsed: Ref<Set<string>>; expandCategory(id: string): void; enabled(): boolean; onLongPress?: (kind: ItemKind, entity: Channel | Category, event: PointerEvent) => void }
-import {
-  locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory,
-  resolveChannelDrop, resolveCategoryDrop
-} from '../lib/channelLayout'
+import { locateChannel, locateCategory, moveChannel, moveCategory, stepChannel, stepCategory } from '../lib/channelLayout'
+import { resolveChannelDrop, resolveCategoryDrop } from '../lib/channelDrop'
 import { useSortableDrag } from './useSortableDrag'
 import { t } from '../i18n'
 
