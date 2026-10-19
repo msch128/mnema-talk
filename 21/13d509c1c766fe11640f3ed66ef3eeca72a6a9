@@ -1,0 +1,14 @@
+AGENTS.md
+  h_0ff4f4713441f4 89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2113d509c1c766fe11640f3ed66ef3eeca72a6a9",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
