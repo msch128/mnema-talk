@@ -1,0 +1,40 @@
+internal/webbundle/cli.go
+  s_06fcde5dbef956::t_2ce0a51ec20c69 77-101,103,108,110-116,118-121,123,125,127-128,130-133,135,140-145,152,156
+internal/webbundle/webbundle.go
+  s_06fcde5dbef956::t_c38cbbba3f36ea 220-251,266-267,286,295-301,303-304,306-307,321
+  s_06fcde5dbef956::t_d5b0408f2ceab0 269,287-292,294
+internal/webbundle/cli_trust_sign.go
+  s_06fcde5dbef956::t_6291d0eb4834f2 1-204
+internal/webhook/execute.go
+  s_06fcde5dbef956::t_b8c17102aaf8b6 302
+  s_06fcde5dbef956::t_9be5496c71e847 271-273,275-276,285-287,299-301,303-339,348-349,365-382
+internal/webbundle/trust.go
+  s_06fcde5dbef956::t_f5b86296f055f3 150-169,171,173-181,188,192-198,205,209-212
+internal/webhook/execute_request.go
+  s_06fcde5dbef956::t_b8c17102aaf8b6 4,9
+  s_06fcde5dbef956::t_9be5496c71e847 93,95-97,99,109-161
+  s_06fcde5dbef956::t_65dd960e50c1ce 162
+internal/webbundle/verify.go
+  s_06fcde5dbef956::t_06d6df836b68b1 21-51,66-77,79-88,91,93,95,97,99,103,107,110-117,119-120,122-124,126-128,130,150-156,159,162
+internal/bot/commands_validate.go
+  s_06fcde5dbef956::t_4ce9ee9469112e 74
+  s_06fcde5dbef956::t_eddb19404db49e 67-73,75-82,86-93
+internal/bot/commands.go
+  s_06fcde5dbef956::t_5258239b24b379 84-92,95,97,102,104,108,112,116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1a95e1a816c6f260975a4102df2e9c44e05d3ff",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
