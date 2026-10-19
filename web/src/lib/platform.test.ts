@@ -25,6 +25,8 @@ vi.mock('./native/nativeTransport', () => ({
   captureNativeTrustPresentation: host.capture,
 }))
 
+import { NativeSocket } from './native/nativeTransport'
+import { isTrustedDesktop } from './native/trustedDesktop'
 import { browserPlatform, desktopPlatform, platform } from './platform'
 
 beforeEach(() => {
@@ -46,6 +48,15 @@ describe('browser platform', () => {
     expect(platform.isDesktop()).toBe(false)
     expect(platform.apiTransport()).toBeNull()
     platform.openSocket('wss://example.invalid/api/ws')
+    expect(socket).toHaveBeenCalledWith('wss://example.invalid/api/ws')
+  })
+
+  it('keeps the native transport off the browser platform when the page is not trusted', () => {
+    const socket = vi.fn()
+    vi.stubGlobal('WebSocket', socket)
+    expect(isTrustedDesktop()).toBe(false)
+    expect(browserPlatform.apiTransport()).toBeNull()
+    expect(browserPlatform.openSocket('wss://example.invalid/api/ws')).not.toBeInstanceOf(NativeSocket)
     expect(socket).toHaveBeenCalledWith('wss://example.invalid/api/ws')
   })
 
@@ -85,6 +96,8 @@ describe('desktop platform', () => {
     expect(platform.isDesktop()).toBe(true)
     expect(platform.apiTransport()).toBe(host.nativeTransport)
     expect(platform.openSocket('wss://ignored.invalid')).toMatchObject({ kind: 'native' })
+    expect(desktopPlatform.apiTransport()).toBe(host.nativeTransport)
+    expect(desktopPlatform.openSocket('wss://ignored.invalid')).toBeInstanceOf(NativeSocket)
     expect(desktopPlatform.isDesktop()).toBe(true)
   })
 
