@@ -31,29 +31,37 @@ var (
 // maxURLLen bounds a target URL.
 const maxURLLen = 2048
 
-// never are addresses no allowlist can open: metadata services and the
-// special-purpose ranges that are never a legitimate webhook target.
+// never are addresses no allowlist can open. Prefixes refused only here stay
+// in this list; link preview's choice is named on the line.
 var never = []netip.Prefix{
-	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata (AWS, GCP, Azure, ...)
-	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata
-	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata
-	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata
-	netip.MustParsePrefix("0.0.0.0/8"),          // "this network", unspecified
-	netip.MustParsePrefix("::/96"),              // unspecified, IPv4-compatible
-	netip.MustParsePrefix("224.0.0.0/3"),        // multicast, reserved, broadcast
-	netip.MustParsePrefix("ff00::/8"),           // multicast
-	netip.MustParsePrefix("192.0.0.0/24"),       // IETF protocol assignments
-	netip.MustParsePrefix("192.0.2.0/24"),       // documentation
-	netip.MustParsePrefix("192.88.99.0/24"),     // 6to4 relay anycast
-	netip.MustParsePrefix("198.18.0.0/15"),      // benchmarking
-	netip.MustParsePrefix("198.51.100.0/24"),    // documentation
-	netip.MustParsePrefix("203.0.113.0/24"),     // documentation
-	netip.MustParsePrefix("64:ff9b::/96"),       // NAT64: carries an IPv4 address
-	netip.MustParsePrefix("64:ff9b:1::/48"),     // local-use NAT64
-	netip.MustParsePrefix("2001::/32"),          // Teredo
-	netip.MustParsePrefix("2001:db8::/32"),      // documentation
-	netip.MustParsePrefix("2002::/16"),          // 6to4: carries an IPv4 address
-	netip.MustParsePrefix("100::/64"),           // discard-only
+	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata; link preview refuses all link-local
+	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata; link preview refuses unique-local
+	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata; link preview refuses all of 100.64.0.0/10
+	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata; link preview uses shared 192.0.0.0/24
+	netip.MustParsePrefix("::/96"),              // IPv4-compatible; link preview does not refuse this
+	netip.MustParsePrefix("224.0.0.0/3"),        // multicast and class E; link preview keeps 240.0.0.0/4
+	netip.MustParsePrefix("ff00::/8"),           // multicast; link preview uses Refused, not this prefix
+	netip.MustParsePrefix("100::/64"),           // discard-only; link preview does not refuse this
+}
+
+// shared is the intersection: special-purpose prefixes both webhooks and
+// link preview refuse. Carrier-grade NAT and site-local are also in private,
+// so the webhook allowlist can still open those two; link preview cannot.
+var shared = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),       // "this network"
+	netip.MustParsePrefix("100.64.0.0/10"),   // carrier-grade NAT; allowlist may open it
+	netip.MustParsePrefix("192.0.0.0/24"),    // IETF protocol assignments
+	netip.MustParsePrefix("192.0.2.0/24"),    // documentation
+	netip.MustParsePrefix("192.88.99.0/24"),  // 6to4 relay anycast
+	netip.MustParsePrefix("198.18.0.0/15"),   // benchmarking
+	netip.MustParsePrefix("198.51.100.0/24"), // documentation
+	netip.MustParsePrefix("203.0.113.0/24"),  // documentation
+	netip.MustParsePrefix("64:ff9b::/96"),    // NAT64: carries an IPv4 address
+	netip.MustParsePrefix("64:ff9b:1::/48"),  // local-use NAT64
+	netip.MustParsePrefix("2001::/32"),       // Teredo
+	netip.MustParsePrefix("2001:db8::/32"),   // documentation
+	netip.MustParsePrefix("2002::/16"),       // 6to4: carries an IPv4 address
+	netip.MustParsePrefix("fec0::/10"),       // site-local; allowlist may open it
 }
 
 // private are the ranges for the local network: refused unless the operator
@@ -64,11 +72,24 @@ var private = []netip.Prefix{
 	netip.MustParsePrefix("172.16.0.0/12"),
 	netip.MustParsePrefix("192.168.0.0/16"),
 	netip.MustParsePrefix("169.254.0.0/16"), // link-local
-	netip.MustParsePrefix("100.64.0.0/10"),  // carrier-grade NAT
+	netip.MustParsePrefix("100.64.0.0/10"),  // carrier-grade NAT; link preview always refuses this
 	netip.MustParsePrefix("::1/128"),
 	netip.MustParsePrefix("fc00::/7"),  // unique local
 	netip.MustParsePrefix("fe80::/10"), // link-local
-	netip.MustParsePrefix("fec0::/10"), // deprecated site-local
+	netip.MustParsePrefix("fec0::/10"), // site-local; link preview always refuses this
+}
+
+// Refused reports whether addr is not a public unicast address.
+// Link preview blocks every true result. Policy.Check does too, except
+// where its allowlist opens a loopback, private, link-local, carrier-grade
+// NAT, unique-local or site-local address. Metadata in never stays closed.
+func Refused(addr netip.Addr) bool {
+	if !addr.IsValid() {
+		return true
+	}
+	addr = addr.WithZone("").Unmap()
+	return addr.IsUnspecified() || addr.IsLoopback() || addr.IsMulticast() ||
+		addr.IsLinkLocalUnicast() || addr.IsPrivate() || contains(shared, addr)
 }
 
 // Policy decides which addresses may be contacted.
@@ -110,7 +131,8 @@ func contains(list []netip.Prefix, a netip.Addr) bool {
 }
 
 // Check reports whether addr may be contacted. IPv4-mapped IPv6 addresses
-// count as the IPv4 address they carry.
+// count as the IPv4 address they carry. The allowlist can open a local range
+// even when Refused reports it; it cannot open never.
 func (p *Policy) Check(addr netip.Addr) error {
 	addr = addr.WithZone("").Unmap()
 	if !addr.IsValid() || addr.IsUnspecified() || addr.IsMulticast() || contains(never, addr) {
@@ -120,6 +142,9 @@ func (p *Policy) Check(addr netip.Addr) error {
 		if p != nil && contains(p.Allow, addr) {
 			return nil
 		}
+		return ErrBlocked
+	}
+	if Refused(addr) {
 		return ErrBlocked
 	}
 	return nil

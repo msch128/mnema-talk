@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/netip"
 	"net/url"
+
+	"github.com/msch128/mnema-talk/internal/ssrf"
 )
 
 // checkResolvedAddress applies the address policy after DNS resolution.
@@ -24,27 +26,9 @@ func (f *Fetcher) checkResolvedAddress(address string) error {
 	return nil
 }
 
-// nonPublic are special-purpose ranges that Go's IsGlobalUnicast accepts but
-// that must never be fetched: shared, documentation, benchmarking and
-// reserved IPv4 space, the deprecated 6to4 relay anycast and IPv6
-// site-local ranges, and IPv6 prefixes that embed an IPv4 address (NAT64,
-// 6to4, Teredo), which could point at a private host.
+// nonPublic stays here: webhooks refuse 240.0.0.0/4 inside 224.0.0.0/3, not as its own prefix.
 var nonPublic = []netip.Prefix{
-	netip.MustParsePrefix("0.0.0.0/8"),
-	netip.MustParsePrefix("100.64.0.0/10"),
-	netip.MustParsePrefix("192.0.0.0/24"),
-	netip.MustParsePrefix("192.0.2.0/24"),
-	netip.MustParsePrefix("192.88.99.0/24"),
-	netip.MustParsePrefix("198.18.0.0/15"),
-	netip.MustParsePrefix("198.51.100.0/24"),
-	netip.MustParsePrefix("203.0.113.0/24"),
 	netip.MustParsePrefix("240.0.0.0/4"),
-	netip.MustParsePrefix("64:ff9b::/96"),
-	netip.MustParsePrefix("64:ff9b:1::/48"),
-	netip.MustParsePrefix("2001::/32"),
-	netip.MustParsePrefix("2001:db8::/32"),
-	netip.MustParsePrefix("2002::/16"),
-	netip.MustParsePrefix("fec0::/10"),
 }
 
 // publicIP reports whether ip is a globally routable unicast address.
@@ -59,7 +43,7 @@ func publicIP(ip net.IP) bool {
 	if !ok {
 		return false
 	}
-	if !ip.IsGlobalUnicast() || ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsUnspecified() {
+	if ssrf.Refused(addr) {
 		return false
 	}
 	for _, p := range nonPublic {

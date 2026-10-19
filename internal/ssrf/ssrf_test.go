@@ -56,6 +56,41 @@ func TestCheckRefusesEverythingButPublicUnicast(t *testing.T) {
 	}
 }
 
+func TestRefusedSharedNonPublicAddresses(t *testing.T) {
+	cases := []struct {
+		name string
+		addr string
+		want bool
+	}{
+		{name: "loopback", addr: "127.0.0.1", want: true},
+		{name: "loopback v6", addr: "::1", want: true},
+		{name: "link-local", addr: "169.254.1.1", want: true},
+		{name: "link-local v6", addr: "fe80::1", want: true},
+		{name: "multicast", addr: "224.0.0.1", want: true},
+		{name: "multicast v6", addr: "ff02::1", want: true},
+		{name: "unspecified", addr: "0.0.0.0", want: true},
+		{name: "unspecified v6", addr: "::", want: true},
+		{name: "cloud metadata", addr: "169.254.169.254", want: true},
+		{name: "cloud metadata v6", addr: "fd00:ec2::254", want: true},
+		{name: "cloud metadata alibaba", addr: "100.100.100.200", want: true},
+		{name: "cloud metadata oracle", addr: "192.0.0.192", want: true},
+		{name: "cloud metadata mapped", addr: "::ffff:169.254.169.254", want: true},
+		{name: "public", addr: "93.184.216.34", want: false},
+		{name: "public v6", addr: "2606:4700::1111", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Refused(netip.MustParseAddr(tc.addr))
+			if got != tc.want {
+				t.Errorf("Refused(%s) = %v, want %v", tc.addr, got, tc.want)
+			}
+		})
+	}
+	if !Refused(netip.Addr{}) {
+		t.Error("the zero address was not refused")
+	}
+}
+
 func TestAllowOpensOnlyLocalRanges(t *testing.T) {
 	allow, err := ParseAllow(" 192.168.1.0/24, 10.1.2.3 ,fd12::/16, ::ffff:172.16.0.5,, ")
 	if err != nil {
