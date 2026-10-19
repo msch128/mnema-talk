@@ -1,0 +1,241 @@
+package chat
+
+import (
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/auth"
+	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/perm"
+)
+
+// toggleReaction handles POST /api/messages/{messageID}/reactions.
+//
+// @Summary Toggle a reaction
+// @Description Adds the caller's reaction, or removes it if already present. A user may add at most 20 different emoji to one message, and a message carries at most 50 different emoji (409 CONFLICT beyond that). Broadcasts message_reaction.
+// @ID toggleReaction
+// @Tags Messages
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Param request body ReactionRequest true "Request body."
+// @Success 200 {object} ReactionResult "Resulting reactions."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 409 {object} httpx.ErrorResponse "CONFLICT: too many reactions on this message."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/{messageID}/reactions [post]
+func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
+	user := auth.UserFrom(r.Context())
+	msgID, err := httpx.PathUUID(r, "messageID")
+	if err != nil {
+		return err
+	}
+	var req ReactionRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return err
+	}
+	emoji, err := ValidateEmoji(req.Emoji)
+	if err != nil {
+		return err
+	}
+	ref, err := loadMessageRef(r.Context(), h.DB, msgID)
+	if err != nil {
+		return err
+	}
+	p, err := h.channelPerms(r, ref.ChannelID)
+	if err != nil {
+		return err
+	}
+	if !p.Has(perm.ViewChannel) {
+		return errMessageNotFound
+	}
+	// Taking back an own reaction stays possible without the permission.
+	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
+	if err != nil {
+		return err
+	}
+	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
+	h.Events.BroadcastChannel(ref.ChannelID, "message_reaction", payload)
+	httpx.WriteJSON(w, http.StatusOK, payload)
+	return nil
+}
+
+// getThread handles GET /api/messages/{messageID}/thread.
+//
+// @Summary Get a thread
+// @Description The root message plus a page of replies, oldest first. Use at most one of before, after (reply IDs). The message must be a root message; a reply has no thread (404).
+// @ID getThread
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param messageID path string true "Message ID." Format(uuid)
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 100." minimum(1) maximum(100) default(50)
+// @Param before query string false "Replies older than this reply." Format(uuid)
+// @Param after query string false "Replies newer than this reply." Format(uuid)
+// @Success 200 {object} Thread "Thread."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/{messageID}/thread [get]
+func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
+	msgID, err := httpx.PathUUID(r, "messageID")
+	if err != nil {
+		return err
+	}
+	root, err := GetMessage(r.Context(), h.DB, msgID)
+	if err != nil {
+		return err
+	}
+	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
+		return notFoundUnlessFailure(err)
+	}
+	// Only a root message has a thread; a reply is not one.
+	if root.ParentID != nil {
+		return errMessageNotFound
+	}
+
+	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
+	if err != nil {
+		return err
+	}
+	if anchors > 1 {
+		return httpx.ErrInvalidInput("use only one of before or after")
+	}
+	if anchor := firstID(q.Before, q.After); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
+			return errMessageNotFound
+		}
+	}
+
+	replies, err := GetThreadReplies(r.Context(), h.DB, msgID, q)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, Thread{Root: root, Replies: replies})
+	return nil
+}
+
+// getMessageByNumber handles GET /api/messages/by-number/{number}.
+//
+// @Summary Get a message by its link number
+// @Description Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.
+// @ID getMessageByNumber
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param number path int true "Message number." minimum(1)
+// @Success 200 {object} Message "Message."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/messages/by-number/{number} [get]
+func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) error {
+	n, err := strconv.ParseInt(chi.URLParam(r, "number"), 10, 64)
+	if err != nil || n < 1 {
+		return httpx.ErrInvalidInput("invalid number")
+	}
+	msg, err := GetMessageByNumber(r.Context(), h.DB, n)
+	if err != nil {
+		return err
+	}
+	if err := h.require(r, msg.ChannelID, perm.ViewChannel); err != nil {
+		return notFoundUnlessFailure(err)
+	}
+	httpx.WriteJSON(w, http.StatusOK, msg)
+	return nil
+}
+
+// search handles GET /api/search.
+//
+// @Summary Search messages
+// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.
+// @ID searchMessages
+// @Tags Messages
+// @Produce json
+// @Security cookieAuth
+// @Param q query string false "Search terms, whitespace separated." maxlength(200)
+// @Param channel_id query string false "Only messages of this channel." Format(uuid)
+// @Param author_id query string false "Only messages of this author." Format(uuid)
+// @Param has query string false "Only messages with a file, an image or a link." Enums(file,image,link)
+// @Param before query string false "Page back: only messages older than this message." Format(uuid)
+// @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50." minimum(1) maximum(50) default(25)
+// @Success 200 {object} SearchResult "One page of results."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/search [get]
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
+	v := r.URL.Query()
+	q := SearchQuery{
+		Text:  v.Get("q"),
+		Has:   v.Get("has"),
+		Limit: httpx.QueryLimit(r, "limit", 25, 50),
+	}
+	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before}); err != nil {
+		return err
+	}
+	var err error
+	if q.Visible, err = h.viewableChannels(r); err != nil {
+		return err
+	}
+	if q.ChannelID != nil {
+		if err := h.require(r, *q.ChannelID, perm.ViewChannel); err != nil {
+			return err
+		}
+	}
+	release, ok := searchSlots.acquire(auth.UserFrom(r.Context()).ID)
+	if !ok {
+		return errSearchBusy
+	}
+	defer release()
+	msgs, more, err := Search(r.Context(), h.DB, q)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, SearchResult{Messages: msgs, HasMore: more})
+	return nil
+}
+
+// ReactionRequest is the body of POST /api/messages/{messageID}/reactions.
+type ReactionRequest struct {
+	// Emoji has no whitespace, control characters, '<' or '>'.
+	Emoji string `json:"emoji" maxLength:"32"`
+}
+
+// ReactionResult is the reaction summary after a toggle.
+type ReactionResult struct {
+	MessageID uuid.UUID `json:"message_id" format:"uuid"`
+	// ChannelID is the channel of the message.
+	ChannelID uuid.UUID         `json:"channel_id" format:"uuid"`
+	Reactions []ReactionSummary `json:"reactions"`
+}
+
+// Thread is a root message with a page of its replies.
+type Thread struct {
+	Root    *Message  `json:"root"`
+	Replies []Message `json:"replies"`
+}
+
+// SearchResult is one page of search hits.
+type SearchResult struct {
+	Messages []Message `json:"messages"`
+	HasMore  bool      `json:"has_more"`
+}
