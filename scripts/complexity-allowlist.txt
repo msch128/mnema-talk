@@ -1,23 +1,2 @@
 # Functions above cognitive complexity 15 that still need a refactor ("directory function").
 # Shrinking list: never add entries, delete them when the function is split.
-internal/audit list
-internal/audit Middleware
-internal/audit sanitize
-internal/auth changePasswordAndReissue
-internal/auth Cleanup
-internal/auth decodeNativeStrings
-internal/auth IssueVerified
-internal/auth PasswordChangeHandler
-internal/auth Register
-internal/auth RevokeFamily
-internal/auth RotateRefresh
-internal/auth WithAuthorizedTransaction
-internal/httpx CORS
-internal/perm CreateRole
-internal/perm DeleteRole
-internal/perm Overwrites
-internal/perm read
-internal/perm ReorderRoles
-internal/perm SetOverwrites
-internal/perm setRoles
-internal/perm UpdateRole

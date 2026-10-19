@@ -74,28 +74,9 @@ func sanitize(v any, depth int) any {
 	}
 	switch x := v.(type) {
 	case map[string]any:
-		out := make(map[string]any, len(x))
-		n := 0
-		for k, val := range x {
-			if n++; n > maxItems {
-				break
-			}
-			if secretKey(k) {
-				out[k] = redacted
-				continue
-			}
-			out[k] = sanitize(val, depth+1)
-		}
-		return out
+		return sanitizeMap(x, depth)
 	case []any:
-		if len(x) > maxItems {
-			x = x[:maxItems]
-		}
-		out := make([]any, len(x))
-		for i, val := range x {
-			out[i] = sanitize(val, depth+1)
-		}
-		return out
+		return sanitizeList(x, depth)
 	case Content:
 		return clip(string(x), MaxContentRunes)
 	case string:
@@ -103,6 +84,34 @@ func sanitize(v any, depth int) any {
 	default:
 		return v
 	}
+}
+
+// sanitizeMap keeps at most maxItems entries and redacts secret values.
+func sanitizeMap(m map[string]any, depth int) map[string]any {
+	out := make(map[string]any, len(m))
+	n := 0
+	for k, val := range m {
+		if n++; n > maxItems {
+			break
+		}
+		if secretKey(k) {
+			out[k] = redacted
+			continue
+		}
+		out[k] = sanitize(val, depth+1)
+	}
+	return out
+}
+
+func sanitizeList(list []any, depth int) []any {
+	if len(list) > maxItems {
+		list = list[:maxItems]
+	}
+	out := make([]any, len(list))
+	for i, val := range list {
+		out[i] = sanitize(val, depth+1)
+	}
+	return out
 }
 
 // cleanString reduces URLs to scheme and host plus a short hash of the whole
