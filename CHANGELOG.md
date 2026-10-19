@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.10](https://github.com/msch128/mnema-talk/compare/v0.8.9...v0.8.10) (2026-10-19)
+
+
+### Documentation
+
+* document web lib subdirectories in AGENTS.md ([#261](https://github.com/msch128/mnema-talk/issues/261)) ([2f35998](https://github.com/msch128/mnema-talk/commit/2f35998251e32a570722f6779f35bbc04ef1db90))
+
 ## [0.8.9](https://github.com/msch128/mnema-talk/compare/v0.8.8...v0.8.9) (2026-10-19)
 
 
