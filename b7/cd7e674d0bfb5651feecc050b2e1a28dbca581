@@ -1,0 +1,35 @@
+web/src/lib/media/codec.ts
+  s_06fcde5dbef956::t_cee3355a6c308b 98-110,126-135,137-138
+web/src/lib/desktopGaming.ts
+  s_06fcde5dbef956::t_e062abf3feda0d 33,69-76
+  s_06fcde5dbef956::t_198868d47ec843 77
+web/src/stores/chat/messageWindow.ts
+  s_06fcde5dbef956::t_cee3355a6c308b 202,208,218-231
+  s_06fcde5dbef956::t_36ee39841f9bab 232
+web/src/composables/webrtc/session.ts
+  s_06fcde5dbef956::t_6df4eb13d52dfa 23-32,36-57,87,92
+  s_06fcde5dbef956::t_c3f9c59e56cbe3 22,33-35,84
+web/src/composables/useComposerAssist.ts
+  s_06fcde5dbef956::t_d792d4b8306140 10-23,93
+web/src/composables/webrtc/remoteAudio.ts
+  s_06fcde5dbef956::t_4157abf3433891 158-163,165,177-220
+web/src/lib/router.ts
+  s_06fcde5dbef956::t_879d9e21ea4ff2 15-20,22-28,30-34,86-89,91-96
+  s_06fcde5dbef956::t_a90c455d7e559b 90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b7cd7e674d0bfb5651feecc050b2e1a28dbca581",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
