@@ -1,0 +1,19 @@
+web/src/lib/noiseSuppressor.ts
+  s_96fdbc7376f874::t_6d6b33647a3db1 12,15-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34100a0d2bcd4627e720e22ae5b964d8556ce06c",
+  "prompts": {},
+  "sessions": {
+    "s_96fdbc7376f874": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "0b059067-c1ff-4a45-9159-d7f274b6e6a0",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
