@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"log/slog"
 	"mime"
 	"net/http"
 	"strings"
@@ -203,54 +201,6 @@ func emptyNativeBody(r *http.Request) error {
 	return httpx.ErrInvalidInput("native request body must be empty")
 }
 
-// This response is the sole explicit token wire conversion. Its nativeSecret
-// wrapper allows JSON here while keeping all formatting and log values redacted.
-type nativeWireSecret struct{ value nativeSecret }
-
-func (nativeWireSecret) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native wire secret redacted]")
-}
-
-func (nativeWireSecret) String() string   { return "[native wire secret redacted]" }
-func (nativeWireSecret) GoString() string { return "[native wire secret redacted]" }
-func (nativeWireSecret) LogValue() slog.Value {
-	return slog.StringValue("[native wire secret redacted]")
-}
-func (s nativeWireSecret) MarshalJSON() ([]byte, error) { return json.Marshal(s.value.wire()) }
-
-type nativeGrantResponse struct {
-	User             User             `json:"user"`
-	FamilyID         uuid.UUID        `json:"family_id"`
-	ClientInstanceID uuid.UUID        `json:"client_instance_id"`
-	RefreshSequence  uint64           `json:"refresh_sequence"`
-	AccessToken      nativeWireSecret `json:"access_token"`
-	RefreshToken     nativeWireSecret `json:"refresh_token"`
-	AccessExpiresAt  time.Time        `json:"access_expires_at"`
-	FamilyExpiresAt  time.Time        `json:"family_expires_at"`
-}
-
-func (nativeGrantResponse) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native wire grant redacted]")
-}
-
-func (nativeGrantResponse) String() string   { return "[native wire grant redacted]" }
-func (nativeGrantResponse) GoString() string { return "[native wire grant redacted]" }
-func (nativeGrantResponse) LogValue() slog.Value {
-	return slog.StringValue("[native wire grant redacted]")
-}
-
-func writeNativeGrant(w http.ResponseWriter, grant IssuedNative) {
-	p := grant.Principal()
-	if p.User().ID == uuid.Nil || p.FamilyID() == uuid.Nil || p.ClientInstanceID() == uuid.Nil || grant.RefreshSequence() > nativeMaxSequence || grant.access.wire() == "" || grant.refresh.wire() == "" {
-		httpx.WriteError(w, httpx.ErrInternal("invalid native grant"))
-		return
-	}
-
-	httpx.WriteJSON(w, http.StatusOK, nativeGrantResponse{User: grant.Principal().User(), FamilyID: p.FamilyID(), ClientInstanceID: p.ClientInstanceID(), RefreshSequence: grant.RefreshSequence(),
-		AccessToken: nativeWireSecret{value: grant.access}, RefreshToken: nativeWireSecret{value: grant.refresh},
-		AccessExpiresAt: grant.AccessExpiresAt(), FamilyExpiresAt: grant.FamilyExpiresAt()})
-}
-
 func nativeHandlerError(err error) error {
 	var storeErr nativeStoreError
 	if errors.As(err, &storeErr) {
@@ -396,6 +346,7 @@ func (h *NativeHandler) AuthenticateNativeRequest(r *http.Request) (NativeLease,
 func (h *NativeHandler) RevalidateNativeLease(ctx context.Context, p NativePrincipal) (NativeLease, error) {
 	return h.sessions.RevalidateNativeLease(ctx, p)
 }
+
 func (h *NativeHandler) AuthenticateAccessLease(ctx context.Context, encoded string) (NativeLease, error) {
 	return h.sessions.AuthenticateAccessLease(ctx, encoded)
 }
