@@ -3,7 +3,6 @@ package sfu
 import (
 	"fmt"
 	"net"
-	"net/netip"
 
 	"github.com/google/uuid"
 	"github.com/pion/ice/v4"
@@ -139,7 +138,9 @@ func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPM
 	return buildAPIWithAuthorization(portMin, portMax, announceIPs, mux, nil, nil, nil)
 }
 
-func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry, load *peerLoad) (*webrtc.API, error) {
+// buildSettingEngine configures ICE: loopback handling, the UDP mux or port
+// range, and the announced addresses.
+func buildSettingEngine(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (webrtc.SettingEngine, error) {
 	settingEngine := webrtc.SettingEngine{}
 	if onlyLoopbackAnnouncements(announceIPs) {
 		settingEngine.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
@@ -147,26 +148,31 @@ func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mu
 	// Explicit loopback announcements are used by local browser deployments.
 	// Gather a socket on that interface too, rather than only rewriting the
 	// addresses of sockets bound to other interfaces.
-	for _, ip := range announceIPs {
-		if addr, err := netip.ParseAddr(ip); err == nil && addr.IsLoopback() {
-			settingEngine.SetIncludeLoopbackCandidate(true)
-			break
-		}
+	if announcesLoopback(announceIPs) {
+		settingEngine.SetIncludeLoopbackCandidate(true)
 	}
 
 	if mux != nil {
 		settingEngine.SetICEUDPMux(mux)
 	} else if portMin > 0 && portMax > 0 {
 		if err := settingEngine.SetEphemeralUDPPortRange(portMin, portMax); err != nil {
-			return nil, fmt.Errorf("failed to set UDP port range: %w", err)
+			return settingEngine, fmt.Errorf("failed to set UDP port range: %w", err)
 		}
 	}
 
 	if len(announceIPs) > 0 {
 		// Every announced address becomes its own host candidate.
 		if err := settingEngine.SetICEAddressRewriteRules(announceRewriteRules(announceIPs)...); err != nil {
-			return nil, fmt.Errorf("failed to set announced addresses: %w", err)
+			return settingEngine, fmt.Errorf("failed to set announced addresses: %w", err)
 		}
+	}
+	return settingEngine, nil
+}
+
+func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry, load *peerLoad) (*webrtc.API, error) {
+	settingEngine, err := buildSettingEngine(portMin, portMax, announceIPs, mux)
+	if err != nil {
+		return nil, err
 	}
 
 	mediaEngine := &webrtc.MediaEngine{}

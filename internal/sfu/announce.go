@@ -79,13 +79,7 @@ func announceRewriteRules(ips []string) []webrtc.ICEAddressRewriteRule {
 // switches the SFU to the new addresses when they changed. Entries that are
 // all IPs never change, so nothing runs for them.
 func (s *SFU) KeepAnnounceCurrent(ctx context.Context, entries []string, every time.Duration) {
-	dynamic := false
-	for _, e := range entries {
-		if _, err := netip.ParseAddr(e); err != nil {
-			dynamic = true
-		}
-	}
-	if !dynamic {
+	if !hasHostName(entries) {
 		return
 	}
 	go func() {
@@ -97,21 +91,37 @@ func (s *SFU) KeepAnnounceCurrent(ctx context.Context, entries []string, every t
 				return
 			case <-t.C:
 			}
-			rctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-			ips, err := ResolveAnnounce(rctx, entries)
-			cancel()
-			if err != nil {
-				slog.Warn("webrtc announce: resolve failed, keeping current addresses", "err", err)
-				continue
-			}
-			if slices.Equal(ips, s.AnnouncedIPs()) {
-				continue
-			}
-			if err := s.SetAnnouncedIPs(ips); err != nil {
-				slog.Warn("webrtc announce: update failed", "err", err)
-				continue
-			}
-			slog.Info("webrtc announce: addresses changed", "ips", ips)
+			s.refreshAnnounce(ctx, entries)
 		}
 	}()
+}
+
+// hasHostName reports whether any entry is a host name rather than an IP.
+func hasHostName(entries []string) bool {
+	for _, e := range entries {
+		if _, err := netip.ParseAddr(e); err != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// refreshAnnounce resolves entries once and switches the SFU to the result
+// when it differs from the current addresses. A failure keeps the current ones.
+func (s *SFU) refreshAnnounce(ctx context.Context, entries []string) {
+	rctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ips, err := ResolveAnnounce(rctx, entries)
+	cancel()
+	if err != nil {
+		slog.Warn("webrtc announce: resolve failed, keeping current addresses", "err", err)
+		return
+	}
+	if slices.Equal(ips, s.AnnouncedIPs()) {
+		return
+	}
+	if err := s.SetAnnouncedIPs(ips); err != nil {
+		slog.Warn("webrtc announce: update failed", "err", err)
+		return
+	}
+	slog.Info("webrtc announce: addresses changed", "ips", ips)
 }

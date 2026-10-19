@@ -155,67 +155,17 @@ func (r *Room) notifyMedia() {
 
 	r.mu.Lock()
 	now := r.mediaStatesLocked()
-	type change struct {
-		user  uuid.UUID
-		state MediaState
-	}
-	var changes []change
+	var changes []mediaChange
 	if mediaFn != nil {
-		for u, st := range now {
-			if r.lastMedia[u] != st {
-				changes = append(changes, change{u, st})
-			}
-		}
-		for u := range r.lastMedia {
-			if _, ok := now[u]; !ok {
-				changes = append(changes, change{u, MediaState{}})
-			}
-		}
-		r.lastMedia = now
+		changes = r.takeMediaChangesLocked(now)
 	}
-	type audience struct {
-		sharer  uuid.UUID
-		viewers []uuid.UUID
-	}
-	var audiences []audience
+	var audiences []audienceChange
 	if viewersFn != nil {
-		// lastViewers keeps only non-empty audiences: an absent sharer was
-		// last announced (or implied) as watched by nobody.
-		next := map[uuid.UUID][]uuid.UUID{}
-		for sharer, viewers := range r.screenViewersLocked(now) {
-			if len(viewers) == 0 {
-				continue
-			}
-			next[sharer] = viewers
-			if !slices.Equal(r.lastViewers[sharer], viewers) {
-				audiences = append(audiences, audience{sharer, slices.Clone(viewers)})
-			}
-		}
-		for sharer := range r.lastViewers {
-			if _, ok := next[sharer]; !ok {
-				audiences = append(audiences, audience{sharer, []uuid.UUID{}})
-			}
-		}
-		r.lastViewers = next
-	}
-	type layerChange struct {
-		sharer uuid.UUID
-		layers []Layer
+		audiences = r.takeAudienceChangesLocked(now)
 	}
 	var layerChanges []layerChange
 	if layersFn != nil {
-		next := r.screenLayersLocked(now)
-		for sharer, layers := range next {
-			if !slices.Equal(r.lastLayers[sharer], layers) {
-				layerChanges = append(layerChanges, layerChange{sharer, layers})
-			}
-		}
-		for sharer := range r.lastLayers {
-			if _, ok := next[sharer]; !ok {
-				layerChanges = append(layerChanges, layerChange{sharer, []Layer{}})
-			}
-		}
-		r.lastLayers = next
+		layerChanges = r.takeLayerChangesLocked(now)
 	}
 	r.mu.Unlock()
 
@@ -226,8 +176,88 @@ func (r *Room) notifyMedia() {
 	for _, c := range layerChanges {
 		layersFn(r.ID, c.sharer, c.layers)
 	}
-	slices.SortFunc(audiences, func(a, b audience) int { return compareIDs(a.sharer, b.sharer) })
+	slices.SortFunc(audiences, func(a, b audienceChange) int { return compareIDs(a.sharer, b.sharer) })
 	for _, a := range audiences {
 		viewersFn(r.ID, a.sharer, a.viewers)
 	}
+}
+
+type mediaChange struct {
+	user  uuid.UUID
+	state MediaState
+}
+
+type audienceChange struct {
+	sharer  uuid.UUID
+	viewers []uuid.UUID
+}
+
+type layerChange struct {
+	sharer uuid.UUID
+	layers []Layer
+}
+
+// takeMediaChangesLocked returns the users whose screen/camera state differs
+// from the last announcement (departed users as an empty state) and records
+// now as announced. r.mu is held.
+func (r *Room) takeMediaChangesLocked(now map[uuid.UUID]MediaState) []mediaChange {
+	var changes []mediaChange
+	for u, st := range now {
+		if r.lastMedia[u] != st {
+			changes = append(changes, mediaChange{u, st})
+		}
+	}
+	for u := range r.lastMedia {
+		if _, ok := now[u]; !ok {
+			changes = append(changes, mediaChange{u, MediaState{}})
+		}
+	}
+	r.lastMedia = now
+	return changes
+}
+
+// takeAudienceChangesLocked returns the screen shares whose audience differs
+// from the last announcement and records the current audiences as announced.
+// r.mu is held.
+func (r *Room) takeAudienceChangesLocked(now map[uuid.UUID]MediaState) []audienceChange {
+	var audiences []audienceChange
+	// lastViewers keeps only non-empty audiences: an absent sharer was
+	// last announced (or implied) as watched by nobody.
+	next := map[uuid.UUID][]uuid.UUID{}
+	for sharer, viewers := range r.screenViewersLocked(now) {
+		if len(viewers) == 0 {
+			continue
+		}
+		next[sharer] = viewers
+		if !slices.Equal(r.lastViewers[sharer], viewers) {
+			audiences = append(audiences, audienceChange{sharer, slices.Clone(viewers)})
+		}
+	}
+	for sharer := range r.lastViewers {
+		if _, ok := next[sharer]; !ok {
+			audiences = append(audiences, audienceChange{sharer, []uuid.UUID{}})
+		}
+	}
+	r.lastViewers = next
+	return audiences
+}
+
+// takeLayerChangesLocked returns the screen shares whose offered layers differ
+// from the last announcement and records the current layers as announced.
+// r.mu is held.
+func (r *Room) takeLayerChangesLocked(now map[uuid.UUID]MediaState) []layerChange {
+	var changes []layerChange
+	next := r.screenLayersLocked(now)
+	for sharer, layers := range next {
+		if !slices.Equal(r.lastLayers[sharer], layers) {
+			changes = append(changes, layerChange{sharer, layers})
+		}
+	}
+	for sharer := range r.lastLayers {
+		if _, ok := next[sharer]; !ok {
+			changes = append(changes, layerChange{sharer, []Layer{}})
+		}
+	}
+	r.lastLayers = next
+	return changes
 }

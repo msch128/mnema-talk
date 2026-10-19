@@ -18,19 +18,9 @@ import (
 func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(webrtc.SessionDescription), sendICE func(*webrtc.ICECandidateInit), authorize func() bool) *Peer {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	pc, cameraTr, screenAudioTr, lowerTrs := conn.pc, conn.cameraTr, conn.screenAudioTr, conn.lowerTrs
+	pc := conn.pc
 
-	if existing, ok := r.peers[userID]; ok {
-		delete(r.peers, userID)
-		r.load.add(-1)
-		r.removePeerTracksLocked(userID)
-		// Closing fires the old connection's state callback; removePeer
-		// ignores it because the user's entry is no longer that peer.
-		go func() {
-			existing.releaseViewerTracks()
-			_ = existing.PC.Close()
-		}()
-	}
+	r.replacePeerLocked(userID)
 
 	peer := &Peer{
 		authorizeMedia: authorize,
@@ -50,73 +40,11 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	})
 
 	pc.OnTrack(func(remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
-		source := SourceAudio
-		streamID := userID.String()
-		layer := 0
-		if remoteTrack.Kind() == webrtc.RTPCodecTypeVideo {
-			source = SourceScreen
-			if cameraTr != nil && receiver == cameraTr.Receiver() {
-				source = SourceCamera
-				streamID = CameraStreamPrefix + streamID
-			}
-			for i, tr := range lowerTrs {
-				if tr != nil && receiver == tr.Receiver() {
-					layer = i + 1
-				}
-			}
-		} else if screenAudioTr != nil && receiver == screenAudioTr.Receiver() {
-			source = SourceScreenAudio
-			streamID = ScreenAudioStreamPrefix + streamID
-		}
-		slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", layer, "codec", remoteTrack.Codec().MimeType)
-
-		// The user may not send this (no Speak or Video permission): never
-		// publish it. Should the permission come back later, the client
-		// renegotiates and the track is accepted then.
-		if peer.sourceDenied(source) {
-			drain(remoteTrack)
-			return
-		}
-
-		if source == SourceScreen {
-			r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, layer)
-			return
-		}
-
-		key := trackKey(userID, remoteTrack.ID())
-		// The stream ID names the publishing user, so clients can map tracks to people.
-		trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, key, streamID)
-		if err != nil {
-			slog.Error("sfu create local track", "err", err)
-			return
-		}
-
-		info := &TrackInfo{
-			Track:     trackLocal,
-			SenderID:  userID,
-			Kind:      remoteTrack.Kind(),
-			Source:    source,
-			publisher: peer,
-			ssrc:      uint32(remoteTrack.SSRC()),
-		}
-		r.addTrack(key, info)
-
-		go r.forward(remoteTrack, trackLocal, key, info)
+		r.handleRemoteTrack(peer, conn, remoteTrack, receiver)
 	})
 
 	pc.OnICEConnectionStateChange(func(state webrtc.ICEConnectionState) {
-		switch state {
-		case webrtc.ICEConnectionStateConnected:
-			attrs := []any{"user", userID}
-			if pair, err := selectedPair(pc); err == nil && pair != nil {
-				attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
-			}
-			slog.Info("sfu ice connected", attrs...)
-			metrics.SFUICE.With("connected").Inc()
-		case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
-			slog.Warn("sfu ice "+state.String(), "user", userID)
-			metrics.SFUICE.With(state.String()).Inc()
-		}
+		logICEState(pc, userID, state)
 	})
 
 	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
@@ -133,6 +61,112 @@ func (r *Room) attachPeer(userID uuid.UUID, conn *receiveConn, sendOffer func(we
 	go r.SignalPeerConnections()
 
 	return peer
+}
+
+// replacePeerLocked drops the user's earlier connection, if any. r.mu is held.
+func (r *Room) replacePeerLocked(userID uuid.UUID) {
+	existing, ok := r.peers[userID]
+	if !ok {
+		return
+	}
+	delete(r.peers, userID)
+	r.load.add(-1)
+	r.removePeerTracksLocked(userID)
+	// Closing fires the old connection's state callback; removePeer
+	// ignores it because the user's entry is no longer that peer.
+	go func() {
+		existing.releaseViewerTracks()
+		_ = existing.PC.Close()
+	}()
+}
+
+// logICEState records ICE transitions worth seeing in the log and metrics.
+func logICEState(pc *webrtc.PeerConnection, userID uuid.UUID, state webrtc.ICEConnectionState) {
+	switch state {
+	case webrtc.ICEConnectionStateConnected:
+		attrs := []any{"user", userID}
+		if pair, err := selectedPair(pc); err == nil && pair != nil {
+			attrs = append(attrs, "local", pair.Local.Address, "remote", pair.Remote.Address, "remote_type", pair.Remote.Typ.String())
+		}
+		slog.Info("sfu ice connected", attrs...)
+		metrics.SFUICE.With("connected").Inc()
+	case webrtc.ICEConnectionStateFailed, webrtc.ICEConnectionStateDisconnected:
+		slog.Warn("sfu ice "+state.String(), "user", userID)
+		metrics.SFUICE.With(state.String()).Inc()
+	}
+}
+
+// remoteTrackRole says what a received track carries: its source, the stream
+// ID viewers see, and, for screen video, the simulcast layer.
+type remoteTrackRole struct {
+	source   Source
+	streamID string
+	layer    int
+}
+
+// classifyRemoteTrack maps the transceiver a track arrived on to its role.
+func classifyRemoteTrack(userID uuid.UUID, conn *receiveConn, remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) remoteTrackRole {
+	role := remoteTrackRole{source: SourceAudio, streamID: userID.String()}
+	if remoteTrack.Kind() != webrtc.RTPCodecTypeVideo {
+		if conn.screenAudioTr != nil && receiver == conn.screenAudioTr.Receiver() {
+			role.source = SourceScreenAudio
+			role.streamID = ScreenAudioStreamPrefix + role.streamID
+		}
+		return role
+	}
+	role.source = SourceScreen
+	if conn.cameraTr != nil && receiver == conn.cameraTr.Receiver() {
+		role.source = SourceCamera
+		role.streamID = CameraStreamPrefix + role.streamID
+	}
+	for i, tr := range conn.lowerTrs {
+		if tr != nil && receiver == tr.Receiver() {
+			role.layer = i + 1
+		}
+	}
+	return role
+}
+
+// handleRemoteTrack publishes a track the peer sends, unless the peer may not
+// send that source.
+func (r *Room) handleRemoteTrack(peer *Peer, conn *receiveConn, remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) {
+	userID := peer.ID
+	role := classifyRemoteTrack(userID, conn, remoteTrack, receiver)
+	source := role.source
+	slog.Info("sfu track received", "user", userID, "kind", remoteTrack.Kind().String(), "source", string(source), "layer", role.layer, "codec", remoteTrack.Codec().MimeType)
+
+	// The user may not send this (no Speak or Video permission): never
+	// publish it. Should the permission come back later, the client
+	// renegotiates and the track is accepted then.
+	if peer.sourceDenied(source) {
+		drain(remoteTrack)
+		return
+	}
+
+	if source == SourceScreen {
+		r.receiveScreenLayer(peer, remoteTrack, remoteTrack.ID(), uint32(remoteTrack.SSRC()), remoteTrack.Codec().RTPCodecCapability, role.layer)
+		return
+	}
+
+	key := trackKey(userID, remoteTrack.ID())
+	// The stream ID names the publishing user, so clients can map tracks to people.
+	trackLocal, err := webrtc.NewTrackLocalStaticRTP(remoteTrack.Codec().RTPCodecCapability, key, role.streamID)
+	if err != nil {
+		slog.Error("sfu create local track", "err", err)
+		return
+	}
+
+	info := &TrackInfo{
+		Track:     trackLocal,
+		SenderID:  userID,
+		Kind:      remoteTrack.Kind(),
+		Source:    source,
+		publisher: peer,
+		ssrc:      uint32(remoteTrack.SSRC()),
+	}
+	r.addTrack(key, info)
+
+	go r.forward(remoteTrack, trackLocal, key, info)
 }
 
 // pinCodecOrder keeps the codec order of the first offer on a publisher's
@@ -180,11 +214,7 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 			r.removeTrack(key, info)
 			return
 		}
-		if verdict := limit.admit(n, time.Now()); verdict != ingressOK {
-			metrics.SFUIngressDropped.With("rate").Inc()
-			if verdict == ingressAbusive {
-				ingressAbuse(info)
-			}
+		if !admitIngress(limit, n, info) {
 			continue
 		}
 		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
@@ -192,27 +222,68 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 		}
 		metrics.SFUIngressPackets.Inc()
 		metrics.SFUIngressBytes.Add(uint64(n))
-		if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+		switch publisherVerdict(info) {
+		case endTrack:
 			return
-		}
-		// Permission revoked while the track was live: drop its packets.
-		if info.publisher != nil && info.publisher.sourceDenied(info.Source) {
+		case dropPacket:
 			continue
 		}
 		// Header extension IDs are negotiated per connection; the
 		// subscriber side adds its own (e.g. transport-cc).
 		rtpPkt.Extension = false
 		rtpPkt.Extensions = nil
-		// The publisher stopped and started the same transceiver again:
-		// the browser keeps the SSRC, so no new OnTrack fires.
-		if at := info.stoppedAt.Load(); at != 0 && time.Since(time.Unix(0, at)) > resumeHoldoff {
-			if info.stoppedAt.CompareAndSwap(at, 0) {
-				r.addTrack(key, info)
-			}
-		}
+		r.resumeStoppedTrack(key, info)
 		// io.ErrClosedPipe only means a subscriber's sender just stopped.
 		if err := local.WriteRTP(rtpPkt); err != nil && !errors.Is(err, io.ErrClosedPipe) && info.writeErrLogged.CompareAndSwap(false, true) {
 			slog.Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
 		}
+	}
+}
+
+// admitIngress applies the publisher's rate limit to an n-byte packet and
+// reports whether it may be forwarded.
+func admitIngress(limit *ingressBucket, n int, info *TrackInfo) bool {
+	verdict := limit.admit(n, time.Now())
+	if verdict == ingressOK {
+		return true
+	}
+	metrics.SFUIngressDropped.With("rate").Inc()
+	if verdict == ingressAbusive {
+		ingressAbuse(info)
+	}
+	return false
+}
+
+// packetVerdict is what to do with a packet after the publisher checks.
+type packetVerdict int
+
+const (
+	forwardPacket packetVerdict = iota
+	dropPacket
+	endTrack
+)
+
+// publisherVerdict re-checks, per packet, that the track is still current and
+// its publisher still allowed to send it.
+func publisherVerdict(info *TrackInfo) packetVerdict {
+	if info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+		return endTrack
+	}
+	// Permission revoked while the track was live: drop its packets.
+	if info.publisher != nil && info.publisher.sourceDenied(info.Source) {
+		return dropPacket
+	}
+	return forwardPacket
+}
+
+// resumeStoppedTrack re-adds a track whose publisher stopped and started the
+// same transceiver again: the browser keeps the SSRC, so no new OnTrack fires.
+func (r *Room) resumeStoppedTrack(key string, info *TrackInfo) {
+	at := info.stoppedAt.Load()
+	if at == 0 || time.Since(time.Unix(0, at)) <= resumeHoldoff {
+		return
+	}
+	if info.stoppedAt.CompareAndSwap(at, 0) {
+		r.addTrack(key, info)
 	}
 }

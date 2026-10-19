@@ -38,9 +38,6 @@ var funcLengthAllowlist = map[string]bool{
 	"internal/perm setRoles":                 true,
 	"internal/perm SetOverwrites":            true,
 	"internal/server NewRouter":              true,
-	"internal/sfu attachPeer":                true,
-	"internal/sfu signalPeer":                true,
-	"internal/sfu notifyMedia":               true,
 	"loadtest/viewer run":                    true,
 	"loadtest/viewer mainErr":                true,
 }
