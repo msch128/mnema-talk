@@ -1,0 +1,20 @@
+internal/sfu/layers_integration_test.go
+  h_0ff4f4713441f4 293-294,298-302
+internal/sfu/permissions_test.go
+  h_0ff4f4713441f4 4,39,56-63
+internal/sfu/screen_order_test.go
+  h_0ff4f4713441f4 9,35-39,81-102
+internal/sfu/sfu_edges_test.go
+  h_0ff4f4713441f4 81-82,86-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "47a26fe71b2150b47129f75a286b8ba2884538c3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
