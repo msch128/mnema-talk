@@ -214,7 +214,8 @@ and [doc/desktop-app.md](doc/desktop-app.md).
 | Moderation and the audit log | [doc/moderation.md](doc/moderation.md) |
 | Webhooks (incoming and outgoing) | [doc/webhooks.md](doc/webhooks.md) |
 | Bots, the bot API and gateway | [doc/bots.md](doc/bots.md) |
-| Where media keys live in the browser | [doc/crypto-state.md](doc/crypto-state.md) |
+| Where media keys live in the browser | [SECURITY.md](SECURITY.md) |
+| Unused persistence foundation | [doc/crypto-state.md](doc/crypto-state.md) |
 | Trusted desktop client, gaming overlay | [doc/desktop-trusted-client.md](doc/desktop-trusted-client.md), [doc/desktop-app.md](doc/desktop-app.md) |
 | Load test | [loadtest/README.md](loadtest/README.md) |
 | Product status and acceptance | [doc/product-status.md](doc/product-status.md) |

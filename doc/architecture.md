@@ -210,8 +210,9 @@ sign of life for 20 minutes are removed and re-admitted when they return, and
 every sealed frame is signed with its sender's leaf key. The connection
 details show a **safety code** for the current epoch so members can compare
 keys out of band. The server validates who may commit but never sees keys.
-Details and limits: [SECURITY.md](../SECURITY.md#security-model-summary) and
-[crypto-state.md](crypto-state.md).
+The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
+[SECURITY.md](../SECURITY.md#security-model-summary).
+[`doc/crypto-state.md`](crypto-state.md) is an unused persistence foundation.
 
 ## Capacity
 
