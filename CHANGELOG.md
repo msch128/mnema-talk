@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.12](https://github.com/msch128/mnema-talk/compare/v0.8.11...v0.8.12) (2026-10-19)
+
+
+### Bug Fixes
+
+* release refactor and documentation commits ([#281](https://github.com/msch128/mnema-talk/issues/281)) ([202dd37](https://github.com/msch128/mnema-talk/commit/202dd37985f146c6665b7a819f6e9a6b0c8b710f))
+
+
+### Code Refactoring
+
+* keep native session fields inside the native hub files ([#277](https://github.com/msch128/mnema-talk/issues/277)) ([96dafc0](https://github.com/msch128/mnema-talk/commit/96dafc0b329af8c10429569edf5d683221b29dfe))
+* keep the native transport off the browser platform ([#269](https://github.com/msch128/mnema-talk/issues/269)) ([2dd67af](https://github.com/msch128/mnema-talk/commit/2dd67af1eca2ede6f1f9e7804c2fa1b44401e4be))
+* split the desktop selector from the native preview ([#271](https://github.com/msch128/mnema-talk/issues/271)) ([1716a34](https://github.com/msch128/mnema-talk/commit/1716a34577248c53cce8efbf9f08b19718b952fe))
+
+
+### Documentation
+
+* close the two audit cells that are not holes ([#280](https://github.com/msch128/mnema-talk/issues/280)) ([db197d8](https://github.com/msch128/mnema-talk/commit/db197d85d661752ce9c44451355304e84a1054b8))
+* mark enforcement cells that are not holes ([#279](https://github.com/msch128/mnema-talk/issues/279)) ([3df6182](https://github.com/msch128/mnema-talk/commit/3df6182beaa66808bb57f797049fe8435a3dba6c))
+* record who may send, talk and moderate ([#278](https://github.com/msch128/mnema-talk/issues/278)) ([0ada384](https://github.com/msch128/mnema-talk/commit/0ada384fbca3e8b64b84e4330302dd8c60959c51))
+
 ## [0.8.11](https://github.com/msch128/mnema-talk/compare/v0.8.10...v0.8.11) (2026-10-19)
 
 
