@@ -96,3 +96,8 @@ func health(hc *healthCheck, version string) http.HandlerFunc {
 		httpx.WriteJSON(w, http.StatusOK, Health{Status: "ok", Version: version, WebClientAPI: WebClientAPI})
 	}
 }
+
+// HealthHandler returns the health handler for the given dependencies.
+func HealthHandler(deps Deps) http.HandlerFunc {
+	return health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version)
+}

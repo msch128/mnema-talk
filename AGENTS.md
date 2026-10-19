@@ -78,6 +78,7 @@ mnema-talk/
 │   ├── sfu/                 # Pion WebRTC SFU (audio/video/screenshare forwarding)
 │   ├── update/              # GitHub release check + client for the optional updater sidecar
 │   ├── version/             # Build version/revision (ldflags), shared with the web build
+│   ├── nativepreview/       # Isolated transport preview router and ciphertext relay research fixtures
 │   ├── server/              # Router wiring + integration tests
 │   └── testutil/            # Postgres fixture for integration tests (dockertest / TEST_DATABASE_URL)
 ├── api/                     # Generated OpenAPI document (`make openapi`)

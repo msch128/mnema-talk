@@ -1,6 +1,6 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"bytes"

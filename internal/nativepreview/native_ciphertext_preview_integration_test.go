@@ -1,6 +1,6 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"bytes"
@@ -20,6 +20,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
+	srv "github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -42,7 +43,7 @@ func newRelayTestApp(t *testing.T, status NativeCompatibility) *relayTestApp {
 	if err != nil {
 		t.Fatal("relay fixture configuration failed")
 	}
-	router, err := NewNativeCiphertextPreviewRouter(Deps{Config: cfg, DB: pool, Version: "relay-fixture"}, NativePreviewOptions{CommunityID: "native-relay-fixture", InstanceOrigin: origin, Compatibility: status})
+	router, err := NewNativeCiphertextPreviewRouter(srv.Deps{Config: cfg, DB: pool, Version: "relay-fixture"}, NativePreviewOptions{CommunityID: "native-relay-fixture", InstanceOrigin: origin, Compatibility: status})
 	if err != nil {
 		t.Fatal("relay router construction failed")
 	}

@@ -1,6 +1,10 @@
-package server
+package nativepreview
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/msch128/mnema-talk/internal/server"
+)
 
 func TestNativePreviewOptionsAreServerOwnedAndBounded(t *testing.T) {
 	valid := NativePreviewOptions{CommunityID: "safe-community_1", InstanceOrigin: "https://community.example.invalid", Compatibility: NativeSupported}
@@ -22,7 +26,7 @@ func TestNativePreviewOptionsAreServerOwnedAndBounded(t *testing.T) {
 			t.Fatalf("invalid option case %d admitted", i)
 		}
 	}
-	if _, err := NewNativePreviewRouter(Deps{}, valid); err == nil {
+	if _, err := NewNativePreviewRouter(server.Deps{}, valid); err == nil {
 		t.Fatal("missing actual dependencies admitted")
 	}
 	if _, ok := NativePreviewInstanceFrom(t.Context()); ok {

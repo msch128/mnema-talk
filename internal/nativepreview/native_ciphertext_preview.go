@@ -1,4 +1,4 @@
-package server
+package nativepreview
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 const nativeCiphertextPath = NativePreviewPrefix + "/channels/{channelID}/ciphertext-events"
@@ -34,7 +35,7 @@ type nativeCiphertextPagingKey struct{}
 // Its current native principal authorizes transport/channel visibility only;
 // no device/group/sender trust is minted here. All existing preview constructors
 // and production routes stay untouched and advertise content unavailable.
-func NewNativeCiphertextPreviewRouter(deps Deps, options NativePreviewOptions) (*NativeCiphertextPreviewRouter, error) {
+func NewNativeCiphertextPreviewRouter(deps server.Deps, options NativePreviewOptions) (*NativeCiphertextPreviewRouter, error) {
 	if deps.Config == nil {
 		return nil, errors.New("invalid native relay dependencies")
 	}
@@ -52,13 +53,13 @@ func NewNativeCiphertextPreviewRouter(deps Deps, options NativePreviewOptions) (
 		return nil, errors.New("native relay store unavailable")
 	}
 	// The relay follows the same channel permissions as the chat handlers.
-	store.WithPermissions(preview.preview.chat.Perms)
+	store.WithPermissions(preview.PreviewDeps().Chat.Perms)
 	result := &NativeCiphertextPreviewRouter{NativePreviewRouter: preview, Store: store}
 	routes := chi.NewRouter()
 	// Bound forged-bearer DB lookups before authentication as well as admitted
 	// account work afterwards. Both use the existing trusted client-IP policy.
 	perRelayIP := httpx.NewRateLimiter(120, time.Minute)
-	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), result.relayBoundary, perRelayIP.PerIP, preview.Native.RequireUser, preview.instanceContext, preview.preview.perUser.By(auth.UserKey))
+	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), result.relayBoundary, perRelayIP.PerIP, preview.Native.RequireUser, preview.instanceContext, preview.PreviewDeps().PerUser.By(auth.UserKey))
 	perRelayUser := httpx.NewRateLimiter(60, time.Minute)
 	routes.Use(perRelayUser.By(auth.UserKey))
 	routes.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {

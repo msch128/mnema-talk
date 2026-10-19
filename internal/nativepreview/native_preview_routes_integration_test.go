@@ -1,12 +1,13 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"net/http"
 	"testing"
 
 	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 // Every native path that is not an explicitly installed metadata route is
@@ -37,7 +38,7 @@ func TestNativePreviewAssemblyFailsOnCorruptRegistry(t *testing.T) {
 	defer func() { nativeMetadataRoutes = original }()
 	nativeMetadataRoutes = append(append([]NativeMetadataRoute(nil), original...), NativeMetadataRoute{Method: http.MethodGet, Path: "/not-installed"})
 	options := NativePreviewOptions{CommunityID: "native-preview-fixture", InstanceOrigin: a.server.URL, Compatibility: NativeSupported}
-	if router, err := NewNativePreviewRouter(Deps{Config: cfg, DB: a.pool}, options); err == nil {
+	if router, err := NewNativePreviewRouter(server.Deps{Config: cfg, DB: a.pool}, options); err == nil {
 		router.Close()
 		t.Fatal("router assembled from a corrupt registry")
 	}

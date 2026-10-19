@@ -1,11 +1,13 @@
-package server
+package nativepreview
 
 import (
-	"github.com/msch128/mnema-talk/internal/config"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/msch128/mnema-talk/internal/config"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 func TestNativePublicPreviewHeaderAndBodyBoundary(t *testing.T) {
@@ -43,16 +45,16 @@ func TestNativePublicPreviewHeaderAndBodyBoundary(t *testing.T) {
 	if response.Code != 400 {
 		t.Fatal("unknown body not denied")
 	}
-	if _, err := NewNativePublicPreviewRouter(Deps{}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativePublicPreviewRouter(server.Deps{}, NativePreviewOptions{}); err == nil {
 		t.Fatal("invalid public preview constructor admitted")
 	}
 }
 
 func TestNativePublicPreviewInvalidStartupTrust(t *testing.T) {
-	if _, err := NewNativePublicPreviewRouter(Deps{Config: &config.Config{TrustedProxies: []string{"invalid-cidr"}}}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativePublicPreviewRouter(server.Deps{Config: &config.Config{TrustedProxies: []string{"invalid-cidr"}}}, NativePreviewOptions{}); err == nil {
 		t.Fatal("invalid public proxy trust accepted")
 	}
-	if _, err := NewNativePublicPreviewRouter(Deps{Config: &config.Config{}}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativePublicPreviewRouter(server.Deps{Config: &config.Config{}}, NativePreviewOptions{}); err == nil {
 		t.Fatal("invalid basepreview constructor accepted")
 	}
 }

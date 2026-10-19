@@ -1,6 +1,6 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
+	srv "github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
@@ -54,7 +55,7 @@ func newPreviewTestApp(t *testing.T, status NativeCompatibility, withSFU bool) *
 	if err != nil {
 		t.Fatal("preview fixture config failed")
 	}
-	deps := Deps{Config: cfg, DB: pool, Version: "preview-fixture"}
+	deps := srv.Deps{Config: cfg, DB: pool, Version: "preview-fixture"}
 	if withSFU {
 		deps.SFU, err = sfu.NewSFU(0, 0, []string{"127.0.0.1"}, nil)
 		if err != nil {
@@ -271,7 +272,7 @@ func TestNativePreviewWSSSuppressesRealBrowserContentAndDeniesVoice(t *testing.T
 	previewReadUntil(t, c, "presence_snapshot", nil)
 	// Real shared browser handler writes a message; no synthetic policy predicate.
 	cookie := httptest.NewRecorder()
-	if a.router.preview.accounts.Sessions.Start(cookie, &a.user, 0) != nil {
+	if a.router.PreviewDeps().Accounts.Sessions.Start(cookie, &a.user, 0) != nil {
 		t.Fatal("fixture browser session failed")
 	}
 	channel := uuid.New()
@@ -374,16 +375,16 @@ func TestNativePreviewStartupAndAuthorityFailures(t *testing.T) {
 	}
 	cfg := configFor()
 	cfg.TrustedProxies = []string{"invalid-cidr"}
-	if _, err := NewNativePreviewRouter(Deps{Config: cfg, DB: a.pool}, options); err == nil {
+	if _, err := NewNativePreviewRouter(srv.Deps{Config: cfg, DB: a.pool}, options); err == nil {
 		t.Fatal("invalid proxy trust startup admitted")
 	}
 	cfg = configFor()
 	cfg.SessionExpiryHours = 0
-	if _, err := NewNativePreviewRouter(Deps{Config: cfg, DB: a.pool}, options); err == nil {
+	if _, err := NewNativePreviewRouter(srv.Deps{Config: cfg, DB: a.pool}, options); err == nil {
 		t.Fatal("invalid native lifetime startup admitted")
 	}
 	options.CommunityID = ""
-	if _, err := NewNativePreviewRouter(Deps{Config: configFor(), DB: a.pool}, options); err == nil {
+	if _, err := NewNativePreviewRouter(srv.Deps{Config: configFor(), DB: a.pool}, options); err == nil {
 		t.Fatal("invalid owned options startup admitted")
 	}
 	req := httptest.NewRequest(http.MethodGet, "https://community.example.invalid", nil)
@@ -396,11 +397,11 @@ func TestNativePreviewStartupAndAuthorityFailures(t *testing.T) {
 	original := nativeMetadataRoutes
 	defer func() { nativeMetadataRoutes = original }()
 	nativeMetadataRoutes = append(append([]NativeMetadataRoute(nil), original...), NativeMetadataRoute{Method: http.MethodGet, Path: "/not-installed"})
-	if _, err := nativeMetadataHandlers(a.router.preview); err == nil {
+	if _, err := nativeMetadataHandlers(a.router.PreviewDeps()); err == nil {
 		t.Fatal("unknown native registry route admitted")
 	}
 	nativeMetadataRoutes = append(append([]NativeMetadataRoute(nil), original...), original[0])
-	if _, err := nativeMetadataHandlers(a.router.preview); err == nil {
+	if _, err := nativeMetadataHandlers(a.router.PreviewDeps()); err == nil {
 		t.Fatal("duplicate native registry route admitted")
 	}
 }

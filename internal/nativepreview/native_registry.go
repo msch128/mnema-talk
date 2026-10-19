@@ -1,12 +1,13 @@
-package server
+package nativepreview
 
 import (
 	"errors"
-	"github.com/msch128/mnema-talk/internal/httpx"
 	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 // This fixed registry installs actual browser handlers only for reviewed
@@ -51,14 +52,14 @@ func NativeMetadataRoutes() []NativeMetadataRoute {
 	return append([]NativeMetadataRoute(nil), nativeMetadataRoutes...)
 }
 
-func nativeMetadataHandlers(deps nativePreviewDependencies) (map[string]http.Handler, error) {
+func nativeMetadataHandlers(deps server.PreviewDeps) (map[string]http.Handler, error) {
 	routes := chi.NewRouter()
-	deps.accounts.MountAuthenticated(routes)
-	deps.chat.Mount(routes)
+	deps.Accounts.MountAuthenticated(routes)
+	deps.Chat.Mount(routes)
 	routes.Route("/admin", func(admin chi.Router) {
-		deps.accounts.MountAdmin(admin)
-		deps.chat.MountAdmin(admin)
-		deps.system.mountAdmin(admin)
+		deps.Accounts.MountAdmin(admin)
+		deps.Chat.MountAdmin(admin)
+		deps.System.MountAdmin(admin)
 	})
 	available := map[string]http.Handler{}
 	err := chi.Walk(routes, func(method, route string, handler http.Handler, _ ...func(http.Handler) http.Handler) error {
