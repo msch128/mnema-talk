@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.11](https://github.com/msch128/mnema-talk/compare/v0.8.10...v0.8.11) (2026-10-19)
+
+
+### Features
+
+* seed Moderator and Admin roles with no members ([#267](https://github.com/msch128/mnema-talk/issues/267)) ([15d64c2](https://github.com/msch128/mnema-talk/commit/15d64c25c502cd498baeffb093a688693d698599))
+
 ## [0.8.10](https://github.com/msch128/mnema-talk/compare/v0.8.9...v0.8.10) (2026-10-19)
 
 
