@@ -117,6 +117,9 @@ jobs:
           go vet ./...
           go vet -tags=integration ./...
 
+      - name: Cognitive complexity
+        run: make complexity-check
+
       - name: OpenAPI description is up to date
         run: make openapi-check
 

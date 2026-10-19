@@ -3,7 +3,7 @@
 # Windows: use Git Bash or WSL.
 
 .DEFAULT_GOAL := help
-.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
+.PHONY: help dev web build run test test-integration test-web typecheck-web contracts-check test-scripts coverage coverage-go coverage-web lint complexity-check fmt vuln openapi openapi-check check docker up down logs install-hooks scorecard e2e load-test smoke backup-drill postgres-upgrade-drill upgrade-drill
 
 BIN        ?= bin/mnema-talk
 S3_HOST_PORT ?= 8333
@@ -13,6 +13,7 @@ GO_PKGS    := ./...
 GO_INTEGRATION_PKG_FLAGS := $(if $(filter undefined,$(origin TEST_DATABASE_URL)),,-p=1)
 # Keep in sync with .github/workflows/ci.yml.
 GOVULNCHECK_VERSION ?= v1.8.0
+GOCOGNIT_VERSION ?= v1.2.0
 
 OPENAPI_FILE := api/openapi.json
 
@@ -106,12 +107,16 @@ coverage-web: $(WEB_DEPS) ## Frontend tests with coverage -> web/coverage/ (lcov
 fmt: ## Format Go code in place
 	gofmt -w cmd internal api web/web.go
 
-lint: $(WEB_DEPS) ## gofmt check, go vet, eslint
+lint: $(WEB_DEPS) ## gofmt check, go vet, cognitive complexity, eslint
 	@out="$$(gofmt -l cmd internal api web/web.go)"; \
 	if [ -n "$$out" ]; then echo "gofmt needed on:"; echo "$$out"; exit 1; fi
 	go vet $(GO_PKGS)
 	go vet -tags=integration $(GO_PKGS)
+	$(MAKE) --no-print-directory complexity-check
 	cd web && npm run lint
+
+complexity-check: ## Fail on Go functions above cognitive complexity 15 (scripts/complexity-allowlist.txt only shrinks); file and function length are checked by internal/repo
+	scripts/complexity-check.sh $(GOCOGNIT_VERSION)
 
 vuln: ## govulncheck (Go vulnerability scan)
 	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) $(GO_PKGS)
