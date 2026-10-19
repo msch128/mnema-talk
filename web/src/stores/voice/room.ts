@@ -28,50 +28,69 @@ export function setVoiceRooms(cs: VoiceState, payload: VoiceRooms) {
   cs.roomStartedAt.value = { ...(payload?.started || {}) }
 }
 
+/** The users of a room, created empty if the room is not known yet. */
+function roomOf(cs: VoiceState, channelId: string) {
+  if (!cs.channelUsers.value[channelId]) cs.channelUsers.value[channelId] = {}
+  return cs.channelUsers.value[channelId] ?? {}
+}
+
+function currentUserId(): string | null | undefined {
+  try {
+    return useAuthStore()?.user?.id
+  } catch {
+    // outside pinia/test context
+    return null
+  }
+}
+
+type JoinUpdate = Extract<VoiceStateUpdate, { action: 'join' }>
+
+function onUserJoined(cs: VoiceState, update: JoinUpdate, myId: string | null | undefined) {
+  const { channel_id, user } = update
+  roomOf(cs, channel_id)[user.id] = user
+  if (update.started_at) cs.roomStartedAt.value = { ...cs.roomStartedAt.value, [channel_id]: update.started_at }
+  if (cs.currentChannelId.value === channel_id && myId && user.id !== myId) {
+    playSoundEffect('user_join')
+  }
+}
+
+function onUserLeft(cs: VoiceState, channel_id: string, user_id: string, myId: string | null | undefined) {
+  const room = roomOf(cs, channel_id)
+  delete room[user_id]
+  if (!Object.keys(room).length) {
+    const next = { ...cs.roomStartedAt.value }
+    delete next[channel_id]
+    cs.roomStartedAt.value = next
+  }
+  // A delayed departure from another room must not clear this room's
+  // receiver streams or speaking state for a participant who moved here.
+  const leavesCurrentRoom = cs.currentChannelId.value === channel_id
+  const mediaChannelId = cs.mediaState.value[user_id]?.channel_id
+  if (leavesCurrentRoom || !cs.currentChannelId.value) {
+    delete cs.speakingUsers.value[user_id]
+    removeUserVideoStream(cs, user_id)
+  }
+  // Publication snapshots cover every room. Only retire the publication
+  // named by this departure, or a current-room share without a snapshot.
+  if (mediaChannelId === channel_id || (!mediaChannelId && (leavesCurrentRoom || !cs.currentChannelId.value))) {
+    handleMediaState(cs, { user_id })
+  }
+  if (cs.currentChannelId.value === channel_id && myId && user_id !== myId) {
+    playSoundEffect('user_leave')
+  }
+}
+
 export function handleVoiceStateUpdate(cs: VoiceState, update: VoiceStateUpdate) {
   const { action, channel_id } = update
   const user = update.action === 'join' ? update.user : null
   const user_id = update.action === 'leave' ? update.user_id : null
-  if (!cs.channelUsers.value[channel_id]) {
-    cs.channelUsers.value[channel_id] = {}
-  }
+  roomOf(cs, channel_id)
 
-  let myId: string | null | undefined = null
-  try {
-    myId = useAuthStore()?.user?.id
-  } catch {
-    // outside pinia/test context
-  }
-
-  if (action === 'join' && user) {
-    cs.channelUsers.value[channel_id][user.id] = user
-    if (update.action === 'join' && update.started_at) cs.roomStartedAt.value = { ...cs.roomStartedAt.value, [channel_id]: update.started_at }
-    if (cs.currentChannelId.value === channel_id && myId && user.id !== myId) {
-      playSoundEffect('user_join')
-    }
+  const myId = currentUserId()
+  if (action === 'join' && user && update.action === 'join') {
+    onUserJoined(cs, update, myId)
   } else if (action === 'leave' && user_id) {
-    delete cs.channelUsers.value[channel_id][user_id]
-    if (!Object.keys(cs.channelUsers.value[channel_id]).length) {
-      const next = { ...cs.roomStartedAt.value }
-      delete next[channel_id]
-      cs.roomStartedAt.value = next
-    }
-    // A delayed departure from another room must not clear this room's
-    // receiver streams or speaking state for a participant who moved here.
-    const leavesCurrentRoom = cs.currentChannelId.value === channel_id
-    const mediaChannelId = cs.mediaState.value[user_id]?.channel_id
-    if (leavesCurrentRoom || !cs.currentChannelId.value) {
-      delete cs.speakingUsers.value[user_id]
-      removeUserVideoStream(cs, user_id)
-    }
-    // Publication snapshots cover every room. Only retire the publication
-    // named by this departure, or a current-room share without a snapshot.
-    if (mediaChannelId === channel_id || (!mediaChannelId && (leavesCurrentRoom || !cs.currentChannelId.value))) {
-      handleMediaState(cs, { user_id })
-    }
-    if (cs.currentChannelId.value === channel_id && myId && user_id !== myId) {
-      playSoundEffect('user_leave')
-    }
+    onUserLeft(cs, channel_id, user_id, myId)
   }
 }
 

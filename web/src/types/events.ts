@@ -161,76 +161,95 @@ function roomUser(value: Record<string, unknown>): boolean {
   return isIdentifier(value['channel_id']) && isIdentifier(value['user_id'])
 }
 
+type RecordCheck = (payload: Record<string, unknown>) => boolean
+
+// Events whose payload is not a JSON object (null, an array or a user map).
+const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
+  ['channels_changed', payload => payload === null],
+  ['permissions_changed', payload => payload === null],
+  ['roles_changed', payload => payload === null],
+  ['member_joined', isAuthUser],
+  ['message_create', isChatMessage],
+  ['message_update', isChatMessage],
+  ['presence_snapshot', payload => isArrayOf(payload, isIdentifier) || isDictionaryOf(payload, isPresence)],
+  ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
+])
+
+function isReadStateUpdate(payload: Record<string, unknown>): boolean {
+  if (!isIdentifier(payload['channel_id'])) return false
+  if (hasOwn(payload, 'refresh')) return payload['refresh'] === true && isTimestamp(payload['last_read_at'])
+    && onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
+  if (hasOwn(payload, 'notify_level')) return isChatNotifyLevel(payload['notify_level'])
+    && onlyFields(payload, ['channel_id', 'notify_level'])
+  return (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
+    && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
+    && onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
+}
+
+function isInteractionResponse(payload: Record<string, unknown>): boolean {
+  return isIdentifier(payload['channel_id']) && isIdentifier(payload['bot_id']) && isString(payload['bot_name'], 64)
+    && (!hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)) && isString(payload['content'], 8_000)
+    && (payload['embeds'] === null || isArrayOf(payload['embeds'], isNoteEmbed)) && isTimestamp(payload['created_at'])
+}
+
+function isModerationNotice(payload: Record<string, unknown>): boolean {
+  return ['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'].includes(String(payload['kind']))
+    && isString(payload['reason'], 400)
+    && (!hasOwn(payload, 'channel_name') || isString(payload['channel_name'], 128))
+    && (!hasOwn(payload, 'count') || isInteger(payload['count']))
+    && (!hasOwn(payload, 'until') || isTimestamp(payload['until']))
+    && (!hasOwn(payload, 'duration_seconds') || isInteger(payload['duration_seconds']))
+}
+
+// Events whose payload is a JSON object, by event type.
+const OBJECT_CHECKS = new Map<string, RecordCheck>([
+  ['pong', payload => typeof payload['t'] === 'number' && Number.isFinite(payload['t'])],
+  ['server_info', payload => isString(payload['version'], 64)
+    && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))],
+  ['system_update', payload => isString(payload['version'], 64)],
+  ['presence_update', payload => isIdentifier(payload['user_id']) && isPresence(payload['status'])
+    && (!hasOwn(payload, 'activity') || isBotActivity(payload['activity']))],
+  ['typing', roomUser],
+  ['read_state', isReadStateUpdate],
+  ['message_delete', payload => isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
+    && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))],
+  ['message_reaction', payload => isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
+    && isArrayOf(payload['reactions'], isChatReactionSummary)],
+  ['interaction_response', isInteractionResponse],
+  ['user_update', payload => hasOwn(payload, 'disabled')
+    ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
+    : isAuthUser(payload)],
+  ['member_timeout', payload => isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
+    && onlyFields(payload, ['id', 'timeout_until'])],
+  ['moderation_notice', isModerationNotice],
+  ['webrtc_offer', payload => payload['type'] === 'offer' && isString(payload['sdp'], 262_144)],
+  ['webrtc_candidate', isIceCandidate],
+  ['voice_state_update', payload => isIdentifier(payload['channel_id']) && (
+    payload['action'] === 'leave' ? isIdentifier(payload['user_id'])
+      : payload['action'] === 'join' && isVoiceUser(payload['user']) && isTimestamp(payload['started_at']))],
+  ['voice_rooms', payload => isDictionaryOf(payload['started'], isTimestamp) && isTimestamp(payload['now'])],
+  ['user_stats', payload => isIdentifier(payload['user_id']) && isInteger(payload['voice_seconds'])],
+  ['webrtc_media_state', payload => roomUser(payload) && typeof payload['screen'] === 'boolean' && typeof payload['camera'] === 'boolean'],
+  ['screen_viewers', payload => roomUser(payload) && isArrayOf(payload['viewers'], isIdentifier)],
+  ['screen_layers', payload => roomUser(payload) && isArrayOf(payload['layers'], isScreenLayer) && (payload['layers'] as unknown[]).length <= MAX_SCREEN_LAYERS],
+  ['screen_quality', payload => roomUser(payload) && isInteger(payload['layer']) && payload['layer'] >= -1 && payload['layer'] < MAX_SCREEN_LAYERS
+    && typeof payload['auto'] === 'boolean'],
+  ['screen_layers_wanted', payload => isIdentifier(payload['channel_id']) && isArrayOf(payload['layers'], isLayerIndex)],
+  ['voice_speaking', payload => roomUser(payload) && typeof payload['active'] === 'boolean'],
+  ['voice_mute_state', payload => roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'],
+  ['voice_kicked', payload => isIdentifier(payload['channel_id'])
+    && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full' || payload['reason'] === 'missing_permission')],
+  ['media_handshake', payload => isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
+    && isString(payload['wire'], 48_000) && payload['wire'] !== '']
+])
+
 export function isServerEvent(value: unknown): value is ServerEvent {
   if (!isRecord(value) || typeof value['type'] !== 'string') return false
   const payload = value['payload']
-  switch (value['type']) {
-    case 'channels_changed':
-    case 'permissions_changed':
-    case 'roles_changed': return payload === null
-    case 'member_joined': return isAuthUser(payload)
-    case 'message_create':
-    case 'message_update': return isChatMessage(payload)
-    case 'presence_snapshot': return isArrayOf(payload, isIdentifier) || isDictionaryOf(payload, isPresence)
-    case 'voice_snapshot': return isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))
-  }
+  const direct = NON_OBJECT_CHECKS.get(value['type'])
+  if (direct) return direct(payload)
   if (!isRecord(payload)) return false
-  switch (value['type']) {
-    case 'pong': return typeof payload['t'] === 'number' && Number.isFinite(payload['t'])
-    case 'server_info': return isString(payload['version'], 64)
-      && (!hasOwn(payload, 'screen_layers') || (isInteger(payload['screen_layers']) && payload['screen_layers'] >= 0 && payload['screen_layers'] <= MAX_SCREEN_LAYERS))
-    case 'system_update': return isString(payload['version'], 64)
-    case 'presence_update': return isIdentifier(payload['user_id']) && isPresence(payload['status'])
-      && (!hasOwn(payload, 'activity') || isBotActivity(payload['activity']))
-    case 'typing': return roomUser(payload)
-    case 'read_state':
-      if (!isIdentifier(payload['channel_id'])) return false
-      if (hasOwn(payload, 'refresh')) return payload['refresh'] === true && isTimestamp(payload['last_read_at'])
-        && onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
-      if (hasOwn(payload, 'notify_level')) return isChatNotifyLevel(payload['notify_level'])
-        && onlyFields(payload, ['channel_id', 'notify_level'])
-      return (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
-        && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
-        && onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
-    case 'message_delete': return isIdentifier(payload['id']) && isIdentifier(payload['channel_id'])
-      && (payload['parent_id'] === null || isIdentifier(payload['parent_id']))
-    case 'message_reaction': return isIdentifier(payload['message_id']) && (!hasOwn(payload, 'channel_id') || isIdentifier(payload['channel_id']))
-      && isArrayOf(payload['reactions'], isChatReactionSummary)
-    case 'interaction_response': return isIdentifier(payload['channel_id']) && isIdentifier(payload['bot_id']) && isString(payload['bot_name'], 64)
-      && (!hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)) && isString(payload['content'], 8_000)
-      && (payload['embeds'] === null || isArrayOf(payload['embeds'], isNoteEmbed)) && isTimestamp(payload['created_at'])
-    case 'user_update': return hasOwn(payload, 'disabled')
-      ? isIdentifier(payload['id']) && typeof payload['disabled'] === 'boolean' && onlyFields(payload, ['id', 'disabled'])
-      : isAuthUser(payload)
-    case 'member_timeout': return isIdentifier(payload['id']) && (payload['timeout_until'] === null || isTimestamp(payload['timeout_until']))
-      && onlyFields(payload, ['id', 'timeout_until'])
-    case 'moderation_notice': return ['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'].includes(String(payload['kind']))
-      && isString(payload['reason'], 400)
-      && (!hasOwn(payload, 'channel_name') || isString(payload['channel_name'], 128))
-      && (!hasOwn(payload, 'count') || isInteger(payload['count']))
-      && (!hasOwn(payload, 'until') || isTimestamp(payload['until']))
-      && (!hasOwn(payload, 'duration_seconds') || isInteger(payload['duration_seconds']))
-    case 'webrtc_offer': return payload['type'] === 'offer' && isString(payload['sdp'], 262_144)
-    case 'webrtc_candidate': return isIceCandidate(payload)
-    case 'voice_state_update': return isIdentifier(payload['channel_id']) && (
-      payload['action'] === 'leave' ? isIdentifier(payload['user_id'])
-        : payload['action'] === 'join' && isVoiceUser(payload['user']) && isTimestamp(payload['started_at']))
-    case 'voice_rooms': return isDictionaryOf(payload['started'], isTimestamp) && isTimestamp(payload['now'])
-    case 'user_stats': return isIdentifier(payload['user_id']) && isInteger(payload['voice_seconds'])
-    case 'webrtc_media_state': return roomUser(payload) && typeof payload['screen'] === 'boolean' && typeof payload['camera'] === 'boolean'
-    case 'screen_viewers': return roomUser(payload) && isArrayOf(payload['viewers'], isIdentifier)
-    case 'screen_layers': return roomUser(payload) && isArrayOf(payload['layers'], isScreenLayer) && (payload['layers'] as unknown[]).length <= MAX_SCREEN_LAYERS
-    case 'screen_quality': return roomUser(payload) && isInteger(payload['layer']) && payload['layer'] >= -1 && payload['layer'] < MAX_SCREEN_LAYERS
-      && typeof payload['auto'] === 'boolean'
-    case 'screen_layers_wanted': return isIdentifier(payload['channel_id']) && isArrayOf(payload['layers'], isLayerIndex)
-    case 'voice_speaking': return roomUser(payload) && typeof payload['active'] === 'boolean'
-    case 'voice_mute_state': return roomUser(payload) && typeof payload['muted'] === 'boolean' && typeof payload['deafened'] === 'boolean'
-    case 'voice_kicked': return isIdentifier(payload['channel_id'])
-      && (!hasOwn(payload, 'reason') || payload['reason'] === 'room_full' || payload['reason'] === 'missing_permission')
-    case 'media_handshake': return isIdentifier(payload['channel_id']) && isIdentifier(payload['user_id'])
-      && isString(payload['wire'], 48_000) && payload['wire'] !== ''
-    default: return false
-  }
+  return OBJECT_CHECKS.get(value['type'])?.(payload) ?? false
 }
 
 function isNoteEmbed(value: unknown): boolean {

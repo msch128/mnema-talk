@@ -31,6 +31,34 @@ function loadSavedScreenQuality(): ScreenQuality {
   return { ...DEFAULT_STREAM_QUALITY }
 }
 
+/** The streams, publications and rooms of the call (shallow refs for MediaStream instances so Vue doesn't deeply wrap them). */
+function mediaState() {
+  return {
+    localScreenStream: shallowRef<MediaStream | null>(null),
+    localAudioStream: shallowRef<MediaStream | null>(null),
+    remoteScreenStream: shallowRef<MediaStream | null>(null),
+    remoteScreenUserId: ref<string | null>(null),
+    remoteScreenStreams: shallowRef<Record<string, MediaStream>>({}),
+    ownScreenFocused: ref(false),
+    focusedCamera: ref<string | null>(null),
+    watchedScreens: ref<Record<string, boolean>>({}),
+    mediaState: ref<Record<string, Omit<MediaState, 'user_id'>>>({}),
+    screenViewers: ref<Record<string, string[]>>({}),
+    screenLayers: ref<Record<string, ScreenLayer[]>>({}),
+    receivedLayer: ref<Record<string, { layer: number, auto: boolean }>>({}),
+    screenChoice: ref<Record<string, number | 'auto'>>({}),
+    serverScreenLayers: ref(0),
+    layersWanted: ref<number[] | null>(null),
+    localCameraStream: shallowRef<MediaStream | null>(null),
+    userVideoStreams: shallowRef<Record<string, MediaStream>>({}),
+    channelUsers: ref<VoiceSnapshot>({}),
+    // Map of userId -> boolean (true if speaking)
+    speakingUsers: ref<Record<string, boolean>>({}),
+    // channelId -> ISO time the room got its first member (for the Talk timer).
+    roomStartedAt: ref<Record<string, string>>({})
+  }
+}
+
 /** Everything the voice store keeps; the modules in this folder read and write it as `cs`. */
 export function createVoiceState() {
   const pingHistory = ref<number[]>([])
@@ -69,29 +97,7 @@ export function createVoiceState() {
     availableInputDevices: ref<MediaDeviceInfo[]>([]),
     availableOutputDevices: ref<MediaDeviceInfo[]>([]),
 
-    // Shallow refs for MediaStream instances so Vue doesn't deeply wrap them
-    localScreenStream: shallowRef<MediaStream | null>(null),
-    localAudioStream: shallowRef<MediaStream | null>(null),
-    remoteScreenStream: shallowRef<MediaStream | null>(null),
-    remoteScreenUserId: ref<string | null>(null),
-    remoteScreenStreams: shallowRef<Record<string, MediaStream>>({}),
-    ownScreenFocused: ref(false),
-    focusedCamera: ref<string | null>(null),
-    watchedScreens: ref<Record<string, boolean>>({}),
-    mediaState: ref<Record<string, Omit<MediaState, 'user_id'>>>({}),
-    screenViewers: ref<Record<string, string[]>>({}),
-    screenLayers: ref<Record<string, ScreenLayer[]>>({}),
-    receivedLayer: ref<Record<string, { layer: number, auto: boolean }>>({}),
-    screenChoice: ref<Record<string, number | 'auto'>>({}),
-    serverScreenLayers: ref(0),
-    layersWanted: ref<number[] | null>(null),
-    localCameraStream: shallowRef<MediaStream | null>(null),
-    userVideoStreams: shallowRef<Record<string, MediaStream>>({}),
-    channelUsers: ref<VoiceSnapshot>({}),
-    // Map of userId -> boolean (true if speaking)
-    speakingUsers: ref<Record<string, boolean>>({}),
-    // channelId -> ISO time the room got its first member (for the Talk timer).
-    roomStartedAt: ref<Record<string, string>>({}),
+    ...mediaState(),
 
     // Persisted settings (inputMode, volumes, devices, noise handling, sound effects) and per-user playback.
     settings: useVoiceSettings(),

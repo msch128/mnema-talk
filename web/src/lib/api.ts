@@ -104,6 +104,30 @@ class BrowserPreparationFailure {
   constructor(readonly cause: unknown) {}
 }
 
+/** Sends one request; anything but a well-formed reply is a network error (a native or browser abort passes through). */
+async function sendRequest(transport: ApiTransport, path: string, operation: ApiRequest): Promise<ApiReply> {
+  let response: ApiReply
+  try {
+    response = await transport(path, operation)
+  } catch (error: unknown) {
+    if (error instanceof BrowserPreparationFailure) throw error.cause
+    if (isRecord(error) && error['name'] === 'AbortError') throw error
+    throw new ApiError(0, 'NETWORK', t('errors.network'))
+  }
+  if (!isRecord(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
+    throw new ApiError(0, 'NETWORK', t('errors.network'))
+  }
+  return response
+}
+
+/** The error a non-2xx reply stands for, from the server's {error: {code, message}} body. */
+function serverFailure(status: number, body: unknown) {
+  const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
+  const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
+    ? serverError['code'] : 'INTERNAL_ERROR'
+  return new ApiError(status, code, errorMessage(code, serverError?.['message']))
+}
+
 export interface ApiClient {
   readonly api: ApiCall
   readonly onUnauthorized: (handler: UnauthorizedHandler) => () => boolean
@@ -121,24 +145,11 @@ export function createApiClient(transport: ApiTransport): ApiClient {
       ...(json !== undefined ? { json } : form ? { form } : {}),
       ...(signal !== undefined ? { signal } : {})
     }
-    let response: ApiReply
-    try {
-      response = await transport(path, operation)
-    } catch (error: unknown) {
-      if (error instanceof BrowserPreparationFailure) throw error.cause
-      if (isRecord(error) && error['name'] === 'AbortError') throw error
-      throw new ApiError(0, 'NETWORK', t('errors.network'))
-    }
-    if (!isRecord(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
-      throw new ApiError(0, 'NETWORK', t('errors.network'))
-    }
+    const response = await sendRequest(transport, path, operation)
     if (response.status === 204) return decode ? decode(null) : null
     const body = response.body
     if (response.status < 200 || response.status >= 300) {
-      const serverError = isRecord(body) && isRecord(body['error']) ? body['error'] : null
-      const code = typeof serverError?.['code'] === 'string' && serverError['code'].length <= 64
-        ? serverError['code'] : 'INTERNAL_ERROR'
-      const error = new ApiError(response.status, code, errorMessage(code, serverError?.['message']))
+      const error = serverFailure(response.status, body)
       if (response.status === 401 && path !== '/api/auth/login' && (shouldNotifyUnauthorized?.() ?? true)) {
         requestUnauthorizedHandlers.forEach(subscription => {
           if (unauthorizedHandlers.has(subscription)) subscription.handler(error)

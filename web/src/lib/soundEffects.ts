@@ -73,6 +73,78 @@ function playTone(ctx: AudioContext, dest: AudioNode, { freq, endFreq, startTime
  */
 export type SoundEvent = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'user_join' | 'user_leave' | 'ptt_start' | 'ptt_stop'
 
+/** One tone of an effect: `at` seconds after it starts. */
+type ToneSpec = Omit<Tone, 'startTime'> & { at: number }
+
+const SOUND_TONES: Record<SoundEvent, ToneSpec[]> = {
+  // Discord voice connect: ascending 3-note melody (G4 -> C5 -> E5 + C6)
+  join: [
+    { freq: 392.0, at: 0, duration: 0.07, gain: 0.45 },
+    { freq: 523.25, at: 0.07, duration: 0.07, gain: 0.45 },
+    { freq: 659.25, at: 0.14, duration: 0.28, gain: 0.4 },
+    { freq: 1046.5, at: 0.14, duration: 0.28, gain: 0.15 }
+  ],
+  // Discord voice disconnect: descending 3-note chime (E5 -> C5 -> G4)
+  leave: [
+    { freq: 659.25, at: 0, duration: 0.07, gain: 0.45 },
+    { freq: 523.25, at: 0.07, duration: 0.07, gain: 0.45 },
+    { freq: 392.0, at: 0.14, duration: 0.25, gain: 0.4 }
+  ],
+  // Discord mic mute: quick snappy two-tone drop (460 -> 340 Hz)
+  mute: [{ freq: 460, endFreq: 340, at: 0, duration: 0.09, gain: 0.5 }],
+  // Discord mic unmute: quick snappy two-tone rise (340 -> 480 Hz)
+  unmute: [{ freq: 340, endFreq: 480, at: 0, duration: 0.09, gain: 0.5 }],
+  // Discord deafen: muffled low-frequency drop (through a low-pass filter, see playEffectTones)
+  deafen: [{ freq: 360, endFreq: 220, at: 0, duration: 0.12, gain: 0.55 }],
+  // Discord undeafen: bright two-tone rise
+  undeafen: [{ freq: 240, endFreq: 440, at: 0, duration: 0.12, gain: 0.5 }],
+  // Soft gentle two-note chime for remote user joining
+  user_join: [
+    { freq: 523.25, at: 0, duration: 0.06, gain: 0.25 },
+    { freq: 659.25, at: 0.06, duration: 0.18, gain: 0.25 }
+  ],
+  // Soft gentle two-note chime for remote user leaving
+  user_leave: [
+    { freq: 659.25, at: 0, duration: 0.06, gain: 0.25 },
+    { freq: 523.25, at: 0.06, duration: 0.18, gain: 0.25 }
+  ],
+  // Subtle ascending PTT activate chirp
+  ptt_start: [{ freq: 650, endFreq: 850, at: 0, duration: 0.04, gain: 0.25 }],
+  // Subtle descending PTT deactivate chirp
+  ptt_stop: [{ freq: 850, endFreq: 650, at: 0, duration: 0.04, gain: 0.25 }]
+}
+
+/** The muffling low-pass the deafen sound plays through, or null if the browser has none. */
+function deafenFilter(ctx: AudioContext, destination: AudioNode, now: number) {
+  const filter = ctx.createBiquadFilter?.()
+  if (!filter) return null
+  filter.type = 'lowpass'
+  if (typeof filter.frequency?.setValueAtTime === 'function') {
+    filter.frequency.setValueAtTime(1000, now)
+  }
+  filter.connect?.(destination)
+  return filter
+}
+
+function playEffectTones(ctx: AudioContext, masterGain: AudioNode, name: SoundEvent, now: number) {
+  const dest = name === 'deafen' ? deafenFilter(ctx, masterGain, now) ?? masterGain : masterGain
+  for (const { at, ...tone } of SOUND_TONES[name] ?? []) playTone(ctx, dest, { ...tone, startTime: now + at })
+}
+
+/** The master gain every effect goes through, at the (clamped) volume. */
+function createMasterGain(ctx: AudioContext, volume: number, now: number) {
+  const masterGain = ctx.createGain()
+  if (!masterGain) return null
+  const clampedVol = Math.min(1, Math.max(0, volume))
+  if (typeof masterGain.gain?.setValueAtTime === 'function') {
+    masterGain.gain.setValueAtTime(clampedVol, now)
+  } else if (masterGain.gain) {
+    masterGain.gain.value = clampedVol
+  }
+  masterGain.connect?.(ctx.destination)
+  return masterGain
+}
+
 export function playSoundEffect(name: SoundEvent, overrideVolume: number | null = null, force = false) {
   let voiceStore = null
   try {
@@ -96,95 +168,7 @@ export function playSoundEffect(name: SoundEvent, overrideVolume: number | null 
   if (!ctx) return
 
   const now = ctx.currentTime || 0
-  const masterGain = ctx.createGain()
+  const masterGain = createMasterGain(ctx, masterVol, now)
   if (!masterGain) return
-  const clampedVol = Math.min(1, Math.max(0, masterVol))
-  if (typeof masterGain.gain?.setValueAtTime === 'function') {
-    masterGain.gain.setValueAtTime(clampedVol, now)
-  } else if (masterGain.gain) {
-    masterGain.gain.value = clampedVol
-  }
-  masterGain.connect?.(ctx.destination)
-
-  switch (name) {
-    case 'join': {
-      // Discord voice connect: ascending 3-note melody (G4 -> C5 -> E5 + C6)
-      playTone(ctx, masterGain, { freq: 392.0, startTime: now, duration: 0.07, gain: 0.45 })
-      playTone(ctx, masterGain, { freq: 523.25, startTime: now + 0.07, duration: 0.07, gain: 0.45 })
-      playTone(ctx, masterGain, { freq: 659.25, startTime: now + 0.14, duration: 0.28, gain: 0.4 })
-      playTone(ctx, masterGain, { freq: 1046.5, startTime: now + 0.14, duration: 0.28, gain: 0.15 })
-      break
-    }
-
-    case 'leave': {
-      // Discord voice disconnect: descending 3-note chime (E5 -> C5 -> G4)
-      playTone(ctx, masterGain, { freq: 659.25, startTime: now, duration: 0.07, gain: 0.45 })
-      playTone(ctx, masterGain, { freq: 523.25, startTime: now + 0.07, duration: 0.07, gain: 0.45 })
-      playTone(ctx, masterGain, { freq: 392.0, startTime: now + 0.14, duration: 0.25, gain: 0.4 })
-      break
-    }
-
-    case 'mute': {
-      // Discord mic mute: quick snappy two-tone drop (460 -> 340 Hz)
-      playTone(ctx, masterGain, { freq: 460, endFreq: 340, startTime: now, duration: 0.09, gain: 0.5 })
-      break
-    }
-
-    case 'unmute': {
-      // Discord mic unmute: quick snappy two-tone rise (340 -> 480 Hz)
-      playTone(ctx, masterGain, { freq: 340, endFreq: 480, startTime: now, duration: 0.09, gain: 0.5 })
-      break
-    }
-
-    case 'deafen': {
-      // Discord deafen: muffled low-frequency drop
-      const filter = ctx.createBiquadFilter?.()
-      if (filter) {
-        filter.type = 'lowpass'
-        if (typeof filter.frequency?.setValueAtTime === 'function') {
-          filter.frequency.setValueAtTime(1000, now)
-        }
-        filter.connect?.(masterGain)
-        playTone(ctx, filter, { freq: 360, endFreq: 220, startTime: now, duration: 0.12, gain: 0.55 })
-      } else {
-        playTone(ctx, masterGain, { freq: 360, endFreq: 220, startTime: now, duration: 0.12, gain: 0.55 })
-      }
-      break
-    }
-
-    case 'undeafen': {
-      // Discord undeafen: bright two-tone rise
-      playTone(ctx, masterGain, { freq: 240, endFreq: 440, startTime: now, duration: 0.12, gain: 0.5 })
-      break
-    }
-
-    case 'user_join': {
-      // Soft gentle two-note chime for remote user joining
-      playTone(ctx, masterGain, { freq: 523.25, startTime: now, duration: 0.06, gain: 0.25 })
-      playTone(ctx, masterGain, { freq: 659.25, startTime: now + 0.06, duration: 0.18, gain: 0.25 })
-      break
-    }
-
-    case 'user_leave': {
-      // Soft gentle two-note chime for remote user leaving
-      playTone(ctx, masterGain, { freq: 659.25, startTime: now, duration: 0.06, gain: 0.25 })
-      playTone(ctx, masterGain, { freq: 523.25, startTime: now + 0.06, duration: 0.18, gain: 0.25 })
-      break
-    }
-
-    case 'ptt_start': {
-      // Subtle ascending PTT activate chirp
-      playTone(ctx, masterGain, { freq: 650, endFreq: 850, startTime: now, duration: 0.04, gain: 0.25 })
-      break
-    }
-
-    case 'ptt_stop': {
-      // Subtle descending PTT deactivate chirp
-      playTone(ctx, masterGain, { freq: 850, endFreq: 650, startTime: now, duration: 0.04, gain: 0.25 })
-      break
-    }
-
-    default:
-      break
-  }
+  playEffectTones(ctx, masterGain, name, now)
 }

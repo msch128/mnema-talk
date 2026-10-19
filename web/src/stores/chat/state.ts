@@ -9,9 +9,9 @@ import { MARK_READ_INTERVAL_MS, type EphemeralNote, type ProfilePreview, type Th
 
 type Handler<K extends keyof ServerEventPayloads> = ((payload: ServerEventPayloads[K]) => void | Promise<void>) | null
 
-/** Everything the chat store keeps; the modules in this folder read and write it through Cx. */
-export function createChatState(markRead: (channelId: string) => void) {
-  const base = {
+/** The channels, the open channel with its windowed history and thread, and the socket. */
+function channelState() {
+  return {
     communityGeneration: 0,
     categories: ref<Category[]>([]),
     uncategorized: ref<Channel[]>([]),
@@ -33,8 +33,13 @@ export function createChatState(markRead: (channelId: string) => void) {
     threadReplies: ref<Message[]>([]),
     isThreadLoading: ref(false),
     ws: shallowRef<PlatformSocket | null>(null),
-    isConnected: ref(false),
+    isConnected: ref(false)
+  }
+}
 
+/** Members, presence, read states, typing and notification permission. */
+function memberState() {
+  return {
     // Community members & real-time presence
     members: ref<Member[]>([]),
     // Replies to slash commands that only this member sees; kept in memory, never stored.
@@ -71,8 +76,13 @@ export function createChatState(markRead: (channelId: string) => void) {
     // Desktop notification permission: 'default' | 'granted' | 'denied' | 'unsupported'
     notificationPermission: ref<string>(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission),
     // Thread to open once the jump to its root message has landed (search / notification targets).
-    pendingThreadOpen: null as { rootId: string; channelId: string } | null,
+    pendingThreadOpen: null as { rootId: string; channelId: string } | null
+  }
+}
 
+/** Socket generations, timers and the handlers the voice layer installs. */
+function socketState() {
+  return {
     socketGeneration: 0,
     reconnectCheckSeq: 0,
     pingTimer: undefined as Timer | undefined,
@@ -81,8 +91,13 @@ export function createChatState(markRead: (channelId: string) => void) {
     webrtcOfferHandler: null as Handler<'webrtc_offer'>,
     webrtcCandidateHandler: null as Handler<'webrtc_candidate'>,
     voiceKickedHandler: null as Handler<'voice_kicked'>,
-    mediaHandshakeHandler: null as Handler<'media_handshake'>,
+    mediaHandshakeHandler: null as Handler<'media_handshake'>
+  }
+}
 
+/** Fetch ordering, window generations, reconnect bookkeeping and idle tracking. */
+function syncState(markRead: (channelId: string) => void) {
+  return {
     // Overlapping fetches (a channels_changed broadcast while a refetch runs)
     // may answer out of order; only the latest one counts. A superseded fetch
     // resolves once the latest one is applied, so whoever awaits it (e.g. the
@@ -117,6 +132,16 @@ export function createChatState(markRead: (channelId: string) => void) {
     lastActivityAt: 0,
     suppressAutoReadFor: null as string | null,
     markReadThrottled: createKeyedThrottle(markRead, MARK_READ_INTERVAL_MS)
+  }
+}
+
+/** Everything the chat store keeps; the modules in this folder read and write it through Cx. */
+export function createChatState(markRead: (channelId: string) => void) {
+  const base = {
+    ...channelState(),
+    ...memberState(),
+    ...socketState(),
+    ...syncState(markRead)
   }
   const allChannels = computed(() => [
     ...base.categories.value.flatMap(c => c.channels),

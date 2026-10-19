@@ -115,11 +115,7 @@ export default tseslint.config(
   // add entries or raise a limit.
   {
     files: [
-      'web/src/lib/api.ts',
-      'web/src/lib/channelLayout.ts',
       'web/src/lib/crypto/stateStore.ts',
-      'web/src/lib/desktopGaming.ts',
-      'web/src/lib/dfnBridgeWorklet.ts',
       'web/src/lib/media/browserCall.ts',
       'web/src/lib/media/frame.ts',
       'web/src/lib/media/group.ts',
@@ -130,21 +126,7 @@ export default tseslint.config(
       'web/src/lib/nativeAdmin.ts',
       'web/src/lib/nativeChatApi.ts',
       'web/src/lib/nativeTransport.ts',
-      'web/src/lib/rtcStats.ts',
-      'web/src/lib/soundEffects.ts',
-      'web/src/lib/streamQuality.ts',
-      'web/src/lib/trustPort.ts',
-      'web/src/lib/voicePlayback.ts',
-      'web/src/stores/auth.ts',
-      'web/src/stores/chat.ts',
-      'web/src/stores/chat/events.ts',
-      'web/src/stores/chat/members.ts',
-      'web/src/stores/chat/state.ts',
-      'web/src/stores/permissions.ts',
-      'web/src/stores/voice.ts',
-      'web/src/stores/voice/room.ts',
-      'web/src/stores/voice/state.ts',
-      'web/src/types/events.ts'
+      'web/src/lib/trustPort.ts'
     ],
     rules: { 'max-lines-per-function': 'off', 'sonarjs/cognitive-complexity': 'off' }
   },
