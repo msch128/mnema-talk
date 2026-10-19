@@ -115,15 +115,6 @@ export default tseslint.config(
   // add entries or raise a limit.
   {
     files: [
-      'web/src/composables/webrtc/layers.ts',
-      'web/src/composables/webrtc/micPipeline.ts',
-      'web/src/composables/webrtc/micTest.ts',
-      'web/src/composables/webrtc/peer.ts',
-      'web/src/composables/webrtc/screen.ts',
-      'web/src/composables/webrtc/sdp.ts',
-      'web/src/composables/webrtc/senders.ts',
-      'web/src/composables/webrtc/streamDiag.ts',
-      'web/src/composables/webrtc/voiceAudio.ts',
       'web/src/lib/api.ts',
       'web/src/lib/channelLayout.ts',
       'web/src/lib/crypto/stateStore.ts',
