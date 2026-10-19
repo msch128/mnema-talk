@@ -243,13 +243,20 @@ const OBJECT_CHECKS = new Map<string, RecordCheck>([
     && isString(payload['wire'], 48_000) && payload['wire'] !== '']
 ])
 
+// The check registered for an event type. The wire-controlled name is only
+// compared, never used as a key or method name.
+function checkFor<T>(checks: ReadonlyMap<string, T>, type: string): T | undefined {
+  for (const [name, check] of checks) if (name === type) return check
+  return undefined
+}
+
 export function isServerEvent(value: unknown): value is ServerEvent {
   if (!isRecord(value) || typeof value['type'] !== 'string') return false
   const payload = value['payload']
-  const direct = NON_OBJECT_CHECKS.get(value['type'])
+  const direct = checkFor(NON_OBJECT_CHECKS, value['type'])
   if (direct) return direct(payload)
   if (!isRecord(payload)) return false
-  return OBJECT_CHECKS.get(value['type'])?.(payload) ?? false
+  return checkFor(OBJECT_CHECKS, value['type'])?.(payload) ?? false
 }
 
 function isNoteEmbed(value: unknown): boolean {
