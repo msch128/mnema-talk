@@ -1,0 +1,57 @@
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_7a593350b489d5 148
+  s_06fcde5dbef956::t_a929e98eb03154 125,128,132,138,145-147,149-179,244-245,247-261,264-271
+internal/chat/native_ciphertext.go
+  s_06fcde5dbef956::t_d9df0f6dfae485 139-140,146-147,155-197,204,206-207,212-214,221-238,240
+  s_06fcde5dbef956::t_a51e59be4fd77d 239
+internal/chat/search.go
+  s_06fcde5dbef956::t_94454929833fa0 107
+  s_06fcde5dbef956::t_8d4fac9fc78d55 102-106,108-132,135,142,165-170,181-182,184-194,196
+internal/media/handler.go
+  s_06fcde5dbef956::t_0a51c0a6714e69 131,137,139-140,142
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_f42405e0b1947b 83,86-87,89,98,109-148
+  s_06fcde5dbef956::t_d767c321f22950 149
+internal/s3/stream.go
+  s_06fcde5dbef956::t_f8917313c2f2bc 59-77,81,83-93,95-96,98-100,103-106,112,123,127-130,133
+internal/media/serve.go
+  s_06fcde5dbef956::t_0a51c0a6714e69 1-95
+internal/chat/embeds.go
+  s_06fcde5dbef956::t_2a864b902309f1 132,137,156,169,181,192-203,205-213,219-220,224,228,232
+  s_06fcde5dbef956::t_cb95e48383c518 118-127,129-131,133-136,138-139,141-143,145-146,148-155,158-159,161-168,171-173,175-180,183-185,187-191,214-218,221-223,225-227,229-231,233-236,238,241,244,248,251,253-255,257
+internal/linkpreview/linkpreview_html.go
+  s_06fcde5dbef956::t_2fe758c7143729 29,46-71
+  s_06fcde5dbef956::t_af88dbd4309fc4 72-73
+internal/media/orphans.go
+  s_06fcde5dbef956::t_2fe758c7143729 37,44-46,51-86,88-115,117,119
+internal/chat/channels.go
+  s_06fcde5dbef956::t_f42405e0b1947b 238-240,243,263-286
+  s_06fcde5dbef956::t_26dc752761a60e 287-288
+internal/chat/moderation.go
+  s_06fcde5dbef956::t_ef4a29cb86eb95 223-236,238-245,248,250,255,258-259,261,263,290-292,297-304,306-329,332-333,335-339
+  s_06fcde5dbef956::t_8ceb1fe88bf495 237
+internal/media/stream.go
+  s_06fcde5dbef956::t_e184a7d63f766e 56,58-59,72-73,76,79,83-124
+internal/chat/channel_layout.go
+  s_06fcde5dbef956::t_cbf43b4928a518 7,80,85,87,89,93-100,102-115,117-136,138-150,152-158
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_bd2df3be0c89ab 154,162-181
+internal/chat/messages.go
+  s_06fcde5dbef956::t_ab32964f71ad21 91-99,101-103,110,120-121,123-124,131,140-141,143-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f70c27bd186dbbb410704bd170838a62560ce2fd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
