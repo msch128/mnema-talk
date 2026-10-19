@@ -44,6 +44,8 @@ internal/audit/handler.go
 internal/perm/store_roles_order.go
   s_06fcde5dbef956::t_722788fa7b84ea 22,24-47
   s_06fcde5dbef956::t_04742439bfede3 1-21,23,48-81
+internal/repo/limits_test.go
+  s_06fcde5dbef956::t_02fe9d8de726c6 28
 ---
 {
   "schema_version": "authorship/3.0.0",
