@@ -52,6 +52,19 @@ func TestRouterRouteErrorsAreJSON(t *testing.T) {
 	(&Router{}).Close()
 }
 
+func TestProductionRouterHasNoNativeRoute(t *testing.T) {
+	router, err := NewRouter(Deps{Config: &config.Config{AllowedOrigins: []string{"http://example.test"}, JWTSecret: "router-test-secret-router-test-secret"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer router.Close()
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/native/v1/", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("GET /api/native/v1/ = %d, want 404", rec.Code)
+	}
+}
+
 func TestRunBindFailure(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

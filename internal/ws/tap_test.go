@@ -28,7 +28,7 @@ func TestTapSkipsPublicationsThatAreNotLive(t *testing.T) {
 	// A native connection without a live lease does not.
 	native := newClient(h, nil, auth.User{ID: uuid.New()}, 0) // not registered
 	tapped = nil
-	native.native = &nativeSocketState{}
+	markDormantNative(native)
 	tapped = nil
 	native.emitApplicationEvent("typing", nil, true, nil, ch)
 	if len(tapped) != 0 {

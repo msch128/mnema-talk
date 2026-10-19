@@ -37,6 +37,11 @@ type nativeBrokenBody struct{}
 func (nativeBrokenBody) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
 func (nativeBrokenBody) Close() error             { return nil }
 
+// markDormantNative gives c a native socket whose lease is not live.
+func markDormantNative(c *Client) {
+	c.native = &nativeSocketState{}
+}
+
 func TestNativeHeaderPresenceRejectsNoncanonicalAndEmptyKeys(t *testing.T) {
 	for _, key := range []string{"origin", "ORIGIN", "cookie", "COOKIE", "sec-websocket-protocol"} {
 		r := httptest.NewRequest(http.MethodGet, "https://example.invalid/api/native/v1/ws", nil)

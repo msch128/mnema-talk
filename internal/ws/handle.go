@@ -26,11 +26,7 @@ func (c *Client) handle(eventType string, payload json.RawMessage) {
 	if !c.commandsAllowed() {
 		return
 	}
-	parent := context.Background()
-	if c.native != nil {
-		parent = c.native.ctx
-	}
-	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	ctx, cancel := context.WithTimeout(c.commandContext(), 5*time.Second)
 	defer cancel()
 
 	var p clientEvent
@@ -151,10 +147,10 @@ func (c *Client) handleAnswer(payload json.RawMessage) {
 		return
 	}
 	if err := peer.SetAnswer(answer); err != nil {
-		if c.native == nil {
-			slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
-		} else {
+		if c.hasNativeLease() {
 			slog.Warn("native sfu answer rejected", "user", c.User.ID)
+		} else {
+			slog.Warn("sfu set remote description, the offer is sent again", "user", c.User.ID, "err", err)
 		}
 	}
 }
@@ -164,7 +160,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 	if json.Unmarshal(payload, &cand) != nil {
 		return
 	}
-	if c.native == nil {
+	if !c.hasNativeLease() {
 		slog.Debug("sfu remote candidate", "user", c.User.Username, "candidate", cand.Candidate)
 	}
 	if peer := c.peer(); peer != nil && c.commandsAllowed() {
@@ -177,7 +173,7 @@ func (c *Client) handleCandidate(payload json.RawMessage) {
 // handleDiag logs a browser's own view of its voice connection, for
 // troubleshooting.
 func (c *Client) handleDiag(payload json.RawMessage) {
-	if c.native == nil && len(payload) <= 4096 && c.allowDiag(time.Now()) {
+	if !c.hasNativeLease() && len(payload) <= 4096 && c.allowDiag(time.Now()) {
 		slog.Debug("webrtc client diag", "user", c.User.Username, "diag", json.RawMessage(payload))
 	}
 }

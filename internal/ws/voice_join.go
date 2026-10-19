@@ -8,7 +8,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/perm"
-	"github.com/msch128/mnema-talk/internal/sfu"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -153,12 +152,9 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 func (h *Hub) attachPeer(c *Client, chID uuid.UUID) bool {
 	sendOffer := func(offer webrtc.SessionDescription) { c.SendEvent("webrtc_offer", offer) }
 	sendICE := func(cand *webrtc.ICECandidateInit) { c.SendEvent("webrtc_candidate", cand) }
-	var peer *sfu.Peer
-	var err error
-	if c.native == nil {
+	peer, err, leased := c.joinLeasedVoice(h.SFU, chID, sendOffer, sendICE)
+	if !leased && c.commandsAllowed() {
 		_, peer, err = h.SFU.Join(chID, c.User.ID, sendOffer, sendICE)
-	} else {
-		_, peer, err = h.SFU.JoinWithAuthorization(chID, c.User.ID, sendOffer, sendICE, c.commandsAllowed)
 	}
 	if err != nil {
 		slog.Error("sfu join failed", "user", c.User.ID, "channel", chID, "err", err)
