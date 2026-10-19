@@ -1,0 +1,348 @@
+package sfu
+
+import (
+	"errors"
+	"io"
+	"log/slog"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/metrics"
+	"github.com/pion/rtp"
+	"github.com/pion/webrtc/v4"
+)
+
+// viewerTrack is the outgoing track of one viewer for a layered screen share.
+// It embeds a TrackLocalStaticRTP of its own, which Pion binds and writes to
+// like any other, so codec matching, SSRC and payload type stay Pion's
+// business; what this adds is choosing which layer's packets reach it and
+// keeping their numbering continuous across layer switches.
+type viewerTrack struct {
+	*webrtc.TrackLocalStaticRTP
+	group  *layerGroup
+	viewer uuid.UUID
+
+	// wantA and curA mirror want and cur for readers without the lock.
+	wantA atomic.Int32
+	curA  atomic.Int32
+
+	mu sync.Mutex
+	// pref is the viewer's choice (-1 automatic), want the layer it stands
+	// for, eff the layer that exists nearest to it and cur the layer being
+	// forwarded (-1 before the first keyframe).
+	pref, want, eff, cur int
+	// ad chooses the layer of a viewer who left it to the server (pref < 0).
+	ad         *adapter
+	closed     bool
+	started    bool
+	lastKeyAsk time.Time
+	// since is when the track was made, the stall clock until a first packet.
+	since time.Time
+	// Offsets that map the current layer's numbers onto the viewer's stream.
+	seqOff uint16
+	tsOff  uint32
+	picOff uint16
+	tl0Off uint8
+	// The last numbers sent to the viewer.
+	lastSeq uint16
+	lastTs  uint32
+	lastAt  time.Time
+	lastPic uint16
+	lastTl0 uint8
+	scratch []byte
+	// sink delivers a packet to the viewer: the track's own WriteRTP.
+	sink func(*rtp.Packet) error
+	// reported is the last state announced to the viewer.
+	reported   QualityState
+	hasRep     bool
+	qualityOut newest[QualityState]
+}
+
+// close ends delivery; the track itself is torn down by Pion.
+func (vt *viewerTrack) close() {
+	vt.mu.Lock()
+	vt.closed = true
+	vt.mu.Unlock()
+}
+
+// retarget re-resolves the layer this viewer should receive. A layer change
+// that waits for a keyframe asks the publisher for one.
+func (vt *viewerTrack) retarget() {
+	vt.mu.Lock()
+	if vt.ad != nil {
+		vt.ad.setFloor(vt.group.floor())
+		vt.want = vt.ad.layer
+		vt.wantA.Store(int32(vt.want))
+	}
+	vt.eff = vt.group.resolve(vt.want)
+	ask := vt.keyframeDueLocked(layerNow())
+	eff := vt.eff
+	vt.mu.Unlock()
+	if ask {
+		vt.group.requestKeyframe(eff)
+	}
+}
+
+// keyframeDueLocked reports whether a keyframe of the target layer should be
+// asked for now (and records the ask).
+func (vt *viewerTrack) keyframeDueLocked(now time.Time) bool {
+	if vt.closed || vt.eff < 0 || vt.eff == vt.cur || now.Sub(vt.lastKeyAsk) < keyframeRetry {
+		return false
+	}
+	vt.lastKeyAsk = now
+	return true
+}
+
+// setPref applies the viewer's choice: -1 automatic, else a layer index.
+func (vt *viewerTrack) setPref(pref int) {
+	vt.mu.Lock()
+	vt.pref = pref
+	switch {
+	case pref >= 0:
+		vt.ad = nil
+	case vt.ad == nil:
+		// Automatic carries on from the layer chosen so far.
+		vt.ad = newAdapter(layerNow(), vt.group.floor())
+		vt.ad.layer = min(vt.want, vt.ad.floor)
+	}
+	vt.want = vt.chosenLayer()
+	vt.wantA.Store(int32(vt.want))
+	vt.lastKeyAsk = time.Time{}
+	vt.mu.Unlock()
+	vt.retarget()
+	vt.group.refreshWanted()
+	vt.report(true)
+}
+
+// chosenLayer is the layer the viewer's choice stands for: the one it picked,
+// or the one the adapter has arrived at.
+func (vt *viewerTrack) chosenLayer() int {
+	if vt.ad != nil {
+		return vt.ad.layer
+	}
+	return vt.pref
+}
+
+// observeReport gives a receiver report of the viewer to the automatic choice.
+func (vt *viewerTrack) observeReport(loss float64, rtt time.Duration) {
+	vt.observeReportWithBandwidth(loss, rtt, 0)
+}
+
+// observeReportWithBandwidth is observeReport with the bandwidth estimate of
+// the viewer's connection in bits per second (zero when unknown).
+func (vt *viewerTrack) observeReportWithBandwidth(loss float64, rtt time.Duration, bandwidth int) {
+	now := layerNow()
+	vt.mu.Lock()
+	if vt.ad == nil || vt.closed {
+		vt.mu.Unlock()
+		return
+	}
+	vt.ad.setBandwidth(vt.bandwidthSampleLocked(now, bandwidth))
+	layer, changed := vt.ad.observe(now, loss, rtt)
+	if changed && vt.ad.narrowed {
+		metrics.SFUBandwidthMoves.Inc()
+	}
+	if !changed {
+		changed = vt.stalledLocked(now)
+		layer = vt.ad.layer
+	}
+	if changed {
+		vt.want = layer
+		vt.wantA.Store(int32(layer))
+	}
+	vt.mu.Unlock()
+	if changed {
+		vt.retarget()
+		vt.group.refreshWanted()
+	}
+}
+
+// bandwidthSampleLocked pairs the estimate with the bitrates of the layer
+// being received and the next better one, or reports nothing when any is
+// unknown or the viewer is not on the layer the adapter stands on.
+func (vt *viewerTrack) bandwidthSampleLocked(now time.Time, est int) (int, int, int) {
+	if est <= 0 || vt.cur < 0 || vt.cur != vt.ad.layer {
+		return 0, 0, 0
+	}
+	metrics.SFUBandwidth.With(metrics.BandwidthRange(est)).Inc()
+	g := vt.group
+	g.sampleRates(now)
+	next := 0
+	if vt.cur > 0 {
+		next = int(g.last[vt.cur-1].Load())
+	}
+	return est, int(g.rate[vt.cur].Load()), next
+}
+
+// stalledLocked moves an automatic viewer to a layer that delivers when
+// nothing has reached it for adaptStall (no packets mean no loss to report).
+func (vt *viewerTrack) stalledLocked(now time.Time) bool {
+	base := vt.lastAt
+	if base.IsZero() {
+		base = vt.since
+	}
+	if now.Sub(base) < adaptStall {
+		return false
+	}
+	to := vt.group.flowing(vt.ad.layer, now)
+	if to < 0 {
+		return false
+	}
+	return vt.ad.stalledTo(now, to)
+}
+
+// viewerKeyframe passes on the viewer's own keyframe request; for an automatic
+// viewer, repeated requests are a sign that it cannot decode what it gets.
+func (vt *viewerTrack) viewerKeyframe() {
+	now := layerNow()
+	vt.mu.Lock()
+	flood := false
+	if vt.ad != nil {
+		flood = !vt.ad.keyframeRequested(now)
+	}
+	vt.mu.Unlock()
+	if !flood {
+		vt.requestKeyframe()
+	}
+}
+
+// layerGone drops the viewer's current layer when it was idx.
+func (vt *viewerTrack) layerGone(idx int) {
+	vt.mu.Lock()
+	if vt.cur == idx {
+		vt.cur = -1
+		vt.curA.Store(-1)
+		// The picture stops: the next layer is asked for at once.
+		vt.lastKeyAsk = time.Time{}
+	}
+	vt.mu.Unlock()
+}
+
+// requestKeyframe passes the viewer's own keyframe request to the layer it
+// receives (or is about to).
+func (vt *viewerTrack) requestKeyframe() {
+	vt.mu.Lock()
+	idx := vt.cur
+	if idx < 0 {
+		idx = vt.eff
+	}
+	vt.mu.Unlock()
+	vt.group.requestKeyframe(idx)
+}
+
+// state is what the viewer currently receives.
+func (vt *viewerTrack) state() QualityState {
+	vt.mu.Lock()
+	defer vt.mu.Unlock()
+	return QualityState{Layer: vt.cur, Auto: vt.pref < 0}
+}
+
+// report tells the viewer what it receives when that changed (or always with
+// force).
+func (vt *viewerTrack) report(force bool) {
+	st := vt.state()
+	vt.mu.Lock()
+	same := vt.hasRep && vt.reported == st
+	vt.reported, vt.hasRep = st, true
+	closed := vt.closed
+	vt.mu.Unlock()
+	if closed || (same && !force) {
+		return
+	}
+	vt.group.notifyQuality(vt, st)
+}
+
+// write offers one packet of layer idx to the viewer.
+func (vt *viewerTrack) write(idx int, src *rtp.Packet) {
+	now := layerNow()
+	vt.mu.Lock()
+	switched, ask, eff := vt.writeLocked(idx, src, now)
+	vt.mu.Unlock()
+	if ask {
+		vt.group.requestKeyframe(eff)
+	}
+	if switched {
+		vt.group.refreshWanted()
+		vt.report(false)
+	}
+}
+
+func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (switched, ask bool, eff int) {
+	if vt.closed {
+		return false, false, -1
+	}
+	eff = vt.eff
+	if idx != vt.cur {
+		if idx != eff {
+			return false, false, eff
+		}
+		if !vt.group.keyStart(idx, src) {
+			return false, vt.keyframeDueLocked(now), eff
+		}
+		vt.switchLocked(idx, src, now)
+		switched = true
+	} else if eff != vt.cur {
+		// A switch is pending; the current layer's packets are the only
+		// ones flowing, so they carry the reminder to ask again.
+		ask = vt.keyframeDueLocked(now)
+	}
+
+	out := *src
+	out.Header.SequenceNumber = src.SequenceNumber + vt.seqOff
+	out.Header.Timestamp = src.Timestamp + vt.tsOff
+	if vt.group.kind == codecVP8 {
+		if d, ok := parseVP8(src.Payload); ok {
+			if d.picPos >= 0 {
+				vt.lastPic = d.pic + vt.picOff
+				if d.pic16 {
+					vt.lastPic &= 0x7fff
+				} else {
+					vt.lastPic &= 0x7f
+				}
+			}
+			if d.tl0Pos >= 0 {
+				vt.lastTl0 = d.tl0 + vt.tl0Off
+			}
+			if vt.picOff != 0 || vt.tl0Off != 0 {
+				vt.scratch = patchVP8(vt.scratch, src.Payload, d, vt.picOff, vt.tl0Off)
+				out.Payload = vt.scratch
+			}
+		}
+	}
+	vt.lastSeq, vt.lastTs, vt.lastAt = out.Header.SequenceNumber, out.Header.Timestamp, now
+	if err := vt.sink(&out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
+		slog.Debug("sfu layer write", "viewer", vt.viewer, "err", err)
+	}
+	return switched, ask, eff
+}
+
+// switchLocked makes idx the layer being forwarded, starting at the keyframe
+// packet src: the numbers of the stream the viewer sees carry on from the last
+// ones sent.
+func (vt *viewerTrack) switchLocked(idx int, src *rtp.Packet, now time.Time) {
+	if vt.started {
+		metrics.SFULayerSwitches.Inc()
+		vt.seqOff = vt.lastSeq + 1 - src.SequenceNumber
+		ticks := uint32(now.Sub(vt.lastAt).Seconds() * videoClockRate)
+		if ticks < 1 {
+			ticks = 1
+		}
+		vt.tsOff = vt.lastTs + ticks - src.Timestamp
+		vt.picOff, vt.tl0Off = 0, 0
+		if vt.group.kind == codecVP8 {
+			if d, ok := parseVP8(src.Payload); ok {
+				if d.picPos >= 0 {
+					vt.picOff = vt.lastPic + 1 - d.pic
+				}
+				if d.tl0Pos >= 0 {
+					vt.tl0Off = vt.lastTl0 + 1 - d.tl0
+				}
+			}
+		}
+	}
+	vt.started = true
+	vt.cur = idx
+	vt.curA.Store(int32(idx))
+}
