@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.9](https://github.com/msch128/mnema-talk/compare/v0.8.8...v0.8.9) (2026-10-19)
+
+
+### Code Refactoring
+
+* every web function within the size and complexity limits ([#253](https://github.com/msch128/mnema-talk/issues/253)) ([03151c8](https://github.com/msch128/mnema-talk/commit/03151c8e558da576206c71ace8b9356d15abae60))
+
 ## [0.8.8](https://github.com/msch128/mnema-talk/compare/v0.8.7...v0.8.8) (2026-10-19)
 
 
