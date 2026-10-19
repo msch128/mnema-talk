@@ -134,6 +134,11 @@ func (h *systemHandler) mountAdmin(r chi.Router) {
 	r.Post("/system/update", httpx.Handle(h.startSelfUpdate))
 }
 
+// MountAdmin mounts the admin system routes on r.
+func (h *systemHandler) MountAdmin(r chi.Router) {
+	h.mountAdmin(r)
+}
+
 // status handles GET /api/admin/system.
 //
 // @Summary System status

@@ -1,4 +1,4 @@
-package server
+package nativepreview
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 // responses precede passwords and require no access token. A client must first
 // select its verified TLS profile; this constructor never grants auth or Core
 // readiness, and production NewRouter does not invoke it.
-func NewNativePublicPreviewRouter(deps Deps, options NativePreviewOptions) (*NativePreviewRouter, error) {
+func NewNativePublicPreviewRouter(deps server.Deps, options NativePreviewOptions) (*NativePreviewRouter, error) {
 	if deps.Config == nil {
 		return nil, errors.New("invalid native public preview dependencies")
 	}
@@ -40,8 +41,8 @@ func NewNativePublicPreviewRouter(deps Deps, options NativePreviewOptions) (*Nat
 	routes.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
 	})
-	routes.Get(NativePublicLegalPath, legal(deps.Config))
-	routes.Get(NativePublicHealthPath, health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version))
+	routes.Get(NativePublicLegalPath, server.LegalHandler(deps.Config))
+	routes.Get(NativePublicHealthPath, server.HealthHandler(deps))
 	base := preview.Router.Handler
 	preview.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == NativePublicLegalPath || r.URL.Path == NativePublicHealthPath {

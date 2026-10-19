@@ -1,9 +1,8 @@
-package server
+package nativepreview
 
 import (
 	"context"
 	"errors"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,8 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
-	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 // This constructor is an isolated transport preview. NewRouter never invokes
@@ -35,17 +34,8 @@ type NativePreviewOptions struct {
 	Compatibility  NativeCompatibility
 }
 
-type nativePreviewDependencies struct {
-	accounts *auth.Handler
-	chat     *chat.Handler
-	system   *systemHandler
-	perUser  *httpx.RateLimiter
-	// trusted are the parsed TRUSTED_PROXIES NewRouter already validated.
-	trusted []*net.IPNet
-}
-
 type NativePreviewRouter struct {
-	*Router
+	*server.Router
 	Native   *auth.NativeHandler
 	Sessions *auth.NativeSessions
 	options  NativePreviewOptions
@@ -86,14 +76,14 @@ func validateNativePreviewOptions(options NativePreviewOptions) error {
 // NewNativePreviewRouter assembles real browser/native handlers over the same
 // account lockout budgets, current-user DB checks, role checks and Hub. Only
 // explicitly listed metadata routes are installed; content handlers are absent.
-func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePreviewRouter, error) {
+func NewNativePreviewRouter(deps server.Deps, options NativePreviewOptions) (*NativePreviewRouter, error) {
 	if err := validateNativePreviewOptions(options); err != nil {
 		return nil, err
 	}
 	if deps.Config == nil || deps.DB == nil {
 		return nil, errors.New("invalid native preview dependencies")
 	}
-	browser, err := NewRouter(deps)
+	browser, err := server.NewRouter(deps)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +101,7 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 	// Keep the browser handler object and routes completely intact. Only this
 	// explicit preview wrapper intercepts the two fixed native/discovery paths.
 	base := browser.Handler
-	trusted := browser.preview.trusted
+	trusted := browser.PreviewDeps().Trusted
 	discoveryHandler := httpx.SecurityHeaders(trusted, deps.Config.IsProduction())(http.HandlerFunc(result.discovery))
 	result.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/.well-known/mnema" {
@@ -130,13 +120,13 @@ func NewNativePreviewRouter(deps Deps, options NativePreviewOptions) (*NativePre
 // newNativeAuth builds the native sessions and handler over the browser
 // router's account handler and binds the hub's family control. The caller
 // closes the browser router on error.
-func newNativeAuth(deps Deps, browser *Router) (*auth.NativeHandler, *auth.NativeSessions, error) {
+func newNativeAuth(deps server.Deps, browser *server.Router) (*auth.NativeHandler, *auth.NativeSessions, error) {
 	lifetime := time.Duration(deps.Config.SessionExpiryHours) * time.Hour
 	sessions, err := auth.NewNativeSessions(deps.DB, auth.NativePolicy{SessionLifetime: lifetime, FamilyLifetime: min(lifetime, 30*24*time.Hour)})
 	if err != nil {
 		return nil, nil, err
 	}
-	native, err := auth.NewNativeHandler(browser.preview.accounts, sessions)
+	native, err := auth.NewNativeHandler(browser.PreviewDeps().Accounts, sessions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -148,9 +138,9 @@ func newNativeAuth(deps Deps, browser *Router) (*auth.NativeHandler, *auth.Nativ
 
 // nativeRoutes is the router for everything under NativePreviewPrefix: the
 // metadata WebSocket, the native auth endpoints and the metadata routes.
-func (p *NativePreviewRouter) nativeRoutes(deps Deps) (chi.Router, error) {
+func (p *NativePreviewRouter) nativeRoutes(deps server.Deps) (chi.Router, error) {
 	browser, native := p.Router, p.Native
-	trusted := browser.preview.trusted
+	trusted := browser.PreviewDeps().Trusted
 	routes := chi.NewRouter()
 	routes.Use(httpx.RequestID, httpx.ClientIPMiddleware(trusted), httpx.Logger, httpx.Recover(deps.Config.IsProduction()), httpx.SecurityHeaders(trusted, deps.Config.IsProduction()), p.boundary)
 	routes.Get("/ws", browser.Hub.NativeMetadataWebSocketHandler(native).ServeHTTP)
@@ -165,14 +155,14 @@ func (p *NativePreviewRouter) nativeRoutes(deps Deps) (chi.Router, error) {
 	routes.Method(http.MethodPost, "/auth/refresh", authDispatch)
 	routes.Method(http.MethodGet, "/auth/me", authDispatch)
 	routes.Method(http.MethodPost, "/auth/logout", authDispatch)
-	metadataHandlers, err := nativeMetadataHandlers(browser.preview)
+	metadataHandlers, err := nativeMetadataHandlers(browser.PreviewDeps())
 	if err != nil {
 		return nil, err
 	}
 	routes.Group(func(metadata chi.Router) {
-		metadata.Use(native.RequireUser, p.instanceContext, browser.preview.perUser.By(auth.UserKey), httpx.MaxBody(httpx.DefaultMaxBody))
-		metadata.Method(http.MethodGet, "/health", nativeMetadataEmptyBody(health(newHealthCheck(deps.DB, deps.StorageReady, healthCacheTTL), deps.Version)))
-		metadata.Method(http.MethodGet, "/legal", nativeMetadataEmptyBody(legal(deps.Config)))
+		metadata.Use(native.RequireUser, p.instanceContext, browser.PreviewDeps().PerUser.By(auth.UserKey), httpx.MaxBody(httpx.DefaultMaxBody))
+		metadata.Method(http.MethodGet, "/health", nativeMetadataEmptyBody(server.HealthHandler(deps)))
+		metadata.Method(http.MethodGet, "/legal", nativeMetadataEmptyBody(server.LegalHandler(deps.Config)))
 		for _, route := range nativeMetadataRoutes {
 			handler := metadataHandlers[route.Method+" "+route.Path]
 			if strings.HasPrefix(route.Path, "/admin/") {

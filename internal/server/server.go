@@ -4,10 +4,14 @@ package server
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/bot"
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/events"
@@ -42,10 +46,24 @@ type Deps struct {
 	Context context.Context
 }
 
+// SystemAdminMounter mounts the admin system routes.
+type SystemAdminMounter interface {
+	MountAdmin(r chi.Router)
+}
+
+// PreviewDeps holds internal dependencies needed by the native preview router.
+type PreviewDeps struct {
+	Accounts *auth.Handler
+	Chat     *chat.Handler
+	System   SystemAdminMounter
+	PerUser  *httpx.RateLimiter
+	Trusted  []*net.IPNet
+}
+
 // Router holds the assembled handler and the hub (for shutdown/tests).
 type Router struct {
-	// Retained for explicitly constructed native preview; NewRouter mounts no native routes.
-	preview nativePreviewDependencies
+	// preview is retained for explicitly constructed native preview; NewRouter mounts no native routes.
+	preview PreviewDeps
 	http.Handler
 	Hub *ws.Hub
 	// Webhooks is the incoming webhook handler (tests adjust its limits).
@@ -57,6 +75,11 @@ type Router struct {
 	cancel  context.CancelFunc
 	// outgoing delivers outgoing webhooks; Close waits for it to settle.
 	outgoing *webhook.Dispatcher
+}
+
+// PreviewDeps returns internal dependencies needed by the native preview router.
+func (r *Router) PreviewDeps() PreviewDeps {
+	return r.preview
 }
 
 // Close stops background work and closes the hub's upgraded WebSockets.
@@ -116,6 +139,6 @@ func NewRouter(d Deps) (*Router, error) {
 		Gateway:  c.gw,
 		cancel:   cancel,
 		outgoing: c.outgoing,
-		preview:  nativePreviewDependencies{accounts: c.authH, chat: c.chatH, system: c.systemH, perUser: c.perUser, trusted: trusted},
+		preview:  PreviewDeps{Accounts: c.authH, Chat: c.chatH, System: c.systemH, PerUser: c.perUser, Trusted: trusted},
 	}, nil
 }

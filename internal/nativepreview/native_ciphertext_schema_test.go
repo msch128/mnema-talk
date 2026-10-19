@@ -1,4 +1,4 @@
-package server
+package nativepreview
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/config"
 	"github.com/msch128/mnema-talk/internal/httpx"
+	"github.com/msch128/mnema-talk/internal/server"
 )
 
 func relayUnitBody(event uuid.UUID, group, ciphertext []byte) []byte {
@@ -160,13 +161,13 @@ func TestNativeCiphertextBoundaryAndSafeErrors(t *testing.T) {
 			t.Fatal("unsafe error mapping")
 		}
 	}
-	if _, err := NewNativeCiphertextPreviewRouter(Deps{}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativeCiphertextPreviewRouter(server.Deps{}, NativePreviewOptions{}); err == nil {
 		t.Fatal("nil dependencies accepted")
 	}
-	if _, err := NewNativeCiphertextPreviewRouter(Deps{Config: &config.Config{TrustedProxies: []string{"invalid"}}}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativeCiphertextPreviewRouter(server.Deps{Config: &config.Config{TrustedProxies: []string{"invalid"}}}, NativePreviewOptions{}); err == nil {
 		t.Fatal("invalid trust accepted")
 	}
-	if _, err := NewNativeCiphertextPreviewRouter(Deps{Config: &config.Config{}}, NativePreviewOptions{}); err == nil {
+	if _, err := NewNativeCiphertextPreviewRouter(server.Deps{Config: &config.Config{}}, NativePreviewOptions{}); err == nil {
 		t.Fatal("invalid base router accepted")
 	}
 	for _, handler := range []func(http.ResponseWriter, *http.Request) error{preview.publishCiphertext, preview.listCiphertext} {

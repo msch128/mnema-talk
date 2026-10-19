@@ -1,6 +1,6 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"bytes"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/config"
+	srv "github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -31,7 +32,7 @@ func newPublicPreviewTestApp(t *testing.T, status NativeCompatibility) *previewT
 	if err != nil {
 		t.Fatal("public fixture config failed")
 	}
-	router, err := NewNativePublicPreviewRouter(Deps{Config: cfg, DB: pool, Version: "public-preview-fixture"}, NativePreviewOptions{CommunityID: "native-public-preview-fixture", InstanceOrigin: origin, Compatibility: status})
+	router, err := NewNativePublicPreviewRouter(srv.Deps{Config: cfg, DB: pool, Version: "public-preview-fixture"}, NativePreviewOptions{CommunityID: "native-public-preview-fixture", InstanceOrigin: origin, Compatibility: status})
 	if err != nil {
 		t.Fatal("actual public router construction failed")
 	}
@@ -53,13 +54,13 @@ func TestNativePublicPreviewActualHTTPSBeforeLogin(t *testing.T) {
 		t.Fatal("prelogin fixture unexpectedly authenticated")
 	}
 	raw := a.request(t, http.MethodGet, NativePublicLegalPath, nil, "", nil, http.StatusOK)
-	var legal Legal
+	var legal srv.Legal
 	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &legal) != nil || json.Unmarshal(raw, &fields) != nil || len(fields) != 10 || legal.OperatorName != "Synthetic Community Operator" || legal.OperatorEmail != "operator@example.invalid" || legal.MediaRetentionDays != 0 || legal.LegalVersion != LegalVersion {
+	if json.Unmarshal(raw, &legal) != nil || json.Unmarshal(raw, &fields) != nil || len(fields) != 10 || legal.OperatorName != "Synthetic Community Operator" || legal.OperatorEmail != "operator@example.invalid" || legal.MediaRetentionDays != 0 || legal.LegalVersion != srv.LegalVersion {
 		t.Fatal("real public legal DTO mismatch")
 	}
 	raw = a.request(t, http.MethodGet, NativePublicHealthPath, nil, "", nil, http.StatusOK)
-	var health Health
+	var health srv.Health
 	if json.Unmarshal(raw, &health) != nil || health.Status != "ok" || health.Version != "public-preview-fixture" {
 		t.Fatal("real public health DTO mismatch")
 	}

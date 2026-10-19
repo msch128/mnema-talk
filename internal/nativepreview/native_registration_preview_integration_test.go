@@ -1,6 +1,6 @@
 //go:build integration
 
-package server
+package nativepreview
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/config"
+	srv "github.com/msch128/mnema-talk/internal/server"
 	"github.com/msch128/mnema-talk/internal/testutil"
 )
 
@@ -33,7 +34,7 @@ func newRegistrationTestApp(t *testing.T, compatibility NativeCompatibility) *pr
 	if err != nil {
 		t.Fatal("registration configuration")
 	}
-	router, err := NewNativeRegistrationPreviewRouter(Deps{Config: cfg, DB: pool, Version: "native-registration-fixture"}, NativePreviewOptions{CommunityID: "native-registration-fixture", InstanceOrigin: origin, Compatibility: compatibility})
+	router, err := NewNativeRegistrationPreviewRouter(srv.Deps{Config: cfg, DB: pool, Version: "native-registration-fixture"}, NativePreviewOptions{CommunityID: "native-registration-fixture", InstanceOrigin: origin, Compatibility: compatibility})
 	if err != nil {
 		t.Fatal(err)
 	}
