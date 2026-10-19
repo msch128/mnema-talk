@@ -9,9 +9,9 @@ import {
   initializeNativeContext,
   nativeApiTransport,
   type NativeReply,
-} from './nativeTransport'
-import { isTrustedDesktop, trustedApp, type TrustedApp } from './trustedDesktop'
-import { TrustedSocket } from './trustedSocket'
+} from './native/nativeTransport'
+import { isTrustedDesktop, trustedApp, type TrustedApp } from './native/trustedDesktop'
+import { TrustedSocket } from './native/trustedSocket'
 
 /** What the chat store needs from a live socket, whichever host opens it. */
 export type PlatformSocket = WebSocket | NativeSocket | TrustedSocket

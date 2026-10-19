@@ -1,7 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { expect, it, vi } from 'vitest'
-import { decodeTrustPreview, decodeTrustStatus } from '../lib/nativeTrust'
-import type { NativeTrustPresentationPort } from '../lib/nativeTrust'
+import { decodeTrustPreview, decodeTrustStatus } from '../lib/native/nativeTrust'
+import type { NativeTrustPresentationPort } from '../lib/native/nativeTrust'
 vi.mock('./BaseDialog.vue', () => ({ default: { template: '<section><slot /></section>' } }))
 import NativeTrustSetup from './NativeTrustSetup.vue'
 import { setLocale } from '../i18n'

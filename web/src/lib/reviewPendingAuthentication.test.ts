@@ -1,5 +1,5 @@
 import { expect,it } from 'vitest'
-import { initializeNativeContext,installNativePort,nativeApiTransport } from './nativeTransport'
+import { initializeNativeContext,installNativePort,nativeApiTransport } from './native/nativeTransport'
 it('rejects an older delivered Me reply after a newer password intent has begun',async()=>{
  const context='10000000-0000-4000-8000-000000000001', profile='20000000-0000-4000-8000-000000000001', first='50000000-0000-4000-8000-000000000001', second='50000000-0000-4000-8000-000000000002'
  let finishMe!:(v:unknown)=>void,finishPassword!:(v:unknown)=>void

@@ -9,7 +9,7 @@
     "skipLibCheck": false
   },
   "include": [
-    "src/lib/dfnWorker.ts",
+    "src/lib/dfn/dfnWorker.ts",
     "src/lib/media/mediaFrameWorker.ts",
     "src/types/worker-env.d.ts"
   ]

@@ -2,7 +2,7 @@
 import { ref, shallowRef } from 'vue'
 import NativeTrustSetup from './NativeTrustSetup.vue'
 import { platform } from '../lib/platform'
-import type { NativeTrustPresentationPort } from '../lib/nativeTrust'
+import type { NativeTrustPresentationPort } from '../lib/native/nativeTrust'
 import { t } from '../i18n'
 defineProps<{ channelId: string }>()
 const emit = defineEmits<{ saved: [] }>()

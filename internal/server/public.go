@@ -86,6 +86,11 @@ func legal(cfg *config.Config) http.HandlerFunc {
 	}
 }
 
+// LegalHandler returns the public legal information handler.
+func LegalHandler(cfg *config.Config) http.HandlerFunc {
+	return legal(cfg)
+}
+
 func nonNil(s []string) []string {
 	if s == nil {
 		return []string{}

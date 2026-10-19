@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { NoiseModel, FilterOptions } from '../lib/dfnTypes'
+import type { NoiseModel, FilterOptions } from '../lib/dfn/dfnTypes'
 
 // The AI filter worklets can't run in jsdom; tests hand in a fake node instead.
 export interface SuppressorDouble { connect: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }

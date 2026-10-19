@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
-import type { DfnWorkerCommand, DfnWorkerReply } from './dfnTypes'
+import type { DfnWorkerCommand, DfnWorkerReply } from './dfn/dfnTypes'
 import { present } from '../media-test.fixture'
 
 interface NodeOptions extends AudioWorkletNodeOptions { maxChannels?: number; wasmBinary?: ArrayBuffer }
