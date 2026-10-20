@@ -11,32 +11,51 @@ interface AuthDeps {
   applyAccountLocale: () => void
 }
 
+function isUnauthorizedSession(s: SessionCore['s'], session: ReturnType<SessionCore['sessionSnapshot']>): boolean {
+  return s.unauthorizedGeneration === session.generation && s.generation === session.generation + 1
+}
+
+function handleCheckAuthError(err: unknown, s: SessionCore['s'], session: ReturnType<SessionCore['sessionSnapshot']>): boolean | null {
+  if (isRecord(err) && err['status'] === 401) {
+    // api already invalidated the current generation before rejecting.
+    return isUnauthorizedSession(s, session) ? false : null
+  }
+  return null
+}
+
+function applyCurrentUser(
+  currentUser: User,
+  session: ReturnType<SessionCore['sessionSnapshot']>,
+  deps: AuthDeps
+): void {
+  const { core, user, applyAccountLocale } = deps
+  core.s.cookieAccountId = currentUser.id
+  if (currentUser.id !== session.userId) core.advanceSession()
+  user.value = currentUser
+  applyAccountLocale()
+}
+
 /**
  * Asks the server who is logged in. Returns true (signed in), false (no or
  * revoked session: the user is cleared) or null when the server could not
  * answer (offline, restarting): the user is kept so a redeploy or a network
  * blip never logs anyone out.
  */
-async function checkAuth({ core, user, applyAccountLocale }: AuthDeps) {
-  const { s, sessionSnapshot, isCurrentSession, advanceSession } = core
-  const session = sessionSnapshot()
+async function checkAuth(deps: AuthDeps) {
+  const { core } = deps
+  const session = core.sessionSnapshot()
   try {
-    await s.cookieRequests
-    if (!isCurrentSession(session)) return null
-    const currentUser = await api('/api/auth/me', { decode: decodeUser, shouldNotifyUnauthorized: () => isCurrentSession(session) })
-    if (!isCurrentSession(session)) return null
-    s.cookieAccountId = currentUser.id
-    if (currentUser.id !== session.userId) advanceSession()
-    user.value = currentUser
-    applyAccountLocale()
+    await core.s.cookieRequests
+    if (!core.isCurrentSession(session)) return null
+    const currentUser = await api('/api/auth/me', {
+      decode: decodeUser,
+      shouldNotifyUnauthorized: () => core.isCurrentSession(session)
+    })
+    if (!core.isCurrentSession(session)) return null
+    applyCurrentUser(currentUser, session, deps)
     return true
   } catch (err) {
-    if (isRecord(err) && err['status'] === 401) {
-      // api already invalidated the current generation before rejecting.
-      return s.unauthorizedGeneration === session.generation && s.generation === session.generation + 1
-        ? false : null
-    }
-    return null
+    return handleCheckAuthError(err, core.s, session)
   }
 }
 

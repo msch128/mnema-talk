@@ -865,8 +865,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/auth/credentials.ts` — 2 Funde, Abzug 1.79.
 
-- [ ] [medium] checkAuth - checkAuth has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] checkAuth - checkAuth nests 4 levels deep (impact -0.94)
+- [x] [medium] checkAuth - checkAuth has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] checkAuth - checkAuth nests 4 levels deep (impact -0.94)
 
 ### `internal/bot/authn.go` — 2 Funde, Abzug 1.78.
 
