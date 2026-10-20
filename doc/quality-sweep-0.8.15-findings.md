@@ -993,8 +993,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/nativepreview/native_ciphertext_schema.go` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] nativeCiphertextDecimal - nativeCiphertextDecimal has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] readNativeCiphertextFields - readNativeCiphertextFields has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] nativeCiphertextDecimal - nativeCiphertextDecimal has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] readNativeCiphertextFields - readNativeCiphertextFields has cyclomatic complexity 11 (impact -0.75)
 
 ### `internal/perm/store_roles_order.go` — 3 Funde, Abzug 1.50.
 
