@@ -72,6 +72,73 @@ export function retryNow(cx: Cx) {
   attemptReconnect(cx)
 }
 
+interface SocketSession {
+  socket: WebSocket
+  generation: number
+  accountId: string
+}
+
+function isCurrentSession(cx: Cx, session: SocketSession): boolean {
+  const { cs, authStore } = cx
+  return cs.ws.value === session.socket && cs.socketGeneration === session.generation && authStore.user?.id === session.accountId
+}
+
+function handleSocketOpen(cx: Cx, session: SocketSession) {
+  if (!isCurrentSession(cx, session)) return
+  const { cs } = cx
+  cs.isConnected.value = true
+  cs.wasConnected.value = true
+  cs.reconnectAttempt.value = 0
+  cs.nextRetryAt.value = 0
+  cs.reconnectDelay = 1000
+  startPingHeartbeat(cx)
+  sendWSEvent(cx, 'ping', { t: Date.now() })
+  if (cs.isIdle) sendWSEvent(cx, 'presence_idle', { idle: true })
+  if (cs.hadConnection) cs.reconnectCount.value++
+  resyncState(cx)
+  cs.hadConnection = true
+}
+
+function handleSocketMessage(cx: Cx, session: SocketSession, data: string) {
+  if (!isCurrentSession(cx, session)) return
+  try {
+    const decoded = decodeServerEvent(JSON.parse(data))
+    if (decoded) handleWSEvent(cx, decoded)
+  } catch (err) {
+    console.error('WS parse error:', err)
+  }
+}
+
+function handleSocketClose(
+  cx: Cx,
+  session: SocketSession,
+  event?: { code?: number }
+) {
+  const { cs, authStore } = cx
+  if (cs.ws.value !== session.socket || cs.socketGeneration !== session.generation) return
+  cs.suppressedPresence.clear()
+  cs.isConnected.value = false
+  stopPingHeartbeat(cx)
+  cs.ws.value = null
+  if (authStore.user?.id !== session.accountId) return
+
+  // The server closed this tab for a newer one of the same account (too
+  // many connections). Reconnecting at once would evict another tab in
+  // turn; this one reconnects when it is shown again (visibilitychange).
+  if (event?.code === 4001) {
+    cs.reconnectAttempt.value = 0
+    cs.nextRetryAt.value = 0
+    return
+  }
+  // Exponential backoff; a revoked session (401) stops the loop.
+  scheduleReconnect(cx)
+}
+
+function socketUrl(): string {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}/api/ws`
+}
+
 export function initWebSocket(cx: Cx) {
   const { cs, authStore } = cx
   const accountId = authStore.user?.id
@@ -80,56 +147,14 @@ export function initWebSocket(cx: Cx) {
   installGlobalSearch()
 
   // The session cookie authenticates the upgrade; no token in the URL.
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   // The trusted desktop client cannot reach the server from its own origin:
   // its host opens the socket (doc/desktop-trusted-client.md).
-  const socket = platform.openSocket(`${protocol}//${window.location.host}/api/ws`)
+  const socket = platform.openSocket(socketUrl())
+  const session: SocketSession = { socket, generation, accountId }
 
-  const currentSocket = () => cs.ws.value === socket && cs.socketGeneration === generation
-  const currentAccount = () => authStore.user?.id === accountId
-  socket.onopen = () => {
-    if (!currentSocket() || !currentAccount()) return
-    cs.isConnected.value = true
-    cs.wasConnected.value = true
-    cs.reconnectAttempt.value = 0
-    cs.nextRetryAt.value = 0
-    cs.reconnectDelay = 1000
-    startPingHeartbeat(cx)
-    sendWSEvent(cx, 'ping', { t: Date.now() })
-    if (cs.isIdle) sendWSEvent(cx, 'presence_idle', { idle: true })
-    if (cs.hadConnection) cs.reconnectCount.value++
-    resyncState(cx)
-    cs.hadConnection = true
-  }
-
-  socket.onmessage = (event: { data: string }) => {
-    if (!currentSocket() || !currentAccount()) return
-    try {
-      const decoded = decodeServerEvent(JSON.parse(event.data))
-      if (decoded) handleWSEvent(cx, decoded)
-    } catch (err) {
-      console.error('WS parse error:', err)
-    }
-  }
-
-  socket.onclose = (event?: { code?: number }) => {
-    if (!currentSocket()) return
-    cs.suppressedPresence.clear()
-    cs.isConnected.value = false
-    stopPingHeartbeat(cx)
-    cs.ws.value = null
-    if (!currentAccount()) return
-    // The server closed this tab for a newer one of the same account (too
-    // many connections). Reconnecting at once would evict another tab in
-    // turn; this one reconnects when it is shown again (visibilitychange).
-    if (event?.code === 4001) {
-      cs.reconnectAttempt.value = 0
-      cs.nextRetryAt.value = 0
-      return
-    }
-    // Exponential backoff; a revoked session (401) stops the loop.
-    scheduleReconnect(cx)
-  }
+  socket.onopen = () => handleSocketOpen(cx, session)
+  socket.onmessage = (event: { data: string }) => handleSocketMessage(cx, session, event.data)
+  socket.onclose = (event?: { code?: number }) => handleSocketClose(cx, session, event)
 
   cs.ws.value = socket
 }

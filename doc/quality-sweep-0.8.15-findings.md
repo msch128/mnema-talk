@@ -1110,7 +1110,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/chat/socket.ts` — 1 Funde, Abzug 1.45.
 
-- [ ] [high] initWebSocket - initWebSocket has cyclomatic complexity 16 (impact -1.45)
+- [x] [high] initWebSocket - initWebSocket has cyclomatic complexity 16 (impact -1.45)
 
 ### `internal/chat/permissions.go` — 3 Funde, Abzug 1.40.
 
