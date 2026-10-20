@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 984-987
+internal/chat/channels.go
+  h_0ff4f4713441f4 52,57,68-69,71,76,84,94-108,127,129,131,133-144,146-157,161-162,213-244,260-261,263-264,309-344,348-349,351-353,355-357,359
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "295a121edbd926424a59d262338661e80d59fe09",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
