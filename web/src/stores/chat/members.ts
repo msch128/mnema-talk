@@ -128,25 +128,55 @@ export function updateUserEverywhere(cx: Cx, updated: UserUpdate) {
   }
 }
 
-export async function openUserProfile(cx: Cx, userOrMessage: Pick<User, 'id'> & Partial<User> & { user_id?: string }) {
+type ProfileCandidate = Pick<User, 'id'> & Partial<User> & { user_id?: string }
+
+function resolveUserId(candidate?: ProfileCandidate): string | null {
+  if (!candidate) return null
+  return candidate.user_id || candidate.id || null
+}
+
+function pickProfileField<T>(primary?: T | null, secondary?: T | null, fallback: T = '' as T): T {
+  if (primary) return primary
+  if (secondary) return secondary
+  return fallback
+}
+
+function buildInitialProfile(
+  userId: string,
+  candidate: ProfileCandidate,
+  known?: Partial<User>
+): User {
+  const username = pickProfileField(candidate.username, known?.username, '')
+  const displayName = pickProfileField(candidate.display_name, known?.display_name, username)
+  const avatarUrl = pickProfileField(candidate.avatar_url, known?.avatar_url, '')
+  const role = pickProfileField(candidate.role, known?.role, 'user')
+  const createdAt = candidate.created_at || known?.created_at
+
+  const profile: User = {
+    id: userId,
+    username,
+    display_name: displayName,
+    avatar_url: avatarUrl,
+    role
+  }
+  if (createdAt) profile.created_at = createdAt
+  return profile
+}
+
+export async function openUserProfile(cx: Cx, userOrMessage: ProfileCandidate) {
   const { cs } = cx
   const community = cs.communityGeneration
-  const userId = userOrMessage?.user_id || userOrMessage?.id
+  const userId = resolveUserId(userOrMessage)
   if (!userId) return
+
   const known = cs.members.value.find(m => m.id === userId)
-  const createdAt = userOrMessage.created_at || known?.created_at
-  cs.selectedUserProfile.value = {
-    id: userId,
-    username: userOrMessage.username || known?.username || '',
-    display_name: userOrMessage.display_name || known?.display_name || userOrMessage.username || '',
-    avatar_url: userOrMessage.avatar_url || known?.avatar_url || '',
-    role: userOrMessage.role || known?.role || 'user',
-    ...(createdAt ? { created_at: createdAt } : {})
-  }
+  cs.selectedUserProfile.value = buildInitialProfile(userId, userOrMessage, known)
+
   try {
     const full = await api(`/api/users/${userId}`, { decode: decodeUser })
     // Closed, or another profile opened, while this one loaded.
-    if (community !== cs.communityGeneration || cs.selectedUserProfile.value?.id !== userId) return
+    const isCurrent = community === cs.communityGeneration && cs.selectedUserProfile.value?.id === userId
+    if (!isCurrent) return
     cs.selectedUserProfile.value = { ...cs.selectedUserProfile.value, ...full }
   } catch (e) {
     console.warn('Failed to fetch full user profile:', e)

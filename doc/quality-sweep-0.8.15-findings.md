@@ -1106,7 +1106,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/chat/members.ts` — 1 Funde, Abzug 1.45.
 
-- [ ] [high] openUserProfile - openUserProfile has cyclomatic complexity 17 (impact -1.45)
+- [x] [high] openUserProfile - openUserProfile has cyclomatic complexity 17 (impact -1.45)
 
 ### `web/src/stores/chat/socket.ts` — 1 Funde, Abzug 1.45.
 
