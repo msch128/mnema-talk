@@ -23,13 +23,20 @@ onMounted(async () => {
   catch { if (alive) error.value = t('nativeDesktop.contextError') }
 })
 
+function isPreviewResponse(body: Record<string, unknown>): boolean {
+  if (typeof body.origin !== 'string') return false
+  if (body.transport_preview !== true) return false
+  if (body.content_authorization !== 'unavailable') return false
+  const compat = String(body.compatibility)
+  return compat === 'supported' || compat === 'deprecated'
+}
+
 function previewOrigin(status: number, body: unknown): string | null {
-  if (status !== 200 || typeof body !== 'object' || body === null) return null
-  if (!('origin' in body) || typeof body.origin !== 'string') return null
-  if (!('compatibility' in body) || !['supported', 'deprecated'].includes(String(body.compatibility))) return null
-  if (!('transport_preview' in body) || body.transport_preview !== true) return null
-  if (!('content_authorization' in body) || body.content_authorization !== 'unavailable') return null
-  return body.origin
+  if (status !== 200) return null
+  if (typeof body !== 'object' || body === null) return null
+  const rec = body as Record<string, unknown>
+  if (!isPreviewResponse(rec)) return null
+  return typeof rec.origin === 'string' ? rec.origin : null
 }
 
 function secureOrigin(value: string): boolean {
@@ -40,19 +47,31 @@ function secureOrigin(value: string): boolean {
   return url.origin === value
 }
 
+function resolveOrigin(status: number, body: unknown): string {
+  const found = previewOrigin(status, body)
+  if (found === null || !secureOrigin(found)) {
+    throw new Error('Unsupported server')
+  }
+  return found
+}
+
 async function connect() {
   if (!ready.value || busy.value) return
   const submittedAddress = addressInput.value?.value ?? address.value
   address.value = submittedAddress
-  const current = ++attempt; busy.value = true; error.value = ''
+  const current = ++attempt
+  busy.value = true
+  error.value = ''
   try {
     const reply = await platform.connectNative(submittedAddress)
     if (current !== attempt) return
-    const found = previewOrigin(reply.status, reply.body)
-    if (found === null || !secureOrigin(found)) throw new Error('Unsupported server')
-    origin.value = found; connected.value = true
-  } catch { if (current === attempt) error.value = t('nativeDesktop.connectError') }
-  finally { if (current === attempt) busy.value = false }
+    origin.value = resolveOrigin(reply.status, reply.body)
+    connected.value = true
+  } catch {
+    if (current === attempt) error.value = t('nativeDesktop.connectError')
+  } finally {
+    if (current === attempt) busy.value = false
+  }
 }
 
 async function changeServer() {

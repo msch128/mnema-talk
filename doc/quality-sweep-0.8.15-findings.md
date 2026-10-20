@@ -1043,8 +1043,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/NativePreviewApp.vue` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] connect - connect has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] previewOrigin - previewOrigin has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] connect - connect has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] previewOrigin - previewOrigin has cyclomatic complexity 12 (impact -0.75)
 
 ### `web/src/composables/useMessageScroll.ts` — 2 Funde, Abzug 1.50.
 
