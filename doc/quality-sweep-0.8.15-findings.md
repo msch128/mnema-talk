@@ -1403,7 +1403,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/message_mutations.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] DeleteMessageAs - DeleteMessageAs has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] DeleteMessageAs - DeleteMessageAs has cyclomatic complexity 11 (impact -0.85)
 
 ### `internal/gateway/presence_sync.go` — 1 Funde, Abzug 0.85.
 

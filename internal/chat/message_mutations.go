@@ -60,27 +60,12 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		// Locking the message first blocks a concurrent thread reply or
 		// upload (their foreign keys need a share lock on it) until we are
 		// done, so every attachment the cascade removes is in keys.
-		var author uuid.UUID
-		var ownerContent bool
-		// The Owner's words (the message or a reply of theirs in its thread)
-		// are only the Owner's to remove.
-		err := tx.QueryRow(ctx, `
-			SELECT m.user_id,
-			       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
-			    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
-			               WHERE r.parent_id = m.id AND ru.role = 'admin')
-			FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&author, &ownerContent)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errMessageNotFound
-		}
+		author, ownerContent, err := lockMessageForDelete(ctx, tx, messageID)
 		if err != nil {
-			return fmt.Errorf("lock message: %w", err)
+			return err
 		}
-		if author != user.ID && !canManage {
-			return httpx.ErrForbidden("only the author or a moderator can delete this message")
-		}
-		if ownerContent && !user.IsAdmin() && author != user.ID {
-			return httpx.ErrForbidden("the Owner's messages can only be deleted by the Owner")
+		if err := checkDeleteAuthorized(user, author, ownerContent, canManage); err != nil {
+			return err
 		}
 		if err := collectKeys(ctx, tx, &keys, `
 			SELECT s3_key FROM media WHERE message_id IN
@@ -96,6 +81,36 @@ func DeleteMessageAs(ctx context.Context, p *db.Pool, messageID uuid.UUID, user 
 		return nil, err
 	}
 	return keys, nil
+}
+
+func lockMessageForDelete(ctx context.Context, tx pgx.Tx, messageID uuid.UUID) (uuid.UUID, bool, error) {
+	var author uuid.UUID
+	var ownerContent bool
+	// The Owner's words (the message or a reply of theirs in its thread)
+	// are only the Owner's to remove.
+	err := tx.QueryRow(ctx, `
+		SELECT m.user_id,
+		       EXISTS (SELECT 1 FROM users a WHERE a.id = m.user_id AND a.role = 'admin')
+		    OR EXISTS (SELECT 1 FROM messages r JOIN users ru ON ru.id = r.user_id
+		               WHERE r.parent_id = m.id AND ru.role = 'admin')
+		FROM messages m WHERE m.id = $1 FOR UPDATE OF m`, messageID).Scan(&author, &ownerContent)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, false, errMessageNotFound
+	}
+	if err != nil {
+		return uuid.Nil, false, fmt.Errorf("lock message: %w", err)
+	}
+	return author, ownerContent, nil
+}
+
+func checkDeleteAuthorized(user *auth.User, author uuid.UUID, ownerContent, canManage bool) error {
+	if author != user.ID && !canManage {
+		return httpx.ErrForbidden("only the author or a moderator can delete this message")
+	}
+	if ownerContent && !user.IsAdmin() && author != user.ID {
+		return httpx.ErrForbidden("the Owner's messages can only be deleted by the Owner")
+	}
+	return nil
 }
 
 // collectKeys appends the first column of query's rows to keys.
