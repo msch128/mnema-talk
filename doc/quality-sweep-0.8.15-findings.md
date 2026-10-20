@@ -1163,10 +1163,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webbundle/trust.go` — 4 Funde, Abzug 1.30.
 
-- [ ] [medium] Validate - Validate has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] Validate - Validate has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `cmd/server/unlock.go` — 3 Funde, Abzug 1.25.
 
