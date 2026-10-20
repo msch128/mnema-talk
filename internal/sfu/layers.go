@@ -61,12 +61,33 @@ var ErrNotInRoom = errors.New("not a member of the room")
 
 // validLayers accepts one to maxLayers layers whose pictures get smaller from
 // one to the next.
+func layerDimensionRejected(size int) bool {
+	if size < 1 {
+		return true
+	}
+	return size > maxLayerDimension
+}
+
+func layerRateRejected(fps int) bool {
+	if fps < 1 {
+		return true
+	}
+	return fps > maxLayerFPS
+}
+
+func layerShapeRejected(l Layer) bool {
+	if layerDimensionRejected(l.Width) || layerDimensionRejected(l.Height) {
+		return true
+	}
+	return layerRateRejected(l.FPS)
+}
+
 func validLayers(layers []Layer) bool {
 	if len(layers) == 0 || len(layers) > maxLayers {
 		return false
 	}
 	for i, l := range layers {
-		if l.Width < 1 || l.Width > maxLayerDimension || l.Height < 1 || l.Height > maxLayerDimension || l.FPS < 1 || l.FPS > maxLayerFPS {
+		if layerShapeRejected(l) {
 			return false
 		}
 		if i > 0 && l.Height >= layers[i-1].Height {

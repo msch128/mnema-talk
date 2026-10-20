@@ -551,13 +551,17 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/nativepreview/native_registry.go` — 2 Funde, Abzug 2.45.
 
-- [ ] [high] nativeMetadataHandlers - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] nativeMetadataHandlers - nativeMetadataHandlers has cyclomatic complexity 11 (impact -0.85)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Metadaten-Routen bleiben leer.
+
+- [x] [high] nativeMetadataHandlers - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] nativeMetadataHandlers - nativeMetadataHandlers has cyclomatic complexity 11 (impact -0.85)
 
 ### `internal/sfu/layers.go` — 2 Funde, Abzug 2.45.
 
-- [ ] [high] validLayers - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] validLayers - validLayers has cyclomatic complexity 12 (impact -0.85)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Layer werden abgelehnt.
+
+- [x] [high] validLayers - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] validLayers - validLayers has cyclomatic complexity 12 (impact -0.85)
 
 ### `internal/sfu/rtpkey.go` — 3 Funde, Abzug 2.44.
 
