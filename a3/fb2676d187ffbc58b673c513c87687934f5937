@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 996-997
+internal/nativepreview/native_ciphertext_schema.go
+  h_0ff4f4713441f4 21-23,25-29,31,34-40,42-48,50,54-57,93-96,119-122,140-141,145,149-150,155-193,226-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a3fb2676d187ffbc58b673c513c87687934f5937",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
