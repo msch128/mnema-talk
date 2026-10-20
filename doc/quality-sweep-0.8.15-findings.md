@@ -180,12 +180,14 @@ Erledigt 2026-10-20: `repowise health --file web/src/lib/streamQuality.ts` nennt
 
 ### `internal/auth/native_handler.go` — 6 Funde, Abzug 4.01.
 
-- [ ] [critical] NewNativeHandler - if condition combines 7 boolean operators (impact -1.47)
-- [ ] [medium] AuthenticateNativeRequest - if condition combines 4 boolean operators (impact -0.52)
-- [ ] [medium] NewNativeHandler - NewNativeHandler has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] RequireUser - if condition combines 4 boolean operators (impact -0.52)
-- [ ] [medium] decodeNativeStrings - decodeNativeStrings has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] login - login has cyclomatic complexity 11 (impact -0.50)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Unit- und Native-Integrationstests grün. Dieselben Abhängigkeiten und derselbe Transport werden abgelehnt.
+
+- [x] [critical] NewNativeHandler - if condition combines 7 boolean operators (impact -1.47)
+- [x] [medium] AuthenticateNativeRequest - if condition combines 4 boolean operators (impact -0.52)
+- [x] [medium] NewNativeHandler - NewNativeHandler has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] RequireUser - if condition combines 4 boolean operators (impact -0.52)
+- [x] [medium] decodeNativeStrings - decodeNativeStrings has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] login - login has cyclomatic complexity 11 (impact -0.50)
 
 ### `web/scripts/check-coverage.ts` — 14 Funde, Abzug 4.01.
 
@@ -206,13 +208,15 @@ Erledigt 2026-10-20: `repowise health --file web/src/lib/streamQuality.ts` nennt
 
 ### `internal/config/config_validate.go` — 7 Funde, Abzug 4.00.
 
-- [ ] [critical] validateUpdater - if condition combines 6 boolean operators (impact -2.17)
-- [ ] [medium] validate - validate has cyclomatic complexity 11 (impact -0.30)
-- [ ] [medium] validateBasics - validateBasics has cyclomatic complexity 11 (impact -0.30)
-- [ ] [medium] validateLimits - validateLimits has cyclomatic complexity 11 (impact -0.30)
-- [ ] [medium] validateProductionSecrets - validateProductionSecrets has cyclomatic complexity 13 (impact -0.30)
-- [ ] [medium] validateUpdater - validateUpdater has cyclomatic complexity 13 (impact -0.30)
-- [ ] [low] validateBasics - if condition combines 3 boolean operators (impact -0.33)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. `MEDIA_RETENTION_DAYS` bleibt aus. Dieselben Werte werden angenommen und abgelehnt.
+
+- [x] [critical] validateUpdater - if condition combines 6 boolean operators (impact -2.17)
+- [x] [medium] validate - validate has cyclomatic complexity 11 (impact -0.30)
+- [x] [medium] validateBasics - validateBasics has cyclomatic complexity 11 (impact -0.30)
+- [x] [medium] validateLimits - validateLimits has cyclomatic complexity 11 (impact -0.30)
+- [x] [medium] validateProductionSecrets - validateProductionSecrets has cyclomatic complexity 13 (impact -0.30)
+- [x] [medium] validateUpdater - validateUpdater has cyclomatic complexity 13 (impact -0.30)
+- [x] [low] validateBasics - if condition combines 3 boolean operators (impact -0.33)
 
 ### `internal/nativepreview/native_preview.go` — 5 Funde, Abzug 4.00.
 
@@ -226,12 +230,14 @@ Erledigt 2026-10-20: `repowise health --file` nennt keinen Fund mehr. Integratio
 
 ### `internal/ssrf/ssrf.go` — 6 Funde, Abzug 4.00.
 
-- [ ] [high] ValidateURL - if condition combines 5 boolean operators (impact -1.36)
-- [ ] [medium] Check - Check has cyclomatic complexity 13 (impact -0.50)
-- [ ] [medium] Check - if condition combines 4 boolean operators (impact -0.80)
-- [ ] [medium] DialContext - DialContext has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] ValidateURL - ValidateURL has cyclomatic complexity 14 (impact -0.50)
-- [ ] [low] Check - if condition combines 3 boolean operators (impact -0.34)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Adressen und URLs werden blockiert.
+
+- [x] [high] ValidateURL - if condition combines 5 boolean operators (impact -1.36)
+- [x] [medium] Check - Check has cyclomatic complexity 13 (impact -0.50)
+- [x] [medium] Check - if condition combines 4 boolean operators (impact -0.80)
+- [x] [medium] DialContext - DialContext has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] ValidateURL - ValidateURL has cyclomatic complexity 14 (impact -0.50)
+- [x] [low] Check - if condition combines 3 boolean operators (impact -0.34)
 
 ### `web/src/lib/native/nativeTrust.ts` — 5 Funde, Abzug 4.00.
 
@@ -245,27 +251,31 @@ Erledigt 2026-10-20: `repowise health --file` nennt keinen Fund mehr. Dieselben 
 
 ### `web/src/lib/trustPort.ts` — 6 Funde, Abzug 4.00.
 
-- [ ] [critical] reply - if condition combines 11 boolean operators (impact -1.67)
-- [ ] [medium] beginFirstRoot - beginFirstRoot has cyclomatic complexity 12 (impact -0.50)
-- [ ] [medium] beginFirstRoot - if condition combines 4 boolean operators (impact -0.58)
-- [ ] [medium] receive - receive has cyclomatic complexity 10 (impact -0.50)
-- [ ] [medium] reply - reply has cyclomatic complexity 13 (impact -0.50)
-- [ ] [low] publish - if condition combines 3 boolean operators (impact -0.25)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Antworten werden angenommen, abgelehnt und veröffentlicht.
+
+- [x] [critical] reply - if condition combines 11 boolean operators (impact -1.67)
+- [x] [medium] beginFirstRoot - beginFirstRoot has cyclomatic complexity 12 (impact -0.50)
+- [x] [medium] beginFirstRoot - if condition combines 4 boolean operators (impact -0.58)
+- [x] [medium] receive - receive has cyclomatic complexity 10 (impact -0.50)
+- [x] [medium] reply - reply has cyclomatic complexity 13 (impact -0.50)
+- [x] [low] publish - if condition combines 3 boolean operators (impact -0.25)
 
 ### `web/src/lib/native/nativeAdmin.ts` — 12 Funde, Abzug 3.99.
 
-- [ ] [critical] createInvite - if condition combines 6 boolean operators (impact -0.64)
-- [ ] [high] createChannel - if condition combines 5 boolean operators (impact -0.39)
-- [ ] [high] replaceLayout - replaceLayout has cyclomatic complexity 19 (impact -0.69)
-- [ ] [high] updateChannel - if condition combines 5 boolean operators (impact -0.39)
-- [ ] [medium] createChannel - createChannel has cyclomatic complexity 9 (impact -0.40)
-- [ ] [medium] createInvite - createInvite has cyclomatic complexity 9 (impact -0.40)
-- [ ] [medium] replaceLayout - if condition combines 4 boolean operators (impact -0.22)
-- [ ] [medium] replaceLayout - if condition combines 4 boolean operators (impact -0.22)
-- [ ] [medium] updateTarget - if condition combines 4 boolean operators (impact -0.22)
-- [ ] [medium] updateTarget - if condition combines 4 boolean operators (impact -0.22)
-- [ ] [low] replaceLayout - if condition combines 3 boolean operators (impact -0.10)
-- [ ] [low] updateTarget - if condition combines 3 boolean operators (impact -0.10)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. 39 Tests, dieselben Admin-Operationen.
+
+- [x] [critical] createInvite - if condition combines 6 boolean operators (impact -0.64)
+- [x] [high] createChannel - if condition combines 5 boolean operators (impact -0.39)
+- [x] [high] replaceLayout - replaceLayout has cyclomatic complexity 19 (impact -0.69)
+- [x] [high] updateChannel - if condition combines 5 boolean operators (impact -0.39)
+- [x] [medium] createChannel - createChannel has cyclomatic complexity 9 (impact -0.40)
+- [x] [medium] createInvite - createInvite has cyclomatic complexity 9 (impact -0.40)
+- [x] [medium] replaceLayout - if condition combines 4 boolean operators (impact -0.22)
+- [x] [medium] replaceLayout - if condition combines 4 boolean operators (impact -0.22)
+- [x] [medium] updateTarget - if condition combines 4 boolean operators (impact -0.22)
+- [x] [medium] updateTarget - if condition combines 4 boolean operators (impact -0.22)
+- [x] [low] replaceLayout - if condition combines 3 boolean operators (impact -0.10)
+- [x] [low] updateTarget - if condition combines 3 boolean operators (impact -0.10)
 
 ### `web/src/lib/media/groupEpoch.ts` — 13 Funde, Abzug 3.98.
 
