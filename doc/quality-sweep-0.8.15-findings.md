@@ -826,10 +826,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/soundEffects.ts` — 4 Funde, Abzug 1.80.
 
-- [ ] [medium] playSoundEffect - playSoundEffect has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] playTone - playTone has cyclomatic complexity 13 (impact -0.75)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [medium] playSoundEffect - playSoundEffect has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] playTone - playTone has cyclomatic complexity 13 (impact -0.75)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `internal/sfu/layer_wanted.go` — 2 Funde, Abzug 1.79.
 

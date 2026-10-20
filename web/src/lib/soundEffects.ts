@@ -16,10 +16,13 @@ function getAudioContext(outputDeviceId: string = '') {
     // Same speakers or headset as the voices in a call.
     applyOutputDevice(sharedAudioContext, outputDeviceId)
     if (sharedAudioContext.state === 'suspended') {
-      sharedAudioContext.resume().catch(() => {})
+      sharedAudioContext.resume().catch((err) => {
+        console.debug?.('soundEffects: failed to resume AudioContext', err)
+      })
     }
     return sharedAudioContext
-  } catch {
+  } catch (err) {
+    console.debug?.('soundEffects: failed to get AudioContext', err)
     return null
   }
 }
@@ -29,41 +32,66 @@ function getAudioContext(outputDeviceId: string = '') {
  */
 interface Tone { freq: number; endFreq?: number; startTime: number; duration: number; type?: OscillatorType; gain?: number }
 
-function playTone(ctx: AudioContext, dest: AudioNode, { freq, endFreq, startTime, duration, type = 'sine', gain = 1 }: Tone) {
+interface ToneEnvelope {
+  freq: number
+  endFreq?: number
+  startTime: number
+  duration: number
+}
+
+interface ToneGain {
+  gain?: number
+  startTime: number
+  duration: number
+}
+
+function applyFrequencyEnvelope(osc: OscillatorNode, env: ToneEnvelope) {
+  if (typeof osc.frequency?.setValueAtTime === 'function') {
+    osc.frequency.setValueAtTime(env.freq, env.startTime)
+    if (env.endFreq && env.endFreq !== env.freq && typeof osc.frequency?.exponentialRampToValueAtTime === 'function') {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(1, env.endFreq), env.startTime + env.duration)
+    }
+  } else if (osc.frequency) {
+    osc.frequency.value = env.freq
+  }
+}
+
+function applyGainEnvelope(g: GainNode, env: ToneGain) {
+  const targetGain = env.gain ?? 1
+  if (typeof g.gain?.setValueAtTime === 'function') {
+    g.gain.setValueAtTime(0.0001, env.startTime)
+    const attack = Math.min(0.01, env.duration * 0.1)
+    if (typeof g.gain?.linearRampToValueAtTime === 'function') {
+      g.gain.linearRampToValueAtTime(targetGain, env.startTime + attack)
+    }
+    if (typeof g.gain?.exponentialRampToValueAtTime === 'function') {
+      g.gain.exponentialRampToValueAtTime(0.0001, env.startTime + env.duration)
+    }
+  } else if (g.gain) {
+    g.gain.value = targetGain
+  }
+}
+
+function connectAndScheduleOscillator(osc: OscillatorNode, g: GainNode, dest: AudioNode, startTime: number, duration: number) {
+  osc.connect?.(g)
+  g.connect?.(dest)
+  osc.start?.(startTime)
+  osc.stop?.(startTime + duration + 0.02)
+}
+
+function playTone(ctx: AudioContext, dest: AudioNode, tone: Tone) {
   try {
     const osc = ctx.createOscillator()
     if (!osc) return
     const g = ctx.createGain()
     if (!g) return
-    osc.type = type
-    if (typeof osc.frequency?.setValueAtTime === 'function') {
-      osc.frequency.setValueAtTime(freq, startTime)
-      if (endFreq && endFreq !== freq && typeof osc.frequency?.exponentialRampToValueAtTime === 'function') {
-        osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFreq), startTime + duration)
-      }
-    } else if (osc.frequency) {
-      osc.frequency.value = freq
-    }
-
-    if (typeof g.gain?.setValueAtTime === 'function') {
-      g.gain.setValueAtTime(0.0001, startTime)
-      const attack = Math.min(0.01, duration * 0.1)
-      if (typeof g.gain?.linearRampToValueAtTime === 'function') {
-        g.gain.linearRampToValueAtTime(gain, startTime + attack)
-      }
-      if (typeof g.gain?.exponentialRampToValueAtTime === 'function') {
-        g.gain.exponentialRampToValueAtTime(0.0001, startTime + duration)
-      }
-    } else if (g.gain) {
-      g.gain.value = gain
-    }
-
-    osc.connect?.(g)
-    g.connect?.(dest)
-    osc.start?.(startTime)
-    osc.stop?.(startTime + duration + 0.02)
-  } catch {
+    osc.type = tone.type ?? 'sine'
+    applyFrequencyEnvelope(osc, tone)
+    applyGainEnvelope(g, tone)
+    connectAndScheduleOscillator(osc, g, dest, tone.startTime, tone.duration)
+  } catch (err) {
     // Audio node failed or scheduled in past
+    console.debug?.('soundEffects: playTone failed', err)
   }
 }
 
@@ -145,23 +173,33 @@ function createMasterGain(ctx: AudioContext, volume: number, now: number) {
   return masterGain
 }
 
-export function playSoundEffect(name: SoundEvent, overrideVolume: number | null = null, force = false) {
-  let voiceStore = null
+function getVoiceStoreSafe(): ReturnType<typeof useVoiceStore> | null {
   try {
-    voiceStore = useVoiceStore()
-  } catch {
+    return useVoiceStore()
+  } catch (err) {
     // Outside Pinia context
+    console.debug?.('soundEffects: voiceStore unavailable', err)
+    return null
   }
+}
 
-  if (voiceStore && !force) {
-    if (!voiceStore.soundEffectsEnabled) return
-    if (voiceStore.soundEvents && voiceStore.soundEvents[name] === false) return
-  }
+function isSoundAllowed(voiceStore: ReturnType<typeof useVoiceStore> | null, name: SoundEvent, force: boolean): boolean {
+  if (!voiceStore || force) return true
+  if (!voiceStore.soundEffectsEnabled) return false
+  if (voiceStore.soundEvents && voiceStore.soundEvents[name] === false) return false
+  return true
+}
 
-  const masterVol = typeof overrideVolume === 'number'
-    ? overrideVolume
-    : ((voiceStore?.soundEffectsVolume ?? 80) / 100)
+function resolveMasterVolume(voiceStore: ReturnType<typeof useVoiceStore> | null, overrideVolume: number | null): number {
+  if (typeof overrideVolume === 'number') return overrideVolume
+  return (voiceStore?.soundEffectsVolume ?? 80) / 100
+}
 
+export function playSoundEffect(name: SoundEvent, overrideVolume: number | null = null, force = false) {
+  const voiceStore = getVoiceStoreSafe()
+  if (!isSoundAllowed(voiceStore, name, force)) return
+
+  const masterVol = resolveMasterVolume(voiceStore, overrideVolume)
   if (masterVol <= 0) return
 
   const ctx = getAudioContext(voiceStore?.selectedOutputDeviceId)
