@@ -1,0 +1,19 @@
+web/src/composables/webrtc/statsPolling.ts
+  s_06fcde5dbef956::t_ceff7745041109 62-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a9fa0b428f7ba5b23d36fe745579d1a5a57bc572",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
