@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 795,797-800
+web/src/composables/useNavMenus.ts
+  h_0ff4f4713441f4 74,79-94,96-97,99-105,110-113,115-134,139-147,334-348,352,357,359-361
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "724cfb35ee160c99110b2df4ed462114aa6cb8c1",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
