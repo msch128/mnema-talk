@@ -24,25 +24,70 @@ func (s *Service) ReorderRoles(ctx context.Context, actor Subject, ids []uuid.UU
 }
 
 // moveRoles gives each role the position its place in ids implies.
+type roleMove struct {
+	id  uuid.UUID
+	pos int
+}
+
 func moveRoles(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, ids []uuid.UUID, custom int) error {
-	seen := map[uuid.UUID]bool{}
+	moves, err := planRoleMoves(snap, actor, ids, custom)
+	if err != nil {
+		return err
+	}
+	return applyRoleMoves(ctx, tx, moves)
+}
+
+func planRoleMoves(snap *Snapshot, actor Subject, ids []uuid.UUID, custom int) ([]roleMove, error) {
+	seen := make(map[uuid.UUID]bool, len(ids))
 	top := snap.TopPosition(actor)
+	var moves []roleMove
 	for i, id := range ids {
 		role, ok := snap.roles[id]
-		if !ok || role.Everyone || seen[id] {
-			return httpx.ErrInvalidInput("list every role exactly once")
+		if isInvalidRoleOrderTarget(ok, role.Everyone, seen[id]) {
+			return nil, httpx.ErrInvalidInput("list every role exactly once")
 		}
 		seen[id] = true
 		pos := custom - i
 		if pos == role.Position {
 			continue
 		}
-		if !snap.IsOwner(actor) && (role.Position >= top || pos >= top) {
-			return httpx.ErrForbidden("roles at or above your highest role cannot be moved")
+		if !canMoveRole(snap, actor, role.Position, pos, top) {
+			return nil, httpx.ErrForbidden("roles at or above your highest role cannot be moved")
 		}
-		if _, err := tx.Exec(ctx, `UPDATE roles SET position = $2, updated_at = NOW() WHERE id = $1`, id, pos); err != nil {
-			return fmt.Errorf("move role: %w", err)
-		}
+		moves = append(moves, roleMove{id: id, pos: pos})
+	}
+	return moves, nil
+}
+
+func isInvalidRoleOrderTarget(ok bool, everyone bool, seen bool) bool {
+	if !ok || everyone {
+		return true
+	}
+	return seen
+}
+
+func canMoveRole(snap *Snapshot, actor Subject, oldPos, newPos, top int) bool {
+	if snap.IsOwner(actor) {
+		return true
+	}
+	return oldPos < top && newPos < top
+}
+
+func applyRoleMoves(ctx context.Context, tx pgx.Tx, moves []roleMove) error {
+	if len(moves) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(moves))
+	positions := make([]int, len(moves))
+	for i, m := range moves {
+		ids[i] = m.id
+		positions[i] = m.pos
+	}
+	const q = `UPDATE roles SET position = v.pos, updated_at = NOW()
+FROM (SELECT UNNEST($1::uuid[]) AS id, UNNEST($2::int[]) AS pos) v
+WHERE roles.id = v.id`
+	if _, err := tx.Exec(ctx, q, ids, positions); err != nil {
+		return fmt.Errorf("move role: %w", err)
 	}
 	return nil
 }
@@ -53,22 +98,39 @@ func moveRoles(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, id
 // says. A list written before the Bot role existed leaves it out: it goes to
 // the bottom, where it started.
 func completeRoleOrder(snap *Snapshot, ids []uuid.UUID) ([]uuid.UUID, int, error) {
-	custom := 0
-	for _, r := range snap.roles {
-		if !r.Everyone && r.BotUserID == nil {
-			custom++
-		}
-	}
+	custom := countCustomRoles(snap.roles)
 	ids = slices.DeleteFunc(slices.Clone(ids), func(id uuid.UUID) bool { return snap.roles[id].BotUserID != nil })
-	for id, r := range snap.roles {
-		if r.Managed && r.BotUserID == nil && !slices.Contains(ids, id) {
-			ids = append(ids, id)
-		}
-	}
+	ids = appendMissingManaged(snap.roles, ids)
 	if len(ids) != custom {
 		return nil, 0, httpx.ErrInvalidInput("list every role exactly once")
 	}
 	return ids, custom, nil
+}
+
+func countCustomRoles(roles map[uuid.UUID]Role) int {
+	n := 0
+	for _, r := range roles {
+		if isCustomOrderRole(r) {
+			n++
+		}
+	}
+	return n
+}
+
+func isCustomOrderRole(r Role) bool {
+	return !r.Everyone && r.BotUserID == nil
+}
+
+func appendMissingManaged(roles map[uuid.UUID]Role, ids []uuid.UUID) []uuid.UUID {
+	for id, r := range roles {
+		if !r.Managed || r.BotUserID != nil {
+			continue
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 // Roles lists every role, highest first.

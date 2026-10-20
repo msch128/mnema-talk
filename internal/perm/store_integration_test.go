@@ -336,7 +336,7 @@ func TestStoreFailsWhenTheDatabaseDoes(t *testing.T) {
 		{"delete role", "DELETE FROM roles", 1, false, func(s *perm.Service, c context.Context) error { return s.DeleteRole(c, w.owner, high.ID) }},
 		{"close the gap", "position = position - 1", 1, false, func(s *perm.Service, c context.Context) error { return s.DeleteRole(c, w.owner, high.ID) }},
 		{"holders before delete", "SELECT user_id FROM user_roles WHERE role_id", 1, false, func(s *perm.Service, c context.Context) error { return s.DeleteRole(c, w.owner, high.ID) }},
-		{"move role", "UPDATE roles SET position = $2", 1, false, func(s *perm.Service, c context.Context) error {
+		{"move role", "UPDATE roles SET position = v.pos", 1, false, func(s *perm.Service, c context.Context) error {
 			return s.ReorderRoles(c, w.owner, []uuid.UUID{high.ID, low.ID})
 		}},
 		{"load user", "SELECT role, is_bot FROM users WHERE id", 1, false, func(s *perm.Service, c context.Context) error {

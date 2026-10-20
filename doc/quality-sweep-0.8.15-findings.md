@@ -998,9 +998,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/perm/store_roles_order.go` — 3 Funde, Abzug 1.50.
 
-- [ ] [medium] completeRoleOrder - completeRoleOrder has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] moveRoles - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [medium] moveRoles - moveRoles has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] completeRoleOrder - completeRoleOrder has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] moveRoles - a database call runs once per loop iteration (N+1 query) (impact -0.00)
+- [x] [medium] moveRoles - moveRoles has cyclomatic complexity 10 (impact -0.75)
 
 ### `internal/sfu/room_attach.go` — 2 Funde, Abzug 1.50.
 
