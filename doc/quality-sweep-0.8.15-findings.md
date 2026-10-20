@@ -1170,9 +1170,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `cmd/server/unlock.go` — 3 Funde, Abzug 1.25.
 
-- [ ] [medium] requestUnlock - a database call is reached once per loop iteration through requestUnlock -> UnlockRequestPending (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] requestUnlock - requestUnlock has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] unlockCommand - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] requestUnlock - a database call is reached once per loop iteration through requestUnlock -> UnlockRequestPending (cross-function N+1 query) (impact -0.00)
+- [x] [medium] requestUnlock - requestUnlock has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] unlockCommand - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/chat/message_types.go` — 2 Funde, Abzug 1.25.
 
