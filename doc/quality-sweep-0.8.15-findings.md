@@ -1479,19 +1479,19 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/camera.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] startCamera - startCamera has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] startCamera - startCamera has cyclomatic complexity 12 (impact -0.85)
 
 ### `web/src/composables/webrtc/layers.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] runSyncLayers - runSyncLayers has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] runSyncLayers - runSyncLayers has cyclomatic complexity 12 (impact -0.85)
 
 ### `web/src/composables/webrtc/session.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] joinVoiceChannel - joinVoiceChannel has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] joinVoiceChannel - joinVoiceChannel has cyclomatic complexity 10 (impact -0.85)
 
 ### `web/src/composables/webrtc/watchers.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] installWatchers - installWatchers has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] installWatchers - installWatchers has cyclomatic complexity 10 (impact -0.85)
 
 ### `web/src/lib/linkPreview.ts` — 1 Funde, Abzug 0.85.
 
