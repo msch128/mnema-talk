@@ -1,0 +1,28 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1446,1450,1454,1458,1462,1622,1893
+internal/ws/handle.go
+  h_0ff4f4713441f4 121,126-136
+internal/ws/native_renew_frame.go
+  h_0ff4f4713441f4 27,36-51
+internal/ws/perms.go
+  h_0ff4f4713441f4 159,161,172-192
+internal/ws/presence.go
+  h_0ff4f4713441f4 93-94,97-103,107,109,111,113,197
+internal/ws/voice.go
+  h_0ff4f4713441f4 74-81,84,86-87,89,91,93-95,98-99,102-103
+internal/ws/voice_kick.go
+  h_0ff4f4713441f4 66-79,89,91,93,106
+internal/ws/voicegate.go
+  h_0ff4f4713441f4 89-95,97-98,101,103-106,115-121,124,129,131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5324707df70b731f22c711fa16d4286b1a4bbdd3",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
