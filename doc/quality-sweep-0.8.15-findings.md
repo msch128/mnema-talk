@@ -1196,9 +1196,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/candidates.go` — 3 Funde, Abzug 1.25.
 
-- [ ] [medium] vetRemoteCandidate - vetRemoteCandidate has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] applyEarlyCandidates - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
-- [ ] [low] routableCandidateAddress - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] vetRemoteCandidate - vetRemoteCandidate has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] applyEarlyCandidates - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
+- [x] [low] routableCandidateAddress - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/sfu/viewer_track.go` — 2 Funde, Abzug 1.25.
 
