@@ -1258,9 +1258,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/interactions.go` — 3 Funde, Abzug 1.15.
 
-- [ ] [medium] invoke - invoke has cyclomatic complexity 14 (impact -0.85)
-- [ ] [low] - 17% of file duplicated in other files; worst clone shares 34 lines with internal/chat/botapi.go (co-changed 2x) (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] invoke - invoke has cyclomatic complexity 14 (impact -0.85)
+- [x] [low] - 17% of file duplicated in other files; worst clone shares 34 lines with internal/chat/botapi.go (co-changed 2x) (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/webhook/store.go` — 3 Funde, Abzug 1.15.
 

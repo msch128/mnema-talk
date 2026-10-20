@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -134,6 +135,97 @@ type Invoked struct {
 	InteractionID uuid.UUID `json:"interaction_id" format:"uuid"`
 }
 
+func isCommandAvailable(cmd Command, botDisabled bool, snap *perm.Snapshot, botUser, ch uuid.UUID) bool {
+	if cmd.Disabled || botDisabled {
+		return false
+	}
+	return snap.Channel(perm.Subject{ID: botUser}, ch).Has(perm.ViewChannel | perm.SendMessages)
+}
+
+func (c *Commands) loadBotProfile(ctx context.Context, botID uuid.UUID) (string, *string, error) {
+	var name string
+	var avatar *string
+	err := c.DB.QueryRow(ctx, `SELECT b.name, u.avatar_s3_key FROM bots b JOIN users u ON u.id = b.user_id WHERE b.id = $1`, botID).Scan(&name, &avatar)
+	return name, avatar, err
+}
+
+func buildInteractionPayload(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) ([]byte, error) {
+	return json.Marshal(map[string]any{
+		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
+		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
+		"member": map[string]any{"user": map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL}},
+	})
+}
+
+func (c *Commands) deliverOrRollback(botID, id uuid.UUID, payload []byte) error {
+	if !c.Deliver.DeliverInteraction(botID, payload) {
+		c.store.mu.Lock()
+		delete(c.store.m, id)
+		c.store.mu.Unlock()
+		return httpx.ErrConflict("the bot is not connected")
+	}
+	return nil
+}
+
+func (c *Commands) channelForInvoke(r *http.Request, user *auth.User) (uuid.UUID, *perm.Snapshot, error) {
+	ch, err := httpx.PathUUID(r, "channelID")
+	if err != nil {
+		return uuid.Nil, nil, err
+	}
+	snap, err := c.Perms.ForChannel(r.Context(), ch)
+	if err != nil {
+		return uuid.Nil, nil, err
+	}
+	if err := perm.CheckChannel(snap.Channel(user.Subject(), ch), perm.SendMessages); err != nil {
+		return uuid.Nil, nil, err
+	}
+	return ch, snap, nil
+}
+
+func (c *Commands) resolveTargetCommand(ctx context.Context, snap *perm.Snapshot, ch uuid.UUID, cmdID uuid.UUID) (*Command, uuid.UUID, error) {
+	cmd, botUser, botDisabled, err := getCommand(ctx, c.DB, cmdID)
+	if err != nil {
+		return nil, uuid.Nil, err
+	}
+	if !isCommandAvailable(cmd, botDisabled, snap, botUser, ch) {
+		return nil, uuid.Nil, errCommandNotFound
+	}
+	return &cmd, botUser, nil
+}
+
+func (c *Commands) checkInvokeRate(w http.ResponseWriter, userID string) error {
+	if ok, retry := c.invokes.Allow(userID); !ok {
+		w.Header().Set("Retry-After", fmt.Sprint(int(retry.Seconds())+1))
+		return httpx.ErrRateLimited()
+	}
+	return nil
+}
+
+func (c *Commands) registerInteraction(cmd *Command, botUser uuid.UUID, name string, avatar *string, ch, invoker uuid.UUID) (uuid.UUID, string, error) {
+	id := uuid.New()
+	token, ok := c.store.add(id, &interaction{botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: invoker})
+	if !ok {
+		return uuid.Nil, "", httpx.ErrRateLimited()
+	}
+	return id, token, nil
+}
+
+func (c *Commands) createInteraction(ctx context.Context, cmd *Command, botUser, ch, invoker uuid.UUID) (uuid.UUID, string, error) {
+	name, avatar, err := c.loadBotProfile(ctx, cmd.BotID)
+	if err != nil {
+		return uuid.Nil, "", err
+	}
+	return c.registerInteraction(cmd, botUser, name, avatar, ch, invoker)
+}
+
+func (c *Commands) dispatchInteraction(id uuid.UUID, token string, ch uuid.UUID, cmd Command, opts []map[string]any, user *auth.User) error {
+	payload, err := buildInteractionPayload(id, token, ch, cmd, opts, user)
+	if err != nil {
+		return err
+	}
+	return c.deliverOrRollback(cmd.BotID, id, payload)
+}
+
 // invoke handles POST /api/channels/{channelID}/interactions.
 //
 // @Summary Run a slash command
@@ -157,56 +249,31 @@ type Invoked struct {
 // @Router /api/channels/{channelID}/interactions [post]
 func (c *Commands) invoke(w http.ResponseWriter, r *http.Request) error {
 	user := auth.UserFrom(r.Context())
-	ch, err := httpx.PathUUID(r, "channelID")
+	ch, snap, err := c.channelForInvoke(r, user)
 	if err != nil {
-		return err
-	}
-	snap, err := c.Perms.ForChannel(r.Context(), ch)
-	if err != nil {
-		return err
-	}
-	if err := perm.CheckChannel(snap.Channel(user.Subject(), ch), perm.SendMessages); err != nil {
 		return err
 	}
 	var req InvokeRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	cmd, botUser, botDisabled, err := getCommand(r.Context(), c.DB, req.CommandID)
+	cmd, botUser, err := c.resolveTargetCommand(r.Context(), snap, ch, req.CommandID)
 	if err != nil {
 		return err
 	}
-	if cmd.Disabled || botDisabled || !snap.Channel(perm.Subject{ID: botUser}, ch).Has(perm.ViewChannel|perm.SendMessages) {
-		return errCommandNotFound
+	if err := c.checkInvokeRate(w, user.ID.String()); err != nil {
+		return err
 	}
-	if ok, retry := c.invokes.Allow(user.ID.String()); !ok {
-		w.Header().Set("Retry-After", fmt.Sprint(int(retry.Seconds())+1))
-		return httpx.ErrRateLimited()
-	}
-	opts, err := c.checkOptions(r, snap, user, ch, cmd, req.Options)
+	opts, err := c.checkOptions(r, snap, user, ch, *cmd, req.Options)
 	if err != nil {
 		return err
 	}
-	var name string
-	var avatar *string
-	if err := c.DB.QueryRow(r.Context(), `SELECT b.name, u.avatar_s3_key FROM bots b JOIN users u ON u.id = b.user_id WHERE b.id = $1`, cmd.BotID).Scan(&name, &avatar); err != nil {
+	id, token, err := c.createInteraction(r.Context(), cmd, botUser, ch, user.ID)
+	if err != nil {
 		return err
 	}
-	id := uuid.New()
-	token, ok := c.store.add(id, &interaction{botID: cmd.BotID, botUser: botUser, botName: name, avatar: auth.AvatarURL(avatar), channel: ch, invoker: user.ID})
-	if !ok {
-		return httpx.ErrRateLimited()
-	}
-	payload, _ := json.Marshal(map[string]any{
-		"id": id, "token": token, "type": InteractionApplicationCommand, "channel_id": ch, "application_id": cmd.BotID,
-		"data":   map[string]any{"id": cmd.ID, "name": cmd.Name, "options": opts},
-		"member": map[string]any{"user": map[string]any{"id": user.ID, "username": user.Username, "display_name": user.DisplayName, "avatar_url": user.AvatarURL}},
-	})
-	if !c.Deliver.DeliverInteraction(cmd.BotID, payload) {
-		c.store.mu.Lock()
-		delete(c.store.m, id)
-		c.store.mu.Unlock()
-		return httpx.ErrConflict("the bot is not connected")
+	if err := c.dispatchInteraction(id, token, ch, *cmd, opts, user); err != nil {
+		return err
 	}
 	httpx.WriteJSON(w, http.StatusAccepted, Invoked{InteractionID: id})
 	return nil
