@@ -1130,13 +1130,13 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/web.go` — 7 Funde, Abzug 1.35.
 
-- [ ] [medium] newHandler - newHandler has cyclomatic complexity 13 (impact -0.85)
-- [ ] [medium] serveCompressed - a deferred call inside a loop runs only when the enclosing function returns, so the resource stays held across every iteration; close it in the loop body (or wrap the body in a function) instead (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [medium] newHandler - newHandler has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] serveCompressed - a deferred call inside a loop runs only when the enclosing function returns, so the resource stays held across every iteration; close it in the loop body (or wrap the body in a function) instead (impact -0.00)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
 
 ### `internal/webhook/outgoing_handler.go` — 3 Funde, Abzug 1.35.
 
