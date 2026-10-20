@@ -37,18 +37,40 @@ async function open(i) {
   clients.push(c)
 }
 
+async function fetchDecodedFrames(page) {
+  try {
+    return await page.evaluate(async () => {
+      let n = 0
+      for (const pc of window.__pcs || []) {
+        const stats = await pc.getStats()
+        stats.forEach((s) => {
+          if (s.type === 'inbound-rtp' && s.kind === 'video') n += s.framesDecoded || 0
+        })
+      }
+      return n
+    })
+  } catch {
+    return -1
+  }
+}
+
+async function checkClientWatching(c) {
+  if (c.watching !== null) return
+  if ((await watchScreen(c.page)) !== null) {
+    c.watching = now()
+  }
+}
+
+async function sampleClient(c) {
+  if (c.i === 0) return
+  await checkClientWatching(c)
+  const f = await fetchDecodedFrames(c.page)
+  c.samples.push([now(), f])
+}
+
 async function sample() {
   for (const c of clients) {
-    if (c.i === 0) continue
-    if (c.watching === null && (await watchScreen(c.page)) !== null) c.watching = now()
-    const f = await c.page
-      .evaluate(async () => {
-        let n = 0
-        for (const pc of window.__pcs || []) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'video') n += s.framesDecoded || 0 })
-        return n
-      })
-      .catch(() => -1)
-    c.samples.push([now(), f])
+    await sampleClient(c)
   }
 }
 
@@ -76,23 +98,61 @@ await sleep(HOLD_S * 1000)
 stop = true
 await loop
 
-const report = clients.filter((c) => c.i > 0).map((c) => {
+function checkSampleStall(stalls, since, t) {
+  if (since !== null && t - since > STALL_S) {
+    stalls.push([since, t])
+  }
+}
+
+function checkFinalStall(stalls, since, end) {
+  if (since !== null && end - since > STALL_S) {
+    stalls.push([since, 'end'])
+  }
+}
+
+function findStalls(samples) {
   const stalls = []
   let last = null, since = null, first = null
-  for (const [t, f] of c.samples) {
-    if (f > 0 && first === null) first = t
-    if (last !== null && f === last) since ??= t - 0.5
-    else {
-      if (since !== null && t - since > STALL_S) stalls.push([since, t])
+  for (const [t, f] of samples) {
+    if (first === null && f > 0) first = t
+    if (f === last) {
+      since ??= t - 0.5
+    } else {
+      checkSampleStall(stalls, since, t)
       since = null
     }
     last = f
   }
-  if (since !== null && c.samples.at(-1)[0] - since > STALL_S) stalls.push([since, 'end'])
-  const after = first === null ? [] : stalls.filter((s) => s[0] >= first)
-  const longest = after.reduce((m, s) => Math.max(m, (s[1] === 'end' ? c.samples.at(-1)[0] : s[1]) - s[0]), 0)
-  return { viewer: c.i, watching: c.watching, firstFrame: first, neverDecoded: first === null, stalls: after, longestStallS: +longest.toFixed(1) }
-})
+  const lastSampleTime = samples.at(-1)?.[0] ?? 0
+  checkFinalStall(stalls, since, lastSampleTime)
+  return { first, stalls }
+}
+
+function calculateLongestStall(stalls, first, lastSampleTime) {
+  if (first === null) return { after: [], longest: 0 }
+  const after = stalls.filter((s) => s[0] >= first)
+  const longest = after.reduce((m, s) => {
+    const end = s[1] === 'end' ? lastSampleTime : s[1]
+    return Math.max(m, end - s[0])
+  }, 0)
+  return { after, longest }
+}
+
+function analyzeClient(c) {
+  const { first, stalls } = findStalls(c.samples)
+  const lastSampleTime = c.samples.at(-1)?.[0] ?? 0
+  const { after, longest } = calculateLongestStall(stalls, first, lastSampleTime)
+  return {
+    viewer: c.i,
+    watching: c.watching,
+    firstFrame: first,
+    neverDecoded: first === null,
+    stalls: after,
+    longestStallS: +longest.toFixed(1),
+  }
+}
+
+const report = clients.filter((c) => c.i > 0).map(analyzeClient)
 const summary = {
   mode: MODE,
   desc: process.env.DESC === '1',

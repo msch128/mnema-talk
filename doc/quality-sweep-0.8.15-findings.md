@@ -1025,8 +1025,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `loadtest/join.mjs` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] clients.filter((c) => c.i > 0).map callback - clients.filter((c) => c.i > 0).map callback has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] sample - sample has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] clients.filter((c) => c.i > 0).map callback - clients.filter((c) => c.i > 0).map callback has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] sample - sample has cyclomatic complexity 10 (impact -0.75)
 
 ### `loadtest/run.sh` — 2 Funde, Abzug 1.50.
 
