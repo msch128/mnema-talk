@@ -1073,8 +1073,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/chatLogic.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] firstUnreadId - firstUnreadId has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] typingLine - typingLine has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] firstUnreadId - firstUnreadId has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] typingLine - typingLine has cyclomatic complexity 9 (impact -0.75)
 
 ### `web/src/lib/media/codec.ts` — 2 Funde, Abzug 1.50.
 
