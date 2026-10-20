@@ -1389,9 +1389,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/auth/lockout.go` — 3 Funde, Abzug 0.85.
 
-- [ ] [medium] ProcessUnlockRequests - ProcessUnlockRequests has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] ProcessUnlockRequests - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [medium] RunUnlockWorker - a database call is reached once per loop iteration through RunUnlockWorker -> ProcessUnlockRequests (cross-function N+1 query) (impact -0.00)
+- [x] [medium] ProcessUnlockRequests - ProcessUnlockRequests has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] ProcessUnlockRequests - a database call runs once per loop iteration (N+1 query) (impact -0.00)
+- [x] [medium] RunUnlockWorker - a database call is reached once per loop iteration through RunUnlockWorker -> ProcessUnlockRequests (cross-function N+1 query) (impact -0.00)
 
 ### `internal/bot/commands_validate.go` — 1 Funde, Abzug 0.85.
 

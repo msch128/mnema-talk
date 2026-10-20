@@ -130,42 +130,51 @@ func UnlockRequestPending(ctx context.Context, q db.Querier, id int64) (bool, er
 	return pending, err
 }
 
-// ProcessUnlockRequests applies and deletes every queued unlock request and
-// returns how many it handled.
-func (h *Handler) ProcessUnlockRequests(ctx context.Context) (int, error) {
-	rows, err := h.Sessions.DB.Query(ctx, `DELETE FROM login_unlock_requests RETURNING username, all_accounts`)
+type unlockReq struct {
+	username *string
+	all      bool
+}
+
+func readUnlockRequests(ctx context.Context, q db.Querier) ([]unlockReq, error) {
+	rows, err := q.Query(ctx, `DELETE FROM login_unlock_requests RETURNING username, all_accounts`)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	type req struct {
-		username *string
-		all      bool
-	}
-	var reqs []req
+	defer rows.Close()
+	var reqs []unlockReq
 	for rows.Next() {
-		var r req
+		var r unlockReq
 		if err := rows.Scan(&r.username, &r.all); err != nil {
-			rows.Close()
-			return 0, err
+			return nil, err
 		}
 		reqs = append(reqs, r)
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	return reqs, rows.Err()
+}
+
+func (h *Handler) applyUnlockRequest(ctx context.Context, r unlockReq) {
+	if r.all || r.username == nil {
+		h.ClearAllLoginLockouts()
+		slog.Info("login lockouts cleared", "scope", "all", "via", "cli")
+		return
+	}
+	var id uuid.UUID
+	if err := h.Sessions.DB.QueryRow(ctx, `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, *r.username).Scan(&id); err != nil {
+		id = uuid.Nil
+	}
+	h.ClearLoginLockout(*r.username, id)
+	slog.Info("login lockout cleared", "scope", "account", "via", "cli")
+}
+
+// ProcessUnlockRequests applies and deletes every queued unlock request and
+// returns how many it handled.
+func (h *Handler) ProcessUnlockRequests(ctx context.Context) (int, error) {
+	reqs, err := readUnlockRequests(ctx, h.Sessions.DB)
+	if err != nil {
 		return 0, err
 	}
 	for _, r := range reqs {
-		if r.all || r.username == nil {
-			h.ClearAllLoginLockouts()
-			slog.Info("login lockouts cleared", "scope", "all", "via", "cli")
-			continue
-		}
-		var id uuid.UUID
-		if err := h.Sessions.DB.QueryRow(ctx, `SELECT id FROM users WHERE LOWER(username) = LOWER($1)`, *r.username).Scan(&id); err != nil {
-			id = uuid.Nil
-		}
-		h.ClearLoginLockout(*r.username, id)
-		slog.Info("login lockout cleared", "scope", "account", "via", "cli")
+		h.applyUnlockRequest(ctx, r)
 	}
 	return len(reqs), nil
 }
