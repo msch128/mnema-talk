@@ -455,10 +455,12 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/desktopGaming.ts` — 4 Funde, Abzug 3.11.
 
-- [ ] [medium] chordFromKey - chordFromKey has cyclomatic complexity 10 (impact -0.85)
-- [ ] [medium] chordFromKey - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] inCall - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] leaseIsLive - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Akkorde, der Anruf und die Lease.
+
+- [x] [medium] chordFromKey - chordFromKey has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] chordFromKey - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] inCall - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] leaseIsLive - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/perm/store_overwrites.go` — 5 Funde, Abzug 3.10.
 

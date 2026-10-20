@@ -29,8 +29,11 @@ type ChatStore = ReturnType<typeof useChatStore>
 // Signed in, connected, with a live media connection, and listed in the channel's call.
 function inCall(auth: AuthStore, chat: ChatStore, voice: VoiceStore): boolean {
   const channel = voice.currentChannelId
-  if (!auth.user?.id || !channel || !chat.isConnected || !voice.isConnected || !voice.rtcStats?.connected) return false
-  return Object.values(voice.channelUsers[channel] ?? {}).some(u => u.id === auth.user?.id)
+  const userId = auth.user?.id
+  if (!userId || !channel) return false
+  if (!chat.isConnected || !voice.isConnected) return false
+  if (!voice.rtcStats?.connected) return false
+  return Object.values(voice.channelUsers[channel] ?? {}).some(u => u.id === userId)
 }
 // What a live, scoped command asks of the call.
 function runGamingAction(action: unknown, voice: VoiceStore, ctl: { stopScreenShare(): void; releasePtt(): void; pressPtt(): void }) {
@@ -62,12 +65,12 @@ export function startDesktopGaming(): () => void {
   }
   function onControl(event: Event) {
     if (!(event instanceof CustomEvent)) return
-    const detail: unknown = event.detail
-    if (!detail || typeof detail !== 'object' || Reflect.get(detail, 'token') !== token) return
+    const detail = gamingDetail(event.detail, token)
+    if (!detail) return
     const action: unknown = Reflect.get(detail, 'action')
     if (action === 'ptt-release') { releasePtt(); return }
     if (!leaseIsLive(detail, performance.now())) return
-    if (Reflect.get(detail, 'scope') !== scope || !ready()) return
+    if (gamingScopeRejected(detail, scope, ready)) return
     runGamingAction(action, voice, { stopScreenShare, releasePtt, pressPtt })
   }
   async function sync() {
@@ -94,23 +97,45 @@ export function startDesktopGaming(): () => void {
 }
 // A command carries the host's issue/expiry stamps (performance.now clock); it
 // is honoured only inside a short, well-formed window.
+function gamingDetail(detail: unknown, token: string): object | null {
+  if (!detail || typeof detail !== 'object') return null
+  if (Reflect.get(detail, 'token') !== token) return null
+  return detail
+}
+
+function gamingScopeRejected(detail: object, scope: string, ready: () => boolean): boolean {
+  if (Reflect.get(detail, 'scope') !== scope) return true
+  return !ready()
+}
+
 function leaseIsLive(detail: object, now: number): boolean {
   const issued: unknown = Reflect.get(detail, 'issued')
   const expires: unknown = Reflect.get(detail, 'expires')
   if (typeof issued !== 'number' || typeof expires !== 'number') return false
-  if (!Number.isFinite(issued) || !Number.isFinite(expires) || expires <= issued || expires - issued > 151) return false
+  if (!Number.isFinite(issued) || !Number.isFinite(expires)) return false
+  if (expires <= issued || expires - issued > 151) return false
   return now >= issued && now < expires
 }
 export function chordText(chord: GamingChord): string {
   const key = chord.key === 32 ? 'Space' : chord.key >= 112 && chord.key <= 135 ? `F${chord.key - 111}` : String.fromCharCode(chord.key)
   return [chord.control && 'Ctrl', chord.alt && 'Alt', chord.shift && 'Shift', key].filter(Boolean).join('+')
 }
+function gamingKey(code: string): number {
+  if (/^Key[A-Z]$/.test(code)) return code.charCodeAt(3)
+  if (/^Digit[0-9]$/.test(code)) return code.charCodeAt(5)
+  if (/^F([1-9]|1[0-9]|2[0-4])$/.test(code)) return 111 + Number(code.slice(1))
+  if (code === 'Space') return 32
+  return 0
+}
+
+function chordBlocked(event: KeyboardEvent, key: number): boolean {
+  if (!key || event.metaKey) return true
+  if (!event.altKey) return false
+  return key === 32 || key === 115
+}
+
 export function chordFromKey(event: KeyboardEvent): GamingChord | null {
-  let key = 0
-  if (/^Key[A-Z]$/.test(event.code)) key = event.code.charCodeAt(3)
-  else if (/^Digit[0-9]$/.test(event.code)) key = event.code.charCodeAt(5)
-  else if (/^F([1-9]|1[0-9]|2[0-4])$/.test(event.code)) key = 111 + Number(event.code.slice(1))
-  else if (event.code === 'Space') key = 32
-  if (!key || event.metaKey || (event.altKey && (key === 32 || key === 115))) return null
+  const key = gamingKey(event.code)
+  if (chordBlocked(event, key)) return null
   return { key, alt: event.altKey, control: event.ctrlKey, shift: event.shiftKey }
 }
