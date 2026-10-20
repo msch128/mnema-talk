@@ -938,9 +938,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/dfn/dfnNode.ts` — 3 Funde, Abzug 1.65.
 
-- [ ] [high] createDeepFilterNode - createDeepFilterNode has cyclomatic complexity 15 (impact -1.19)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] createDeepFilterNode - createDeepFilterNode is 76 lines long (impact -0.31)
+- [x] [high] createDeepFilterNode - createDeepFilterNode has cyclomatic complexity 15 (impact -1.19)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] createDeepFilterNode - createDeepFilterNode is 76 lines long (impact -0.31)
 
 ### `web/src/stores/voice/screens.ts` — 4 Funde, Abzug 1.65.
 
