@@ -1154,12 +1154,12 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/db/db.go` — 6 Funde, Abzug 1.30.
 
-- [ ] [medium] MigrateFS - MigrateFS has cyclomatic complexity 13 (impact -0.85)
-- [ ] [medium] MigrateFS - a database call is reached once per loop iteration through MigrateFS -> applyMigration (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] recordChecksums - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] applyMigration - long parameter list: applyMigration takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.15)
+- [x] [medium] MigrateFS - MigrateFS has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] MigrateFS - a database call is reached once per loop iteration through MigrateFS -> applyMigration (cross-function N+1 query) (impact -0.00)
+- [x] [medium] recordChecksums - a database call runs once per loop iteration (N+1 query) (impact -0.00)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] applyMigration - long parameter list: applyMigration takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.15)
 
 ### `internal/webbundle/trust.go` — 4 Funde, Abzug 1.30.
 
