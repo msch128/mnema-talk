@@ -1146,11 +1146,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webhook/dispatch_delivery.go` — 5 Funde, Abzug 1.33.
 
-- [ ] [medium] process - process has cyclomatic complexity 14 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [medium] process - process has cyclomatic complexity 14 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
 
 ### `internal/db/db.go` — 6 Funde, Abzug 1.30.
 
