@@ -920,8 +920,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/signal.go` — 3 Funde, Abzug 1.65.
 
-- [ ] [medium] handleSubscribe - handleSubscribe has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] parseSubscribe - parseSubscribe has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] handleSubscribe - handleSubscribe has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] parseSubscribe - parseSubscribe has cyclomatic complexity 13 (impact -0.75)
 - [ ] [low] - 13% of file duplicated in other files; worst clone shares 13 lines with internal/ws/layers.go (co-changed 2x) (impact -0.15)
 
 ### `web/src/composables/useSidebarReorder.ts` — 3 Funde, Abzug 1.65.
