@@ -2018,8 +2018,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/httpx/middleware_clientip.go` — 2 Funde, Abzug 0.00.
 
-- [ ] [low] ParseCIDRs - string built by += in a loop; use a buffer / join for linear cost (impact -0.00)
-- [ ] [low] ParseCIDRs - string built by += in a loop; use a buffer / join for linear cost (impact -0.00)
+- [x] [low] ParseCIDRs - string built by += in a loop; use a buffer / join for linear cost (impact -0.00)
+- [x] [low] ParseCIDRs - string built by += in a loop; use a buffer / join for linear cost (impact -0.00)
 
 ### `internal/server/ops.go` — 1 Funde, Abzug 0.00.
 
