@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 704-710
+web/src/composables/usePictureInPicture.ts
+  h_0ff4f4713441f4 28-29,53,82-86,102-122,127,130,135-137,148-149,165-194,214,217,222-223,228-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "66dbd496bfe00f4bab902e309bcf9b010dc25f7a",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
