@@ -233,6 +233,26 @@ func (h *Handler) get(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func validateUpdateRequest(req *UpdateRequest) error {
+	if req.Name != nil {
+		n, err := cleanName(*req.Name)
+		if err != nil {
+			return err
+		}
+		req.Name = &n
+	}
+	if req.AllowedIntents != nil {
+		if err := checkIntents(*req.AllowedIntents); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func shouldRevokeConnections(req UpdateRequest) bool {
+	return (req.Disabled != nil && *req.Disabled) || req.AllowedIntents != nil
+}
+
 // update handles PATCH /api/admin/bots/{id}.
 //
 // @Summary Change a bot
@@ -262,25 +282,13 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	if req.Name != nil {
-		n, err := cleanName(*req.Name)
-		if err != nil {
-			return err
-		}
-		req.Name = &n
-	}
-	if req.AllowedIntents != nil {
-		if err := checkIntents(*req.AllowedIntents); err != nil {
-			return err
-		}
+	if err := validateUpdateRequest(&req); err != nil {
+		return err
 	}
 	if err := Update(r.Context(), h.DB, b.ID, req.Name, req.AllowedIntents, req.Disabled); err != nil {
 		return err
 	}
-	if req.Disabled != nil && *req.Disabled && h.OnRevoke != nil {
-		h.OnRevoke(b.ID, nil)
-	} else if req.AllowedIntents != nil && h.OnRevoke != nil {
-		// A narrower intent set must not outlive the connections that used it.
+	if h.OnRevoke != nil && shouldRevokeConnections(req) {
 		h.OnRevoke(b.ID, nil)
 	}
 	h.Perms.Changed(nil)

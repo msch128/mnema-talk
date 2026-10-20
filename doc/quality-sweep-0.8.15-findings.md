@@ -1238,8 +1238,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/handler.go` — 2 Funde, Abzug 1.20.
 
-- [ ] [medium] - 43% of file duplicated in other files; worst clone shares 37 lines with internal/webhook/outgoing_handler.go (impact -0.35)
-- [ ] [medium] update - update has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] - 43% of file duplicated in other files; worst clone shares 37 lines with internal/webhook/outgoing_handler.go (impact -0.35)
+- [x] [medium] update - update has cyclomatic complexity 13 (impact -0.85)
 
 ### `internal/chat/botapi_reactions.go` — 2 Funde, Abzug 1.20.
 
