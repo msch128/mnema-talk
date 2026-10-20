@@ -1202,8 +1202,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/viewer_track.go` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] writeLocked - writeLocked has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] keyframeDueLocked - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] writeLocked - writeLocked has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] keyframeDueLocked - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/markdown.ts` — 2 Funde, Abzug 1.25.
 

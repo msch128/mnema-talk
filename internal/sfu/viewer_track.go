@@ -85,10 +85,21 @@ func (vt *viewerTrack) retarget() {
 	}
 }
 
+func (vt *viewerTrack) needsKeyframe(now time.Time) bool {
+	switch {
+	case vt.closed, vt.eff < 0:
+		return false
+	case vt.eff == vt.cur, now.Sub(vt.lastKeyAsk) < keyframeRetry:
+		return false
+	default:
+		return true
+	}
+}
+
 // keyframeDueLocked reports whether a keyframe of the target layer should be
 // asked for now (and records the ask).
 func (vt *viewerTrack) keyframeDueLocked(now time.Time) bool {
-	if vt.closed || vt.eff < 0 || vt.eff == vt.cur || now.Sub(vt.lastKeyAsk) < keyframeRetry {
+	if !vt.needsKeyframe(now) {
 		return false
 	}
 	vt.lastKeyAsk = now
@@ -269,26 +280,25 @@ func (vt *viewerTrack) write(idx int, src *rtp.Packet) {
 	}
 }
 
-func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (switched, ask bool, eff int) {
-	if vt.closed {
-		return false, false, -1
-	}
-	eff = vt.eff
+func (vt *viewerTrack) checkLayerTransition(idx int, src *rtp.Packet, now time.Time) (drop bool, switched bool, ask bool) {
+	eff := vt.eff
 	if idx != vt.cur {
 		if idx != eff {
-			return false, false, eff
+			return true, false, false
 		}
 		if !vt.group.keyStart(idx, src) {
-			return false, vt.keyframeDueLocked(now), eff
+			return true, false, vt.keyframeDueLocked(now)
 		}
 		vt.switchLocked(idx, src, now)
-		switched = true
-	} else if eff != vt.cur {
-		// A switch is pending; the current layer's packets are the only
-		// ones flowing, so they carry the reminder to ask again.
-		ask = vt.keyframeDueLocked(now)
+		return false, true, false
 	}
+	if eff != vt.cur {
+		return false, false, vt.keyframeDueLocked(now)
+	}
+	return false, false, false
+}
 
+func (vt *viewerTrack) sendPacketLocked(src *rtp.Packet, now time.Time) {
 	out := *src
 	out.Header.SequenceNumber = src.SequenceNumber + vt.seqOff
 	out.Header.Timestamp = src.Timestamp + vt.tsOff
@@ -299,6 +309,18 @@ func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (swi
 	if err := vt.sink(&out); err != nil && !errors.Is(err, io.ErrClosedPipe) {
 		slog.Debug("sfu layer write", "viewer", vt.viewer, "err", err)
 	}
+}
+
+func (vt *viewerTrack) writeLocked(idx int, src *rtp.Packet, now time.Time) (switched, ask bool, eff int) {
+	if vt.closed {
+		return false, false, -1
+	}
+	eff = vt.eff
+	drop, switched, ask := vt.checkLayerTransition(idx, src, now)
+	if drop {
+		return false, ask, eff
+	}
+	vt.sendPacketLocked(src, now)
 	return switched, ask, eff
 }
 
