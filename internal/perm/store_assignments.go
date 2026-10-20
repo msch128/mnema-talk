@@ -160,13 +160,20 @@ func grantRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, us
 	if err := checkGrant(snap, actor, role.Permissions); err != nil {
 		return err
 	}
-	if bot && (role.Permissions.HasAny(Elevated) || snap.RoleGrantsElevatedInChannels(roleID)) && !snap.IsOwner(actor) {
+	if forbidsBotElevation(snap, actor, role, bot) {
 		return httpx.ErrForbidden("only the Owner can give a bot a role with administrator or admin-area permissions")
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, userID, roleID); err != nil {
 		return fmt.Errorf("assign role: %w", err)
 	}
 	return nil
+}
+
+func forbidsBotElevation(snap *Snapshot, actor Subject, role Role, bot bool) bool {
+	if !bot || snap.IsOwner(actor) {
+		return false
+	}
+	return role.Permissions.HasAny(Elevated) || snap.RoleGrantsElevatedInChannels(role.ID)
 }
 
 // MemberRoles returns the custom role IDs of every member that has any.

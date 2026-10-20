@@ -1419,15 +1419,15 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/perm/service.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] reload - reload has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] reload - reload has cyclomatic complexity 10 (impact -0.85)
 
 ### `internal/perm/snapshot_load.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] read - read has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] read - read has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/perm/store.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] locked - locked has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] locked - locked has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/sfu/media_state.go` — 1 Funde, Abzug 0.85.
 
@@ -1611,7 +1611,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 - [ ] [medium] syncRoles - a database call is reached once per loop iteration through syncRoles -> grantRole (cross-function N+1 query) (impact -0.00)
 - [ ] [medium] syncRoles - a database call is reached once per loop iteration through syncRoles -> revokeRole (cross-function N+1 query) (impact -0.00)
-- [ ] [low] grantRole - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] grantRole - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/webbundle/version.go` — 1 Funde, Abzug 0.40.
 
