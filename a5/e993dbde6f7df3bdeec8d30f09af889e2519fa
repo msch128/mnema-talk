@@ -1,0 +1,26 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1498,1502,1506,1650,1988,1996
+web/src/lib/appVersion.ts
+  h_0ff4f4713441f4 15-18,27
+web/src/lib/channelTree.ts
+  h_0ff4f4713441f4 28-29,37-38
+web/src/lib/linkPreview.ts
+  h_0ff4f4713441f4 11-26,31,35,38
+web/src/lib/messageGrouping.ts
+  h_0ff4f4713441f4 12-20,26-32
+web/src/lib/screenLayers.ts
+  h_0ff4f4713441f4 32-47,53-54,56-58,60,69-70
+web/src/lib/voicePlayback.ts
+  h_0ff4f4713441f4 24-25,33-34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a5e993dbde6f7df3bdeec8d30f09af889e2519fa",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
