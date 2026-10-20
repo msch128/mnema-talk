@@ -621,9 +621,11 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/composables/useMessageKeyboard.ts` — 3 Funde, Abzug 2.25.
 
-- [ ] [high] handleMessageKeydown - handleMessageKeydown has cyclomatic complexity 19 (impact -1.45)
-- [ ] [low] handleMessageKeydown - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] handleMessageKeydown - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Tastenkombinationen und Menüaufrufe bleiben.
+
+- [x] [high] handleMessageKeydown - handleMessageKeydown has cyclomatic complexity 19 (impact -1.45)
+- [x] [low] handleMessageKeydown - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] handleMessageKeydown - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/group.ts` — 7 Funde, Abzug 2.25.
 
