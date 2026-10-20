@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 568-572,576-580
+internal/ws/handshake.go
+  h_0ff4f4713441f4 1-150
+internal/ws/lifecycle.go
+  h_0ff4f4713441f4 98-99,106-107,116,119,188,190,192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ef210101bbb33fd61fb1cd0234c3cb7d18842337",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
