@@ -1014,8 +1014,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/voice_join.go` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] joinVoice - joinVoice has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] takeSeat - takeSeat has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] joinVoice - joinVoice has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] takeSeat - takeSeat has cyclomatic complexity 11 (impact -0.75)
 
 ### `loadtest/browsers.mjs` — 3 Funde, Abzug 1.50.
 
