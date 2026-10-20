@@ -988,8 +988,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/media/stream.go` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] readUpload - readUpload has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] storePart - storePart has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] readUpload - readUpload has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] storePart - storePart has cyclomatic complexity 11 (impact -0.75)
 
 ### `internal/nativepreview/native_ciphertext_schema.go` — 2 Funde, Abzug 1.50.
 
