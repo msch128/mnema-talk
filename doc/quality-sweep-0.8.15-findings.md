@@ -744,11 +744,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] unpublish - unpublish has cyclomatic complexity 9 (impact -0.50)
 - [x] [low] addTrack - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/composables/appRoutingApply.ts` — 3 Funde, Abzug 1.90.
+### `web/src/composables/appRoutingApply.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 8, Nest 2)
 
-- [ ] [medium] applyRoute - applyRoute has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] applyVoiceRoute - applyVoiceRoute has cyclomatic complexity 9 (impact -0.75)
-- [ ] [low] openRouteThread - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] applyRoute - applyRoute has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] applyVoiceRoute - applyVoiceRoute has cyclomatic complexity 9 (impact -0.75)
+- [x] [low] openRouteThread - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/webrtc/screen.ts` — 3 Funde, Abzug 1.90.
 
