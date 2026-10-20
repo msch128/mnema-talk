@@ -1,0 +1,29 @@
+internal/config/config_validate.go
+  s_43a2919f74d7c0::t_7d81524a80f505 24-25,44-55,68,81-92,110-115,122-129,150-162,169-178,180-182,212,217-232
+web/src/lib/trustPort.ts
+  s_11ecb0a20f1288::t_d09372d6708760 1,13-39,41-50,64-66,69-73,78,87-90,92,94-108,110-162,165,167-171,175,179-180,182-184,189,201
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e8c3938d65d24c41a28fbe8f8eeae9b62152a7a0",
+  "prompts": {},
+  "sessions": {
+    "s_11ecb0a20f1288": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a15a14-2deb-74f1-a4a1-bfc75ce63fe4",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    },
+    "s_43a2919f74d7c0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a15a14-2deb-74f1-a4a1-bfa1b454b648",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
