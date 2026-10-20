@@ -1431,15 +1431,15 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/media_state.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] notifyMedia - notifyMedia has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] notifyMedia - notifyMedia has cyclomatic complexity 10 (impact -0.85)
 
 ### `internal/sfu/room_signal.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] watchOffer - watchOffer has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] watchOffer - watchOffer has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/sfu/sfu_setup.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] buildSettingEngine - buildSettingEngine has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] buildSettingEngine - buildSettingEngine has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/ws/native_renew_frame.go` — 1 Funde, Abzug 0.85.
 
@@ -1567,11 +1567,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/sfu_join.go` — 5 Funde, Abzug 0.50.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
 
 ### `internal/webbundle/cli.go` — 8 Funde, Abzug 0.48.
 
@@ -1874,7 +1874,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/layer_viewers.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/webhook/outgoing_store.go` — 1 Funde, Abzug 0.15.
 
@@ -2027,7 +2027,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/ordered.go` — 1 Funde, Abzug 0.00.
 
-- [ ] [low] send - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
+- [x] [low] send - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
 
 ### `scripts/check-native-test-vectors.mjs` — 2 Funde, Abzug 0.00.
 

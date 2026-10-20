@@ -28,16 +28,24 @@ func (n *newest[T]) send(v T, fn func(T)) {
 	n.mu.Unlock()
 	go func() {
 		for {
-			n.mu.Lock()
-			if !n.pending {
-				n.running = false
-				n.mu.Unlock()
+			next, ok := n.drainNext()
+			if !ok {
 				return
 			}
-			next := n.value
-			n.pending = false
-			n.mu.Unlock()
 			fn(next)
 		}
 	}()
+}
+
+func (n *newest[T]) drainNext() (T, bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if !n.pending {
+		n.running = false
+		var zero T
+		return zero, false
+	}
+	next := n.value
+	n.pending = false
+	return next, true
 }

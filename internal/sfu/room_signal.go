@@ -245,22 +245,35 @@ func (p *Peer) watchOffer(gen uint64, attempt int) {
 				p.room.requestPeerSignal(p)
 			}
 		}()
-		if p.offerGen.Load() != gen || p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed ||
-			p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
-			return
-		}
-		pending := p.PC.PendingLocalDescription()
-		if pending == nil {
-			return
-		}
-		if attempt > maxOfferResends {
-			slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
-			return
-		}
-		slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
-		if p.SendOffer != nil {
-			p.SendOffer(*pending)
-		}
-		p.watchOffer(gen, attempt+1)
+		p.resendOffer(gen, attempt)
 	})
+}
+
+func (p *Peer) isOfferStaleOrInactive(gen uint64) bool {
+	if p.offerGen.Load() != gen {
+		return true
+	}
+	if p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		return true
+	}
+	return p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer
+}
+
+func (p *Peer) resendOffer(gen uint64, attempt int) {
+	if p.isOfferStaleOrInactive(gen) {
+		return
+	}
+	pending := p.PC.PendingLocalDescription()
+	if pending == nil {
+		return
+	}
+	if attempt > maxOfferResends {
+		slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
+		return
+	}
+	slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
+	if p.SendOffer != nil {
+		p.SendOffer(*pending)
+	}
+	p.watchOffer(gen, attempt+1)
 }
