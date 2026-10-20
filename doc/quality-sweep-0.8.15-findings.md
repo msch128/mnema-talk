@@ -786,11 +786,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] onlyRenewsLeaf - onlyRenewsLeaf has cyclomatic complexity 10 (impact -0.75)
 - [x] [low] onlyRenewsLeaf - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/mentionQuery.ts` — 3 Funde, Abzug 1.90.
+### `web/src/lib/mentionQuery.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 7, Nest 2)
 
-- [ ] [high] suggestMentions - suggestMentions has cyclomatic complexity 22 (impact -0.95)
-- [ ] [medium] findMentionQuery - findMentionQuery has cyclomatic complexity 13 (impact -0.55)
-- [ ] [low] findMentionQuery - if condition combines 3 boolean operators (impact -0.40)
+- [x] [high] suggestMentions - suggestMentions has cyclomatic complexity 22 (impact -0.95)
+- [x] [medium] findMentionQuery - findMentionQuery has cyclomatic complexity 13 (impact -0.55)
+- [x] [low] findMentionQuery - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/useNavMenus.ts` — 4 Funde, Abzug 1.89.
 
