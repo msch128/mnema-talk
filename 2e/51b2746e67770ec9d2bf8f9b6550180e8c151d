@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 584-591
+web/src/composables/webrtc/remoteAudio.ts
+  h_0ff4f4713441f4 20-22,38-52,54-56,58-60,62,106-108,118,123,136,141,155-157,175-207,209,212-214
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e51b2746e67770ec9d2bf8f9b6550180e8c151d",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
