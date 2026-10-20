@@ -981,10 +981,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/channels.go` — 4 Funde, Abzug 1.50.
 
-- [ ] [medium] CreateChannel - CreateChannel has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] DeleteCategoryTx - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [medium] GetServerHierarchy - GetServerHierarchy has cyclomatic complexity 10 (impact -0.50)
-- [ ] [medium] validateChannelEdit - validateChannelEdit has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] CreateChannel - CreateChannel has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] DeleteCategoryTx - a database call runs once per loop iteration (N+1 query) (impact -0.00)
+- [x] [medium] GetServerHierarchy - GetServerHierarchy has cyclomatic complexity 10 (impact -0.50)
+- [x] [medium] validateChannelEdit - validateChannelEdit has cyclomatic complexity 11 (impact -0.50)
 
 ### `internal/media/stream.go` — 2 Funde, Abzug 1.50.
 
