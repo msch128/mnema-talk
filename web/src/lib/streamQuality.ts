@@ -187,7 +187,7 @@ function encodeFrameStats(out: MediaStat, previous: SendStatsSample | null, same
   const frames = out.framesEncoded
   const reported = reportedFps(out)
   const count = previous && sameStream ? frameDelta(previous, ts, frames) : null
-  if (count !== null) {
+  if (count !== null && previous) {
     return { fps: fpsSince(count, reported, ts, previous.ts), encodeMs: encodeMsSince(count, out.totalEncodeTime, previous.encodeTime) }
   }
   return { fps: reported, encodeMs: lifetimeEncodeMs(frames, out.totalEncodeTime) }
@@ -240,6 +240,31 @@ function limitationOf(reason: string | undefined): string | null {
   return reason
 }
 
+function textOrEmpty(value: string | undefined): string {
+  if (!value) return ''
+  return value
+}
+
+function numberOrZero(value: number | undefined): number {
+  if (!value) return 0
+  return value
+}
+
+function statList(stats: Iterable<MediaStat> | null | undefined): MediaStat[] {
+  if (!stats) return []
+  return [...stats]
+}
+
+function codecLabel(list: MediaStat[], codecId: string | undefined): string {
+  const mime = codecNames(list).get(textOrEmpty(codecId))
+  return textOrEmpty(mime).replace(/^video\//i, '').toUpperCase()
+}
+
+function codecLine(codec: MediaStat | undefined): string {
+  if (!codec) return ''
+  return textOrEmpty(codec.sdpFmtpLine)
+}
+
 function sampleOf(out: MediaStat, bytes: number, ts: number): SendStatsSample {
   const frames = out.framesEncoded
   const encodeTime = out.totalEncodeTime
@@ -252,31 +277,34 @@ function sampleOf(out: MediaStat, bytes: number, ts: number): SendStatsSample {
   }
 }
 
-export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined, previous: SendStatsSample | null = null): SendStatsSummary | null {
-  const list = [...(stats || [])]
-  const out = activeVideoSender(list)
-  if (!out) return null
+function buildSendSummary(list: MediaStat[], out: MediaStat, previous: SendStatsSample | null): SendStatsSummary {
   const source = statById(list, 'media-source', out.mediaSourceId)
   const codec = statById(list, 'codec', out.codecId)
-  const mime = codecNames(list).get(out.codecId || '') || ''
-  const bytes = out.bytesSent || 0
-  const ts = out.timestamp || 0
+  const bytes = numberOrZero(out.bytesSent)
+  const ts = numberOrZero(out.timestamp)
   const sameStream = sameSendStream(previous, out.id)
-  const { fps, encodeMs } = encodeFrameStats(out, previous, sameStream)
+  const rates = encodeFrameStats(out, previous, sameStream)
   return {
-    codec: mime.replace(/^video\//i, '').toUpperCase(),
-    width: out.frameWidth || 0,
-    height: out.frameHeight || 0,
-    fps,
+    codec: codecLabel(list, out.codecId),
+    width: numberOrZero(out.frameWidth),
+    height: numberOrZero(out.frameHeight),
+    fps: rates.fps,
     kbps: bitrateSince(previous, sameStream, ts, bytes),
     captureFps: captureFpsOf(source),
-    encoder: out.encoderImplementation || '',
+    encoder: textOrEmpty(out.encoderImplementation),
     efficientEncoder: efficientOf(out),
     limitation: limitationOf(out.qualityLimitationReason),
-    encodeMs,
-    codecParameters: codec?.sdpFmtpLine || '',
+    encodeMs: rates.encodeMs,
+    codecParameters: codecLine(codec),
     sample: sampleOf(out, bytes, ts),
   }
+}
+
+export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined, previous: SendStatsSample | null = null): SendStatsSummary | null {
+  const list = statList(stats)
+  const out = activeVideoSender(list)
+  if (!out) return null
+  return buildSendSummary(list, out, previous)
 }
 
 /** Values used by the advanced diagnosis, distinct from the selected target. */

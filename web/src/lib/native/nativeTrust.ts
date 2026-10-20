@@ -88,7 +88,27 @@ export function decodeTrustPreview(value: unknown): TrustPreview {
   if (!scopeOrigin(scope['origin']) || !canonicalGroup(scope['group_id'])) throw new Error('Invalid native trust scope')
   if (!hexKeys(value)) throw new Error('Invalid native trust public key')
   // Construct a new closed object so callers cannot later mutate the received wire object.
-  return { version: 1, operation_id: value['operation_id'], operation_kind: value['operation_kind'] as TrustPreview['operation_kind'], expires_at: value['expires_at'], scope: { origin: scope['origin'], community_id: scope['community_id'], channel_id: scope['channel_id'], account_id: scope['account_id'], device_id: scope['device_id'], group_id: scope['group_id'] }, root_fingerprint_hex: value['root_fingerprint_hex'] as string, root_public_key_hex: value['root_public_key_hex'] as string, device_public_key_hex: value['device_public_key_hex'] as string }
+  return {
+    version: 1,
+    operation_id: value['operation_id'] as string,
+    operation_kind: value['operation_kind'] as TrustPreview['operation_kind'],
+    expires_at: value['expires_at'] as string,
+    scope: trustScope(scope),
+    root_fingerprint_hex: value['root_fingerprint_hex'] as string,
+    root_public_key_hex: value['root_public_key_hex'] as string,
+    device_public_key_hex: value['device_public_key_hex'] as string,
+  }
+}
+
+function trustScope(scope: Record<string, unknown>): TrustPreview['scope'] {
+  return {
+    origin: scope['origin'] as string,
+    community_id: scope['community_id'] as string,
+    channel_id: scope['channel_id'] as string,
+    account_id: scope['account_id'] as string,
+    device_id: scope['device_id'] as string,
+    group_id: scope['group_id'] as string,
+  }
 }
 
 function statusFields(value: Record<string, unknown>): boolean {
@@ -99,5 +119,5 @@ function statusFields(value: Record<string, unknown>): boolean {
 
 export function decodeTrustStatus(value: unknown): TrustStatus {
   if (!object(value) || !statusFields(value)) throw new Error('Invalid native trust status')
-  return { operation_id: value['operation_id'], state: value['state'] as TrustStatus['state'] }
+  return { operation_id: value['operation_id'] as string, state: value['state'] as TrustStatus['state'] }
 }

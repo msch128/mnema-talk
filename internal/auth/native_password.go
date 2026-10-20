@@ -166,36 +166,6 @@ func (s *NativeSessions) finishReissue(ctx context.Context, tx pgx.Tx, change *p
 	return nil
 }
 
-// checkReissueLease verifies, at the database clock, that the session still is
-// the one the caller authenticated: same account version, family, instance and
-// deadlines, and not revoked. It returns the clock reading it used.
-func (l lockedNativeSession) checkReissueLease(ctx context.Context, tx pgx.Tx, expected NativePrincipal) (time.Time, error) {
-	now, err := nativeClock(ctx, tx)
-	if err != nil {
-		return time.Time{}, nativeStoreFailure(err)
-	}
-	if l.reissueLeaseRejected(now, expected) {
-		return time.Time{}, ErrNativeUnauthorized
-	}
-	return now, nil
-}
-
-// reissueLeaseRejected reports that the locked session is not the one the
-// caller authenticated, read at the database clock now.
-func (l lockedNativeSession) reissueLeaseRejected(now time.Time, expected NativePrincipal) bool {
-	f := l.family
-	if l.disabled || l.version != expected.tokenVersion {
-		return true
-	}
-	if f.version != l.version || f.instanceID != expected.instanceID {
-		return true
-	}
-	if f.revokedAt != nil || !f.expiresAt.Equal(expected.familyExpiresAt) {
-		return true
-	}
-	return !now.Before(f.expiresAt) || !now.Before(expected.accessExpiresAt)
-}
-
 // checkUnchanged verifies under lock that neither the password hash nor the
 // access token's expiry moved since the caller was authenticated.
 func (c *passwordReissue) checkUnchanged(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {

@@ -166,7 +166,7 @@ Erledigt 2026-10-20: `repowise health --file internal/auth/native_password.go` n
 
 ### `web/src/lib/streamQuality.ts` — 9 Funde, Abzug 4.02.
 
-Erledigt 2026-10-20: `repowise health --file web/src/lib/streamQuality.ts` nennt keinen Fund mehr. 18 Vitest-Tests grün.
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. 18 Vitest-Tests grün. Die Typprüfung bleibt bei derselben Statistik.
 
 - [x] [critical] summarizeSendStats - summarizeSendStats has cyclomatic complexity 27 (impact -0.65)
 - [x] [high] encodeFrameStats - encodeFrameStats has cyclomatic complexity 17 (impact -0.39)
@@ -191,20 +191,22 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/scripts/check-coverage.ts` — 14 Funde, Abzug 4.01.
 
-- [ ] [critical] checkCoverage - checkCoverage has cyclomatic complexity 28 (impact -0.60)
-- [ ] [critical] coverage - if condition combines 6 boolean operators (impact -0.58)
-- [ ] [critical] policy - if condition combines 6 boolean operators (impact -0.58)
-- [ ] [critical] policy - if condition combines 7 boolean operators (impact -0.58)
-- [ ] [critical] policy - policy has cyclomatic complexity 31 (impact -0.60)
-- [ ] [medium] checkCoverage - checkCoverage has 4 nested blocks at the same level (bumpy road) (impact -0.08)
-- [ ] [medium] checkCoverage - checkCoverage nests 4 levels deep (impact -0.21)
-- [ ] [medium] executableSources - a filesystem call runs once per loop iteration (I/O call inside a loop) (impact -0.00)
-- [ ] [medium] executableSources - executableSources has cyclomatic complexity 12 (impact -0.21)
-- [ ] [medium] policy - policy nests 4 levels deep (impact -0.21)
-- [ ] [low] checkCoverage - checkCoverage is 69 lines long (impact -0.09)
-- [ ] [low] checkCoverage - if condition combines 3 boolean operators (impact -0.09)
-- [ ] [low] executableSources - if condition combines 3 boolean operators (impact -0.09)
-- [ ] [low] policy - if condition combines 3 boolean operators (impact -0.09)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Schwellen bleiben 80 und 90. Der Quellenlauf liegt in check-coverage-sources.ts.
+
+- [x] [critical] checkCoverage - checkCoverage has cyclomatic complexity 28 (impact -0.60)
+- [x] [critical] coverage - if condition combines 6 boolean operators (impact -0.58)
+- [x] [critical] policy - if condition combines 6 boolean operators (impact -0.58)
+- [x] [critical] policy - if condition combines 7 boolean operators (impact -0.58)
+- [x] [critical] policy - policy has cyclomatic complexity 31 (impact -0.60)
+- [x] [medium] checkCoverage - checkCoverage has 4 nested blocks at the same level (bumpy road) (impact -0.08)
+- [x] [medium] checkCoverage - checkCoverage nests 4 levels deep (impact -0.21)
+- [x] [medium] executableSources - a filesystem call runs once per loop iteration (I/O call inside a loop) (impact -0.00)
+- [x] [medium] executableSources - executableSources has cyclomatic complexity 12 (impact -0.21)
+- [x] [medium] policy - policy nests 4 levels deep (impact -0.21)
+- [x] [low] checkCoverage - checkCoverage is 69 lines long (impact -0.09)
+- [x] [low] checkCoverage - if condition combines 3 boolean operators (impact -0.09)
+- [x] [low] executableSources - if condition combines 3 boolean operators (impact -0.09)
+- [x] [low] policy - if condition combines 3 boolean operators (impact -0.09)
 
 ### `internal/config/config_validate.go` — 7 Funde, Abzug 4.00.
 
@@ -279,49 +281,55 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/media/groupEpoch.ts` — 13 Funde, Abzug 3.98.
 
-- [ ] [critical] adopt - if condition combines 6 boolean operators (impact -1.79)
-- [ ] [high] adopt - adopt has cyclomatic complexity 16 (impact -0.29)
-- [ ] [medium] commit - commit has cyclomatic complexity 14 (impact -0.17)
-- [ ] [medium] commitAdds - commitAdds has cyclomatic complexity 9 (impact -0.17)
-- [ ] [medium] forgetDeparted - forgetDeparted has 4 nested blocks at the same level (bumpy road) (impact -0.24)
-- [ ] [medium] forgetDeparted - forgetDeparted has cyclomatic complexity 9 (impact -0.17)
-- [ ] [medium] livenessWires - livenessWires has cyclomatic complexity 9 (impact -0.17)
-- [ ] [medium] maintenanceCommits - maintenanceCommits has cyclomatic complexity 14 (impact -0.17)
-- [ ] [medium] renewalDue - renewalDue has cyclomatic complexity 9 (impact -0.17)
-- [ ] [medium] trackLeaves - trackLeaves has cyclomatic complexity 9 (impact -0.17)
-- [ ] [low] commit - commit has 3 nested blocks at the same level (bumpy road) (impact -0.10)
-- [ ] [low] maintenanceCommits - if condition combines 3 boolean operators (impact -0.27)
-- [ ] [low] trackLeaves - trackLeaves has 3 nested blocks at the same level (bumpy road) (impact -0.10)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Epochen werden abgelehnt.
+
+- [x] [critical] adopt - if condition combines 6 boolean operators (impact -1.79)
+- [x] [high] adopt - adopt has cyclomatic complexity 16 (impact -0.29)
+- [x] [medium] commit - commit has cyclomatic complexity 14 (impact -0.17)
+- [x] [medium] commitAdds - commitAdds has cyclomatic complexity 9 (impact -0.17)
+- [x] [medium] forgetDeparted - forgetDeparted has 4 nested blocks at the same level (bumpy road) (impact -0.24)
+- [x] [medium] forgetDeparted - forgetDeparted has cyclomatic complexity 9 (impact -0.17)
+- [x] [medium] livenessWires - livenessWires has cyclomatic complexity 9 (impact -0.17)
+- [x] [medium] maintenanceCommits - maintenanceCommits has cyclomatic complexity 14 (impact -0.17)
+- [x] [medium] renewalDue - renewalDue has cyclomatic complexity 9 (impact -0.17)
+- [x] [medium] trackLeaves - trackLeaves has cyclomatic complexity 9 (impact -0.17)
+- [x] [low] commit - commit has 3 nested blocks at the same level (bumpy road) (impact -0.10)
+- [x] [low] maintenanceCommits - if condition combines 3 boolean operators (impact -0.27)
+- [x] [low] trackLeaves - trackLeaves has 3 nested blocks at the same level (bumpy road) (impact -0.10)
 
 ### `web/src/lib/native/nativeChatView.ts` — 9 Funde, Abzug 3.98.
 
-- [ ] [critical] accept - accept has cyclomatic complexity 26 (impact -0.75)
-- [ ] [critical] accept - if condition combines 6 boolean operators (impact -0.57)
-- [ ] [critical] row - if condition combines 11 boolean operators (impact -0.57)
-- [ ] [critical] row - if condition combines 6 boolean operators (impact -0.57)
-- [ ] [critical] row - row has cyclomatic complexity 38 (impact -0.75)
-- [ ] [high] row - if condition combines 5 boolean operators (impact -0.34)
-- [ ] [medium] accept - if condition combines 4 boolean operators (impact -0.20)
-- [ ] [medium] row - if condition combines 4 boolean operators (impact -0.20)
-- [ ] [low] accept - accept has 3 nested blocks at the same level (bumpy road) (impact -0.03)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Projektion wird abgelehnt. 44 Tests grün.
+
+- [x] [critical] accept - accept has cyclomatic complexity 26 (impact -0.75)
+- [x] [critical] accept - if condition combines 6 boolean operators (impact -0.57)
+- [x] [critical] row - if condition combines 11 boolean operators (impact -0.57)
+- [x] [critical] row - if condition combines 6 boolean operators (impact -0.57)
+- [x] [critical] row - row has cyclomatic complexity 38 (impact -0.75)
+- [x] [high] row - if condition combines 5 boolean operators (impact -0.34)
+- [x] [medium] accept - if condition combines 4 boolean operators (impact -0.20)
+- [x] [medium] row - if condition combines 4 boolean operators (impact -0.20)
+- [x] [low] accept - accept has 3 nested blocks at the same level (bumpy road) (impact -0.03)
 
 ### `web/src/lib/native/nativeChatApi.ts` — 15 Funde, Abzug 3.96.
 
-- [ ] [critical] messageActionInput - if condition combines 6 boolean operators (impact -0.89)
-- [ ] [critical] newMessageInput - if condition combines 7 boolean operators (impact -0.89)
-- [ ] [high] handle - handle has cyclomatic complexity 21 (impact -0.25)
-- [ ] [high] messageActionInput - messageActionInput has cyclomatic complexity 16 (impact -0.25)
-- [ ] [high] request - request has cyclomatic complexity 17 (impact -0.25)
-- [ ] [medium] completedMessageId - completedMessageId has cyclomatic complexity 9 (impact -0.14)
-- [ ] [medium] handleChannelMessages - handleChannelMessages has cyclomatic complexity 11 (impact -0.14)
-- [ ] [medium] messageActionInput - if condition combines 4 boolean operators (impact -0.31)
-- [ ] [medium] newMessageInput - newMessageInput has cyclomatic complexity 13 (impact -0.14)
-- [ ] [medium] pageOf - pageOf has cyclomatic complexity 12 (impact -0.14)
-- [ ] [medium] receiptMatches - receiptMatches has cyclomatic complexity 13 (impact -0.14)
-- [ ] [low] completedMessageId - if condition combines 3 boolean operators (impact -0.13)
-- [ ] [low] handle - if condition combines 3 boolean operators (impact -0.13)
-- [ ] [low] handle - if condition combines 3 boolean operators (impact -0.13)
-- [ ] [low] messageActionInput - long parameter list: messageActionInput takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.03)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. 503 UNAVAILABLE bleibt.
+
+- [x] [critical] messageActionInput - if condition combines 6 boolean operators (impact -0.89)
+- [x] [critical] newMessageInput - if condition combines 7 boolean operators (impact -0.89)
+- [x] [high] handle - handle has cyclomatic complexity 21 (impact -0.25)
+- [x] [high] messageActionInput - messageActionInput has cyclomatic complexity 16 (impact -0.25)
+- [x] [high] request - request has cyclomatic complexity 17 (impact -0.25)
+- [x] [medium] completedMessageId - completedMessageId has cyclomatic complexity 9 (impact -0.14)
+- [x] [medium] handleChannelMessages - handleChannelMessages has cyclomatic complexity 11 (impact -0.14)
+- [x] [medium] messageActionInput - if condition combines 4 boolean operators (impact -0.31)
+- [x] [medium] newMessageInput - newMessageInput has cyclomatic complexity 13 (impact -0.14)
+- [x] [medium] pageOf - pageOf has cyclomatic complexity 12 (impact -0.14)
+- [x] [medium] receiptMatches - receiptMatches has cyclomatic complexity 13 (impact -0.14)
+- [x] [low] completedMessageId - if condition combines 3 boolean operators (impact -0.13)
+- [x] [low] handle - if condition combines 3 boolean operators (impact -0.13)
+- [x] [low] handle - if condition combines 3 boolean operators (impact -0.13)
+- [x] [low] messageActionInput - long parameter list: messageActionInput takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.03)
 
 ### `web/src/lib/crypto/stateStore.ts` — 8 Funde, Abzug 3.94.
 
@@ -384,15 +392,19 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/native_lock.go` — 3 Funde, Abzug 3.50.
 
-- [ ] [critical] checkLease - if condition combines 7 boolean operators (impact -2.50)
-- [ ] [medium] checkLease - checkLease has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - 22% of file duplicated in other files; worst clone shares 11 lines with internal/auth/native_password.go (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Lease und Reissue prüfen dieselben Fristen. Native-Integrationstests grün.
+
+- [x] [critical] checkLease - if condition combines 7 boolean operators (impact -2.50)
+- [x] [medium] checkLease - checkLease has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - 22% of file duplicated in other files; worst clone shares 11 lines with internal/auth/native_password.go (impact -0.15)
 
 ### `internal/auth/native_password_handler.go` — 3 Funde, Abzug 3.50.
 
-- [ ] [critical] PasswordChangeHandler - if condition combines 6 boolean operators (impact -2.50)
-- [ ] [medium] PasswordChangeHandler - PasswordChangeHandler has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - 21% of file duplicated in other files; worst clone shares 16 lines with internal/auth/native_registration.go (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Abhängigkeiten und Routen.
+
+- [x] [critical] PasswordChangeHandler - if condition combines 6 boolean operators (impact -2.50)
+- [x] [medium] PasswordChangeHandler - PasswordChangeHandler has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - 21% of file duplicated in other files; worst clone shares 16 lines with internal/auth/native_registration.go (impact -0.15)
 
 ### `internal/auth/native_refresh.go` — 6 Funde, Abzug 3.50.
 
@@ -405,9 +417,11 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/native_session.go` — 3 Funde, Abzug 3.50.
 
-- [ ] [critical] NewNativeSessions - if condition combines 6 boolean operators (impact -2.50)
-- [ ] [medium] openFamily - openFamily has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Laufzeiten und dieselbe Familie. Native-Integrationstests grün.
+
+- [x] [critical] NewNativeSessions - if condition combines 6 boolean operators (impact -2.50)
+- [x] [medium] openFamily - openFamily has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/ws/native_metadata_admission.go` — 5 Funde, Abzug 3.44.
 
@@ -594,9 +608,11 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/native_registration.go` — 3 Funde, Abzug 2.13.
 
-- [ ] [medium] - 41% of file duplicated in other files; worst clone shares 16 lines with internal/auth/native_password_handler.go (impact -0.35)
-- [ ] [medium] RegistrationHandler - RegistrationHandler has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] RegistrationHandler - if condition combines 4 boolean operators (impact -0.93)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Abhängigkeiten und dieselbe Zielprüfung.
+
+- [x] [medium] - 41% of file duplicated in other files; worst clone shares 16 lines with internal/auth/native_password_handler.go (impact -0.35)
+- [x] [medium] RegistrationHandler - RegistrationHandler has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] RegistrationHandler - if condition combines 4 boolean operators (impact -0.93)
 
 ### `internal/webbundle/webbundle.go` — 11 Funde, Abzug 1.98.
 
