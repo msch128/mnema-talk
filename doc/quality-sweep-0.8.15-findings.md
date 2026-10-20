@@ -464,11 +464,13 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/perm/store_overwrites.go` — 5 Funde, Abzug 3.10.
 
-- [ ] [high] authorizeOverwriteChanges - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] authorizeOverwriteChanges - authorizeOverwriteChanges has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] replaceOverwrites - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [medium] validateOverwrites - a database call is reached once per loop iteration through validateOverwrites -> checkOverwriteSubject (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] validateOverwrites - validateOverwrites has cyclomatic complexity 10 (impact -0.75)
+Erledigt 2026-10-20: Komplexität ist weg. `repowise health --file --recompute` nennt nur noch die beiden Schleifen. Die bleiben: Rollen- und Mitgliederzeilen stehen in der eingereichten Reihenfolge, und die Bitprüfung läuft vor der Mitgliedsabfrage.
+
+- [x] [high] authorizeOverwriteChanges - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] authorizeOverwriteChanges - authorizeOverwriteChanges has cyclomatic complexity 10 (impact -0.75)
+- [ ] [medium] replaceOverwrites - a database call runs once per loop iteration (N+1 query) (impact -0.00). Angenommen: eine Sammelzeile würde die Fehlerreihenfolge ändern.
+- [ ] [medium] validateOverwrites - a database call is reached once per loop iteration through validateOverwrites -> checkOverwriteSubject (cross-function N+1 query) (impact -0.00). Angenommen: die Mitgliedsabfrage bleibt hinter der Bitprüfung derselben Zeile.
+- [x] [medium] validateOverwrites - validateOverwrites has cyclomatic complexity 10 (impact -0.75)
 
 ### `web/src/components/AdminRolesTab.vue` — 3 Funde, Abzug 3.10.
 

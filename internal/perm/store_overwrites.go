@@ -156,11 +156,8 @@ func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []O
 			return nil, httpx.ErrInvalidInput("duplicate overwrite")
 		}
 		seen[k] = true
-		if !o.Allow.Valid() || !o.Deny.Valid() || (o.Allow|o.Deny)&^ChannelScoped != 0 {
-			return nil, httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
-		}
-		if o.Allow&o.Deny != 0 {
-			return nil, httpx.ErrInvalidInput("a permission cannot be both allowed and denied")
+		if err := overwriteBitsRejected(o); err != nil {
+			return nil, err
 		}
 		if err := checkOverwriteSubject(ctx, tx, snap, o); err != nil {
 			return nil, err
@@ -170,6 +167,19 @@ func validateOverwrites(ctx context.Context, tx pgx.Tx, snap *Snapshot, list []O
 		}
 	}
 	return next, nil
+}
+
+func overwriteBitsRejected(o Overwrite) error {
+	if !o.Allow.Valid() || !o.Deny.Valid() {
+		return httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
+	}
+	if (o.Allow|o.Deny)&^ChannelScoped != 0 {
+		return httpx.ErrInvalidInput("these permissions cannot be overwritten per channel")
+	}
+	if o.Allow&o.Deny != 0 {
+		return httpx.ErrInvalidInput("a permission cannot be both allowed and denied")
+	}
+	return nil
 }
 
 // checkOverwriteSubject makes sure the role or member exists and is not the Owner.
@@ -245,12 +255,21 @@ func authorizeOverwriteChanges(snap *Snapshot, actor Subject, held Set, changed 
 		}
 		// Elevated channel permissions (Disconnect members) for a bot are
 		// the Owner's to give, as are administrator roles.
-		if c.added.HasAny(Elevated) && !snap.IsOwner(actor) &&
-			(k.typ == "member" && snap.bots[k.id] || k.typ == "role" && snap.RoleHeldByBot(k.id)) {
+		if botElevationRejected(snap, actor, k, c.added) {
 			return httpx.ErrForbidden("only the Owner can allow a bot administrator or admin-area permissions")
 		}
 	}
 	return nil
+}
+
+func botElevationRejected(snap *Snapshot, actor Subject, k overwriteKey, added Set) bool {
+	if !added.HasAny(Elevated) || snap.IsOwner(actor) {
+		return false
+	}
+	if k.typ == "member" && snap.bots[k.id] {
+		return true
+	}
+	return k.typ == "role" && snap.RoleHeldByBot(k.id)
 }
 
 func authorizeOverwriteSubject(snap *Snapshot, actor Subject, k overwriteKey) error {
