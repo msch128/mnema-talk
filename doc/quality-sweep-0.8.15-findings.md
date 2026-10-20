@@ -737,12 +737,12 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] updateRole - updateRole has cyclomatic complexity 11 (impact -0.75)
 - [x] [low] checkRoleEditable - if condition combines 3 boolean operators (impact -0.40)
 
-### `internal/sfu/room_tracks.go` — 4 Funde, Abzug 1.90.
+### `internal/sfu/room_tracks.go` — 4 Funde, Abzug 1.90. (Repowise: 9.9/10, max CCN 6, Nest 3)
 
-- [ ] [medium] DispatchKeyframe - DispatchKeyframe has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] addTrack - addTrack has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] unpublish - unpublish has cyclomatic complexity 9 (impact -0.50)
-- [ ] [low] addTrack - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] DispatchKeyframe - DispatchKeyframe has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] addTrack - addTrack has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] unpublish - unpublish has cyclomatic complexity 9 (impact -0.50)
+- [x] [low] addTrack - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/appRoutingApply.ts` — 3 Funde, Abzug 1.90.
 
