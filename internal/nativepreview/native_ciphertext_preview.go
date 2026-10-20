@@ -81,11 +81,22 @@ func nativeCiphertextRoute(path string) bool {
 	const prefix = NativePreviewPrefix + "/channels/"
 	return strings.HasPrefix(path, prefix) && strings.HasSuffix(path, "/ciphertext-events") && len(strings.Split(strings.Trim(path, "/"), "/")) == 6
 }
+
+func relayRequestRejected(request *http.Request) bool {
+	if nativePreviewHeaderPresent(request, "Origin") || nativePreviewHeaderPresent(request, "Cookie") {
+		return true
+	}
+	if request.URL.User != nil || request.URL.Fragment != "" {
+		return true
+	}
+	return request.URL.RawPath != ""
+}
+
 func (r *NativeCiphertextPreviewRouter) relayBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
-		if nativePreviewHeaderPresent(request, "Origin") || nativePreviewHeaderPresent(request, "Cookie") || request.URL.User != nil || request.URL.Fragment != "" || request.URL.RawPath != "" {
+		if relayRequestRejected(request) {
 			httpx.WriteError(w, httpx.ErrForbidden("native relay request rejected"))
 			return
 		}
@@ -140,7 +151,7 @@ func (r *NativeCiphertextPreviewRouter) listCiphertext(w http.ResponseWriter, re
 	if !ok {
 		return httpx.ErrUnauthorized("authentication required")
 	}
-	if request.ContentLength != 0 || len(request.TransferEncoding) != 0 || (request.Body != nil && request.Body != http.NoBody) {
+	if relayBodyPresent(request) {
 		return httpx.ErrInvalidInput("native relay read body must be empty")
 	}
 	channel, err := nativeCiphertextChannel(request)
@@ -178,36 +189,79 @@ func nativeCiphertextError(err error) error {
 		return httpx.ErrUnavailable("native ciphertext request unavailable")
 	}
 }
+func relayBodyPresent(request *http.Request) bool {
+	if request.ContentLength != 0 || len(request.TransferEncoding) != 0 {
+		return true
+	}
+	if request.Body == nil {
+		return false
+	}
+	return request.Body != http.NoBody
+}
+
+func forcedEmptyQuery(target *url.URL) bool {
+	return target.ForceQuery && target.RawQuery == ""
+}
+
 func parseNativeCiphertextQuery(method string, target *url.URL) (nativeCiphertextPaging, error) {
 	paging := nativeCiphertextPaging{Limit: 25}
 	errInvalid := httpx.ErrInvalidInput("invalid native relay pagination")
-	if target.ForceQuery && target.RawQuery == "" {
+	if forcedEmptyQuery(target) {
 		return paging, errInvalid
 	}
 	if method != http.MethodGet {
-		if target.RawQuery != "" {
-			return paging, errInvalid
-		}
-		return paging, nil
+		return nonGetPaging(paging, target.RawQuery, errInvalid)
 	}
 	if target.RawQuery == "" {
 		return paging, nil
 	}
-	values, err := url.ParseQuery(target.RawQuery)
-	if err != nil || len(values) > 2 {
-		return paging, errInvalid
-	}
-	for key, value := range values {
-		if len(value) != 1 || !paging.set(key, value[0]) {
-			return paging, errInvalid
-		}
-	}
-	// Requiring canonical encoding also denies empty separators, encoded field
-	// names/numbers and equivalent spellings before the native query is stripped.
-	if values.Encode() != target.RawQuery {
+	return parsedPaging(paging, target.RawQuery, errInvalid)
+}
+
+func nonGetPaging(paging nativeCiphertextPaging, raw string, errInvalid error) (nativeCiphertextPaging, error) {
+	if raw != "" {
 		return paging, errInvalid
 	}
 	return paging, nil
+}
+
+func parsedPaging(paging nativeCiphertextPaging, raw string, errInvalid error) (nativeCiphertextPaging, error) {
+	values, err := url.ParseQuery(raw)
+	if queryRejected(err, values) {
+		return paging, errInvalid
+	}
+	if fieldsRejected(&paging, values) {
+		return paging, errInvalid
+	}
+	// Requiring canonical encoding also denies empty separators, encoded field
+	// names/numbers and equivalent spellings before the native query is stripped.
+	if values.Encode() != raw {
+		return paging, errInvalid
+	}
+	return paging, nil
+}
+
+func queryRejected(err error, values url.Values) bool {
+	if err != nil {
+		return true
+	}
+	return len(values) > 2
+}
+
+func fieldsRejected(paging *nativeCiphertextPaging, values url.Values) bool {
+	for key, value := range values {
+		if fieldRejected(paging, key, value) {
+			return true
+		}
+	}
+	return false
+}
+
+func fieldRejected(paging *nativeCiphertextPaging, key string, value []string) bool {
+	if len(value) != 1 {
+		return true
+	}
+	return !paging.set(key, value[0])
 }
 
 // set applies one query parameter and reports whether it is a known one with

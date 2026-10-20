@@ -513,17 +513,21 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/nativepreview/native_ciphertext_preview.go` — 4 Funde, Abzug 2.83.
 
-- [ ] [medium] listCiphertext - listCiphertext has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] parseNativeCiphertextQuery - parseNativeCiphertextQuery has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] relayBoundary - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] listCiphertext - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Relay-Anfrage wird abgelehnt. Routen bleiben unmounted.
+
+- [x] [medium] listCiphertext - listCiphertext has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] parseNativeCiphertextQuery - parseNativeCiphertextQuery has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] relayBoundary - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] listCiphertext - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/update/checker.go` — 4 Funde, Abzug 2.80.
 
-- [ ] [critical] releasePage - if condition combines 6 boolean operators (impact -2.50)
-- [ ] [medium] Run - a network call is reached once per loop iteration through Run -> Check -> fetch -> send (cross-function I/O call inside a loop) (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+Erledigt 2026-10-20: Komplexität und verworfene Fehler sind weg. `repowise health --file --recompute` nennt nur noch die Prüfschleife. Die bleibt: ein Lauf fragt in seinem Intervall einmal GitHub.
+
+- [x] [critical] releasePage - if condition combines 6 boolean operators (impact -2.50)
+- [ ] [medium] Run - a network call is reached once per loop iteration through Run -> Check -> fetch -> send (cross-function I/O call inside a loop) (impact -0.00). Angenommen: der Lauf prüft einmal pro Intervall.
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/lib/voiceSession.ts` — 4 Funde, Abzug 2.75.
 

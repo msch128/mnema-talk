@@ -97,7 +97,7 @@ type Checker struct {
 // production; tests pass an httptest server). current is the running
 // version, sent in the User-Agent.
 func NewChecker(releaseURL, current string) *Checker {
-	base, _ := url.Parse(releaseURL)
+	base := releaseBase(releaseURL)
 	return &Checker{
 		url:       releaseURL,
 		userAgent: "mnema-talk/" + current + " (update check; +https://github.com/" + Repo + ")",
@@ -212,7 +212,7 @@ func (c *Checker) fetch(ctx context.Context, etag string) (rel *Release, newETag
 	}
 	defer res.Body.Close()
 	// Drain a little so the connection can be reused, never more than the cap.
-	defer func() { _, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10)) }()
+	defer func() { drainReleaseBody(res.Body) }()
 
 	switch {
 	case res.StatusCode == http.StatusNotModified:
@@ -339,11 +339,37 @@ func parseRelease(body []byte) (*Release, error) {
 func releasePage(raw string, v Semver) string {
 	fallback := "https://github.com/" + Repo + "/releases/tag/v" + v.String()
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme != "https" || u.Host != "github.com" || u.User != nil ||
-		!strings.HasPrefix(u.EscapedPath(), "/"+Repo+"/releases/") || u.RawQuery != "" || u.Fragment != "" {
+	if releasePageRejected(u, err) {
 		return fallback
 	}
 	return u.String()
+}
+
+func releaseBase(releaseURL string) *url.URL {
+	base, err := url.Parse(releaseURL)
+	if err != nil {
+		slog.Debug("update check url", "err", err)
+	}
+	return base
+}
+
+func drainReleaseBody(body io.Reader) {
+	if _, err := io.Copy(io.Discard, io.LimitReader(body, 64<<10)); err != nil {
+		slog.Debug("update check drain", "err", err)
+	}
+}
+
+func releasePageRejected(u *url.URL, err error) bool {
+	if err != nil {
+		return true
+	}
+	if u.Scheme != "https" || u.Host != "github.com" || u.User != nil {
+		return true
+	}
+	if !strings.HasPrefix(u.EscapedPath(), "/"+Repo+"/releases/") || u.RawQuery != "" {
+		return true
+	}
+	return u.Fragment != ""
 }
 
 // cleanNotes drops control characters (except newlines and tabs) and
