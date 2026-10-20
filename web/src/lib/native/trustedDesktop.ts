@@ -43,7 +43,7 @@ function parseVersion(val: unknown): string | null {
 }
 
 function parseSource(val: unknown): TrustedApp['source'] | null {
-  return typeof val === 'string' && (val === 'builtin' || val === 'cache') ? val : null
+  return typeof val === 'string' && SOURCES.includes(val) ? (val as TrustedApp['source']) : null
 }
 
 function parseWebClientApi(val: unknown): number | null {

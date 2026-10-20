@@ -1207,8 +1207,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/markdown.ts` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] renderMarkdown - renderMarkdown has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] renderMarkdown - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] renderMarkdown - renderMarkdown has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] renderMarkdown - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/groupSync.ts` — 2 Funde, Abzug 1.25.
 
