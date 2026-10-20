@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 777,779-781
+web/src/lib/media/callEngine.ts
+  h_0ff4f4713441f4 135-144,155,160,162,166-179,181-184,194-204,212,215-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "af4bc73b8b3e18c4e58a78261c8913b3f53a8b45",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
