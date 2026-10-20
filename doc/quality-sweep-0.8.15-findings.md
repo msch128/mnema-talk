@@ -756,11 +756,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] startScreenShare - startScreenShare has cyclomatic complexity 13 (impact -0.75)
 - [x] [low] startScreenShare - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/composables/webrtc/sdp.ts` — 3 Funde, Abzug 1.90.
+### `web/src/composables/webrtc/sdp.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 8, Nest 2)
 
-- [ ] [medium] restrictVideoSection - restrictVideoSection has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] tuneLine - tuneLine has cyclomatic complexity 11 (impact -0.75)
-- [ ] [low] tuneLine - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] restrictVideoSection - restrictVideoSection has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] tuneLine - tuneLine has cyclomatic complexity 11 (impact -0.75)
+- [x] [low] tuneLine - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/api.ts` — 3 Funde, Abzug 1.90.
 

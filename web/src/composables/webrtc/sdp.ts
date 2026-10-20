@@ -89,21 +89,41 @@ function retransmitTargets(section: string[]) {
   return apt
 }
 
+function findSealablePts(names: Map<string, string>, apt: Map<string, string>): Set<string> {
+  const keep = new Set<string>()
+  for (const [pt, name] of names) {
+    if (SEALABLE_VIDEO.has(name)) keep.add(pt)
+  }
+  for (const [pt, name] of names) {
+    if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
+  }
+  return keep
+}
+
+function sealablePayloadTypes(section: string[]): { keep: Set<string>; listed: string[] } | null {
+  const names = codecNames(section)
+  const apt = retransmitTargets(section)
+  const keep = findSealablePts(names, apt)
+  const listed = section[0]?.split(' ').slice(3) || []
+  if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) return null
+  return { keep, listed }
+}
+
+function filterRestrictedLine(l: string, keep: Set<string>, listed: string[]): string[] {
+  if (l.startsWith('m=')) {
+    return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
+  }
+  const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
+  if (m?.[1] && !keep.has(m[1])) return []
+  return [l]
+}
+
 /** The section without its unsealable codecs, or null if it needs no change. */
 function restrictVideoSection(section: string[]) {
   if (!section[0]?.startsWith('m=video')) return null
-  const names = codecNames(section)
-  const apt = retransmitTargets(section)
-  const keep = new Set<string>()
-  for (const [pt, name] of names) if (SEALABLE_VIDEO.has(name)) keep.add(pt)
-  for (const [pt, name] of names) if (name === 'rtx' && keep.has(apt.get(pt) || '')) keep.add(pt)
-  const listed = section[0].split(' ').slice(3)
-  if (!listed.some(pt => SEALABLE_VIDEO.has(names.get(pt) || ''))) return null
-  return section.flatMap((l) => {
-    if (l.startsWith('m=')) return [[...l.split(' ').slice(0, 3), ...listed.filter(pt => keep.has(pt))].join(' ')]
-    const m = /^a=(?:rtpmap|fmtp|rtcp-fb):(\d+)\b/.exec(l)
-    return m?.[1] && !keep.has(m[1]) ? [] : [l]
-  })
+  const sealable = sealablePayloadTypes(section)
+  if (!sealable) return null
+  return section.flatMap(l => filterRestrictedLine(l, sealable.keep, sealable.listed))
 }
 
 /**
@@ -175,15 +195,29 @@ function preferH264(line: string, c: TuneContext) {
   return [...parts.slice(0, 3), ...sorted].join(' ')
 }
 
+function tuneFmtpLine(l: string, c: TuneContext, bitrate: string): string[] | null {
+  const fmtp = /^a=fmtp:(\d+) (.*)$/.exec(l)
+  if (!fmtp?.[1] || fmtp[2] === undefined) return null
+  if (!isMediaCodec(c, fmtp[1]) || fmtp[2].includes('x-google-')) return null
+  return [`${l};${bitrate}`]
+}
+
+function tuneRtpmapLine(l: string, c: TuneContext, bitrate: string): string[] | null {
+  const rtpmap = /^a=rtpmap:(\d+) /.exec(l)
+  if (!rtpmap?.[1]) return null
+  if (!isMediaCodec(c, rtpmap[1]) || c.fmtps.has(rtpmap[1])) return null
+  return [l, `a=fmtp:${rtpmap[1]} ${bitrate}`]
+}
+
 /** One line of the section, with the start and floor bitrate added to the codecs that send video. */
 function tuneLine(l: string, c: TuneContext): string[] {
   if (l.startsWith('m=') && c.h264) return [preferH264(l, c)]
   if (!c.startKbps) return [l]
   const bitrate = `x-google-start-bitrate=${c.startKbps};x-google-min-bitrate=${c.minKbps}`
-  const fmtp = /^a=fmtp:(\d+) (.*)$/.exec(l)
-  if (fmtp?.[1] && fmtp[2] !== undefined && isMediaCodec(c, fmtp[1]) && !fmtp[2].includes('x-google-')) return [`${l};${bitrate}`]
-  const rtpmap = /^a=rtpmap:(\d+) /.exec(l)
-  if (rtpmap?.[1] && isMediaCodec(c, rtpmap[1]) && !c.fmtps.has(rtpmap[1])) return [l, `a=fmtp:${rtpmap[1]} ${bitrate}`]
+  const tunedFmtp = tuneFmtpLine(l, c, bitrate)
+  if (tunedFmtp) return tunedFmtp
+  const tunedRtpmap = tuneRtpmapLine(l, c, bitrate)
+  if (tunedRtpmap) return tunedRtpmap
   return [l]
 }
 
