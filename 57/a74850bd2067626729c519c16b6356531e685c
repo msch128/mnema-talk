@@ -1,0 +1,14 @@
+THIRD_PARTY_NOTICES.md
+  h_0ff4f4713441f4 28-29,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "57a74850bd2067626729c519c16b6356531e685c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
