@@ -25,44 +25,70 @@ type incomingFile struct {
 	size     int64
 }
 
-// readFile extracts and validates the named multipart file part.
-func readFile(r *http.Request, field string, maxBytes int64, allow map[string]bool, imageOnly bool) (*incomingFile, error) {
+type readFileOptions struct {
+	field     string
+	maxBytes  int64
+	allow     map[string]bool
+	imageOnly bool
+}
+
+func parseMultipartForm(r *http.Request, maxBytes int64) error {
 	if err := r.ParseMultipartForm(multipartMemory); err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", maxBytes>>20))
+			return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", maxBytes>>20))
 		}
-		return nil, httpx.ErrInvalidInput("invalid multipart form")
+		return httpx.ErrInvalidInput("invalid multipart form")
 	}
-	file, header, err := r.FormFile(field)
-	if err != nil {
-		return nil, httpx.ErrInvalidInput(field + " file is required")
-	}
-	if header.Size > maxBytes {
-		file.Close()
-		return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", maxBytes>>20))
-	}
-	if header.Size == 0 {
-		file.Close()
-		return nil, httpx.ErrInvalidInput("file is empty")
-	}
+	return nil
+}
 
+func validateFileSize(file multipart.File, size, maxBytes int64) error {
+	if size > maxBytes {
+		file.Close()
+		return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", maxBytes>>20))
+	}
+	if size == 0 {
+		file.Close()
+		return httpx.ErrInvalidInput("file is empty")
+	}
+	return nil
+}
+
+func readUploadHead(file multipart.File) ([]byte, error) {
 	head := make([]byte, 512)
 	n, err := io.ReadFull(file, head)
 	if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) {
-		file.Close()
 		return nil, fmt.Errorf("read upload head: %w", err)
 	}
 	if _, err := file.Seek(0, io.SeekStart); err != nil {
-		file.Close()
 		return nil, fmt.Errorf("rewind upload: %w", err)
 	}
+	return head[:n], nil
+}
 
+// readFile extracts and validates the named multipart file part.
+func readFile(r *http.Request, opts readFileOptions) (*incomingFile, error) {
+	if err := parseMultipartForm(r, opts.maxBytes); err != nil {
+		return nil, err
+	}
+	file, header, err := r.FormFile(opts.field)
+	if err != nil {
+		return nil, httpx.ErrInvalidInput(opts.field + " file is required")
+	}
+	if err := validateFileSize(file, header.Size, opts.maxBytes); err != nil {
+		return nil, err
+	}
+	head, err := readUploadHead(file)
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
 	filename := httpx.SanitizeFilename(header.Filename, maxFilenameLen)
 	if filename == "" {
 		filename = "file"
 	}
-	mimeType, err := reconcileMIME(declaredMIME(header.Header.Get("Content-Type"), filename), head[:n], allow, imageOnly)
+	mimeType, err := reconcileMIME(declaredMIME(header.Header.Get("Content-Type"), filename), head, opts.allow, opts.imageOnly)
 	if err != nil {
 		file.Close()
 		return nil, httpx.ErrUnsupportedMediaType(err.Error())
@@ -73,6 +99,37 @@ func readFile(r *http.Request, field string, maxBytes int64, allow map[string]bo
 func storageKey(prefix string, id uuid.UUID, mimeType string) string {
 	now := time.Now().UTC()
 	return fmt.Sprintf("%s/%04d/%02d/%s%s", prefix, now.Year(), now.Month(), id, extensionFor(mimeType))
+}
+
+func (h *Handler) prepareUploadRequest(w http.ResponseWriter, r *http.Request, user *auth.User) (*http.Request, error) {
+	limit, err := h.memberLimit(r.Context(), user.Subject())
+	if err != nil {
+		return nil, err
+	}
+	// The route's body cap is the ceiling's; this request gets its own.
+	if r.ContentLength > bodyLimit(limit) {
+		return nil, httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", limit>>20))
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(limit))
+	return r.WithContext(WithUploadLimit(r.Context(), limit)), nil
+}
+
+func (h *Handler) insertUploadMessage(ctx context.Context, chID uuid.UUID, user *auth.User, in *storedUpload, target *uploadTarget) (uuid.UUID, error) {
+	msgID, err := chat.InsertMessage(ctx, h.DB, h.Online, chat.NewMessage{
+		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
+	}, func(tx pgx.Tx, msgID uuid.UUID) error {
+		_, err := tx.Exec(ctx, `
+			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size)
+		return err
+	})
+	if err != nil {
+		// The object must not outlive a failed DB write.
+		h.discard(ctx, in.key)
+		return uuid.Nil, fmt.Errorf("record upload: %w", err)
+	}
+	return msgID, nil
 }
 
 // upload handles POST /api/channels/{channelID}/upload.
@@ -117,38 +174,19 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if _, err := chat.ChannelForMessages(ctx, h.DB, chID); err != nil {
 		return err
 	}
-
-	limit, err := h.memberLimit(r.Context(), user.Subject())
+	req, err := h.prepareUploadRequest(w, r, user)
 	if err != nil {
 		return err
 	}
-	// The route's body cap is the ceiling's; this request gets its own.
-	if r.ContentLength > bodyLimit(limit) {
-		return httpx.ErrPayloadTooLarge(fmt.Sprintf("file exceeds the %d MB limit", limit>>20))
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(limit))
-	r = r.WithContext(WithUploadLimit(r.Context(), limit))
-
-	in, target, err := h.readUpload(r, chID)
+	in, target, err := h.readUpload(req, chID)
 	if err != nil {
 		return err
 	}
-
-	msgID, err := chat.InsertMessage(ctx, h.DB, h.Online, chat.NewMessage{
-		ChannelID: chID, UserID: user.ID, Content: target.content, ParentID: target.parentID, ReplyToID: target.replyToID,
-	}, func(tx pgx.Tx, msgID uuid.UUID) error {
-		_, err := tx.Exec(r.Context(), `
-			INSERT INTO media (id, uploader_id, channel_id, message_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			in.id, user.ID, chID, msgID, h.Bucket, in.key, in.filename, in.mime, in.size)
-		return err
-	})
+	msgID, err := h.insertUploadMessage(ctx, chID, user, in, target)
 	if err != nil {
-		// The object must not outlive a failed DB write.
-		h.discard(r.Context(), in.key)
-		return fmt.Errorf("record upload: %w", err)
+		return err
 	}
-	return chat.PublishMessage(w, r, h.DB, h.Events, msgID)
+	return chat.PublishMessage(w, req, h.DB, h.Events, msgID)
 }
 
 // uploadAvatar handles POST /api/users/me/avatar.
@@ -189,6 +227,37 @@ func (h *Handler) uploadAvatar(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (h *Handler) deletePreviousAvatar(ctx context.Context, previous *string) {
+	if previous == nil {
+		return
+	}
+	oldID, err := uuid.Parse(*previous)
+	if err != nil {
+		return
+	}
+	if err := DeleteMedia(context.WithoutCancel(ctx), h.DB, h.Store, oldID); err != nil {
+		slog.Warn("could not delete previous avatar", "media_id", oldID, "err", err)
+	}
+}
+
+func (h *Handler) recordAvatarTx(ctx context.Context, userID, mediaID uuid.UUID, key string, in *incomingFile) (*string, error) {
+	var previous *string
+	err := pgx.BeginFunc(ctx, h.DB, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			mediaID, userID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
+		return err
+	})
+	return previous, err
+}
+
 // ReplaceAvatar reads the 'avatar' image of a multipart request (at most
 // MaxAvatarBytes, image types only), makes it userID's avatar and deletes the
 // previous one. Webhooks use it for their bot account.
@@ -196,7 +265,7 @@ func (h *Handler) ReplaceAvatar(r *http.Request, userID uuid.UUID) error {
 	if h.Store == nil {
 		return httpx.ErrUnavailable("file storage is not configured")
 	}
-	in, err := readFile(r, "avatar", MaxAvatarBytes, avatarMIME, true)
+	in, err := readFile(r, readFileOptions{field: "avatar", maxBytes: MaxAvatarBytes, allow: avatarMIME, imageOnly: true})
 	if err != nil {
 		return err
 	}
@@ -208,32 +277,12 @@ func (h *Handler) ReplaceAvatar(r *http.Request, userID uuid.UUID) error {
 		return fmt.Errorf("store avatar: %w", err)
 	}
 
-	var previous *string
-	err = pgx.BeginFunc(r.Context(), h.DB, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(r.Context(), `SELECT avatar_s3_key FROM users WHERE id = $1 FOR UPDATE`, userID).Scan(&previous); err != nil {
-			return err
-		}
-		if _, err := tx.Exec(r.Context(), `
-			INSERT INTO media (id, uploader_id, s3_bucket, s3_key, original_filename, mime_type, size_bytes)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			mediaID, userID, h.Bucket, key, in.filename, in.mime, in.size); err != nil {
-			return err
-		}
-		_, err := tx.Exec(r.Context(), `UPDATE users SET avatar_s3_key = $1, updated_at = NOW() WHERE id = $2`, mediaID.String(), userID)
-		return err
-	})
+	previous, err := h.recordAvatarTx(r.Context(), userID, mediaID, key, in)
 	if err != nil {
 		_ = h.Store.Delete(context.WithoutCancel(r.Context()), key)
 		return fmt.Errorf("record avatar: %w", err)
 	}
 
-	// The replaced avatar is no longer referenced anywhere; remove it.
-	if previous != nil {
-		if oldID, err := uuid.Parse(*previous); err == nil {
-			if err := DeleteMedia(context.WithoutCancel(r.Context()), h.DB, h.Store, oldID); err != nil {
-				slog.Warn("could not delete previous avatar", "media_id", oldID, "err", err)
-			}
-		}
-	}
+	h.deletePreviousAvatar(r.Context(), previous)
 	return nil
 }

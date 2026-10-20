@@ -809,13 +809,13 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [ ] [critical] <anonymous> - <anonymous> is 292 lines long (impact -1.50)
 - [ ] [medium] - 69% of file duplicated in other files; worst clone shares 242 lines with web/src/third_party/deepfilternet3/worker-glue.js (impact -0.35)
 
-### `internal/media/handler_upload.go` — 5 Funde, Abzug 1.84.
+### `internal/media/handler_upload.go` — 5 Funde, Abzug 1.84. (Repowise: max CCN 8, Nest 2)
 
 - [ ] [medium] - 33% of file duplicated in other files; worst clone shares 33 lines with internal/media/handler_admin.go (impact -0.35)
-- [ ] [medium] ReplaceAvatar - ReplaceAvatar has cyclomatic complexity 10 (impact -0.47)
-- [ ] [medium] readFile - readFile has cyclomatic complexity 11 (impact -0.47)
-- [ ] [medium] upload - upload has cyclomatic complexity 9 (impact -0.47)
-- [ ] [low] readFile - long parameter list: readFile takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.08)
+- [x] [medium] ReplaceAvatar - ReplaceAvatar has cyclomatic complexity 10 (impact -0.47)
+- [x] [medium] readFile - readFile has cyclomatic complexity 11 (impact -0.47)
+- [x] [medium] upload - upload has cyclomatic complexity 9 (impact -0.47)
+- [x] [low] readFile - long parameter list: readFile takes 5 parameters, 3 of 5 typed ones scalars or strings (impact -0.08)
 
 ### `web/src/composables/webrtc/micTest.ts` — 4 Funde, Abzug 1.80.
 
