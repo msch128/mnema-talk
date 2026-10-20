@@ -1300,8 +1300,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/handler_messages.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] listMessages - listMessages has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - 23% of file duplicated in other files; worst clone shares 30 lines with internal/bot/interactions.go (impact -0.15)
+- [x] [medium] listMessages - listMessages has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - 23% of file duplicated in other files; worst clone shares 30 lines with internal/bot/interactions.go (impact -0.15)
 
 ### `internal/gateway/observe.go` — 2 Funde, Abzug 1.00.
 
