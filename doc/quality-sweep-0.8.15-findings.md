@@ -1004,8 +1004,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/room_attach.go` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] classifyRemoteTrack - classifyRemoteTrack has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] forward - forward has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] classifyRemoteTrack - classifyRemoteTrack has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] forward - forward has cyclomatic complexity 9 (impact -0.75)
 
 ### `internal/webbundle/verify.go` — 2 Funde, Abzug 1.50.
 
