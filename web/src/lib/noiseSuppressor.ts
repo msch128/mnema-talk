@@ -80,34 +80,72 @@ export function preloadNoiseSuppressor(model: NoiseModel = 'dfn3') {
   if (isNoiseSuppressionSupported() && MODELS[model]) MODELS[model].load().catch(() => {})
 }
 
+function isContextCompatible(audioContext: AudioContext, model: NoiseModel): boolean {
+  const spec = MODELS[model]
+  if (!spec || !isNoiseSuppressionSupported() || !audioContext?.audioWorklet) return false
+  return spec.sampleRates.includes(audioContext.sampleRate)
+}
+
+function getWorkletRegistry(audioContext: AudioContext): Map<NoiseModel, Promise<void>> {
+  let registered = registeredWorklets.get(audioContext)
+  if (!registered) {
+    registered = new Map()
+    registeredWorklets.set(audioContext, registered)
+  }
+  return registered
+}
+
+async function registerWorkletModule(audioContext: AudioContext, model: NoiseModel, workletUrl: string): Promise<void> {
+  const registry = getWorkletRegistry(audioContext)
+  if (!registry.has(model)) {
+    const registration = audioContext.audioWorklet.addModule(workletUrl)
+    registry.set(model, registration)
+    registration.catch(() => {
+      if (registry.get(model) === registration) registry.delete(model)
+    })
+  }
+  await registry.get(model)
+}
+
+type Dfn3Assets = Awaited<ReturnType<typeof MODELS.dfn3.load>>
+type GtcrnAssets = Awaited<ReturnType<typeof MODELS.gtcrn.load>>
+type LoadedModel =
+  | { model: 'dfn3'; assets: Dfn3Assets }
+  | { model: 'gtcrn'; assets: GtcrnAssets }
+
+async function loadAssets(model: NoiseModel): Promise<LoadedModel> {
+  if (model === 'dfn3') {
+    return { model: 'dfn3', assets: await MODELS.dfn3.load() }
+  }
+  return { model: 'gtcrn', assets: await MODELS.gtcrn.load() }
+}
+
+async function buildNode(
+  audioContext: AudioContext,
+  loaded: LoadedModel,
+  options: FilterOptions
+): Promise<FilterNode> {
+  if (loaded.model === 'dfn3') {
+    return MODELS.dfn3.create(audioContext, loaded.assets, options)
+  }
+  return MODELS.gtcrn.create(audioContext, loaded.assets)
+}
+
 /**
  * Returns a mono AudioWorkletNode running the model, or null when the browser
  * can't run it. Callers fall back to the browser's own suppression.
  */
 export async function createNoiseSuppressorNode(audioContext: AudioContext, model: NoiseModel = 'dfn3', options: FilterOptions = {}): Promise<FilterNode | null> {
-  const spec = MODELS[model]
-  if (!spec || !isNoiseSuppressionSupported() || !audioContext?.audioWorklet) return null
-  if (!spec.sampleRates.includes(audioContext.sampleRate)) return null
-  const stale = () => options.signal?.aborted || audioContext.state === 'closed'
+  if (!isContextCompatible(audioContext, model)) return null
+  const stale = () => Boolean(options.signal?.aborted || audioContext.state === 'closed')
   if (stale()) return null
 
   try {
-    const loaded = model === 'dfn3'
-      ? { model, assets: await MODELS.dfn3.load() }
-      : { model, assets: await MODELS.gtcrn.load() }
+    const loaded = await loadAssets(model)
     if (stale()) return null
-    let registered = registeredWorklets.get(audioContext)
-    if (!registered) registeredWorklets.set(audioContext, registered = new Map())
-    if (!registered.has(model)) {
-      const registration = audioContext.audioWorklet.addModule(spec.workletUrl)
-      registered.set(model, registration)
-      registration.catch(() => { if (registered.get(model) === registration) registered.delete(model) })
-    }
-    await registered.get(model)
+    await registerWorkletModule(audioContext, model, MODELS[model].workletUrl)
     if (stale()) return null
-    return loaded.model === 'dfn3'
-      ? await MODELS.dfn3.create(audioContext, loaded.assets, options)
-      : MODELS.gtcrn.create(audioContext, loaded.assets)
+    return await buildNode(audioContext, loaded, options)
   } catch (err) {
     console.warn(`AI noise suppression (${model}) unavailable:`, err)
     return null
