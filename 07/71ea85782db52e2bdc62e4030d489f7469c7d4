@@ -1,0 +1,34 @@
+web/src/composables/useMessageActions.ts
+  h_0ff4f4713441f4 103,153
+web/src/composables/usePictureInPicture.ts
+  h_0ff4f4713441f4 102
+web/src/composables/useScreenLayerMenu.ts
+  h_0ff4f4713441f4 8,15
+web/src/composables/useStreamQuality.ts
+  h_0ff4f4713441f4 79
+web/src/composables/webrtc/screen.ts
+  h_0ff4f4713441f4 85
+web/src/lib/media/frame.ts
+  h_0ff4f4713441f4 117-118
+web/src/lib/media/group.ts
+  h_0ff4f4713441f4 13,26-28
+web/src/lib/media/groupSync.ts
+  h_0ff4f4713441f4 36,41
+web/src/lib/noiseSuppressor.ts
+  h_0ff4f4713441f4 127
+web/src/stores/chat/members.ts
+  h_0ff4f4713441f4 10,149,156
+web/src/stores/chat/socket.ts
+  h_0ff4f4713441f4 1,76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0771ea85782db52e2bdc62e4030d489f7469c7d4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
