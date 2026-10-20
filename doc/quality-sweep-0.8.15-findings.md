@@ -1385,7 +1385,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/globalSearch.ts` — 1 Funde, Abzug 0.93.
 
-- [ ] [medium] onKeydown - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] onKeydown - if condition combines 4 boolean operators (impact -0.93)
 
 ### `internal/auth/lockout.go` — 3 Funde, Abzug 0.85.
 

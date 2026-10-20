@@ -23,8 +23,14 @@ function ensureMounted() {
   return mounting
 }
 
+function isSearchShortcut(e: KeyboardEvent): boolean {
+  if (e.altKey || e.shiftKey) return false
+  if (e.key.toLowerCase() !== 'k') return false
+  return e.metaKey || e.ctrlKey
+}
+
 function onKeydown(e: KeyboardEvent) {
-  if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'k') return
+  if (!isSearchShortcut(e)) return
   e.preventDefault()
   ensureMounted().then(() => { searchOpen.value = !searchOpen.value })
 }
