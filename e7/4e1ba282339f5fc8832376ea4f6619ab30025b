@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 677-688
+internal/webbundle/webbundle.go
+  h_0ff4f4713441f4 94-96,99-101,131-138,141,158,173-180,188,193,225,227,230,233,235-238,244-247,262-280,283-331,337-342,345,348,369,372-386,389-394,396
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e74e1ba282339f5fc8832376ea4f6619ab30025b",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
