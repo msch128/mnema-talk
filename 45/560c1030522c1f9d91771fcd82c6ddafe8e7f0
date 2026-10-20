@@ -1,0 +1,16 @@
+doc/product-status.md
+  h_0ff4f4713441f4 116
+internal/sfu/adapt_layers_test.go
+  h_0ff4f4713441f4 222-260
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45560c1030522c1f9d91771fcd82c6ddafe8e7f0",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
