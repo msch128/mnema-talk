@@ -1181,8 +1181,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/search.go` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] buildSearchSQL - buildSearchSQL has cyclomatic complexity 14 (impact -0.85)
-- [ ] [low] buildSearchSQL - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] buildSearchSQL - buildSearchSQL has cyclomatic complexity 14 (impact -0.85)
+- [x] [low] buildSearchSQL - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/linkpreview/linkpreview_ssrf.go` — 2 Funde, Abzug 1.25.
 

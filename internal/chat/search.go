@@ -128,57 +128,85 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	return msgs, more, nil
 }
 
-// buildSearchSQL validates the query and turns it into SQL with its arguments.
-func buildSearchSQL(q SearchQuery) (string, []any, error) {
+func isSearchEmpty(terms []string, q SearchQuery) bool {
+	if len(terms) > 0 || q.ChannelID != nil || q.AuthorID != nil {
+		return false
+	}
+	return q.Has == ""
+}
+
+func validateSearchTerms(q SearchQuery) ([]string, error) {
 	text := strings.TrimSpace(q.Text)
 	if utf8.RuneCountInString(text) > maxSearchQueryLen {
-		return "", nil, httpx.ErrInvalidInput("search text is too long")
+		return nil, httpx.ErrInvalidInput("search text is too long")
 	}
 	terms := strings.Fields(text)
 	if len(terms) > maxSearchTerms {
 		terms = terms[:maxSearchTerms]
 	}
-	if len(terms) == 0 && q.ChannelID == nil && q.AuthorID == nil && q.Has == "" {
-		return "", nil, httpx.ErrInvalidInput("enter a search term or choose a filter")
+	if isSearchEmpty(terms, q) {
+		return nil, httpx.ErrInvalidInput("enter a search term or choose a filter")
 	}
+	return terms, nil
+}
 
-	// Every channel's chat is searched, voice channels included. The check
-	// above guarantees at least one condition.
-	where := []string{}
-	args := []any{}
-	arg := func(v any) string {
-		args = append(args, v)
-		return fmt.Sprintf("$%d", len(args))
-	}
+type searchBuilder struct {
+	where []string
+	args  []any
+}
+
+func (b *searchBuilder) addArg(v any) string {
+	b.args = append(b.args, v)
+	return fmt.Sprintf("$%d", len(b.args))
+}
+
+func (b *searchBuilder) addTerms(terms []string) {
 	for _, t := range terms {
-		where = append(where, "m.content ILIKE "+arg(likePattern(t))+` ESCAPE '\'`)
+		b.where = append(b.where, "m.content ILIKE "+b.addArg(likePattern(t))+` ESCAPE '\'`)
 	}
+}
+
+func (b *searchBuilder) addFilters(q SearchQuery) error {
 	if q.Visible != nil {
-		where = append(where, "m.channel_id = ANY("+arg(q.Visible)+"::uuid[])")
+		b.where = append(b.where, "m.channel_id = ANY("+b.addArg(q.Visible)+"::uuid[])")
 	}
 	if q.ChannelID != nil {
-		where = append(where, "m.channel_id = "+arg(*q.ChannelID))
+		b.where = append(b.where, "m.channel_id = "+b.addArg(*q.ChannelID))
 	}
 	if q.AuthorID != nil {
-		where = append(where, "m.user_id = "+arg(*q.AuthorID))
+		b.where = append(b.where, "m.user_id = "+b.addArg(*q.AuthorID))
 	}
 	has, err := hasCondition(q.Has)
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	if has != "" {
-		where = append(where, has)
+		b.where = append(b.where, has)
 	}
 	if q.Before != nil {
-		where = append(where, "(m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = "+arg(*q.Before)+")")
+		b.where = append(b.where, "(m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = "+b.addArg(*q.Before)+")")
+	}
+	return nil
+}
+
+// buildSearchSQL validates the query and turns it into SQL with its arguments.
+func buildSearchSQL(q SearchQuery) (string, []any, error) {
+	terms, err := validateSearchTerms(q)
+	if err != nil {
+		return "", nil, err
+	}
+	b := &searchBuilder{}
+	b.addTerms(terms)
+	if err := b.addFilters(q); err != nil {
+		return "", nil, err
 	}
 
 	sql := messageSelect + `
 	JOIN channels c ON c.id = m.channel_id
-	WHERE ` + strings.Join(where, " AND ") + `
+	WHERE ` + strings.Join(b.where, " AND ") + `
 	ORDER BY m.created_at DESC, m.id DESC
-	LIMIT ` + arg(q.Limit+1)
-	return sql, args, nil
+	LIMIT ` + b.addArg(q.Limit+1)
+	return sql, b.args, nil
 }
 
 // hasCondition is the WHERE condition of the "has" filter ("" for none).
