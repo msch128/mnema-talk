@@ -1348,8 +1348,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/LegalModal.vue` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] onMounted callback - onMounted callback has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [medium] onMounted callback - onMounted callback has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/composables/webrtc/senderTuning.ts` — 2 Funde, Abzug 1.00.
 
