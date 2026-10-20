@@ -30,6 +30,80 @@ function finite(n: number | undefined, fallback: number): number {
  */
 export interface GridOptions { count?: number; width?: number; height?: number; gap?: number; aspect?: number; maxTileWidth?: number; minTileWidth?: number }
 export interface GridLayout { cols: number; rows: number; tileWidth: number; tileHeight: number; overflow: boolean }
+
+interface CandidateLayout {
+  cols: number
+  rows: number
+  tileWidth: number
+  shape: number
+}
+
+function isBetterLayout(candidate: CandidateLayout, current: CandidateLayout | null): boolean {
+  if (!current) return true
+  if (candidate.tileWidth !== current.tileWidth) {
+    return candidate.tileWidth > current.tileWidth
+  }
+  return candidate.shape < current.shape
+}
+
+interface LayoutArea {
+  n: number
+  W: number
+  H: number
+  g: number
+  ratio: number
+  maxW: number
+  minW: number
+}
+
+function evaluateColumnCandidate(
+  cols: number,
+  area: LayoutArea
+): CandidateLayout | null {
+  const { n, W, H, g, ratio, maxW } = area
+  const rows = Math.ceil(n / cols)
+  const colWidth = (W - g * (cols - 1)) / cols
+  const rowHeight = (H - g * (rows - 1)) / rows
+  if (colWidth <= 0 || rowHeight <= 0) return null
+  const tileWidth = Math.floor(Math.min(colWidth, rowHeight * ratio, maxW))
+  const shape = Math.abs(Math.log((cols * ratio) / rows / (W / H)))
+  return { cols, rows, tileWidth, shape }
+}
+
+function findBestGridLayout(area: LayoutArea): CandidateLayout | null {
+  let best: CandidateLayout | null = null
+  for (let cols = 1; cols <= area.n; cols++) {
+    const candidate = evaluateColumnCandidate(cols, area)
+    if (candidate && isBetterLayout(candidate, best)) {
+      best = candidate
+    }
+  }
+  return best
+}
+
+function emptyOrUnmeasuredGrid(n: number, W: number, H: number): GridLayout | null {
+  if (!n) return { cols: 0, rows: 0, tileWidth: 0, tileHeight: 0, overflow: false }
+  if (!W || !H) {
+    const cols = Math.ceil(Math.sqrt(n))
+    return { cols, rows: Math.ceil(n / cols), tileWidth: 0, tileHeight: 0, overflow: false }
+  }
+  return null
+}
+
+function meetsTileMinimum(best: CandidateLayout | null, minW: number): boolean {
+  if (!best || best.tileWidth <= 0) return false
+  return best.tileWidth >= minW
+}
+
+function fallbackOverflowLayout(area: LayoutArea): GridLayout {
+  const { n, W, H, g, ratio, minW } = area
+  const tileWidth = Math.max(1, Math.floor(Math.min(minW || W, W)))
+  const cols = Math.max(1, Math.min(n, Math.floor((W + g) / (tileWidth + g))))
+  const rows = Math.ceil(n / cols)
+  const tileHeight = Math.floor(tileWidth / ratio)
+  return { cols, rows, tileWidth, tileHeight, overflow: rows * tileHeight + (rows - 1) * g > H }
+}
+
 export function videoGridLayout({
   count,
   width,
@@ -48,38 +122,22 @@ export function videoGridLayout({
   const maxW = finite(maxTileWidth, Infinity) > 0 ? finite(maxTileWidth, Infinity) : Infinity
   const minW = Math.min(Math.max(0, finite(minTileWidth, 0)), maxW)
 
-  if (!n) return { cols: 0, rows: 0, tileWidth: 0, tileHeight: 0, overflow: false }
-  if (!W || !H) {
-    const cols = Math.ceil(Math.sqrt(n))
-    return { cols, rows: Math.ceil(n / cols), tileWidth: 0, tileHeight: 0, overflow: false }
-  }
+  const empty = emptyOrUnmeasuredGrid(n, W, H)
+  if (empty) return empty
 
-  let best: { cols: number; rows: number; tileWidth: number; shape: number } | null = null
-  for (let cols = 1; cols <= n; cols++) {
-    const rows = Math.ceil(n / cols)
-    const colWidth = (W - g * (cols - 1)) / cols
-    const rowHeight = (H - g * (rows - 1)) / rows
-    if (colWidth <= 0 || rowHeight <= 0) continue
-    const tileWidth = Math.floor(Math.min(colWidth, rowHeight * ratio, maxW))
-    // How far the grid's shape (cols x rows tiles) is from the area's.
-    const shape = Math.abs(Math.log((cols * ratio) / rows / (W / H)))
-    if (!best || tileWidth > best.tileWidth || (tileWidth === best.tileWidth && shape < best.shape)) {
-      best = { cols, rows, tileWidth, shape }
+  const area: LayoutArea = { n, W, H, g, ratio, maxW, minW }
+  const best = findBestGridLayout(area)
+  if (meetsTileMinimum(best, minW) && best) {
+    return {
+      cols: best.cols,
+      rows: best.rows,
+      tileWidth: best.tileWidth,
+      tileHeight: Math.floor(best.tileWidth / ratio),
+      overflow: false
     }
   }
 
-  if (best && best.tileWidth >= minW && best.tileWidth > 0) {
-    const { cols, rows, tileWidth } = best
-    return { cols, rows, tileWidth, tileHeight: Math.floor(tileWidth / ratio), overflow: false }
-  }
-
-  // Too small for the minimum: as many minimum-width columns as fit, the
-  // rest scrolls.
-  const tileWidth = Math.max(1, Math.floor(Math.min(minW || W, W)))
-  const cols = Math.max(1, Math.min(n, Math.floor((W + g) / (tileWidth + g))))
-  const rows = Math.ceil(n / cols)
-  const tileHeight = Math.floor(tileWidth / ratio)
-  return { cols, rows, tileWidth, tileHeight, overflow: rows * tileHeight + (rows - 1) * g > H }
+  return fallbackOverflowLayout(area)
 }
 
 /** Outer size of the laid-out grid (tiles plus gaps), for centering. */

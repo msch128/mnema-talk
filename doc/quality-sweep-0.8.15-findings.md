@@ -799,10 +799,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [low] buildChannelItems - buildChannelItems is 68 lines long (impact -0.27)
 - [x] [low] moderationItems - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/videoGrid.ts` — 2 Funde, Abzug 1.85.
+### `web/src/lib/videoGrid.ts` — 2 Funde, Abzug 1.85. (Repowise: 10.0/10, max CCN 6, Nest 2)
 
-- [ ] [high] videoGridLayout - videoGridLayout has cyclomatic complexity 17 (impact -1.45)
-- [ ] [low] videoGridLayout - if condition combines 3 boolean operators (impact -0.40)
+- [x] [high] videoGridLayout - videoGridLayout has cyclomatic complexity 17 (impact -1.45)
+- [x] [low] videoGridLayout - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/third_party/deepfilternet3/worklet.js` — 2 Funde, Abzug 1.85. Vendor, nicht editieren.
 
