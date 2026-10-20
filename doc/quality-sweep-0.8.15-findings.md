@@ -1048,8 +1048,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useMessageScroll.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] loadMoreNearEdges - loadMoreNearEdges has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] watchWindowChanges - watchWindowChanges has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] loadMoreNearEdges - loadMoreNearEdges has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] watchWindowChanges - watchWindowChanges has cyclomatic complexity 11 (impact -0.75)
 
 ### `web/src/composables/webrtc/audioSettings.ts` — 2 Funde, Abzug 1.50.
 
