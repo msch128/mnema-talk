@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 458-463
+web/src/lib/desktopGaming.ts
+  h_0ff4f4713441f4 32-36,68-69,73,100-110,115-116,123-136,138-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6629802c47e5bdb95ee4b4936eb3987c68608c13",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
