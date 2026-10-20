@@ -75,23 +75,30 @@ export function leafIdentities(state: ClientState): string[] {
   return ids
 }
 
-/**
- * Each member's frame verifying key, from its leaf's signature key. An id that
- * holds more than one leaf gets none: which of its leaves signed a frame could
- * not be told apart.
- */
-export async function frameVerifiers(state: ClientState): Promise<Map<string, CryptoKey> | null> {
+function singleSignatureKeys(state: ClientState): Map<string, Uint8Array> {
   const leaves = new Map<string, Uint8Array[]>()
   state.ratchetTree.forEach((node, index) => {
     if (!node || node.nodeType !== 'leaf' || index % 2 !== 0) return
     const id = credentialIdentity(node.leaf.credential)
     if (id) leaves.set(id, [...(leaves.get(id) ?? []), node.leaf.signaturePublicKey])
   })
-  const verifiers = new Map<string, CryptoKey>()
+  const single = new Map<string, Uint8Array>()
   for (const [id, keys] of leaves) {
-    const only = keys.length === 1 ? keys[0] : undefined
-    if (!only) continue
-    const key = await importFrameVerifier(only)
+    if (keys.length === 1 && keys[0]) single.set(id, keys[0])
+  }
+  return single
+}
+
+/**
+ * Each member's frame verifying key, from its leaf's signature key. An id that
+ * holds more than one leaf gets none: which of its leaves signed a frame could
+ * not be told apart.
+ */
+export async function frameVerifiers(state: ClientState): Promise<Map<string, CryptoKey> | null> {
+  const single = singleSignatureKeys(state)
+  const verifiers = new Map<string, CryptoKey>()
+  for (const [id, keyBytes] of single) {
+    const key = await importFrameVerifier(keyBytes)
     if (!key) return null
     verifiers.set(id, key)
   }
@@ -109,6 +116,31 @@ export function treeLeafSigner(state: ClientState, id: string): Uint8Array | nul
   return node && node.nodeType === 'leaf' ? node.leaf.signaturePublicKey : null
 }
 
+function shouldCheckLeaf(
+  node: unknown,
+  i: number,
+  removed: ReadonlySet<number>
+): node is { nodeType: 'leaf'; leaf: { credential: Credential; signaturePublicKey: Uint8Array; hpkePublicKey: Uint8Array } } {
+  if (!node || i % 2 !== 0) return false
+  const leafNode = node as { nodeType: string }
+  if (leafNode.nodeType !== 'leaf') return false
+  return !removed.has(i / 2)
+}
+
+function matchesRenewedLeaf(
+  node: { leaf: { credential: Credential; signaturePublicKey: Uint8Array; hpkePublicKey: Uint8Array } },
+  next: unknown,
+  i: number,
+  index: number
+): boolean {
+  if (!next) return false
+  const nextNode = next as { nodeType: string; leaf: { credential: Credential; signaturePublicKey: Uint8Array; hpkePublicKey: Uint8Array } }
+  if (nextNode.nodeType !== 'leaf') return false
+  if (credentialIdentity(nextNode.leaf.credential) !== credentialIdentity(node.leaf.credential)) return false
+  if (!sameBytes(node.leaf.signaturePublicKey, nextNode.leaf.signaturePublicKey)) return false
+  return i === index * 2 || sameBytes(node.leaf.hpkePublicKey, nextNode.leaf.hpkePublicKey)
+}
+
 /**
  * What a commit may do to the leaves that are already there: every leaf of
  * `before` the commit does not remove (or replace) is still at its position
@@ -119,11 +151,8 @@ export function treeLeafSigner(state: ClientState, id: string): Uint8Array | nul
  */
 export function onlyRenewsLeaf(before: ClientState, after: ClientState, index: number, removed: ReadonlySet<number> = new Set()): boolean {
   return before.ratchetTree.every((node, i) => {
-    if (!node || node.nodeType !== 'leaf' || i % 2 !== 0 || removed.has(i / 2)) return true
-    const next = after.ratchetTree[i]
-    if (!next || next.nodeType !== 'leaf' || credentialIdentity(next.leaf.credential) !== credentialIdentity(node.leaf.credential)) return false
-    if (!sameBytes(node.leaf.signaturePublicKey, next.leaf.signaturePublicKey)) return false
-    return i === index * 2 || sameBytes(node.leaf.hpkePublicKey, next.leaf.hpkePublicKey)
+    if (!shouldCheckLeaf(node, i, removed)) return true
+    return matchesRenewedLeaf(node, after.ratchetTree[i], i, index)
   })
 }
 

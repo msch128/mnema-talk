@@ -780,11 +780,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] flush - flush has cyclomatic complexity 9 (impact -0.75)
 - [x] [low] handleStats - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/media/groupTree.ts` — 3 Funde, Abzug 1.90.
+### `web/src/lib/media/groupTree.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 8, Nest 2)
 
-- [ ] [medium] frameVerifiers - frameVerifiers has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] onlyRenewsLeaf - onlyRenewsLeaf has cyclomatic complexity 10 (impact -0.75)
-- [ ] [low] onlyRenewsLeaf - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] frameVerifiers - frameVerifiers has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] onlyRenewsLeaf - onlyRenewsLeaf has cyclomatic complexity 10 (impact -0.75)
+- [x] [low] onlyRenewsLeaf - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/mentionQuery.ts` — 3 Funde, Abzug 1.90.
 
