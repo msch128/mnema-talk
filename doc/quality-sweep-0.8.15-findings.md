@@ -1009,8 +1009,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webbundle/verify.go` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] checkFileList - checkFileList has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] verifySignature - verifySignature has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] checkFileList - checkFileList has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] verifySignature - verifySignature has cyclomatic complexity 10 (impact -0.75)
 
 ### `internal/ws/voice_join.go` — 2 Funde, Abzug 1.50.
 
