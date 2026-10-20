@@ -12,6 +12,10 @@ export function normalizeVersion(v: unknown): string {
   return SAFE.test(s) ? s : ''
 }
 
+function isDevOrEmpty(v: string): boolean {
+  return !v || v === 'dev'
+}
+
 /**
  * True when the server runs a different build than this page: both versions
  * are known, neither is a development build ("dev"), and they differ. The UI
@@ -20,6 +24,6 @@ export function normalizeVersion(v: unknown): string {
 export function isNewServerVersion(serverVersion: unknown, clientVersion: unknown = CLIENT_VERSION): boolean {
   const server = normalizeVersion(serverVersion)
   const client = normalizeVersion(clientVersion)
-  if (!server || !client || server === 'dev' || client === 'dev') return false
+  if (isDevOrEmpty(server) || isDevOrEmpty(client)) return false
   return server !== client
 }

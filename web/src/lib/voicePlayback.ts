@@ -21,7 +21,8 @@ export function readJson(key: string): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(localStorage.getItem(key) || '{}')
     return isRecord(parsed) ? parsed : {}
-  } catch {
+  } catch (error) {
+    void error
     return {}
   }
 }
@@ -29,7 +30,8 @@ export function readJson(key: string): Record<string, unknown> {
 export function writeJson(key: string, value: Record<string, unknown>) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch {
+  } catch (error) {
+    void error
     // Storage blocked or full: the setting then only lasts for this session.
   }
 }

@@ -1495,15 +1495,15 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/linkPreview.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] fetchLinkPreview - fetchLinkPreview has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] fetchLinkPreview - fetchLinkPreview has cyclomatic complexity 12 (impact -0.85)
 
 ### `web/src/lib/messageGrouping.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] isContinuation - isContinuation has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] isContinuation - isContinuation has cyclomatic complexity 10 (impact -0.85)
 
 ### `web/src/lib/screenLayers.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] planScreenLayers - planScreenLayers has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] planScreenLayers - planScreenLayers has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/stores/chat/channels.ts` — 1 Funde, Abzug 0.85.
 
@@ -1647,7 +1647,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/appVersion.ts` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] isNewServerVersion - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] isNewServerVersion - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/useAppRouting.ts` — 1 Funde, Abzug 0.38.
 
@@ -1985,7 +1985,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/channelTree.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/lib/media/api.ts` — 1 Funde, Abzug 0.15.
 
@@ -1993,7 +1993,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/voicePlayback.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/stores/appVersion.ts` — 1 Funde, Abzug 0.15.
 
