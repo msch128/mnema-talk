@@ -914,8 +914,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/moderation.go` — 3 Funde, Abzug 1.65.
 
-- [ ] [medium] bulkDelete - bulkDelete has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] takeLatestMessages - takeLatestMessages has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] bulkDelete - bulkDelete has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] takeLatestMessages - takeLatestMessages has cyclomatic complexity 9 (impact -0.75)
 - [ ] [low] - 15% of file duplicated in other files; worst clone shares 49 lines with internal/chat/botapi_reactions.go (impact -0.15)
 
 ### `internal/ws/signal.go` — 3 Funde, Abzug 1.65.

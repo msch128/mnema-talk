@@ -160,6 +160,39 @@ type deletedMessage struct {
 	attachments []map[string]any
 }
 
+func parseBulkDeleteRequest(r *http.Request) (uuid.UUID, BulkDeleteRequest, string, error) {
+	chID, err := httpx.PathUUID(r, "channelID")
+	if err != nil {
+		return uuid.Nil, BulkDeleteRequest{}, "", err
+	}
+	var req BulkDeleteRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return uuid.Nil, BulkDeleteRequest{}, "", err
+	}
+	if req.Count < 1 || req.Count > MaxBulkDelete {
+		return uuid.Nil, BulkDeleteRequest{}, "", httpx.ErrInvalidInput(fmt.Sprintf("count must be between 1 and %d", MaxBulkDelete))
+	}
+	reason, err := httpx.CleanText("reason", req.Reason, MaxModerationReason, false)
+	if err != nil {
+		return uuid.Nil, BulkDeleteRequest{}, "", err
+	}
+	return chID, req, reason, nil
+}
+
+func verifyBulkDeleteTarget(ctx context.Context, tx pgx.Tx, snap *perm.Snapshot, actor auth.User, targetID uuid.UUID) (string, error) {
+	var targetName string
+	if err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot`, targetID).Scan(&targetName); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", httpx.ErrNotFound("user not found")
+		}
+		return "", err
+	}
+	if err := snap.CanModerate(actor.Subject(), perm.Subject{ID: targetID}); err != nil {
+		return "", err
+	}
+	return targetName, nil
+}
+
 // bulkDelete handles POST /api/channels/{channelID}/messages/bulk-delete.
 //
 // @Summary Delete a member's latest messages in a channel
@@ -181,18 +214,7 @@ type deletedMessage struct {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/bulk-delete [post]
 func (h *Handler) bulkDelete(w http.ResponseWriter, r *http.Request) error {
-	chID, err := httpx.PathUUID(r, "channelID")
-	if err != nil {
-		return err
-	}
-	var req BulkDeleteRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
-		return err
-	}
-	if req.Count < 1 || req.Count > MaxBulkDelete {
-		return httpx.ErrInvalidInput(fmt.Sprintf("count must be between 1 and %d", MaxBulkDelete))
-	}
-	reason, err := httpx.CleanText("reason", req.Reason, MaxModerationReason, false)
+	chID, req, reason, err := parseBulkDeleteRequest(r)
 	if err != nil {
 		return err
 	}
@@ -202,17 +224,11 @@ func (h *Handler) bulkDelete(w http.ResponseWriter, r *http.Request) error {
 	var keys []string
 	var channelName, targetName string
 	err = h.asModerator(r, chID, func(tx pgx.Tx, snap *perm.Snapshot) error {
-		if err := tx.QueryRow(ctx, `SELECT username FROM users WHERE id = $1 AND NOT is_bot`, req.UserID).Scan(&targetName); err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return httpx.ErrNotFound("user not found")
-			}
-			return err
-		}
-		if err := snap.CanModerate(actor.Subject(), perm.Subject{ID: req.UserID}); err != nil {
+		var err error
+		if targetName, err = verifyBulkDeleteTarget(ctx, tx, snap, *actor, req.UserID); err != nil {
 			return err
 		}
 		_ = tx.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, chID).Scan(&channelName)
-		var err error
 		gone, keys, err = takeLatestMessages(ctx, tx, chID, req.UserID, req.Count, snap.IsOwner(actor.Subject()))
 		return err
 	})
@@ -265,11 +281,7 @@ func (h *Handler) announceBulkDelete(ctx context.Context, rep bulkDeleteReport) 
 	}
 }
 
-// takeLatestMessages deletes the n latest messages of a member in a channel
-// inside tx and returns what the audit log needs of them and the storage keys
-// of their attachments (and those of the replies that go with them). Messages
-// with a reply of the Owner stay unless the Owner asks.
-func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]deletedMessage, []string, error) {
+func queryLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]deletedMessage, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT m.id, m.parent_id, m.content, m.created_at FROM messages m
 		WHERE m.channel_id = $1 AND m.user_id = $2
@@ -277,7 +289,7 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 		                         WHERE r.parent_id = m.id AND ru.role = 'admin'))
 		ORDER BY m.created_at DESC, m.id DESC LIMIT $3 FOR UPDATE OF m`, chID, userID, n, byOwner)
 	if err != nil {
-		return nil, nil, fmt.Errorf("select messages: %w", err)
+		return nil, fmt.Errorf("select messages: %w", err)
 	}
 	gone, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (deletedMessage, error) {
 		var m deletedMessage
@@ -285,10 +297,28 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 		return m, err
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("select messages: %w", err)
+		return nil, fmt.Errorf("select messages: %w", err)
 	}
-	if len(gone) == 0 {
-		return gone, nil, nil
+	return gone, nil
+}
+
+func attachDeletedMedia(gone []deletedMessage, byMessage map[uuid.UUID][]map[string]any) {
+	for i := range gone {
+		gone[i].attachments = byMessage[gone[i].id]
+		if gone[i].attachments == nil {
+			gone[i].attachments = []map[string]any{}
+		}
+	}
+}
+
+// takeLatestMessages deletes the n latest messages of a member in a channel
+// inside tx and returns what the audit log needs of them and the storage keys
+// of their attachments (and those of the replies that go with them). Messages
+// with a reply of the Owner stay unless the Owner asks.
+func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, n int, byOwner bool) ([]deletedMessage, []string, error) {
+	gone, err := queryLatestMessages(ctx, tx, chID, userID, n, byOwner)
+	if err != nil || len(gone) == 0 {
+		return gone, nil, err
 	}
 	ids := make([]uuid.UUID, len(gone))
 	for i, m := range gone {
@@ -298,12 +328,7 @@ func takeLatestMessages(ctx context.Context, tx pgx.Tx, chID, userID uuid.UUID, 
 	if err != nil {
 		return nil, nil, err
 	}
-	for i := range gone {
-		gone[i].attachments = byMessage[gone[i].id]
-		if gone[i].attachments == nil {
-			gone[i].attachments = []map[string]any{}
-		}
-	}
+	attachDeletedMedia(gone, byMessage)
 	if _, err := tx.Exec(ctx, `DELETE FROM messages WHERE id = ANY($1)`, ids); err != nil {
 		return nil, nil, fmt.Errorf("delete messages: %w", err)
 	}
