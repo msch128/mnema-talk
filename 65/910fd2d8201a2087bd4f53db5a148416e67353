@@ -1,0 +1,22 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1654,1658,1662,1666
+web/src/composables/useAppRouting.ts
+  h_0ff4f4713441f4 56-75,112-113
+web/src/composables/useMessageActions.ts
+  h_0ff4f4713441f4 103-137,153-157
+web/src/composables/useScreenLayerMenu.ts
+  h_0ff4f4713441f4 8,12-51,54,89-94
+web/src/composables/useSlashCommands.ts
+  h_0ff4f4713441f4 32-33,60-81,127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "65910fd2d8201a2087bd4f53db5a148416e67353",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
