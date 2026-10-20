@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 543-550
+internal/ws/native_lease.go
+  h_0ff4f4713441f4 77-103,107,152-153,155-156,198,205,254-284,287,298-299,306-309
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3c40bcd0c19f8181e23c6c3ae3b472b4fc7db363",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
