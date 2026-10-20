@@ -540,12 +540,14 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/ws/native_lease.go` — 6 Funde, Abzug 2.73.
 
-- [ ] [medium] DisconnectNativeFamily - DisconnectNativeFamily has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] emitApplicationEvent - emitApplicationEvent has cyclomatic complexity 13 (impact -0.50)
-- [ ] [medium] install - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] install - install has cyclomatic complexity 13 (impact -0.50)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Familie, dieselbe Lease und dieselbe Veröffentlichung bleiben.
+
+- [x] [medium] DisconnectNativeFamily - DisconnectNativeFamily has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] emitApplicationEvent - emitApplicationEvent has cyclomatic complexity 13 (impact -0.50)
+- [x] [medium] install - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] install - install has cyclomatic complexity 13 (impact -0.50)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/nativepreview/native_registry.go` — 2 Funde, Abzug 2.45.
 
