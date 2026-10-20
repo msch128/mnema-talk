@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 911-913
+internal/chat/messages.go
+  h_0ff4f4713441f4 33-70,76-77,81,84-86,90,261-273,284,361-365
+internal/chat/messages_test.go
+  h_0ff4f4713441f4 1-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "34103c3ae0a519aeb476010a813efe78c2ab3493",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
