@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1157-1162
+internal/db/db.go
+  h_0ff4f4713441f4 73-122,145,149,152,162-164,210-217,219-223,227-228,230,235,237,240,244,246,297-300
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1b42bd6123a2f32ecbfdac3b91fcafb996bcbfc4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
