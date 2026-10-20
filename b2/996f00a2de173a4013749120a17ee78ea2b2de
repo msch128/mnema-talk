@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 829-832
+web/src/lib/soundEffects.ts
+  h_0ff4f4713441f4 19-21,24-25,35-82,88-92,94,176,178-179,181-182,184,186-191,193-200,202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b2996f00a2de173a4013749120a17ee78ea2b2de",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
