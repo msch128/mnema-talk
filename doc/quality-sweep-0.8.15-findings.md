@@ -1264,9 +1264,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webhook/store.go` — 3 Funde, Abzug 1.15.
 
-- [ ] [medium] remove - remove has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] remove - remove has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/update/updater.go` — 2 Funde, Abzug 1.08.
 
