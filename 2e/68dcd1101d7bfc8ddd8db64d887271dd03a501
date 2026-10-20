@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1086-1088
+web/src/components/NativeTrustSetup.vue
+  h_0ff4f4713441f4 17-21,23-61,63,66,69-98,100-106,108-115,118-147,149-153,156-161,163-180
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2e68dcd1101d7bfc8ddd8db64d887271dd03a501",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
