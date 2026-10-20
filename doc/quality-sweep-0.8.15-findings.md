@@ -166,15 +166,17 @@ Erledigt 2026-10-20: `repowise health --file internal/auth/native_password.go` n
 
 ### `web/src/lib/streamQuality.ts` — 9 Funde, Abzug 4.02.
 
-- [ ] [critical] summarizeSendStats - summarizeSendStats has cyclomatic complexity 27 (impact -0.65)
-- [ ] [high] encodeFrameStats - encodeFrameStats has cyclomatic complexity 17 (impact -0.39)
-- [ ] [medium] encodeFrameStats - if condition combines 4 boolean operators (impact -0.92)
-- [ ] [medium] formatSendStats - formatSendStats has cyclomatic complexity 10 (impact -0.23)
-- [ ] [medium] normalizeQuality - normalizeQuality has cyclomatic complexity 12 (impact -0.23)
-- [ ] [low] encodeFrameStats - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] normalizeQuality - ternary condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] streamModeOf - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] summarizeSendStats - ternary condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file web/src/lib/streamQuality.ts` nennt keinen Fund mehr. 18 Vitest-Tests grün.
+
+- [x] [critical] summarizeSendStats - summarizeSendStats has cyclomatic complexity 27 (impact -0.65)
+- [x] [high] encodeFrameStats - encodeFrameStats has cyclomatic complexity 17 (impact -0.39)
+- [x] [medium] encodeFrameStats - if condition combines 4 boolean operators (impact -0.92)
+- [x] [medium] formatSendStats - formatSendStats has cyclomatic complexity 10 (impact -0.23)
+- [x] [medium] normalizeQuality - normalizeQuality has cyclomatic complexity 12 (impact -0.23)
+- [x] [low] encodeFrameStats - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] normalizeQuality - ternary condition combines 3 boolean operators (impact -0.40)
+- [x] [low] streamModeOf - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] summarizeSendStats - ternary condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/auth/native_handler.go` — 6 Funde, Abzug 4.01.
 
@@ -214,11 +216,13 @@ Erledigt 2026-10-20: `repowise health --file internal/auth/native_password.go` n
 
 ### `internal/nativepreview/native_preview.go` — 5 Funde, Abzug 4.00.
 
-- [ ] [critical] validateNativePreviewOptions - if condition combines 7 boolean operators (impact -0.96)
-- [ ] [critical] validateNativePreviewOptions - if condition combines 9 boolean operators (impact -0.96)
-- [ ] [critical] validateNativePreviewOptions - validateNativePreviewOptions has cyclomatic complexity 25 (impact -1.11)
-- [ ] [high] boundary - if condition combines 5 boolean operators (impact -0.58)
-- [ ] [medium] NewNativePreviewRouter - NewNativePreviewRouter has cyclomatic complexity 10 (impact -0.39)
+Erledigt 2026-10-20: `repowise health --file` nennt keinen Fund mehr. Integrationstests des Pakets grün. Routen bleiben unmounted in NewRouter.
+
+- [x] [critical] validateNativePreviewOptions - if condition combines 7 boolean operators (impact -0.96)
+- [x] [critical] validateNativePreviewOptions - if condition combines 9 boolean operators (impact -0.96)
+- [x] [critical] validateNativePreviewOptions - validateNativePreviewOptions has cyclomatic complexity 25 (impact -1.11)
+- [x] [high] boundary - if condition combines 5 boolean operators (impact -0.58)
+- [x] [medium] NewNativePreviewRouter - NewNativePreviewRouter has cyclomatic complexity 10 (impact -0.39)
 
 ### `internal/ssrf/ssrf.go` — 6 Funde, Abzug 4.00.
 
@@ -231,11 +235,13 @@ Erledigt 2026-10-20: `repowise health --file internal/auth/native_password.go` n
 
 ### `web/src/lib/native/nativeTrust.ts` — 5 Funde, Abzug 4.00.
 
-- [ ] [critical] decodeTrustPreview - decodeTrustPreview has cyclomatic complexity 27 (impact -1.50)
-- [ ] [critical] decodeTrustPreview - if condition combines 8 boolean operators (impact -0.93)
-- [ ] [critical] decodeTrustPreview - if condition combines 8 boolean operators (impact -0.93)
-- [ ] [medium] decodeTrustPreview - if condition combines 4 boolean operators (impact -0.32)
-- [ ] [medium] decodeTrustStatus - if condition combines 4 boolean operators (impact -0.32)
+Erledigt 2026-10-20: `repowise health --file` nennt keinen Fund mehr. Dieselben Ablehnungen, 17 Setup-Tests grün.
+
+- [x] [critical] decodeTrustPreview - decodeTrustPreview has cyclomatic complexity 27 (impact -1.50)
+- [x] [critical] decodeTrustPreview - if condition combines 8 boolean operators (impact -0.93)
+- [x] [critical] decodeTrustPreview - if condition combines 8 boolean operators (impact -0.93)
+- [x] [medium] decodeTrustPreview - if condition combines 4 boolean operators (impact -0.32)
+- [x] [medium] decodeTrustStatus - if condition combines 4 boolean operators (impact -0.32)
 
 ### `web/src/lib/trustPort.ts` — 6 Funde, Abzug 4.00.
 
