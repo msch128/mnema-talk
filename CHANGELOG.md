@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.13](https://github.com/msch128/mnema-talk/compare/v0.8.12...v0.8.13) (2026-10-20)
+
+
+### Bug Fixes
+
+* refuse broad trusted proxy ranges in production ([#283](https://github.com/msch128/mnema-talk/issues/283)) ([7be5c52](https://github.com/msch128/mnema-talk/commit/7be5c522f1a3181e5ce6963905ce30fbab0501b6))
+
 ## [0.8.12](https://github.com/msch128/mnema-talk/compare/v0.8.11...v0.8.12) (2026-10-19)
 
 
