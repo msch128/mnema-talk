@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 923-924
+internal/ws/signal.go
+  h_0ff4f4713441f4 34-52,61-62,65,83-119,123-124,127-128,131-132,135-136,139-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "17e78ae52d3490cbac4d083a2426b94c9ff63c40",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
