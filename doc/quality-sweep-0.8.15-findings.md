@@ -1078,8 +1078,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/media/codec.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] parseFrame - parseFrame has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] splitNals - splitNals has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] parseFrame - parseFrame has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] splitNals - splitNals has cyclomatic complexity 9 (impact -0.75)
 
 ### `web/src/components/NativeTrustSetup.vue` — 3 Funde, Abzug 1.49.
 
