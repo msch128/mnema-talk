@@ -375,10 +375,12 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/native_token.go` — 4 Funde, Abzug 3.65.
 
-- [ ] [critical] parseNativeSecret - if condition combines 7 boolean operators (impact -2.50)
-- [ ] [medium] parseNativeSecret - parseNativeSecret has cyclomatic complexity 14 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dasselbe Alphabet, dieselbe Länge, Schreibfehler beim Redigieren werden geprüft.
+
+- [x] [critical] parseNativeSecret - if condition combines 7 boolean operators (impact -2.50)
+- [x] [medium] parseNativeSecret - parseNativeSecret has cyclomatic complexity 14 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/auth/native_lock.go` — 3 Funde, Abzug 3.50.
 
