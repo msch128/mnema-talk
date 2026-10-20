@@ -476,28 +476,40 @@ Erledigt 2026-10-20: Komplexität ist weg. `repowise health --file --recompute` 
 
 ### `web/src/components/AdminRolesTab.vue` — 3 Funde, Abzug 3.10.
 
-- [ ] [high] onDrop - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] onDrop - onDrop has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] save - save has cyclomatic complexity 11 (impact -0.75)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Rolle wird gespeichert und abgelegt.
+
+
+- [x] [high] onDrop - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] onDrop - onDrop has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] save - save has cyclomatic complexity 11 (impact -0.75)
 
 ### `internal/sfu/subscriptions.go` — 2 Funde, Abzug 3.05.
 
-- [ ] [high] Subscribe - Subscribe has cyclomatic complexity 15 (impact -1.45)
-- [ ] [high] Subscribe - if condition combines 5 boolean operators (impact -1.60)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Ansicht und dieselben Keyframes bleiben.
+
+
+- [x] [high] Subscribe - Subscribe has cyclomatic complexity 15 (impact -1.45)
+- [x] [high] Subscribe - if condition combines 5 boolean operators (impact -1.60)
 
 ### `internal/chat/native_ciphertext.go` — 4 Funde, Abzug 3.00.
 
-- [ ] [high] Publish - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] Publish - Publish has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] List - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Ereignisse werden angenommen und abgelehnt.
+
+
+- [x] [high] Publish - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] Publish - Publish has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] List - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/chat/embeds.go` — 4 Funde, Abzug 2.83.
 
-- [ ] [medium] embedLink - embedLink has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] embedText - embedText has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] embedText - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] embedLink - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Texte und Links werden abgelehnt.
+
+
+- [x] [medium] embedLink - embedLink has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] embedText - embedText has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] embedText - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] embedLink - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/nativepreview/native_ciphertext_preview.go` — 4 Funde, Abzug 2.83.
 

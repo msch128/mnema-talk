@@ -139,6 +139,48 @@ func (r *Room) wantsLocked(viewer uuid.UUID, info *TrackInfo) bool {
 	return r.subs[viewer].Wants(info.SenderID, info.Kind, info.Source)
 }
 
+func applySubscription(s *Subscriptions, publisher uuid.UUID, kind Source, all, on bool) error {
+	switch {
+	case kind == SourceCamera && all:
+		s.SetAllCameras(on)
+		return nil
+	case kind == SourceCamera:
+		return s.SetCamera(publisher, on)
+	case kind == SourceScreen:
+		return s.SetScreen(publisher, on)
+	default:
+		return errors.New("unknown subscription kind")
+	}
+}
+
+func keyframeWanted(info *TrackInfo, kind Source, all bool, publisher uuid.UUID) bool {
+	if info.Kind != webrtc.RTPCodecTypeVideo || info.group != nil {
+		return false
+	}
+	if info.Source != kind {
+		return false
+	}
+	if all {
+		return true
+	}
+	return info.SenderID == publisher
+}
+
+// A new viewer of a stream needs a keyframe to start decoding. A layered
+// share is asked for when the viewer's track exists. r.mu must be held.
+func (r *Room) keyframeTracks(failed error, on bool, viewer, publisher uuid.UUID, kind Source, all bool) []*TrackInfo {
+	if failed != nil || !on {
+		return nil
+	}
+	var fresh []*TrackInfo
+	for _, info := range r.trackLocals {
+		if keyframeWanted(info, kind, all, publisher) && r.wantsLocked(viewer, info) {
+			fresh = append(fresh, info)
+		}
+	}
+	return fresh
+}
+
 // Subscribe changes what viewer receives. kind is SourceScreen or
 // SourceCamera. all (cameras only) applies to every publisher. Tracks are
 // added or removed by renegotiating with the viewer.
@@ -148,28 +190,8 @@ func (r *Room) Subscribe(viewer, publisher uuid.UUID, kind Source, all, on bool)
 		r.mu.Unlock()
 		return ErrNotInRoom
 	}
-	s := r.subsLocked(viewer)
-	var err error
-	switch {
-	case kind == SourceCamera && all:
-		s.SetAllCameras(on)
-	case kind == SourceCamera:
-		err = s.SetCamera(publisher, on)
-	case kind == SourceScreen:
-		err = s.SetScreen(publisher, on)
-	default:
-		err = errors.New("unknown subscription kind")
-	}
-	// A new viewer of a stream needs a keyframe to start decoding.
-	var fresh []*TrackInfo
-	if err == nil && on {
-		for _, info := range r.trackLocals {
-			// A layered share is asked for when the viewer's track exists.
-			if info.Kind == webrtc.RTPCodecTypeVideo && info.group == nil && info.Source == kind && (all || info.SenderID == publisher) && r.wantsLocked(viewer, info) {
-				fresh = append(fresh, info)
-			}
-		}
-	}
+	err := applySubscription(r.subsLocked(viewer), publisher, kind, all, on)
+	fresh := r.keyframeTracks(err, on, viewer, publisher, kind, all)
 	r.mu.Unlock()
 	if err != nil {
 		return err

@@ -52,6 +52,16 @@ func (e FormError) Error() string { return string(e) }
 
 // text validates one embed text: valid UTF-8, no control characters except
 // line breaks and tabs, at most max characters. Surrounding space is trimmed.
+func embedControl(r rune) bool {
+	if r == 0x7f {
+		return true
+	}
+	if r >= 0x20 {
+		return false
+	}
+	return r != '\n' && r != '\t' && r != '\r'
+}
+
 func embedText(field, s string, max int) (string, error) {
 	s = strings.TrimSpace(s)
 	if !utf8.ValidString(s) {
@@ -61,11 +71,28 @@ func embedText(field, s string, max int) (string, error) {
 		return "", FormError(fmt.Sprintf("%s must be at most %d characters", field, max))
 	}
 	for _, r := range s {
-		if (r < 0x20 && r != '\n' && r != '\t' && r != '\r') || r == 0x7f {
+		if embedControl(r) {
 			return "", FormError(field + " contains control characters")
 		}
 	}
 	return s, nil
+}
+
+func embedURLRejected(u *url.URL, err error) bool {
+	if err != nil {
+		return true
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return true
+	}
+	return u.Hostname() == ""
+}
+
+func embedURLChar(r rune) bool {
+	if r <= 0x20 {
+		return true
+	}
+	return r == 0x7f
 }
 
 // link validates a link: absolute http(s) with a host, at most 2048 bytes.
@@ -79,11 +106,11 @@ func embedLink(field, s string) (string, error) {
 		return "", FormError(field + " is too long")
 	}
 	u, err := url.Parse(s)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+	if embedURLRejected(u, err) {
 		return "", FormError(field + " must be an http or https URL")
 	}
 	for _, r := range s {
-		if r <= 0x20 || r == 0x7f {
+		if embedURLChar(r) {
 			return "", FormError(field + " must be an http or https URL")
 		}
 	}
