@@ -25,8 +25,8 @@ binary release.
 | Component | Version | License |
 |---|---|---|
 | [Vue](https://vuejs.org) (`vue`, incl. `@vue/*` runtime) | 3.5.44 | MIT |
-| [Pinia](https://pinia.vuejs.org) | 4.0.3 | MIT |
-| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.56.0 | ISC |
+| [Pinia](https://pinia.vuejs.org) | 4.1.0 | MIT |
+| [Lucide](https://lucide.dev) (`@lucide/vue`) | 1.57.0 | ISC |
 | [Inter](https://rsms.me/inter/) (`@fontsource/inter`) | 5.3.0 | OFL-1.1 |
 | [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (`@fontsource/jetbrains-mono`) | 5.3.0 | OFL-1.1 |
 | [emoji-picker-element](https://github.com/nolanlawson/emoji-picker-element) | 1.29.1 | Apache-2.0 |
@@ -94,7 +94,7 @@ modules are compiled into `mnema-talk`:
 | `github.com/aws/aws-sdk-go-v2/service/sts` | v1.51.2 | Apache-2.0 |
 | `github.com/aws/aws-sdk-go-v2` | v1.47.1 | Apache-2.0 |
 | `github.com/aws/smithy-go` | v1.28.4 | Apache-2.0 |
-| `github.com/go-chi/chi/v5` | v5.4.0 | MIT |
+| `github.com/go-chi/chi/v5` | v5.5.0 | MIT |
 | `github.com/golang-jwt/jwt/v5` | v5.3.1 | MIT |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause |
 | `github.com/gorilla/websocket` | v1.5.3 | BSD-2-Clause |
