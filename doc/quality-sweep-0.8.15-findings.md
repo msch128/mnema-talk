@@ -1373,7 +1373,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `loadtest/viewer/report.go` — 1 Funde, Abzug 0.94.
 
-- [ ] [medium] printReport - printReport nests 4 levels deep (impact -0.94)
+- [x] [medium] printReport - printReport nests 4 levels deep (impact -0.94)
 
 ### `web/src/stores/chat/presence.ts` — 1 Funde, Abzug 0.94.
 

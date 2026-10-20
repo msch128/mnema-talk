@@ -82,15 +82,20 @@ func printReport(members []*member, res result) {
 			continue
 		}
 		fmt.Printf("member %s never connected (err=%s)\n", mr.ID[:min(8, len(mr.ID))], mr.Error)
-		for _, m := range members {
-			if m.id == mr.ID {
-				for _, l := range m.diagLines() {
-					fmt.Println(l)
-				}
-			}
-		}
+		printMemberDiags(members, mr.ID)
 	}
 	fmt.Printf("viewers=%d neverConnected=%d iceTimedOut=%d neverReceived=%d failed=%d flaps=%d connect p50/p95=%d/%dms firstVideo p50/p95=%d/%dms maxStall=%dms avgKbps=%.0f\n",
 		res.Members, res.NeverConnected, res.ICETimedOut, res.NeverReceived, res.Failed, res.Flaps,
 		res.ConnectMsP50, res.ConnectMsP95, res.FirstVideoMsP50, res.FirstVideoMsP95, res.MaxStallMs, res.AvgVideoKbps)
+}
+
+func printMemberDiags(members []*member, id string) {
+	for _, m := range members {
+		if m.id != id {
+			continue
+		}
+		for _, l := range m.diagLines() {
+			fmt.Println(l)
+		}
+	}
 }
