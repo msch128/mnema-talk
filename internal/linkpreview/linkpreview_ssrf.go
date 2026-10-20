@@ -98,15 +98,26 @@ func (f *Fetcher) isDenied(ip net.IP) bool {
 	return f.denied[addr.Unmap()]
 }
 
+func isAllowedPort(port string, allowPrivate bool) bool {
+	if allowPrivate || port == "" {
+		return true
+	}
+	return port == "80" || port == "443"
+}
+
+func isValidWebScheme(scheme string) bool {
+	return scheme == "http" || scheme == "https"
+}
+
 // checkURL allows only plain http(s) URLs on the default ports.
 func (f *Fetcher) checkURL(u *url.URL) error {
-	if u.Scheme != "http" && u.Scheme != "https" {
+	if !isValidWebScheme(u.Scheme) {
 		return ErrBlocked
 	}
 	if u.User != nil || u.Hostname() == "" {
 		return ErrBlocked
 	}
-	if p := u.Port(); p != "" && p != "80" && p != "443" && !f.allowPrivate {
+	if !isAllowedPort(u.Port(), f.allowPrivate) {
 		return ErrBlocked
 	}
 	return nil

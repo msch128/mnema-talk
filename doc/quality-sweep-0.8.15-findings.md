@@ -1186,8 +1186,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/linkpreview/linkpreview_ssrf.go` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] checkURL - checkURL has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] checkURL - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] checkURL - checkURL has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] checkURL - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/sfu/adapt.go` — 2 Funde, Abzug 1.25.
 
