@@ -444,7 +444,7 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/stores/chat/messageWindow.ts` — 6 Funde, Abzug 3.24.
 
-Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Seiten und Sprünge.
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Seiten und Sprünge. Die zwei `if (!channelId)` danach sind dieselbe frühe Rückgabe. Der Hotspot ohne Paar-Testdatei bleibt: `chatStoreBehaviour.test.ts` prüft das Fenster, ein Dummy-Test nur für den Detektor kommt nicht dazu. Angenommen.
 
 - [x] [medium] jumpToRootMessage - jumpToRootMessage has cyclomatic complexity 11 (impact -0.50)
 - [x] [medium] jumpToRootMessage - jumpToRootMessage nests 4 levels deep (impact -0.94)
@@ -455,7 +455,7 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/desktopGaming.ts` — 4 Funde, Abzug 3.11.
 
-Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Akkorde, der Anruf und die Lease.
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Akkorde, der Anruf und die Lease. Der Token-Parameter ist `string | null`, der Vergleich bleibt.
 
 - [x] [medium] chordFromKey - chordFromKey has cyclomatic complexity 10 (impact -0.85)
 - [x] [medium] chordFromKey - if condition combines 4 boolean operators (impact -0.93)

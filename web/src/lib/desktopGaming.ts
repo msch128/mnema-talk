@@ -97,7 +97,7 @@ export function startDesktopGaming(): () => void {
 }
 // A command carries the host's issue/expiry stamps (performance.now clock); it
 // is honoured only inside a short, well-formed window.
-function gamingDetail(detail: unknown, token: string): object | null {
+function gamingDetail(detail: unknown, token: string | null): object | null {
   if (!detail || typeof detail !== 'object') return null
   if (Reflect.get(detail, 'token') !== token) return null
   return detail

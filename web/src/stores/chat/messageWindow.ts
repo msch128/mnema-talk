@@ -105,6 +105,7 @@ export async function loadOlder(cx: Cx) {
   const { cs } = cx
   const channelId = cs.activeChannel.value?.id
   if (pageBlocked(cs, channelId, cs.isLoadingBefore.value, cs.hasMoreBefore.value)) return false
+  if (!channelId) return false
   const anchorId = cs.messages.value[0]?.id
   if (!anchorId) return false
   const gen = cs.windowGen
@@ -126,6 +127,7 @@ export async function loadNewer(cx: Cx) {
   const { cs } = cx
   const channelId = cs.activeChannel.value?.id
   if (pageBlocked(cs, channelId, cs.isLoadingAfter.value, cs.hasMoreAfter.value)) return false
+  if (!channelId) return false
   const anchorId = cs.messages.value[cs.messages.value.length - 1]?.id
   if (!anchorId) return false
   const gen = cs.windowGen
