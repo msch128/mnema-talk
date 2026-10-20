@@ -1,4 +1,5 @@
 import { FRAME_EPOCH_BYTES } from './bounds'
+import { type ReplayWindow } from './replay'
 
 // Wire format of one sealed unit, version 3:
 //   'M' '3' | epoch u32 | stream u32 | counter u32 | line u8 | nonce (12) |
@@ -107,6 +108,16 @@ export interface FrameOpen {
   onUnknownEpoch?: (epoch: number) => void
 }
 
+export interface FrameAadParams {
+  channelId: string
+  senderId: string
+  epoch: number
+  stream: number
+  counter: number
+  clear?: Uint8Array
+  line?: number
+}
+
 function copyBytes(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
@@ -158,20 +169,21 @@ export async function importFrameVerifier(raw: Uint8Array): Promise<CryptoKey | 
   }
 }
 
-export function bindFrameAad(channelId: string, senderId: string, epoch: number, stream: number, counter: number, clear: Uint8Array = new Uint8Array(), line?: number): Uint8Array {
-  const channel = new TextEncoder().encode(channelId)
-  const sender = new TextEncoder().encode(senderId)
+export function bindFrameAad(p: FrameAadParams): Uint8Array {
+  const clearBytes = p.clear ?? new Uint8Array()
+  const channel = new TextEncoder().encode(p.channelId)
+  const sender = new TextEncoder().encode(p.senderId)
   const fixed = channel.length + 1 + sender.length
-  const extra = line === undefined ? 0 : 1
-  const out = new Uint8Array(fixed + 12 + extra + clear.length)
+  const extra = p.line === undefined ? 0 : 1
+  const out = new Uint8Array(fixed + 12 + extra + clearBytes.length)
   out.set(channel, 0)
   out.set(sender, channel.length + 1)
   const view = new DataView(out.buffer)
-  view.setUint32(fixed, epoch)
-  view.setUint32(fixed + 4, stream)
-  view.setUint32(fixed + 8, counter)
-  if (line !== undefined) out[fixed + 12] = line
-  out.set(clear, fixed + 12 + extra)
+  view.setUint32(fixed, p.epoch)
+  view.setUint32(fixed + 4, p.stream)
+  view.setUint32(fixed + 8, p.counter)
+  if (p.line !== undefined) out[fixed + 12] = p.line
+  out.set(clearBytes, fixed + 12 + extra)
   return out
 }
 
@@ -184,25 +196,13 @@ function signedBytes(aad: Uint8Array, body: Uint8Array, domain: Uint8Array = SIG
   return out
 }
 
-export async function sealFrame(frame: FrameSeal): Promise<Uint8Array | null> {
-  if (!isU32(frame.epoch) || !isU32(frame.stream) || !isU32(frame.counter)) return null
-  const v3 = frame.version === 3
-  if (v3 && !isFrameSource(frame.source)) return null
-  const line = v3 ? lineByte(frame.source as FrameSource, frame.source === SOURCE_SCREEN ? frame.layer ?? 0 : 0) : undefined
-  const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES))
-  const aad = bindFrameAad(frame.channelId, frame.senderId, frame.epoch, frame.stream, frame.counter, frame.clear, line)
-  let sealed: ArrayBuffer
-  try {
-    sealed = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(aad) },
-      frame.keys.key,
-      copyBytes(frame.plaintext),
-    )
-  } catch {
-    return null
-  }
-  const cipher = new Uint8Array(sealed)
-  const header = v3 ? HEADER_BYTES_V3 : HEADER_BYTES
+function sealLineByte(v3: boolean, source?: FrameSource, layer?: number): number | undefined {
+  if (!v3) return undefined
+  const s = source as FrameSource
+  return lineByte(s, s === SOURCE_SCREEN ? layer ?? 0 : 0)
+}
+
+function assembleSealedPacket(v3: boolean, header: number, frame: FrameSeal, nonce: Uint8Array, cipher: Uint8Array, line?: number): Uint8Array {
   const packet = new Uint8Array(header + cipher.byteLength + SIGNATURE_BYTES)
   packet[0] = MAGIC_0
   packet[1] = v3 ? MAGIC_1_V3 : MAGIC_1
@@ -213,23 +213,66 @@ export async function sealFrame(frame: FrameSeal): Promise<Uint8Array | null> {
   if (line !== undefined) packet[NONCE_OFFSET] = line
   packet.set(nonce, v3 ? NONCE_OFFSET_V3 : NONCE_OFFSET)
   packet.set(cipher, header)
-  const body = packet.subarray(0, header + cipher.byteLength)
-  let signature: ArrayBuffer
+  return packet
+}
+
+function invalidSealParams(frame: FrameSeal): boolean {
+  if (!isU32(frame.epoch) || !isU32(frame.stream) || !isU32(frame.counter)) return true
+  return frame.version === 3 && !isFrameSource(frame.source)
+}
+
+async function encryptPayload(key: CryptoKey, nonce: Uint8Array, aad: Uint8Array, plaintext: Uint8Array): Promise<Uint8Array | null> {
   try {
-    signature = await crypto.subtle.sign('Ed25519', frame.keys.signer, copyBytes(signedBytes(aad, body, v3 ? SIGNATURE_DOMAIN_V3 : SIGNATURE_DOMAIN)))
+    const sealed = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: copyBytes(nonce), additionalData: copyBytes(aad) },
+      key,
+      copyBytes(plaintext),
+    )
+    return new Uint8Array(sealed)
   } catch {
     return null
   }
-  if (signature.byteLength !== SIGNATURE_BYTES) return null
-  packet.set(new Uint8Array(signature), body.byteLength)
+}
+
+async function signPacketBody(signer: CryptoKey, aad: Uint8Array, body: Uint8Array, v3: boolean): Promise<Uint8Array | null> {
+  try {
+    const domain = v3 ? SIGNATURE_DOMAIN_V3 : SIGNATURE_DOMAIN
+    const signature = await crypto.subtle.sign('Ed25519', signer, copyBytes(signedBytes(aad, body, domain)))
+    if (signature.byteLength !== SIGNATURE_BYTES) return null
+    return new Uint8Array(signature)
+  } catch {
+    return null
+  }
+}
+
+export async function sealFrame(frame: FrameSeal): Promise<Uint8Array | null> {
+  if (invalidSealParams(frame)) return null
+  const v3 = frame.version === 3
+  const line = sealLineByte(v3, frame.source, frame.layer)
+  const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES))
+  const aad = bindFrameAad({ channelId: frame.channelId, senderId: frame.senderId, epoch: frame.epoch, stream: frame.stream, counter: frame.counter, clear: frame.clear, line })
+  const cipher = await encryptPayload(frame.keys.key, nonce, aad, frame.plaintext)
+  if (!cipher) return null
+  const header = v3 ? HEADER_BYTES_V3 : HEADER_BYTES
+  const packet = assembleSealedPacket(v3, header, frame, nonce, cipher, line)
+  const body = packet.subarray(0, header + cipher.byteLength)
+  const signature = await signPacketBody(frame.keys.signer, aad, body, v3)
+  if (!signature) return null
+  packet.set(signature, body.byteLength)
   return packet
+}
+
+function matchingSource(source: number, expected: FrameOpen['source']): boolean {
+  if (!isFrameSource(source)) return false
+  if (expected === undefined || expected === null) return false
+  return source === expected
 }
 
 // The unit must be what the line it arrived on carries: same source, and
 // a screen's layer is the one its stream was made for.
 function lineAgrees(line: number, expected: FrameOpen['source']): boolean {
   const source = line >> 4
-  if (!isFrameSource(source) || expected === undefined || expected === null || source !== expected) return false
+  if (!matchingSource(source, expected)) return false
   if ((line & ~(0xf0 | LAYER_MASK)) !== 0) return false
   return source === SOURCE_SCREEN || (line & LAYER_MASK) === 0
 }
@@ -263,11 +306,35 @@ async function openWithKeys(frame: FrameOpen, candidates: EpochKeys[], unit: Fra
       // Checked again: another unit of the same stream may have opened meanwhile.
       if (!frame.replay.mark(epoch, stream, counter)) return null
       return new Uint8Array(opened)
-    } catch {
+    } catch (error) {
+      void error
       // A tag that does not match under this key: try the other one, if any.
     }
   }
   return null
+}
+
+function parsePacketHeader(packet: Uint8Array): { v3: boolean, header: number } | null {
+  if (packet.byteLength < FRAME_OVERHEAD_BYTES || packet[0] !== MAGIC_0) return null
+  const v3 = packet[1] === MAGIC_1_V3
+  if (!v3 && packet[1] !== MAGIC_1) return null
+  if (v3 && packet.byteLength < FRAME_OVERHEAD_BYTES + 1) return null
+  return { v3, header: v3 ? HEADER_BYTES_V3 : HEADER_BYTES }
+}
+
+function screenLayerMismatch(line: number | undefined, stream: number): boolean {
+  if (line === undefined || line >> 4 !== SOURCE_SCREEN) return false
+  return (stream & LAYER_MASK) !== (line & LAYER_MASK)
+}
+
+function v2Refused(v3: boolean, epoch: number, acceptV2?: (epoch: number) => boolean): boolean {
+  if (v3 || !acceptV2) return false
+  return !acceptV2(epoch)
+}
+
+function invalidLineOrLayer(line: number | undefined, source: FrameOpen['source'], stream: number): boolean {
+  if (line !== undefined && !lineAgrees(line, source)) return true
+  return screenLayerMismatch(line, stream)
 }
 
 /**
@@ -276,23 +343,19 @@ async function openWithKeys(frame: FrameOpen, candidates: EpochKeys[], unit: Fra
  */
 export async function openFrame(frame: FrameOpen): Promise<Uint8Array | null> {
   const packet = frame.packet
-  if (packet.byteLength < FRAME_OVERHEAD_BYTES || packet[0] !== MAGIC_0) return null
-  const v3 = packet[1] === MAGIC_1_V3
-  if (!v3 && packet[1] !== MAGIC_1) return null
-  if (v3 && packet.byteLength < FRAME_OVERHEAD_BYTES + 1) return null
-  const header = v3 ? HEADER_BYTES_V3 : HEADER_BYTES
+  const parsed = parsePacketHeader(packet)
+  if (!parsed) return null
+  const { v3, header } = parsed
   const line = v3 ? packet[NONCE_OFFSET] : undefined
-  if (line !== undefined && !lineAgrees(line, frame.source)) return null
   const view = new DataView(packet.buffer, packet.byteOffset, packet.byteLength)
   const epoch = view.getUint32(EPOCH_OFFSET)
   const stream = view.getUint32(STREAM_OFFSET)
   const counter = view.getUint32(COUNTER_OFFSET)
-  if (!v3 && frame.acceptV2 && !frame.acceptV2(epoch)) return null
+  if (invalidLineOrLayer(line, frame.source, stream)) return null
+  if (v2Refused(v3, epoch, frame.acceptV2)) return null
   const candidates = keyCandidates(frame, epoch)
-  if (!candidates.length) return null
-  if (line !== undefined && line >> 4 === SOURCE_SCREEN && (stream & LAYER_MASK) !== (line & LAYER_MASK)) return null
-  if (!frame.replay.fresh(epoch, stream, counter)) return null
-  const aad = bindFrameAad(frame.channelId, frame.senderId, epoch, stream, counter, frame.clear, line)
+  if (!candidates.length || !frame.replay.fresh(epoch, stream, counter)) return null
+  const aad = bindFrameAad({ channelId: frame.channelId, senderId: frame.senderId, epoch, stream, counter, clear: frame.clear, line })
   return openWithKeys(frame, candidates, { epoch, stream, counter, aad, v3, header })
 }
 
@@ -331,5 +394,4 @@ export class FrameStream {
   }
 }
 
-import { ReplayWindow } from './replay'
 export { REPLAY_STREAMS, REPLAY_IDLE_MS, REPLAY_RETIRED, ReplayWindow, rememberEpochKey } from './replay'

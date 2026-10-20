@@ -649,12 +649,12 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/media/frame.ts` — 6 Funde, Abzug 2.20.
 
-- [ ] [high] openFrame - openFrame has cyclomatic complexity 19 (impact -0.67)
-- [ ] [high] sealFrame - sealFrame has cyclomatic complexity 16 (impact -0.67)
-- [ ] [medium] bindFrameAad - long parameter list: bindFrameAad takes 7 parameters, 6 of 7 typed ones scalars or strings (impact -0.16)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] lineAgrees - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] sealFrame - sealFrame has 3 nested blocks at the same level (bumpy road) (impact -0.15)
+- [x] [high] openFrame - openFrame has cyclomatic complexity 19 (impact -0.67)
+- [x] [high] sealFrame - sealFrame has cyclomatic complexity 16 (impact -0.67)
+- [x] [medium] bindFrameAad - long parameter list: bindFrameAad takes 7 parameters, 6 of 7 typed ones scalars or strings (impact -0.16)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] lineAgrees - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] sealFrame - sealFrame has 3 nested blocks at the same level (bumpy road) (impact -0.15)
 
 ### `internal/auth/users_admin_handlers.go` — 3 Funde, Abzug 2.14.
 
