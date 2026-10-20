@@ -1019,9 +1019,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `loadtest/browsers.mjs` — 3 Funde, Abzug 1.50.
 
-- [ ] [medium] main - main has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] poll - poll has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] watch - watch has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] main - main has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] poll - poll has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] watch - watch has cyclomatic complexity 9 (impact -0.50)
 
 ### `loadtest/join.mjs` — 2 Funde, Abzug 1.50.
 
