@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 753,755-757
+web/src/composables/webrtc/screen.ts
+  h_0ff4f4713441f4 81-85,91,95-96,98-104,110-122,125,127-160,162-163,169,171,180-181,191-196,207,217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f10203f3bb1c0fbc9574645334a12850d404a7da",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
