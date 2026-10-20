@@ -860,8 +860,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/dfn/dfnWorker.ts` — 2 Funde, Abzug 1.79.
 
-- [ ] [medium] self.onmessage - self.onmessage has cyclomatic complexity 14 (impact -0.85)
-- [ ] [medium] self.onmessage - self.onmessage nests 4 levels deep (impact -0.94)
+- [x] [medium] self.onmessage - self.onmessage has cyclomatic complexity 14 (impact -0.85)
+- [x] [medium] self.onmessage - self.onmessage nests 4 levels deep (impact -0.94)
 
 ### `web/src/stores/auth/credentials.ts` — 2 Funde, Abzug 1.79.
 
