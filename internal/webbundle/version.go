@@ -9,6 +9,13 @@ import (
 // Version is a release version, MAJOR.MINOR.PATCH.
 type Version [3]uint32
 
+func isValidVersionPart(p string) bool {
+	if p == "" || len(p) > 9 {
+		return false
+	}
+	return len(p) == 1 || p[0] != '0'
+}
+
 // ParseVersion reads X.Y.Z (no "v" prefix, no pre-release or build suffix).
 func ParseVersion(s string) (Version, error) {
 	var v Version
@@ -17,7 +24,7 @@ func ParseVersion(s string) (Version, error) {
 		return v, fmt.Errorf("%q is not MAJOR.MINOR.PATCH", s)
 	}
 	for i, p := range parts {
-		if p == "" || len(p) > 9 || (len(p) > 1 && p[0] == '0') {
+		if !isValidVersionPart(p) {
 			return v, fmt.Errorf("%q is not MAJOR.MINOR.PATCH", s)
 		}
 		n, err := strconv.ParseUint(p, 10, 32)

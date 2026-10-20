@@ -64,9 +64,13 @@ function handleTileClick(e: MouseEvent | KeyboardEvent) {
   emit('open-profile', props.user)
 }
 
+function isButtonTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && !!target.closest('button')
+}
+
 // A double-click on a camera: on the stage and full screen.
 function onDblclick(e: MouseEvent) {
-  if (!props.stream || !focusable.value || (e.target instanceof Element && e.target.closest('button'))) return
+  if (!props.stream || !focusable.value || isButtonTarget(e.target)) return
   e.stopPropagation()
   emit('fullscreen-camera', props.user.id)
 }

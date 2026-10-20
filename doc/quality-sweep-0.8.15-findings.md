@@ -1532,38 +1532,38 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 ### `web/src/components/PresenceMenu.vue` — 2 Funde, Abzug 0.75.
 
 - [ ] [medium] - 33% of file duplicated in other files; worst clone shares 10 lines with web/src/components/AccountMenu.vue (impact -0.35)
-- [ ] [low] onPointerDown - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] onPointerDown - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/webbundle/cli_trust.go` — 13 Funde, Abzug 0.63.
 
 - [ ] [low] - 8% of file duplicated in other files; worst clone shares 13 lines with internal/webbundle/cli.go (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.04)
 
 ### `internal/nativepreview/native_public_preview.go` — 2 Funde, Abzug 0.55.
 
 - [ ] [low] - 9% of file duplicated in other files; worst clone shares 6 lines with internal/nativepreview/native_ciphertext_preview.go (co-changed 2x) (impact -0.15)
-- [ ] [low] nativePublicPreviewBoundary - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] nativePublicPreviewBoundary - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/AccountMenu.vue` — 2 Funde, Abzug 0.55.
 
 - [ ] [low] - 13% of file duplicated in other files; worst clone shares 10 lines with web/src/components/PresenceMenu.vue (impact -0.15)
-- [ ] [low] onPointerDown - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] onPointerDown - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/media/handler_admin.go` — 2 Funde, Abzug 0.50.
 
 - [ ] [medium] - 46% of file duplicated in other files; worst clone shares 33 lines with internal/media/handler_upload.go (impact -0.35)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/sfu/sfu_join.go` — 5 Funde, Abzug 0.50.
 
@@ -1576,36 +1576,36 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 ### `internal/webbundle/cli.go` — 8 Funde, Abzug 0.48.
 
 - [ ] [medium] writeBundle - a filesystem call runs once per loop iteration (I/O call inside a loop) (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.08)
 - [ ] [low] readPub - a blocking filesystem call in one of the most-called functions in this repo (6 direct callers); every call through it waits for the I/O (impact -0.00)
 
 ### `internal/gateway/gateway.go` — 4 Funde, Abzug 0.45.
 
 - [ ] [medium] Run - a database call is reached once per loop iteration through Run -> checkTokens -> validTokens (cross-function N+1 query) (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/update/semver.go` — 3 Funde, Abzug 0.45.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/composables/useSortableDrag.ts` — 3 Funde, Abzug 0.45.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `internal/auth/native_transaction.go` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] WithAuthorizedTransaction - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] WithAuthorizedTransaction - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/perm/store_assignments.go` — 3 Funde, Abzug 0.40.
 
@@ -1615,7 +1615,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webbundle/version.go` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] ParseVersion - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] ParseVersion - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/ws/handle.go` — 1 Funde, Abzug 0.40.
 
@@ -1623,27 +1623,27 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/AdminUploadLimit.vue` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] computed callback - ternary condition combines 3 boolean operators (impact -0.40)
+- [x] [low] computed callback - ternary condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/ChatArea.vue` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] handleSend - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] handleSend - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/MarkdownContent.vue` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] onKeydown - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] onKeydown - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/ParticipantTile.vue` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] onDblclick - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] onDblclick - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/ThreadSidebar.vue` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] handleSendReply - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] handleSendReply - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/webrtc/voiceAudio.ts` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] watchForNoAudio - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] watchForNoAudio - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/appVersion.ts` — 1 Funde, Abzug 0.40.
 

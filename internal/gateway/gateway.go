@@ -260,13 +260,21 @@ type frame struct {
 }
 
 func marshal(op int, d any) []byte {
-	raw, _ := json.Marshal(d) // plain data: cannot fail
-	out, _ := json.Marshal(frame{Op: op, D: raw})
+	raw, err := json.Marshal(d)
+	if err != nil {
+		return nil
+	}
+	out, err := json.Marshal(frame{Op: op, D: raw})
+	if err != nil {
+		return nil
+	}
 	return out
 }
 
 func newSessionID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return uuid.New().String()
+	}
 	return hex.EncodeToString(b)
 }

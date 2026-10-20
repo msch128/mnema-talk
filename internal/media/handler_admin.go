@@ -51,8 +51,8 @@ func (h *Handler) stats(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/media [get]
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) error {
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	if offset < 0 {
+	offset, err := strconv.Atoi(r.URL.Query().Get("offset"))
+	if err != nil || offset < 0 {
 		offset = 0
 	}
 	items, err := ListMedia(r.Context(), h.DB, httpx.QueryLimit(r, "limit", 50, 100), offset)

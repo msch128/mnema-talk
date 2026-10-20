@@ -111,13 +111,13 @@ function begin<Item, Target>(c: DragCtx<Item, Target>) {
   // Keeps pointerup coming when the mouse is released outside the window.
   try {
     if (s.pointerId !== null) s.source?.setPointerCapture?.(s.pointerId)
-  } catch {
-    // the pointer is gone already
+  } catch (err) {
+    void err
   }
   try {
     globalThis.getSelection?.()?.removeAllRanges?.()
-  } catch {
-    // nothing selected
+  } catch (err) {
+    void err
   }
   document.documentElement.classList.add('mnema-dragging')
   c.opts.onStart?.(state.item)
@@ -239,8 +239,8 @@ function reset<Item, Target>(c: DragCtx<Item, Target>) {
   c.listeners.unlisten()
   try {
     if (s.pointerId !== null && s.source?.hasPointerCapture?.(s.pointerId)) s.source.releasePointerCapture(s.pointerId)
-  } catch {
-    // released already
+  } catch (err) {
+    void err
   }
   s.pointerId = null
   s.source = null

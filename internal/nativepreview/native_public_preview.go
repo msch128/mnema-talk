@@ -53,6 +53,13 @@ func NewNativePublicPreviewRouter(deps server.Deps, options NativePreviewOptions
 	})
 	return preview, nil
 }
+func hasNonEmptyPublicBody(r *http.Request) bool {
+	if r.ContentLength != 0 || len(r.TransferEncoding) != 0 {
+		return true
+	}
+	return r.Body != nil && r.Body != http.NoBody
+}
+
 func nativePublicPreviewBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Origin/Cookie/query/unsupported-version rejection and no-store/CSP already
@@ -65,7 +72,7 @@ func nativePublicPreviewBoundary(next http.Handler) http.Handler {
 		// The wire accepts known-empty bodies only. Reject framed/chunked bodies
 		// without waiting for bytes, so a pre-login client cannot hold a DB check or
 		// legal response hostage with an unfinished body.
-		if r.ContentLength != 0 || len(r.TransferEncoding) != 0 || (r.Body != nil && r.Body != http.NoBody) {
+		if hasNonEmptyPublicBody(r) {
 			httpx.WriteError(w, httpx.ErrInvalidInput("native public metadata body must be empty"))
 			return
 		}

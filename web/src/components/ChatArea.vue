@@ -157,9 +157,14 @@ async function revealOwnMessage() {
   else scrollToBottom()
 }
 
+function isSendBlocked(text: string): boolean {
+  if (!text || !canSend.value) return true
+  return isUploading.value || isSending.value
+}
+
 async function handleSend() {
   const text = inputMessage.value.trim()
-  if (!text || !canSend.value || isUploading.value || isSending.value) return
+  if (isSendBlocked(text)) return
 
   isSending.value = true
   try {

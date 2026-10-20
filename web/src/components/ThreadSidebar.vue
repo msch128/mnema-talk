@@ -139,9 +139,14 @@ onUnmounted(() => {
   clearTimeout(highlightTimer)
 })
 
+function isReplyBlocked(text: string): boolean {
+  if (!text || !canSend.value) return true
+  return isSending.value || isUploading.value
+}
+
 async function handleSendReply() {
   const text = replyInput.value.trim()
-  if (!text || !canSend.value || isSending.value || isUploading.value) return
+  if (isReplyBlocked(text)) return
 
   isSending.value = true
   try {

@@ -44,13 +44,17 @@ function onClick(event: MouseEvent) {
   if (spoiler) spoiler.classList.toggle('revealed')
 }
 
+function isSpoilerElement(target: EventTarget | null): target is Element {
+  return target instanceof Element && target.classList.contains('md-spoiler')
+}
+
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' && event.target instanceof HTMLElement && event.target.dataset.mention) {
     event.preventDefault()
     openMention(event.target)
     return
   }
-  if ((event.key === 'Enter' || event.key === ' ') && event.target instanceof Element && event.target.classList.contains('md-spoiler')) {
+  if ((event.key === 'Enter' || event.key === ' ') && isSpoilerElement(event.target)) {
     event.preventDefault()
     event.target.classList.toggle('revealed')
   }

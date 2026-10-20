@@ -26,9 +26,16 @@ func ParseSemver(s string) (Semver, bool) {
 		return Semver{}, false
 	}
 	var v Semver
-	v.Major, _ = strconv.Atoi(m[1])
-	v.Minor, _ = strconv.Atoi(m[2])
-	v.Patch, _ = strconv.Atoi(m[3])
+	var err error
+	if v.Major, err = strconv.Atoi(m[1]); err != nil {
+		return Semver{}, false
+	}
+	if v.Minor, err = strconv.Atoi(m[2]); err != nil {
+		return Semver{}, false
+	}
+	if v.Patch, err = strconv.Atoi(m[3]); err != nil {
+		return Semver{}, false
+	}
 	v.Pre = m[4]
 	return v, true
 }
