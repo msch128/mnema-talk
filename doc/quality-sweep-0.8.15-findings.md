@@ -674,16 +674,18 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/webbundle/webbundle.go` — 11 Funde, Abzug 1.98.
 
-- [ ] [medium] ValidPath - ValidPath has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] readWebApp - readWebApp has cyclomatic complexity 11 (impact -0.75)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+Erledigt 2026-10-20: ValidPath (CCN 12 -> 5) und readWebApp (CCN 11 -> 3) durch Hilfsfunktionen/appCollector entflechtet. Alle verworfenen Fehler behandelt; Build CCN von 10 auf 5 gesenkt. Repowise-Score stieg von 8.0 auf 10.0/10.
+
+- [x] [medium] ValidPath - ValidPath has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] readWebApp - readWebApp has cyclomatic complexity 11 (impact -0.75)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.06)
 - [ ] [low] LoadCompat - a blocking filesystem call in one of the most-called functions in this repo (3 direct callers); every call through it waits for the I/O (impact -0.00)
 
 ### `internal/gateway/serve.go` — 6 Funde, Abzug 1.95.

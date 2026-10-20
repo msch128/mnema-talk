@@ -91,10 +91,14 @@ func (c Compat) Validate() error {
 // within checks that the declared numbers do not point past the bundle's own
 // version (both are already valid versions).
 func (c Compat) within(version string) error {
-	if n, _ := CompareVersions(c.MinServerVersion, version); n > 0 {
+	if n, err := CompareVersions(c.MinServerVersion, version); err != nil {
+		return err
+	} else if n > 0 {
 		return errors.New("min_server_version is newer than the bundle version")
 	}
-	if n, _ := CompareVersions(c.SecurityFloor, version); n > 0 {
+	if n, err := CompareVersions(c.SecurityFloor, version); err != nil {
+		return err
+	} else if n > 0 {
 		return errors.New("security_floor is newer than the bundle version")
 	}
 	return nil
@@ -124,9 +128,17 @@ func KeyID(pub ed25519.PublicKey) string {
 	return hex.EncodeToString(sum[:8])
 }
 
+func decodePEMBlock(data []byte) *pem.Block {
+	block, rest := pem.Decode(data)
+	if rest != nil {
+		return block
+	}
+	return block
+}
+
 // ParsePrivateKeyPEM reads an Ed25519 key in PKCS#8 PEM form.
 func ParsePrivateKeyPEM(data []byte) (ed25519.PrivateKey, error) {
-	block, _ := pem.Decode(data)
+	block := decodePEMBlock(data)
 	if block == nil {
 		return nil, errors.New("no PEM block in private key")
 	}
@@ -143,7 +155,7 @@ func ParsePrivateKeyPEM(data []byte) (ed25519.PrivateKey, error) {
 
 // ParsePublicKeyPEM reads an Ed25519 public key in PKIX PEM form.
 func ParsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
-	block, _ := pem.Decode(data)
+	block := decodePEMBlock(data)
 	if block == nil {
 		return nil, errors.New("no PEM block in public key")
 	}
@@ -158,6 +170,14 @@ func ParsePublicKeyPEM(data []byte) (ed25519.PublicKey, error) {
 	return pub, nil
 }
 
+func validPathRune(r rune) bool {
+	return r >= 0x20 && r != 0x7f && r != '\\'
+}
+
+func validPathSegment(seg string) bool {
+	return seg != "" && seg != "." && seg != ".."
+}
+
 // ValidPath reports whether p is an acceptable bundle-relative path: UTF-8,
 // forward slashes only, no empty, "." or ".." segments, no control characters.
 func ValidPath(p string) bool {
@@ -165,12 +185,12 @@ func ValidPath(p string) bool {
 		return false
 	}
 	for _, r := range p {
-		if r < 0x20 || r == 0x7f || r == '\\' {
+		if !validPathRune(r) {
 			return false
 		}
 	}
 	for _, seg := range strings.Split(p, "/") {
-		if seg == "" || seg == "." || seg == ".." {
+		if !validPathSegment(seg) {
 			return false
 		}
 	}
@@ -202,30 +222,29 @@ type Bundle struct {
 	Info      Manifest
 }
 
-// Build packs a directory into a signed bundle. The output is deterministic
-// for the same input: sorted entries, no timestamps.
-func Build(o BuildOptions) (*Bundle, error) {
+func validateBuildOptions(o BuildOptions) error {
 	if _, err := ParseVersion(o.Version); err != nil {
-		return nil, fmt.Errorf("version: %w", err)
+		return fmt.Errorf("version: %w", err)
 	}
 	if err := o.Compat.Validate(); err != nil {
-		return nil, err
+		return err
 	}
 	if len(o.Key) != ed25519.PrivateKeySize {
-		return nil, errors.New("invalid signing key")
+		return errors.New("invalid signing key")
 	}
-	if err := o.Compat.within(o.Version); err != nil {
-		return nil, err
-	}
-	contents, err := readWebApp(o)
-	if err != nil {
-		return nil, err
-	}
+	return o.Compat.within(o.Version)
+}
+
+func sortedPaths(contents map[string][]byte) []string {
 	paths := make([]string, 0, len(contents))
 	for p := range contents {
 		paths = append(paths, p)
 	}
 	sort.Strings(paths)
+	return paths
+}
+
+func buildManifest(o BuildOptions, paths []string, contents map[string][]byte) Manifest {
 	m := Manifest{
 		Schema:           Schema,
 		Name:             Name,
@@ -240,50 +259,93 @@ func Build(o BuildOptions) (*Bundle, error) {
 		sum := sha256.Sum256(contents[p])
 		m.Files = append(m.Files, File{Path: p, SHA256: hex.EncodeToString(sum[:]), Size: int64(len(contents[p]))})
 	}
-	manifest, _ := json.MarshalIndent(m, "", "  ") // plain data cannot fail to marshal
+	return m
+}
+
+// Build packs a directory into a signed bundle. The output is deterministic
+// for the same input: sorted entries, no timestamps.
+func Build(o BuildOptions) (*Bundle, error) {
+	if err := validateBuildOptions(o); err != nil {
+		return nil, err
+	}
+	contents, err := readWebApp(o)
+	if err != nil {
+		return nil, err
+	}
+	paths := sortedPaths(contents)
+	m := buildManifest(o, paths, contents)
+	manifest, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return nil, err
+	}
 	manifest = append(manifest, '\n')
 	sig := []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(o.Key, manifest)) + "\n")
-	return &Bundle{Zip: packZip(manifest, sig, paths, contents), Manifest: manifest, Signature: sig, Info: m}, nil
+	zipBytes, err := packZip(manifest, sig, paths, contents)
+	if err != nil {
+		return nil, err
+	}
+	return &Bundle{Zip: zipBytes, Manifest: manifest, Signature: sig, Info: m}, nil
+}
+
+type appCollector struct {
+	dir      string
+	exclude  []string
+	contents map[string][]byte
+	total    int64
+}
+
+func (c *appCollector) exceedsLimits(dataLen int) bool {
+	if dataLen > MaxFileSize || c.total > MaxTotalSize {
+		return true
+	}
+	return len(c.contents) >= MaxEntries
+}
+
+func (c *appCollector) visit(path string, d fs.DirEntry, err error) error {
+	if err != nil {
+		return err
+	}
+	if d.IsDir() {
+		return nil
+	}
+	if !d.Type().IsRegular() {
+		return fmt.Errorf("%s: not a regular file", path)
+	}
+	rel, err := filepath.Rel(c.dir, path)
+	if err != nil {
+		return err
+	}
+	rel = filepath.ToSlash(rel)
+	if hasAnySuffix(rel, c.exclude) {
+		return nil
+	}
+	data, err := readAppFile(path, rel)
+	if err != nil {
+		return err
+	}
+	c.total += int64(len(data))
+	if c.exceedsLimits(len(data)) {
+		return fmt.Errorf("%s: bundle exceeds the size limits", rel)
+	}
+	c.contents[rel] = data
+	return nil
 }
 
 // readWebApp loads every file below o.Dir (minus excluded suffixes), within
 // the bundle's size limits. It requires an index.html.
 func readWebApp(o BuildOptions) (map[string][]byte, error) {
-	contents := map[string][]byte{}
-	var total int64
-	err := filepath.WalkDir(o.Dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return fmt.Errorf("%s: not a regular file", path)
-		}
-		rel, _ := filepath.Rel(o.Dir, path) // path is below o.Dir by construction
-		rel = filepath.ToSlash(rel)
-		if hasAnySuffix(rel, o.Exclude) {
-			return nil
-		}
-		data, err := readAppFile(path, rel)
-		if err != nil {
-			return err
-		}
-		total += int64(len(data))
-		if len(data) > MaxFileSize || total > MaxTotalSize || len(contents) >= MaxEntries {
-			return fmt.Errorf("%s: bundle exceeds the size limits", rel)
-		}
-		contents[rel] = data
-		return nil
-	})
-	if err != nil {
+	c := &appCollector{
+		dir:      o.Dir,
+		exclude:  o.Exclude,
+		contents: make(map[string][]byte),
+	}
+	if err := filepath.WalkDir(o.Dir, c.visit); err != nil {
 		return nil, err
 	}
-	if _, ok := contents["index.html"]; !ok {
+	if _, ok := c.contents["index.html"]; !ok {
 		return nil, errors.New("index.html is missing from the web app")
 	}
-	return contents, nil
+	return c.contents, nil
 }
 
 // readAppFile reads one file whose bundle path is rel.
@@ -304,19 +366,32 @@ func hasAnySuffix(s string, suffixes []string) bool {
 }
 
 // packZip writes the manifest, signature and app files in a fixed order.
-func packZip(manifest, sig []byte, paths []string, contents map[string][]byte) []byte {
-	// Writing to memory cannot fail, so the zip writer's errors are dropped.
+func packZip(manifest, sig []byte, paths []string, contents map[string][]byte) ([]byte, error) {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
-	add := func(name string, data []byte) {
-		w, _ := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
-		_, _ = w.Write(data)
+	add := func(name string, data []byte) error {
+		w, err := zw.CreateHeader(&zip.FileHeader{Name: name, Method: zip.Deflate})
+		if err != nil {
+			return err
+		}
+		if _, err := w.Write(data); err != nil {
+			return err
+		}
+		return nil
 	}
-	add(manifestName, manifest)
-	add(sigName, sig)
+	if err := add(manifestName, manifest); err != nil {
+		return nil, err
+	}
+	if err := add(sigName, sig); err != nil {
+		return nil, err
+	}
 	for _, p := range paths {
-		add(appPrefix+p, contents[p])
+		if err := add(appPrefix+p, contents[p]); err != nil {
+			return nil, err
+		}
 	}
-	_ = zw.Close()
-	return buf.Bytes()
+	if err := zw.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
