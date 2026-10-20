@@ -1377,7 +1377,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/chat/presence.ts` — 1 Funde, Abzug 0.94.
 
-- [ ] [medium] setMyPresence - setMyPresence nests 4 levels deep (impact -0.94)
+- [x] [medium] setMyPresence - setMyPresence nests 4 levels deep (impact -0.94)
 
 ### `internal/sfu/authorization.go` — 1 Funde, Abzug 0.93.
 
