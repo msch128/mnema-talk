@@ -99,7 +99,7 @@ function failOpening(video: HTMLVideoElement, currentStream: StageStream) {
   return false
 }
 
-function canEnter(video: HTMLVideoElement | null, stream?: MediaStream | null): boolean {
+function canEnter(video: HTMLVideoElement | null, stream?: MediaStream | null): video is HTMLVideoElement {
   if (!video || !stream) return false
   return isPictureInPictureSupported()
 }

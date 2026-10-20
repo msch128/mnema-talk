@@ -100,7 +100,7 @@ function useFileUpload() {
   return { isUploading, upload }
 }
 
-function useMessageEditor(channelOf: (msg: Message) => string | undefined, onStart?: () => void) {
+function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => void) {
   const chatStore = useChatStore()
   const toasts = useToastStore()
   const editingId = ref<string | null>(null)
@@ -150,7 +150,7 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
   const { pickerId, toggleReaction, togglePicker, closePicker } = useReactionPicker(container)
   const { isUploading, upload } = useFileUpload()
 
-  function channelOf(msg: Message) {
+  function channelOf(msg: Message): string {
     return chatStore.activeChannel?.id || msg.channel_id
   }
 

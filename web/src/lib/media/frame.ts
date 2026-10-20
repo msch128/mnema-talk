@@ -114,8 +114,8 @@ export interface FrameAadParams {
   epoch: number
   stream: number
   counter: number
-  clear?: Uint8Array
-  line?: number
+  clear?: Uint8Array | undefined
+  line?: number | undefined
 }
 
 function copyBytes(bytes: Uint8Array): ArrayBuffer {

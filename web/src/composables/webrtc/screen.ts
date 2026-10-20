@@ -82,7 +82,7 @@ async function prepareAttachedTracks(
   cx: Cx,
   stream: MediaStream,
   currentCapture: CurrentCapture
-): Promise<{ videoTrack?: MediaStreamTrack; screenAudio: MediaStreamTrack | null } | null> {
+): Promise<{ videoTrack?: MediaStreamTrack | undefined; screenAudio: MediaStreamTrack | null } | null> {
   const { voice, st } = cx
   const videoTrack = stream.getVideoTracks()[0]
   if (videoTrack) prepareScreenVideo(cx, stream, videoTrack)

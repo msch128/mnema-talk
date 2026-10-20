@@ -7,6 +7,7 @@ import { usePermissionsStore } from '../permissions'
 import { applyPresenceUpdate, activityOf } from '../../lib/presence'
 import type { Cx } from './state'
 import { loadedLists } from './messageWindow'
+import type { ProfilePreview } from './types'
 
 const decodeMembers = arrayDecoder('members', isChatMember)
 
@@ -145,14 +146,14 @@ function buildInitialProfile(
   userId: string,
   candidate: ProfileCandidate,
   known?: Partial<User>
-): User {
+): ProfilePreview {
   const username = pickProfileField(candidate.username, known?.username, '')
   const displayName = pickProfileField(candidate.display_name, known?.display_name, username)
   const avatarUrl = pickProfileField(candidate.avatar_url, known?.avatar_url, '')
   const role = pickProfileField(candidate.role, known?.role, 'user')
   const createdAt = candidate.created_at || known?.created_at
 
-  const profile: User = {
+  const profile: ProfilePreview = {
     id: userId,
     username,
     display_name: displayName,

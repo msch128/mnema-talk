@@ -33,12 +33,12 @@ export abstract class GroupSync extends GroupEpoch {
     }
   }
 
-  private isKnownOrHigher(id: string, tree: Set<string> | null): boolean {
+  private isKnownOrHigher(id: string, tree: Map<string, number> | null): boolean {
     if (id > this.userId) return true
     return (tree?.has(id) || this.heard.has(id)) ?? false
   }
 
-  private filterReachableOthers(others: string[], tree: Set<string> | null, now: number): { kept: string[]; wait: number } {
+  private filterReachableOthers(others: string[], tree: Map<string, number> | null, now: number): { kept: string[]; wait: number } {
     let wait = Infinity
     const kept = others.filter((id) => {
       if (this.isKnownOrHigher(id, tree)) return true

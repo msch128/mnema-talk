@@ -5,14 +5,14 @@
 import { computed } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { layerDetail, layerName } from '../lib/screenLayers'
-import type { ScreenLayer } from '../lib/screenLayers'
+import type { ScreenLayer } from '../types/events'
 import { t } from '../i18n'
 import type { ContextMenuItem } from '../components/menuTypes'
 
 interface LayerMenuOptions {
   layers: ScreenLayer[]
   choice: number | 'auto'
-  receivedLayer?: number
+  receivedLayer?: number | undefined
   nameOf(index: number): string
   choose(next: number | 'auto'): void
 }

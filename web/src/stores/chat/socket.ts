@@ -1,4 +1,4 @@
-import { platform } from '../../lib/platform'
+import { platform, type PlatformSocket } from '../../lib/platform'
 import { decodeServerEvent } from '../../types/events'
 import type { ServerEventPayloads, ClientEventPayloads } from '../../types/events'
 import { usePermissionsStore } from '../permissions'
@@ -73,7 +73,7 @@ export function retryNow(cx: Cx) {
 }
 
 interface SocketSession {
-  socket: WebSocket
+  socket: PlatformSocket
   generation: number
   accountId: string
 }

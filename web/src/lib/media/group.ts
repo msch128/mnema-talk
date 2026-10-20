@@ -10,8 +10,7 @@ import {
   type Credential,
   type IncomingMessageCallback,
   type KeyPackage,
-  type MlsMessage,
-  type ProcessedPublicMessage,
+  type MLSMessage,
   type PublicMessage,
   type Welcome,
 } from 'ts-mls'
@@ -24,6 +23,9 @@ import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
 import { GroupSync } from './groupSync'
+
+type MlsMessage = MLSMessage
+type ProcessedPublicMessage = Awaited<ReturnType<typeof processPublicMessage>>
 import {
   validCapBits,
   isKnownSigner,

@@ -124,7 +124,7 @@ async function buildNode(
   audioContext: AudioContext,
   loaded: LoadedModel,
   options: FilterOptions
-): Promise<FilterNode> {
+): Promise<FilterNode | null> {
   if (loaded.model === 'dfn3') {
     return MODELS.dfn3.create(audioContext, loaded.assets, options)
   }

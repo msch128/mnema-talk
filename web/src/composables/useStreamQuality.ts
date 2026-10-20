@@ -76,7 +76,7 @@ interface RadioItemOpts {
   label: string
   checked: boolean
   action: () => void
-  subtitle?: string
+  subtitle?: string | undefined
 }
 
 function radioItem(opts: RadioItemOpts): ContextMenuItem {
