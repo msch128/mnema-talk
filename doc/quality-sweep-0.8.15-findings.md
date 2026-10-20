@@ -1089,12 +1089,12 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/micPipeline.ts` — 6 Funde, Abzug 1.48.
 
-- [ ] [medium] teardownMicPipeline - teardownMicPipeline has cyclomatic complexity 12 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.12)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.12)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.12)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.12)
-- [ ] [low] teardownMicPipeline - teardownMicPipeline has 3 nested blocks at the same level (bumpy road) (impact -0.15)
+- [x] [medium] teardownMicPipeline - teardownMicPipeline has cyclomatic complexity 12 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.12)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.12)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.12)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.12)
+- [x] [low] teardownMicPipeline - teardownMicPipeline has 3 nested blocks at the same level (bumpy road) (impact -0.15)
 
 ### `web/src/lib/native/trustedDesktop.ts` — 1 Funde, Abzug 1.45.
 
