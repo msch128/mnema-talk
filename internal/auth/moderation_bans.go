@@ -61,6 +61,32 @@ type Ban struct {
 // @Header 429 {integer} Retry-After "Seconds until the client may retry."
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/admin/users/{id}/ban [post]
+func parseBanDuration(durationSeconds *int) (*time.Time, error) {
+	if durationSeconds == nil {
+		return nil, nil
+	}
+	if *durationSeconds < MinBanSeconds || *durationSeconds > MaxBanSeconds {
+		return nil, httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinBanSeconds, MaxBanSeconds))
+	}
+	t := time.Now().Add(time.Duration(*durationSeconds) * time.Second)
+	return &t, nil
+}
+
+func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) {
+	// Tell them first; the connection closes a moment later so the notice
+	// is written. Their sessions are already dead, so nothing can be done
+	// with the socket meanwhile.
+	h.notify(id, notice{Kind: "ban", Until: until, Reason: reason})
+	if h.OnAccountEnded != nil {
+		h.OnAccountEnded(id)
+	}
+	if h.Live != nil {
+		h.Live.KickFromVoice(id)
+		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })
+	}
+	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+}
+
 func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
@@ -74,13 +100,9 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var until *time.Time
-	if req.DurationSeconds != nil {
-		if *req.DurationSeconds < MinBanSeconds || *req.DurationSeconds > MaxBanSeconds {
-			return httpx.ErrInvalidInput(fmt.Sprintf("duration_seconds must be between %d and %d", MinBanSeconds, MaxBanSeconds))
-		}
-		t := time.Now().Add(time.Duration(*req.DurationSeconds) * time.Second)
-		until = &t
+	until, err := parseBanDuration(req.DurationSeconds)
+	if err != nil {
+		return err
 	}
 	revoke := req.RevokeInvite == nil || *req.RevokeInvite
 	actor := UserFrom(r.Context())
@@ -90,18 +112,7 @@ func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	// Tell them first; the connection closes a moment later so the notice
-	// is written. Their sessions are already dead, so nothing can be done
-	// with the socket meanwhile.
-	h.notify(id, notice{Kind: "ban", Until: until, Reason: reason})
-	if h.OnAccountEnded != nil {
-		h.OnAccountEnded(id)
-	}
-	if h.Live != nil {
-		h.Live.KickFromVoice(id)
-		time.AfterFunc(banDisconnectDelay, func() { h.Live.DisconnectUser(id) })
-	}
-	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
+	h.postBanCleanup(id, until, reason)
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }

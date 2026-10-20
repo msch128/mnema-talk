@@ -1232,9 +1232,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/auth/moderation_bans.go` — 3 Funde, Abzug 1.20.
 
-- [ ] [medium] - 25% of file duplicated in other files; worst clone shares 32 lines with internal/roles/handler.go (impact -0.35)
-- [ ] [medium] RunBanExpiry - a database call is reached once per loop iteration through RunBanExpiry -> ExpireBans (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] banUser - banUser has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] - 25% of file duplicated in other files; worst clone shares 32 lines with internal/roles/handler.go (impact -0.35)
+- [x] [medium] RunBanExpiry - a database call is reached once per loop iteration through RunBanExpiry -> ExpireBans (cross-function N+1 query) (impact -0.00)
+- [x] [medium] banUser - banUser has cyclomatic complexity 11 (impact -0.85)
 
 ### `internal/bot/handler.go` — 2 Funde, Abzug 1.20.
 
