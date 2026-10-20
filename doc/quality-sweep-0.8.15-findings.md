@@ -750,11 +750,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] applyVoiceRoute - applyVoiceRoute has cyclomatic complexity 9 (impact -0.75)
 - [x] [low] openRouteThread - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/composables/webrtc/screen.ts` — 3 Funde, Abzug 1.90.
+### `web/src/composables/webrtc/screen.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 8, Nest 2)
 
-- [ ] [medium] attachScreen - attachScreen has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] startScreenShare - startScreenShare has cyclomatic complexity 13 (impact -0.75)
-- [ ] [low] startScreenShare - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] attachScreen - attachScreen has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] startScreenShare - startScreenShare has cyclomatic complexity 13 (impact -0.75)
+- [x] [low] startScreenShare - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/webrtc/sdp.ts` — 3 Funde, Abzug 1.90.
 
