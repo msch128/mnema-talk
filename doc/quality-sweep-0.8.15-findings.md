@@ -1363,9 +1363,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/config/config_net.go` — 3 Funde, Abzug 0.95.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] BroadTrustedProxies - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] normalizeURL - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] BroadTrustedProxies - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] normalizeURL - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/chat/audit.go` — 1 Funde, Abzug 0.94.
 
