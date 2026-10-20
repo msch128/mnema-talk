@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 947-949
+web/src/stores/voice/screens.ts
+  h_0ff4f4713441f4 86-90,93-94,96-97,101-116,119-120,125,127,155-159,161-166,168-171,173,176-177,179,181,186-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fd4af078ce653f5612b19fbbd56aecfa066a072b",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
