@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1474,1478
+web/src/components/VoiceStage.vue
+  h_0ff4f4713441f4 167-199,201,203
+web/src/composables/useTalkStage.ts
+  h_0ff4f4713441f4 10-19,26,28-35,37-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9562dc1ad746c7861285138c41d4af7e8e5e35dc",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
