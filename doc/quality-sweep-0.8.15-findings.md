@@ -717,13 +717,13 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] botMentionPolicy - botMentionPolicy nests 4 levels deep (impact -0.94)
 - [x] [low] - 12% of file duplicated in other files; worst clone shares 34 lines with internal/bot/interactions.go (co-changed 2x) (impact -0.15)
 
-### `internal/webhook/dispatch.go` — 5 Funde, Abzug 1.94.
+### `internal/webhook/dispatch.go` — 5 Funde, Abzug 1.94. (Repowise: 7.7/10, max CCN 6, Nest 2)
 
-- [ ] [medium] Run - Run has cyclomatic complexity 10 (impact -0.85)
-- [ ] [medium] Run - Run nests 4 levels deep (impact -0.94)
+- [x] [medium] Run - Run has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] Run - Run nests 4 levels deep (impact -0.94)
 - [ ] [medium] Run - a database call is reached once per loop iteration through Run -> Reload (cross-function N+1 query) (impact -0.00)
 - [ ] [medium] Run - a database call is reached once per loop iteration through Run -> prune -> pruneQueue (cross-function N+1 query) (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/auth/native_wire.go` — 3 Funde, Abzug 1.90.
 
