@@ -1191,8 +1191,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/adapt.go` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] observe - observe has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] tryStepUp - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] observe - observe has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] tryStepUp - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/sfu/candidates.go` — 3 Funde, Abzug 1.25.
 
