@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1194-1195
+internal/sfu/adapt.go
+  h_0ff4f4713441f4 222-251,259-260,263-269,271-272,311-320,329
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "132f8594d4daaaa8b6a8e7afdeb83da3e536c4c2",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
