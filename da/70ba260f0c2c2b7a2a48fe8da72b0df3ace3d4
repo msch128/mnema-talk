@@ -1,0 +1,36 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1510,1514,1518,1522,1526,1530,2000,2004,2008,2012
+web/src/lib/globalSearch.ts
+  h_0ff4f4713441f4 28
+web/src/stores/appVersion.ts
+  h_0ff4f4713441f4 57-58
+web/src/stores/auth.ts
+  h_0ff4f4713441f4 23-24
+web/src/stores/chat/channels.ts
+  h_0ff4f4713441f4 25-50,58
+web/src/stores/chat/events.ts
+  h_0ff4f4713441f4 79-93,96,106
+web/src/stores/chat/notifications.ts
+  h_0ff4f4713441f4 19-34,39-41,43-44,46-47
+web/src/stores/chat/threads.ts
+  h_0ff4f4713441f4 8-19,21-22,24,26,31
+web/src/stores/chat/typing.ts
+  h_0ff4f4713441f4 19-44,52-53,55,62
+web/src/stores/voice/cameras.ts
+  h_0ff4f4713441f4 106-128,134-138,142,146
+web/src/stores/voice/controls.ts
+  h_0ff4f4713441f4 60-61
+web/src/stores/voice/state.ts
+  h_0ff4f4713441f4 28-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da70ba260f0c2c2b7a2a48fe8da72b0df3ace3d4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
