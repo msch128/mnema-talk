@@ -1120,13 +1120,13 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webbundle/cli_trust_sign.go` — 7 Funde, Abzug 1.35.
 
-- [ ] [medium] fillKeys - a filesystem call is reached once per loop iteration through fillKeys -> bundleKeyArg -> readPub (cross-function I/O call inside a loop) (impact -0.00)
-- [ ] [medium] runTrustSign - runTrustSign has cyclomatic complexity 13 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [medium] fillKeys - a filesystem call is reached once per loop iteration through fillKeys -> bundleKeyArg -> readPub (cross-function I/O call inside a loop) (impact -0.00)
+- [x] [medium] runTrustSign - runTrustSign has cyclomatic complexity 13 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.10)
 
 ### `web/web.go` — 7 Funde, Abzug 1.35.
 

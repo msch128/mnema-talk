@@ -49,39 +49,58 @@ func parseTrustSignFlags(args []string, stderr io.Writer) (*trustSignOpts, error
 	return o, nil
 }
 
-func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	o, err := parseTrustSignFlags(args, stderr)
+func loadRootKey(path string) (ed25519.PrivateKey, error) {
+	pemKey, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	pemKey, err := os.ReadFile(o.keyFile)
-	if err != nil {
-		return err
-	}
-	root, err := ParsePrivateKeyPEM(pemKey)
-	if err != nil {
-		return err
-	}
+	return ParsePrivateKeyPEM(pemKey)
+}
+
+func (o *trustSignOpts) prepareStatement(root ed25519.PrivateKey) (Trust, *Trust, error) {
 	now := time.Now().UTC().Truncate(time.Second)
 	t := Trust{
-		Schema: TrustSchema, Serial: o.serial,
+		Schema:     TrustSchema,
+		Serial:     o.serial,
 		IssuedAt:   now.Format(time.RFC3339),
 		ExpiresAt:  now.Add(o.validFor).Format(time.RFC3339),
 		MaxVersion: map[string]string{},
 	}
 	var prev *Trust
 	if o.prev != "" {
-		if prev, err = o.carryForward(&t, root.Public().(ed25519.PublicKey)); err != nil {
-			return err
+		p, err := o.carryForward(&t, root.Public().(ed25519.PublicKey))
+		if err != nil {
+			return Trust{}, nil, err
 		}
+		prev = p
 	}
 	if t.Serial == 0 {
 		t.Serial = 1
 	}
 	if err := o.fillKeys(&t); err != nil {
-		return err
+		return Trust{}, nil, err
 	}
 	if err := parseMaxVersions(&t, o.maxVersions); err != nil {
+		return Trust{}, nil, err
+	}
+	return t, prev, nil
+}
+
+func shouldSign(yes bool, stdin io.Reader, stdout io.Writer) bool {
+	return yes || confirmSigning(stdin, stdout)
+}
+
+func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	o, err := parseTrustSignFlags(args, stderr)
+	if err != nil {
+		return err
+	}
+	root, err := loadRootKey(o.keyFile)
+	if err != nil {
+		return err
+	}
+	t, prev, err := o.prepareStatement(root)
+	if err != nil {
 		return err
 	}
 	doc, sig, err := SignTrust(t, root)
@@ -89,14 +108,16 @@ func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 		return err
 	}
 	describeTrust(stdout, &t, prev)
-	if !o.yes && !confirmSigning(stdin, stdout) {
+	if !shouldSign(o.yes, stdin, stdout) {
 		return errors.New("aborted, nothing written")
 	}
 	if err := writeTrust(o.out, doc, sig); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(stdout, "signed trust statement serial %d: %d bundle key(s), %d revoked, %d updater key(s), %d revoked\n",
-		t.Serial, len(t.BundleKeys), len(t.RevokedBundleKeys), len(t.UpdaterKeys), len(t.RevokedUpdaterKeys))
+	if _, err := fmt.Fprintf(stdout, "signed trust statement serial %d: %d bundle key(s), %d revoked, %d updater key(s), %d revoked\n",
+		t.Serial, len(t.BundleKeys), len(t.RevokedBundleKeys), len(t.UpdaterKeys), len(t.RevokedUpdaterKeys)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -143,14 +164,14 @@ func (o *trustSignOpts) keepAllowedKeys(t, p *Trust) {
 		revoked[id] = true
 	}
 	for _, k := range p.BundleKeys {
-		raw, _ := hex.DecodeString(k) // verified
-		if !revoked[KeyID(raw)] {
+		raw, err := hex.DecodeString(k) // verified
+		if err == nil && !revoked[KeyID(raw)] {
 			t.BundleKeys = append(t.BundleKeys, k)
 		}
 	}
 	for _, k := range p.UpdaterKeys {
-		id, _ := UpdaterKeyID(k) // verified
-		if !revoked[id] {
+		id, err := UpdaterKeyID(k) // verified
+		if err == nil && !revoked[id] {
 			o.updaterKeys = append(o.updaterKeys, k)
 		}
 	}
@@ -187,8 +208,13 @@ func parseMaxVersions(t *Trust, caps listFlag) error {
 
 // confirmSigning asks on stdout and reads the answer from stdin.
 func confirmSigning(stdin io.Reader, stdout io.Writer) bool {
-	_, _ = fmt.Fprint(stdout, "Sign this statement? [y/N] ")
-	answer, _ := bufio.NewReader(stdin).ReadString('\n')
+	if _, err := fmt.Fprint(stdout, "Sign this statement? [y/N] "); err != nil {
+		return false
+	}
+	answer, err := bufio.NewReader(stdin).ReadString('\n')
+	if err != nil && len(answer) == 0 {
+		return false
+	}
 	a := strings.ToLower(strings.TrimSpace(answer))
 	return a == "y" || a == "yes"
 }
