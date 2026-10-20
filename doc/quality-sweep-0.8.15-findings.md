@@ -711,9 +711,11 @@ Erledigt 2026-10-20: usePictureInPictureHost (CCN 17 -> 6, bumpy road behoben) u
 
 ### `internal/chat/botapi.go` — 3 Funde, Abzug 1.94.
 
-- [ ] [medium] botCreateMessage - botCreateMessage has cyclomatic complexity 14 (impact -0.85)
-- [ ] [medium] botMentionPolicy - botMentionPolicy nests 4 levels deep (impact -0.94)
-- [ ] [low] - 12% of file duplicated in other files; worst clone shares 34 lines with internal/bot/interactions.go (co-changed 2x) (impact -0.15)
+Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nesting 4 -> 2) durch Hilfsfunktionen (checkBotChannelSend, decodeRawBotMessage, validateBotPayload, parseAllowedUsers, applyAllowedMentions) entflechtet.
+
+- [x] [medium] botCreateMessage - botCreateMessage has cyclomatic complexity 14 (impact -0.85)
+- [x] [medium] botMentionPolicy - botMentionPolicy nests 4 levels deep (impact -0.94)
+- [x] [low] - 12% of file duplicated in other files; worst clone shares 34 lines with internal/bot/interactions.go (co-changed 2x) (impact -0.15)
 
 ### `internal/webhook/dispatch.go` — 5 Funde, Abzug 1.94.
 
