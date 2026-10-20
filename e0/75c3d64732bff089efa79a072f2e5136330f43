@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 812,815-818
+internal/media/handler_upload.go
+  h_0ff4f4713441f4 28-35,39,41,43-47,49,51,53,55-56,58,67-68,70-86,91,104-134,177,181,185,187,189,230-260,268,280,286
+internal/media/upload_edges_test.go
+  h_0ff4f4713441f4 73,78,82,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e075c3d64732bff089efa79a072f2e5136330f43",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
