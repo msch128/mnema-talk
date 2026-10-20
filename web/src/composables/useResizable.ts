@@ -40,7 +40,8 @@ export function sanitizeWidth(raw: unknown, { defaultWidth, min, max }: PanelCon
 function defaultStorage() {
   try {
     return globalThis.localStorage ?? null
-  } catch {
+  } catch (err) {
+    void err
     return null
   }
 }
@@ -52,7 +53,8 @@ export function storageKey(name: string, dimension = 'width') {
 export function loadWidth(name: string, config: PanelConfig, storage: Storage | null = defaultStorage(), dimension = 'width') {
   try {
     return sanitizeWidth(storage ? storage.getItem(storageKey(name, dimension)) : null, config)
-  } catch {
+  } catch (err) {
+    void err
     return config.defaultWidth
   }
 }
@@ -62,7 +64,8 @@ export function saveWidth(name: string, width: number, storage: Storage | null =
     if (!storage) return false
     storage.setItem(storageKey(name, dimension), String(Math.round(width)))
     return true
-  } catch {
+  } catch (err) {
+    void err
     return false
   }
 }
@@ -86,10 +89,15 @@ export function fitPanels(panels: FittedPanel[], viewportWidth: number, centerMi
   return widths
 }
 
+export interface AvailableBounds {
+  viewportWidth: number
+  centerMin: number
+}
+
 // Largest width panel `index` may take right now without squeezing the center.
-export function availableMax(index: number, effectiveWidths: number[], panel: PanelConfig, viewportWidth: number, centerMin: number) {
+export function availableMax(index: number, effectiveWidths: number[], panel: PanelConfig, bounds: AvailableBounds) {
   const others = effectiveWidths.reduce((sum, w, i) => (i === index ? sum : sum + w), 0)
-  return clamp(viewportWidth - centerMin - others, panel.min, panel.max)
+  return clamp(bounds.viewportWidth - bounds.centerMin - others, panel.min, panel.max)
 }
 
 // Panels at the start of the axis (left, top) grow when the separator moves
@@ -169,15 +177,54 @@ interface PanelDrag {
   onFinish: () => void
 }
 
+function setupDragBody(axis: PanelAxis) {
+  const body = document.body
+  const prevUserSelect = body.style.userSelect
+  const prevCursor = body.style.cursor
+  body.style.userSelect = 'none'
+  body.style.cursor = axis === 'y' ? 'row-resize' : 'col-resize'
+  return () => {
+    body.style.userSelect = prevUserSelect
+    body.style.cursor = prevCursor
+  }
+}
+
+function safeCapturePointer(handle: Element, pointerId: number) {
+  try {
+    handle.setPointerCapture(pointerId)
+  } catch (err) {
+    // Capture is best effort (e.g. synthetic events).
+    void err
+  }
+}
+
+function safeReleasePointer(handle: Element, pointerId: number) {
+  try {
+    if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId)
+  } catch (err) {
+    // already released
+    void err
+  }
+}
+
+function bindDragListeners(handle: Element, onMove: EventListener, onEnd: EventListener) {
+  handle.addEventListener('pointermove', onMove)
+  handle.addEventListener('pointerup', onEnd)
+  handle.addEventListener('pointercancel', onEnd)
+  handle.addEventListener('lostpointercapture', onEnd)
+  return () => {
+    handle.removeEventListener('pointermove', onMove)
+    handle.removeEventListener('pointerup', onEnd)
+    handle.removeEventListener('pointercancel', onEnd)
+    handle.removeEventListener('lostpointercapture', onEnd)
+  }
+}
+
 /** Follows one pointer on a separator until it is released. Returns the function that ends the drag. */
 function beginPanelDrag({ event: e, handle, def, axis, startWidth, max, dragging, setWidth, commit, onFinish }: PanelDrag) {
   const pointerId = e.pointerId
   e.preventDefault()
-  try {
-    handle.setPointerCapture(pointerId)
-  } catch {
-    // Capture is best effort (e.g. synthetic events).
-  }
+  safeCapturePointer(handle, pointerId)
 
   const coord = (ev: PointerEvent) => (axis === 'y' ? ev.clientY : ev.clientX)
   const startX = coord(e)
@@ -185,11 +232,7 @@ function beginPanelDrag({ event: e, handle, def, axis, startWidth, max, dragging
   let frame = 0
   let ended = false
 
-  const body = document.body
-  const prevUserSelect = body.style.userSelect
-  const prevCursor = body.style.cursor
-  body.style.userSelect = 'none'
-  body.style.cursor = axis === 'y' ? 'row-resize' : 'col-resize'
+  const restoreBody = setupDragBody(axis)
   dragging.value = def.name
 
   const apply = () => {
@@ -209,28 +252,45 @@ function beginPanelDrag({ event: e, handle, def, axis, startWidth, max, dragging
     apply()
     commit()
     dragging.value = null
-    body.style.userSelect = prevUserSelect
-    body.style.cursor = prevCursor
-    handle.removeEventListener('pointermove', onMove as EventListener)
-    handle.removeEventListener('pointerup', onEnd as EventListener)
-    handle.removeEventListener('pointercancel', onEnd as EventListener)
-    handle.removeEventListener('lostpointercapture', onEnd as EventListener)
-    try {
-      if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId)
-    } catch {
-      // already released
-    }
+    restoreBody()
+    unbind()
+    safeReleasePointer(handle, pointerId)
   }
   const onEnd = (ev: PointerEvent) => {
     if (ev.pointerId !== pointerId) return
     if (ev.type === 'pointerup') lastX = coord(ev)
     finish()
   }
-  handle.addEventListener('pointermove', onMove as EventListener)
-  handle.addEventListener('pointerup', onEnd as EventListener)
-  handle.addEventListener('pointercancel', onEnd as EventListener)
-  handle.addEventListener('lostpointercapture', onEnd as EventListener)
+  const unbind = bindDragListeners(handle, onMove as EventListener, onEnd as EventListener)
   return finish
+}
+
+function createPanelState<Name extends string>(
+  def: PanelDefinition<Name>,
+  index: number,
+  axis: PanelAxis,
+  helpers: {
+    effective: Ref<number[]>
+    dragging: Ref<string | null>
+    maxFor: (index: number) => number
+    startDrag: (index: number, e: PointerEvent) => void
+    onKeydown: (index: number, e: KeyboardEvent) => void
+    reset: (index: number) => void
+  }
+): ResizePanel {
+  return reactive({
+    name: String(def.name),
+    side: def.side,
+    axis,
+    min: def.min,
+    defaultWidth: def.defaultWidth,
+    width: computed(() => helpers.effective.value[index] ?? def.defaultWidth),
+    maxNow: computed(() => helpers.maxFor(index)),
+    dragging: computed(() => helpers.dragging.value === def.name),
+    startDrag: (e: PointerEvent) => helpers.startDrag(index, e),
+    onKeydown: (e: KeyboardEvent) => helpers.onKeydown(index, e),
+    reset: () => helpers.reset(index)
+  })
 }
 
 /**
@@ -263,7 +323,7 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
 
   function maxFor(index: number) {
     const def = defs[index]
-    return def ? availableMax(index, effective.value, def, viewport.value, centerMin) : 0
+    return def ? availableMax(index, effective.value, def, { viewportWidth: viewport.value, centerMin }) : 0
   }
 
   function setWidth(def: PanelDefinition, width: number, persist: boolean) {
@@ -306,17 +366,6 @@ export function useResizable<const Name extends string>(defs: readonly PanelDefi
     if (def) setWidth(def, def.defaultWidth, true)
   }
 
-  return Object.fromEntries(defs.map((def, index) => [def.name, reactive({
-    name: String(def.name),
-    side: def.side,
-    axis,
-    min: def.min,
-    defaultWidth: def.defaultWidth,
-    width: computed(() => effective.value[index] ?? def.defaultWidth),
-    maxNow: computed(() => maxFor(index)),
-    dragging: computed(() => dragging.value === def.name),
-    startDrag: (e: PointerEvent) => startDrag(index, e),
-    onKeydown: (e: KeyboardEvent) => onKeydown(index, e),
-    reset: () => reset(index)
-  })])) as Record<Name, ResizePanel>
+  const helpers = { effective, dragging, maxFor, startDrag, onKeydown, reset }
+  return Object.fromEntries(defs.map((def, index) => [def.name, createPanelState(def, index, axis, helpers)])) as Record<Name, ResizePanel>
 }

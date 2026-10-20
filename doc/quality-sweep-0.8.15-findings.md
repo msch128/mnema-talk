@@ -893,11 +893,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useResizable.ts` — 5 Funde, Abzug 1.68.
 
-- [ ] [medium] beginPanelDrag - beginPanelDrag has cyclomatic complexity 12 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] availableMax - long parameter list: availableMax takes 5 parameters, 4 of 5 typed ones scalars or strings (impact -0.15)
-- [ ] [low] useResizable - useResizable is 70 lines long (impact -0.38)
+- [x] [medium] beginPanelDrag - beginPanelDrag has cyclomatic complexity 12 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] availableMax - long parameter list: availableMax takes 5 parameters, 4 of 5 typed ones scalars or strings (impact -0.15)
+- [x] [low] useResizable - useResizable is 70 lines long (impact -0.38)
 
 ### `internal/bot/commands.go` — 4 Funde, Abzug 1.65.
 
