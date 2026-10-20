@@ -1,0 +1,48 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1535,1540-1551,1556,1561,1566,1579-1584,1590-1592,1596-1598,1602-1604,1608,1618,1626,1630,1634,1638,1642,1646
+internal/auth/native_transaction.go
+  h_0ff4f4713441f4 9-15,25
+internal/gateway/gateway.go
+  h_0ff4f4713441f4 263-270,276-278
+internal/media/handler_admin.go
+  h_0ff4f4713441f4 54-55
+internal/nativepreview/native_public_preview.go
+  h_0ff4f4713441f4 56-62,75
+internal/update/semver.go
+  h_0ff4f4713441f4 29-38
+internal/webbundle/cli.go
+  h_0ff4f4713441f4 24-41,45,59,68,110,208,222
+internal/webbundle/cli_trust.go
+  h_0ff4f4713441f4 36,47,67-70,77,128,138,140-143,146-152,159,164,176,180
+internal/webbundle/version.go
+  h_0ff4f4713441f4 12-18,27
+web/src/components/AccountMenu.vue
+  h_0ff4f4713441f4 105-109,111
+web/src/components/AdminUploadLimit.vue
+  h_0ff4f4713441f4 16-20,23
+web/src/components/ChatArea.vue
+  h_0ff4f4713441f4 160-164,167
+web/src/components/MarkdownContent.vue
+  h_0ff4f4713441f4 47-50,57
+web/src/components/ParticipantTile.vue
+  h_0ff4f4713441f4 67-70,73
+web/src/components/PresenceMenu.vue
+  h_0ff4f4713441f4 66-70,72
+web/src/components/ThreadSidebar.vue
+  h_0ff4f4713441f4 142-146,149
+web/src/composables/useSortableDrag.ts
+  h_0ff4f4713441f4 114-115,119-120,242-243
+web/src/composables/webrtc/voiceAudio.ts
+  h_0ff4f4713441f4 48-52,56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e70d48f1be86c5bf3b8a9b9e1bcab9a7f46d4953",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
