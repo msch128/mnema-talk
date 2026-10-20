@@ -1058,8 +1058,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/streamDiag.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] directionFields - directionFields has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] streamDiag - streamDiag has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] directionFields - directionFields has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] streamDiag - streamDiag has cyclomatic complexity 12 (impact -0.75)
 
 ### `web/src/lib/channelDrop.ts` — 2 Funde, Abzug 1.50.
 
