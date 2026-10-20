@@ -1395,7 +1395,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/commands_validate.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] checkOptions - checkOptions has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] checkOptions - checkOptions has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/chat/handler.go` — 1 Funde, Abzug 0.85.
 
