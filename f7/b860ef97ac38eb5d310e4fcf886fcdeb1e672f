@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1001-1003
+internal/perm/store_integration_test.go
+  h_0ff4f4713441f4 339
+internal/perm/store_roles_order.go
+  h_0ff4f4713441f4 27-31,33-41,43,46-47,54-55,57-90,101,103,110-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f7b860ef97ac38eb5d310e4fcf886fcdeb1e672f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
