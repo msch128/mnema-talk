@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1251-1252
+web/src/composables/useWebRTC.harness.fixture.ts
+  h_0ff4f4713441f4 78-79,81,87,89,91,99-102,131-132,134,140,154,160,165-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "93c5c6ccd4e4438acb6056ce3e33c1c483a13ebb",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
