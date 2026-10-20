@@ -1463,11 +1463,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `loadtest/viewer/loss.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] newAPI - newAPI has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] newAPI - newAPI has cyclomatic complexity 9 (impact -0.85)
 
 ### `scripts/upgrade-drill.sh` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] resolve_previous - resolve_previous has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] resolve_previous - resolve_previous has cyclomatic complexity 11 (impact -0.85)
 
 ### `web/src/components/VoiceStage.vue` — 1 Funde, Abzug 0.85.
 

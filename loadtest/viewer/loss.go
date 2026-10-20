@@ -72,6 +72,19 @@ func (l *lossInterceptor) impair(n int) bool {
 }
 
 func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {
+	se := buildViewerSettingEngine()
+	me := &webrtc.MediaEngine{}
+	if err := me.RegisterDefaultCodecs(); err != nil {
+		return nil, err
+	}
+	reg, err := buildViewerRegistry(loss, jitter, me)
+	if err != nil {
+		return nil, err
+	}
+	return webrtc.NewAPI(webrtc.WithSettingEngine(se), webrtc.WithMediaEngine(me), webrtc.WithInterceptorRegistry(reg)), nil
+}
+
+func buildViewerSettingEngine() webrtc.SettingEngine {
 	se := webrtc.SettingEngine{}
 	if v := os.Getenv("ICE_INTERFACES"); v != "" {
 		allowed := map[string]bool{}
@@ -83,17 +96,21 @@ func newAPI(loss float64, jitter time.Duration) (*webrtc.API, error) {
 	if os.Getenv("ICE_UDP4_ONLY") == "1" {
 		se.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
 	}
-	me := &webrtc.MediaEngine{}
-	if err := me.RegisterDefaultCodecs(); err != nil {
-		return nil, err
-	}
+	return se
+}
+
+func hasImpairments(loss float64, jitter time.Duration, kbps int) bool {
+	return loss > 0 || jitter > 0 || kbps > 0
+}
+
+func buildViewerRegistry(loss float64, jitter time.Duration, me *webrtc.MediaEngine) (*interceptor.Registry, error) {
 	reg := &interceptor.Registry{}
 	kbps := envInt("BW_KBPS", 0)
-	if loss > 0 || jitter > 0 || kbps > 0 {
+	if hasImpairments(loss, jitter, kbps) {
 		reg.Add(&lossFactory{loss: loss, jitter: jitter, kbps: kbps, queue: time.Duration(envInt("BW_QUEUE_MS", 1500)) * time.Millisecond})
 	}
 	if err := webrtc.RegisterDefaultInterceptors(me, reg); err != nil {
 		return nil, err
 	}
-	return webrtc.NewAPI(webrtc.WithSettingEngine(se), webrtc.WithMediaEngine(me), webrtc.WithInterceptorRegistry(reg)), nil
+	return reg, nil
 }

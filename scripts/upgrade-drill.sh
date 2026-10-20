@@ -26,20 +26,39 @@ ALICE_PASSWORD="alice-$(openssl rand -hex 8)"
 BOB_PASSWORD="bob-$(openssl rand -hex 8)"
 
 # --- which release to upgrade from -------------------------------------------
-resolve_previous() {
-  local current head tags tag ver
-  current="$(tr -d '[:space:]' <"$ROOT/version.txt")"
-  head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
-  # "<sha> refs/tags/vX.Y.Z" and, for annotated tags, the peeled "<sha> refs/tags/vX.Y.Z^{}".
+fetch_git_tags() {
+  local tags
   tags="$(git -C "$ROOT" ls-remote --tags origin 'refs/tags/v*' 2>/dev/null || true)"
   if [ -z "$tags" ]; then
     tags="$(git -C "$ROOT" for-each-ref --format='%(objectname) %(refname)' 'refs/tags/v*' 2>/dev/null || true)"
   fi
+  printf '%s\n' "$tags"
+}
+
+is_candidate_version() {
+  local ver="$1" current="$2" head="$3" tags="$4"
+  if [ -z "$ver" ]; then
+    return 1
+  fi
+  if [ -n "$head" ] && grep -Eq "^$head[[:space:]]+refs/tags/v$ver(\^\{\})?\$" <<<"$tags"; then
+    return 1
+  fi
+  if [ "$(printf '%s\n%s\n' "$ver" "$current" | sort -V | tail -n 1)" != "$current" ]; then
+    return 1
+  fi
+  return 0
+}
+
+resolve_previous() {
+  local current head tags ver
+  current="$(tr -d '[:space:]' <"$ROOT/version.txt")"
+  head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
+  tags="$(fetch_git_tags)"
   # Newest first, at most current, skipping the tag of the tested commit.
   while read -r ver; do
-    [ -n "$ver" ] || continue
-    if [ -n "$head" ] && grep -Eq "^$head[[:space:]]+refs/tags/v$ver(\^\{\})?\$" <<<"$tags"; then continue; fi
-    if [ "$(printf '%s\n%s\n' "$ver" "$current" | sort -V | tail -n 1)" != "$current" ]; then continue; fi
+    if ! is_candidate_version "$ver" "$current" "$head" "$tags"; then
+      continue
+    fi
     if docker pull --quiet "$REGISTRY_IMAGE:$ver" >/dev/null 2>&1; then
       echo "$REGISTRY_IMAGE:$ver"
       return 0
