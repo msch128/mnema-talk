@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1230-1231
+internal/auth/invites.go
+  h_0ff4f4713441f4 67,69,71-77,79,81-117,120,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "95f299c347aae62f12ce9d96e7145208bb6d4a1c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
