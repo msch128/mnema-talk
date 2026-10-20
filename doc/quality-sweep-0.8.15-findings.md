@@ -155,12 +155,14 @@ Erledigt 2026-10-20: `repowise health --file web/src/lib/media/guard.ts` nennt k
 
 ### `internal/auth/native_password.go` — 6 Funde, Abzug 4.02.
 
-- [ ] [critical] checkReissueLease - if condition combines 7 boolean operators (impact -2.17)
-- [ ] [medium] changePasswordAndReissue - changePasswordAndReissue has cyclomatic complexity 9 (impact -0.38)
-- [ ] [medium] checkReissueLease - checkReissueLease has cyclomatic complexity 10 (impact -0.38)
-- [ ] [medium] prepareReissue - prepareReissue has cyclomatic complexity 9 (impact -0.38)
-- [ ] [medium] reissue - reissue has cyclomatic complexity 9 (impact -0.38)
-- [ ] [low] changePasswordAndReissue - if condition combines 3 boolean operators (impact -0.33)
+Erledigt 2026-10-20: `repowise health --file internal/auth/native_password.go` nennt keinen Fund mehr. Dieselben Prüfungen, kürzere Bedingungen. `go test -tags=integration ./internal/auth/ -run NativePassword` grün.
+
+- [x] [critical] checkReissueLease - if condition combines 7 boolean operators (impact -2.17)
+- [x] [medium] changePasswordAndReissue - changePasswordAndReissue has cyclomatic complexity 9 (impact -0.38)
+- [x] [medium] checkReissueLease - checkReissueLease has cyclomatic complexity 10 (impact -0.38)
+- [x] [medium] prepareReissue - prepareReissue has cyclomatic complexity 9 (impact -0.38)
+- [x] [medium] reissue - reissue has cyclomatic complexity 9 (impact -0.38)
+- [x] [low] changePasswordAndReissue - if condition combines 3 boolean operators (impact -0.33)
 
 ### `web/src/lib/streamQuality.ts` — 9 Funde, Abzug 4.02.
 
