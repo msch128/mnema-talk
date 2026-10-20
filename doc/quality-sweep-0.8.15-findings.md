@@ -565,15 +565,19 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/sfu/rtpkey.go` — 3 Funde, Abzug 2.44.
 
-- [ ] [medium] h264Start - h264Start has cyclomatic complexity 13 (impact -0.75)
-- [ ] [medium] h264Start - h264Start nests 4 levels deep (impact -0.94)
-- [ ] [medium] parseExtension - parseExtension has cyclomatic complexity 9 (impact -0.75)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben NAL-Typen und dieselben Picture-IDs bleiben.
+
+- [x] [medium] h264Start - h264Start has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] h264Start - h264Start nests 4 levels deep (impact -0.94)
+- [x] [medium] parseExtension - parseExtension has cyclomatic complexity 9 (impact -0.75)
 
 ### `internal/ws/lifecycle.go` — 3 Funde, Abzug 2.43.
 
-- [ ] [high] HandleWebSocket - HandleWebSocket has cyclomatic complexity 15 (impact -0.95)
-- [ ] [medium] HandleWebSocket - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] registerVerified - registerVerified has cyclomatic complexity 12 (impact -0.55)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Sitzung wird angenommen oder abgewiesen. `handshake.go` ist im selben Lauf leer.
+
+- [x] [high] HandleWebSocket - HandleWebSocket has cyclomatic complexity 15 (impact -0.95)
+- [x] [medium] HandleWebSocket - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] registerVerified - registerVerified has cyclomatic complexity 12 (impact -0.55)
 
 ### `web/src/composables/webrtc/remoteAudio.ts` — 6 Funde, Abzug 2.35.
 
