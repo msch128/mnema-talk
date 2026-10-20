@@ -1411,7 +1411,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/httpx/request.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] SanitizeFilename - SanitizeFilename has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] SanitizeFilename - SanitizeFilename has cyclomatic complexity 11 (impact -0.85)
 
 ### `internal/media/objectreader.go` — 1 Funde, Abzug 0.85.
 
