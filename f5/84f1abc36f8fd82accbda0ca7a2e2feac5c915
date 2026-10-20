@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 941-943
+web/src/lib/dfn/dfnNode.ts
+  h_0ff4f4713441f4 6-23,25-38,40-48,51-71,73-76,79-146,148-149,151-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f584f1abc36f8fd82accbda0ca7a2e2feac5c915",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
