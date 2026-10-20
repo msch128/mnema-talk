@@ -690,11 +690,13 @@ Erledigt 2026-10-20: ValidPath (CCN 12 -> 5) und readWebApp (CCN 11 -> 3) durch 
 
 ### `internal/gateway/serve.go` — 6 Funde, Abzug 1.95.
 
-- [ ] [medium] identify - identify has cyclomatic complexity 13 (impact -0.50)
-- [ ] [medium] register - register has cyclomatic complexity 10 (impact -0.50)
-- [ ] [medium] resume - resume has cyclomatic complexity 11 (impact -0.50)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+Erledigt 2026-10-20: identify (CCN 13 -> 8), register (CCN 10 -> 5) und resume (CCN 11 -> 6) durch Hilfsfunktionen (validIntents, sendReady, scanSessions, adoptSession, sessionCredentials) entflechtet. Verworfenen json.Marshal/Unmarshal-Fehler behoben.
+
+- [x] [medium] identify - identify has cyclomatic complexity 13 (impact -0.50)
+- [x] [medium] register - register has cyclomatic complexity 10 (impact -0.50)
+- [x] [medium] resume - resume has cyclomatic complexity 11 (impact -0.50)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/composables/usePictureInPicture.ts` — 5 Funde, Abzug 1.95.
