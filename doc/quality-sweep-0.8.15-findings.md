@@ -531,10 +531,12 @@ Erledigt 2026-10-20: Komplexität und verworfene Fehler sind weg. `repowise heal
 
 ### `web/src/lib/voiceSession.ts` — 4 Funde, Abzug 2.75.
 
-- [ ] [high] recent - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] recent - recent has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Sitzung wird fortgesetzt oder verworfen.
+
+- [x] [high] recent - if condition combines 5 boolean operators (impact -1.60)
+- [x] [medium] recent - recent has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `internal/ws/native_lease.go` — 6 Funde, Abzug 2.73.
 
