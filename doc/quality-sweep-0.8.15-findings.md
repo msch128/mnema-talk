@@ -1243,8 +1243,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/botapi_reactions.go` — 2 Funde, Abzug 1.20.
 
-- [ ] [medium] - 50% of file duplicated in other files; worst clone shares 49 lines with internal/chat/moderation.go (impact -0.35)
-- [ ] [medium] setBotReaction - setBotReaction has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] - 50% of file duplicated in other files; worst clone shares 49 lines with internal/chat/moderation.go (impact -0.35)
+- [x] [medium] setBotReaction - setBotReaction has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/composables/useWebRTC.harness.fixture.ts` — 2 Funde, Abzug 1.20.
 
