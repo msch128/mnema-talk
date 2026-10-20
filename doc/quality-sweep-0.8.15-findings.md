@@ -437,8 +437,10 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/nativepreview/native_discovery.go` — 2 Funde, Abzug 3.35.
 
-- [ ] [critical] discovery - if condition combines 6 boolean operators (impact -2.50)
-- [ ] [medium] discovery - discovery has cyclomatic complexity 9 (impact -0.85)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Anfrage wird abgelehnt.
+
+- [x] [critical] discovery - if condition combines 6 boolean operators (impact -2.50)
+- [x] [medium] discovery - discovery has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/stores/chat/messageWindow.ts` — 6 Funde, Abzug 3.24.
 
