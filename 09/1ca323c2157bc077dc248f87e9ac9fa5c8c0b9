@@ -1,0 +1,20 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 632-640,644-648
+web/src/lib/media/group.ts
+  h_0ff4f4713441f4 13-14,18,22,27-36,71,73-74,76-77,81,84-97,132-134,265,267,273,279-300,330-334,365-367,369,373
+web/src/lib/media/groupBase.ts
+  h_0ff4f4713441f4 17-32,129,135,141,175,235-238,261-267,270-275
+web/src/lib/media/groupVet.ts
+  h_0ff4f4713441f4 2-4,48-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "091ca323c2157bc077dc248f87e9ac9fa5c8c0b9",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
