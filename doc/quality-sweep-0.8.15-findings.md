@@ -1141,8 +1141,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 ### `internal/webhook/outgoing_handler.go` — 3 Funde, Abzug 1.35.
 
 - [ ] [medium] - 63% of file duplicated in other files; worst clone shares 39 lines with internal/bot/handler_commands.go (impact -0.35)
-- [ ] [medium] updateOutgoing - updateOutgoing has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] updateOutgoing - updateOutgoing has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/webhook/dispatch_delivery.go` — 5 Funde, Abzug 1.33.
 
