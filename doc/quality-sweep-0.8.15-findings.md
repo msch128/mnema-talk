@@ -932,9 +932,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/peer.ts` — 3 Funde, Abzug 1.65.
 
-- [ ] [high] applyRemoteOffer - applyRemoteOffer has cyclomatic complexity 21 (impact -0.95)
-- [ ] [medium] wireIceDiagnostics - wireIceDiagnostics has cyclomatic complexity 13 (impact -0.55)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [high] applyRemoteOffer - applyRemoteOffer has cyclomatic complexity 21 (impact -0.95)
+- [x] [medium] wireIceDiagnostics - wireIceDiagnostics has cyclomatic complexity 13 (impact -0.55)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/lib/dfn/dfnNode.ts` — 3 Funde, Abzug 1.65.
 
