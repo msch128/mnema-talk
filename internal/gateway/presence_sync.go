@@ -51,6 +51,11 @@ func (g *Gateway) onlineBotsLocked() (live, has map[uuid.UUID]bool) {
 // presenceChangesLocked lists the bots whose announced state differs from
 // live, and forgets the status of bots without any session. Callers hold g.mu.
 func (g *Gateway) presenceChangesLocked(live, has map[uuid.UUID]bool) []uuid.UUID {
+	changes := g.diffAnnouncedOnline(live)
+	return append(changes, g.pruneDeadPresence(live, has)...)
+}
+
+func (g *Gateway) diffAnnouncedOnline(live map[uuid.UUID]bool) []uuid.UUID {
 	var changes []uuid.UUID
 	for id := range live {
 		if !g.announced[id] {
@@ -62,14 +67,18 @@ func (g *Gateway) presenceChangesLocked(live, has map[uuid.UUID]bool) []uuid.UUI
 			changes = append(changes, id)
 		}
 	}
-	// A status ends with the last session; one set by a bot that left before
-	// it was ever announced online is reported once so the hub drops it.
+	return changes
+}
+
+func (g *Gateway) pruneDeadPresence(live, has map[uuid.UUID]bool) []uuid.UUID {
+	var changes []uuid.UUID
 	for id := range g.pres {
-		if !has[id] {
-			delete(g.pres, id)
-			if !g.announced[id] && !live[id] {
-				changes = append(changes, id)
-			}
+		if has[id] {
+			continue
+		}
+		delete(g.pres, id)
+		if !g.announced[id] && !live[id] {
+			changes = append(changes, id)
 		}
 	}
 	return changes
