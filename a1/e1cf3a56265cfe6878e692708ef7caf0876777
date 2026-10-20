@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 991-992
+internal/media/stream.go
+  h_0ff4f4713441f4 57-58,66-67,81-101,161-180,183,189-190,192-199,202,204-209,211,213-214,216-218,220-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a1e1cf3a56265cfe6878e692708ef7caf0876777",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
