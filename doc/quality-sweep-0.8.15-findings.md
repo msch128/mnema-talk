@@ -774,11 +774,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] updateBypass - updateBypass has cyclomatic complexity 10 (impact -0.75)
 - [x] [low] updateBypass - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/media/callEngine.ts` — 3 Funde, Abzug 1.90.
+### `web/src/lib/media/callEngine.ts` — 3 Funde, Abzug 1.90. (Repowise: 10.0/10, max CCN 7, Nest 3)
 
-- [ ] [medium] emit - emit has cyclomatic complexity 11 (impact -0.75)
-- [ ] [medium] flush - flush has cyclomatic complexity 9 (impact -0.75)
-- [ ] [low] handleStats - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] emit - emit has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] flush - flush has cyclomatic complexity 9 (impact -0.75)
+- [x] [low] handleStats - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/groupTree.ts` — 3 Funde, Abzug 1.90.
 

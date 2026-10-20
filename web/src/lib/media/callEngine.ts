@@ -132,6 +132,16 @@ function noteNewerEpochs(s: CallState, senders: Record<string, FrameStats>, live
   }
 }
 
+function hasCommitterEvidence(committer: string | null, userId: string | null, fresh: string[]): boolean {
+  if (!committer || committer === userId) return false
+  return fresh.includes(committer)
+}
+
+function hasRecoveryConsensus(fresh: string[], committer: string | null, userId: string | null): boolean {
+  if (fresh.length >= 2) return true
+  return hasCommitterEvidence(committer, userId, fresh)
+}
+
 export function handleStats(s: CallState, senders: Record<string, FrameStats>) {
   const live = s.group
   if (!live) return
@@ -142,34 +152,36 @@ export function handleStats(s: CallState, senders: Record<string, FrameStats>) {
   const fresh = [...s.newerFrom].filter(([, seen]) => now - seen.last <= EVIDENCE_MS && now - seen.first >= EVIDENCE_MS).map(([id]) => id)
   // Two publishers agree, or the one who commits does.
   const committer = lowest([...s.roster, s.userId as string])
-  if (fresh.length < 2 && !(committer && committer !== s.userId && fresh.includes(committer))) return
+  if (!hasRecoveryConsensus(fresh, committer, s.userId)) return
   // The group's own limit decides how often this may act.
   track(s, recover(s, s.generation))
 }
 
-export function emit(s: CallState, step: MediaStep) {
-  // A group exists only for a valid channel, and steps are dropped once the call moved on.
+function pushPacedWires(s: CallState, wires: readonly Uint8Array[]) {
   const channel = s.channelId as string
-  for (const wire of step.wires) {
+  for (const wire of wires) {
     const text = encodeWire(wire)
     if (text) s.pacer.push(text, () => s.wireListener?.(channel, text))
   }
-  if (step.key && step.epoch !== null) {
-    if (step.epoch !== s.appliedEpoch || step.key !== s.appliedKey) {
-      const replace = s.appliedEpoch === null || step.epoch <= s.appliedEpoch
-      s.appliedEpoch = step.epoch
-      s.appliedKey = step.key
-      s.appliedCaps = capsId(step)
-      s.guard.setKey(step.epoch, step.key, replace, step.soft === true, step.caps)
-      s.keyListener?.()
-    } else if (step.caps && capsId(step) !== s.appliedCaps) {
-      // A member's advertisement arrived: the epoch is the same, the keys stay.
-      s.appliedCaps = capsId(step)
-      s.guard.setCaps(step.epoch, step.caps)
-    }
-    verify(s, step.verification ?? null)
-    return
+}
+
+function applyStepKey(s: CallState, step: MediaStep & { key: EpochKeys; epoch: number }) {
+  if (step.epoch !== s.appliedEpoch || step.key !== s.appliedKey) {
+    const replace = s.appliedEpoch === null || step.epoch <= s.appliedEpoch
+    s.appliedEpoch = step.epoch
+    s.appliedKey = step.key
+    s.appliedCaps = capsId(step)
+    s.guard.setKey(step.epoch, step.key, replace, step.soft === true, step.caps)
+    s.keyListener?.()
+  } else if (step.caps && capsId(step) !== s.appliedCaps) {
+    // A member's advertisement arrived: the epoch is the same, the keys stay.
+    s.appliedCaps = capsId(step)
+    s.guard.setCaps(step.epoch, step.caps)
   }
+  verify(s, step.verification ?? null)
+}
+
+function clearStepKeys(s: CallState) {
   // Without a group (regrouping, or waiting to be let in again) the worker
   // keeps the last keys: it goes on opening with them, and sealing for a
   // short while, until the next group's key arrives as a new group.
@@ -179,10 +191,17 @@ export function emit(s: CallState, step: MediaStep) {
   verify(s, null)
 }
 
-export async function flush(s: CallState, current: number, resend = false): Promise<void> {
-  await s.opening
-  const live = s.group
-  if (current !== s.generation || !live) return
+export function emit(s: CallState, step: MediaStep) {
+  // A group exists only for a valid channel, and steps are dropped once the call moved on.
+  pushPacedWires(s, step.wires)
+  if (step.key && step.epoch !== null) {
+    applyStepKey(s, step as MediaStep & { key: EpochKeys; epoch: number })
+    return
+  }
+  clearStepKeys(s)
+}
+
+async function drainInbox(s: CallState, live: MediaGroup, current: number): Promise<boolean> {
   // A step that finishes after the call moved on belongs to the old call.
   while (s.inbox.length && current === s.generation) {
     const item = s.inbox.shift()
@@ -190,9 +209,17 @@ export async function flush(s: CallState, current: number, resend = false): Prom
     const raw = decodeWire(item.wire)
     if (!raw) continue
     const step = await live.receive(item.from, raw, true)
-    if (current !== s.generation) return
+    if (current !== s.generation) return false
     emit(s, step)
   }
+  return current === s.generation
+}
+
+export async function flush(s: CallState, current: number, resend = false): Promise<void> {
+  await s.opening
+  const live = s.group
+  if (current !== s.generation || !live) return
+  if (!(await drainInbox(s, live, current))) return
   const step = await live.sync(s.roster, resend)
   if (current === s.generation) emit(s, step)
 }
