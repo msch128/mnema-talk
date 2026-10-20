@@ -8,10 +8,24 @@ export type FrameHandle = { kind: 'raf'; id: number } | { kind: 'timer'; id: Ret
 export const requestFrame = (cb: () => void): FrameHandle => globalThis.requestAnimationFrame ? { kind: 'raf', id: globalThis.requestAnimationFrame(cb) } : { kind: 'timer', id: setTimeout(cb, 16) }
 export const cancelFrame = (handle: FrameHandle) => handle.kind === 'raf' ? globalThis.cancelAnimationFrame(handle.id) : clearTimeout(handle.id)
 
+function hasModifierKey(e: PointerEvent): boolean {
+  if (e.ctrlKey || e.metaKey) return true
+  return e.altKey || e.shiftKey
+}
+
+function isPlainPrimaryClick(e: PointerEvent): boolean {
+  if (e.button !== 0) return false
+  return !hasModifierKey(e)
+}
+
+function isNoDragTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('[data-no-drag]'))
+}
+
 /** A press that may start a drag: any touch, or a plain primary-button mouse press, not on a no-drag element. */
 export function isDragPress(e: PointerEvent, type: string) {
-  if (type !== 'touch' && (e.button !== 0 || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey)) return false
-  return !(e.target instanceof Element && e.target.closest('[data-no-drag]'))
+  if (type !== 'touch' && !isPlainPrimaryClick(e)) return false
+  return !isNoDragTarget(e.target)
 }
 
 /** px per frame to scroll `el` (negative = up) for a pointer at `y`, 0 away from its edges. */

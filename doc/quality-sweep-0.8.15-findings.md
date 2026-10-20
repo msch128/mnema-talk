@@ -963,7 +963,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/sortableDragParts.ts` — 1 Funde, Abzug 1.60.
 
-- [ ] [high] isDragPress - if condition combines 5 boolean operators (impact -1.60)
+- [x] [high] isDragPress - if condition combines 5 boolean operators (impact -1.60)
 
 ### `internal/audit/middleware.go` — 4 Funde, Abzug 1.55.
 
