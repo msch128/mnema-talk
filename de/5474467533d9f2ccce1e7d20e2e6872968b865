@@ -1,0 +1,21 @@
+web/src/lib/native/nativeTrust.ts
+  s_549deb206d8bb6::t_c38b6cf55abf87 22-26,33-83,85,87-89,93-96,98
+  s_549deb206d8bb6::t_b3852c7763fff1 97
+  s_549deb206d8bb6::t_2ee4958787a76b 99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "de5474467533d9f2ccce1e7d20e2e6872968b865",
+  "prompts": {},
+  "sessions": {
+    "s_549deb206d8bb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a159a6-74d4-7fe3-bbbb-74f40ccb4eb6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
