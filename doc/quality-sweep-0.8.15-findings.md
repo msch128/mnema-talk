@@ -974,10 +974,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/types/events.ts` — 4 Funde, Abzug 1.52.
 
-- [ ] [medium] isIceCandidate - isIceCandidate has cyclomatic complexity 13 (impact -0.38)
-- [ ] [medium] isInteractionResponse - isInteractionResponse has cyclomatic complexity 9 (impact -0.38)
-- [ ] [medium] isModerationNotice - isModerationNotice has cyclomatic complexity 10 (impact -0.38)
-- [ ] [medium] isReadStateUpdate - isReadStateUpdate has cyclomatic complexity 11 (impact -0.38)
+- [x] [medium] isIceCandidate - isIceCandidate has cyclomatic complexity 13 (impact -0.38)
+- [x] [medium] isInteractionResponse - isInteractionResponse has cyclomatic complexity 9 (impact -0.38)
+- [x] [medium] isModerationNotice - isModerationNotice has cyclomatic complexity 10 (impact -0.38)
+- [x] [medium] isReadStateUpdate - isReadStateUpdate has cyclomatic complexity 11 (impact -0.38)
 
 ### `internal/chat/channels.go` — 4 Funde, Abzug 1.50.
 

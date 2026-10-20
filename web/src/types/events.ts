@@ -130,12 +130,22 @@ export function isVoiceUser(value: unknown): value is VoiceUser {
     && typeof value['muted'] === 'boolean' && typeof value['deafened'] === 'boolean' && isAuthUser(value)
 }
 
+function isOptionalString(value: unknown, maxLen: number): boolean {
+  if (value === undefined || value === null) return true
+  return isString(value, maxLen)
+}
+
+function isOptionalSdpMLineIndex(value: unknown): boolean {
+  if (value === undefined || value === null) return true
+  return isInteger(value) && value >= 0 && value <= 65_535
+}
+
 export function isIceCandidate(value: unknown): value is RTCIceCandidateInit {
   if (!isRecord(value)) return false
-  return isString(value['candidate'], 16_384)
-    && (value['sdpMid'] === undefined || value['sdpMid'] === null || isString(value['sdpMid'], 256))
-    && (value['sdpMLineIndex'] === undefined || value['sdpMLineIndex'] === null || (isInteger(value['sdpMLineIndex']) && value['sdpMLineIndex'] >= 0 && value['sdpMLineIndex'] <= 65_535))
-    && (value['usernameFragment'] === undefined || value['usernameFragment'] === null || isString(value['usernameFragment'], 256))
+  if (!isString(value['candidate'], 16_384)) return false
+  if (!isOptionalString(value['sdpMid'], 256)) return false
+  if (!isOptionalSdpMLineIndex(value['sdpMLineIndex'])) return false
+  return isOptionalString(value['usernameFragment'], 256)
 }
 
 // Variant payloads are spread into stores, so every retained field must belong
@@ -175,30 +185,62 @@ const NON_OBJECT_CHECKS = new Map<string, (payload: unknown) => boolean>([
   ['voice_snapshot', payload => isDictionaryOf(payload, (users): users is Record<string, VoiceUser> => isDictionaryOf(users, isVoiceUser))]
 ])
 
+function isRefreshReadState(payload: Record<string, unknown>): boolean {
+  if (payload['refresh'] !== true || !isTimestamp(payload['last_read_at'])) return false
+  return onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
+}
+
+function isNotifyLevelReadState(payload: Record<string, unknown>): boolean {
+  if (!isChatNotifyLevel(payload['notify_level'])) return false
+  return onlyFields(payload, ['channel_id', 'notify_level'])
+}
+
+function isStandardReadState(payload: Record<string, unknown>): boolean {
+  const lastReadAt = payload['last_read_at']
+  const validLastRead = lastReadAt === null || isTimestamp(lastReadAt)
+  if (!validLastRead) return false
+  if (!isInteger(payload['unread_count']) || !isInteger(payload['mention_count'])) return false
+  return onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
+}
+
 function isReadStateUpdate(payload: Record<string, unknown>): boolean {
   if (!isIdentifier(payload['channel_id'])) return false
-  if (hasOwn(payload, 'refresh')) return payload['refresh'] === true && isTimestamp(payload['last_read_at'])
-    && onlyFields(payload, ['channel_id', 'last_read_at', 'refresh'])
-  if (hasOwn(payload, 'notify_level')) return isChatNotifyLevel(payload['notify_level'])
-    && onlyFields(payload, ['channel_id', 'notify_level'])
-  return (payload['last_read_at'] === null || isTimestamp(payload['last_read_at']))
-    && isInteger(payload['unread_count']) && isInteger(payload['mention_count'])
-    && onlyFields(payload, ['channel_id', 'last_read_at', 'unread_count', 'mention_count'])
+  if (hasOwn(payload, 'refresh')) return isRefreshReadState(payload)
+  if (hasOwn(payload, 'notify_level')) return isNotifyLevelReadState(payload)
+  return isStandardReadState(payload)
+}
+
+function isOptionalAvatarUrl(payload: Record<string, unknown>): boolean {
+  return !hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)
+}
+
+function isOptionalNoteEmbeds(embeds: unknown): boolean {
+  return embeds === null || isArrayOf(embeds, isNoteEmbed)
 }
 
 function isInteractionResponse(payload: Record<string, unknown>): boolean {
-  return isIdentifier(payload['channel_id']) && isIdentifier(payload['bot_id']) && isString(payload['bot_name'], 64)
-    && (!hasOwn(payload, 'bot_avatar_url') || isString(payload['bot_avatar_url'], 512)) && isString(payload['content'], 8_000)
-    && (payload['embeds'] === null || isArrayOf(payload['embeds'], isNoteEmbed)) && isTimestamp(payload['created_at'])
+  if (!isIdentifier(payload['channel_id']) || !isIdentifier(payload['bot_id'])) return false
+  if (!isString(payload['bot_name'], 64) || !isString(payload['content'], 8_000)) return false
+  if (!isOptionalAvatarUrl(payload) || !isOptionalNoteEmbeds(payload['embeds'])) return false
+  return isTimestamp(payload['created_at'])
+}
+
+const MODERATION_NOTICE_KINDS = new Set([
+  'timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'
+])
+
+function isValidModerationTiming(payload: Record<string, unknown>): boolean {
+  if (hasOwn(payload, 'until') && !isTimestamp(payload['until'])) return false
+  if (hasOwn(payload, 'duration_seconds') && !isInteger(payload['duration_seconds'])) return false
+  return true
 }
 
 function isModerationNotice(payload: Record<string, unknown>): boolean {
-  return ['timeout', 'timeout_removed', 'ban', 'message_deleted', 'messages_deleted'].includes(String(payload['kind']))
-    && isString(payload['reason'], 400)
-    && (!hasOwn(payload, 'channel_name') || isString(payload['channel_name'], 128))
-    && (!hasOwn(payload, 'count') || isInteger(payload['count']))
-    && (!hasOwn(payload, 'until') || isTimestamp(payload['until']))
-    && (!hasOwn(payload, 'duration_seconds') || isInteger(payload['duration_seconds']))
+  if (!MODERATION_NOTICE_KINDS.has(String(payload['kind']))) return false
+  if (!isString(payload['reason'], 400)) return false
+  if (hasOwn(payload, 'channel_name') && !isString(payload['channel_name'], 128)) return false
+  if (hasOwn(payload, 'count') && !isInteger(payload['count'])) return false
+  return isValidModerationTiming(payload)
 }
 
 // Events whose payload is a JSON object, by event type.
