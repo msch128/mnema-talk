@@ -1,0 +1,36 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1798-1799,1803-1804,1808-1809,1814-1815,1823,1827,1831,1841,1853,1869,1881
+internal/audit/audit.go
+  h_0ff4f4713441f4 89-93
+internal/auth/service.go
+  h_0ff4f4713441f4 148-151
+internal/auth/users_admin.go
+  h_0ff4f4713441f4 107-109
+internal/bot/store.go
+  h_0ff4f4713441f4 89-91,165-167
+internal/gateway/serve_read.go
+  h_0ff4f4713441f4 141
+internal/gateway/session.go
+  h_0ff4f4713441f4 54-57,123-126
+internal/linkpreview/handler.go
+  h_0ff4f4713441f4 93-94
+internal/server/metrics.go
+  h_0ff4f4713441f4 36-38
+internal/server/public.go
+  h_0ff4f4713441f4 157-159,188-190
+internal/webhook/outgoing_store.go
+  h_0ff4f4713441f4 151-153
+loadtest/viewer/main.go
+  h_0ff4f4713441f4 120-122,170-173
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce79630316c43c330379902430150dcfb9ca1b3a",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
