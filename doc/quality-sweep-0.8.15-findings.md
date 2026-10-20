@@ -1035,7 +1035,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `scripts/backup-common.sh` — 1 Funde, Abzug 1.50.
 
-- [ ] [critical] backup_validate - backup_validate has cyclomatic complexity 28 (impact -1.50)
+- [x] [critical] backup_validate - backup_validate has cyclomatic complexity 28 (impact -1.50)
 
 ### `web/scripts/generate-contracts.ts` — 1 Funde, Abzug 1.50.
 
