@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1012-1013
+internal/webbundle/verify.go
+  h_0ff4f4713441f4 97-101,105-112,115,117-120,123,126,179-180,183-184,196-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e4918f4cbe47377e2f3ec06981f4c5332ea980d",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
