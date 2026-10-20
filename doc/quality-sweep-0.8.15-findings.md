@@ -1471,11 +1471,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/VoiceStage.vue` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] openStageMenu - openStageMenu has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] openStageMenu - openStageMenu has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/composables/useTalkStage.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] screenCardsFor - screenCardsFor has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] screenCardsFor - screenCardsFor has cyclomatic complexity 11 (impact -0.85)
 
 ### `web/src/composables/webrtc/camera.ts` — 1 Funde, Abzug 0.85.
 

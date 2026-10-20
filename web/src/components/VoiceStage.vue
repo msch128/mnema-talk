@@ -164,35 +164,43 @@ const { isFullscreen, enterFullscreen, toggleFullscreen, onTileFocusCamera, full
 
 // Right-click on the stage: its actions as a menu (outside full screen,
 // where the page's menus cannot show).
+function shouldIgnoreStageMenu(e: MouseEvent): boolean {
+  if (document.fullscreenElement) return true
+  return e.target instanceof Element && Boolean(e.target.closest('[data-testid="talk-controls"]'))
+}
+
+function getStageStreamActionItem(): ContextMenuItem | null {
+  if (cameraOnStage.value) {
+    return { id: 'unfocus', label: t('talk.unfocusCamera'), icon: X, action: () => voiceStore.unfocusCamera() }
+  }
+  if (ownOnStage.value) {
+    return { id: 'stop-share', label: t('voice.stopShare'), icon: MonitorOff, danger: true, action: () => stopScreenShare() }
+  }
+  if (stageUserId.value) {
+    const uid = stageUserId.value
+    return { id: 'unwatch', label: t('talk.stopWatching'), icon: X, action: () => voiceStore.unwatchScreen(uid) }
+  }
+  return null
+}
+
+function buildStageMenuItems(): ContextMenuItem[] {
+  const items: ContextMenuItem[] = [{
+    id: 'fullscreen', label: t('talk.fullscreen'), icon: Maximize2, shortcut: 'F', action: () => enterFullscreen()
+  }]
+  if (pip.supported) {
+    items.push({
+      id: 'pip', label: pipActive.value ? t('talk.pipExit') : t('talk.pip'), icon: PictureInPicture2, action: () => pip.toggle()
+    })
+  }
+  const streamItem = getStageStreamActionItem()
+  if (streamItem) items.push(streamItem)
+  return items
+}
+
 function openStageMenu(e: MouseEvent) {
-  if (document.fullscreenElement || (e.target instanceof Element && e.target.closest('[data-testid="talk-controls"]'))) return
+  if (shouldIgnoreStageMenu(e)) return
   e.preventDefault()
-  menu.show(e, () => {
-    const items: ContextMenuItem[] = [{
-      id: 'fullscreen',
-      label: t('talk.fullscreen'),
-      icon: Maximize2,
-      shortcut: 'F',
-      action: () => enterFullscreen()
-    }]
-    if (pip.supported) {
-      items.push({
-        id: 'pip',
-        label: pipActive.value ? t('talk.pipExit') : t('talk.pip'),
-        icon: PictureInPicture2,
-        action: () => pip.toggle()
-      })
-    }
-    if (cameraOnStage.value) {
-      items.push({ id: 'unfocus', label: t('talk.unfocusCamera'), icon: X, action: () => voiceStore.unfocusCamera() })
-    } else if (ownOnStage.value) {
-      items.push({ id: 'stop-share', label: t('voice.stopShare'), icon: MonitorOff, danger: true, action: () => stopScreenShare() })
-    } else if (stageUserId.value) {
-      const uid = stageUserId.value
-      items.push({ id: 'unwatch', label: t('talk.stopWatching'), icon: X, action: () => voiceStore.unwatchScreen(uid) })
-    }
-    return items
-  })
+  menu.show(e, buildStageMenuItems)
 }
 
 // --- Layout: the stage takes the video's shape in the free area ---
