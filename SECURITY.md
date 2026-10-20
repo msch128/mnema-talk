@@ -165,7 +165,9 @@ details and the limits.
   and publishes the app port on `127.0.0.1` by default. List your reverse
   proxy's address, not a whole private range: anyone who can connect from a
   trusted range can set their own `X-Forwarded-For` and evade the per-client
-  limits (startup warns about broad ranges). `APP_ENV=development` only
+  limits. Production and staging refuse to start when a range is wider than
+  an IPv4 `/24` or an IPv6 `/64` and the listener is not loopback; other
+  environments log a warning. `APP_ENV=development` only
   listens on loopback, since it logs the generated admin password.
 - **Voice and screenshare.** The SFU transport is DTLS-SRTP. Microphone, camera,
   screen video and screen-audio payloads are encrypted in the browser with

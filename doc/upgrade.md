@@ -9,6 +9,16 @@ Database migrations are embedded in the binary and run automatically at
 startup, in order, and are **forward-only**: an older version cannot use a
 schema a newer one migrated. Take a backup before every update.
 
+## Broad trusted proxies
+
+`TRUSTED_PROXY_CIDRS` entries wider than an IPv4 `/24` or an IPv6 `/64` used
+to log a startup warning when the listener was not loopback. Production and
+staging now refuse to start with that configuration. A single proxy address,
+an IPv4 prefix of `/24` or longer, an IPv6 prefix of `/64` or longer, and any
+range while the listener is loopback, still start. Set the value to the
+reverse proxy's address before updating, or the new process exits during
+configuration and the previous container is already gone.
+
 ## Update procedure (compose, released image)
 
 Run in the deployment directory (where `docker-compose.yml` and `.env` are).

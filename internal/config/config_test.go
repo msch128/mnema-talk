@@ -434,6 +434,39 @@ func TestBroadTrustedProxies(t *testing.T) {
 	}
 }
 
+func TestProductionRefusesBroadTrustedProxies(t *testing.T) {
+	env := prodEnv()
+	env["TRUSTED_PROXY_CIDRS"] = "172.16.0.0/12,10.1.2.3"
+	_, err := FromEnv(lookup(env))
+	if err == nil || !strings.Contains(err.Error(), "172.16.0.0/12") || strings.Contains(err.Error(), "10.1.2.3") {
+		t.Fatalf("broad range: %v", err)
+	}
+
+	env["APP_ENV"] = "staging"
+	if _, err := FromEnv(lookup(env)); err == nil || !strings.Contains(err.Error(), "TRUSTED_PROXY_CIDRS") {
+		t.Fatalf("staging must refuse the same range: %v", err)
+	}
+
+	env = prodEnv()
+	env["TRUSTED_PROXY_CIDRS"] = "172.21.0.1,10.0.0.0/24,fd00::/64"
+	if _, err := FromEnv(lookup(env)); err != nil {
+		t.Fatalf("a proxy address and a /24 must be allowed: %v", err)
+	}
+
+	env["BIND_ADDR"] = "127.0.0.1"
+	env["TRUSTED_PROXY_CIDRS"] = "172.16.0.0/12"
+	if _, err := FromEnv(lookup(env)); err != nil {
+		t.Fatalf("loopback listener must keep a broad range: %v", err)
+	}
+
+	env = prodEnv()
+	env["APP_ENV"] = "test"
+	env["TRUSTED_PROXY_CIDRS"] = "172.16.0.0/12"
+	if _, err := FromEnv(lookup(env)); err != nil {
+		t.Fatalf("test env must still start: %v", err)
+	}
+}
+
 func TestLoadReadsOptionalDotenvWithoutOverridingEnvironment(t *testing.T) {
 	// Clear configuration keys while preserving the surrounding test process.
 	// A temporary working directory keeps the real workspace .env untouched.

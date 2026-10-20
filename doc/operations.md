@@ -191,8 +191,10 @@ untrusted hop). Rate limits and the login lockout depend on that address.
 - Never list ranges untrusted clients can connect from, and don't expose port
   8080 directly while private ranges are trusted: anyone connecting from a
   trusted range could set their own `X-Forwarded-For`. The compose file
-  publishes the app on `127.0.0.1` by default (`PUBLISH_ADDR`); a startup
-  warning flags broad trusted ranges on a non-loopback listener.
+  publishes the app on `127.0.0.1` by default (`PUBLISH_ADDR`). Production
+  and staging refuse to start when a trusted range is wider than an IPv4
+  `/24` or an IPv6 `/64` and the listener is not loopback. Other environments
+  still log that warning.
 
 `PUBLIC_URL` must be the `https://` URL users open; otherwise the CSRF origin
 check rejects their requests and cookies lose `Secure`.
@@ -550,8 +552,9 @@ docker compose logs app | grep '"audit":"self_update"'
 Compose rotates every container's log at 3 x 10 MB, so older lines drop off;
 ship them elsewhere if you need a longer history.
 
-Configuration problems the server notices (`TRUSTED_PROXY_CIDRS` too broad,
-requests arriving through an untrusted proxy, voice unreachable from outside
+Configuration problems the server notices (a broad `TRUSTED_PROXY_CIDRS` in
+an environment that still starts, requests arriving through an untrusted
+proxy, voice unreachable from outside
 or without a shared UDP port, voice disabled) are logged and also shown at the
 top of Admin > System, each with a short explanation and a link to this guide.
 They are not part of the public `/api/health`.
