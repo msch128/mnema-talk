@@ -1039,7 +1039,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/scripts/generate-contracts.ts` — 1 Funde, Abzug 1.50.
 
-- [ ] [critical] isSchema - isSchema has cyclomatic complexity 27 (impact -1.50)
+- [x] [critical] isSchema - isSchema has cyclomatic complexity 27 (impact -1.50)
 
 ### `web/src/NativePreviewApp.vue` — 2 Funde, Abzug 1.50.
 
