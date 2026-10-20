@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 896-900
+web/src/composables/useResizable.test.ts
+  h_0ff4f4713441f4 103-105
+web/src/composables/useResizable.ts
+  h_0ff4f4713441f4 43-44,56-57,67-68,92-96,98,100,180-192,195,197,199-227,235,255-257,264,268-295,326,369-370
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "933e451c6fdf799435115c81d38fbd419d721112",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
