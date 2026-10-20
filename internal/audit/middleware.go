@@ -43,49 +43,99 @@ func (l *Log) Middleware(next http.Handler) http.Handler {
 	})
 }
 
-// serve runs the request and records it if it was a successful change.
-func (l *Log) serve(next http.Handler, w http.ResponseWriter, r *http.Request) {
+type routeMatch struct {
+	rt     Route
+	params map[string]string
+	known  bool
+}
+
+func matchAuditableRoute(r *http.Request) (routeMatch, bool) {
 	if !mutating(r.Method) {
-		next.ServeHTTP(w, r)
-		return
+		return routeMatch{}, false
 	}
 	rt, params, known := Match(r.Method, r.URL.Path)
 	if known && rt.Skip {
+		return routeMatch{}, false
+	}
+	return routeMatch{rt: rt, params: params, known: known}, true
+}
+
+func (l *Log) captureBefore(ctx context.Context, rt Route, params map[string]string, known bool) (map[string]any, string) {
+	if !known || rt.Snapshot == ResNone {
+		return nil, ""
+	}
+	return Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam])
+}
+
+func isSuccessStatus(status int) bool {
+	return status >= http.StatusOK && status < http.StatusMultipleChoices
+}
+
+func attachChannelID(e *Entry) {
+	if e.TargetType != "channel" {
+		return
+	}
+	id, err := uuid.Parse(e.TargetID)
+	if err != nil {
+		return
+	}
+	e.ChannelID = &id
+}
+
+func (l *Log) finalizeEntry(
+	ctx context.Context,
+	r *http.Request,
+	m routeMatch,
+	before map[string]any,
+	name string,
+	req map[string]any,
+	reqMark string,
+	response []byte,
+) Entry {
+	e := newEntry(r, m.rt, m.params, m.known)
+	e.TargetName = name
+	addRequestDetails(&e, m.params, req, reqMark)
+	if before != nil {
+		l.addStateChange(ctx, &e, m.rt, m.params, before)
+	}
+	if e.TargetID == "" {
+		takeCreatedTarget(&e, response)
+	}
+	attachChannelID(&e)
+	return e
+}
+
+// serve runs the request and records it if it was a successful change.
+func (l *Log) serve(next http.Handler, w http.ResponseWriter, r *http.Request) {
+	m, auditable := matchAuditableRoute(r)
+	if !auditable {
 		next.ServeHTTP(w, r)
 		return
 	}
 	ctx := r.Context()
-	req, reqMark := peekRequest(r, known && rt.NoBody)
-
-	var before map[string]any
-	var name string
-	if known && rt.Snapshot != ResNone {
-		before, name = Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam])
-	}
+	req, reqMark := peekRequest(r, m.known && m.rt.NoBody)
+	before, name := l.captureBefore(ctx, m.rt, m.params, m.known)
 
 	ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 	resp := &capped{max: maxResponseSnip}
 	ww.Tee(resp)
 	next.ServeHTTP(ww, r)
-	if st := ww.Status(); st < 200 || st >= 300 {
+	if !isSuccessStatus(ww.Status()) {
 		return
 	}
 
-	e := newEntry(r, rt, params, known)
-	e.TargetName = name
-	addRequestDetails(&e, params, req, reqMark)
-	if before != nil {
-		l.addStateChange(ctx, &e, rt, params, before)
-	}
-	if e.TargetID == "" {
-		takeCreatedTarget(&e, resp.buf.Bytes())
-	}
-	if e.TargetType == "channel" {
-		if id, err := uuid.Parse(e.TargetID); err == nil {
-			e.ChannelID = &id
-		}
-	}
+	e := l.finalizeEntry(ctx, r, m, before, name, req, reqMark, resp.buf.Bytes())
 	l.RecordOrLog(ctx, e)
+}
+
+func shouldSkipBody(r *http.Request, noBody bool) bool {
+	if noBody || r.Body == nil {
+		return true
+	}
+	if r.Body == http.NoBody {
+		return true
+	}
+	return strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/")
 }
 
 // peekRequest reads the body for the entry and puts it back for the handler.
@@ -94,10 +144,13 @@ func (l *Log) serve(next http.Handler, w http.ResponseWriter, r *http.Request) {
 // Anything that is not a JSON object, or does not fit in the limit, is marked
 // instead of dropped silently.
 func peekRequest(r *http.Request, noBody bool) (req map[string]any, mark string) {
-	if noBody || r.Body == nil || r.Body == http.NoBody || strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/") {
+	if shouldSkipBody(r, noBody) {
 		return nil, ""
 	}
-	head, _ := io.ReadAll(io.LimitReader(r.Body, maxRequestBody+1))
+	head, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBody+1))
+	if err != nil {
+		return nil, "request_unparsed"
+	}
 	r.Body = struct {
 		io.Reader
 		io.Closer
@@ -106,8 +159,10 @@ func peekRequest(r *http.Request, noBody bool) (req map[string]any, mark string)
 	case len(head) > maxRequestBody:
 		mark = "request_truncated"
 	case len(bytes.TrimSpace(head)) == 0:
-	case json.Unmarshal(head, &req) != nil:
-		req, mark = nil, "request_unparsed"
+	default:
+		if err := json.Unmarshal(head, &req); err != nil {
+			req, mark = nil, "request_unparsed"
+		}
 	}
 	return req, mark
 }
@@ -163,7 +218,8 @@ func takeCreatedTarget(e *Entry, response []byte) {
 		Name     string `json:"name"`
 		Username string `json:"username"`
 	}
-	if json.Unmarshal(response, &out) == nil {
-		e.TargetID, e.TargetName = out.ID, out.Name
+	if err := json.Unmarshal(response, &out); err != nil {
+		return
 	}
+	e.TargetID, e.TargetName = out.ID, out.Name
 }

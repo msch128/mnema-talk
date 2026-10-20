@@ -967,10 +967,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/audit/middleware.go` — 4 Funde, Abzug 1.55.
 
-- [ ] [medium] serve - serve has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] serve - serve has cyclomatic complexity 13 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] peekRequest - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] peekRequest - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/types/events.ts` — 4 Funde, Abzug 1.52.
 
