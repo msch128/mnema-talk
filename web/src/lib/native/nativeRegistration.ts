@@ -21,6 +21,46 @@ export type RegistrationResult =
   | { kind: 'rejected'; reply: Reply }
   | { kind: 'login_required'; reason: 'ack_unknown' | 'invalid_ack' | 'login_failed' | 'scope_retired' | 'identity_mismatch' }
 
+function parseCreatedUser(port: CapturedPort, body: unknown): string | null {
+  try {
+    return port.userId(body)
+  } catch {
+    return null
+  }
+}
+
+async function verifySession(port: CapturedPort, body: unknown, createdUser: string): Promise<boolean> {
+  try {
+    if (port.userId(body) === createdUser) return true
+  } catch {
+    // A native session might exist; seal its captured owner before reporting failure.
+  }
+  await port.retireCaptured()
+  return false
+}
+
+async function completeLogin(
+  port: CapturedPort,
+  username: string,
+  password: string,
+  createdUser: string
+): Promise<RegistrationResult> {
+  let login: Reply
+  try {
+    login = await port.call('native_auth_login', { username, password })
+  } catch {
+    return { kind: 'login_required', reason: 'login_failed' }
+  }
+  if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
+  if (login.status !== 200) return { kind: 'login_required', reason: 'login_failed' }
+
+  const valid = await verifySession(port, login.body, createdUser)
+  if (!valid) return { kind: 'login_required', reason: 'identity_mismatch' }
+  if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
+
+  return { kind: 'authenticated', reply: login }
+}
+
 export async function registerThenLogin(port: CapturedPort, input: RegistrationInput): Promise<RegistrationResult> {
   if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
   let registration: Reply
@@ -35,22 +75,10 @@ export async function registerThenLogin(port: CapturedPort, input: RegistrationI
   }
   if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
   if (registration.status !== 201) return { kind: 'rejected', reply: registration }
-  let createdUser: string
-  try { createdUser = port.userId(registration.body) }
-  catch { return { kind: 'login_required', reason: 'invalid_ack' } }
+
+  const createdUser = parseCreatedUser(port, registration.body)
+  if (!createdUser) return { kind: 'login_required', reason: 'invalid_ack' }
   if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
-  let login: Reply
-  try { login = await port.call('native_auth_login', { username: input.username, password: input.password }) }
-  catch { return { kind: 'login_required', reason: 'login_failed' } }
-  if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
-  if (login.status !== 200) return { kind: 'login_required', reason: 'login_failed' }
-  try {
-    if (port.userId(login.body) !== createdUser) throw new Error('identity mismatch')
-  } catch {
-    // A native session might exist; seal its captured owner before reporting failure.
-    await port.retireCaptured()
-    return { kind: 'login_required', reason: 'identity_mismatch' }
-  }
-  if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }
-  return { kind: 'authenticated', reply: login }
+
+  return completeLogin(port, input.username, input.password, createdUser)
 }

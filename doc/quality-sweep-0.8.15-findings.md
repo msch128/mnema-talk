@@ -1253,8 +1253,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/native/nativeRegistration.ts` — 2 Funde, Abzug 1.20.
 
-- [ ] [medium] registerThenLogin - registerThenLogin has 4 nested blocks at the same level (bumpy road) (impact -0.35)
-- [ ] [medium] registerThenLogin - registerThenLogin has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] registerThenLogin - registerThenLogin has 4 nested blocks at the same level (bumpy road) (impact -0.35)
+- [x] [medium] registerThenLogin - registerThenLogin has cyclomatic complexity 13 (impact -0.85)
 
 ### `internal/bot/interactions.go` — 3 Funde, Abzug 1.15.
 
