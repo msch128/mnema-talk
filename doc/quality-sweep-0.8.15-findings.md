@@ -926,9 +926,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useSidebarReorder.ts` — 3 Funde, Abzug 1.65.
 
-- [ ] [medium] channelHit - channelHit has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] channelHit - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] resolveSidebarDrop - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] channelHit - channelHit has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] channelHit - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] resolveSidebarDrop - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/webrtc/peer.ts` — 3 Funde, Abzug 1.65.
 
