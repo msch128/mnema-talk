@@ -1222,8 +1222,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `scripts/screenshots/seed.mjs` — 2 Funde, Abzug 1.23.
 
-- [ ] [medium] seed - seed has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] seed - seed is 87 lines long (impact -0.38)
+- [x] [medium] seed - seed has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] seed - seed is 87 lines long (impact -0.38)
 
 ### `internal/auth/invites.go` — 2 Funde, Abzug 1.20.
 
