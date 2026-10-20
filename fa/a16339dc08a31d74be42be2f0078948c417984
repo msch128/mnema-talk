@@ -1,0 +1,22 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 479-484,488-492,496-502,506-512
+internal/chat/embeds.go
+  h_0ff4f4713441f4 55-64,74,81-97,109,113
+internal/chat/native_ciphertext.go
+  h_0ff4f4713441f4 51-53,132-151,153,162,214-223,227
+internal/sfu/subscriptions.go
+  h_0ff4f4713441f4 142,146,148,150,152-173,176-178,181-194
+web/src/components/AdminRolesTab.vue
+  h_0ff4f4713441f4 105-132,135-136,138,144,149,198-213,217-218,222-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "faa16339dc08a31d74be42be2f0078948c417984",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
