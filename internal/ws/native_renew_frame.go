@@ -24,18 +24,29 @@ func parseNativeRenewFrame(raw []byte) (string, bool) {
 		return "", false
 	}
 	var frame renewFrame
-	for d.More() {
-		if !frame.readMember(d) {
-			return "", false
-		}
-	}
-	if !expectToken(d, json.Delim('}')) || !frame.seenType || !frame.seenPayload {
+	if !frame.parseBody(d) {
 		return "", false
 	}
 	if _, err := d.Token(); err != io.EOF {
 		return "", false
 	}
 	return frame.token, true
+}
+
+func (f *renewFrame) isComplete(d *json.Decoder) bool {
+	if !expectToken(d, json.Delim('}')) {
+		return false
+	}
+	return f.seenType && f.seenPayload
+}
+
+func (f *renewFrame) parseBody(d *json.Decoder) bool {
+	for d.More() {
+		if !f.readMember(d) {
+			return false
+		}
+	}
+	return f.isComplete(d)
 }
 
 // renewFrame collects the members of a renew frame as they are read.

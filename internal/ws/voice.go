@@ -71,30 +71,36 @@ func (h *Hub) voiceChannel(ctx context.Context, chID uuid.UUID) (*chat.ChannelIn
 // applyUserUpdate keeps the hub's copies of a user's public profile current
 // after a name, status or avatar change (a user_update with a User payload).
 func (h *Hub) applyUserUpdate(payload any) {
-	var u auth.User
-	switch v := payload.(type) {
-	case auth.User:
-		u = v
-	case *auth.User:
-		if v == nil {
-			return
-		}
-		u = *v
-	default:
-		return // e.g. {id, disabled}
-	}
-	if u.ID == uuid.Nil {
+	u, ok := extractUserPayload(payload)
+	if !ok {
 		return
 	}
-	pub := u.Public()
+	h.updateUserPublicProfile(u.ID, u.Public())
+}
+
+func extractUserPayload(payload any) (auth.User, bool) {
+	switch v := payload.(type) {
+	case auth.User:
+		return v, v.ID != uuid.Nil
+	case *auth.User:
+		if v == nil || v.ID == uuid.Nil {
+			return auth.User{}, false
+		}
+		return *v, true
+	default:
+		return auth.User{}, false
+	}
+}
+
+func (h *Hub) updateUserPublicProfile(id uuid.UUID, pub auth.User) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if _, ok := h.profiles[u.ID]; ok {
-		h.profiles[u.ID] = pub
+	if _, ok := h.profiles[id]; ok {
+		h.profiles[id] = pub
 	}
 	for _, users := range h.voice {
-		if _, ok := users[u.ID]; ok {
-			users[u.ID] = pub
+		if _, ok := users[id]; ok {
+			users[id] = pub
 		}
 	}
 }

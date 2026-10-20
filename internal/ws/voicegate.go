@@ -86,17 +86,24 @@ func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
 	if h.DB == nil || secs <= 0 {
 		return
 	}
-	// Held time of another Talk is written, and announced to that Talk's
-	// viewers only, before this stay is added: one pending total never mixes
-	// two Talks, so it cannot reveal a hidden Talk to the viewers of a
-	// visible one.
+	h.flushConflictingVoiceTime(userID, chID)
+	if h.recordPendingVoiceTime(userID, chID, secs) {
+		h.flushVoiceTime(userID)
+	}
+}
+
+func (h *Hub) flushConflictingVoiceTime(userID, chID uuid.UUID) {
 	h.vtimes.mu.Lock()
-	if p := h.vtimes.m[userID]; p != nil && p.secs > 0 && p.channel != chID {
+	p := h.vtimes.m[userID]
+	if p != nil && p.secs > 0 && p.channel != chID {
 		h.vtimes.mu.Unlock()
 		h.flushVoiceTime(userID)
-		h.vtimes.mu.Lock()
+		return
 	}
-	now := time.Now()
+	h.vtimes.mu.Unlock()
+}
+
+func (h *Hub) getOrCreatePendingVoiceTime(userID uuid.UUID) *pendingVoiceTime {
 	if h.vtimes.m == nil {
 		h.vtimes.m = map[uuid.UUID]*pendingVoiceTime{}
 	}
@@ -105,17 +112,23 @@ func (h *Hub) addVoiceTime(userID, chID uuid.UUID, d time.Duration) {
 		p = &pendingVoiceTime{}
 		h.vtimes.m[userID] = p
 	}
+	return p
+}
+
+func (h *Hub) recordPendingVoiceTime(userID, chID uuid.UUID, secs int64) bool {
+	h.vtimes.mu.Lock()
+	defer h.vtimes.mu.Unlock()
+	p := h.getOrCreatePendingVoiceTime(userID)
 	p.secs += secs
 	p.channel = chID
+	now := time.Now()
 	if wait := voiceTimeFlushEvery - now.Sub(p.lastWrite); wait > 0 {
 		if p.timer == nil {
 			p.timer = time.AfterFunc(wait, func() { h.flushVoiceTime(userID) })
 		}
-		h.vtimes.mu.Unlock()
-		return
+		return false
 	}
-	h.vtimes.mu.Unlock()
-	h.flushVoiceTime(userID)
+	return true
 }
 
 // flushVoiceTime writes what is pending for userID.

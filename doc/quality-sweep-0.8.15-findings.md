@@ -1443,23 +1443,23 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/native_renew_frame.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] parseNativeRenewFrame - parseNativeRenewFrame has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] parseNativeRenewFrame - parseNativeRenewFrame has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/ws/perms.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] PermissionsChanged - PermissionsChanged has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] PermissionsChanged - PermissionsChanged has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/ws/voice.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] applyUserUpdate - applyUserUpdate has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] applyUserUpdate - applyUserUpdate has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/ws/voice_kick.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] CloseVoiceChannel - CloseVoiceChannel has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] CloseVoiceChannel - CloseVoiceChannel has cyclomatic complexity 9 (impact -0.85)
 
 ### `internal/ws/voicegate.go` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] addVoiceTime - addVoiceTime has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] addVoiceTime - addVoiceTime has cyclomatic complexity 10 (impact -0.85)
 
 ### `loadtest/viewer/loss.go` — 1 Funde, Abzug 0.85.
 
@@ -1619,7 +1619,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/handle.go` — 1 Funde, Abzug 0.40.
 
-- [ ] [low] handleTyping - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] handleTyping - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/AdminUploadLimit.vue` — 1 Funde, Abzug 0.40.
 
@@ -1890,7 +1890,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/presence.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/ws/voice_mute.go` — 1 Funde, Abzug 0.15.
 
