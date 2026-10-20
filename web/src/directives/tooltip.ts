@@ -124,7 +124,7 @@ export const tooltip: ObjectDirective<TooltipElement, TooltipValue> = {
       leave: () => hideTip(el),
       focus: () => {
         // Keyboard focus only; mouse clicks on buttons also focus them.
-        try { if (!el.matches(':focus-visible')) return } catch { /* old engine */ }
+        try { if (!el.matches(':focus-visible')) return } catch (err) { void err }
         showTip(el, true)
       },
       key: e => { if (e.key === 'Escape') hideTip(el) }

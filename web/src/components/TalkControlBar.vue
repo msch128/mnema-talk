@@ -91,7 +91,8 @@ function onFocusIn(e: FocusEvent) {
   let visibleFocus = !pointerFocus
   try {
     if (e.target instanceof Element) visibleFocus = e.target.matches(':focus-visible')
-  } catch {
+  } catch (err) {
+    void err
     // Older engines: the pointer flag decides.
   }
   keyboardFocus.value = visibleFocus

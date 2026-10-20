@@ -32,7 +32,7 @@ export function calculateRMSLevel(analyserNode: AnalyserNode | null, buffer: Uin
 export function setNodeGain(gainNode: GainNode | null, val: number, time = 0) {
   if (!gainNode?.gain) return
   if (typeof gainNode.gain.setValueAtTime === 'function') {
-    try { gainNode.gain.setValueAtTime(val, time) } catch { /* ignore */ }
+    try { gainNode.gain.setValueAtTime(val, time) } catch (err) { void err }
   } else {
     gainNode.gain.value = val
   }

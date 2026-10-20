@@ -59,7 +59,8 @@ export function createStatsPolling({ connection, screenAudioGuard }: StatsPollin
             diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, own_audio: voiceStore.isScreenSharing ? screenAudioGuard() : undefined, sharing: !!voiceStore.isScreenSharing })
           }
         }
-      } catch {
+      } catch (err) {
+        void err
         // The connection may be closing; the next tick retries.
       }
     }, POLL_MS)

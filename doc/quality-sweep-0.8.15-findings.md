@@ -697,7 +697,7 @@ Erledigt 2026-10-20: identify (CCN 13 -> 8), register (CCN 10 -> 5) und resume (
 - [x] [medium] resume - resume has cyclomatic complexity 11 (impact -0.50)
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/composables/usePictureInPicture.ts` — 5 Funde, Abzug 1.95.
 
@@ -969,7 +969,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 - [x] [medium] serve - serve has cyclomatic complexity 13 (impact -0.85)
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [x] [low] peekRequest - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/types/events.ts` — 4 Funde, Abzug 1.52.
@@ -1905,7 +1905,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 ### `loadtest/viewer/summary.go` — 2 Funde, Abzug 0.15.
 
 - [ ] [medium] diagnoseAll - a goroutine is spawned per loop element with no concurrency bound; use a worker pool or a bounded errgroup/semaphore (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/components/AdminBotsTab.vue` — 1 Funde, Abzug 0.15.
 
@@ -1929,7 +1929,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/AdminSystemTab.vue` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/components/BotTokensPanel.vue` — 1 Funde, Abzug 0.15.
 
@@ -1957,7 +1957,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/TalkControlBar.vue` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/components/TalkParticipants.vue` — 1 Funde, Abzug 0.15.
 
@@ -1965,23 +1965,23 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useNotificationHint.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/composables/useStreamQuality.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] radioItem - long parameter list: radioItem takes 5 parameters, 4 of 5 typed ones scalars or strings (impact -0.15)
+- [x] [low] radioItem - long parameter list: radioItem takes 5 parameters, 4 of 5 typed ones scalars or strings (impact -0.15)
 
 ### `web/src/composables/webrtc/audioMath.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/composables/webrtc/statsPolling.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/directives/tooltip.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/lib/channelTree.ts` — 1 Funde, Abzug 0.15.
 

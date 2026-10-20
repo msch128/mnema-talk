@@ -10,7 +10,7 @@ import { t } from '../i18n'
 const NOTIF_HINT_KEY = 'mnema_notif_hint_dismissed'
 
 function readHintDismissed() {
-  try { return localStorage.getItem(NOTIF_HINT_KEY) === '1' } catch { return false }
+  try { return localStorage.getItem(NOTIF_HINT_KEY) === '1' } catch (err) { void err; return false }
 }
 
 export function useNotificationHint(isPanel: () => boolean) {
@@ -24,7 +24,7 @@ export function useNotificationHint(isPanel: () => boolean) {
 
   function dismissNotifHint() {
     notifHintDismissed.value = true
-    try { localStorage.setItem(NOTIF_HINT_KEY, '1') } catch { /* private mode: dismissed for this session only */ }
+    try { localStorage.setItem(NOTIF_HINT_KEY, '1') } catch (err) { void err }
   }
 
   // Asked on a click, never on page load.

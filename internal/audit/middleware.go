@@ -25,7 +25,9 @@ type capped struct {
 
 func (c *capped) Write(p []byte) (int, error) {
 	if room := c.max - c.buf.Len(); room > 0 {
-		c.buf.Write(p[:min(room, len(p))])
+		if _, err := c.buf.Write(p[:min(room, len(p))]); err != nil {
+			return 0, err
+		}
 	}
 	return len(p), nil
 }
