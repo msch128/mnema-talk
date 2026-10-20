@@ -59,20 +59,50 @@ SERVER_PID=""
 SCRAPER_PID=""
 SCENARIO_PIDS=()
 
+kill_pid() {
+  local pid="${1:-}"
+  if [ -n "$pid" ]; then
+    kill "$pid" 2>/dev/null || true
+  fi
+}
+
+kill_scenarios() {
+  kill_pid "$SCRAPER_PID"
+  for p in "${SCENARIO_PIDS[@]:-}"; do
+    kill_pid "$p"
+  done
+}
+
+stop_local_stack() {
+  if [ "$REMOTE" != 0 ] || [ "${KEEP:-0}" = 1 ]; then
+    return 0
+  fi
+  if [ -n "$SERVER_PID" ]; then
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
+  rm -f "$RESULT_DIR/tokens.json"
+}
+
+dump_server_log() {
+  local status="$1"
+  if [ "$status" -eq 0 ]; then
+    return 0
+  fi
+  if [ ! -f "$SERVER_LOG" ]; then
+    return 0
+  fi
+  echo "--- server log (last 40 lines) ---" >&2
+  tail -n 40 "$SERVER_LOG" >&2 || true
+}
+
 cleanup() {
   status=$?
   trap - EXIT
-  [ -n "$SCRAPER_PID" ] && kill "$SCRAPER_PID" 2>/dev/null || true
-  for p in "${SCENARIO_PIDS[@]:-}"; do [ -n "$p" ] && kill "$p" 2>/dev/null || true; done
-  if [ "$REMOTE" = 0 ] && [ "${KEEP:-0}" != 1 ]; then
-    [ -n "$SERVER_PID" ] && { kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true; }
-    "${COMPOSE[@]}" down -v --remove-orphans >/dev/null 2>&1 || true
-    rm -f "$RESULT_DIR/tokens.json"
-  fi
-  if [ "$status" -ne 0 ] && [ -f "$SERVER_LOG" ]; then
-    echo "--- server log (last 40 lines) ---" >&2
-    tail -n 40 "$SERVER_LOG" >&2 || true
-  fi
+  kill_scenarios
+  stop_local_stack
+  dump_server_log "$status"
   echo "results: $RESULT_DIR"
   exit "$status"
 }
@@ -186,29 +216,56 @@ if [ -n "${METRICS_TOKEN:-}" ]; then
 fi
 
 # -- scenarios ------------------------------------------------------------------
+wait_for_ready() {
+  local bpid="$1"
+  for _ in $(seq 1 180); do
+    if [ -f "$RESULT_DIR/.ready" ]; then
+      return 0
+    fi
+    if ! kill -0 "$bpid" 2>/dev/null; then
+      return 1
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+start_pion_viewers() {
+  if [ "$PION" -le 0 ]; then
+    return 0
+  fi
+  if [ ! -f "$RESULT_DIR/.ready" ]; then
+    return 0
+  fi
+  local join_s=$(( (BROWSERS / BATCH + 1) * (BATCH_MS / 1000 + 8) + 20 ))
+  FROM=$((BROWSERS + 1)) TO=$((BROWSERS + 1 + PION)) HOLD_S=$((HOLD_S + join_s)) \
+    SHARER_ID="$SHARER_ID" STOP_FILE="$RESULT_DIR/.stop" LOSS="$LOSS" QUALITY="$QUALITY" \
+    JITTER_MS="$JITTER_MS" BW_KBPS="${BW_KBPS:-0}" BW_QUEUE_MS="${BW_QUEUE_MS:-1500}" SPACING_MS="$SPACING_MS" \
+    OUT="$RESULT_DIR/viewers.json" "$VIEWER_BIN" > >(tee "$RESULT_DIR/viewers.log") 2>&1 &
+  local vpid=$!
+  SCENARIO_PIDS+=("$vpid")
+  echo "$vpid"
+}
+
+wait_scenario() {
+  local pid="${1:-}"
+  local name="${2:-scenario}"
+  if [ -n "$pid" ]; then
+    wait "$pid" || echo "$name failed" >&2
+  fi
+}
+
 run_watch() {
-  local vpid="" bpid=""
   BROWSERS="$BROWSERS" HOLD_S="$HOLD_S" BATCH="$BATCH" BATCH_MS="$BATCH_MS" \
     READY_FILE="$RESULT_DIR/.ready" HOLD_FILE="$HOLD_FILE" STOP_FILE="$RESULT_DIR/.stop" OUT="$RESULT_DIR/browsers.json" \
     node loadtest/browsers.mjs > >(tee "$RESULT_DIR/browsers.log") 2>&1 &
-  bpid=$!
+  local bpid=$!
   SCENARIO_PIDS+=("$bpid")
-  for _ in $(seq 1 180); do
-    [ -f "$RESULT_DIR/.ready" ] && break
-    kill -0 "$bpid" 2>/dev/null || break
-    sleep 1
-  done
-  if [ "$PION" -gt 0 ] && [ -f "$RESULT_DIR/.ready" ]; then
-    # The viewers outlast the browsers' joins so both overlap for HOLD_S.
-    local join_s=$(( (BROWSERS / BATCH + 1) * (BATCH_MS / 1000 + 8) + 20 ))
-    FROM=$((BROWSERS + 1)) TO=$((BROWSERS + 1 + PION)) HOLD_S=$((HOLD_S + join_s)) \
-      SHARER_ID="$SHARER_ID" STOP_FILE="$RESULT_DIR/.stop" LOSS="$LOSS" QUALITY="$QUALITY" JITTER_MS="$JITTER_MS" BW_KBPS="${BW_KBPS:-0}" BW_QUEUE_MS="${BW_QUEUE_MS:-1500}" SPACING_MS="$SPACING_MS" \
-      OUT="$RESULT_DIR/viewers.json" "$VIEWER_BIN" > >(tee "$RESULT_DIR/viewers.log") 2>&1 &
-    vpid=$!
-    SCENARIO_PIDS+=("$vpid")
-  fi
-  wait "$bpid" || echo "browser scenario failed" >&2
-  [ -n "$vpid" ] && { wait "$vpid" || echo "viewer failed" >&2; }
+  wait_for_ready "$bpid" || true
+  local vpid
+  vpid="$(start_pion_viewers)"
+  wait_scenario "$bpid" "browser scenario"
+  wait_scenario "$vpid" "viewer"
   return 0
 }
 run_join() {

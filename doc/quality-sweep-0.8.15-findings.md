@@ -1030,8 +1030,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `loadtest/run.sh` — 2 Funde, Abzug 1.50.
 
-- [ ] [high] cleanup - cleanup has cyclomatic complexity 15 (impact -0.95)
-- [ ] [medium] run_watch - run_watch has cyclomatic complexity 9 (impact -0.55)
+- [x] [high] cleanup - cleanup has cyclomatic complexity 15 (impact -0.95)
+- [x] [medium] run_watch - run_watch has cyclomatic complexity 9 (impact -0.55)
 
 ### `scripts/backup-common.sh` — 1 Funde, Abzug 1.50.
 
