@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 841-842
+internal/tools/openapifix/main.go
+  h_0ff4f4713441f4 43-67,73,78
+internal/tools/openapifix/main_test.go
+  h_0ff4f4713441f4 1-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "41ca6c2c57ece09e6d942d6979d9a5ae16439178",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
