@@ -1295,8 +1295,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/handler_lookup.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] getThread - getThread has cyclomatic complexity 12 (impact -0.85)
-- [ ] [low] - 11% of file duplicated in other files; worst clone shares 27 lines with internal/media/handler_admin.go (impact -0.15)
+- [x] [medium] getThread - getThread has cyclomatic complexity 12 (impact -0.85)
+- [x] [low] - 11% of file duplicated in other files; worst clone shares 27 lines with internal/media/handler_admin.go (impact -0.15)
 
 ### `internal/chat/handler_messages.go` — 2 Funde, Abzug 1.00.
 
