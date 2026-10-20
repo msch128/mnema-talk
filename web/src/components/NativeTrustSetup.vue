@@ -14,57 +14,170 @@ let incarnation = 0
 let alive = true
 let unsubscribe: (() => void) | null = null
 let activePort = props.port
-function retire() {
-  incarnation++; unsubscribe?.(); unsubscribe = null
-  const previous = preview.value; preview.value = null; status.value = null; busy.value = false
-  if (previous) void activePort.cancel(previous.operation_id).catch(() => {})
+
+function safeCancel(port: NativeTrustPresentationPort, opId: string) {
+  port.cancel(opId).catch(() => {})
 }
+
+function retire() {
+  incarnation++
+  unsubscribe?.()
+  unsubscribe = null
+  const previous = preview.value
+  preview.value = null
+  status.value = null
+  busy.value = false
+  if (previous) safeCancel(activePort, previous.operation_id)
+}
+
+function isTerminalState(state: TrustStatus['state']): boolean {
+  return state === 'cancelled' || state === 'expired' || state === 'failed'
+}
+
+function handleStatusMessage(value: unknown, expectedOpId: string): TrustStatus['state'] | null {
+  const update = decodeTrustStatus(value)
+  if (update.operation_id !== expectedOpId) return null
+  return update.state
+}
+
+function shouldProcessStatus(owner: number): boolean {
+  return alive && owner === incarnation && preview.value !== null
+}
+
+function updateStatusState(nextState: TrustStatus['state']) {
+  if (status.value && status.value !== 'pending') return
+  status.value = nextState
+  emit('status', nextState)
+  if (isTerminalState(nextState)) preview.value = null
+}
+
+function onStatusReceived(value: unknown, owner: number) {
+  if (!shouldProcessStatus(owner) || !preview.value) return
+  try {
+    const nextState = handleStatusMessage(value, preview.value.operation_id)
+    if (nextState) updateStatusState(nextState)
+  } catch {
+    error.value = t('nativeTrust.statusError')
+  }
+}
+
 function listen() {
   const owner = incarnation
-  unsubscribe = activePort.subscribe(value => {
-    if (!alive || owner !== incarnation || !preview.value) return
-    try {
-      const update = decodeTrustStatus(value)
-      if (update.operation_id !== preview.value.operation_id) return
-      // A pending callback cannot replace a terminal UI status.
-      if (status.value && status.value !== 'pending') return
-      status.value = update.state
-      emit('status', update.state)
-      if (update.state === 'cancelled' || update.state === 'expired' || update.state === 'failed') preview.value = null
-    } catch { error.value = t('nativeTrust.statusError') }
-  })
+  unsubscribe = activePort.subscribe(val => onStatusReceived(val, owner))
 }
 listen()
-watch(() => [props.channelId, props.port] as const, () => { retire(); activePort = props.port; error.value = ''; listen() })
-onBeforeUnmount(() => { alive = false; retire() })
+
+watch(() => [props.channelId, props.port] as const, () => {
+  retire()
+  activePort = props.port
+  error.value = ''
+  listen()
+})
+
+onBeforeUnmount(() => {
+  alive = false
+  retire()
+})
+
+function canBegin(): boolean {
+  if (busy.value || preview.value) return false
+  return Boolean(trustOperationId(props.channelId))
+}
+
+function isValidFirstRoot(value: TrustPreview, channelId: string): boolean {
+  return value.operation_kind === 'first_root' && value.scope.channel_id === channelId
+}
+
+function handleBeginError(owner: number) {
+  if (alive && owner === incarnation) error.value = t('nativeTrust.beginError')
+}
+
+function handleBeginDone(owner: number) {
+  if (alive && owner === incarnation) busy.value = false
+}
+
 async function begin() {
-  if (busy.value || preview.value || !trustOperationId(props.channelId)) return
-  const owner = incarnation; const currentPort = activePort; const channelId = props.channelId
-  busy.value = true; error.value = ''
+  if (!canBegin()) return
+  const owner = incarnation
+  const currentPort = activePort
+  const channelId = props.channelId
+  busy.value = true
+  error.value = ''
+
   try {
-    const value = decodeTrustPreview(await currentPort.beginFirstRoot(channelId))
-    if (!alive || owner !== incarnation) { void currentPort.cancel(value.operation_id).catch(() => {}); return }
-    if (value.operation_kind !== 'first_root' || value.scope.channel_id !== channelId) {
-      void currentPort.cancel(value.operation_id).catch(() => {})
+    const raw = await currentPort.beginFirstRoot(channelId)
+    const value = decodeTrustPreview(raw)
+    if (!alive || owner !== incarnation) {
+      safeCancel(currentPort, value.operation_id)
+      return
+    }
+    if (!isValidFirstRoot(value, channelId)) {
+      safeCancel(currentPort, value.operation_id)
       throw new Error('Wrong native trust operation')
     }
-    preview.value = value; status.value = 'pending'
-  } catch { if (alive && owner === incarnation) error.value = t('nativeTrust.beginError') }
-  finally { if (alive && owner === incarnation) busy.value = false }
+    preview.value = value
+    status.value = 'pending'
+  } catch {
+    handleBeginError(owner)
+  } finally {
+    handleBeginDone(owner)
+  }
 }
+
+function canConfirm(current: TrustPreview | null): boolean {
+  return current !== null && !busy.value && status.value === 'pending'
+}
+
+function isValidConfirmationAck(value: TrustStatus, opId: string): boolean {
+  if (value.operation_id !== opId) return false
+  return value.state === 'pending' || value.state === 'cancelled'
+}
+
+function isConfirmationCurrent(owner: number, opId: string): boolean {
+  return alive && owner === incarnation && preview.value?.operation_id === opId
+}
+
+function applyConfirmationResult(state: TrustStatus['state']) {
+  if (status.value !== 'pending') return
+  status.value = state
+  if (state === 'cancelled') preview.value = null
+}
+
+function handleConfirmError(owner: number) {
+  if (alive && owner === incarnation) error.value = t('nativeTrust.confirmError')
+}
+
+function handleConfirmDone(owner: number) {
+  if (alive && owner === incarnation) busy.value = false
+}
+
 async function requestConfirmation() {
   const current = preview.value
-  if (!current || busy.value || status.value !== 'pending') return
-  const owner = incarnation; busy.value = true; error.value = ''
+  if (!canConfirm(current)) return
+  const opId = current!.operation_id
+  const owner = incarnation
+  busy.value = true
+  error.value = ''
+
   try {
-    const value = decodeTrustStatus(await activePort.requestConfirmation(current.operation_id))
-    if (!alive || owner !== incarnation || preview.value?.operation_id !== current.operation_id) return
-    if (value.operation_id !== current.operation_id || !['pending', 'cancelled'].includes(value.state)) throw new Error('Invalid native confirmation response')
-    if (status.value === 'pending') { status.value = value.state; if (value.state === 'cancelled') preview.value = null }
-  } catch { if (alive && owner === incarnation) error.value = t('nativeTrust.confirmError') }
-  finally { if (alive && owner === incarnation) busy.value = false }
+    const raw = await activePort.requestConfirmation(opId)
+    const value = decodeTrustStatus(raw)
+    if (!isConfirmationCurrent(owner, opId)) return
+    if (!isValidConfirmationAck(value, opId)) {
+      throw new Error('Invalid native confirmation response')
+    }
+    applyConfirmationResult(value.state)
+  } catch {
+    handleConfirmError(owner)
+  } finally {
+    handleConfirmDone(owner)
+  }
 }
-function close() { retire(); emit('close') }
+
+function close() {
+  retire()
+  emit('close')
+}
 </script>
 <template>
   <BaseDialog :title="t('nativeTrust.title')" panel-class="max-w-sm" @close="close">

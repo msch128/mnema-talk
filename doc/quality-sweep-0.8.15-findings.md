@@ -1083,9 +1083,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/NativeTrustSetup.vue` — 3 Funde, Abzug 1.49.
 
-- [ ] [high] requestConfirmation - requestConfirmation has cyclomatic complexity 16 (impact -0.69)
-- [ ] [medium] begin - begin has cyclomatic complexity 13 (impact -0.40)
-- [ ] [medium] listen - listen has cyclomatic complexity 11 (impact -0.40)
+- [x] [high] requestConfirmation - requestConfirmation has cyclomatic complexity 16 (impact -0.69)
+- [x] [medium] begin - begin has cyclomatic complexity 13 (impact -0.40)
+- [x] [medium] listen - listen has cyclomatic complexity 11 (impact -0.40)
 
 ### `web/src/composables/webrtc/micPipeline.ts` — 6 Funde, Abzug 1.48.
 
