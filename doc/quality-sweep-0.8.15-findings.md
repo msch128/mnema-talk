@@ -658,9 +658,11 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/users_admin_handlers.go` — 3 Funde, Abzug 2.14.
 
-- [ ] [medium] - 68% of file duplicated in other files; worst clone shares 34 lines with internal/chat/handler_channels.go (impact -0.35)
-- [ ] [medium] kickUser - kickUser has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] kickUser - kickUser nests 4 levels deep (impact -0.94)
+Erledigt 2026-10-20: kickUser CCN von 9 auf 6 und Nesting von 4 auf 2 gesenkt durch Extraktion von kickUserFromVoice und canModerateVoiceChannel. Repowise-Score stieg von 7.9 auf 9.7/10.
+
+- [x] [medium] - 68% of file duplicated in other files; worst clone shares 34 lines with internal/chat/handler_channels.go (impact -0.35)
+- [x] [medium] kickUser - kickUser has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] kickUser - kickUser nests 4 levels deep (impact -0.94)
 
 ### `internal/auth/native_registration.go` — 3 Funde, Abzug 2.13.
 

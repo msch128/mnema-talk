@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/msch128/mnema-talk/internal/db"
 	"github.com/msch128/mnema-talk/internal/httpx"
@@ -250,27 +251,46 @@ func (h *Handler) kickUser(w http.ResponseWriter, r *http.Request) error {
 		}
 		return err
 	}
-	// The caller needs the permission in the Talk the member is in; a Talk
-	// they may not use answers like no Talk at all, so it stays hidden.
-	kicked := false
-	if h.Live != nil {
-		actor := UserFrom(r.Context()).Subject()
-		for _, ch := range h.Live.VoiceChannels(id) {
-			if err := h.Perms.RequireChannel(r.Context(), actor, ch, perm.ViewChannel|perm.DisconnectMembers); err != nil {
-				if _, refused := httpx.AsAPIError(err); !refused {
-					return err
-				}
-				continue
-			}
-			h.Live.KickFromChannel(id, ch)
-			kicked = true
-		}
+	kicked, err := h.kickUserFromVoice(r, id)
+	if err != nil {
+		return err
 	}
 	if !kicked {
 		return httpx.ErrInvalidInput("user is not in a Talk")
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+func (h *Handler) kickUserFromVoice(r *http.Request, id uuid.UUID) (bool, error) {
+	if h.Live == nil {
+		return false, nil
+	}
+	actor := UserFrom(r.Context()).Subject()
+	kicked := false
+	for _, ch := range h.Live.VoiceChannels(id) {
+		allowed, err := h.canModerateVoiceChannel(r, actor, ch)
+		if err != nil {
+			return false, err
+		}
+		if !allowed {
+			continue
+		}
+		h.Live.KickFromChannel(id, ch)
+		kicked = true
+	}
+	return kicked, nil
+}
+
+func (h *Handler) canModerateVoiceChannel(r *http.Request, actor perm.Subject, ch uuid.UUID) (bool, error) {
+	err := h.Perms.RequireChannel(r.Context(), actor, ch, perm.ViewChannel|perm.DisconnectMembers)
+	if err == nil {
+		return true, nil
+	}
+	if _, refused := httpx.AsAPIError(err); !refused {
+		return false, err
+	}
+	return false, nil
 }
 
 // setUserStatus lets an admin edit or clear any member's status line.
