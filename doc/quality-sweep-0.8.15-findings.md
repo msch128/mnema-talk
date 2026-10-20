@@ -1381,7 +1381,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/authorization.go` — 1 Funde, Abzug 0.93.
 
-- [ ] [medium] BindLocalStream - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] BindLocalStream - if condition combines 4 boolean operators (impact -0.93)
 
 ### `web/src/lib/globalSearch.ts` — 1 Funde, Abzug 0.93.
 
