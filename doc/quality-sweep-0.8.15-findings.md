@@ -843,14 +843,14 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webhook/dispatch_queue.go` — 8 Funde, Abzug 1.79.
 
-- [ ] [medium] flush - a database call is reached once per loop iteration through flush -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] persist - a database call is reached once per loop iteration through persist -> flush -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] persist - a database call is reached once per loop iteration through persist -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] work - a database call is reached once per loop iteration through work -> claimJob (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] work - a database call is reached once per loop iteration through work -> process -> getOutgoing (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] work - a database call is reached once per loop iteration through work -> releaseJob (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] work - work has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] work - work nests 4 levels deep (impact -0.94)
+- [x] [medium] flush - a database call is reached once per loop iteration through flush -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
+- [x] [medium] persist - a database call is reached once per loop iteration through persist -> flush -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
+- [x] [medium] persist - a database call is reached once per loop iteration through persist -> store -> storeEvents (cross-function N+1 query) (impact -0.00)
+- [x] [medium] work - a database call is reached once per loop iteration through work -> claimJob (cross-function N+1 query) (impact -0.00)
+- [x] [medium] work - a database call is reached once per loop iteration through work -> process -> getOutgoing (cross-function N+1 query) (impact -0.00)
+- [x] [medium] work - a database call is reached once per loop iteration through work -> releaseJob (cross-function N+1 query) (impact -0.00)
+- [x] [medium] work - work has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] work - work nests 4 levels deep (impact -0.94)
 
 ### `web/scripts/check-typescript.ts` — 3 Funde, Abzug 1.79.
 
