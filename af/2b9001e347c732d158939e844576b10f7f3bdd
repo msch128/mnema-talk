@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 977-980
+web/src/types/events.ts
+  h_0ff4f4713441f4 133-142,145-148,188-205,208-218,222-235,239-243
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "af2b9001e347c732d158939e844576b10f7f3bdd",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
