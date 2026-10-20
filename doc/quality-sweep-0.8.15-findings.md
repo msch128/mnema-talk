@@ -592,20 +592,24 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/rtcStats.ts` — 5 Funde, Abzug 2.30.
 
-- [ ] [medium] addInboundAudio - addInboundAudio has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] selectedPair - selectedPair has cyclomatic complexity 10 (impact -0.50)
-- [ ] [medium] summarizeStats - summarizeStats has cyclomatic complexity 14 (impact -0.50)
-- [ ] [low] receivedPictures - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] selectedPair - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Verbindungszahlen bleiben.
+
+- [x] [medium] addInboundAudio - addInboundAudio has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] selectedPair - selectedPair has cyclomatic complexity 10 (impact -0.50)
+- [x] [medium] summarizeStats - summarizeStats has cyclomatic complexity 14 (impact -0.50)
+- [x] [low] receivedPictures - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] selectedPair - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/httpx/ratelimit.go` — 6 Funde, Abzug 2.26.
 
-- [ ] [medium] makeRoomLocked - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] makeRoomLocked - makeRoomLocked has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Sperre und dasselbe Verdrängen bleiben.
+
+- [x] [medium] makeRoomLocked - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] makeRoomLocked - makeRoomLocked has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.12)
 
 ### `internal/chat/mentions.go` — 3 Funde, Abzug 2.25.
 

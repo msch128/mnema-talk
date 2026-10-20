@@ -271,7 +271,8 @@ func (l *LoginFailureLimiter) RecordFailures(key string, n int) {
 		e = &loginFailureEntry{lastSeen: now}
 		l.entries[key] = e
 	}
-	locked, _ := l.refreshLocked(e, now)
+	locked, remaining := l.refreshLocked(e, now)
+	_ = remaining
 	e.lastSeen = now
 	if locked {
 		return
@@ -312,7 +313,9 @@ func (l *LoginFailureLimiter) LockedKeys() []string {
 	now := l.now()
 	var keys []string
 	for k, e := range l.entries {
-		if locked, _ := l.refreshLocked(e, now); locked {
+		locked, remaining := l.refreshLocked(e, now)
+		_ = remaining
+		if locked {
 			keys = append(keys, k)
 		}
 	}
@@ -335,7 +338,9 @@ func (l *LoginFailureLimiter) sweepLocked(now time.Time) {
 	}
 	l.lastSweep = now
 	for k, e := range l.entries {
-		if locked, _ := l.refreshLocked(e, now); !locked && now.Sub(e.lastSeen) >= l.decay {
+		locked, remaining := l.refreshLocked(e, now)
+		_ = remaining
+		if !locked && now.Sub(e.lastSeen) >= l.decay {
 			delete(l.entries, k)
 		}
 	}
@@ -348,18 +353,41 @@ func (l *LoginFailureLimiter) makeRoomLocked(now time.Time) {
 	if len(l.entries) < l.maxEntries {
 		return
 	}
+	delete(l.entries, l.evictVictim(now))
+}
+
+// evictVictim picks the stalest entry of a sample, preferring one that is not
+// locked, so flooding the map with fresh keys does not cheaply lift a lockout.
+func (l *LoginFailureLimiter) evictVictim(now time.Time) string {
 	var victim string
 	var victimLocked bool
 	var victimSeen time.Time
 	n := 0
 	for k, e := range l.entries {
-		locked, _ := l.refreshLocked(e, now)
-		if n == 0 || (victimLocked && !locked) || (victimLocked == locked && e.lastSeen.Before(victimSeen)) {
+		locked, remaining := l.refreshLocked(e, now)
+		_ = remaining
+		if preferEviction(n, victimLocked, locked, e.lastSeen, victimSeen) {
 			victim, victimLocked, victimSeen = k, locked, e.lastSeen
 		}
-		if n++; n >= evictSample {
+		n++
+		if n >= evictSample {
 			break
 		}
 	}
-	delete(l.entries, victim)
+	return victim
+}
+
+// preferEviction keeps the first sample, then an unlocked entry over a locked
+// one, then the earlier last-seen time when the lock state matches.
+func preferEviction(n int, victimLocked, locked bool, seen, victimSeen time.Time) bool {
+	if n == 0 {
+		return true
+	}
+	if victimLocked && !locked {
+		return true
+	}
+	if victimLocked != locked {
+		return false
+	}
+	return seen.Before(victimSeen)
 }
