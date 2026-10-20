@@ -25,7 +25,7 @@ function ensureMounted() {
 
 function isSearchShortcut(e: KeyboardEvent): boolean {
   if (e.altKey || e.shiftKey) return false
-  if (e.key.toLowerCase() !== 'k') return false
+  if (e.key?.toLowerCase() !== 'k') return false
   return e.metaKey || e.ctrlKey
 }
 

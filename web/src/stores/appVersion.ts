@@ -54,7 +54,8 @@ export const useAppVersionStore = defineStore('appVersion', () => {
     try {
       const status = await api('/api/admin/system/update', { decode: decodeUpdateStatus })
       if (generation === adminGeneration) setAdminUpdate(status)
-    } catch {
+    } catch (error) {
+      void error
       // Not an admin any more, or the server is restarting: keep the last state.
     }
   }

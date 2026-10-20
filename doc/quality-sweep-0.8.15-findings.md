@@ -1507,27 +1507,27 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/chat/channels.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] loadChannels - loadChannels has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] loadChannels - loadChannels has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/stores/chat/events.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] onMessageCreate - onMessageCreate has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] onMessageCreate - onMessageCreate has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/stores/chat/notifications.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] triggerBrowserNotification - triggerBrowserNotification has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] triggerBrowserNotification - triggerBrowserNotification has cyclomatic complexity 12 (impact -0.85)
 
 ### `web/src/stores/chat/threads.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] openThread - openThread has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] openThread - openThread has cyclomatic complexity 10 (impact -0.85)
 
 ### `web/src/stores/chat/typing.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] handleTypingEvent - handleTypingEvent has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] handleTypingEvent - handleTypingEvent has cyclomatic complexity 12 (impact -0.85)
 
 ### `web/src/stores/voice/cameras.ts` — 1 Funde, Abzug 0.85.
 
-- [ ] [medium] installStage - installStage has cyclomatic complexity 11 (impact -0.85)
+- [x] [medium] installStage - installStage has cyclomatic complexity 11 (impact -0.85)
 
 ### `web/src/components/PresenceMenu.vue` — 2 Funde, Abzug 0.75.
 
@@ -1997,19 +1997,19 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/appVersion.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/stores/auth.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/stores/voice/controls.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/stores/voice/state.ts` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `internal/chat/post.go` — 2 Funde, Abzug 0.00.
 

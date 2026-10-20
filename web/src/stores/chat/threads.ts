@@ -5,18 +5,30 @@ import type { ThreadRoot } from './types'
 import type { Cx } from './state'
 import { sendMessage, uploadMedia } from './messageActions'
 
+function resolveThreadTarget(msg: Message | ThreadRoot | string): { id: string; initial: ThreadRoot } | null {
+  if (!msg) return null
+  if (typeof msg === 'string') {
+    return msg ? { id: msg, initial: { id: msg } } : null
+  }
+  return msg.id ? { id: msg.id, initial: msg } : null
+}
+
+function isThreadActive(cs: Cx['cs'], id: string, gen: number): boolean {
+  return gen === cs.threadGen && cs.activeThread.value?.id === id
+}
+
 export async function openThread(cx: Cx, msg: Message | ThreadRoot | string) {
+  const target = resolveThreadTarget(msg)
+  if (!target) return
   const { cs } = cx
-  if (!msg) return
-  const id = typeof msg === 'string' ? msg : msg.id
-  if (!id) return
+  const { id, initial } = target
   const gen = ++cs.threadGen
-  cs.activeThread.value = typeof msg === 'object' ? msg : { id }
+  cs.activeThread.value = initial
   cs.threadReplies.value = []
   cs.isThreadLoading.value = true
   try {
     const data = await api(`/api/messages/${id}/thread`, { decode: decodeThread })
-    if (gen !== cs.threadGen || cs.activeThread.value?.id !== id) return
+    if (!isThreadActive(cs, id, gen)) return
     cs.activeThread.value = data.root
     cs.threadReplies.value = data.replies
   } catch (e) {

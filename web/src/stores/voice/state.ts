@@ -25,7 +25,8 @@ function loadSavedScreenQuality(): ScreenQuality {
       const parsed: unknown = JSON.parse(raw)
       return { ...normalizeQuality(parsed), ...(isRecord(parsed) && parsed['custom'] === true ? { custom: true } : {}) }
     }
-  } catch {
+  } catch (error) {
+    void error
     // Storage blocked or invalid JSON: fall back to default quality.
   }
   return { ...DEFAULT_STREAM_QUALITY }

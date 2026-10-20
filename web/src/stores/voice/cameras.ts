@@ -103,35 +103,46 @@ export function screenRequest(cs: VoiceState, userId: string, on: boolean): Subs
   return choice === undefined ? { kind: 'screen', user_id: userId, on } : { kind: 'screen', user_id: userId, on, quality: choice }
 }
 
+function resolveScreenStage(cs: VoiceState) {
+  const own = cs.localScreenStream.value
+  const remoteId = cs.remoteScreenUserId.value
+  const remote = remoteId ? cs.remoteScreenStream.value : null
+  const prefersOwn = own && (cs.ownScreenFocused.value || !remote)
+  if (prefersOwn) {
+    return { kind: 'screen' as const, own: true, userId: myUserId(), stream: own }
+  }
+  if (remote) {
+    return { kind: 'screen' as const, own: false, userId: remoteId, stream: remote }
+  }
+  return null
+}
+
+function resolveStageState(cs: VoiceState) {
+  const cameraId = cs.focusedCamera.value
+  const camera = cameraStreamOf(cs, cameraId)
+  if (camera) {
+    return { kind: 'camera' as const, own: cameraId === myUserId(), userId: cameraId, stream: camera }
+  }
+  return resolveScreenStage(cs)
+}
+
 export function installStage(cs: VoiceState) {
   // --- The stage: one screen share (mine or one I watch) or one camera ---
   // Starting to share puts my own share on the stage unless I already watch
   // someone; then theirs stays and mine is a card.
   watch(cs.localScreenStream, (stream, prev) => {
-    if (!stream) cs.ownScreenFocused.value = false
-    else if (!prev) cs.ownScreenFocused.value = !cs.remoteScreenUserId.value
+    if (!stream) {
+      cs.ownScreenFocused.value = false
+    } else if (!prev) {
+      cs.ownScreenFocused.value = !cs.remoteScreenUserId.value
+    }
   }, { flush: 'sync' })
 
   // The camera on the stage was turned off, hidden or left: it leaves the stage.
-  watch(() => !!cs.focusedCamera.value && !canFocusCamera(cs, cs.focusedCamera.value), gone => {
+  watch(() => Boolean(cs.focusedCamera.value && !canFocusCamera(cs, cs.focusedCamera.value)), gone => {
     if (gone) cs.focusedCamera.value = null
   }, { flush: 'sync' })
 
-  // What the stage shows, null for nothing (the grid):
-  //   { kind: 'camera', own, userId, stream } a camera I chose, else
-  //   { kind: 'screen', own, userId, stream } a screen share.
-  // A chosen share that is not there (yet) falls back to the other one.
-  const stage = computed(() => {
-    const cameraId = cs.focusedCamera.value
-    const camera = cameraStreamOf(cs, cameraId)
-    if (camera) return { kind: 'camera' as const, own: cameraId === myUserId(), userId: cameraId, stream: camera }
-    const own = cs.localScreenStream.value
-    const remoteId = cs.remoteScreenUserId.value
-    const remote = remoteId ? cs.remoteScreenStream.value : null
-    if (own && (cs.ownScreenFocused.value || !remote)) return { kind: 'screen' as const, own: true, userId: myUserId(), stream: own }
-    if (remote) return { kind: 'screen' as const, own: false, userId: remoteId, stream: remote }
-    return null
-  })
-  return stage
+  return computed(() => resolveStageState(cs))
 }
 

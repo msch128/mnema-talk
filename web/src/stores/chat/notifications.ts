@@ -16,27 +16,35 @@ export function messageMentionsMe(cx: Cx, msg: Message) {
   return mentionsUser(msg.content || '', me.username)
 }
 
-export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean) {
-  const { cs, authStore } = cx
-  if (typeof Notification === 'undefined') return
-  // Do not disturb and focus silence everything.
-  if (isQuiet(authStore.user?.presence)) return
-  if (!shouldNotify({
+function buildNotificationTitle(cx: Cx, msg: Message): string {
+  const channel = cx.cs.allChannels.value.find(c => c.id === msg.channel_id)
+  const channelName = channel ? `#${channel.name}` : ''
+  const sender = msg.display_name || msg.username || ''
+  return channelName ? `${sender} (${channelName})` : sender
+}
+
+function buildNotificationBody(msg: Message): string {
+  if (msg.content) return msg.content
+  return msg.attachments?.length ? t('chat.attachment') : ''
+}
+
+function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
+  if (typeof Notification === 'undefined') return false
+  if (isQuiet(cx.authStore.user?.presence)) return false
+  return shouldNotify({
     permission: Notification.permission,
     level: notificationLevel(cx, msg.channel_id),
     isMention,
     hidden: !isTabVisible(),
-    isCurrentChannel: msg.channel_id === cs.activeChannel.value?.id
-  })) return
+    isCurrentChannel: msg.channel_id === cx.cs.activeChannel.value?.id
+  })
+}
 
-  const channel = cs.allChannels.value.find(c => c.id === msg.channel_id)
-  const channelName = channel ? `#${channel.name}` : ''
-  const sender = msg.display_name || msg.username || ''
-  const title = channelName ? `${sender} (${channelName})` : sender
-
+export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean) {
+  if (!canShowBrowserNotification(cx, msg, isMention)) return
   try {
-    const n = new Notification(title, {
-      body: msg.content || (msg.attachments?.length ? t('chat.attachment') : ''),
+    const n = new Notification(buildNotificationTitle(cx, msg), {
+      body: buildNotificationBody(msg),
       icon: '/favicon.svg',
       tag: msg.channel_id
     })

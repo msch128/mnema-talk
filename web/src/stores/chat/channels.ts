@@ -22,6 +22,32 @@ export function fetchChannels(cx: Cx): Promise<void> {
   return fetching
 }
 
+function resolveFallbackChannel(channels: Channel[]): Channel | null {
+  const route = currentRoute.value
+  const routeId = 'channelId' in route ? route.channelId : null
+  const routeCh = channels.find(c => c.id === routeId)
+  return routeCh ?? channels.find(c => c.type === 'text') ?? channels[0] ?? null
+}
+
+function syncActiveChannel(cx: Cx) {
+  const { cs } = cx
+  const activeId = cs.activeChannel.value?.id
+  const fresh = activeId ? cs.allChannels.value.find(c => c.id === activeId) : null
+  if (fresh) {
+    // Same channel, new object: a rename or topic change shows in the header.
+    cs.activeChannel.value = fresh
+    return
+  }
+  const next = resolveFallbackChannel(cs.allChannels.value)
+  if (next) {
+    selectChannel(cx, next)
+    return
+  }
+  cs.activeChannel.value = null
+  resetWindow(cx)
+  setWindow(cx, emptyWindow())
+}
+
 async function loadChannels(cx: Cx, seq: number): Promise<void> {
   const { cs } = cx
   try {
@@ -29,25 +55,7 @@ async function loadChannels(cx: Cx, seq: number): Promise<void> {
     if (seq !== cs.channelsFetchSeq) return cs.latestChannelsFetch
     cs.categories.value = data.categories
     cs.uncategorized.value = data.uncategorized
-
-    const activeId = cs.activeChannel.value?.id
-    const fresh = activeId && cs.allChannels.value.find(c => c.id === activeId)
-    if (fresh) {
-      // Same channel, new object: a rename or topic change shows in the header.
-      cs.activeChannel.value = fresh
-    } else {
-      const route = currentRoute.value
-      const routeId = 'channelId' in route ? route.channelId : null
-      const routeCh = cs.allChannels.value.find(c => c.id === routeId)
-      const next = routeCh || cs.allChannels.value.find(c => c.type === 'text') || cs.allChannels.value[0]
-      if (next) {
-        selectChannel(cx, next)
-      } else {
-        cs.activeChannel.value = null
-        resetWindow(cx)
-        setWindow(cx, emptyWindow())
-      }
-    }
+    syncActiveChannel(cx)
   } catch (e) {
     console.error('Failed to fetch channels:', e)
   }
