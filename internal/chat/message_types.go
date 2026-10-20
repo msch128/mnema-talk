@@ -124,14 +124,32 @@ func ValidateContent(content string, allowEmpty bool) (string, error) {
 	return httpx.CleanText("content", content, MaxMessageLen, !allowEmpty)
 }
 
+func isDisallowedEmojiRune(r rune) bool {
+	switch {
+	case unicode.IsSpace(r), unicode.IsControl(r):
+		return true
+	case r == '<', r == '>':
+		return true
+	default:
+		return false
+	}
+}
+
+func validEmojiLength(emoji string) bool {
+	if emoji == "" || len(emoji) > maxEmojiBytes {
+		return false
+	}
+	return utf8.ValidString(emoji)
+}
+
 // ValidateEmoji accepts a short, printable, whitespace-free reaction token.
 func ValidateEmoji(emoji string) (string, error) {
 	emoji = strings.TrimSpace(emoji)
-	if emoji == "" || len(emoji) > maxEmojiBytes || !utf8.ValidString(emoji) {
+	if !validEmojiLength(emoji) {
 		return "", httpx.ErrInvalidInput("invalid emoji")
 	}
 	for _, r := range emoji {
-		if unicode.IsSpace(r) || unicode.IsControl(r) || r == '<' || r == '>' {
+		if isDisallowedEmojiRune(r) {
 			return "", httpx.ErrInvalidInput("invalid emoji")
 		}
 	}

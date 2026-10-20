@@ -1176,8 +1176,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/message_types.go` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] ValidateEmoji - ValidateEmoji has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] ValidateEmoji - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] ValidateEmoji - ValidateEmoji has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] ValidateEmoji - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/chat/search.go` — 2 Funde, Abzug 1.25.
 
