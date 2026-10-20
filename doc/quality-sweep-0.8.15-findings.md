@@ -1270,8 +1270,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/update/updater.go` — 2 Funde, Abzug 1.08.
 
-- [ ] [medium] NewUpdater - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] NewUpdater - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/auth/admin_seed.go` — 2 Funde, Abzug 1.00.
 
