@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 595-601,605-612
+internal/httpx/ratelimit.go
+  h_0ff4f4713441f4 274-275,316-318,341-343,356-361,367-369,372-373,377-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "414b7914565bff9b43dca25740914724884fc64b",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
