@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1117-1119
+internal/chat/permissions.go
+  h_0ff4f4713441f4 5,32-33,94,97-99,188,191-193,259-276,283-285,291-295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8d2076c8bf292103190cebd167b7040bc6781af5",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
