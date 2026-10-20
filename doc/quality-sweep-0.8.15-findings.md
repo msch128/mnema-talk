@@ -944,9 +944,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/voice/screens.ts` — 4 Funde, Abzug 1.65.
 
-- [ ] [medium] handleMediaState - handleMediaState has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] handleScreenLayers - handleScreenLayers has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] handleScreenViewers - handleScreenViewers has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] handleMediaState - handleMediaState has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] handleScreenLayers - handleScreenLayers has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] handleScreenViewers - handleScreenViewers has cyclomatic complexity 9 (impact -0.50)
 - [ ] [low] - 10% of file duplicated in other files; worst clone shares 9 lines with web/src/stores/voice/cameras.ts (impact -0.15)
 
 ### `web/src/stores/voiceSettings.ts` — 3 Funde, Abzug 1.63.

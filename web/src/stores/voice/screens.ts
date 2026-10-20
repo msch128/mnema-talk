@@ -83,37 +83,48 @@ function sameRoom(cs: VoiceState, channelId: string | undefined): boolean {
   return !!cs.currentChannelId.value && (!channelId || channelId === cs.currentChannelId.value)
 }
 
+function filterScreenViewers(viewers: unknown, sharerId: string): string[] {
+  if (!Array.isArray(viewers)) return []
+  return [...new Set(viewers.filter(id => Boolean(id) && id !== sharerId))]
+}
+
 /** screen_viewers: { channel_id, user_id (the sharer), viewers: [user IDs] }. */
 export function handleScreenViewers(cs: VoiceState, event: ScreenViewers) {
-  const { channel_id, user_id, viewers } = event || {}
-  if (!user_id) return
-  // Late events of a room I left (or before I joined one) are not mine.
-  if (!cs.currentChannelId.value || (channel_id && channel_id !== cs.currentChannelId.value)) return
-  const ids = Array.isArray(viewers) ? [...new Set(viewers.filter(id => id && id !== user_id))] : []
+  if (!event?.user_id || !sameRoom(cs, event.channel_id)) return
+  const ids = filterScreenViewers(event.viewers, event.user_id)
   const next = { ...cs.screenViewers.value }
-  if (ids.length) next[user_id] = ids
-  else delete next[user_id]
+  if (ids.length > 0) next[event.user_id] = ids
+  else delete next[event.user_id]
   cs.screenViewers.value = next
+}
+
+function resetScreenChoiceOnShapeChange(
+  cs: VoiceState,
+  userId: string,
+  before: unknown,
+  layers: unknown
+) {
+  if (!before || layersShape(before as never) === layersShape(layers as never)) return
+  if (!(userId in cs.screenChoice.value)) return
+  const next = { ...cs.screenChoice.value }
+  delete next[userId]
+  cs.screenChoice.value = next
+  if (cs.watchedScreens.value[userId]) {
+    emitSubscription(cs, { kind: 'screen', user_id: userId, on: true, quality: 'auto' })
+  }
 }
 
 /** screen_layers: the layers of userId's live screen share ([] once it ended). */
 export function handleScreenLayers(cs: VoiceState, event: ScreenLayers) {
-  const { channel_id, user_id, layers } = event || {}
-  if (!user_id || !sameRoom(cs, channel_id)) return
-  const before = cs.screenLayers.value[user_id]
+  if (!event?.user_id || !sameRoom(cs, event.channel_id)) return
+  const { user_id, layers } = event
   if (!layers?.length) {
     forgetScreenQuality(cs, user_id)
     return
   }
+  const before = cs.screenLayers.value[user_id]
   cs.screenLayers.value = { ...cs.screenLayers.value, [user_id]: layers }
-  // A choice is a position among the layers: it survives new sizes (a resized
-  // window) but not other layers, where the server's pick stands again.
-  if (before && layersShape(before) !== layersShape(layers) && user_id in cs.screenChoice.value) {
-    const next = { ...cs.screenChoice.value }
-    delete next[user_id]
-    cs.screenChoice.value = next
-    if (cs.watchedScreens.value[user_id]) emitSubscription(cs, { kind: 'screen', user_id, on: true, quality: 'auto' })
-  }
+  resetScreenChoiceOnShapeChange(cs, user_id, before, layers)
 }
 
 /** screen_quality: the layer of userId's share I receive now. */
@@ -141,26 +152,42 @@ export function viewersOf(cs: VoiceState, userId: string | null) {
   return userId ? cs.screenViewers.value[userId] || [] : []
 }
 
-export function handleMediaState(cs: VoiceState, update: Pick<MediaState, 'user_id'> & Partial<Omit<MediaState, 'user_id'>>) {
-  const { user_id, channel_id, screen, camera } = update || {}
-  if (!user_id) return
+function updateMediaStateEntry(
+  cs: VoiceState,
+  userId: string,
+  update: { channel_id?: string; screen?: boolean; camera?: boolean }
+) {
   const next = { ...cs.mediaState.value }
-  if ((screen || camera) && channel_id) next[user_id] = { channel_id, screen: !!screen, camera: !!camera }
-  else delete next[user_id]
+  const isActive = Boolean(update.screen || update.camera)
+  if (isActive && update.channel_id) {
+    next[userId] = { channel_id: update.channel_id, screen: Boolean(update.screen), camera: Boolean(update.camera) }
+  } else {
+    delete next[userId]
+  }
   cs.mediaState.value = next
-  if (!screen && cs.screenViewers.value[user_id]) {
+}
+
+function cleanupEndedScreen(cs: VoiceState, userId: string) {
+  if (cs.screenViewers.value[userId]) {
     const v = { ...cs.screenViewers.value }
-    delete v[user_id]
+    delete v[userId]
     cs.screenViewers.value = v
   }
-  if (!screen) forgetScreenQuality(cs, user_id)
-  // The share ended: the opt-in ended with it.
-  if (!screen && cs.watchedScreens.value[user_id]) {
+  forgetScreenQuality(cs, userId)
+  if (cs.watchedScreens.value[userId]) {
     const w = { ...cs.watchedScreens.value }
-    delete w[user_id]
+    delete w[userId]
     cs.watchedScreens.value = w
-    removeRemoteScreen(cs, user_id)
+    removeRemoteScreen(cs, userId)
     syncScreenFocus(cs, null)
+  }
+}
+
+export function handleMediaState(cs: VoiceState, update: Pick<MediaState, 'user_id'> & Partial<Omit<MediaState, 'user_id'>>) {
+  if (!update?.user_id) return
+  updateMediaStateEntry(cs, update.user_id, update)
+  if (!update.screen) {
+    cleanupEndedScreen(cs, update.user_id)
   }
 }
 
