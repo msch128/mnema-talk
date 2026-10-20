@@ -1217,8 +1217,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/voice/room.ts` — 2 Funde, Abzug 1.25.
 
-- [ ] [medium] onUserLeft - onUserLeft has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] onUserLeft - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] onUserLeft - onUserLeft has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] onUserLeft - if condition combines 3 boolean operators (impact -0.40)
 
 ### `scripts/screenshots/seed.mjs` — 2 Funde, Abzug 1.23.
 

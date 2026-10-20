@@ -54,30 +54,46 @@ function onUserJoined(cs: VoiceState, update: JoinUpdate, myId: string | null | 
   }
 }
 
-function onUserLeft(cs: VoiceState, channel_id: string, user_id: string, myId: string | null | undefined) {
-  const room = roomOf(cs, channel_id)
-  delete room[user_id]
-  if (!Object.keys(room).length) {
+function pruneRoomStarted(cs: VoiceState, channel_id: string, room: Record<string, unknown>) {
+  if (Object.keys(room).length === 0) {
     const next = { ...cs.roomStartedAt.value }
     delete next[channel_id]
     cs.roomStartedAt.value = next
   }
+}
+
+function shouldRetireMedia(mediaChannelId: string | undefined, channel_id: string, inActiveRoom: boolean): boolean {
+  if (mediaChannelId === channel_id) return true
+  if (mediaChannelId) return false
+  return inActiveRoom
+}
+
+function maybePlayLeaveSound(leavesCurrentRoom: boolean, user_id: string, myId: string | null | undefined) {
+  if (leavesCurrentRoom && myId && user_id !== myId) {
+    playSoundEffect('user_leave')
+  }
+}
+
+function onUserLeft(cs: VoiceState, channel_id: string, user_id: string, myId: string | null | undefined) {
+  const room = roomOf(cs, channel_id)
+  delete room[user_id]
+  pruneRoomStarted(cs, channel_id, room)
+
   // A delayed departure from another room must not clear this room's
   // receiver streams or speaking state for a participant who moved here.
   const leavesCurrentRoom = cs.currentChannelId.value === channel_id
-  const mediaChannelId = cs.mediaState.value[user_id]?.channel_id
-  if (leavesCurrentRoom || !cs.currentChannelId.value) {
+  const inActiveRoom = leavesCurrentRoom || !cs.currentChannelId.value
+  if (inActiveRoom) {
     delete cs.speakingUsers.value[user_id]
     removeUserVideoStream(cs, user_id)
   }
   // Publication snapshots cover every room. Only retire the publication
   // named by this departure, or a current-room share without a snapshot.
-  if (mediaChannelId === channel_id || (!mediaChannelId && (leavesCurrentRoom || !cs.currentChannelId.value))) {
+  const mediaChannelId = cs.mediaState.value[user_id]?.channel_id
+  if (shouldRetireMedia(mediaChannelId, channel_id, inActiveRoom)) {
     handleMediaState(cs, { user_id })
   }
-  if (cs.currentChannelId.value === channel_id && myId && user_id !== myId) {
-    playSoundEffect('user_leave')
-  }
+  maybePlayLeaveSound(leavesCurrentRoom, user_id, myId)
 }
 
 export function handleVoiceStateUpdate(cs: VoiceState, update: VoiceStateUpdate) {
