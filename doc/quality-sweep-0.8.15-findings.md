@@ -1285,8 +1285,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/interaction_store.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] claim - claim has cyclomatic complexity 11 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] claim - claim has cyclomatic complexity 11 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/bot/interactions_respond.go` — 2 Funde, Abzug 1.00.
 
