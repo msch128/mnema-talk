@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1022-1024
+loadtest/browsers.mjs
+  h_0ff4f4713441f4 50-71,75-78,81,89,94-99,110-111,117-125,127-143,145,154-156,160,169-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e875c7f61d5d6834d791ae22f372ee0683358752",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
