@@ -629,19 +629,23 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/media/group.ts` — 7 Funde, Abzug 2.25.
 
-- [ ] [medium] MediaGroup - MediaGroup has low cohesion (LCOM4=2): its 18 methods split into 2 groups that share no fields or calls (impact -0.35)
-- [ ] [medium] capNow - capNow has cyclomatic complexity 9 (impact -0.30)
-- [ ] [medium] conflictNow - conflictNow has cyclomatic complexity 12 (impact -0.30)
-- [ ] [medium] receiveNow - receiveNow has cyclomatic complexity 14 (impact -0.30)
-- [ ] [medium] receiveWelcome - receiveWelcome has cyclomatic complexity 11 (impact -0.30)
-- [ ] [medium] vetCommitterProposals - vetCommitterProposals has cyclomatic complexity 12 (impact -0.30)
-- [ ] [low] vetCommitterProposals - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Code-Shape-Fund mehr. Dieselben Nachrichten- und Konfliktprüfungen bleiben.
+
+- [x] [medium] MediaGroup - MediaGroup has low cohesion (LCOM4=2): its 18 methods split into 2 groups that share no fields or calls (impact -0.35)
+- [x] [medium] capNow - capNow has cyclomatic complexity 9 (impact -0.30)
+- [x] [medium] conflictNow - conflictNow has cyclomatic complexity 12 (impact -0.30)
+- [x] [medium] receiveNow - receiveNow has cyclomatic complexity 14 (impact -0.30)
+- [x] [medium] receiveWelcome - receiveWelcome has cyclomatic complexity 11 (impact -0.30)
+- [x] [medium] vetCommitterProposals - vetCommitterProposals has cyclomatic complexity 12 (impact -0.30)
+- [x] [low] vetCommitterProposals - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/groupBase.ts` — 3 Funde, Abzug 2.25.
 
-- [ ] [critical] GroupBase - GroupBase has low cohesion (LCOM4=7): its 25 methods split into 7 groups that share no fields or calls (impact -1.00)
-- [ ] [medium] wipeRejected - wipeRejected has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] capabilities - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Geheimnis-Bereinigung und Fähigkeiten bleiben.
+
+- [x] [critical] GroupBase - GroupBase has low cohesion (LCOM4=7): its 25 methods split into 7 groups that share no fields or calls (impact -1.00)
+- [x] [medium] wipeRejected - wipeRejected has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] capabilities - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/frame.ts` — 6 Funde, Abzug 2.20.
 

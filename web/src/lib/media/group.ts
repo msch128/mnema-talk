@@ -10,19 +10,30 @@ import {
   type Credential,
   type IncomingMessageCallback,
   type KeyPackage,
+  type MlsMessage,
+  type ProcessedPublicMessage,
   type PublicMessage,
   type Welcome,
 } from 'ts-mls'
-import { HANDSHAKE_MAX_BYTES, mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
+import { mediaGroupId, mediaUserId, type MediaTiming } from './bounds'
 import { clock } from './clock'
 import { mediaTiming } from './lifetime'
 import { isHeartbeat, openHeartbeat } from './heartbeat'
-import { CAP_FRAME_V3, isCapability, openCapability, sealCapability } from './capability'
+import { isCapability, openCapability, sealCapability } from './capability'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
 import { suite, credentialIdentity, sameBytes, wipeConsumed, treeMembers, treeLeafSigner, onlyRenewsLeaf, keepsEveryLeaf, lowest } from './groupTree'
 import { GroupBase } from './groupBase'
 import { GroupSync } from './groupSync'
-import { scanCommitProposals, type CommitProposals } from './groupVet'
+import {
+  validCapBits,
+  isKnownSigner,
+  invalidHandshakeWire,
+  invalidHandshakeSender,
+  isRivalWelcome,
+  shouldIgnoreWelcome,
+  commitWinsConflict,
+  vetProposals,
+} from './groupVet'
 export { frameVerifiers, onlyRenewsLeaf, keepsEveryLeaf } from './groupTree'
 export type { MediaStep } from './groupParams'
 
@@ -57,22 +68,33 @@ export class MediaGroup extends GroupSync {
   }
 
   protected async receiveNow(fromUserId: string, wire: Uint8Array, batch = false): Promise<MediaStep> {
-    if (this.closed || wire.byteLength === 0 || wire.byteLength > HANDSHAKE_MAX_BYTES) return this.step()
+    if (invalidHandshakeWire(this.closed, wire.byteLength)) return this.step()
     const from = mediaUserId(fromUserId)
-    if (!from || from === this.userId) return this.step()
+    if (invalidHandshakeSender(from, this.userId)) return this.step()
+    const sender = from as string
     this.dropSelfUpdate(true)
-    if (isHeartbeat(wire)) return this.beatNow(from, wire)
-    if (isCapability(wire)) return this.capNow(from, wire)
+    if (isHeartbeat(wire)) return this.beatNow(sender, wire)
+    if (isCapability(wire)) return this.capNow(sender, wire)
     const decoded = decodeMlsMessage(wire, 0)
     if (!decoded) return this.step()
     const [message] = decoded
-    this.heard.add(from)
+    this.heard.add(sender)
     this.lastHandshakeAt = clock.now()
     const members = this.state ? treeMembers(this.state) : null
-    if (message.wireformat === 'mls_key_package') return this.receiveKeyPackage(from, wire, message.keyPackage, members, batch)
-    if (message.wireformat === 'mls_welcome') return this.receiveWelcome(from, message.welcome, members)
-    if (message.wireformat === 'mls_public_message' && this.state) return this.receivePublic(from, message.publicMessage, members)
-    return this.step()
+    return this.dispatchMlsMessage(sender, wire, message, members, batch)
+  }
+
+  protected dispatchMlsMessage(from: string, wire: Uint8Array, message: MlsMessage, members: Map<string, number> | null, batch: boolean): Promise<MediaStep> {
+    if (message.wireformat === 'mls_key_package') {
+      return this.receiveKeyPackage(from, wire, message.keyPackage, members, batch)
+    }
+    if (message.wireformat === 'mls_welcome') {
+      return this.receiveWelcome(from, message.welcome, members)
+    }
+    if (message.wireformat === 'mls_public_message' && this.state) {
+      return this.receivePublic(from, message.publicMessage, members)
+    }
+    return Promise.resolve(this.step())
   }
 
   /** A member's key package: kept for the next commit, or, from a member coming back, swapped in. */
@@ -106,17 +128,10 @@ export class MediaGroup extends GroupSync {
   }
 
   protected async receiveWelcome(from: string, welcome: Welcome, members: Map<string, number> | null): Promise<MediaStep> {
-    // Without a group, or with one of my own that nobody joined yet (I
-    // founded while this welcome was on its way): the group that lets me in
-    // is the one everybody else is in. A group others are in is given up
-    // only for a rival that proves itself below: a welcome from a lower id
-    // outside my group that opens with my own key package and passes the
-    // committer rule. Nothing unauthenticated (a message that merely parses)
-    // ever discards a group.
     const previous = this.state
-    const rival = previous !== null && members !== null && from < this.userId && !members.has(from)
-    if (previous && treeMembers(previous).size > 1 && !rival) return this.step()
-    // Whoever commits for the group I offered to lets me in.
+    const rival = isRivalWelcome(previous, members, from, this.userId)
+    const prevCount = previous ? treeMembers(previous).size : 0
+    if (shouldIgnoreWelcome(previous !== null, prevCount, rival)) return this.step()
     if (!this.room.includes(from)) return this.step()
     if (rival && !this.rivals.allow(from)) return this.step()
     try {
@@ -247,35 +262,40 @@ export class MediaGroup extends GroupSync {
       const processed = await processPublicMessage(saved.state, message, emptyPskIndex, this.cs, this.validator(saved.state, from))
       const content = message.content
       const empty = content.contentType === 'commit' && content.commit.proposals.length === 0
+      const isCommitter = this.committer(this.listed()) === from
       const renews = processed.actionTaken === 'reject' || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number, this.vetted)
-      const wins = processed.actionTaken !== 'reject' && renews && (!empty || this.committer(this.listed()) === from || from < saved.sender)
+      const wins = commitWinsConflict(processed.actionTaken === 'reject', renews, empty, isCommitter, from, saved.sender)
       if (!wins) {
         wipeConsumed(processed.consumed)
         if (processed.newState !== saved.state) this.wipeRejected(processed.newState)
         return this.step()
       }
-      const mine = this.state as ClientState
-      const mineCurrent = this.current
-      const minePrevious = this.previousEpoch
-      this.selfUpdate = null
-      this.state = saved.state
-      this.current = saved.current
-      this.previousEpoch = saved.previousEpoch
-      const adopted = await this.adopt(processed.newState, keepsEveryLeaf(saved.state, processed.newState) ? 'soft' : 'commit')
-      wipeConsumed(processed.consumed)
-      wipeConsumed(saved.held)
-      if (!adopted) {
-        this.state = mine
-        this.current = mineCurrent
-        this.previousEpoch = minePrevious
-        return this.recoverNow()
-      }
-      this.alive.set(from, clock.now())
-      this.wipeRejected(mine)
-      return this.step()
+      return this.switchConflictState(saved, processed, from)
     } catch {
       return this.step()
     }
+  }
+
+  protected async switchConflictState(saved: NonNullable<GroupBase['selfUpdate']>, processed: ProcessedPublicMessage, from: string): Promise<MediaStep> {
+    const mine = this.state as ClientState
+    const mineCurrent = this.current
+    const minePrevious = this.previousEpoch
+    this.selfUpdate = null
+    this.state = saved.state
+    this.current = saved.current
+    this.previousEpoch = saved.previousEpoch
+    const adopted = await this.adopt(processed.newState, keepsEveryLeaf(saved.state, processed.newState) ? 'soft' : 'commit')
+    wipeConsumed(processed.consumed)
+    wipeConsumed(saved.held)
+    if (!adopted) {
+      this.state = mine
+      this.current = mineCurrent
+      this.previousEpoch = minePrevious
+      return this.recoverNow()
+    }
+    this.alive.set(from, clock.now())
+    this.wipeRejected(mine)
+    return this.step()
   }
 
   /**
@@ -307,35 +327,15 @@ export class MediaGroup extends GroupSync {
         // more than twice per rotation period.
         return proposals.length === 0 && this.mayUpdate(from) ? 'accept' : 'reject'
       }
-      const removedAt = this.vetCommitterProposals(members, proposals, from)
+      const removedAt = vetProposals(
+        members, proposals, from, this.hinted, this.userId, this.room,
+        this.timing, this.sleptRecently(), (id, kp) => this.wasRelayed(id, kp),
+        clock.now(), this.alive
+      )
       if (!removedAt) return 'reject'
       this.vetted = removedAt
       return 'accept'
     }
-  }
-
-  /** The leaves a committer's commit removes, if what it adds and removes is acceptable; otherwise null. */
-  protected vetCommitterProposals(members: Map<string, number>, proposals: CommitProposals, from: string): Set<number> | null {
-    const identityOf = new Map<number, string>()
-    for (const [id, leaf] of members) identityOf.set(leaf, id)
-    // Newest roster: who is listed now. Adds also accept the last synced room.
-    const room = new Set(this.hinted)
-    room.add(this.userId)
-    const roomOrLast = new Set([...room, ...this.room])
-    const now = clock.now()
-    const slack = Math.max(10, this.timing.maintenanceMs)
-    const slept = this.sleptRecently()
-    const effects = scanCommitProposals(proposals, identityOf, from, roomOrLast, (id, keyPackage) => this.wasRelayed(id, keyPackage))
-    if (!effects) return null
-    const { removed, added, removedAt } = effects
-    for (const id of added) if (members.has(id) && !removed.has(id)) return null
-    for (const id of removed) {
-      // My own removal is the committer's word about me (my link dropped, I
-      // slept): I cannot judge it, and taking it means a notice and a rejoin.
-      if (added.has(id) || slept || id === this.userId || !room.has(id)) continue
-      if (now - (this.alive.get(id) as number) <= this.timing.absentMs - slack) return null
-    }
-    return removedAt
   }
 
   /** A heartbeat counts when this epoch's member signed it, and it is newer than the last. */
@@ -362,14 +362,15 @@ export class MediaGroup extends GroupSync {
    */
   protected async capNow(from: string, wire: Uint8Array): Promise<MediaStep> {
     const current = this.current
-    const verifier = current?.key.verifiers.get(from)
-    if (!current || !verifier || !this.state) return this.step()
+    if (!current || !this.state) return this.step()
+    const verifier = current.key.verifiers.get(from)
+    if (!verifier) return this.step()
     const bits = await openCapability(verifier, this.groupId, from, wire)
-    if (bits === null || (bits & CAP_FRAME_V3) === 0) return this.step()
+    if (!validCapBits(bits)) return this.step()
     const signer = treeLeafSigner(this.state, from) as Uint8Array
     const known = this.capable.get(from)
     this.capable.set(from, new Uint8Array(signer))
-    if (known !== undefined && sameBytes(known, signer)) return this.step()
+    if (isKnownSigner(known, signer)) return this.step()
     this.capDue = false
     const own = await sealCapability(current.key.signer, this.groupId, this.userId)
     return this.step(own ? [own] : [])
