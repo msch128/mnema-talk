@@ -444,12 +444,14 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/stores/chat/messageWindow.ts` — 6 Funde, Abzug 3.24.
 
-- [ ] [medium] jumpToRootMessage - jumpToRootMessage has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] jumpToRootMessage - jumpToRootMessage nests 4 levels deep (impact -0.94)
-- [ ] [medium] loadNewer - loadNewer has cyclomatic complexity 9 (impact -0.50)
-- [ ] [medium] loadOlder - loadOlder has cyclomatic complexity 9 (impact -0.50)
-- [ ] [low] loadNewer - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] loadOlder - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Seiten und Sprünge.
+
+- [x] [medium] jumpToRootMessage - jumpToRootMessage has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] jumpToRootMessage - jumpToRootMessage nests 4 levels deep (impact -0.94)
+- [x] [medium] loadNewer - loadNewer has cyclomatic complexity 9 (impact -0.50)
+- [x] [medium] loadOlder - loadOlder has cyclomatic complexity 9 (impact -0.50)
+- [x] [low] loadNewer - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] loadOlder - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/desktopGaming.ts` — 4 Funde, Abzug 3.11.
 
