@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 740,742-745
+internal/sfu/room_tracks.go
+  h_0ff4f4713441f4 65,80-87,119-138,142,150,232-239,242,248-261,263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00468d5c03002977db0c40009347e0997cbf1af9",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
