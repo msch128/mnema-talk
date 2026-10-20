@@ -143,13 +143,15 @@ Erledigt 2026-10-20: `repowise health --file` auf `mediaFrameWorker.ts`, `frameW
 
 ### `web/src/lib/media/guard.ts` — 7 Funde, Abzug 4.06.
 
-- [ ] [high] readStats - readStats has cyclomatic complexity 18 (impact -1.36)
-- [ ] [medium] readStats - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] readStats - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] keyMessage - long parameter list: keyMessage takes 6 parameters, 4 of 6 typed ones scalars or strings (impact -0.14)
-- [ ] [low] readStats - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file web/src/lib/media/guard.ts` nennt keinen Fund mehr. 7 Vitest-Tests grün.
+
+- [x] [high] readStats - readStats has cyclomatic complexity 18 (impact -1.36)
+- [x] [medium] readStats - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] readStats - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] keyMessage - long parameter list: keyMessage takes 6 parameters, 4 of 6 typed ones scalars or strings (impact -0.14)
+- [x] [low] readStats - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/auth/native_password.go` — 6 Funde, Abzug 4.02.
 
