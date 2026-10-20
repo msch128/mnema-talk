@@ -1114,9 +1114,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/permissions.go` — 3 Funde, Abzug 1.40.
 
-- [ ] [medium] checkChannelMove - checkChannelMove has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] checkChannelMove - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] checkChannelMove - checkChannelMove has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] checkChannelMove - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/webbundle/cli_trust_sign.go` — 7 Funde, Abzug 1.35.
 
