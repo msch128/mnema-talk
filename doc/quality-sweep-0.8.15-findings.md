@@ -887,9 +887,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/components/ContextMenu.vue` — 3 Funde, Abzug 1.73.
 
-- [ ] [medium] typeAhead - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [low] handleClickOutside - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] handleScroll - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] typeAhead - if condition combines 4 boolean operators (impact -0.93)
+- [x] [low] handleClickOutside - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] handleScroll - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/useResizable.ts` — 5 Funde, Abzug 1.68.
 

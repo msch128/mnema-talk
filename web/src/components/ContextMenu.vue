@@ -260,9 +260,15 @@ function rowTarget(key: string, cur: number): number | null {
   return null
 }
 
+function isPrintableCharKey(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.metaKey || e.altKey) return false
+  if (e.key.length !== 1) return false
+  return /\S/.test(e.key)
+}
+
 // Type-ahead: next row whose label starts with the typed letter.
 function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
-  if (e.key.length !== 1 || !/\S/.test(e.key) || e.ctrlKey || e.metaKey || e.altKey) return
+  if (!isPrintableCharKey(e)) return
   const ch = e.key.toLowerCase()
   const n = list.length
   for (let k = 1; k <= n; k++) {
@@ -274,31 +280,29 @@ function typeAhead(e: KeyboardEvent, list: HTMLElement[], cur: number) {
   }
 }
 
-function handleClickOutside(e: MouseEvent) {
-  if (props.modelValue && menuEl.value && !(e.target instanceof Node && menuEl.value.contains(e.target))) {
-    opener = null
-    close()
-  }
+function isInsideMenu(target: EventTarget | null): boolean {
+  return target instanceof Node && !!menuEl.value?.contains(target)
 }
 
-function handleScroll(e: Event) {
-  if (props.modelValue && !(menuEl.value && e.target instanceof Node && menuEl.value.contains(e.target))) {
+function handleOutsideDismiss(e: Event) {
+  if (!props.modelValue || !menuEl.value) return
+  if (!isInsideMenu(e.target)) {
     opener = null
     close()
   }
 }
 
 onMounted(() => {
-  document.addEventListener('mousedown', handleClickOutside, true)
-  document.addEventListener('contextmenu', handleClickOutside, true)
-  window.addEventListener('scroll', handleScroll, true)
+  document.addEventListener('mousedown', handleOutsideDismiss, true)
+  document.addEventListener('contextmenu', handleOutsideDismiss, true)
+  window.addEventListener('scroll', handleOutsideDismiss, true)
 })
 
 onUnmounted(() => {
   closeSubmenu()
-  document.removeEventListener('mousedown', handleClickOutside, true)
-  document.removeEventListener('contextmenu', handleClickOutside, true)
-  window.removeEventListener('scroll', handleScroll, true)
+  document.removeEventListener('mousedown', handleOutsideDismiss, true)
+  document.removeEventListener('contextmenu', handleOutsideDismiss, true)
+  window.removeEventListener('scroll', handleOutsideDismiss, true)
 })
 
 const panelClass = 'p-1.5 rounded-lg bg-mnema-elevated border border-mnema-border shadow-2xl text-sm text-mnema-muted font-sans'
