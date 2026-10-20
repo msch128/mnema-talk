@@ -854,9 +854,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/scripts/check-typescript.ts` — 3 Funde, Abzug 1.79.
 
-- [ ] [medium] inspect - a filesystem call runs once per loop iteration (I/O call inside a loop) (impact -0.00)
-- [ ] [medium] inspect - inspect has cyclomatic complexity 12 (impact -0.85)
-- [ ] [medium] inspect - inspect nests 4 levels deep (impact -0.94)
+- [x] [medium] inspect - a filesystem call runs once per loop iteration (I/O call inside a loop) (impact -0.00)
+- [x] [medium] inspect - inspect has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] inspect - inspect nests 4 levels deep (impact -0.94)
 
 ### `web/src/lib/dfn/dfnWorker.ts` — 2 Funde, Abzug 1.79.
 
