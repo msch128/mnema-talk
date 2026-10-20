@@ -768,11 +768,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] sendRequest - sendRequest has cyclomatic complexity 9 (impact -0.75)
 - [x] [low] sendRequest - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/dfn/dfnBridgeWorklet.ts` — 3 Funde, Abzug 1.90.
+### `web/src/lib/dfn/dfnBridgeWorklet.ts` — 3 Funde, Abzug 1.90. (Repowise: 9.0/10, max CCN 7, Nest 2)
 
-- [ ] [medium] receive - receive has cyclomatic complexity 11 (impact -0.75)
-- [ ] [medium] updateBypass - updateBypass has cyclomatic complexity 10 (impact -0.75)
-- [ ] [low] updateBypass - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] receive - receive has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] updateBypass - updateBypass has cyclomatic complexity 10 (impact -0.75)
+- [x] [low] updateBypass - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/media/callEngine.ts` — 3 Funde, Abzug 1.90.
 
