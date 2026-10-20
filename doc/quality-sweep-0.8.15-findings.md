@@ -1227,8 +1227,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/auth/invites.go` — 2 Funde, Abzug 1.20.
 
-- [ ] [medium] - 31% of file duplicated in other files; worst clone shares 35 lines with internal/webhook/handler.go (impact -0.35)
-- [ ] [medium] CreateInvite - CreateInvite has cyclomatic complexity 13 (impact -0.85)
+- [x] [medium] - 31% of file duplicated in other files; worst clone shares 35 lines with internal/webhook/handler.go (impact -0.35)
+- [x] [medium] CreateInvite - CreateInvite has cyclomatic complexity 13 (impact -0.85)
 
 ### `internal/auth/moderation_bans.go` — 3 Funde, Abzug 1.20.
 

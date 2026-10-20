@@ -64,39 +64,66 @@ func ListInvites(ctx context.Context, p *db.Pool) ([]Invite, error) {
 	return invites, rows.Err()
 }
 
-// CreateInvite stores an invite. An empty code is generated randomly.
-func CreateInvite(ctx context.Context, p *db.Pool, createdBy uuid.UUID, code string, maxUses *int, expiresInHours *int) (*Invite, error) {
+func validateOrGenerateCode(code string) (string, error) {
 	if code == "" {
-		var err error
-		if code, err = GenerateInviteCode(); err != nil {
-			return nil, err
-		}
-	} else if !inviteCodePattern.MatchString(code) {
-		return nil, httpx.ErrInvalidInput("code must be 6-64 characters: letters, digits, '_' or '-'")
+		return GenerateInviteCode()
 	}
+	if !inviteCodePattern.MatchString(code) {
+		return "", httpx.ErrInvalidInput("code must be 6-64 characters: letters, digits, '_' or '-'")
+	}
+	return code, nil
+}
+
+func validateMaxUses(maxUses *int) error {
 	if maxUses != nil && (*maxUses < 1 || *maxUses > 1000) {
-		return nil, httpx.ErrInvalidInput("max_uses must be between 1 and 1000")
+		return httpx.ErrInvalidInput("max_uses must be between 1 and 1000")
 	}
-	var expiresAt *time.Time
-	if expiresInHours != nil {
-		if *expiresInHours < 1 || *expiresInHours > 24*365 {
-			return nil, httpx.ErrInvalidInput("expires_in_hours must be between 1 and 8760")
-		}
-		t := time.Now().Add(time.Duration(*expiresInHours) * time.Hour)
-		expiresAt = &t
+	return nil
+}
+
+func validateInviteExpiry(expiresInHours *int) (*time.Time, error) {
+	if expiresInHours == nil {
+		return nil, nil
+	}
+	if *expiresInHours < 1 || *expiresInHours > 24*365 {
+		return nil, httpx.ErrInvalidInput("expires_in_hours must be between 1 and 8760")
+	}
+	t := time.Now().Add(time.Duration(*expiresInHours) * time.Hour)
+	return &t, nil
+}
+
+func mapInsertInviteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return httpx.ErrConflict("invite code already exists")
+	}
+	return fmt.Errorf("insert invite: %w", err)
+}
+
+// CreateInvite stores an invite. An empty code is generated randomly.
+func CreateInvite(ctx context.Context, p *db.Pool, createdBy uuid.UUID, rawCode string, maxUses *int, expiresInHours *int) (*Invite, error) {
+	code, err := validateOrGenerateCode(rawCode)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateMaxUses(maxUses); err != nil {
+		return nil, err
+	}
+	expiresAt, err := validateInviteExpiry(expiresInHours)
+	if err != nil {
+		return nil, err
 	}
 	var inv Invite
-	err := p.QueryRow(ctx, `
+	err = p.QueryRow(ctx, `
 		INSERT INTO invites (code, created_by, max_uses, expires_at) VALUES ($1, $2, $3, $4)
 		RETURNING id, code, max_uses, uses_count, expires_at, created_at`,
 		code, createdBy, maxUses, expiresAt).
 		Scan(&inv.ID, &inv.Code, &inv.MaxUses, &inv.UsesCount, &inv.ExpiresAt, &inv.CreatedAt)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return nil, httpx.ErrConflict("invite code already exists")
-		}
-		return nil, fmt.Errorf("insert invite: %w", err)
+		return nil, mapInsertInviteError(err)
 	}
 	return &inv, nil
 }
