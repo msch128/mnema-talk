@@ -1369,7 +1369,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/audit.go` — 1 Funde, Abzug 0.94.
 
-- [ ] [medium] snapshotMessage - snapshotMessage nests 4 levels deep (impact -0.94)
+- [x] [medium] snapshotMessage - snapshotMessage nests 4 levels deep (impact -0.94)
 
 ### `loadtest/viewer/report.go` — 1 Funde, Abzug 0.94.
 
