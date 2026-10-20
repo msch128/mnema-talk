@@ -1,0 +1,14 @@
+web/src/lib/rtcStats.ts
+  h_0ff4f4713441f4 10-27,31,33,36-47,49-51,53-57,61-71,83-89,94-95,120-153,157-158,160,163,173-174,178,181-182,184-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9b2e63a22fb6689deff404f304b12bfb5fec88d",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
