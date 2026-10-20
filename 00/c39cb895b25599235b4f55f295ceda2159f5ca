@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1278-1279
+internal/auth/admin_seed.go
+  h_0ff4f4713441f4 30,32-34,36,46-47,49-54,56-62,64-65,75-90,92-99,107-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "00c39cb895b25599235b4f55f295ceda2159f5ca",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
