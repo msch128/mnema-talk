@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1017-1018
+internal/ws/voice_join.go
+  h_0ff4f4713441f4 23,37-54,60-64,66-70,73-74,76-81,123,127,134-135,137-138,149-174
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bda72beff8ac7e585801ab3c523e4c2cb2ff62f9",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
