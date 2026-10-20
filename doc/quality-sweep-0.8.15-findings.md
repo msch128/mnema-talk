@@ -792,12 +792,12 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] findMentionQuery - findMentionQuery has cyclomatic complexity 13 (impact -0.55)
 - [x] [low] findMentionQuery - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/composables/useNavMenus.ts` — 4 Funde, Abzug 1.89.
+### `web/src/composables/useNavMenus.ts` — 4 Funde, Abzug 1.89. (Repowise: 9.0/10, max CCN 7, Nest 2)
 
-- [ ] [medium] buildChannelItems - buildChannelItems has cyclomatic complexity 10 (impact -0.61)
-- [ ] [medium] moderationItems - moderationItems has cyclomatic complexity 14 (impact -0.61)
-- [ ] [low] buildChannelItems - buildChannelItems is 68 lines long (impact -0.27)
-- [ ] [low] moderationItems - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] buildChannelItems - buildChannelItems has cyclomatic complexity 10 (impact -0.61)
+- [x] [medium] moderationItems - moderationItems has cyclomatic complexity 14 (impact -0.61)
+- [x] [low] buildChannelItems - buildChannelItems is 68 lines long (impact -0.27)
+- [x] [low] moderationItems - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/videoGrid.ts` — 2 Funde, Abzug 1.85.
 

@@ -71,78 +71,78 @@ export function notifyLevelOf(chatStore: Pick<ChatStore, "notificationLevel" | "
     ?? 'all'
 }
 
-/** handlers: { onEdit(channel), onDuplicate(channel), onDelete(channel) } (admin only). */
-export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = {}): ContextMenuItem[] {
+function basicChannelItems(channel: Channel): ContextMenuItem[] {
   const chatStore = useChatStore()
-  const permissions = usePermissionsStore()
   const toasts = useToastStore()
-  // Every channel has a chat (a voice channel's sits next to its Talk), so
-  // every channel has a read state and a notification level.
   const rs = chatStore.readStates?.[channel.id]
   const hasUnread = (rs?.unread_count || 0) > 0 || (rs?.mention_count || 0) > 0
-  const items: ContextMenuItem[] = [{
-    id: 'mark-read',
-    label: t('sidebar.markRead'),
-    icon: CheckCheck,
-    disabled: !hasUnread,
-    action: async () => {
-      await chatStore.markChannelRead?.(channel.id)
-      toasts.success(t('sidebar.markedRead'))
+  return [
+    {
+      id: 'mark-read',
+      label: t('sidebar.markRead'),
+      icon: CheckCheck,
+      disabled: !hasUnread,
+      action: async () => {
+        await chatStore.markChannelRead?.(channel.id)
+        toasts.success(t('sidebar.markedRead'))
+      }
+    },
+    {
+      id: 'copy-link',
+      label: t('sidebar.copyLink'),
+      icon: Link,
+      action: () => copyText(channelLink(channel), t('sidebar.copiedLink'))
     }
-  }, {
-    id: 'copy-link',
-    label: t('sidebar.copyLink'),
-    icon: Link,
-    action: () => copyText(channelLink(channel), t('sidebar.copiedLink'))
-  }]
+  ]
+}
 
-  const current = notifyLevelOf(chatStore, channel.id)
-  items.push({ type: 'separator' })
-  items.push({ type: 'label', label: t('notifications.title') })
-  for (const level of NOTIFY_LEVELS) {
-    items.push({
+function notificationLevelItems(channelId: string): ContextMenuItem[] {
+  const chatStore = useChatStore()
+  const current = notifyLevelOf(chatStore, channelId)
+  return [
+    { type: 'separator' },
+    { type: 'label', label: t('notifications.title') },
+    ...NOTIFY_LEVELS.map((level): ContextMenuItem => ({
       id: `notify-${level}`,
       type: 'radio',
       label: t(`notifications.${level}`),
       checked: current === level,
-      action: () => chatStore.setNotificationLevel?.(channel.id, level)
-    })
-  }
+      action: () => chatStore.setNotificationLevel?.(channelId, level)
+    }))
+  ]
+}
 
-  if (permissions.can('administrator') && !permissions.can('manage_channels')) {
-    items.push({ type: 'separator' })
-    items.push(webhooksItem(channel, handlers))
-  }
-  if (permissions.can('manage_channels')) {
-    items.push({ type: 'separator' })
-    if (permissions.can('administrator')) items.push(webhooksItem(channel, handlers))
-    items.push({
-      id: 'permissions',
-      label: t('overwrites.menu'),
-      icon: Shield,
-      action: () => handlers.onPermissions?.(channel)
-    })
-    items.push({
-      id: 'edit',
-      label: t('sidebar.editChannel'),
-      icon: Pencil,
-      action: () => handlers.onEdit?.(channel)
-    })
-    items.push({
-      id: 'duplicate',
-      label: t('sidebar.duplicateChannel'),
-      icon: CopyPlus,
-      action: () => handlers.onDuplicate?.(channel)
-    })
-    items.push({
-      id: 'delete',
-      label: t(channel.type === 'voice' ? 'sidebar.deleteVoiceChannel' : 'sidebar.deleteChannel'),
-      icon: Trash2,
-      danger: true,
-      action: () => handlers.onDelete?.(channel)
-    })
+function channelManagementItems(channel: Channel, handlers: ChannelHandlers): ContextMenuItem[] {
+  const permissions = usePermissionsStore()
+  const canAdmin = permissions.can('administrator')
+  const canManage = permissions.can('manage_channels')
+  if (!canAdmin && !canManage) return []
+  const items: ContextMenuItem[] = [{ type: 'separator' }]
+  if (canAdmin) items.push(webhooksItem(channel, handlers))
+  if (canManage) {
+    items.push(
+      { id: 'permissions', label: t('overwrites.menu'), icon: Shield, action: () => handlers.onPermissions?.(channel) },
+      { id: 'edit', label: t('sidebar.editChannel'), icon: Pencil, action: () => handlers.onEdit?.(channel) },
+      { id: 'duplicate', label: t('sidebar.duplicateChannel'), icon: CopyPlus, action: () => handlers.onDuplicate?.(channel) },
+      {
+        id: 'delete',
+        label: t(channel.type === 'voice' ? 'sidebar.deleteVoiceChannel' : 'sidebar.deleteChannel'),
+        icon: Trash2,
+        danger: true,
+        action: () => handlers.onDelete?.(channel)
+      }
+    )
   }
   return items
+}
+
+/** handlers: { onEdit(channel), onDuplicate(channel), onDelete(channel) } (admin only). */
+export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = {}): ContextMenuItem[] {
+  return [
+    ...basicChannelItems(channel),
+    ...notificationLevelItems(channel.id),
+    ...channelManagementItems(channel, handlers)
+  ]
 }
 
 function webhooksItem(channel: Channel, handlers: ChannelHandlers): ContextMenuItem {
@@ -331,21 +331,34 @@ function timeoutAndBanItems(member: MenuMember, offer: ReturnType<typeof moderat
   return items
 }
 
+function isMemberReachable(member: MenuMember, isSelf: boolean): boolean {
+  if (isSelf || member.role === 'admin') return false
+  return usePermissionsStore().outranksMember(member.id)
+}
+
+function hasModerationActions(canKick: boolean, canModerate: boolean, offer: ReturnType<typeof moderationOffer>): boolean {
+  if (canKick || canModerate) return true
+  return !!offer.timeout || !!offer.ban
+}
+
+function isMemberInAnyVoiceCall(memberId: string): boolean {
+  const channelUsers = useVoiceStore().channelUsers || {}
+  return Object.values(channelUsers).some(u => !!u?.[memberId])
+}
+
 /** Kick, timeout, ban, revoke sessions and disable, as far as the viewer may. */
 function moderationItems(member: MenuMember, isSelf: boolean): ContextMenuItem[] {
-  const voiceStore = useVoiceStore()
   const permissions = usePermissionsStore()
-  // Moderation needs the permission and a higher rank than the member; the
-  // Owner is out of reach for everyone.
-  const reachable = !isSelf && member.role !== 'admin' && permissions.outranksMember(member.id)
+  const reachable = isMemberReachable(member, isSelf)
   const canKick = reachable && permissions.can('disconnect_members')
   const canModerate = reachable && permissions.can('manage_members')
   const offer = moderationOffer(member)
   const items: ContextMenuItem[] = []
-  if (canKick || canModerate || offer.timeout || offer.ban) {
+  if (hasModerationActions(canKick, canModerate, offer)) {
     items.push({ type: 'separator' })
-    const inAnyCall = Object.values(voiceStore.channelUsers || {}).some(u => u && u[member.id])
-    if (canKick && inAnyCall) items.push(...kickItems(member))
+    if (canKick && isMemberInAnyVoiceCall(member.id)) {
+      items.push(...kickItems(member))
+    }
   }
   items.push(...timeoutAndBanItems(member, offer))
   if (canModerate) items.push(...sessionItems(member))
