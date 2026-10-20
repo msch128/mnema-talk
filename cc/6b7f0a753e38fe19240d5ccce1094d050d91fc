@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 430-436,821
+internal/ws/native_admission.go
+  h_0ff4f4713441f4 40-43,45-46
+internal/ws/native_metadata_admission.go
+  h_0ff4f4713441f4 19,39,55,115-128,131,135-136,138,146-172,174-185,197-198,201-204,209-215,218,220,222,224-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc6b7f0a753e38fe19240d5ccce1094d050d91fc",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
