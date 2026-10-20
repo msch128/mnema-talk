@@ -1290,8 +1290,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/interactions_respond.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] callback - callback has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - 19% of file duplicated in other files; worst clone shares 34 lines with internal/bot/commands_bot.go (impact -0.15)
+- [x] [medium] callback - callback has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - 19% of file duplicated in other files; worst clone shares 34 lines with internal/bot/commands_bot.go (impact -0.15)
 
 ### `internal/chat/handler_lookup.go` — 2 Funde, Abzug 1.00.
 

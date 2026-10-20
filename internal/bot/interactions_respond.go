@@ -29,6 +29,20 @@ type CallbackRequest struct {
 	Data *ResponseData `json:"data"`
 }
 
+func parseCallbackMessage(req CallbackRequest) (*message, error) {
+	switch req.Type {
+	case CallbackDeferred:
+		return nil, nil
+	case CallbackMessage:
+		if req.Data == nil {
+			return nil, httpx.ErrInvalidInput("data is required for type 4")
+		}
+		return validate(*req.Data)
+	default:
+		return nil, httpx.ErrInvalidInput("type must be 4 or 5")
+	}
+}
+
 // callback handles POST /api/bot/v1/interactions/{interactionID}/{token}/callback.
 //
 // @Summary Respond to an interaction
@@ -53,19 +67,9 @@ func (c *Commands) callback(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	var msg *message
-	switch req.Type {
-	case CallbackDeferred:
-	case CallbackMessage:
-		if req.Data == nil {
-			return httpx.ErrInvalidInput("data is required for type 4")
-		}
-		var err error
-		if msg, err = validate(*req.Data); err != nil {
-			return err
-		}
-	default:
-		return httpx.ErrInvalidInput("type must be 4 or 5")
+	msg, err := parseCallbackMessage(req)
+	if err != nil {
+		return err
 	}
 	in, err := c.claimFrom(r, true)
 	if err != nil {
