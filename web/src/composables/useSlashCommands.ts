@@ -29,7 +29,8 @@ function useChannelCommands() {
     try {
       const list = await api(`/api/channels/${id}/commands`, { decode: arrayDecoder('channel commands', isBotChannelCommand) })
       if (loadedFor === id) commands.value = list
-    } catch {
+    } catch (err) {
+      void err
       // No list is no menu; typing "/" stays an ordinary message.
       loadedAt = 0
       commands.value = []
@@ -54,6 +55,28 @@ function onListKey(
   if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(suggestions[active.value]); return true }
   if (e.key === 'Escape') { e.preventDefault(); dismissed.value = true; return true }
   return false
+}
+
+async function invokeCommand(
+  command: BotChannelCommand,
+  id: string,
+  values: OptionValues,
+  toasts: ReturnType<typeof useToastStore>,
+  cancel: () => void
+): Promise<boolean> {
+  const built = buildOptions(command, values)
+  if (built.problem) {
+    toasts.error(t(built.problem.kind === 'missing' ? 'slash.missing' : 'slash.notANumber', { name: built.problem.name }))
+    return false
+  }
+  try {
+    await api(`/api/channels/${id}/interactions`, { method: 'POST', json: { command_id: command.id, options: built.options }, decode: decodeBotInvoked })
+    cancel()
+    return true
+  } catch (err) {
+    toasts.error(isApiError(err) && err.status === 409 ? t('slash.botOffline', { bot: command.bot_name }) : caughtErrorMessage(err, t('slash.failed')))
+    return false
+  }
 }
 
 export function useSlashCommands(model: Ref<string>, channelId: () => string | undefined) {
@@ -99,19 +122,9 @@ export function useSlashCommands(model: Ref<string>, channelId: () => string | u
     const command = picked.value
     const id = channelId()
     if (!command || !id || running.value) return false
-    const built = buildOptions(command, values)
-    if (built.problem) {
-      toasts.error(t(built.problem.kind === 'missing' ? 'slash.missing' : 'slash.notANumber', { name: built.problem.name }))
-      return false
-    }
     running.value = true
     try {
-      await api(`/api/channels/${id}/interactions`, { method: 'POST', json: { command_id: command.id, options: built.options }, decode: decodeBotInvoked })
-      cancel()
-      return true
-    } catch (err) {
-      toasts.error(isApiError(err) && err.status === 409 ? t('slash.botOffline', { bot: command.bot_name }) : caughtErrorMessage(err, t('slash.failed')))
-      return false
+      return await invokeCommand(command, id, values, toasts, cancel)
     } finally {
       running.value = false
     }

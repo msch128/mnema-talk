@@ -5,12 +5,53 @@
 import { computed } from 'vue'
 import { useVoiceStore } from '../stores/voice'
 import { layerDetail, layerName } from '../lib/screenLayers'
+import type { ScreenLayer } from '../lib/screenLayers'
 import { t } from '../i18n'
 import type { ContextMenuItem } from '../components/menuTypes'
 
+interface LayerMenuOptions {
+  layers: ScreenLayer[]
+  choice: number | 'auto'
+  receivedLayer?: number
+  nameOf(index: number): string
+  choose(next: number | 'auto'): void
+}
+
+function buildLayerMenuItems(opts: LayerMenuOptions): ContextMenuItem[] {
+  const showing = opts.receivedLayer !== undefined && opts.receivedLayer >= 0 ? opts.nameOf(opts.receivedLayer) : ''
+  const items: ContextMenuItem[] = [
+    { type: 'label', label: t('talk.layers.title') },
+    {
+      id: 'layer-auto',
+      type: 'radio',
+      label: t('talk.layers.auto'),
+      subtitle: showing && opts.choice === 'auto' ? t('talk.layers.autoNow', { name: showing }) : t('talk.layers.autoHint'),
+      checked: opts.choice === 'auto',
+      keepOpen: true,
+      action: () => opts.choose('auto')
+    }
+  ]
+  opts.layers.forEach((layer, index) => {
+    items.push({
+      id: `layer-${index}`,
+      type: 'radio',
+      label: opts.nameOf(index),
+      subtitle: layerDetail(layer),
+      checked: opts.choice === index,
+      keepOpen: true,
+      action: () => opts.choose(index)
+    })
+  })
+  if (typeof opts.choice === 'number' && opts.receivedLayer !== undefined && opts.receivedLayer !== opts.choice) {
+    items.push({ type: 'separator' })
+    items.push({ type: 'label', label: t('talk.layers.switching') })
+  }
+  return items
+}
+
 export function useScreenLayerMenu(userId: () => string | null) {
   const voiceStore = useVoiceStore()
-  const layers = computed(() => {
+  const layers = computed<ScreenLayer[]>(() => {
     const id = userId()
     return (id && voiceStore.screenLayers[id]) || []
   })
@@ -45,35 +86,13 @@ export function useScreenLayerMenu(userId: () => string | null) {
   /** ContextMenu items; read reactively, so the open menu follows every change. */
   function menuItems(): ContextMenuItem[] {
     const now = received.value
-    const showing = now && now.layer >= 0 ? nameOf(now.layer) : ''
-    const items: ContextMenuItem[] = [
-      { type: 'label', label: t('talk.layers.title') },
-      {
-        id: 'layer-auto',
-        type: 'radio',
-        label: t('talk.layers.auto'),
-        subtitle: showing && choice.value === 'auto' ? t('talk.layers.autoNow', { name: showing }) : t('talk.layers.autoHint'),
-        checked: choice.value === 'auto',
-        keepOpen: true,
-        action: () => choose('auto')
-      }
-    ]
-    layers.value.forEach((layer, index) => {
-      items.push({
-        id: `layer-${index}`,
-        type: 'radio',
-        label: nameOf(index),
-        subtitle: layerDetail(layer),
-        checked: choice.value === index,
-        keepOpen: true,
-        action: () => choose(index)
-      })
+    return buildLayerMenuItems({
+      layers: layers.value,
+      choice: choice.value,
+      receivedLayer: now?.layer,
+      nameOf,
+      choose
     })
-    if (typeof choice.value === 'number' && now && now.layer !== choice.value) {
-      items.push({ type: 'separator' })
-      items.push({ type: 'label', label: t('talk.layers.switching') })
-    }
-    return items
   }
 
   return { layers, available, choice, received, buttonLabel, menuItems }

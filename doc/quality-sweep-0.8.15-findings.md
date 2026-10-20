@@ -1651,19 +1651,19 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useAppRouting.ts` — 1 Funde, Abzug 0.38.
 
-- [ ] [low] useAppRouting - useAppRouting is 62 lines long (impact -0.38)
+- [x] [low] useAppRouting - useAppRouting is 62 lines long (impact -0.38)
 
 ### `web/src/composables/useMessageActions.ts` — 1 Funde, Abzug 0.38.
 
-- [ ] [low] useMessageActions - useMessageActions is 65 lines long (impact -0.38)
+- [x] [low] useMessageActions - useMessageActions is 65 lines long (impact -0.38)
 
 ### `web/src/composables/useScreenLayerMenu.ts` — 1 Funde, Abzug 0.38.
 
-- [ ] [low] useScreenLayerMenu - useScreenLayerMenu is 62 lines long (impact -0.38)
+- [x] [low] useScreenLayerMenu - useScreenLayerMenu is 62 lines long (impact -0.38)
 
 ### `web/src/composables/useSlashCommands.ts` — 1 Funde, Abzug 0.38.
 
-- [ ] [low] useSlashCommands - useSlashCommands is 66 lines long (impact -0.38)
+- [x] [low] useSlashCommands - useSlashCommands is 66 lines long (impact -0.38)
 
 ### `internal/auth/handler_account.go` — 1 Funde, Abzug 0.35.
 
