@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 328-337
+web/src/lib/crypto/stateStore.ts
+  h_0ff4f4713441f4 29,35-36,133-138,141,143-150,157-158,179-188,192-193,196-197,217,340-345,354-355,357
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b55d505e0effe44f3b849b913648eebfcba1508f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
