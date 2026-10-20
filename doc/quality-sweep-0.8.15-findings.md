@@ -870,8 +870,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/authn.go` — 2 Funde, Abzug 1.78.
 
-- [ ] [medium] touch - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] touch - touch has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] touch - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] touch - touch has cyclomatic complexity 9 (impact -0.85)
 
 ### `web/src/lib/media/groupVet.ts` — 2 Funde, Abzug 1.78.
 

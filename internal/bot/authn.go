@@ -105,29 +105,41 @@ func (a *Authenticator) Lookup(ctx context.Context, token string) (*Credentials,
 	return &c, nil
 }
 
-// touch records the use of a token and of its bot, at most once a minute per
-// token. A failure only loses a timestamp.
-func (a *Authenticator) touch(ctx context.Context, b *auth.BotInfo, last *time.Time) {
-	now := a.now()
+// shouldTouch reports whether a token should have its last-used timestamp refreshed.
+func (a *Authenticator) shouldTouch(id uuid.UUID, last *time.Time, now time.Time) bool {
 	a.mu.Lock()
-	prev, seen := a.touched[b.TokenID]
-	if seen && now.Sub(prev) < touchEvery || last != nil && !seen && now.Sub(*last) < touchEvery {
-		a.mu.Unlock()
-		return
+	defer a.mu.Unlock()
+	if prev, seen := a.touched[id]; seen {
+		return now.Sub(prev) >= touchEvery
+	}
+	if last != nil && now.Sub(*last) < touchEvery {
+		return false
 	}
 	if len(a.touched) > 4096 {
 		clear(a.touched)
 	}
-	a.touched[b.TokenID] = now
-	a.mu.Unlock()
+	a.touched[id] = now
+	return true
+}
+
+func (a *Authenticator) recordTouch(ctx context.Context, tokenID, botID uuid.UUID) {
 	ctx = context.WithoutCancel(ctx)
-	if _, err := a.DB.Exec(ctx, `UPDATE bot_tokens SET last_used_at = NOW() WHERE id = $1`, b.TokenID); err != nil {
+	if _, err := a.DB.Exec(ctx, `UPDATE bot_tokens SET last_used_at = NOW() WHERE id = $1`, tokenID); err != nil {
 		slog.Warn("bot token last-used", "err", err)
 		return
 	}
-	if _, err := a.DB.Exec(ctx, `UPDATE bots SET last_active_at = NOW() WHERE id = $1`, b.BotID); err != nil {
+	if _, err := a.DB.Exec(ctx, `UPDATE bots SET last_active_at = NOW() WHERE id = $1`, botID); err != nil {
 		slog.Warn("bot last-active", "err", err)
 	}
+}
+
+// touch records the use of a token and of its bot, at most once a minute per
+// token. A failure only loses a timestamp.
+func (a *Authenticator) touch(ctx context.Context, b *auth.BotInfo, last *time.Time) {
+	if !a.shouldTouch(b.TokenID, last, a.now()) {
+		return
+	}
+	a.recordTouch(ctx, b.TokenID, b.BotID)
 }
 
 // BearerToken reads the credential of an Authorization header: "Bot <token>".
