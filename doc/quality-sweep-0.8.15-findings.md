@@ -1317,8 +1317,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/server/system.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] health - health has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - 10% of file duplicated in other files; worst clone shares 21 lines with internal/server/system_ops.go (co-changed 2x) (impact -0.15)
+- [x] [medium] health - health has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - 10% of file duplicated in other files; worst clone shares 21 lines with internal/server/system_ops.go (co-changed 2x) (impact -0.15)
 
 ### `internal/server/system_selfupdate.go` — 2 Funde, Abzug 1.00.
 
