@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1092-1097
+web/src/composables/webrtc/micPipeline.ts
+  h_0ff4f4713441f4 68-100,104,193-194,247-251,264-266,270-275,277-288
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "312bfe6a4320907b31152ecd6514e41b27386ae6",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
