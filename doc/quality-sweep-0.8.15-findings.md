@@ -1305,8 +1305,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/gateway/observe.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] Observe - Observe has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] Observe - Observe has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/media/admin.go` — 4 Funde, Abzug 1.00.
 

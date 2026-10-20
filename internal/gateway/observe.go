@@ -39,13 +39,33 @@ func event(eventType string) (name string, intent int64, ok bool) {
 	return "", 0, false
 }
 
+func broadcastToSessions(targets []*session, name string, msg json.RawMessage) {
+	for _, s := range targets {
+		s.enqueue(name, msg)
+	}
+}
+
+func dispatchGlobalEvent(snap *perm.Snapshot, targets []*session, name string, payload any) {
+	if name == EventChannelsUpdate {
+		// The layout or someone's access changed: bots refetch /channels.
+		broadcastToSessions(targets, name, json.RawMessage(`{}`))
+		return
+	}
+	if name == EventGuildMemberAdd {
+		enqueueMemberAdd(snap, targets, name, payload)
+	}
+}
+
 // Observe is the hub's tap: it sees every event the hub publishes (channel is
 // uuid.Nil for events to everybody) and queues it for the sessions whose
 // intents ask for it and whose bot may view the channel right now. It never
 // blocks.
 func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
+	if g.Perms == nil {
+		return
+	}
 	name, intent, ok := event(eventType)
-	if !ok || g.Perms == nil {
+	if !ok {
 		return
 	}
 	targets := g.sessionsWith(intent)
@@ -56,17 +76,11 @@ func (g *Gateway) Observe(channel uuid.UUID, eventType string, payload any) {
 	if err != nil {
 		return // fail closed
 	}
-	switch {
-	case channel != uuid.Nil:
+	if channel != uuid.Nil {
 		enqueueChannelEvent(snap, targets, channel, name, payload)
-	case name == EventChannelsUpdate:
-		// The layout or someone's access changed: bots refetch /channels.
-		for _, s := range targets {
-			s.enqueue(name, json.RawMessage(`{}`))
-		}
-	case name == EventGuildMemberAdd:
-		enqueueMemberAdd(snap, targets, name, payload)
+		return
 	}
+	dispatchGlobalEvent(snap, targets, name, payload)
 }
 
 // enqueueChannelEvent queues a channel's event for the bots that may view it.
@@ -89,7 +103,10 @@ func enqueueMemberAdd(snap *perm.Snapshot, targets []*session, name string, payl
 	if !ok {
 		return
 	}
-	data, _ := json.Marshal(member)
+	data, err := json.Marshal(member)
+	if err != nil {
+		return
+	}
 	theirs := snap.ChannelPermissions(perm.Subject{ID: member.ID})
 	for _, s := range targets {
 		for ch := range snap.ChannelPermissions(perm.Subject{ID: s.userID}) {
