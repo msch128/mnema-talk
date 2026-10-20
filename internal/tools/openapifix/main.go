@@ -40,26 +40,42 @@ func main() {
 	}
 }
 
+func cleanExternalDocs(doc obj) {
+	if ed, ok := doc["externalDocs"].(obj); ok && ed["url"] == "" {
+		delete(doc, "externalDocs")
+	}
+}
+
+func fixPathItem(item any) {
+	itemObj, ok := item.(obj)
+	if !ok {
+		return
+	}
+	for _, op := range itemObj {
+		if opObj, ok := op.(obj); ok {
+			fixOperation(opObj)
+		}
+	}
+}
+
+func fixPaths(paths obj) {
+	renameAtMe(paths)
+	for _, item := range paths {
+		fixPathItem(item)
+	}
+}
+
 func run(in, out string) error {
 	doc, err := readDocument(in)
 	if err != nil {
 		return err
 	}
-	if ed, ok := doc["externalDocs"].(obj); ok && ed["url"] == "" {
-		delete(doc, "externalDocs")
-	}
+	cleanExternalDocs(doc)
 	if err := walk(doc); err != nil {
 		return err
 	}
 	if paths, ok := doc["paths"].(obj); ok {
-		renameAtMe(paths)
-		for _, item := range paths {
-			for _, op := range item.(obj) {
-				if op, ok := op.(obj); ok {
-					fixOperation(op)
-				}
-			}
-		}
+		fixPaths(paths)
 	}
 	return writeDocument(out, doc)
 }

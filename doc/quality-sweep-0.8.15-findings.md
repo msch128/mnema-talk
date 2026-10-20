@@ -838,8 +838,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/tools/openapifix/main.go` — 2 Funde, Abzug 1.79.
 
-- [ ] [medium] run - run has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] run - run nests 4 levels deep (impact -0.94)
+- [x] [medium] run - run has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] run - run nests 4 levels deep (impact -0.94)
 
 ### `internal/webhook/dispatch_queue.go` — 8 Funde, Abzug 1.79.
 
