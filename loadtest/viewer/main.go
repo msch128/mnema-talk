@@ -117,7 +117,9 @@ func loadConfig() (viewerConfig, error) {
 	c.to = min(envInt("TO", len(c.tokens)), len(c.tokens))
 	c.hold = time.Duration(envInt("HOLD_S", 60)) * time.Second
 	c.spacing = time.Duration(envInt("SPACING_MS", 300)) * time.Millisecond
-	c.loss, _ = strconv.ParseFloat(os.Getenv("LOSS"), 64)
+	if loss, err := strconv.ParseFloat(os.Getenv("LOSS"), 64); err == nil {
+		c.loss = loss
+	}
 	c.jitter = time.Duration(envInt("JITTER_MS", 0)) * time.Millisecond
 	c.channel, c.sharer = os.Getenv("CHANNEL_ID"), os.Getenv("SHARER_ID")
 	if c.channel == "" || c.sharer == "" {
@@ -165,7 +167,10 @@ func mainErr() error {
 	diagnoseAll(members, 5*time.Second)
 	res := summarize(members, c.loss, c.jitter)
 	if out := os.Getenv("OUT"); out != "" {
-		b, _ := json.MarshalIndent(res, "", " ")
+		b, err := json.MarshalIndent(res, "", " ")
+		if err != nil {
+			return err
+		}
 		if err := os.WriteFile(out, b, 0o600); err != nil {
 			return err
 		}

@@ -33,7 +33,9 @@ func metricsHandler(src *opsSource) http.HandlerFunc {
 
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(b.String()))
+		if _, err := w.Write([]byte(b.String())); err != nil {
+			return
+		}
 	}
 }
 

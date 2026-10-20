@@ -148,7 +148,9 @@ func listOutgoing(ctx context.Context, p *db.Pool, channel uuid.UUID) ([]*outgoi
 // newSecret returns a fresh signing secret.
 func newSecret() string {
 	raw := make([]byte, 32)
-	_, _ = rand.Read(raw) // never fails: Go aborts the program if the system has no randomness
+	if _, err := rand.Read(raw); err != nil {
+		return ""
+	}
 	return "whsec_" + base64.RawURLEncoding.EncodeToString(raw)
 }
 

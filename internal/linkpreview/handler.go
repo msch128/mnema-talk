@@ -90,8 +90,8 @@ func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	hdr.Set("Cache-Control", "private, max-age=86400")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body)
-	return nil
+	_, err = w.Write(body)
+	return err
 }
 
 // requester tags the request context with the signed-in member, so one

@@ -1795,24 +1795,24 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/bot/store.go` — 2 Funde, Abzug 0.30.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/gateway/session.go` — 2 Funde, Abzug 0.30.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/server/public.go` — 2 Funde, Abzug 0.30.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `loadtest/viewer/main.go` — 3 Funde, Abzug 0.30.
 
 - [ ] [medium] runBounded - a goroutine is spawned per loop element with no concurrency bound; use a worker pool or a bounded errgroup/semaphore (impact -0.00)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `cmd/server/storage.go` — 1 Funde, Abzug 0.15.
 
@@ -1820,15 +1820,15 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/audit/audit.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/auth/service.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/auth/users_admin.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/chat/channel_layout.go` — 3 Funde, Abzug 0.15.
 
@@ -1838,7 +1838,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/gateway/serve_read.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/httpx/discord.go` — 1 Funde, Abzug 0.15.
 
@@ -1850,7 +1850,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/linkpreview/handler.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/media/handler.go` — 1 Funde, Abzug 0.15.
 
@@ -1866,7 +1866,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/server/metrics.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/server/system_ops.go` — 1 Funde, Abzug 0.15.
 
@@ -1878,7 +1878,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/webhook/outgoing_store.go` — 1 Funde, Abzug 0.15.
 
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/ws/layers.go` — 1 Funde, Abzug 0.15.
 

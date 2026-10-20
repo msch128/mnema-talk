@@ -154,7 +154,9 @@ func webrtcConfig(cfg *config.Config) http.HandlerFunc {
 func openAPISpec(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
-	_, _ = w.Write(api.Spec)
+	if _, err := w.Write(api.Spec); err != nil {
+		return
+	}
 }
 
 // apiDocs serves the API reference page (Swagger UI) to signed-in members;
@@ -183,6 +185,8 @@ func apiDocs(sessions *auth.Sessions, page []byte) http.HandlerFunc {
 		w.Header().Set("Content-Security-Policy", httpx.SPAContentSecurityPolicy)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-cache")
-		_, _ = w.Write(page)
+		if _, err := w.Write(page); err != nil {
+			return
+		}
 	}
 }

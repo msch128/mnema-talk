@@ -145,7 +145,10 @@ func acquireBcrypt() func() {
 }
 
 func newDummyHash() []byte {
-	h, _ := bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), passwordCost)
+	h, err := bcrypt.GenerateFromPassword([]byte("mnema-talk-timing-equaliser"), passwordCost)
+	if err != nil {
+		return nil
+	}
 	return h
 }
 

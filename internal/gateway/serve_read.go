@@ -138,7 +138,7 @@ func (rd *reader) onPresenceUpdate(f frame) bool {
 		return false
 	}
 	// Over the limit, an update is dropped (Discord does the same).
-	if ok, _ := rd.g.presLimit.Allow(rd.sess.botID.String()); ok {
+	if ok, wait := rd.g.presLimit.Allow(rd.sess.botID.String()); ok && wait == 0 {
 		rd.g.setPresence(rd.sess.userID, p)
 	}
 	return true

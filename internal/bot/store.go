@@ -86,7 +86,9 @@ type Token struct {
 // NewToken makes a token and its stored hash.
 func NewToken() (token string, hash []byte, hint string) {
 	raw := make([]byte, 32)
-	_, _ = rand.Read(raw) // never fails (Go 1.24: it crashes the program instead)
+	if _, err := rand.Read(raw); err != nil {
+		return "", nil, ""
+	}
 	token = TokenPrefix + base64.RawURLEncoding.EncodeToString(raw)
 	return token, HashToken(token), token[len(token)-4:]
 }
@@ -160,7 +162,9 @@ func wrapCreate(err error) error {
 // createIn inserts the account, the bot and its Bot role in tx.
 func createIn(ctx context.Context, tx pgx.Tx, name string, intents int64, creator uuid.UUID) (uuid.UUID, error) {
 	suffix := make([]byte, 6)
-	_, _ = rand.Read(suffix)
+	if _, err := rand.Read(suffix); err != nil {
+		return uuid.Nil, err
+	}
 	var n int
 	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM bots`).Scan(&n); err != nil {
 		return uuid.Nil, err
