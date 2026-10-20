@@ -30,40 +30,64 @@ const messageSelect = `
 	LEFT JOIN messages rm ON rm.id = m.reply_to_id
 	LEFT JOIN users ru ON ru.id = rm.user_id`
 
+type rawReplyFields struct {
+	id          *uuid.UUID
+	user        *uuid.UUID
+	username    *string
+	displayName *string
+	avatar      *string
+	content     *string
+	hasMedia    bool
+	isBot       *bool
+	isWebhook   *bool
+}
+
+func buildReplyPreview(replyToID uuid.UUID, r rawReplyFields) *ReplyPreview {
+	p := &ReplyPreview{ID: replyToID, Deleted: r.id == nil}
+	if r.id != nil {
+		p.UserID = *r.user
+		p.Username = deref(r.username)
+		p.DisplayName = deref(r.displayName)
+		p.AvatarURL = auth.AvatarURL(r.avatar)
+		p.Content = deref(r.content)
+		p.HasAttachments = r.hasMedia
+		p.IsBot = r.isBot != nil && *r.isBot
+		p.IsWebhook = r.isWebhook != nil && *r.isWebhook
+	}
+	return p
+}
+
+func decodeEmbeds(raw []byte) ([]Embed, error) {
+	if len(raw) <= 2 {
+		return nil, nil
+	}
+	var embeds []Embed
+	if err := json.Unmarshal(raw, &embeds); err != nil {
+		return nil, fmt.Errorf("decode embeds: %w", err)
+	}
+	return embeds, nil
+}
+
 func scanMessages(rows pgx.Rows) ([]Message, error) {
 	defer rows.Close()
 	msgs := make([]Message, 0)
 	for rows.Next() {
 		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0), Mentions: make([]uuid.UUID, 0)}
-		var avatar, rUsername, rDisplay, rAvatar, rContent *string
-		var rID, rUser *uuid.UUID
-		var rHasMedia bool
-		var rBot, rWebhook *bool
+		var avatar *string
+		var r rawReplyFields
 		var embeds []byte
 		if err := rows.Scan(&m.ID, &m.Number, &m.ChannelID, &m.UserID, &m.ParentID, &m.Username, &m.DisplayName, &avatar,
 			&m.Content, &m.IsPinned, &m.IsEdited, &m.ReplyCount, &m.CreatedAt, &m.UpdatedAt,
-			&m.ReplyToID, &rID, &rUser, &rUsername, &rDisplay, &rAvatar, &rContent, &rHasMedia, &m.IsBot, &m.IsWebhook, &embeds, &rBot, &rWebhook); err != nil {
+			&m.ReplyToID, &r.id, &r.user, &r.username, &r.displayName, &r.avatar, &r.content, &r.hasMedia, &m.IsBot, &m.IsWebhook, &embeds, &r.isBot, &r.isWebhook); err != nil {
 			return nil, err
 		}
-		if len(embeds) > 2 { // anything but the empty array
-			if err := json.Unmarshal(embeds, &m.Embeds); err != nil {
-				return nil, fmt.Errorf("decode embeds: %w", err)
-			}
+		var err error
+		if m.Embeds, err = decodeEmbeds(embeds); err != nil {
+			return nil, err
 		}
 		m.AvatarURL = auth.AvatarURL(avatar)
 		if m.ReplyToID != nil {
-			p := &ReplyPreview{ID: *m.ReplyToID, Deleted: rID == nil}
-			if rID != nil {
-				p.UserID = *rUser
-				p.Username = deref(rUsername)
-				p.DisplayName = deref(rDisplay)
-				p.AvatarURL = auth.AvatarURL(rAvatar)
-				p.Content = deref(rContent)
-				p.HasAttachments = rHasMedia
-				p.IsBot = rBot != nil && *rBot
-				p.IsWebhook = rWebhook != nil && *rWebhook
-			}
-			m.ReplyTo = p
+			m.ReplyTo = buildReplyPreview(*m.ReplyToID, r)
 		}
 		msgs = append(msgs, m)
 	}
@@ -234,6 +258,19 @@ func reverse(msgs []Message) {
 	}
 }
 
+func isSameThreadContext(refParentID, parentID, replyTo *uuid.UUID) bool {
+	if refParentID == nil && parentID == nil {
+		return true // both root messages
+	}
+	if refParentID != nil && parentID != nil {
+		return *refParentID == *parentID // both replies in the same thread
+	}
+	if refParentID == nil && parentID != nil {
+		return *replyTo == *parentID // reply to thread root
+	}
+	return false
+}
+
 // ValidateReplyTarget checks that replyTo exists in the same channel and the
 // same thread context (both root messages, or both replies of one thread).
 func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, parentID, replyTo *uuid.UUID) error {
@@ -244,10 +281,7 @@ func ValidateReplyTarget(ctx context.Context, p *db.Pool, channelID uuid.UUID, p
 	if err != nil {
 		return httpx.ErrInvalidInput("message to reply to not found")
 	}
-	sameThread := (ref.ParentID == nil && parentID == nil) ||
-		(ref.ParentID != nil && parentID != nil && *ref.ParentID == *parentID) ||
-		(ref.ParentID == nil && parentID != nil && *replyTo == *parentID)
-	if ref.ChannelID != channelID || !sameThread {
+	if ref.ChannelID != channelID || !isSameThreadContext(ref.ParentID, parentID, replyTo) {
 		return httpx.ErrInvalidInput("can only reply to a message in the same conversation")
 	}
 	return nil
@@ -324,7 +358,11 @@ func CreateMessage(ctx context.Context, q db.Querier, nm NewMessage) (uuid.UUID,
 	var id uuid.UUID
 	embeds := []byte("[]")
 	if len(nm.Embeds) > 0 {
-		embeds, _ = json.Marshal(nm.Embeds) // plain strings, ints and bools: cannot fail
+		var err error
+		embeds, err = json.Marshal(nm.Embeds)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("marshal embeds: %w", err)
+		}
 	}
 	var authorName *string
 	if nm.AuthorName != "" {

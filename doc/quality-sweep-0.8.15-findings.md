@@ -908,9 +908,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/chat/messages.go` — 3 Funde, Abzug 1.65.
 
-- [ ] [medium] ValidateReplyTarget - ValidateReplyTarget has cyclomatic complexity 12 (impact -0.75)
-- [ ] [medium] scanMessages - scanMessages has cyclomatic complexity 9 (impact -0.75)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] ValidateReplyTarget - ValidateReplyTarget has cyclomatic complexity 12 (impact -0.75)
+- [x] [medium] scanMessages - scanMessages has cyclomatic complexity 9 (impact -0.75)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/chat/moderation.go` — 3 Funde, Abzug 1.65.
 
