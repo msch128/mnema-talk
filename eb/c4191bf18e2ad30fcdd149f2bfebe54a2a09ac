@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1149-1153
+internal/webhook/dispatch_delivery.go
+  h_0ff4f4713441f4 91-93,95-98,106-109,112-125,128-138,142,146-168,203-208,251-253,263-266,268-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ebc4191bf18e2ad30fcdd149f2bfebe54a2a09ac",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
