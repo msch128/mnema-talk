@@ -1,0 +1,14 @@
+internal/ws/voice_join.go
+  h_0ff4f4713441f4 77-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "54d84cda5cda1eb6584365be6911c815fefa8fbe",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
