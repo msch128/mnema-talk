@@ -1,0 +1,18 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 554-557,561-564
+internal/nativepreview/native_registry.go
+  h_0ff4f4713441f4 82,90-102
+internal/sfu/layers.go
+  h_0ff4f4713441f4 64-84,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "056187b63bd3115c0247cdf6221606680b6189de",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
