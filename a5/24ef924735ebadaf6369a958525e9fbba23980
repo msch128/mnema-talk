@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 970-971,973
+internal/audit/middleware.go
+  h_0ff4f4713441f4 46-52,54,58,60-61,63-65,67-68,70-75,78-83,85-95,97,99,102,104-124,126-127,131-140,147,150-153,162-165,221-222,224
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a524ef924735ebadaf6369a958525e9fbba23980",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
