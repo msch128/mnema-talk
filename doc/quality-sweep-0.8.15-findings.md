@@ -1068,8 +1068,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/channelLayout.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [high] applyLayoutPayload - applyLayoutPayload has cyclomatic complexity 17 (impact -0.95)
-- [ ] [medium] channelStep - channelStep has cyclomatic complexity 11 (impact -0.55)
+- [x] [high] applyLayoutPayload - applyLayoutPayload has cyclomatic complexity 17 (impact -0.95)
+- [x] [medium] channelStep - channelStep has cyclomatic complexity 11 (impact -0.55)
 
 ### `web/src/lib/chatLogic.ts` — 2 Funde, Abzug 1.50.
 
