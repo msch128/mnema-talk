@@ -1322,8 +1322,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/server/system_selfupdate.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] startSelfUpdate - startSelfUpdate has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] startSelfUpdate - startSelfUpdate has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/sfu/transport.go` — 3 Funde, Abzug 1.00.
 
