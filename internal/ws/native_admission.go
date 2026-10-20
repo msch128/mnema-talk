@@ -37,9 +37,13 @@ func nativeHandshakeAllowed(r *http.Request) bool {
 // NativeWebSocketHandler is explicitly unmounted in the production server.
 // Its constructor shares Hub membership, while using native-only authorization.
 func (h *Hub) NativeWebSocketHandler(a NativeAuthenticator) http.Handler {
+	return h.nativePumps(a, (*Client).writePump, (*Client).readPump)
+}
+
+func (h *Hub) nativePumps(a NativeAuthenticator, write, read func(*Client)) http.Handler {
 	return h.nativeSocketHandler(a, func(c *Client) {
-		go c.writePump()
-		go c.readPump()
+		go write(c)
+		go read(c)
 		go c.nativeWatchdog()
 	})
 }

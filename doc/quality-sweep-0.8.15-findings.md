@@ -427,11 +427,13 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/ws/native_metadata_admission.go` — 5 Funde, Abzug 3.44.
 
-- [ ] [high] parseNativeMetadataFrame - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [high] parseNativeMetadataFrame - parseNativeMetadataFrame has cyclomatic complexity 21 (impact -0.69)
-- [ ] [medium] - 14% of file duplicated in other files; worst clone shares 13 lines with internal/ws/native_admission.go (co-changed 3x) (impact -0.35)
-- [ ] [medium] dispatchMetadataFrame - dispatchMetadataFrame has cyclomatic complexity 9 (impact -0.40)
-- [ ] [medium] nativeMetadataObject - nativeMetadataObject has cyclomatic complexity 10 (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Frames werden abgelehnt.
+
+- [x] [high] parseNativeMetadataFrame - if condition combines 5 boolean operators (impact -1.60)
+- [x] [high] parseNativeMetadataFrame - parseNativeMetadataFrame has cyclomatic complexity 21 (impact -0.69)
+- [x] [medium] - 14% of file duplicated in other files; worst clone shares 13 lines with internal/ws/native_admission.go (co-changed 3x) (impact -0.35)
+- [x] [medium] dispatchMetadataFrame - dispatchMetadataFrame has cyclomatic complexity 9 (impact -0.40)
+- [x] [medium] nativeMetadataObject - nativeMetadataObject has cyclomatic complexity 10 (impact -0.40)
 
 ### `internal/nativepreview/native_discovery.go` — 2 Funde, Abzug 3.35.
 
@@ -816,7 +818,7 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/ws/native_admission.go` — 4 Funde, Abzug 1.75.
 
-- [ ] [medium] - 11% of file duplicated in other files; worst clone shares 13 lines with internal/ws/native_metadata_admission.go (co-changed 3x) (impact -0.35)
+- [ ] [medium] - 10% of file duplicated in other files; worst clone shares 12 lines with internal/nativepreview/native_preview.go (co-changed 2x) (impact -0.35)
 - [ ] [medium] nativeSocketHandler - nativeSocketHandler has cyclomatic complexity 10 (impact -0.85)
 - [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [ ] [low] nativeSocketHandler - if condition combines 3 boolean operators (impact -0.40)

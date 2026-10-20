@@ -16,11 +16,7 @@ import (
 // voice, content or cryptographic controls without a separately verified Core
 // grant. The existing full native handler remains unmounted.
 func (h *Hub) NativeMetadataWebSocketHandler(a NativeAuthenticator) http.Handler {
-	return h.nativeSocketHandler(a, func(c *Client) {
-		go c.nativeMetadataWritePump()
-		go c.nativeMetadataReadPump()
-		go c.nativeWatchdog()
-	})
+	return h.nativePumps(a, (*Client).nativeMetadataWritePump, (*Client).nativeMetadataReadPump)
 }
 
 func (c *Client) nativeMetadataReadPump() {
@@ -40,7 +36,7 @@ func (c *Client) nativeMetadataReadPump() {
 // dispatchMetadataFrame routes one frame of a metadata session. It reports
 // false when the connection was terminated.
 func (c *Client) dispatchMetadataFrame(budget *eventBudget, kind int, frame []byte) bool {
-	if kind != websocket.TextMessage || !c.commandsAllowed() {
+	if metadataSocketRejected(c, kind) {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -56,7 +52,7 @@ func (c *Client) dispatchMetadataFrame(budget *eventBudget, kind int, frame []by
 	if c.handleNativeControl(eventType, frame) {
 		return true
 	}
-	if eventType != "ping" && eventType != "presence_idle" {
+	if metadataEventRejected(eventType) {
 		c.hub.terminateNativeClient(c)
 		return false
 	}
@@ -116,28 +112,30 @@ func (c *Client) nativeMetadataWritePump() {
 
 // Parse closed metadata/control envelopes before dispatch. Duplicate or unknown
 // fields are denied, rather than permitting last-value-wins JSON ambiguity.
+func metadataSocketRejected(c *Client, kind int) bool {
+	if kind != websocket.TextMessage {
+		return true
+	}
+	return !c.commandsAllowed()
+}
+
+func metadataEventRejected(eventType string) bool {
+	if eventType == "ping" {
+		return false
+	}
+	return eventType != "presence_idle"
+}
+
 func nativeMetadataObject(raw []byte) (map[string]json.RawMessage, bool) {
 	d := json.NewDecoder(bytes.NewReader(raw))
-	if token, err := d.Token(); err != nil || token != json.Delim('{') {
+	if !expectToken(d, json.Delim('{')) {
 		return nil, false
 	}
 	values := make(map[string]json.RawMessage)
-	for d.More() {
-		token, err := d.Token()
-		if err != nil {
-			return nil, false
-		}
-		key, _ := token.(string) // a decoder always yields a string where an object key is due
-		if _, duplicate := values[key]; duplicate {
-			return nil, false
-		}
-		var value json.RawMessage
-		if d.Decode(&value) != nil {
-			return nil, false
-		}
-		values[key] = value
+	if !readMetadataMembers(d, values) {
+		return nil, false
 	}
-	if token, err := d.Token(); err != nil || token != json.Delim('}') {
+	if !expectToken(d, json.Delim('}')) {
 		return nil, false
 	}
 	if _, err := d.Token(); err != io.EOF {
@@ -145,7 +143,46 @@ func nativeMetadataObject(raw []byte) (map[string]json.RawMessage, bool) {
 	}
 	return values, true
 }
+
+func readMetadataMembers(d *json.Decoder, values map[string]json.RawMessage) bool {
+	for d.More() {
+		if !readMetadataMember(d, values) {
+			return false
+		}
+	}
+	return true
+}
+
+func readMetadataMember(d *json.Decoder, values map[string]json.RawMessage) bool {
+	token, err := d.Token()
+	if err != nil {
+		return false
+	}
+	key, _ := token.(string) // a decoder always yields a string where an object key is due
+	if _, duplicate := values[key]; duplicate {
+		return false
+	}
+	var value json.RawMessage
+	if d.Decode(&value) != nil {
+		return false
+	}
+	values[key] = value
+	return true
+}
+
 func parseNativeMetadataFrame(raw []byte) (string, json.RawMessage, bool) {
+	eventType, payload, ok := metadataEnvelope(raw)
+	if !ok {
+		return "", nil, false
+	}
+	if eventType == "native_access_renew" {
+		_, valid := parseNativeRenewFrame(raw)
+		return eventType, payload, valid
+	}
+	return metadataEvent(eventType, payload)
+}
+
+func metadataEnvelope(raw []byte) (string, json.RawMessage, bool) {
 	if len(raw) > 1024 {
 		return "", nil, false
 	}
@@ -157,32 +194,54 @@ func parseNativeMetadataFrame(raw []byte) (string, json.RawMessage, bool) {
 	if json.Unmarshal(fields["type"], &eventType) != nil {
 		return "", nil, false
 	}
-	payload, hasPayload := fields["payload"]
-	if !hasPayload {
+	payload, found := fields["payload"]
+	if !found {
 		return "", nil, false
 	}
-	if eventType == "native_access_renew" {
-		_, valid := parseNativeRenewFrame(raw)
-		return eventType, payload, valid
-	}
+	return eventType, payload, true
+}
+
+func metadataEvent(eventType string, payload json.RawMessage) (string, json.RawMessage, bool) {
 	object, ok := nativeMetadataObject(payload)
 	if !ok || len(object) != 1 {
 		return "", nil, false
 	}
-	switch eventType {
-	case "ping":
-		var timestamp float64
-		if bytes.Equal(bytes.TrimSpace(object["t"]), []byte("null")) || json.Unmarshal(object["t"], &timestamp) != nil || timestamp < 0 || timestamp > 9007199254740991 || math.IsInf(timestamp, 0) || math.IsNaN(timestamp) {
-			return "", nil, false
-		}
-	case "presence_idle":
-		var idle bool
-		value, found := object["idle"]
-		if !found || bytes.Equal(bytes.TrimSpace(value), []byte("null")) || json.Unmarshal(value, &idle) != nil {
-			return "", nil, false
-		}
-	default:
+	if !metadataPayload(eventType, object) {
 		return "", nil, false
 	}
 	return eventType, payload, true
+}
+
+func metadataPayload(eventType string, object map[string]json.RawMessage) bool {
+	switch eventType {
+	case "ping":
+		return finiteTimestamp(object["t"])
+	case "presence_idle":
+		return idleFlag(object)
+	default:
+		return false
+	}
+}
+
+func finiteTimestamp(raw json.RawMessage) bool {
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return false
+	}
+	var timestamp float64
+	if json.Unmarshal(raw, &timestamp) != nil {
+		return false
+	}
+	if timestamp < 0 || timestamp > 9007199254740991 {
+		return false
+	}
+	return !math.IsInf(timestamp, 0) && !math.IsNaN(timestamp)
+}
+
+func idleFlag(object map[string]json.RawMessage) bool {
+	value, found := object["idle"]
+	if !found || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+		return false
+	}
+	var idle bool
+	return json.Unmarshal(value, &idle) == nil
 }
