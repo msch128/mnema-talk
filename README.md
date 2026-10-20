@@ -140,7 +140,8 @@ Two defaults to know about:
 - **`TRUSTED_PROXY_CIDRS`** is empty, which trusts loopback only. A reverse
   proxy on another host or in a container must be listed here by address,
   otherwise all members share the proxy's IP for rate limits and login
-  lockout. See [the upgrade note](doc/upgrade.md#07x--080) for the exact setups.
+  lockout. Production refuses a range wider than a small network; see
+  [the upgrade note](doc/upgrade.md#broad-trusted-proxies).
 
 ### Behind a reverse proxy
 

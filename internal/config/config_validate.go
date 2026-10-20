@@ -31,6 +31,9 @@ func (c *Config) validate(portMin, portMax uint16) error {
 		return err
 	}
 	if c.IsProduction() {
+		if err := c.refuseBroadTrustedProxies(); err != nil {
+			return err
+		}
 		return c.validateProductionSecrets()
 	}
 	if c.JWTSecret == "" {

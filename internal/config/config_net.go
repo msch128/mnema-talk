@@ -79,6 +79,21 @@ func (c *Config) BroadTrustedProxies() []string {
 	return out
 }
 
+// refuseBroadTrustedProxies rejects a production listener that would trust
+// X-Forwarded-For from every host in a wide range. A loopback listener is
+// left alone: those ranges cannot connect to it. Development and test keep
+// starting so fixtures can name a wide range; the process still logs it.
+func (c *Config) refuseBroadTrustedProxies() error {
+	if !c.IsProduction() || IsLoopbackAddr(c.BindAddr) {
+		return nil
+	}
+	broad := c.BroadTrustedProxies()
+	if len(broad) == 0 {
+		return nil
+	}
+	return fmt.Errorf("TRUSTED_PROXY_CIDRS contains broad ranges (%s) and the listener is not loopback-only: any host in those ranges can forge X-Forwarded-For and evade rate limits and login lockout; list only the reverse proxy's address", strings.Join(broad, ", "))
+}
+
 // RandomHex returns a cryptographically random hex string of n bytes.
 func RandomHex(n int) string {
 	b := make([]byte, n)
