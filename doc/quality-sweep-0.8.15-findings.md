@@ -725,11 +725,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [ ] [medium] Run - a database call is reached once per loop iteration through Run -> prune -> pruneQueue (cross-function N+1 query) (impact -0.00)
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
-### `internal/auth/native_wire.go` — 3 Funde, Abzug 1.90.
+### `internal/auth/native_wire.go` — 3 Funde, Abzug 1.90. (Repowise: 8.2/10, max CCN 6, Nest 1)
 
-- [ ] [high] writeNativeGrant - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [high] writeNativeGrant - if condition combines 5 boolean operators (impact -1.60)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `internal/perm/store_roles.go` — 3 Funde, Abzug 1.90.
 
