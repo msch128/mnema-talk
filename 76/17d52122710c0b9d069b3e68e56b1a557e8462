@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 954-956
+web/src/stores/voiceSettings.ts
+  h_0ff4f4713441f4 39-44,50,54,58,60-61,63,73-77,79,82,88-122,125,129-131,137,140-144
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7617d52122710c0b9d069b3e68e56b1a557e8462",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
