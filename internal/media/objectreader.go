@@ -87,28 +87,46 @@ func (o *objectReader) Close() error {
 // header: the start of a single byte range, else 0. Anything unusual (several
 // ranges, a start past the end) yields 0; ServeContent handles those itself.
 func rangeStart(header string, size int64) int64 {
-	spec, ok := strings.CutPrefix(strings.TrimSpace(header), "bytes=")
-	if !ok || strings.Contains(spec, ",") {
-		return 0
-	}
-	first, last, ok := strings.Cut(strings.TrimSpace(spec), "-")
+	first, last, ok := parseSingleRange(header)
 	if !ok {
 		return 0
 	}
-	first, last = strings.TrimSpace(first), strings.TrimSpace(last)
 	if first == "" {
-		// Suffix range: the last n bytes.
-		n, err := strconv.ParseInt(last, 10, 64)
-		if err != nil || n <= 0 {
-			return 0
-		}
-		if n >= size {
-			return 0
-		}
-		return size - n
+		return parseSuffixRangeStart(last, size)
 	}
+	return parsePrefixRangeStart(first, size)
+}
+
+func parseSingleRange(header string) (string, string, bool) {
+	spec, ok := strings.CutPrefix(strings.TrimSpace(header), "bytes=")
+	if !ok || strings.Contains(spec, ",") {
+		return "", "", false
+	}
+	first, last, ok := strings.Cut(strings.TrimSpace(spec), "-")
+	if !ok {
+		return "", "", false
+	}
+	return strings.TrimSpace(first), strings.TrimSpace(last), true
+}
+
+func parseSuffixRangeStart(last string, size int64) int64 {
+	// Suffix range: the last n bytes.
+	n, err := strconv.ParseInt(last, 10, 64)
+	if err != nil || n <= 0 {
+		return 0
+	}
+	if n >= size {
+		return 0
+	}
+	return size - n
+}
+
+func parsePrefixRangeStart(first string, size int64) int64 {
 	start, err := strconv.ParseInt(first, 10, 64)
-	if err != nil || start < 0 || start >= size {
+	if err != nil || start < 0 {
+		return 0
+	}
+	if start >= size {
 		return 0
 	}
 	return start
