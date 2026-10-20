@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 652-657
+web/src/lib/media/frame.ts
+  h_0ff4f4713441f4 2,111-120,172-175,177-178,182-186,199-205,216-237,239-242,246-261,265-270,275,309-310,317-339,346-348,354-355,357-358
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dc7a15b45bdb3f325a03f1cf673c6e7ec8c2644c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
