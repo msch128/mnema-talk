@@ -81,29 +81,68 @@ func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID
 	}
 	policy := mentionPolicyFrom(ctx)
 	targets := splitMentionTargets(names, policy)
-
-	ids := map[uuid.UUID]bool{}
-	if targets.all || len(targets.usernames) > 0 || (targets.here && len(online) > 0) {
-		found, err := queryMentioned(ctx, q, targets, online)
-		if err != nil {
-			return nil, err
-		}
-		for _, id := range found {
-			ids[id] = true
-		}
+	ids, err := mentionIDs(ctx, q, targets, online)
+	if err != nil {
+		return nil, err
 	}
 	delete(ids, authorID)
+	return allowedMentions(ids, policy, targets), nil
+}
+
+func needsMentionQuery(targets mentionTargets, online []uuid.UUID) bool {
+	if targets.all || len(targets.usernames) > 0 {
+		return true
+	}
+	if !targets.here {
+		return false
+	}
+	return len(online) > 0
+}
+
+func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, online []uuid.UUID) (map[uuid.UUID]bool, error) {
+	ids := map[uuid.UUID]bool{}
+	if !needsMentionQuery(targets, online) {
+		return ids, nil
+	}
+	found, err := queryMentioned(ctx, q, targets, online)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range found {
+		ids[id] = true
+	}
+	return ids, nil
+}
+
+func allowedMentions(ids map[uuid.UUID]bool, policy MentionPolicy, targets mentionTargets) []uuid.UUID {
 	out := make([]uuid.UUID, 0, len(ids))
 	for id := range ids {
-		if policy.NoUsers && !targets.all && !targets.here && !slices.Contains(policy.AllowUsers, id) {
+		if mentionSkipped(policy, targets, id) {
 			continue
 		}
-		if policy.CanView != nil && !policy.CanView(id) {
+		if !mentionVisible(policy, id) {
 			continue
 		}
 		out = append(out, id)
 	}
-	return out, nil
+	return out
+}
+
+func mentionSkipped(policy MentionPolicy, targets mentionTargets, id uuid.UUID) bool {
+	if !policy.NoUsers {
+		return false
+	}
+	if targets.all || targets.here {
+		return false
+	}
+	return !slices.Contains(policy.AllowUsers, id)
+}
+
+func mentionVisible(policy MentionPolicy, id uuid.UUID) bool {
+	if policy.CanView == nil {
+		return true
+	}
+	return policy.CanView(id)
 }
 
 // mentionTargets is what the parsed names of a message address: everyone,

@@ -613,9 +613,11 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/chat/mentions.go` — 3 Funde, Abzug 2.25.
 
-- [ ] [high] ResolveMentions - ResolveMentions has cyclomatic complexity 15 (impact -1.45)
-- [ ] [low] ResolveMentions - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] ResolveMentions - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselben Erwähnungen und Berechtigungen bleiben.
+
+- [x] [high] ResolveMentions - ResolveMentions has cyclomatic complexity 15 (impact -1.45)
+- [x] [low] ResolveMentions - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] ResolveMentions - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/useMessageKeyboard.ts` — 3 Funde, Abzug 2.25.
 
