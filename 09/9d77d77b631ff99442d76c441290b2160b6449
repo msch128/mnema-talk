@@ -1,0 +1,14 @@
+doc/product-status.md
+  h_0ff4f4713441f4 66-76,120-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "099d77d77b631ff99442d76c441290b2160b6449",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
