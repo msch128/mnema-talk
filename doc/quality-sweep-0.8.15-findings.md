@@ -762,11 +762,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [medium] tuneLine - tuneLine has cyclomatic complexity 11 (impact -0.75)
 - [x] [low] tuneLine - if condition combines 3 boolean operators (impact -0.40)
 
-### `web/src/lib/api.ts` — 3 Funde, Abzug 1.90.
+### `web/src/lib/api.ts` — 3 Funde, Abzug 1.90. (Repowise: errorMessage & sendRequest resolved)
 
-- [ ] [medium] errorMessage - errorMessage has cyclomatic complexity 11 (impact -0.75)
-- [ ] [medium] sendRequest - sendRequest has cyclomatic complexity 9 (impact -0.75)
-- [ ] [low] sendRequest - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] errorMessage - errorMessage has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] sendRequest - sendRequest has cyclomatic complexity 9 (impact -0.75)
+- [x] [low] sendRequest - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/dfn/dfnBridgeWorklet.ts` — 3 Funde, Abzug 1.90.
 

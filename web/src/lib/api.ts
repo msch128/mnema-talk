@@ -48,18 +48,32 @@ const PATTERNS: readonly ErrorPattern[] = [
   [/^(missing permission|cannot (grant|allow|change) a permission you do not have)/, () => t('errors.detail.missingPermission')]
 ]
 
-// Untrusted error bodies may be null, arrays or objects. Bound copy before
-// attempting patterns or displaying it; no raw payload gets logged.
-export function errorMessage(code: unknown, serverMessage?: unknown): string {
-  const message = typeof serverMessage === 'string' ? serverMessage.slice(0, 1024) : ''
-  if (message && Object.prototype.hasOwnProperty.call(DETAILS, message)) return t(`errors.detail.${DETAILS[message]}`)
+function formatDetailMessage(message: string): string | null {
+  if (Object.prototype.hasOwnProperty.call(DETAILS, message)) {
+    return t(`errors.detail.${DETAILS[message]}`)
+  }
   for (const [pattern, format] of PATTERNS) {
     const match = message.match(pattern)
     if (match) return format(...match.slice(1))
   }
+  return null
+}
+
+function formatErrorCode(code: unknown, message: string): string {
   if (code === 'INVALID_INPUT' && message) return message
   if (typeof code === 'string' && CODES.has(code)) return t(`errors.code.${code}`)
   return message || t('errors.unknown')
+}
+
+// Untrusted error bodies may be null, arrays or objects. Bound copy before
+// attempting patterns or displaying it; no raw payload gets logged.
+export function errorMessage(code: unknown, serverMessage?: unknown): string {
+  const message = typeof serverMessage === 'string' ? serverMessage.slice(0, 1024) : ''
+  if (message) {
+    const formatted = formatDetailMessage(message)
+    if (formatted) return formatted
+  }
+  return formatErrorCode(code, message)
 }
 
 export type UnauthorizedHandler = (error: ApiError) => void
@@ -104,6 +118,16 @@ class BrowserPreparationFailure {
   constructor(readonly cause: unknown) {}
 }
 
+function isValidReplyStatus(status: unknown): boolean {
+  if (!Number.isInteger(status)) return false
+  const s = status as number
+  return s >= 100 && s <= 599
+}
+
+function isValidApiReply(response: unknown): response is ApiReply {
+  return isRecord(response) && isValidReplyStatus(response['status'])
+}
+
 /** Sends one request; anything but a well-formed reply is a network error (a native or browser abort passes through). */
 async function sendRequest(transport: ApiTransport, path: string, operation: ApiRequest): Promise<ApiReply> {
   let response: ApiReply
@@ -114,7 +138,7 @@ async function sendRequest(transport: ApiTransport, path: string, operation: Api
     if (isRecord(error) && error['name'] === 'AbortError') throw error
     throw new ApiError(0, 'NETWORK', t('errors.network'))
   }
-  if (!isRecord(response) || !Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
+  if (!isValidApiReply(response)) {
     throw new ApiError(0, 'NETWORK', t('errors.network'))
   }
   return response
