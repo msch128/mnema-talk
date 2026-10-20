@@ -701,11 +701,13 @@ Erledigt 2026-10-20: identify (CCN 13 -> 8), register (CCN 10 -> 5) und resume (
 
 ### `web/src/composables/usePictureInPicture.ts` — 5 Funde, Abzug 1.95.
 
-- [ ] [high] usePictureInPictureHost - usePictureInPictureHost has cyclomatic complexity 17 (impact -0.95)
-- [ ] [medium] enter - enter has cyclomatic complexity 11 (impact -0.55)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] usePictureInPictureHost - usePictureInPictureHost has 3 nested blocks at the same level (bumpy road) (impact -0.15)
+Erledigt 2026-10-20: usePictureInPictureHost (CCN 17 -> 6, bumpy road behoben) und enter (CCN 11 -> 3) durch Hilfsfunktionen (detachHostVideo, attachHostVideo, onStageStreamChange, onConnectionChange, canEnter, resolveCurrentStream, finalizeEnter) entflechtet. Alle geschluckten Exceptions behandelt. Repowise-Score stieg von 8.1 auf 10.0/10 (0 offene Funde).
+
+- [x] [high] usePictureInPictureHost - usePictureInPictureHost has cyclomatic complexity 17 (impact -0.95)
+- [x] [medium] enter - enter has cyclomatic complexity 11 (impact -0.55)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] usePictureInPictureHost - usePictureInPictureHost has 3 nested blocks at the same level (bumpy road) (impact -0.15)
 
 ### `internal/chat/botapi.go` — 3 Funde, Abzug 1.94.
 

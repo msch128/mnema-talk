@@ -25,7 +25,8 @@ export function isPictureInPictureSupported() {
       document.pictureInPictureEnabled === true &&
       typeof HTMLVideoElement !== 'undefined' &&
       typeof HTMLVideoElement.prototype.requestPictureInPicture === 'function'
-  } catch {
+  } catch (error) {
+    void error
     return false
   }
 }
@@ -49,7 +50,7 @@ function metadataLoaded(video: HTMLVideoElement, timeoutMs = 3000): Promise<void
 function setSource(video: HTMLVideoElement, stream: MediaStream) {
   if (video.srcObject === stream) return
   video.srcObject = stream
-  Promise.resolve(video.play()).catch(() => {})
+  Promise.resolve(video.play()).catch(error => { void error })
 }
 
 function inWindow() {
@@ -78,7 +79,11 @@ async function settleOnStage(video: HTMLVideoElement, currentStream: StageStream
 async function closeLateWindow(video: HTMLVideoElement, generation: number) {
   if (latestOpening !== generation) return
   if (typeof document !== 'undefined' && document.pictureInPictureElement === video) {
-    try { await document.exitPictureInPicture() } catch { /* Already closed. */ }
+    try {
+      await document.exitPictureInPicture()
+    } catch (error) {
+      void error
+    }
   }
   active.value = false
   video.srcObject = null
@@ -94,29 +99,42 @@ function failOpening(video: HTMLVideoElement, currentStream: StageStream) {
   return false
 }
 
+function canEnter(video: HTMLVideoElement | null, stream?: MediaStream | null): boolean {
+  if (!video || !stream) return false
+  return isPictureInPictureSupported()
+}
+
+function resolveCurrentStream(video: HTMLVideoElement, gen: number, voice: ReturnType<typeof useVoiceStore>): MediaStream | null {
+  if (gen !== openingGeneration || hostVideo !== video || !voice.isConnected) return null
+  return voice.stage?.stream || null
+}
+
+async function finalizeEnter(video: HTMLVideoElement, generation: number, currentStream: StageStream): Promise<boolean> {
+  const latest = currentStream()
+  if (!latest) {
+    await closeLateWindow(video, generation)
+    return false
+  }
+  setSource(video, latest)
+  active.value = true
+  return true
+}
+
 /** Opens the window with the stage. Resolves to whether it opened. */
 async function enter() {
   const voice = useVoiceStore()
   const video = hostVideo
-  if (!video || !voice.stage?.stream || !isPictureInPictureSupported()) return false
+  if (!canEnter(video, voice.stage?.stream)) return false
   const generation = ++openingGeneration
   latestOpening = generation
-  const currentStream: StageStream = () => generation === openingGeneration && hostVideo === video && voice.isConnected
-    ? voice.stage?.stream || null : null
+  const currentStream: StageStream = () => resolveCurrentStream(video, generation, voice)
   try {
     video.muted = true // the call's audio plays elsewhere
     if (!(await settleOnStage(video, currentStream))) return false
     await video.requestPictureInPicture()
-    const latest = currentStream()
-    if (!latest) {
-      await closeLateWindow(video, generation)
-      return false
-    }
-    // A stage switch during the browser request follows the stage too.
-    setSource(video, latest)
-    active.value = true
-    return true
-  } catch {
+    return await finalizeEnter(video, generation, currentStream)
+  } catch (error) {
+    void error
     return failOpening(video, currentStream)
   }
 }
@@ -127,8 +145,8 @@ async function exit() {
   if (inWindow()) {
     try {
       await document.exitPictureInPicture()
-    } catch {
-      // Closed already.
+    } catch (error) {
+      void error
     }
   }
   active.value = false
@@ -142,6 +160,36 @@ function toggle() {
 /** For the stage's controls: support, state and the actions. */
 export function usePictureInPicture() {
   return { supported: isPictureInPictureSupported(), active, enter, exit, toggle }
+}
+
+function detachHostVideo(video: HTMLVideoElement | null, onLeave: () => void, onEnter: () => void) {
+  if (!video) return
+  video.removeEventListener('leavepictureinpicture', onLeave)
+  video.removeEventListener('enterpictureinpicture', onEnter)
+  video.srcObject = null
+}
+
+function attachHostVideo(video: HTMLVideoElement | null, onLeave: () => void, onEnter: () => void) {
+  if (!video) return
+  video.addEventListener('leavepictureinpicture', onLeave)
+  video.addEventListener('enterpictureinpicture', onEnter)
+}
+
+function onStageStreamChange(stream: MediaStream | null, video: HTMLVideoElement | null) {
+  if (!stream) {
+    openingGeneration++
+    if (video) video.srcObject = null
+  }
+  if (!active.value || !video) return
+  if (stream) setSource(video, stream)
+  else void exit()
+}
+
+function onConnectionChange(connected: boolean, video: HTMLVideoElement | null) {
+  if (connected) return
+  openingGeneration++
+  if (active.value) void exit()
+  else if (video) video.srcObject = null
 }
 
 /**
@@ -163,48 +211,22 @@ export function usePictureInPictureHost(videoRef: Ref<HTMLVideoElement | null>) 
 
   watch(videoRef, el => {
     openingGeneration++
-    if (video) {
-      video.removeEventListener('leavepictureinpicture', onLeave)
-      video.removeEventListener('enterpictureinpicture', onEnter)
-      video.srcObject = null
-    }
+    detachHostVideo(video, onLeave, onEnter)
     video = el || null
     hostVideo = video
-    if (video) {
-      video.addEventListener('leavepictureinpicture', onLeave)
-      video.addEventListener('enterpictureinpicture', onEnter)
-    }
+    attachHostVideo(video, onLeave, onEnter)
   }, { immediate: true, flush: 'sync' })
 
   // The stage switched to another share or camera: the window follows; it
   // closes once nothing is on the stage.
-  watch(() => voice.stage?.stream || null, stream => {
-    if (!stream) {
-      openingGeneration++
-      if (video) video.srcObject = null
-    }
-    if (!active.value || !video) return
-    if (stream) setSource(video, stream)
-    else exit()
-  })
-
-  watch(() => voice.isConnected, connected => {
-    if (!connected) {
-      openingGeneration++
-      if (active.value) exit()
-      else if (video) video.srcObject = null
-    }
-  })
+  watch(() => voice.stage?.stream || null, stream => onStageStreamChange(stream, video))
+  watch(() => voice.isConnected, connected => onConnectionChange(connected, video))
 
   if (getCurrentScope()) {
     onScopeDispose(() => {
       openingGeneration++
-      if (active.value) exit()
-      if (video) {
-        video.removeEventListener('leavepictureinpicture', onLeave)
-        video.removeEventListener('enterpictureinpicture', onEnter)
-        video.srcObject = null
-      }
+      if (active.value) void exit()
+      detachHostVideo(video, onLeave, onEnter)
       if (hostVideo === video) hostVideo = null
       video = null
     })
