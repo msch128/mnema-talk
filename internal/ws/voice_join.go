@@ -74,10 +74,10 @@ func (h *Hub) announceVoiceJoin(c *Client, chID uuid.UUID, seat voiceSeat) {
 		h.Presence(c.User.ID, chID, true)
 	}
 	c.emitApplicationEvent("voice_state_update", map[string]any{
-		"action":      "join",
-		"channel_id":  chID,
-		"user":        seat.joined,
-		"started_at":  seat.roomStarted,
+		"action":     "join",
+		"channel_id": chID,
+		"user":       seat.joined,
+		"started_at": seat.roomStarted,
 	}, false, nil, chID)
 }
 
