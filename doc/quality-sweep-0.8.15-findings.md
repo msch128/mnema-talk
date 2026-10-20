@@ -1327,9 +1327,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/transport.go` — 3 Funde, Abzug 1.00.
 
-- [ ] [medium] openUDPMux - openUDPMux has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - 9% of file duplicated in other files; worst clone shares 8 lines with internal/sfu/room_signal.go (impact -0.15)
-- [ ] [low] Close - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
+- [x] [medium] openUDPMux - openUDPMux has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - 9% of file duplicated in other files; worst clone shares 8 lines with internal/sfu/room_signal.go (impact -0.15)
+- [x] [low] Close - a lock is acquired every loop iteration; hoist the lock outside the loop or batch the critical section (impact -0.00)
 
 ### `internal/update/image.go` — 2 Funde, Abzug 1.00.
 
