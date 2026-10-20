@@ -1,0 +1,26 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1434,1438,1442,1570-1574,1877,2030
+internal/sfu/layer_viewers.go
+  h_0ff4f4713441f4 39-42
+internal/sfu/media_state.go
+  h_0ff4f4713441f4 140-144,153,156-157,162-174,176-178,180-181,183-184,186-187,189-193,195-199,201-205
+internal/sfu/ordered.go
+  h_0ff4f4713441f4 31-32,39-51
+internal/sfu/room_signal.go
+  h_0ff4f4713441f4 248,251-279
+internal/sfu/sfu_join.go
+  h_0ff4f4713441f4 211-229,232-236
+internal/sfu/sfu_setup.go
+  h_0ff4f4713441f4 145-154,156,159,161-163,166-167,169-176,179
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cf14b194e4b7bc6c2dbcf6bd737709d561929843",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
