@@ -1,0 +1,36 @@
+web/src/lib/native/nativeSocket.ts
+  s_14d607bad5fef4::t_cde26029d70422 1-268
+web/src/lib/native/nativeAuth.ts
+  s_14d607bad5fef4::t_b702de7976aaad 1-295
+  s_14d607bad5fef4::t_0298528df35d9f 296
+web/src/lib/native/nativeSession.ts
+  s_14d607bad5fef4::t_162b33e8e2ef2b 1-97,99
+  s_14d607bad5fef4::t_5e9b13561af3b9 98
+  s_14d607bad5fef4::t_ec898d60d18198 100-102
+web/src/lib/native/nativeTrustSession.ts
+  s_14d607bad5fef4::t_3bcdaeb3a42fbb 1-2,4-5,10-16,18-21
+  s_14d607bad5fef4::t_f8b75a4359cf4d 3,6-9,17,22-23
+web/src/lib/native/nativeRoutes.ts
+  s_14d607bad5fef4::t_a8e280b7803862 1-193
+web/src/lib/native/nativeFlow.ts
+  s_14d607bad5fef4::t_6e196e1a6c3e8c 1-211
+  s_14d607bad5fef4::t_486b577cb85c3b 212-214
+web/src/lib/native/nativeTransport.ts
+  s_14d607bad5fef4::t_ef64e88fcc4f75 2-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aa6247c97460fd99b70227cf0f9a876fe1fa525f",
+  "prompts": {},
+  "sessions": {
+    "s_14d607bad5fef4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a15a25-ce5a-7833-92d9-57a1d35e28a9",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
