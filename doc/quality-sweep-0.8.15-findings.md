@@ -951,9 +951,9 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/stores/voiceSettings.ts` — 3 Funde, Abzug 1.63.
 
-- [ ] [medium] useVoiceSettings - useVoiceSettings has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] savedNoiseMode - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] useVoiceSettings - useVoiceSettings is 60 lines long (impact -0.38)
+- [x] [medium] useVoiceSettings - useVoiceSettings has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] savedNoiseMode - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] useVoiceSettings - useVoiceSettings is 60 lines long (impact -0.38)
 
 ### `web/src/components/MessageModerationDialog.vue` — 3 Funde, Abzug 1.60.
 
