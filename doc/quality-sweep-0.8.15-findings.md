@@ -1248,8 +1248,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/useWebRTC.harness.fixture.ts` — 2 Funde, Abzug 1.20.
 
-- [ ] [high] FakeAudioContext - FakeAudioContext has low cohesion (LCOM4=7): its 9 methods split into 7 groups that share no fields or calls (impact -0.60)
-- [ ] [high] FakePC - FakePC has low cohesion (LCOM4=4): its 12 methods split into 4 groups that share no fields or calls (impact -0.60)
+- [x] [high] FakeAudioContext - FakeAudioContext has low cohesion (LCOM4=7): its 9 methods split into 7 groups that share no fields or calls (impact -0.60)
+- [x] [high] FakePC - FakePC has low cohesion (LCOM4=4): its 12 methods split into 4 groups that share no fields or calls (impact -0.60)
 
 ### `web/src/lib/native/nativeRegistration.ts` — 2 Funde, Abzug 1.20.
 
