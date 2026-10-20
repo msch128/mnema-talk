@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 747,749-751
+web/src/composables/appRoutingApply.ts
+  h_0ff4f4713441f4 48-52,59,85,88-89,100,102-110,113,115-127,171,173-177,179-184,196-211
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1d6f309041bf1a7b9facb4684bcc5b94e889d0e6",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
