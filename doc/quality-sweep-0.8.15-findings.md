@@ -123,21 +123,23 @@ Dateien: 321. Funde: 848.
 
 ### `web/src/lib/media/mediaFrameWorker.ts` — 15 Funde, Abzug 4.17.
 
-- [ ] [high] lineFrom - lineFrom has cyclomatic complexity 18 (impact -0.31)
-- [ ] [high] onCapsMessage - if condition combines 5 boolean operators (impact -0.51)
-- [ ] [high] onKeyMessage - if condition combines 5 boolean operators (impact -0.51)
-- [ ] [high] onLineMessage - if condition combines 5 boolean operators (impact -0.51)
-- [ ] [high] onLineMessage - onLineMessage has cyclomatic complexity 16 (impact -0.31)
-- [ ] [high] remember - remember has cyclomatic complexity 18 (impact -0.31)
-- [ ] [high] remember - ternary condition combines 5 boolean operators (impact -0.51)
-- [ ] [medium] lineFrom - if condition combines 4 boolean operators (impact -0.30)
-- [ ] [medium] onCapsMessage - onCapsMessage has cyclomatic complexity 11 (impact -0.18)
-- [ ] [medium] onKeyMessage - onKeyMessage has cyclomatic complexity 13 (impact -0.18)
-- [ ] [medium] sealOutgoing - sealOutgoing has cyclomatic complexity 14 (impact -0.18)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] lineFrom - ternary condition combines 3 boolean operators (impact -0.13)
-- [ ] [low] remember - long parameter list: remember takes 6 parameters, 3 of 5 typed ones scalars or strings (impact -0.03)
-- [ ] [low] remember - remember has 3 nested blocks at the same level (bumpy road) (impact -0.05)
+Erledigt 2026-10-20: `repowise health --file` auf `mediaFrameWorker.ts`, `frameWorkerLine.ts` und `frameWorkerPort.ts` nennt keinen Fund mehr. Verhalten unverändert, 27 Vitest-Tests grün.
+
+- [x] [high] lineFrom - lineFrom has cyclomatic complexity 18 (impact -0.31)
+- [x] [high] onCapsMessage - if condition combines 5 boolean operators (impact -0.51)
+- [x] [high] onKeyMessage - if condition combines 5 boolean operators (impact -0.51)
+- [x] [high] onLineMessage - if condition combines 5 boolean operators (impact -0.51)
+- [x] [high] onLineMessage - onLineMessage has cyclomatic complexity 16 (impact -0.31)
+- [x] [high] remember - remember has cyclomatic complexity 18 (impact -0.31)
+- [x] [high] remember - ternary condition combines 5 boolean operators (impact -0.51)
+- [x] [medium] lineFrom - if condition combines 4 boolean operators (impact -0.30)
+- [x] [medium] onCapsMessage - onCapsMessage has cyclomatic complexity 11 (impact -0.18)
+- [x] [medium] onKeyMessage - onKeyMessage has cyclomatic complexity 13 (impact -0.18)
+- [x] [medium] sealOutgoing - sealOutgoing has cyclomatic complexity 14 (impact -0.18)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] lineFrom - ternary condition combines 3 boolean operators (impact -0.13)
+- [x] [low] remember - long parameter list: remember takes 6 parameters, 3 of 5 typed ones scalars or strings (impact -0.03)
+- [x] [low] remember - remember has 3 nested blocks at the same level (bumpy road) (impact -0.05)
 
 ### `web/src/lib/media/guard.ts` — 7 Funde, Abzug 4.06.
 
