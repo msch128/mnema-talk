@@ -113,21 +113,12 @@ func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int
 	}
 	total := 0
 	for {
-		ids, keys, err := prunable(ctx, p, days)
+		deleted, hasMore, err := pruneNextBatch(ctx, p, store, days)
+		total += deleted
 		if err != nil {
 			return total, err
 		}
-		if len(keys) == 0 {
-			break
-		}
-		if err := store.DeleteBatch(ctx, keys); err != nil {
-			return total, fmt.Errorf("delete objects: %w", err)
-		}
-		if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
-			return total, fmt.Errorf("mark pruned media: %w", err)
-		}
-		total += len(keys)
-		if len(keys) < pruneBatch {
+		if !hasMore {
 			break
 		}
 	}
@@ -135,6 +126,20 @@ func PruneOlderThan(ctx context.Context, p *db.Pool, store Store, days int) (int
 		slog.Info("media pruned", "count", total, "older_than_days", days)
 	}
 	return total, nil
+}
+
+func pruneNextBatch(ctx context.Context, p *db.Pool, store Store, days int) (int, bool, error) {
+	ids, keys, err := prunable(ctx, p, days)
+	if err != nil || len(keys) == 0 {
+		return 0, false, err
+	}
+	if err := store.DeleteBatch(ctx, keys); err != nil {
+		return 0, false, fmt.Errorf("delete objects: %w", err)
+	}
+	if _, err := p.Exec(ctx, `UPDATE media SET is_deleted = TRUE WHERE id = ANY($1)`, ids); err != nil {
+		return 0, false, fmt.Errorf("mark pruned media: %w", err)
+	}
+	return len(keys), len(keys) >= pruneBatch, nil
 }
 
 // prunable returns the next batch of attachments older than days.

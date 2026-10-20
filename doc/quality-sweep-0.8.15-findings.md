@@ -1310,10 +1310,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/media/admin.go` — 4 Funde, Abzug 1.00.
 
-- [ ] [medium] PruneOlderThan - PruneOlderThan has cyclomatic complexity 9 (impact -0.85)
-- [ ] [medium] PruneOlderThan - a database call is reached once per loop iteration through PruneOlderThan -> prunable (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] PruneOlderThan - a database call runs once per loop iteration (N+1 query) (impact -0.00)
-- [ ] [low] - 8% of file duplicated in other files; worst clone shares 16 lines with internal/chat/channel_layout.go (impact -0.15)
+- [x] [medium] PruneOlderThan - PruneOlderThan has cyclomatic complexity 9 (impact -0.85)
+- [x] [medium] PruneOlderThan - a database call is reached once per loop iteration through PruneOlderThan -> prunable (cross-function N+1 query) (impact -0.00)
+- [x] [medium] PruneOlderThan - a database call runs once per loop iteration (N+1 query) (impact -0.00)
+- [x] [low] - 8% of file duplicated in other files; worst clone shares 16 lines with internal/chat/channel_layout.go (impact -0.15)
 
 ### `internal/server/system.go` — 2 Funde, Abzug 1.00.
 
