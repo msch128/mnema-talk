@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.14](https://github.com/msch128/mnema-talk/compare/v0.8.13...v0.8.14) (2026-10-20)
+
+
+### Documentation
+
+* record the Windows WebView2 origin check ([2b61e27](https://github.com/msch128/mnema-talk/commit/2b61e273bb436a45ccddcde1302847cceb6d6a66))
+
 ## [0.8.13](https://github.com/msch128/mnema-talk/compare/v0.8.12...v0.8.13) (2026-10-20)
 
 
