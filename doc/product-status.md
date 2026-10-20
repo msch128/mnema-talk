@@ -63,9 +63,17 @@ the WebSocket commands and the gaming integration's session-bound Talk-state
 sync; local gaming surfaces hold their separate display/control permissions.
 Status: unit-tested and run on macOS during development; the bundle verifier
 has a high-water mark, a security floor that rises with `fix(security)`
-releases and a session cookie kept in the OS keychain; Windows/WebView2
-acceptance (custom-protocol mapping, media permission prompts, gaming surfaces,
-sealed media on real hardware) is outstanding, and the installer is unsigned.
+releases and a session cookie kept in the OS keychain. Windows CI on the
+desktop repository
+([run 39423960431](https://github.com/msch128/mnema-talk-desktop/actions/runs/39423960431))
+checks the current web-client host. WebView2 presents the custom protocol as
+`https://mnema.localhost/` for the selector, the instance window and the
+gaming surfaces. The instance window leaves the microphone on WebView2's own
+prompt; the check does not click it. The selector and the gaming surfaces are
+refused. The host passes a synthetic capture device, and each probe window
+has its own profile because a refusal is remembered for the origin. A human
+prompt, a physical device, sealed media and an Authenticode signature remain
+outstanding. The installer is unsigned.
 
 Voice in the desktop client uses the instance's browser path, so microphone,
 camera and screen payloads are sealed in WebView2 by the same code as in a
@@ -109,9 +117,13 @@ Topmost windows do not establish exclusive fullscreen or anti-cheat support.
 
 The remaining fixes and acceptance work follow:
 
-1. Client parity: Windows/WebView2 acceptance of the trusted bundle (custom
-   protocol mapping, media permission prompts, gaming surfaces) and a signed
-   installer. macOS and Linux clients are not started.
+1. Client parity: Windows CI checks the trusted bundle's custom-protocol
+   origin (`https://mnema.localhost/`), that the instance window leaves the
+   microphone on WebView2's own prompt, and that the selector and the gaming
+   surfaces refuse one. The check uses a synthetic capture device and does
+   not click the prompt. A human prompt, a physical microphone or camera,
+   display capture, sealed media on real hardware and a signed installer
+   remain outstanding. macOS and Linux clients are not started.
 2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium browsers, including calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
 3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds for 0.8 and 0.7.25 alike while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.
