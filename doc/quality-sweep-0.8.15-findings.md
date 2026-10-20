@@ -880,10 +880,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/native_admission.go` — 4 Funde, Abzug 1.75.
 
-- [ ] [medium] - 10% of file duplicated in other files; worst clone shares 12 lines with internal/nativepreview/native_preview.go (co-changed 2x) (impact -0.35)
-- [ ] [medium] nativeSocketHandler - nativeSocketHandler has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
-- [ ] [low] nativeSocketHandler - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] - 10% of file duplicated in other files; worst clone shares 12 lines with internal/nativepreview/native_preview.go (co-changed 2x) (impact -0.35)
+- [x] [medium] nativeSocketHandler - nativeSocketHandler has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [low] nativeSocketHandler - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/components/ContextMenu.vue` — 3 Funde, Abzug 1.73.
 
