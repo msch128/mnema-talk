@@ -1,0 +1,22 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1422,1426,1430,1614
+internal/perm/service.go
+  h_0ff4f4713441f4 142-146,164-184
+internal/perm/snapshot_load.go
+  h_0ff4f4713441f4 120-126,139-142
+internal/perm/store.go
+  h_0ff4f4713441f4 97,101-118
+internal/perm/store_assignments.go
+  h_0ff4f4713441f4 163,172-178
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aeeccf34731aacfd798ce70fcb5ad46ba333a00f",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
