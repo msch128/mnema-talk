@@ -1343,8 +1343,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/ws/native_protocol.go` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] handleNativeControl - handleNativeControl has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
+- [x] [medium] handleNativeControl - handleNativeControl has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
 ### `web/src/components/LegalModal.vue` — 2 Funde, Abzug 1.00.
 

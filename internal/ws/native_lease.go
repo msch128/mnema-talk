@@ -50,6 +50,12 @@ func (s *nativeSocketState) snapshot() (uint64, auth.NativeLease, time.Time) {
 	return s.generation, s.lease, minTime(s.lease.Deadline(), s.accessDeadline, s.familyDeadline)
 }
 
+func (s *nativeSocketState) currentGeneration() uint64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.generation
+}
+
 func minTime(first time.Time, others ...time.Time) time.Time {
 	for _, other := range others {
 		if other.Before(first) {
