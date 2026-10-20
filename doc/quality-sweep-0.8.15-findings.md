@@ -1353,8 +1353,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/senderTuning.ts` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] tuneSender - tuneSender has cyclomatic complexity 12 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [medium] tuneSender - tuneSender has cyclomatic complexity 12 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/i18n/index.ts` — 2 Funde, Abzug 1.00.
 

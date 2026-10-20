@@ -41,25 +41,38 @@ export async function ensureScreenAudioGuard(track: MediaStreamTrack | null | un
   if (ownAudioGuard(track) === 'none' && typeof track?.applyConstraints === 'function') {
     try {
       await track.applyConstraints({ ...(track.getConstraints?.() || {}), echoCancellation: true })
-    } catch { /* The selected capture may not support echo cancellation. */ }
+    } catch (error) {
+      /* The selected capture may not support echo cancellation. */
+      void error
+    }
   }
   return ownAudioGuard(track)
 }
 
-export async function tuneSender(sender: RTCRtpSender, { active, maxBitrate, maxFramerate, scaleResolutionDownBy, degradationPreference, priority, networkPriority }: SenderTuning = {}) {
+function applyEncodingTuning(encoding: RTCRtpEncodingParameters, tuning: SenderTuning): void {
+  if (tuning.active !== undefined) encoding.active = tuning.active
+  if (tuning.maxBitrate !== undefined) encoding.maxBitrate = tuning.maxBitrate
+  if (tuning.maxFramerate !== undefined) encoding.maxFramerate = tuning.maxFramerate
+  if (tuning.scaleResolutionDownBy !== undefined) encoding.scaleResolutionDownBy = tuning.scaleResolutionDownBy
+  if (tuning.priority) encoding.priority = tuning.priority
+  if (tuning.networkPriority) encoding.networkPriority = tuning.networkPriority
+}
+
+function prepareSenderParameters(sender: RTCRtpSender, tuning: SenderTuning): RTCRtpSendParameters | null {
+  const params = sender.getParameters?.()
+  if (!params) return null
+  if (!params.encodings?.length) params.encodings = [{}]
+  const encoding = params.encodings[0]
+  if (!encoding) return null
+  applyEncodingTuning(encoding, tuning)
+  if (tuning.degradationPreference) params.degradationPreference = tuning.degradationPreference
+  return params
+}
+
+export async function tuneSender(sender: RTCRtpSender, tuning: SenderTuning = {}) {
   try {
-    const params = sender.getParameters?.()
+    const params = prepareSenderParameters(sender, tuning)
     if (!params) return
-    if (!params.encodings?.length) params.encodings = [{}]
-    const encoding = params.encodings[0]
-    if (!encoding) return
-    if (active !== undefined) encoding.active = active
-    if (maxBitrate !== undefined) encoding.maxBitrate = maxBitrate
-    if (maxFramerate !== undefined) encoding.maxFramerate = maxFramerate
-    if (scaleResolutionDownBy !== undefined) encoding.scaleResolutionDownBy = scaleResolutionDownBy
-    if (degradationPreference) params.degradationPreference = degradationPreference
-    if (priority) encoding.priority = priority
-    if (networkPriority) encoding.networkPriority = networkPriority
     await sender.setParameters(params)
   } catch (err) {
     // Not every browser accepts every field; the defaults still work.
