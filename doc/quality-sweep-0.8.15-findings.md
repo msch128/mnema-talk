@@ -875,8 +875,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/media/groupVet.ts` — 2 Funde, Abzug 1.78.
 
-- [ ] [medium] scanCommitProposals - if condition combines 4 boolean operators (impact -0.93)
-- [ ] [medium] scanCommitProposals - scanCommitProposals has cyclomatic complexity 10 (impact -0.85)
+- [x] [medium] scanCommitProposals - if condition combines 4 boolean operators (impact -0.93)
+- [x] [medium] scanCommitProposals - scanCommitProposals has cyclomatic complexity 10 (impact -0.85)
 
 ### `internal/ws/native_admission.go` — 4 Funde, Abzug 1.75.
 

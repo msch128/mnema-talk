@@ -13,6 +13,39 @@ export interface CommitEffects {
   removedAt: Set<number>
 }
 
+function isValidAddIdentity(id: string | null, from: string, added: ReadonlySet<string>, roomOrLast: ReadonlySet<string>): id is string {
+  if (id === null || id === from) return false
+  if (added.has(id) || !roomOrLast.has(id)) return false
+  return true
+}
+
+function processAddProposal(
+  addProposal: Extract<CommitProposals[number]['proposal'], { proposalType: 'add' }>['add'],
+  from: string,
+  roomOrLast: ReadonlySet<string>,
+  wasRelayed: (id: string, keyPackage: KeyPackage) => boolean,
+  added: Set<string>
+): boolean {
+  const id = credentialIdentity(addProposal.keyPackage.leafNode.credential)
+  if (!isValidAddIdentity(id, from, added, roomOrLast)) return false
+  if (!wasRelayed(id, addProposal.keyPackage)) return false
+  added.add(id)
+  return true
+}
+
+function processRemoveProposal(
+  removeProposal: Extract<CommitProposals[number]['proposal'], { proposalType: 'remove' }>['remove'],
+  identityOf: ReadonlyMap<number, string>,
+  removed: Set<string>,
+  removedAt: Set<number>
+): boolean {
+  const id = identityOf.get(removeProposal.removed)
+  if (id === undefined) return false
+  removed.add(id)
+  removedAt.add(removeProposal.removed)
+  return true
+}
+
 /**
  * Reads a commit's proposals, which may only remove a known leaf or add an
  * identity in `roomOrLast` (not the sender, not twice) whose key package the
@@ -31,14 +64,9 @@ export function scanCommitProposals(
   const removedAt = new Set<number>()
   for (const { proposal } of proposals) {
     if (proposal.proposalType === 'remove') {
-      const id = identityOf.get(proposal.remove.removed)
-      if (id === undefined) return null
-      removed.add(id)
-      removedAt.add(proposal.remove.removed)
+      if (!processRemoveProposal(proposal.remove, identityOf, removed, removedAt)) return null
     } else if (proposal.proposalType === 'add') {
-      const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
-      if (id === null || id === from || added.has(id) || !roomOrLast.has(id) || !wasRelayed(id, proposal.add.keyPackage)) return null
-      added.add(id)
+      if (!processAddProposal(proposal.add, from, roomOrLast, wasRelayed, added)) return null
     } else {
       return null
     }
