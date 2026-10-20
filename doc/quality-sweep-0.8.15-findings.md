@@ -1063,8 +1063,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/channelDrop.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] headerPlacement - headerPlacement has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] resolveCategoryDrop - resolveCategoryDrop has cyclomatic complexity 13 (impact -0.75)
+- [x] [medium] headerPlacement - headerPlacement has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] resolveCategoryDrop - resolveCategoryDrop has cyclomatic complexity 13 (impact -0.75)
 
 ### `web/src/lib/channelLayout.ts` — 2 Funde, Abzug 1.50.
 
