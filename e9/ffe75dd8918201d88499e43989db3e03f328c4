@@ -1,0 +1,14 @@
+internal/sfu/rtpkey.go
+  h_0ff4f4713441f4 77-79,84,86-87,105-122,126,130-131,133,135-151,153-154,159-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9ffe75dd8918201d88499e43989db3e03f328c4",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
