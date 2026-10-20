@@ -1098,7 +1098,7 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/lib/native/trustedDesktop.ts` — 1 Funde, Abzug 1.45.
 
-- [ ] [high] trustedApp - trustedApp has cyclomatic complexity 17 (impact -1.45)
+- [x] [high] trustedApp - trustedApp has cyclomatic complexity 17 (impact -1.45)
 
 ### `web/src/lib/noiseSuppressor.ts` — 1 Funde, Abzug 1.45.
 
