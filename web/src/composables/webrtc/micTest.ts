@@ -34,7 +34,7 @@ async function filteredTestSource(cx: Cx, ctx: AudioContext, input: AudioNode, c
   const node = await createNoiseSuppressorNode(ctx, model, { signal: controller.signal, onFailure: () => cx.hooks.filterFailed(ctx, model, true) })
   if (stale()) {
     // stopMicTest already closed the context and stopped the stream.
-    try { node?.destroy?.() } catch { /* ignore */ }
+    try { node?.destroy?.() } catch (err) { console.debug?.('Filter destroy error:', err) }
     return null
   }
   if (!node) {
@@ -136,33 +136,36 @@ export async function startMicTest(cx: Cx) {
   }
 }
 
-async function startMicLoopback(cx: Cx) {
+function startCallLoopback(cx: Cx): boolean {
   const { voice, chat, st } = cx
-  disconnectLoopback(cx)
-  voice.isMicTesting = true
+  if (!st.localAudioStream.value || !st.audioContext || !st.callBiquad) return false
+  connectLoopback(cx, st.audioContext, st.callBiquad)
+  const track = st.localAudioStream.value.getAudioTracks()[0]
+  if (track) track.enabled = false
+  chat.sendWSEvent('voice_speaking', { active: false })
+  updateRemoteVolume(voice)
+  return !!st.loopbackGain
+}
 
-  // If in a voice call:
-  if (st.localAudioStream.value && st.audioContext && st.callBiquad) {
-    connectLoopback(cx, st.audioContext, st.callBiquad)
-    const track = st.localAudioStream.value.getAudioTracks()[0]
-    if (track) track.enabled = false
-    chat.sendWSEvent('voice_speaking', { active: false })
-    updateRemoteVolume(voice)
-    return !!st.loopbackGain
-  }
-
-  // Not in a voice call: the test builds the loopback itself once it runs.
+async function startStandaloneLoopback(cx: Cx): Promise<boolean> {
+  const { voice, st } = cx
   if (st.testAudioContext && st.testBiquad) {
     connectLoopback(cx, st.testAudioContext, st.testBiquad)
     return !!st.loopbackGain
-  } else {
-    const starting = startMicTest(cx)
-    const gen = st.micTestGen
-    const started = await starting
-    if (gen !== st.micTestGen) return false
-    if (!started || !st.loopbackGain) voice.isMicTesting = false
-    return started && !!st.loopbackGain
   }
+  const starting = startMicTest(cx)
+  const gen = st.micTestGen
+  const started = await starting
+  if (gen !== st.micTestGen) return false
+  if (!started || !st.loopbackGain) voice.isMicTesting = false
+  return started && !!st.loopbackGain
+}
+
+async function startMicLoopback(cx: Cx): Promise<boolean> {
+  disconnectLoopback(cx)
+  cx.voice.isMicTesting = true
+  if (startCallLoopback(cx)) return true
+  return startStandaloneLoopback(cx)
 }
 
 function stopMicLoopback(cx: Cx) {
@@ -182,8 +185,7 @@ export function toggleMicTest(cx: Cx) {
   return startMicLoopback(cx)
 }
 
-// Ends the standalone test pipeline (and any start still awaiting the mic).
-function teardownTestPipeline(cx: Cx) {
+function teardownTestControllers(cx: Cx) {
   const { st } = cx
   st.micTestGen++
   st.micTestController?.abort()
@@ -193,11 +195,22 @@ function teardownTestPipeline(cx: Cx) {
     st.testSpeakingInterval = null
   }
   if (st.loopbackCtx && st.loopbackCtx === st.testAudioContext) disconnectLoopback(cx)
+  if (st.testOwnsPtt) {
+    st.testOwnsPtt = false
+    // A call that started meanwhile keeps its own listeners.
+    if (!st.localAudioStream.value) st.pushToTalk.detach()
+  }
+}
+
+function teardownTestAudio(cx: Cx) {
+  const { st } = cx
   if (st.testSuppressor) {
     try {
       st.testSuppressor.disconnect?.()
       st.testSuppressor.destroy?.()
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.debug?.('Test suppressor disconnect error:', err)
+    }
     st.testSuppressor = null
   }
   st.testBiquad = null
@@ -210,11 +223,12 @@ function teardownTestPipeline(cx: Cx) {
     st.testAudioContext.close().catch(() => {})
     st.testAudioContext = null
   }
-  if (st.testOwnsPtt) {
-    st.testOwnsPtt = false
-    // A call that started meanwhile keeps its own listeners.
-    if (!st.localAudioStream.value) st.pushToTalk.detach()
-  }
+}
+
+// Ends the standalone test pipeline (and any start still awaiting the mic).
+function teardownTestPipeline(cx: Cx) {
+  teardownTestControllers(cx)
+  teardownTestAudio(cx)
 }
 
 export function stopMicTest(cx: Cx) {

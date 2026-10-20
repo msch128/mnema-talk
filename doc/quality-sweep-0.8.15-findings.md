@@ -819,10 +819,10 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/micTest.ts` — 4 Funde, Abzug 1.80.
 
-- [ ] [medium] startMicLoopback - startMicLoopback has cyclomatic complexity 11 (impact -0.75)
-- [ ] [medium] teardownTestPipeline - teardownTestPipeline has cyclomatic complexity 10 (impact -0.75)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [medium] startMicLoopback - startMicLoopback has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] teardownTestPipeline - teardownTestPipeline has cyclomatic complexity 10 (impact -0.75)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `web/src/lib/soundEffects.ts` — 4 Funde, Abzug 1.80.
 
