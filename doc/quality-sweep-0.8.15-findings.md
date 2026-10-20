@@ -833,8 +833,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `internal/sfu/layer_wanted.go` — 2 Funde, Abzug 1.79.
 
-- [ ] [medium] refreshWanted - refreshWanted has cyclomatic complexity 12 (impact -0.85)
-- [ ] [medium] refreshWanted - refreshWanted nests 4 levels deep (impact -0.94)
+- [x] [medium] refreshWanted - refreshWanted has cyclomatic complexity 12 (impact -0.85)
+- [x] [medium] refreshWanted - refreshWanted nests 4 levels deep (impact -0.94)
 
 ### `internal/tools/openapifix/main.go` — 2 Funde, Abzug 1.79.
 
