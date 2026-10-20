@@ -1,0 +1,19 @@
+web/src/lib/media/frameWorkerPort.ts
+  s_549deb206d8bb6::t_3c2abafd83fa35 1-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "870003aeec8c02d98672e305efe8039703d4502a",
+  "prompts": {},
+  "sessions": {
+    "s_549deb206d8bb6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "01a159a6-74d4-7fe3-bbbb-74f40ccb4eb6",
+        "model": "unknown"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
