@@ -581,12 +581,14 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/composables/webrtc/remoteAudio.ts` — 6 Funde, Abzug 2.35.
 
-- [ ] [medium] attachRemoteAudio - attachRemoteAudio has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] createBoost - createBoost has cyclomatic complexity 10 (impact -0.75)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] attachRemoteAudio - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Dieselbe Wiedergabe, dieselbe Verstärkung und dasselbe Entfernen bleiben.
+
+- [x] [medium] attachRemoteAudio - attachRemoteAudio has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] createBoost - createBoost has cyclomatic complexity 10 (impact -0.75)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] attachRemoteAudio - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/rtcStats.ts` — 5 Funde, Abzug 2.30.
 

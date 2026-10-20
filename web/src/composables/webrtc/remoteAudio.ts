@@ -17,6 +17,9 @@ let playbackContext: AudioContext | null = null
 // The voice store, for the output device of a lazily created playback context.
 let outputDeviceStore: VoiceStore | null = null
 
+// Autoplay, a closed device, or a detached element: the next gesture retries.
+function ignorePlaybackError(): void { /* playback retry is the caller's next gesture */ }
+
 // Linear gain for one remote audio element: master volume x that user's
 // voice volume, or x the volume of their stream for a screen share's sound.
 function remoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
@@ -32,19 +35,31 @@ function remoteGain(voiceStore: VoiceStore, el: RemoteAudioElement) {
 // Routes the element's stream through a GainNode (the element stays attached
 // but muted so the stream keeps flowing). Only done once a gain above 1 is
 // asked for; until then plain element.volume does the job.
+function audioContextCtor(): typeof AudioContext | undefined {
+  if (typeof window === 'undefined') return undefined
+  if (window.AudioContext) return window.AudioContext
+  return window.webkitAudioContext
+}
+
+function openPlayback(AudioCtx: typeof AudioContext): AudioContext {
+  if (!playbackContext || playbackContext.state === 'closed') {
+    playbackContext = new AudioCtx()
+    if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
+  }
+  if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => { ignorePlaybackError() })
+  return playbackContext
+}
+
 function createBoost(el: RemoteAudioElement) {
-  const AudioCtx = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext)
-  if (!AudioCtx || !el.srcObject) return null
+  const AudioCtx = audioContextCtor()
+  if (!AudioCtx) return null
+  if (!el.srcObject) return null
   try {
-    if (!playbackContext || playbackContext.state === 'closed') {
-      playbackContext = new AudioCtx()
-      if (outputDeviceStore) applyOutput(outputDeviceStore, playbackContext)
-    }
-    if (playbackContext.state === 'suspended') playbackContext.resume().catch(() => {})
-    const source = playbackContext.createMediaStreamSource(el.srcObject)
-    const gain = playbackContext.createGain()
+    const ctx = openPlayback(AudioCtx)
+    const source = ctx.createMediaStreamSource(el.srcObject)
+    const gain = ctx.createGain()
     source.connect(gain)
-    gain.connect(playbackContext.destination)
+    gain.connect(ctx.destination)
     el.muted = true
     const boost = { source, gain }
     boosts.set(el, boost)
@@ -88,7 +103,9 @@ function releaseBoost(el: RemoteAudioElement) {
   try {
     boost.source.disconnect()
     boost.gain.disconnect()
-  } catch { /* already disconnected */ }
+  } catch {
+    ignorePlaybackError()
+  }
   boosts.delete(el)
 }
 
@@ -98,12 +115,12 @@ export function updateRemoteVolume(voiceStore: VoiceStore) {
 
 /** Plays what the browser paused while the page was hidden. */
 export function playPausedRemoteAudio() {
-  remoteAudioElements.forEach(el => { if (el.paused) el.play().catch(() => {}) })
+  remoteAudioElements.forEach(el => { if (el.paused) el.play().catch(() => { ignorePlaybackError() }) })
 }
 
 /** After a click: autoplay was blocked once, so start everything again and note what stays blocked. */
 export function resumeRemoteAudio(voiceStore: VoiceStore) {
-  playbackContext?.resume?.().catch(() => {})
+  playbackContext?.resume?.().catch(() => { ignorePlaybackError() })
   remoteAudioElements.forEach(el => el.play().catch(() => { voiceStore.audioBlocked = true }))
 }
 
@@ -116,12 +133,12 @@ export function releaseRemoteAudio() {
       el.srcObject = null
       el.remove()
     } catch {
-      // element already detached / disposed
+      ignorePlaybackError()
     }
   })
   remoteAudioElements.clear()
   if (playbackContext) {
-    playbackContext.close().catch(() => {})
+    playbackContext.close().catch(() => { ignorePlaybackError() })
     playbackContext = null
   }
 }
@@ -135,7 +152,9 @@ function removeRemoteAudio(trackId: string) {
     el.pause?.()
     el.srcObject = null
     el.remove()
-  } catch { /* detached */ }
+  } catch {
+    ignorePlaybackError()
+  }
 }
 
 // Who an audio element plays (data-user-id) and whether it is the sound of
@@ -153,26 +172,46 @@ function tagRemoteAudio(el: RemoteAudioElement, streamId: string) {
 // Plays one remote audio track. The stream ID names the speaking user (or,
 // prefixed, the user whose screen share it is); a repeated ontrack for the
 // same track (transceiver reused for someone else) only retags its element.
+function streamIdOf(stream: MediaStream | undefined): string {
+  if (!stream?.id) return ''
+  return stream.id
+}
+
+function retagPlaying(voiceStore: VoiceStore, el: RemoteAudioElement, streamId: string) {
+  tagRemoteAudio(el, streamId)
+  applyRemoteGain(voiceStore, el)
+  if (!el.paused) return
+  el.play?.().catch(() => { ignorePlaybackError() })
+}
+
+function trackStillHere(el: RemoteAudioElement, streamId: string, track: MediaStreamTrack): boolean {
+  const tagged = el.dataset.streamId || ''
+  if (tagged !== streamId) return false
+  return el.srcObject?.getAudioTracks()[0] === track
+}
+
+function dropRemovedTrack(track: MediaStreamTrack, streamId: string, event: MediaStreamTrackEvent) {
+  if (event.track !== track) return
+  const el = remoteAudioElements.get(track.id)
+  if (!el) return
+  if (!trackStillHere(el, streamId, track)) return
+  removeRemoteAudio(track.id)
+}
+
+// When the SFU stops forwarding, the browser removes the track from its
+// stream instead of ending it. Only drop the element while it still
+// belongs to this stream: a reused track may already play for someone else.
+function watchRemoval(stream: MediaStream | undefined, track: MediaStreamTrack, streamId: string) {
+  stream?.addEventListener?.('removetrack', (event) => { dropRemovedTrack(track, streamId, event) })
+}
+
 export function attachRemoteAudio(voiceStore: VoiceStore, track: MediaStreamTrack, stream: MediaStream | undefined) {
-  const streamId = stream?.id || ''
+  const streamId = streamIdOf(stream)
   removeSupersededAudio(track, streamId)
   const existing = remoteAudioElements.get(track.id)
-  if (existing) {
-    tagRemoteAudio(existing, streamId)
-    applyRemoteGain(voiceStore, existing)
-    if (existing.paused) existing.play?.().catch(() => {})
-  } else {
-    startRemoteAudio(voiceStore, track, streamId)
-  }
-
-  // When the SFU stops forwarding, the browser removes the track from its
-  // stream instead of ending it. Only drop the element while it still
-  // belongs to this stream: a reused track may already play for someone else.
-  stream?.addEventListener?.('removetrack', (e) => {
-    if (e.track !== track) return
-    const el = remoteAudioElements.get(track.id)
-    if (el && (el.dataset.streamId || '') === streamId && el.srcObject?.getAudioTracks()[0] === track) removeRemoteAudio(track.id)
-  })
+  if (existing) retagPlaying(voiceStore, existing, streamId)
+  else startRemoteAudio(voiceStore, track, streamId)
+  watchRemoval(stream, track, streamId)
 }
 
 // A source can return on a different receiver track after renegotiation.
