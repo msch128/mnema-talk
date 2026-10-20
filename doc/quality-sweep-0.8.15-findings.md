@@ -408,12 +408,14 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `internal/auth/native_refresh.go` — 6 Funde, Abzug 3.50.
 
-- [ ] [high] revokeAuthenticatedFamily - if condition combines 5 boolean operators (impact -1.60)
-- [ ] [medium] cleanupNativeBatch - a database call is reached once per loop iteration through cleanupNativeBatch -> deleteFamilyIfDead (cross-function N+1 query) (impact -0.00)
-- [ ] [medium] deleteFamilyIfDead - deleteFamilyIfDead has cyclomatic complexity 11 (impact -0.50)
-- [ ] [medium] revokeAuthenticatedFamily - revokeAuthenticatedFamily has cyclomatic complexity 10 (impact -0.50)
-- [ ] [medium] rotate - rotate has cyclomatic complexity 12 (impact -0.50)
-- [ ] [low] deleteFamilyIfDead - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: Komplexität ist weg. `repowise health --file --recompute` nennt nur noch die Löschschleife. Die bleibt: jede Familie wird user-first mit SKIP LOCKED und eigener Uhr geprüft. Eine Mengen-Löschung würde diese Reihenfolge ändern.
+
+- [x] [high] revokeAuthenticatedFamily - if condition combines 5 boolean operators (impact -1.60)
+- [ ] [medium] cleanupNativeBatch - a database call is reached once per loop iteration through cleanupNativeBatch -> deleteFamilyIfDead (cross-function N+1 query) (impact -0.00). Angenommen: die Fault-Tests pinnen Sperre, Uhr und Löschung pro Familie.
+- [x] [medium] deleteFamilyIfDead - deleteFamilyIfDead has cyclomatic complexity 11 (impact -0.50)
+- [x] [medium] revokeAuthenticatedFamily - revokeAuthenticatedFamily has cyclomatic complexity 10 (impact -0.50)
+- [x] [medium] rotate - rotate has cyclomatic complexity 12 (impact -0.50)
+- [x] [low] deleteFamilyIfDead - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/auth/native_session.go` — 3 Funde, Abzug 3.50.
 
