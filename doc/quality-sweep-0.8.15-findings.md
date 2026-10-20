@@ -1053,8 +1053,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/composables/webrtc/audioSettings.ts` — 2 Funde, Abzug 1.50.
 
-- [ ] [medium] recoverFilter - recoverFilter has cyclomatic complexity 10 (impact -0.75)
-- [ ] [medium] swapMicrophone - swapMicrophone has cyclomatic complexity 11 (impact -0.75)
+- [x] [medium] recoverFilter - recoverFilter has cyclomatic complexity 10 (impact -0.75)
+- [x] [medium] swapMicrophone - swapMicrophone has cyclomatic complexity 11 (impact -0.75)
 
 ### `web/src/composables/webrtc/streamDiag.ts` — 2 Funde, Abzug 1.50.
 
