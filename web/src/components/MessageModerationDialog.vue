@@ -35,21 +35,50 @@ function close(done: boolean) {
   pending.value?.resolve(done)
 }
 
+interface BulkDeleteResponse {
+  deleted: number
+}
+
+function parseBulkDeletedCount(result: unknown): number {
+  if (typeof result !== 'object' || result === null) return 0
+  if (!('deleted' in result)) return 0
+  const deleted = (result as BulkDeleteResponse).deleted
+  return typeof deleted === 'number' ? deleted : 0
+}
+
+async function executeSingleDelete(
+  chat: ReturnType<typeof useChatStore>,
+  req: { channelId: string; messageId: string },
+  reasonText: string
+) {
+  await chat.deleteMessage(req.channelId, req.messageId, reasonText)
+}
+
+async function executeBulkDelete(
+  toasts: ReturnType<typeof useToastStore>,
+  req: { channelId: string; userId: string; name: string },
+  count: number,
+  reasonText: string
+) {
+  const result = await api(`/api/channels/${req.channelId}/messages/bulk-delete`, {
+    method: 'POST',
+    json: { user_id: req.userId, count, reason: reasonText }
+  })
+  const deleted = parseBulkDeletedCount(result)
+  toasts.success(t('moderation.bulkDeleted', { count: deleted, name: req.name }))
+}
+
 async function submit() {
   const req = request.value
   if (!req || !valid.value || saving.value) return
   error.value = ''
   saving.value = true
   try {
+    const reasonText = reason.value.trim()
     if (req.kind === 'delete') {
-      await chat.deleteMessage(req.channelId, req.messageId, reason.value.trim())
+      await executeSingleDelete(chat, req, reasonText)
     } else {
-      const result = await api(`/api/channels/${req.channelId}/messages/bulk-delete`, {
-        method: 'POST',
-        json: { user_id: req.userId, count: bulkCount.value, reason: reason.value.trim() }
-      })
-      const deleted = typeof result === 'object' && result !== null && 'deleted' in result && typeof result.deleted === 'number' ? result.deleted : 0
-      toasts.success(t('moderation.bulkDeleted', { count: deleted, name: req.name }))
+      await executeBulkDelete(toasts, req, bulkCount.value, reasonText)
     }
     close(true)
   } catch (e) {

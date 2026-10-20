@@ -958,8 +958,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 ### `web/src/components/MessageModerationDialog.vue` — 3 Funde, Abzug 1.60.
 
 - [ ] [medium] - 27% of file duplicated in other files; worst clone shares 14 lines with web/src/components/ModerationDialog.vue (impact -0.35)
-- [ ] [medium] submit - submit has cyclomatic complexity 10 (impact -0.85)
-- [ ] [low] submit - ternary condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] submit - submit has cyclomatic complexity 10 (impact -0.85)
+- [x] [low] submit - ternary condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/composables/sortableDragParts.ts` — 1 Funde, Abzug 1.60.
 
