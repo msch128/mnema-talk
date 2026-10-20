@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 935-937
+web/src/composables/webrtc/peer.ts
+  h_0ff4f4713441f4 19,32-64,70,73-76,80,84-85,164-165,186,205-289,292,294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e5f9c9fa7ae99f46b5aa48a0016cf43d146f4e64",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
