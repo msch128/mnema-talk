@@ -1358,8 +1358,8 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 
 ### `web/src/i18n/index.ts` — 2 Funde, Abzug 1.00.
 
-- [ ] [medium] flattenKeys - flattenKeys has cyclomatic complexity 9 (impact -0.85)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [medium] flattenKeys - flattenKeys has cyclomatic complexity 9 (impact -0.85)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
 
 ### `internal/config/config_net.go` — 3 Funde, Abzug 0.95.
 
