@@ -219,3 +219,42 @@ func TestReceiverReportsOfARealViewerMoveItDown(t *testing.T) {
 		}
 	}
 }
+
+// One viewer's loss moves only that viewer. The other stays on the high layer
+// and keeps receiving it. Voice does not go through this path.
+func TestOneViewersTroubleLeavesTheOtherOnTheHighLayer(t *testing.T) {
+	clock := useFakeClock(t)
+	rig := newLayerRig(t, "video/VP8", 3)
+	rig.group.declared.Store(3)
+	troubled, _ := rig.viewer(-1)
+	steady, steadyOut := rig.viewer(-1)
+	rig.pkt(0, 100, 1000, vp8Payload(true, true, 10, true, 1, 'a'))
+	if troubled.state().Layer != 0 || steady.state().Layer != 0 {
+		t.Fatalf("start: troubled %+v steady %+v", troubled.state(), steady.state())
+	}
+	steadyOut.take()
+
+	clock.advance(10 * time.Second)
+	rig.asked(1)
+	troubled.observeReport(0.5, 0)
+	if got := troubled.wantA.Load(); got != 1 {
+		t.Fatalf("troubled viewer wants layer %d", got)
+	}
+	if steady.wantA.Load() != 0 || steady.state().Layer != 0 {
+		t.Fatalf("steady viewer moved: %+v want %d", steady.state(), steady.wantA.Load())
+	}
+
+	rig.pkt(1, 500, 5, vp8Payload(true, true, 50, true, 1, 'b'))
+	if st := troubled.state(); st.Layer != 1 {
+		t.Fatalf("troubled viewer after the move: %+v", st)
+	}
+	steadyOut.take()
+	rig.pkt(0, 101, 2000, vp8Payload(true, false, 11, true, 1, 'a'))
+	got := steadyOut.take()
+	if len(got) != 1 || got[0].SequenceNumber != 101 {
+		t.Fatalf("steady viewer high layer: %v", seqs(got))
+	}
+	if steady.state().Layer != 0 {
+		t.Fatalf("steady viewer left the high layer: %+v", steady.state())
+	}
+}
