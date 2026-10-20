@@ -731,11 +731,11 @@ Erledigt 2026-10-20: botCreateMessage (CCN 14 -> 7) und botMentionPolicy (Nestin
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 - [x] [low] - error value is checked then ignored, or discarded via the blank identifier (impact -0.15)
 
-### `internal/perm/store_roles.go` — 3 Funde, Abzug 1.90.
+### `internal/perm/store_roles.go` — 3 Funde, Abzug 1.90. (Repowise: max CCN 8, Nest 2)
 
-- [ ] [medium] applyRoleAppearance - applyRoleAppearance has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] updateRole - updateRole has cyclomatic complexity 11 (impact -0.75)
-- [ ] [low] checkRoleEditable - if condition combines 3 boolean operators (impact -0.40)
+- [x] [medium] applyRoleAppearance - applyRoleAppearance has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] updateRole - updateRole has cyclomatic complexity 11 (impact -0.75)
+- [x] [low] checkRoleEditable - if condition combines 3 boolean operators (impact -0.40)
 
 ### `internal/sfu/room_tracks.go` — 4 Funde, Abzug 1.90.
 
