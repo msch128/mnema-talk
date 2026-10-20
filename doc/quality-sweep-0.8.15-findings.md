@@ -325,14 +325,16 @@ Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr
 
 ### `web/src/lib/crypto/stateStore.ts` — 8 Funde, Abzug 3.94.
 
-- [ ] [medium] transaction - transaction nests 4 levels deep (impact -0.94)
-- [ ] [medium] validateUsage - validateUsage has cyclomatic complexity 9 (impact -0.75)
-- [ ] [medium] validatedConfig - validatedConfig has cyclomatic complexity 10 (impact -0.75)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] - caught exception is swallowed without any handling (impact -0.15)
-- [ ] [low] revision - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] validateUsage - if condition combines 3 boolean operators (impact -0.40)
-- [ ] [low] validatedConfig - if condition combines 3 boolean operators (impact -0.40)
+Erledigt 2026-10-20: `repowise health --file --recompute` nennt keinen Fund mehr. Die Datei bleibt ein Modul für das Browser-Harness. 38 Tests grün.
+
+- [x] [medium] transaction - transaction nests 4 levels deep (impact -0.94)
+- [x] [medium] validateUsage - validateUsage has cyclomatic complexity 9 (impact -0.75)
+- [x] [medium] validatedConfig - validatedConfig has cyclomatic complexity 10 (impact -0.75)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] - caught exception is swallowed without any handling (impact -0.15)
+- [x] [low] revision - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] validateUsage - if condition combines 3 boolean operators (impact -0.40)
+- [x] [low] validatedConfig - if condition combines 3 boolean operators (impact -0.40)
 
 ### `web/src/lib/native/nativeTransport.ts` — 34 Funde, Abzug 3.93.
 
