@@ -1,0 +1,16 @@
+doc/quality-sweep-0.8.15-findings.md
+  h_0ff4f4713441f4 1123-1129
+internal/webbundle/cli_trust_sign.go
+  h_0ff4f4713441f4 52-53,55,57-60,63-64,71-73,75,81,84-103,111,117-120,167-168,173-174,211-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0dd9c6d60adf13b9763042f79ee78c4bfd63b4ab",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
