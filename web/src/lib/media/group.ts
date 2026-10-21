@@ -266,7 +266,7 @@ export class MediaGroup extends GroupSync {
       const empty = content.contentType === 'commit' && content.commit.proposals.length === 0
       const isCommitter = this.committer(this.listed()) === from
       const renews = processed.actionTaken === 'reject' || onlyRenewsLeaf(saved.state, processed.newState, treeMembers(saved.state).get(from) as number, this.vetted)
-      const wins = commitWinsConflict(processed.actionTaken === 'reject', renews, empty, isCommitter, from, saved.sender)
+      const wins = commitWinsConflict({ rejected: processed.actionTaken === 'reject', renews, empty, isCommitter }, from, saved.sender)
       if (!wins) {
         wipeConsumed(processed.consumed)
         if (processed.newState !== saved.state) this.wipeRejected(processed.newState)

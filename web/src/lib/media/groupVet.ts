@@ -78,9 +78,16 @@ export function illegalAdd(id: string, members: Map<string, number>, removed: Se
   return members.has(id) && !removed.has(id)
 }
 
-export function skipRemovalCheck(id: string, added: Set<string>, slept: boolean, userId: string, room: Set<string>): boolean {
-  if (added.has(id) || slept) return true
-  return id === userId || !room.has(id)
+export interface RemovalContext {
+  added: Set<string>
+  slept: boolean
+  userId: string
+  room: Set<string>
+}
+
+export function skipRemovalCheck(id: string, ctx: RemovalContext): boolean {
+  if (ctx.added.has(id) || ctx.slept) return true
+  return id === ctx.userId || !ctx.room.has(id)
 }
 
 export function prematureRemoval(now: number, lastAlive: number | undefined, absentMs: number, slack: number): boolean {
@@ -119,10 +126,17 @@ export function shouldIgnoreWelcome(hasPrevious: boolean, membersCount: number, 
   return membersCount > 1
 }
 
-export function commitWinsConflict(rejected: boolean, renews: boolean, empty: boolean, isCommitter: boolean, from: string, savedSender: string): boolean {
-  if (rejected || !renews) return false
-  if (!empty) return true
-  return isCommitter || from < savedSender
+export interface ConflictProposal {
+  rejected: boolean
+  renews: boolean
+  empty: boolean
+  isCommitter: boolean
+}
+
+export function commitWinsConflict(proposal: ConflictProposal, from: string, savedSender: string): boolean {
+  if (proposal.rejected || !proposal.renews) return false
+  if (!proposal.empty) return true
+  return proposal.isCommitter || from < savedSender
 }
 
 export function vetProposals(
@@ -150,8 +164,9 @@ export function vetProposals(
   for (const id of added) {
     if (illegalAdd(id, members, removed)) return null
   }
+  const removalCtx: RemovalContext = { added, slept, userId, room }
   for (const id of removed) {
-    if (skipRemovalCheck(id, added, slept, userId, room)) continue
+    if (skipRemovalCheck(id, removalCtx)) continue
     if (prematureRemoval(now, alive.get(id), timing.absentMs, slack)) return null
   }
   return removedAt

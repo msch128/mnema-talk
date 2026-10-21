@@ -123,6 +123,14 @@ function ignoreClosedPort(error: unknown) {
   void error
 }
 
+function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource): boolean {
+  if (!channelId || senderId === '') return false
+  if (direction === 'send') {
+    return senderId !== null && source !== undefined
+  }
+  return true
+}
+
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
@@ -143,7 +151,7 @@ export function createMediaGuard(): MediaGuard {
   }
 
   function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
-    if (!channelId || senderId === '' || (senderId === null && direction === 'send') || (direction === 'send' && source === undefined)) return false
+    if (!isValidArmTarget(direction, channelId, senderId, source)) return false
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()

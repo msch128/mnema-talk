@@ -157,28 +157,46 @@ export interface ApiClient {
   readonly onUnauthorized: (handler: UnauthorizedHandler) => () => boolean
 }
 
+function buildApiRequest(options: ApiOptions): ApiRequest {
+  const { method = 'GET', json, form, signal } = options
+  return {
+    method,
+    ...(json !== undefined ? { json } : form ? { form } : {}),
+    ...(signal !== undefined ? { signal } : {})
+  }
+}
+
+function handleUnauthorizedNotification(
+  path: string,
+  status: number,
+  error: ApiError,
+  shouldNotify: (() => boolean) | undefined,
+  currentHandlers: Set<{ readonly handler: UnauthorizedHandler }>,
+  targetHandlers: { readonly handler: UnauthorizedHandler }[]
+) {
+  if (status !== 401 || path === '/api/auth/login') return
+  if (shouldNotify && !shouldNotify()) return
+  for (const subscription of targetHandlers) {
+    if (currentHandlers.has(subscription)) {
+      subscription.handler(error)
+    }
+  }
+}
+
 /** Construct once for a native session owner. Transport is immutable and every
  * client owns its listeners; choosing a profile never replaces global fetch. */
 export function createApiClient(transport: ApiTransport): ApiClient {
   const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
   async function request<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
-    const { method = 'GET', json, form, signal, decode, shouldNotifyUnauthorized } = options
+    const { decode, shouldNotifyUnauthorized } = options
     const requestUnauthorizedHandlers = [...unauthorizedHandlers]
-    const operation: ApiRequest = {
-      method,
-      ...(json !== undefined ? { json } : form ? { form } : {}),
-      ...(signal !== undefined ? { signal } : {})
-    }
+    const operation = buildApiRequest(options)
     const response = await sendRequest(transport, path, operation)
     if (response.status === 204) return decode ? decode(null) : null
     const body = response.body
     if (response.status < 200 || response.status >= 300) {
       const error = serverFailure(response.status, body)
-      if (response.status === 401 && path !== '/api/auth/login' && (shouldNotifyUnauthorized?.() ?? true)) {
-        requestUnauthorizedHandlers.forEach(subscription => {
-          if (unauthorizedHandlers.has(subscription)) subscription.handler(error)
-        })
-      }
+      handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
       throw error
     }
     return decode ? decode(body) : body
