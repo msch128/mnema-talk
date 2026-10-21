@@ -74,9 +74,22 @@ func wantAPI(t *testing.T, what string, err error, status int) {
 func TestMigrationSeedsTheDocumentedDefaults(t *testing.T) {
 	w := newWorld(t)
 	roles, err := w.svc.Roles(context.Background())
-	if err != nil || len(roles) != 2 || !roles[1].Everyone || roles[1].Permissions != perm.DefaultEveryone || roles[1].Position != 0 ||
-		!roles[0].Managed || roles[0].Name != "Bot" || roles[0].Position != 1 || roles[0].Permissions != 0 || !roles[0].Hoist {
-		t.Fatalf("roles after migration: %+v %v", roles, err)
+	if err != nil {
+		t.Fatalf("fetch roles: %v", err)
+	}
+	if len(roles) != 2 {
+		t.Fatalf("expected 2 roles, got %d", len(roles))
+	}
+	everyone := roles[1]
+	if !everyone.Everyone || everyone.Permissions != perm.DefaultEveryone || everyone.Position != 0 {
+		t.Fatalf("unexpected @everyone role: %+v", everyone)
+	}
+	bot := roles[0]
+	if !bot.Managed || bot.Name != "Bot" || bot.Position != 1 {
+		t.Fatalf("unexpected bot role identity/position: %+v", bot)
+	}
+	if bot.Permissions != 0 || !bot.Hoist {
+		t.Fatalf("unexpected bot role permissions/flags: %+v", bot)
 	}
 }
 
@@ -115,8 +128,11 @@ func TestStoreEnforcesRulesWithoutTheHTTPLayer(t *testing.T) {
 	}
 	hoist, mention := true, true
 	role, err := w.svc.CreateRole(ctx, w.owner, perm.RoleInput{Name: &name, Hoist: &hoist, Mentionable: &mention})
-	if err != nil || !role.Hoist || !role.Mentionable || role.Position != 2 {
-		t.Fatalf("create: %+v %v", role, err)
+	if err != nil {
+		t.Fatalf("create role: %v", err)
+	}
+	if !role.Hoist || !role.Mentionable || role.Position != 2 {
+		t.Fatalf("unexpected role attributes: %+v", role)
 	}
 	for _, c := range []struct {
 		what string

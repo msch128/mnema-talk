@@ -33,8 +33,17 @@ func TestEveryBotHasAManagedRoleOfItsOwn(t *testing.T) {
 	other := createBot(t, owner, "other")
 
 	role, ok := ownRoleOf(t, owner, b.UserID)
-	if !ok || !role.Managed || role.Name != "helper" || role.Permissions != 0 || role.Position != 1 || role.Hoist || role.Everyone {
-		t.Fatalf("own role: %+v %v", role, ok)
+	if !ok {
+		t.Fatalf("own role missing for bot %s", b.UserID)
+	}
+	if !role.Managed || role.Name != "helper" {
+		t.Fatalf("unexpected role metadata: %+v", role)
+	}
+	if role.Permissions != 0 || role.Position != 1 {
+		t.Fatalf("unexpected role permissions or position: %+v", role)
+	}
+	if role.Hoist || role.Everyone {
+		t.Fatalf("unexpected role flags: %+v", role)
 	}
 	roleID := role.ID.String()
 	holds := func(user, role uuid.UUID) bool {
@@ -52,8 +61,8 @@ func TestEveryBotHasAManagedRoleOfItsOwn(t *testing.T) {
 
 	// A rename follows the bot.
 	wantStatus(t, "rename bot", owner.patch("/api/admin/bots/"+b.ID.String(), map[string]any{"name": "helper2"}), http.StatusOK)
-	if r, _ := ownRoleOf(t, owner, b.UserID); r.Name != "helper2" {
-		t.Fatalf("role name after rename: %q", r.Name)
+	if r, ok := ownRoleOf(t, owner, b.UserID); !ok || r.Name != "helper2" {
+		t.Fatalf("role name after rename: %q (found: %v)", r.Name, ok)
 	}
 	// Not by hand, not deletable, not assignable to anyone else.
 	wantStatus(t, "rename role", owner.patch("/api/admin/roles/"+roleID, map[string]any{"name": "Robots"}), http.StatusBadRequest)
@@ -76,8 +85,8 @@ func TestEveryBotHasAManagedRoleOfItsOwn(t *testing.T) {
 	}
 	// Colour and permissions are editable; the upload limit is not.
 	wantStatus(t, "edit", owner.patch("/api/admin/roles/"+roleID, map[string]any{"color": 0x5865F2, "permissions": perm.ViewChannel | perm.SendMessages}), http.StatusOK)
-	if r, _ := ownRoleOf(t, owner, b.UserID); r.Color != 0x5865F2 || r.Permissions != perm.ViewChannel|perm.SendMessages {
-		t.Fatalf("after edit: %+v", r)
+	if r, ok := ownRoleOf(t, owner, b.UserID); !ok || r.Color != 0x5865F2 || r.Permissions != perm.ViewChannel|perm.SendMessages {
+		t.Fatalf("after edit: %+v (found: %v)", r, ok)
 	}
 	wantStatus(t, "upload limit", owner.patch("/api/admin/roles/"+roleID, map[string]any{"max_upload_mb": 5}), http.StatusBadRequest)
 
@@ -85,8 +94,8 @@ func TestEveryBotHasAManagedRoleOfItsOwn(t *testing.T) {
 	mine := createRole(t, owner, "Mine", perm.ViewChannel)
 	wantStatus(t, "order with own role", owner.put("/api/admin/roles/order", map[string]any{"role_ids": []uuid.UUID{mine, role.ID}}), http.StatusNoContent)
 	wantStatus(t, "order without", owner.put("/api/admin/roles/order", map[string]any{"role_ids": []uuid.UUID{mine}}), http.StatusNoContent)
-	if r, _ := ownRoleOf(t, owner, b.UserID); r.Position != 1 {
-		t.Fatalf("own role moved: %+v", r)
+	if r, ok := ownRoleOf(t, owner, b.UserID); !ok || r.Position != 1 {
+		t.Fatalf("own role moved: %+v (found: %v)", r, ok)
 	}
 
 	// Deleting the bot deletes its role, and only its.

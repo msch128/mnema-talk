@@ -27,55 +27,105 @@ func vp8Payload(start, key bool, pic uint16, pic16 bool, tl0 uint8, body ...byte
 }
 
 func TestParseVP8(t *testing.T) {
-	d, ok := parseVP8(vp8Payload(true, true, 0x1234, true, 7, 1, 2))
-	if !ok || !d.start || !d.key || !d.pic16 || d.pic != 0x1234 || d.picPos != 2 || d.tl0 != 7 || d.tl0Pos != 4 {
-		t.Fatalf("15-bit keyframe start parsed as %+v ok=%v", d, ok)
-	}
-	d, ok = parseVP8(vp8Payload(true, false, 0x55, false, 9, 1))
-	if !ok || !d.start || d.key || d.pic16 || d.pic != 0x55 || d.picPos != 2 || d.tl0Pos != 3 {
-		t.Fatalf("7-bit delta start parsed as %+v ok=%v", d, ok)
-	}
-	// A continuation packet is neither a start nor a keyframe, whatever its bytes say.
-	d, ok = parseVP8(vp8Payload(false, true, 1, true, 1, 1))
-	if !ok || d.start || d.key {
-		t.Fatalf("continuation parsed as %+v", d)
-	}
-	// Without the extension there are no IDs to patch.
-	d, ok = parseVP8([]byte{0x10, 0x00, 0xaa})
-	if !ok || !d.key || d.picPos != -1 || d.tl0Pos != -1 {
-		t.Fatalf("minimal descriptor parsed as %+v ok=%v", d, ok)
-	}
-	// A later partition of the first frame is not the start of it.
-	if d, _ := parseVP8([]byte{0x11, 0x00, 0xaa}); d.start || d.key {
-		t.Fatalf("partition 1 taken for a start: %+v", d)
-	}
-	// TID/KEYIDX byte is skipped.
-	d, ok = parseVP8([]byte{0x90, 0x20, 0x00, 0x00, 0xaa})
-	if !ok || !d.key {
-		t.Fatalf("T byte not skipped: %+v ok=%v", d, ok)
-	}
-	for name, p := range map[string][]byte{
-		"empty":         {},
-		"no extension":  {0x80},
-		"no picture id": {0x80, 0x80},
-		"short pic16":   {0x80, 0x80, 0x80},
-		"no tl0":        {0x80, 0x40},
-		"no body":       {0x10},
-		"only tid":      {0x80, 0x20, 0x00},
-	} {
-		if _, ok := parseVP8(p); ok {
-			t.Errorf("%s accepted", name)
+	t.Run("15-bit keyframe start", func(t *testing.T) {
+		d, ok := parseVP8(vp8Payload(true, true, 0x1234, true, 7, 1, 2))
+		if !ok {
+			t.Fatal("expected successful parse")
 		}
-	}
+		if !d.start || !d.key || !d.pic16 {
+			t.Fatalf("unexpected frame flags: %+v", d)
+		}
+		if d.pic != 0x1234 || d.picPos != 2 || d.tl0 != 7 || d.tl0Pos != 4 {
+			t.Fatalf("unexpected frame indices: %+v", d)
+		}
+	})
+
+	t.Run("7-bit delta start", func(t *testing.T) {
+		d, ok := parseVP8(vp8Payload(true, false, 0x55, false, 9, 1))
+		if !ok {
+			t.Fatal("expected successful parse")
+		}
+		if !d.start || d.key || d.pic16 {
+			t.Fatalf("unexpected delta flags: %+v", d)
+		}
+		if d.pic != 0x55 || d.picPos != 2 || d.tl0Pos != 3 {
+			t.Fatalf("unexpected delta indices: %+v", d)
+		}
+	})
+
+	t.Run("continuation packet", func(t *testing.T) {
+		d, ok := parseVP8(vp8Payload(false, true, 1, true, 1, 1))
+		if !ok {
+			t.Fatal("expected continuation to parse")
+		}
+		if d.start || d.key {
+			t.Fatalf("continuation cannot be start or key: %+v", d)
+		}
+	})
+
+	t.Run("minimal descriptor without extension", func(t *testing.T) {
+		d, ok := parseVP8([]byte{0x10, 0x00, 0xaa})
+		if !ok {
+			t.Fatal("expected minimal descriptor to parse")
+		}
+		if !d.key {
+			t.Fatal("expected keyframe")
+		}
+		if d.picPos != -1 || d.tl0Pos != -1 {
+			t.Fatalf("unexpected positions: %+v", d)
+		}
+	})
+
+	t.Run("later partition", func(t *testing.T) {
+		d, ok := parseVP8([]byte{0x11, 0x00, 0xaa})
+		if !ok {
+			t.Fatal("expected partition to parse")
+		}
+		if d.start || d.key {
+			t.Fatalf("partition 1 taken for a start: %+v", d)
+		}
+	})
+
+	t.Run("tid and keyidx skipped", func(t *testing.T) {
+		d, ok := parseVP8([]byte{0x90, 0x20, 0x00, 0x00, 0xaa})
+		if !ok || !d.key {
+			t.Fatalf("T byte not skipped: %+v ok=%v", d, ok)
+		}
+	})
+
+	t.Run("invalid payloads", func(t *testing.T) {
+		for name, p := range map[string][]byte{
+			"empty":         {},
+			"no extension":  {0x80},
+			"no picture id": {0x80, 0x80},
+			"short pic16":   {0x80, 0x80, 0x80},
+			"no tl0":        {0x80, 0x40},
+			"no body":       {0x10},
+			"only tid":      {0x80, 0x20, 0x00},
+		} {
+			if _, ok := parseVP8(p); ok {
+				t.Errorf("%s accepted", name)
+			}
+		}
+	})
 }
 
 func TestPatchVP8(t *testing.T) {
 	src := vp8Payload(true, true, 0x7ffe, true, 250, 9, 9)
-	d, _ := parseVP8(src)
+	d, ok := parseVP8(src)
+	if !ok {
+		t.Fatalf("parse source: % x", src)
+	}
 	got := patchVP8(nil, src, d, 3, 10)
 	nd, ok := parseVP8(got)
-	if !ok || nd.pic != 1 || nd.tl0 != 4 || !nd.key || !bytes.Equal(got[5:], src[5:]) {
-		t.Fatalf("15-bit patch wrapped wrongly: %+v % x", nd, got)
+	if !ok {
+		t.Fatalf("parse patched: % x", got)
+	}
+	if nd.pic != 1 || nd.tl0 != 4 || !nd.key {
+		t.Fatalf("unexpected patched descriptors: %+v", nd)
+	}
+	if !bytes.Equal(got[5:], src[5:]) {
+		t.Fatalf("payload body altered: got % x, want % x", got[5:], src[5:])
 	}
 	if got[2]&0x80 == 0 {
 		t.Fatal("the M bit of a 15-bit picture ID was lost")
@@ -86,16 +136,25 @@ func TestPatchVP8(t *testing.T) {
 	}
 
 	src = vp8Payload(true, false, 0x7f, false, 1, 5)
-	d, _ = parseVP8(src)
+	d, ok = parseVP8(src)
+	if !ok {
+		t.Fatalf("parse delta source: % x", src)
+	}
 	got = patchVP8(got, src, d, 2, 0)
-	nd, _ = parseVP8(got)
+	nd, ok = parseVP8(got)
+	if !ok {
+		t.Fatalf("parse patched delta: % x", got)
+	}
 	if nd.pic != 1 || nd.pic16 || nd.tl0 != 1 {
 		t.Fatalf("7-bit patch: %+v", nd)
 	}
 
 	// Nothing to patch: the packet comes back as it was.
 	src = []byte{0x10, 0x00, 0xaa}
-	d, _ = parseVP8(src)
+	d, ok = parseVP8(src)
+	if !ok {
+		t.Fatalf("parse plain source: % x", src)
+	}
 	if got = patchVP8(got, src, d, 5, 5); !bytes.Equal(got, src) {
 		t.Fatalf("plain descriptor changed: % x", got)
 	}

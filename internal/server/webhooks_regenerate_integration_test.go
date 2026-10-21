@@ -32,9 +32,14 @@ func TestRegeneratingATokenChangesOnlyTheToken(t *testing.T) {
 	if res.status != http.StatusOK || fresh.Token == h.Token {
 		t.Fatalf("regenerate: %d %s", res.status, res.body)
 	}
-	if fresh.CreatedBy == nil || *fresh.CreatedBy != admin.user.ID || fresh.Name != "owner's" ||
-		!fresh.AllowEveryone || fresh.AllowEmbeds || !fresh.AllowAttachments {
-		t.Fatalf("regenerating changed more than the token: %+v", fresh.Webhook)
+	if fresh.CreatedBy == nil || *fresh.CreatedBy != admin.user.ID {
+		t.Fatalf("unexpected creator: %v", fresh.CreatedBy)
+	}
+	if fresh.Name != "owner's" {
+		t.Fatalf("unexpected name: %q", fresh.Name)
+	}
+	if !fresh.AllowEveryone || fresh.AllowEmbeds || !fresh.AllowAttachments {
+		t.Fatalf("regenerating changed permissions: %+v", fresh.Webhook)
 	}
 	if r := a.exec(h.path, map[string]any{"content": "x"}, nil); r.status != http.StatusUnauthorized {
 		t.Fatalf("old URL: %d", r.status)

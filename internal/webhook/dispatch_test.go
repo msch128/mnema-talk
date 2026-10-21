@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -58,8 +59,14 @@ func TestTranslate(t *testing.T) {
 	}
 	for _, tc := range cases {
 		name, data, ok := translate(tc.typ, tc.payload)
-		if (tc.want == "") == ok || name != tc.want || (ok && data == nil) {
-			t.Errorf("%s: %q %v %v", tc.name, name, data, ok)
+		if tc.want == "" {
+			if ok {
+				t.Errorf("%s: expected translation to be rejected, got %q", tc.name, name)
+			}
+			continue
+		}
+		if !ok || name != tc.want || data == nil {
+			t.Errorf("%s: got name=%q data=%v ok=%v, want %q", tc.name, name, data, ok, tc.want)
 		}
 	}
 }
@@ -140,6 +147,25 @@ func TestBackoff(t *testing.T) {
 	}
 }
 
+func drainDispatchedQueue(t *testing.T, queue <-chan job) map[uuid.UUID]bool {
+	t.Helper()
+	out := map[uuid.UUID]bool{}
+	for {
+		select {
+		case j := <-queue:
+			out[j.webhook] = true
+			if j.attempt != 1 || j.event.Type == "" {
+				t.Errorf("job invalid attempt or type: %+v", j)
+			}
+			if j.event.ID == uuid.Nil || j.event.Channel == uuid.Nil {
+				t.Errorf("job invalid ids: %+v", j)
+			}
+		default:
+			return out
+		}
+	}
+}
+
 func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	d := NewDispatcher(nil, nil, "t")
 	chA, chB := uuid.New(), uuid.New()
@@ -153,26 +179,12 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	d.routes.Store(&routes)
 	msg := chat.Message{ID: uuid.New(), ChannelID: chA}
 
-	got := func() map[uuid.UUID]bool {
-		out := map[uuid.UUID]bool{}
-		for {
-			select {
-			case j := <-d.queue:
-				out[j.webhook] = true
-				if j.attempt != 1 || j.event.Type == "" || j.event.ID == uuid.Nil || j.event.Channel == uuid.Nil {
-					t.Errorf("job %+v", j)
-				}
-			default:
-				return out
-			}
-		}
-	}
 	d.Observe(chA, "message_create", &msg)
-	if g := got(); len(g) != 2 || !g[a] || !g[both] {
+	if g := drainDispatchedQueue(t, d.queue); len(g) != 2 || !g[a] || !g[both] {
 		t.Fatalf("message in A reached %v", g)
 	}
 	d.Observe(chB, "message_delete", map[string]any{"id": 1})
-	if g := got(); len(g) != 1 || !g[b] {
+	if g := drainDispatchedQueue(t, d.queue); len(g) != 1 || !g[b] {
 		t.Fatalf("delete in B reached %v", g)
 	}
 	d.Observe(chA, "typing", nil)
@@ -180,7 +192,7 @@ func TestObserveRoutesByChannelAndEvent(t *testing.T) {
 	// Events to everybody (no channel) belong to no webhook.
 	d.Observe(uuid.Nil, "message_create", &msg)
 	d.Observe(uuid.Nil, "member_joined", map[string]any{"id": 1})
-	if g := got(); len(g) != 0 {
+	if g := drainDispatchedQueue(t, d.queue); len(g) != 0 {
 		t.Fatalf("unsubscribed events reached %v", g)
 	}
 }
@@ -190,40 +202,60 @@ func TestPostSignsAndBoundsTheExchange(t *testing.T) {
 	var body []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		seen = r.Header.Clone()
-		body = make([]byte, 1<<10)
-		n, _ := r.Body.Read(body)
-		body = body[:n]
+		var err error
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
 		w.Header().Set("Retry-After", "7")
 		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write(make([]byte, 2*readLimit)) // far more than is read
+		if _, err := w.Write(make([]byte, 2*readLimit)); err != nil {
+			t.Errorf("write response: %v", err)
+		}
 	}))
 	defer srv.Close()
-	allow, _ := ssrf.ParseAllow("127.0.0.0/8")
+	allow, err := ssrf.ParseAllow("127.0.0.0/8")
+	if err != nil {
+		t.Fatalf("parse allow: %v", err)
+	}
 	d := NewDispatcher(nil, ssrf.NewClient(ssrf.NewDialer(&ssrf.Policy{Allow: allow}), time.Second), "9.9")
 	rec := &outgoingRec{Outgoing: Outgoing{ID: uuid.New(), URL: srv.URL}, secret: "whsec_s"}
 	ev := Event{ID: uuid.New(), Type: EventMessageCreate, Time: time.Now(), Data: []byte(`{}`)}
 
 	del, retryAfter := d.attempt(context.Background(), rec, ev, 3)
-	if del.Success || del.Attempt != 3 || del.StatusCode == nil || *del.StatusCode != 503 || del.Error == nil || *del.Error != "http_503" || retryAfter != 7*time.Second {
+	if del.Success || del.Attempt != 3 {
+		t.Fatalf("expected attempt 3 failure: %+v", del)
+	}
+	if del.StatusCode == nil || *del.StatusCode != 503 {
+		t.Fatalf("expected status code 503: %+v", del)
+	}
+	if del.Error == nil || *del.Error != "http_503" || retryAfter != 7*time.Second {
 		t.Fatalf("delivery %+v, retry after %v", del, retryAfter)
 	}
 	if seen.Get("X-Mnema-Event") != "MESSAGE_CREATE" || seen.Get("User-Agent") != "MnemaTalk-Webhook/9.9" || seen.Get("X-Mnema-Delivery") != ev.ID.String() {
 		t.Fatalf("headers %v", seen)
 	}
-	ts, _ := strconv.ParseInt(seen.Get("X-Mnema-Signature")[2:12], 10, 64)
-	if Sign("whsec_s", time.Unix(ts, 0), body) != seen.Get("X-Mnema-Signature") {
+	sig := seen.Get("X-Mnema-Signature")
+	ts, err := strconv.ParseInt(sig[2:12], 10, 64)
+	if err != nil {
+		t.Fatalf("parse signature timestamp: %v", err)
+	}
+	if Sign("whsec_s", time.Unix(ts, 0), body) != sig {
 		t.Fatalf("signature does not verify")
 	}
 	var env Envelope
-	if err := json.Unmarshal(body, &env); err != nil || env.T != "MESSAGE_CREATE" || env.WebhookID != rec.ID.String() || env.ChannelID != nil {
-		t.Fatalf("envelope %s: %+v %v", body, env, err)
+	if err := json.Unmarshal(body, &env); err != nil {
+		t.Fatalf("unmarshal envelope: %v", err)
+	}
+	if env.T != "MESSAGE_CREATE" || env.WebhookID != rec.ID.String() || env.ChannelID != nil {
+		t.Fatalf("envelope unexpected content: %+v", env)
 	}
 
 	// An address that cannot be requested is a delivery failure, not a panic.
 	bad := &outgoingRec{Outgoing: Outgoing{ID: uuid.New(), URL: "http://bad host/"}}
-	del, _ = d.attempt(context.Background(), bad, ev, 1)
-	if del.Success || del.Error == nil || *del.Error != "invalid_url" {
-		t.Fatalf("bad url: %+v", del)
+	delBad, _ := d.attempt(context.Background(), bad, ev, 1)
+	if delBad.Success || delBad.Error == nil || *delBad.Error != "invalid_url" {
+		t.Fatalf("bad url: %+v", delBad)
 	}
 	// With a channel the envelope names it.
 	ev.Channel = uuid.New()

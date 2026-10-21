@@ -28,6 +28,56 @@ func TestSystemStatusIsAdminOnly(t *testing.T) {
 	}
 }
 
+func assertDatabaseHealth(t *testing.T, dbHealth DatabaseHealth) {
+	t.Helper()
+	files, err := db.MigrationFiles()
+	if err != nil {
+		t.Fatalf("migration files: %v", err)
+	}
+	if !dbHealth.Reachable {
+		t.Fatalf("database unreachable: %+v", dbHealth)
+	}
+	if dbHealth.AppliedMigrations != len(files) || dbHealth.PendingMigrations != 0 {
+		t.Fatalf("database migrations count mismatch: %+v (want %d)", dbHealth, len(files))
+	}
+	if dbHealth.LatestMigration != files[len(files)-1] {
+		t.Fatalf("database latest migration mismatch: got %q, want %q", dbHealth.LatestMigration, files[len(files)-1])
+	}
+}
+
+func assertStorageHealth(t *testing.T, s StorageHealth) {
+	t.Helper()
+	if !s.Configured || !s.Reachable {
+		t.Fatalf("storage unreachable or unconfigured: %+v", s)
+	}
+	if s.Files != 1 || s.TotalBytes <= 0 {
+		t.Fatalf("unexpected storage files or bytes: %+v", s)
+	}
+	if s.AttachmentBytes != s.TotalBytes || s.AvatarBytes != 0 {
+		t.Fatalf("unexpected storage category bytes: %+v", s)
+	}
+}
+
+func assertVoiceHealth(t *testing.T, v VoiceHealth) {
+	t.Helper()
+	if v.Enabled || v.STUNConfigured {
+		t.Fatalf("unexpected voice enable/stun flags: %+v", v)
+	}
+	if !v.TURNConfigured {
+		t.Fatalf("expected turn configured: %+v", v)
+	}
+	if v.WebSocketConnections != 1 || v.OnlineUsers != 1 {
+		t.Fatalf("unexpected connection counts: %+v", v)
+	}
+}
+
+func assertRuntimeHealth(t *testing.T, r RuntimeHealth) {
+	t.Helper()
+	if r.Goroutines <= 0 || r.MemAllocBytes == 0 || r.StartedAt.IsZero() {
+		t.Fatalf("runtime health invalid: %+v", r)
+	}
+}
+
 func TestSystemStatusReportsHealthWithoutSecrets(t *testing.T) {
 	turnSecret := strings.Repeat("turn-", 5)
 	a := newAppWithDeps(t, true, func(c *config.Config) {
@@ -61,22 +111,10 @@ func TestSystemStatusReportsHealthWithoutSecrets(t *testing.T) {
 	if st.Version.Current != "0.4.0" || !strings.HasPrefix(st.Version.GoVersion, "go") {
 		t.Fatalf("version = %+v", st.Version)
 	}
-	files, _ := db.MigrationFiles()
-	h := st.Health
-	if !h.Database.Reachable || h.Database.AppliedMigrations != len(files) || h.Database.PendingMigrations != 0 ||
-		h.Database.LatestMigration != files[len(files)-1] {
-		t.Fatalf("database = %+v (want %d migrations, latest %s)", h.Database, len(files), files[len(files)-1])
-	}
-	if !h.Storage.Configured || !h.Storage.Reachable || h.Storage.Files != 1 || h.Storage.TotalBytes <= 0 ||
-		h.Storage.AttachmentBytes != h.Storage.TotalBytes || h.Storage.AvatarBytes != 0 {
-		t.Fatalf("storage = %+v", h.Storage)
-	}
-	if h.Voice.Enabled || !h.Voice.TURNConfigured || h.Voice.STUNConfigured || h.Voice.WebSocketConnections != 1 || h.Voice.OnlineUsers != 1 {
-		t.Fatalf("voice = %+v", h.Voice)
-	}
-	if h.Runtime.Goroutines <= 0 || h.Runtime.MemAllocBytes == 0 || h.Runtime.StartedAt.IsZero() {
-		t.Fatalf("runtime = %+v", h.Runtime)
-	}
+	assertDatabaseHealth(t, st.Health.Database)
+	assertStorageHealth(t, st.Health.Storage)
+	assertVoiceHealth(t, st.Health.Voice)
+	assertRuntimeHealth(t, st.Health.Runtime)
 	body := string(res.body)
 	for _, secret := range []string{turnSecret, "integration-test-secret", "postgres://", "turn.example.com"} {
 		if strings.Contains(body, secret) {

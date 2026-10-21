@@ -23,7 +23,8 @@ import (
 
 func nativeHTTPFixture(t *testing.T) (*db.Pool, *User, *NativeHandler) {
 	t.Helper()
-	pool, user, service, _ := nativeFixture(t)
+	pool, user, service, device := nativeFixture(t)
+	_ = device
 	accounts := NewHandler(&Sessions{DB: pool, Secret: strings.Repeat("s", 32), TTL: nativeMaxFamilyTTL, Secure: true}, nil)
 	handler, err := NewNativeHandler(accounts, service)
 	if err != nil {
@@ -42,12 +43,18 @@ type nativeClientGrant struct {
 }
 
 func nativeLoginBody(username, password string, instance uuid.UUID) string {
-	body, _ := json.Marshal(map[string]string{"username": username, "password": password, "client_instance_id": instance.String()})
+	body, err := json.Marshal(map[string]string{"username": username, "password": password, "client_instance_id": instance.String()})
+	if err != nil {
+		panic(err)
+	}
 	return string(body)
 }
 
 func nativeRefreshBody(token string) string {
-	body, _ := json.Marshal(map[string]string{"refresh_token": token})
+	body, err := json.Marshal(map[string]string{"refresh_token": token})
+	if err != nil {
+		panic(err)
+	}
 	return string(body)
 }
 
@@ -55,8 +62,17 @@ func nativeHTTPLogin(t *testing.T, h *NativeHandler, user *User) nativeClientGra
 	t.Helper()
 	w := nativeStatus(t, h.Handler(), nativeRequest(http.MethodPost, "/auth/login", nativeLoginBody(user.Username, testPassword, uuid.New())), http.StatusOK)
 	var grant nativeClientGrant
-	if err := json.Unmarshal(w.Body.Bytes(), &grant); err != nil || grant.User.ID != user.ID || len(grant.Access) != 43 || len(grant.Refresh) != 43 || grant.Access == grant.Refresh || !grant.AccessExpiry.Before(grant.FamilyExpiry) {
-		t.Fatal("invalid native grant response")
+	if err := json.Unmarshal(w.Body.Bytes(), &grant); err != nil {
+		t.Fatalf("unmarshal grant: %v", err)
+	}
+	if grant.User.ID != user.ID {
+		t.Fatalf("grant user mismatch: got %v, want %v", grant.User.ID, user.ID)
+	}
+	if len(grant.Access) != 43 || len(grant.Refresh) != 43 || grant.Access == grant.Refresh {
+		t.Fatal("invalid token lengths or identical tokens")
+	}
+	if !grant.AccessExpiry.Before(grant.FamilyExpiry) {
+		t.Fatal("access expiry must precede family expiry")
 	}
 	return grant
 }
@@ -79,14 +95,23 @@ func TestNativeHTTPLoginRefreshReuseAndContext(t *testing.T) {
 	other := nativeHTTPLogin(t, h, user)
 	w := nativeStatus(t, h.Handler(), nativeAuthedRequest(http.MethodGet, "/auth/me", "", grant.Access), http.StatusOK)
 	var got User
-	if json.Unmarshal(w.Body.Bytes(), &got) != nil || got.ID != user.ID || bytes.Contains(w.Body.Bytes(), []byte(grant.Access)) || bytes.Contains(w.Body.Bytes(), []byte(grant.Refresh)) {
-		t.Fatal("me leaked grant or wrong identity")
+	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal me: %v", err)
+	}
+	if got.ID != user.ID {
+		t.Fatalf("me user ID mismatch: got %v, want %v", got.ID, user.ID)
+	}
+	if bytes.Contains(w.Body.Bytes(), []byte(grant.Access)) || bytes.Contains(w.Body.Bytes(), []byte(grant.Refresh)) {
+		t.Fatal("me leaked grant tokens")
 	}
 	called := false
 	h.RequireUser(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		principal, ok := NativePrincipalFrom(r.Context())
-		if !ok || UserFrom(r.Context()) == nil || principal.User().ID != user.ID || UserFrom(r.Context()).ID != user.ID {
+		if !ok || UserFrom(r.Context()) == nil {
 			t.Fatal("native context missing")
+		}
+		if principal.User().ID != user.ID || UserFrom(r.Context()).ID != user.ID {
+			t.Fatal("native context user mismatch")
 		}
 		called = true
 	})).ServeHTTP(httptest.NewRecorder(), nativeAuthedRequest(http.MethodGet, "/resource", "", grant.Access))
@@ -99,8 +124,14 @@ func TestNativeHTTPLoginRefreshReuseAndContext(t *testing.T) {
 	}
 	w = nativeStatus(t, h.Handler(), nativeRequest(http.MethodPost, "/auth/refresh", nativeRefreshBody(grant.Refresh)), http.StatusOK)
 	var next nativeClientGrant
-	if json.Unmarshal(w.Body.Bytes(), &next) != nil || next.Access == grant.Access || next.Refresh == grant.Refresh || next.FamilyExpiry != grant.FamilyExpiry {
-		t.Fatal("rotation did not produce fresh bounded grants")
+	if err := json.Unmarshal(w.Body.Bytes(), &next); err != nil {
+		t.Fatalf("unmarshal next grant: %v", err)
+	}
+	if next.Access == grant.Access || next.Refresh == grant.Refresh {
+		t.Fatal("rotation did not produce fresh tokens")
+	}
+	if next.FamilyExpiry != grant.FamilyExpiry {
+		t.Fatal("rotation changed family expiry")
 	}
 	// Reuse must revoke the family even though the new refresh is throttled.
 	nativeStatus(t, h.Handler(), nativeRequest(http.MethodPost, "/auth/refresh", nativeRefreshBody(grant.Refresh)), http.StatusUnauthorized)
@@ -109,7 +140,11 @@ func TestNativeHTTPLoginRefreshReuseAndContext(t *testing.T) {
 	nativeStatus(t, h.Handler(), nativeAuthedRequest(http.MethodGet, "/auth/me", "", other.Access), http.StatusUnauthorized)
 	browserRequest := nativeRequest(http.MethodGet, "/api/auth/me", "")
 	browserRequest.AddCookie(browser.Result().Cookies()[0])
-	if got, err := h.accounts.Sessions.Authenticate(browserRequest); err != nil || got.ID != user.ID {
+	gotUser, err := h.accounts.Sessions.Authenticate(browserRequest)
+	if err != nil {
+		t.Fatalf("authenticate browser request: %v", err)
+	}
+	if gotUser.ID != user.ID {
 		t.Fatal("native family logout invalidated browser cookie")
 	}
 }

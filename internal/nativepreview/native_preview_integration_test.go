@@ -133,9 +133,18 @@ func (a *previewTestApp) login(t *testing.T, user auth.User) previewTestGrant {
 	id := uuid.New()
 	raw := a.request(t, http.MethodPost, NativePreviewPrefix+"/auth/login", map[string]string{"username": user.Username, "password": nativePreviewFixturePassword, "client_instance_id": id.String()}, "", nil, http.StatusOK)
 	var grant previewTestGrant
+	if err := json.Unmarshal(raw, &grant); err != nil {
+		t.Fatalf("unmarshal grant: %v", err)
+	}
 	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &grant) != nil || json.Unmarshal(raw, &fields) != nil || len(fields) != 8 || grant.User.ID != user.ID || grant.Instance != id || grant.Family == uuid.Nil || grant.Sequence != 0 || len(grant.Access) != 43 || len(grant.Refresh) != 43 {
-		t.Fatal("native eight-field grant invalid")
+	if err := json.Unmarshal(raw, &fields); err != nil || len(fields) != 8 {
+		t.Fatalf("unexpected fields in grant response: len=%d err=%v", len(fields), err)
+	}
+	if grant.User.ID != user.ID || grant.Instance != id || grant.Family == uuid.Nil {
+		t.Fatalf("unexpected grant identity: %+v", grant)
+	}
+	if grant.Sequence != 0 || len(grant.Access) != 43 || len(grant.Refresh) != 43 {
+		t.Fatalf("unexpected grant sequence or tokens: %+v", grant)
 	}
 	return grant
 }
@@ -227,8 +236,17 @@ func TestNativePreviewDiscoveryVersionStatesAndNoContentGrant(t *testing.T) {
 			a := newPreviewTestApp(t, state, false)
 			raw := a.request(t, http.MethodGet, "/.well-known/mnema", nil, "", nil, http.StatusOK)
 			var d nativeDiscoveryDocument
-			if json.Unmarshal(raw, &d) != nil || len(raw) > 16<<10 || d.Protocol != "mnema-desktop-discovery-v1" || !d.E2EERequired || d.NativeAPI.Compatibility != state || d.NativeAPI.ContentAuthorization != "unavailable" || d.NativeAPI.Prefix != NativePreviewPrefix {
-				t.Fatal("native discovery contract invalid")
+			if err := json.Unmarshal(raw, &d); err != nil {
+				t.Fatalf("unmarshal discovery document: %v", err)
+			}
+			if len(raw) > 16<<10 || d.Protocol != "mnema-desktop-discovery-v1" {
+				t.Fatalf("invalid discovery size or protocol: %d %q", len(raw), d.Protocol)
+			}
+			if !d.E2EERequired || d.NativeAPI.Compatibility != state {
+				t.Fatalf("unexpected discovery flags or compatibility: %+v", d)
+			}
+			if d.NativeAPI.ContentAuthorization != "unavailable" || d.NativeAPI.Prefix != NativePreviewPrefix {
+				t.Fatalf("unexpected discovery authorization or prefix: %+v", d.NativeAPI)
 			}
 			if state == NativeUnsupported {
 				a.request(t, http.MethodPost, NativePreviewPrefix+"/auth/login", map[string]string{"username": a.user.Username, "password": nativePreviewFixturePassword, "client_instance_id": uuid.NewString()}, "", nil, http.StatusServiceUnavailable)
@@ -318,8 +336,14 @@ func TestNativePreviewRefreshRenewAndLogoutActualSocket(t *testing.T) {
 	}
 	raw := a.request(t, http.MethodPost, NativePreviewPrefix+"/auth/refresh", map[string]string{"refresh_token": original.Refresh}, "", nil, http.StatusOK)
 	var next previewTestGrant
-	if json.Unmarshal(raw, &next) != nil || next.Family != original.Family || next.Instance != original.Instance || next.Sequence != 1 || next.Access == original.Access {
-		t.Fatal("real refresh lineage invalid")
+	if err := json.Unmarshal(raw, &next); err != nil {
+		t.Fatalf("unmarshal next grant: %v", err)
+	}
+	if next.Family != original.Family || next.Instance != original.Instance {
+		t.Fatalf("family or instance mismatch: %+v", next)
+	}
+	if next.Sequence != 1 || next.Access == original.Access {
+		t.Fatalf("sequence or access mismatch: %+v", next)
 	}
 	if socket.WriteJSON(map[string]any{"type": "native_access_renew", "payload": map[string]string{"access_token": next.Access}}) != nil {
 		t.Fatal("native renewal send failed")
@@ -355,8 +379,14 @@ func TestNativePreviewDiscoveryStrictInputsAndNativeInstanceContext(t *testing.T
 	req.Header.Set("Authorization", "Bearer "+grant.Access)
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, req)
-	if !called || response.Code != http.StatusNoContent || seen.CommunityID != "native-preview-fixture" || seen.Origin != a.server.URL || seen.FamilyID != grant.Family || seen.ClientInstanceID != grant.Instance {
-		t.Fatal("native instance context did not derive exact server/principal binding")
+	if !called || response.Code != http.StatusNoContent {
+		t.Fatalf("handler not called or unexpected status: %d", response.Code)
+	}
+	if seen.CommunityID != "native-preview-fixture" || seen.Origin != a.server.URL {
+		t.Fatalf("unexpected seen community or origin: %s %s", seen.CommunityID, seen.Origin)
+	}
+	if seen.FamilyID != grant.Family || seen.ClientInstanceID != grant.Instance {
+		t.Fatalf("unexpected seen family or instance: %v %v", seen.FamilyID, seen.ClientInstanceID)
 	}
 }
 
