@@ -1,3 +1,4 @@
+import type { OnboardingState } from './types/rest'
 import type { Channel, Message, User, VoiceUser, Category, ReadState, MediaAttachment } from './types/domain'
 
 export const FIXTURE_TIMESTAMP = '2026-01-01T00:00:00Z'
@@ -96,5 +97,13 @@ export function parseLayoutRequestBody(value: unknown): { channels: RawChannelMo
   return {
     channels: v.channels.map(parseChannelMove),
     categories: v.categories.map(parseCategoryMove),
+  }
+}
+
+/** A member's onboarding record: welcome flow done, nothing dismissed, no rules. */
+export function onboardingStateFixture(overrides: Partial<OnboardingState> = {}): OnboardingState {
+  return {
+    community_name: '', welcome_text: '', rules_text: '', rules_version: 0, rules_accepted_version: 0,
+    rules_pending: false, start_channel_id: null, dismissed_tips: [], welcome_done: true, ...overrides,
   }
 }

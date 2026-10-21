@@ -1,5 +1,5 @@
-import { test, expect } from './fixtures'
-import type { Page } from '@playwright/test'
+import { test, expect, showWelcomeFlow } from './fixtures'
+import type { BrowserContext, Page } from '@playwright/test'
 import { apiFetch, responseString, suiteMember } from './helpers'
 
 const ADMIN_USER = process.env.E2E_ADMIN_USER || 'Herzog'
@@ -19,7 +19,72 @@ async function signIn(page: Page, username: string, password: string) {
   await expect(dialog).toBeHidden()
 }
 
-test('invite links name the community, and rules must be accepted before a member can write', async ({ browser }) => {
+async function ensureSuiteMember(admin: Page, member: Page) {
+  await member.goto('/')
+  if (suiteMember.registered) {
+    expect((await apiFetch(member, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
+    return
+  }
+  const invite = await apiFetch(admin, 'POST', '/api/admin/invites', { max_uses: 1 })
+  expect((await apiFetch(member, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
+  suiteMember.registered = true
+}
+
+// The same member, once more as a brand-new one: the welcome flow walks them
+// through every step, and a raised rules version asks only for the rules.
+async function welcomeFlowPhase(a: Page, b: Page, bCtx: BrowserContext, channelId: string) {
+  // Headless Chromium reports notifications as blocked; a real new member is still undecided.
+  await bCtx.addInitScript(() => Object.defineProperty(Notification, 'permission', { get: () => 'default', configurable: true }))
+  // Other specs hide the flow so it cannot cover their pages; this one wants it.
+  await showWelcomeFlow(bCtx)
+  expect((await apiFetch(b, 'PUT', '/api/onboarding/tips', { welcome_done: false })).status).toBe(200)
+  expect((await apiFetch(a, 'PUT', '/api/admin/onboarding', {
+    community_name: COMMUNITY, welcome_text: 'Schön, dass du da bist.', rules_text: '# Regeln\nSei nett.', start_channel_id: channelId, require_reacceptance: true,
+  })).status).toBe(200)
+
+  await b.goto('/')
+  const dialog = b.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: `Willkommen bei ${COMMUNITY}` })).toBeVisible()
+  await expect(dialog).toContainText('Schön, dass du da bist.')
+  await dialog.getByRole('button', { name: 'Weiter' }).click()
+
+  // The rules cannot be skipped or closed; reading works, writing waits for the click.
+  await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei nett.')
+  await b.keyboard.press('Escape')
+  await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Einführung überspringen' })).toHaveCount(0)
+  await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
+
+  await expect(dialog.getByRole('heading', { name: 'Dein Profil' })).toBeVisible()
+  // Not the display name: later specs find this member by the user name.
+  await dialog.getByLabel(/^Bio/).fill('Neu hier.')
+  await dialog.getByTestId('welcome-profile-save').click()
+  await expect(dialog.getByRole('heading', { name: 'Immer auf dem Laufenden' })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Nicht jetzt' }).click()
+
+  await expect(dialog).toBeHidden()
+  await expect(b).toHaveURL(new RegExp(`/c/${channelId}$`))
+  expect((await apiFetch(b, 'GET', '/api/onboarding')).json).toMatchObject({ rules_pending: false })
+
+  // Done is stored on the account: a reload shows nothing.
+  await b.reload()
+  await expect(b.getByTestId('welcome-title')).toHaveCount(0)
+
+  // The Owner raises the rules version: only the rules come back, and block.
+  expect((await apiFetch(a, 'PUT', '/api/admin/onboarding', {
+    community_name: COMMUNITY, welcome_text: 'Schön, dass du da bist.', rules_text: '# Regeln\nSei netter.', start_channel_id: channelId, require_reacceptance: true,
+  })).status).toBe(200)
+  await b.reload()
+  await expect(dialog.getByRole('heading', { name: 'Die Regeln' })).toBeVisible()
+  await expect(dialog.getByTestId('welcome-progress')).toHaveText('Schritt 1 von 1')
+  await expect(dialog.getByTestId('welcome-rules')).toContainText('Sei netter.')
+  await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
+  await expect(dialog).toBeHidden()
+  expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'angekommen' })).status).toBe(201)
+}
+
+test('invite links name the community, rules block a member until accepted, and a new member gets the welcome flow', async ({ browser }) => {
   const aCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const visitor = await browser.newContext({ viewport: { width: 1400, height: 900 } })
@@ -33,14 +98,7 @@ test('invite links name the community, and rules must be accepted before a membe
     const channelId = responseString(channel, 'id')
 
     // The member of this suite exists before any rules do.
-    await b.goto('/')
-    if (suiteMember.registered) {
-      expect((await apiFetch(b, 'POST', '/api/auth/login', { username: suiteMember.username, password: suiteMember.password })).status).toBe(200)
-    } else {
-      const invite = await apiFetch(a, 'POST', '/api/admin/invites', { max_uses: 1 })
-      expect((await apiFetch(b, 'POST', '/api/auth/register', { username: suiteMember.username, password: suiteMember.password, invite_code: responseString(invite, 'code') })).status).toBe(201)
-      suiteMember.registered = true
-    }
+    await ensureSuiteMember(a, b)
     expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'before the rules' })).status).toBe(201)
 
     // The Owner writes the community name and rules in the admin console.
@@ -80,6 +138,8 @@ test('invite links name the community, and rules must be accepted before a membe
     expect((await apiFetch(b, 'POST', `/api/channels/${channelId}/messages`, { content: 'after the rules' })).status).toBe(201)
     // The Owner was never asked.
     expect((await apiFetch(a, 'POST', `/api/channels/${channelId}/messages`, { content: 'owner' })).status).toBe(201)
+
+    await welcomeFlowPhase(a, b, bCtx, channelId)
   } finally {
     // Other specs post as this member: leave the instance without rules.
     await apiFetch(a, 'PUT', '/api/admin/onboarding', { community_name: '', welcome_text: '', rules_text: '', start_channel_id: null })
