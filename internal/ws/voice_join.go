@@ -45,7 +45,7 @@ func (h *Hub) checkJoinPermission(c *Client, chID uuid.UUID) bool {
 	snap, ok := h.permSnapshot(chID)
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
 		slog.Info("voice join refused, missing permission", "user", c.User.Username, "channel", chID)
-		c.SendEvent("voice_kicked", map[string]any{"channel_id": chID, "reason": "missing_permission"})
+		c.SendEvent("voice_kicked", map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)})
 		return false
 	}
 	return true
@@ -179,7 +179,7 @@ func (h *Hub) recheckJoin(c *Client, chID uuid.UUID) (*perm.Snapshot, bool) {
 	if !ok || !c.can(snap, chID, perm.ViewChannel|perm.Connect) {
 		slog.Info("voice join revoked, permission changed meanwhile", "user", c.User.Username, "channel", chID)
 		h.leaveVoiceLocked(c, chID)
-		c.SendEvent("voice_kicked", map[string]any{"channel_id": chID, "reason": "missing_permission"})
+		c.SendEvent("voice_kicked", map[string]any{"channel_id": chID, "reason": c.joinRefusal(snap)})
 		return nil, false
 	}
 	return snap, true
@@ -230,4 +230,13 @@ func (h *Hub) sendRoomState(c *Client, chID uuid.UUID) {
 	for sharer, layers := range room.ScreenLayers() {
 		c.SendEvent("screen_layers", screenLayersPayload(chID, sharer, layers))
 	}
+}
+
+// joinRefusal is the voice_kicked reason of a refused join: the rules the
+// member has not accepted yet, otherwise a missing permission.
+func (c *Client) joinRefusal(snap *perm.Snapshot) string {
+	if snap != nil && snap.RulesPending(c.User.ID) {
+		return "rules_not_accepted"
+	}
+	return "missing_permission"
 }

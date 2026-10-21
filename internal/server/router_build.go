@@ -17,6 +17,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
 	"github.com/msch128/mnema-talk/internal/media"
+	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
 	"github.com/msch128/mnema-talk/internal/perm"
 	"github.com/msch128/mnema-talk/internal/roles"
@@ -43,6 +44,7 @@ type components struct {
 	authH    *auth.Handler
 	chatH    *chat.Handler
 	rolesH   *roles.Handler
+	onboardH *onboarding.Handler
 	mediaH   *media.Handler
 
 	outgoing *webhook.Dispatcher
@@ -97,6 +99,7 @@ func (c *components) newCore() {
 	go chat.RunSlowModePrune(c.ctx, d.DB, time.Hour)
 	c.chatH = &chat.Handler{DB: d.DB, Events: c.pub, Online: hub, Perms: c.permSvc, Audit: c.auditLog}
 	c.rolesH = &roles.Handler{Perms: c.permSvc, Events: c.pub}
+	c.onboardH = onboarding.NewHandler(d.DB, c.permSvc)
 	if d.Store != nil {
 		c.chatH.Objects = d.Store
 	}
