@@ -127,7 +127,8 @@ test('a new member is walked through the welcome flow once, and a raised rules v
     await dialog.getByRole('button', { name: 'Ich akzeptiere die Regeln' }).click()
 
     await expect(dialog.getByRole('heading', { name: 'Dein Profil' })).toBeVisible()
-    await dialog.getByLabel('Anzeigename').fill('Neuling')
+    // Not the display name: later specs find this member by the user name.
+    await dialog.getByLabel(/^Bio/).fill('Neu hier.')
     await dialog.getByTestId('welcome-profile-save').click()
     await expect(dialog.getByRole('heading', { name: 'Immer auf dem Laufenden' })).toBeVisible()
     await dialog.getByRole('button', { name: 'Nicht jetzt' }).click()
