@@ -3,7 +3,6 @@ package ws
 import (
 	"context"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -80,10 +79,7 @@ func (h *Hub) admitNativeConn(ctx context.Context, a NativeAuthenticator, conn *
 	principal := original.Principal()
 	c := newClient(h, conn, principal.User(), principal.TokenVersion())
 	c.native = newNativeSocketState(a, original)
-	if ok, err := h.registerPending(c); !ok {
-		if err != nil {
-			slog.Debug("native socket register pending rejected", "err", err)
-		}
+	if ok, _ := h.registerPending(c); !ok {
 		c.shutdown()
 		c.close()
 		return
