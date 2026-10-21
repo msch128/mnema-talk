@@ -181,7 +181,7 @@ onMounted(async () => {
               @clear-lockout="clearLoginLockout(u)"
               @roles="rolesModalUser = u"
               @toggle-disable="toggleDisableUser(u)"
-              @reset-password="resetUser = u"
+              @reset-login="resetUser = u"
               @revoke-sessions="revokeSessions(u)"
             />
           </tbody>

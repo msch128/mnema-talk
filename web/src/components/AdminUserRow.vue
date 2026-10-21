@@ -17,7 +17,7 @@ import { roleColorCss } from '../lib/permissions'
 const props = defineProps({
   user: { type: Object as PropType<AdminUser>, required: true }
 })
-const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-password': []; 'revoke-sessions': [] }>()
+const emit = defineEmits<{ kick: []; 'clear-lockout': []; roles: []; 'toggle-disable': []; 'reset-login': []; 'revoke-sessions': [] }>()
 
 const chatStore = useChatStore()
 const voiceStore = useVoiceStore()
@@ -217,7 +217,7 @@ function roles() {
             class="p-1.5 rounded text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-hover transition"
             :title="$t('admin.resetPassword')"
             :aria-label="$t('admin.resetPassword')"
-            @click="emit('reset-password')"
+            @click="emit('reset-login')"
           >
             <KeyRound class="w-4 h-4" />
           </button>
