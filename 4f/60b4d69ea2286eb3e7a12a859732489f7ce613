@@ -1,0 +1,25 @@
+internal/httpx/ratelimit.go
+  s_06fcde5dbef956::t_84b372c56e83de 274,315,339,364
+internal/gateway/serve_read.go
+  s_06fcde5dbef956::t_84b372c56e83de 141
+internal/auth/native_token.go
+  s_06fcde5dbef956::t_6133b863fad5c4 35-36
+internal/webbundle/webbundle.go
+  s_06fcde5dbef956::t_e4d932a16f58db 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4f60b4d69ea2286eb3e7a12a859732489f7ce613",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
