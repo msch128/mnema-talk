@@ -1,0 +1,83 @@
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_c5399c97abd5e2 1-79
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_ccb09f8bba4648 5,9-10,23-27,66-76
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_670989686ff8ff 1333,1340,1345-1362
+  s_06fcde5dbef956::t_309a98eea2a437 1363
+web/src/lib/searchHighlight.ts
+  s_06fcde5dbef956::t_d58de17bc38511 1-28
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_fee81c6132ddab 1-18,20-21,23-24,45,49-94,104-119,122-124,126
+  s_06fcde5dbef956::t_16f74f157d2c14 19,22,25-44,46-48,95-103,120-121,125
+internal/server/search_filters_integration_test.go
+  s_06fcde5dbef956::t_ea33271ac3580b 1-79,81-85
+  s_06fcde5dbef956::t_0f065d141684b0 80
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_a48104f73900cf 47
+  s_06fcde5dbef956::t_4ab0ca94db0f8b 2,6,26-28,30,32,35,38-43,45-46,50-58,61-66,72,77,123,131
+  s_06fcde5dbef956::t_35cbd32d78074a 1,3-5,7-25,29,31,33-34,36-37,44,48-49,59-60,67-71,73-76,78-122,124-130,132-192
+internal/chat/search_filters_test.go
+  s_06fcde5dbef956::t_63c0b052c0b353 1-61
+web/src/lib/searchQuery.test.ts
+  s_06fcde5dbef956::t_ef60fd8a654d40 1-119
+internal/chat/search.go
+  s_06fcde5dbef956::t_16f74f157d2c14 10,81,87-92
+  s_06fcde5dbef956::t_15064babdc8e96 93
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_346491aa8994bd 296,306-308
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_346491aa8994bd 296,306-308
+web/src/lib/searchHighlight.test.ts
+  s_06fcde5dbef956::t_045ad03c1c1cb8 1-34
+web/src/components/ChatHeader.test.ts
+  s_06fcde5dbef956::t_b9608ba99f2085 1-40
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_46351eb4462333 181,189-192,209,213-218,236-240,268-269
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_e51ba22d0e7c7b 3,5-6,8-9,12-13,28,35-43,45-46,55-56,61-66,73,81,84,91,105,108,122-123,133,135-136,140-143,174-196
+web/src/components/SearchInput.test.ts
+  s_06fcde5dbef956::t_7b37a145398eba 1-92
+e2e/tests/search.spec.ts
+  s_06fcde5dbef956::t_0718d27bff4454 83,86-88,90
+  s_06fcde5dbef956::t_61750d45a36508 1-82,84-85,89,91-109
+internal/chat/search_roots.go
+  s_06fcde5dbef956::t_bb05635d294143 1-52
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_cd5b438fd5ef9f 1-119,142-191,194,198-226
+  s_06fcde5dbef956::t_4ab0ca94db0f8b 120-141
+  s_06fcde5dbef956::t_e98381d784a4ca 192-193,195-197
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_3ab0f75f266cf5 1-62
+web/src/components/SearchModal.test.ts
+  s_06fcde5dbef956::t_73e5bef3534294 10,42,114,118-119,125-137,139-140,148-175,269,271
+  s_06fcde5dbef956::t_cabe5e34da02eb 138
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_04d22d74ade924 1-51
+web/src/lib/globalSearch.test.ts
+  s_06fcde5dbef956::t_0e1b26e1563865 4,48-57
+  s_06fcde5dbef956::t_f805f6eead951f 58
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_ee584b6179cb49 12
+  s_06fcde5dbef956::t_a6aa8a304d2cf6 1-11,13-74
+web/src/lib/globalSearch.ts
+  s_06fcde5dbef956::t_c76b23f1fb220a 11-12,28-33,56
+api/openapi.json
+  s_06fcde5dbef956::t_5f496db755fe3f 2227-2233,2238-2269,17264,17295,17302,17308-17334
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e6ab086561b4703a86402cc92aff0bcfd0b13dfd",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
