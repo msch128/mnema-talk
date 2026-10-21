@@ -1,0 +1,20 @@
+internal/linkpreview/fetch_policy_test.go
+  h_0ff4f4713441f4 120-127,130-133,209-212,231-235,252-253,255-261,263-264,276-280,284-287,295-309,311-312,314-316,318-359
+internal/server/system_warnings_test.go
+  h_0ff4f4713441f4 14-48,53,59
+internal/ws/layers_test.go
+  h_0ff4f4713441f4 72-76,91-93,107-110,157-161,178-185,204-207,240-249,260-263,265-268,270-273,320,323-325,329-331
+internal/ws/native_credentials_integration_test.go
+  h_0ff4f4713441f4 21-22,33,38-42,44,51-57,61-65,72-73,87-94,97-101,103-112,116,119-162,165-167,170-175
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eeda338449bb80aa80960710bd265a2800bd932c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
