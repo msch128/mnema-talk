@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.15](https://github.com/msch128/mnema-talk/compare/v0.8.14...v0.8.15) (2026-10-21)
+
+
+### Bug Fixes
+
+* build with Go 1.27.3 (crypto/x509 GO-2026-6809) ([#290](https://github.com/msch128/mnema-talk/issues/290)) ([492eac1](https://github.com/msch128/mnema-talk/commit/492eac17be8d3a7ac3939e792731ed80316399f6))
+
 ## [0.8.14](https://github.com/msch128/mnema-talk/compare/v0.8.13...v0.8.14) (2026-10-20)
 
 
