@@ -1,0 +1,14 @@
+web/src/test-fixtures.fixture.ts
+  h_0ff4f4713441f4 76-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d569c8d7b10e4d5ecca7fa62df9c8571edf3a29",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
