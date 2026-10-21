@@ -1,0 +1,16 @@
+web/src/components/AdminUserRow.vue
+  h_0ff4f4713441f4 20,220
+web/src/components/AdminUsersTab.vue
+  h_0ff4f4713441f4 184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3d99e4eb7e0b9b0008b64698bd67d5389b2fc5a",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
