@@ -1,0 +1,14 @@
+internal/bot/guards_integration_test.go
+  h_0ff4f4713441f4 41-42,67-68,70-71,90-108,110-128,137,140-142,145-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c52744139022030d7616cf09c80f70621a30797c",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
