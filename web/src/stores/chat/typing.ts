@@ -20,9 +20,10 @@ function resolveTyperIdentity(
   payload: { username?: string; display_name?: string },
   member?: { username?: string; display_name?: string }
 ): { username: string; display_name: string } {
-  const username = payload.username || member?.username || ''
-  const display_name = payload.display_name || member?.display_name || username
-  return { username, display_name }
+  return {
+    username: payload.username || member?.username || '',
+    display_name: payload.display_name || member?.display_name || member?.username || ''
+  }
 }
 
 function scheduleTypingExpiry(cx: Cx, channelId: string, userId: string) {

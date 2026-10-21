@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useAuthStore } from '../auth'
 import { useVoiceStore } from '../voice'
@@ -10,6 +10,7 @@ import {
   countMessageOf,
   updateUserEverywhere,
   closeUserProfile,
+  openUserProfile,
   insertMention
 } from './members'
 import { userFixture, messageFixture, fixtureId } from '../../test-fixtures.fixture'
@@ -24,6 +25,21 @@ describe('members', () => {
     const voiceStore = useVoiceStore()
     const cs = createChatState(() => {})
     cx = { cs, authStore, voiceStore }
+  })
+
+  describe('opening a profile', () => {
+    it('falls back to the candidate username, not the known member, for the display name', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const id = fixtureId(7)
+      cx.cs.members.value = [userFixture({ id, username: 'known', display_name: '' })]
+      const opening = openUserProfile(cx, { id, username: 'given' })
+      expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'given', display_name: 'given' })
+      await opening
+      cx.cs.selectedUserProfile.value = null
+      const bare = openUserProfile(cx, { id })
+      expect(cx.cs.selectedUserProfile.value).toMatchObject({ username: 'known', display_name: '' })
+      await bare
+    })
   })
 
   describe('presence and activity', () => {

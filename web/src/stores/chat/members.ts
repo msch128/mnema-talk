@@ -148,7 +148,7 @@ function buildInitialProfile(
   known?: Partial<User>
 ): ProfilePreview {
   const username = pickProfileField(candidate.username, known?.username, '')
-  const displayName = pickProfileField(candidate.display_name, known?.display_name, username)
+  const displayName = pickProfileField(candidate.display_name, known?.display_name, candidate.username || '')
   const avatarUrl = pickProfileField(candidate.avatar_url, known?.avatar_url, '')
   const role = pickProfileField(candidate.role, known?.role, 'user')
   const createdAt = candidate.created_at || known?.created_at
