@@ -1,0 +1,22 @@
+internal/linkpreview/handler_test.go
+  h_0ff4f4713441f4 69,77-86,90-91,93-102,104-105
+internal/s3/client_test.go
+  h_0ff4f4713441f4 165,176-179,192-205,218-219,235-247
+internal/server/commands_integration_test.go
+  h_0ff4f4713441f4 251,271-274,292-297
+internal/sfu/layers_integration_test.go
+  h_0ff4f4713441f4 26-36,43
+internal/sfu/transport_test.go
+  h_0ff4f4713441f4 115,133-136,155-160
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "141a4c41edf220ab39784d1f936d4deb78f099d1",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
