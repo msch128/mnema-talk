@@ -1,0 +1,26 @@
+web/src/stores/chatStoreDefensive.test.ts
+  s_06fcde5dbef956::t_8854c14fb3866c 216-225
+web/src/stores/chat/typing.ts
+  s_06fcde5dbef956::t_5c57c0da3e34c5 23-26
+web/src/stores/chat/members.ts
+  s_06fcde5dbef956::t_5c57c0da3e34c5 151
+web/src/stores/chat/members.test.ts
+  s_06fcde5dbef956::t_8854c14fb3866c 1,13,30-42
+  s_06fcde5dbef956::t_08541fae896ae1 43-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7c8c02545186c53d20aa8aed5c16addce0d07e0e",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
