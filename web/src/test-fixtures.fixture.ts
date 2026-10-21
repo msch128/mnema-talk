@@ -73,8 +73,8 @@ export function attachmentFixture(overrides: Partial<MediaAttachment> = {}): Med
   }
 }
 
-export interface RawChannelMove { id: string; sort_order: number; category_id: string | null }
-export interface RawCategoryMove { id: string; sort_order: number }
+interface RawChannelMove { id: string; sort_order: number; category_id: string | null }
+interface RawCategoryMove { id: string; sort_order: number }
 
 function parseChannelMove(entry: unknown): RawChannelMove {
   const e = entry as Record<string, unknown> | null | undefined
