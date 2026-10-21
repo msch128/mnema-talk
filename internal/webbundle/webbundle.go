@@ -129,10 +129,7 @@ func KeyID(pub ed25519.PublicKey) string {
 }
 
 func decodePEMBlock(data []byte) *pem.Block {
-	block, rest := pem.Decode(data)
-	if rest != nil {
-		return block
-	}
+	block, _ := pem.Decode(data)
 	return block
 }
 

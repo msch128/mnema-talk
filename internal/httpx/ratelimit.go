@@ -271,8 +271,7 @@ func (l *LoginFailureLimiter) RecordFailures(key string, n int) {
 		e = &loginFailureEntry{lastSeen: now}
 		l.entries[key] = e
 	}
-	locked, remaining := l.refreshLocked(e, now)
-	_ = remaining
+	locked, _ := l.refreshLocked(e, now)
 	e.lastSeen = now
 	if locked {
 		return
@@ -313,8 +312,7 @@ func (l *LoginFailureLimiter) LockedKeys() []string {
 	now := l.now()
 	var keys []string
 	for k, e := range l.entries {
-		locked, remaining := l.refreshLocked(e, now)
-		_ = remaining
+		locked, _ := l.refreshLocked(e, now)
 		if locked {
 			keys = append(keys, k)
 		}
@@ -338,8 +336,7 @@ func (l *LoginFailureLimiter) sweepLocked(now time.Time) {
 	}
 	l.lastSweep = now
 	for k, e := range l.entries {
-		locked, remaining := l.refreshLocked(e, now)
-		_ = remaining
+		locked, _ := l.refreshLocked(e, now)
 		if !locked && now.Sub(e.lastSeen) >= l.decay {
 			delete(l.entries, k)
 		}
@@ -364,8 +361,7 @@ func (l *LoginFailureLimiter) evictVictim(now time.Time) string {
 	var victimSeen time.Time
 	n := 0
 	for k, e := range l.entries {
-		locked, remaining := l.refreshLocked(e, now)
-		_ = remaining
+		locked, _ := l.refreshLocked(e, now)
 		if preferEviction(n, victimLocked, locked, e.lastSeen, victimSeen) {
 			victim, victimLocked, victimSeen = k, locked, e.lastSeen
 		}

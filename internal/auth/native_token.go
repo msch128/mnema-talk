@@ -32,13 +32,8 @@ func newNativeSecret() nativeSecret {
 }
 
 func writeNativeText(state fmt.State, text string) {
-	written, err := io.WriteString(state, text)
-	if err != nil {
-		return
-	}
-	if written != len(text) {
-		return
-	}
+	// A failed write to a fmt.State has nowhere to be reported.
+	_, _ = io.WriteString(state, text)
 }
 
 func (nativeSecret) Format(state fmt.State, _ rune) {
