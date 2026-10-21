@@ -20,6 +20,8 @@ export interface OsNotification {
 
 export interface NotifyAdapter {
   permission(): NotifyPermission
+  /** Asks the platform again what it allows right now (the person may have changed it in the system settings). */
+  refreshPermission(): Promise<NotifyPermission>
   requestPermission(): Promise<NotifyPermission>
   notify(n: OsNotification): void
   setBadge(count: number): void
@@ -27,6 +29,9 @@ export interface NotifyAdapter {
 
 export const browserNotify: NotifyAdapter = {
   permission: () => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
+  async refreshPermission() {
+    return browserNotify.permission()
+  },
   async requestPermission() {
     if (typeof Notification === 'undefined') return 'unsupported'
     try {
@@ -68,10 +73,31 @@ function pendingKey(channelId: string, messageId: string): string {
   return `${channelId}/${messageId}`
 }
 
-/** The desktop client's own toasts and badge. Always permitted: the OS decides. */
+const PERMISSIONS: readonly NotifyPermission[] = ['granted', 'denied', 'default', 'unsupported']
+
+function asPermission(value: unknown): NotifyPermission | null {
+  return typeof value === 'string' && (PERMISSIONS as readonly string[]).includes(value) ? value as NotifyPermission : null
+}
+
+/**
+ * The desktop client's own toasts and badge. The operating system owns the
+ * permission: macOS asks the person once (when the page asks, or at the first
+ * toast), Windows and Linux never ask. The state starts optimistic, so a host
+ * that cannot report it (a client from before `desktop_notify_permission`)
+ * behaves as before, and is replaced by what the host says.
+ */
 export function createHostNotify(): NotifyAdapter {
   const pending = new Map<string, () => void>()
   let opening: Promise<unknown> | null = null
+  let state: NotifyPermission = 'granted'
+
+  async function ask(command: string): Promise<NotifyPermission> {
+    try {
+      const answer = asPermission(await invoke(command))
+      if (answer) state = answer
+    } catch { /* an older host: keep what is known */ }
+    return state
+  }
 
   function click(event: HostClick) {
     const { channel_id: channelId, message_id: messageId } = event
@@ -94,8 +120,9 @@ export function createHostNotify(): NotifyAdapter {
   }
 
   return {
-    permission: () => 'granted',
-    requestPermission: () => Promise.resolve('granted'),
+    permission: () => state,
+    refreshPermission: () => ask('desktop_notify_permission'),
+    requestPermission: () => ask('desktop_notify_request_permission'),
     notify(n) {
       const key = pendingKey(n.channelId, n.messageId)
       pending.delete(key)

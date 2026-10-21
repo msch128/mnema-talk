@@ -16,8 +16,8 @@ vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOrigin
 vi.mock('./desktopRuntime', () => ({ isDesktopRuntime: () => host.desktop, isWebDesktopSelector: () => host.selector }))
 vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
 const notify = vi.hoisted(() => ({
-  browser: { permission: vi.fn(() => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
-  host: { permission: vi.fn(() => 'granted'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
+  browser: { permission: vi.fn(() => 'default'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
+  host: { permission: vi.fn(() => 'granted'), refreshPermission: vi.fn(async () => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
 }))
 vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
@@ -103,6 +103,7 @@ describe('notifications', () => {
       vi.clearAllMocks()
       expect(platform.notificationPermission()).toBe('default')
       await platform.requestNotificationPermission()
+      expect(await platform.refreshNotificationPermission()).toBe('default')
       platform.notify(toast)
       platform.setBadge(2)
       expect(notify.browser.notify).toHaveBeenCalledWith(toast)
@@ -115,6 +116,7 @@ describe('notifications', () => {
     host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify'] }
     expect(platform.notificationPermission()).toBe('granted')
     expect(await platform.requestNotificationPermission()).toBe('granted')
+    expect(await platform.refreshNotificationPermission()).toBe('default')
     platform.notify(toast)
     platform.setBadge(3)
     expect(notify.host.notify).toHaveBeenCalledWith(toast)

@@ -37,6 +37,7 @@ describe('browser adapter', () => {
   it('reports unsupported without the Notification API', async () => {
     vi.stubGlobal('Notification', undefined)
     expect(browserNotify.permission()).toBe('unsupported')
+    expect(await browserNotify.refreshPermission()).toBe('unsupported')
     expect(await browserNotify.requestPermission()).toBe('unsupported')
   })
 
@@ -95,10 +96,27 @@ describe('host adapter', () => {
     host.channels.length = 0
   })
 
-  it('is always permitted: the OS decides', async () => {
+  it('starts permitted and takes what the host reports, asking it only through its commands', async () => {
     const adapter = createHostNotify()
     expect(adapter.permission()).toBe('granted')
+    host.invoke.mockResolvedValueOnce('default')
+    expect(await adapter.refreshPermission()).toBe('default')
+    expect(adapter.permission()).toBe('default')
+    expect(host.invoke).toHaveBeenLastCalledWith('desktop_notify_permission')
+    host.invoke.mockResolvedValueOnce('denied')
+    expect(await adapter.requestPermission()).toBe('denied')
+    expect(host.invoke).toHaveBeenLastCalledWith('desktop_notify_request_permission')
+    expect(adapter.permission()).toBe('denied')
+  })
+
+  it('keeps what it knows when the host cannot tell or answers something else', async () => {
+    const adapter = createHostNotify()
+    host.invoke.mockRejectedValueOnce(new Error('Unknown command.'))
     expect(await adapter.requestPermission()).toBe('granted')
+    host.invoke.mockResolvedValueOnce('maybe')
+    expect(await adapter.refreshPermission()).toBe('granted')
+    host.invoke.mockResolvedValueOnce(null)
+    expect(await adapter.refreshPermission()).toBe('granted')
   })
 
   it('opens the click channel once, then shows the toast with plain arguments', async () => {

@@ -14,6 +14,9 @@ export function useNotificationHint(isPanel: () => boolean) {
   const onboarding = useOnboardingStore()
   onMounted(() => { void onboarding.ensureLoaded() })
 
+  // The desktop client's system may not have been asked yet (macOS asks on the first toast or on the click below).
+  void chatStore.refreshNotificationPermission()
+
   // Dismissed on the server with the member's other tips; nothing shows before it is known.
   const showNotifHint = computed(() =>
     !isPanel() && chatStore.notificationPermission === 'default' &&

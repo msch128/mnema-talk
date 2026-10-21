@@ -444,18 +444,26 @@ host:
   selector, gaming surfaces and the attachment window announce none, and a
   client from before this feature announces no list at all, in which case the
   app falls back to the browser's Notification and Badging APIs. The commands
-  are `desktop_notify_open` (a channel that reports which toast was used, as
+  are `desktop_notify_open` (a channel that reports which toast was clicked, as
   `{channel_id, message_id}`), `desktop_notify` (`title`, `body`, `channelId`,
-  `messageId`) and `desktop_set_badge` (`count`). They are allowed only in the
-  instance window, never on the selector or a gaming surface. The host treats
-  everything as untrusted text: control characters are flattened, title and
-  body are truncated, ids must be plain identifiers, and toasts are rate
-  limited, so a hostile server cannot show markup or spam the desktop. The OS
-  owns the permission (the app reports `granted` and the per-channel levels
-  still apply). Windows shows a dot as the taskbar overlay, macOS and Linux the
-  count on the dock or launcher icon. Where the platform cannot tell the host
-  which toast was clicked (Windows, macOS), bringing the window to the front
-  within 15 seconds of a toast counts as using it. This needs no
+  `messageId`), `desktop_notify_permission` and
+  `desktop_notify_request_permission` (both answer `granted`, `denied`,
+  `default` or `unsupported`) and `desktop_set_badge` (`count`). They are
+  allowed only in the instance window, never on the selector or a gaming
+  surface. The host treats everything as untrusted text: control characters
+  are flattened, title and body are truncated, ids must be plain identifiers,
+  and toasts are rate limited, so a hostile server cannot show markup or spam
+  the desktop. The OS owns the permission and the host reports it: on macOS
+  the system asks once (UserNotifications), when the page calls
+  `desktop_notify_request_permission` or at the first toast, and `default`
+  means it has not been asked yet; Windows and Linux never ask and answer
+  `granted` (a toast the person turned off in the system is dropped without an
+  error). A page that gets an unknown-command error from these two commands (a
+  client from before them) keeps treating the permission as `granted`. Clicking
+  a toast is reported by the platform itself (the toast's activation on Windows,
+  the notification delegate on macOS, the `click` event on Linux) and also
+  brings the window forward. Windows shows a dot as the taskbar overlay, macOS
+  and Linux the count on the dock or launcher icon. This needs no
   `web_client_api` bump: the web app detects the capability.
 
 ### Why this keeps the browser model intact

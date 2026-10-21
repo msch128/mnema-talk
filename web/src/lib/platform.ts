@@ -45,6 +45,8 @@ export interface Platform {
   invoke<T = unknown>(command: string, args?: Record<string, unknown>): Promise<T>
   /** Whether OS notifications may be shown. */
   notificationPermission(): NotifyPermission
+  /** Asks the host what notifications may do right now (it can change outside the app). */
+  refreshNotificationPermission(): Promise<NotifyPermission>
   /** Asks for notification permission; call only from a user gesture. */
   requestNotificationPermission(): Promise<NotifyPermission>
   /** Shows an OS notification; clicking it runs `onClick`. */
@@ -82,6 +84,7 @@ export const browserPlatform: Platform = {
   gamingBridgeToken: () => windowString('__MNEMA_GAMING_BRIDGE__'),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => tauriInvoke<T>(command, args),
   notificationPermission: () => notifier().permission(),
+  refreshNotificationPermission: () => notifier().refreshPermission(),
   requestNotificationPermission: () => notifier().requestPermission(),
   notify: n => notifier().notify(n),
   setBadge: count => notifier().setBadge(count),
@@ -115,6 +118,7 @@ export const platform: Platform = {
   gamingBridgeToken: () => current().gamingBridgeToken(),
   invoke: <T = unknown>(command: string, args?: Record<string, unknown>) => current().invoke<T>(command, args),
   notificationPermission: () => current().notificationPermission(),
+  refreshNotificationPermission: () => current().refreshNotificationPermission(),
   requestNotificationPermission: () => current().requestNotificationPermission(),
   notify: n => current().notify(n),
   setBadge: count => current().setBadge(count),
