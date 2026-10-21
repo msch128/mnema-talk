@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../components/GlobalSearch.vue', () => ({ default: { template: '<div data-search-host>Search</div>' } }))
-import { searchOpen, installGlobalSearch, uninstallGlobalSearch } from './globalSearch'
+import { searchOpen, searchText, openSearch, installGlobalSearch, uninstallGlobalSearch } from './globalSearch'
 
 afterEach(() => {
   uninstallGlobalSearch()
@@ -44,6 +44,17 @@ describe('global search keyboard lifecycle', () => {
     await vi.dynamicImportSettled()
     expect(searchOpen.value).toBe(false)
     add.mockRestore()
+  })
+  it('opens the search with a prefilled query and forgets it at logout', async () => {
+    installGlobalSearch()
+    await openSearch('in:general ')
+    expect(searchOpen.value).toBe(true)
+    expect(searchText.value).toBe('in:general ')
+    searchOpen.value = false
+    await openSearch()
+    expect(searchText.value).toBe('in:general ')
+    uninstallGlobalSearch()
+    expect(searchText.value).toBe('')
   })
   it('does not install a browser listener in a server-side environment', () => {
     uninstallGlobalSearch()

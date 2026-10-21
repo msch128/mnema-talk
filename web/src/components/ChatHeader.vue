@@ -2,10 +2,12 @@
 import type { Component } from 'vue'
 import type { ContextMenuItem } from './menuTypes'
 import { computed } from 'vue'
-import { Hash, Users, Bell, BellOff, AtSign, X, Volume2 } from '@lucide/vue'
+import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
+import { openSearch } from '../lib/globalSearch'
+import { quoteValue } from '../lib/searchQuery'
 
 // The channel header (48px, aligned with the side columns; 40px in the Talk's
 // chat) and the desktop notification opt-in under it, shown until answered or dismissed.
@@ -17,6 +19,11 @@ const emit = defineEmits<{ close: []; menu: [x: number, y: number, items: Contex
 const chatStore = useChatStore()
 const channelIcon = computed<Component>(() => (props.panel ? Volume2 : Hash))
 const { showNotifHint, dismissNotifHint, enableNotifications, notificationMenuItems } = useNotificationHint(() => props.panel)
+
+function searchInChannel() {
+  const channel = chatStore.activeChannel
+  if (channel) void openSearch(`in:${quoteValue(channel.name)} `)
+}
 
 function openNotificationMenu(e: MouseEvent) {
   const channel = chatStore.activeChannel
@@ -56,6 +63,17 @@ function openNotificationMenu(e: MouseEvent) {
 
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 flex-shrink-0">
+      <button
+        v-if="chatStore.activeChannel"
+        type="button"
+        data-testid="search-in-channel"
+        @click="searchInChannel"
+        class="w-8 h-8 flex items-center justify-center rounded-md text-mnema-tertiary hover:text-mnema-text hover:bg-mnema-surface transition"
+        v-tooltip="$t('chat.searchInChannel')"
+        :aria-label="$t('chat.searchInChannel')"
+      >
+        <Search class="w-5 h-5" />
+      </button>
       <button
         v-if="chatStore.activeChannel"
         @click="openNotificationMenu"
