@@ -33,17 +33,23 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
   const memberCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const owner = await ownerCtx.newPage()
   const member = await memberCtx.newPage()
+  // Everything made here is removed again: the sidebar specs that follow read the whole list.
+  const created: string[] = []
+  let categoryToDelete = ''
   try {
     await signIn(owner, ADMIN_USER, ADMIN_PASSWORD)
     const category = await apiFetch(owner, 'POST', '/api/admin/categories', { name: CATEGORY })
     expect(category.status).toBe(201)
     const categoryId = responseString(category, 'id')
+    categoryToDelete = categoryId
     const make = async (name: string, categoryId?: string) => {
       const res = await apiFetch(owner, 'POST', '/api/admin/channels', { name, type: 'text', ...(categoryId ? { category_id: categoryId } : {}) })
       expect(res.status).toBe(201)
-      return responseString(res, 'id')
+      const id = responseString(res, 'id')
+      created.push(id)
+      return id
     }
-    const home = await make(HOME)
+    await make(HOME)
     const one = await make(ONE, categoryId)
     const two = await make(TWO, categoryId)
 
@@ -104,8 +110,9 @@ test('notification levels, timed mutes, category badges and mark all read', asyn
     await expect(member.getByTestId('channel-mentions')).toHaveCount(0)
     await expect(member.getByTestId('channel-unread')).toHaveCount(0)
     await expect(member).not.toHaveTitle(/^(\(\d+\)|•) /)
-    expect(home).toBeTruthy()
   } finally {
+    for (const id of created) await apiFetch(owner, 'DELETE', `/api/admin/channels/${id}`)
+    if (categoryToDelete) await apiFetch(owner, 'DELETE', `/api/admin/categories/${categoryToDelete}`)
     await ownerCtx.close()
     await memberCtx.close()
   }
