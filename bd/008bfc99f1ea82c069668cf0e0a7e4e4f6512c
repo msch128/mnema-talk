@@ -1,0 +1,118 @@
+web/src/stores/chatNotifySettings.test.ts
+  s_06fcde5dbef956::t_195e8def665641 1-174
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_195e8def665641 783-797,853-867,1102-1112,1265-1278,1281,1435,1441
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_195e8def665641 2,65-68
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_195e8def665641 14-15,56,109,111-112
+e2e/tests/notifications.spec.ts
+  s_06fcde5dbef956::t_195e8def665641 1-119
+web/src/App.test.ts
+  s_06fcde5dbef956::t_195e8def665641 35,157,367
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_195e8def665641 630
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_195e8def665641 23-24,157-165,248,277-278
+web/src/lib/native/nativeTransport.test.ts
+  s_06fcde5dbef956::t_195e8def665641 52-62
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_195e8def665641 14,46-51
+web/src/types/events.ts
+  s_06fcde5dbef956::t_195e8def665641 27,208
+web/src/App.vue
+  s_06fcde5dbef956::t_195e8def665641 38,44,84-85
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_195e8def665641 173-174,214-226
+web/src/composables/useNavMenus.test.ts
+  s_06fcde5dbef956::t_195e8def665641 176-183,186,201,206-210,215,221-222,233,238,257,261
+internal/chat/notify_test.go
+  s_06fcde5dbef956::t_195e8def665641 1-44
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_195e8def665641 12,40
+internal/chat/notify.go
+  s_06fcde5dbef956::t_195e8def665641 1-192
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_195e8def665641 28,126-127,157,162
+  s_06fcde5dbef956::t_35d441ab8cadf8 163
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_195e8def665641 30-31,39-41,45,49,56-60,91,107
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_195e8def665641 15-16,37
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_195e8def665641 478-480,485-487,489
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_195e8def665641 29,130-132
+web/src/lib/channelActivity.ts
+  s_06fcde5dbef956::t_195e8def665641 1-32
+web/src/components/Sidebar.menus.test.ts
+  s_06fcde5dbef956::t_195e8def665641 206,225,319
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_195e8def665641 1-59
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_195e8def665641 45-46
+internal/chat/handler_notify.go
+  s_06fcde5dbef956::t_195e8def665641 1-211
+internal/chat/handler.go
+  s_06fcde5dbef956::t_195e8def665641 86-88
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_195e8def665641 54
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_195e8def665641 364
+api/openapi.json
+  s_06fcde5dbef956::t_195e8def665641 1319-1342,1442-1465,1822-1834,2127-2147,2152-2153,2159-2160,2387-2394,14623-14733,15869,17351-17415,17586-17673,18768
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_195e8def665641 18-21,70-82
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_195e8def665641 181-184
+internal/db/migrations/0035_notification_levels.sql
+  s_06fcde5dbef956::t_195e8def665641 1-22
+web/src/stores/chat/notifySettings.ts
+  s_06fcde5dbef956::t_195e8def665641 1-115
+web/src/stores/chat/readState.ts
+  s_06fcde5dbef956::t_195e8def665641 1
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_195e8def665641 173-174,214-226
+web/src/composables/useAppBadge.ts
+  s_06fcde5dbef956::t_b6280706b343f2 1-2,6,10-13
+web/src/composables/useTitleBadge.test.ts
+  s_06fcde5dbef956::t_195e8def665641 1-40
+internal/server/notify_integration_test.go
+  s_06fcde5dbef956::t_195e8def665641 1-162
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_195e8def665641 8,53-55,71,131
+web/src/composables/useTitleBadge.ts
+  s_06fcde5dbef956::t_195e8def665641 1-16
+web/src/composables/useMuteMenu.test.ts
+  s_06fcde5dbef956::t_195e8def665641 1-85
+web/src/lib/channelActivity.test.ts
+  s_06fcde5dbef956::t_195e8def665641 1-34
+web/src/composables/useMuteMenu.ts
+  s_06fcde5dbef956::t_195e8def665641 1-87
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_195e8def665641 3,11,140-143
+web/src/composables/useNotificationHint.ts
+  s_06fcde5dbef956::t_195e8def665641 3-4,37-38
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_195e8def665641 8-9
+web/src/composables/useNotificationHint.test.ts
+  s_06fcde5dbef956::t_195e8def665641 81-83,85-90
+web/src/composables/useAppBadge.test.ts
+  s_06fcde5dbef956::t_d2435b1b7b32ad 19,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bd008bfc99f1ea82c069668cf0e0a7e4e4f6512c",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
