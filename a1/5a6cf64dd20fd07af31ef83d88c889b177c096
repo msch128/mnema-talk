@@ -1,0 +1,35 @@
+web/src/lib/osNotify.test.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 40,99,102-114,116-119
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 55-61
+web/src/lib/osNotify.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 23-24,32-34,76-88,92-100,123-125
+web/src/composables/useNotificationHint.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 17-19
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 17,116
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_a6e4894eebc2f6 447,449-466
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 463-470
+web/src/lib/platform.test.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 19-20,106,119
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_a6e4894eebc2f6 48-49,87,121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a15a6cf64dd20fd07af31ef83d88c889b177c096",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
