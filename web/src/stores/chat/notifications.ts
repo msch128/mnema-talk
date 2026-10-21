@@ -2,6 +2,7 @@ import type { Message } from '../../types/domain'
 import { t } from '../../i18n'
 import { mentionsUser, shouldNotify } from '../../lib/chatLogic'
 import { isQuiet } from '../../lib/presence'
+import { platform } from '../../lib/platform'
 import type { Cx } from './state'
 import { goToMessage } from './messageWindow'
 import { isTabVisible } from './readState'
@@ -30,10 +31,9 @@ function buildNotificationBody(msg: Message): string {
 }
 
 function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): boolean {
-  if (typeof Notification === 'undefined') return false
   if (isQuiet(cx.authStore.user?.presence)) return false
   return shouldNotify({
-    permission: Notification.permission,
+    permission: platform.notificationPermission(),
     level: notificationLevel(cx, msg.channel_id),
     isMention,
     hidden: !isTabVisible(),
@@ -43,30 +43,18 @@ function canShowBrowserNotification(cx: Cx, msg: Message, isMention: boolean): b
 
 export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: boolean) {
   if (!canShowBrowserNotification(cx, msg, isMention)) return
-  try {
-    const n = new Notification(buildNotificationTitle(cx, msg), {
-      body: buildNotificationBody(msg),
-      icon: '/favicon.svg',
-      tag: msg.channel_id
-    })
-    n.onclick = () => {
-      if (typeof window !== 'undefined') window.focus()
-      goToMessage(cx, msg)
-      n.close()
-    }
-  } catch (e) {
-    console.warn('Browser notification failed:', e)
-  }
+  platform.notify({
+    title: buildNotificationTitle(cx, msg),
+    body: buildNotificationBody(msg),
+    channelId: msg.channel_id,
+    messageId: msg.id,
+    onClick: () => goToMessage(cx, msg),
+  })
 }
 
 export async function requestNotificationPermission(cx: Cx) {
   const { cs } = cx
-  if (typeof Notification === 'undefined') return 'unsupported'
-  try {
-    cs.notificationPermission.value = await Notification.requestPermission()
-  } catch {
-    cs.notificationPermission.value = Notification.permission
-  }
-  return cs.notificationPermission.value
+  const result = await platform.requestNotificationPermission()
+  if (result !== 'unsupported') cs.notificationPermission.value = result
+  return result
 }
-

@@ -86,6 +86,7 @@ export default tseslint.config(
       '**/*.config.ts',
       '**/src/lib/platform.ts',
       '**/src/lib/desktopRuntime.ts',
+      '**/src/lib/osNotify.ts',
       '**/src/lib/native/trustedDesktop.ts',
       '**/src/lib/native/trustedSocket.ts',
       '**/src/lib/native/nativeTransport.ts'
