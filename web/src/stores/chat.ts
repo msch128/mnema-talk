@@ -14,7 +14,7 @@ import { handleWSEvent } from './chat/events'
 import { fetchReadState, markActiveChannelReadIfReading, markChannelRead, markChannelUnread, setReturnToTabHandler, setVoiceChatReading } from './chat/readState'
 import { fetchNotificationSettings, markAllRead, notificationLevel, setCategoryNotificationLevel, setNotificationLevel } from './chat/notifySettings'
 import { sendTyping } from './chat/typing'
-import { messageMentionsMe, requestNotificationPermission } from './chat/notifications'
+import { messageMentionsMe, refreshNotificationPermission, requestNotificationPermission } from './chat/notifications'
 import { dismissEphemeral, resetCommunityState } from './chat/reset'
 
 export type { EphemeralNote, ProfilePreview, ThreadRoot } from './chat/types'
@@ -113,6 +113,7 @@ function exposedActions(cx: Cx) {
     notificationLevel: bind(notificationLevel),
     goToMessage: bind(goToMessage),
     sendTyping: bind(sendTyping),
+    refreshNotificationPermission: bind(refreshNotificationPermission),
     requestNotificationPermission: bind(requestNotificationPermission),
     openThread: bind(openThread),
     closeThread: bind(closeThread),
