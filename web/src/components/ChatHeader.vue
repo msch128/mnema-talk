@@ -6,6 +6,7 @@ import { Hash, Users, Bell, BellOff, AtSign, X, Volume2, Search } from '@lucide/
 import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
+import MentionsInbox from './MentionsInbox.vue'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
 
@@ -63,6 +64,7 @@ function openNotificationMenu(e: MouseEvent) {
 
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 flex-shrink-0">
+      <MentionsInbox v-if="!panel" />
       <button
         v-if="chatStore.activeChannel"
         type="button"

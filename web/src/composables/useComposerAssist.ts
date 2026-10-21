@@ -5,6 +5,7 @@ import type { Ref } from 'vue'
 import type { MentionSuggestion } from '../lib/mentionQuery'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { findMentionQuery, suggestMentions, applyMention } from '../lib/mentionQuery'
 
 /** Inserts text at the caret (e.g. an emoji) and keeps focus. */
@@ -29,6 +30,15 @@ async function insertAtCaret(el: HTMLTextAreaElement | null, model: Ref<string>,
 export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, model: Ref<string>) {
   const chatStore = useChatStore()
   const authStore = useAuthStore()
+  const permissions = usePermissionsStore()
+
+  // The roles the member may mention here: mentionable ones, or any with
+  // "Mention everyone". The server decides again when the message is sent.
+  const mentionableRoles = computed(() => {
+    const channelId = chatStore.activeChannel?.id
+    const mayAll = channelId ? permissions.canIn(channelId, 'mention_everyone') : permissions.can('mention_everyone')
+    return permissions.roles.filter(r => !r.is_everyone && !r.managed && (r.mentionable || mayAll))
+  })
 
   const query = ref<ReturnType<typeof findMentionQuery>>(null) // { start, query } while a mention is being typed
   const active = ref(0)
@@ -36,7 +46,7 @@ export function useComposerAssist(textarea: Ref<HTMLTextAreaElement | null>, mod
 
   const suggestions = computed(() => {
     if (!query.value) return []
-    return suggestMentions(query.value.query, chatStore.members, { selfId: authStore.user?.id ?? null })
+    return suggestMentions(query.value.query, chatStore.members, { selfId: authStore.user?.id ?? null, roles: mentionableRoles.value })
   })
   const open = computed(() => suggestions.value.length > 0)
 

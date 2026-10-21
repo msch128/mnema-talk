@@ -46,7 +46,7 @@ export function messageFixture(overrides: Partial<Message> = {}): Message {
   return {
     id: fixtureId(3), number: 3, channel_id: fixtureId(2), user_id: fixtureId(1),
     username: 'member', display_name: '', content: 'Synthetic message',
-    attachments: [], mentions: [], reactions: [], is_edited: false,
+    attachments: [], mentions: [], mention_roles: [], reactions: [], is_edited: false,
     is_pinned: false, reply_count: 0, created_at: FIXTURE_TIMESTAMP,
     updated_at: FIXTURE_TIMESTAMP,
     ...overrides,

@@ -4,6 +4,7 @@ import { enableAutoUnmount, mount } from '@vue/test-utils'
 import MarkdownContent from './MarkdownContent.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 import { userFixture, fixtureId } from '../test-fixtures.fixture'
 
 enableAutoUnmount(afterEach)
@@ -80,5 +81,21 @@ describe('MarkdownContent interaction delegation', () => {
   it('renders preview cards only for plain URLs and caps them at three', () => {
     const w = mount(MarkdownContent, { props: { content: 'https://example.org/one https://example.org/two https://example.org/three https://example.org/four `https://example.org/code` ||https://example.org/spoiler||' }, global: { stubs: { LinkPreviewCard: { props: ['url'], template: '<a class="preview">{{ url }}</a>' } } } })
     expect(w.findAll('.preview').map(link => link.text())).toEqual(['https://example.org/one', 'https://example.org/two', 'https://example.org/three'])
+  })
+})
+
+describe('MarkdownContent role pills', () => {
+  const role = (id: string, name: string) => ({
+    id, name, color: 0, position: 1, permissions: 0, hoist: false, mentionable: true, is_everyone: false, max_upload_mb: null
+  })
+
+  it("draws only the roles the message recorded, and marks the reader's own", () => {
+    const permissions = usePermissionsStore()
+    permissions.roles = [role('r1', 'Dev Team'), role('r2', 'Ops')]
+    permissions.info = { owner: false, permissions: 0, max_upload_mb: 50, role_ids: ['r1'], top_position: 1, catalog: [], channels: [] }
+    const w = mount(MarkdownContent, { props: { content: '@Dev Team and @Ops and @gone', mentionRoles: ['r1', 'missing'] } })
+    const pills = w.findAll('.md-mention-role')
+    expect(pills.map(p => p.text())).toEqual(['@Dev Team'])
+    expect(pills[0]?.classes()).toContain('md-mention-me')
   })
 })
