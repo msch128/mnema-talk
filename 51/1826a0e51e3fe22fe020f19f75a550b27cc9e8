@@ -1,0 +1,30 @@
+e2e/tests/crypto-state.spec.ts
+  h_0ff4f4713441f4 5,44-53,57-58,60-67,70-74,77-81,84,86-100,106-132
+internal/linkpreview/handler_test.go
+  h_0ff4f4713441f4 22-186,195,204-206
+internal/nativepreview/native_public_preview_integration_test.go
+  h_0ff4f4713441f4 50-54,56-74,76-78,80-81,83-101,103-104,106-123,129
+internal/s3/client_test.go
+  h_0ff4f4713441f4 40-58,61-68,71-82,90,95,101-115,165-175,185,192,194-196,226-230,232-236,240-243
+internal/server/commands_integration_test.go
+  h_0ff4f4713441f4 38-52,54-57,59-60,62-68,70-71,90,92-94,97,109,111-113,122-178,195,229-368,386,393,397,414,419,422
+internal/sfu/authorization_test.go
+  h_0ff4f4713441f4 54-101,120-121,123-124,128-129,131-132,134-135,177-285,292,309-345,367-369,374
+internal/sfu/layers_integration_test.go
+  h_0ff4f4713441f4 26-69,98,101,135-142,166-223,254,257,260
+internal/sfu/transport_test.go
+  h_0ff4f4713441f4 40-90,102-179,181-182,190,192
+internal/tools/openapifix/main_test.go
+  h_0ff4f4713441f4 10-11,73,75-79,81-82,84-85,87-88,90,92-93,108,116-146,174-177
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "511826a0e51e3fe22fe020f19f75a550b27cc9e8",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
