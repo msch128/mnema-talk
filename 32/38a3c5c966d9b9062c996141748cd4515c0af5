@@ -1,0 +1,228 @@
+web/src/composables/useTitleBadge.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-16
+web/src/lib/searchSuggest.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-51
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 7-8
+web/src/lib/searchSuggest.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-74
+web/src/components/MessageRow.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 171
+web/src/stores/chat/reset.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 45-46
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 787-801,857-871,1106-1116,1203-1215,1229,1256,1271-1284,1287,1408,1415,1420-1438,1441,1447
+web/src/stores/chat/socket.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 12,40
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 181,189-192,209,213-218,236-240,268-269
+web/src/composables/useNotificationHint.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 3-4,37-38
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 179-183
+  s_06fcde5dbef956::t_6f4158a5b2def7 184-188
+web/src/lib/searchQuery.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-119
+internal/chat/inbox.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-95
+web/src/stores/chatNotifySettings.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-174
+internal/chat/message_types.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 53-60
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 70,88-101
+  s_06fcde5dbef956::t_ffb994df2374c6 102-103
+web/src/composables/useMuteMenu.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-87
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_ecf24952b1e89f 178-179,219-231,315,325-327,1130-1136
+internal/chat/handler.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 82,86-88
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 30-31,39-41,45,49,56-60,91,107
+internal/db/migrations/0035_notification_levels.sql
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-22
+web/src/lib/markdown.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 105-127
+internal/chat/handler_notify.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-211
+web/src/components/SidebarCategoryHeader.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 18-21,70-82
+internal/chat/notify.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-192
+web/src/lib/native/nativeTransport.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 52-62
+web/src/lib/globalSearch.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 11-12,28-33,56
+e2e/tests/search.spec.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-111
+internal/chat/search_filters_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-61
+web/src/stores/chat/events.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 14,46-51
+web/src/components/SearchResultItem.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-79
+internal/chat/mentions.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 33-35,77-90,92-93,95,99-106,119-120,128-129,134-136,143,189,191,199,206-207,209-211,213,222,226
+web/src/stores/chat.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 14-15,56,109,111-112
+internal/chat/search.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 10,81,87-93
+web/src/App.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 35,157,367
+web/src/components/Sidebar.menus.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 206,225,319
+web/src/composables/useNavMenus.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 176-183,186,201,206-210,215,221-222,233,238,257,261
+web/src/lib/channelActivity.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-32
+internal/chat/messages.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 75,116
+web/src/components/MentionSuggestions.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 6,10,33,52-57
+  s_06fcde5dbef956::t_f933b3eb9aa30f 58
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 478-480,485-487,489
+e2e/tests/mentions.spec.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-87
+web/src/composables/useComposerAssist.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 8,33-41,49
+web/src/composables/useTitleBadge.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-40
+web/src/lib/searchQuery.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-226
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 2,65-68
+web/src/composables/useMentionsInbox.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-65
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 5,9-11,24-28,67-78
+web/src/components/MentionsInbox.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-120
+web/src/composables/useMuteMenu.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-85
+internal/chat/mentions_roles.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-249
+web/src/components/SearchModal.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 10,42,114,118-119,125-140,148-175,269,271
+web/src/components/ChatHeader.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-40
+e2e/tests/notifications.spec.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-119
+web/src/components/SearchInput.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-192
+web/src/components/Sidebar.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 630
+web/src/lib/mentionQuery.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 52-71
+web/src/lib/mentionQuery.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 4,8-11,78-87,99-101,106,118-122
+web/src/components/MarkdownContent.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 3,9,15-19,25,29-33,36-37,136-137
+internal/chat/notify_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-44
+web/src/components/SidebarNotifications.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-59
+internal/chat/search_filters.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-126
+web/src/components/MentionsInbox.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-90
+web/src/components/SidebarServerMenu.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 3,11,140-143
+internal/chat/mentions_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 6-7,10-46
+  s_06fcde5dbef956::t_09df3d9d1d08e0 47
+internal/server/mentions_roles_integration_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-167
+web/src/App.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 37,43,82-83
+internal/db/migrations/0036_role_mentions.sql
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-19
+web/src/composables/useMentionsInbox.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-78
+web/src/lib/searchHighlight.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-28
+web/src/stores/chatStoreBehaviour.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 364
+web/src/components/SearchInput.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-92
+web/src/types/events.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 29,130-132
+web/src/types/events.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 27,208
+web/src/lib/globalSearch.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 4,48-57
+  s_06fcde5dbef956::t_f8711aceba9353 58
+web/src/lib/channelActivity.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-34
+web/src/components/ThreadReply.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 143
+web/src/composables/useComposerAssist.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 9-10,145-166,168
+  s_06fcde5dbef956::t_eca92c26a2412b 167,169
+internal/server/notify_integration_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-162
+web/src/lib/markdown.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 89-113,119,121-124,129
+web/src/composables/useNavMenus.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 28,126-127,157,162
+  s_06fcde5dbef956::t_a2d0eb92b4e965 163
+internal/perm/snapshot_members.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-19
+web/src/components/ThreadSidebar.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 251
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_ecf24952b1e89f 30-40
+web/src/composables/useNotificationHint.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 81-83,85-90
+web/src/components/MentionSuggestions.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-34
+web/src/components/SearchResults.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-62
+web/src/stores/chat/notifySettings.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-115
+web/src/components/MarkdownContent.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 7,86-100
+  s_06fcde5dbef956::t_f18b63cdf8d269 101
+web/src/components/Sidebar.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 23-24,157-165,248,277-278
+web/src/components/SearchModal.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 3,5-6,8-9,12-13,28,35-43,45-46,55-56,61-66,73,81,84,91,105,108,122-123,133,135-136,140-143,174-196
+web/src/stores/chat/readState.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1
+web/src/test-fixtures.fixture.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 49
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_ecf24952b1e89f 178-179,219-231,315,325-327,1130-1136
+web/src/types/domain.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 15-16,37
+web/src/components/SidebarChannelRow.vue
+  s_06fcde5dbef956::t_ecf24952b1e89f 8,53-55,71,131
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 54
+internal/server/search_filters_integration_test.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-85
+web/src/lib/searchHighlight.test.ts
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-34
+internal/chat/search_roots.go
+  s_06fcde5dbef956::t_ecf24952b1e89f 1-52
+api/openapi.json
+  s_06fcde5dbef956::t_ecf24952b1e89f 1327-1350,1450-1473,1830-1842,1999-2016,2068-2075,2139-2159,2164-2165,2171-2172,2349-2355,2360-2391,2399-2406,14990-15100,16236,17277-17373,17780-17841,18255-18342,18413,18444,18451,18457-18483
+  s_06fcde5dbef956::t_858fa17f232d52 17842-17844,19437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3238a3c5c966d9b9062c996141748cd4515c0af5",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
