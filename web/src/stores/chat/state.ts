@@ -1,7 +1,7 @@
 import { computed, ref, shallowRef } from 'vue'
 import type { Category, Channel, Member, Message, Presence, ReadState, User } from '../../types/domain'
 import type { ServerEventPayloads } from '../../types/events'
-import type { PlatformSocket } from '../../lib/platform'
+import { platform, type PlatformSocket } from '../../lib/platform'
 import { createKeyedThrottle } from '../../lib/chatLogic'
 import type { useAuthStore } from '../auth'
 import type { useVoiceStore } from '../voice'
@@ -74,7 +74,7 @@ function memberState() {
     lastTypingSentAt: new Map<string, number>(),
 
     // Desktop notification permission: 'default' | 'granted' | 'denied' | 'unsupported'
-    notificationPermission: ref<string>(typeof Notification === 'undefined' ? 'unsupported' : Notification.permission),
+    notificationPermission: ref<string>(platform.notificationPermission()),
     // Thread to open once the jump to its root message has landed (search / notification targets).
     pendingThreadOpen: null as { rootId: string; channelId: string } | null
   }

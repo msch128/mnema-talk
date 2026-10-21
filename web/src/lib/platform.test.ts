@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const host = vi.hoisted(() => ({
   desktop: false,
   selector: false,
-  trusted: null as null | { role: string; version: string },
+  trusted: null as null | { role: string; version: string; capabilities: string[] },
   invoke: vi.fn(),
   nativeTransport: vi.fn(),
   initialize: vi.fn(),
@@ -15,6 +15,11 @@ const host = vi.hoisted(() => ({
 vi.mock('@tauri-apps/api/core', async importOriginal => ({ ...await importOriginal<typeof import('@tauri-apps/api/core')>(), invoke: host.invoke }))
 vi.mock('./desktopRuntime', () => ({ isDesktopRuntime: () => host.desktop, isWebDesktopSelector: () => host.selector }))
 vi.mock('./native/trustedDesktop', () => ({ trustedApp: () => host.trusted, isTrustedDesktop: () => host.trusted !== null }))
+const notify = vi.hoisted(() => ({
+  browser: { permission: vi.fn(() => 'default'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
+  host: { permission: vi.fn(() => 'granted'), requestPermission: vi.fn(async () => 'granted'), notify: vi.fn(), setBadge: vi.fn() },
+}))
+vi.mock('./osNotify', () => ({ browserNotify: notify.browser, hostNotify: notify.host }))
 vi.mock('./native/trustedSocket', () => ({ TrustedSocket: class TrustedSocket { kind = 'trusted' } }))
 vi.mock('./native/nativeTransport', () => ({
   NativeSocket: class NativeSocket { kind = 'native' },
@@ -61,7 +66,7 @@ describe('browser platform', () => {
   })
 
   it('opens the host relayed socket inside the verified desktop bundle', () => {
-    host.trusted = { role: 'instance', version: '1.2.3' }
+    host.trusted = { role: 'instance', version: '1.2.3', capabilities: [] }
     expect(platform.isTrustedDesktop()).toBe(true)
     expect(platform.trustedApp()).toEqual(host.trusted)
     expect(platform.openSocket('wss://example.invalid/api/ws')).toMatchObject({ kind: 'trusted' })
@@ -86,6 +91,41 @@ describe('browser platform', () => {
   it('reads no window global without a window', () => {
     vi.stubGlobal('window', undefined)
     expect(browserPlatform.gamingSurface()).toBeNull()
+  })
+})
+
+describe('notifications', () => {
+  const toast = { title: 't', body: 'b', channelId: 'c', messageId: 'm', onClick: () => {} }
+
+  it('uses the browser adapter outside the client and in clients without the capability', async () => {
+    for (const trusted of [null, { role: 'instance', version: '1.2.3', capabilities: [] }, { role: 'selector', version: '1.2.3', capabilities: ['notify'] }]) {
+      host.trusted = trusted
+      vi.clearAllMocks()
+      expect(platform.notificationPermission()).toBe('default')
+      await platform.requestNotificationPermission()
+      platform.notify(toast)
+      platform.setBadge(2)
+      expect(notify.browser.notify).toHaveBeenCalledWith(toast)
+      expect(notify.browser.setBadge).toHaveBeenCalledWith(2)
+      expect(notify.host.notify).not.toHaveBeenCalled()
+    }
+  })
+
+  it('hands toasts and the badge to the client when its instance window announces notify', async () => {
+    host.trusted = { role: 'instance', version: '1.2.3', capabilities: ['notify'] }
+    expect(platform.notificationPermission()).toBe('granted')
+    expect(await platform.requestNotificationPermission()).toBe('granted')
+    platform.notify(toast)
+    platform.setBadge(3)
+    expect(notify.host.notify).toHaveBeenCalledWith(toast)
+    expect(notify.host.setBadge).toHaveBeenCalledWith(3)
+    expect(notify.browser.notify).not.toHaveBeenCalled()
+  })
+
+  it('routes the same way on the desktop platform', () => {
+    host.desktop = true
+    platform.notify(toast)
+    expect(notify.browser.notify).toHaveBeenCalledWith(toast)
   })
 })
 
