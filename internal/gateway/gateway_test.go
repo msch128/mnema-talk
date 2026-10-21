@@ -292,3 +292,37 @@ func TestWriteLoopEndsWhenTheSocketIsGone(t *testing.T) {
 	c2.closeWith(1000, "")
 	<-c2.done
 }
+
+func TestCloseReasonsNeverCarryErrorText(t *testing.T) {
+	g := &Gateway{Auth: bot.NewAuthenticator(nil)}
+	check := func(name string, c *connection, code int, want string) {
+		t.Helper()
+		if !c.closed() {
+			t.Fatalf("%s: connection not closed", name)
+		}
+		if c.closeCode != code || c.closeReason != want {
+			t.Errorf("%s: closed %d %q, want %d %q", name, c.closeCode, c.closeReason, code, want)
+		}
+		if len(c.closeReason) > 123 {
+			t.Errorf("%s: reason is %d bytes, over the 123 a close frame holds", name, len(c.closeReason))
+		}
+	}
+
+	c := newConnection(nil)
+	if g.credentials(c, "not-a-token", nil) != nil {
+		t.Fatal("a malformed token resolved")
+	}
+	check("token", c, CloseAuthFailed, "Authentication failed")
+
+	c = newConnection(nil)
+	if g.identify(c, json.RawMessage(`{"token":`), nil) != nil {
+		t.Fatal("garbage identified")
+	}
+	check("identify decode", c, 4002, "Decode error")
+
+	c = newConnection(nil)
+	if s, fatal := g.resume(c, json.RawMessage(`[1`), nil); s != nil || !fatal {
+		t.Fatal("garbage resumed")
+	}
+	check("resume decode", c, 4002, "Decode error")
+}

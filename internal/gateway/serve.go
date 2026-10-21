@@ -3,7 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -100,7 +100,8 @@ func (g *Gateway) credentials(c *connection, token string, header *bot.Credentia
 	}
 	creds, err := g.Auth.Lookup(context.Background(), token)
 	if err != nil {
-		c.closeWith(CloseAuthFailed, "Authentication failed: "+err.Error())
+		slog.Debug("gateway token lookup", "err", err)
+		c.closeWith(CloseAuthFailed, "Authentication failed")
 		return nil
 	}
 	return creds
@@ -146,12 +147,8 @@ func (g *Gateway) sessionCredentials(c *connection, token string, header *bot.Cr
 	if creds == nil {
 		return nil
 	}
-	if ok, retry := g.idents.Allow(creds.Bot.BotID.String()); !ok {
-		msg := "Rate limited"
-		if retry > 0 {
-			msg = fmt.Sprintf("Rate limited: retry after %s", retry.Round(time.Second))
-		}
-		c.closeWith(CloseRateLimited, msg)
+	if ok, _ := g.idents.Allow(creds.Bot.BotID.String()); !ok {
+		c.closeWith(CloseRateLimited, "Rate limited")
 		return nil
 	}
 	return creds
@@ -160,7 +157,8 @@ func (g *Gateway) sessionCredentials(c *connection, token string, header *bot.Cr
 func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credentials) *session {
 	var req Identify
 	if err := json.Unmarshal(d, &req); err != nil {
-		c.closeWith(4002, "Decode error: "+err.Error())
+		slog.Debug("gateway decode", "err", err)
+		c.closeWith(4002, "Decode error")
 		return nil
 	}
 	creds := g.sessionCredentials(c, req.Token, header)
@@ -188,7 +186,8 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		return nil
 	}
 	if err := g.sendReady(s, creds); err != nil {
-		c.closeWith(CloseUnknownError, "Internal error: "+err.Error())
+		slog.Error("gateway ready", "err", err)
+		c.closeWith(CloseUnknownError, "Internal error")
 		return nil
 	}
 	g.initSessionPresence(s, req.Presence)
@@ -223,7 +222,8 @@ func (g *Gateway) adoptSession(s *session, tokenID uuid.UUID) bool {
 func (g *Gateway) resume(c *connection, d json.RawMessage, header *bot.Credentials) (s *session, fatal bool) {
 	var req Resume
 	if err := json.Unmarshal(d, &req); err != nil {
-		c.closeWith(4002, "Decode error: "+err.Error())
+		slog.Debug("gateway decode", "err", err)
+		c.closeWith(4002, "Decode error")
 		return nil, true
 	}
 	creds := g.sessionCredentials(c, req.Token, header)
