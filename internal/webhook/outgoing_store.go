@@ -149,7 +149,7 @@ func listOutgoing(ctx context.Context, p *db.Pool, channel uuid.UUID) ([]*outgoi
 func newSecret() string {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
-		return ""
+		panic(err)
 	}
 	return "whsec_" + base64.RawURLEncoding.EncodeToString(raw)
 }
