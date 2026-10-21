@@ -140,7 +140,7 @@ const { pickerId, editingId, editText } = props.actions
           @cancel="actions.cancelEdit()"
         />
 
-        <MarkdownContent v-else-if="reply.content" :content="reply.content" class="mt-0.5" />
+        <MarkdownContent v-else-if="reply.content" :content="reply.content" :mention-roles="reply.mention_roles ?? []" class="mt-0.5" />
         <MessageEmbeds v-if="editingId !== reply.id" :embeds="reply.embeds ?? []" />
 
         <!-- Reply Attachments -->

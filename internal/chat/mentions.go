@@ -30,6 +30,9 @@ type MentionPolicy struct {
 	AllowUsers []uuid.UUID
 	// CanView, when set, drops mentioned users who cannot view the channel.
 	CanView func(userID uuid.UUID) bool
+	// Roles are the roles the author may mention by name (see MentionRole);
+	// any other @Role stays plain text.
+	Roles []MentionRole
 }
 
 type mentionPolicyKey struct{}
@@ -71,22 +74,36 @@ func ParseMentions(content string) []string {
 	return names
 }
 
+// Why a user is mentioned (message_mentions.kind). A lower kind wins when a
+// user is reached more than one way.
+const (
+	MentionKindName  int16 = 0 // @username
+	MentionKindGroup int16 = 1 // @all, @here
+	MentionKindRole  int16 = 2 // @Role
+)
+
+// MentionedUser is a user a message notifies and why.
+type MentionedUser struct {
+	ID   uuid.UUID
+	Kind int16
+}
+
 // ResolveMentions turns the mentions in content into user IDs: named users,
-// every active member for @all and active online users for @here. The author is
-// never mentioned by their own message.
+// every active member for @all, active online users for @here and the members
+// of mentioned roles. The author is never mentioned by their own message.
 func ResolveMentions(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) ([]uuid.UUID, error) {
-	names := ParseMentions(content)
-	if len(names) == 0 {
-		return nil, nil
-	}
-	policy := mentionPolicyFrom(ctx)
-	targets := splitMentionTargets(names, policy)
-	ids, err := mentionIDs(ctx, q, targets, online)
+	set, err := resolveMentionSet(ctx, q, content, authorID, online)
 	if err != nil {
 		return nil, err
 	}
-	delete(ids, authorID)
-	return allowedMentions(ids, policy, targets), nil
+	ids := make([]uuid.UUID, len(set.Users))
+	for i, u := range set.Users {
+		ids[i] = u.ID
+	}
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	return ids, nil
 }
 
 func needsMentionQuery(targets mentionTargets, online []uuid.UUID) bool {
@@ -99,8 +116,8 @@ func needsMentionQuery(targets mentionTargets, online []uuid.UUID) bool {
 	return len(online) > 0
 }
 
-func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, online []uuid.UUID) (map[uuid.UUID]bool, error) {
-	ids := map[uuid.UUID]bool{}
+func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, online []uuid.UUID) (map[uuid.UUID]int16, error) {
+	ids := map[uuid.UUID]int16{}
 	if !needsMentionQuery(targets, online) {
 		return ids, nil
 	}
@@ -108,22 +125,22 @@ func mentionIDs(ctx context.Context, q db.Querier, targets mentionTargets, onlin
 	if err != nil {
 		return nil, err
 	}
-	for _, id := range found {
-		ids[id] = true
+	for _, u := range found {
+		ids[u.ID] = u.Kind
 	}
 	return ids, nil
 }
 
-func allowedMentions(ids map[uuid.UUID]bool, policy MentionPolicy, targets mentionTargets) []uuid.UUID {
-	out := make([]uuid.UUID, 0, len(ids))
-	for id := range ids {
+func allowedMentions(ids map[uuid.UUID]int16, policy MentionPolicy, targets mentionTargets) []MentionedUser {
+	out := make([]MentionedUser, 0, len(ids))
+	for id, kind := range ids {
 		if mentionSkipped(policy, targets, id) {
 			continue
 		}
 		if !mentionVisible(policy, id) {
 			continue
 		}
-		out = append(out, id)
+		out = append(out, MentionedUser{ID: id, Kind: kind})
 	}
 	return out
 }
@@ -169,9 +186,9 @@ func splitMentionTargets(names []string, policy MentionPolicy) mentionTargets {
 	return t
 }
 
-func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online []uuid.UUID) ([]uuid.UUID, error) {
+func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online []uuid.UUID) ([]MentionedUser, error) {
 	rows, err := q.Query(ctx, `
-		SELECT id FROM users
+		SELECT id, CASE WHEN LOWER(username) = ANY($2) THEN 0 ELSE 1 END::smallint FROM users
 		WHERE `+auth.ActiveSQL("")+` AND (
 		    (NOT is_bot AND ($1 OR LOWER(username) = ANY($2) OR ($3 AND id = ANY($4::uuid[]))))
 		    -- a bot is mentioned by name only, never by @all or @here
@@ -179,29 +196,21 @@ func queryMentioned(ctx context.Context, q db.Querier, t mentionTargets, online 
 	if err != nil {
 		return nil, fmt.Errorf("resolve mentions: %w", err)
 	}
-	found, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	found, err := pgx.CollectRows(rows, pgx.RowToStructByPos[MentionedUser])
 	if err != nil {
 		return nil, fmt.Errorf("resolve mentions: %w", err)
 	}
 	return found, nil
 }
 
-// SaveMentions replaces the stored mentions of messageID with userIDs.
+// SaveMentions replaces the stored mentions of messageID with userIDs, all
+// by name.
 func SaveMentions(ctx context.Context, q db.Querier, messageID uuid.UUID, userIDs []uuid.UUID) error {
-	if _, err := q.Exec(ctx, `DELETE FROM message_mentions WHERE message_id = $1`, messageID); err != nil {
-		return fmt.Errorf("clear mentions: %w", err)
+	users := make([]MentionedUser, len(userIDs))
+	for i, id := range userIDs {
+		users[i] = MentionedUser{ID: id, Kind: MentionKindName}
 	}
-	if len(userIDs) == 0 {
-		return nil
-	}
-	_, err := q.Exec(ctx, `
-		INSERT INTO message_mentions (message_id, user_id)
-		SELECT $1, u FROM unnest($2::uuid[]) AS u
-		ON CONFLICT DO NOTHING`, messageID, userIDs)
-	if err != nil {
-		return fmt.Errorf("save mentions: %w", err)
-	}
-	return nil
+	return saveMentionSet(ctx, q, messageID, MentionSet{Users: users})
 }
 
 // RecordMentions resolves and stores the mentions of a new or edited message.
@@ -210,9 +219,9 @@ func RecordMentions(ctx context.Context, q db.Querier, src OnlineSource, message
 	if src != nil {
 		online = src.OnlineUserIDs()
 	}
-	ids, err := ResolveMentions(ctx, q, content, authorID, online)
+	set, err := resolveMentionSet(ctx, q, content, authorID, online)
 	if err != nil {
 		return err
 	}
-	return SaveMentions(ctx, q, messageID, ids)
+	return saveMentionSet(ctx, q, messageID, set)
 }

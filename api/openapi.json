@@ -1923,6 +1923,24 @@
         ],
         "type": "object"
       },
+      "chat.MentionsPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/chat.Message"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "messages"
+        ],
+        "type": "object"
+      },
       "chat.Message": {
         "properties": {
           "attachments": {
@@ -1973,6 +1991,14 @@
           "is_webhook": {
             "description": "IsWebhook narrows IsBot: the author is an incoming webhook (shown with\na Webhook label), not a bot account (shown with a BOT label).",
             "type": "boolean"
+          },
+          "mention_roles": {
+            "description": "MentionRoles are the roles this message mentions (@Role); the client\ndraws them as role pills. A role that was deleted since drops out. The\nserver always sends it; it is optional for clients that build messages\nthemselves (the desktop app's native chat path).",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
           },
           "mentions": {
             "description": "Mentions are the users this message mentions (@username, @all, @here).",
@@ -2224,11 +2250,49 @@
               "$ref": "#/components/schemas/chat.Message"
             },
             "type": "array"
+          },
+          "roots": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/chat.SearchRoot"
+            },
+            "description": "Roots maps a reply hit's parent_id to its thread root.",
+            "type": "object"
           }
         },
         "required": [
           "has_more",
-          "messages"
+          "messages",
+          "roots"
+        ],
+        "type": "object"
+      },
+      "chat.SearchRoot": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "snippet": {
+            "description": "Snippet is the start of the root message (at most 200 characters).",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "display_name",
+          "id",
+          "snippet",
+          "username"
         ],
         "type": "object"
       },
@@ -16577,6 +16641,103 @@
         ]
       }
     },
+    "/api/mentions": {
+      "get": {
+        "description": "Messages that mention the caller (by name, @all, @here or through a role) or reply to one of their messages, newest first. Only channels the caller may view are included; the caller's own messages never are.",
+        "operationId": "listMentions",
+        "parameters": [
+          {
+            "description": "Page back: only messages older than this message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MentionsPage"
+                }
+              }
+            },
+            "description": "One page of mentions."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Mentions inbox",
+        "tags": [
+          "Messages"
+        ]
+      }
+    },
     "/api/messages/by-number/{number}": {
       "get": {
         "description": "Resolves the short number used in links (/m/4821, /t/4821) to the message, including its channel_id and, for a thread reply, its parent_id.",
@@ -17223,7 +17384,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.",
+        "description": "Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -17254,15 +17415,43 @@
             }
           },
           {
-            "description": "Only messages with a file, an image or a link.",
+            "description": "Only messages with a file, an image, a video or a link.",
             "in": "query",
             "name": "has",
             "schema": {
               "enum": [
                 "file",
                 "image",
+                "video",
                 "link"
               ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages that mention this user (directly or via @all/@here).",
+            "in": "query",
+            "name": "mentions",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages created after this instant (RFC 3339); must be earlier than before_date.",
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages created before this instant (RFC 3339).",
+            "in": "query",
+            "name": "before_date",
+            "schema": {
+              "format": "date-time",
               "type": "string"
             }
           },

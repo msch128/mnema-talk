@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"unicode/utf8"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -78,23 +78,22 @@ var (
 
 // SearchQuery filters messages in all channels (text and voice channels' chats). Every term of Text must
 // occur in the message (case-insensitive substring); Has is "", "file",
-// "image" or "link". Results are newest first; Before pages further back.
+// "image", "video" or "link". Results are newest first; Before pages further back.
 type SearchQuery struct {
 	Text      string
 	ChannelID *uuid.UUID
 	AuthorID  *uuid.UUID
 	Has       string
-	Before    *uuid.UUID
-	Limit     int
+	// Mentions keeps messages that mention this user (directly or via @all/@here).
+	Mentions *uuid.UUID
+	// After and BeforeDate bound created_at (exclusive).
+	After      *time.Time
+	BeforeDate *time.Time
+	Before     *uuid.UUID
+	Limit      int
 	// Visible limits the search to these channels; nil searches all of them
 	// (an empty, non-nil list finds nothing).
 	Visible []uuid.UUID
-}
-
-// likePattern escapes LIKE wildcards so user input matches literally.
-func likePattern(term string) string {
-	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return "%" + r.Replace(term) + "%"
 }
 
 // Search returns one page of matching messages and whether more exist.
@@ -128,67 +127,6 @@ func Search(ctx context.Context, p *db.Pool, q SearchQuery) ([]Message, bool, er
 	return msgs, more, nil
 }
 
-func isSearchEmpty(terms []string, q SearchQuery) bool {
-	if len(terms) > 0 || q.ChannelID != nil || q.AuthorID != nil {
-		return false
-	}
-	return q.Has == ""
-}
-
-func validateSearchTerms(q SearchQuery) ([]string, error) {
-	text := strings.TrimSpace(q.Text)
-	if utf8.RuneCountInString(text) > maxSearchQueryLen {
-		return nil, httpx.ErrInvalidInput("search text is too long")
-	}
-	terms := strings.Fields(text)
-	if len(terms) > maxSearchTerms {
-		terms = terms[:maxSearchTerms]
-	}
-	if isSearchEmpty(terms, q) {
-		return nil, httpx.ErrInvalidInput("enter a search term or choose a filter")
-	}
-	return terms, nil
-}
-
-type searchBuilder struct {
-	where []string
-	args  []any
-}
-
-func (b *searchBuilder) addArg(v any) string {
-	b.args = append(b.args, v)
-	return fmt.Sprintf("$%d", len(b.args))
-}
-
-func (b *searchBuilder) addTerms(terms []string) {
-	for _, t := range terms {
-		b.where = append(b.where, "m.content ILIKE "+b.addArg(likePattern(t))+` ESCAPE '\'`)
-	}
-}
-
-func (b *searchBuilder) addFilters(q SearchQuery) error {
-	if q.Visible != nil {
-		b.where = append(b.where, "m.channel_id = ANY("+b.addArg(q.Visible)+"::uuid[])")
-	}
-	if q.ChannelID != nil {
-		b.where = append(b.where, "m.channel_id = "+b.addArg(*q.ChannelID))
-	}
-	if q.AuthorID != nil {
-		b.where = append(b.where, "m.user_id = "+b.addArg(*q.AuthorID))
-	}
-	has, err := hasCondition(q.Has)
-	if err != nil {
-		return err
-	}
-	if has != "" {
-		b.where = append(b.where, has)
-	}
-	if q.Before != nil {
-		b.where = append(b.where, "(m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = "+b.addArg(*q.Before)+")")
-	}
-	return nil
-}
-
 // buildSearchSQL validates the query and turns it into SQL with its arguments.
 func buildSearchSQL(q SearchQuery) (string, []any, error) {
 	terms, err := validateSearchTerms(q)
@@ -207,19 +145,4 @@ func buildSearchSQL(q SearchQuery) (string, []any, error) {
 	ORDER BY m.created_at DESC, m.id DESC
 	LIMIT ` + b.addArg(q.Limit+1)
 	return sql, b.args, nil
-}
-
-// hasCondition is the WHERE condition of the "has" filter ("" for none).
-func hasCondition(has string) (string, error) {
-	switch has {
-	case "":
-		return "", nil
-	case "file":
-		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id)", nil
-	case "image":
-		return "EXISTS (SELECT 1 FROM media f WHERE f.message_id = m.id AND f.mime_type LIKE 'image/%')", nil
-	case "link":
-		return `m.content ~* 'https?://'`, nil
-	}
-	return "", httpx.ErrInvalidInput("has must be file, image or link")
 }
