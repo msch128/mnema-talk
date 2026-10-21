@@ -1,0 +1,20 @@
+internal/auth/native_token_test.go
+  h_0ff4f4713441f4 60-95,100-103,118-121,126,128-129,133,165
+internal/bot/faults_integration_test.go
+  h_0ff4f4713441f4 214-238,252,258-259,275-276,278-279,281-282,284-287,304-335
+internal/server/apidocs_integration_test.go
+  h_0ff4f4713441f4 20-21,24-29,32,34,36-37,39-46,49-50,52-55,57-58,69-73,81-88,106-124,130,139-147
+internal/webhook/webhook_test.go
+  h_0ff4f4713441f4 11,79-106,114-115,117-118,120,189-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1063b343520b10e813b196a6b647545f60bd7931",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
