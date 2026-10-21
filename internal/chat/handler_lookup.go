@@ -60,7 +60,7 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	// Taking back an own reaction stays possible without the permission.
 	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
 	if err != nil {
-		return err
+		return h.refusalFor(r, err)
 	}
 	payload := ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions}
 	h.Events.BroadcastChannel(ref.ChannelID, "message_reaction", payload)

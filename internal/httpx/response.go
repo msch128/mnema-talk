@@ -33,6 +33,7 @@ const (
 	CodePayloadTooLarge      = "PAYLOAD_TOO_LARGE"
 	CodeUnsupportedMediaType = "UNSUPPORTED_MEDIA_TYPE"
 	CodeRateLimited          = "RATE_LIMITED"
+	CodeRulesNotAccepted     = "RULES_NOT_ACCEPTED"
 	CodeUnavailable          = "UNAVAILABLE"
 	CodeInternalError        = "INTERNAL_ERROR"
 )
@@ -44,7 +45,7 @@ const (
 type APIError struct {
 	Status int `json:"-"`
 	// Code is one of the stable Code* constants; clients branch on it.
-	Code string `json:"code" enums:"INVALID_INPUT,UNAUTHORIZED,INVALID_CREDENTIALS,FORBIDDEN,ACCOUNT_DISABLED,NOT_FOUND,CONFLICT,PAYLOAD_TOO_LARGE,UNSUPPORTED_MEDIA_TYPE,RATE_LIMITED,UNAVAILABLE,INTERNAL_ERROR"`
+	Code string `json:"code" enums:"INVALID_INPUT,UNAUTHORIZED,INVALID_CREDENTIALS,FORBIDDEN,ACCOUNT_DISABLED,NOT_FOUND,CONFLICT,PAYLOAD_TOO_LARGE,UNSUPPORTED_MEDIA_TYPE,RATE_LIMITED,RULES_NOT_ACCEPTED,UNAVAILABLE,INTERNAL_ERROR"`
 	// Message is a human-readable English message.
 	Message string `json:"message"`
 	// RetryAfter, when set, is sent as the Retry-After header (seconds).

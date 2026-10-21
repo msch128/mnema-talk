@@ -15,7 +15,7 @@ import VoiceStage from './components/VoiceStage.vue'
 import VoiceChatPanel from './components/VoiceChatPanel.vue'
 import MemberList from './components/MemberList.vue'
 import ThreadSidebar from './components/ThreadSidebar.vue'
-import LoginModal from './components/LoginModal.vue'
+import InviteLanding from './components/InviteLanding.vue'
 import AdminDashboard from './components/AdminDashboard.vue'
 import ConnectionStatsModal from './components/ConnectionStatsModal.vue'
 import AudioSettingsModal from './components/AudioSettingsModal.vue'
@@ -185,7 +185,7 @@ onMounted(async () => {
     </div>
 
     <!-- Unauthenticated: login / invite registration -->
-    <LoginModal v-else-if="!authStore.isAuthenticated" />
+    <InviteLanding v-else-if="!authStore.isAuthenticated" />
 
     <!-- Main Mnema Talk Layout -->
     <template v-else>

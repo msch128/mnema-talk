@@ -131,7 +131,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	h.Sessions.markDevice(w, strings.ToLower(strings.TrimSpace(req.Username)), u.ID, tv)
-	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: *u})
+	httpx.WriteJSON(w, http.StatusOK, UserEnvelope{User: h.withRulesPending(r.Context(), u)})
 	return nil
 }
 

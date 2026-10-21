@@ -37,6 +37,30 @@ details and the limits.
 - **Invite-only.** There is no public registration. Only the Owner
   (configurable, default `Herzog`) and members whose role holds *Manage
   invites* can create invite codes.
+- **Invite preview (the one public read).** `GET /api/invites/{code}` needs no
+  session so an invite link can show the community's name before sign-up. It
+  answers `{"valid": true, "community_name", "expires_at"?}` or exactly
+  `{"valid": false}`, and nothing else: no creator, no use counts, no id.
+  Unknown, malformed, expired, revoked and used-up codes give byte-identical
+  answers, so the endpoint cannot tell an attacker that a code once existed. It
+  is rate limited per client address (30 per minute, IPv6 per /64, 429 with
+  `Retry-After`; a code carries about 59 bits, so guessing is hopeless), answers
+  `Cache-Control: no-store`, and a code is only looked up when it has the shape
+  the server issues. The community name is the only thing it discloses and the
+  Owner chooses it.
+- **Community rules.** When the Owner or an Administrator writes rules, members
+  who have not accepted the current version (`users.rules_accepted_version`
+  below `instance_settings.rules_version`) lose what a timeout takes: sending
+  messages, reactions, uploads, joining a Talk and speaking or sharing in one.
+  This is part of the permission snapshot, so it holds in REST (403
+  `RULES_NOT_ACCEPTED`), in the WebSocket hub (`voice_kicked` with reason
+  `rules_not_accepted`, also when the rules change while someone is in a Talk)
+  and in the SFU, and fails closed: a member the snapshot has not seen yet
+  counts as not having accepted. Reading stays possible. The Owner and bots are
+  exempt. Empty rules text enforces nothing, so an upgrade or clearing the
+  rules can never lock anyone out. Only the Owner and Administrators change the
+  texts, every change is audited, and the rules are shown as sanitized
+  Markdown.
 - **Owner and roles.** The Owner (the one `ADMIN_USERNAME` account) holds every
   permission and nobody can edit, restrict, disable, kick, rename or overwrite
   them or change their roles, not even a role with *Administrator*. The

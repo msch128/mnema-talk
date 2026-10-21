@@ -24,6 +24,7 @@ const (
 	ResCatOvw     Resource = "category_overwrites"
 	ResSettings   Resource = "settings"
 	ResBot        Resource = "bot"
+	ResOnboarding Resource = "onboarding"
 )
 
 // Route describes one mutating admin route.
@@ -105,6 +106,8 @@ var Routes = []Route{
 	{Method: "DELETE", Pattern: "/bots/{id}/commands/{commandID}", Action: "bot.command_delete", TargetType: "bot", IDParam: "id", Snapshot: ResBot},
 
 	{Method: "PUT", Pattern: "/upload-limit", Action: "settings.upload_limit", TargetType: "settings", Snapshot: ResSettings},
+
+	{Method: "PUT", Pattern: "/onboarding", Action: "settings.onboarding", TargetType: "settings", Snapshot: ResOnboarding},
 
 	{Method: "POST", Pattern: "/media/prune", Action: "media.prune", TargetType: "media"},
 	{Method: "POST", Pattern: "/media/orphans/cleanup", Action: "media.orphans_cleanup", TargetType: "media"},

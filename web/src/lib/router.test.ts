@@ -83,6 +83,12 @@ describe('router', () => {
     expect(window.location.pathname).toBe('/v/ch-2/chat')
   })
 
+  it('never saves an invite link as the route to return to after login', () => {
+    window.history.replaceState(null, '', '/invite/abc234xyz789')
+    savePendingRoute()
+    expect(consumePendingRoute()).toBeNull()
+  })
+
   it('keeps the shared link across login (pending route round trip)', () => {
     window.history.replaceState(null, '', '/c/c-id/m/m-id')
     savePendingRoute()

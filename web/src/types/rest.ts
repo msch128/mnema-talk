@@ -59,6 +59,7 @@ export type AuthAdminUser = {
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
   role_ids?: Array<string>
+  rules_pending?: boolean
   status_text: string
   timeout_until?: string
   username: string
@@ -81,6 +82,7 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -312,6 +314,7 @@ export type AuthUser = {
   message_count?: number
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
+  rules_pending?: boolean
   status_text: string
   username: string
   voice_seconds?: number
@@ -328,6 +331,7 @@ export function isAuthUser(value: unknown): value is AuthUser {
     && (!hasOwn(value, "message_count") || isInteger(value["message_count"]))
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
+    && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (hasOwn(value, "username") && isString(value["username"]))
     && (!hasOwn(value, "voice_seconds") || isInteger(value["voice_seconds"]))
@@ -1125,6 +1129,7 @@ export type ChatMember = {
   presence?: "online" | "away" | "dnd" | "focus"
   role: "admin" | "user"
   role_ids?: Array<string>
+  rules_pending?: boolean
   status_text: string
   timeout_until?: string
   username: string
@@ -1145,6 +1150,7 @@ export function isChatMember(value: unknown): value is ChatMember {
     && (!hasOwn(value, "presence") || (value["presence"] === "online" || value["presence"] === "away" || value["presence"] === "dnd" || value["presence"] === "focus"))
     && (hasOwn(value, "role") && (value["role"] === "admin" || value["role"] === "user"))
     && (!hasOwn(value, "role_ids") || isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
     && (hasOwn(value, "status_text") && isString(value["status_text"], 32))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "username") && isString(value["username"]))
@@ -1397,13 +1403,13 @@ export function isGatewayInfo(value: unknown): value is GatewayInfo {
 export const decodeGatewayInfo = decoder("gateway.Info", isGatewayInfo)
 
 export type HttpxAPIError = {
-  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR"
+  code: "INVALID_INPUT" | "UNAUTHORIZED" | "INVALID_CREDENTIALS" | "FORBIDDEN" | "ACCOUNT_DISABLED" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "RULES_NOT_ACCEPTED" | "UNAVAILABLE" | "INTERNAL_ERROR"
   message: string
 }
 
 export function isHttpxAPIError(value: unknown): value is HttpxAPIError {
   return isRecord(value)
-    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
+    && (hasOwn(value, "code") && (value["code"] === "INVALID_INPUT" || value["code"] === "UNAUTHORIZED" || value["code"] === "INVALID_CREDENTIALS" || value["code"] === "FORBIDDEN" || value["code"] === "ACCOUNT_DISABLED" || value["code"] === "NOT_FOUND" || value["code"] === "CONFLICT" || value["code"] === "PAYLOAD_TOO_LARGE" || value["code"] === "UNSUPPORTED_MEDIA_TYPE" || value["code"] === "RATE_LIMITED" || value["code"] === "RULES_NOT_ACCEPTED" || value["code"] === "UNAVAILABLE" || value["code"] === "INTERNAL_ERROR"))
     && (hasOwn(value, "message") && isString(value["message"]))
 }
 
@@ -1540,6 +1546,110 @@ export function isMediaStats(value: unknown): value is MediaStats {
 }
 
 export const decodeMediaStats = decoder("media.Stats", isMediaStats)
+
+export type OnboardingAcceptInput = {
+  version: number
+}
+
+export function isOnboardingAcceptInput(value: unknown): value is OnboardingAcceptInput {
+  return isRecord(value)
+    && (hasOwn(value, "version") && (isInteger(value["version"]) && value["version"] >= 0))
+}
+
+export const decodeOnboardingAcceptInput = decoder("onboarding.AcceptInput", isOnboardingAcceptInput)
+
+export type OnboardingInvitePreview = {
+  community_name?: string
+  expires_at?: string
+  valid: boolean
+}
+
+export function isOnboardingInvitePreview(value: unknown): value is OnboardingInvitePreview {
+  return isRecord(value)
+    && (!hasOwn(value, "community_name") || isString(value["community_name"]))
+    && (!hasOwn(value, "expires_at") || isTimestamp(value["expires_at"]))
+    && (hasOwn(value, "valid") && typeof value["valid"] === 'boolean')
+}
+
+export const decodeOnboardingInvitePreview = decoder("onboarding.InvitePreview", isOnboardingInvitePreview)
+
+export type OnboardingSettings = {
+  community_name: string
+  rules_text: string
+  rules_version: number
+  start_channel_id: string | null
+  welcome_text: string
+}
+
+export function isOnboardingSettings(value: unknown): value is OnboardingSettings {
+  return isRecord(value)
+    && (hasOwn(value, "community_name") && isString(value["community_name"], 60))
+    && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
+    && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
+    && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
+    && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
+}
+
+export const decodeOnboardingSettings = decoder("onboarding.Settings", isOnboardingSettings)
+
+export type OnboardingSettingsInput = {
+  community_name: string
+  require_reacceptance?: boolean
+  rules_text: string
+  start_channel_id: string | null
+  welcome_text: string
+}
+
+export function isOnboardingSettingsInput(value: unknown): value is OnboardingSettingsInput {
+  return isRecord(value)
+    && (hasOwn(value, "community_name") && isString(value["community_name"], 60))
+    && (!hasOwn(value, "require_reacceptance") || typeof value["require_reacceptance"] === 'boolean')
+    && (hasOwn(value, "rules_text") && isString(value["rules_text"], 10000))
+    && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
+    && (hasOwn(value, "welcome_text") && isString(value["welcome_text"], 4000))
+}
+
+export const decodeOnboardingSettingsInput = decoder("onboarding.SettingsInput", isOnboardingSettingsInput)
+
+export type OnboardingState = {
+  community_name: string
+  dismissed_tips: Array<string>
+  rules_accepted_version: number
+  rules_pending: boolean
+  rules_text: string
+  rules_version: number
+  start_channel_id: string | null
+  welcome_done: boolean
+  welcome_text: string
+}
+
+export function isOnboardingState(value: unknown): value is OnboardingState {
+  return isRecord(value)
+    && (hasOwn(value, "community_name") && isString(value["community_name"]))
+    && (hasOwn(value, "dismissed_tips") && isArrayOf(value["dismissed_tips"], item => isString(item)))
+    && (hasOwn(value, "rules_accepted_version") && (isInteger(value["rules_accepted_version"]) && value["rules_accepted_version"] >= 0))
+    && (hasOwn(value, "rules_pending") && typeof value["rules_pending"] === 'boolean')
+    && (hasOwn(value, "rules_text") && isString(value["rules_text"]))
+    && (hasOwn(value, "rules_version") && (isInteger(value["rules_version"]) && value["rules_version"] >= 0))
+    && (hasOwn(value, "start_channel_id") && (isIdentifier(value["start_channel_id"]) || value["start_channel_id"] === null))
+    && (hasOwn(value, "welcome_done") && typeof value["welcome_done"] === 'boolean')
+    && (hasOwn(value, "welcome_text") && isString(value["welcome_text"]))
+}
+
+export const decodeOnboardingState = decoder("onboarding.State", isOnboardingState)
+
+export type OnboardingTipsInput = {
+  dismissed_tips?: Array<string>
+  welcome_done?: boolean | null
+}
+
+export function isOnboardingTipsInput(value: unknown): value is OnboardingTipsInput {
+  return isRecord(value)
+    && (!hasOwn(value, "dismissed_tips") || isArrayOf(value["dismissed_tips"], item => isString(item)))
+    && (!hasOwn(value, "welcome_done") || (typeof value["welcome_done"] === 'boolean' || value["welcome_done"] === null))
+}
+
+export const decodeOnboardingTipsInput = decoder("onboarding.TipsInput", isOnboardingTipsInput)
 
 export type OpwarnWarning = {
   code: string
@@ -1697,6 +1807,7 @@ export type RolesPermissionsInfo = {
   owner: boolean
   permissions: number
   role_ids: Array<string>
+  rules_pending?: boolean
   timeout_reason?: string
   timeout_until?: string
   top_position: number
@@ -1710,6 +1821,7 @@ export function isRolesPermissionsInfo(value: unknown): value is RolesPermission
     && (hasOwn(value, "owner") && typeof value["owner"] === 'boolean')
     && (hasOwn(value, "permissions") && (isInteger(value["permissions"]) && value["permissions"] >= 0))
     && (hasOwn(value, "role_ids") && isArrayOf(value["role_ids"], item => isIdentifier(item)))
+    && (!hasOwn(value, "rules_pending") || typeof value["rules_pending"] === 'boolean')
     && (!hasOwn(value, "timeout_reason") || isString(value["timeout_reason"]))
     && (!hasOwn(value, "timeout_until") || isTimestamp(value["timeout_until"]))
     && (hasOwn(value, "top_position") && (isInteger(value["top_position"]) && value["top_position"] >= 0))

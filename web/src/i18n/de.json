@@ -83,6 +83,7 @@
       "PAYLOAD_TOO_LARGE": "Die Datei ist zu groß",
       "UNSUPPORTED_MEDIA_TYPE": "Dieser Dateityp wird nicht unterstützt",
       "RATE_LIMITED": "Zu viele Versuche – bitte warte einen Moment",
+      "RULES_NOT_ACCEPTED": "Bitte akzeptiere zuerst die Regeln der Community",
       "UNAVAILABLE": "Der Dienst ist gerade nicht verfügbar",
       "INTERNAL_ERROR": "Interner Serverfehler"
     },
@@ -147,7 +148,11 @@
     "toRegister": "Hast du einen Einladungscode? Hier registrieren",
     "legal": "Datenschutzerklärung & Rechtliches",
     "inviteRequired": "Bitte gib einen Einladungscode ein.",
-    "failed": "Das hat nicht geklappt. Versuch es noch einmal."
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+    "subtitleInvited": "Du wurdest eingeladen, beizutreten",
+    "inviteChecking": "Einladung wird geprüft …",
+    "inviteInvalid": "Diese Einladung gilt nicht mehr. Frag nach einer neuen, oder melde dich an, wenn du schon ein Konto hast.",
+    "inviteExpires": "Gültig bis {when}"
   },
   "sidebar": {
     "subtitle": "Private Gemeinschaft",
@@ -761,7 +766,8 @@
       "roles": "Rollen",
       "audit": "Audit-Log",
       "bans": "Sperren",
-      "bots": "Bots"
+      "bots": "Bots",
+      "onboarding": "Willkommen & Regeln"
     },
     "system": {
       "heading": "System & Version",
@@ -1019,6 +1025,24 @@
       "saved": "Upload-Limit gespeichert.",
       "hint": "Gilt für alle, sofern eine Rolle kein eigenes Limit setzt. Es kann das Server-Maximum von {ceiling} MB (MAX_UPLOAD_SIZE_MB) nicht übersteigen. Dein Reverse-Proxy muss diese Body-Größe erlauben.",
       "invalid": "Gib eine ganze Zahl von 1 bis {ceiling} ein."
+    },
+    "onboarding": {
+      "hint": "Wird neuen Mitgliedern gezeigt. Sobald es Regeln gibt, müssen Mitglieder sie akzeptieren, bevor sie schreiben, reagieren, hochladen oder einem Talk beitreten können. Du wirst nie gefragt.",
+      "name": "Name der Community",
+      "namePlaceholder": "Mnema Talk",
+      "nameHint": "Erscheint auf Einladungslinks, bevor sich jemand angemeldet hat.",
+      "welcome": "Willkommenstext",
+      "rules": "Regeln",
+      "preview": "Vorschau",
+      "edit": "Bearbeiten",
+      "rulesOn": "Mitglieder müssen diese Regeln akzeptieren (Version {version}).",
+      "rulesOff": "Keine Regeln: Mitglieder werden nichts gefragt und nichts wird blockiert.",
+      "reaccept": "Alle müssen die Regeln erneut akzeptieren",
+      "startChannel": "Startkanal",
+      "startChannelNone": "Der erste Kanal, den ein Mitglied sehen kann",
+      "tooLong": "Einer der Texte ist zu lang.",
+      "save": "Speichern",
+      "saved": "Willkommen und Regeln gespeichert."
     }
   },
   "profile": {

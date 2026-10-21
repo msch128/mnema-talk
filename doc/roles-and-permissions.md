@@ -209,6 +209,31 @@ cannot do.
 | Talks | *View channels* + *Connect* to join; the SFU drops audio without *Speak* and camera/screen without *Video*, also while a call is running |
 | Native session API | Uses the same handlers and hub; the opaque ciphertext store checks view/send when given the permission service |
 
+## Community rules
+
+The Owner and Administrators can write rules, a welcome text and a community
+name (admin console, *Welcome & rules*; `GET|PUT /api/admin/onboarding`, audited).
+While rules exist, a member who has not accepted the current version
+(`rules_pending` in `GET /api/permissions`, `GET /api/auth/me` and
+`GET /api/onboarding`) loses what a timeout takes: *Send messages*, *Attach
+files*, *Add reactions*, *Mention everyone*, *Connect*, *Speak* and *Video*.
+They keep reading. It is not a permission anyone can grant or deny: it comes
+from the same snapshot as a timeout, so REST, the WebSocket hub and the SFU all
+agree, and writes answer `403 RULES_NOT_ACCEPTED` (a Talk join answers
+`voice_kicked` with reason `rules_not_accepted`). `POST /api/onboarding/accept`
+with the current `version` lifts it at once.
+
+- The Owner and bots are exempt. Empty rules enforce nothing, so existing
+  installs and clearing the rules never lock anyone out.
+- The first rules written start at version 1 and every existing member has to
+  accept them. Later edits keep acceptances unless the Owner ticks *require
+  re-acceptance*, which raises the version.
+- A member the server has not seen yet counts as not having accepted (the check
+  fails closed).
+- `GET /api/invites/{code}` is public and rate limited per IP; it answers only
+  `{valid, community_name, expires_at?}`, and an expired, revoked, used-up or
+  unknown code looks the same.
+
 ## Upload size
 
 `MAX_UPLOAD_SIZE_MB` (default 50) is the operator's hard ceiling. On top of it
@@ -246,6 +271,9 @@ minute is only a backstop for edits made directly in the database) and then:
 - `GET /api/permissions`: the caller's server-wide permissions and, per
   viewable channel, their permissions there, plus the catalog of bits.
 - `GET|PUT /api/admin/upload-limit` (Owner): the global upload limit and the ceiling.
+- `GET|PUT /api/admin/onboarding` (Owner, Administrators): community name, welcome text, rules, start channel.
+- `GET /api/onboarding`, `POST /api/onboarding/accept`, `PUT /api/onboarding/tips`: a member's view of them and their acceptance and dismissed tips.
+- `GET /api/invites/{code}` (public): the invite preview.
 - `GET /api/roles`: all roles (visible to every member; they colour names).
 - `POST /api/admin/roles`, `PATCH|DELETE /api/admin/roles/{id}`,
   `PUT /api/admin/roles/order`, `PUT /api/admin/users/{id}/roles`.

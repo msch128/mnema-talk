@@ -2,7 +2,7 @@
 // Admin dashboard shell: the tab bar and one component per tab. Tabs stay
 // alive while the dialog is open, so an unsaved layout survives a tab switch.
 import { ref, computed, watch } from 'vue'
-import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot } from '@lucide/vue'
+import { Users, FolderTree, Link, HardDrive, Server, Shield, ScrollText, Gavel, Bot, Sparkles } from '@lucide/vue'
 import { navigate } from '../lib/router'
 import { useAuthStore } from '../stores/auth'
 import { usePermissionsStore } from '../stores/permissions'
@@ -16,6 +16,7 @@ import AdminSystemTab from './AdminSystemTab.vue'
 import AdminAuditTab from './AdminAuditTab.vue'
 import AdminBansTab from './AdminBansTab.vue'
 import AdminBotsTab from './AdminBotsTab.vue'
+import AdminOnboardingTab from './AdminOnboardingTab.vue'
 
 const props = defineProps({
   initialTab: {
@@ -28,14 +29,15 @@ const emit = defineEmits<{ close: [] }>()
 const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 
-type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'bans' | 'bots' | 'media' | 'audit' | 'system'
-const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'bans', 'bots', 'media', 'audit', 'system']
+type AdminTab = 'users' | 'roles' | 'channels' | 'invites' | 'onboarding' | 'bans' | 'bots' | 'media' | 'audit' | 'system'
+const ALL_TABS: readonly AdminTab[] = ['users', 'roles', 'channels', 'invites', 'onboarding', 'bans', 'bots', 'media', 'audit', 'system']
 // Each tab needs its own permission; storage and system are the Owner's.
 const ALLOWED: Record<AdminTab, () => boolean> = {
   users: () => permissions.can('manage_members') || permissions.can('manage_roles'),
   roles: () => permissions.can('manage_roles'),
   channels: () => permissions.can('manage_channels'),
   invites: () => permissions.can('create_invites'),
+  onboarding: () => permissions.can('administrator'),
   bans: () => permissions.can('ban_members'),
   bots: () => permissions.can('manage_bots'),
   media: () => permissions.isOwner,
@@ -49,6 +51,7 @@ const TAB_COMPONENTS = {
   roles: AdminRolesTab,
   channels: AdminLayoutTab,
   invites: AdminInvitesTab,
+  onboarding: AdminOnboardingTab,
   bans: AdminBansTab,
   bots: AdminBotsTab,
   media: AdminMediaTab,
@@ -93,6 +96,7 @@ watch(activeTab, (tab) => {
         <Shield v-else-if="tab === 'roles'" class="w-4 h-4" />
         <FolderTree v-else-if="tab === 'channels'" class="w-4 h-4" />
         <Link v-else-if="tab === 'invites'" class="w-4 h-4" />
+        <Sparkles v-else-if="tab === 'onboarding'" class="w-4 h-4" />
         <Gavel v-else-if="tab === 'bans'" class="w-4 h-4" />
         <Bot v-else-if="tab === 'bots'" class="w-4 h-4" />
         <HardDrive v-else-if="tab === 'media'" class="w-4 h-4" />

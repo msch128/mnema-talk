@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { caughtErrorMessage } from '../lib/api'
-import { ref, onMounted, useId } from 'vue'
+import { computed, ref, onMounted, useId } from 'vue'
 import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import LegalModal from './LegalModal.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
+import type { InviteContext } from '../lib/inviteLink'
+
+const props = defineProps<{ invite?: InviteContext }>()
 
 const authStore = useAuthStore()
 
@@ -28,7 +31,21 @@ const inviteCodeInput = ref<HTMLInputElement | null>(null)
 const errorMsg = ref('')
 const isLoading = ref(false)
 
+// Opened from /invite/{code}: the code is filled in and, when the server says
+// it works, the heading names the community. A dead code falls back to sign-in.
+const heading = computed(() => (props.invite?.valid && props.invite.communityName) || 'Mnema Talk')
+const inviteDead = computed(() => props.invite?.valid === false)
+const expiry = computed(() => {
+  const at = props.invite?.valid ? props.invite.expiresAt : ''
+  return at ? new Date(at).toLocaleString(locale.value, { dateStyle: 'medium', timeStyle: 'short' }) : ''
+})
+
 onMounted(() => {
+  if (props.invite) {
+    inviteCode.value = props.invite.code
+    isRegister.value = props.invite.valid !== false
+    return
+  }
   // Check if URL has ?invite=...
   const urlParams = new URLSearchParams(window.location.search)
   const hashParams = new URLSearchParams(window.location.hash.split('?')[1])
@@ -91,11 +108,16 @@ async function handleSubmit() {
           M
         </div>
         <div>
-          <h1 :id="titleId" class="text-lg font-bold tracking-tight text-mnema-text">Mnema Talk</h1>
+          <h1 :id="titleId" class="text-lg font-bold tracking-tight text-mnema-text" data-testid="login-heading">{{ heading }}</h1>
           <p class="text-sm text-mnema-muted mt-0.5">
-            {{ isRegister ? $t('login.subtitleRegister') : $t('login.subtitleLogin') }}
+            {{ isRegister ? (invite?.valid ? $t('login.subtitleInvited') : $t('login.subtitleRegister')) : $t('login.subtitleLogin') }}
           </p>
+          <p v-if="expiry" class="text-xs text-mnema-tertiary mt-1" data-testid="invite-expiry">{{ $t('login.inviteExpires', { when: expiry }) }}</p>
         </div>
+      </div>
+
+      <div v-if="inviteDead" role="status" class="bg-mnema-warning/10 border border-mnema-warning/30 text-mnema-text text-sm p-2.5 rounded-md" data-testid="invite-invalid">
+        {{ $t('login.inviteInvalid') }}
       </div>
 
       <!-- Error Alert -->

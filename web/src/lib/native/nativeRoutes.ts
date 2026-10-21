@@ -176,7 +176,11 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
   return viaNative(metadataCommand(resource), { resource }, request)
 }
 
-// The first route that matches the request answers it.
+// The first route that matches the request answers it. Anything not listed is
+// unavailable here, including /api/onboarding (rules acceptance, welcome flow)
+// and the public invite preview: the native account preview is read-only until
+// a typed onboarding bridge exists, and the server answers RULES_NOT_ACCEPTED
+// for writes while rules are pending.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

@@ -1,10 +1,12 @@
 package perm
 
 import (
+	"net/http"
 	"slices"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
 // Subject is who a permission question is about. Owner comes from the
@@ -81,6 +83,14 @@ type Snapshot struct {
 	// timeouts are the running timeouts; an entry whose time has passed no
 	// longer counts, so expiry needs no reload.
 	timeouts map[uuid.UUID]Timeout
+	// rulesVersion is the version of the rules members must have accepted;
+	// 0 while no rules text is set (nothing is enforced). rulesAccepted holds
+	// the version each member accepted (only those above 0), so a member the
+	// snapshot has not seen yet counts as pending: it fails closed. Like a
+	// timeout, pending rules take TimeoutMask, so REST, the hub and the SFU all
+	// enforce it from this one snapshot. The Owner and bots are exempt.
+	rulesVersion  int
+	rulesAccepted map[uuid.UUID]int
 }
 
 // Timeout is a member's timeout: they keep reading but lose TimeoutMask.
@@ -161,10 +171,31 @@ func (s *Snapshot) Timeouts() map[uuid.UUID]time.Time {
 
 // silence removes TimeoutMask from p while the member is timed out.
 func (s *Snapshot) silence(userID uuid.UUID, p Set) Set {
-	if _, ok := s.Timeout(userID); ok {
+	if _, ok := s.Timeout(userID); ok || s.RulesPending(userID) {
 		return p &^ TimeoutMask
 	}
 	return p
+}
+
+// RulesPending reports whether the member still has to accept the community's
+// rules before they may post, react, upload or join a Talk. The Owner and
+// bots never do.
+func (s *Snapshot) RulesPending(userID uuid.UUID) bool {
+	return s.rulesVersion > 0 && s.rulesAccepted[userID] < s.rulesVersion && !s.owners[userID] && !s.bots[userID]
+}
+
+// ErrRulesNotAccepted is what an action refused for unaccepted rules answers.
+var ErrRulesNotAccepted = httpx.NewAPIError(http.StatusForbidden, httpx.CodeRulesNotAccepted, "accept the community rules first")
+
+// Deny is CheckChannel for the member sub: the same refusal, except that a
+// permission the pending rules took away answers RULES_NOT_ACCEPTED, so the
+// client can show the rules instead of a bare "missing permission".
+func (s *Snapshot) Deny(sub Subject, p, need Set) error {
+	err := CheckChannel(p, need)
+	if err != nil && p.Has(ViewChannel) && s.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
+		return ErrRulesNotAccepted
+	}
+	return err
 }
 
 // EmptySnapshot knows no channel: everybody but the Owner gets nothing from
