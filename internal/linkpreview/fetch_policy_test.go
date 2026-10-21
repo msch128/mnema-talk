@@ -117,11 +117,20 @@ func TestPreviewRedirectsAreValidatedAndBounded(t *testing.T) {
 			p, err := f.Preview(context.Background(), srv.URL+"/start")
 			switch target {
 			case "/card":
-				if err != nil || p.Title != "redirected card" || p.URL != srv.URL+"/start" || hits.Load() != 2 {
-					t.Fatalf("same-origin redirect: preview=%+v err=%v hits=%d", p, err, hits.Load())
+				if err != nil {
+					t.Fatalf("same-origin redirect error: %v", err)
+				}
+				if p.Title != "redirected card" || p.URL != srv.URL+"/start" {
+					t.Fatalf("same-origin redirect wrong preview: %+v", p)
+				}
+				if hits.Load() != 2 {
+					t.Fatalf("same-origin redirect wrong hits: %d", hits.Load())
 				}
 			case "/loop":
-				if err == nil || hits.Load() != maxRedirects || !strings.Contains(err.Error(), "too many redirects") {
+				if err == nil {
+					t.Fatal("expected error on loop redirect")
+				}
+				if hits.Load() != maxRedirects || !strings.Contains(err.Error(), "too many redirects") {
 					t.Fatalf("unbounded redirect loop: err=%v hits=%d", err, hits.Load())
 				}
 			default:
@@ -197,7 +206,10 @@ func TestPreviewClipsUnicodeMetadataAndRejectsUnsafeImageURLs(t *testing.T) {
 				value string
 				limit int
 			}{{p.Title, maxTitleRunes}, {p.Description, maxDescRunes}, {p.SiteName, 80}} {
-				if !utf8.ValidString(field.value) || utf8.RuneCountInString(field.value) != field.limit || !strings.HasSuffix(field.value, "…") {
+				if !utf8.ValidString(field.value) {
+					t.Errorf("metadata clipping invalid UTF-8: %q", field.value)
+				}
+				if utf8.RuneCountInString(field.value) != field.limit || !strings.HasSuffix(field.value, "…") {
 					t.Errorf("metadata clipping should preserve Unicode and limit %d runes: %q", field.limit, field.value)
 				}
 			}
@@ -216,8 +228,11 @@ func TestOversizedRasterImageIsRejectedAndNotCached(t *testing.T) {
 	})
 	for range 2 {
 		body, mime, err := f.Image(context.Background(), "https://example.invalid/too-large.png")
-		if !errors.Is(err, ErrNoPreview) || body != nil || mime != "" {
-			t.Fatalf("oversized image accepted: len=%d mime=%q err=%v", len(body), mime, err)
+		if !errors.Is(err, ErrNoPreview) {
+			t.Fatalf("oversized image error = %v, want ErrNoPreview", err)
+		}
+		if body != nil || mime != "" {
+			t.Fatalf("oversized image accepted: len=%d mime=%q", len(body), mime)
 		}
 	}
 	if hits.Load() != 2 || f.imgCache.bytes != 0 {
@@ -234,12 +249,19 @@ func TestPreviewCacheBoundsManyDistinctURLs(t *testing.T) {
 	for i := range cacheMax + 2 {
 		last = "https://example.invalid/card/" + strconv.Itoa(i)
 		p, err := f.Preview(context.Background(), last)
-		if err != nil || p.Title != "bounded" || len(f.cache) > cacheMax {
-			t.Fatalf("cache insertion %d: err=%v entries=%d preview=%+v", i, err, len(f.cache), p)
+		if err != nil {
+			t.Fatalf("cache insertion %d err: %v", i, err)
+		}
+		if p.Title != "bounded" || len(f.cache) > cacheMax {
+			t.Fatalf("cache insertion %d: entries=%d preview=%+v", i, len(f.cache), p)
 		}
 	}
-	if p, err, ok := f.cached(last); !ok || err != nil || p.URL != last {
-		t.Fatalf("newest entry disappeared under capacity pressure: ok=%v err=%v p=%+v", ok, err, p)
+	p, err, ok := f.cached(last)
+	if !ok {
+		t.Fatal("newest entry disappeared under capacity pressure")
+	}
+	if err != nil || p.URL != last {
+		t.Fatalf("newest entry corrupted: err=%v p=%+v", err, p)
 	}
 }
 
@@ -251,12 +273,18 @@ func TestReplacingImageCacheEntryRecountsBytesAndRefreshesTTL(t *testing.T) {
 	c.put("other", []byte("side"), "image/png")
 	now = now.Add(30 * time.Second)
 	c.put("image", []byte("newer"), "image/webp")
-	if c.bytes != 9 || len(c.items) != 2 || c.order.Len() != 2 {
-		t.Fatalf("replacement retained stale byte/list entry: bytes=%d items=%d order=%d", c.bytes, len(c.items), c.order.Len())
+	if c.bytes != 9 || len(c.items) != 2 {
+		t.Fatalf("replacement byte/items mismatch: bytes=%d items=%d", c.bytes, len(c.items))
+	}
+	if c.order.Len() != 2 {
+		t.Fatalf("replacement order mismatch: %d", c.order.Len())
 	}
 	now = now.Add(31 * time.Second)
 	body, mime, ok := c.get("image")
-	if !ok || string(body) != "newer" || mime != "image/webp" {
+	if !ok {
+		t.Fatal("replacement entry missing after TTL refresh")
+	}
+	if string(body) != "newer" || mime != "image/webp" {
 		t.Fatalf("replacement payload/type/TTL not refreshed: body=%q mime=%q ok=%v", body, mime, ok)
 	}
 	if _, _, ok := c.get("other"); ok || c.bytes != 5 {
@@ -264,57 +292,71 @@ func TestReplacingImageCacheEntryRecountsBytesAndRefreshesTTL(t *testing.T) {
 	}
 }
 
+func runConcurrentPhaseCallers(f *Fetcher, raw string, image bool, callers int) error {
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	errs := make(chan error, callers)
+	const png = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+
+	for range callers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			if image {
+				body, mime, err := f.Image(context.Background(), raw)
+				if err == nil && (string(body) != png || mime != "image/png") {
+					err = fmt.Errorf("inconsistent image body=%q MIME=%q", body, mime)
+				}
+				errs <- err
+				return
+			}
+			p, err := f.Preview(context.Background(), raw)
+			if err == nil && (p.Title != "shared fast origin" || p.URL != raw) {
+				err = fmt.Errorf("inconsistent preview %+v", p)
+			}
+			errs <- err
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func testImmediateOriginConsistency(t *testing.T, image bool) {
+	f := New()
+	var hits atomic.Int32
+	const png = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
+	f.client.Transport = edgePreviewTransport(func(r *http.Request) (*http.Response, error) {
+		hits.Add(1)
+		if image {
+			return edgePreviewResponse(r, "image/png", strings.NewReader(png)), nil
+		}
+		return edgePreviewResponse(r, "text/html", strings.NewReader("<title>shared fast origin</title>")), nil
+	})
+	const phases, callers = 40, 32
+	for phase := range phases {
+		raw := "https://example.invalid/card/" + strconv.Itoa(phase)
+		if err := runConcurrentPhaseCallers(f, raw, image, callers); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if hits.Load() != phases {
+		t.Fatalf("shared cache fetched %d times for %d distinct URLs", hits.Load(), phases)
+	}
+}
+
 func TestImmediateOriginConcurrentPreviewAndImageCacheConsistency(t *testing.T) {
 	for _, image := range []bool{false, true} {
 		t.Run(strconv.FormatBool(image), func(t *testing.T) {
-			f := New()
-			var hits atomic.Int32
-			const png = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR"
-			f.client.Transport = edgePreviewTransport(func(r *http.Request) (*http.Response, error) {
-				hits.Add(1)
-				if image {
-					return edgePreviewResponse(r, "image/png", strings.NewReader(png)), nil
-				}
-				return edgePreviewResponse(r, "text/html", strings.NewReader("<title>shared fast origin</title>")), nil
-			})
-			const phases, callers = 40, 32
-			for phase := range phases {
-				var wg sync.WaitGroup
-				start := make(chan struct{})
-				errs := make(chan error, callers)
-				raw := "https://example.invalid/card/" + strconv.Itoa(phase)
-				for range callers {
-					wg.Add(1)
-					go func() {
-						defer wg.Done()
-						<-start
-						if image {
-							body, mime, err := f.Image(context.Background(), raw)
-							if err == nil && (string(body) != png || mime != "image/png") {
-								err = fmt.Errorf("inconsistent image body=%q MIME=%q", body, mime)
-							}
-							errs <- err
-						} else {
-							p, err := f.Preview(context.Background(), raw)
-							if err == nil && (p.Title != "shared fast origin" || p.URL != raw) {
-								err = fmt.Errorf("inconsistent preview %+v", p)
-							}
-							errs <- err
-						}
-					}()
-				}
-				close(start)
-				wg.Wait()
-				close(errs)
-				for err := range errs {
-					if err != nil {
-						t.Fatal(err)
-					}
-				}
-			}
-			if hits.Load() != phases {
-				t.Fatalf("shared cache fetched %d times for %d distinct URLs", hits.Load(), phases)
-			}
+			testImmediateOriginConsistency(t, image)
 		})
 	}
 }
