@@ -87,7 +87,7 @@ type Token struct {
 func NewToken() (token string, hash []byte, hint string) {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
-		return "", nil, ""
+		panic(err)
 	}
 	token = TokenPrefix + base64.RawURLEncoding.EncodeToString(raw)
 	return token, HashToken(token), token[len(token)-4:]

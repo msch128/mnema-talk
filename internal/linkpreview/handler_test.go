@@ -243,3 +243,28 @@ func TestHandlerDefinitiveFailuresKeepTheirStatus(t *testing.T) {
 		})
 	}
 }
+
+// failingWriter accepts headers and refuses the body, like a client that left.
+type failingWriter struct {
+	*httptest.ResponseRecorder
+}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, io.ErrClosedPipe }
+
+func TestImageWriteFailureAfterHeadersIsNotAnError(t *testing.T) {
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89")
+	var hits atomic.Int32
+	origin := newMockOriginServer(t, "image", &hits, png)
+	fetcher := New()
+	fetcher.allowPrivate = true
+	t.Cleanup(fetcher.client.CloseIdleConnections)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/link-preview/image?url="+url.QueryEscape(origin.URL), nil)
+	if err := (&Handler{Fetcher: fetcher}).image(failingWriter{rec}, req); err != nil {
+		t.Fatalf("a failed body write after the headers went out returned %v", err)
+	}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d, want 200", rec.Code)
+	}
+}
