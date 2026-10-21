@@ -38,11 +38,9 @@ var routeGuards = map[string]string{
 	"DELETE /admin/bots/{id}/commands/{commandID}":      "acting",
 }
 
-func TestEveryManagementRouteHasItsGuard(t *testing.T) {
-	e := newEnv(t)
+func seedManagerAndElevatedBot(t *testing.T, e *env) (*auth.User, fixtureBot) {
+	t.Helper()
 	ctx := context.Background()
-
-	// A manager below the Owner: Manage bots, with a role above the bot's.
 	var managerID uuid.UUID
 	if err := e.p.QueryRow(ctx, `INSERT INTO users (username, display_name, password_hash, role) VALUES ('manager', 'm', 'x', 'user') RETURNING id`).Scan(&managerID); err != nil {
 		t.Fatal(err)
@@ -66,10 +64,11 @@ func TestEveryManagementRouteHasItsGuard(t *testing.T) {
 	if _, err := e.p.Exec(ctx, `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, f.bot.UserID, botRole); err != nil {
 		t.Fatal(err)
 	}
-	manager := &auth.User{ID: managerID, Role: "user"}
+	return &auth.User{ID: managerID, Role: "user"}, f
+}
 
-	// The table covers exactly the routes that are mounted.
-	h := e.handler(e.p)
+func verifyMountedRoutesMatchGuards(t *testing.T, h *Handler) {
+	t.Helper()
 	mounted := chi.NewRouter()
 	mounted.Route("/admin", func(a chi.Router) { h.MountAdmin(a) })
 	var got []string
@@ -88,7 +87,45 @@ func TestEveryManagementRouteHasItsGuard(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Fatalf("mounted routes and the guard table differ:\nmounted:\n%s\ntable:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
+}
 
+func verifyRouteGuardResponse(t *testing.T, route, guard string, w *httptest.ResponseRecorder) {
+	t.Helper()
+	switch guard {
+	case "acting":
+		if w.Code != http.StatusForbidden {
+			t.Errorf("%s must be guarded by loadActing: %d %s", route, w.Code, w.Body)
+			return
+		}
+		if !strings.Contains(w.Body.String(), "only the Owner can manage a bot with administrator") {
+			t.Errorf("%s missing administrator guard error: %s", route, w.Body)
+		}
+	default:
+		if w.Code >= 400 {
+			t.Errorf("%s (%s) must stay open to the manager: %d %s", route, guard, w.Code, w.Body)
+		}
+	}
+}
+
+func executeGuardedRoute(h *Handler, manager *auth.User, method, path, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r := chi.NewRouter()
+	r.Route("/admin", func(a chi.Router) {
+		a.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				next.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), manager)))
+			})
+		})
+		h.MountAdmin(a)
+	})
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func verifyRouteGuards(t *testing.T, h *Handler, manager *auth.User, f fixtureBot) {
+	t.Helper()
 	later := "2099-01-01T00:00:00Z"
 	bodies := map[string]string{
 		"PATCH /admin/bots/{id}":                      `{"name":"renamed"}`,
@@ -97,32 +134,19 @@ func TestEveryManagementRouteHasItsGuard(t *testing.T) {
 		"PATCH /admin/bots/{id}/commands/{commandID}": `{"disabled":true}`,
 		"POST /admin/bots":                            `{"name":"fresh"}`,
 	}
+	replacer := strings.NewReplacer("{id}", f.bot.ID.String(), "{tokenID}", f.token.ID.String(), "{commandID}", f.cmd.ID.String())
 	for route, guard := range routeGuards {
 		method, pattern, _ := strings.Cut(route, " ")
-		path := strings.NewReplacer("{id}", f.bot.ID.String(), "{tokenID}", f.token.ID.String(), "{commandID}", f.cmd.ID.String()).Replace(pattern)
-		var body string = bodies[route]
-		req := httptest.NewRequest(method, path, strings.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		w := httptest.NewRecorder()
-		r := chi.NewRouter()
-		r.Route("/admin", func(a chi.Router) {
-			a.Use(func(next http.Handler) http.Handler {
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					next.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), manager)))
-				})
-			})
-			h.MountAdmin(a)
-		})
-		r.ServeHTTP(w, req)
-		switch guard {
-		case "acting":
-			if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "only the Owner can manage a bot with administrator") {
-				t.Errorf("%s must be guarded by loadActing: %d %s", route, w.Code, w.Body)
-			}
-		default:
-			if w.Code >= 400 {
-				t.Errorf("%s (%s) must stay open to the manager: %d %s", route, guard, w.Code, w.Body)
-			}
-		}
+		path := replacer.Replace(pattern)
+		w := executeGuardedRoute(h, manager, method, path, bodies[route])
+		verifyRouteGuardResponse(t, route, guard, w)
 	}
+}
+
+func TestEveryManagementRouteHasItsGuard(t *testing.T) {
+	e := newEnv(t)
+	manager, f := seedManagerAndElevatedBot(t, e)
+	h := e.handler(e.p)
+	verifyMountedRoutesMatchGuards(t, h)
+	verifyRouteGuards(t, h, manager, f)
 }
