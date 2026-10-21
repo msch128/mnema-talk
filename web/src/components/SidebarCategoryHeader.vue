@@ -15,7 +15,10 @@ const props = defineProps({
   // Drop indicator: 'top' | 'bottom' | 'inside' (a channel goes into it) | ''.
   indicator: { type: String as PropType<DropIndicator>, default: '' },
   flash: { type: Boolean, default: false },
-  hintId: { type: String, default: '' }
+  hintId: { type: String, default: '' },
+  // What the category's channels have waiting; shown while it is collapsed.
+  unreadChannels: { type: Number, default: 0 },
+  mentions: { type: Number, default: 0 }
 })
 
 const emit = defineEmits<{ toggle: []; menu: [event: MouseEvent | KeyboardEvent]; 'create-channel': []; delete: []; 'drag-start': [event: PointerEvent]; move: [direction: -1 | 1] }>()
@@ -64,6 +67,19 @@ function moveKey(e: KeyboardEvent, dir: -1 | 1) {
       <ChevronRight v-if="collapsed" class="w-3 h-3 flex-shrink-0" />
       <ChevronDown v-else class="w-3 h-3 flex-shrink-0" />
       <span class="truncate">{{ category.name }}</span>
+      <span
+        v-if="collapsed && mentions > 0"
+        data-testid="category-mentions"
+        class="ml-auto px-1.5 py-0.5 rounded-full bg-mnema-danger text-white text-xs font-bold leading-none min-w-[18px] text-center normal-case tracking-normal"
+        :aria-label="$t('sidebar.categoryMentions', { n: mentions })"
+      >{{ mentions }}</span>
+      <span
+        v-else-if="collapsed && unreadChannels > 0"
+        data-testid="category-unread"
+        class="ml-auto w-2 h-2 mr-1 rounded-full bg-mnema-text flex-shrink-0"
+        role="img"
+        :aria-label="$t('sidebar.categoryUnread')"
+      ></span>
     </button>
     <div
       v-if="admin"

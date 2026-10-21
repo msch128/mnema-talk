@@ -4,7 +4,8 @@ import { mentionsUser, shouldNotify } from '../../lib/chatLogic'
 import { isQuiet } from '../../lib/presence'
 import type { Cx } from './state'
 import { goToMessage } from './messageWindow'
-import { isTabVisible, notificationLevel } from './readState'
+import { isTabVisible } from './readState'
+import { notificationLevel } from './notifySettings'
 
 /** Whether msg mentions the signed-in user (@username, @all, @here) or replies to them. */
 export function messageMentionsMe(cx: Cx, msg: Message) {

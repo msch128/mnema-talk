@@ -176,12 +176,16 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
   return viaNative(metadataCommand(resource), { resource }, request)
 }
 
-// The first route that matches the request answers it. Anything not listed is
-// unavailable here, including /api/onboarding (rules acceptance, welcome flow)
-// and the public invite preview. This transport belongs to the experimental
-// Windows DEV client only (isDesktopRuntime); the shipped desktop clients
-// (v0.2.x) run the signed web bundle through the trusted proxy, which passes
-// every /api path, so rules acceptance works there. Add typed onboarding
+// The first route that matches the request answers it. GET /api/mentions (the
+// mentions inbox) and /api/search are not served natively: they answer
+// "unavailable" and the interface shows its failure state. The same holds for
+// channel and category notification levels, GET /api/notification-settings and
+// POST /api/read-state/read-all: the trusted desktop client has no typed
+// command for them. Also unavailable: /api/onboarding (rules acceptance,
+// welcome flow) and the public invite preview. This transport belongs to the
+// experimental Windows DEV client only (isDesktopRuntime); the shipped desktop
+// clients (v0.2.x) run the signed web bundle through the trusted proxy, which
+// passes every /api path, so rules acceptance works there. Add typed onboarding
 // operations here before the native DEV client is ever shipped.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,

@@ -42,6 +42,8 @@ export function resetCommunityState(cx: Cx) {
   cs.memberProfileUpdates.clear()
   cs.countedReplies.clear()
   cs.readStates.value = {}
+  cs.notifySettings.value = { channels: [], categories: [] }
+  clearTimeout(cs.notifyExpiryTimer)
   cs.activeChannelLastReadAt.value = null
   cs.voiceChatReading.value = false
   cs.suppressAutoReadFor = null

@@ -5,7 +5,7 @@ import type { Channel, VoiceUser } from '../types/domain'
 // it for a voice channel. Admins can drag the row (and its users with it) or
 // move it with Alt+ArrowUp / Alt+ArrowDown.
 import { computed } from 'vue'
-import { Hash, Volume2, Trash2, Monitor } from '@lucide/vue'
+import { Hash, Volume2, Trash2, Monitor, BellOff } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useVoiceStore } from '../stores/voice'
 import UserAvatar from './UserAvatar.vue'
@@ -50,7 +50,9 @@ const reading = computed(() =>
     : active.value
 )
 // Voice channels have their own text chat, so unreads and mentions too.
-const unread = computed(() => chatStore.readStates[props.channel.id]?.unread_count || 0)
+const muted = computed(() => chatStore.readStates[props.channel.id]?.notify_level === 'mute')
+// A muted channel keeps its mentions but does not announce plain unreads.
+const unread = computed(() => (muted.value ? 0 : chatStore.readStates[props.channel.id]?.unread_count || 0))
 const mentions = computed(() => chatStore.readStates[props.channel.id]?.mention_count || 0)
 const voiceUsers = computed(() => {
   if (!isVoice.value) return []
@@ -66,6 +68,7 @@ const rowClass = computed(() => [
     : unread.value > 0
       ? 'text-mnema-text font-semibold hover:bg-mnema-hover/70'
       : 'text-mnema-muted hover:bg-mnema-hover/70 hover:text-mnema-text',
+  muted.value && !active.value && 'opacity-60',
   props.flash && 'nav-flash'
 ])
 </script>
@@ -125,6 +128,7 @@ const rowClass = computed(() => [
           ]"
         />
         <span class="truncate">{{ channel.name }}</span>
+        <BellOff v-if="muted" class="w-3.5 h-3.5 flex-shrink-0 text-mnema-tertiary" data-testid="channel-muted" :aria-label="$t('notifications.mute')" />
       </div>
 
       <!-- Unread & Mention Badges; for a Talk in use, how long it runs -->

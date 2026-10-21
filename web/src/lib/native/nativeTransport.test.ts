@@ -49,6 +49,17 @@ describe('native API delivery', () => {
     invoke.mockResolvedValueOnce(reply(503)); await expect(disconnectNative()).rejects.toThrow('disconnect unavailable')
     await expect(nativeApiTransport('/api/auth/me', { method: 'GET' })).rejects.toThrow('profile unavailable')
   })
+  it('answers the notification settings, category levels and read-all as unavailable without dispatch', async () => {
+    invoke.mockClear()
+    for (const [path, method, json] of [
+      ['/api/notification-settings', 'GET', undefined],
+      ['/api/categories/c1/notifications', 'PUT', { level: 'mute', muted_until: null }],
+      ['/api/channels/c1/notifications', 'PUT', { level: 'mute', muted_until: null }],
+      ['/api/read-state/read-all', 'POST', {}]
+    ] as const) expect(await nativeApiTransport(path, { method, json })).toMatchObject({ status: 503 })
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
   it('rejects malformed credential inputs without dispatch and handles rejected authentication ACKs', async () => {
     invoke.mockClear()
     for (const [path, json] of [

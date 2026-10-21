@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
-import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X } from '@lucide/vue'
+import { ShieldCheck, Crown, Plus, FolderPlus, ChevronDown, X, CheckCheck } from '@lucide/vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { useDismissable } from '../composables/useDismissable'
 
@@ -8,7 +8,7 @@ import { useDismissable } from '../composables/useDismissable'
 // admin console, creating channels and categories, the legal notices.
 const SERVER_NAME = 'Mnema Talk'
 
-const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': [] }>()
+const emit = defineEmits<{ 'open-admin': []; 'open-legal': []; 'create-channel': []; 'create-category': []; 'mark-all-read': [] }>()
 
 const permissions = usePermissionsStore()
 
@@ -137,6 +137,10 @@ const menuItemClass = 'w-full h-8 px-2 flex items-center justify-between gap-3 r
         </template>
         <div class="my-1 h-px bg-mnema-hairline" role="separator"></div>
       </template>
+      <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('mark-all-read'))">
+        <span class="truncate">{{ $t('sidebar.markAllRead') }}</span>
+        <CheckCheck class="w-4 h-4 flex-shrink-0" />
+      </button>
       <button type="button" role="menuitem" tabindex="-1" :class="menuItemClass" @click="runMenuAction(() => emit('open-legal'))">
         <span class="truncate">{{ $t('menu.legal') }}</span>
         <ShieldCheck class="w-4 h-4 flex-shrink-0" />

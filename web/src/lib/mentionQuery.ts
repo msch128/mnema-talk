@@ -1,12 +1,14 @@
 // Mention autocomplete in the composer: find the "@que" being typed at the
 // caret, rank matching members, and splice the chosen name in.
 
-import type { User } from '../types/domain'
+import type { Role, User } from '../types/domain'
 
 type Mentionable = User & { is_bot?: boolean }
 export type MentionSuggestion =
-  | { username: 'here' | 'all'; display_name: string; group: true; user?: never }
-  | { username: string; display_name: string; user: Mentionable; group?: false }
+  | { username: 'here' | 'all'; display_name: string; group: true; user?: never; role?: never }
+  | { username: string; display_name: string; user: Mentionable; group?: false; role?: never }
+  // A role: username holds the role's name, which is what gets inserted.
+  | { username: string; display_name: string; role: Role; user?: never; group?: false }
 const NAME_CHARS = /[A-Za-z0-9_.-]/
 
 function findAtPosition(text: string, caret: number): number {
@@ -73,6 +75,16 @@ function compareScoredMembers(a: { score: number; m: User }, b: { score: number;
   return nameA.localeCompare(nameB)
 }
 
+const MAX_ROLE_SUGGESTIONS = 3
+
+/** Roles whose name starts with (then contains) the query, in the given order. */
+function matchRoles(q: string, roles: readonly Role[], limit: number): MentionSuggestion[] {
+  const lower = (r: Role) => r.name.toLowerCase()
+  const starts = roles.filter(r => lower(r).startsWith(q))
+  const contains = q ? roles.filter(r => !lower(r).startsWith(q) && lower(r).includes(q)) : []
+  return [...starts, ...contains].slice(0, limit).map(role => ({ username: role.name, display_name: role.name, role }))
+}
+
 function matchGroupMentions(q: string, items: MentionSuggestion[], limit: number) {
   const max = limit + GROUP_MENTIONS.length
   for (const g of GROUP_MENTIONS) {
@@ -84,13 +96,14 @@ function matchGroupMentions(q: string, items: MentionSuggestion[], limit: number
 
 /**
  * Suggestions for query: members whose username or display name starts with
- * it (then those that contain it), then @here / @all. Each item is
- * { username, display_name, user?, group? }.
+ * it (then those that contain it), then the roles passed in (the ones the
+ * reader may mention), then @here / @all. Each item is
+ * { username, display_name, user?, role?, group? }.
  */
 export function suggestMentions(
   query: string,
   members: Array<User & { disabled?: boolean }> | null | undefined,
-  { selfId = null, limit = 8 }: { selfId?: string | null; limit?: number } = {}
+  { selfId = null, limit = 8, roles = [] }: { selfId?: string | null; limit?: number; roles?: readonly Role[] } = {}
 ): MentionSuggestion[] {
   const q = (query || '').toLowerCase()
   const scored: Array<{ score: number; m: User }> = []
@@ -102,7 +115,11 @@ export function suggestMentions(
   const items: MentionSuggestion[] = scored
     .slice(0, limit)
     .map(({ m }) => ({ username: m.username, display_name: m.display_name || m.username, user: m }))
-  matchGroupMentions(q, items, limit)
+  // A user named like a role wins on the server, so the role is not offered.
+  const taken = new Set((members || []).map(m => (m.username || '').toLowerCase()))
+  const offered = matchRoles(q, roles.filter(r => !taken.has(r.name.toLowerCase())), MAX_ROLE_SUGGESTIONS)
+  items.push(...offered)
+  matchGroupMentions(q, items, limit + offered.length)
   return items
 }
 

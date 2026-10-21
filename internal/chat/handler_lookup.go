@@ -178,7 +178,7 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // search handles GET /api/search.
 //
 // @Summary Search messages
-// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.
+// @Description Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.
 // @ID searchMessages
 // @Tags Messages
 // @Produce json
@@ -186,7 +186,10 @@ func (h *Handler) getMessageByNumber(w http.ResponseWriter, r *http.Request) err
 // @Param q query string false "Search terms, whitespace separated." maxlength(200)
 // @Param channel_id query string false "Only messages of this channel." Format(uuid)
 // @Param author_id query string false "Only messages of this author." Format(uuid)
-// @Param has query string false "Only messages with a file, an image or a link." Enums(file,image,link)
+// @Param has query string false "Only messages with a file, an image, a video or a link." Enums(file,image,video,link)
+// @Param mentions query string false "Only messages that mention this user (directly or via @all/@here)." Format(uuid)
+// @Param after query string false "Only messages created after this instant (RFC 3339); must be earlier than before_date." Format(date-time)
+// @Param before_date query string false "Only messages created before this instant (RFC 3339)." Format(date-time)
 // @Param before query string false "Page back: only messages older than this message." Format(uuid)
 // @Param limit query int false "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50." minimum(1) maximum(50) default(25)
 // @Success 200 {object} SearchResult "One page of results."
@@ -203,10 +206,16 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 		Has:   v.Get("has"),
 		Limit: httpx.QueryLimit(r, "limit", 25, 50),
 	}
-	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before}); err != nil {
+	if _, err := queryIDs(r, "an id", map[string]**uuid.UUID{"channel_id": &q.ChannelID, "author_id": &q.AuthorID, "before": &q.Before, "mentions": &q.Mentions}); err != nil {
 		return err
 	}
 	var err error
+	if q.After, err = ParseSearchTime("after", v.Get("after")); err != nil {
+		return err
+	}
+	if q.BeforeDate, err = ParseSearchTime("before_date", v.Get("before_date")); err != nil {
+		return err
+	}
 	if q.Visible, err = h.viewableChannels(r); err != nil {
 		return err
 	}
@@ -224,7 +233,11 @@ func (h *Handler) search(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	httpx.WriteJSON(w, http.StatusOK, SearchResult{Messages: msgs, HasMore: more})
+	roots, err := searchRoots(r.Context(), h.DB, msgs)
+	if err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusOK, SearchResult{Messages: msgs, HasMore: more, Roots: roots})
 	return nil
 }
 
@@ -252,4 +265,6 @@ type Thread struct {
 type SearchResult struct {
 	Messages []Message `json:"messages"`
 	HasMore  bool      `json:"has_more"`
+	// Roots maps a reply hit's parent_id to its thread root.
+	Roots map[string]SearchRoot `json:"roots"`
 }

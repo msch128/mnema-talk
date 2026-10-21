@@ -784,6 +784,21 @@ export function isChatCategory(value: unknown): value is ChatCategory {
 
 export const decodeChatCategory = decoder("chat.Category", isChatCategory)
 
+export type ChatCategoryNotifySetting = {
+  category_id: string
+  level: ChatNotifyLevel
+  muted_until: string | null
+}
+
+export function isChatCategoryNotifySetting(value: unknown): value is ChatCategoryNotifySetting {
+  return isRecord(value)
+    && (hasOwn(value, "category_id") && isIdentifier(value["category_id"]))
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (hasOwn(value, "muted_until") && (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+}
+
+export const decodeChatCategoryNotifySetting = decoder("chat.CategoryNotifySetting", isChatCategoryNotifySetting)
+
 export type ChatCategoryOrder = {
   id: string
   sort_order: number
@@ -838,6 +853,21 @@ export function isChatChannelHierarchy(value: unknown): value is ChatChannelHier
 }
 
 export const decodeChatChannelHierarchy = decoder("chat.ChannelHierarchy", isChatChannelHierarchy)
+
+export type ChatChannelNotifySetting = {
+  channel_id: string
+  level: ChatNotifyLevel
+  muted_until: string | null
+}
+
+export function isChatChannelNotifySetting(value: unknown): value is ChatChannelNotifySetting {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (hasOwn(value, "muted_until") && (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
+}
+
+export const decodeChatChannelNotifySetting = decoder("chat.ChannelNotifySetting", isChatChannelNotifySetting)
 
 export type ChatChannelPlacement = {
   category_id: string | null
@@ -1073,6 +1103,17 @@ export function isChatLayoutRequest(value: unknown): value is ChatLayoutRequest 
 
 export const decodeChatLayoutRequest = decoder("chat.LayoutRequest", isChatLayoutRequest)
 
+export type ChatMarkAllReadRequest = {
+  category_id?: string | null
+}
+
+export function isChatMarkAllReadRequest(value: unknown): value is ChatMarkAllReadRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "category_id") || (isIdentifier(value["category_id"]) || value["category_id"] === null))
+}
+
+export const decodeChatMarkAllReadRequest = decoder("chat.MarkAllReadRequest", isChatMarkAllReadRequest)
+
 export type ChatMarkReadRequest = {
   message_id?: string | null
 }
@@ -1159,6 +1200,19 @@ export function isChatMember(value: unknown): value is ChatMember {
 
 export const decodeChatMember = decoder("chat.Member", isChatMember)
 
+export type ChatMentionsPage = {
+  has_more: boolean
+  messages: Array<ChatMessage>
+}
+
+export function isChatMentionsPage(value: unknown): value is ChatMentionsPage {
+  return isRecord(value)
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "messages") && isArrayOf(value["messages"], item => isChatMessage(item)))
+}
+
+export const decodeChatMentionsPage = decoder("chat.MentionsPage", isChatMentionsPage)
+
 export type ChatMessage = {
   attachments: Array<ChatMediaAttachment>
   avatar_url?: string
@@ -1172,6 +1226,7 @@ export type ChatMessage = {
   is_edited: boolean
   is_pinned: boolean
   is_webhook?: boolean
+  mention_roles?: Array<string>
   mentions: Array<string>
   number: number
   parent_id?: string
@@ -1198,6 +1253,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
+    && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))
@@ -1212,10 +1268,23 @@ export function isChatMessage(value: unknown): value is ChatMessage {
 
 export const decodeChatMessage = decoder("chat.Message", isChatMessage)
 
-export type ChatNotifyLevel = "all" | "mentions" | "mute"
+export type ChatNotificationSettings = {
+  categories: Array<ChatCategoryNotifySetting>
+  channels: Array<ChatChannelNotifySetting>
+}
+
+export function isChatNotificationSettings(value: unknown): value is ChatNotificationSettings {
+  return isRecord(value)
+    && (hasOwn(value, "categories") && isArrayOf(value["categories"], item => isChatCategoryNotifySetting(item)))
+    && (hasOwn(value, "channels") && isArrayOf(value["channels"], item => isChatChannelNotifySetting(item)))
+}
+
+export const decodeChatNotificationSettings = decoder("chat.NotificationSettings", isChatNotificationSettings)
+
+export type ChatNotifyLevel = "all" | "mentions" | "mute" | "inherit"
 
 export function isChatNotifyLevel(value: unknown): value is ChatNotifyLevel {
-  return (value === "all" || value === "mentions" || value === "mute")
+  return (value === "all" || value === "mentions" || value === "mute" || value === "inherit")
 }
 
 export const decodeChatNotifyLevel = decoder("chat.NotifyLevel", isChatNotifyLevel)
@@ -1336,23 +1405,46 @@ export const decodeChatReplyPreview = decoder("chat.ReplyPreview", isChatReplyPr
 export type ChatSearchResult = {
   has_more: boolean
   messages: Array<ChatMessage>
+  roots: Record<string, unknown>
 }
 
 export function isChatSearchResult(value: unknown): value is ChatSearchResult {
   return isRecord(value)
     && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
     && (hasOwn(value, "messages") && isArrayOf(value["messages"], item => isChatMessage(item)))
+    && (hasOwn(value, "roots") && isRecord(value["roots"]))
 }
 
 export const decodeChatSearchResult = decoder("chat.SearchResult", isChatSearchResult)
 
+export type ChatSearchRoot = {
+  channel_id: string
+  display_name: string
+  id: string
+  snippet: string
+  username: string
+}
+
+export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "snippet") && isString(value["snippet"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatSearchRoot = decoder("chat.SearchRoot", isChatSearchRoot)
+
 export type ChatSetNotifyLevelRequest = {
   level: ChatNotifyLevel
+  muted_until?: string | null
 }
 
 export function isChatSetNotifyLevelRequest(value: unknown): value is ChatSetNotifyLevelRequest {
   return isRecord(value)
     && (hasOwn(value, "level") && isChatNotifyLevel(value["level"]))
+    && (!hasOwn(value, "muted_until") || (isTimestamp(value["muted_until"]) || value["muted_until"] === null))
 }
 
 export const decodeChatSetNotifyLevelRequest = decoder("chat.SetNotifyLevelRequest", isChatSetNotifyLevelRequest)

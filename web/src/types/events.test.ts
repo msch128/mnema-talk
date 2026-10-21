@@ -26,6 +26,7 @@ const examples: Record<ServerEventType, unknown[]> = {
     { channel_id: id, notify_level: 'all' },
     { channel_id: id, notify_level: 'mentions' },
     { channel_id: id, notify_level: 'mute' },
+    { refresh: true },
   ],
   message_create: [messageFixture()],
   message_update: [messageFixture({ is_edited: true })],
@@ -126,6 +127,9 @@ describe('WebSocket runtime event contracts', () => {
       { ...refresh, refresh: false },
       { ...refresh, last_read_at: null },
       { channel_id: id, notify_level: 'invalid' },
+      { refresh: false },
+      { refresh: true, unread_count: 1 },
+      {},
     ]
     for (const payload of malformed) expect(() => decodeServerEvent({ type: 'read_state', payload })).toThrow(ContractError)
     for (const payload of examples.read_state) expect(decodeServerEvent({ type: 'read_state', payload })).toEqual({ type: 'read_state', payload })

@@ -173,9 +173,17 @@ describe('menu actions and state', () => {
   })
 })
 
+const NOTIFY_IDS = ['notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute']
+
+/** The entries of the "mute" submenu. */
+function muteItems(list: ContextMenuItem[]): ContextMenuItem[] {
+  const sub = list.find(i => i.type === 'submenu')
+  return sub && 'items' in sub ? sub.items : []
+}
+
 describe('channel menu', () => {
   it('gives members read, link and notification options only', () => {
-    expect(ids(buildChannelItems(textCh))).toEqual(['mark-read', 'copy-link', 'notify-all', 'notify-mentions', 'notify-mute'])
+    expect(ids(buildChannelItems(textCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute'])
   })
 
   it('adds edit, duplicate and delete for admins', () => {
@@ -190,24 +198,28 @@ describe('channel menu', () => {
   })
 
   it('voice channels have a chat, so read state and notifications too', () => {
-    expect(ids(buildChannelItems(voiceCh))).toEqual(['mark-read', 'copy-link', 'notify-all', 'notify-mentions', 'notify-mute'])
+    expect(ids(buildChannelItems(voiceCh))).toEqual(['mark-read', 'copy-link', 'notify-inherit', 'notify-all', 'notify-mentions', 'notify-mute'])
     chat.readStates = { [voiceCh.id]: readStateFixture({ channel_id: voiceCh.id, unread_count: 1, mention_count: 0 }) }
     chat.setNotificationLevel = vi.fn()
     const list = buildChannelItems(voiceCh)
     expect(menuItem(list, 'mark-read').disabled).toBe(false)
-    required(menuItem(list, 'notify-mute').action)()
-    expect(chat.setNotificationLevel).toHaveBeenCalledWith(voiceCh.id, 'mute')
+    required(menuItem(list, 'notify-mentions').action)()
+    expect(chat.setNotificationLevel).toHaveBeenCalledWith(voiceCh.id, 'mentions', null)
+    const mute = muteItems(list)
+    required(mute[0]?.action)()
+    expect(chat.setNotificationLevel).toHaveBeenLastCalledWith(voiceCh.id, 'mute', expect.stringMatching(/^\d{4}-/))
   })
 
   it('marks the current notification level and sets a new one', () => {
     chat.readStates = { t1: readStateFixture({ channel_id: 't1', unread_count: 2, mention_count: 0, notify_level: 'mentions' }) }
+    chat.notifySettings = { channels: [{ channel_id: 't1', level: 'mentions', muted_until: null }], categories: [] }
     chat.setNotificationLevel = vi.fn()
     const list = buildChannelItems(textCh)
     expect(checkedItem(list, 'notify-mentions').checked).toBe(true)
     expect(checkedItem(list, 'notify-all').checked).toBe(false)
     expect(menuItem(list, 'mark-read').disabled).toBe(false)
-    required(menuItem(list, 'notify-mute').action)()
-    expect(chat.setNotificationLevel).toHaveBeenCalledWith('t1', 'mute')
+    required(muteItems(list).at(-1)?.action)()
+    expect(chat.setNotificationLevel).toHaveBeenCalledWith('t1', 'mute', null)
   })
 
   it('disables mark-read without unread messages', () => {
@@ -218,12 +230,12 @@ describe('channel menu', () => {
 describe('category menu', () => {
   const cat = categoryFixture({ id: 'c1', name: 'Text', channels: [textCh] })
   it('members get mark all read and collapse / expand all', () => {
-    expect(ids(buildCategoryItems(cat))).toEqual(['mark-all-read', 'collapse-all', 'expand-all'])
+    expect(ids(buildCategoryItems(cat))).toEqual(['mark-all-read', ...NOTIFY_IDS, 'collapse-all', 'expand-all'])
   })
   it('admins can also create, edit and delete', () => {
     auth.user = userFixture({ id: 'me', role: 'admin' })
     expect(ids(buildCategoryItems(cat))).toEqual([
-      'mark-all-read', 'collapse-all', 'expand-all', 'permissions', 'create-channel', 'create-category', 'edit', 'delete'
+      'mark-all-read', ...NOTIFY_IDS, 'collapse-all', 'expand-all', 'permissions', 'create-channel', 'create-category', 'edit', 'delete'
     ])
   })
   it('collapse and expand all are disabled when there is nothing to do', () => {
@@ -242,11 +254,11 @@ describe('category menu', () => {
   })
   it('mark all read covers the chats of voice channels too', async () => {
     chat.readStates = { v1: readStateFixture({ channel_id: 'v1', unread_count: 2, mention_count: 0 }) }
-    chat.markChannelRead = vi.fn(async () => {})
+    chat.markAllRead = vi.fn(async () => true)
     const item = menuItem(buildCategoryItems(categoryFixture({ id: 'c2', name: 'Talks', channels: [textCh, voiceCh] })), 'mark-all-read')
     expect(item.disabled).toBe(false)
     await required(item.action)()
-    expect(vi.mocked(chat.markChannelRead).mock.calls.map(c => c[0])).toEqual(['t1', 'v1'])
+    expect(chat.markAllRead).toHaveBeenCalledWith('c2')
   })
   it('passes the category to the create handlers', () => {
     auth.user = userFixture({ id: 'me', role: 'admin' })

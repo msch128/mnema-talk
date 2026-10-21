@@ -9,6 +9,7 @@ import { handleWSEvent } from './events'
 import { fetchMembers } from './members'
 import { fetchMessages } from './messageWindow'
 import { fetchReadState } from './readState'
+import { fetchNotificationSettings } from './notifySettings'
 import { openThread } from './threads'
 
 function startPingHeartbeat(cx: Cx) {
@@ -36,6 +37,7 @@ function resyncState(cx: Cx) {
   fetchChannels(cx)
   fetchMembers(cx)
   fetchReadState(cx)
+  fetchNotificationSettings(cx)
   const channel = cs.activeChannel.value
   if (channel && channel.type === 'text' && !cs.hasMoreAfter.value) fetchMessages(cx, channel.id)
   if (cs.activeThread.value) openThread(cx, cs.activeThread.value)

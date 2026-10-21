@@ -27,8 +27,17 @@ calls it Owner.
 ## Roles
 
 A role has a name, a colour, a position, a set of permission bits and the flags
-*hoist* (list its members separately) and *mentionable* (reserved for role
-mentions; stored, not used yet).
+*hoist* (list its members separately) and *mentionable* (anyone may write
+`@Role` to notify its members).
+
+A role mention (`@Role`, also with spaces, case-insensitive) notifies the
+members of the role who can view the channel when the role is *mentionable*,
+or when the author holds *Mention everyone* (the Owner and Administrators
+always do). Otherwise it stays plain text. A user named like the role wins:
+`@name` then mentions the user, not the role. Bots are only notified when
+named directly, never through a role, and `@everyone` is not a role mention
+(use `@all`). Edits resolve the mentions again. `GET /api/mentions` is the
+caller's inbox: mentions and replies to them in channels they can view.
 
 - **`@everyone`** is implicit: every member has it, it sits at position 0 and
   cannot be renamed, moved or deleted. Only its permissions can be edited. A

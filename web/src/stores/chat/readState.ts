@@ -1,4 +1,4 @@
-import type { ReadState, NotifyLevel } from '../../types/domain'
+import type { ReadState } from '../../types/domain'
 import { isChatReadState } from '../../types/rest'
 import { arrayDecoder } from '../../types/validation'
 import { api } from '../../lib/api'
@@ -111,35 +111,6 @@ export async function markChannelUnread(cx: Cx, channelId: string, messageId: st
     cs.activeChannelLastReadAt.value = cs.readStates.value[channelId]?.last_read_at || null
   }
 }
-
-export async function setNotificationLevel(cx: Cx, channelId: string, level: NotifyLevel) {
-  const { cs } = cx
-  if (!channelId || !level) return
-
-  const prev = cs.readStates.value[channelId] || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
-  cs.readStates.value = {
-    ...cs.readStates.value,
-    [channelId]: {
-      ...prev,
-      notify_level: level
-    }
-  }
-  try {
-    await api(`/api/channels/${channelId}/notifications`, {
-      method: 'PUT',
-      json: { level }
-    })
-  } catch (e) {
-    console.warn('Failed to set notification level:', e)
-  }
-}
-
-/** 'all' | 'mentions' | 'mute' for a channel (default 'all'). */
-export function notificationLevel(cx: Cx, channelId: string) {
-  const { cs } = cx
-  return cs.readStates.value[channelId]?.notify_level || 'all'
-}
-
 
 // Back in the tab (visible / focused): the store catches up on reading. One
 // pair of listeners for the page; the live store registers its handler.

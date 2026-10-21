@@ -86,18 +86,47 @@ function formatMention(
   return `${m.pre}<span class="${cls.join(' ')}"${attrs}>@${name}</span>${tail}`
 }
 
+/** A role the message mentions; me marks a role the reader holds. */
+export interface RoleMention {
+  name: string
+  me?: boolean
+}
+
+/**
+ * Draws "@Role Name" as a pill for the roles the server recorded on the
+ * message. Role names may contain spaces, so the known names are matched
+ * (longest first) instead of a username-like token. Roles are not clickable
+ * and carry no colour here (the CSP forbids inline styles in this markup).
+ */
+function highlightRoles(html: string, roles: readonly RoleMention[]): string {
+  if (!roles.length) return html
+  const byName = new Map(roles.map(r => [escapeHtml(r.name).toLowerCase(), r]))
+  const names = [...byName.keys()]
+    .sort((a, b) => b.length - a.length)
+    .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const re = new RegExp(`(^|[\\s(])@(${names.join('|')})(?![A-Za-z0-9_-]|\\.[A-Za-z0-9_-])`, 'gi')
+  return html.replace(re, (_all: string, pre: string, name: string) => {
+    const cls = byName.get(name.toLowerCase())?.me ? 'md-mention md-mention-role md-mention-me' : 'md-mention md-mention-role'
+    return `${pre}<span class="${cls}">@${name}</span>`
+  })
+}
+
 /**
  * Renders chat Markdown. Options:
  * - known: Set of lower-cased usernames; when given, only those (and @all,
  *   @here) are highlighted as mentions.
  * - me: the reader's username; mentions of them get .md-mention-me.
+ * - roles: the roles the message mentions (by the server), drawn as pills.
  */
-export function renderMarkdown(content: string | null | undefined, { known = null, me = '' }: { known?: ReadonlySet<string> | null; me?: string } = {}): string {
+export function renderMarkdown(
+  content: string | null | undefined,
+  { known = null, me = '', roles = [] }: { known?: ReadonlySet<string> | null; me?: string; roles?: readonly RoleMention[] } = {}
+): string {
   if (!content) return ''
   const { text: stashed, code } = stashCodeAndLinks(escapeHtml(content))
   const styled = applyInlineStyles(stashed)
   const self = me.toLowerCase()
-  const mentioned = styled.replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all: string, pre: string, raw: string) =>
+  const mentioned = highlightRoles(styled, roles).replace(/(^|[\s(])@([A-Za-z0-9_.-]{3,32})/g, (all: string, pre: string, raw: string) =>
     formatMention({ all, pre, raw }, known, self))
 
   // \u0000 is the intentional code-span placeholder delimiter used for code spans above, so matching it is deliberate.

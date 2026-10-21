@@ -1,26 +1,40 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { PropType } from 'vue'
 import { renderMarkdown } from '../lib/markdown'
 import { extractPreviewUrls } from '../lib/chatLogic'
 import LinkPreviewCard from './LinkPreviewCard.vue'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
 
 const props = defineProps({
   content: {
     type: String,
     default: ''
+  },
+  // The roles the server recorded as mentioned by this message.
+  mentionRoles: {
+    type: Array as PropType<string[]>,
+    default: () => []
   }
 })
 
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const permissions = usePermissionsStore()
 
 // Only real members (and @all/@here) are highlighted, and clickable.
 const knownNames = computed(() => new Set(chatStore.members.map(m => (m.username || '').toLowerCase())))
+// Pills for the recorded roles that still exist, from their stored IDs.
+const mentionedRoles = computed(() => props.mentionRoles
+  .map(id => permissions.roles.find(r => r.id === id))
+  .filter(r => r !== undefined)
+  .map(r => ({ name: r.name, me: permissions.myRoleIds.includes(r.id) })))
 const parsedHtml = computed(() => renderMarkdown(props.content, {
   known: knownNames.value,
-  me: authStore.user?.username || ''
+  me: authStore.user?.username || '',
+  roles: mentionedRoles.value
 }))
 
 function openMention(el: HTMLElement) {
@@ -119,6 +133,8 @@ function onKeydown(event: KeyboardEvent) {
 .markdown-body .md-mention[data-mention] { cursor: pointer; }
 .markdown-body .md-mention[data-mention]:hover { background: rgba(45, 167, 113, 0.28); }
 .markdown-body .md-mention-group[data-mention] { cursor: default; }
+/* A role reads like a member mention with an outline; the reader's own roles turn amber via -me. */
+.markdown-body .md-mention-role { box-shadow: inset 0 0 0 1px rgba(45, 167, 113, 0.45); }
 .markdown-body .md-mention-me,
 .markdown-body .md-mention-group {
   color: #fce4a8;

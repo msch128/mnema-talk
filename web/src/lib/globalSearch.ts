@@ -8,6 +8,8 @@ import { tooltip } from '../directives/tooltip'
 // through the active instance).
 
 export const searchOpen = ref(false)
+/** The query line; kept while the session lasts so reopening shows the last search. */
+export const searchText = ref('')
 
 let installed = false
 let mounting: Promise<void> | null = null
@@ -21,6 +23,12 @@ function ensureMounted() {
     })
   }
   return mounting
+}
+
+/** Opens the search, optionally with a new query line (e.g. "in:general "). */
+export function openSearch(prefill?: string) {
+  if (prefill !== undefined) searchText.value = prefill
+  return ensureMounted().then(() => { searchOpen.value = true })
 }
 
 function isSearchShortcut(e: KeyboardEvent): boolean {
@@ -45,5 +53,6 @@ export function uninstallGlobalSearch() {
   if (!installed) return
   installed = false
   searchOpen.value = false
+  searchText.value = ''
   window.removeEventListener('keydown', onKeydown)
 }
