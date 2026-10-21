@@ -2308,11 +2308,49 @@
               "$ref": "#/components/schemas/chat.Message"
             },
             "type": "array"
+          },
+          "roots": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/chat.SearchRoot"
+            },
+            "description": "Roots maps a reply hit's parent_id to its thread root.",
+            "type": "object"
           }
         },
         "required": [
           "has_more",
-          "messages"
+          "messages",
+          "roots"
+        ],
+        "type": "object"
+      },
+      "chat.SearchRoot": {
+        "properties": {
+          "channel_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "snippet": {
+            "description": "Snippet is the start of the root message (at most 200 characters).",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "display_name",
+          "id",
+          "snippet",
+          "username"
         ],
         "type": "object"
       },
@@ -17580,7 +17618,7 @@
     },
     "/api/search": {
       "get": {
-        "description": "Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id or has is required.",
+        "description": "Text channels and voice channels' chats, newest first. Every term (max 8) must occur case-insensitively. At least one of q, channel_id, author_id, mentions, has, after or before_date is required. Reply hits carry parent_id; roots maps those ids to the thread root with a snippet.",
         "operationId": "searchMessages",
         "parameters": [
           {
@@ -17611,15 +17649,43 @@
             }
           },
           {
-            "description": "Only messages with a file, an image or a link.",
+            "description": "Only messages with a file, an image, a video or a link.",
             "in": "query",
             "name": "has",
             "schema": {
               "enum": [
                 "file",
                 "image",
+                "video",
                 "link"
               ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages that mention this user (directly or via @all/@here).",
+            "in": "query",
+            "name": "mentions",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages created after this instant (RFC 3339); must be earlier than before_date.",
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only messages created before this instant (RFC 3339).",
+            "in": "query",
+            "name": "before_date",
+            "schema": {
+              "format": "date-time",
               "type": "string"
             }
           },
