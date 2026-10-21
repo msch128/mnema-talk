@@ -73,11 +73,23 @@ export async function setNotificationLevel(cx: Cx, channelId: string, level: Not
   const { cs } = cx
   if (!channelId || !level) return false
   // Show the change at once; "inherit" needs the server to resolve it.
-  if (level !== 'inherit') {
-    const prev = cs.readStates.value[channelId] || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
-    cs.readStates.value = { ...cs.readStates.value, [channelId]: { ...prev, notify_level: level } }
-  }
-  return putSetting(cx, `/api/channels/${channelId}/notifications`, level, mutedUntil, level === 'inherit')
+  if (level === 'inherit') return putSetting(cx, `/api/channels/${channelId}/notifications`, level, mutedUntil, true)
+  const existing = cs.readStates.value[channelId]
+  const prev = existing || { channel_id: channelId, unread_count: 0, mention_count: 0, last_read_at: null }
+  cs.readStates.value = { ...cs.readStates.value, [channelId]: { ...prev, notify_level: level } }
+  const ok = await putSetting(cx, `/api/channels/${channelId}/notifications`, level, mutedUntil, false)
+  if (!ok) restoreLevel(cx, channelId, existing)
+  return ok
+}
+
+/** Takes an optimistic level back after a failed write, keeping any newer counts. */
+function restoreLevel(cx: Cx, channelId: string, before: ReadState | undefined) {
+  const { cs } = cx
+  const next = { ...cs.readStates.value }
+  const now = next[channelId]
+  if (!before) delete next[channelId]
+  else if (now) next[channelId] = { ...now, notify_level: before.notify_level }
+  cs.readStates.value = next
 }
 
 /** Set the level the channels of a category inherit. */

@@ -1,3 +1,5 @@
+import type { OnboardingState, OnboardingTipsInput } from '../types/rest'
+
 // Tip ids stored in the member's onboarding record (PUT /api/onboarding/tips).
 
 /** The desktop-notification hint above the message list. */
@@ -16,4 +18,22 @@ export function legacyHintDismissed(): boolean {
 
 export function clearLegacyHint(): void {
   try { localStorage.removeItem(LEGACY_HINT_KEY) } catch { /* storage blocked: nothing to clear */ }
+}
+
+/** The record as the server sent it, plus a welcome flow this session already finished. */
+export function withFinished(record: OnboardingState, finished: boolean): OnboardingState {
+  return finished && !record.welcome_done ? { ...record, welcome_done: true } : record
+}
+
+/** The browser-only dismissal of the notification hint moves to the server, once. */
+export async function migrateLegacyHint(dismissed: readonly string[] | undefined, save: (input: OnboardingTipsInput) => Promise<void>) {
+  if (!legacyHintDismissed()) return
+  if (dismissed?.includes(NOTIFICATION_HINT_TIP)) {
+    clearLegacyHint()
+    return
+  }
+  try {
+    await save({ dismissed_tips: [NOTIFICATION_HINT_TIP] })
+    clearLegacyHint()
+  } catch { /* keep the flag and try again next start */ }
 }

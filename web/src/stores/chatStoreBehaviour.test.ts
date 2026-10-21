@@ -371,7 +371,7 @@ describe('read state, presence and typing', () => {
     await chat.markChannelRead(ch.id)
     expect(chat.readStates[ch.id]?.unread_count).toBe(0)
     await chat.setNotificationLevel(ch.id, 'mute')
-    expect(chat.readStates[ch.id]?.notify_level).toBe('mute')
+    expect(chat.readStates[ch.id]?.notify_level).toBe('mentions')
     await chat.markChannelRead('')
     await chat.markChannelUnread('', 'id')
     await chat.markChannelUnread(ch.id, '')
