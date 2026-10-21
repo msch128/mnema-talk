@@ -1,0 +1,75 @@
+web/src/components/ChatHeader.vue
+  s_06fcde5dbef956::t_3f3737fa7ef36f 10,149-151
+web/src/composables/useNotificationHint.ts
+  s_06fcde5dbef956::t_a6cfdfdd2103c7 20
+  s_06fcde5dbef956::t_4bc5272cc6f273 3,7-8,14-15,17,19,23
+web/src/lib/welcomeSteps.test.ts
+  s_06fcde5dbef956::t_228f26879da4d6 1-35
+web/src/composables/useNotificationHint.test.ts
+  s_06fcde5dbef956::t_08e4f464a28b88 3,10,13-16,18-21,23-24,26-28,43-44,62-64,67-70,73,75,77-78
+  s_06fcde5dbef956::t_acb88870b1fd23 17,22,25
+web/src/components/ChatAreaBoundaries.test.ts
+  s_06fcde5dbef956::t_7878879912cb48 9-10,18,45,50,52
+web/src/composables/useWelcomeFlow.ts
+  s_06fcde5dbef956::t_69726bec58de9a 1-10,17-82,87-89
+  s_06fcde5dbef956::t_bda014bf96b7c2 11-16,83-86
+web/src/components/ChatArea.test.ts
+  s_06fcde5dbef956::t_acb88870b1fd23 2
+  s_06fcde5dbef956::t_7878879912cb48 10,27,468,471
+web/src/test-fixtures.fixture.ts
+  s_06fcde5dbef956::t_7878879912cb48 1,102-107
+  s_06fcde5dbef956::t_944ae57651d69b 108-109
+web/src/components/WelcomeProfileStep.vue
+  s_06fcde5dbef956::t_0c7140a6a225c2 1-106
+web/src/lib/onboardingTips.ts
+  s_06fcde5dbef956::t_100565da74798f 1-13,15-17,19
+  s_06fcde5dbef956::t_6853b5a7d7bd58 14,18
+web/src/composables/useOnboardingTips.test.ts
+  s_06fcde5dbef956::t_d53ef3acf1eeb5 1-68,76-127,163-164,181-182
+  s_06fcde5dbef956::t_63901d32e7fb2b 167-174
+  s_06fcde5dbef956::t_315c430e8e9c53 69-75,128-162,165-166,175-180
+web/src/components/WelcomeProfileStep.test.ts
+  s_06fcde5dbef956::t_0c236889811183 1-92
+web/src/components/WelcomeFlow.test.ts
+  s_06fcde5dbef956::t_f065f225a715c3 22-26,141
+  s_06fcde5dbef956::t_a1a94ab58e6734 1-21,27-140,142-222
+web/src/App.vue
+  s_06fcde5dbef956::t_3f3737fa7ef36f 28,284-285
+  s_06fcde5dbef956::t_0191cb27ebbd25 286
+web/src/stores/onboarding.ts
+  s_06fcde5dbef956::t_421e4e32c9716b 1-87
+web/src/lib/welcomeSteps.ts
+  s_06fcde5dbef956::t_8fb76c8b460893 1-27
+web/src/composables/useOnboardingTips.ts
+  s_06fcde5dbef956::t_9df429e2375ff5 1-19
+e2e/tests/fixtures.ts
+  s_06fcde5dbef956::t_67d2abcf102711 65-84,90
+web/src/components/WelcomeFlow.vue
+  s_06fcde5dbef956::t_ce48fd92907775 1-79
+e2e/tests/onboarding.spec.ts
+  s_06fcde5dbef956::t_67d2abcf102711 1,22-32,47,95-105,108-158
+  s_06fcde5dbef956::t_a92f10e5e26654 106-107
+  s_06fcde5dbef956::t_6939273b8d797f 159
+web/src/components/TipBar.vue
+  s_06fcde5dbef956::t_a7db10205465ae 1-36
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_6eb9bfc465a8cb 233-261
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_5ca9e32db9283f 233-261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8885c87df764bb1cb1f49b33bb8cba81c7a86777",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
