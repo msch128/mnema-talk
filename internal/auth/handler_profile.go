@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -54,8 +55,23 @@ func (h *Handler) setLocale(w http.ResponseWriter, r *http.Request) error {
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/auth/me [get]
 func (h *Handler) me(w http.ResponseWriter, r *http.Request) error {
-	httpx.WriteJSON(w, http.StatusOK, UserFrom(r.Context()))
+	httpx.WriteJSON(w, http.StatusOK, h.withRulesPending(r.Context(), UserFrom(r.Context())))
 	return nil
+}
+
+// withRulesPending returns a copy of the caller with RulesPending filled in
+// from the permission state, which is also what enforces the rules.
+func (h *Handler) withRulesPending(ctx context.Context, u *User) User {
+	out := *u
+	if h.Perms == nil {
+		return out
+	}
+	// An unreadable permission state must not break sign-in; the enforcement
+	// itself fails closed.
+	if snap, err := h.Perms.Snapshot(ctx); err == nil {
+		out.RulesPending = snap.RulesPending(u.ID)
+	}
+	return out
 }
 
 // changePassword handles PUT /api/auth/password.

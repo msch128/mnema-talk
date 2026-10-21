@@ -584,3 +584,13 @@ executable itself is trusted as far as its download was.
   a throwaway stack. Anything that needs WebView2 (custom protocol mapping on
   Windows, media permission prompts, the gaming overlays) is listed as
   Windows-only in the desktop repository's status page.
+
+## Rules acceptance and the native DEV client
+
+Community rules (`/api/onboarding`, see [roles-and-permissions.md](roles-and-permissions.md))
+reach the shipped desktop clients through the trusted proxy like any other
+`/api` call, so members accept them in the web app as usual. The native IPC
+transport (`web/src/lib/native/nativeRoutes.ts`) belongs to the experimental
+Windows DEV client, which is not shipped; it does not carry `/api/onboarding`
+and a member of that client could not accept rules until a typed operation is
+added.

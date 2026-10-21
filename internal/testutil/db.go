@@ -101,6 +101,14 @@ func reset(p *db.Pool) error {
 		RESTART IDENTITY CASCADE`); err != nil {
 		return err
 	}
+	// instance_settings references channels, so the cascade above emptied it:
+	// put the single row back at its defaults.
+	if _, err := p.Exec(ctx, `DELETE FROM instance_settings`); err != nil {
+		return err
+	}
+	if _, err := p.Exec(ctx, `INSERT INTO instance_settings (singleton) VALUES (TRUE)`); err != nil {
+		return err
+	}
 	// Roles are not user data: @everyone stays (back at its defaults), the
 	// custom roles of the previous test go.
 	if _, err := p.Exec(ctx, `DELETE FROM audit_log`); err != nil {

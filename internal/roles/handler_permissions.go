@@ -31,6 +31,10 @@ type PermissionsInfo struct {
 	// one); the Owner is above every position. A member can only manage roles
 	// and members below it.
 	TopPosition int `json:"top_position" minimum:"0"`
+	// RulesPending is set while the caller has to accept the community rules
+	// (POST /api/onboarding/accept); posting, reacting, uploading and joining
+	// a Talk answer RULES_NOT_ACCEPTED until then.
+	RulesPending bool `json:"rules_pending,omitempty" binding:"optional"`
 	// TimeoutUntil and TimeoutReason are set while the caller is timed out:
 	// they can read but not post, react, speak or join Talks. The reason is
 	// the moderator's, and the caller's own to see.
@@ -82,6 +86,7 @@ func (h *Handler) myPermissions(w http.ResponseWriter, r *http.Request) error {
 		Catalog:     perm.Catalog,
 		MaxUploadMB: snap.UploadMB(sub, h.Perms.UploadCeilingMB()),
 	}
+	info.RulesPending = snap.RulesPending(user.ID)
 	if t, ok := snap.Timeout(user.ID); ok {
 		info.TimeoutUntil, info.TimeoutReason = &t.Until, t.Reason
 	}

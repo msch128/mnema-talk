@@ -7,7 +7,7 @@ import { isRecord, type Decoder } from '../types/validation'
 
 const CODES = new Set([
   'INVALID_CREDENTIALS', 'UNAUTHORIZED', 'FORBIDDEN', 'NOT_FOUND', 'CONFLICT', 'PAYLOAD_TOO_LARGE',
-  'UNSUPPORTED_MEDIA_TYPE', 'RATE_LIMITED', 'UNAVAILABLE', 'INTERNAL_ERROR'
+  'UNSUPPORTED_MEDIA_TYPE', 'RATE_LIMITED', 'RULES_NOT_ACCEPTED', 'UNAVAILABLE', 'INTERNAL_ERROR'
 ])
 
 const DETAILS: Readonly<Record<string, string>> = {

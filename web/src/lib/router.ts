@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { isRecord } from '../types/validation'
 import type { Channel } from '../types/domain'
+import { isInvitePath } from './inviteLink'
 
 export type Route =
   | { view: 'root' }
@@ -104,7 +105,7 @@ export const popRedirectRoute = consumePendingRoute
 export function savePendingRoute() {
   if (typeof window === 'undefined') return
   const path = window.location.pathname
-  if (path && path !== '/' && path !== '/login') {
+  if (path && path !== '/' && path !== '/login' && !isInvitePath(path)) {
     sessionStorage.setItem(PENDING_ROUTE_KEY, path)
   }
 }

@@ -27,6 +27,8 @@ func newSnapshot(now time.Time) *Snapshot {
 		channelOv:  map[uuid.UUID]*scope{},
 		categoryOv: map[uuid.UUID]*scope{},
 		timeouts:   map[uuid.UUID]Timeout{},
+
+		rulesAccepted: map[uuid.UUID]int{},
 	}
 }
 
@@ -87,6 +89,11 @@ type timeoutRow struct {
 	Reason string
 }
 
+type acceptedRow struct {
+	ID      uuid.UUID
+	Version int
+}
+
 type channelRow struct {
 	ID       uuid.UUID
 	Category *uuid.UUID
@@ -104,6 +111,8 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	owners := load(r, `SELECT id FROM users WHERE role = 'admin'`, pgx.RowTo[uuid.UUID])
 	settings := load(r, `SELECT max_upload_mb FROM instance_settings`, pgx.RowTo[*int])
 	timeouts := load(r, `SELECT id, timeout_until, timeout_reason FROM users WHERE timeout_until > NOW()`, pgx.RowToStructByPos[timeoutRow])
+	rules := load(r, `SELECT CASE WHEN rules_text <> '' THEN rules_version ELSE 0 END FROM instance_settings`, pgx.RowTo[int])
+	accepted := load(r, `SELECT id, rules_accepted_version FROM users WHERE rules_accepted_version > 0`, pgx.RowToStructByPos[acceptedRow])
 	bots := load(r, `SELECT user_id FROM bots`, pgx.RowTo[uuid.UUID])
 	cats := load(r, `SELECT id FROM categories`, pgx.RowTo[uuid.UUID])
 	chans := load(r, `SELECT id, category_id FROM channels`, pgx.RowToStructByPos[channelRow])
@@ -118,6 +127,12 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 		s.globalUploadMB = settings[0]
 	}
 	s.addEntities(owners, bots, cats, timeouts)
+	if len(rules) > 0 {
+		s.rulesVersion = rules[0]
+	}
+	for _, a := range accepted {
+		s.rulesAccepted[a.ID] = a.Version
+	}
 	s.addChannels(chans)
 	s.addOverwrites(ows)
 	return nil

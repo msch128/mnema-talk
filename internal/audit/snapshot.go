@@ -35,6 +35,9 @@ var snapshotSQL = map[Resource]string{
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = users.id), '[]'::jsonb)),
 		username FROM users WHERE id = $1`,
 	ResSettings: `SELECT jsonb_build_object('max_upload_mb', max_upload_mb), 'instance settings' FROM instance_settings`,
+	ResOnboarding: `SELECT jsonb_build_object('community_name', community_name, 'welcome_text', welcome_text,
+		'rules_text', rules_text, 'rules_version', rules_version, 'start_channel_id', start_channel_id),
+		'onboarding' FROM instance_settings`,
 	ResBot: `SELECT jsonb_build_object('name', b.name, 'allowed_intents', b.allowed_intents, 'disabled', b.disabled,
 		'role_ids', COALESCE((SELECT jsonb_agg(role_id ORDER BY role_id) FROM user_roles WHERE user_id = b.user_id), '[]'::jsonb),
 		'active_tokens', (SELECT COUNT(*) FROM bot_tokens t WHERE t.bot_id = b.id AND t.revoked_at IS NULL
@@ -63,7 +66,7 @@ func Snapshot(ctx context.Context, q db.Querier, res Resource, id string) (map[s
 		return nil, ""
 	}
 	var args []any
-	if res != ResSettings {
+	if res != ResSettings && res != ResOnboarding {
 		uid, err := uuid.Parse(id)
 		if err != nil {
 			return nil, ""

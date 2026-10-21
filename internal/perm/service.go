@@ -253,11 +253,14 @@ var ErrChannelHidden = httpx.ErrNotFound("channel not found")
 // RequireChannel checks that sub holds need in ch. Without ViewChannel the
 // channel looks nonexistent (404); a missing permission otherwise is a 403.
 func (s *Service) RequireChannel(ctx context.Context, sub Subject, ch uuid.UUID, need Set) error {
-	p, err := s.Channel(ctx, sub, ch)
+	if s == nil {
+		return nil
+	}
+	snap, err := s.ForChannel(ctx, ch)
 	if err != nil {
 		return err
 	}
-	return CheckChannel(p, need)
+	return snap.Deny(sub, snap.Channel(sub, ch), need)
 }
 
 // CheckChannel is RequireChannel for an already resolved Set.
@@ -273,11 +276,18 @@ func CheckChannel(p, need Set) error {
 
 // RequireGlobal checks that sub holds need server-wide.
 func (s *Service) RequireGlobal(ctx context.Context, sub Subject, need Set) error {
-	p, err := s.Global(ctx, sub)
+	if s == nil {
+		return nil
+	}
+	snap, err := s.Snapshot(ctx)
 	if err != nil {
 		return err
 	}
+	p := snap.Global(sub)
 	if name := p.MissingName(need); name != "" {
+		if snap.RulesPending(sub.ID) && need&^p&TimeoutMask != 0 {
+			return ErrRulesNotAccepted
+		}
 		return httpx.ErrForbidden("missing permission: " + name)
 	}
 	return nil

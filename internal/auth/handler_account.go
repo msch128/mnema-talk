@@ -39,7 +39,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	h.auditUser(r.Context(), u, "auth.register")
 	h.Events.Broadcast("member_joined", u.Public())
-	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: *u})
+	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.withRulesPending(r.Context(), u)})
 	return nil
 }
 

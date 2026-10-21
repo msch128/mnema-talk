@@ -211,7 +211,11 @@ func (h *Hub) enforceVoiceAccess(snap *perm.Snapshot, want map[uuid.UUID]bool) {
 		if p.Has(perm.ViewChannel | perm.Connect) {
 			continue
 		}
-		h.kickUserFromChannel(s.user, s.ch, "missing_permission")
+		reason := "missing_permission"
+		if snap.RulesPending(s.user) {
+			reason = "rules_not_accepted"
+		}
+		h.kickUserFromChannel(s.user, s.ch, reason)
 	}
 	for _, c := range h.clientsMatching(want) {
 		h.applyMediaPolicy(c, snap)

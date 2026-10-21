@@ -62,6 +62,7 @@ func (c *components) mountAPI(api chi.Router) {
 	api.Group(func(pub chi.Router) {
 		pub.Use(httpx.MaxBody(httpx.DefaultMaxBody))
 		c.authH.MountPublic(pub)
+		c.onboardH.MountPublic(pub)
 	})
 
 	api.Group(c.mountAuthenticated)
@@ -100,6 +101,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.cmds.MountMember(j)
 		c.mediaH.Mount(j)
 		c.rolesH.Mount(j)
+		c.onboardH.Mount(j)
 	})
 
 	// Link cards make outbound requests; they get their own budget.
@@ -126,6 +128,7 @@ func (c *components) mountAdmin(adm chi.Router) {
 	c.authH.MountAdmin(adm)
 	c.chatH.MountAdmin(adm)
 	c.rolesH.MountAdmin(adm)
+	c.onboardH.MountAdmin(adm)
 	c.webhookH.MountAdmin(adm)
 	c.botH.MountAdmin(adm)
 	c.mediaH.MountAdmin(adm)
