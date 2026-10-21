@@ -1,0 +1,48 @@
+web/src/App.vue
+  s_06fcde5dbef956::t_250aa7ce988936 37,68
+web/src/lib/native/trustedDesktop.test.ts
+  s_06fcde5dbef956::t_930b467f5462e6 20,64-70
+  s_06fcde5dbef956::t_8677c0265f3dfb 71
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_199a68d75000e9 442-460
+web/src/lib/osNotify.test.ts
+  s_06fcde5dbef956::t_9906a93b6ee141 1-161
+web/eslint.config.ts
+  s_06fcde5dbef956::t_ba0f8af450e9e9 89
+web/src/lib/platform.ts
+  s_06fcde5dbef956::t_d9ec4da4aa3120 14,46-53,67-72,84-87,117-120
+web/src/composables/useAppBadge.ts
+  s_06fcde5dbef956::t_ba0f8af450e9e9 11
+  s_06fcde5dbef956::t_1ab750e4fbd4e3 1-10,12-13
+web/src/lib/native/trustedDesktop.ts
+  s_06fcde5dbef956::t_d9ec4da4aa3120 19-20,63-71,84
+web/src/lib/platform.test.ts
+  s_06fcde5dbef956::t_930b467f5462e6 6,18-22,69,97-129
+  s_06fcde5dbef956::t_a5beae6b38efd2 130-131
+web/src/stores/chat/state.ts
+  s_06fcde5dbef956::t_9be947183fab7e 4
+  s_06fcde5dbef956::t_d9ec4da4aa3120 77
+web/src/lib/osNotify.ts
+  s_06fcde5dbef956::t_f96355505a33e1 1-117
+web/src/composables/useAppBadge.test.ts
+  s_06fcde5dbef956::t_db307a38343e76 1-35
+web/src/stores/chat/notifications.ts
+  s_06fcde5dbef956::t_d9ec4da4aa3120 5,35
+  s_06fcde5dbef956::t_c83e870cb73665 45-51,56-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ca3043dc4e5fa4e9ebfd6e148fe804f05c546cb7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
