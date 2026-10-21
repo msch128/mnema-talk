@@ -248,7 +248,7 @@ type interactionEvent struct {
 	} `json:"member"`
 }
 
-func assertInteractionEvent(t *testing.T, ev interactionEvent, invID uuid.UUID, openCh, cmdID, maxUserID uuid.UUID, raw []byte) {
+func assertInteractionRouting(t *testing.T, ev interactionEvent, invID, openCh, cmdID uuid.UUID) {
 	t.Helper()
 	if ev.ID != invID {
 		t.Fatalf("expected interaction id %s, got %s", invID, ev.ID)
@@ -268,6 +268,10 @@ func assertInteractionEvent(t *testing.T, ev interactionEvent, invID uuid.UUID, 
 	if ev.Data.Name != "ping" {
 		t.Fatalf("expected name ping, got %q", ev.Data.Name)
 	}
+}
+
+func assertInteractionPayload(t *testing.T, ev interactionEvent, maxUserID uuid.UUID, raw []byte) {
+	t.Helper()
 	if ev.Member.User.ID != maxUserID {
 		t.Fatalf("expected member id %s, got %s", maxUserID, ev.Member.User.ID)
 	}
@@ -283,6 +287,12 @@ func assertInteractionEvent(t *testing.T, ev interactionEvent, invID uuid.UUID, 
 	if ev.Data.Options[1].Value != float64(3) {
 		t.Fatalf("expected option 1 value 3, got %v", ev.Data.Options[1].Value)
 	}
+}
+
+func assertInteractionEvent(t *testing.T, ev interactionEvent, invID uuid.UUID, openCh, cmdID, maxUserID uuid.UUID, raw []byte) {
+	t.Helper()
+	assertInteractionRouting(t, ev, invID, openCh, cmdID)
+	assertInteractionPayload(t, ev, maxUserID, raw)
 }
 
 func verifySlashCommandOptionErrors(t *testing.T, run func(map[string]any) response) {

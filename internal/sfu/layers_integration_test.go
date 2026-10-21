@@ -23,20 +23,24 @@ type layerPub struct {
 
 func (p *layerPub) ssrc() uint32 { return uint32(p.sender.GetParameters().Encodings[0].SSRC) }
 
+func forwardPLIs(pkts []rtcp.Packet, plis chan<- struct{}) {
+	for _, pkt := range pkts {
+		if _, ok := pkt.(*rtcp.PictureLossIndication); ok {
+			select {
+			case plis <- struct{}{}:
+			default:
+			}
+		}
+	}
+}
+
 func startRTCPReader(sender *webrtc.RTPSender, plis chan<- struct{}) {
 	for {
 		pkts, _, err := sender.ReadRTCP()
 		if err != nil {
 			return
 		}
-		for _, pkt := range pkts {
-			if _, ok := pkt.(*rtcp.PictureLossIndication); ok {
-				select {
-				case plis <- struct{}{}:
-				default:
-				}
-			}
-		}
+		forwardPLIs(pkts, plis)
 	}
 }
 

@@ -162,7 +162,7 @@ func TestNewCreatesMissingBucket(t *testing.T) {
 	}
 }
 
-func assertStoredObject(t *testing.T, f *fakeS3, key string, data []byte, contentType string) {
+func (f *fakeS3) assertStored(t *testing.T, key string, data []byte, contentType string) {
 	t.Helper()
 	got := f.objects[key]
 	if !bytes.Equal(got, data) {
@@ -173,19 +173,10 @@ func assertStoredObject(t *testing.T, f *fakeS3, key string, data []byte, conten
 	}
 }
 
-func TestClientRoundTrip(t *testing.T) {
-	f, srv := newFakeS3(t, "media")
-	c := newTestClient(t, srv.URL)
-	ctx := context.Background()
-
-	data := []byte("0123456789")
-	if err := c.Upload(ctx, "a/file.bin", bytes.NewReader(data), "application/octet-stream", int64(len(data))); err != nil {
-		t.Fatalf("upload: %v", err)
-	}
-	assertStoredObject(t, f, "media/a/file.bin", data, "application/octet-stream")
-
-	for _, offset := range []int64{0, 4} {
-		rc, err := c.GetObjectFrom(ctx, "a/file.bin", offset)
+func assertOffsetGets(t *testing.T, ctx context.Context, c *Client, key string, data []byte, offsets []int64) {
+	t.Helper()
+	for _, offset := range offsets {
+		rc, err := c.GetObjectFrom(ctx, key, offset)
 		if err != nil {
 			t.Fatalf("get from %d: %v", offset, err)
 		}
@@ -198,6 +189,20 @@ func TestClientRoundTrip(t *testing.T) {
 			t.Fatalf("get from %d: %q", offset, got)
 		}
 	}
+}
+
+func TestClientRoundTrip(t *testing.T) {
+	f, srv := newFakeS3(t, "media")
+	c := newTestClient(t, srv.URL)
+	ctx := context.Background()
+
+	data := []byte("0123456789")
+	if err := c.Upload(ctx, "a/file.bin", bytes.NewReader(data), "application/octet-stream", int64(len(data))); err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+	f.assertStored(t, "media/a/file.bin", data, "application/octet-stream")
+
+	assertOffsetGets(t, ctx, c, "a/file.bin", data, []int64{0, 4})
 	if _, err := c.GetObjectFrom(ctx, "missing", 0); err == nil || !strings.Contains(err.Error(), "missing") {
 		t.Fatalf("missing object: %v", err)
 	}
@@ -210,16 +215,8 @@ func TestClientRoundTrip(t *testing.T) {
 	}
 }
 
-func TestDeleteBatchChunksAndReportsFailures(t *testing.T) {
-	f, srv := newFakeS3(t, "media")
-	c := newTestClient(t, srv.URL)
-	ctx := context.Background()
-
-	keys := make([]string, 2500)
-	for i := range keys {
-		keys[i] = fmt.Sprintf("old/%d", i)
-		f.objects["media/"+keys[i]] = []byte("x")
-	}
+func assertSuccessfulBatchDelete(t *testing.T, ctx context.Context, c *Client, f *fakeS3, keys []string) {
+	t.Helper()
 	if err := c.DeleteBatch(ctx, keys); err != nil {
 		t.Fatalf("delete batch: %v", err)
 	}
@@ -235,6 +232,19 @@ func TestDeleteBatchChunksAndReportsFailures(t *testing.T) {
 	if f.batchDeletes != 3 {
 		t.Fatalf("expected 3 batch requests, got %d", f.batchDeletes)
 	}
+}
+
+func TestDeleteBatchChunksAndReportsFailures(t *testing.T) {
+	f, srv := newFakeS3(t, "media")
+	c := newTestClient(t, srv.URL)
+	ctx := context.Background()
+
+	keys := make([]string, 2500)
+	for i := range keys {
+		keys[i] = fmt.Sprintf("old/%d", i)
+		f.objects["media/"+keys[i]] = []byte("x")
+	}
+	assertSuccessfulBatchDelete(t, ctx, c, f, keys)
 
 	err := c.DeleteBatch(ctx, []string{"old/x", "locked/a", "locked/b"})
 	if err == nil {

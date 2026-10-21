@@ -66,30 +66,43 @@ func acquireTestSlots(t *testing.T, fetcher *Fetcher, limit string, user *auth.U
 	return release
 }
 
-func assertBusyResponse(t *testing.T, server *httptest.Server, requestURL string, hits *atomic.Int32) {
+func assertBusyHeaders(t *testing.T, res *http.Response) {
 	t.Helper()
-	res, err := server.Client().Get(requestURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var response httpx.ErrorResponse
-	decodeErr := json.NewDecoder(res.Body).Decode(&response)
-	_ = res.Body.Close()
 	if res.StatusCode != http.StatusTooManyRequests {
 		t.Fatalf("expected 429, got %d", res.StatusCode)
 	}
 	if res.Header.Get("Retry-After") != "1" {
 		t.Fatalf("expected Retry-After 1, got %q", res.Header.Get("Retry-After"))
 	}
-	if decodeErr != nil {
-		t.Fatalf("decode busy response: %v", decodeErr)
-	}
-	if response.Error == nil || response.Error.Code != httpx.CodeRateLimited {
-		t.Fatalf("expected rate limited code, got %+v", response.Error)
-	}
 	if res.Header.Get("Cache-Control") != "" {
 		t.Fatalf("unexpected Cache-Control: %q", res.Header.Get("Cache-Control"))
 	}
+}
+
+func assertBusyPayload(t *testing.T, res *http.Response) {
+	t.Helper()
+	var response httpx.ErrorResponse
+	decodeErr := json.NewDecoder(res.Body).Decode(&response)
+	_ = res.Body.Close()
+	if decodeErr != nil {
+		t.Fatalf("decode busy response: %v", decodeErr)
+	}
+	if response.Error == nil {
+		t.Fatal("expected non-nil error object")
+	}
+	if response.Error.Code != httpx.CodeRateLimited {
+		t.Fatalf("expected rate limited code, got %s", response.Error.Code)
+	}
+}
+
+func assertBusyResponse(t *testing.T, server *httptest.Server, requestURL string, hits *atomic.Int32) {
+	t.Helper()
+	res, err := server.Client().Get(requestURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertBusyHeaders(t, res)
+	assertBusyPayload(t, res)
 	if hits.Load() != 0 {
 		t.Fatalf("origin hits reached %d during busy response", hits.Load())
 	}

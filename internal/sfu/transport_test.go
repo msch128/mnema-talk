@@ -112,7 +112,7 @@ func createLoopbackClientAPI() *webrtc.API {
 	return webrtc.NewAPI(webrtc.WithSettingEngine(settings))
 }
 
-func exchangeOfferAnswer(t *testing.T, clientPC, serverPC *webrtc.PeerConnection) {
+func sendOfferToRemote(t *testing.T, clientPC, serverPC *webrtc.PeerConnection) {
 	t.Helper()
 	offer, err := clientPC.CreateOffer(nil)
 	if err != nil {
@@ -130,6 +130,10 @@ func exchangeOfferAnswer(t *testing.T, clientPC, serverPC *webrtc.PeerConnection
 	if err := serverPC.SetRemoteDescription(*clientPC.LocalDescription()); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func sendAnswerToRemote(t *testing.T, serverPC, clientPC *webrtc.PeerConnection) {
+	t.Helper()
 	answer, err := serverPC.CreateAnswer(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -146,6 +150,12 @@ func exchangeOfferAnswer(t *testing.T, clientPC, serverPC *webrtc.PeerConnection
 	if err := clientPC.SetRemoteDescription(*serverPC.LocalDescription()); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func exchangeOfferAnswer(t *testing.T, clientPC, serverPC *webrtc.PeerConnection) {
+	t.Helper()
+	sendOfferToRemote(t, clientPC, serverPC)
+	sendAnswerToRemote(t, serverPC, clientPC)
 }
 
 func runConcurrentPeerDataExchange(t *testing.T, s *SFU, clientAPI *webrtc.API, i int) {
