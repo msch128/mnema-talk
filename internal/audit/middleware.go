@@ -202,9 +202,12 @@ func addRequestDetails(e *Entry, params map[string]string, req map[string]any, r
 // resource has no state afterwards.
 func (l *Log) addStateChange(ctx context.Context, e *Entry, rt Route, params map[string]string, before map[string]any) {
 	e.Details["before"] = before
-	after, _ := Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam])
+	after, name := Snapshot(ctx, l.DB, rt.Snapshot, params[rt.IDParam])
 	if after == nil {
 		return
+	}
+	if e.TargetName == "" && name != "" {
+		e.TargetName = name
 	}
 	e.Details["after"] = after
 	if ch := diff(before, after); len(ch) > 0 {

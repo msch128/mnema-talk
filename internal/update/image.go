@@ -104,7 +104,10 @@ func matchMajorTrack(m []string, l Semver) (Reach, string) {
 func matchMajorMinorTrack(m []string, l Semver) (Reach, string) {
 	major, err1 := strconv.Atoi(m[1])
 	minor, err2 := strconv.Atoi(m[2])
-	if err1 == nil && err2 == nil && major == l.Major && minor == l.Minor {
+	if err1 != nil || err2 != nil {
+		return ReachNo, ReasonTrackMismatch
+	}
+	if major == l.Major && minor == l.Minor {
 		return ReachYes, ReasonFollows
 	}
 	return ReachNo, ReasonTrackMismatch

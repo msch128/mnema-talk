@@ -16,6 +16,25 @@ export function focusableIn(root: HTMLElement) {
   return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el => !el.hasAttribute('inert') && el.getAttribute('aria-hidden') !== 'true')
 }
 
+function trapFocus(e: KeyboardEvent, root: HTMLElement) {
+  const items = focusableIn(root)
+  if (!items.length) {
+    e.preventDefault()
+    root.focus()
+    return
+  }
+  const first = items[0]
+  const last = items[items.length - 1]
+  const active = document.activeElement
+  if (e.shiftKey && (active === first || !root.contains(active))) {
+    e.preventDefault()
+    last?.focus()
+  } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+    e.preventDefault()
+    first?.focus()
+  }
+}
+
 /**
  * @param containerRef ref to the dialog element
  * @param opts.onClose called on Escape
@@ -36,22 +55,8 @@ export function useDialog(containerRef: Ref<HTMLElement | null>, { onClose, init
       onClose?.()
       return
     }
-    if (e.key !== 'Tab') return
-    const items = focusableIn(root)
-    if (!items.length) {
-      e.preventDefault()
-      root.focus()
-      return
-    }
-    const first = items[0]
-    const last = items[items.length - 1]
-    const active = document.activeElement
-    if (e.shiftKey && (active === first || !root.contains(active))) {
-      e.preventDefault()
-      last?.focus()
-    } else if (!e.shiftKey && (active === last || !root.contains(active))) {
-      e.preventDefault()
-      first?.focus()
+    if (e.key === 'Tab') {
+      trapFocus(e, root)
     }
   }
 

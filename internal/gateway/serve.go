@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -145,8 +146,12 @@ func (g *Gateway) sessionCredentials(c *connection, token string, header *bot.Cr
 	if creds == nil {
 		return nil
 	}
-	if ok, _ := g.idents.Allow(creds.Bot.BotID.String()); !ok {
-		c.closeWith(CloseRateLimited, "Rate limited")
+	if ok, retry := g.idents.Allow(creds.Bot.BotID.String()); !ok {
+		msg := "Rate limited"
+		if retry > 0 {
+			msg = fmt.Sprintf("Rate limited: retry after %s", retry.Round(time.Second))
+		}
+		c.closeWith(CloseRateLimited, msg)
 		return nil
 	}
 	return creds

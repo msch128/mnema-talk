@@ -76,19 +76,20 @@ function countUnread({ cs }: Cx, channelId: string, isMention: boolean) {
   }
 }
 
-function handleIncomingMessageReadState(
-  cx: Cx,
-  channelId: string,
-  isOwn: boolean,
-  isCurrentChannel: boolean,
+interface IncomingReadStateOptions {
+  channelId: string
+  isOwn: boolean
+  isCurrentChannel: boolean
   isMention: boolean
-) {
-  if (isOwn || !channelId) return
-  if (isCurrentChannel && isReadingActiveChannel(cx)) {
-    cx.cs.markReadThrottled.call(channelId)
+}
+
+function handleIncomingMessageReadState(cx: Cx, opts: IncomingReadStateOptions) {
+  if (opts.isOwn || !opts.channelId) return
+  if (opts.isCurrentChannel && isReadingActiveChannel(cx)) {
+    cx.cs.markReadThrottled.call(opts.channelId)
     return
   }
-  countUnread(cx, channelId, isMention)
+  countUnread(cx, opts.channelId, opts.isMention)
 }
 
 function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
@@ -103,7 +104,7 @@ function onMessageCreate(cx: Cx, p: Payload<'message_create'>) {
   const isCurrentChannel = p.channel_id === cs.activeChannel.value?.id
   const isMention = messageMentionsMe(cx, p)
 
-  handleIncomingMessageReadState(cx, p.channel_id, isOwn, isCurrentChannel, isMention)
+  handleIncomingMessageReadState(cx, { channelId: p.channel_id, isOwn, isCurrentChannel, isMention })
   if (!isOwn && p.channel_id) {
     triggerBrowserNotification(cx, p, isMention)
   }

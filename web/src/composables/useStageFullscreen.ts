@@ -35,6 +35,17 @@ function isStageFullscreenKey(e: KeyboardEvent): boolean {
   return e.key === 'f' || e.key === 'F'
 }
 
+function isPttCollision(voiceStore: VoiceStore, code: string): boolean {
+  return voiceStore.inputMode === 'ptt' && voiceStore.pttKey === code
+}
+
+function canToggleStageFullscreen(e: KeyboardEvent, rootElement: HTMLElement | null, voiceStore: VoiceStore): boolean {
+  if (!isStageFullscreenKey(e) || hasModifierOrComposition(e)) return false
+  if (!inTalkView(e.target, rootElement) || isTypingTarget(e.target)) return false
+  if (isModalOrMenuOpen(e.target)) return false
+  return !isPttCollision(voiceStore, e.code)
+}
+
 interface Options {
   /** The element that goes full screen (the stage), once there is one. */
   container: () => HTMLElement | null
@@ -99,10 +110,7 @@ export function useStageFullscreen({ container, root, connected, stage, toggleCa
   // focus is in the Talk view (or nowhere), not while typing, with a dialog or
   // menu open, or when F is the push-to-talk key.
   function onKeydown(e: KeyboardEvent) {
-    if (!isStageFullscreenKey(e) || hasModifierOrComposition(e)) return
-    if (!inTalkView(e.target, root.value) || isTypingTarget(e.target)) return
-    if (isModalOrMenuOpen(e.target)) return
-    if (voiceStore.inputMode === 'ptt' && voiceStore.pttKey === e.code) return
+    if (!canToggleStageFullscreen(e, root.value, voiceStore)) return
     if (!container()) return
     e.preventDefault()
     toggleFullscreen()

@@ -24,7 +24,8 @@ export type RegistrationResult =
 function parseCreatedUser(port: CapturedPort, body: unknown): string | null {
   try {
     return port.userId(body)
-  } catch {
+  } catch (err) {
+    void err
     return null
   }
 }
@@ -32,7 +33,8 @@ function parseCreatedUser(port: CapturedPort, body: unknown): string | null {
 async function verifySession(port: CapturedPort, body: unknown, createdUser: string): Promise<boolean> {
   try {
     if (port.userId(body) === createdUser) return true
-  } catch {
+  } catch (err) {
+    void err
     // A native session might exist; seal its captured owner before reporting failure.
   }
   await port.retireCaptured()
@@ -48,7 +50,8 @@ async function completeLogin(
   let login: Reply
   try {
     login = await port.call('native_auth_login', { username, password })
-  } catch {
+  } catch (err) {
+    void err
     return { kind: 'login_required', reason: 'login_failed' }
   }
   if (!port.isCurrent()) return { kind: 'login_required', reason: 'scope_retired' }

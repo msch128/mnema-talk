@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -180,8 +181,13 @@ func (h *systemHandler) checkSelfUpdateTarget(req SelfUpdateRequest) (UpdateStat
 	if req.TargetVersion != upd.LatestVersion {
 		return upd, httpx.ErrConflict("the latest release changed; reload the System tab")
 	}
-	if reach, _ := update.ImageReach(h.cfg.AppImage, upd.LatestVersion); reach == update.ReachNo {
-		return upd, httpx.ErrConflict("the configured image tag cannot reach this release; update manually")
+	reach, reason := update.ImageReach(h.cfg.AppImage, upd.LatestVersion)
+	if reach == update.ReachNo {
+		msg := "the configured image tag cannot reach this release; update manually"
+		if reason != "" {
+			msg = fmt.Sprintf("the configured image tag cannot reach this release (%s); update manually", reason)
+		}
+		return upd, httpx.ErrConflict(msg)
 	}
 	return upd, nil
 }

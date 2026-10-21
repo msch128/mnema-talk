@@ -19,6 +19,29 @@ const POLL_MS = 2000
 // Every 10 s the stream diagnostics go out.
 const DIAG_EVERY_TICKS = 5
 
+function shouldEmitDiagnostics(ticks: number, voiceStore: VoiceStore): boolean {
+  if (ticks % DIAG_EVERY_TICKS !== 0) return false
+  return Boolean(voiceStore.isScreenSharing || voiceStore.remoteScreenStream)
+}
+
+function emitStreamDiagnostics(
+  report: RTCStatsReport,
+  voiceStore: VoiceStore,
+  lastVideoBytes: Map<string, number>,
+  screenAudioGuard: () => string | null,
+  diagSink: (payload: Record<string, JsonValue | undefined>) => void,
+) {
+  const video = streamDiag([...report.values()], lastVideoBytes, (POLL_MS * DIAG_EVERY_TICKS) / 1000)
+  if (!video.length) return
+  diagSink({
+    event: 'stream',
+    video,
+    screen_audio: Boolean(voiceStore.hasScreenAudio),
+    own_audio: voiceStore.isScreenSharing ? screenAudioGuard() : undefined,
+    sharing: Boolean(voiceStore.isScreenSharing),
+  })
+}
+
 export function createStatsPolling({ connection, screenAudioGuard }: StatsPollingSource) {
   let timer: ReturnType<typeof setInterval> | null = null
   let lastSample: RTCStatsSample | null = null
@@ -53,11 +76,8 @@ export function createStatsPolling({ connection, screenAudioGuard }: StatsPollin
         const summary = summarizeStats(report.values(), lastSample)
         lastSample = summary.sample
         voiceStore.rtcStats = summary
-        if (++ticks % DIAG_EVERY_TICKS === 0 && (voiceStore.isScreenSharing || voiceStore.remoteScreenStream)) {
-          const video = streamDiag([...report.values()], lastVideoBytes, POLL_MS * DIAG_EVERY_TICKS / 1000)
-          if (video.length) {
-            diagSink({ event: 'stream', video, screen_audio: !!voiceStore.hasScreenAudio, own_audio: voiceStore.isScreenSharing ? screenAudioGuard() : undefined, sharing: !!voiceStore.isScreenSharing })
-          }
+        if (shouldEmitDiagnostics(++ticks, voiceStore)) {
+          emitStreamDiagnostics(report, voiceStore, lastVideoBytes, screenAudioGuard, diagSink)
         }
       } catch (err) {
         void err
