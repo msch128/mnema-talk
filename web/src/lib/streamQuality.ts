@@ -28,7 +28,6 @@ export const STREAM_PRESETS = {
   gaming: { resolution: 1440, fps: 60 },
   screen: { resolution: 'source', fps: 15 }
 } satisfies Record<Exclude<StreamMode, 'custom'>, StreamQuality>
-export const STREAM_MODES = ['gaming', 'screen', 'custom'] as const
 export const DEFAULT_STREAM_QUALITY = Object.freeze<StreamQuality>({ resolution: 1080, fps: 30 })
 export const SCREEN_QUALITY_STORAGE_KEY = 'mnema_screen_quality'
 

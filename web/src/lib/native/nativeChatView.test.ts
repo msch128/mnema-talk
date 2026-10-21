@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { NativeChatView, nativeReceiptId, type NativeTextRow } from './nativeChatView'
+import { NativeChatView, nativeReceiptId, type NativeTextRow, type NativeTextSnapshot } from './nativeChatView'
 
 const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const channel = id(1)
@@ -10,7 +10,7 @@ function row(n = 2): NativeTextRow {
     edited: false, deleted: false, reactions: {}, cached_reply_count: 0,
     author: { id: id(4), username: 'fixture', display_name: 'Fixture', avatar_url: '' }, attachments: [], is_pinned: false, mentions: [] }
 }
-const snapshot = (messages: unknown[]) => ({ channel_id: channel, messages })
+const snapshot = (messages: unknown[]): NativeTextSnapshot => ({ channel_id: channel, messages: messages as NativeTextRow[] })
 
 it('admits authoritative chronology, thread linkage and quoted content without sharing mutable state', () => {
   const view = new NativeChatView()
