@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.8.16](https://github.com/msch128/mnema-talk/compare/v0.8.15...v0.8.16) (2026-10-21)
+
+
+### Bug Fixes
+
+* **audit:** audit entries report a JSON encoding failure instead of storing null, and take the target name from the post-change state when none was known ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **auth:** the unknown-device login throttle reports the longer Retry-After ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **bot:** bot tokens are written at most once a minute again ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **gateway:** close reasons stay constant; error details go to the log only ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* migration checksum backfill runs in one batched transaction ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **sfu:** a failed receive-transceiver add aborts the join with an error ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **update:** semver components that overflow are rejected ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **webhook:** the outgoing-webhook test endpoint sends Retry-After when rate limited; secret generation fails closed ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+* **ws:** typing and voice room lookups re-check the native lease ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+
+
+### Code Refactoring
+
+* quality sweep, functions split by responsibility ([#289](https://github.com/msch128/mnema-talk/issues/289)) ([8e18e11](https://github.com/msch128/mnema-talk/commit/8e18e117b59c50afb4a100feaf48057c4abc434d))
+
 ## [0.8.15](https://github.com/msch128/mnema-talk/compare/v0.8.14...v0.8.15) (2026-10-21)
 
 
