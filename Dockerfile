@@ -31,7 +31,7 @@ COPY version.txt /version.txt
 RUN MNEMA_VERSION="${VERSION}" npm run build
 
 # --- Stage 2: Go binary ---
-FROM --platform=$BUILDPLATFORM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
 WORKDIR /src
 
 COPY go.mod go.sum ./
