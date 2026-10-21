@@ -1,0 +1,14 @@
+internal/server/message_moderation_integration_test.go
+  h_0ff4f4713441f4 238-242,248-251,268-270,272-274,278,282,285,291,294,296-299,308-313,317,321-322,328,330-331,340-348,350-351,353,355-356,361-364,368-370,378-433,437
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "051762e0894fa7537e1d9526d5131053723c01dc",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
