@@ -37,29 +37,49 @@ func newFakeS3(t *testing.T, buckets ...string) (*fakeS3, *httptest.Server) {
 	return f, srv
 }
 
-func (f *fakeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.deny {
-		writeS3Error(w, http.StatusForbidden, "AccessDenied")
-		return
-	}
-	bucket, key, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	if key == "" {
-		switch {
-		case r.Method == http.MethodHead:
-			if !f.buckets[bucket] {
-				w.WriteHeader(http.StatusNotFound)
-			}
-		case r.Method == http.MethodPut:
-			f.buckets[bucket] = true
-		case r.Method == http.MethodPost && r.URL.Query().Has("delete"):
-			f.deleteObjects(w, r, bucket)
-		default:
-			w.WriteHeader(http.StatusNotImplemented)
+func (f *fakeS3) handleBucketLevel(w http.ResponseWriter, r *http.Request, bucket string) {
+	switch {
+	case r.Method == http.MethodHead:
+		if !f.buckets[bucket] {
+			w.WriteHeader(http.StatusNotFound)
 		}
+	case r.Method == http.MethodPut:
+		f.buckets[bucket] = true
+	case r.Method == http.MethodPost && r.URL.Query().Has("delete"):
+		f.deleteObjects(w, r, bucket)
+	default:
+		w.WriteHeader(http.StatusNotImplemented)
+	}
+}
+
+func (f *fakeS3) handleObjectPut(w http.ResponseWriter, r *http.Request, id string) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	f.objects[id] = body
+	f.types[id] = r.Header.Get("Content-Type")
+}
+
+func (f *fakeS3) handleObjectGet(w http.ResponseWriter, r *http.Request, id string) {
+	body, ok := f.objects[id]
+	if !ok {
+		writeS3Error(w, http.StatusNotFound, "NoSuchKey")
+		return
+	}
+	from, err := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(r.Header.Get("Range"), "bytes="), "-"))
+	if err != nil || from < 0 || from > len(body) {
+		from = 0
+	}
+	w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", from, len(body)-1, len(body)))
+	w.WriteHeader(http.StatusPartialContent)
+	if _, err := w.Write(body[from:]); err != nil {
+		return
+	}
+}
+
+func (f *fakeS3) handleObjectLevel(w http.ResponseWriter, r *http.Request, bucket, key string) {
 	if !f.buckets[bucket] {
 		writeS3Error(w, http.StatusNotFound, "NoSuchBucket")
 		return
@@ -67,25 +87,30 @@ func (f *fakeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := bucket + "/" + key
 	switch r.Method {
 	case http.MethodPut:
-		body, _ := io.ReadAll(r.Body)
-		f.objects[id] = body
-		f.types[id] = r.Header.Get("Content-Type")
+		f.handleObjectPut(w, r, id)
 	case http.MethodDelete:
 		delete(f.objects, id)
 		w.WriteHeader(http.StatusNoContent)
 	case http.MethodGet:
-		body, ok := f.objects[id]
-		if !ok {
-			writeS3Error(w, http.StatusNotFound, "NoSuchKey")
-			return
-		}
-		from, _ := strconv.Atoi(strings.TrimSuffix(strings.TrimPrefix(r.Header.Get("Range"), "bytes="), "-"))
-		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", from, len(body)-1, len(body)))
-		w.WriteHeader(http.StatusPartialContent)
-		_, _ = w.Write(body[from:])
+		f.handleObjectGet(w, r, id)
 	default:
 		w.WriteHeader(http.StatusNotImplemented)
 	}
+}
+
+func (f *fakeS3) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.deny {
+		writeS3Error(w, http.StatusForbidden, "AccessDenied")
+		return
+	}
+	bucket, key, hasKey := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	if !hasKey || key == "" {
+		f.handleBucketLevel(w, r, bucket)
+		return
+	}
+	f.handleObjectLevel(w, r, bucket, key)
 }
 
 func (f *fakeS3) deleteObjects(w http.ResponseWriter, r *http.Request, bucket string) {
@@ -137,6 +162,17 @@ func TestNewCreatesMissingBucket(t *testing.T) {
 	}
 }
 
+func assertStoredObject(t *testing.T, f *fakeS3, key string, data []byte, contentType string) {
+	t.Helper()
+	got := f.objects[key]
+	if !bytes.Equal(got, data) {
+		t.Fatalf("stored payload %q, want %q", got, data)
+	}
+	if f.types[key] != contentType {
+		t.Fatalf("stored type %q, want %s", f.types[key], contentType)
+	}
+}
+
 func TestClientRoundTrip(t *testing.T) {
 	f, srv := newFakeS3(t, "media")
 	c := newTestClient(t, srv.URL)
@@ -146,17 +182,18 @@ func TestClientRoundTrip(t *testing.T) {
 	if err := c.Upload(ctx, "a/file.bin", bytes.NewReader(data), "application/octet-stream", int64(len(data))); err != nil {
 		t.Fatalf("upload: %v", err)
 	}
-	if got := f.objects["media/a/file.bin"]; !bytes.Equal(got, data) || f.types["media/a/file.bin"] != "application/octet-stream" {
-		t.Fatalf("stored %q (%s)", got, f.types["media/a/file.bin"])
-	}
+	assertStoredObject(t, f, "media/a/file.bin", data, "application/octet-stream")
 
 	for _, offset := range []int64{0, 4} {
 		rc, err := c.GetObjectFrom(ctx, "a/file.bin", offset)
 		if err != nil {
 			t.Fatalf("get from %d: %v", offset, err)
 		}
-		got, _ := io.ReadAll(rc)
+		got, err := io.ReadAll(rc)
 		_ = rc.Close()
+		if err != nil {
+			t.Fatalf("read from offset %d: %v", offset, err)
+		}
 		if !bytes.Equal(got, data[offset:]) {
 			t.Fatalf("get from %d: %q", offset, got)
 		}
@@ -186,15 +223,24 @@ func TestDeleteBatchChunksAndReportsFailures(t *testing.T) {
 	if err := c.DeleteBatch(ctx, keys); err != nil {
 		t.Fatalf("delete batch: %v", err)
 	}
-	if f.batchDeletes != 3 || len(f.objects) != 0 {
-		t.Fatalf("%d requests, %d objects left; want 3 requests and none left", f.batchDeletes, len(f.objects))
+	if f.batchDeletes != 3 {
+		t.Fatalf("expected 3 batch deletes, got %d", f.batchDeletes)
 	}
-	if err := c.DeleteBatch(ctx, nil); err != nil || f.batchDeletes != 3 {
-		t.Fatalf("empty batch: %v, %d requests", err, f.batchDeletes)
+	if len(f.objects) != 0 {
+		t.Fatalf("expected 0 objects left, got %d", len(f.objects))
+	}
+	if err := c.DeleteBatch(ctx, nil); err != nil {
+		t.Fatalf("empty batch error: %v", err)
+	}
+	if f.batchDeletes != 3 {
+		t.Fatalf("expected 3 batch requests, got %d", f.batchDeletes)
 	}
 
 	err := c.DeleteBatch(ctx, []string{"old/x", "locked/a", "locked/b"})
-	if err == nil || !strings.Contains(err.Error(), "2 of 3 failed") {
+	if err == nil {
+		t.Fatal("expected partial failure error")
+	}
+	if !strings.Contains(err.Error(), "2 of 3 failed") {
 		t.Fatalf("partial failure not reported: %v", err)
 	}
 }

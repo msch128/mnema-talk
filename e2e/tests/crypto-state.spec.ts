@@ -2,7 +2,7 @@ import ts from '../../web/node_modules/typescript/lib/typescript.js'
 import { createServer, type Server } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { test, expect } from './fixtures'
-import type { Page } from '@playwright/test'
+import type { BrowserContext, Page } from '@playwright/test'
 
 // Tests the persistence boundary in actual Chromium. These synthetic opaque
 // provider states are not an MLS implementation or an E2EE integration proof.
@@ -41,10 +41,68 @@ async function connect(page: Page, contextId: string) {
       namespace: { communityId: 'synthetic-community', accountId: 'synthetic-account', deviceId: 'synthetic-device' },
       establishFreshContext: async () => ({ contextId: fresh, state: new Uint8Array([1]) })
     })
-    try { window.store = await window.openStore(contextId); return 'owned' }
-    catch (error) { if (!error || typeof error !== 'object' || !('code' in error) || typeof error.code !== 'string') throw error
-      return error.code }
+    try {
+      window.store = await window.openStore(contextId)
+      return 'owned'
+    } catch (error) {
+      if (!error) throw error
+      if (typeof error !== 'object') throw error
+      if (!('code' in error)) throw error
+      if (typeof error.code !== 'string') throw error
+      return error.code
+    }
   }, contextId)
+}
+
+async function commitInitialSenderState(page: Page) {
+  return page.evaluate(async () => {
+    const state = await window.store.establishContext({ groupId: 'group', expectedRevision: 0 })
+    const event = await window.store.commitSend({
+      groupId: 'group',
+      contextId: state.contextId,
+      expectedRevision: state.revision,
+      eventId: 'stable-event',
+      nextState: new Uint8Array([2]),
+      ciphertext: new Uint8Array([7, 8])
+    })
+    return { revision: event.revision, bytes: [...event.ciphertext] }
+  })
+}
+
+async function crashAndClosePage(context: BrowserContext, page: Page) {
+  const session = await context.newCDPSession(page)
+  const crashed = page.waitForEvent('crash')
+  void session.send('Page.crash').catch(() => {})
+  await crashed
+  await page.close()
+}
+
+async function verifyRestoredSenderBlocked(page: Page) {
+  return page.evaluate(async () => {
+    const state = await window.store.loadState('group')
+    if (!state) throw new Error('Expected committed state')
+    let blocked: string | undefined
+    try {
+      await window.store.commitSend({
+        groupId: 'group',
+        contextId: state.contextId,
+        expectedRevision: state.revision,
+        eventId: 'new-event',
+        nextState: new Uint8Array([3]),
+        ciphertext: new Uint8Array([9])
+      })
+    } catch (error) {
+      if (!error) throw error
+      if (typeof error !== 'object') throw error
+      if (!('code' in error)) throw error
+      if (typeof error.code !== 'string') throw error
+      blocked = error.code
+    }
+    const pending = await window.store.listPending('group')
+    const fresh = await window.store.establishContext({ groupId: 'group', expectedRevision: state.revision })
+    await window.store.close()
+    return { blocked, pending: pending.map(event => [...event.ciphertext]), contextId: fresh.contextId, revision: fresh.revision }
+  })
 }
 
 test('native Web Lock prevents parallel ownership and a crashed tab cannot resume sender state', async ({ context }) => {
@@ -52,35 +110,26 @@ test('native Web Lock prevents parallel ownership and a crashed tab cannot resum
   const other = await context.newPage()
   expect(await connect(owner, 'synthetic-context-1')).toBe('owned')
   expect(await connect(other, 'synthetic-context-2')).toBe('owned-by-another-tab')
-  const committed = await owner.evaluate(async () => {
-    const state = await window.store.establishContext({ groupId: 'group', expectedRevision: 0 })
-    const event = await window.store.commitSend({ groupId: 'group', contextId: state.contextId, expectedRevision: state.revision, eventId: 'stable-event', nextState: new Uint8Array([2]), ciphertext: new Uint8Array([7, 8]) })
-    return { revision: event.revision, bytes: [...event.ciphertext] }
-  })
+
+  const committed = await commitInitialSenderState(owner)
   expect(committed).toEqual({ revision: 2, bytes: [7, 8] })
-  const session = await context.newCDPSession(owner)
-  const crashed = owner.waitForEvent('crash')
-  void session.send('Page.crash').catch(() => {})
-  await crashed
-  await owner.close()
+
+  await crashAndClosePage(context, owner)
+
   await expect.poll(async () => other.evaluate(async () => {
-    try { window.store = await window.openStore('synthetic-context-2'); return 'owned' }
-    catch (error) { if (!error || typeof error !== 'object' || !('code' in error) || typeof error.code !== 'string') throw error
-      return error.code }
-  })).toBe('owned')
-  const restored = await other.evaluate(async () => {
-    const state = await window.store.loadState('group')
-    if (!state) throw new Error('Expected committed state')
-    let blocked
     try {
-      await window.store.commitSend({ groupId: 'group', contextId: state.contextId, expectedRevision: state.revision, eventId: 'new-event', nextState: new Uint8Array([3]), ciphertext: new Uint8Array([9]) })
-    } catch (error) { if (!error || typeof error !== 'object' || !('code' in error) || typeof error.code !== 'string') throw error
-      blocked = error.code }
-    const pending = await window.store.listPending('group')
-    const fresh = await window.store.establishContext({ groupId: 'group', expectedRevision: state.revision })
-    await window.store.close()
-    return { blocked, pending: pending.map(event => [...event.ciphertext]), contextId: fresh.contextId, revision: fresh.revision }
-  })
+      window.store = await window.openStore('synthetic-context-2')
+      return 'owned'
+    } catch (error) {
+      if (!error) throw error
+      if (typeof error !== 'object') throw error
+      if (!('code' in error)) throw error
+      if (typeof error.code !== 'string') throw error
+      return error.code
+    }
+  })).toBe('owned')
+
+  const restored = await verifyRestoredSenderBlocked(other)
   expect(restored).toEqual({ blocked: 'fresh-context-required', pending: [[7, 8]], contextId: 'synthetic-context-2', revision: 3 })
 })
 

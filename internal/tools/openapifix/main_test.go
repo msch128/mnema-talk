@@ -7,12 +7,8 @@ import (
 	"testing"
 )
 
-func TestOpenAPIFixRun(t *testing.T) {
-	dir := t.TempDir()
-	inPath := filepath.Join(dir, "input.json")
-	outPath := filepath.Join(dir, "output.json")
-
-	sampleDoc := obj{
+func buildSampleOpenAPIDoc() obj {
+	return obj{
 		"openapi": "3.1.0",
 		"info": obj{
 			"title":   "Test API",
@@ -74,7 +70,55 @@ func TestOpenAPIFixRun(t *testing.T) {
 			},
 		},
 	}
+}
 
+func assertNullableTypeArray(t *testing.T, raw any) {
+	t.Helper()
+	types, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("expected []any type, got %T", raw)
+	}
+	if len(types) != 2 {
+		t.Fatalf("expected length 2, got %d", len(types))
+	}
+	if types[0] != "string" {
+		t.Fatalf("expected types[0] string, got %v", types[0])
+	}
+	if types[1] != "null" {
+		t.Fatalf("expected types[1] null, got %v", types[1])
+	}
+}
+
+func verifyFixedDocument(t *testing.T, res obj) {
+	t.Helper()
+	if _, ok := res["externalDocs"]; ok {
+		t.Errorf("expected externalDocs to be deleted")
+	}
+
+	paths := res["paths"].(obj)
+	if _, ok := paths["/api/users/@me"]; !ok {
+		t.Errorf("expected /api/users/@me path to exist")
+	}
+
+	schemas := res["components"].(obj)["schemas"].(obj)
+	nf := schemas["NullableField"].(obj)
+	if _, ok := nf["x-nullable"]; ok {
+		t.Errorf("x-nullable should be deleted")
+	}
+	assertNullableTypeArray(t, nf["type"])
+
+	arr := schemas["ArrayItem"].(obj)
+	if _, ok := arr["uniqueItems"]; ok {
+		t.Errorf("uniqueItems should be deleted")
+	}
+}
+
+func TestOpenAPIFixRun(t *testing.T) {
+	dir := t.TempDir()
+	inPath := filepath.Join(dir, "input.json")
+	outPath := filepath.Join(dir, "output.json")
+
+	sampleDoc := buildSampleOpenAPIDoc()
 	data, err := json.Marshal(sampleDoc)
 	if err != nil {
 		t.Fatalf("marshal sample: %v", err)
@@ -97,33 +141,7 @@ func TestOpenAPIFixRun(t *testing.T) {
 		t.Fatalf("unmarshal output: %v", err)
 	}
 
-	// Verify externalDocs dropped
-	if _, ok := res["externalDocs"]; ok {
-		t.Errorf("expected externalDocs to be deleted")
-	}
-
-	// Verify paths renamed
-	paths := res["paths"].(obj)
-	if _, ok := paths["/api/users/@me"]; !ok {
-		t.Errorf("expected /api/users/@me path to exist")
-	}
-
-	// Verify nullable field transformed
-	schemas := res["components"].(obj)["schemas"].(obj)
-	nf := schemas["NullableField"].(obj)
-	if _, ok := nf["x-nullable"]; ok {
-		t.Errorf("x-nullable should be deleted")
-	}
-	types, ok := nf["type"].([]any)
-	if !ok || len(types) != 2 || types[0] != "string" || types[1] != "null" {
-		t.Errorf("type should be [string, null], got %v", nf["type"])
-	}
-
-	// Verify uniqueItems false deleted
-	arr := schemas["ArrayItem"].(obj)
-	if _, ok := arr["uniqueItems"]; ok {
-		t.Errorf("uniqueItems should be deleted")
-	}
+	verifyFixedDocument(t, res)
 }
 
 func TestOpenAPIFixErrors(t *testing.T) {
@@ -153,7 +171,10 @@ func TestOpenAPIFixErrors(t *testing.T) {
 			},
 		},
 	}
-	nullData, _ := json.Marshal(badNullDoc)
+	nullData, err := json.Marshal(badNullDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(badNullable, nullData, 0o644); err != nil {
 		t.Fatal(err)
 	}
