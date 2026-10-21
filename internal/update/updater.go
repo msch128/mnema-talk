@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -78,7 +79,7 @@ func (u *Updater) Trigger(ctx context.Context) error {
 	}
 	defer res.Body.Close()
 	if _, err := io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10)); err != nil {
-		// draining body for connection reuse; error is safe to ignore
+		slog.Debug("updater response drain failed", "err", err)
 	}
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusAccepted:
