@@ -136,9 +136,10 @@ export async function startMicTest(cx: Cx) {
   }
 }
 
-function startCallLoopback(cx: Cx): boolean {
+/** null: not in a call. Otherwise whether the call loopback connected. */
+function startCallLoopback(cx: Cx): boolean | null {
   const { voice, chat, st } = cx
-  if (!st.localAudioStream.value || !st.audioContext || !st.callBiquad) return false
+  if (!st.localAudioStream.value || !st.audioContext || !st.callBiquad) return null
   connectLoopback(cx, st.audioContext, st.callBiquad)
   const track = st.localAudioStream.value.getAudioTracks()[0]
   if (track) track.enabled = false
@@ -164,7 +165,8 @@ async function startStandaloneLoopback(cx: Cx): Promise<boolean> {
 async function startMicLoopback(cx: Cx): Promise<boolean> {
   disconnectLoopback(cx)
   cx.voice.isMicTesting = true
-  if (startCallLoopback(cx)) return true
+  const inCall = startCallLoopback(cx)
+  if (inCall !== null) return inCall
   return startStandaloneLoopback(cx)
 }
 
