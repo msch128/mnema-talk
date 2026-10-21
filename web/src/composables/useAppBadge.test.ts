@@ -16,7 +16,7 @@ beforeEach(() => { setActivePinia(createPinia()); badge.mockClear() })
 afterEach(() => scope.stop())
 
 describe('useAppBadge', () => {
-  it('shows the unread mentions of unmuted channels and clears at zero', async () => {
+  it('shows the unread mentions, as the tab title does, and clears at zero', async () => {
     const chat = useChatStore()
     scope = effectScope()
     scope.run(() => useAppBadge())
@@ -27,7 +27,7 @@ describe('useAppBadge', () => {
       c: { channel_id: 'c', notify_level: 'mentions', unread_count: 1, mention_count: 1, last_read_at: null },
     }
     await nextTick()
-    expect(badge).toHaveBeenLastCalledWith(3)
+    expect(badge).toHaveBeenLastCalledWith(10)
     chat.readStates = {}
     await nextTick()
     expect(badge).toHaveBeenLastCalledWith(0)

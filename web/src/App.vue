@@ -35,11 +35,13 @@ import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
 import { useAppBadge } from './composables/useAppBadge'
+import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
 const authStore = useAuthStore()
 const permissions = usePermissionsStore()
 const chatStore = useChatStore()
+useTitleBadge()
 const voiceStore = useVoiceStore()
 let alive = true
 let authRetryTimer: ReturnType<typeof setTimeout> | undefined
@@ -79,7 +81,8 @@ async function initializeApp() {
   await Promise.all([
     chatStore.fetchChannels(),
     chatStore.fetchMembers(),
-    chatStore.fetchReadState()
+    chatStore.fetchReadState(),
+    chatStore.fetchNotificationSettings()
   ])
   if (!alive) return
   chatStore.initWebSocket()

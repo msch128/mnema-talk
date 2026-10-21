@@ -178,7 +178,10 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 
 // The first route that matches the request answers it. GET /api/mentions (the
 // mentions inbox) and /api/search are not served natively: they answer
-// "unavailable" and the interface shows its failure state.
+// "unavailable" and the interface shows its failure state. The same holds for
+// channel and category notification levels, GET /api/notification-settings and
+// POST /api/read-state/read-all: the trusted desktop client has no typed
+// command for them.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]

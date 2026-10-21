@@ -203,7 +203,7 @@ describe('Sidebar context menus', () => {
   it('category menu: everyone can collapse and expand all', async () => {
     await mountSidebar({ role: 'user' })
     await contextMenu(headerOf('voice'))
-    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Alle einklappen', 'Alle ausklappen'])
+    expect(menuLabels()).toEqual(['Alle als gelesen markieren', 'Standard (alle Nachrichten)', 'Alle Nachrichten', 'Nur Erwähnungen', 'Kategorie stummschalten', 'Alle einklappen', 'Alle ausklappen'])
     expect(menuItems().find(b => (b.textContent ?? '').includes('Alle ausklappen'))!.disabled).toBe(true)
     await choose('Alle einklappen')
     expect(JSON.parse(requireValue(localStorage.getItem(COLLAPSED_KEY)))).toEqual(['text', 'voice', 'empty'])
@@ -222,7 +222,7 @@ describe('Sidebar context menus', () => {
     await mountSidebar()
     await contextMenu(headerOf('voice'))
     expect(menuLabels()).toEqual([
-      'Alle als gelesen markieren', 'Alle einklappen', 'Alle ausklappen',
+      'Alle als gelesen markieren', 'Standard (alle Nachrichten)', 'Alle Nachrichten', 'Nur Erwähnungen', 'Kategorie stummschalten', 'Alle einklappen', 'Alle ausklappen',
       'Rechte …', 'Kanal erstellen', 'Kategorie erstellen', 'Kategorie bearbeiten', 'Kategorie löschen'
     ])
     await choose('Kanal erstellen')
@@ -316,7 +316,7 @@ describe('Sidebar context menus', () => {
     await wrapper.find('[aria-controls="server-menu"]').trigger('click')
     await nextTick()
     const items = wrapper.findAll('#server-menu [role="menuitem"]')
-    expect(items.map(b => b.text())).toEqual(['Admin-Konsole', 'Kanal erstellen', 'Kategorie erstellen', 'Rechtliches & Datenschutz'])
+    expect(items.map(b => b.text())).toEqual(['Admin-Konsole', 'Kanal erstellen', 'Kategorie erstellen', 'Alle als gelesen markieren', 'Rechtliches & Datenschutz'])
     await items[2]!.trigger('click')
     await flush()
     expect(document.querySelector('#edit-name')).not.toBeNull()
