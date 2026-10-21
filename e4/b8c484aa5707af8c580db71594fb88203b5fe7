@@ -1,0 +1,22 @@
+internal/audit/hardening_test.go
+  s_06fcde5dbef956::t_5349d3ef9b9459 109-138
+  s_06fcde5dbef956::t_01f618f1d42380 8
+internal/audit/middleware.go
+  s_06fcde5dbef956::t_e580c7cf81dc88 153-154,159-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e4b8c484aa5707af8c580db71594fb88203b5fe7",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
