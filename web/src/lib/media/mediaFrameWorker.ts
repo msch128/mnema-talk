@@ -1,24 +1,15 @@
 import { sealMedia, openMedia, videoCodecOf, type FrameKind } from './codec'
-import { FrameStream, LAYER_STREAM_MASK, SOURCE_SCREEN, isFrameSource, layerStreamId, openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSource } from './frame'
+import { openFrame, ReplayWindow, sealFrame, type EpochKeys, type FrameSource, type FrameStream } from './frame'
 import { PREVIOUS_EPOCH_MS, PREVIOUS_GROUP_MS, SEND_GRACE_MS, STALE_SEAL_MS, V2_GRACE_MS } from './bounds'
 import { clock } from './clock'
+import { lineFrom, type Line, type TransformOptions } from './frameWorkerLine'
+import { onLineMessage, type Caps, type LineActions, type RememberedKey } from './frameWorkerPort'
 
 interface EncodedFrame {
   data: ArrayBuffer
   /** Only video frames have a type. */
   type?: string
   getMetadata?: () => { mimeType?: unknown }
-}
-
-interface TransformOptions {
-  port?: MessagePort
-  direction?: unknown
-  channelId?: unknown
-  senderId?: unknown
-  /** The layer of a screen share this line sends (0..3); absent for every other line. */
-  layer?: unknown
-  /** What the line carries (frame.ts SOURCE_*). */
-  source?: unknown
 }
 
 interface RtpTransformer {
@@ -68,44 +59,71 @@ function newest(map: ReadonlyMap<number, EpochKeys>): number | null {
   return map.size ? Math.max(...map.keys()) : null
 }
 
-function remember(epoch: number, key: EpochKeys, replace: boolean, seq: number | null, soft = false, caps: Caps | null = null) {
-  if (seq !== null) {
-    if (seq <= lastSeq) return
-    lastSeq = seq
+/** False when this delivery is a repeat of a key or capability message already applied. */
+function noteSeq(seq: number | null): boolean {
+  if (seq === null) return true
+  if (seq <= lastSeq) return false
+  lastSeq = seq
+  return true
+}
+
+function beginsGroup(replace: boolean, epoch: number): boolean {
+  if (replace) return true
+  return sendEpoch !== null && epoch < sendEpoch
+}
+
+function parkPreviousGroup() {
+  // A new group: what this member held so far is now the previous group.
+  if (!keys.size) return
+  previous = keys
+  regroupedAt = clock.now()
+}
+
+function resetGroup() {
+  keys = new Map()
+  retiredAt = new Map()
+  sendHold = null
+  v3Epochs.clear()
+}
+
+function retireOlderEpochs(epoch: number, now: number) {
+  for (const held of keys.keys()) {
+    if (held < epoch && !retiredAt.has(held)) retiredAt.set(held, now)
   }
-  if (replace || (sendEpoch !== null && epoch < sendEpoch)) {
-    // A new group: what this member held so far is now the previous group.
-    if (keys.size) {
-      previous = keys
-      regroupedAt = clock.now()
-    }
-    keys = new Map()
-    retiredAt = new Map()
-    sendHold = null
-    v3Epochs.clear()
+}
+
+function keepTwoNewest() {
+  const ordered = [...keys.keys()].sort((a, b) => a - b)
+  for (const drop of ordered.slice(0, -2)) keys.delete(drop)
+}
+
+function keepsSealing(soft: boolean, replace: boolean, left: number | null): boolean {
+  if (!soft || replace) return false
+  if (left === null || sendEpoch === null) return false
+  return left < sendEpoch && keys.has(left)
+}
+
+function remember(item: RememberedKey) {
+  if (!noteSeq(item.seq)) return
+  if (beginsGroup(item.replace, item.epoch)) {
+    parkPreviousGroup()
+    resetGroup()
   }
   const left = sendEpoch
   const now = clock.now()
-  keys.set(epoch, key)
-  retiredAt.delete(epoch)
-  for (const held of keys.keys()) if (held < epoch && !retiredAt.has(held)) retiredAt.set(held, now)
-  const ordered = [...keys.keys()].sort((a, b) => a - b)
-  for (const drop of ordered.slice(0, -2)) keys.delete(drop)
+  keys.set(item.epoch, item.key)
+  retiredAt.delete(item.epoch)
+  retireOlderEpochs(item.epoch, now)
+  keepTwoNewest()
   sendEpoch = newest(keys)
-  sendHold = soft && !replace && left !== null && sendEpoch !== null && left < sendEpoch && keys.has(left)
+  const sealing = keepsSealing(item.soft, item.replace, left)
+  sendHold = sealing && left !== null
     ? { epoch: left, until: now + Math.min(SEND_GRACE_MS, PREVIOUS_EPOCH_MS) }
     : null
   dropExpired()
   staleSince = null
   retainReplays()
-  if (caps) applyCaps(epoch, caps)
-}
-
-interface Caps { members: string[], complete: boolean }
-
-function isCaps(value: unknown): value is Caps {
-  return !!value && typeof value === 'object' && 'members' in value && Array.isArray(value.members) && value.members.every(id => typeof id === 'string')
-    && 'complete' in value && typeof value.complete === 'boolean'
+  if (item.caps) applyCaps(item.epoch, item.caps)
 }
 
 /** Whether all of this epoch's members open version 3. Once they do, that stays so for the epoch. */
@@ -165,48 +183,78 @@ function forget() {
   replays.clear()
 }
 
-function isEpochKeys(value: unknown): value is EpochKeys {
-  return !!value && typeof value === 'object' && 'key' in value && !!value.key && 'signer' in value && !!value.signer
-    && 'verifiers' in value && value.verifiers instanceof Map
-}
-
-function isEpoch(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 0xffffffff
-}
-
 function packet(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
 
-interface Line {
-  direction: 'send' | 'recv'
+function sealIsStale(now: number): boolean {
+  return staleSince !== null && now - staleSince > STALE_SEAL_MS
+}
+
+function clearExpiredHold(now: number) {
+  const hold = sendHold
+  if (!hold || now < hold.until) return
+  sendHold = null
+}
+
+function epochToSeal(now: number): number | null {
+  const hold = sendHold
+  if (hold && now < hold.until && keys.has(hold.epoch)) return hold.epoch
+  return sendEpoch
+}
+
+interface SealReady {
+  epoch: number
+  epochKeys: EpochKeys
+  stream: FrameStream
+  source: FrameSource
   channelId: string
-  senderId: string | null
-  stream: FrameStream | null
-  /** What the line carries; a receiver learns it with the publisher. */
-  source: FrameSource | null
   layer: number
+}
+
+/** The epoch, keys and stream a frame may leave on, or null when sealing must drop it. */
+function sealReady(line: Line): SealReady | null {
+  if (sendEpoch === null) return null
+  const now = clock.now()
+  if (sealIsStale(now)) return null
+  dropExpired()
+  clearExpiredHold(now)
+  const epoch = epochToSeal(now)
+  if (epoch === null) return null
+  const epochKeys = keys.get(epoch)
+  const stream = line.stream
+  const source = line.source
+  if (!epochKeys || !stream || source === null) return null
+  return { epoch, epochKeys, stream, source, channelId: line.channelId, layer: line.layer }
+}
+
+function frameVersion(epoch: number): 2 | 3 {
+  return v3Epochs.has(epoch) ? 3 : 2
+}
+
+function sealUnit(ready: SealReady, senderId: string, plaintext: Uint8Array, clear: Uint8Array): Promise<Uint8Array | null> {
+  const counter = ready.stream.next()
+  if (counter === null) return Promise.resolve(null)
+  return sealFrame({
+    keys: ready.epochKeys,
+    epoch: ready.epoch,
+    stream: ready.stream.id,
+    counter,
+    channelId: ready.channelId,
+    senderId,
+    plaintext,
+    clear,
+    version: frameVersion(ready.epoch),
+    source: ready.source,
+    layer: ready.layer,
+  })
 }
 
 /** Seals one frame of a sending line under the epoch it is to go out in. */
 async function sealOutgoing(data: Uint8Array, kind: FrameKind, codec: ReturnType<typeof videoCodecOf> | null, line: Line, senderId: string): Promise<ArrayBuffer | null> {
-  const { channelId } = line
-  if (sendEpoch === null) return null
-  const now = clock.now()
-  if (staleSince !== null && now - staleSince > STALE_SEAL_MS) return null
-  dropExpired()
-  const hold = sendHold
-  if (hold && now >= hold.until) sendHold = null
-  const epoch = hold && now < hold.until && keys.has(hold.epoch) ? hold.epoch : sendEpoch
-  const epochKeys = keys.get(epoch)
-  const stream = line.stream
-  if (!epochKeys || !stream) return null
-  const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => {
-    const counter = stream.next()
-    return counter === null
-      ? Promise.resolve(null)
-      : sealFrame({ keys: epochKeys, epoch, stream: stream.id, counter, channelId, senderId, plaintext, clear, version: v3Epochs.has(epoch) ? 3 : 2, source: line.source as FrameSource, layer: line.layer })
-  })
+  const ready = sealReady(line)
+  if (ready === null) return null
+  const sealed = await sealMedia(data, kind, codec, (plaintext, clear) => sealUnit(ready, senderId, plaintext, clear))
   return sealed ? packet(sealed) : null
 }
 
@@ -261,69 +309,16 @@ function count(senderId: string, opened: boolean, unknownEpoch: number) {
   stats.clear()
 }
 
-function directionOf(value: unknown): 'send' | 'recv' | null {
-  return value === 'send' || value === 'recv' ? value : null
-}
-
 const scope = self as typeof self & {
   onrtctransform: ((event: Event & { transformer?: RtpTransformer }) => void) | null
 }
 
-/** The line a transform serves, or null when its options are not ones this worker will seal or open for. */
-function lineFrom(options: TransformOptions | undefined): Line | null {
-  const direction = directionOf(options?.direction)
-  const channelId = options?.channelId
-  // A receiver may be armed before the SFU says who publishes on its line.
-  const senderId = typeof options?.senderId === 'string' && options.senderId ? options.senderId : null
-  if (!direction || typeof channelId !== 'string' || !channelId || (direction === 'send' && senderId === null)) return null
-  // Every sending transform starts a fresh stream; a screen share's layers
-  // carry their layer in the stream ID, so they cannot share one.
-  const layer = options?.layer
-  const source = isFrameSource(options?.source) ? options.source : null
-  // Every sending line says what it carries; without that nothing is sealed.
-  if (direction === 'send' && source === null) return null
-  const layerNo = typeof layer === 'number' && Number.isInteger(layer) && layer >= 0 && layer <= LAYER_STREAM_MASK ? layer : source === SOURCE_SCREEN ? 0 : undefined
-  const layerId = layerNo === undefined ? undefined : layerStreamId(layerNo)
-  return { direction, channelId, senderId, stream: direction === 'send' ? new FrameStream(layerId) : null, source, layer: layerNo ?? 0 }
-}
-
-/** The key message of the call: applied once however many lines deliver it. */
-function onKeyMessage(data: object & { epoch?: unknown, key?: unknown }): boolean {
-  if (!('type' in data) || data.type !== 'key' || !('epoch' in data) || !('key' in data) || !isEpoch(data.epoch) || !isEpochKeys(data.key)) return false
-  const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-  remember(data.epoch, data.key, 'replace' in data && data.replace === true, seq, 'soft' in data && data.soft === true, 'caps' in data && isCaps(data.caps) ? data.caps : null)
-  return true
-}
-
-function onCapsMessage(data: object) {
-  if (!('type' in data) || data.type !== 'caps' || !('epoch' in data) || !('caps' in data) || !isEpoch(data.epoch) || !isCaps(data.caps)) return
-  const seq = 'seq' in data && typeof data.seq === 'number' ? data.seq : null
-  if (seq !== null) {
-    if (seq <= lastSeq) return
-    lastSeq = seq
-  }
-  applyCaps(data.epoch, data.caps)
-}
-
-/** What the call tells a line over its port: drop, stale, who publishes, a key or capabilities. */
-function onLineMessage(line: Line, data: unknown) {
-  if (!data || typeof data !== 'object') return
-  if ('type' in data && data.type === 'drop') {
-    forget()
-    return
-  }
-  if ('type' in data && data.type === 'stale') {
-    staleSince ??= clock.now()
-    return
-  }
-  if (line.direction === 'recv' && 'type' in data && data.type === 'sender' && 'senderId' in data && typeof data.senderId === 'string' && data.senderId) {
-    line.senderId = data.senderId
-    // A reused receiver may now carry another source.
-    line.source = 'source' in data && isFrameSource(data.source) ? data.source : null
-    return
-  }
-  if (onKeyMessage(data)) return
-  onCapsMessage(data)
+const lineActions: LineActions = {
+  drop: forget,
+  stale() { staleSince ??= clock.now() },
+  remember,
+  noteSeq,
+  applyCaps,
 }
 
 scope.onrtctransform = (event) => {
@@ -331,7 +326,7 @@ scope.onrtctransform = (event) => {
   const port = transformer?.options?.port
   const line = lineFrom(transformer?.options)
   if (!transformer || !port || !line) return
-  port.onmessage = (message: MessageEvent<unknown>) => onLineMessage(line, message.data)
+  port.onmessage = (message: MessageEvent<unknown>) => onLineMessage(line, message.data, lineActions)
   transformer.readable.pipeThrough(new TransformStream<EncodedFrame, EncodedFrame>({
     async transform(frame, controller) {
       try {
@@ -339,9 +334,14 @@ scope.onrtctransform = (event) => {
         if (!next) return
         frame.data = next
         controller.enqueue(frame)
-      } catch {
-        // A failed seal or open never becomes a plaintext frame.
+      } catch (error) {
+        dropUnsealed(error)
       }
     },
-  })).pipeTo(transformer.writable).catch(() => {})
+  })).pipeTo(transformer.writable).catch(dropUnsealed)
+}
+
+/** A failed seal or open never becomes a plaintext frame. */
+function dropUnsealed(error: unknown) {
+  void error
 }

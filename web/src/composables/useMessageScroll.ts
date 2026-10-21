@@ -52,13 +52,28 @@ function restoreAnchors(el: HTMLElement | null, anchors: ScrollAnchor[]) {
   }
 }
 
+function canLoadOlder(el: HTMLElement, chatStore: ReturnType<typeof useChatStore>): boolean {
+  if (el.scrollTop >= LOAD_THRESHOLD_PX) return false
+  return chatStore.hasMoreBefore && !chatStore.isLoadingBefore
+}
+
+function canLoadNewer(el: HTMLElement, chatStore: ReturnType<typeof useChatStore>): boolean {
+  if (distanceFromBottom(el) >= LOAD_THRESHOLD_PX) return false
+  return chatStore.hasMoreAfter && !chatStore.isLoadingAfter
+}
+
+function shouldCheckScrollEdges(el: HTMLElement | null, chatStore: ReturnType<typeof useChatStore>): el is HTMLElement {
+  if (!el || !chatStore.messages.length) return false
+  return !chatStore.isLoadingWindow
+}
+
 /** Loads the next page of history when the view is close to either end. */
 function loadMoreNearEdges(el: HTMLElement | null, chatStore: ReturnType<typeof useChatStore>) {
-  if (!el || !chatStore.messages.length || chatStore.isLoadingWindow) return
-  if (el.scrollTop < LOAD_THRESHOLD_PX && chatStore.hasMoreBefore && !chatStore.isLoadingBefore) {
+  if (!shouldCheckScrollEdges(el, chatStore)) return
+  if (canLoadOlder(el, chatStore)) {
     chatStore.loadOlder()
   }
-  if (distanceFromBottom(el) < LOAD_THRESHOLD_PX && chatStore.hasMoreAfter && !chatStore.isLoadingAfter) {
+  if (canLoadNewer(el, chatStore)) {
     chatStore.loadNewer()
   }
 }
@@ -127,6 +142,38 @@ interface WindowScrollOps {
   markUnread: () => void
 }
 
+function isOwnLiveMessage(live: boolean, lastUserId: string | undefined, currentUserId: string | undefined): boolean {
+  if (!live || !lastUserId) return false
+  return lastUserId === currentUserId
+}
+
+function shouldStickToBottom(latest: boolean, live: boolean, wasAtBottom: boolean, isMine: boolean): boolean {
+  if (latest) return true
+  if (!live) return false
+  return wasAtBottom || isMine
+}
+
+interface ApplyWindowScrollArgs {
+  ops: WindowScrollOps
+  chatStore: ReturnType<typeof useChatStore>
+  anchors: ScrollAnchor[]
+  live: boolean
+  jump: { id: string } | null
+  stickBottom: boolean
+}
+
+function applyWindowScroll({ ops, chatStore, anchors, live, jump, stickBottom }: ApplyWindowScrollArgs) {
+  if (jump) {
+    ops.scrollToMessage(jump.id)
+  } else if (stickBottom) {
+    ops.scrollToBottomNow()
+  } else {
+    restoreAnchors(ops.container(), anchors)
+    if (live) ops.markUnread()
+  }
+  loadMoreNearEdges(ops.container(), chatStore)
+}
+
 // One pre-render hook for every window change: decide what caused it, then
 // after the DOM updated scroll to the bottom, to a jump target, or put the
 // previously visible messages back where they were.
@@ -144,25 +191,17 @@ function watchWindowChanges(ops: WindowScrollOps) {
       const wasAtBottom = ops.isAtBottom()
       const latest = chatStore.latestLoadSeq !== seenLatest
       const live = chatStore.liveAppendSeq !== seenLive
-      const jump = chatStore.jumpTarget && chatStore.jumpTarget.seq !== seenJump ? chatStore.jumpTarget : null
+      const jumpTarget = chatStore.jumpTarget
+      const jump = jumpTarget && jumpTarget.seq !== seenJump ? jumpTarget : null
       seenLatest = chatStore.latestLoadSeq
       seenLive = chatStore.liveAppendSeq
-      seenJump = chatStore.jumpTarget?.seq ?? 0
+      seenJump = jumpTarget?.seq ?? 0
 
       nextTick(() => {
         const last = chatStore.messages[chatStore.messages.length - 1]
-        const mine = live && last?.user_id && last.user_id === authStore.user?.id
-        if (jump) {
-          ops.scrollToMessage(jump.id)
-        } else if (latest) {
-          ops.scrollToBottomNow()
-        } else if (live && (wasAtBottom || mine)) {
-          ops.scrollToBottomNow()
-        } else {
-          restoreAnchors(ops.container(), anchors)
-          if (live) ops.markUnread()
-        }
-        loadMoreNearEdges(ops.container(), chatStore)
+        const isMine = isOwnLiveMessage(live, last?.user_id, authStore.user?.id)
+        const stickBottom = shouldStickToBottom(latest, live, wasAtBottom, isMine)
+        applyWindowScroll({ ops, chatStore, anchors, live, jump, stickBottom })
       })
     },
     { flush: 'pre' }

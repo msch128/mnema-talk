@@ -106,25 +106,38 @@ type remoteTrackRole struct {
 
 // classifyRemoteTrack maps the transceiver a track arrived on to its role.
 func classifyRemoteTrack(userID uuid.UUID, conn *receiveConn, remoteTrack *webrtc.TrackRemote, receiver *webrtc.RTPReceiver) remoteTrackRole {
-	role := remoteTrackRole{source: SourceAudio, streamID: userID.String()}
 	if remoteTrack.Kind() != webrtc.RTPCodecTypeVideo {
-		if conn.screenAudioTr != nil && receiver == conn.screenAudioTr.Receiver() {
-			role.source = SourceScreenAudio
-			role.streamID = ScreenAudioStreamPrefix + role.streamID
-		}
-		return role
+		return classifyAudioTrack(userID, conn, receiver)
 	}
-	role.source = SourceScreen
+	return classifyVideoTrack(userID, conn, receiver)
+}
+
+func classifyAudioTrack(userID uuid.UUID, conn *receiveConn, receiver *webrtc.RTPReceiver) remoteTrackRole {
+	role := remoteTrackRole{source: SourceAudio, streamID: userID.String()}
+	if conn.screenAudioTr != nil && receiver == conn.screenAudioTr.Receiver() {
+		role.source = SourceScreenAudio
+		role.streamID = ScreenAudioStreamPrefix + role.streamID
+	}
+	return role
+}
+
+func classifyVideoTrack(userID uuid.UUID, conn *receiveConn, receiver *webrtc.RTPReceiver) remoteTrackRole {
+	role := remoteTrackRole{source: SourceScreen, streamID: userID.String()}
 	if conn.cameraTr != nil && receiver == conn.cameraTr.Receiver() {
 		role.source = SourceCamera
 		role.streamID = CameraStreamPrefix + role.streamID
 	}
-	for i, tr := range conn.lowerTrs {
+	role.layer = matchSimulcastLayer(conn.lowerTrs, receiver)
+	return role
+}
+
+func matchSimulcastLayer(trs []*webrtc.RTPTransceiver, receiver *webrtc.RTPReceiver) int {
+	for i, tr := range trs {
 		if tr != nil && receiver == tr.Receiver() {
-			role.layer = i + 1
+			return i + 1
 		}
 	}
-	return role
+	return 0
 }
 
 // handleRemoteTrack publishes a track the peer sends, unless the peer may not
@@ -214,30 +227,44 @@ func (r *Room) forward(remote rtpReader, local rtpWriter, key string, info *Trac
 			r.removeTrack(key, info)
 			return
 		}
-		if !admitIngress(limit, n, info) {
+		if !admitIngress(limit, n, info) || !parseForwardPacket(buf, n, rtpPkt) {
 			continue
 		}
-		if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
-			continue
-		}
-		metrics.SFUIngressPackets.Inc()
-		metrics.SFUIngressBytes.Add(uint64(n))
 		switch publisherVerdict(info) {
 		case endTrack:
 			return
 		case dropPacket:
 			continue
 		}
-		// Header extension IDs are negotiated per connection; the
-		// subscriber side adds its own (e.g. transport-cc).
-		rtpPkt.Extension = false
-		rtpPkt.Extensions = nil
-		r.resumeStoppedTrack(key, info)
-		// io.ErrClosedPipe only means a subscriber's sender just stopped.
-		if err := local.WriteRTP(rtpPkt); err != nil && !errors.Is(err, io.ErrClosedPipe) && info.writeErrLogged.CompareAndSwap(false, true) {
-			slog.Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
-		}
+		r.writeForwardedPacket(local, rtpPkt, key, info)
 	}
+}
+
+func parseForwardPacket(buf []byte, n int, rtpPkt *rtp.Packet) bool {
+	if err := rtpPkt.Unmarshal(buf[:n]); err != nil {
+		return false
+	}
+	metrics.SFUIngressPackets.Inc()
+	metrics.SFUIngressBytes.Add(uint64(n))
+	return true
+}
+
+func (r *Room) writeForwardedPacket(local rtpWriter, rtpPkt *rtp.Packet, key string, info *TrackInfo) {
+	// Header extension IDs are negotiated per connection; the
+	// subscriber side adds its own (e.g. transport-cc).
+	rtpPkt.Extension = false
+	rtpPkt.Extensions = nil
+	r.resumeStoppedTrack(key, info)
+	if err := local.WriteRTP(rtpPkt); isLoggedWriteError(err, info) {
+		slog.Warn("sfu forward rtp", "publisher", info.SenderID, "source", string(info.Source), "err", err)
+	}
+}
+
+func isLoggedWriteError(err error, info *TrackInfo) bool {
+	if err == nil || errors.Is(err, io.ErrClosedPipe) {
+		return false
+	}
+	return info.writeErrLogged.CompareAndSwap(false, true)
 }
 
 // admitIngress applies the publisher's rate limit to an n-byte packet and

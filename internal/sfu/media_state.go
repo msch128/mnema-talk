@@ -137,6 +137,11 @@ func (r *Room) screenViewersLocked(states map[uuid.UUID]MediaState) map[uuid.UUI
 	return out
 }
 
+func (n *mediaNotifier) hasListeners() bool {
+	mediaFn, viewersFn := n.get()
+	return mediaFn != nil || viewersFn != nil || n.layersFn() != nil
+}
+
 // compareIDs orders user IDs like their canonical string form.
 func compareIDs(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) }
 
@@ -145,40 +150,59 @@ func compareIDs(a, b uuid.UUID) int { return bytes.Compare(a[:], b[:]) }
 // which every track, peer and subscription change triggers anyway. notifyMu
 // keeps the announcements in the order the states were computed.
 func (r *Room) notifyMedia() {
-	mediaFn, viewersFn := r.notifier.get()
-	layersFn := r.notifier.layersFn()
-	if mediaFn == nil && viewersFn == nil && layersFn == nil {
+	if !r.notifier.hasListeners() {
 		return
 	}
+	mediaFn, viewersFn := r.notifier.get()
+	layersFn := r.notifier.layersFn()
 	r.notifyMu.Lock()
 	defer r.notifyMu.Unlock()
 
 	r.mu.Lock()
-	now := r.mediaStatesLocked()
-	var changes []mediaChange
-	if mediaFn != nil {
-		changes = r.takeMediaChangesLocked(now)
-	}
-	var audiences []audienceChange
-	if viewersFn != nil {
-		audiences = r.takeAudienceChangesLocked(now)
-	}
-	var layerChanges []layerChange
-	if layersFn != nil {
-		layerChanges = r.takeLayerChangesLocked(now)
-	}
+	pending := r.collectMediaNotificationsLocked(mediaFn != nil, viewersFn != nil, layersFn != nil)
 	r.mu.Unlock()
 
-	for _, c := range changes {
-		mediaFn(r.ID, c.user, c.state)
+	r.dispatchMediaNotifications(pending, mediaFn, viewersFn, layersFn)
+}
+
+type pendingMediaNotifications struct {
+	changes      []mediaChange
+	audiences    []audienceChange
+	layerChanges []layerChange
+}
+
+func (r *Room) collectMediaNotificationsLocked(needMedia, needViewers, needLayers bool) pendingMediaNotifications {
+	now := r.mediaStatesLocked()
+	var p pendingMediaNotifications
+	if needMedia {
+		p.changes = r.takeMediaChangesLocked(now)
 	}
-	slices.SortFunc(layerChanges, func(a, b layerChange) int { return compareIDs(a.sharer, b.sharer) })
-	for _, c := range layerChanges {
-		layersFn(r.ID, c.sharer, c.layers)
+	if needViewers {
+		p.audiences = r.takeAudienceChangesLocked(now)
 	}
-	slices.SortFunc(audiences, func(a, b audienceChange) int { return compareIDs(a.sharer, b.sharer) })
-	for _, a := range audiences {
-		viewersFn(r.ID, a.sharer, a.viewers)
+	if needLayers {
+		p.layerChanges = r.takeLayerChangesLocked(now)
+	}
+	return p
+}
+
+func (r *Room) dispatchMediaNotifications(p pendingMediaNotifications, mediaFn func(uuid.UUID, uuid.UUID, MediaState), viewersFn func(uuid.UUID, uuid.UUID, []uuid.UUID), layersFn func(uuid.UUID, uuid.UUID, []Layer)) {
+	if mediaFn != nil {
+		for _, c := range p.changes {
+			mediaFn(r.ID, c.user, c.state)
+		}
+	}
+	if layersFn != nil {
+		slices.SortFunc(p.layerChanges, func(a, b layerChange) int { return compareIDs(a.sharer, b.sharer) })
+		for _, c := range p.layerChanges {
+			layersFn(r.ID, c.sharer, c.layers)
+		}
+	}
+	if viewersFn != nil {
+		slices.SortFunc(p.audiences, func(a, b audienceChange) int { return compareIDs(a.sharer, b.sharer) })
+		for _, a := range p.audiences {
+			viewersFn(r.ID, a.sharer, a.viewers)
+		}
 	}
 }
 

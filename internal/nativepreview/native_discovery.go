@@ -23,6 +23,19 @@ type nativeDiscoveryDocument struct {
 	NativeAPI    nativeAPIDescriptor `json:"native_api"`
 }
 
+func discoveryTransportRejected(request *http.Request) bool {
+	if nativePreviewHeaderPresent(request, "Origin") || nativePreviewHeaderPresent(request, "Cookie") {
+		return true
+	}
+	if nativePreviewHeaderPresent(request, "Authorization") || request.URL.RawQuery != "" {
+		return true
+	}
+	if request.URL.ForceQuery || request.URL.User != nil {
+		return true
+	}
+	return request.URL.Fragment != ""
+}
+
 func (r *NativePreviewRouter) discovery(w http.ResponseWriter, request *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
@@ -30,7 +43,7 @@ func (r *NativePreviewRouter) discovery(w http.ResponseWriter, request *http.Req
 		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
 		return
 	}
-	if nativePreviewHeaderPresent(request, "Origin") || nativePreviewHeaderPresent(request, "Cookie") || nativePreviewHeaderPresent(request, "Authorization") || request.URL.RawQuery != "" || request.URL.ForceQuery || request.URL.User != nil || request.URL.Fragment != "" {
+	if discoveryTransportRejected(request) {
 		httpx.WriteError(w, httpx.ErrForbidden("native discovery request rejected"))
 		return
 	}

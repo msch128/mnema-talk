@@ -23,6 +23,54 @@ type layerPub struct {
 
 func (p *layerPub) ssrc() uint32 { return uint32(p.sender.GetParameters().Encodings[0].SSRC) }
 
+func forwardPLIs(pkts []rtcp.Packet, plis chan<- struct{}) {
+	for _, pkt := range pkts {
+		if _, ok := pkt.(*rtcp.PictureLossIndication); ok {
+			select {
+			case plis <- struct{}{}:
+			default:
+			}
+		}
+	}
+}
+
+func startRTCPReader(sender *webrtc.RTPSender, plis chan<- struct{}) {
+	for {
+		pkts, _, err := sender.ReadRTCP()
+		if err != nil {
+			return
+		}
+		forwardPLIs(pkts, plis)
+	}
+}
+
+func startLayerPublisher(track *webrtc.TrackLocalStaticRTP, layer, keyEvery int, stop <-chan struct{}) {
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	seq := uint16(1000 + 20000*layer)
+	ts := uint32(1_000_000 * (layer + 1))
+	pic := uint16(1000 * (layer + 1))
+	tl0 := uint8(50 * layer)
+	frame := 0
+	for {
+		select {
+		case <-stop:
+			return
+		case <-tick.C:
+			key := frame%keyEvery == 0
+			_ = track.WriteRTP(&rtp.Packet{
+				Header:  rtp.Header{Version: 2, PayloadType: 96, SequenceNumber: seq, Timestamp: ts, Marker: true},
+				Payload: vp8Payload(true, key, pic&0x7fff, true, tl0, byte(layer)),
+			})
+			seq++
+			ts += 3000
+			pic++
+			tl0++
+			frame++
+		}
+	}
+}
+
 // publishLayers adds the four video tracks a layered publisher sends on the
 // SFU's video lines: the screen (layer 0), a camera that sends nothing, and
 // the two lower layers. It must run before join.
@@ -51,50 +99,10 @@ func (c *client) publishLayers(keyEvery int) []*layerPub {
 		}
 		p := &layerPub{layer: layer, track: track, sender: sender, plis: make(chan struct{}, 64)}
 		pubs = append(pubs, p)
-		go func() {
-			for {
-				pkts, _, err := sender.ReadRTCP()
-				if err != nil {
-					return
-				}
-				for _, pkt := range pkts {
-					if _, ok := pkt.(*rtcp.PictureLossIndication); ok {
-						select {
-						case p.plis <- struct{}{}:
-						default:
-						}
-					}
-				}
-			}
-		}()
+		go startRTCPReader(sender, p.plis)
 		stop := make(chan struct{})
 		c.t.Cleanup(func() { close(stop) })
-		go func() {
-			tick := time.NewTicker(10 * time.Millisecond)
-			defer tick.Stop()
-			seq := uint16(1000 + 20000*layer)
-			ts := uint32(1_000_000 * (layer + 1))
-			pic := uint16(1000 * (layer + 1))
-			tl0 := uint8(50 * layer)
-			frame := 0
-			for {
-				select {
-				case <-stop:
-					return
-				case <-tick.C:
-					key := frame%keyEvery == 0
-					_ = track.WriteRTP(&rtp.Packet{
-						Header:  rtp.Header{Version: 2, PayloadType: 96, SequenceNumber: seq, Timestamp: ts, Marker: true},
-						Payload: vp8Payload(true, key, pic&0x7fff, true, tl0, byte(layer)),
-					})
-					seq++
-					ts += 3000
-					pic++
-					tl0++
-					frame++
-				}
-			}
-		}()
+		go startLayerPublisher(track, layer, keyEvery, stop)
 	}
 	return pubs
 }
@@ -128,8 +136,14 @@ func checkOneStream(t *testing.T, pkts []*rtp.Packet) {
 		if int32(cur.Timestamp-prev.Timestamp) < 0 {
 			t.Fatalf("packet %d: timestamp went back from %d to %d", i, prev.Timestamp, cur.Timestamp)
 		}
-		dp, _ := parseVP8(prev.Payload)
-		dc, _ := parseVP8(cur.Payload)
+		dp, ok := parseVP8(prev.Payload)
+		if !ok {
+			t.Fatalf("packet %d: parse prev vp8 failed", i-1)
+		}
+		dc, ok := parseVP8(cur.Payload)
+		if !ok {
+			t.Fatalf("packet %d: parse cur vp8 failed", i)
+		}
 		if dc.pic != (dp.pic+1)&0x7fff {
 			t.Fatalf("packet %d: picture ID %d after %d (layers %d, %d)", i, dc.pic, dp.pic, layerOf(prev), layerOf(cur))
 		}
@@ -151,6 +165,64 @@ func waitLayer(t *testing.T, c *client, layer int) []*rtp.Packet {
 	}
 	t.Fatalf("the viewer never received layer %d", layer)
 	return nil
+}
+
+func assertInitialQuality(t *testing.T, r *Room, viewerID, pubID uuid.UUID) {
+	t.Helper()
+	st, ok := r.ScreenQuality(viewerID, pubID)
+	if !ok {
+		t.Fatal("quality lookup failed for initial state")
+	}
+	if st.Layer != 0 {
+		t.Fatalf("expected initial layer 0, got %d", st.Layer)
+	}
+	if !st.Auto {
+		t.Fatalf("expected initial quality to be auto, got manual")
+	}
+}
+
+func assertLayerTransition(t *testing.T, r *Room, viewer, pub *client, layers []*layerPub, layer int) {
+	t.Helper()
+	drainPLIs(pub)
+	for _, l := range layers {
+		select {
+		case <-l.plis:
+		default:
+		}
+	}
+	if err := r.SetScreenQuality(viewer.id, pub.id, layer); err != nil {
+		t.Fatal(err)
+	}
+	pkts := waitLayer(t, viewer, layer)
+	checkOneStream(t, pkts)
+	select {
+	case <-layers[layer].plis:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("switching to layer %d did not ask the publisher for its keyframe", layer)
+	}
+	st, ok := r.ScreenQuality(viewer.id, pub.id)
+	if !ok {
+		t.Fatalf("after choosing %d: quality not ok", layer)
+	}
+	if st.Layer != layer {
+		t.Fatalf("after choosing %d: got layer %d", layer, st.Layer)
+	}
+	if st.Auto {
+		t.Fatalf("after choosing %d: expected manual quality, got auto", layer)
+	}
+}
+
+func assertLayersWanted(t *testing.T, mu *sync.Mutex, wanted *[][]int) {
+	t.Helper()
+	mu.Lock()
+	defer mu.Unlock()
+	if len(*wanted) == 0 {
+		t.Fatal("the sender was never told which layers are needed: empty list")
+	}
+	latest := (*wanted)[len(*wanted)-1]
+	if len(latest) == 0 {
+		t.Fatalf("the sender was never told which layers are needed: latest wanted entry empty: %v", *wanted)
+	}
 }
 
 func TestViewerIsMovedBetweenLayersWithoutBreakingTheStream(t *testing.T) {
@@ -183,40 +255,13 @@ func TestViewerIsMovedBetweenLayersWithoutBreakingTheStream(t *testing.T) {
 	waitTrack(t, viewer)
 	first := waitLayer(t, viewer, 0)
 	checkOneStream(t, first)
-	st, ok := r.ScreenQuality(viewer.id, pub.id)
-	if !ok || st.Layer != 0 || !st.Auto {
-		t.Fatalf("quality %+v ok=%v", st, ok)
-	}
+	assertInitialQuality(t, r, viewer.id, pub.id)
 
 	for _, layer := range []int{2, 1, 0, 2} {
-		drainPLIs(pub)
-		for _, l := range layers {
-			select {
-			case <-l.plis:
-			default:
-			}
-		}
-		if err := r.SetScreenQuality(viewer.id, pub.id, layer); err != nil {
-			t.Fatal(err)
-		}
-		pkts := waitLayer(t, viewer, layer)
-		checkOneStream(t, pkts)
-		select {
-		case <-layers[layer].plis:
-		case <-time.After(3 * time.Second):
-			t.Fatalf("switching to layer %d did not ask the publisher for its keyframe", layer)
-		}
-		st, ok := r.ScreenQuality(viewer.id, pub.id)
-		if !ok || st.Layer != layer || st.Auto {
-			t.Fatalf("after choosing %d: %+v ok=%v", layer, st, ok)
-		}
+		assertLayerTransition(t, r, viewer, pub, layers, layer)
 	}
 
-	wantedMu.Lock()
-	defer wantedMu.Unlock()
-	if len(wanted) == 0 || len(wanted[len(wanted)-1]) == 0 {
-		t.Fatalf("the sender was never told which layers are needed: %v", wanted)
-	}
+	assertLayersWanted(t, &wantedMu, &wanted)
 }
 
 func TestSecondViewerChoosesItsOwnLayer(t *testing.T) {

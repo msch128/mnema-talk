@@ -31,6 +31,31 @@ func screenViewersPayload(roomID, sharer uuid.UUID, viewers []uuid.UUID) map[str
 	return map[string]any{"channel_id": roomID, "user_id": sharer, "viewers": viewers}
 }
 
+func (c *Client) activeVoiceRoom() *sfu.Room {
+	if !c.commandsAllowed() || c.hub.SFU == nil {
+		return nil
+	}
+	cur := c.currentVoice()
+	if cur == nil {
+		return nil
+	}
+	room := c.hub.SFU.Room(*cur)
+	// The native lease may lapse while the room is looked up: check again
+	// before anything is subscribed.
+	if room == nil || !c.commandsAllowed() {
+		return nil
+	}
+	return room
+}
+
+func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) {
+	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
+		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
+			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
+		}
+	}
+}
+
 // handleSubscribe applies a viewer's choice of which video to receive:
 // {kind: "screen"|"camera", user_id, on} for one publisher, or
 // {kind: "camera", all: true, on} for every camera.
@@ -39,20 +64,11 @@ func (c *Client) handleSubscribe(payload json.RawMessage) {
 	if !ok {
 		return
 	}
-	cur := c.currentVoice()
-	if cur == nil || c.hub.SFU == nil || !c.commandsAllowed() {
+	room := c.activeVoiceRoom()
+	if room == nil {
 		return
 	}
-	room := c.hub.SFU.Room(*cur)
-	if room == nil || !c.commandsAllowed() {
-		return
-	}
-	// The layer is chosen first, so the viewer's track starts on it.
-	if req.hasQuality && req.on && req.kind == sfu.SourceScreen {
-		if err := room.SetScreenQuality(c.User.ID, req.publisher, req.quality); err != nil {
-			slog.Debug("sfu screen quality rejected", "user", c.User.ID, "err", err)
-		}
-	}
+	c.applySubscriptionQuality(room, req)
 	if err := room.Subscribe(c.User.ID, req.publisher, req.kind, req.all, req.on); err != nil {
 		slog.Debug("sfu subscribe rejected", "user", c.User.ID, "err", err)
 	}
@@ -70,37 +86,68 @@ type subscribeRequest struct {
 	hasQuality bool
 }
 
+type subscribeWire struct {
+	Kind    string          `json:"kind"`
+	UserID  string          `json:"user_id"`
+	All     bool            `json:"all"`
+	On      bool            `json:"on"`
+	Quality json.RawMessage `json:"quality"`
+}
+
+func isValidSubscriptionKind(kind sfu.Source, all bool) bool {
+	if kind != sfu.SourceScreen && kind != sfu.SourceCamera {
+		return false
+	}
+	if all && kind != sfu.SourceCamera {
+		return false
+	}
+	return true
+}
+
+func validateQuality(raw json.RawMessage, kind sfu.Source) (int, bool, bool) {
+	quality, hasQuality, ok := parseQuality(raw)
+	if !ok || (hasQuality && kind != sfu.SourceScreen) {
+		return 0, false, false
+	}
+	return quality, hasQuality, true
+}
+
+func parsePublisher(all bool, userID string, viewer uuid.UUID) (uuid.UUID, bool) {
+	if all {
+		return uuid.Nil, true
+	}
+	id, err := uuid.Parse(userID)
+	if err != nil || id == uuid.Nil || id == viewer {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // parseSubscribe validates a webrtc_subscribe payload from viewer: a screen
 // or camera of one other user, or every camera at once.
 func parseSubscribe(payload json.RawMessage, viewer uuid.UUID) (subscribeRequest, bool) {
-	var req struct {
-		Kind    string          `json:"kind"`
-		UserID  string          `json:"user_id"`
-		All     bool            `json:"all"`
-		On      bool            `json:"on"`
-		Quality json.RawMessage `json:"quality"`
-	}
-	if json.Unmarshal(payload, &req) != nil {
+	var wire subscribeWire
+	if err := json.Unmarshal(payload, &wire); err != nil {
 		return subscribeRequest{}, false
 	}
-	kind := sfu.Source(req.Kind)
-	if kind != sfu.SourceScreen && kind != sfu.SourceCamera {
+	kind := sfu.Source(wire.Kind)
+	if !isValidSubscriptionKind(kind, wire.All) {
 		return subscribeRequest{}, false
 	}
-	if req.All && kind != sfu.SourceCamera {
+	quality, hasQuality, ok := validateQuality(wire.Quality, kind)
+	if !ok {
 		return subscribeRequest{}, false
 	}
-	quality, hasQuality, ok := parseQuality(req.Quality)
-	if !ok || hasQuality && kind != sfu.SourceScreen {
+	pub, ok := parsePublisher(wire.All, wire.UserID, viewer)
+	if !ok {
 		return subscribeRequest{}, false
 	}
-	out := subscribeRequest{kind: kind, all: req.All, on: req.On, quality: quality, hasQuality: hasQuality}
-	if !req.All {
-		id, err := uuid.Parse(req.UserID)
-		if err != nil || id == uuid.Nil || id == viewer {
-			return subscribeRequest{}, false
-		}
-		out.publisher = id
-	}
-	return out, true
+	return subscribeRequest{
+		kind:       kind,
+		publisher:  pub,
+		all:        wire.All,
+		on:         wire.On,
+		quality:    quality,
+		hasQuality: hasQuality,
+	}, true
 }

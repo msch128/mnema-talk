@@ -94,20 +94,36 @@ func verifySignature(entries map[string]*zip.File, keys []ed25519.PublicKey) ([]
 	if err != nil {
 		return nil, nil, err
 	}
-	sigText, err := readEntry(sf, 1024)
+	sig, err := readSignature(sf)
 	if err != nil {
 		return nil, nil, err
 	}
+	key, err := matchSigningKey(keys, manifest, sig)
+	if err != nil {
+		return nil, nil, err
+	}
+	return manifest, key, nil
+}
+
+func readSignature(sf *zip.File) ([]byte, error) {
+	sigText, err := readEntry(sf, 1024)
+	if err != nil {
+		return nil, err
+	}
 	sig, err := base64.StdEncoding.DecodeString(strings.TrimSpace(string(sigText)))
 	if err != nil || len(sig) != ed25519.SignatureSize {
-		return nil, nil, errors.New("malformed signature")
+		return nil, errors.New("malformed signature")
 	}
+	return sig, nil
+}
+
+func matchSigningKey(keys []ed25519.PublicKey, manifest, sig []byte) (ed25519.PublicKey, error) {
 	for _, k := range keys {
 		if len(k) == ed25519.PublicKeySize && ed25519.Verify(k, manifest, sig) {
-			return manifest, k, nil
+			return k, nil
 		}
 	}
-	return nil, nil, errors.New("signature does not match a trusted key")
+	return nil, errors.New("signature does not match a trusted key")
 }
 
 // verifyFile compares one zip entry with its manifest record.
@@ -160,17 +176,12 @@ func checkFileList(files []File) error {
 	hasIndex := false
 	var total int64
 	for _, f := range files {
-		if !ValidPath(f.Path) || seen[f.Path] {
-			return fmt.Errorf("invalid or duplicate path %q", f.Path)
+		if err := checkFileRecord(f, seen); err != nil {
+			return err
 		}
 		seen[f.Path] = true
-		hasIndex = hasIndex || f.Path == "index.html"
-		raw, err := hex.DecodeString(f.SHA256)
-		if err != nil || len(raw) != sha256.Size {
-			return fmt.Errorf("%s: invalid sha256", f.Path)
-		}
-		if f.Size < 0 || f.Size > MaxFileSize {
-			return fmt.Errorf("%s: invalid size", f.Path)
+		if f.Path == "index.html" {
+			hasIndex = true
 		}
 		total += f.Size
 	}
@@ -181,4 +192,22 @@ func checkFileList(files []File) error {
 		return errors.New("bundle exceeds the size limit")
 	}
 	return nil
+}
+
+func checkFileRecord(f File, seen map[string]bool) error {
+	if !ValidPath(f.Path) || seen[f.Path] {
+		return fmt.Errorf("invalid or duplicate path %q", f.Path)
+	}
+	if !isValidSHA256(f.SHA256) {
+		return fmt.Errorf("%s: invalid sha256", f.Path)
+	}
+	if f.Size < 0 || f.Size > MaxFileSize {
+		return fmt.Errorf("%s: invalid size", f.Path)
+	}
+	return nil
+}
+
+func isValidSHA256(s string) bool {
+	raw, err := hex.DecodeString(s)
+	return err == nil && len(raw) == sha256.Size
 }

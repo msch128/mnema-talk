@@ -25,7 +25,8 @@ export function loadCollapsed(storage: Pick<Storage, 'getItem'> | null = globalT
   try {
     const ids: unknown = JSON.parse(storage?.getItem(COLLAPSED_KEY) || '[]')
     return Array.isArray(ids) ? ids.filter((id: unknown): id is string => typeof id === 'string') : []
-  } catch {
+  } catch (error) {
+    void error
     return []
   }
 }
@@ -33,7 +34,8 @@ export function loadCollapsed(storage: Pick<Storage, 'getItem'> | null = globalT
 export function saveCollapsed(ids: string[], storage: Pick<Storage, 'setItem'> | null = globalThis.localStorage): void {
   try {
     storage?.setItem(COLLAPSED_KEY, JSON.stringify(ids))
-  } catch {
+  } catch (error) {
+    void error
     // Storage unavailable (private mode, quota): collapse state is per session then.
   }
 }

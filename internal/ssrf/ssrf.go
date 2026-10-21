@@ -130,15 +130,38 @@ func contains(list []netip.Prefix, a netip.Addr) bool {
 	return false
 }
 
+// notAllowable reports an address the allowlist cannot open: it is not a
+// real unicast address, or it is one of the metadata and reserved ranges.
+func notAllowable(addr netip.Addr) bool {
+	if !addr.IsValid() {
+		return true
+	}
+	if addr.IsUnspecified() || addr.IsMulticast() {
+		return true
+	}
+	return contains(never, addr)
+}
+
+// onLocalNet reports an address the allowlist may open.
+func onLocalNet(addr netip.Addr) bool {
+	if addr.IsLoopback() || addr.IsPrivate() {
+		return true
+	}
+	if addr.IsLinkLocalUnicast() || addr.IsInterfaceLocalMulticast() {
+		return true
+	}
+	return contains(private, addr)
+}
+
 // Check reports whether addr may be contacted. IPv4-mapped IPv6 addresses
 // count as the IPv4 address they carry. The allowlist can open a local range
 // even when Refused reports it; it cannot open never.
 func (p *Policy) Check(addr netip.Addr) error {
 	addr = addr.WithZone("").Unmap()
-	if !addr.IsValid() || addr.IsUnspecified() || addr.IsMulticast() || contains(never, addr) {
+	if notAllowable(addr) {
 		return ErrBlocked
 	}
-	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() || addr.IsInterfaceLocalMulticast() || contains(private, addr) {
+	if onLocalNet(addr) {
 		if p != nil && contains(p.Allow, addr) {
 			return nil
 		}
@@ -150,24 +173,44 @@ func (p *Policy) Check(addr netip.Addr) error {
 	return nil
 }
 
+// rejectedURLText reports a URL string that is empty, too long, or contains
+// a space, an ASCII control or DEL.
+func rejectedURLText(raw string) bool {
+	if raw == "" || len(raw) > maxURLLen {
+		return true
+	}
+	for _, r := range raw {
+		if r <= 0x20 || r == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
+// acceptableURL reports an absolute http(s) URL with a host and no credentials.
+func acceptableURL(u *url.URL) bool {
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	if u.Hostname() == "" || u.User != nil {
+		return false
+	}
+	return u.Opaque == ""
+}
+
 // ValidateURL parses a target URL: absolute http or https with a host, no
 // credentials, a literal IP only if its address is allowed.
 func (p *Policy) ValidateURL(raw string) (*url.URL, error) {
 	raw = strings.TrimSpace(raw)
-	if raw == "" || len(raw) > maxURLLen {
+	if rejectedURLText(raw) {
 		return nil, ErrBadURL
-	}
-	for _, r := range raw {
-		if r <= 0x20 || r == 0x7f {
-			return nil, ErrBadURL
-		}
 	}
 	u, err := url.Parse(raw)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || u.Opaque != "" {
+	if err != nil || !acceptableURL(u) {
 		return nil, ErrBadURL
 	}
-	if a, err := netip.ParseAddr(u.Hostname()); err == nil {
-		if err := p.Check(a); err != nil {
+	if addr, err := netip.ParseAddr(u.Hostname()); err == nil {
+		if err := p.Check(addr); err != nil {
 			return nil, err
 		}
 	}
@@ -203,26 +246,39 @@ func (d *Dialer) DialContext(ctx context.Context, network, address string) (net.
 	if err != nil {
 		return nil, ErrBadURL
 	}
-	var addrs []netip.Addr
-	if a, err := netip.ParseAddr(host); err == nil {
-		addrs = []netip.Addr{a}
-	} else {
-		if addrs, err = d.Resolver.LookupNetIP(ctx, "ip", host); err != nil || len(addrs) == 0 {
-			return nil, ErrResolve
-		}
+	addrs, err := d.hostAddrs(ctx, host)
+	if err != nil {
+		return nil, err
 	}
-	for _, a := range addrs {
-		if err := d.Policy.Check(a); err != nil {
+	for _, addr := range addrs {
+		if err := d.Policy.Check(addr); err != nil {
 			return nil, err
 		}
 	}
+	return d.dialAddrs(ctx, network, port, addrs)
+}
+
+// hostAddrs returns a literal address as written, or every address of a name.
+func (d *Dialer) hostAddrs(ctx context.Context, host string) ([]netip.Addr, error) {
+	if addr, err := netip.ParseAddr(host); err == nil {
+		return []netip.Addr{addr}, nil
+	}
+	addrs, err := d.Resolver.LookupNetIP(ctx, "ip", host)
+	if err != nil || len(addrs) == 0 {
+		return nil, ErrResolve
+	}
+	return addrs, nil
+}
+
+// dialAddrs dials vetted addresses by number and returns the first connection.
+func (d *Dialer) dialAddrs(ctx context.Context, network, port string, addrs []netip.Addr) (net.Conn, error) {
 	dial := d.dial
 	if dial == nil {
 		nd := &net.Dialer{Timeout: d.Timeout}
 		dial = nd.DialContext
 	}
-	for _, a := range addrs {
-		conn, err := dial(ctx, network, net.JoinHostPort(a.Unmap().String(), port))
+	for _, addr := range addrs {
+		conn, err := dial(ctx, network, net.JoinHostPort(addr.Unmap().String(), port))
 		if err == nil {
 			return conn, nil
 		}

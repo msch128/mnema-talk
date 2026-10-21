@@ -102,27 +102,51 @@ async function create() {
   }
 }
 
+function saveClosed(role: Role | null, isBusy: boolean): boolean {
+  if (!role) return true
+  return isBusy
+}
+
+function customNameMissing(role: Role, trimmed: string): boolean {
+  if (role.is_everyone) return false
+  return trimmed.length === 0
+}
+
+function ownerUploadRejected(owner: boolean, upload: number | null | undefined): boolean {
+  if (!owner) return false
+  return upload === undefined
+}
+
+function uploadPatch(owner: boolean, upload: number | null | undefined, current: number | null) {
+  // Only the Owner may send the upload limit; it is the one field the
+  // server refuses from role managers.
+  if (!owner) return {}
+  if (upload === undefined || upload === current) return {}
+  return { max_upload_mb: upload }
+}
+
+function savedRole(role: Role, trimmed: string, upload: { max_upload_mb?: number | null }) {
+  if (role.is_everyone) return { permissions: allow.value, ...upload }
+  return { name: trimmed, color: color.value, hoist: hoist.value, permissions: allow.value, ...upload }
+}
+
 async function save() {
   const role = selected.value
-  if (!role || busy.value) return
+  if (saveClosed(role, busy.value)) return
+  if (!role) return
   const trimmed = name.value.trim()
-  if (!role.is_everyone && !trimmed) {
+  if (customNameMissing(role, trimmed)) {
     toasts.error(t('roles.nameRequired'))
     return
   }
   busy.value = true
   try {
-    if (permissions.isOwner && uploadValue.value === undefined) {
+    if (ownerUploadRejected(permissions.isOwner, uploadValue.value)) {
       toasts.error(t('roles.uploadInvalid'))
       busy.value = false
       return
     }
-    // Only the Owner may send the upload limit; it is the one field the
-    // server refuses from role managers.
-    const upload = permissions.isOwner && uploadValue.value !== role.max_upload_mb ? { max_upload_mb: uploadValue.value } : {}
-    const json = role.is_everyone
-      ? { permissions: allow.value, ...upload }
-      : { name: trimmed, color: color.value, hoist: hoist.value, permissions: allow.value, ...upload }
+    const json = savedRole(role, trimmed, uploadPatch(permissions.isOwner, uploadValue.value, role.max_upload_mb))
     await api(`/api/admin/roles/${role.id}`, { method: 'PATCH', json, decode: decodeRole })
     await permissions.loadRoles()
     select(role.id)
@@ -171,16 +195,32 @@ async function move(index: number, delta: number) {
   await commitOrder(ids)
 }
 
+function dragIgnored(from: string | null, targetId: string): boolean {
+  if (!from) return true
+  return from === targetId
+}
+
+function dropOutOfRange(fromIndex: number, toIndex: number): boolean {
+  if (fromIndex < 0) return true
+  return toIndex < 0
+}
+
+function dropRankBlocked(moved: Role | undefined, target: Role | undefined): boolean {
+  if (!moved || !target) return true
+  if (!permissions.outranks(moved)) return true
+  return !permissions.outranks(target)
+}
+
 function onDrop(targetId: string) {
   const from = dragging.value
   dragging.value = null
-  if (!from || from === targetId) return
+  if (dragIgnored(from, targetId)) return
+  if (!from) return
   const ids = custom.value.map(r => r.id)
   const fromIndex = ids.indexOf(from)
   const toIndex = ids.indexOf(targetId)
-  const moved = custom.value[fromIndex]
-  const target = custom.value[toIndex]
-  if (fromIndex < 0 || toIndex < 0 || !moved || !target || !permissions.outranks(moved) || !permissions.outranks(target)) return
+  if (dropOutOfRange(fromIndex, toIndex)) return
+  if (dropRankBlocked(custom.value[fromIndex], custom.value[toIndex])) return
   ids.splice(fromIndex, 1)
   ids.splice(toIndex, 0, from)
   void commitOrder(ids)

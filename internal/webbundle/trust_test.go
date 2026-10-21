@@ -5,6 +5,8 @@ import (
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -483,5 +485,25 @@ func TestSignShowsTheResultAndNeedsConfirmation(t *testing.T) {
 		if code, _, _ := run([]string{"trust", "sign", "-yes", "-key-file", key, "-out", filepath.Join(dir, "bad"), "-bundle-key", newK, "-max-version", bad}, nil); code == 0 {
 			t.Errorf("-max-version %s accepted", bad)
 		}
+	}
+}
+
+type deadWriter struct{}
+
+func (deadWriter) Write([]byte) (int, error) { return 0, errors.New("stdout closed") }
+
+func TestTrustSignSucceedsWhenTheStatusLineCannotBeWritten(t *testing.T) {
+	dir := t.TempDir()
+	if code, _, e := run([]string{"trust", "keygen", "-out", dir}, nil); code != 0 {
+		t.Fatal(e)
+	}
+	pub, _ := testKey(t)
+	out := filepath.Join(dir, "signed")
+	args := []string{"-yes", "-key-file", filepath.Join(dir, "offline-root.key"), "-out", out, "-bundle-key", hex.EncodeToString(pub)}
+	if err := runTrustSign(args, strings.NewReader(""), deadWriter{}, io.Discard); err != nil {
+		t.Fatalf("signing failed because stdout was gone: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(out, "trust.json")); err != nil {
+		t.Fatalf("trust statement not written: %v", err)
 	}
 }

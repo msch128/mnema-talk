@@ -16,7 +16,7 @@ export function cleanupPeerConnection(cx: Cx) {
   st.signalingChain = Promise.resolve()
   st.pendingCandidates = []
   if (st.pc) {
-    try { st.pc.close() } catch { /* connection already closed */ }
+    try { st.pc.close() } catch (err) { void err }
     st.pc = null
   }
   releaseRemoteAudio()
@@ -29,38 +29,60 @@ export function cleanupPeerConnection(cx: Cx) {
   voice?.resetRemoteMedia()
 }
 
+function candidateKey(candidate: RTCIceCandidate): string {
+  const protocol = candidate.protocol || '?'
+  const type = candidate.type || '?'
+  return `${protocol}/${type}`
+}
+
+function formatCandidateError(event: RTCPeerConnectionIceErrorEvent): string {
+  const text = event.errorText || ''
+  const url = event.url || ''
+  return `${event.errorCode} ${text} ${url}`.trim()
+}
+
+const REPORTABLE_ICE_STATES = new Set(['connected', 'failed', 'disconnected'])
+
+function createDiagnosticsReporter(cx: Cx, conn: RTCPeerConnection, diag: { candidates: Record<string, number>; errors: string[] }) {
+  const { chat, st } = cx
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  return (event: string) => {
+    if (st.pc !== conn) return
+    chat.sendWSEvent('webrtc_diag', {
+      event,
+      gathering: st.pc?.iceGatheringState,
+      ice: st.pc?.iceConnectionState,
+      connection: st.pc?.connectionState,
+      signaling: st.pc?.signalingState,
+      candidates: diag.candidates,
+      errors: diag.errors.slice(-5),
+      ice_servers: iceServers().length,
+      ua
+    })
+  }
+}
+
 // Connection diagnostics for the server log: what this browser gathers and
 // how the connection develops (candidate types only, never addresses).
 function wireIceDiagnostics(cx: Cx, conn: RTCPeerConnection) {
   const { chat, st } = cx
   const diag: { candidates: Record<string, number>; errors: string[] } = { candidates: {}, errors: [] }
-  const reportDiag = (event: string) => st.pc === conn && chat.sendWSEvent('webrtc_diag', {
-    event,
-    gathering: st.pc?.iceGatheringState,
-    ice: st.pc?.iceConnectionState,
-    connection: st.pc?.connectionState,
-    signaling: st.pc?.signalingState,
-    candidates: diag.candidates,
-    errors: diag.errors.slice(-5),
-    ice_servers: iceServers().length,
-    ua: typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  })
+  const reportDiag = createDiagnosticsReporter(cx, conn, diag)
 
   conn.onicecandidate = (event) => {
-    if (st.pc !== conn) return
-    if (event.candidate) {
-      const key = `${event.candidate.protocol || '?'}/${event.candidate.type || '?'}`
-      diag.candidates[key] = (diag.candidates[key] || 0) + 1
-      chat.sendWSEvent('webrtc_candidate', event.candidate.toJSON())
-    }
+    if (st.pc !== conn || !event.candidate) return
+    const key = candidateKey(event.candidate)
+    diag.candidates[key] = (diag.candidates[key] || 0) + 1
+    chat.sendWSEvent('webrtc_candidate', event.candidate.toJSON())
   }
   conn.onicecandidateerror = (event) => {
     if (st.pc !== conn) return
-    diag.errors.push(`${event.errorCode} ${event.errorText || ''} ${event.url || ''}`.trim())
+    diag.errors.push(formatCandidateError(event))
   }
   conn.onicegatheringstatechange = () => reportDiag('gathering')
   conn.oniceconnectionstatechange = () => {
-    if (['connected', 'failed', 'disconnected'].includes(st.pc?.iceConnectionState || '')) reportDiag('ice')
+    const state = st.pc?.iceConnectionState
+    if (state && REPORTABLE_ICE_STATES.has(state)) reportDiag('ice')
   }
 }
 
@@ -139,7 +161,8 @@ function canSendH264() {
   try {
     const caps = globalThis.RTCRtpSender?.getCapabilities?.('video')
     return !!caps?.codecs?.some(c => /^video\/h264$/i.test(c.mimeType))
-  } catch {
+  } catch (err) {
+    void err
     return false
   }
 }
@@ -160,7 +183,7 @@ async function flushQueuedCandidates(cx: Cx, conn: RTCPeerConnection, isCurrent:
   const queued = st.pendingCandidates
   st.pendingCandidates = []
   for (const candidate of queued) {
-    await conn.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {})
+    await conn.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => { void err })
     if (!isCurrent()) return false
   }
   return true
@@ -179,38 +202,96 @@ async function startWaitingScreen(cx: Cx, bound: ReturnType<typeof bindPublishSe
   return true
 }
 
-async function applyRemoteOffer(cx: Cx, offer: RTCSessionDescriptionInit, generation: number, expectedConnection: RTCPeerConnection | null) {
-  const { voice, chat, st } = cx
-  if (!voice.currentChannelId || generation !== st.joinGeneration || st.pc !== expectedConnection) return
-  if (!st.pc) setupPeerConnection(cx)
-  const conn = st.pc || setupPeerConnection(cx)
-  const channelId = voice.currentChannelId
-  const isCurrent = () => st.pc === conn && generation === st.joinGeneration && voice.currentChannelId === channelId
+function shouldApplyOffer(cx: Cx, generation: number, expected: RTCPeerConnection | null): boolean {
+  const { voice, st } = cx
+  if (!voice.currentChannelId) return false
+  if (generation !== st.joinGeneration) return false
+  return st.pc === expected
+}
+
+function ensurePeerConnection(cx: Cx): RTCPeerConnection {
+  if (!cx.st.pc) setupPeerConnection(cx)
+  return cx.st.pc || setupPeerConnection(cx)
+}
+
+function prepareRemoteSdp(offerSdp: string | undefined, layerLines: number): string {
+  const raw = offerSdp || ''
+  return tuneScreenLines(restrictVideoCodecs(raw), publishMids(raw, layerLines), canSendH264())
+}
+
+function prepareTransceiverTransforms(conn: RTCPeerConnection) {
+  for (const transceiver of conn.getTransceivers()) {
+    mediaCall().prepareIncoming(transceiver.receiver)
+  }
+}
+
+async function publishAnswer(conn: RTCPeerConnection, chat: Cx['chat'], isCurrent: () => boolean): Promise<boolean> {
+  const answer = await conn.createAnswer()
+  if (!isCurrent()) return false
+  await conn.setLocalDescription(answer)
+  if (!isCurrent()) return false
+  chat.sendWSEvent('webrtc_answer', answer)
+  return true
+}
+
+async function finishOfferNegotiation(
+  cx: Cx,
+  bound: ReturnType<typeof bindPublishSenders>,
+  isCurrent: () => boolean
+): Promise<void> {
+  await tuneBoundSenders(cx, bound.fresh)
+  if (!isCurrent()) return
+  if (!(await startWaitingScreen(cx, bound, isCurrent))) return
+  if (bound.fresh.layers?.length) {
+    await syncLayers(cx)
+  }
+}
+
+function reportNegotiationError(chat: Cx['chat'], err: unknown) {
+  console.warn('[WebRTC] Offer/Answer negotiation error:', err)
+  const message = err instanceof Error ? err.message : String(err)
+  chat.sendWSEvent('webrtc_diag', { event: 'negotiation_error', error: message })
+}
+
+function createCurrentChecker(cx: Cx, conn: RTCPeerConnection, generation: number, channelId: string): () => boolean {
+  return () => {
+    if (cx.st.pc !== conn) return false
+    if (cx.st.joinGeneration !== generation) return false
+    return cx.voice.currentChannelId === channelId
+  }
+}
+
+async function executeOfferNegotiation(
+  cx: Cx,
+  conn: RTCPeerConnection,
+  offer: RTCSessionDescriptionInit,
+  isCurrent: () => boolean
+): Promise<void> {
+  const layerLines = Math.max(0, cx.voice.serverScreenLayers - 1)
+  const sdp = prepareRemoteSdp(offer.sdp, layerLines)
+  await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
+  if (!isCurrent()) return
+  const bound = bindPublishSenders(cx, conn, offer.sdp || '', layerLines)
+  prepareTransceiverTransforms(conn)
+  if (!(await flushQueuedCandidates(cx, conn, isCurrent))) return
+  if (!(await publishAnswer(conn, cx.chat, isCurrent))) return
+  await finishOfferNegotiation(cx, bound, isCurrent)
+}
+
+async function applyRemoteOffer(
+  cx: Cx,
+  offer: RTCSessionDescriptionInit,
+  generation: number,
+  expectedConnection: RTCPeerConnection | null
+) {
+  if (!shouldApplyOffer(cx, generation, expectedConnection)) return
+  const conn = ensurePeerConnection(cx)
+  const isCurrent = createCurrentChecker(cx, conn, generation, cx.voice.currentChannelId || '')
 
   try {
-    // The screen's lower layers get the screen line's tuning, so every layer sends the same codec.
-    const layerLines = Math.max(0, voice.serverScreenLayers - 1)
-    const sdp = tuneScreenLines(restrictVideoCodecs(offer.sdp || ''), publishMids(offer.sdp, layerLines), canSendH264())
-    await conn.setRemoteDescription(new RTCSessionDescription({ type: offer.type, sdp }))
-    if (!isCurrent()) return
-    const bound = bindPublishSenders(cx, conn, offer.sdp || '', layerLines)
-    // Before the answer: a browser ignores a receiver transform that is set
-    // after its line was set up, so the track event comes too late.
-    for (const transceiver of conn.getTransceivers()) mediaCall().prepareIncoming(transceiver.receiver)
-    if (!(await flushQueuedCandidates(cx, conn, isCurrent))) return
-    const answer = await conn.createAnswer()
-    if (!isCurrent()) return
-    await conn.setLocalDescription(answer)
-    if (!isCurrent()) return
-    chat.sendWSEvent('webrtc_answer', answer)
-    await tuneBoundSenders(cx, bound.fresh)
-    if (!isCurrent()) return
-    if (!(await startWaitingScreen(cx, bound, isCurrent))) return
-    if (bound.fresh.layers?.length) await syncLayers(cx)
+    await executeOfferNegotiation(cx, conn, offer, isCurrent)
   } catch (err) {
-    if (!isCurrent()) return
-    console.warn('[WebRTC] Offer/Answer negotiation error:', err)
-    chat.sendWSEvent('webrtc_diag', { event: 'negotiation_error', error: String(err instanceof Error ? err.message : err) })
+    if (isCurrent()) reportNegotiationError(cx.chat, err)
   }
 }
 

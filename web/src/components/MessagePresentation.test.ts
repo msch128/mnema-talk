@@ -12,7 +12,7 @@ import ReplyComposerBar from './ReplyComposerBar.vue'
 import MentionSuggestions from './MentionSuggestions.vue'
 import EmojiPicker from './EmojiPicker.vue'
 import UserAvatar from './UserAvatar.vue'
-import { fixtureId, messageFixture, requireValue, userFixture } from '../test-fixtures.fixture'
+import { attachmentFixture, fixtureId, messageFixture, requireValue, userFixture } from '../test-fixtures.fixture'
 import type { ReplyPreview as Reply, MediaAttachment } from '../types/domain'
 import type { MentionSuggestion } from '../lib/mentionQuery'
 import { t } from '../i18n'
@@ -20,7 +20,7 @@ import { t } from '../i18n'
 enableAutoUnmount(afterEach)
 beforeEach(() => setActivePinia(createPinia()))
 const reply: Reply = { id: fixtureId(5), deleted: false, username: 'original', content: 'Original text' }
-const image: MediaAttachment = { id: fixtureId(6), is_deleted: false, mime_type: 'image/png', original_filename: 'image.png', size_bytes: 1, url: '/m/image' }
+const image: MediaAttachment = attachmentFixture({ id: fixtureId(6), original_filename: 'image.png', url: '/m/image' })
 const emojiStub = defineComponent({ name: 'EmojiPicker', emits: ['pick', 'close'], template: '<div data-testid="emoji-picker"></div>' })
 
 describe('MessageRow presentation and event contract', () => {

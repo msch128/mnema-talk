@@ -17,7 +17,9 @@ import (
 type nativeWireSecret struct{ value nativeSecret }
 
 func (nativeWireSecret) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native wire secret redacted]")
+	if _, err := io.WriteString(state, "[native wire secret redacted]"); err != nil {
+		return
+	}
 }
 
 func (nativeWireSecret) String() string { return "[native wire secret redacted]" }
@@ -42,7 +44,9 @@ type nativeGrantResponse struct {
 }
 
 func (nativeGrantResponse) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native wire grant redacted]")
+	if _, err := io.WriteString(state, "[native wire grant redacted]"); err != nil {
+		return
+	}
 }
 
 func (nativeGrantResponse) String() string { return "[native wire grant redacted]" }
@@ -53,13 +57,24 @@ func (nativeGrantResponse) LogValue() slog.Value {
 	return slog.StringValue("[native wire grant redacted]")
 }
 
-func writeNativeGrant(w http.ResponseWriter, grant IssuedNative) {
+func isValidNativeGrant(grant IssuedNative) bool {
 	p := grant.Principal()
-	if p.User().ID == uuid.Nil || p.FamilyID() == uuid.Nil || p.ClientInstanceID() == uuid.Nil || grant.RefreshSequence() > nativeMaxSequence || grant.access.wire() == "" || grant.refresh.wire() == "" {
+	if p.User().ID == uuid.Nil || p.FamilyID() == uuid.Nil || p.ClientInstanceID() == uuid.Nil {
+		return false
+	}
+	if grant.RefreshSequence() > nativeMaxSequence {
+		return false
+	}
+	return grant.access.wire() != "" && grant.refresh.wire() != ""
+}
+
+func writeNativeGrant(w http.ResponseWriter, grant IssuedNative) {
+	if !isValidNativeGrant(grant) {
 		httpx.WriteError(w, httpx.ErrInternal("invalid native grant"))
 		return
 	}
 
+	p := grant.Principal()
 	httpx.WriteJSON(w, http.StatusOK, nativeGrantResponse{User: grant.Principal().User(), FamilyID: p.FamilyID(), ClientInstanceID: p.ClientInstanceID(), RefreshSequence: grant.RefreshSequence(),
 		AccessToken: nativeWireSecret{value: grant.access}, RefreshToken: nativeWireSecret{value: grant.refresh},
 		AccessExpiresAt: grant.AccessExpiresAt(), FamilyExpiresAt: grant.FamilyExpiresAt()})

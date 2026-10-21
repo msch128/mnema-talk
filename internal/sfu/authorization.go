@@ -138,9 +138,23 @@ func (i *mediaAuthorizationInterceptor) BindLocalStream(info *interceptor.Stream
 		return writer // deliberate ordinary browser source and recipient.
 	}
 	return interceptor.RTPWriterFunc(func(header *rtp.Header, payload []byte, attributes interceptor.Attributes) (int, error) {
-		if (i.authorize != nil && !i.authorize()) || (source != nil && (source.authorize == nil || !source.authorize())) {
+		if i.isUnauthorized(source) {
 			return 0, io.ErrClosedPipe
 		}
 		return writer.Write(header, payload, attributes)
 	})
+}
+
+func isSourceUnauthorized(source *sourceAuthorizationBinding) bool {
+	if source == nil {
+		return false
+	}
+	return source.authorize == nil || !source.authorize()
+}
+
+func (i *mediaAuthorizationInterceptor) isUnauthorized(source *sourceAuthorizationBinding) bool {
+	if i.authorize != nil && !i.authorize() {
+		return true
+	}
+	return isSourceUnauthorized(source)
 }

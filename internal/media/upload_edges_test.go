@@ -70,19 +70,19 @@ func TestReadFileValidatesMultipartAndSize(t *testing.T) {
 		{"mime", []formPart{{name: "avatar", filename: "a.png", mime: "image/png", value: string(htmlBytes)}}, 1000, 415},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := readFile(uploadRequest(t, tc.parts...), "avatar", tc.max, avatarMIME, true)
+			_, err := readFile(uploadRequest(t, tc.parts...), readFileOptions{field: "avatar", maxBytes: tc.max, allow: avatarMIME, imageOnly: true})
 			requireAPIError(t, err, tc.status)
 		})
 	}
 	r := httptest.NewRequest(http.MethodPost, "/upload", strings.NewReader("bad"))
-	_, err := readFile(r, "avatar", 100, avatarMIME, true)
+	_, err := readFile(r, readFileOptions{field: "avatar", maxBytes: 100, allow: avatarMIME, imageOnly: true})
 	requireAPIError(t, err, 400)
 	r = uploadRequest(t, formPart{name: "avatar", filename: "a.png", mime: "image/png", value: string(pngBytes)})
 	r.Body = http.MaxBytesReader(httptest.NewRecorder(), r.Body, 10)
-	_, err = readFile(r, "avatar", 100, avatarMIME, true)
+	_, err = readFile(r, readFileOptions{field: "avatar", maxBytes: 100, allow: avatarMIME, imageOnly: true})
 	requireAPIError(t, err, 413)
 	r = uploadRequest(t, formPart{name: "avatar", filename: ".", mime: "image/png", value: string(pngBytes)})
-	in, err := readFile(r, "avatar", 100, avatarMIME, true)
+	in, err := readFile(r, readFileOptions{field: "avatar", maxBytes: 100, allow: avatarMIME, imageOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -235,13 +235,20 @@ func TestModeratorDeleteKeepsTheReasonAndTellsTheAuthor(t *testing.T) {
 		t.Fatalf("delete: %d", r.status)
 	}
 	raw, ok := conn.expect("moderation_notice", 2*time.Second)
-	if !ok || !strings.Contains(string(raw), "insult") || !strings.Contains(string(raw), "message_deleted") || !strings.Contains(string(raw), "general") {
+	if !ok {
+		t.Fatal("expected moderation notice")
+	}
+	msgText := string(raw)
+	if !strings.Contains(msgText, "insult") || !strings.Contains(msgText, "message_deleted") || !strings.Contains(msgText, "general") {
 		t.Fatalf("author not told: %s", raw)
 	}
 	var found bool
 	for _, e := range auditEntries(t, f.admin, "action=message.delete").Entries {
 		if e.TargetID == id.String() {
-			found = e.Details["reason"] == "insult" && e.Details["moderator"] == true && e.Details["content"] == "rude words"
+			hasReason := e.Details["reason"] == "insult"
+			isMod := e.Details["moderator"] == true
+			hasContent := e.Details["content"] == "rude words"
+			found = hasReason && isMod && hasContent
 		}
 	}
 	if !found {
@@ -256,6 +263,139 @@ func TestModeratorDeleteKeepsTheReasonAndTellsTheAuthor(t *testing.T) {
 	if raw, ok := conn.expect("moderation_notice", 300*time.Millisecond); ok {
 		t.Errorf("self delete sent a notice: %s", raw)
 	}
+}
+
+func bulkDeletePayload(userID uuid.UUID, count int, reason string) map[string]any {
+	return map[string]any{"user_id": userID, "count": count, "reason": reason}
+}
+
+func verifyBulkDeleteValidations(t *testing.T, f *messageModerationFixture, url string) {
+	t.Helper()
+	if r := f.user.post(url, bulkDeletePayload(f.user.user.ID, 2, "")); r.status != http.StatusForbidden {
+		t.Errorf("without the permission: %d", r.status)
+	}
+	for name, count := range map[string]int{"zero": 0, "too many": 101} {
+		if r := f.mod.post(url, bulkDeletePayload(f.user.user.ID, count, "")); r.status != http.StatusBadRequest {
+			t.Errorf("%s: %d", name, r.status)
+		}
+	}
+	if r := f.mod.post(url, bulkDeletePayload(f.user.user.ID, 2, strings.Repeat("x", 201))); r.status != http.StatusBadRequest {
+		t.Errorf("long reason: %d", r.status)
+	}
+	if r := f.mod.post(url, bulkDeletePayload(uuid.New(), 2, "")); r.status != http.StatusNotFound {
+		t.Errorf("unknown member: %d", r.status)
+	}
+	if r := f.mod.post(url, map[string]any{"user_id": "nope", "count": 1}); r.status != http.StatusBadRequest {
+		t.Errorf("bad member: %d", r.status)
+	}
+	if r := f.mod.post("/api/channels/nope/messages/bulk-delete", bulkDeletePayload(f.user.user.ID, 1, "")); r.status != http.StatusBadRequest {
+		t.Errorf("bad channel: %d", r.status)
+	}
+}
+
+func verifyBulkDeleteAttachmentsAndReplies(t *testing.T, f *messageModerationFixture, conn *wsConn, uploadedID, repliedID, keepID uuid.UUID) {
+	t.Helper()
+	url := f.path("/messages/bulk-delete")
+	res := f.mod.post(url, bulkDeletePayload(f.user.user.ID, 2, "attachments"))
+	if res.status != http.StatusOK {
+		t.Fatalf("bulk delete of attachments: %d %s", res.status, res.body)
+	}
+	var first struct{ Deleted int }
+	res.decode(t, &first)
+	if first.Deleted != 2 {
+		t.Fatalf("deleted %d, want 2", first.Deleted)
+	}
+	raw, ok := conn.expect("moderation_notice", 2*time.Second)
+	if !ok {
+		t.Fatal("expected moderation notice for attachments")
+	}
+	if !strings.Contains(string(raw), "attachments") {
+		t.Errorf("notice lacks attachments reason: %s", raw)
+	}
+	attachmentEntry, replyEntry := false, false
+	for _, e := range auditEntries(t, f.admin, "action=message.delete&limit=50").Entries {
+		if e.TargetID == uploadedID.String() {
+			list, _ := e.Details["attachments"].([]any)
+			attachmentEntry = len(list) == 1 && strings.Contains(string(mustJSON(list[0])), "evidence.png")
+		}
+		if e.TargetID == repliedID.String() {
+			replyEntry = e.Details["parent_id"] == keepID.String()
+		}
+	}
+	if !attachmentEntry || !replyEntry {
+		t.Errorf("audit lacks the attachment (%v) or the reply's parent (%v)", attachmentEntry, replyEntry)
+	}
+}
+
+func assertRemainingMessages(t *testing.T, f *messageModerationFixture, ids []uuid.UUID, keep uuid.UUID) {
+	t.Helper()
+	var listed []struct {
+		ID uuid.UUID `json:"id"`
+	}
+	f.admin.get(f.path("/messages?limit=50")).decode(t, &listed)
+	left := map[uuid.UUID]bool{}
+	for _, m := range listed {
+		left[m.ID] = true
+	}
+	for i := 2; i <= 4; i++ {
+		if left[ids[i]] {
+			t.Errorf("expected spam %d deleted, still present", i)
+		}
+	}
+	for i := 0; i <= 1; i++ {
+		if !left[ids[i]] {
+			t.Errorf("expected spam %d kept, missing", i)
+		}
+	}
+	if !left[keep] {
+		t.Errorf("expected keep message kept, missing")
+	}
+}
+
+func assertFloodingAuditEntries(t *testing.T, f *messageModerationFixture) {
+	t.Helper()
+	deleted, summary := 0, false
+	for _, e := range auditEntries(t, f.admin, "limit=100").Entries {
+		switch e.Action {
+		case "message.delete":
+			isBulk := e.Details["bulk"] == true
+			isFlooding := e.Details["reason"] == "flooding"
+			content, _ := e.Details["content"].(string)
+			if isBulk && isFlooding && strings.HasPrefix(content, "spam ") && e.ActorName == "msgmod" {
+				deleted++
+			}
+		case "moderation.bulk_delete":
+			if e.TargetName == "talker" && e.Details["deleted"] == float64(3) && e.Details["reason"] == "flooding" {
+				summary = true
+			}
+		}
+	}
+	if deleted != 3 || !summary {
+		t.Errorf("audit: %d message entries, summary %v", deleted, summary)
+	}
+}
+
+func verifyBulkDeleteFloodingMessages(t *testing.T, f *messageModerationFixture, conn *wsConn, ids []uuid.UUID, keep uuid.UUID) {
+	t.Helper()
+	url := f.path("/messages/bulk-delete")
+	res := f.mod.post(url, bulkDeletePayload(f.user.user.ID, 3, "flooding"))
+	if res.status != http.StatusOK {
+		t.Fatalf("bulk delete: %d %s", res.status, res.body)
+	}
+	var out struct{ Deleted int }
+	res.decode(t, &out)
+	if out.Deleted != 3 {
+		t.Fatalf("deleted %d", out.Deleted)
+	}
+	assertRemainingMessages(t, f, ids, keep)
+	raw, ok := conn.expect("moderation_notice", 2*time.Second)
+	if !ok {
+		t.Fatal("expected moderation notice for flooding")
+	}
+	if !strings.Contains(string(raw), "messages_deleted") || !strings.Contains(string(raw), "flooding") {
+		t.Errorf("author not told: %s", raw)
+	}
+	assertFloodingAuditEntries(t, f)
 }
 
 func TestBulkDeleteRemovesTheLatestMessagesOfOneMember(t *testing.T) {
@@ -284,102 +424,17 @@ func TestBulkDeleteRemovesTheLatestMessagesOfOneMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	url := f.path("/messages/bulk-delete")
-	body := func(user uuid.UUID, count int, reason string) map[string]any {
-		return map[string]any{"user_id": user, "count": count, "reason": reason}
-	}
 
-	if r := f.user.post(url, body(f.user.user.ID, 2, "")); r.status != http.StatusForbidden {
-		t.Errorf("without the permission: %d", r.status)
-	}
-	for name, count := range map[string]int{"zero": 0, "too many": 101} {
-		if r := f.mod.post(url, body(f.user.user.ID, count, "")); r.status != http.StatusBadRequest {
-			t.Errorf("%s: %d", name, r.status)
-		}
-	}
-	if r := f.mod.post(url, body(f.user.user.ID, 2, strings.Repeat("x", 201))); r.status != http.StatusBadRequest {
-		t.Errorf("long reason: %d", r.status)
-	}
-	if r := f.mod.post(url, body(uuid.New(), 2, "")); r.status != http.StatusNotFound {
-		t.Errorf("unknown member: %d", r.status)
-	}
-	if r := f.mod.post(url, map[string]any{"user_id": "nope", "count": 1}); r.status != http.StatusBadRequest {
-		t.Errorf("bad member: %d", r.status)
-	}
-	if r := f.mod.post("/api/channels/nope/messages/bulk-delete", body(f.user.user.ID, 1, "")); r.status != http.StatusBadRequest {
-		t.Errorf("bad channel: %d", r.status)
-	}
-
+	verifyBulkDeleteValidations(t, f, url)
 	// Count 2 takes the reply and the upload, the two latest.
-	res := f.mod.post(url, body(f.user.user.ID, 2, "attachments"))
-	if res.status != http.StatusOK {
-		t.Fatalf("bulk delete of attachments: %d %s", res.status, res.body)
-	}
-	var first struct{ Deleted int }
-	res.decode(t, &first)
-	if first.Deleted != 2 {
-		t.Fatalf("deleted %d, want 2", first.Deleted)
-	}
-	if raw, ok := conn.expect("moderation_notice", 2*time.Second); !ok || !strings.Contains(string(raw), "attachments") {
-		t.Errorf("no notice for the first bulk delete: %s", raw)
-	}
-	attachmentEntry, replyEntry := false, false
-	for _, e := range auditEntries(t, f.admin, "action=message.delete&limit=50").Entries {
-		if e.TargetID == uploaded.ID.String() {
-			list, _ := e.Details["attachments"].([]any)
-			attachmentEntry = len(list) == 1 && strings.Contains(string(mustJSON(list[0])), "evidence.png")
-		}
-		if e.TargetID == replied.ID.String() {
-			replyEntry = e.Details["parent_id"] == keep.String()
-		}
-	}
-	if !attachmentEntry || !replyEntry {
-		t.Errorf("audit lacks the attachment (%v) or the reply's parent (%v)", attachmentEntry, replyEntry)
-	}
-
-	res = f.mod.post(url, body(f.user.user.ID, 3, "flooding"))
-	if res.status != http.StatusOK {
-		t.Fatalf("bulk delete: %d %s", res.status, res.body)
-	}
-	var out struct{ Deleted int }
-	res.decode(t, &out)
-	if out.Deleted != 3 {
-		t.Fatalf("deleted %d", out.Deleted)
-	}
-	var listed []struct {
-		ID uuid.UUID `json:"id"`
-	}
-	f.admin.get(f.path("/messages?limit=50")).decode(t, &listed)
-	left := map[uuid.UUID]bool{}
-	for _, m := range listed {
-		left[m.ID] = true
-	}
-	if left[ids[4]] || left[ids[3]] || left[ids[2]] || !left[ids[1]] || !left[ids[0]] || !left[keep] {
-		t.Errorf("wrong messages left: %v", left)
-	}
-	if raw, ok := conn.expect("moderation_notice", 2*time.Second); !ok || !strings.Contains(string(raw), "messages_deleted") || !strings.Contains(string(raw), "flooding") {
-		t.Errorf("author not told: %s", raw)
-	}
-
-	deleted, summary := 0, false
-	for _, e := range auditEntries(t, f.admin, "limit=100").Entries {
-		switch e.Action {
-		case "message.delete":
-			if e.Details["bulk"] == true && e.Details["reason"] == "flooding" && strings.HasPrefix(e.Details["content"].(string), "spam ") && e.ActorName == "msgmod" {
-				deleted++
-			}
-		case "moderation.bulk_delete":
-			summary = summary || (e.TargetName == "talker" && e.Details["deleted"] == float64(3) && e.Details["reason"] == "flooding")
-		}
-	}
-	if deleted != 3 || !summary {
-		t.Errorf("audit: %d message entries, summary %v", deleted, summary)
-	}
+	verifyBulkDeleteAttachmentsAndReplies(t, f, conn, uploaded.ID, replied.ID, keep)
+	verifyBulkDeleteFloodingMessages(t, f, conn, ids, keep)
 }
 
 func TestBulkDeleteRespectsHierarchyAndTheOwner(t *testing.T) {
 	f := newMessageModerationFixture(t, false)
 	url := f.path("/messages/bulk-delete")
-	ownerMsg := f.a.send(f.admin, f.channel, "owner words")
+	f.a.send(f.admin, f.channel, "owner words")
 	if r := f.mod.post(url, map[string]any{"user_id": f.admin.user.ID, "count": 5}); r.status != http.StatusForbidden {
 		t.Errorf("the Owner's messages: %d", r.status)
 	}
@@ -407,7 +462,6 @@ func TestBulkDeleteRespectsHierarchyAndTheOwner(t *testing.T) {
 	if res.status != http.StatusOK || out.Deleted != 1 {
 		t.Errorf("Owner bulk delete: %d %d", res.status, out.Deleted)
 	}
-	_ = ownerMsg
 	// Nobody outside the channel's audience can moderate it.
 	secret := f.a.createChannel(f.admin, "secret", "text")
 	if r := putOverwrites(f.admin, "channels", secret, overwrite("role", everyoneID(t, f.admin), 0, perm.ViewChannel)); r.status != http.StatusNoContent {

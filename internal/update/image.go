@@ -77,17 +77,15 @@ func ImageReach(image, latest string) (Reach, string) {
 	if !ok {
 		return ReachUnknown, ReasonCustomTag
 	}
+	return matchTrack(tag, l)
+}
+
+func matchTrack(tag string, l Semver) (Reach, string) {
 	if m := majorTag.FindStringSubmatch(tag); m != nil {
-		if atoi(m[1]) == l.Major {
-			return ReachYes, ReasonFollows
-		}
-		return ReachNo, ReasonTrackMismatch
+		return matchMajorTrack(m, l)
 	}
 	if m := majorMinorTag.FindStringSubmatch(tag); m != nil {
-		if atoi(m[1]) == l.Major && atoi(m[2]) == l.Minor {
-			return ReachYes, ReasonFollows
-		}
-		return ReachNo, ReasonTrackMismatch
+		return matchMajorMinorTrack(m, l)
 	}
 	if _, ok := ParseSemver(tag); ok {
 		return ReachNo, ReasonPinned
@@ -95,7 +93,22 @@ func ImageReach(image, latest string) (Reach, string) {
 	return ReachUnknown, ReasonCustomTag
 }
 
-func atoi(s string) int {
-	n, _ := strconv.Atoi(s)
-	return n
+func matchMajorTrack(m []string, l Semver) (Reach, string) {
+	val, err := strconv.Atoi(m[1])
+	if err == nil && val == l.Major {
+		return ReachYes, ReasonFollows
+	}
+	return ReachNo, ReasonTrackMismatch
+}
+
+func matchMajorMinorTrack(m []string, l Semver) (Reach, string) {
+	major, err1 := strconv.Atoi(m[1])
+	minor, err2 := strconv.Atoi(m[2])
+	if err1 != nil || err2 != nil {
+		return ReachNo, ReasonTrackMismatch
+	}
+	if major == l.Major && minor == l.Minor {
+		return ReachYes, ReasonFollows
+	}
+	return ReachNo, ReasonTrackMismatch
 }

@@ -148,12 +148,18 @@ func (p *Peer) applyEarlyCandidates() {
 	early := p.cands.early
 	p.cands.early = nil
 	p.candMu.Unlock()
+	var dropped []error
 	for _, c := range early {
 		if err := p.PC.AddICECandidate(c); err != nil {
-			p.candMu.Lock()
-			p.candidateDropped(err)
-			p.candMu.Unlock()
+			dropped = append(dropped, err)
 		}
+	}
+	if len(dropped) > 0 {
+		p.candMu.Lock()
+		for _, err := range dropped {
+			p.candidateDropped(err)
+		}
+		p.candMu.Unlock()
 	}
 }
 
@@ -194,6 +200,28 @@ func candidateDropReason(err error) string {
 	}
 }
 
+func isPrintableASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < 0x20 || s[i] > 0x7e {
+			return false
+		}
+	}
+	return true
+}
+
+func vetCandidateAddresses(parsed ice.Candidate, allowLoopback bool) error {
+	if !routableCandidateAddress(parsed.Address(), allowLoopback) {
+		return errCandidateAddress
+	}
+	rel := parsed.RelatedAddress()
+	if rel != nil && rel.Address != "" {
+		if !routableCandidateAddress(rel.Address, allowLoopback) {
+			return errCandidateAddress
+		}
+	}
+	return nil
+}
+
 // vetRemoteCandidate refuses candidates that would make the server probe
 // addresses a member has no business pointing it at: mDNS names (each costs
 // a multicast query and a goroutine), names in general, and unspecified,
@@ -204,16 +232,8 @@ func vetRemoteCandidate(candidate string, allowLoopback bool) error {
 	if candidate == "" {
 		return nil
 	}
-	if len(candidate) > maxCandidateLen {
+	if len(candidate) > maxCandidateLen || !isPrintableASCII(candidate) {
 		return errCandidateInvalid
-	}
-	// Plain printable ASCII and single spaces only: Pion splits on its own
-	// idea of a separator, and anything else (tabs, NBSP, NEL, controls)
-	// could make the two readings differ.
-	for i := 0; i < len(candidate); i++ {
-		if b := candidate[i]; b < 0x20 || b > 0x7e {
-			return errCandidateInvalid
-		}
 	}
 	// Pion's own parser, on the same text Pion will be given, so what is
 	// vetted is exactly what is applied.
@@ -221,13 +241,18 @@ func vetRemoteCandidate(candidate string, allowLoopback bool) error {
 	if err != nil {
 		return errCandidateInvalid
 	}
-	if !routableCandidateAddress(parsed.Address(), allowLoopback) {
-		return errCandidateAddress
+	return vetCandidateAddresses(parsed, allowLoopback)
+}
+
+func isDisallowedAddr(addr netip.Addr) bool {
+	switch {
+	case addr.IsUnspecified(), addr.IsMulticast():
+		return true
+	case addr.IsLinkLocalUnicast(), addr.IsLinkLocalMulticast():
+		return true
+	default:
+		return false
 	}
-	if rel := parsed.RelatedAddress(); rel != nil && rel.Address != "" && !routableCandidateAddress(rel.Address, allowLoopback) {
-		return errCandidateAddress
-	}
-	return nil
 }
 
 // routableCandidateAddress accepts an IP literal that is not unspecified,
@@ -239,7 +264,7 @@ func routableCandidateAddress(host string, allowLoopback bool) bool {
 		return false
 	}
 	addr = addr.Unmap()
-	if addr.IsUnspecified() || addr.IsMulticast() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() {
+	if isDisallowedAddr(addr) {
 		return false
 	}
 	return allowLoopback || !addr.IsLoopback()

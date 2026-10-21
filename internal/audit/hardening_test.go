@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -105,3 +106,33 @@ func (c *capturingDB) Exec(_ context.Context, _ string, args ...any) (pgconn.Com
 }
 func (c *capturingDB) Query(context.Context, string, ...any) (pgx.Rows, error) { return nil, nil }
 func (c *capturingDB) QueryRow(context.Context, string, ...any) pgx.Row        { return nil }
+
+type brokenBody struct {
+	data []byte
+	err  error
+}
+
+func (b *brokenBody) Read(p []byte) (int, error) {
+	if len(b.data) > 0 {
+		n := copy(p, b.data)
+		b.data = b.data[n:]
+		return n, nil
+	}
+	return 0, b.err
+}
+
+func (*brokenBody) Close() error { return nil }
+
+func TestPeekRequestKeepsTheBodyAfterAReadError(t *testing.T) {
+	boom := errors.New("connection reset")
+	r := httptest.NewRequest(http.MethodPost, "/api/x", nil)
+	r.Body = &brokenBody{data: []byte(`{"name":"a`), err: boom}
+	req, mark := peekRequest(r, false)
+	if req != nil || mark != "request_unparsed" {
+		t.Fatalf("got %v %q", req, mark)
+	}
+	got, err := io.ReadAll(r.Body)
+	if string(got) != `{"name":"a` || !errors.Is(err, boom) {
+		t.Fatalf("handler sees %q, %v; want the bytes read so far and the error", got, err)
+	}
+}

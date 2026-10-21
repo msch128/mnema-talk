@@ -6,6 +6,13 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func isInvalidAuthorizedPrincipal(principal NativePrincipal, action func(context.Context, pgx.Tx, User) error) bool {
+	if principal.user.ID == uuid.Nil || principal.familyID == uuid.Nil {
+		return true
+	}
+	return principal.instanceID == uuid.Nil || action == nil
+}
+
 // WithAuthorizedTransaction serializes a native mutation with account and family
 // revocation. The principal must originate from AuthenticateAccess. This grants
 // transport authorization only, never device, group or ciphertext authenticity.
@@ -15,7 +22,7 @@ import (
 // not extend that deadline. Actions receive the current account, and must not
 // leak transaction handles.
 func (s *NativeSessions) WithAuthorizedTransaction(ctx context.Context, principal NativePrincipal, action func(context.Context, pgx.Tx, User) error) error {
-	if principal.user.ID == uuid.Nil || principal.familyID == uuid.Nil || principal.instanceID == uuid.Nil || action == nil {
+	if isInvalidAuthorizedPrincipal(principal, action) {
 		return ErrNativeUnauthorized
 	}
 	ctx, cancel := context.WithTimeout(ctx, nativeQueryTimeout)

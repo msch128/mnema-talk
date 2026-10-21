@@ -5,9 +5,37 @@ import (
 	"net/url"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/msch128/mnema-talk/internal/auth"
 	"github.com/msch128/mnema-talk/internal/perm"
 )
+
+func extractEmojiParam(r *http.Request) (string, error) {
+	raw := chi.URLParam(r, "emoji")
+	if decoded, err := url.PathUnescape(raw); err == nil {
+		raw = decoded
+	}
+	return ValidateEmoji(raw)
+}
+
+func (h *Handler) hasReaction(r *http.Request, msgID, userID uuid.UUID, emoji string) (bool, error) {
+	var has bool
+	err := h.DB.QueryRow(r.Context(),
+		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
+		msgID, userID, emoji).Scan(&has)
+	return has, err
+}
+
+func (h *Handler) applyBotReactionChange(r *http.Request, msgID, userID, channelID uuid.UUID, emoji string, canAdd bool) error {
+	reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, userID, emoji, canAdd)
+	if err != nil {
+		return err
+	}
+	h.Events.BroadcastChannel(channelID, "message_reaction", ReactionResult{
+		MessageID: msgID, ChannelID: channelID, Reactions: reactions,
+	})
+	return nil
+}
 
 // setBotReaction adds (want) or removes the bot's reaction, idempotently.
 func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bool) error {
@@ -16,13 +44,7 @@ func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bo
 	if err != nil {
 		return err
 	}
-	// The router hands over the segment decoded or not, depending on the bytes
-	// in it: decode what still looks encoded.
-	raw := chi.URLParam(r, "emoji")
-	if decoded, err := url.PathUnescape(raw); err == nil {
-		raw = decoded
-	}
-	emoji, err := ValidateEmoji(raw)
+	emoji, err := extractEmojiParam(r)
 	if err != nil {
 		return err
 	}
@@ -33,18 +55,14 @@ func (h *Handler) setBotReaction(w http.ResponseWriter, r *http.Request, want bo
 	if !p.Has(perm.ViewChannel) {
 		return errMessageNotFound
 	}
-	var has bool
-	if err := h.DB.QueryRow(r.Context(),
-		`SELECT EXISTS (SELECT 1 FROM message_reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3)`,
-		msgID, user.ID, emoji).Scan(&has); err != nil {
+	has, err := h.hasReaction(r, msgID, user.ID, emoji)
+	if err != nil {
 		return err
 	}
 	if has != want {
-		reactions, err := ToggleReactionAs(r.Context(), h.DB, msgID, user.ID, emoji, p.Has(perm.AddReactions))
-		if err != nil {
+		if err := h.applyBotReactionChange(r, msgID, user.ID, ref.ChannelID, emoji, p.Has(perm.AddReactions)); err != nil {
 			return err
 		}
-		h.Events.BroadcastChannel(ref.ChannelID, "message_reaction", ReactionResult{MessageID: msgID, ChannelID: ref.ChannelID, Reactions: reactions})
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil

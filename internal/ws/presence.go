@@ -90,19 +90,27 @@ type botState struct {
 // activity: offline without a gateway connection and when the bot is
 // invisible; idle is shown as away. Callers hold h.mu.
 func (h *Hub) botVisibleLocked(id uuid.UUID) (string, *BotActivity) {
-	if !h.botLive[id] {
+	status := h.botVisibleStatusLocked(id)
+	if status == StatusOffline {
 		return StatusOffline, nil
+	}
+	return status, h.botState[id].activity
+}
+
+func (h *Hub) botVisibleStatusLocked(id uuid.UUID) string {
+	if !h.botLive[id] {
+		return StatusOffline
 	}
 	st := h.botState[id]
 	switch st.status {
 	case "invisible":
-		return StatusOffline, nil
+		return StatusOffline
 	case "idle":
-		return auth.PresenceAway, st.activity
+		return auth.PresenceAway
 	case auth.PresenceDND:
-		return auth.PresenceDND, st.activity
+		return auth.PresenceDND
 	}
-	return auth.PresenceOnline, st.activity
+	return auth.PresenceOnline
 }
 
 func botPresenceEvent(id uuid.UUID, status string, activity *BotActivity) map[string]any {
@@ -186,7 +194,7 @@ func (h *Hub) presenceSnapshot() map[uuid.UUID]string {
 		out[id] = h.statusLocked(id)
 	}
 	for id := range h.botLive {
-		if status, _ := h.botVisibleLocked(id); status != StatusOffline {
+		if status := h.botVisibleStatusLocked(id); status != StatusOffline {
 			out[id] = status
 		}
 	}

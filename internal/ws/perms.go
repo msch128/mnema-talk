@@ -156,20 +156,9 @@ func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 	if !ok {
 		return
 	}
-	var want map[uuid.UUID]bool
-	if userIDs != nil {
-		want = make(map[uuid.UUID]bool, len(userIDs))
-		for _, id := range userIDs {
-			want[id] = true
-		}
-	}
+	want := wantUserIDs(userIDs)
 	h.mu.RLock()
-	clients := make([]*Client, 0, len(h.clients))
-	for c := range h.clients {
-		if want == nil || want[c.User.ID] {
-			clients = append(clients, c)
-		}
-	}
+	clients := filterPermClients(h.clients, want)
 	h.mu.RUnlock()
 	for _, c := range clients {
 		c.notifyPermissions()
@@ -178,6 +167,27 @@ func (h *Hub) PermissionsChanged(userIDs []uuid.UUID) {
 		return
 	}
 	h.enforceVoiceAccess(snap, want)
+}
+
+func filterPermClients(clients map[*Client]struct{}, want map[uuid.UUID]bool) []*Client {
+	out := make([]*Client, 0, len(clients))
+	for c := range clients {
+		if want == nil || want[c.User.ID] {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func wantUserIDs(userIDs []uuid.UUID) map[uuid.UUID]bool {
+	if userIDs == nil {
+		return nil
+	}
+	want := make(map[uuid.UUID]bool, len(userIDs))
+	for _, id := range userIDs {
+		want[id] = true
+	}
+	return want
 }
 
 // enforceVoiceAccess removes every member of a Talk (present or lingering in

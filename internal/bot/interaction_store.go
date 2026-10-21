@@ -63,7 +63,9 @@ type interactionStore struct {
 
 func (s *interactionStore) add(id uuid.UUID, in *interaction) (token string, ok bool) {
 	raw := make([]byte, 24)
-	_, _ = rand.Read(raw)
+	if _, err := rand.Read(raw); err != nil {
+		panic(err)
+	}
 	token = base64.RawURLEncoding.EncodeToString(raw)
 	in.hash = sha256.Sum256([]byte(token))
 	in.created = s.now()
@@ -85,27 +87,41 @@ func (s *interactionStore) add(id uuid.UUID, in *interaction) (token string, ok 
 
 var errUnknownInteraction = httpx.ErrNotFound("unknown interaction")
 
+func matchInteraction(in *interaction, botID uuid.UUID, sum [32]byte) bool {
+	if in == nil || in.botID != botID {
+		return false
+	}
+	return subtle.ConstantTimeCompare(in.hash[:], sum[:]) == 1
+}
+
+func validateInteractionState(in *interaction, callback bool) error {
+	switch {
+	case callback && in.called:
+		return httpx.ErrConflict("the interaction already has a response")
+	case !callback && !in.called:
+		return httpx.ErrConflict("respond to the interaction first")
+	case in.responses >= maxResponses:
+		return httpx.ErrConflict(fmt.Sprintf("an interaction takes at most %d responses", maxResponses))
+	default:
+		return nil
+	}
+}
+
 // claim finds an interaction for its bot and token and counts one response.
 func (s *interactionStore) claim(id uuid.UUID, token string, botID uuid.UUID, callback bool) (*interaction, error) {
 	sum := sha256.Sum256([]byte(token))
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	in := s.m[id]
-	if in == nil || in.botID != botID || subtle.ConstantTimeCompare(in.hash[:], sum[:]) != 1 {
+	if !matchInteraction(in, botID, sum) {
 		return nil, errUnknownInteraction
 	}
 	if s.now().Sub(in.created) > interactionTTL {
 		delete(s.m, id)
 		return nil, errUnknownInteraction
 	}
-	if callback && in.called {
-		return nil, httpx.ErrConflict("the interaction already has a response")
-	}
-	if !callback && !in.called {
-		return nil, httpx.ErrConflict("respond to the interaction first")
-	}
-	if in.responses >= maxResponses {
-		return nil, httpx.ErrConflict(fmt.Sprintf("an interaction takes at most %d responses", maxResponses))
+	if err := validateInteractionState(in, callback); err != nil {
+		return nil, err
 	}
 	if callback {
 		in.called = true

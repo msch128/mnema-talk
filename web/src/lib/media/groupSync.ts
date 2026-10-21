@@ -27,6 +27,40 @@ export abstract class GroupSync extends GroupEpoch {
     })
   }
 
+  private pruneFirstSeen(others: string[]) {
+    for (const id of [...this.firstSeen.keys()]) {
+      if (!others.includes(id)) this.firstSeen.delete(id)
+    }
+  }
+
+  private isKnownOrHigher(id: string, tree: Map<string, number> | null): boolean {
+    if (id > this.userId) return true
+    return (tree?.has(id) || this.heard.has(id)) ?? false
+  }
+
+  private filterReachableOthers(others: string[], tree: Map<string, number> | null, now: number): { kept: string[]; wait: number } {
+    let wait = Infinity
+    const kept = others.filter((id) => {
+      if (this.isKnownOrHigher(id, tree)) return true
+      const since = this.firstSeen.get(id) ?? now
+      this.firstSeen.set(id, since)
+      const left = TAKEOVER_MS - (now - since)
+      if (left > 0) wait = Math.min(wait, left)
+      return left > 0
+    })
+    return { kept, wait }
+  }
+
+  private scheduleTakeover(wait: number) {
+    if (this.takeoverTimer !== null) clearTimeout(this.takeoverTimer)
+    this.takeoverTimer = null
+    if (wait === Infinity) return
+    this.takeoverTimer = setTimeout(() => {
+      this.takeoverTimer = null
+      void this.enqueue(async () => (this.closed ? null : this.syncNow(this.lastRoster, false))).then(step => step && this.stepListener(step))
+    }, wait + 50)
+  }
+
   /**
    * Leaves out lower ids the room lists but that have never been heard from
    * after TAKEOVER_MS, so one client that cannot speak MLS does not wedge the
@@ -35,24 +69,9 @@ export abstract class GroupSync extends GroupEpoch {
   protected reachable(others: string[]): string[] {
     const now = clock.now()
     const tree = this.state ? treeMembers(this.state) : null
-    for (const id of [...this.firstSeen.keys()]) if (!others.includes(id)) this.firstSeen.delete(id)
-    let wait = Infinity
-    const kept = others.filter((id) => {
-      if (id > this.userId || tree?.has(id) || this.heard.has(id)) return true
-      const since = this.firstSeen.get(id) ?? now
-      this.firstSeen.set(id, since)
-      const left = TAKEOVER_MS - (now - since)
-      if (left > 0) wait = Math.min(wait, left)
-      return left > 0
-    })
-    if (this.takeoverTimer !== null) clearTimeout(this.takeoverTimer)
-    this.takeoverTimer = null
-    if (wait !== Infinity) {
-      this.takeoverTimer = setTimeout(() => {
-        this.takeoverTimer = null
-        void this.enqueue(async () => (this.closed ? null : this.syncNow(this.lastRoster, false))).then(step => step && this.stepListener(step))
-      }, wait + 50)
-    }
+    this.pruneFirstSeen(others)
+    const { kept, wait } = this.filterReachableOthers(others, tree, now)
+    this.scheduleTakeover(wait)
     return kept
   }
 
@@ -121,17 +140,21 @@ export abstract class GroupSync extends GroupEpoch {
     }
   }
 
+  private shouldYieldToLeader(lead: string | null): boolean {
+    if (!this.state || lead === null) return false
+    return lead < this.userId && treeMembers(this.state).size === 1
+  }
+
   protected async syncNow(roster: readonly string[], resend: boolean): Promise<MediaStep> {
     if (this.closed) return this.step()
     const wires: Uint8Array[] = []
     const others = this.refreshRoom(roster)
-    const state = this.state
     // A group is never given up because a lower id arrives: the newcomer
     // offers its package and is let in. Only a group of one, which nobody
     // else depends on, steps aside for a lower id, so that two members who
     // each found an empty room end up in one group.
     const lead = lowest(others)
-    if (state && lead !== null && lead < this.userId && treeMembers(state).size === 1) {
+    if (this.shouldYieldToLeader(lead)) {
       await this.leave()
     }
     await this.establishGroup(others, resend, wires)

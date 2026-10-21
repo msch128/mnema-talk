@@ -1,8 +1,8 @@
 import type { VueWrapper, DOMWrapper } from '@vue/test-utils'
 import type { ApiOptions } from '../lib/api'
-import type { Channel, ChannelType, Category, LayoutRequest } from '../types/domain'
+import type { Channel, ChannelType, Category } from '../types/domain'
 import type { ConfirmRequest } from '../lib/confirm'
-import { userFixture, channelFixture, categoryFixture, requireValue } from '../test-fixtures.fixture'
+import { userFixture, channelFixture, categoryFixture, requireValue, parseLayoutRequestBody } from '../test-fixtures.fixture'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import { setActivePinia, createPinia } from 'pinia'
@@ -15,27 +15,20 @@ interface Tree { uncategorized: Channel[]; categories: Category[] }
 interface Call { url: string; method: string; json: unknown }
 interface Waiting { url: string; json: unknown; resolve: (value: unknown) => void; reject: (reason: unknown) => void }
 const h = vi.hoisted((): { server: Tree; waiting: Waiting[]; calls: Call[] } => ({ server: { uncategorized: [], categories: [] }, waiting: [], calls: [] }))
-function layoutBody(value: unknown): Required<LayoutRequest> {
-  if (!value || typeof value !== 'object' || !('channels' in value) || !('categories' in value) || !Array.isArray(value.channels) || !Array.isArray(value.categories)) throw new Error('Expected layout request')
-  return {
-    channels: value.channels.map((entry: unknown) => {
-      if (!entry || typeof entry !== 'object' || !('id' in entry) || typeof entry.id !== 'string' || !('sort_order' in entry) || typeof entry.sort_order !== 'number' || !('category_id' in entry) || (entry.category_id !== null && typeof entry.category_id !== 'string')) throw new Error('Expected channel move')
-      return { id: entry.id, sort_order: entry.sort_order, category_id: entry.category_id }
-    }),
-    categories: value.categories.map((entry: unknown) => {
-      if (!entry || typeof entry !== 'object' || !('id' in entry) || typeof entry.id !== 'string' || !('sort_order' in entry) || typeof entry.sort_order !== 'number') throw new Error('Expected category move')
-      return { id: entry.id, sort_order: entry.sort_order }
-    }),
-  }
-}
+const layoutBody = parseLayoutRequestBody
 function layoutCall(call: Call | undefined) { const c = requireValue(call); return { ...c, json: layoutBody(c.json) } }
+
+function isWaitingEndpoint(url: string, method?: string): boolean {
+  if (url === '/api/admin/layout' || url.endsWith('/duplicate')) return true
+  return url === '/api/admin/categories' && method === 'POST'
+}
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/api')>()),
   api: vi.fn((url: string, opts: ApiOptions = {}) => {
     h.calls.push({ url, method: opts.method || 'GET', json: opts.json })
     if (url === '/api/channels') return Promise.resolve(JSON.parse(JSON.stringify(h.server)))
-    if (url === '/api/admin/layout' || url.endsWith('/duplicate') || (url === '/api/admin/categories' && opts.method === 'POST')) {
+    if (isWaitingEndpoint(url, opts.method)) {
       return new Promise((resolve, reject) => h.waiting.push({ url, json: opts.json, resolve, reject }))
     }
     return Promise.resolve(null)

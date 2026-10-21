@@ -221,7 +221,7 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.Events.BroadcastChannel(msg.ChannelID, "message_create", msg)
-	if wait, _ := strconv.ParseBool(r.URL.Query().Get("wait")); wait {
+	if wait, err := strconv.ParseBool(r.URL.Query().Get("wait")); err == nil && wait {
 		httpx.WriteJSON(w, http.StatusOK, msg)
 		return
 	}
@@ -263,30 +263,15 @@ func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*ch
 
 // build validates a parsed request into a message and the mention policy.
 func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *request) (*chat.NewMessage, chat.MentionPolicy, error) {
-	p := req.payload
-	content, err := chat.ValidateContent(p.Content, true)
-	if err != nil {
-		return nil, chat.MentionPolicy{}, formError(err.Error())
-	}
-	name, err := senderName(rec, p)
+	content, name, embeds, err := validatePayloadContent(rec, req)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, err
-	}
-	if err := checkAllowed(rec, req); err != nil {
-		return nil, chat.MentionPolicy{}, err
-	}
-	embeds, err := sanitizeEmbeds(p.Embeds)
-	if err != nil {
-		return nil, chat.MentionPolicy{}, err
-	}
-	if content == "" && len(embeds) == 0 && len(req.files) == 0 {
-		return nil, chat.MentionPolicy{}, emptyMessage{}
 	}
 	parent, err := h.threadParent(ctx, r, rec)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, err
 	}
-	policy, err := h.mentionPolicy(ctx, rec, p.AllowedMentions)
+	policy, err := h.mentionPolicy(ctx, rec, req.payload.AllowedMentions)
 	if err != nil {
 		return nil, chat.MentionPolicy{}, err
 	}
@@ -294,6 +279,33 @@ func (h *Handler) build(ctx context.Context, r *http.Request, rec *record, req *
 		ChannelID: rec.ChannelID, UserID: rec.botUserID, Content: content, ParentID: parent,
 		WebhookID: &rec.ID, AuthorName: name, Embeds: embeds,
 	}, policy, nil
+}
+
+func validatePayloadContent(rec *record, req *request) (string, string, []chat.Embed, error) {
+	p := req.payload
+	content, err := chat.ValidateContent(p.Content, true)
+	if err != nil {
+		return "", "", nil, formError(err.Error())
+	}
+	name, err := senderName(rec, p)
+	if err != nil {
+		return "", "", nil, err
+	}
+	if err := checkAllowed(rec, req); err != nil {
+		return "", "", nil, err
+	}
+	embeds, err := sanitizeEmbeds(p.Embeds)
+	if err != nil {
+		return "", "", nil, err
+	}
+	if isEmptyPayload(content, embeds, len(req.files)) {
+		return "", "", nil, emptyMessage{}
+	}
+	return content, name, embeds, nil
+}
+
+func isEmptyPayload(content string, embeds []chat.Embed, filesCount int) bool {
+	return content == "" && len(embeds) == 0 && filesCount == 0
 }
 
 // senderName is the webhook's name, or the request's username when the

@@ -13,31 +13,48 @@ import (
 
 // checkOptions validates the values against the command's options.
 func (c *Commands) checkOptions(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, cmd Command, given map[string]any) ([]map[string]any, error) {
-	declared := map[string]Option{}
-	for _, o := range cmd.Options {
-		declared[o.Name] = o
+	if err := validateKnownOptions(cmd, given); err != nil {
+		return nil, err
 	}
-	for name := range given {
-		if _, ok := declared[name]; !ok {
-			return nil, httpx.ErrInvalidInput("unknown option: " + name)
-		}
-	}
-	out := []map[string]any{}
+	out := make([]map[string]any, 0, len(given))
 	for _, o := range cmd.Options {
-		v, present := given[o.Name]
-		if !present || v == nil {
-			if o.Required {
-				return nil, httpx.ErrInvalidInput("missing option: " + o.Name)
-			}
-			continue
-		}
-		val, err := c.checkValue(r, snap, user, ch, o, v)
+		entry, err := c.evaluateOption(r, snap, user, ch, o, given)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, map[string]any{"name": o.Name, "type": o.Type, "value": val})
+		if entry != nil {
+			out = append(out, entry)
+		}
 	}
 	return out, nil
+}
+
+func validateKnownOptions(cmd Command, given map[string]any) error {
+	declared := make(map[string]struct{}, len(cmd.Options))
+	for _, o := range cmd.Options {
+		declared[o.Name] = struct{}{}
+	}
+	for name := range given {
+		if _, ok := declared[name]; !ok {
+			return httpx.ErrInvalidInput("unknown option: " + name)
+		}
+	}
+	return nil
+}
+
+func (c *Commands) evaluateOption(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, o Option, given map[string]any) (map[string]any, error) {
+	v, present := given[o.Name]
+	if !present || v == nil {
+		if o.Required {
+			return nil, httpx.ErrInvalidInput("missing option: " + o.Name)
+		}
+		return nil, nil
+	}
+	val, err := c.checkValue(r, snap, user, ch, o, v)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"name": o.Name, "type": o.Type, "value": val}, nil
 }
 
 func (c *Commands) checkValue(r *http.Request, snap *perm.Snapshot, user *auth.User, ch uuid.UUID, o Option, v any) (any, error) {

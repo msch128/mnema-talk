@@ -14,6 +14,38 @@ function isTypingTarget(el: EventTarget | null) {
   return el instanceof HTMLElement && (el.isContentEditable || !!el.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
 }
 
+function hasModifierOrComposition(e: KeyboardEvent): boolean {
+  if (e.ctrlKey || e.metaKey || e.altKey) return true
+  return Boolean(e.repeat || e.isComposing || e.defaultPrevented)
+}
+
+function isModalOrMenuOpen(target: EventTarget | null): boolean {
+  if (target instanceof Element && target.closest('[role="dialog"], [role="menu"]')) {
+    return true
+  }
+  return Boolean(document.querySelector('[aria-modal="true"]'))
+}
+
+function inTalkView(el: EventTarget | null, rootElement: HTMLElement | null) {
+  if (!el || el === document.body || el === document.documentElement) return true
+  return el instanceof Node && Boolean(rootElement?.contains(el))
+}
+
+function isStageFullscreenKey(e: KeyboardEvent): boolean {
+  return e.key === 'f' || e.key === 'F'
+}
+
+function isPttCollision(voiceStore: VoiceStore, code: string): boolean {
+  return voiceStore.inputMode === 'ptt' && voiceStore.pttKey === code
+}
+
+function canToggleStageFullscreen(e: KeyboardEvent, rootElement: HTMLElement | null, voiceStore: VoiceStore): boolean {
+  if (!isStageFullscreenKey(e) || hasModifierOrComposition(e)) return false
+  if (!inTalkView(e.target, rootElement) || isTypingTarget(e.target)) return false
+  if (isModalOrMenuOpen(e.target)) return false
+  return !isPttCollision(voiceStore, e.code)
+}
+
 interface Options {
   /** The element that goes full screen (the stage), once there is one. */
   container: () => HTMLElement | null
@@ -77,15 +109,8 @@ export function useStageFullscreen({ container, root, connected, stage, toggleCa
   // F toggles the stage's full screen, like in a video player: while the
   // focus is in the Talk view (or nowhere), not while typing, with a dialog or
   // menu open, or when F is the push-to-talk key.
-  function inTalkView(el: EventTarget | null) {
-    return !el || el === document.body || el === document.documentElement || el instanceof Node && !!root.value?.contains(el)
-  }
   function onKeydown(e: KeyboardEvent) {
-    if (e.key !== 'f' && e.key !== 'F') return
-    if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.isComposing || e.defaultPrevented) return
-    if (!inTalkView(e.target) || isTypingTarget(e.target)) return
-    if ((e.target instanceof Element && e.target.closest('[role="dialog"], [role="menu"]')) || document.querySelector('[aria-modal="true"]')) return
-    if (voiceStore.inputMode === 'ptt' && voiceStore.pttKey === e.code) return
+    if (!canToggleStageFullscreen(e, root.value, voiceStore)) return
     if (!container()) return
     e.preventDefault()
     toggleFullscreen()

@@ -87,31 +87,45 @@ func (in CommandInput) Clean() (CommandInput, error) {
 	return in, nil
 }
 
+func isValidOptionType(t int) bool {
+	switch t {
+	case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
+		return true
+	default:
+		return false
+	}
+}
+
+func cleanOptionEntry(o *Option, seen map[string]bool) error {
+	if !nameRE.MatchString(o.Name) || seen[o.Name] {
+		return httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
+	}
+	seen[o.Name] = true
+	d, err := httpx.CleanText("option description", o.Description, 100, true)
+	if err != nil {
+		return err
+	}
+	o.Description = d
+	if !isValidOptionType(o.Type) {
+		return httpx.ErrInvalidInput("unknown option type")
+	}
+	return nil
+}
+
 // cleanOptions validates option names, descriptions, types and order, and
 // normalizes the descriptions in place.
 func cleanOptions(opts []Option) error {
 	seen := map[string]bool{}
 	optional := false
-	for i, o := range opts {
-		if !nameRE.MatchString(o.Name) || seen[o.Name] {
-			return httpx.ErrInvalidInput("option names are 1 to 32 lowercase letters, digits, - or _, and unique")
-		}
-		seen[o.Name] = true
-		d, err := httpx.CleanText("option description", o.Description, 100, true)
-		if err != nil {
+	for i := range opts {
+		if err := cleanOptionEntry(&opts[i], seen); err != nil {
 			return err
 		}
-		opts[i].Description = d
-		switch o.Type {
-		case OptionString, OptionInteger, OptionBoolean, OptionUser, OptionChannel:
-		default:
-			return httpx.ErrInvalidInput("unknown option type")
-		}
 		// As in Discord, required options come first.
-		if o.Required && optional {
+		if opts[i].Required && optional {
 			return httpx.ErrInvalidInput("required options must come before optional ones")
 		}
-		optional = optional || !o.Required
+		optional = optional || !opts[i].Required
 	}
 	return nil
 }
@@ -139,7 +153,10 @@ func ListCommands(ctx context.Context, q db.Querier, botID uuid.UUID) ([]Command
 }
 
 func upsert(ctx context.Context, q db.Querier, botID uuid.UUID, in CommandInput) (Command, error) {
-	opts, _ := json.Marshal(in.Options) // plain data: cannot fail
+	opts, err := json.Marshal(in.Options)
+	if err != nil {
+		return Command{}, fmt.Errorf("marshal options: %w", err)
+	}
 	return scanCommand(q.QueryRow(ctx, `
 		INSERT INTO bot_commands (bot_id, name, description, options) VALUES ($1, $2, $3, $4)
 		ON CONFLICT (bot_id, name) DO UPDATE SET description = EXCLUDED.description, options = EXCLUDED.options, updated_at = NOW()
@@ -169,9 +186,7 @@ func UpsertCommand(ctx context.Context, p *db.Pool, botID uuid.UUID, in CommandI
 	return out, wrapDB(err, "register command")
 }
 
-// ReplaceCommands makes the given definitions the bot's commands: it adds and
-// updates by name and removes the others (Discord's bulk overwrite).
-func ReplaceCommands(ctx context.Context, p *db.Pool, botID uuid.UUID, ins []CommandInput) ([]Command, error) {
+func collectUniqueCommandNames(ins []CommandInput) ([]string, error) {
 	if len(ins) > MaxCommands {
 		return nil, httpx.ErrInvalidInput(fmt.Sprintf("a bot can have at most %d commands", MaxCommands))
 	}
@@ -184,19 +199,33 @@ func ReplaceCommands(ctx context.Context, p *db.Pool, botID uuid.UUID, ins []Com
 		seen[in.Name] = true
 		names = append(names, in.Name)
 	}
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if err := lockBot(ctx, tx, botID); err != nil {
+	return names, nil
+}
+
+func replaceCommandsTx(ctx context.Context, tx pgx.Tx, botID uuid.UUID, names []string, ins []CommandInput) error {
+	if err := lockBot(ctx, tx, botID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2))`, botID, names); err != nil {
+		return err
+	}
+	for _, in := range ins {
+		if _, err := upsert(ctx, tx, botID, in); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `DELETE FROM bot_commands WHERE bot_id = $1 AND NOT (name = ANY($2))`, botID, names); err != nil {
-			return err
-		}
-		for _, in := range ins {
-			if _, err := upsert(ctx, tx, botID, in); err != nil {
-				return err
-			}
-		}
-		return nil
+	}
+	return nil
+}
+
+// ReplaceCommands makes the given definitions the bot's commands: it adds and
+// updates by name and removes the others (Discord's bulk overwrite).
+func ReplaceCommands(ctx context.Context, p *db.Pool, botID uuid.UUID, ins []CommandInput) ([]Command, error) {
+	names, err := collectUniqueCommandNames(ins)
+	if err != nil {
+		return nil, err
+	}
+	err = pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		return replaceCommandsTx(ctx, tx, botID, names, ins)
 	})
 	if err != nil {
 		return nil, wrapDB(err, "replace commands")

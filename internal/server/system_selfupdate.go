@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -112,16 +113,8 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 	log := slog.With("audit", "self_update", "admin_id", admin.ID, "admin", admin.Username,
 		"from_version", h.version, "target_version", upd.LatestVersion, "client_ip", httpx.ClientIPKey(r))
 
-	retry, err := h.self.confirm(r.Context(), admin.ID, req.Password)
-	if err != nil {
-		if retry > 0 {
-			log.Warn("self-update refused: password confirmation locked")
-			httpx.WriteRateLimited(w, retry)
-			return nil
-		}
-		if errors.Is(err, auth.ErrWrongPassword) {
-			log.Warn("self-update refused: wrong password")
-		}
+	confirmed, err := h.verifySelfUpdatePassword(r.Context(), w, admin, req.Password, log)
+	if err != nil || !confirmed {
 		return err
 	}
 
@@ -132,9 +125,33 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 	}
 	defer release()
 
+	if err := h.triggerSelfUpdate(r.Context(), upd, log); err != nil {
+		return err
+	}
+	httpx.WriteJSON(w, http.StatusAccepted, SelfUpdateStarted{Status: "started", FromVersion: h.version, TargetVersion: upd.LatestVersion})
+	return nil
+}
+
+func (h *systemHandler) verifySelfUpdatePassword(ctx context.Context, w http.ResponseWriter, admin *auth.User, password string, log *slog.Logger) (bool, error) {
+	retry, err := h.self.confirm(ctx, admin.ID, password)
+	if err == nil {
+		return true, nil
+	}
+	if retry > 0 {
+		log.Warn("self-update refused: password confirmation locked")
+		httpx.WriteRateLimited(w, retry)
+		return false, nil
+	}
+	if errors.Is(err, auth.ErrWrongPassword) {
+		log.Warn("self-update refused: wrong password")
+	}
+	return false, err
+}
+
+func (h *systemHandler) triggerSelfUpdate(ctx context.Context, upd UpdateStatus, log *slog.Logger) error {
 	log.Info("self-update requested")
 	// The admin closing the tab must not cut the request short.
-	err = h.self.updater.Trigger(context.WithoutCancel(r.Context()))
+	err := h.self.updater.Trigger(context.WithoutCancel(ctx))
 	switch {
 	case errors.Is(err, update.ErrUpdaterBusy):
 		log.Warn("self-update: updater busy")
@@ -147,7 +164,6 @@ func (h *systemHandler) startSelfUpdate(w http.ResponseWriter, r *http.Request) 
 	if h.events != nil {
 		h.events.Broadcast("system_update", map[string]string{"version": upd.LatestVersion})
 	}
-	httpx.WriteJSON(w, http.StatusAccepted, SelfUpdateStarted{Status: "started", FromVersion: h.version, TargetVersion: upd.LatestVersion})
 	return nil
 }
 
@@ -165,8 +181,13 @@ func (h *systemHandler) checkSelfUpdateTarget(req SelfUpdateRequest) (UpdateStat
 	if req.TargetVersion != upd.LatestVersion {
 		return upd, httpx.ErrConflict("the latest release changed; reload the System tab")
 	}
-	if reach, _ := update.ImageReach(h.cfg.AppImage, upd.LatestVersion); reach == update.ReachNo {
-		return upd, httpx.ErrConflict("the configured image tag cannot reach this release; update manually")
+	reach, reason := update.ImageReach(h.cfg.AppImage, upd.LatestVersion)
+	if reach == update.ReachNo {
+		msg := "the configured image tag cannot reach this release; update manually"
+		if reason != "" {
+			msg = fmt.Sprintf("the configured image tag cannot reach this release (%s); update manually", reason)
+		}
+		return upd, httpx.ErrConflict(msg)
 	}
 	return upd, nil
 }

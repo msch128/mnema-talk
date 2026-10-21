@@ -45,7 +45,9 @@ func starterDB(t *testing.T) *db.Pool {
 	}
 	ctx := context.Background()
 	b := make([]byte, 6)
-	_, _ = rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		t.Fatalf("rand read: %v", err)
+	}
 	schema := "starter_" + hex.EncodeToString(b)
 
 	admin, err := db.Connect(ctx, dsn)
@@ -56,7 +58,9 @@ func starterDB(t *testing.T) *db.Pool {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		_, _ = admin.Exec(context.Background(), `DROP SCHEMA `+schema+` CASCADE`)
+		if _, err := admin.Exec(context.Background(), `DROP SCHEMA `+schema+` CASCADE`); err != nil {
+			t.Logf("cleanup drop schema %s: %v", schema, err)
+		}
 		admin.Close()
 	})
 
@@ -93,6 +97,67 @@ func TestStarterRolesAreSeededEmpty(t *testing.T) {
 	}
 }
 
+func testStarterRolesBothNames(t *testing.T, p *db.Pool, ctx context.Context) {
+	tx := beginRolledBack(t, p)
+	mod := twistRole(t, ctx, tx, "Moderator", 4, 1, perm.Administrator)
+	admin := twistRole(t, ctx, tx, "Admin", 9, 2, perm.ManageBots)
+	keep := insertPlainRole(t, ctx, tx, "Keep", 5)
+	holdRoles(t, ctx, tx, "kept-both", mod, admin)
+	before := map[uuid.UUID]roleRow{
+		mod: readRole(t, ctx, tx, mod), admin: readRole(t, ctx, tx, admin), keep: readRole(t, ctx, tx, keep),
+	}
+	everyone := everyonePerms(t, ctx, tx)
+	if _, err := tx.Exec(ctx, starterRoleSQL); err != nil {
+		t.Fatal(err)
+	}
+	for id, row := range before {
+		if got := readRole(t, ctx, tx, id); got != row {
+			t.Fatalf("existing role changed:\n got  %+v\n want %+v", got, row)
+		}
+	}
+	if got := everyonePerms(t, ctx, tx); got != everyone || got != perm.DefaultEveryone {
+		t.Fatalf("@everyone = %b, want %b", got, perm.DefaultEveryone)
+	}
+	if n := countNamed(t, ctx, tx, "Moderator"); n != 1 {
+		t.Fatalf("Moderator count = %d", n)
+	}
+	if n := countNamed(t, ctx, tx, "Admin"); n != 1 {
+		t.Fatalf("Admin count = %d", n)
+	}
+}
+
+func testStarterRolesAdminMissing(t *testing.T, p *db.Pool, ctx context.Context) {
+	tx := beginRolledBack(t, p)
+	if _, err := tx.Exec(ctx, `DELETE FROM roles WHERE name = 'Admin'`); err != nil {
+		t.Fatal(err)
+	}
+	mod := twistRole(t, ctx, tx, "Moderator", 4, 3, perm.Administrator)
+	keep := insertPlainRole(t, ctx, tx, "Keep", 11)
+	holdRoles(t, ctx, tx, "kept-mod", mod)
+	beforeMod, beforeKeep := readRole(t, ctx, tx, mod), readRole(t, ctx, tx, keep)
+	if _, err := tx.Exec(ctx, starterRoleSQL); err != nil {
+		t.Fatal(err)
+	}
+	if got := readRole(t, ctx, tx, mod); got != beforeMod {
+		t.Fatalf("Moderator changed:\n got  %+v\n want %+v", got, beforeMod)
+	}
+	if got := readRole(t, ctx, tx, keep); got != beforeKeep {
+		t.Fatalf("Keep changed:\n got  %+v\n want %+v", got, beforeKeep)
+	}
+	if got := everyonePerms(t, ctx, tx); got != perm.DefaultEveryone {
+		t.Fatalf("@everyone = %b", got)
+	}
+	admin := readNamed(t, ctx, tx, "Admin")
+	assertEmptySeed(t, admin, adminBits(), adminBlue)
+	var maxOther int
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(position), 0) FROM roles WHERE id <> $1`, admin.id).Scan(&maxOther); err != nil {
+		t.Fatal(err)
+	}
+	if admin.position != maxOther+1 || admin.position <= beforeMod.position {
+		t.Fatalf("Admin at %d, want %d (above Moderator at %d)", admin.position, maxOther+1, beforeMod.position)
+	}
+}
+
 // A role that already has the name keeps its bits, position and members.
 // Only a missing name is inserted, at the top, without moving the others.
 func TestStarterRolesLeaveExistingNamesAlone(t *testing.T) {
@@ -102,63 +167,10 @@ func TestStarterRolesLeaveExistingNamesAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Run("both names", func(t *testing.T) {
-		tx := beginRolledBack(t, p)
-		mod := twistRole(t, ctx, tx, "Moderator", 4, 1, perm.Administrator)
-		admin := twistRole(t, ctx, tx, "Admin", 9, 2, perm.ManageBots)
-		keep := insertPlainRole(t, ctx, tx, "Keep", 5)
-		holdRoles(t, ctx, tx, "kept-both", mod, admin)
-		before := map[uuid.UUID]roleRow{
-			mod: readRole(t, ctx, tx, mod), admin: readRole(t, ctx, tx, admin), keep: readRole(t, ctx, tx, keep),
-		}
-		everyone := everyonePerms(t, ctx, tx)
-		if _, err := tx.Exec(ctx, starterRoleSQL); err != nil {
-			t.Fatal(err)
-		}
-		for id, row := range before {
-			if got := readRole(t, ctx, tx, id); got != row {
-				t.Fatalf("existing role changed:\n got  %+v\n want %+v", got, row)
-			}
-		}
-		if got := everyonePerms(t, ctx, tx); got != everyone || got != perm.DefaultEveryone {
-			t.Fatalf("@everyone = %b, want %b", got, perm.DefaultEveryone)
-		}
-		if n := countNamed(t, ctx, tx, "Moderator"); n != 1 {
-			t.Fatalf("Moderator count = %d", n)
-		}
-		if n := countNamed(t, ctx, tx, "Admin"); n != 1 {
-			t.Fatalf("Admin count = %d", n)
-		}
+		testStarterRolesBothNames(t, p, ctx)
 	})
 	t.Run("admin name missing", func(t *testing.T) {
-		tx := beginRolledBack(t, p)
-		if _, err := tx.Exec(ctx, `DELETE FROM roles WHERE name = 'Admin'`); err != nil {
-			t.Fatal(err)
-		}
-		mod := twistRole(t, ctx, tx, "Moderator", 4, 3, perm.Administrator)
-		keep := insertPlainRole(t, ctx, tx, "Keep", 11)
-		holdRoles(t, ctx, tx, "kept-mod", mod)
-		beforeMod, beforeKeep := readRole(t, ctx, tx, mod), readRole(t, ctx, tx, keep)
-		if _, err := tx.Exec(ctx, starterRoleSQL); err != nil {
-			t.Fatal(err)
-		}
-		if got := readRole(t, ctx, tx, mod); got != beforeMod {
-			t.Fatalf("Moderator changed:\n got  %+v\n want %+v", got, beforeMod)
-		}
-		if got := readRole(t, ctx, tx, keep); got != beforeKeep {
-			t.Fatalf("Keep changed:\n got  %+v\n want %+v", got, beforeKeep)
-		}
-		if got := everyonePerms(t, ctx, tx); got != perm.DefaultEveryone {
-			t.Fatalf("@everyone = %b", got)
-		}
-		admin := readNamed(t, ctx, tx, "Admin")
-		assertEmptySeed(t, admin, adminBits(), adminBlue)
-		var maxOther int
-		if err := tx.QueryRow(ctx, `SELECT COALESCE(MAX(position), 0) FROM roles WHERE id <> $1`, admin.id).Scan(&maxOther); err != nil {
-			t.Fatal(err)
-		}
-		if admin.position != maxOther+1 || admin.position <= beforeMod.position {
-			t.Fatalf("Admin at %d, want %d (above Moderator at %d)", admin.position, maxOther+1, beforeMod.position)
-		}
+		testStarterRolesAdminMissing(t, p, ctx)
 	})
 }
 
@@ -196,8 +208,14 @@ func assertEmptySeed(t *testing.T, r roleRow, bits perm.Set, color int) {
 	t.Helper()
 	got := perm.Set(r.perms)
 	forbidden := perm.Administrator | perm.ManageBots | perm.ManageWebhooks
-	if got != bits || got.Has(forbidden) || r.color != color || !r.hoist || r.mentionable || r.managed || r.holders != 0 {
-		t.Fatalf("%s = %+v, want bits %b color %d, hoisted, not mentionable, not managed, nobody assigned", r.name, r, bits, color)
+	if got != bits || got.Has(forbidden) {
+		t.Fatalf("%s unexpected permissions: got %b, want %b (forbidden: %b)", r.name, got, bits, forbidden)
+	}
+	if r.color != color || !r.hoist {
+		t.Fatalf("%s unexpected color or hoist: color=%d hoist=%v", r.name, r.color, r.hoist)
+	}
+	if r.mentionable || r.managed || r.holders != 0 {
+		t.Fatalf("%s unexpected role flags: mentionable=%v managed=%v holders=%d", r.name, r.mentionable, r.managed, r.holders)
 	}
 }
 

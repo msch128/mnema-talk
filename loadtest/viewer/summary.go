@@ -91,7 +91,9 @@ func newMemberResult(m *member) memberResult {
 		CandRecv: m.candRecv.Load(), CandErrors: m.candErr.Load(), MaxStallMs: m.maxStallMs.Load(),
 		TimedOut: m.timedOut.Load(),
 	}
-	mr.FirstVideoMs, _ = firstVideoMs(m)
+	if ms, ok := firstVideoMs(m); ok {
+		mr.FirstVideoMs = ms
+	}
 	if f, ok := m.failed.Load().(string); ok {
 		mr.Error = f
 	}

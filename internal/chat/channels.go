@@ -49,34 +49,31 @@ type Category struct {
 	CreatedAt time.Time `json:"created_at" format:"date-time"`
 }
 
-// GetServerHierarchy returns all categories with their nested channels, plus
-// uncategorized channels.
-func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel, error) {
+func loadCategories(ctx context.Context, p *db.Pool) ([]Category, map[uuid.UUID]int, error) {
 	catRows, err := p.Query(ctx, `SELECT id, name, sort_order, created_at FROM categories ORDER BY sort_order, created_at`)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query categories: %w", err)
 	}
+	defer catRows.Close()
 	categories := make([]Category, 0)
 	categoryIdx := make(map[uuid.UUID]int)
 	for catRows.Next() {
 		cat := Category{Channels: make([]Channel, 0)}
 		if err := catRows.Scan(&cat.ID, &cat.Name, &cat.SortOrder, &cat.CreatedAt); err != nil {
-			catRows.Close()
 			return nil, nil, err
 		}
 		categoryIdx[cat.ID] = len(categories)
 		categories = append(categories, cat)
 	}
-	catRows.Close()
-	if err := catRows.Err(); err != nil {
-		return nil, nil, err
-	}
+	return categories, categoryIdx, catRows.Err()
+}
 
+func populateChannels(ctx context.Context, p *db.Pool, categories []Category, categoryIdx map[uuid.UUID]int) ([]Channel, error) {
 	chanRows, err := p.Query(ctx, `
 		SELECT id, number, category_id, name, type, topic, sort_order, created_at, user_limit, slow_mode_seconds
 		FROM channels ORDER BY sort_order, created_at`)
 	if err != nil {
-		return nil, nil, fmt.Errorf("query channels: %w", err)
+		return nil, fmt.Errorf("query channels: %w", err)
 	}
 	defer chanRows.Close()
 
@@ -84,7 +81,7 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 	for chanRows.Next() {
 		var ch Channel
 		if err := chanRows.Scan(&ch.ID, &ch.Number, &ch.CategoryID, &ch.Name, &ch.Type, &ch.Topic, &ch.SortOrder, &ch.CreatedAt, &ch.UserLimit, &ch.SlowModeSeconds); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if ch.CategoryID != nil {
 			if idx, ok := categoryIdx[*ch.CategoryID]; ok {
@@ -94,7 +91,21 @@ func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel,
 		}
 		uncategorized = append(uncategorized, ch)
 	}
-	return categories, uncategorized, chanRows.Err()
+	return uncategorized, chanRows.Err()
+}
+
+// GetServerHierarchy returns all categories with their nested channels, plus
+// uncategorized channels.
+func GetServerHierarchy(ctx context.Context, p *db.Pool) ([]Category, []Channel, error) {
+	categories, categoryIdx, err := loadCategories(ctx, p)
+	if err != nil {
+		return nil, nil, err
+	}
+	uncategorized, err := populateChannels(ctx, p, categories, categoryIdx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return categories, uncategorized, nil
 }
 
 func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int) (*Category, error) {
@@ -113,26 +124,42 @@ func CreateCategory(ctx context.Context, p *db.Pool, name string, sortOrder int)
 	return &cat, nil
 }
 
-func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
+func cleanChannelInputs(name, topic string, chType ChannelType) (string, string, error) {
 	if chType != ChannelTypeText && chType != ChannelTypeVoice {
-		return nil, httpx.ErrInvalidInput("type must be 'text' or 'voice'")
+		return "", "", httpx.ErrInvalidInput("type must be 'text' or 'voice'")
 	}
-	name, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+	cleanName, err := httpx.CleanText("name", name, MaxChannelNameLen, true)
+	if err != nil {
+		return "", "", err
+	}
+	cleanTopic, err := httpx.CleanText("topic", topic, MaxTopicLen, false)
+	if err != nil {
+		return "", "", err
+	}
+	return cleanName, cleanTopic, nil
+}
+
+func verifyCategoryExists(ctx context.Context, p *db.Pool, categoryID *uuid.UUID) error {
+	if categoryID == nil {
+		return nil
+	}
+	var exists bool
+	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, *categoryID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return httpx.ErrInvalidInput("category not found")
+	}
+	return nil
+}
+
+func CreateChannel(ctx context.Context, p *db.Pool, categoryID *uuid.UUID, name string, chType ChannelType, topic string, sortOrder int) (*Channel, error) {
+	name, topic, err := cleanChannelInputs(name, topic, chType)
 	if err != nil {
 		return nil, err
 	}
-	topic, err = httpx.CleanText("topic", topic, MaxTopicLen, false)
-	if err != nil {
+	if err := verifyCategoryExists(ctx, p, categoryID); err != nil {
 		return nil, err
-	}
-	if categoryID != nil {
-		var exists bool
-		if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM categories WHERE id = $1)`, *categoryID).Scan(&exists); err != nil {
-			return nil, err
-		}
-		if !exists {
-			return nil, httpx.ErrInvalidInput("category not found")
-		}
 	}
 	var ch Channel
 	err = p.QueryRow(ctx, `
@@ -183,6 +210,38 @@ func DeleteCategory(ctx context.Context, p *db.Pool, categoryID uuid.UUID) error
 	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error { return DeleteCategoryTx(ctx, tx, categoryID) })
 }
 
+func checkCategoryMergeable(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
+	var inexact bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM permission_overwrites WHERE category_id = $1)
+		   AND EXISTS (SELECT 1 FROM permission_overwrites o JOIN channels ch ON ch.id = o.channel_id WHERE ch.category_id = $1)`,
+		categoryID).Scan(&inexact); err != nil {
+		return fmt.Errorf("check category permissions: %w", err)
+	}
+	if inexact {
+		return httpx.ErrConflict("clear the permissions of the channels in this category, or of the category, first: they cannot be merged exactly")
+	}
+	return nil
+}
+
+func copyCategoryOverwrites(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO permission_overwrites (channel_id, role_id, allow, deny)
+		SELECT ch.id, co.role_id, co.allow, co.deny
+		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
+		WHERE ch.category_id = $1 AND co.role_id IS NOT NULL`, categoryID); err != nil {
+		return fmt.Errorf("keep category role permissions: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO permission_overwrites (channel_id, user_id, allow, deny)
+		SELECT ch.id, co.user_id, co.allow, co.deny
+		FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
+		WHERE ch.category_id = $1 AND co.user_id IS NOT NULL`, categoryID); err != nil {
+		return fmt.Errorf("keep category user permissions: %w", err)
+	}
+	return nil
+}
+
 // DeleteCategoryTx is DeleteCategory inside a transaction. The category's
 // permission overwrites do not vanish for its channels: they are copied to
 // each channel first, so deleting a private category never makes its channels
@@ -198,24 +257,11 @@ func DeleteCategoryTx(ctx context.Context, tx pgx.Tx, categoryID uuid.UUID) erro
 	if err != nil {
 		return fmt.Errorf("lock category: %w", err)
 	}
-	var inexact bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM permission_overwrites WHERE category_id = $1)
-		   AND EXISTS (SELECT 1 FROM permission_overwrites o JOIN channels ch ON ch.id = o.channel_id WHERE ch.category_id = $1)`,
-		categoryID).Scan(&inexact); err != nil {
-		return fmt.Errorf("check category permissions: %w", err)
+	if err := checkCategoryMergeable(ctx, tx, categoryID); err != nil {
+		return err
 	}
-	if inexact {
-		return httpx.ErrConflict("clear the permissions of the channels in this category, or of the category, first: they cannot be merged exactly")
-	}
-	for _, subject := range []string{"role_id", "user_id"} {
-		if _, err := tx.Exec(ctx, `
-			INSERT INTO permission_overwrites (channel_id, `+subject+`, allow, deny)
-			SELECT ch.id, co.`+subject+`, co.allow, co.deny
-			FROM channels ch JOIN permission_overwrites co ON co.category_id = ch.category_id
-			WHERE ch.category_id = $1 AND co.`+subject+` IS NOT NULL`, categoryID); err != nil {
-			return fmt.Errorf("keep category permissions: %w", err)
-		}
+	if err := copyCategoryOverwrites(ctx, tx, categoryID); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM categories WHERE id = $1`, categoryID); err != nil {
 		return fmt.Errorf("delete category: %w", err)
@@ -260,30 +306,57 @@ func UpdateChannel(ctx context.Context, p *db.Pool, id uuid.UUID, name, topic *s
 	return &ch, nil
 }
 
+func validateChannelLimits(userLimit, slowMode *int) error {
+	if slowMode != nil {
+		if *slowMode < 0 || *slowMode > MaxSlowModeSeconds {
+			return httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
+		}
+	}
+	if userLimit != nil {
+		if *userLimit < 0 || *userLimit > MaxUserLimit {
+			return httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
+		}
+	}
+	return nil
+}
+
+func validateOptionalName(name *string) (*string, error) {
+	if name == nil {
+		return nil, nil
+	}
+	n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
+	if err != nil {
+		return nil, err
+	}
+	return &n, nil
+}
+
+func validateOptionalTopic(topic *string) (*string, error) {
+	if topic == nil {
+		return nil, nil
+	}
+	t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
 // validateChannelEdit checks the fields of a channel update and returns the
 // cleaned name and topic (nil stays nil).
 func validateChannelEdit(name, topic *string, userLimit, slowMode *int) (*string, *string, error) {
-	if slowMode != nil && (*slowMode < 0 || *slowMode > MaxSlowModeSeconds) {
-		return nil, nil, httpx.ErrInvalidInput(fmt.Sprintf("slow_mode_seconds must be between 0 (off) and %d", MaxSlowModeSeconds))
+	if err := validateChannelLimits(userLimit, slowMode); err != nil {
+		return nil, nil, err
 	}
-	if userLimit != nil && (*userLimit < 0 || *userLimit > MaxUserLimit) {
-		return nil, nil, httpx.ErrInvalidInput(fmt.Sprintf("user_limit must be between 0 (no limit) and %d", MaxUserLimit))
+	validName, err := validateOptionalName(name)
+	if err != nil {
+		return nil, nil, err
 	}
-	if name != nil {
-		n, err := httpx.CleanText("name", *name, MaxChannelNameLen, true)
-		if err != nil {
-			return nil, nil, err
-		}
-		name = &n
+	validTopic, err := validateOptionalTopic(topic)
+	if err != nil {
+		return nil, nil, err
 	}
-	if topic != nil {
-		t, err := httpx.CleanText("topic", *topic, MaxTopicLen, false)
-		if err != nil {
-			return nil, nil, err
-		}
-		topic = &t
-	}
-	return name, topic, nil
+	return validName, validTopic, nil
 }
 
 // RenameCategory changes a category's name.

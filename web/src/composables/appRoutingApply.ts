@@ -45,14 +45,18 @@ async function selectChannelFor(ctx: RoutingContext, channelId: string, supersed
   return target
 }
 
+function isThreadEmptyStub(th: { id: string; user_id?: string; content?: string } | null | undefined, threadId: string): boolean {
+  if (th?.id !== threadId) return false
+  return !th.user_id && !th.content
+}
+
 async function openRouteThread(ctx: RoutingContext, channelId: string, threadId: string, superseded: Superseded) {
   const { chatStore } = ctx
   if (chatStore.activeThread?.id === threadId) return
   await chatStore.openThread(threadId)
   if (superseded()) return
   // A thread that failed to load only has its id.
-  const th = chatStore.activeThread
-  if (th && th.id === threadId && !th.user_id && !th.content) {
+  if (isThreadEmptyStub(chatStore.activeThread, threadId)) {
     chatStore.closeThread()
     ctx.toasts.error(t('chat.messageNotFound'))
     navigate(`/c/${channelId}`, { replace: true })
@@ -78,14 +82,12 @@ async function applyChatRoute(ctx: RoutingContext, route: Route & { view: 'chat'
   }
 }
 
-async function applyVoiceRoute(
+function syncVoiceViewState(
   ctx: RoutingContext,
   route: Route & { view: 'voice' },
-  previousVoiceChannel: string | null,
-  superseded: Superseded
-) {
+  previousVoiceChannel: string | null
+): boolean {
   ctx.showAdminModal.value = false
-  // Opening the channel you're connected to is not a preview.
   ctx.previewVoiceChannelId.value = route.channelId === ctx.voiceStore.currentChannelId ? null : route.channelId
   ctx.voiceStore.activeView = 'voice'
   ctx.voiceShowChat.value = voiceChatOpenFor({
@@ -93,20 +95,36 @@ async function applyVoiceRoute(
     sameTalk: previousVoiceChannel === route.channelId,
     remembered: ctx.voiceShowChat.value
   })
-  // Entering a Talk with its chat remembered open: say so in the address
-  // (that route then does the rest).
   if (ctx.voiceShowChat.value && !route.showChat) {
     navigate(`/v/${route.channelId}/chat`, { replace: true })
-    return
+    return true
   }
-  const targetChannel = await selectChannelFor(ctx, route.channelId, superseded)
-  if (!targetChannel || !route.messageId) return
-  // The chat (and its scroll handling) renders before the jump.
+  return false
+}
+
+async function jumpToVoiceMessage(
+  ctx: RoutingContext,
+  targetChannelId: string,
+  messageId: string,
+  superseded: Superseded
+) {
   await nextTick()
   if (superseded()) return
-  const found = await ctx.chatStore.jumpToMessage(route.messageId)
+  const found = await ctx.chatStore.jumpToMessage(messageId)
   if (superseded()) return
-  if (found === false) navigate(`/v/${targetChannel.id}/chat`, { replace: true })
+  if (found === false) navigate(`/v/${targetChannelId}/chat`, { replace: true })
+}
+
+async function applyVoiceRoute(
+  ctx: RoutingContext,
+  route: Route & { view: 'voice' },
+  previousVoiceChannel: string | null,
+  superseded: Superseded
+) {
+  if (syncVoiceViewState(ctx, route, previousVoiceChannel)) return
+  const targetChannel = await selectChannelFor(ctx, route.channelId, superseded)
+  if (!targetChannel || !route.messageId) return
+  await jumpToVoiceMessage(ctx, targetChannel.id, route.messageId, superseded)
 }
 
 function applyRootRoute(ctx: RoutingContext) {
@@ -150,25 +168,20 @@ async function dispatchRoute(ctx: RoutingContext, route: Route, previousVoiceCha
   }
 }
 
-/** Shows what the address says: the channel, thread, Talk or admin console. */
-export async function applyRoute(ctx: RoutingContext, route: Route) {
-  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return
-  const gen = ++ctx.routeGen
-  const superseded = () => !ctx.alive() || gen !== ctx.routeGen
-
-  if (!(await admitRoute(ctx, route, superseded))) return
-  if (!ctx.chatStore.allChannels.length) return
-
+function handleRouteRedirect(ctx: RoutingContext, route: Route): boolean {
   const fix = resolveRoute(route, { isAdmin: ctx.permissions.canOpenAdmin, channels: ctx.chatStore.allChannels })
-  if (fix) {
-    if (fix.reason) ctx.toasts.error(t(`nav.${fix.reason}`))
-    navigate(fix.redirect, { replace: true })
-    return
-  }
+  if (!fix) return false
+  if (fix.reason) ctx.toasts.error(t(`nav.${fix.reason}`))
+  navigate(fix.redirect, { replace: true })
+  return true
+}
 
-  const previousVoiceChannel = ctx.lastVoiceRouteChannel
-  ctx.lastVoiceRouteChannel = route.view === 'voice' ? route.channelId : null
-
+async function runSyncedDispatch(
+  ctx: RoutingContext,
+  route: Route,
+  previousVoiceChannel: string | null,
+  superseded: Superseded
+) {
   ctx.isSyncingFromRoute = true
   ctx.routesApplying++
   try {
@@ -179,4 +192,20 @@ export async function applyRoute(ctx: RoutingContext, route: Route) {
       if (--ctx.routesApplying === 0) ctx.isSyncingFromRoute = false
     })
   }
+}
+
+/** Shows what the address says: the channel, thread, Talk or admin console. */
+export async function applyRoute(ctx: RoutingContext, route: Route) {
+  if (!ctx.alive() || !ctx.authStore.isAuthenticated) return
+  const gen = ++ctx.routeGen
+  const superseded = () => !ctx.alive() || gen !== ctx.routeGen
+
+  if (!(await admitRoute(ctx, route, superseded))) return
+  if (!ctx.chatStore.allChannels.length) return
+  if (handleRouteRedirect(ctx, route)) return
+
+  const previousVoiceChannel = ctx.lastVoiceRouteChannel
+  ctx.lastVoiceRouteChannel = route.view === 'voice' ? route.channelId : null
+
+  await runSyncedDispatch(ctx, route, previousVoiceChannel, superseded)
 }

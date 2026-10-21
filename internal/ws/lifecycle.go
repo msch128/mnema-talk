@@ -95,23 +95,16 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// The version is the cookie's own: re-reading it from the database here
 	// would let a revocation between the two reads slip through, and the
 	// connection would then outlive it.
-	user, tv, err := h.Sessions.AuthenticateRequest(r)
-	if err != nil {
-		if _, ok := httpx.AsAPIError(err); !ok {
-			err = httpx.ErrServer(err)
-		}
-		httpx.WriteError(w, err)
+	user, tv, ok := h.authenticated(w, r)
+	if !ok {
 		return
 	}
 	if h.isClosed() {
 		httpx.WriteError(w, httpx.ErrUnavailable("server shutting down"))
 		return
 	}
-	if h.UpgradeLimit != nil {
-		if ok, retry := h.UpgradeLimit.Allow(user.ID.String()); !ok {
-			httpx.WriteRateLimited(w, retry)
-			return
-		}
+	if !h.upgradeAllowed(w, user.ID) {
+		return
 	}
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -120,22 +113,10 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := newClient(h, conn, *user, tv)
-	ok, evicted := h.registerPending(c)
-	for _, old := range evicted {
-		old.evict()
-	}
-	if !ok {
-		c.shutdown()
-		c.close()
+	if !h.admitPending(c) {
 		return
 	}
-	// Revocation can finish between the first check and the upgrade. Track
-	// this socket before checking again so a later revocation also cancels
-	// admission. Never hold the hub lock while consulting the database.
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	fresh, freshTV, err := h.Sessions.AuthenticateRequest(r.WithContext(ctx))
-	cancel()
-	if err != nil || fresh == nil || fresh.ID != user.ID || freshTV != tv || !h.registerVerified(c, fresh) {
+	if !h.confirmHandshake(r, c, user.ID, tv) {
 		h.cancelPending(c)
 		return
 	}
@@ -204,54 +185,11 @@ func (h *Hub) register(c *Client) bool {
 // A fresh user promotes an existing pending handshake atomically. The nil
 // case registers the in-memory clients used by internal hub callers.
 func (h *Hub) registerVerified(c *Client, fresh *auth.User) bool {
-	h.mu.Lock()
-	if h.closed || c.closed.Load() || !c.commandsAllowed() {
-		h.mu.Unlock()
+	before, after, ok := h.admitVerified(c, fresh)
+	if !ok {
 		return false
 	}
-	if fresh != nil {
-		if _, ok := h.pending[c]; !ok {
-			h.mu.Unlock()
-			return false
-		}
-		delete(h.pending, c)
-		c.User = *fresh
-	}
-	before := h.statusLocked(c.User.ID)
-	h.clients[c] = struct{}{}
-	h.online[c.User.ID]++
-	h.active[c.User.ID]++
-	// The session was just loaded from the database: the freshest profile.
-	h.profiles[c.User.ID] = c.User.Public()
-	// The session was just loaded, so its presence is the latest choice.
-	if auth.ValidPresence(c.User.Presence) {
-		h.chosen[c.User.ID] = c.User.Presence
-	} else if h.chosen[c.User.ID] == "" {
-		h.chosen[c.User.ID] = auth.PresenceOnline
-	}
-	after := h.statusLocked(c.User.ID)
-	h.mu.Unlock()
-
-	slog.Info("ws connected", "user", c.User.Username)
-	h.announcePresence(c.User.ID, before, after)
-	c.SendEvent("server_info", h.serverInfo())
-	c.SendEvent("presence_snapshot", h.presenceSnapshot())
-	h.sendBotActivities(c)
-	// Talks the member may not view stay invisible: who sits in them, since
-	// when and what they share.
-	snap, ok := h.permSnapshot(uuid.Nil)
-	if !ok {
-		snap = deniedSnapshot
-	}
-	c.SendEvent("voice_snapshot", visibleTo(c, snap, h.voiceSnapshot()))
-	c.SendEvent("voice_rooms", h.voiceRooms(c, snap))
-	if h.SFU != nil {
-		for chID, states := range visibleTo(c, snap, h.SFU.AllMediaStates()) {
-			for uid, st := range states {
-				c.SendEvent("webrtc_media_state", mediaStatePayload(chID, uid, st))
-			}
-		}
-	}
+	h.greet(c, before, after)
 	return true
 }
 

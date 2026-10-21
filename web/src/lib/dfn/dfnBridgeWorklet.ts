@@ -50,36 +50,49 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     }
   }
 
-  receive(result: unknown) {
+  validateReceivedFrame(result: unknown): { id: number; samples: Float32Array } | null {
     if (isDfnFailed(result)) {
       this.fail()
-      return
+      return null
     }
-    if (!isDfnFrameHeader(result) || !this.pending.delete(result.id)) return
+    if (!isDfnFrameHeader(result) || !this.pending.delete(result.id)) return null
     if (!(result.samples instanceof Float32Array) || result.samples.length !== this.frameLength) {
       this.fail()
-      return
+      return null
     }
-    this.processedFrames++
-    const late = this.nextFrame - result.id > this.maxFrames
-    if (late) this.droppedFrames++
-    // Local numerical diagnostics, first frame then once per second; no PCM.
+    return { id: result.id, samples: result.samples }
+  }
+
+  emitStatsIfNeeded() {
     if (this.processedFrames === 1 || this.processedFrames % 100 === 0) {
       this.port.postMessage({ type: 'stats', processedFrames: this.processedFrames, droppedFrames: this.droppedFrames, bridgeBudgetMs: 30 })
     }
-    if (late) return
+  }
+
+  writeOutputSamples(frameId: number, samples: Float32Array) {
     // Oldest queued samples yield to fresh ones at the finite output limit.
     const excess = Math.max(0, this.outputCount + this.frameLength - this.output.length)
     this.readPos = (this.readPos + excess) % this.output.length
     this.outputCount -= excess
     let writePos = (this.readPos + this.outputCount) % this.output.length
-    for (let i = 0; i < result.samples.length; i++) {
-      this.output[writePos] = result.samples[i] ?? 0
-      this.outputPositions[writePos] = result.id * this.frameLength + i + 1
+    for (let i = 0; i < samples.length; i++) {
+      this.output[writePos] = samples[i] ?? 0
+      this.outputPositions[writePos] = frameId * this.frameLength + i + 1
       writePos = (writePos + 1) % this.output.length
     }
     this.outputCount += this.frameLength
     this.hasOutput = true
+  }
+
+  receive(result: unknown) {
+    const frame = this.validateReceivedFrame(result)
+    if (!frame) return
+    this.processedFrames++
+    const late = this.nextFrame - frame.id > this.maxFrames
+    if (late) this.droppedFrames++
+    this.emitStatsIfNeeded()
+    if (late) return
+    this.writeOutputSamples(frame.id, frame.samples)
   }
 
   fail() {
@@ -130,15 +143,21 @@ class DeepFilterBridge extends AudioWorkletProcessor {
     }
   }
 
+  hasStartedOutput(): boolean {
+    return this.hasOutput || this.nextFrame >= this.maxFrames
+  }
+
   // Counts starved samples (failing the bridge after too many) and says whether the dry input is passed through.
   updateBypass(inputLength: number) {
     const underrun = this.outputCount < inputLength
-    const startupExpired = this.nextFrame >= this.maxFrames
-    if ((this.hasOutput || startupExpired) && underrun && !this.failed) {
+    const activeUnderrun = this.hasStartedOutput() && underrun
+    if (activeUnderrun && !this.failed) {
       this.underrunSamples += inputLength
       if (this.underrunSamples > this.failureSamples) this.fail()
-    } else if (!underrun) this.underrunSamples = 0
-    return this.failed || ((this.hasOutput || startupExpired) && underrun)
+    } else if (!underrun) {
+      this.underrunSamples = 0
+    }
+    return this.failed || activeUnderrun
   }
 
   render(input: Float32Array, channels: Float32Array[], bypass: boolean) {

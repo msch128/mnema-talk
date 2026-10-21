@@ -47,26 +47,38 @@ async function join(client) {
   if (client.index !== 0) await mute(client.page)
 }
 
+function waitForFirstDecodedFrame(client, base) {
+  client.page
+    .waitForFunction(
+      async (from) => {
+        let n = 0
+        for (const pc of window.__pcs || []) {
+          const stats = await pc.getStats()
+          stats.forEach((s) => {
+            if (s.type === 'inbound-rtp' && s.kind === 'video') n += s.framesDecoded || 0
+          })
+        }
+        return n > from
+      },
+      base,
+      { polling: 100, timeout: 120_000 },
+    )
+    .then(() => {
+      client.firstFrameAt ??= Date.now()
+    })
+    .catch(() => {})
+}
+
 async function watch(client) {
   if (client.watching || client.index === 0) return
   const base = await watchScreen(client.page)
-  if (base !== null) {
-    client.watching = true
-    client.watchAt = Date.now()
-    // Time to the first decoded frame, measured at 100 ms resolution.
-    client.page
-      .waitForFunction(async (from) => {
-        let n = 0
-        for (const pc of window.__pcs || []) (await pc.getStats()).forEach((s) => { if (s.type === 'inbound-rtp' && s.kind === 'video') n += s.framesDecoded || 0 })
-        return n > from
-      }, base, { polling: 100, timeout: 120_000 })
-      .then(() => { client.firstFrameAt ??= Date.now() })
-      .catch(() => {})
-  }
+  if (base === null) return
+  client.watching = true
+  client.watchAt = Date.now()
+  waitForFirstDecodedFrame(client, base)
 }
 
-async function poll() {
-  const rows = await Promise.all(clients.map(async (c) => ({ c, s: await stats(c.page) })))
+function aggregateStats(rows) {
   let connected = 0, decoding = 0, watching = 0, totalFps = 0
   for (const { c, s } of rows) {
     if (!s) continue
@@ -74,12 +86,17 @@ async function poll() {
     if (c.watching) watching++
     const before = c.last
     c.last = s
-    if (c.index === 0) continue
-    if (before && s.framesDecoded > before.framesDecoded) {
+    if (c.index !== 0 && before && s.framesDecoded > before.framesDecoded) {
       decoding++
       totalFps += s.fps
     }
   }
+  return { connected, decoding, watching, totalFps }
+}
+
+async function poll() {
+  const rows = await Promise.all(clients.map(async (c) => ({ c, s: await stats(c.page) })))
+  const { connected, decoding, watching, totalFps } = aggregateStats(rows)
   const sharer = rows.find((r) => r.c.index === 0)?.s
   return {
     hostLoad: +loadavg()[0].toFixed(1), connected, watching, decoding, viewers: clients.length - 1,
@@ -90,27 +107,42 @@ async function poll() {
 
 const timeline = []
 const t0 = Date.now()
-async function main() {
-  log(`browsers=${BROWSERS} per_browser=${PER_BROWSER} batch=${BATCH}/${BATCH_MS}ms hold=${HOLD_S}s`)
+
+async function setupSharer() {
   const sharer = await newClient(0)
   await join(sharer)
   await sharer.page.getByRole('button', { name: LABEL.share }).first().click()
   log('sharer joined and sharing')
   if (process.env.READY_FILE) writeFileSync(process.env.READY_FILE, String(sharer.id))
-  for (let i = 1; i < N; i += BATCH) {
-    const batch = []
-    for (let j = i; j < Math.min(i + BATCH, N); j++) {
-      batch.push(newClient(j).then((c) => within(join(c), 90_000).then((r) => { if (r === null) c.joinError = 'timeout' }).catch((e) => { c.joinError = String(e).slice(0, 160) })))
-    }
-    await Promise.all(batch)
-    await Promise.all(clients.map(watch))
-    const p = await poll()
-    timeline.push({ t: Date.now() - t0, ...p })
-    log(`joined ${clients.length}/${N}`, JSON.stringify(p))
-    await sleep(BATCH_MS)
+}
+
+async function joinViewer(index) {
+  const c = await newClient(index)
+  try {
+    const res = await within(join(c), 90_000)
+    if (res === null) c.joinError = 'timeout'
+  } catch (e) {
+    c.joinError = String(e).slice(0, 160)
   }
+  return c
+}
+
+async function joinBatch(start, end) {
+  const batch = []
+  for (let j = start; j < end; j++) {
+    batch.push(joinViewer(j))
+  }
+  await Promise.all(batch)
+  await Promise.all(clients.map(watch))
+  const p = await poll()
+  timeline.push({ t: Date.now() - t0, ...p })
+  log(`joined ${clients.length}/${N}`, JSON.stringify(p))
+  await sleep(BATCH_MS)
+}
+
+async function runHoldPhase(holdSeconds) {
   if (process.env.HOLD_FILE) writeFileSync(process.env.HOLD_FILE, String(Date.now()))
-  const holdUntil = Date.now() + HOLD_S * 1000
+  const holdUntil = Date.now() + holdSeconds * 1000
   while (Date.now() < holdUntil) {
     await Promise.all(clients.map(watch))
     const p = await poll()
@@ -118,12 +150,14 @@ async function main() {
     log('hold', JSON.stringify(p))
     await sleep(10_000)
   }
-  // Tells the lightweight viewers the hold is over, before the sharer leaves.
   if (process.env.STOP_FILE) writeFileSync(process.env.STOP_FILE, String(Date.now()))
+}
+
+function buildSummary(clients, timeline) {
   const viewers = clients.filter((c) => c.index !== 0)
   const ttf = viewers.filter((c) => c.firstFrameAt && c.watchAt).map((c) => c.firstFrameAt - c.watchAt).sort((a, b) => a - b)
   const joins = viewers.filter((c) => c.joinMs).map((c) => c.joinMs).sort((a, b) => a - b)
-  const summary = {
+  return {
     browsers: BROWSERS,
     joinErrors: viewers.filter((c) => c.joinError).map((c) => ({ i: c.index, e: c.joinError })),
     pageErrors: clients.reduce((s, c) => s + c.errors, 0),
@@ -132,6 +166,16 @@ async function main() {
     firstFrameAfterWatchMs: { p50: percentile(ttf, 0.5), p95: percentile(ttf, 0.95), max: ttf.at(-1) ?? null },
     final: timeline.at(-1),
   }
+}
+
+async function main() {
+  log(`browsers=${BROWSERS} per_browser=${PER_BROWSER} batch=${BATCH}/${BATCH_MS}ms hold=${HOLD_S}s`)
+  await setupSharer()
+  for (let i = 1; i < N; i += BATCH) {
+    await joinBatch(i, Math.min(i + BATCH, N))
+  }
+  await runHoldPhase(HOLD_S)
+  const summary = buildSummary(clients, timeline)
   writeJSON(OUT, { summary, timeline })
   log('SUMMARY', JSON.stringify(summary))
 }

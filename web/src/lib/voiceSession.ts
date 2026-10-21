@@ -15,11 +15,15 @@ function storage() {
   }
 }
 
+function storageBlocked(): void {
+  // Storage full or blocked: resuming simply won't happen.
+}
+
 export function save(channelId: string, now = Date.now()) {
   try {
     storage()?.setItem(STORAGE_KEY, JSON.stringify({ channelId, ts: now }))
   } catch {
-    // Storage full or blocked: resuming simply won't happen.
+    storageBlocked()
   }
 }
 
@@ -27,28 +31,44 @@ export function clear() {
   try {
     storage()?.removeItem(STORAGE_KEY)
   } catch {
-    // ignore
+    storageBlocked()
   }
+}
+
+function readSession(): unknown {
+  try {
+    return JSON.parse(storage()?.getItem(STORAGE_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
+function sessionFields(entry: object): { channelId: string; ts: number } | null {
+  if (!('channelId' in entry) || !('ts' in entry)) return null
+  const channelId = Reflect.get(entry, 'channelId')
+  const ts = Reflect.get(entry, 'ts')
+  if (typeof channelId !== 'string' || typeof ts !== 'number') return null
+  return { channelId, ts }
 }
 
 /** Returns the channel to resume, or null if none or too old. Stale entries are removed. */
 export function recent(now = Date.now(), windowMs = RESUME_WINDOW_MS) {
-  let entry: unknown
-  try {
-    entry = JSON.parse(storage()?.getItem(STORAGE_KEY) || 'null')
-  } catch {
-    entry = null
-  }
-  if (!entry || typeof entry !== 'object' || !('channelId' in entry) || !('ts' in entry) || typeof entry.channelId !== 'string' || typeof entry.ts !== 'number') {
+  const entry = readSession()
+  if (!entry || typeof entry !== 'object') {
     clear()
     return null
   }
-  const age = now - entry.ts
+  const fields = sessionFields(entry)
+  if (!fields) {
+    clear()
+    return null
+  }
+  const age = now - fields.ts
   if (age < 0 || age > windowMs) {
     clear()
     return null
   }
-  return entry.channelId
+  return fields.channelId
 }
 
 let heartbeat: ReturnType<typeof setInterval> | null = null

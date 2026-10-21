@@ -35,27 +35,48 @@ export function extractPreviewUrls(content: string | null | undefined, max = 3):
   return [...new Set(matches)].slice(0, max)
 }
 
+type UnreadMessage = Pick<Message, 'id' | 'created_at' | 'user_id'>
+
+function isUnreadCandidate(m: UnreadMessage, cutoff: number, myId?: string): boolean {
+  if (m.user_id === myId) return false
+  return new Date(m.created_at).getTime() > cutoff
+}
+
 // Id of the first message from someone else newer than `since` (ISO string):
 // where the "new since" divider goes. Null when unknown or nothing is new.
-export function firstUnreadId(messages: Array<Pick<Message, 'id' | 'created_at' | 'user_id'>> | null | undefined, since: string | null | undefined, myId: string | undefined, hasMoreBefore = false): string | null {
-  if (!since || !messages?.length) return null
+export function firstUnreadId(
+  messages: UnreadMessage[] | null | undefined,
+  since: string | null | undefined,
+  myId: string | undefined,
+  hasMoreBefore = false
+): string | null {
+  if (!since || !messages || messages.length === 0) return null
   const cutoff = new Date(since).getTime()
   if (!Number.isFinite(cutoff)) return null
-  const i = messages.findIndex(m => new Date(m.created_at).getTime() > cutoff && m.user_id !== myId)
+
+  const i = messages.findIndex(m => isUnreadCandidate(m, cutoff, myId))
   if (i < 0) return null
   // Everything loaded is newer: without the history above we can't tell where it starts.
   if (i === 0 && hasMoreBefore) return null
-  return messages[i]?.id || null
+  return messages[i]?.id ?? null
+}
+
+function extractTypingNames(users: Array<Partial<Pick<User, 'display_name' | 'username'>>> | null | undefined): string[] {
+  if (!users) return []
+  const names: string[] = []
+  for (const u of users) {
+    const name = u.display_name || u.username
+    if (name) names.push(name)
+  }
+  return names
 }
 
 // What the typing line says: null | { key, params } for $t.
 export function typingLine(users: Array<Partial<Pick<User, 'display_name' | 'username'>>> | null | undefined) {
-  const names = (users || []).map(u => u.display_name || u.username).filter(Boolean)
-  if (!names.length) return null
-  const first = names[0]
-  const second = names[1]
-  if (names.length === 1 && first) return { key: 'chat.isTyping', params: { name: first } }
-  if (names.length === 2 && first && second) return { key: 'chat.twoTyping', params: { a: first, b: second } }
+  const names = extractTypingNames(users)
+  if (names.length === 0) return null
+  if (names.length === 1) return { key: 'chat.isTyping', params: { name: names[0] } }
+  if (names.length === 2) return { key: 'chat.twoTyping', params: { a: names[0], b: names[1] } }
   return { key: 'chat.severalTyping', params: {} }
 }
 

@@ -27,6 +27,84 @@ func ValidateAdminSeed(username, password string) error {
 	return nil
 }
 
+func hasAdminUser(ctx context.Context, p *db.Pool) (bool, error) {
+	var exists bool
+	err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`).Scan(&exists)
+	return exists, err
+}
+
+func checkAdminUsernameAvailable(ctx context.Context, p *db.Pool, username string) error {
+	// Usernames are unique case-insensitively: "herzog" blocks "Herzog".
+	var holder string
+	err := p.QueryRow(ctx, `SELECT username FROM users WHERE LOWER(username) = LOWER($1)`, username).Scan(&holder)
+	if err == nil {
+		return fmt.Errorf("ADMIN_USERNAME %q is taken by the regular user %q; choose another admin name", username, holder)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("look up admin username: %w", err)
+	}
+	return nil
+}
+
+func resolveAdminPassword(password string, requirePassword bool) (string, string, error) {
+	if password != "" {
+		return password, "", nil
+	}
+	if requirePassword {
+		return "", "", errors.New("ADMIN_INITIAL_PASSWORD is empty: set it for the first start in production (it is only used to create the administrator), then change it after the first login")
+	}
+	b := make([]byte, 18)
+	if _, err := rand.Read(b); err != nil {
+		return "", "", fmt.Errorf("generate initial admin password: %w", err)
+	}
+	gen := base64.RawURLEncoding.EncodeToString(b)
+	return gen, gen, nil
+}
+
+func insertAdminUser(ctx context.Context, p *db.Pool, username, hash string) error {
+	_, err := p.Exec(ctx, `
+		INSERT INTO users (username, display_name, password_hash, role)
+		VALUES ($1, $2, $3, 'admin')`,
+		username, defaultDisplayName(username), hash)
+	if isUniqueViolation(err) {
+		return fmt.Errorf("ADMIN_USERNAME %q is taken by a regular user; choose another admin name", username)
+	}
+	if err != nil {
+		return fmt.Errorf("insert admin user: %w", err)
+	}
+	return nil
+}
+
+func checkExistingAdmin(ctx context.Context, p *db.Pool, invalid error) (bool, error) {
+	exists, err := hasAdminUser(ctx, p)
+	if err != nil {
+		return false, fmt.Errorf("look up admin: %w", err)
+	}
+	if exists {
+		if invalid != nil {
+			slog.Warn("ignoring invalid admin seed settings, an administrator already exists", "err", invalid)
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
+func createAdminAccount(ctx context.Context, p *db.Pool, username, pass, generated string) error {
+	hash, err := HashPassword(pass)
+	if err != nil {
+		return fmt.Errorf("hash admin password: %w", err)
+	}
+	if err := insertAdminUser(ctx, p, username, hash); err != nil {
+		return err
+	}
+	slog.Info("initial administrator created", "username", username)
+	if generated != "" {
+		// Development only (see requirePassword); printed once on first start.
+		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", generated)
+	}
+	return nil
+}
+
 // EnsureAdminUser seeds the administrator on first start. With
 // requirePassword (production) an empty password fails the seed, so the
 // initial password never ends up in container logs; otherwise an empty
@@ -37,63 +115,19 @@ func ValidateAdminSeed(username, password string) error {
 // effect.
 func EnsureAdminUser(ctx context.Context, p *db.Pool, username, password string, requirePassword bool) error {
 	invalid := ValidateAdminSeed(username, password)
-
-	var exists bool
-	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM users WHERE role = 'admin')`).Scan(&exists); err != nil {
-		return fmt.Errorf("look up admin: %w", err)
-	}
-	if exists {
-		if invalid != nil {
-			slog.Warn("ignoring invalid admin seed settings, an administrator already exists", "err", invalid)
-		}
-		return nil
+	exists, err := checkExistingAdmin(ctx, p, invalid)
+	if err != nil || exists {
+		return err
 	}
 	if invalid != nil {
 		return invalid
 	}
-	if password == "" && requirePassword {
-		return errors.New("ADMIN_INITIAL_PASSWORD is empty: set it for the first start in production (it is only used to create the administrator), then change it after the first login")
-	}
-
-	// Usernames are unique case-insensitively: "herzog" blocks "Herzog".
-	var holder string
-	err := p.QueryRow(ctx, `SELECT username FROM users WHERE LOWER(username) = LOWER($1)`, username).Scan(&holder)
-	if err == nil {
-		return fmt.Errorf("ADMIN_USERNAME %q is taken by the regular user %q; choose another admin name", username, holder)
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("look up admin username: %w", err)
-	}
-
-	// generated holds a random initial password when none was configured; it
-	// is shown once in the log below, the configured one never is.
-	var generated string
-	if password == "" {
-		b := make([]byte, 18)
-		_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
-		generated = base64.RawURLEncoding.EncodeToString(b)
-		password = generated
-	}
-	hash, err := HashPassword(password)
+	pass, generated, err := resolveAdminPassword(password, requirePassword)
 	if err != nil {
-		return fmt.Errorf("hash admin password: %w", err)
+		return err
 	}
-
-	_, err = p.Exec(ctx, `
-		INSERT INTO users (username, display_name, password_hash, role)
-		VALUES ($1, $2, $3, 'admin')`,
-		username, defaultDisplayName(username), hash)
-	if isUniqueViolation(err) {
-		return fmt.Errorf("ADMIN_USERNAME %q is taken by a regular user; choose another admin name", username)
+	if err := checkAdminUsernameAvailable(ctx, p, username); err != nil {
+		return err
 	}
-	if err != nil {
-		return fmt.Errorf("insert admin user: %w", err)
-	}
-
-	slog.Info("initial administrator created", "username", username)
-	if generated != "" {
-		// Development only (see requirePassword); printed once on first start.
-		slog.Warn("ADMIN_INITIAL_PASSWORD was empty, generated a password", "username", username, "password", generated)
-	}
-	return nil
+	return createAdminAccount(ctx, p, username, pass, generated)
 }

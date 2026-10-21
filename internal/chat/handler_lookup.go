@@ -68,6 +68,39 @@ func (h *Handler) toggleReaction(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (h *Handler) loadThreadRoot(r *http.Request, msgID uuid.UUID) (*Message, error) {
+	root, err := GetMessage(r.Context(), h.DB, msgID)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
+		return nil, notFoundUnlessFailure(err)
+	}
+	// Only a root message has a thread; a reply is not one.
+	if root.ParentID != nil {
+		return nil, errMessageNotFound
+	}
+	return root, nil
+}
+
+func (h *Handler) parseThreadQuery(r *http.Request, msgID uuid.UUID) (HistoryQuery, error) {
+	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
+	if err != nil {
+		return q, err
+	}
+	if anchors > 1 {
+		return q, httpx.ErrInvalidInput("use only one of before or after")
+	}
+	if anchor := firstID(q.Before, q.After); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
+			return q, errMessageNotFound
+		}
+	}
+	return q, nil
+}
+
 // getThread handles GET /api/messages/{messageID}/thread.
 //
 // @Summary Get a thread
@@ -93,33 +126,14 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	root, err := GetMessage(r.Context(), h.DB, msgID)
+	root, err := h.loadThreadRoot(r, msgID)
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, root.ChannelID, perm.ViewChannel); err != nil {
-		return notFoundUnlessFailure(err)
-	}
-	// Only a root message has a thread; a reply is not one.
-	if root.ParentID != nil {
-		return errMessageNotFound
-	}
-
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After})
+	q, err := h.parseThreadQuery(r, msgID)
 	if err != nil {
 		return err
 	}
-	if anchors > 1 {
-		return httpx.ErrInvalidInput("use only one of before or after")
-	}
-	if anchor := firstID(q.Before, q.After); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
-		if err != nil || ref.ParentID == nil || *ref.ParentID != msgID {
-			return errMessageNotFound
-		}
-	}
-
 	replies, err := GetThreadReplies(r.Context(), h.DB, msgID, q)
 	if err != nil {
 		return err

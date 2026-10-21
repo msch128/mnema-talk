@@ -28,6 +28,24 @@ export function onActivity(cx: Cx) {
   markActive(cx)
 }
 
+function updateLocalPresence(cx: Cx, meId: string, presence: ChosenPresence): void {
+  const { cs } = cx
+  if (!cs.presenceById.value[meId]) return
+  cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, {
+    user_id: meId,
+    status: presence === 'online' && cs.isIdle ? 'away' : presence
+  })
+}
+
+function restorePresenceOnFailure(authStore: Cx['authStore'], meId: string, previous?: ChosenPresence): void {
+  const current = authStore.user
+  if (current?.id !== meId) return
+  const restored = { ...current }
+  if (previous === undefined) delete restored.presence
+  else restored.presence = previous
+  authStore.user = restored
+}
+
 /** Sets the signed-in user's presence (online, away, dnd, focus). */
 export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
   const { cs, authStore } = cx
@@ -36,12 +54,7 @@ export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
   if (!me) return
   const previous = me.presence
   authStore.user = { ...me, presence }
-  if (cs.presenceById.value[me.id]) {
-    cs.presenceById.value = applyPresenceUpdate(cs.presenceById.value, {
-      user_id: me.id,
-      status: presence === 'online' && cs.isIdle ? 'away' : presence
-    })
-  }
+  updateLocalPresence(cx, me.id, presence)
   try {
     const updated = await api('/api/users/me/presence', { method: 'PUT', json: { presence }, decode: decodeUser })
     assertCommunity(cx, community)
@@ -50,13 +63,7 @@ export async function setMyPresence(cx: Cx, presence: ChosenPresence) {
     assertCommunity(cx, community)
     // A failed presence request must preserve newer profile updates and a
     // session that was cleared or switched while the request was pending.
-    const current = authStore.user
-    if (current?.id === me.id) {
-      const restored = { ...current }
-      if (previous === undefined) delete restored.presence
-      else restored.presence = previous
-      authStore.user = restored
-    }
+    restorePresenceOnFailure(authStore, me.id, previous)
     throw e
   }
 }

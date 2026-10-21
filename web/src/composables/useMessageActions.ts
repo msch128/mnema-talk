@@ -100,54 +100,17 @@ function useFileUpload() {
   return { isUploading, upload }
 }
 
-/**
- * @param options.container ref/getter of the element holding the list; the
- *                          open reaction picker closes on presses outside its
- *                          anchors within it and on Escape. Rows in it carry
- *                          data-msg-id or data-reply-id.
- * @param options.deleteTitle i18n key of the delete confirmation title.
- */
-export function useMessageActions({ container = null, deleteTitle = 'chat.deleteTitle' }: { container?: MaybeRefOrGetter<HTMLElement | null>; deleteTitle?: string } = {}) {
+function useMessageEditor(channelOf: (msg: Message) => string, onStart?: () => void) {
   const chatStore = useChatStore()
-  const authStore = useAuthStore()
   const toasts = useToastStore()
-  const permissions = usePermissionsStore()
-  const { pickerId, toggleReaction, togglePicker, closePicker } = useReactionPicker(container)
-  const { isUploading, upload } = useFileUpload()
-
   const editingId = ref<string | null>(null)
   const editText = ref('')
   const isSavingEdit = ref(false)
 
-  // Leaving the editor drops focus with it: hand it back to the message row
-  // so keyboard users stay where they were.
-  watch(editingId, (now, was) => {
-    if (!was || now) return
-    const active = document.activeElement
-    if (active && active !== document.body && active.isConnected) return
-    toValue(container)?.querySelector<HTMLElement>(`[data-msg-id="${was}"], [data-reply-id="${was}"]`)?.focus()
-  }, { flush: 'post' })
-
-  function channelOf(msg: Message) {
-    return chatStore.activeChannel?.id || msg.channel_id
-  }
-
-  function isOwn(msg: Message) {
-    return !!authStore.user?.id && msg.user_id === authStore.user.id
-  }
-
-  // Own messages always; others' with Manage messages in the channel, but
-  // never the Owner's (the server refuses that too).
-  function canDelete(msg: Message) {
-    if (isOwn(msg)) return true
-    if (chatStore.members.find(m => m.id === msg.user_id)?.role === 'admin') return authStore.isAdmin
-    return permissions.canIn(channelOf(msg), 'manage_messages')
-  }
-
   function startEdit(msg: Message) {
     editingId.value = msg.id
     editText.value = msg.content
-    pickerId.value = null
+    onStart?.()
   }
 
   function cancelEdit() {
@@ -167,6 +130,51 @@ export function useMessageActions({ container = null, deleteTitle = 'chat.delete
     } finally {
       isSavingEdit.value = false
     }
+  }
+
+  return { editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit }
+}
+
+/**
+ * @param options.container ref/getter of the element holding the list; the
+ *                          open reaction picker closes on presses outside its
+ *                          anchors within it and on Escape. Rows in it carry
+ *                          data-msg-id or data-reply-id.
+ * @param options.deleteTitle i18n key of the delete confirmation title.
+ */
+export function useMessageActions({ container = null, deleteTitle = 'chat.deleteTitle' }: { container?: MaybeRefOrGetter<HTMLElement | null>; deleteTitle?: string } = {}) {
+  const chatStore = useChatStore()
+  const authStore = useAuthStore()
+  const toasts = useToastStore()
+  const permissions = usePermissionsStore()
+  const { pickerId, toggleReaction, togglePicker, closePicker } = useReactionPicker(container)
+  const { isUploading, upload } = useFileUpload()
+
+  function channelOf(msg: Message): string {
+    return chatStore.activeChannel?.id || msg.channel_id
+  }
+
+  const { editingId, editText, isSavingEdit, startEdit, cancelEdit, saveEdit } = useMessageEditor(channelOf, () => { pickerId.value = null })
+
+  // Leaving the editor drops focus with it: hand it back to the message row
+  // so keyboard users stay where they were.
+  watch(editingId, (now, was) => {
+    if (!was || now) return
+    const active = document.activeElement
+    if (active && active !== document.body && active.isConnected) return
+    toValue(container)?.querySelector<HTMLElement>(`[data-msg-id="${was}"], [data-reply-id="${was}"]`)?.focus()
+  }, { flush: 'post' })
+
+  function isOwn(msg: Message) {
+    return !!authStore.user?.id && msg.user_id === authStore.user.id
+  }
+
+  // Own messages always; others' with Manage messages in the channel, but
+  // never the Owner's (the server refuses that too).
+  function canDelete(msg: Message) {
+    if (isOwn(msg)) return true
+    if (chatStore.members.find(m => m.id === msg.user_id)?.role === 'admin') return authStore.isAdmin
+    return permissions.canIn(channelOf(msg), 'manage_messages')
   }
 
   async function deleteMessage(msg: Message) {

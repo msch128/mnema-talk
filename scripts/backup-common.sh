@@ -28,27 +28,108 @@ service_start() {
   done
   backup_fail "$1 did not become healthy"
 }
-backup_validate() {
-  local src=$1 legacy=$2 preparing=${3:-} name actual
+validate_safe_file() {
+  local file="$1/$2"
+  if [ ! -f "$file" ] || [ -L "$file" ]; then
+    backup_fail "missing/unsafe backup file: $2"
+    return 1
+  fi
+}
+
+validate_required_files() {
+  local src="$1"
+  local name
   for name in postgres.sql.gz seaweedfs.tar.gz env; do
-    [ -f "$src/$name" ] && [ ! -L "$src/$name" ] || backup_fail "missing/unsafe backup file: $name" || return
+    validate_safe_file "$src" "$name" || return 1
   done
-  if [ "$legacy" != 1 ] || [ -e "$src/COMPLETE" ] || [ -e "$src/manifest" ]; then
-    for name in manifest schema.txt compose.yaml SHA256SUMS; do
-      [ -f "$src/$name" ] && [ ! -L "$src/$name" ] || backup_fail "missing/unsafe backup file: $name" || return
-    done
-    if [ "$preparing" != preparing ]; then
-      [ -f "$src/COMPLETE" ] && [ ! -L "$src/COMPLETE" ] && [ "$(cat "$src/COMPLETE")" = mnema-backup-v1 ] || backup_fail 'incomplete backup' || return
-    fi
-    [ "$(head -n 1 "$src/manifest")" = format=mnema-backup-v1 ] || backup_fail 'unsupported backup format' || return
-    actual=$(cd "$src" && backup_hashes postgres.sql.gz seaweedfs.tar.gz env manifest schema.txt compose.yaml)
-    [ "$actual" = "$(cat "$src/SHA256SUMS")" ] || backup_fail 'backup checksum mismatch' || return
+}
+
+validate_manifest_files() {
+  local src="$1"
+  local name
+  for name in manifest schema.txt compose.yaml SHA256SUMS; do
+    validate_safe_file "$src" "$name" || return 1
+  done
+}
+
+validate_backup_completeness() {
+  local src="$1"
+  local preparing="$2"
+  if [ "$preparing" = preparing ]; then
+    return 0
+  fi
+  local complete="$src/COMPLETE"
+  if [ ! -f "$complete" ] || [ -L "$complete" ]; then
+    backup_fail 'incomplete backup'
+    return 1
+  fi
+  if [ "$(< "$complete")" != mnema-backup-v1 ]; then
+    backup_fail 'incomplete backup'
+    return 1
+  fi
+}
+
+validate_manifest_and_checksums() {
+  local src="$1"
+  if [ "$(head -n 1 "$src/manifest")" != format=mnema-backup-v1 ]; then
+    backup_fail 'unsupported backup format'
+    return 1
+  fi
+  local actual
+  actual=$(cd "$src" && backup_hashes postgres.sql.gz seaweedfs.tar.gz env manifest schema.txt compose.yaml)
+  if [ "$actual" != "$(< "$src/SHA256SUMS")" ]; then
+    backup_fail 'backup checksum mismatch'
+    return 1
+  fi
+}
+
+is_v1_backup() {
+  local src="$1"
+  local legacy="$2"
+  if [ "$legacy" != 1 ]; then
+    return 0
+  fi
+  if [ -e "$src/COMPLETE" ] || [ -e "$src/manifest" ]; then
+    return 0
+  fi
+  return 1
+}
+
+validate_media_archive() {
+  local tarball="$1/seaweedfs.tar.gz"
+  if ! tar tzf "$tarball" | awk '/^\// || /(^|\/)\.\.(\/|$)/ {bad=1} END {exit bad}'; then
+    backup_fail 'unsafe media archive paths'
+    return 1
+  fi
+  if ! tar tvzf "$tarball" | awk 'substr($0,1,1)!="-" && substr($0,1,1)!="d" {bad=1} END {exit bad}'; then
+    backup_fail 'media archive contains links/special files'
+    return 1
+  fi
+}
+
+validate_compressed_archives() {
+  local src="$1"
+  gzip -t "$src/postgres.sql.gz" || return 1
+  gzip -t "$src/seaweedfs.tar.gz" || return 1
+  validate_media_archive "$src" || return 1
+}
+
+validate_v1_backup_if_needed() {
+  local src="$1"
+  local legacy="$2"
+  local preparing="$3"
+  if is_v1_backup "$src" "$legacy"; then
+    validate_manifest_files "$src" || return 1
+    validate_backup_completeness "$src" "$preparing" || return 1
+    validate_manifest_and_checksums "$src" || return 1
   else
     echo 'WARNING: explicit legacy restore; no manifest/checksums or consistency guarantee' >&2
   fi
-  gzip -t "$src/postgres.sql.gz" || return
-  gzip -t "$src/seaweedfs.tar.gz" || return
-  # Refuse traversal and non-file/directory members before any live mutation.
-  tar tzf "$src/seaweedfs.tar.gz" | awk '/^\// || /(^|\/)\.\.(\/|$)/ {bad=1} END {exit bad}' || backup_fail 'unsafe media archive paths' || return
-  tar tvzf "$src/seaweedfs.tar.gz" | awk 'substr($0,1,1)!="-" && substr($0,1,1)!="d" {bad=1} END {exit bad}' || backup_fail 'media archive contains links/special files' || return
+}
+
+backup_validate() {
+  local src=$1 legacy=$2 preparing=${3:-}
+  validate_required_files "$src" || return 1
+  validate_v1_backup_if_needed "$src" "$legacy" "$preparing" || return 1
+  validate_compressed_archives "$src" || return 1
 }

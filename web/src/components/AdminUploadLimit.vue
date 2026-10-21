@@ -13,9 +13,14 @@ const settings = ref<PermUploadSettings | null>(null)
 const draft = ref<string | number>('')
 const busy = ref(false)
 
+function isValidUploadLimit(n: number, ceiling?: number): boolean {
+  if (!Number.isInteger(n) || n < 1) return false
+  return ceiling !== undefined && n <= ceiling
+}
+
 const parsed = computed(() => {
   const n = Number(draft.value)
-  return Number.isInteger(n) && n >= 1 && settings.value && n <= settings.value.ceiling_mb ? n : null
+  return isValidUploadLimit(n, settings.value?.ceiling_mb) ? n : null
 })
 const dirty = computed(() => !!settings.value && parsed.value !== null && parsed.value !== settings.value.max_upload_mb)
 const atCeiling = computed(() => !!settings.value && settings.value.max_upload_mb === settings.value.ceiling_mb)

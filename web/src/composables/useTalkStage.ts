@@ -7,21 +7,35 @@ export type TalkScreenCard = { key: 'own'; kind: 'own'; user: null; state: 'queu
 interface ScreenCardOptions { users?: TalkParticipant[]; myId?: string | null; stage?: VoiceStore['stage']; ownStream?: MediaStream | null; mediaState?: VoiceStore['mediaState']; watched?: Record<string, boolean>; streams?: Record<string, MediaStream> }
 import { useVoiceStore } from '../stores/voice'
 
+function resolveScreenCardState(userId: string, watched: Record<string, boolean>, streams: Record<string, MediaStream>): 'idle' | 'pending' | 'queued' {
+  if (!watched[userId]) return 'idle'
+  return streams[userId] ? 'queued' : 'pending'
+}
+
+function resolveStageTarget(stage?: VoiceStore['stage']): string | null {
+  if (stage?.kind !== 'screen') return null
+  return stage.own ? 'own' : stage.userId
+}
+
 /**
  * Cards for every screen share that is not on the stage: my own while I share,
  * shares I watch, and shares I have not opted into yet.
  * state: 'idle' (not watched yet), 'pending' (watched, no media yet) or
  * 'queued' (can go on the stage).
  */
-export function screenCardsFor({ users = [], myId = null, stage = null, ownStream = null, mediaState = {}, watched = {}, streams = {} }: ScreenCardOptions): TalkScreenCard[] {
+export function screenCardsFor(opts: ScreenCardOptions): TalkScreenCard[] {
   const cards: TalkScreenCard[] = []
-  const onStage = stage?.kind === 'screen' ? (stage.own ? 'own' : stage.userId) : null
-  if (ownStream && onStage !== 'own') cards.push({ key: 'own', kind: 'own', user: null, state: 'queued' })
+  const onStage = resolveStageTarget(opts.stage)
+  if (opts.ownStream && onStage !== 'own') {
+    cards.push({ key: 'own', kind: 'own', user: null, state: 'queued' })
+  }
+  const users = opts.users ?? []
+  const mediaState = opts.mediaState ?? {}
+  const watched = opts.watched ?? {}
+  const streams = opts.streams ?? {}
   for (const user of users) {
-    if (user.id === myId || !mediaState[user.id]?.screen) continue
-    if (onStage === user.id) continue
-    const state = !watched[user.id] ? 'idle' : streams[user.id] ? 'queued' : 'pending'
-    cards.push({ key: user.id, kind: 'remote', user, state })
+    if (user.id === opts.myId || !mediaState[user.id]?.screen || onStage === user.id) continue
+    cards.push({ key: user.id, kind: 'remote', user, state: resolveScreenCardState(user.id, watched, streams) })
   }
   return cards
 }

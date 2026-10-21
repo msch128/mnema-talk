@@ -117,6 +117,13 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	if len(settings) > 0 {
 		s.globalUploadMB = settings[0]
 	}
+	s.addEntities(owners, bots, cats, timeouts)
+	s.addChannels(chans)
+	s.addOverwrites(ows)
+	return nil
+}
+
+func (s *Snapshot) addEntities(owners, bots, cats []uuid.UUID, timeouts []timeoutRow) {
 	for _, id := range owners {
 		s.owners[id] = true
 	}
@@ -129,14 +136,15 @@ func (s *Snapshot) read(ctx context.Context, q db.Querier) error {
 	for _, id := range cats {
 		s.categories[id] = true
 	}
-	for _, c := range chans {
+}
+
+func (s *Snapshot) addChannels(rows []channelRow) {
+	for _, c := range rows {
 		s.channelCat[c.ID] = uuid.Nil
 		if c.Category != nil {
 			s.channelCat[c.ID] = *c.Category
 		}
 	}
-	s.addOverwrites(ows)
-	return nil
 }
 
 func (s *Snapshot) addRoles(rows []roleRow) {

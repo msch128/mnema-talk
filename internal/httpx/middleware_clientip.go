@@ -14,18 +14,22 @@ import (
 	"github.com/msch128/mnema-talk/internal/opwarn"
 )
 
+func normalizeCIDR(v string) string {
+	if strings.Contains(v, "/") {
+		return v
+	}
+	if strings.Contains(v, ":") {
+		return v + "/128"
+	}
+	return v + "/32"
+}
+
 // ParseCIDRs parses CIDRs or bare IPs into networks.
 func ParseCIDRs(values []string) ([]*net.IPNet, error) {
 	var out []*net.IPNet
 	for _, v := range values {
-		if !strings.Contains(v, "/") {
-			if strings.Contains(v, ":") {
-				v += "/128"
-			} else {
-				v += "/32"
-			}
-		}
-		_, n, err := net.ParseCIDR(v)
+		cidr := normalizeCIDR(v)
+		_, n, err := net.ParseCIDR(cidr)
 		if err != nil {
 			return nil, fmt.Errorf("invalid CIDR %q: %w", v, err)
 		}

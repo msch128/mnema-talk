@@ -54,20 +54,70 @@ func NativePreviewInstanceFrom(ctx context.Context) (NativePreviewInstance, bool
 	return value, ok
 }
 
-func validateNativePreviewOptions(options NativePreviewOptions) error {
-	if options.CommunityID == "" || len(options.CommunityID) > 128 {
-		return errors.New("invalid native community identifier")
+func communityRune(c byte) bool {
+	if c >= 'a' && c <= 'z' {
+		return true
 	}
-	for _, c := range []byte(options.CommunityID) {
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-			return errors.New("invalid native community identifier")
+	if c >= 'A' && c <= 'Z' {
+		return true
+	}
+	if c >= '0' && c <= '9' {
+		return true
+	}
+	return c == '-' || c == '_'
+}
+
+func communityIDOK(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	for _, c := range []byte(id) {
+		if !communityRune(c) {
+			return false
 		}
 	}
-	origin, err := url.Parse(options.InstanceOrigin)
-	if err != nil || origin.Scheme != "https" || origin.Hostname() == "" || origin.User != nil || origin.RawQuery != "" || origin.ForceQuery || origin.Fragment != "" || origin.Path != "" || origin.RawPath != "" || origin.String() != options.InstanceOrigin {
+	return true
+}
+
+func originPartsOK(origin *url.URL) bool {
+	if origin.Scheme != "https" || origin.Hostname() == "" {
+		return false
+	}
+	if origin.User != nil || origin.RawQuery != "" {
+		return false
+	}
+	if origin.ForceQuery || origin.Fragment != "" {
+		return false
+	}
+	return origin.Path == "" && origin.RawPath == ""
+}
+
+func instanceOriginOK(raw string) bool {
+	origin, err := url.Parse(raw)
+	if err != nil || origin == nil {
+		return false
+	}
+	if !originPartsOK(origin) {
+		return false
+	}
+	return origin.String() == raw
+}
+
+func compatibilityOK(value NativeCompatibility) bool {
+	if value == NativeSupported || value == NativeDeprecated {
+		return true
+	}
+	return value == NativeUnsupported
+}
+
+func validateNativePreviewOptions(options NativePreviewOptions) error {
+	if !communityIDOK(options.CommunityID) {
+		return errors.New("invalid native community identifier")
+	}
+	if !instanceOriginOK(options.InstanceOrigin) {
 		return errors.New("invalid native instance origin")
 	}
-	if options.Compatibility != NativeSupported && options.Compatibility != NativeDeprecated && options.Compatibility != NativeUnsupported {
+	if !compatibilityOK(options.Compatibility) {
 		return errors.New("invalid native API compatibility")
 	}
 	return nil
@@ -103,18 +153,29 @@ func NewNativePreviewRouter(deps server.Deps, options NativePreviewOptions) (*Na
 	base := browser.Handler
 	trusted := browser.PreviewDeps().Trusted
 	discoveryHandler := httpx.SecurityHeaders(trusted, deps.Config.IsProduction())(http.HandlerFunc(result.discovery))
-	result.Router.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	result.Router.Handler = previewDispatch(base, discoveryHandler, nativeRoutes)
+	return result, nil
+}
+
+func previewNativePath(path string) bool {
+	if path == NativePreviewPrefix {
+		return true
+	}
+	return strings.HasPrefix(path, NativePreviewPrefix+"/")
+}
+
+func previewDispatch(base http.Handler, discovery http.Handler, native http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/.well-known/mnema" {
-			discoveryHandler.ServeHTTP(w, r)
+			discovery.ServeHTTP(w, r)
 			return
 		}
-		if r.URL.Path == NativePreviewPrefix || strings.HasPrefix(r.URL.Path, NativePreviewPrefix+"/") {
-			http.StripPrefix(NativePreviewPrefix, nativeRoutes).ServeHTTP(w, r)
+		if previewNativePath(r.URL.Path) {
+			http.StripPrefix(NativePreviewPrefix, native).ServeHTTP(w, r)
 			return
 		}
 		base.ServeHTTP(w, r)
 	})
-	return result, nil
 }
 
 // newNativeAuth builds the native sessions and handler over the browser
@@ -185,11 +246,32 @@ func nativePreviewHeaderPresent(r *http.Request, name string) bool {
 	}
 	return false
 }
+func previewHeadersRejected(r *http.Request) bool {
+	if nativePreviewHeaderPresent(r, "Origin") {
+		return true
+	}
+	return nativePreviewHeaderPresent(r, "Cookie")
+}
+
+func previewQueryRejected(u *url.URL) bool {
+	if u.RawQuery != "" || u.ForceQuery {
+		return true
+	}
+	return u.User != nil || u.Fragment != ""
+}
+
+func previewTransportRejected(r *http.Request) bool {
+	if previewHeadersRejected(r) {
+		return true
+	}
+	return previewQueryRejected(r.URL)
+}
+
 func (r *NativePreviewRouter) boundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
-		if nativePreviewHeaderPresent(request, "Origin") || nativePreviewHeaderPresent(request, "Cookie") || request.URL.RawQuery != "" || request.URL.ForceQuery || request.URL.User != nil || request.URL.Fragment != "" {
+		if previewTransportRejected(request) {
 			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
 			return
 		}

@@ -9,16 +9,25 @@ function timeOf(msg: GroupableMessage | null | undefined): number {
   return Number.isFinite(t) ? t : NaN
 }
 
-export function isContinuation(prev: GroupableMessage | null | undefined, msg: GroupableMessage | null | undefined, windowMs = GROUP_WINDOW_MS): boolean {
-  if (!prev || !msg) return false
-  // A reply shows its reference line above the header, so it always starts a group.
-  if (msg.reply_to_id || msg.reply_to) return false
-  if (!prev.user_id || prev.user_id !== msg.user_id) return false
-  const a = timeOf(prev)
-  const b = timeOf(msg)
+function isReply(msg: GroupableMessage): boolean {
+  return Boolean(msg.reply_to_id || msg.reply_to)
+}
+
+function hasSameAuthor(prev: GroupableMessage, msg: GroupableMessage): boolean {
+  return Boolean(prev.user_id && prev.user_id === msg.user_id)
+}
+
+function isWithinWindow(a: number, b: number, windowMs: number): boolean {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return false
   const diff = b - a
   return diff >= 0 && diff < windowMs
+}
+
+export function isContinuation(prev: GroupableMessage | null | undefined, msg: GroupableMessage | null | undefined, windowMs = GROUP_WINDOW_MS): boolean {
+  if (!prev || !msg) return false
+  if (isReply(msg)) return false
+  if (!hasSameAuthor(prev, msg)) return false
+  return isWithinWindow(timeOf(prev), timeOf(msg), windowMs)
 }
 
 // Returns a Set of message ids that continue the previous message's group.

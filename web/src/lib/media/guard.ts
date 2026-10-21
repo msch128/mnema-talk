@@ -39,15 +39,35 @@ function count(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0
 }
 
+function isStatsMessage(data: unknown): data is { type: 'stats', senders: unknown } {
+  if (!data || typeof data !== 'object') return false
+  if (!('type' in data) || data.type !== 'stats') return false
+  return 'senders' in data
+}
+
+function isStatsEntry(entry: unknown): entry is { opened: unknown, newer: unknown, epoch: unknown } {
+  if (!entry || typeof entry !== 'object') return false
+  if (!('opened' in entry) || !('newer' in entry)) return false
+  return 'epoch' in entry
+}
+
+function statsOf(entry: { opened: unknown, newer: unknown, epoch: unknown }): FrameStats | null {
+  const { opened, newer, epoch } = entry
+  if (!count(opened) || !count(newer)) return null
+  if (typeof epoch !== 'number' || !Number.isInteger(epoch)) return null
+  return { opened, newer, epoch }
+}
+
 function readStats(data: unknown): Record<string, FrameStats> | null {
-  if (!data || typeof data !== 'object' || !('type' in data) || data.type !== 'stats' || !('senders' in data)) return null
+  if (!isStatsMessage(data)) return null
   const raw = data.senders
   if (!raw || typeof raw !== 'object') return null
   const out: Record<string, FrameStats> = {}
   for (const [id, entry] of Object.entries(raw)) {
-    if (!entry || typeof entry !== 'object' || !('opened' in entry) || !('newer' in entry) || !('epoch' in entry)) continue
-    const { opened, newer, epoch } = entry
-    if (count(opened) && count(newer) && typeof epoch === 'number' && Number.isInteger(epoch)) out[id] = { opened, newer, epoch }
+    if (!isStatsEntry(entry)) continue
+    const stats = statsOf(entry)
+    if (!stats) continue
+    out[id] = stats
   }
   return out
 }
@@ -58,7 +78,17 @@ function canArm(): boolean {
 
 type KeyMessage = { type: 'key', epoch: number, key: EpochKeys, replace?: true, soft?: true, caps?: FrameCaps, seq: number }
 
-function keyMessage(epoch: number, key: EpochKeys, seq: number, replace: boolean, soft: boolean, caps: FrameCaps | undefined): KeyMessage {
+interface KeyFields {
+  epoch: number
+  key: EpochKeys
+  seq: number
+  replace: boolean
+  soft: boolean
+  caps: FrameCaps | undefined
+}
+
+function keyMessage(fields: KeyFields): KeyMessage {
+  const { epoch, key, seq, replace, soft, caps } = fields
   return {
     type: 'key' as const, epoch, key, seq,
     ...(replace ? { replace: true as const } : {}),
@@ -88,6 +118,19 @@ function spawnWorker(onStats: (senders: Record<string, FrameStats>) => void): Wo
   return worker
 }
 
+/** A port the browser already closed rejects; the call is gone either way. */
+function ignoreClosedPort(error: unknown) {
+  void error
+}
+
+function isValidArmTarget(direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource): boolean {
+  if (!channelId || senderId === '') return false
+  if (direction === 'send') {
+    return senderId !== null && source !== undefined
+  }
+  return true
+}
+
 /** One worker seals every local track and opens every remote track of this call. */
 export function createMediaGuard(): MediaGuard {
   let worker: Worker | null = null
@@ -108,7 +151,7 @@ export function createMediaGuard(): MediaGuard {
   }
 
   function arm(target: TransformTarget, direction: 'send' | 'recv', channelId: string, senderId: string | null, source?: FrameSource, layer?: number): boolean {
-    if (!channelId || senderId === '' || (senderId === null && direction === 'send') || (direction === 'send' && source === undefined)) return false
+    if (!isValidArmTarget(direction, channelId, senderId, source)) return false
     const currentWorker = sharedWorker()
     if (!currentWorker) return false
     const channel = new MessageChannel()
@@ -138,7 +181,7 @@ export function createMediaGuard(): MediaGuard {
     armReceiver: armIncoming,
     setKey(epoch, key, replace = false, soft = false, caps) {
       seq += 1
-      const message = keyMessage(epoch, key, seq, replace, soft, caps)
+      const message = keyMessage({ epoch, key, seq, replace, soft, caps })
       current = message
       currentCaps = null
       for (const port of ports) port.postMessage(message)
@@ -157,8 +200,8 @@ export function createMediaGuard(): MediaGuard {
       current = null
       currentCaps = null
       for (const port of ports) {
-        try { port.postMessage({ type: 'drop' }) } catch { /* already closed */ }
-        try { port.close() } catch { /* already closed */ }
+        try { port.postMessage({ type: 'drop' }) } catch (error) { ignoreClosedPort(error) }
+        try { port.close() } catch (error) { ignoreClosedPort(error) }
       }
       ports.length = 0
       armed = new WeakMap()

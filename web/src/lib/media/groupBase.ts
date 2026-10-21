@@ -14,6 +14,22 @@ import { type MediaVerification } from './verify'
 import { SWAP_BASE_MS, RESET_BASE_MS, BACKOFF_MAX_MS, RIVAL_BASE_MS, RIVAL_MAX_MS, type MediaStep, type OwnPackage } from './groupParams'
 import { sameBytes, wipeConsumed, treeMembers, treeLeafSigner, lowest, encodeWire } from './groupTree'
 
+function isCapableMember(id: string, userId: string, signer: Uint8Array | undefined, leaf: Uint8Array | null): boolean {
+  if (id === userId) return true
+  if (signer === undefined || leaf === null) return false
+  return sameBytes(signer, leaf)
+}
+
+function stateSecrets(state: ClientState): Uint8Array[] {
+  const schedule = state.keySchedule
+  return [
+    schedule.exporterSecret, schedule.senderDataSecret, schedule.externalSecret, schedule.confirmationKey,
+    schedule.membershipKey, schedule.resumptionPsk, schedule.epochAuthenticator, schedule.initSecret,
+    state.signaturePrivateKey, state.confirmationTag,
+    ...Object.values(state.privatePath.privateKeys),
+  ]
+}
+
 export abstract class GroupBase {
   protected state: ClientState | null = null
   protected readonly pending = new Map<string, KeyPackage>()
@@ -153,7 +169,7 @@ export abstract class GroupBase {
     for (const id of key.verifiers.keys()) {
       const signer = this.capable.get(id)
       const leaf = id === this.userId ? null : treeLeafSigner(state, id)
-      if (id === this.userId || (signer !== undefined && leaf !== null && sameBytes(signer, leaf))) members.push(id)
+      if (isCapableMember(id, this.userId, signer, leaf)) members.push(id)
       else complete = false
     }
     return { members: members.sort(), complete }
@@ -213,22 +229,11 @@ export abstract class GroupBase {
     keep(this.own.privatePackage.hpkePrivateKey)
     keep(this.own.privatePackage.signaturePrivateKey)
     if (this.state) {
-      const schedule = this.state.keySchedule
-      for (const secret of [
-        schedule.exporterSecret, schedule.senderDataSecret, schedule.externalSecret, schedule.confirmationKey,
-        schedule.membershipKey, schedule.resumptionPsk, schedule.epochAuthenticator, schedule.initSecret,
-        this.state.signaturePrivateKey, this.state.confirmationTag,
-      ]) keep(secret)
-      for (const secret of Object.values(this.state.privatePath.privateKeys)) keep(secret)
+      for (const secret of stateSecrets(this.state)) keep(secret)
     }
-    const wipe = (bytes: Uint8Array | undefined) => { if (bytes && !kept.has(bytes)) zeroOutUint8Array(bytes) }
-    const schedule = state.keySchedule
-    for (const secret of [
-      schedule.exporterSecret, schedule.senderDataSecret, schedule.externalSecret, schedule.confirmationKey,
-      schedule.membershipKey, schedule.resumptionPsk, schedule.epochAuthenticator, schedule.initSecret,
-      state.signaturePrivateKey, state.confirmationTag,
-    ]) wipe(secret)
-    for (const secret of Object.values(state.privatePath.privateKeys)) wipe(secret)
+    for (const secret of stateSecrets(state)) {
+      if (secret && !kept.has(secret)) zeroOutUint8Array(secret)
+    }
   }
 
   protected discard() {
@@ -250,9 +255,13 @@ export abstract class GroupBase {
     this.leaves.clear()
     this.updates.clear()
     this.dropSelfUpdate()
+    this.clearDiscardTimers()
+    if (state) this.wipeRejected(state)
+  }
+
+  private clearDiscardTimers() {
     if (this.tickTimer !== null) clearTimeout(this.tickTimer)
     this.tickTimer = null
-    if (state) this.wipeRejected(state)
   }
 
   /** Forgets the state before a self-update once the time for a conflict has passed (or at once with `now`). */

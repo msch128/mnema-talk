@@ -213,6 +213,16 @@ describe('optional values and defensive public actions', () => {
     vi.advanceTimersByTime(TYPING_EXPIRY_MS)
     expect(chat.typingByChannel[ch.id]).toEqual([])
   })
+  it('labels a typer like the known member, never from the payload username alone', () => {
+    const chat = setup()
+    chat.members = [me, { ...other, display_name: '' }]
+    Reflect.apply(chat.handleWSEvent, chat, [{ type: 'typing', payload: { channel_id: ch.id, user_id: other.id, username: 'wire' } }])
+    expect(chat.typingByChannel[ch.id]?.[0]).toEqual({ user_id: other.id, username: 'wire', display_name: 'other' })
+    chat.typingByChannel = {}
+    chat.members = [me]
+    Reflect.apply(chat.handleWSEvent, chat, [{ type: 'typing', payload: { channel_id: ch.id, user_id: other.id, username: 'wire' } }])
+    expect(chat.typingByChannel[ch.id]?.[0]).toEqual({ user_id: other.id, username: 'wire', display_name: '' })
+  })
   it('ignores malformed optional programmatic events before mutating state', () => {
     const chat = setup()
     // The wire decoder rejects these. Public actions also retain explicit

@@ -9,6 +9,39 @@ import (
 	"github.com/msch128/mnema-talk/internal/perm"
 )
 
+func (h *Handler) validateListChannel(r *http.Request) (uuid.UUID, error) {
+	chID, err := httpx.PathUUID(r, "channelID")
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if err := h.require(r, chID, perm.ViewChannel); err != nil {
+		return uuid.Nil, err
+	}
+	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
+		return uuid.Nil, err
+	}
+	return chID, nil
+}
+
+func (h *Handler) parseChannelMessageQuery(r *http.Request, chID uuid.UUID) (HistoryQuery, error) {
+	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
+	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around})
+	if err != nil {
+		return q, err
+	}
+	if anchors > 1 {
+		return q, httpx.ErrInvalidInput("use only one of before, after or around")
+	}
+	// The anchor must be a root message of this channel.
+	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
+		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
+		if err != nil || ref.ChannelID != chID || ref.ParentID != nil {
+			return q, errMessageNotFound
+		}
+	}
+	return q, nil
+}
+
 // listMessages handles GET /api/channels/{channelID}/messages.
 //
 // @Summary List channel messages
@@ -31,30 +64,13 @@ import (
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages [get]
 func (h *Handler) listMessages(w http.ResponseWriter, r *http.Request) error {
-	chID, err := httpx.PathUUID(r, "channelID")
+	chID, err := h.validateListChannel(r)
 	if err != nil {
 		return err
 	}
-	if err := h.require(r, chID, perm.ViewChannel); err != nil {
-		return err
-	}
-	if _, err := LoadChannel(r.Context(), h.DB, chID); err != nil {
-		return err
-	}
-	q := HistoryQuery{Limit: httpx.QueryLimit(r, "limit", 50, 100)}
-	anchors, err := queryIDs(r, "a message id", map[string]**uuid.UUID{"before": &q.Before, "after": &q.After, "around": &q.Around})
+	q, err := h.parseChannelMessageQuery(r, chID)
 	if err != nil {
 		return err
-	}
-	if anchors > 1 {
-		return httpx.ErrInvalidInput("use only one of before, after or around")
-	}
-	// The anchor must be a root message of this channel.
-	if anchor := firstID(q.Before, q.After, q.Around); anchor != nil {
-		ref, err := loadMessageRef(r.Context(), h.DB, *anchor)
-		if err != nil || ref.ChannelID != chID || ref.ParentID != nil {
-			return errMessageNotFound
-		}
 	}
 	msgs, err := GetChannelMessages(r.Context(), h.DB, chID, q)
 	if err != nil {

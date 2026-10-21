@@ -177,46 +177,68 @@ func (h *systemHandler) snapshot(ctx context.Context) SystemStatus {
 func (h *systemHandler) health(ctx context.Context) SystemHealth {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	var out SystemHealth
 
-	if h.db != nil && h.db.Ping(ctx) == nil {
-		out.Database.Reachable = true
-		var latest string
-		var applied int
-		if err := h.db.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(filename), '') FROM schema_migrations`).Scan(&applied, &latest); err == nil {
-			out.Database.LatestMigration, out.Database.AppliedMigrations = latest, applied
-		}
-		if files, err := db.MigrationFiles(); err == nil && len(files) > applied {
-			out.Database.PendingMigrations = len(files) - applied
-		}
-		_ = h.db.QueryRow(ctx, `
-			SELECT COUNT(*), COALESCE(SUM(size_bytes), 0),
-			       COALESCE(SUM(size_bytes) FILTER (WHERE s3_key LIKE 'avatars/%'), 0)
-			FROM media WHERE NOT is_deleted`).Scan(&out.Storage.Files, &out.Storage.TotalBytes, &out.Storage.AvatarBytes)
-		out.Storage.AttachmentBytes = out.Storage.TotalBytes - out.Storage.AvatarBytes
+	dbH, storH := h.dbHealth(ctx)
+	return SystemHealth{
+		Database: dbH,
+		Storage:  h.storageHealth(storH),
+		Voice:    h.voiceHealth(),
+		Runtime:  h.runtimeHealth(),
 	}
+}
 
-	out.Storage.Configured = h.hasStore
+func (h *systemHandler) dbHealth(ctx context.Context) (DatabaseHealth, StorageHealth) {
+	var dbH DatabaseHealth
+	var storH StorageHealth
+	if h.db == nil || h.db.Ping(ctx) != nil {
+		return dbH, storH
+	}
+	dbH.Reachable = true
+	var latest string
+	var applied int
+	if err := h.db.QueryRow(ctx, `SELECT COUNT(*), COALESCE(MAX(filename), '') FROM schema_migrations`).Scan(&applied, &latest); err == nil {
+		dbH.LatestMigration, dbH.AppliedMigrations = latest, applied
+	}
+	if files, err := db.MigrationFiles(); err == nil && len(files) > applied {
+		dbH.PendingMigrations = len(files) - applied
+	}
+	_ = h.db.QueryRow(ctx, `
+		SELECT COUNT(*), COALESCE(SUM(size_bytes), 0),
+		       COALESCE(SUM(size_bytes) FILTER (WHERE s3_key LIKE 'avatars/%'), 0)
+		FROM media WHERE NOT is_deleted`).Scan(&storH.Files, &storH.TotalBytes, &storH.AvatarBytes)
+	storH.AttachmentBytes = storH.TotalBytes - storH.AvatarBytes
+	return dbH, storH
+}
+
+func (h *systemHandler) storageHealth(base StorageHealth) StorageHealth {
+	base.Configured = h.hasStore
 	if h.hasStore {
-		out.Storage.Reachable = h.storage == nil || h.storage() == nil
+		base.Reachable = h.storage == nil || h.storage() == nil
 	}
+	return base
+}
 
-	out.Voice.Enabled = h.sfu != nil
+func (h *systemHandler) voiceHealth() VoiceHealth {
+	var v VoiceHealth
+	v.Enabled = h.sfu != nil
 	if h.sfu != nil {
 		st := h.sfu.Stats()
-		out.Voice.MediaConnections, out.Voice.ScreenShares, out.Voice.Cameras = st.Peers, st.ScreenShares, st.Cameras
+		v.MediaConnections, v.ScreenShares, v.Cameras = st.Peers, st.ScreenShares, st.Cameras
 	}
 	if h.hub != nil {
 		st := h.hub.Stats()
-		out.Voice.Rooms, out.Voice.Participants = st.VoiceRooms, st.VoiceParticipants
-		out.Voice.WebSocketConnections, out.Voice.OnlineUsers = st.Connections, st.OnlineUsers
+		v.Rooms, v.Participants = st.VoiceRooms, st.VoiceParticipants
+		v.WebSocketConnections, v.OnlineUsers = st.Connections, st.OnlineUsers
 	}
-	out.Voice.TURNConfigured = len(h.cfg.WebRTCTURNURLs) > 0
-	out.Voice.STUNConfigured = len(h.cfg.WebRTCSTUNURLs) > 0
+	v.TURNConfigured = len(h.cfg.WebRTCTURNURLs) > 0
+	v.STUNConfigured = len(h.cfg.WebRTCSTUNURLs) > 0
+	return v
+}
 
+func (h *systemHandler) runtimeHealth() RuntimeHealth {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
-	out.Runtime = RuntimeHealth{
+	return RuntimeHealth{
 		StartedAt:     h.started.UTC(),
 		UptimeSeconds: int64(time.Since(h.started).Seconds()),
 		GoVersion:     version.GoVersion(),
@@ -224,5 +246,4 @@ func (h *systemHandler) health(ctx context.Context) SystemHealth {
 		MemAllocBytes: mem.Alloc,
 		MemSysBytes:   mem.Sys,
 	}
-	return out
 }

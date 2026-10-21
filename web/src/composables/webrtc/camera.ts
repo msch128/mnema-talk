@@ -23,17 +23,35 @@ function cameraErrorKey(err: unknown) {
   }
 }
 
-export async function startCamera(cx: Cx) {
-  const { voice, chat, st } = cx
+function canStartCamera(cx: Cx): boolean {
   if (platform.isDesktop()) {
     useToastStore().error(t('nativeDesktop.mediaUnavailable'))
-    return
+    return false
   }
-  if (mediaUnprotected()) return
-  if (!voice.currentChannelId || st.localCameraStream.value) return
+  if (mediaUnprotected()) return false
+  return Boolean(cx.voice.currentChannelId && !cx.st.localCameraStream.value)
+}
+
+function isCameraCaptureOutdated(st: Cx['st'], gen: number, captureGen: number): boolean {
+  return gen !== st.joinGeneration || captureGen !== st.cameraCaptureGeneration || Boolean(st.localCameraStream.value)
+}
+
+async function attachCameraTrack(cx: Cx, track: MediaStreamTrack) {
+  if ('contentHint' in track) track.contentHint = 'motion'
+  track.onended = () => stopCamera(cx)
+  if (cx.st.cameraSender) {
+    await cx.st.cameraSender.replaceTrack(track).catch(() => {})
+    await tuneSender(cx.st.cameraSender, cameraSenderParams(cx))
+    cx.chat.sendWSEvent('webrtc_request_keyframe', {})
+  }
+}
+
+export async function startCamera(cx: Cx) {
+  if (!canStartCamera(cx)) return
+  const { voice, st } = cx
   const gen = st.joinGeneration
   const captureGen = st.cameraCaptureGeneration
-  let stream
+  let stream: MediaStream
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -48,7 +66,7 @@ export async function startCamera(cx: Cx) {
     return
   }
   // Left the call, or the call became unprotected, while the browser was asking.
-  if (gen !== st.joinGeneration || captureGen !== st.cameraCaptureGeneration || st.localCameraStream.value) {
+  if (isCameraCaptureOutdated(st, gen, captureGen)) {
     stream.getTracks().forEach(tr => tr.stop())
     return
   }
@@ -58,13 +76,7 @@ export async function startCamera(cx: Cx) {
 
   const track = stream.getVideoTracks()[0]
   if (track) {
-    if ('contentHint' in track) track.contentHint = 'motion'
-    track.onended = () => stopCamera(cx)
-    if (st.cameraSender) {
-      await st.cameraSender.replaceTrack(track).catch(() => {})
-      await tuneSender(st.cameraSender, cameraSenderParams(cx))
-      chat.sendWSEvent('webrtc_request_keyframe', {})
-    }
+    await attachCameraTrack(cx, track)
   }
 }
 

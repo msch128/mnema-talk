@@ -26,12 +26,14 @@ export class CryptoStateError extends Error {
 }
 
 function fail(code: string): never { throw new CryptoStateError(code) }
+function ignoreFinished(): void { return }
 function id(value: unknown): string {
   if (typeof value !== 'string' || !value.length || value.length > 256) fail('invalid-id')
   return value
 }
 function revision(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0 || value === Number.MAX_SAFE_INTEGER) fail('invalid-revision')
+  if (typeof value !== 'number' || !Number.isSafeInteger(value)) fail('invalid-revision')
+  if (value < 0 || value === Number.MAX_SAFE_INTEGER) fail('invalid-revision')
   return value
 }
 function bytes(value: unknown, maximum: number): Uint8Array<ArrayBuffer> {
@@ -128,79 +130,75 @@ function enqueue<T>(ctx: StoreCtx, operation: () => T | Promise<T>): Promise<T> 
   return result
 }
 
-async function transaction<T>(ctx: StoreCtx, stores: string[], write: boolean, operation: (tx: IDBTransaction) => T | Promise<T>): Promise<T> {
-  let tx: IDBTransaction
-  try {
-    tx = ctx.db.transaction(stores, write ? 'readwrite' : 'readonly', write ? { durability: 'strict' } : undefined)
-  } catch {
-    ctx.active.clear()
-    fail('storage-transaction-unavailable')
-  }
-  ctx.transactions.add(tx)
-  const completion = new Promise<void>((resolve, reject) => {
+function beginTransaction(ctx: StoreCtx, stores: string[], write: boolean): IDBTransaction {
+  try { return ctx.db.transaction(stores, write ? 'readwrite' : 'readonly', write ? { durability: 'strict' } : undefined) }
+  catch { ctx.active.clear(); fail('storage-transaction-unavailable') }
+}
+function settle(tx: IDBTransaction): Promise<void> {
+  const done = new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve()
     tx.onabort = () => reject(new CryptoStateError('storage-transaction-aborted'))
-    tx.onerror = () => {} // Request failures abort; never preventDefault.
+    tx.onerror = () => { ignoreFinished() } // Request failures abort; never preventDefault.
   })
-  // Attach before requests to avoid an unhandled rejection on an early abort.
-  completion.catch(() => {})
+  done.catch(() => { ignoreFinished() }) // Attach before requests to avoid an unhandled rejection on an early abort.
+  return done
+}
+function abortQuiet(tx: IDBTransaction): void { try { tx.abort() } catch { ignoreFinished() } }
+async function transaction<T>(ctx: StoreCtx, stores: string[], write: boolean, operation: (tx: IDBTransaction) => T | Promise<T>): Promise<T> {
+  const tx = beginTransaction(ctx, stores, write)
+  ctx.transactions.add(tx)
+  const completion = settle(tx)
   try {
     if (write && tx.durability !== 'strict') fail('strict-durability-unavailable')
     const result = await operation(tx)
     await completion
     return result
   } catch (error) {
-    try { tx.abort() } catch { /* Already aborted or committed. */ }
-    await completion.catch(() => {})
+    abortQuiet(tx)
+    await completion.catch(() => { ignoreFinished() })
     ctx.active.clear() // Corruption/uncertain persistence invalidates all live provider contexts.
     throw error
   } finally { ctx.transactions.delete(tx) }
 }
-
 function storedObject(value: unknown, code: string): Record<string, unknown> {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) fail(code)
   return value as Record<string, unknown>
 }
-
 function validateGroup(ctx: StoreCtx, value: unknown): CryptoGroupRecord | undefined {
   if (value === undefined) return undefined
   const record = storedObject(value, 'invalid-stored-state')
   if (record.schemaVersion !== SCHEMA_VERSION) fail('invalid-stored-state')
   return { schemaVersion: SCHEMA_VERSION, groupId: id(record.groupId), contextId: id(record.contextId), revision: revision(record.revision), state: bytes(record.state, ctx.limits.stateBytes) }
 }
-
 function validateEvent(ctx: StoreCtx, value: unknown): CryptoPendingEvent {
   const record = storedObject(value, 'invalid-stored-event')
   if (record.schemaVersion !== SCHEMA_VERSION) fail('invalid-stored-event')
   return { schemaVersion: SCHEMA_VERSION, groupId: id(record.groupId), contextId: id(record.contextId), eventId: id(record.eventId), revision: revision(record.revision), ciphertext: bytes(record.ciphertext, ctx.limits.ciphertextBytes) }
 }
 
+function usageCount(count: unknown): number {
+  if (typeof count !== 'number' || !Number.isSafeInteger(count)) fail('invalid-stored-usage')
+  if (count < 0) fail('invalid-stored-usage')
+  return count
+}
+function withinBudget(checked: StoredUsage, limits: CryptoStateLimits): boolean {
+  if (checked.stateBytes > limits.totalStateBytes || checked.eventBytes > limits.outboxBytes) return false
+  if (checked.eventCount > limits.outboxEvents || checked.groupCount > limits.groups) return false
+  return true
+}
 function validateUsage(ctx: StoreCtx, value: unknown): StoredUsage {
-  const { limits } = ctx
   const record = storedObject(value, 'invalid-stored-usage')
   const checked: StoredUsage = { stateBytes: 0, eventBytes: 0, eventCount: 0, groupCount: 0 }
-  for (const key of ['stateBytes', 'eventBytes', 'eventCount', 'groupCount'] as const) {
-    const count = record[key]
-    if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) fail('invalid-stored-usage')
-    checked[key] = count
-  }
-  if (checked.stateBytes > limits.totalStateBytes || checked.eventBytes > limits.outboxBytes || checked.eventCount > limits.outboxEvents || checked.groupCount > limits.groups) fail('storage-budget-exceeded')
+  for (const key of ['stateBytes', 'eventBytes', 'eventCount', 'groupCount'] as const) checked[key] = usageCount(record[key])
+  if (!withinBudget(checked, ctx.limits)) fail('storage-budget-exceeded')
   return checked
 }
-
-async function readGroup(ctx: StoreCtx, tx: IDBTransaction, groupId: string) {
-  return validateGroup(ctx, await requestResult(tx.objectStore('groups').get(groupId)))
-}
-
-async function readUsage(ctx: StoreCtx, tx: IDBTransaction) {
-  return validateUsage(ctx, await requestResult(tx.objectStore('usage').get('totals')))
-}
-
+async function readGroup(ctx: StoreCtx, tx: IDBTransaction, groupId: string) { return validateGroup(ctx, await requestResult(tx.objectStore('groups').get(groupId))) }
+async function readUsage(ctx: StoreCtx, tx: IDBTransaction) { return validateUsage(ctx, await requestResult(tx.objectStore('usage').get('totals'))) }
 function assertCurrent(ctx: StoreCtx, record: CryptoGroupRecord | undefined, expectedRevision: number, contextId: string) {
   if (!record || record.revision !== expectedRevision || record.contextId !== contextId) fail('state-conflict')
   if (ctx.active.get(record.groupId) !== contextId) fail('fresh-context-required')
 }
-
 function writeState(ctx: StoreCtx, tx: IDBTransaction, usage: StoredUsage, record: CryptoGroupRecord | undefined, state: Uint8Array<ArrayBuffer>, contextId: string, groupId: string): CryptoGroupRecord {
   usage.stateBytes += state.byteLength - (record?.state.byteLength || 0)
   if (!record) usage.groupCount++
@@ -216,7 +214,7 @@ function closeStore(ctx: StoreCtx) {
   ctx.closed = true
   ctx.active.clear()
   for (const controller of ctx.providerCalls) controller.abort()
-  for (const tx of ctx.transactions) { try { tx.abort() } catch { /* Already complete. */ } }
+  for (const tx of ctx.transactions) abortQuiet(tx)
   ctx.db.close()
   // Retain the lock until pending writes and queued work have settled.
   ctx.closePromise = ctx.tail.then(ctx.releaseOwner)
@@ -339,6 +337,12 @@ function acknowledge(ctx: StoreCtx, { groupId, eventId, contextId }: { groupId: 
   }))
 }
 
+function storedLimit(key: string, value: unknown): void {
+  if (!Object.hasOwn(DEFAULT_LIMITS, key) || typeof value !== 'number') fail('invalid-limit')
+  if (!Number.isSafeInteger(value)) fail('invalid-limit')
+  const cap = DEFAULT_LIMITS[key as keyof CryptoStateLimits]
+  if (value < 1 || value > cap) fail('invalid-limit')
+}
 /** The namespace and limits an open store is configured with, validated. */
 function validatedConfig({ namespace, establishFreshContext, limits: overrides = {}, contextTimeoutMs = 30000 }: OpenCryptoStateOptions) {
   const scope = Object.freeze({
@@ -347,11 +351,10 @@ function validatedConfig({ namespace, establishFreshContext, limits: overrides =
     deviceId: id(namespace?.deviceId)
   })
   if (typeof establishFreshContext !== 'function') fail('fresh-context-provider-required')
-  if (!Number.isSafeInteger(contextTimeoutMs) || contextTimeoutMs < 1 || contextTimeoutMs > 30000) fail('invalid-timeout')
+  if (!Number.isSafeInteger(contextTimeoutMs) || contextTimeoutMs < 1) fail('invalid-timeout')
+  if (contextTimeoutMs > 30000) fail('invalid-timeout')
   const limits = { ...DEFAULT_LIMITS, ...overrides }
-  for (const [key, value] of Object.entries(limits)) {
-    if (!Object.hasOwn(DEFAULT_LIMITS, key) || !Number.isSafeInteger(value) || value < 1 || value > DEFAULT_LIMITS[key as keyof CryptoStateLimits]) fail('invalid-limit')
-  }
+  for (const [key, value] of Object.entries(limits)) storedLimit(key, value)
   return { scope, limits, contextTimeoutMs }
 }
 

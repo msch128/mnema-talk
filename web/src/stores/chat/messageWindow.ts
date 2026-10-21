@@ -9,7 +9,7 @@ import { markPreviewEdited, markPreviewDeleted } from '../../lib/replies'
 import { navigate, voiceMessagePath } from '../../lib/router'
 import { MAX_PENDING_LIVE } from './types'
 import type { ThreadRoot, MessageWindow } from './types'
-import type { Cx } from './state'
+import type { ChatState, Cx } from './state'
 import { isVoiceChannel } from './channels'
 import { markActiveChannelReadIfReading } from './readState'
 import { openThread } from './threads'
@@ -95,10 +95,17 @@ export async function jumpToLatest(cx: Cx) {
   return ok
 }
 
+function pageBlocked(cs: ChatState, channelId: string | undefined, paging: boolean, hasMore: boolean): boolean {
+  if (!channelId || cs.isLoadingWindow.value) return true
+  if (paging) return true
+  return !hasMore
+}
+
 export async function loadOlder(cx: Cx) {
   const { cs } = cx
   const channelId = cs.activeChannel.value?.id
-  if (!channelId || cs.isLoadingWindow.value || cs.isLoadingBefore.value || !cs.hasMoreBefore.value) return false
+  if (pageBlocked(cs, channelId, cs.isLoadingBefore.value, cs.hasMoreBefore.value)) return false
+  if (!channelId) return false
   const anchorId = cs.messages.value[0]?.id
   if (!anchorId) return false
   const gen = cs.windowGen
@@ -119,7 +126,8 @@ export async function loadOlder(cx: Cx) {
 export async function loadNewer(cx: Cx) {
   const { cs } = cx
   const channelId = cs.activeChannel.value?.id
-  if (!channelId || cs.isLoadingWindow.value || cs.isLoadingAfter.value || !cs.hasMoreAfter.value) return false
+  if (pageBlocked(cs, channelId, cs.isLoadingAfter.value, cs.hasMoreAfter.value)) return false
+  if (!channelId) return false
   const anchorId = cs.messages.value[cs.messages.value.length - 1]?.id
   if (!anchorId) return false
   const gen = cs.windowGen
@@ -168,12 +176,27 @@ export function goToMessage(cx: Cx, msg: Message) {
   navigate(isVoiceChannel(cx, msg.channel_id) ? voiceMessagePath(msg.channel_id, rootId) : `/c/${msg.channel_id}/m/${rootId}`)
 }
 
+function rememberJump(cs: ChatState, id: string) {
+  cs.jumpTarget.value = { id, seq: ++cs.jumpSeq }
+}
+
+function jumpWindowCurrent(cs: ChatState, gen: number, channelId: string): boolean {
+  if (gen !== cs.windowGen) return false
+  return cs.activeChannel.value?.id === channelId
+}
+
+function reportMissedJump(cs: ChatState, gen: number, error: unknown) {
+  if (gen !== cs.windowGen) return
+  const missing = isRecord(error) && error['status'] === 404
+  showToast(missing ? t('chat.messageNotFound') : t('chat.messageLoadFailed'))
+}
+
 async function jumpToRootMessage(cx: Cx, id: string) {
   const { cs } = cx
   const channelId = cs.activeChannel.value?.id
   if (!id || !channelId) return false
   if (cs.messages.value.some(m => m.id === id)) {
-    cs.jumpTarget.value = { id, seq: ++cs.jumpSeq }
+    rememberJump(cs, id)
     return true
   }
   resetWindow(cx)
@@ -181,15 +204,13 @@ async function jumpToRootMessage(cx: Cx, id: string) {
   cs.isLoadingWindow.value = true
   try {
     const data = await api(messagesUrl(channelId, { around: id }), { decode: decodeMessages })
-    if (gen !== cs.windowGen || cs.activeChannel.value?.id !== channelId) return false
+    if (!jumpWindowCurrent(cs, gen, channelId)) return false
     setWindow(cx, fromAround(data, id, PAGE_SIZE))
     // Same tick as the window swap so the view handles both in one render.
-    cs.jumpTarget.value = { id, seq: ++cs.jumpSeq }
+    rememberJump(cs, id)
     return true
-  } catch (e) {
-    if (gen === cs.windowGen) {
-      showToast(isRecord(e) && e['status'] === 404 ? t('chat.messageNotFound') : t('chat.messageLoadFailed'))
-    }
+  } catch (error) {
+    reportMissedJump(cs, gen, error)
     return false
   } finally {
     if (gen === cs.windowGen) cs.isLoadingWindow.value = false

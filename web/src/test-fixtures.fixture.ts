@@ -72,3 +72,29 @@ export function attachmentFixture(overrides: Partial<MediaAttachment> = {}): Med
     url: `/api/media/${fixtureId(5)}`, ...overrides,
   }
 }
+
+interface RawChannelMove { id: string; sort_order: number; category_id: string | null }
+interface RawCategoryMove { id: string; sort_order: number }
+
+function parseChannelMove(entry: unknown): RawChannelMove {
+  const e = entry as Record<string, unknown> | null | undefined
+  if (!e || typeof e.id !== 'string' || typeof e.sort_order !== 'number') throw new Error('Expected channel move')
+  const cat = e.category_id
+  if (cat !== null && typeof cat !== 'string') throw new Error('Expected channel move')
+  return { id: e.id, sort_order: e.sort_order, category_id: cat as string | null }
+}
+
+function parseCategoryMove(entry: unknown): RawCategoryMove {
+  const e = entry as Record<string, unknown> | null | undefined
+  if (!e || typeof e.id !== 'string' || typeof e.sort_order !== 'number') throw new Error('Expected category move')
+  return { id: e.id, sort_order: e.sort_order }
+}
+
+export function parseLayoutRequestBody(value: unknown): { channels: RawChannelMove[]; categories: RawCategoryMove[] } {
+  const v = value as { channels?: unknown[]; categories?: unknown[] } | null | undefined
+  if (!v || !Array.isArray(v.channels) || !Array.isArray(v.categories)) throw new Error('Expected layout request')
+  return {
+    channels: v.channels.map(parseChannelMove),
+    categories: v.categories.map(parseCategoryMove),
+  }
+}

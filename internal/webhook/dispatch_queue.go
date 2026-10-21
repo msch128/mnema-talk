@@ -85,6 +85,30 @@ func (d *Dispatcher) prune(ctx context.Context) {
 	d.count("expired", n)
 }
 
+// waitWork pauses until more webhook jobs might be available or the context is cancelled.
+func (d *Dispatcher) waitWork(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-d.wake:
+		return true
+	}
+}
+
+// paceWork respects the global rate-limit tick and releases the claimed job on shutdown.
+func (d *Dispatcher) paceWork(ctx context.Context, j job, tick <-chan time.Time) bool {
+	select {
+	case <-ctx.Done():
+		// Shutting down: hand the row back instead of holding it for the lease.
+		if err := releaseJob(context.WithoutCancel(ctx), d.DB, j.seq); err != nil {
+			slog.Warn("outgoing webhooks: release", "err", err)
+		}
+		return false
+	case <-tick: // one attempt per tick, shared by the workers
+		return true
+	}
+}
+
 // work claims due rows one at a time and attempts them, one attempt per tick
 // of the global rate limiter.
 func (d *Dispatcher) work(ctx context.Context, tick <-chan time.Time) {
@@ -94,22 +118,14 @@ func (d *Dispatcher) work(ctx context.Context, tick <-chan time.Time) {
 			slog.Warn("outgoing webhooks: claim", "err", err)
 		}
 		if !ok {
-			select {
-			case <-ctx.Done():
+			if !d.waitWork(ctx) {
 				return
-			case <-d.wake:
 			}
 			continue
 		}
 		d.signal() // there may be more: let an idle worker look too
-		select {
-		case <-ctx.Done():
-			// Shutting down: hand the row back instead of holding it for the lease.
-			if err := releaseJob(context.WithoutCancel(ctx), d.DB, j.seq); err != nil {
-				slog.Warn("outgoing webhooks: release", "err", err)
-			}
+		if !d.paceWork(ctx, j, tick) {
 			return
-		case <-tick: // one attempt per tick, shared by the workers
 		}
 		d.process(ctx, j)
 	}

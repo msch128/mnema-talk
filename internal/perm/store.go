@@ -94,15 +94,26 @@ func (s *Service) locked(ctx context.Context, actor Subject, always bool, fn fun
 		if err := fn(tx, snap); err != nil {
 			return err
 		}
-		if snap.IsOwner(actor) || (len(snap.bots) == 0 && !always) {
-			return nil
-		}
-		after := newSnapshot(s.now())
-		if err := after.read(ctx, tx); err != nil {
-			return fmt.Errorf("load permissions: %w", err)
-		}
-		return checkBotGrowth(snap, after, actor)
+		return s.verifyBotGrowth(ctx, tx, snap, actor, always)
 	})
+}
+
+func skipBotGrowthCheck(snap *Snapshot, actor Subject, always bool) bool {
+	if snap.IsOwner(actor) {
+		return true
+	}
+	return len(snap.bots) == 0 && !always
+}
+
+func (s *Service) verifyBotGrowth(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, always bool) error {
+	if skipBotGrowthCheck(snap, actor, always) {
+		return nil
+	}
+	after := newSnapshot(s.now())
+	if err := after.read(ctx, tx); err != nil {
+		return fmt.Errorf("load permissions: %w", err)
+	}
+	return checkBotGrowth(snap, after, actor)
 }
 
 var (

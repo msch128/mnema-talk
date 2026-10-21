@@ -118,11 +118,20 @@ func (c *Client) handleTyping(ctx context.Context, channelID uuid.UUID) {
 	}
 	// Only someone who could send a message shows as typing, and only to
 	// those who can see the channel.
-	h := c.hub
-	if snap, ok := h.permSnapshot(channelID); ok && c.commandsAllowed() && h.channelKnown(ctx, snap, channelID) &&
-		c.can(snap, channelID, perm.ViewChannel|perm.SendMessages) {
+	if c.canTypeInChannel(ctx, channelID) {
 		c.emitApplicationEvent("typing", map[string]any{"channel_id": channelID, "user_id": c.User.ID}, true, nil, channelID)
 	}
+}
+
+func (c *Client) canTypeInChannel(ctx context.Context, channelID uuid.UUID) bool {
+	if !c.commandsAllowed() {
+		return false
+	}
+	snap, ok := c.hub.permSnapshot(channelID)
+	if !ok || !c.hub.channelKnown(ctx, snap, channelID) {
+		return false
+	}
+	return c.can(snap, channelID, perm.ViewChannel|perm.SendMessages)
 }
 
 func (c *Client) handleSpeaking(active bool) {

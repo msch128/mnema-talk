@@ -135,17 +135,56 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func validateUsernameOrBurn(username, password string) error {
+	if !usernamePattern.MatchString(username) {
+		// No such account can exist. Answer like a wrong password, with the
+		// same bcrypt cost, but never let arbitrary input become a limiter key.
+		burnPasswordCheck(password)
+		return ErrInvalidCredentials
+	}
+	return nil
+}
+
+func (h *Handler) isUnknownDeviceThrottled(r *http.Request, account string) (time.Duration, bool) {
+	locked, retry := h.accountFailures.IsLockedOut(account)
+	if !locked || h.isKnownDevice(r, account) {
+		return 0, false
+	}
+	if ok, deviceRetry := h.unknownDevice.Allow(account); !ok {
+		if deviceRetry > retry {
+			return deviceRetry, true
+		}
+		return retry, true
+	}
+	return 0, false
+}
+
+func (h *Handler) handleInvalidCredentials(ctx context.Context, key, account string) (time.Duration, error) {
+	// Known devices still get a verdict while the cap is on, but each
+	// wrong guess counts several times against their address.
+	accountLocked, retry := h.accountFailures.IsLockedOut(account)
+	weight := 1
+	if accountLocked {
+		weight = accountAttackWeight
+	}
+	h.loginFailures.RecordFailures(key, weight)
+	h.accountFailures.RecordFailure(account)
+	if accountLocked {
+		h.auditLoginFailure(ctx, account, "auth.login_locked")
+		return retry, nil
+	}
+	h.auditLoginFailure(ctx, account, "auth.login_failed")
+	return 0, ErrInvalidCredentials
+}
+
 // verifyLogin is the shared browser/native credential and lockout policy.
 // Both transports must use this Handler's per-IP route limiter as well. It
 // returns the token version captured by password verification; callers must
 // never reload and substitute a newer version before issuing a session.
 func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, time.Duration, error) {
 	username := strings.TrimSpace(req.Username)
-	if !usernamePattern.MatchString(username) {
-		// No such account can exist. Answer like a wrong password, with the
-		// same bcrypt cost, but never let arbitrary input become a limiter key.
-		burnPasswordCheck(req.Password)
-		return nil, 0, 0, ErrInvalidCredentials
+	if err := validateUsernameOrBurn(username, req.Password); err != nil {
+		return nil, 0, 0, err
 	}
 	account := strings.ToLower(username)
 	key := httpx.ClientIPKey(r) + "|" + account
@@ -158,29 +197,14 @@ func (h *Handler) verifyLogin(r *http.Request, req LoginRequest) (*User, int, ti
 	// devices that signed in to this account before; anyone else is turned
 	// away without a password check, so guessing from many addresses stops
 	// being useful while the real owner keeps signing in from their devices.
-	if locked, retry := h.accountFailures.IsLockedOut(account); locked && !h.isKnownDevice(r, account) {
-		if ok, _ := h.unknownDevice.Allow(account); !ok {
-			return nil, 0, retry, nil
-		}
+	if retry, throttled := h.isUnknownDeviceThrottled(r, account); throttled {
+		return nil, 0, retry, nil
 	}
 
 	u, tv, err := h.verifyCredentials(r.Context(), username, req.Password)
 	if err == ErrInvalidCredentials {
-		// Known devices still get a verdict while the cap is on, but each
-		// wrong guess counts several times against their address.
-		accountLocked, retry := h.accountFailures.IsLockedOut(account)
-		weight := 1
-		if accountLocked {
-			weight = accountAttackWeight
-		}
-		h.loginFailures.RecordFailures(key, weight)
-		h.accountFailures.RecordFailure(account)
-		if accountLocked {
-			h.auditLoginFailure(r.Context(), account, "auth.login_locked")
-			return nil, 0, retry, nil
-		}
-		h.auditLoginFailure(r.Context(), account, "auth.login_failed")
-		return nil, 0, 0, err
+		retry, failErr := h.handleInvalidCredentials(r.Context(), key, account)
+		return nil, 0, retry, failErr
 	}
 	if err != nil {
 		return nil, 0, 0, err

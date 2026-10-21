@@ -20,18 +20,70 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
+function isValidRef(ref: unknown): boolean {
+  return ref === undefined || typeof ref === 'string'
+}
+
+function isValidType(type: unknown): boolean {
+  if (type === undefined || typeof type === 'string') return true
+  return Array.isArray(type) && type.every(item => typeof item === 'string')
+}
+
+function isValidEnumItem(item: unknown): boolean {
+  return item === null || typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number'
+}
+
+function isValidEnum(enm: unknown): boolean {
+  if (enm === undefined) return true
+  return Array.isArray(enm) && enm.every(isValidEnumItem)
+}
+
+function isValidRequired(req: unknown): boolean {
+  if (req === undefined) return true
+  return Array.isArray(req) && req.every(item => typeof item === 'string')
+}
+
+function isValidProperties(props: unknown): boolean {
+  if (props === undefined) return true
+  return isRecord(props) && Object.values(props).every(isSchema)
+}
+
+function isValidItems(items: unknown): boolean {
+  return items === undefined || isSchema(items)
+}
+
+function isValidFormat(format: unknown): boolean {
+  return format === undefined || typeof format === 'string'
+}
+
+function isValidNumberField(val: unknown): boolean {
+  return val === undefined || typeof val === 'number'
+}
+
+function hasValidSchemaBounds(rec: Record<string, unknown>): boolean {
+  return isValidNumberField(rec['maxLength'])
+    && isValidNumberField(rec['minimum'])
+    && isValidNumberField(rec['maximum'])
+}
+
+function hasValidSchemaMetadata(rec: Record<string, unknown>): boolean {
+  return isValidRef(rec['$ref'])
+    && isValidType(rec['type'])
+    && isValidFormat(rec['format'])
+}
+
+function hasValidSchemaShape(rec: Record<string, unknown>): boolean {
+  return isValidEnum(rec['enum'])
+    && isValidRequired(rec['required'])
+    && isValidProperties(rec['properties'])
+    && isValidItems(rec['items'])
+}
+
 function isSchema(value: unknown): value is Schema {
   if (!isRecord(value)) return false
-  return (value['$ref'] === undefined || typeof value['$ref'] === 'string')
-    && (value['type'] === undefined || typeof value['type'] === 'string' || (Array.isArray(value['type']) && value['type'].every(item => typeof item === 'string')))
-    && (value['enum'] === undefined || (Array.isArray(value['enum']) && value['enum'].every(item => item === null || ['string', 'boolean', 'number'].includes(typeof item))))
-    && (value['required'] === undefined || (Array.isArray(value['required']) && value['required'].every(item => typeof item === 'string')))
-    && (value['properties'] === undefined || (isRecord(value['properties']) && Object.values(value['properties']).every(isSchema)))
-    && (value['items'] === undefined || isSchema(value['items']))
-    && (value['format'] === undefined || typeof value['format'] === 'string')
-    && (value['maxLength'] === undefined || typeof value['maxLength'] === 'number')
-    && (value['minimum'] === undefined || typeof value['minimum'] === 'number')
-    && (value['maximum'] === undefined || typeof value['maximum'] === 'number')
+  return hasValidSchemaMetadata(value)
+    && hasValidSchemaShape(value)
+    && hasValidSchemaBounds(value)
 }
 
 const specPath = new URL('../../api/openapi.json', import.meta.url)

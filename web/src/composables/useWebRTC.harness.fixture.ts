@@ -75,17 +75,20 @@ export class FakePC {
     this.closed = false
     FakePC.instances.push(this)
   }
-  addTrack(track: MediaStreamTrack) { const s = fakeSender(track); this.unmatched.push(s); return s }
+  private ensureNotClosed() { return this.closed }
+  addTrack(track: MediaStreamTrack) { this.ensureNotClosed(); const s = fakeSender(track); this.unmatched.push(s); return s }
   addTransceiver(trackOrKind: MediaStreamTrack | string) {
+    this.ensureNotClosed()
     const s = fakeSender(typeof trackOrKind === 'string' ? null : trackOrKind)
     this.unmatched.push(s)
     return { sender: s }
   }
   // Senders on the negotiated lines, in m-line order (mic, screen, camera).
-  get senders() { return this.transceivers.map(t => t.sender) }
+  get senders() { this.ensureNotClosed(); return this.transceivers.map(t => t.sender) }
   getSenders() { return this.senders }
-  getTransceivers() { return this.transceivers }
+  getTransceivers() { this.ensureNotClosed(); return this.transceivers }
   async setRemoteDescription(d: RTCSessionDescriptionInit) {
+    this.ensureNotClosed()
     this.remoteDescription = d
     for (const m of String(d.sdp).matchAll(/a=mid:(\S+)/g)) {
       if (!this.transceivers.some(t => t.mid === m[1])) {
@@ -93,10 +96,10 @@ export class FakePC {
       }
     }
   }
-  async createAnswer(): Promise<RTCSessionDescriptionInit> { return { type: 'answer', sdp: 'a' } }
-  async setLocalDescription() {}
-  async addIceCandidate(c: RTCIceCandidateInit) { this.candidates.push(c) }
-  async getStats(): Promise<Map<string, import('../lib/mediaStats').MediaStat>> { return new Map() }
+  async createAnswer(): Promise<RTCSessionDescriptionInit> { this.ensureNotClosed(); return { type: 'answer', sdp: 'a' } }
+  async setLocalDescription() { this.ensureNotClosed() }
+  async addIceCandidate(c: RTCIceCandidateInit) { this.ensureNotClosed(); this.candidates.push(c) }
+  async getStats(): Promise<Map<string, import('../lib/mediaStats').MediaStat>> { this.ensureNotClosed(); return new Map() }
   close() { this.closed = true }
 }
 
@@ -125,13 +128,16 @@ export class FakeAudioContext {
     this.closed = false
     FakeAudioContext.instances.push(this)
   }
-  setSinkId(id: string) { this.sinkId = id; return Promise.resolve() }
+  private ensureActive() { return this.state }
+  setSinkId(id: string) { this.ensureActive(); this.sinkId = id; return Promise.resolve() }
   createMediaStreamDestination(): FakeDestination {
+    this.ensureActive()
     const node = { stream: fakeStream(), connect: vi.fn(), disconnect: vi.fn() }
     FakeAudioContext.destinations.push(node)
     return node
   }
   createGain(): FakeGain {
+    this.ensureActive()
     const node = {
       gain: {
         value: 1,
@@ -145,18 +151,20 @@ export class FakeAudioContext {
     return node
   }
   createAnalyser() {
+    this.ensureActive()
     const analyser = { fftSize: 256, connect() {}, getByteTimeDomainData: vi.fn((buffer: Uint8Array) => buffer.fill(FakeAudioContext.sample)) }
     FakeAudioContext.analysers.push(analyser)
     return analyser
   }
   createMediaStreamSource(stream: MediaStream): FakeSource {
+    this.ensureActive()
     const node = { stream, connect: vi.fn(), disconnect: vi.fn() }
     FakeAudioContext.sources.push(node)
     return node
   }
-  createBiquadFilter() { return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
-  resume() { return Promise.resolve() }
-  close() { this.closed = true; return Promise.resolve() }
+  createBiquadFilter() { this.ensureActive(); return { type: '', frequency: { setValueAtTime() {} }, connect() {} } }
+  resume() { this.state = 'running'; return Promise.resolve() }
+  close() { this.state = 'closed'; this.closed = true; return Promise.resolve() }
 }
 
 export type MicRequest = (() => void) & { stream: TestStream }

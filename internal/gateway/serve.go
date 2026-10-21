@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -99,19 +100,50 @@ func (g *Gateway) credentials(c *connection, token string, header *bot.Credentia
 	}
 	creds, err := g.Auth.Lookup(context.Background(), token)
 	if err != nil {
+		slog.Debug("gateway token lookup", "err", err)
 		c.closeWith(CloseAuthFailed, "Authentication failed")
 		return nil
 	}
 	return creds
 }
 
-func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credentials) *session {
-	var req Identify
-	if json.Unmarshal(d, &req) != nil {
-		c.closeWith(4002, "Decode error")
-		return nil
+func validIntents(intents *int64, allowed int64) int {
+	if intents == nil || *intents < 0 || *intents&^bot.AllIntents != 0 {
+		return CloseInvalidIntents
 	}
-	creds := g.credentials(c, req.Token, header)
+	if *intents&^allowed != 0 {
+		return CloseDisallowedIntents
+	}
+	return 0
+}
+
+func (g *Gateway) sendReady(s *session, creds *bot.Credentials) error {
+	ready, err := json.Marshal(Ready{
+		V: Version, SessionID: s.id, Intents: s.intents, ResumeURL: g.wsURL(), Heartbeat: int(g.timings().Heartbeat / time.Millisecond),
+		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Bot: true, AvatarURL: creds.User.AvatarURL},
+	})
+	if err != nil {
+		return err
+	}
+	s.enqueue("READY", ready)
+	return nil
+}
+
+func (g *Gateway) initSessionPresence(s *session, p *PresenceUpdate) {
+	if p == nil {
+		g.resetIdlePresence(s)
+		return
+	}
+	validated, err := p.validate()
+	if err != nil {
+		g.resetIdlePresence(s)
+		return
+	}
+	g.setPresence(s.userID, validated)
+}
+
+func (g *Gateway) sessionCredentials(c *connection, token string, header *bot.Credentials) *bot.Credentials {
+	creds := g.credentials(c, token, header)
 	if creds == nil {
 		return nil
 	}
@@ -119,12 +151,26 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 		c.closeWith(CloseRateLimited, "Rate limited")
 		return nil
 	}
-	if req.Intents == nil || *req.Intents < 0 || *req.Intents&^bot.AllIntents != 0 {
-		c.closeWith(CloseInvalidIntents, "Invalid intents")
+	return creds
+}
+
+func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credentials) *session {
+	var req Identify
+	if err := json.Unmarshal(d, &req); err != nil {
+		slog.Debug("gateway decode", "err", err)
+		c.closeWith(4002, "Decode error")
 		return nil
 	}
-	if *req.Intents&^creds.Bot.Intents != 0 {
-		c.closeWith(CloseDisallowedIntents, "Disallowed intents")
+	creds := g.sessionCredentials(c, req.Token, header)
+	if creds == nil {
+		return nil
+	}
+	if code := validIntents(req.Intents, creds.Bot.Intents); code != 0 {
+		reason := "Invalid intents"
+		if code == CloseDisallowedIntents {
+			reason = "Disallowed intents"
+		}
+		c.closeWith(code, reason)
 		return nil
 	}
 	s := &session{id: newSessionID(), botID: creds.Bot.BotID, userID: creds.User.ID, tokenID: creds.Bot.TokenID, intents: *req.Intents, startedAt: time.Now()}
@@ -139,23 +185,35 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 	if !g.stillGood(ctx, s) {
 		return nil
 	}
-	ready, _ := json.Marshal(Ready{
-		V: Version, SessionID: s.id, Intents: s.intents, ResumeURL: g.wsURL(), Heartbeat: int(g.timings().Heartbeat / time.Millisecond),
-		User: ReadyUser{ID: creds.User.ID, BotID: creds.Bot.BotID, Username: creds.User.DisplayName, Bot: true, AvatarURL: creds.User.AvatarURL},
-	})
-	s.enqueue("READY", ready)
-	// An invalid or missing presence in IDENTIFY leaves the bot online.
-	set := false
-	if req.Presence != nil {
-		if p, err := req.Presence.validate(); err == nil {
-			g.setPresence(s.userID, p)
-			set = true
-		}
+	if err := g.sendReady(s, creds); err != nil {
+		slog.Error("gateway ready", "err", err)
+		c.closeWith(CloseUnknownError, "Internal error")
+		return nil
 	}
-	if !set {
-		g.resetIdlePresence(s)
-	}
+	g.initSessionPresence(s, req.Presence)
 	return s
+}
+
+func (g *Gateway) lookupSession(id string) *session {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.sessions[id]
+}
+
+func validResumeSession(s *session, botID uuid.UUID, seq int64) bool {
+	return s != nil && s.botID == botID && seq >= 0
+}
+
+func closeReplaced(replaced, current *connection) {
+	if replaced != nil && replaced != current {
+		replaced.closeWith(CloseUnknownError, "Session resumed elsewhere")
+	}
+}
+
+func (g *Gateway) adoptSession(s *session, tokenID uuid.UUID) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return g.adopt(ctx, s, tokenID)
 }
 
 // resume continues a session on c. It returns the session when it resumed,
@@ -163,22 +221,17 @@ func (g *Gateway) identify(c *connection, d json.RawMessage, header *bot.Credent
 // fatal true when the connection was closed.
 func (g *Gateway) resume(c *connection, d json.RawMessage, header *bot.Credentials) (s *session, fatal bool) {
 	var req Resume
-	if json.Unmarshal(d, &req) != nil {
+	if err := json.Unmarshal(d, &req); err != nil {
+		slog.Debug("gateway decode", "err", err)
 		c.closeWith(4002, "Decode error")
 		return nil, true
 	}
-	creds := g.credentials(c, req.Token, header)
+	creds := g.sessionCredentials(c, req.Token, header)
 	if creds == nil {
 		return nil, true
 	}
-	if ok, _ := g.idents.Allow(creds.Bot.BotID.String()); !ok {
-		c.closeWith(CloseRateLimited, "Rate limited")
-		return nil, true
-	}
-	g.mu.Lock()
-	s = g.sessions[req.SessionID]
-	g.mu.Unlock()
-	if s == nil || s.botID != creds.Bot.BotID || req.Seq < 0 {
+	s = g.lookupSession(req.SessionID)
+	if !validResumeSession(s, creds.Bot.BotID, req.Seq) {
 		c.trySend(marshal(OpInvalidSession, false))
 		return nil, false
 	}
@@ -187,16 +240,23 @@ func (g *Gateway) resume(c *connection, d json.RawMessage, header *bot.Credentia
 		c.trySend(marshal(OpInvalidSession, false))
 		return nil, false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if !g.adopt(ctx, s, creds.Bot.TokenID) {
+	if !g.adoptSession(s, creds.Bot.TokenID) {
 		c.closeWith(CloseAuthFailed, "Authentication failed")
 		return nil, true
 	}
-	if replaced != nil && replaced != c {
-		replaced.closeWith(CloseUnknownError, "Session resumed elsewhere")
-	}
+	closeReplaced(replaced, c)
 	return s, false
+}
+
+func scanSessions(mine map[string]*session) (live int, oldest *session) {
+	for _, o := range mine {
+		if o.live() {
+			live++
+		} else if oldest == nil || o.detachedAt.Before(oldest.detachedAt) {
+			oldest = o
+		}
+	}
+	return live, oldest
 }
 
 // register adds a session unless the bot is at its limits. Detached sessions
@@ -208,17 +268,7 @@ func (g *Gateway) register(s *session) bool {
 		return false
 	}
 	mine := g.byBot[s.botID]
-	live := 0
-	var oldest *session
-	for _, o := range mine {
-		if o.live() {
-			live++
-			continue
-		}
-		if oldest == nil || o.detachedAt.Before(oldest.detachedAt) {
-			oldest = o
-		}
-	}
+	live, oldest := scanSessions(mine)
 	if live >= maxConnsPerBot {
 		return false
 	}

@@ -18,22 +18,43 @@ import (
 
 const nativeCiphertextBodyMax int64 = 96 << 10
 
-func nativeCiphertextDecimal(value string, min, max int64) (int64, bool) {
-	if value == "" || (len(value) > 1 && value[0] == '0') {
-		return 0, false
+func isValidDecimalString(value string) bool {
+	if value == "" {
+		return false
 	}
-	for _, b := range []byte(value) {
+	if len(value) > 1 && value[0] == '0' {
+		return false
+	}
+	for i := 0; i < len(value); i++ {
+		b := value[i]
 		if b < '0' || b > '9' {
-			return 0, false
+			return false
 		}
 	}
-	n, err := strconv.ParseInt(value, 10, 64)
-	return n, err == nil && n >= min && n <= max
+	return true
 }
+
+func nativeCiphertextDecimal(value string, min, max int64) (int64, bool) {
+	if !isValidDecimalString(value) {
+		return 0, false
+	}
+	n, err := strconv.ParseInt(value, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	if n < min || n > max {
+		return 0, false
+	}
+	return n, true
+}
+
 func nativeCiphertextChannel(r *http.Request) (uuid.UUID, error) {
 	value := chi.URLParam(r, "channelID")
 	id, err := uuid.Parse(value)
-	if err != nil || id == uuid.Nil || id.String() != value {
+	if err != nil || id == uuid.Nil {
+		return uuid.Nil, httpx.ErrInvalidInput("invalid native ciphertext channel")
+	}
+	if id.String() != value {
 		return uuid.Nil, httpx.ErrInvalidInput("invalid native ciphertext channel")
 	}
 	return id, nil
@@ -69,7 +90,10 @@ func checkNativeCiphertextRequest(r *http.Request) error {
 		return httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
 	}
 	kind, _, err := mime.ParseMediaType(types[0])
-	if err != nil || kind != "application/json" || nativePreviewHeaderPresent(r, "Content-Encoding") {
+	if err != nil || kind != "application/json" {
+		return httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
+	}
+	if nativePreviewHeaderPresent(r, "Content-Encoding") {
 		return httpx.ErrUnsupportedMediaType("native ciphertext requires JSON")
 	}
 	if r.ContentLength > nativeCiphertextBodyMax {
@@ -92,7 +116,10 @@ func decodeNativeCiphertext(w http.ResponseWriter, r *http.Request, channel uuid
 		return empty, nativeCiphertextBodyError(err)
 	}
 	event, err := uuid.Parse(fields["client_event_id"])
-	if err != nil || event == uuid.Nil || event.String() != fields["client_event_id"] {
+	if err != nil || event == uuid.Nil {
+		return empty, nativeCiphertextBodyError(nil)
+	}
+	if event.String() != fields["client_event_id"] {
 		return empty, nativeCiphertextBodyError(nil)
 	}
 	group, ok := decodeCanonicalBase64(fields["group_id"], 1, 128)
@@ -110,32 +137,58 @@ func decodeNativeCiphertext(w http.ResponseWriter, r *http.Request, channel uuid
 // fields client_event_id, group_id and ciphertext, each once and nothing
 // else, followed by the end of the body.
 func readNativeCiphertextFields(decoder *json.Decoder) (map[string]string, error) {
-	if token, err := decoder.Token(); err != nil || token != json.Delim('{') {
-		return nil, errOrShape(err)
+	if err := readStartObject(decoder); err != nil {
+		return nil, err
 	}
 	fields := make(map[string]string, 3)
 	for decoder.More() {
-		key, err := readNativeCiphertextKey(decoder, fields)
-		if err != nil {
+		if err := readFieldEntry(decoder, fields); err != nil {
 			return nil, err
 		}
-		value, err := decoder.Token()
-		if err != nil {
-			return nil, err
-		}
-		text, ok := value.(string)
-		if !ok {
-			return nil, errNativeCiphertextShape
-		}
-		fields[key] = text
 	}
-	if token, err := decoder.Token(); err != nil || token != json.Delim('}') || len(fields) != 3 {
-		return nil, errOrShape(err)
-	}
-	if _, err := decoder.Token(); err != io.EOF {
-		return nil, errOrShape(err)
+	if err := readEndObject(decoder, len(fields)); err != nil {
+		return nil, err
 	}
 	return fields, nil
+}
+
+func readStartObject(decoder *json.Decoder) error {
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return errOrShape(err)
+	}
+	return nil
+}
+
+func readFieldEntry(decoder *json.Decoder, fields map[string]string) error {
+	key, err := readNativeCiphertextKey(decoder, fields)
+	if err != nil {
+		return err
+	}
+	value, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	text, ok := value.(string)
+	if !ok {
+		return errNativeCiphertextShape
+	}
+	fields[key] = text
+	return nil
+}
+
+func readEndObject(decoder *json.Decoder, fieldCount int) error {
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('}') {
+		return errOrShape(err)
+	}
+	if fieldCount != 3 {
+		return errNativeCiphertextShape
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		return errOrShape(err)
+	}
+	return nil
 }
 
 // readNativeCiphertextKey reads the next object key, which must be one of the
@@ -170,5 +223,11 @@ func decodeCanonicalBase64(value string, min, max int) ([]byte, bool) {
 		return nil, false
 	}
 	raw, err := base64.StdEncoding.Strict().DecodeString(value)
-	return raw, err == nil && len(raw) >= min && len(raw) <= max && base64.StdEncoding.EncodeToString(raw) == value
+	if err != nil || len(raw) < min {
+		return nil, false
+	}
+	if len(raw) > max || base64.StdEncoding.EncodeToString(raw) != value {
+		return nil, false
+	}
+	return raw, true
 }

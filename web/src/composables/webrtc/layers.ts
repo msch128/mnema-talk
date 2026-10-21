@@ -89,6 +89,33 @@ function declareLayers(cx: Cx, plans: LayerPlan[]) {
   chat.sendWSEvent('webrtc_layers', { layers: declared })
 }
 
+function isLayerActive(wanted: number[] | null, layer: number): boolean {
+  return wanted === null ? layer === 0 : wanted.includes(layer)
+}
+
+async function syncSenderLayers(
+  cx: Cx,
+  senders: (RTCRtpSender | null | undefined)[],
+  plans: LayerPlan[],
+  track: MediaStreamTrack,
+  gen: number,
+  wanted: number[] | null
+): Promise<boolean> {
+  for (let i = 0; i < senders.length; i++) {
+    const sender = senders[i]
+    if (!sender) continue
+    const plan = plans[i + 1]
+    if (!plan) {
+      await dropTrack(sender)
+      continue
+    }
+    if (!(await feedLayer(cx, sender, plan, isLayerActive(wanted, i + 1), track, gen))) {
+      return false
+    }
+  }
+  return true
+}
+
 async function runSyncLayers(cx: Cx) {
   const { voice, st } = cx
   if (!st.layerSenders.some(Boolean)) return
@@ -99,21 +126,11 @@ async function runSyncLayers(cx: Cx) {
     await releaseLayers(cx, senders)
     return
   }
-  const plans = planScreenLayers(voice.screenQuality, track.getSettings?.() || {})
+  const plans = planScreenLayers(voice.screenQuality, track.getSettings?.() ?? {})
   const wanted = voice.layersWanted
-  const active = (layer: number) => (wanted === null ? layer === 0 : wanted.includes(layer))
-  await tuneSender(st.screenSender, { active: active(0) })
-  for (let i = 0; i < senders.length; i++) {
-    const sender = senders[i]
-    if (!sender) continue
-    const plan = plans[i + 1]
-    if (!plan) {
-      await dropTrack(sender)
-      continue
-    }
-    if (!(await feedLayer(cx, sender, plan, active(i + 1), track, gen))) return
-  }
-  if (gen !== st.joinGeneration || !plans.length) return
+  await tuneSender(st.screenSender, { active: isLayerActive(wanted, 0) })
+  const fed = await syncSenderLayers(cx, senders, plans, track, gen, wanted)
+  if (!fed || gen !== st.joinGeneration || !plans.length) return
   declareLayers(cx, plans)
 }
 

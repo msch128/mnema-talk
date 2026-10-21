@@ -27,27 +27,38 @@ const updateCheck = ref(false)
 
 const TABS: readonly LegalTab[] = ['all', 'operator', 'privacy', 'terms', 'oss']
 
-onMounted(async () => {
+function applyOperatorData(data: ReturnType<typeof decodeServerLegal>): void {
+  operatorRaw.value = {
+    name: data.operator_name || '',
+    email: data.operator_email || '',
+    country: data.operator_country || '',
+    status: data.project_notice || ''
+  }
+}
+
+function applyLegalData(data: ReturnType<typeof decodeServerLegal>): void {
+  applyOperatorData(data)
+  mediaRetentionDays.value = data.media_retention_days || 0
+  if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
+  stunServers.value = data.stun_servers || []
+  updateCheck.value = data.update_check === true
+  if (data.legal_version) legalVersion.value = data.legal_version
+}
+
+async function loadLegal(): Promise<void> {
   try {
     const res = await fetch('/api/legal')
-    if (res.ok) {
-      const raw: unknown = await res.json()
-      const data = decodeServerLegal(raw)
-      operatorRaw.value = {
-        name: data.operator_name || '',
-        email: data.operator_email || '',
-        country: data.operator_country || '',
-        status: data.project_notice || ''
-      }
-      mediaRetentionDays.value = data.media_retention_days || 0
-      if (data.session_expiry_days) sessionExpiryDays.value = data.session_expiry_days
-      stunServers.value = data.stun_servers || []
-      updateCheck.value = data.update_check === true
-      if (data.legal_version) legalVersion.value = data.legal_version
-    }
-  } catch {
+    if (!res.ok) return
+    const raw: unknown = await res.json()
+    applyLegalData(decodeServerLegal(raw))
+  } catch (error) {
     // Keep generic defaults
+    void error
   }
+}
+
+onMounted(() => {
+  void loadLegal()
 })
 
 </script>

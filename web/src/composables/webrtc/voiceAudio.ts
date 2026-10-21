@@ -45,10 +45,15 @@ function releaseStalledGamingLease(cx: Cx, tick: SpeakingTick) {
   tick.lastGamingTick = now
 }
 
+function shouldSkipNoAudioWatch(voice: Cx['voice'], level: number): boolean {
+  if (!voice.warnNoAudioDetected || level >= 1) return true
+  return voice.isMuted || voice.isMicTesting
+}
+
 // Warns (at most every two minutes) when an unmuted mic has been silent for 15 s.
 function watchForNoAudio(cx: Cx, level: number) {
   const { voice, st } = cx
-  if (!voice.warnNoAudioDetected || voice.isMuted || voice.isMicTesting || level >= 1) {
+  if (shouldSkipNoAudioWatch(voice, level)) {
     st.unmutedZeroAudioStartTime = 0
     return
   }

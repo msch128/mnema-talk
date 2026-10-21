@@ -142,31 +142,41 @@ func buildAPIWithMux(portMin, portMax uint16, announceIPs []string, mux ice.UDPM
 // range, and the announced addresses.
 func buildSettingEngine(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux) (webrtc.SettingEngine, error) {
 	settingEngine := webrtc.SettingEngine{}
-	if onlyLoopbackAnnouncements(announceIPs) {
-		settingEngine.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	if err := configureICEAddresses(&settingEngine, announceIPs); err != nil {
+		return settingEngine, err
 	}
-	// Explicit loopback announcements are used by local browser deployments.
-	// Gather a socket on that interface too, rather than only rewriting the
-	// addresses of sockets bound to other interfaces.
-	if announcesLoopback(announceIPs) {
-		settingEngine.SetIncludeLoopbackCandidate(true)
-	}
-
-	if mux != nil {
-		settingEngine.SetICEUDPMux(mux)
-	} else if portMin > 0 && portMax > 0 {
-		if err := settingEngine.SetEphemeralUDPPortRange(portMin, portMax); err != nil {
-			return settingEngine, fmt.Errorf("failed to set UDP port range: %w", err)
-		}
-	}
-
-	if len(announceIPs) > 0 {
-		// Every announced address becomes its own host candidate.
-		if err := settingEngine.SetICEAddressRewriteRules(announceRewriteRules(announceIPs)...); err != nil {
-			return settingEngine, fmt.Errorf("failed to set announced addresses: %w", err)
-		}
+	if err := configureICEPorts(&settingEngine, portMin, portMax, mux); err != nil {
+		return settingEngine, err
 	}
 	return settingEngine, nil
+}
+
+func configureICEAddresses(se *webrtc.SettingEngine, announceIPs []string) error {
+	if onlyLoopbackAnnouncements(announceIPs) {
+		se.SetIPFilter(func(ip net.IP) bool { return ip.IsLoopback() })
+	}
+	if announcesLoopback(announceIPs) {
+		se.SetIncludeLoopbackCandidate(true)
+	}
+	if len(announceIPs) > 0 {
+		if err := se.SetICEAddressRewriteRules(announceRewriteRules(announceIPs)...); err != nil {
+			return fmt.Errorf("failed to set announced addresses: %w", err)
+		}
+	}
+	return nil
+}
+
+func configureICEPorts(se *webrtc.SettingEngine, portMin, portMax uint16, mux ice.UDPMux) error {
+	if mux != nil {
+		se.SetICEUDPMux(mux)
+		return nil
+	}
+	if portMin > 0 && portMax > 0 {
+		if err := se.SetEphemeralUDPPortRange(portMin, portMax); err != nil {
+			return fmt.Errorf("failed to set UDP port range: %w", err)
+		}
+	}
+	return nil
 }
 
 func buildAPIWithAuthorization(portMin, portMax uint16, announceIPs []string, mux ice.UDPMux, authorize func() bool, sources *sourceAuthorizationRegistry, load *peerLoad) (*webrtc.API, error) {

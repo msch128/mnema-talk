@@ -44,13 +44,55 @@ func nativeLockFailure(err error) error {
 // instance, not revoked, and neither the family nor the access token expired.
 // It returns the clock reading it used.
 func (l lockedNativeSession) checkLease(ctx context.Context, tx pgx.Tx, p NativePrincipal) (time.Time, error) {
+	return l.clockLease(ctx, tx, func(now time.Time) bool { return l.leaseRejected(now, p) })
+}
+
+// checkReissueLease verifies, at the database clock, that the session still is
+// the one the caller authenticated: same account version, family, instance and
+// deadlines, and not revoked. It returns the clock reading it used.
+func (l lockedNativeSession) checkReissueLease(ctx context.Context, tx pgx.Tx, expected NativePrincipal) (time.Time, error) {
+	return l.clockLease(ctx, tx, func(now time.Time) bool { return l.reissueLeaseRejected(now, expected) })
+}
+
+func (l lockedNativeSession) clockLease(ctx context.Context, tx pgx.Tx, rejected func(time.Time) bool) (time.Time, error) {
 	now, err := nativeClock(ctx, tx)
 	if err != nil {
 		return time.Time{}, nativeStoreFailure(err)
 	}
-	if l.disabled || l.version != p.tokenVersion || l.family.version != l.version || l.family.instanceID != p.instanceID ||
-		l.family.revokedAt != nil || !now.Before(l.family.expiresAt) || !now.Before(p.familyExpiresAt) || !now.Before(p.accessExpiresAt) {
+	if rejected(now) {
 		return time.Time{}, ErrNativeUnauthorized
 	}
 	return now, nil
+}
+
+// leaseRejected reports that the locked session is not the one p authenticated.
+func (l lockedNativeSession) leaseRejected(now time.Time, p NativePrincipal) bool {
+	family := l.family
+	if l.disabled || l.version != p.tokenVersion {
+		return true
+	}
+	if family.version != l.version || family.instanceID != p.instanceID {
+		return true
+	}
+	if family.revokedAt != nil || !now.Before(family.expiresAt) {
+		return true
+	}
+	return !now.Before(p.familyExpiresAt) || !now.Before(p.accessExpiresAt)
+}
+
+// reissueLeaseRejected reports that the locked session is not the one the
+// caller authenticated, read at the database clock now. A reissue also requires
+// the stored family deadline to be the one the caller was shown.
+func (l lockedNativeSession) reissueLeaseRejected(now time.Time, expected NativePrincipal) bool {
+	family := l.family
+	if l.disabled || l.version != expected.tokenVersion {
+		return true
+	}
+	if family.version != l.version || family.instanceID != expected.instanceID {
+		return true
+	}
+	if family.revokedAt != nil || !family.expiresAt.Equal(expected.familyExpiresAt) {
+		return true
+	}
+	return !now.Before(family.expiresAt) || !now.Before(expected.accessExpiresAt)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -159,6 +160,35 @@ func (h *Handler) createOutgoing(w http.ResponseWriter, r *http.Request) error {
 	return h.createIn(w, r, ch)
 }
 
+func (h *Handler) buildOutgoingChange(ctx context.Context, req UpdateOutgoingRequest) (outgoingChange, error) {
+	change := outgoingChange{enabled: req.Enabled}
+	if req.Name != nil {
+		name, err := cleanName("name", *req.Name)
+		if err != nil {
+			return outgoingChange{}, err
+		}
+		change.name = &name
+	}
+	if req.URL != nil {
+		u, err := h.Policy.ValidateURL(*req.URL)
+		if err != nil {
+			return outgoingChange{}, httpx.ErrInvalidInput("url must be an http or https address that is allowed as a target")
+		}
+		s := u.String()
+		change.url = &s
+		editor := auth.UserFrom(ctx).ID
+		change.urlBy = &editor
+	}
+	if req.Events != nil {
+		events, err := validEvents(*req.Events)
+		if err != nil {
+			return outgoingChange{}, err
+		}
+		change.events = events
+	}
+	return change, nil
+}
+
 // updateOutgoing handles PATCH /api/admin/outgoing-webhooks/{id}.
 //
 // @Summary Change an outgoing webhook
@@ -188,28 +218,9 @@ func (h *Handler) updateOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		return err
 	}
-	change := outgoingChange{enabled: req.Enabled}
-	if req.Name != nil {
-		name, err := cleanName("name", *req.Name)
-		if err != nil {
-			return err
-		}
-		change.name = &name
-	}
-	if req.URL != nil {
-		u, err := h.Policy.ValidateURL(*req.URL)
-		if err != nil {
-			return httpx.ErrInvalidInput("url must be an http or https address that is allowed as a target")
-		}
-		s := u.String()
-		change.url = &s
-		editor := auth.UserFrom(r.Context()).ID
-		change.urlBy = &editor
-	}
-	if req.Events != nil {
-		if change.events, err = validEvents(*req.Events); err != nil {
-			return err
-		}
+	change, err := h.buildOutgoingChange(r.Context(), req)
+	if err != nil {
+		return err
 	}
 	if err := updateOutgoing(r.Context(), h.DB, rec.ID, change); err != nil {
 		return err
@@ -277,7 +288,8 @@ func (h *Handler) testOutgoing(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if ok, _ := h.testLimiter.Allow(rec.ID.String()); !ok {
+	if ok, retry := h.testLimiter.Allow(rec.ID.String()); !ok {
+		w.Header().Set("Retry-After", strconv.Itoa(int(retry.Seconds()+1)))
 		return httpx.ErrRateLimited()
 	}
 	del, err := h.Outgoing.SendTest(r.Context(), rec)

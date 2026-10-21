@@ -102,8 +102,13 @@ function openLang() {
   nextTick(() => root.value?.querySelector<HTMLElement>('[data-submenu] [role="menuitemradio"]')?.focus())
 }
 
+function isInsideMenu(target: EventTarget | null): boolean {
+  if (!(target instanceof Node)) return false
+  return !!(root.value?.contains(target) || props.trigger?.contains(target))
+}
+
 function onPointerDown(e: PointerEvent) {
-  if (root.value && !(e.target instanceof Node && (root.value.contains(e.target) || props.trigger?.contains(e.target)))) close(false)
+  if (root.value && !isInsideMenu(e.target)) close(false)
 }
 
 onMounted(() => {

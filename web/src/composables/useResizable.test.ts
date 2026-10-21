@@ -100,9 +100,9 @@ describe('fitPanels / availableMax', () => {
   })
 
   it('limits a panel by the remaining space', () => {
-    expect(availableMax(0, [240, 240, 0], cfg, 1000, 400)).toBe(360)
-    expect(availableMax(0, [240, 240, 0], cfg, 900, 400)).toBe(260)
-    expect(availableMax(0, [240, 240, 0], cfg, 700, 400)).toBe(200)
+    expect(availableMax(0, [240, 240, 0], cfg, { viewportWidth: 1000, centerMin: 400 })).toBe(360)
+    expect(availableMax(0, [240, 240, 0], cfg, { viewportWidth: 900, centerMin: 400 })).toBe(260)
+    expect(availableMax(0, [240, 240, 0], cfg, { viewportWidth: 700, centerMin: 400 })).toBe(200)
   })
 })
 

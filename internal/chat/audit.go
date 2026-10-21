@@ -36,20 +36,27 @@ func (h *Handler) snapshotMessage(ctx context.Context, id uuid.UUID, withReplies
 	s := &auditSnapshot{msg: msg}
 	_ = h.DB.QueryRow(ctx, `SELECT name FROM channels WHERE id = $1`, msg.ChannelID).Scan(&s.channel)
 	if withReplies && msg.ReplyCount > 0 {
-		// Ids only: replies are other members' messages, and one that is
-		// deleted on its own gets its own entry with its text.
-		rows, err := h.DB.Query(ctx, `SELECT id FROM messages WHERE parent_id = $1 ORDER BY created_at LIMIT $2`, id, maxAuditedReplies)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var rid uuid.UUID
-				if rows.Scan(&rid) == nil {
-					s.replies = append(s.replies, rid)
-				}
-			}
-		}
+		s.replies = h.fetchAuditedReplyIDs(ctx, id)
 	}
 	return s
+}
+
+func (h *Handler) fetchAuditedReplyIDs(ctx context.Context, parentID uuid.UUID) []uuid.UUID {
+	// Ids only: replies are other members' messages, and one that is
+	// deleted on its own gets its own entry with its text.
+	rows, err := h.DB.Query(ctx, `SELECT id FROM messages WHERE parent_id = $1 ORDER BY created_at LIMIT $2`, parentID, maxAuditedReplies)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var replies []uuid.UUID
+	for rows.Next() {
+		var rid uuid.UUID
+		if err := rows.Scan(&rid); err == nil {
+			replies = append(replies, rid)
+		}
+	}
+	return replies
 }
 
 func attachmentList(m *Message) []map[string]any {

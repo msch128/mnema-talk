@@ -5,38 +5,38 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
+
+func invalidRegistrationHandler(h *NativeHandler) bool {
+	if !nativeAccountsReady(h) {
+		return true
+	}
+	return h.accounts.registerPerIP == nil
+}
+
+func requireAnonymousNative(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
+		if err := noNativeAuthorization(request); err != nil {
+			httpx.WriteError(w, err)
+			return
+		}
+		next.ServeHTTP(w, request)
+	})
+}
+
+func rejectNativeRegistration(next http.Handler) http.Handler {
+	return rejectForcedNativeTarget(requireAnonymousNative(next), "invalid native registration target")
+}
 
 // RegistrationHandler is an explicit native-only account creation preview.
 // It shares invite consumption and the browser registration IP budget. It
 // creates neither a cookie nor a native session; a separate login is required.
 func (h *NativeHandler) RegistrationHandler() (http.Handler, error) {
-	if h == nil || h.accounts == nil || h.accounts.Sessions == nil || h.accounts.Sessions.DB == nil || h.accounts.registerPerIP == nil {
+	if invalidRegistrationHandler(h) {
 		return nil, errors.New("invalid native registration dependencies")
 	}
-	r := chi.NewRouter()
-	r.Use(nativeRequestBoundary)
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, request *http.Request) {
-			if request.URL.ForceQuery || request.URL.RawPath != "" {
-				httpx.WriteError(w, httpx.ErrInvalidInput("invalid native registration target"))
-				return
-			}
-			if err := noNativeAuthorization(request); err != nil {
-				httpx.WriteError(w, err)
-				return
-			}
-			next.ServeHTTP(w, request)
-		})
-	})
-	r.NotFound(func(w http.ResponseWriter, request *http.Request) {
-		httpx.WriteError(w, httpx.ErrNotFound("native registration route not found"))
-	})
-	r.MethodNotAllowed(func(w http.ResponseWriter, request *http.Request) {
-		httpx.WriteError(w, httpx.NewAPIError(http.StatusMethodNotAllowed, httpx.CodeInvalidInput, "method not allowed"))
-	})
+	r := nativeRouter(rejectNativeRegistration, "native registration route not found")
 	r.With(h.accounts.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.registerNative))
 	return r, nil
 }

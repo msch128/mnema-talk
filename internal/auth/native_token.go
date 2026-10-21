@@ -31,8 +31,13 @@ func newNativeSecret() nativeSecret {
 	return nativeSecret{value: &bytes}
 }
 
+func writeNativeText(state fmt.State, text string) {
+	// A failed write to a fmt.State has nowhere to be reported.
+	_, _ = io.WriteString(state, text)
+}
+
 func (nativeSecret) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native secret redacted]")
+	writeNativeText(state, "[native secret redacted]")
 }
 
 func (nativeSecret) String() string               { return "[native secret redacted]" }
@@ -52,20 +57,40 @@ func (v nativeSecret) digest() [32]byte {
 	return sha256.Sum256((*v.value)[:])
 }
 
+func nativeSecretRune(b byte) bool {
+	if b >= 'A' && b <= 'Z' {
+		return true
+	}
+	if b >= 'a' && b <= 'z' {
+		return true
+	}
+	if b >= '0' && b <= '9' {
+		return true
+	}
+	return b == '-' || b == '_'
+}
+
 func parseNativeSecret(raw string) (nativeSecret, error) {
 	if len(raw) != 43 {
 		return nativeSecret{}, ErrNativeUnauthorized
 	}
 	for i := range raw {
-		b := raw[i]
-		if !(b >= 'A' && b <= 'Z' || b >= 'a' && b <= 'z' || b >= '0' && b <= '9' || b == '-' || b == '_') {
+		if !nativeSecretRune(raw[i]) {
 			return nativeSecret{}, ErrNativeUnauthorized
 		}
 	}
 	// Strict decoding still ignores CR/LF, hence the explicit alphabet above.
+	return decodedNativeSecret(raw)
+}
+
+func decodedNativeSecret(raw string) (nativeSecret, error) {
 	secret := newNativeSecret()
 	n, err := base64.RawURLEncoding.Strict().Decode((*secret.value)[:], []byte(raw))
-	if err != nil || n != len(*secret.value) || secret.wire() != raw {
+	if err != nil {
+		clear((*secret.value)[:])
+		return nativeSecret{}, ErrNativeUnauthorized
+	}
+	if n != len(*secret.value) || secret.wire() != raw {
 		clear((*secret.value)[:])
 		return nativeSecret{}, ErrNativeUnauthorized
 	}
@@ -92,7 +117,7 @@ func generateNativeSecrets(random io.Reader) (nativeSecret, nativeSecret, error)
 type nativeStoreError struct{ cause *error }
 
 func (nativeStoreError) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "native session storage failed")
+	writeNativeText(state, "native session storage failed")
 }
 
 func (nativeStoreError) Error() string    { return "native session storage failed" }

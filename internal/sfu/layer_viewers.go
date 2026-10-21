@@ -35,9 +35,11 @@ func (g *layerGroup) representative() *TrackInfo {
 
 // newViewer makes the outgoing track one viewer gets for the group. pref is
 // the viewer's choice, -1 for automatic. It receives nothing until addViewer.
-func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID string) *viewerTrack {
-	// NewTrackLocalStaticRTP never fails.
-	local, _ := webrtc.NewTrackLocalStaticRTP(g.codec, trackID, streamID)
+func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID string) (*viewerTrack, error) {
+	local, err := webrtc.NewTrackLocalStaticRTP(g.codec, trackID, streamID)
+	if err != nil {
+		return nil, err
+	}
 	vt := &viewerTrack{TrackLocalStaticRTP: local, group: g, since: layerNow(), viewer: viewer, pref: pref, cur: -1, eff: -1, sink: local.WriteRTP}
 	if pref < 0 {
 		vt.ad = newAdapter(layerNow(), g.floor())
@@ -45,7 +47,7 @@ func (g *layerGroup) newViewer(viewer uuid.UUID, pref int, trackID, streamID str
 	vt.want = vt.chosenLayer()
 	vt.curA.Store(-1)
 	vt.wantA.Store(int32(vt.want))
-	return vt
+	return vt, nil
 }
 
 // addViewer starts delivering to vt and asks for the keyframe it waits for.

@@ -53,6 +53,26 @@ function syncStateToRoute(ctx: RoutingContext) {
   }
 }
 
+function createAdminNavigation(ctx: RoutingContext) {
+  function openAdmin(tab = 'users') {
+    if (!ctx.permissions.canOpenAdmin) return
+    ctx.adminTab.value = tab
+    ctx.showAdminModal.value = true
+    navigate(`/admin/${tab}`, { replace: false })
+  }
+
+  function closeAdmin() {
+    if (canGoBackInApp()) {
+      window.history.back()
+      return
+    }
+    ctx.showAdminModal.value = false
+    navigate(ctx.currentStatePath(), { replace: true })
+  }
+
+  return { openAdmin, closeAdmin }
+}
+
 /**
  * The app's address and what it shows, kept in step both ways: the route
  * decides the channel, thread, Talk or admin console on screen, and what the
@@ -63,13 +83,8 @@ export function useAppRouting(alive: () => boolean) {
   const showAdminModal = ref(false)
   const adminTab = ref('users')
   const previewVoiceChannelId = ref<string | null>(null)
-  // /v/:id is the Talk on its own, /v/:id/chat adds its chat under the stage.
-  // Open or closed is remembered per browser (closed by default).
-  // A deep link to /v/:id/chat counts from the start: a resumed call can sync
-  // the address before that route is applied.
   const voiceShowChat = ref((currentRoute.value.view === 'voice' && !!currentRoute.value.showChat) || loadVoiceChatOpen())
   watch(voiceShowChat, open => saveVoiceChatOpen(open))
-  // The channel the Talk view shows: a previewed one (not joined) or the joined one.
   const voiceChannelId = computed(() => previewVoiceChannelId.value || voiceStore.currentChannelId)
   const currentStatePath = () => statePath(ctx, voiceChannelId.value)
   const ctx: RoutingContext = {
@@ -94,27 +109,8 @@ export function useAppRouting(alive: () => boolean) {
   const syncCurrentStateToRoute = () => syncStateToRoute(ctx)
   watchStateForRoute(ctx, syncCurrentStateToRoute)
 
-  function openAdmin(tab = 'users') {
-    if (!ctx.permissions.canOpenAdmin) return
-    adminTab.value = tab
-    showAdminModal.value = true
-    navigate(`/admin/${tab}`, { replace: false })
-  }
-
-  function closeAdmin() {
-    // Opened from inside the app: step back (popstate then closes the console).
-    if (canGoBackInApp()) {
-      window.history.back()
-      return
-    }
-    // Deep-linked or reloaded: there's nothing in-app to go back to.
-    showAdminModal.value = false
-    navigate(currentStatePath(), { replace: true })
-  }
-
-  function onVoiceJoin(channelId: string) {
-    previewVoiceChannelId.value = channelId === voiceStore.currentChannelId ? null : channelId
-  }
+  const { openAdmin, closeAdmin } = createAdminNavigation(ctx)
+  const onVoiceJoin = (id: string) => { previewVoiceChannelId.value = id === voiceStore.currentChannelId ? null : id }
 
   return {
     showAdminModal,
@@ -127,10 +123,8 @@ export function useAppRouting(alive: () => boolean) {
     openAdmin,
     closeAdmin,
     onVoiceJoin,
-    /** A login's first fetch starts: the channel list selecting one must not overwrite a deep link. */
     beginFirstRoute() { ctx.loadingFirstRoute = true },
     endFirstRoute() { ctx.loadingFirstRoute = false },
-    /** Stops a route that is still loading. */
     dispose() { ++ctx.routeGen }
   }
 }

@@ -86,8 +86,11 @@ func (l *Log) RecordTx(ctx context.Context, q db.Querier, e Entry) error {
 		e.RequestID = httpx.RequestIDFromContext(ctx)
 	}
 	// SanitizeDetails returns only JSON-safe values, so this cannot fail.
-	details, _ := json.Marshal(SanitizeDetails(e.Details))
-	_, err := q.Exec(ctx, `
+	details, err := json.Marshal(SanitizeDetails(e.Details))
+	if err != nil {
+		return err
+	}
+	_, err = q.Exec(ctx, `
 		INSERT INTO audit_log (actor_id, actor_name, action, target_type, target_id, target_name, details, request_id, channel_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		e.ActorID, clip(e.ActorName, 64), e.Action, e.TargetType, clip(e.TargetID, 64), clip(e.TargetName, 120), details, clip(e.RequestID, 64), e.ChannelID)

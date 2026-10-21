@@ -15,6 +15,24 @@ function isTypingTarget(el: EventTarget | null) {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable
 }
 
+function matchesPttKey(e: KeyboardEvent, pttKey: string): boolean {
+  return (e.code || e.key) === pttKey
+}
+
+function shouldHandlePtt(store: VoiceStore | null, e: KeyboardEvent): boolean {
+  if (!store) return false
+  if (store.inputMode !== 'ptt') return false
+  if (e.repeat) return false
+  if (isTypingTarget(e.target)) return false
+  return matchesPttKey(e, store.pttKey)
+}
+
+function playPttSound(store: VoiceStore, effect: 'ptt_start' | 'ptt_stop') {
+  if (store.isConnected || store.isMicTesting) {
+    playSoundEffect(effect)
+  }
+}
+
 /**
  * Push-to-talk key handling. The listeners are on the window, so one instance
  * serves the whole page and any component can detach it.
@@ -23,22 +41,19 @@ export function createPushToTalk({ lease, wake }: PushToTalkHooks) {
   let store: VoiceStore | null = null
 
   function onKeyDown(e: KeyboardEvent) {
-    if (!store || store.inputMode !== 'ptt' || e.repeat) return
-    // Holding the key while typing in the composer must not open the mic.
-    if (isTypingTarget(e.target)) return
-    if ((e.code || e.key) !== store.pttKey) return
+    if (!store || !shouldHandlePtt(store, e)) return
     lease(true)
     if (store.isPttPressed) return
     store.isPttPressed = true
-    if (store.isConnected || store.isMicTesting) playSoundEffect('ptt_start')
+    playPttSound(store, 'ptt_start')
   }
 
   function onKeyUp(e: KeyboardEvent) {
     if (!store || store.inputMode !== 'ptt') return
-    if ((e.code || e.key) !== store.pttKey || !store.isPttPressed) return
+    if (!matchesPttKey(e, store.pttKey) || !store.isPttPressed) return
     store.isPttPressed = false
     lease(false)
-    if (store.isConnected || store.isMicTesting) playSoundEffect('ptt_stop')
+    playPttSound(store, 'ptt_stop')
   }
 
   // A keyup that happens while the window is in the background never arrives;

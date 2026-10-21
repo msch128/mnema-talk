@@ -72,11 +72,21 @@ func (c *Config) BroadTrustedProxies() []string {
 			continue
 		}
 		ones, bits := n.Mask.Size()
-		if (bits == 32 && ones < 24) || (bits == 128 && ones < 64) {
+		if isBroadMask(ones, bits) {
 			out = append(out, p)
 		}
 	}
 	return out
+}
+
+func isBroadMask(ones, bits int) bool {
+	if bits == 32 {
+		return ones < 24
+	}
+	if bits == 128 {
+		return ones < 64
+	}
+	return false
 }
 
 // refuseBroadTrustedProxies rejects a production listener that would trust
@@ -97,7 +107,9 @@ func (c *Config) refuseBroadTrustedProxies() error {
 // RandomHex returns a cryptographically random hex string of n bytes.
 func RandomHex(n int) string {
 	b := make([]byte, n)
-	_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
 	return hex.EncodeToString(b)
 }
 
@@ -108,15 +120,29 @@ func RandomHex(n int) string {
 func normalizeURL(raw string) string {
 	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
 	u, err := url.Parse(raw)
-	if err != nil || u.Scheme == "" || u.Host == "" {
+	if err != nil || !hasSchemeAndHost(u) {
 		return raw
 	}
 	u.Scheme = strings.ToLower(u.Scheme)
 	u.Host = strings.ToLower(u.Host)
-	if p := u.Port(); (u.Scheme == "https" && p == "443") || (u.Scheme == "http" && p == "80") {
+	if p := u.Port(); isDefaultPort(u.Scheme, p) {
 		u.Host = strings.TrimSuffix(u.Host, ":"+p)
 	}
 	return strings.TrimRight(u.String(), "/")
+}
+
+func hasSchemeAndHost(u *url.URL) bool {
+	return u.Scheme != "" && u.Host != ""
+}
+
+func isDefaultPort(scheme, port string) bool {
+	if scheme == "https" {
+		return port == "443"
+	}
+	if scheme == "http" {
+		return port == "80"
+	}
+	return false
 }
 
 // SplitList splits a comma-separated list, dropping empty entries.

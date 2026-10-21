@@ -48,7 +48,9 @@ type nativeCiphertextData struct {
 }
 
 func (NativeCiphertextRecord) Format(s fmt.State, _ rune) {
-	_, _ = io.WriteString(s, "[native ciphertext record redacted]")
+	if _, err := io.WriteString(s, "[native ciphertext record redacted]"); err != nil {
+		return
+	}
 }
 
 type NativeCiphertextWire struct {
@@ -122,13 +124,33 @@ func scanNativeCiphertext(row pgx.Row) (NativeCiphertextRecord, error) {
 	return NativeCiphertextRecord{value: &v}, nil
 }
 
+func ciphertextInputRejected(request OpaqueCiphertextRequest) bool {
+	if request.ChannelID == uuid.Nil || request.ClientEventID == uuid.Nil {
+		return true
+	}
+	if len(request.GroupID) < 1 || len(request.GroupID) > 128 {
+		return true
+	}
+	return len(request.Ciphertext) < 1 || len(request.Ciphertext) > 65536
+}
+
+func (s *NativeCiphertextStore) publishInChannel(ctx context.Context, tx pgx.Tx, user auth.User, request OpaqueCiphertextRequest) (NativeCiphertextRecord, bool, error) {
+	if err := lockNativeChannel(ctx, tx, nativeChannelLockWrite, request.ChannelID); err != nil {
+		return NativeCiphertextRecord{}, false, err
+	}
+	if err := s.authorize(ctx, user, request.ChannelID, perm.SendMessages); err != nil {
+		return NativeCiphertextRecord{}, false, err
+	}
+	return insertOrReplay(ctx, tx, user.ID, request)
+}
+
 // Publish commits identical stored bytes on an idempotent retry; it never
 // reencrypts or silently replaces an existing event. The boolean means created.
 // Writers serialize on the channel before allocating sequence numbers, so a
 // concurrent reader cannot advance past an uncommitted lower-number event.
 // No events are broadcast by this persistence-only foundation.
 func (s *NativeCiphertextStore) Publish(ctx context.Context, principal auth.NativePrincipal, request OpaqueCiphertextRequest) (NativeCiphertextRecord, bool, error) {
-	if request.ChannelID == uuid.Nil || request.ClientEventID == uuid.Nil || len(request.GroupID) < 1 || len(request.GroupID) > 128 || len(request.Ciphertext) < 1 || len(request.Ciphertext) > 65536 {
+	if ciphertextInputRejected(request) {
 		return NativeCiphertextRecord{}, false, ErrNativeContentInput
 	}
 	request.GroupID = bytes.Clone(request.GroupID)
@@ -136,14 +158,8 @@ func (s *NativeCiphertextStore) Publish(ctx context.Context, principal auth.Nati
 	var record NativeCiphertextRecord
 	created := false
 	err := s.sessions.WithAuthorizedTransaction(ctx, principal, func(ctx context.Context, tx pgx.Tx, user auth.User) error {
-		if err := lockNativeChannel(ctx, tx, nativeChannelLockWrite, request.ChannelID); err != nil {
-			return err
-		}
-		if err := s.authorize(ctx, user, request.ChannelID, perm.SendMessages); err != nil {
-			return err
-		}
 		var err error
-		record, created, err = insertOrReplay(ctx, tx, user.ID, request)
+		record, created, err = s.publishInChannel(ctx, tx, user, request)
 		return err
 	})
 	if err != nil {
@@ -195,10 +211,20 @@ func insertOrReplay(ctx context.Context, tx pgx.Tx, userID uuid.UUID, request Op
 	return record, false, nil
 }
 
+func listInputRejected(channelID uuid.UUID, after int64, limit int) bool {
+	if channelID == uuid.Nil || after < 0 {
+		return true
+	}
+	if limit < 1 {
+		return true
+	}
+	return limit > 100
+}
+
 // List paginates opaque events without claiming that any group is authorized.
 // Channel visibility follows the current single-server text/voice model.
 func (s *NativeCiphertextStore) List(ctx context.Context, principal auth.NativePrincipal, channelID uuid.UUID, after int64, limit int) ([]NativeCiphertextRecord, error) {
-	if channelID == uuid.Nil || after < 0 || limit < 1 || limit > 100 {
+	if listInputRejected(channelID, after, limit) {
 		return nil, ErrNativeContentInput
 	}
 	var records []NativeCiphertextRecord

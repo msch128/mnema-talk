@@ -88,25 +88,14 @@ func (d *Dispatcher) backoff(attempt int) time.Duration {
 	return base + time.Duration(rand.Int64N(int64(base)/5+1)) - base/10 // +-10 %
 }
 
-// process makes one attempt of a claimed row and, in the same transaction
-// that logs it, deletes the row (settled) or schedules the next attempt.
-// A crash between the request and that transaction repeats the delivery
-// (at least once; receivers deduplicate on the delivery id).
-func (d *Dispatcher) process(ctx context.Context, j job) {
-	// Bookkeeping completes even while shutting down.
-	wctx := context.WithoutCancel(ctx)
-	rec, err := getOutgoing(wctx, d.DB, j.webhook)
-	switch {
-	case errors.Is(err, errOutgoingNotFound) || (err == nil && !rec.enabled):
-		if err := dropRow(wctx, d.DB, j.seq); err != nil {
-			slog.Warn("outgoing webhooks: drop", "err", err)
-		}
-		return
-	case err != nil:
-		slog.Warn("outgoing webhooks: load webhook", "err", err) // the lease makes the row due again
-		return
+func shouldDropWebhook(rec *outgoingRec, err error) bool {
+	if errors.Is(err, errOutgoingNotFound) {
+		return true
 	}
-	// Attempts already under way when shutdown begins get shutdownGrace to finish.
+	return err == nil && !rec.enabled
+}
+
+func (d *Dispatcher) runAttemptWithGrace(ctx context.Context, wctx context.Context, rec *outgoingRec, j job) (Delivery, time.Duration, bool) {
 	actx, cancel := context.WithCancel(wctx)
 	grace := shutdownGrace
 	stop := context.AfterFunc(ctx, func() { time.AfterFunc(grace, cancel) })
@@ -114,27 +103,67 @@ func (d *Dispatcher) process(ctx context.Context, j job) {
 	aborted := actx.Err() != nil
 	stop()
 	cancel()
-	if aborted { // cut off by the shutdown: not an outcome, leave the row for the next start
-		if err := releaseJob(wctx, d.DB, j.seq); err != nil {
-			slog.Warn("outgoing webhooks: release", "err", err)
-		}
-		return
-	}
+	return del, retryAfter, aborted
+}
+
+func (d *Dispatcher) computeSettleStep(j job, del Delivery, retryAfter time.Duration) (step, bool) {
 	wait := d.backoff(j.attempt)
 	retry := !del.Success && retriable(del) && wait >= 0
-	settle := settleStep(j.seq)
-	if retry {
-		wait = max(wait, min(retryAfter, maxRetryAfter))
-		settle = rescheduleStep(j.seq, j.attempt+1, wait)
+	if !retry {
+		return settleStep(j.seq), false
 	}
-	off, err := recordDelivery(wctx, d.DB, rec.ID, del, !retry, true, settle)
+	wait = max(wait, min(retryAfter, maxRetryAfter))
+	return rescheduleStep(j.seq, j.attempt+1, wait), true
+}
+
+func (d *Dispatcher) loadActiveWebhook(ctx context.Context, j job) (*outgoingRec, bool) {
+	rec, err := getOutgoing(ctx, d.DB, j.webhook)
+	if shouldDropWebhook(rec, err) {
+		if dropErr := dropRow(ctx, d.DB, j.seq); dropErr != nil {
+			slog.Warn("outgoing webhooks: drop", "err", dropErr)
+		}
+		return nil, false
+	}
 	if err != nil {
-		slog.Warn("outgoing webhooks: record delivery", "err", err)
+		slog.Warn("outgoing webhooks: load webhook", "err", err) // the lease makes the row due again
+		return nil, false
+	}
+	return rec, true
+}
+
+func (d *Dispatcher) recordDeliveryResult(ctx context.Context, rec *outgoingRec, j job, del Delivery, retryAfter time.Duration) {
+	settle, retry := d.computeSettleStep(j, del, retryAfter)
+	off, recErr := recordDelivery(ctx, d.DB, rec.ID, del, !retry, true, settle)
+	if recErr != nil {
+		slog.Warn("outgoing webhooks: record delivery", "err", recErr)
 		return
 	}
 	if !del.Success && !retry {
-		d.afterFinal(wctx, rec.ID, off)
+		d.afterFinal(ctx, rec.ID, off)
 	}
+}
+
+// process makes one attempt of a claimed row and, in the same transaction
+// that logs it, deletes the row (settled) or schedules the next attempt.
+// A crash between the request and that transaction repeats the delivery
+// (at least once; receivers deduplicate on the delivery id).
+func (d *Dispatcher) process(ctx context.Context, j job) {
+	// Bookkeeping completes even while shutting down.
+	wctx := context.WithoutCancel(ctx)
+	rec, ok := d.loadActiveWebhook(wctx, j)
+	if !ok {
+		return
+	}
+
+	del, retryAfter, aborted := d.runAttemptWithGrace(ctx, wctx, rec, j)
+	if aborted { // cut off by the shutdown: not an outcome, leave the row for the next start
+		if relErr := releaseJob(wctx, d.DB, j.seq); relErr != nil {
+			slog.Warn("outgoing webhooks: release", "err", relErr)
+		}
+		return
+	}
+
+	d.recordDeliveryResult(wctx, rec, j, del, retryAfter)
 }
 
 // afterFinal refreshes the cached list after a failure for good, which may
@@ -171,7 +200,12 @@ func retriable(d Delivery) bool {
 // attempt makes one HTTP request. retryAfter is the receiver's Retry-After.
 func (d *Dispatcher) attempt(ctx context.Context, rec *outgoingRec, ev Event, n int) (Delivery, time.Duration) {
 	del := Delivery{EventID: ev.ID, EventType: ev.Type, Attempt: n}
-	body, _ := json.Marshal(newEnvelope(rec, ev))
+	body, err := json.Marshal(newEnvelope(rec, ev))
+	if err != nil {
+		code := "marshal_error"
+		del.Error = &code
+		return del, 0
+	}
 	start := time.Now()
 	status, retryAfter, err := d.post(ctx, rec, ev, body)
 	del.DurationMS = int(time.Since(start).Milliseconds())
@@ -214,7 +248,9 @@ func (d *Dispatcher) post(ctx context.Context, rec *outgoingRec, ev Event, body 
 		return 0, 0, err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, readLimit))
+	if _, drainErr := io.Copy(io.Discard, io.LimitReader(resp.Body, readLimit)); drainErr != nil {
+		slog.Debug("outgoing webhooks: drain body", "err", drainErr)
+	}
 	if secs, convErr := strconv.Atoi(resp.Header.Get("Retry-After")); convErr == nil && secs > 0 {
 		retryAfter = time.Duration(secs) * time.Second
 	}
@@ -224,9 +260,18 @@ func (d *Dispatcher) post(ctx context.Context, rec *outgoingRec, ev Event, body 
 // SendTest delivers a PING to the webhook once, right now, and returns the
 // attempt. It neither retries nor counts towards switching the webhook off.
 func (d *Dispatcher) SendTest(ctx context.Context, rec *outgoingRec) (Delivery, error) {
-	data, _ := json.Marshal(map[string]string{"message": "Test event from Mnema Talk"})
+	data, err := json.Marshal(map[string]string{"message": "Test event from Mnema Talk"})
+	if err != nil {
+		return Delivery{}, err
+	}
 	ev := Event{ID: uuid.New(), Type: EventPing, Time: time.Now().UTC(), Data: data}
-	del, _ := d.attempt(ctx, rec, ev, 1)
-	_, err := recordDelivery(ctx, d.DB, rec.ID, del, false, false)
-	return del, err
+	del, retryAfter := d.attempt(ctx, rec, ev, 1)
+	if retryAfter > 0 {
+		slog.Debug("outgoing webhooks: test retry-after", "retry_after", retryAfter)
+	}
+	off, recErr := recordDelivery(ctx, d.DB, rec.ID, del, false, false)
+	if off {
+		slog.Debug("outgoing webhooks: test disabled webhook", "webhook", rec.ID)
+	}
+	return del, recErr
 }

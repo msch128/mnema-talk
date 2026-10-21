@@ -158,7 +158,9 @@ func list(ctx context.Context, p *db.Pool, channel uuid.UUID) ([]Webhook, error)
 // bits, so a plain SHA-256 is enough to store it.
 func newToken() (token string, hash []byte) {
 	raw := make([]byte, 32)
-	_, _ = rand.Read(raw) // never fails: Go aborts the program if the system has no randomness
+	if _, err := rand.Read(raw); err != nil {
+		panic(err)
+	}
 	token = base64.RawURLEncoding.EncodeToString(raw)
 	return token, hashToken(token)
 }
@@ -200,7 +202,9 @@ func botDisplayName(name string) string {
 func create(ctx context.Context, p *db.Pool, channel, creator uuid.UUID, name string, st Settings) (*record, string, error) {
 	token, hash := newToken()
 	suffix := make([]byte, 8)
-	_, _ = rand.Read(suffix)
+	if _, err := rand.Read(suffix); err != nil {
+		panic(err)
+	}
 	var id uuid.UUID
 	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
 		var n int
@@ -262,6 +266,30 @@ func regenerate(ctx context.Context, p *db.Pool, rec *record) (string, error) {
 	return token, nil
 }
 
+func cleanupWebhookAvatar(ctx context.Context, p *db.Pool, store media.Store, avatarURL string) {
+	if store == nil || avatarURL == "" {
+		return
+	}
+	id, err := uuid.Parse(path.Base(avatarURL))
+	if err != nil {
+		return
+	}
+	if err := media.DeleteMedia(ctx, p, store, id); err != nil {
+		slog.Warn("could not delete webhook avatar", "media_id", id, "err", err)
+	}
+}
+
+func deleteWebhookRecords(ctx context.Context, p *db.Pool, webhookID, botUserID uuid.UUID) error {
+	return pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM webhooks WHERE id = $1`, webhookID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			DELETE FROM users WHERE id = $1 AND is_bot AND NOT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, botUserID)
+		return err
+	})
+}
+
 // remove deletes the webhook. Its bot account stays while messages by it
 // exist, so history keeps its author; without any, the account goes too, and
 // its avatar object with it (store may be nil).
@@ -270,22 +298,10 @@ func remove(ctx context.Context, p *db.Pool, store media.Store, rec *record) err
 	if err := p.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, rec.botUserID).Scan(&hasMessages); err != nil {
 		return fmt.Errorf("delete webhook: %w", err)
 	}
-	if !hasMessages && store != nil && rec.AvatarURL != "" {
-		if id, err := uuid.Parse(path.Base(rec.AvatarURL)); err == nil {
-			if err := media.DeleteMedia(ctx, p, store, id); err != nil {
-				slog.Warn("could not delete webhook avatar", "media_id", id, "err", err)
-			}
-		}
+	if !hasMessages {
+		cleanupWebhookAvatar(ctx, p, store, rec.AvatarURL)
 	}
-	err := pgx.BeginFunc(ctx, p, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `DELETE FROM webhooks WHERE id = $1`, rec.ID); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx, `
-			DELETE FROM users WHERE id = $1 AND is_bot AND NOT EXISTS (SELECT 1 FROM messages WHERE user_id = $1)`, rec.botUserID)
-		return err
-	})
-	if err != nil {
+	if err := deleteWebhookRecords(ctx, p, rec.ID, rec.botUserID); err != nil {
 		return fmt.Errorf("delete webhook: %w", err)
 	}
 	return nil

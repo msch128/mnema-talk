@@ -74,24 +74,45 @@ function nearestDropElement(section: Element, y: number) {
   return best
 }
 
+const CHANNEL_DROP_ZONES = new Set(['channel', 'header', 'empty'])
+
+function isChannelDropZone(zone: string | null): zone is 'channel' | 'header' | 'empty' {
+  return zone !== null && CHANNEL_DROP_ZONES.has(zone)
+}
+
+function resolveElementHit(
+  best: { el: Element; rect: DOMRect },
+  y: number,
+  fallbackId: string | null
+): DropHit {
+  const zone = best.el.getAttribute('data-drop')
+  const id = best.el.getAttribute('data-id')
+  if (!id) return { zone: 'end', id: fallbackId }
+  if (zone === 'channel-tail') return { zone: 'channel', id, ratio: 1 }
+  if (!isChannelDropZone(zone)) return { zone: 'end', id: fallbackId }
+  return { zone, id, ratio: ratioIn(best.rect, y) }
+}
+
 function channelHit(nav: HTMLElement, y: number): DropHit {
   const section = sectionAt(nav, y)
   if (!section) return { zone: 'start' }
-  if (!section.inside) return { zone: 'end', id: sectionId(section.el) }
+  const secId = sectionId(section.el)
+  if (!section.inside) return { zone: 'end', id: secId }
   const best = nearestDropElement(section.el, y)
-  if (!best) return { zone: 'end', id: sectionId(section.el) }
-  const zone = best.el.getAttribute('data-drop')
-  const id = best.el.getAttribute('data-id')
-  // The people under a voice channel belong to its lower half.
-  if (zone === 'channel-tail' && id) return { zone: 'channel', id, ratio: 1 }
-  if ((zone !== 'channel' && zone !== 'header' && zone !== 'empty') || !id) return { zone: 'end', id: sectionId(section.el) }
-  return { zone, id, ratio: ratioIn(best.rect, y) }
+  if (!best) return { zone: 'end', id: secId }
+  return resolveElementHit(best, y, secId)
 }
 
 function categoryHit(nav: HTMLElement, y: number): DropHit {
   const section = sectionAt(nav, y)
   if (!section) return { zone: 'start' }
   return { zone: 'section', id: sectionId(section.el), ratio: section.inside ? ratioIn(section.rect, y) : 1 }
+}
+
+function isInsideRect(r: DOMRect, x: number, y: number): boolean {
+  const inX = x >= r.left && x <= r.right
+  const inY = y >= r.top && y <= r.bottom
+  return inX && inY
 }
 
 function resolveSidebarDrop(
@@ -103,7 +124,7 @@ function resolveSidebarDrop(
   if (!nav) return null
   const r = nav.getBoundingClientRect()
   // Outside the channel list: dropping there cancels.
-  if (x < r.left || x > r.right || y < r.top || y > r.bottom) return null
+  if (!isInsideRect(r, x, y)) return null
   if (item.kind === 'category') return resolveCategoryDrop(layout, item.id, categoryHit(nav, y))
   const hit = channelHit(nav, y)
   const target = resolveChannelDrop(layout, item.id, hit, { isCollapsed })

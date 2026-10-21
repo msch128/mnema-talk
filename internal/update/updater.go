@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,11 +37,18 @@ type Updater struct {
 	client   *http.Client
 }
 
+func isValidUpdaterURL(u *url.URL) bool {
+	if u.Host == "" || u.User != nil {
+		return false
+	}
+	return u.Scheme == "http" || u.Scheme == "https"
+}
+
 // NewUpdater returns a client for the sidecar at baseURL (e.g.
 // http://mnema-updater:8080), authenticated with token.
 func NewUpdater(baseURL, token string) (*Updater, error) {
 	u, err := url.Parse(strings.TrimRight(strings.TrimSpace(baseURL), "/"))
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil {
+	if err != nil || !isValidUpdaterURL(u) {
 		return nil, errors.New("UPDATER_URL must be an http(s) URL without credentials")
 	}
 	u.Path += "/v1/update"
@@ -70,7 +78,9 @@ func (u *Updater) Trigger(ctx context.Context) error {
 		return ErrUpdaterUnreachable
 	}
 	defer res.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10))
+	if _, err := io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10)); err != nil {
+		slog.Debug("updater response drain failed", "err", err)
+	}
 	switch res.StatusCode {
 	case http.StatusOK, http.StatusAccepted:
 		return nil

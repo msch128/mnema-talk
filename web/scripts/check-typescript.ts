@@ -13,22 +13,31 @@ const generatedJavaScript = new Set([
 const ignoredDirectories = new Set(['node_modules', 'dist', 'coverage', '.git', '.codex'])
 const violations: string[] = []
 
+function checkVueSFC(path: string, filename: string): void {
+  const { descriptor, errors } = parse(readFileSync(filename, 'utf8'), { filename })
+  if (errors.length) violations.push(`${path}: invalid Vue SFC`)
+  for (const script of [descriptor.script, descriptor.scriptSetup]) {
+    if (script && script.lang !== 'ts') violations.push(`${path}: every script block must use lang="ts"`)
+  }
+}
+
+function inspectFile(entryName: string, filename: string): void {
+  const path = relative(repoRoot, filename).replaceAll('\\', '/')
+  if (/\.(?:js|mjs|cjs|jsx)$/.test(entryName) && !generatedJavaScript.has(path)) {
+    violations.push(`${path}: first-party source must be TypeScript`)
+  }
+  if (entryName.endsWith('.vue')) {
+    checkVueSFC(path, filename)
+  }
+}
+
 function inspect(directory: string): void {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const filename = join(directory, entry.name)
     if (entry.isDirectory()) {
       if (!ignoredDirectories.has(entry.name)) inspect(filename)
-      continue
-    }
-    if (!entry.isFile()) continue
-    const path = relative(repoRoot, filename).replaceAll('\\', '/')
-    if (/\.(?:js|mjs|cjs|jsx)$/.test(entry.name) && !generatedJavaScript.has(path)) violations.push(`${path}: first-party source must be TypeScript`)
-    if (entry.name.endsWith('.vue')) {
-      const { descriptor, errors } = parse(readFileSync(filename, 'utf8'), { filename })
-      if (errors.length) violations.push(`${path}: invalid Vue SFC`)
-      for (const script of [descriptor.script, descriptor.scriptSetup]) {
-        if (script && script.lang !== 'ts') violations.push(`${path}: every script block must use lang="ts"`)
-      }
+    } else if (entry.isFile()) {
+      inspectFile(entry.name, filename)
     }
   }
 }

@@ -29,19 +29,66 @@ func nativeHeaderPresent(r *http.Request, name string) bool {
 	return false
 }
 
+func hasNativeHandshakeHeaders(r *http.Request) bool {
+	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
+		return false
+	}
+	return !nativeHeaderPresent(r, "Sec-WebSocket-Protocol")
+}
+
+func hasCleanURL(r *http.Request) bool {
+	if r.URL.RawQuery != "" || r.URL.Fragment != "" {
+		return false
+	}
+	return r.URL.User == nil
+}
+
 func nativeHandshakeAllowed(r *http.Request) bool {
-	return !nativeHeaderPresent(r, "Origin") && !nativeHeaderPresent(r, "Cookie") &&
-		!nativeHeaderPresent(r, "Sec-WebSocket-Protocol") && r.URL.RawQuery == "" && r.URL.User == nil && r.URL.Fragment == ""
+	return hasNativeHandshakeHeaders(r) && hasCleanURL(r)
 }
 
 // NativeWebSocketHandler is explicitly unmounted in the production server.
 // Its constructor shares Hub membership, while using native-only authorization.
 func (h *Hub) NativeWebSocketHandler(a NativeAuthenticator) http.Handler {
+	return h.nativePumps(a, (*Client).writePump, (*Client).readPump)
+}
+
+func (h *Hub) nativePumps(a NativeAuthenticator, write, read func(*Client)) http.Handler {
 	return h.nativeSocketHandler(a, func(c *Client) {
-		go c.writePump()
-		go c.readPump()
+		go write(c)
+		go read(c)
 		go c.nativeWatchdog()
 	})
+}
+
+func (h *Hub) verifyAndRegisterNative(ctx context.Context, a NativeAuthenticator, c *Client, original auth.NativeLease) bool {
+	fresh, err := a.RevalidateNativeLease(ctx, original.Principal())
+	if err != nil {
+		return false
+	}
+	if !original.Principal().SameNativeAccess(fresh.Principal()) {
+		return false
+	}
+	if !c.native.install(1, fresh, false) {
+		return false
+	}
+	return h.registerVerified(c, ptrNativeUser(fresh.Principal()))
+}
+
+func (h *Hub) admitNativeConn(ctx context.Context, a NativeAuthenticator, conn *websocket.Conn, original auth.NativeLease, start func(*Client)) {
+	principal := original.Principal()
+	c := newClient(h, conn, principal.User(), principal.TokenVersion())
+	c.native = newNativeSocketState(a, original)
+	if ok, _ := h.registerPending(c); !ok {
+		c.shutdown()
+		c.close()
+		return
+	}
+	if !h.verifyAndRegisterNative(ctx, a, c, original) {
+		h.cancelPending(c)
+		return
+	}
+	start(c)
 }
 
 // nativeSocketHandler admits a native connection (rate limit, handshake
@@ -69,20 +116,7 @@ func (h *Hub) nativeSocketHandler(a NativeAuthenticator, start func(*Client)) ht
 		if err != nil {
 			return
 		} // Gorilla already answered; never log request/header data.
-		principal := original.Principal()
-		c := newClient(h, conn, principal.User(), principal.TokenVersion())
-		c.native = newNativeSocketState(a, original)
-		if ok, _ := h.registerPending(c); !ok {
-			c.shutdown()
-			c.close()
-			return
-		}
-		fresh, err := a.RevalidateNativeLease(r.Context(), principal)
-		if err != nil || !principal.SameNativeAccess(fresh.Principal()) || !c.native.install(1, fresh, false) || !h.registerVerified(c, ptrNativeUser(fresh.Principal())) {
-			h.cancelPending(c)
-			return
-		}
-		start(c)
+		h.admitNativeConn(r.Context(), a, conn, original, start)
 	})
 	limited := connectionsPerIP.PerIP(core)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

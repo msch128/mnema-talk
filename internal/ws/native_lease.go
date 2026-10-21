@@ -50,6 +50,12 @@ func (s *nativeSocketState) snapshot() (uint64, auth.NativeLease, time.Time) {
 	return s.generation, s.lease, minTime(s.lease.Deadline(), s.accessDeadline, s.familyDeadline)
 }
 
+func (s *nativeSocketState) currentGeneration() uint64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.generation
+}
+
 func minTime(first time.Time, others ...time.Time) time.Time {
 	for _, other := range others {
 		if other.Before(first) {
@@ -74,22 +80,37 @@ func (c *Client) commandsAllowed() bool {
 	return deadline != nil && time.Now().Before(*deadline) && !c.closed.Load() && !c.native.securityClosed.Load()
 }
 
+func (s *nativeSocketState) installRejected(expected uint64, l auth.NativeLease) bool {
+	if s.securityClosed.Load() || s.ctx.Err() != nil {
+		return true
+	}
+	if s.generation != expected || !s.binding.SameNativeBinding(l.Principal()) {
+		return true
+	}
+	return !time.Now().Before(minTime(s.lease.Deadline(), s.accessDeadline, s.familyDeadline))
+}
+
+func (s *nativeSocketState) applyRenew(l auth.NativeLease, renew bool) bool {
+	if !renew {
+		return s.lease.Principal().SameNativeAccess(l.Principal())
+	}
+	if s.generation == math.MaxUint64 {
+		return false
+	}
+	if l.Principal().AccessExpiresAt().Before(s.lease.Principal().AccessExpiresAt()) {
+		return false
+	}
+	if !s.lease.Principal().SameNativeAccess(l.Principal()) {
+		s.accessDeadline = l.AccessDeadline()
+	}
+	s.generation++
+	return true
+}
+
 func (s *nativeSocketState) install(expected uint64, l auth.NativeLease, renew bool) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.securityClosed.Load() || s.ctx.Err() != nil || s.generation != expected || !s.binding.SameNativeBinding(l.Principal()) ||
-		!time.Now().Before(minTime(s.lease.Deadline(), s.accessDeadline, s.familyDeadline)) {
-		return false
-	}
-	if renew {
-		if s.generation == math.MaxUint64 || l.Principal().AccessExpiresAt().Before(s.lease.Principal().AccessExpiresAt()) {
-			return false
-		}
-		if !s.lease.Principal().SameNativeAccess(l.Principal()) {
-			s.accessDeadline = l.AccessDeadline()
-		}
-		s.generation++
-	} else if !s.lease.Principal().SameNativeAccess(l.Principal()) {
+	if s.installRejected(expected, l) || !s.applyRenew(l, renew) {
 		return false
 	}
 	if !time.Now().Before(minTime(l.Deadline(), s.accessDeadline, s.familyDeadline)) {
@@ -134,9 +155,11 @@ func (c *Client) nativeWatchdog() {
 func (c *Client) revalidateNative() {
 	s := c.native
 	defer s.checking.Store(false)
-	generation, old, _ := s.snapshot()
+	generation, old, observed := s.snapshot()
+	_ = observed
 	fresh, err := s.authenticator.RevalidateNativeLease(s.ctx, old.Principal())
-	current, _, _ := s.snapshot()
+	current, _, again := s.snapshot()
+	_ = again
 	if current != generation || c.closed.Load() {
 		return
 	}
@@ -178,14 +201,14 @@ func (h *Hub) DisconnectNativeFamily(id uuid.UUID) {
 	h.mu.Lock()
 	var selected []*Client
 	for c := range h.clients {
-		if c.native != nil && c.native.binding.FamilyID() == id {
+		if nativeFamily(c, id) {
 			c.native.securityClosed.Store(true)
 			c.shutdown()
 			selected = append(selected, c)
 		}
 	}
 	for c := range h.pending {
-		if c.native != nil && c.native.binding.FamilyID() == id {
+		if nativeFamily(c, id) {
 			delete(h.pending, c)
 			c.native.securityClosed.Store(true)
 			c.shutdown()
@@ -234,14 +257,40 @@ func (h *Hub) expireNativeClient(c *Client) bool {
 //
 // view, when set, limits the event to the connections whose user may view
 // that channel.
+func nativeFamily(c *Client, id uuid.UUID) bool {
+	if c.native == nil {
+		return false
+	}
+	return c.native.binding.FamilyID() == id
+}
+
+func browserBroadcast(c *Client, eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) bool {
+	if c.native != nil || view != uuid.Nil || excludeSelf {
+		return false
+	}
+	if voice != nil {
+		c.hub.sendToVoiceRoom(*voice, eventType, payload)
+		return true
+	}
+	c.hub.Broadcast(eventType, payload)
+	return true
+}
+
+func attachView(scope *eventScope, h *Hub, view uuid.UUID) bool {
+	if view == uuid.Nil {
+		return true
+	}
+	snap, ok := h.permSnapshot(view)
+	if !ok {
+		return false
+	}
+	scope.snap = snap
+	return true
+}
+
 func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf bool, voice *uuid.UUID, view uuid.UUID) {
 	h := c.hub
-	if c.native == nil && view == uuid.Nil && !excludeSelf {
-		if voice != nil {
-			h.sendToVoiceRoom(*voice, eventType, payload)
-		} else {
-			h.Broadcast(eventType, payload)
-		}
+	if browserBroadcast(c, eventType, payload, excludeSelf, voice, view) {
 		return
 	}
 	data := encode(eventType, payload)
@@ -252,17 +301,18 @@ func (c *Client) emitApplicationEvent(eventType string, payload any, excludeSelf
 	if excludeSelf {
 		scope.excludeUser = c.User.ID
 	}
-	if view != uuid.Nil {
-		var ok bool
-		if scope.snap, ok = h.permSnapshot(view); !ok {
-			return
-		}
+	if !attachView(&scope, h, view) {
+		return
 	}
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	if !c.commandsAllowed() {
 		return
 	}
+	publishScoped(h, data, scope, view, eventType, payload)
+}
+
+func publishScoped(h *Hub, data []byte, scope eventScope, view uuid.UUID, eventType string, payload any) {
 	// Outgoing webhooks only hear what is really published: after the
 	// publication is authorized and live, never before.
 	if view != uuid.Nil {

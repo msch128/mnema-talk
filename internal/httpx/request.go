@@ -81,27 +81,44 @@ func CleanText(field, s string, maxRunes int, required bool) (string, error) {
 // dots so the name is safe as a Content-Disposition base name. It returns ""
 // when nothing usable remains. Adopted from mnema.xyz.
 func SanitizeFilename(name string, maxLen int) string {
-	name = strings.TrimSpace(name)
-	if i := strings.LastIndexAny(name, "/\\"); i >= 0 {
-		name = name[i+1:]
-	}
-	name = strings.Map(func(r rune) rune {
-		if r < 0x20 || r == 0x7f || r == '"' {
-			return -1
-		}
-		return r
-	}, name)
+	name = stripPathComponents(name)
+	name = filterFilenameRunes(name)
 	name = strings.TrimSpace(strings.TrimLeft(name, "."))
 	if name == "" || !utf8.ValidString(name) {
 		return ""
 	}
-	if maxLen > 0 && len(name) > maxLen {
-		// Cut on a rune boundary so the result stays valid UTF-8.
-		cut := maxLen
-		for cut > 0 && !utf8.RuneStart(name[cut]) {
-			cut--
-		}
-		name = name[:cut]
+	return truncateRuneBoundary(name, maxLen)
+}
+
+func stripPathComponents(name string) string {
+	name = strings.TrimSpace(name)
+	if i := strings.LastIndexAny(name, "/\\"); i >= 0 {
+		return name[i+1:]
 	}
 	return name
+}
+
+func isForbiddenFilenameRune(r rune) bool {
+	return r < 0x20 || r == 0x7f || r == '"'
+}
+
+func filterFilenameRunes(name string) string {
+	return strings.Map(func(r rune) rune {
+		if isForbiddenFilenameRune(r) {
+			return -1
+		}
+		return r
+	}, name)
+}
+
+func truncateRuneBoundary(name string, maxLen int) string {
+	if maxLen <= 0 || len(name) <= maxLen {
+		return name
+	}
+	// Cut on a rune boundary so the result stays valid UTF-8.
+	cut := maxLen
+	for cut > 0 && !utf8.RuneStart(name[cut]) {
+		cut--
+	}
+	return name[:cut]
 }

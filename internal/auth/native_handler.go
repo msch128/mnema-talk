@@ -29,14 +29,22 @@ type NativeHandler struct {
 }
 
 func NewNativeHandler(accounts *Handler, sessions *NativeSessions) (*NativeHandler, error) {
-	// Credential proof and grant persistence must belong to the same instance.
-	if accounts == nil || accounts.Sessions == nil || sessions == nil ||
-		accounts.Sessions.DB == nil || accounts.Sessions.DB != sessions.pool ||
-		accounts.loginPerIP == nil || accounts.loginFailures == nil || accounts.accountFailures == nil {
+	if invalidNativeHandlerDeps(accounts, sessions) {
 		return nil, errors.New("invalid native authentication dependencies")
 	}
 	return &NativeHandler{accounts: accounts, sessions: sessions,
 		refreshPerIP: httpx.NewRateLimiter(120, time.Minute)}, nil
+}
+
+// Credential proof and grant persistence must belong to the same instance.
+func invalidNativeHandlerDeps(accounts *Handler, sessions *NativeSessions) bool {
+	if accounts == nil || accounts.Sessions == nil || sessions == nil {
+		return true
+	}
+	if accounts.Sessions.DB == nil || accounts.Sessions.DB != sessions.pool {
+		return true
+	}
+	return accounts.loginPerIP == nil || accounts.loginFailures == nil || accounts.accountFailures == nil
 }
 
 // Handler returns an isolated router with relative /auth/* endpoints. Calling
@@ -99,6 +107,13 @@ func nativeRequestBoundary(next http.Handler) http.Handler {
 	})
 }
 
+func nativeTransportRejected(r *http.Request) bool {
+	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") {
+		return true
+	}
+	return r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != ""
+}
+
 func nativeBearer(r *http.Request) (string, error) {
 	values := nativeHeaderValues(r, "Authorization")
 	if len(values) != 1 || len(values[0]) != 50 || !strings.HasPrefix(values[0], "Bearer ") {
@@ -125,7 +140,10 @@ func decodeNativeStrings(w http.ResponseWriter, r *http.Request, fields ...strin
 		return nil, err
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, nativeAuthMaxBody)
-	decoder := json.NewDecoder(r.Body)
+	return readNativeObject(json.NewDecoder(r.Body), fields)
+}
+
+func readNativeObject(decoder *json.Decoder, fields []string) (map[string]string, error) {
 	token, err := decoder.Token()
 	if err != nil || token != json.Delim('{') {
 		return nil, invalidNativeBody(err)
@@ -234,6 +252,20 @@ func nativeHandlerError(err error) error {
 	return nativeStoreFailure(err)
 }
 
+func nativeLoginFields(fields map[string]string) (uuid.UUID, error) {
+	if len(fields["username"]) > 64 || len(fields["password"]) > MaxPasswordBytes {
+		return uuid.Nil, httpx.ErrInvalidInput("invalid native credential fields")
+	}
+	instanceID, err := uuid.Parse(fields["client_instance_id"])
+	if err != nil || instanceID == uuid.Nil {
+		return uuid.Nil, httpx.ErrInvalidInput("invalid native client instance")
+	}
+	if instanceID.String() != fields["client_instance_id"] {
+		return uuid.Nil, httpx.ErrInvalidInput("invalid native client instance")
+	}
+	return instanceID, nil
+}
+
 func (h *NativeHandler) login(w http.ResponseWriter, r *http.Request) error {
 	if err := noNativeAuthorization(r); err != nil {
 		return err
@@ -242,12 +274,9 @@ func (h *NativeHandler) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return nativeHandlerError(err)
 	}
-	if len(fields["username"]) > 64 || len(fields["password"]) > MaxPasswordBytes {
-		return httpx.ErrInvalidInput("invalid native credential fields")
-	}
-	instanceID, err := uuid.Parse(fields["client_instance_id"])
-	if err != nil || instanceID == uuid.Nil || instanceID.String() != fields["client_instance_id"] {
-		return httpx.ErrInvalidInput("invalid native client instance")
+	instanceID, err := nativeLoginFields(fields)
+	if err != nil {
+		return err
 	}
 	user, version, retry, err := h.accounts.verifyLogin(r, LoginRequest{Username: fields["username"], Password: fields["password"]})
 	if retry > 0 {
@@ -296,7 +325,7 @@ func (h *NativeHandler) RequireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This middleware remains safe when used outside Handler() as well.
 		w.Header().Set("Cache-Control", "no-store")
-		if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") || r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != "" {
+		if nativeTransportRejected(r) {
 			httpx.WriteError(w, httpx.ErrForbidden("native transport request rejected"))
 			return
 		}
@@ -345,7 +374,7 @@ func (h *NativeHandler) logout(w http.ResponseWriter, r *http.Request) error {
 // AuthenticateNativeRequest shares the reviewed native header and target boundary.
 // It returns an auth-owned lease for native socket admission, never a browser cookie.
 func (h *NativeHandler) AuthenticateNativeRequest(r *http.Request) (NativeLease, error) {
-	if nativeHeaderPresent(r, "Origin") || nativeHeaderPresent(r, "Cookie") || r.URL.RawQuery != "" || r.URL.User != nil || r.URL.Fragment != "" {
+	if nativeTransportRejected(r) {
 		return NativeLease{}, httpx.ErrForbidden("native transport request rejected")
 	}
 	encoded, err := nativeBearer(r)

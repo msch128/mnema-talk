@@ -51,7 +51,10 @@ func (s *session) enqueue(name string, d json.RawMessage) {
 }
 
 func dispatch(seq int64, name string, d json.RawMessage) []byte {
-	out, _ := json.Marshal(frame{Op: OpDispatch, D: d, S: &seq, T: &name})
+	out, err := json.Marshal(frame{Op: OpDispatch, D: d, S: &seq, T: &name})
+	if err != nil {
+		return nil
+	}
 	return out
 }
 
@@ -117,7 +120,10 @@ func (s *session) resumeOn(c *connection, seq int64) (replaced *connection, ok b
 	// RESUMED carries the session's current sequence number without using one.
 	cur := s.seq
 	name := "RESUMED"
-	out, _ := json.Marshal(frame{Op: OpDispatch, D: json.RawMessage(`{}`), S: &cur, T: &name})
+	out, err := json.Marshal(frame{Op: OpDispatch, D: json.RawMessage(`{}`), S: &cur, T: &name})
+	if err != nil {
+		return nil, false
+	}
 	c.trySend(out)
 	replaced = s.conn
 	s.conn = c

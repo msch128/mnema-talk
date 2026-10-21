@@ -43,7 +43,8 @@ function useSendStatsSampler({ getStats, getCaptureSettings }: StreamQualityOpti
     let raw
     try {
       raw = await getStats?.()
-    } catch {
+    } catch (err) {
+      void err
       raw = null
     }
     if (run !== sampling) return
@@ -70,15 +71,23 @@ function useSendStatsSampler({ getStats, getCaptureSettings }: StreamQualityOpti
   return { sendStats, captureSettings, startStats, stopStats }
 }
 
-function radioItem(id: string, label: string, checked: boolean, action: () => void, subtitle?: string): ContextMenuItem {
+interface RadioItemOpts {
+  id: string
+  label: string
+  checked: boolean
+  action: () => void
+  subtitle?: string | undefined
+}
+
+function radioItem(opts: RadioItemOpts): ContextMenuItem {
   return {
-    id,
+    id: opts.id,
     type: 'radio',
-    label,
-    ...(subtitle === undefined ? {} : { subtitle }),
-    checked,
+    label: opts.label,
+    ...(opts.subtitle === undefined ? {} : { subtitle: opts.subtitle }),
+    checked: opts.checked,
     keepOpen: true,
-    action
+    action: opts.action
   }
 }
 
@@ -96,7 +105,7 @@ function resolutionAndRateItems(q: { resolution: StreamResolution; fps: StreamFr
       label: t('talk.quality.resolution'),
       value: resolutionLabel(q.resolution),
       minWidth: 150,
-      items: STREAM_RESOLUTIONS.map(r => radioItem(`resolution-${r}`, resolutionLabel(r), q.resolution === r, () => actions.setResolution(r)))
+      items: STREAM_RESOLUTIONS.map(r => radioItem({ id: `resolution-${r}`, label: resolutionLabel(r), checked: q.resolution === r, action: () => actions.setResolution(r) }))
     },
     {
       id: 'fps',
@@ -104,7 +113,7 @@ function resolutionAndRateItems(q: { resolution: StreamResolution; fps: StreamFr
       label: t('talk.quality.frameRate'),
       value: frameRateLabel(q.fps),
       minWidth: 150,
-      items: STREAM_FRAME_RATES.map(fps => radioItem(`fps-${fps}`, frameRateLabel(fps), q.fps === fps, () => actions.setFrameRate(fps)))
+      items: STREAM_FRAME_RATES.map(fps => radioItem({ id: `fps-${fps}`, label: frameRateLabel(fps), checked: q.fps === fps, action: () => actions.setFrameRate(fps) }))
     }
   ]
 }
@@ -160,7 +169,7 @@ export function useStreamQuality(options: StreamQualityOptions = {}) {
   function menuItems({ onChangeSource }: { onChangeSource?: () => void } = {}): ContextMenuItem[] {
     const q = quality.value
     const m = mode.value
-    const modeItem = (id: StreamMode, subtitle?: string) => radioItem(`mode-${id}`, t(`talk.quality.${id}`), m === id, () => setMode(id), subtitle)
+    const modeItem = (id: StreamMode, subtitle?: string) => radioItem({ id: `mode-${id}`, label: t(`talk.quality.${id}`), checked: m === id, action: () => setMode(id), subtitle })
     const items: ContextMenuItem[] = [
       { type: 'label', label: t('talk.quality.mode') },
       modeItem('gaming', t('talk.quality.gamingHint')),

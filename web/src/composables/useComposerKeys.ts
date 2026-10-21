@@ -34,15 +34,24 @@ interface EscapeMarksRead {
   markAllRead: () => boolean
 }
 
+function isExternalInputTarget(target: EventTarget | null, composerElement: HTMLTextAreaElement | null): boolean {
+  if (!(target instanceof Element)) return false
+  if (target === composerElement) return false
+  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+}
+
+function hasActiveDraftOrDialog(draftText: string): boolean {
+  if (draftText.trim()) return true
+  return Boolean(document.querySelector('[role="dialog"]'))
+}
+
 /** Escape anywhere in the channel marks it read, unless something else is using the key. */
 export function useEscapeMarksRead({ composer, closeMenu, occupied, draft, markAllRead }: EscapeMarksRead) {
   function onKeydown(e: KeyboardEvent) {
-    if (e.key !== 'Escape') return
-    if (closeMenu()) return
+    if (e.key !== 'Escape' || closeMenu()) return
     if (e.defaultPrevented || occupied()) return
-    if (draft().trim() || document.querySelector('[role="dialog"]')) return
-    const tag = e.target instanceof Element ? e.target.tagName : undefined
-    if ((tag === 'INPUT' || tag === 'TEXTAREA') && e.target !== composer.value) return
+    if (hasActiveDraftOrDialog(draft())) return
+    if (isExternalInputTarget(e.target, composer.value)) return
     if (markAllRead()) e.preventDefault()
   }
   onMounted(() => window.addEventListener('keydown', onKeydown))

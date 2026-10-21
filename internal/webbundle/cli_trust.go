@@ -33,7 +33,7 @@ func (l *listFlag) Set(v string) error { *l = append(*l, v); return nil }
 
 func runTrust(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		_, _ = fmt.Fprint(stderr, trustUsage)
+		printString(stderr, trustUsage)
 		return flag.ErrHelp
 	}
 	switch args[0] {
@@ -44,7 +44,7 @@ func runTrust(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	case "verify":
 		return runTrustVerify(args[1:], stdout, stderr)
 	}
-	_, _ = fmt.Fprint(stderr, trustUsage)
+	printString(stderr, trustUsage)
 	return flag.ErrHelp
 }
 
@@ -64,14 +64,17 @@ func runTrustKeygen(args []string, stdout, stderr io.Writer) error {
 	if err := os.MkdirAll(*out, 0o700); err != nil {
 		return err
 	}
-	pub, priv, _ := GenerateRootKey()
+	pub, priv, err := GenerateRootKey()
+	if err != nil {
+		return err
+	}
 	if err := errors.Join(
 		os.WriteFile(keyPath, MarshalPrivateKeyPEM(priv), 0o600),
 		os.WriteFile(filepath.Join(*out, "offline-root.pub"), MarshalPublicKeyPEM(pub), 0o644),
 	); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(stdout, "wrote %s (keep it offline) and offline-root.pub, key id %s\n", keyPath, KeyID(pub))
+	printFormat(stdout, "wrote %s (keep it offline) and offline-root.pub, key id %s\n", keyPath, KeyID(pub))
 	return nil
 }
 
@@ -122,7 +125,7 @@ func runTrustVerify(args []string, stdout, stderr io.Writer) error {
 	if t.Expired(time.Now()) {
 		return fmt.Errorf("trust statement serial %d expired at %s; re-sign it with trust sign -renew", t.Serial, t.ExpiresAt)
 	}
-	_, _ = fmt.Fprintf(stdout, "ok: serial %d, %d bundle key(s), valid until %s, root key %s\n", t.Serial, len(t.BundleKeys), t.ExpiresAt, KeyID(pub))
+	printFormat(stdout, "ok: serial %d, %d bundle key(s), valid until %s, root key %s\n", t.Serial, len(t.BundleKeys), t.ExpiresAt, KeyID(pub))
 	return nil
 }
 
@@ -132,24 +135,33 @@ func describeTrust(w io.Writer, t, prev *Trust) {
 	if prev == nil {
 		prev = &Trust{}
 	}
-	_, _ = fmt.Fprintf(w, "Trust statement serial %d, valid %s to %s\n", t.Serial, t.IssuedAt, t.ExpiresAt)
+	printFormat(w, "Trust statement serial %d, valid %s to %s\n", t.Serial, t.IssuedAt, t.ExpiresAt)
 	bundleID := func(k string) string {
-		raw, _ := hex.DecodeString(k)
+		raw, err := hex.DecodeString(k)
+		if err != nil {
+			return k
+		}
 		return KeyID(raw) + " (key " + k[:8] + "...)"
 	}
-	updaterID := func(k string) string { id, _ := UpdaterKeyID(k); return id }
+	updaterID := func(k string) string {
+		id, err := UpdaterKeyID(k)
+		if err != nil {
+			return k
+		}
+		return id
+	}
 	same := func(k string) string { return k }
 	listChange(w, "allowed bundle keys", t.BundleKeys, prev.BundleKeys, bundleID)
 	listChange(w, "revoked bundle key ids", t.RevokedBundleKeys, prev.RevokedBundleKeys, same)
 	listChange(w, "allowed updater keys", t.UpdaterKeys, prev.UpdaterKeys, updaterID)
 	listChange(w, "revoked updater key ids", t.RevokedUpdaterKeys, prev.RevokedUpdaterKeys, same)
 	for api, v := range t.MaxVersion {
-		_, _ = fmt.Fprintf(w, "  rollback cap: web client API %s at most %s\n", api, v)
+		printFormat(w, "  rollback cap: web client API %s at most %s\n", api, v)
 	}
 }
 
 func listChange(w io.Writer, title string, now, before []string, label func(string) string) {
-	_, _ = fmt.Fprintf(w, "%s:\n", title)
+	printFormat(w, "%s:\n", title)
 	had := map[string]bool{}
 	for _, k := range before {
 		had[k] = true
@@ -161,11 +173,11 @@ func listChange(w io.Writer, title string, now, before []string, label func(stri
 		if had[k] {
 			mark = " "
 		}
-		_, _ = fmt.Fprintf(w, "  %s %s\n", mark, label(k))
+		printFormat(w, "  %s %s\n", mark, label(k))
 	}
 	for _, k := range before {
 		if !is[k] {
-			_, _ = fmt.Fprintf(w, "  - %s\n", label(k))
+			printFormat(w, "  - %s\n", label(k))
 		}
 	}
 }

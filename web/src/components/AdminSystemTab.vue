@@ -54,7 +54,8 @@ async function copyCommand() {
   try {
     await navigator.clipboard.writeText(UPDATE_COMMAND)
     toasts.success(t('admin.system.copied'))
-  } catch {
+  } catch (err) {
+    void err
     toasts.error(t('admin.system.copyFailed'))
   }
 }
@@ -97,7 +98,8 @@ async function pollHealth(fromVersion: string | undefined) {
         return
       }
     }
-  } catch {
+  } catch (err) {
+    void err
     // Restarting: keep waiting.
   }
   if (Date.now() - pollStarted > STALL_MS) {

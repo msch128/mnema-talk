@@ -19,6 +19,13 @@ const unlockUsage = "usage: mnema-talk unlock <username> | mnema-talk unlock --a
 // request before it says the request stays queued.
 var unlockWait = 15 * time.Second
 
+func validUnlockArgs(all bool, narg int) bool {
+	if all {
+		return narg == 0
+	}
+	return narg == 1
+}
+
 // unlockCommand clears login lockouts of the running server. The server holds
 // them in memory, so this process queues a request in the database (the
 // server polls it) and then waits for the server to pick it up.
@@ -29,7 +36,7 @@ func unlockCommand(ctx context.Context, args []string, out io.Writer) error {
 	if err := fs.Parse(reorderFlags(args)); err != nil {
 		return fmt.Errorf("%w\n%s", err, unlockUsage)
 	}
-	if (*all && fs.NArg() != 0) || (!*all && fs.NArg() != 1) {
+	if !validUnlockArgs(*all, fs.NArg()) {
 		return errors.New(unlockUsage)
 	}
 	cfg, err := config.Load()
@@ -57,14 +64,15 @@ func reorderFlags(args []string) []string {
 	return append(flags, rest...)
 }
 
-func requestUnlock(ctx context.Context, q db.Querier, username string, all bool, out io.Writer) error {
-	id, err := auth.RequestUnlock(ctx, q, username, all)
-	if errors.Is(err, auth.ErrUnlockUnknownUser) {
-		return fmt.Errorf("no user named %q", username)
+func printUnlockSuccess(out io.Writer, username string, all bool) {
+	if all {
+		fmt.Fprintln(out, "Login lockouts cleared for all accounts.")
+		return
 	}
-	if err != nil {
-		return err
-	}
+	fmt.Fprintf(out, "Login lockouts cleared for %s.\n", username)
+}
+
+func waitForUnlock(ctx context.Context, q db.Querier, id int64, username string, all bool, out io.Writer) error {
 	deadline := time.Now().Add(unlockWait)
 	for {
 		pending, err := auth.UnlockRequestPending(ctx, q, id)
@@ -72,11 +80,7 @@ func requestUnlock(ctx context.Context, q db.Querier, username string, all bool,
 			return err
 		}
 		if !pending {
-			if all {
-				fmt.Fprintln(out, "Login lockouts cleared for all accounts.")
-			} else {
-				fmt.Fprintf(out, "Login lockouts cleared for %s.\n", username)
-			}
+			printUnlockSuccess(out, username, all)
 			return nil
 		}
 		if time.Now().After(deadline) {
@@ -89,4 +93,15 @@ func requestUnlock(ctx context.Context, q db.Querier, username string, all bool,
 		case <-time.After(250 * time.Millisecond):
 		}
 	}
+}
+
+func requestUnlock(ctx context.Context, q db.Querier, username string, all bool, out io.Writer) error {
+	id, err := auth.RequestUnlock(ctx, q, username, all)
+	if errors.Is(err, auth.ErrUnlockUnknownUser) {
+		return fmt.Errorf("no user named %q", username)
+	}
+	if err != nil {
+		return err
+	}
+	return waitForUnlock(ctx, q, id, username, all, out)
 }

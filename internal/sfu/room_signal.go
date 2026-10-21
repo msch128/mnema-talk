@@ -148,7 +148,11 @@ func (r *Room) addMissingSenders(peer *Peer, desired map[string]*TrackInfo, exis
 // addSender adds one track to the peer and starts its RTCP and keyframe
 // handling. It reports whether the track was added.
 func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
-	recipientTrack, vt := r.recipientTrack(peer, trackID, info)
+	recipientTrack, vt, err := r.recipientTrack(peer, trackID, info)
+	if err != nil {
+		peer.noteAddTrackFailure(trackID, info, err)
+		return false
+	}
 	sender, err := peer.PC.AddTrack(recipientTrack)
 	if err != nil {
 		// E.g. the viewer's browser cannot receive the publisher's codec:
@@ -176,14 +180,18 @@ func (r *Room) addSender(peer *Peer, trackID string, info *TrackInfo) bool {
 // recipientTrack picks what the peer's PeerConnection gets for info: the
 // shared track, a per-viewer layer switcher for screen shares, and an
 // authorization wrapper when either end requires media authorization.
-func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webrtc.TrackLocal, *viewerTrack) {
+func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webrtc.TrackLocal, *viewerTrack, error) {
 	var recipientTrack webrtc.TrackLocal = info.Track
 	var vt *viewerTrack
 	if info.group != nil {
 		r.mu.RLock()
 		pref := r.subs[peer.ID].screenQuality(info.SenderID)
 		r.mu.RUnlock()
-		vt = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
+		var err error
+		vt, err = info.group.newViewer(peer.ID, pref, trackID, info.SenderID.String())
+		if err != nil {
+			return nil, nil, err
+		}
 		recipientTrack = vt
 	}
 	if peer.authorizeMedia != nil || (info.publisher != nil && info.publisher.authorizeMedia != nil) {
@@ -193,7 +201,7 @@ func (r *Room) recipientTrack(peer *Peer, trackID string, info *TrackInfo) (webr
 		}
 		recipientTrack = &authorizedTrack{TrackLocal: recipientTrack, authorize: peer.mediaAuthorized, source: source, sources: r.sourceAuthorization}
 	}
-	return recipientTrack, vt
+	return recipientTrack, vt, nil
 }
 
 // noteAddTrackFailure logs the first failure to add a track and remembers it,
@@ -245,22 +253,35 @@ func (p *Peer) watchOffer(gen uint64, attempt int) {
 				p.room.requestPeerSignal(p)
 			}
 		}()
-		if p.offerGen.Load() != gen || p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed ||
-			p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer {
-			return
-		}
-		pending := p.PC.PendingLocalDescription()
-		if pending == nil {
-			return
-		}
-		if attempt > maxOfferResends {
-			slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
-			return
-		}
-		slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
-		if p.SendOffer != nil {
-			p.SendOffer(*pending)
-		}
-		p.watchOffer(gen, attempt+1)
+		p.resendOffer(gen, attempt)
 	})
+}
+
+func (p *Peer) isOfferStaleOrInactive(gen uint64) bool {
+	if p.offerGen.Load() != gen {
+		return true
+	}
+	if p.PC.ConnectionState() == webrtc.PeerConnectionStateClosed {
+		return true
+	}
+	return p.PC.SignalingState() != webrtc.SignalingStateHaveLocalOffer
+}
+
+func (p *Peer) resendOffer(gen uint64, attempt int) {
+	if p.isOfferStaleOrInactive(gen) {
+		return
+	}
+	pending := p.PC.PendingLocalDescription()
+	if pending == nil {
+		return
+	}
+	if attempt > maxOfferResends {
+		slog.Error("sfu offer never answered, giving up", "user", p.ID, "resends", maxOfferResends)
+		return
+	}
+	slog.Warn("sfu offer unanswered, sending it again", "user", p.ID, "attempt", attempt)
+	if p.SendOffer != nil {
+		p.SendOffer(*pending)
+	}
+	p.watchOffer(gen, attempt+1)
 }

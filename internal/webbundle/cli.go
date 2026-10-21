@@ -21,10 +21,28 @@ const usage = `usage: webbundle <command> [flags]
   trust   keygen|sign|verify   offline root key and signed trust statements (key revocation)
 `
 
+func printString(w io.Writer, s string) {
+	if _, err := fmt.Fprint(w, s); err != nil {
+		return
+	}
+}
+
+func printLine(w io.Writer, a ...any) {
+	if _, err := fmt.Fprintln(w, a...); err != nil {
+		return
+	}
+}
+
+func printFormat(w io.Writer, format string, a ...any) {
+	if _, err := fmt.Fprintf(w, format, a...); err != nil {
+		return
+	}
+}
+
 // Run implements the webbundle command line and returns the exit code.
 func Run(args []string, getenv func(string) string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		_, _ = fmt.Fprint(stderr, usage)
+		printString(stderr, usage)
 		return 2
 	}
 	var err error
@@ -38,7 +56,7 @@ func Run(args []string, getenv func(string) string, stdin io.Reader, stdout, std
 	case "trust":
 		err = runTrust(args[1:], stdin, stdout, stderr)
 	default:
-		_, _ = fmt.Fprint(stderr, usage)
+		printString(stderr, usage)
 		return 2
 	}
 	switch {
@@ -47,7 +65,7 @@ func Run(args []string, getenv func(string) string, stdin io.Reader, stdout, std
 	case errors.Is(err, flag.ErrHelp):
 		return 2
 	}
-	_, _ = fmt.Fprintln(stderr, "webbundle:", err)
+	printLine(stderr, "webbundle:", err)
 	return 1
 }
 
@@ -89,7 +107,7 @@ func runBuild(args []string, getenv func(string) string, stdout, stderr io.Write
 	if err := writeBundle(*out, *version, b); err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(stdout, "bundle %s: %d files, %d bytes, key %s\n", b.Info.Version, len(b.Info.Files), len(b.Zip), b.Info.KeyID)
+	printFormat(stdout, "bundle %s: %d files, %d bytes, key %s\n", b.Info.Version, len(b.Info.Files), len(b.Zip), b.Info.KeyID)
 	return nil
 }
 
@@ -187,7 +205,7 @@ func runVerify(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintf(stdout, "ok: version %s, web_client_api %d, %d files, key %s\n", m.Version, m.WebClientAPI, len(m.Files), m.KeyID)
+	printFormat(stdout, "ok: version %s, web_client_api %d, %d files, key %s\n", m.Version, m.WebClientAPI, len(m.Files), m.KeyID)
 	return nil
 }
 
@@ -201,6 +219,6 @@ func runKeyID(args []string, stdout, stderr io.Writer) error {
 	if err != nil {
 		return err
 	}
-	_, _ = fmt.Fprintln(stdout, KeyID(pub))
+	printLine(stdout, KeyID(pub))
 	return nil
 }

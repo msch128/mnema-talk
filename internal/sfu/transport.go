@@ -33,16 +33,7 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 	if port < portMin || port > portMax {
 		return nil, fmt.Errorf("UDP mux port %d must be inside UDP range %d-%d", port, portMin, portMax)
 	}
-	var options []ice.UDPMuxFromPortOption
-	if onlyLoopbackAnnouncements(announceIPs) {
-		options = append(options, ice.UDPMuxFromPortWithIPFilter(func(ip net.IP) bool { return ip.IsLoopback() }))
-	}
-	for _, ip := range announceIPs {
-		if addr, err := netip.ParseAddr(ip); err == nil && addr.IsLoopback() {
-			options = append(options, ice.UDPMuxFromPortWithLoopback())
-			break
-		}
-	}
+	options := buildUDPMuxOptions(announceIPs)
 	// Pion binds separately to each usable IPv4/IPv6 interface. Its constructor
 	// closes previously opened sockets if a later bind fails.
 	mux, err := ice.NewMultiUDPMuxFromPort(int(port), options...)
@@ -54,6 +45,17 @@ func openUDPMux(port, portMin, portMax uint16, announceIPs []string) (ice.UDPMux
 		return nil, errors.New("no usable interfaces for SFU UDP mux")
 	}
 	return mux, nil
+}
+
+func buildUDPMuxOptions(announceIPs []string) []ice.UDPMuxFromPortOption {
+	var options []ice.UDPMuxFromPortOption
+	if onlyLoopbackAnnouncements(announceIPs) {
+		options = append(options, ice.UDPMuxFromPortWithIPFilter(func(ip net.IP) bool { return ip.IsLoopback() }))
+	}
+	if announcesLoopback(announceIPs) {
+		options = append(options, ice.UDPMuxFromPortWithLoopback())
+	}
+	return options
 }
 
 func onlyLoopbackAnnouncements(ips []string) bool {
@@ -83,19 +85,23 @@ func (s *SFU) Close() error {
 			s.closeErr = errors.Join(s.closeErr, s.udpMux.Close())
 		}
 		for _, room := range rooms {
-			room.mu.RLock()
-			peers := make([]*Peer, 0, len(room.peers))
-			for _, peer := range room.peers {
-				peers = append(peers, peer)
-			}
-			room.mu.RUnlock()
-			for _, peer := range peers {
+			for _, peer := range room.peersSnapshot() {
 				room.detachPeer(peer)
 				s.closeErr = errors.Join(s.closeErr, peer.PC.Close())
 			}
 		}
 	})
 	return s.closeErr
+}
+
+func (r *Room) peersSnapshot() []*Peer {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	peers := make([]*Peer, 0, len(r.peers))
+	for _, peer := range r.peers {
+		peers = append(peers, peer)
+	}
+	return peers
 }
 
 // announcesLoopback reports whether any announced address is loopback, i.e.

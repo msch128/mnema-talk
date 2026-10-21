@@ -79,12 +79,25 @@ func nativeMetadataHandlers(deps server.PreviewDeps) (map[string]http.Handler, e
 			return nil, errors.New("duplicate native metadata route")
 		}
 		handler := available[key]
-		if route.Method == http.MethodGet || route.Method == http.MethodDelete || (route.Method == http.MethodPost && route.Path != "/admin/invites" && route.Path != "/admin/categories" && route.Path != "/admin/channels") {
+		if metadataNeedsEmptyBody(route.Method, route.Path) {
 			handler = nativeMetadataEmptyBody(handler)
 		}
 		selected[key] = handler
 	}
 	return selected, nil
+}
+
+func metadataNeedsEmptyBody(method, path string) bool {
+	if method == http.MethodGet || method == http.MethodDelete {
+		return true
+	}
+	if method != http.MethodPost {
+		return false
+	}
+	if path == "/admin/invites" || path == "/admin/categories" {
+		return false
+	}
+	return path != "/admin/channels"
 }
 
 // Fixed metadata reads and action-only writes never consume a caller payload.

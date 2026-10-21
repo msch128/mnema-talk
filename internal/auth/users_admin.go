@@ -104,7 +104,9 @@ func ResetPassword(ctx context.Context, p *db.Pool, id uuid.UUID) (string, error
 		return "", err
 	}
 	b := make([]byte, 15)
-	_, _ = rand.Read(b) // never fails since Go 1.24: it aborts the process instead
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
 	password := base64.RawURLEncoding.EncodeToString(b)
 	hash, err := HashPassword(password)
 	if err != nil {

@@ -118,22 +118,31 @@ export function moveCategoryToGap<C extends LayoutChannel, K extends LayoutCateg
  * category); past the last channel to the start of the next category. Empty
  * categories are stops of their own, so every category can be reached.
  */
+type ChannelContainer<C> = { id: string | null; channels: C[] }
+
+function stepUp<C>(from: { categoryId: string | null; index: number }, list: ChannelContainer<C>[], k: number) {
+  if (from.index > 0) return { categoryId: from.categoryId, index: from.index - 1 }
+  if (k <= 0) return null
+  const prev = list[k - 1]
+  return prev ? { categoryId: prev.id, index: prev.channels.length } : null
+}
+
+function stepDown<C>(from: { categoryId: string | null; index: number }, list: ChannelContainer<C>[], k: number) {
+  const current = list[k]
+  if (current && from.index < current.channels.length - 1) {
+    return { categoryId: from.categoryId, index: from.index + 1 }
+  }
+  if (k >= list.length - 1) return null
+  const next = list[k + 1]
+  return next ? { categoryId: next.id, index: 0 } : null
+}
+
 export function channelStep<C extends LayoutChannel, K extends LayoutCategory<C>>(tree: ChannelTree<C, K>, channelId: string, dir: number) {
   const from = locateChannel(tree, channelId)
   if (!from || !dir) return null
   const list = containers(tree)
   const k = list.findIndex(c => c.id === from.categoryId)
-  if (dir < 0) {
-    if (from.index > 0) return { categoryId: from.categoryId, index: from.index - 1 }
-    if (k === 0) return null
-    const prev = list[k - 1]
-    return prev ? { categoryId: prev.id, index: prev.channels.length } : null
-  }
-  const current = list[k]
-  if (current && from.index < current.channels.length - 1) return { categoryId: from.categoryId, index: from.index + 1 }
-  if (k === list.length - 1) return null
-  const next = list[k + 1]
-  return next ? { categoryId: next.id, index: 0 } : null
+  return dir < 0 ? stepUp(from, list, k) : stepDown(from, list, k)
 }
 
 export function stepChannel<C extends LayoutChannel, K extends LayoutCategory<C>>(tree: ChannelTree<C, K>, channelId: string, dir: number): ChannelTree<C, K> {
@@ -206,6 +215,56 @@ export function sameLayout<C extends LayoutChannel, K extends LayoutCategory<C>>
   return samePayload(toLayoutPayload(a), toLayoutPayload(b))
 }
 
+type RankedItem<T> = { item: T; rank: [number, number]; seq: number }
+
+function compareRanked<T>(a: RankedItem<T>, b: RankedItem<T>): number {
+  if (a.rank[0] !== b.rank[0]) return a.rank[0] - b.rank[0]
+  if (a.rank[1] !== b.rank[1]) return a.rank[1] - b.rank[1]
+  return a.seq - b.seq
+}
+
+function itemRank(order: number | null | undefined, seq: number): [number, number] {
+  return order == null ? [1, seq] : [0, order]
+}
+
+function resolvePlacementTarget(
+  placement: Map<string, { category_id: string | null; sort_order: number }>,
+  known: Set<string>,
+  channelId: string,
+  currentContainerId: string | null
+): { target: string | null; sortOrder?: number } {
+  const p = placement.get(channelId)
+  if (!p) return { target: currentContainerId }
+  if (p.category_id != null && !known.has(p.category_id)) {
+    return { target: currentContainerId }
+  }
+  return { target: p.category_id ?? null, sortOrder: p.sort_order }
+}
+
+function collectPlacedChannels<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  tree: ChannelTree<C, K>,
+  placement: Map<string, { category_id: string | null; sort_order: number }>
+): Map<string | null, C[]> {
+  const known = new Set((tree.categories || []).map(c => c.id))
+  const buckets = new Map<string | null, Array<RankedItem<C>>>(containers(tree).map(c => [c.id, []]))
+  let seq = 0
+
+  for (const { id, channels } of containers(tree)) {
+    for (const ch of channels) {
+      const { target, sortOrder } = resolvePlacementTarget(placement, known, ch.id, id)
+      const moved = target !== id
+      const item = moved ? { ...ch, category_id: target } : ch
+      buckets.get(target)?.push({ item, rank: itemRank(sortOrder, seq), seq: seq++ })
+    }
+  }
+
+  const result = new Map<string | null, C[]>()
+  for (const [id, items] of buckets.entries()) {
+    result.set(id, items.sort(compareRanked).map(entry => entry.item))
+  }
+  return result
+}
+
 /**
  * Arranges a (fresh) tree in the order a payload describes. Used to keep a
  * pending reorder on screen while the server's data refreshes underneath:
@@ -217,26 +276,12 @@ export function applyLayoutPayload<C extends LayoutChannel, K extends LayoutCate
   if (!payload) return tree
   const catOrder = new Map((payload.categories || []).map(c => [c.id, c.sort_order]))
   const placement = new Map((payload.channels || []).map(c => [c.id, c]))
-  const known = new Set((tree.categories || []).map(c => c.id))
-  const rank = (order: number | null | undefined, i: number): [number, number] => (order == null ? [1, i] : [0, order])
-  const byRank = (a: { rank: [number, number]; i: number }, b: { rank: [number, number]; i: number }) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.i - b.i
-
-  const buckets = new Map<string | null, Array<{ ch: C; rank: [number, number]; i: number }>>(containers(tree).map(c => [c.id, []]))
-  let i = 0
-  for (const { id, channels } of containers(tree)) {
-    for (const ch of channels) {
-      const found = placement.get(ch.id)
-      const p = found && (found.category_id == null || known.has(found.category_id)) ? found : null
-      const target = p ? p.category_id ?? null : id
-      const moved = target !== id
-      buckets.get(target)?.push({ ch: moved ? { ...ch, category_id: target } : ch, rank: rank(p?.sort_order, i), i: i++ })
-    }
-  }
-  const sorted = (id: string | null): C[] => (buckets.get(id) || []).sort(byRank).map(e => e.ch)
+  const placed = collectPlacedChannels(tree, placement)
 
   const categories = (tree.categories || [])
-    .map((c, idx) => ({ c, rank: rank(catOrder.get(c.id), idx), i: idx }))
-    .sort(byRank)
-    .map(({ c }) => ({ ...c, channels: sorted(c.id) }))
-  return { uncategorized: sorted(null), categories }
+    .map((c, idx) => ({ item: c, rank: itemRank(catOrder.get(c.id), idx), seq: idx }))
+    .sort(compareRanked)
+    .map(({ item }) => ({ ...item, channels: placed.get(item.id) || [] }))
+
+  return { uncategorized: placed.get(null) || [], categories }
 }

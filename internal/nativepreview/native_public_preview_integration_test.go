@@ -47,31 +47,86 @@ func newPublicPreviewTestApp(t *testing.T, status NativeCompatibility) *previewT
 	}
 	return &previewTestApp{server: server, router: router, pool: pool}
 }
+func assertZeroNativeSessions(t *testing.T, a *previewTestApp) {
+	t.Helper()
+	var sessions int
+	if err := a.pool.QueryRow(context.Background(), `SELECT count(*) FROM native_session_families`).Scan(&sessions); err != nil {
+		t.Fatalf("count native sessions: %v", err)
+	}
+	if sessions != 0 {
+		t.Fatalf("expected 0 native sessions, got %d", sessions)
+	}
+}
+
+func assertZeroPreloginRecords(t *testing.T, a *previewTestApp) {
+	t.Helper()
+	var users int
+	if err := a.pool.QueryRow(context.Background(), `SELECT count(*) FROM users`).Scan(&users); err != nil {
+		t.Fatalf("count users: %v", err)
+	}
+	if users != 0 {
+		t.Fatalf("expected 0 users, got %d", users)
+	}
+	assertZeroNativeSessions(t, a)
+}
+
+func assertPublicLegalDTO(t *testing.T, raw []byte) {
+	t.Helper()
+	var legal srv.Legal
+	if err := json.Unmarshal(raw, &legal); err != nil {
+		t.Fatalf("unmarshal legal: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("unmarshal legal fields: %v", err)
+	}
+	if len(fields) != 10 {
+		t.Fatalf("expected 10 legal fields, got %d", len(fields))
+	}
+	if legal.OperatorName != "Synthetic Community Operator" {
+		t.Fatalf("unexpected operator name: %q", legal.OperatorName)
+	}
+	if legal.OperatorEmail != "operator@example.invalid" {
+		t.Fatalf("unexpected operator email: %q", legal.OperatorEmail)
+	}
+	if legal.MediaRetentionDays != 0 {
+		t.Fatalf("unexpected media retention: %d", legal.MediaRetentionDays)
+	}
+	if legal.LegalVersion != srv.LegalVersion {
+		t.Fatalf("unexpected legal version: %q", legal.LegalVersion)
+	}
+}
+
+func assertPublicHealthDTO(t *testing.T, raw []byte) {
+	t.Helper()
+	var health srv.Health
+	if err := json.Unmarshal(raw, &health); err != nil {
+		t.Fatalf("unmarshal health: %v", err)
+	}
+	if health.Status != "ok" {
+		t.Fatalf("unexpected status: %q", health.Status)
+	}
+	if health.Version != "public-preview-fixture" {
+		t.Fatalf("unexpected version: %q", health.Version)
+	}
+}
+
 func TestNativePublicPreviewActualHTTPSBeforeLogin(t *testing.T) {
 	a := newPublicPreviewTestApp(t, NativeSupported)
-	var users, sessions int
-	if a.pool.QueryRow(context.Background(), `SELECT count(*) FROM users`).Scan(&users) != nil || a.pool.QueryRow(context.Background(), `SELECT count(*) FROM native_session_families`).Scan(&sessions) != nil || users != 0 || sessions != 0 {
-		t.Fatal("prelogin fixture unexpectedly authenticated")
-	}
+	assertZeroPreloginRecords(t, a)
+
 	raw := a.request(t, http.MethodGet, NativePublicLegalPath, nil, "", nil, http.StatusOK)
-	var legal srv.Legal
-	var fields map[string]json.RawMessage
-	if json.Unmarshal(raw, &legal) != nil || json.Unmarshal(raw, &fields) != nil || len(fields) != 10 || legal.OperatorName != "Synthetic Community Operator" || legal.OperatorEmail != "operator@example.invalid" || legal.MediaRetentionDays != 0 || legal.LegalVersion != srv.LegalVersion {
-		t.Fatal("real public legal DTO mismatch")
-	}
+	assertPublicLegalDTO(t, raw)
+
 	raw = a.request(t, http.MethodGet, NativePublicHealthPath, nil, "", nil, http.StatusOK)
-	var health srv.Health
-	if json.Unmarshal(raw, &health) != nil || health.Status != "ok" || health.Version != "public-preview-fixture" {
-		t.Fatal("real public health DTO mismatch")
-	}
+	assertPublicHealthDTO(t, raw)
+
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/legal", nil, "", nil, http.StatusUnauthorized)
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/health", nil, "", nil, http.StatusUnauthorized)
 	a.request(t, http.MethodGet, NativePreviewPrefix+"/members", nil, "", nil, http.StatusUnauthorized)
 	a.request(t, http.MethodGet, "/api/legal", nil, "", nil, http.StatusOK)
 	a.request(t, http.MethodGet, "/api/health", nil, "", nil, http.StatusOK)
-	if a.pool.QueryRow(context.Background(), `SELECT count(*) FROM native_session_families`).Scan(&sessions) != nil || sessions != 0 {
-		t.Fatal("public metadata created a native session")
-	}
+	assertZeroNativeSessions(t, a)
 }
 func TestNativePublicPreviewActualHTTPSStrictBoundary(t *testing.T) {
 	a := newPublicPreviewTestApp(t, NativeSupported)

@@ -65,10 +65,43 @@ export function connectLoopback(cx: Cx, ctx: AudioContext, source: AudioNode) {
   }
 }
 
+function disconnectNodeSafely(node: AudioNode | null | undefined, label: string) {
+  if (!node) return
+  try {
+    node.disconnect()
+  } catch (err) {
+    console.debug(`[WebRTC] ${label} disconnect:`, err)
+  }
+}
+
+function destroySuppressorSafely(node: { disconnect: () => void; destroy?: () => void } | null | undefined) {
+  if (!node) return
+  try {
+    node.disconnect()
+    node.destroy?.()
+  } catch (err) {
+    console.debug('[WebRTC] suppressor destroy:', err)
+  }
+}
+
+function stopMediaTracks(stream: MediaStream | null | undefined) {
+  if (!stream) return
+  for (const track of stream.getTracks()) {
+    track.stop()
+  }
+}
+
+function closeAudioContextSafely(ctx: AudioContext | null | undefined) {
+  if (!ctx) return
+  ctx.close().catch(err => {
+    console.debug('[WebRTC] AudioContext close:', err)
+  })
+}
+
 export function disconnectLoopback(cx: Cx) {
   const { st } = cx
   if (!st.loopbackGain) return
-  try { st.loopbackGain.disconnect() } catch { /* ignore */ }
+  disconnectNodeSafely(st.loopbackGain, 'loopbackGain')
   st.loopbackGain = null
   st.loopbackCtx = null
 }
@@ -157,7 +190,8 @@ function applyGamingLease(cx: Cx, ctx: AudioContext, stream: MediaStream, sendSt
     st.gamingGainNode = gain
     st.rawMicStream ??= stream
     return destination.stream
-  } catch {
+  } catch (err) {
+    console.warn('[WebRTC] Gaming bridge lease setup error:', err)
     stopTracks(stream)
     stopTracks(sendStream)
     teardownMicPipeline(cx)
@@ -210,7 +244,11 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
   st.micPipelineController = controller
   // Not awaited: after a reload (voice resume) there is no user gesture yet
   // and resume() may stay pending until there is one; the graph starts then.
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {})
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(err => {
+      console.debug('[WebRTC] AudioContext resume:', err)
+    })
+  }
 
   const filtered = await applyNoiseFilter(cx, ctx, stream, controller)
   if (filtered.aborted) return null
@@ -223,37 +261,31 @@ export async function setupMicPipeline(cx: Cx, stream: MediaStream): Promise<Med
 
 export function teardownMicPipeline(cx: Cx) {
   const { st } = cx
-  if (st.gamingGainNode) {
-    try { st.gamingGainNode.disconnect() } catch { /* already disconnected */ }
-    st.gamingGainNode = null
-  }
+  disconnectNodeSafely(st.gamingGainNode, 'gamingGainNode')
+  st.gamingGainNode = null
+
   st.micPipelineController?.abort()
   st.micPipelineController = null
   st.callBiquad = null
-  if (st.inputGainNode) {
-    try { st.inputGainNode.disconnect() } catch { /* ignore */ }
-    st.inputGainNode = null
+
+  disconnectNodeSafely(st.inputGainNode, 'inputGainNode')
+  st.inputGainNode = null
+
+  if (st.loopbackCtx && st.loopbackCtx === st.audioContext) {
+    disconnectLoopback(cx)
   }
-  if (st.loopbackCtx && st.loopbackCtx === st.audioContext) disconnectLoopback(cx)
-  if (st.suppressorNode) {
-    try {
-      st.suppressorNode.disconnect()
-      st.suppressorNode.destroy?.()
-    } catch { /* ignore */ }
-    st.suppressorNode = null
-  }
-  if (st.rawMicStream) {
-    st.rawMicStream.getTracks().forEach(t => t.stop())
-    st.rawMicStream = null
-  }
-  if (st.meteringTrack) {
-    st.meteringTrack.stop()
-    st.meteringTrack = null
-  }
-  if (st.audioContext) {
-    st.audioContext.close().catch(() => {})
-    st.audioContext = null
-  }
+
+  destroySuppressorSafely(st.suppressorNode)
+  st.suppressorNode = null
+
+  stopMediaTracks(st.rawMicStream)
+  st.rawMicStream = null
+
+  st.meteringTrack?.stop()
+  st.meteringTrack = null
+
+  closeAudioContextSafely(st.audioContext)
+  st.audioContext = null
   st.analyser = null
 }
 

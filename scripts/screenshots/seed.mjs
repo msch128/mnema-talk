@@ -32,12 +32,7 @@ export async function login(page, user, password) {
 
 const bit = n => 2 ** n
 
-export async function seed(browser) {
-  const ctx = () => browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } })
-  const admin = await (await ctx()).newPage()
-  await login(admin, ADMIN_USER, ADMIN_PASSWORD)
-
-  // Members.
+async function seedMembers(admin, ctx) {
   const pages = {}
   for (const name of MEMBERS) {
     const p = await (await ctx()).newPage()
@@ -48,8 +43,10 @@ export async function seed(browser) {
   }
   const status = { mira: 'Shipping the 1.4 docs', jonas: 'Back at 14:00', nora: 'Reading RFCs' }
   for (const [n, s] of Object.entries(status)) must(await api(pages[n], 'PUT', '/api/users/me/status', { status_text: s }), 'status')
+  return pages
+}
 
-  // Layout. The installation's default channels are replaced by the demo layout.
+async function seedLayout(admin) {
   const before = must(await api(admin, 'GET', '/api/channels'), 'channels')
   const cat = async (name, sort_order) => must(await api(admin, 'POST', '/api/admin/categories', { name, sort_order }), 'category').id
   const community = await cat('Community', 0)
@@ -72,8 +69,10 @@ export async function seed(browser) {
     must(await api(admin, 'DELETE', `/api/admin/categories/${c.id}`), 'delete default category')
   }
   for (const x of before.uncategorized) must(await api(admin, 'DELETE', `/api/admin/channels/${x.id}`), 'delete default channel')
+  return { general, devChat, releases, core, lounge }
+}
 
-  // Roles: Moderator, Builder, Guest; the maintainers' channel is private.
+async function seedRoles(admin, core) {
   const role = async (name, color, permissions, hoist) =>
     must(await api(admin, 'POST', '/api/admin/roles', { name, color, permissions, hoist }), `role ${name}`)
   await role('Moderator', 0xe0a458, bit(5) + bit(10) + bit(15), true)
@@ -93,8 +92,29 @@ export async function seed(browser) {
     { id: everyone, type: 'role', allow: 0, deny: bit(1) },
     { id: idOf('Builder'), type: 'role', allow: bit(1), deny: 0 },
   ] }), 'overwrites')
+}
 
-  // Conversation in #general.
+async function seedWebhooks(admin, releases) {
+  const hook = must(await api(admin, 'POST', `/api/admin/channels/${releases}/webhooks`, { name: 'Release bot' }), 'webhook')
+  const url = hook.url ?? hook.webhook?.url
+  if (url) {
+    const r = await admin.evaluate(async (u) => {
+      const res = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        username: 'Release bot',
+        embeds: [{ title: 'v1.4.0 published', description: 'Faster search, a new roles editor and 14 fixes.', color: 0x2da771 }],
+      }) })
+      return res.status
+    }, url)
+    if (r >= 300) throw new Error(`webhook execute failed: ${r}`)
+  }
+  const out = await api(admin, 'POST', `/api/admin/channels/${releases}/outgoing-webhooks`, {
+    name: 'Docs rebuild', url: 'https://hooks.example.com/mnema', events: ['MESSAGE_CREATE'],
+  })
+  if (out.status >= 300) console.warn('outgoing webhook not created:', out.status, JSON.stringify(out.json))
+}
+
+async function seedMessages(admin, pages, channels) {
+  const { general, devChat, releases } = channels
   const say = async (who, channel, content, extra = {}) =>
     must(await api(who === 'admin' ? admin : pages[who], 'POST', `/api/channels/${channel}/messages`, { content, ...extra }), 'message')
   const m1 = await say('mira', general, 'Morning all. The 1.4 docs draft is up, I would love a second pair of eyes on the **upgrade section**.')
@@ -111,26 +131,20 @@ export async function seed(browser) {
   await say('jonas', devChat, 'CI is green on main again. Merging the playback fix.')
   await say('mira', devChat, 'Thanks! Cutting the release in ten minutes.')
 
-  // Incoming webhook: a release announcement.
-  const hook = must(await api(admin, 'POST', `/api/admin/channels/${releases}/webhooks`, { name: 'Release bot' }), 'webhook')
-  const url = hook.url ?? hook.webhook?.url
-  if (url) {
-    const r = await admin.evaluate(async (u) => {
-      const res = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-        username: 'Release bot',
-        embeds: [{ title: 'v1.4.0 published', description: 'Faster search, a new roles editor and 14 fixes.', color: 0x2da771 }],
-      }) })
-      return res.status
-    }, url)
-    if (r >= 300) throw new Error(`webhook execute failed: ${r}`)
-  }
-  // Outgoing webhook (placeholder target, never called by the demo).
-  const out = await api(admin, 'POST', `/api/admin/channels/${releases}/outgoing-webhooks`, {
-    name: 'Docs rebuild', url: 'https://hooks.example.com/mnema', events: ['MESSAGE_CREATE'],
-  })
-  if (out.status >= 300) console.warn('outgoing webhook not created:', out.status, JSON.stringify(out.json))
+  await seedWebhooks(admin, releases)
+}
 
-  return { admin, pages, ids: { general, releases, devChat, core, lounge } }
+export async function seed(browser) {
+  const ctx = () => browser.newContext({ locale: 'en-US', viewport: { width: 1440, height: 900 } })
+  const admin = await (await ctx()).newPage()
+  await login(admin, ADMIN_USER, ADMIN_PASSWORD)
+
+  const pages = await seedMembers(admin, ctx)
+  const channels = await seedLayout(admin)
+  await seedRoles(admin, channels.core)
+  await seedMessages(admin, pages, channels)
+
+  return { admin, pages, ids: channels }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

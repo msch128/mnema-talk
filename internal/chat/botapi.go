@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -149,6 +150,54 @@ type rawBotMessage struct {
 	ParentID         *uuid.UUID           `json:"parent_id"`
 }
 
+func (h *Handler) checkBotChannelSend(ctx context.Context, user *auth.User, chID uuid.UUID) (*perm.Snapshot, perm.Set, error) {
+	snap, err := h.Perms.ForChannel(ctx, chID)
+	if err != nil {
+		return nil, 0, err
+	}
+	p := snap.Channel(user.Subject(), chID)
+	if err := perm.CheckChannel(p, perm.SendMessages); err != nil {
+		return nil, 0, err
+	}
+	if _, err := ChannelForMessages(ctx, h.DB, chID); err != nil {
+		return nil, 0, err
+	}
+	return snap, p, nil
+}
+
+func decodeRawBotMessage(w http.ResponseWriter, r *http.Request) (*rawBotMessage, error) {
+	var req rawBotMessage
+	httpx.SetJSONReadDeadline(w)
+	r.Body = http.MaxBytesReader(w, r.Body, httpx.DefaultMaxBody)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			return nil, httpx.ErrPayloadTooLarge("request body too large")
+		}
+		return nil, httpx.ErrInvalidInput("the body is not a valid JSON object")
+	}
+	return &req, nil
+}
+
+func validateBotPayload(req *rawBotMessage) (string, []Embed, *uuid.UUID, error) {
+	content, err := ValidateContent(req.Content, true)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	embeds, err := SanitizeEmbeds(req.Embeds)
+	if err != nil {
+		return "", nil, nil, httpx.ErrInvalidInput(err.Error())
+	}
+	if content == "" && len(embeds) == 0 {
+		return "", nil, nil, httpx.ErrInvalidInput("Cannot send an empty message")
+	}
+	var reply *uuid.UUID
+	if req.MessageReference != nil {
+		reply = &req.MessageReference.MessageID
+	}
+	return content, embeds, reply, nil
+}
+
 // botCreateMessage handles POST /api/bot/v1/channels/{channelID}/messages.
 //
 // @Summary Post a message
@@ -174,41 +223,17 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	snap, err := h.Perms.ForChannel(r.Context(), chID)
+	snap, p, err := h.checkBotChannelSend(r.Context(), user, chID)
 	if err != nil {
 		return err
 	}
-	p := snap.Channel(user.Subject(), chID)
-	if err := perm.CheckChannel(p, perm.SendMessages); err != nil {
-		return err
-	}
-	if _, err := ChannelForMessages(r.Context(), h.DB, chID); err != nil {
-		return err
-	}
-	var req rawBotMessage
-	httpx.SetJSONReadDeadline(w)
-	r.Body = http.MaxBytesReader(w, r.Body, httpx.DefaultMaxBody)
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		var tooBig *http.MaxBytesError
-		if errors.As(err, &tooBig) {
-			return httpx.ErrPayloadTooLarge("request body too large")
-		}
-		return httpx.ErrInvalidInput("the body is not a valid JSON object")
-	}
-	content, err := ValidateContent(req.Content, true)
+	req, err := decodeRawBotMessage(w, r)
 	if err != nil {
 		return err
 	}
-	embeds, err := SanitizeEmbeds(req.Embeds)
+	content, embeds, reply, err := validateBotPayload(req)
 	if err != nil {
-		return httpx.ErrInvalidInput(err.Error())
-	}
-	if content == "" && len(embeds) == 0 {
-		return httpx.ErrInvalidInput("Cannot send an empty message")
-	}
-	var reply *uuid.UUID
-	if req.MessageReference != nil {
-		reply = &req.MessageReference.MessageID
+		return err
 	}
 	if err := ValidateTarget(r.Context(), h.DB, chID, req.ParentID, reply); err != nil {
 		return err
@@ -223,6 +248,27 @@ func (h *Handler) botCreateMessage(w http.ResponseWriter, r *http.Request) error
 	return PublishMessage(w, r, h.DB, h.Events, id)
 }
 
+func parseAllowedUsers(rawIDs []string) []uuid.UUID {
+	var ids []uuid.UUID
+	for _, raw := range rawIDs {
+		if id, err := uuid.Parse(raw); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+func applyAllowedMentions(policy *MentionPolicy, am *BotAllowedMentions) {
+	if am == nil {
+		return
+	}
+	policy.NoEveryone = !slices.Contains(am.Parse, "everyone")
+	if !slices.Contains(am.Parse, "users") {
+		policy.NoUsers = true
+		policy.AllowUsers = parseAllowedUsers(am.Users)
+	}
+}
+
 // botMentionPolicy is the mention policy of a bot's message: what the bot may
 // do in the channel (p), narrowed by its allowed_mentions. The request can
 // only narrow the permissions, never widen them.
@@ -231,17 +277,7 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 		NoEveryone: true,
 		CanView:    func(id uuid.UUID) bool { return snap.Channel(perm.Subject{ID: id}, ch).Has(perm.ViewChannel) },
 	}
-	if am != nil {
-		policy.NoEveryone = !slices.Contains(am.Parse, "everyone")
-		if !slices.Contains(am.Parse, "users") {
-			policy.NoUsers = true
-			for _, raw := range am.Users {
-				if id, err := uuid.Parse(raw); err == nil {
-					policy.AllowUsers = append(policy.AllowUsers, id)
-				}
-			}
-		}
-	}
+	applyAllowedMentions(&policy, am)
 	policy.NoEveryone = policy.NoEveryone || !p.Has(perm.MentionEveryone)
 	return policy
 }

@@ -100,7 +100,10 @@ func newLayerRig(t *testing.T, mime string, layers int) *layerRig {
 // returned collector.
 func (rig *layerRig) viewer(pref int) (*viewerTrack, *sunk) {
 	rig.t.Helper()
-	vt := rig.group.newViewer(uuid.New(), pref, "track", "stream")
+	vt, err := rig.group.newViewer(uuid.New(), pref, "track", "stream")
+	if err != nil {
+		rig.t.Fatal(err)
+	}
 	out := &sunk{}
 	vt.sink = out.write
 	rig.group.addViewer(vt)
@@ -591,7 +594,10 @@ func TestViewerTrackIgnoresClosedAndForwardsErrors(t *testing.T) {
 	}
 	// A viewer replaced by a newer track of the same user stops receiving.
 	first, firstOut := rig.viewer(0)
-	second := rig.group.newViewer(first.viewer, 0, "t2", "s")
+	second, err := rig.group.newViewer(first.viewer, 0, "t2", "s")
+	if err != nil {
+		t.Fatal(err)
+	}
 	secondOut := &sunk{}
 	second.sink = secondOut.write
 	rig.group.addViewer(second)

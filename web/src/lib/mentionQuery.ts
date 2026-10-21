@@ -9,6 +9,18 @@ export type MentionSuggestion =
   | { username: string; display_name: string; user: Mentionable; group?: false }
 const NAME_CHARS = /[A-Za-z0-9_.-]/
 
+function findAtPosition(text: string, caret: number): number {
+  let i = caret - 1
+  while (i >= 0 && NAME_CHARS.test(text[i] || '')) i--
+  return i
+}
+
+function isValidMentionBoundary(text: string, atIndex: number): boolean {
+  if (atIndex <= 0) return true
+  const prev = text[atIndex - 1] || ''
+  return !NAME_CHARS.test(prev) && prev !== '@'
+}
+
 /**
  * The mention being typed right before the caret: { start, query } where
  * start is the index of '@', or null. A mention starts at the beginning of
@@ -16,10 +28,9 @@ const NAME_CHARS = /[A-Za-z0-9_.-]/
  */
 export function findMentionQuery(text: string | null | undefined, caret: number | null | undefined) {
   if (typeof text !== 'string' || caret == null) return null
-  let i = caret - 1
-  while (i >= 0 && NAME_CHARS.test(text[i] || '')) i--
+  const i = findAtPosition(text, caret)
   if (i < 0 || text[i] !== '@') return null
-  if (i > 0 && (NAME_CHARS.test(text[i - 1] || '') || text[i - 1] === '@')) return null
+  if (!isValidMentionBoundary(text, i)) return null
   const query = text.slice(i + 1, caret)
   if (query.length > 32) return null
   return { start: i, query }
@@ -28,29 +39,70 @@ export function findMentionQuery(text: string | null | undefined, caret: number 
 /** The keyword mentions, offered after the members. */
 export const GROUP_MENTIONS = ['here', 'all'] as const
 
+function isEligibleMember(m: User & { disabled?: boolean }, selfId: string | null): boolean {
+  if (!m?.username || m.id === selfId) return false
+  return !m.disabled
+}
+
+function matchesPrefix(u: string, d: string, q: string): boolean {
+  return u.startsWith(q) || d.startsWith(q)
+}
+
+function matchesWordPrefix(d: string, q: string): boolean {
+  return d.split(/\s+/).some(w => w.startsWith(q))
+}
+
+function matchesSubstring(u: string, d: string, q: string): boolean {
+  return !!q && (u.includes(q) || d.includes(q))
+}
+
+function scoreMember(m: User & { disabled?: boolean }, q: string, selfId: string | null): number {
+  if (!isEligibleMember(m, selfId)) return -1
+  const u = m.username.toLowerCase()
+  const d = (m.display_name || '').toLowerCase()
+  if (matchesPrefix(u, d, q)) return 0
+  if (matchesWordPrefix(d, q)) return 1
+  if (matchesSubstring(u, d, q)) return 2
+  return -1
+}
+
+function compareScoredMembers(a: { score: number; m: User }, b: { score: number; m: User }): number {
+  if (a.score !== b.score) return a.score - b.score
+  const nameA = a.m.display_name || a.m.username
+  const nameB = b.m.display_name || b.m.username
+  return nameA.localeCompare(nameB)
+}
+
+function matchGroupMentions(q: string, items: MentionSuggestion[], limit: number) {
+  const max = limit + GROUP_MENTIONS.length
+  for (const g of GROUP_MENTIONS) {
+    if (g.startsWith(q) && items.length < max) {
+      items.push({ username: g, display_name: g, group: true })
+    }
+  }
+}
+
 /**
  * Suggestions for query: members whose username or display name starts with
  * it (then those that contain it), then @here / @all. Each item is
  * { username, display_name, user?, group? }.
  */
-export function suggestMentions(query: string, members: Array<User & { disabled?: boolean }> | null | undefined, { selfId = null, limit = 8 }: { selfId?: string | null; limit?: number } = {}): MentionSuggestion[] {
+export function suggestMentions(
+  query: string,
+  members: Array<User & { disabled?: boolean }> | null | undefined,
+  { selfId = null, limit = 8 }: { selfId?: string | null; limit?: number } = {}
+): MentionSuggestion[] {
   const q = (query || '').toLowerCase()
   const scored: Array<{ score: number; m: User }> = []
   for (const m of members || []) {
-    if (!m?.username || m.id === selfId || m.disabled) continue
-    const u = m.username.toLowerCase()
-    const d = (m.display_name || '').toLowerCase()
-    let score = -1
-    if (u.startsWith(q) || d.startsWith(q)) score = 0
-    else if (d.split(/\s+/).some(w => w.startsWith(q))) score = 1
-    else if (q && (u.includes(q) || d.includes(q))) score = 2
+    const score = scoreMember(m, q, selfId)
     if (score >= 0) scored.push({ score, m })
   }
-  scored.sort((a, b) => a.score - b.score || (a.m.display_name || a.m.username).localeCompare(b.m.display_name || b.m.username))
-  const items: MentionSuggestion[] = scored.slice(0, limit).map(({ m }) => ({ username: m.username, display_name: m.display_name || m.username, user: m }))
-  for (const g of GROUP_MENTIONS) {
-    if (g.startsWith(q) && items.length < limit + GROUP_MENTIONS.length) items.push({ username: g, display_name: g, group: true })
-  }
+  scored.sort(compareScoredMembers)
+  const items: MentionSuggestion[] = scored
+    .slice(0, limit)
+    .map(({ m }) => ({ username: m.username, display_name: m.display_name || m.username, user: m }))
+  matchGroupMentions(q, items, limit)
   return items
 }
 

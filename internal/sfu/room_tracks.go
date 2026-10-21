@@ -62,10 +62,7 @@ func (t *TrackInfo) requestKeyframe() {
 	_ = t.publisher.PC.WriteRTCP([]rtcp.Packet{&rtcp.PictureLossIndication{MediaSSRC: t.ssrc}})
 }
 
-// DispatchKeyframe asks every publisher whose video viewerID receives for a
-// keyframe (the browser sends this when a remote video starts).
-func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
-	r.mu.RLock()
+func (r *Room) keyframeTargetsLocked(viewerID uuid.UUID) ([]*TrackInfo, []*layerGroup) {
 	var tracks []*TrackInfo
 	var layered []*layerGroup
 	for _, info := range r.trackLocals {
@@ -80,6 +77,14 @@ func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
 		}
 		tracks = append(tracks, info)
 	}
+	return tracks, layered
+}
+
+// DispatchKeyframe asks every publisher whose video viewerID receives for a
+// keyframe (the browser sends this when a remote video starts).
+func (r *Room) DispatchKeyframe(viewerID uuid.UUID) {
+	r.mu.RLock()
+	tracks, layered := r.keyframeTargetsLocked(viewerID)
 	r.mu.RUnlock()
 	for _, info := range tracks {
 		info.requestKeyframe()
@@ -111,10 +116,30 @@ func (r *Room) RequestSourceKeyframe(publisherID uuid.UUID, source Source) {
 	}
 }
 
+func (r *Room) isTrackStaleLocked(info *TrackInfo) bool {
+	if r.peers[info.SenderID] != info.publisher || info.isSuperseded() {
+		return true
+	}
+	return info.publisher != nil && !info.publisher.mediaAuthorized()
+}
+
+func (r *Room) supersedePreviousCaptureLocked(info *TrackInfo, sourceKey string) {
+	previous := r.latestSources[sourceKey]
+	if previous == nil || previous.sameCapture(info) {
+		return
+	}
+	previous.supersede()
+	for oldKey, old := range r.trackLocals {
+		if old.sameCapture(previous) {
+			delete(r.trackLocals, oldKey)
+		}
+	}
+}
+
 func (r *Room) addTrack(key string, info *TrackInfo) {
 	r.mu.Lock()
 	// The publisher may have been replaced while its track was arriving.
-	if r.peers[info.SenderID] != info.publisher || info.isSuperseded() || info.publisher != nil && !info.publisher.mediaAuthorized() {
+	if r.isTrackStaleLocked(info) {
 		r.mu.Unlock()
 		return
 	}
@@ -122,14 +147,7 @@ func (r *Room) addTrack(key string, info *TrackInfo) {
 		r.latestSources = make(map[string]*TrackInfo)
 	}
 	sourceKey := trackKey(info.SenderID, string(info.Source))
-	if previous := r.latestSources[sourceKey]; previous != nil && !previous.sameCapture(info) {
-		previous.supersede()
-		for oldKey, old := range r.trackLocals {
-			if old.sameCapture(previous) {
-				delete(r.trackLocals, oldKey)
-			}
-		}
-	}
+	r.supersedePreviousCaptureLocked(info, sourceKey)
 	r.latestSources[sourceKey] = info
 	r.trackLocals[key] = info
 	r.mu.Unlock()
@@ -211,24 +229,38 @@ func (r *Room) RevokeUserSource(userID uuid.UUID, source Source) {
 	r.unpublish(userID, source)
 }
 
-func (r *Room) unpublish(userID uuid.UUID, source Source) {
-	r.mu.Lock()
+func matchesSource(tInfoSource Source, source Source) bool {
+	if tInfoSource == source {
+		return true
+	}
+	return source == SourceScreen && tInfoSource == SourceScreenAudio
+}
+
+func (r *Room) stopSourceTracksLocked(userID uuid.UUID, source Source) bool {
 	changed := false
 	for id, tInfo := range r.trackLocals {
-		ofSource := tInfo.Source == source || (source == SourceScreen && tInfo.Source == SourceScreenAudio)
-		if tInfo.SenderID == userID && ofSource {
+		if tInfo.SenderID == userID && matchesSource(tInfo.Source, source) {
 			tInfo.stoppedAt.Store(time.Now().UnixNano())
 			delete(r.trackLocals, id)
 			changed = true
 		}
 	}
+	return changed
+}
+
+func (r *Room) stopScreenShareLocked(userID uuid.UUID) {
+	r.dropScreenSubsLocked(userID)
+	delete(r.layerMeta, userID)
+	if g := r.groups[userID]; g != nil {
+		g.shareStopped()
+	}
+}
+
+func (r *Room) unpublish(userID uuid.UUID, source Source) {
+	r.mu.Lock()
+	changed := r.stopSourceTracksLocked(userID, source)
 	if source == SourceScreen {
-		r.dropScreenSubsLocked(userID)
-		// The next share declares its own layers.
-		delete(r.layerMeta, userID)
-		if g := r.groups[userID]; g != nil {
-			g.shareStopped()
-		}
+		r.stopScreenShareLocked(userID)
 	}
 	r.mu.Unlock()
 	if changed {

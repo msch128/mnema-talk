@@ -167,30 +167,43 @@ func (s *Service) UpdateRole(ctx context.Context, actor Subject, id uuid.UUID, i
 	return updated, err
 }
 
-// updateRole validates and stores the change; the second result lists whose
-// permissions change with it (nil: everybody).
-func (s *Service) updateRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, id uuid.UUID, in RoleInput) (Role, []uuid.UUID, error) {
+func checkBotRoleElevation(snap *Snapshot, actor Subject, id uuid.UUID, oldPerms, newPerms Set) error {
+	added := newPerms &^ oldPerms
+	if added.HasAny(Elevated) && !snap.IsOwner(actor) && snap.RoleHeldByBot(id) {
+		return httpx.ErrForbidden("a bot holds this role: only the Owner can add administrator or admin-area permissions to it")
+	}
+	return nil
+}
+
+func (s *Service) validateRoleUpdate(snap *Snapshot, actor Subject, id uuid.UUID, in RoleInput) (Role, Role, error) {
 	role, ok := snap.roles[id]
 	if !ok {
-		return Role{}, nil, errRoleNotFound
+		return Role{}, Role{}, errRoleNotFound
 	}
 	if err := checkRoleEditable(snap, actor, role, in); err != nil {
-		return Role{}, nil, err
+		return Role{}, Role{}, err
 	}
 	next, err := applyRoleInput(role, in)
 	if err != nil {
-		return Role{}, nil, err
+		return Role{}, Role{}, err
 	}
-	// Only the bits that change need the actor's own authority.
 	if err := checkGrant(snap, actor, role.Permissions^next.Permissions); err != nil {
-		return Role{}, nil, err
+		return Role{}, Role{}, err
 	}
-	// A role a bot already holds must not become a way to give it
-	// administrator power: that stays with the Owner.
-	if added := next.Permissions &^ role.Permissions; added.HasAny(Elevated) && !snap.IsOwner(actor) && snap.RoleHeldByBot(id) {
-		return Role{}, nil, httpx.ErrForbidden("a bot holds this role: only the Owner can add administrator or admin-area permissions to it")
+	if err := checkBotRoleElevation(snap, actor, id, role.Permissions, next.Permissions); err != nil {
+		return Role{}, Role{}, err
 	}
 	next.MaxUploadMB, err = s.checkRoleUpload(actor, in.MaxUploadMB, role.MaxUploadMB)
+	if err != nil {
+		return Role{}, Role{}, err
+	}
+	return role, next, nil
+}
+
+// updateRole validates and stores the change; the second result lists whose
+// permissions change with it (nil: everybody).
+func (s *Service) updateRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, actor Subject, id uuid.UUID, in RoleInput) (Role, []uuid.UUID, error) {
+	role, next, err := s.validateRoleUpdate(snap, actor, id, in)
 	if err != nil {
 		return Role{}, nil, err
 	}
@@ -208,16 +221,23 @@ func (s *Service) updateRole(ctx context.Context, tx pgx.Tx, snap *Snapshot, act
 	return updated, holders, err
 }
 
+func checkEveryoneChanges(in RoleInput) error {
+	if in.Name != nil || in.Color != nil {
+		return httpx.ErrInvalidInput("only the permissions of @everyone can be changed")
+	}
+	if in.Hoist != nil || in.Mentionable != nil {
+		return httpx.ErrInvalidInput("only the permissions of @everyone can be changed")
+	}
+	return nil
+}
+
 // checkRoleEditable lets @everyone change its permissions only and any other
 // role only for actors above it.
 func checkRoleEditable(snap *Snapshot, actor Subject, role Role, in RoleInput) error {
 	if !role.Everyone {
 		return snap.CanManageRole(actor, role)
 	}
-	if in.Name != nil || in.Color != nil || in.Hoist != nil || in.Mentionable != nil {
-		return httpx.ErrInvalidInput("only the permissions of @everyone can be changed")
-	}
-	return nil
+	return checkEveryoneChanges(in)
 }
 
 // applyRoleInput returns the role with the fields of in applied, after
@@ -242,29 +262,47 @@ func applyRoleInput(role Role, in RoleInput) (Role, error) {
 	return next, nil
 }
 
+func resolveRoleName(role Role, inName *string) (string, error) {
+	if inName == nil {
+		return role.Name, nil
+	}
+	name, err := cleanRoleName(*inName)
+	if err != nil {
+		return "", err
+	}
+	if role.Managed && name != role.Name {
+		return "", errManagedName
+	}
+	return name, nil
+}
+
+func resolveRoleColor(role Role, inColor *int) (int, error) {
+	if inColor == nil {
+		return role.Color, nil
+	}
+	if err := checkColor(*inColor); err != nil {
+		return 0, err
+	}
+	return *inColor, nil
+}
+
 // applyRoleAppearance applies name and colour; a managed role keeps its name
 // and has no upload limit of its own.
 func applyRoleAppearance(role Role, in RoleInput) (Role, error) {
-	next := role
-	if in.Name != nil {
-		name, err := cleanRoleName(*in.Name)
-		if err != nil {
-			return Role{}, err
-		}
-		if role.Managed && name != role.Name {
-			return Role{}, errManagedName
-		}
-		next.Name = name
-	}
 	if role.Managed && in.MaxUploadMB.Present {
 		return Role{}, httpx.ErrInvalidInput("managed bot roles have no upload limit: bots upload under their own rules")
 	}
-	if in.Color != nil {
-		if err := checkColor(*in.Color); err != nil {
-			return Role{}, err
-		}
-		next.Color = *in.Color
+	name, err := resolveRoleName(role, in.Name)
+	if err != nil {
+		return Role{}, err
 	}
+	color, err := resolveRoleColor(role, in.Color)
+	if err != nil {
+		return Role{}, err
+	}
+	next := role
+	next.Name = name
+	next.Color = color
 	return next, nil
 }
 

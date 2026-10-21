@@ -58,8 +58,17 @@ func TestListObjectsPaginatesAndPropagatesErrors(t *testing.T) {
 	if err := c.List(context.Background(), "uploads/", func(o media.ObjectInfo) error { objects = append(objects, o); return nil }); err != nil {
 		t.Fatal(err)
 	}
-	if requests.Load() != 2 || len(objects) != 2 || objects[0].Key != "uploads/a" || objects[1].Size != 8 || !objects[0].LastModified.Equal(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)) {
-		t.Fatalf("pages=%d, objects=%+v", requests.Load(), objects)
+	if requests.Load() != 2 {
+		t.Fatalf("pages count = %d, want 2", requests.Load())
+	}
+	if len(objects) != 2 {
+		t.Fatalf("objects count = %d, want 2", len(objects))
+	}
+	if objects[0].Key != "uploads/a" || objects[1].Size != 8 {
+		t.Fatalf("unexpected object keys or sizes: %+v", objects)
+	}
+	if !objects[0].LastModified.Equal(time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)) {
+		t.Fatalf("unexpected last modified: %v", objects[0].LastModified)
 	}
 	sentinel := errors.New("stop listing")
 	if err := c.List(context.Background(), "uploads/", func(media.ObjectInfo) error { return sentinel }); !errors.Is(err, sentinel) {
@@ -72,43 +81,50 @@ func TestListObjectsPaginatesAndPropagatesErrors(t *testing.T) {
 	}
 }
 
+func handleStreamUploadFailure(w http.ResponseWriter, r *http.Request, stage string, aborted *atomic.Bool) {
+	if r.Method == http.MethodHead {
+		return
+	}
+	q := r.URL.Query()
+	switch {
+	case r.Method == http.MethodDelete:
+		aborted.Store(true)
+		if stage == "abort" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+		} else {
+			w.WriteHeader(http.StatusNoContent)
+		}
+	case r.Method == http.MethodPost && q.Has("uploads"):
+		if stage == "start" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+			return
+		}
+		fmt.Fprint(w, `<InitiateMultipartUploadResult><UploadId>upload-test</UploadId></InitiateMultipartUploadResult>`)
+	case r.Method == http.MethodPost && q.Has("uploadId"):
+		writeS3Error(w, http.StatusForbidden, "AccessDenied")
+	case r.Method == http.MethodPut && q.Has("partNumber"):
+		if stage == "abort" {
+			writeS3Error(w, http.StatusForbidden, "AccessDenied")
+			return
+		}
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("ETag", `"part-test"`)
+	case r.Method == http.MethodPut:
+		writeS3Error(w, http.StatusForbidden, "AccessDenied")
+	default:
+		http.Error(w, "unexpected request", http.StatusBadRequest)
+	}
+}
+
 func TestStreamedUploadStorageFailures(t *testing.T) {
 	for _, stage := range []string{"put", "start", "complete", "abort"} {
 		t.Run(stage, func(t *testing.T) {
 			var aborted atomic.Bool
 			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method == http.MethodHead {
-					return
-				}
-				q := r.URL.Query()
-				switch {
-				case r.Method == http.MethodDelete:
-					aborted.Store(true)
-					if stage == "abort" {
-						writeS3Error(w, http.StatusForbidden, "AccessDenied")
-					} else {
-						w.WriteHeader(http.StatusNoContent)
-					}
-				case r.Method == http.MethodPost && q.Has("uploads"):
-					if stage == "start" {
-						writeS3Error(w, http.StatusForbidden, "AccessDenied")
-						return
-					}
-					fmt.Fprint(w, `<InitiateMultipartUploadResult><UploadId>upload-test</UploadId></InitiateMultipartUploadResult>`)
-				case r.Method == http.MethodPost && q.Has("uploadId"):
-					writeS3Error(w, http.StatusForbidden, "AccessDenied")
-				case r.Method == http.MethodPut && q.Has("partNumber"):
-					if stage == "abort" {
-						writeS3Error(w, http.StatusForbidden, "AccessDenied")
-						return
-					}
-					_, _ = io.Copy(io.Discard, r.Body)
-					w.Header().Set("ETag", `"part-test"`)
-				case r.Method == http.MethodPut:
-					writeS3Error(w, http.StatusForbidden, "AccessDenied")
-				default:
-					t.Errorf("unexpected request %s %s", r.Method, r.URL)
-				}
+				handleStreamUploadFailure(w, r, stage, &aborted)
 			}))
 			defer srv.Close()
 			c := newTestClient(t, srv.URL)

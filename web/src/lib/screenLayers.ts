@@ -29,18 +29,35 @@ function evenWidth(width: number): number {
   return Math.max(2, Math.floor(width / 2) * 2)
 }
 
+function buildLowerLayerPlan(captureHeight: number, captureWidth: number, height: number, fps: number): LayerPlan {
+  const scale = Math.round((captureHeight / height) * 1000) / 1000
+  const width = evenWidth(captureWidth / scale)
+  return {
+    width, height, fps,
+    scale,
+    maxFramerate: fps,
+    maxBitrate: bitrateFor(width, height, fps)
+  }
+}
+
+function shouldSkipLowerLayer(above: LayerPlan | undefined, height: number): boolean {
+  if (!above) return true
+  return height > Math.floor(above.height / MIN_LAYER_STEP)
+}
+
 /**
  * The layers of a share captured at `settings` and shared in quality `q`.
  * Empty while the capture's size is unknown; one layer when nothing smaller is
  * worth sending.
  */
-export function planScreenLayers(q: unknown, settings: MediaTrackSettings = {}): LayerPlan[] {
+export function planScreenLayers(q: unknown, settings?: MediaTrackSettings): LayerPlan[] {
+  const safeSettings = settings ?? {}
   const quality = normalizeQuality(q)
-  const captureHeight = Number(settings.height) || 0
-  const captureWidth = Number(settings.width) || 0
-  const top = sentSize(quality, settings)
+  const captureHeight = Number(safeSettings.height) || 0
+  const captureWidth = Number(safeSettings.width) || 0
+  const top = sentSize(quality, safeSettings)
   if (!top || !captureHeight) return []
-  const encoding = streamEncoding(quality, settings)
+  const encoding = streamEncoding(quality, safeSettings)
   const plans: LayerPlan[] = [{
     width: top.width, height: top.height, fps: quality.fps,
     scale: encoding.scaleResolutionDownBy, maxFramerate: encoding.maxFramerate, maxBitrate: encoding.maxBitrate
@@ -49,15 +66,8 @@ export function planScreenLayers(q: unknown, settings: MediaTrackSettings = {}):
   for (const height of SCREEN_LAYER_HEIGHTS) {
     if (plans.length >= MAX_SCREEN_LAYERS) break
     const above = plans[plans.length - 1]
-    if (!above || height > Math.floor(above.height / MIN_LAYER_STEP)) continue
-    const scale = Math.round((captureHeight / height) * 1000) / 1000
-    const width = evenWidth(captureWidth / scale)
-    plans.push({
-      width, height, fps,
-      scale,
-      maxFramerate: fps,
-      maxBitrate: bitrateFor(width, height, fps)
-    })
+    if (shouldSkipLowerLayer(above, height)) continue
+    plans.push(buildLowerLayerPlan(captureHeight, captureWidth, height, fps))
   }
   return plans
 }

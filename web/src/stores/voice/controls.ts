@@ -57,7 +57,8 @@ export function setScreenQuality(cs: VoiceState, q: ScreenQuality) {
   cs.screenQuality.value = norm
   try {
     localStorage.setItem(SCREEN_QUALITY_STORAGE_KEY, JSON.stringify(norm))
-  } catch {
+  } catch (error) {
+    void error
     // Storage blocked or full: keeps quality for this session only.
   }
 }

@@ -423,6 +423,19 @@ describe('voice activity, loopback and window lifecycle', () => {
     expect(present(FakeAudioContext.instances.at(-1)).closed).toBe(true)
   })
 
+  it('reports a failed loopback in a call without starting a standalone test', async () => {
+    const { rtc, voice } = await timedCall()
+    const callCtx = present(FakeAudioContext.instances.at(-1))
+    vi.spyOn(callCtx, 'createGain').mockImplementation(() => { throw new Error('graph broken') })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const mediaCalls = vi.mocked(navigator.mediaDevices.getUserMedia).mock.calls.length
+    const contexts = FakeAudioContext.instances.length
+    expect(await rtc.toggleMicTest()).toBe(false)
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(mediaCalls)
+    expect(FakeAudioContext.instances).toHaveLength(contexts)
+    expect(voice.isMicTesting).toBe(true)
+  })
+
   it('uses key fallback, ignores repeats, unrelated keys and typing, and releases on visibility loss', async () => {
     const { voice } = await timedCall()
     voice.inputMode = 'ptt'

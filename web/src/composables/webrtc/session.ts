@@ -55,33 +55,47 @@ async function captureMicrophone(cx: Cx): Promise<MediaStream | null> {
   }
 }
 
-export async function joinVoiceChannel(cx: Cx, channelId: string) {
-  const { voice, chat, st } = cx
-  // The server refuses it too; saying so up front avoids a half-started call.
+function canJoinVoiceChannel(cx: Cx, channelId: string): boolean {
   if (!usePermissionsStore().canIn(channelId, 'connect')) {
     useToastStore().error(t('talk.noConnect'))
-    return
+    return false
   }
-  // The native transport has no qualified protected-media owner yet.
-  // Reject before changing connection state or requesting physical capture.
   if (platform.isDesktop()) {
     useToastStore().error(t('nativeDesktop.mediaUnavailable'))
-    return
+    return false
   }
-  // If already in this channel, don't re-create audio graphs
-  if (channelId === voice.currentChannelId && st.localAudioStream.value) {
-    return
+  return !(channelId === cx.voice.currentChannelId && cx.st.localAudioStream.value)
+}
+
+function stopStreams(...streams: (MediaStream | null | undefined)[]) {
+  for (const s of streams) {
+    s?.getTracks().forEach(t => t.stop())
   }
+}
+
+async function prepareAudioPipeline(cx: Cx, gen: number): Promise<MediaStream | null | false> {
+  const stream = await captureMicrophone(cx)
+  if (gen !== cx.st.joinGeneration) {
+    stopStreams(stream)
+    return false
+  }
+  const sendStream = stream ? await setupMicPipeline(cx, stream) : null
+  if (gen !== cx.st.joinGeneration) {
+    stopStreams(sendStream, stream)
+    return false
+  }
+  return sendStream
+}
+
+export async function joinVoiceChannel(cx: Cx, channelId: string) {
+  if (!canJoinVoiceChannel(cx, channelId)) return
+  const { voice, chat, st } = cx
   resetMediaAnnouncements()
   closeMediaRoom()
-
-  // Stop standalone mic test before joining voice
   stopMicTest(cx)
-
-  // Clean up any previous voice session to prevent audio thread leak
   cleanupVoiceAudio(cx)
-
   registerSignalingHandlers(cx)
+
   const gen = ++st.joinGeneration
   voice.setChannel(channelId)
   startMediaCall(cx, channelId)
@@ -89,19 +103,8 @@ export async function joinVoiceChannel(cx: Cx, channelId: string) {
   await loadIceServers()
   if (gen !== st.joinGeneration) return
 
-  const stream = await captureMicrophone(cx)
-  // Left (or joined elsewhere) while the browser was asking for the mic.
-  if (gen !== st.joinGeneration) {
-    stream?.getTracks().forEach(t => t.stop())
-    return
-  }
-
-  const sendStream = stream ? await setupMicPipeline(cx, stream) : null
-  if (gen !== st.joinGeneration) {
-    sendStream?.getTracks().forEach(t => t.stop())
-    stream?.getTracks().forEach(t => t.stop())
-    return
-  }
+  const sendStream = await prepareAudioPipeline(cx, gen)
+  if (sendStream === false) return
 
   st.localAudioStream.value = sendStream
   voice.localAudioStream = sendStream

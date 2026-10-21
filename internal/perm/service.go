@@ -139,19 +139,11 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := s.now()
-	if s.db == nil {
-		// A fixture state: nothing to reload from.
-		if cur := s.cur.Load(); cur != nil {
-			return cur, nil
-		}
-		return nil, errNoDatabase
+	if snap, err := s.checkFixtureSnapshot(); snap != nil || err != nil {
+		return snap, err
 	}
-	if cur := s.cur.Load(); cur != nil && cur.age(now) < snapshotTTL {
-		// Another caller loaded while this one waited; a forced reload only
-		// repeats it once the rate limit allows.
-		if !forced || now.Sub(s.lastForced) < missReload {
-			return cur, nil
-		}
+	if snap := s.reuseCurrentSnapshot(now, forced); snap != nil {
+		return snap, nil
 	}
 	if forced {
 		s.lastForced = now
@@ -167,6 +159,27 @@ func (s *Service) reload(ctx context.Context, forced bool) (*Snapshot, error) {
 		s.cur.Store(snap)
 	}
 	return snap, nil
+}
+
+func (s *Service) checkFixtureSnapshot() (*Snapshot, error) {
+	if s.db != nil {
+		return nil, nil
+	}
+	if cur := s.cur.Load(); cur != nil {
+		return cur, nil
+	}
+	return nil, errNoDatabase
+}
+
+func (s *Service) reuseCurrentSnapshot(now time.Time, forced bool) *Snapshot {
+	cur := s.cur.Load()
+	if cur == nil || cur.age(now) >= snapshotTTL {
+		return nil
+	}
+	if !forced || now.Sub(s.lastForced) < missReload {
+		return cur
+	}
+	return nil
 }
 
 // Invalidate drops the snapshot; the next question reloads it.

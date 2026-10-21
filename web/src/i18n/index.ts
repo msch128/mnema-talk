@@ -23,8 +23,9 @@ export const locale = ref<Locale>(DEFAULT_LOCALE)
 function applyHtmlLang(l: Locale) {
   try {
     if (typeof document !== 'undefined') document.documentElement.lang = l
-  } catch {
+  } catch (error) {
     // no DOM
+    void error
   }
 }
 
@@ -82,7 +83,8 @@ function interpolate(str: string, params: TranslationParams | undefined): string
 function pluralForm(l: Locale, count: number): Intl.LDMLPluralRule {
   try {
     return new Intl.PluralRules(l).select(count)
-  } catch {
+  } catch (error) {
+    void error
     return count === 1 ? 'one' : 'other'
   }
 }
@@ -112,6 +114,16 @@ export const i18nPlugin = {
   }
 }
 
+function appendNodeKeys(out: Record<string, string>, path: string, v: MessageValue): void {
+  if (isPluralObject(v)) {
+    for (const [form, s] of Object.entries(v)) out[`${path}.${form}`] = s
+  } else if (typeof v === 'object' && v !== null) {
+    Object.assign(out, flattenKeys(v, true, path))
+  } else {
+    out[path] = v
+  }
+}
+
 /** Dotted leaf keys of a message tree; plural objects count as one leaf each
  *  unless `asMap` is set, which returns { key: value } instead. */
 export function flattenKeys(tree: MessageTree, asMap?: false, prefix?: string): string[]
@@ -120,13 +132,7 @@ export function flattenKeys(tree: MessageTree, asMap = false, prefix = ''): stri
   const out: Record<string, string> = {}
   for (const [k, v] of Object.entries(tree)) {
     const path = prefix ? `${prefix}.${k}` : k
-    if (v && typeof v === 'object' && !isPluralObject(v)) {
-      Object.assign(out, flattenKeys(v, true, path))
-    } else if (isPluralObject(v)) {
-      for (const [form, s] of Object.entries(v)) out[`${path}.${form}`] = s
-    } else {
-      out[path] = v
-    }
+    appendNodeKeys(out, path, v)
   }
   return asMap ? out : Object.keys(out)
 }

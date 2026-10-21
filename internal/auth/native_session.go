@@ -69,7 +69,7 @@ type IssuedNative struct {
 }
 
 func (IssuedNative) Format(state fmt.State, _ rune) {
-	_, _ = io.WriteString(state, "[native grant redacted]")
+	writeNativeText(state, "[native grant redacted]")
 }
 
 func (g IssuedNative) RefreshSequence() uint64 { return g.refreshSequence }
@@ -97,18 +97,30 @@ type NativeSessions struct {
 	familyControl   NativeFamilyControl
 }
 
+func invalidNativePolicy(pool *db.Pool, policy NativePolicy) bool {
+	if pool == nil || pool.Pool == nil {
+		return true
+	}
+	if policy.SessionLifetime < time.Hour || policy.SessionLifetime > 365*24*time.Hour {
+		return true
+	}
+	if policy.FamilyLifetime < time.Second || policy.FamilyLifetime > nativeMaxFamilyTTL {
+		return true
+	}
+	return policy.FamilyLifetime > policy.SessionLifetime
+}
+
+func readCommitted(pool *db.Pool) func(context.Context) (pgx.Tx, error) {
+	return func(ctx context.Context) (pgx.Tx, error) {
+		return pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	}
+}
+
 func NewNativeSessions(pool *db.Pool, policy NativePolicy) (*NativeSessions, error) {
-	if pool == nil || pool.Pool == nil || policy.SessionLifetime < time.Hour ||
-		policy.SessionLifetime > 365*24*time.Hour || policy.FamilyLifetime < time.Second ||
-		policy.FamilyLifetime > nativeMaxFamilyTTL || policy.FamilyLifetime > policy.SessionLifetime {
+	if invalidNativePolicy(pool, policy) {
 		return nil, errors.New("invalid native session policy")
 	}
-	return &NativeSessions{
-		pool: pool, policy: policy, random: rand.Reader,
-		begin: func(ctx context.Context) (pgx.Tx, error) {
-			return pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
-		},
-	}, nil
+	return &NativeSessions{pool: pool, policy: policy, random: rand.Reader, begin: readCommitted(pool)}, nil
 }
 
 func (s *NativeSessions) transact(ctx context.Context, fn func(context.Context, pgx.Tx) error) (err error) {
@@ -244,6 +256,10 @@ func (s *NativeSessions) openFamily(ctx context.Context, tx pgx.Tx, proof verifi
 	if count >= nativeMaxFamilies {
 		return IssuedNative{}, ErrNativeLimit
 	}
+	return s.storeOpenedFamily(ctx, tx, user, version, instanceID, familyID, now, access, refresh)
+}
+
+func (s *NativeSessions) storeOpenedFamily(ctx context.Context, tx pgx.Tx, user *User, version int, instanceID, familyID uuid.UUID, now time.Time, access, refresh nativeSecret) (IssuedNative, error) {
 	expiry := now.Add(s.policy.FamilyLifetime)
 	if _, err := tx.Exec(ctx, `INSERT INTO native_session_families
 		(id,user_id,client_instance_id,issued_token_version,created_at,expires_at,refresh_after)

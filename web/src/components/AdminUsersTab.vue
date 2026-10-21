@@ -19,7 +19,7 @@ const permissions = usePermissionsStore()
 const rolesModalUser = ref<AdminUser | null>(null)
 
 const users = ref<AdminUser[]>([])
-const passwordModalUser = ref<AdminUser | null>(null)
+const resetUser = ref<AdminUser | null>(null)
 const userSearch = ref('')
 function showError(e: unknown) {
   toasts.error(caughtErrorMessage(e, t('admin.unknownError')))
@@ -181,7 +181,7 @@ onMounted(async () => {
               @clear-lockout="clearLoginLockout(u)"
               @roles="rolesModalUser = u"
               @toggle-disable="toggleDisableUser(u)"
-              @reset-password="passwordModalUser = u"
+              @reset-login="resetUser = u"
               @revoke-sessions="revokeSessions(u)"
             />
           </tbody>
@@ -191,6 +191,6 @@ onMounted(async () => {
 
     <MemberRolesDialog v-if="rolesModalUser" :user="rolesModalUser" @close="rolesModalUser = null" @saved="refreshUsers" />
 
-    <AdminResetPasswordDialog v-if="passwordModalUser" :user="passwordModalUser" @close="passwordModalUser = null" />
+    <AdminResetPasswordDialog v-if="resetUser" :user="resetUser" @close="resetUser = null" />
   </section>
 </template>

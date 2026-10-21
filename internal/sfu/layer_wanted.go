@@ -120,29 +120,34 @@ func (g *layerGroup) need() uint8 {
 	return mask
 }
 
-// refreshWanted tells the publisher which layers to send when that changed.
-// A layer stays wanted for layerHold after the last viewer left it.
-func (g *layerGroup) refreshWanted() {
-	need := g.need()
-	now := layerNow()
-	g.mu.Lock()
+// evalLayerHold updates or reads the expiration time for layer i.
+func (g *layerGroup) evalLayerHold(i int, now time.Time, need uint8) (uint8, time.Time) {
+	if need&(1<<i) != 0 {
+		g.hold[i] = now.Add(layerHold)
+		return 1 << i, time.Time{}
+	}
+	if g.hold[i].After(now) {
+		return 1 << i, g.hold[i]
+	}
+	return 0, time.Time{}
+}
+
+// computeHoldMaskLocked determines which layers remain wanted and when the earliest expires.
+func (g *layerGroup) computeHoldMaskLocked(now time.Time, need uint8) (uint8, time.Time) {
 	var mask uint8
 	var next time.Time
 	for i := range g.hold {
-		switch {
-		case need&(1<<i) != 0:
-			g.hold[i] = now.Add(layerHold)
-			mask |= 1 << i
-		case g.hold[i].After(now):
-			mask |= 1 << i
-			if next.IsZero() || g.hold[i].Before(next) {
-				next = g.hold[i]
-			}
+		m, exp := g.evalLayerHold(i, now, need)
+		mask |= m
+		if !exp.IsZero() && (next.IsZero() || exp.Before(next)) {
+			next = exp
 		}
 	}
-	changed := !g.started || mask != g.announced
-	g.started = true
-	g.announced = mask
+	return mask, next
+}
+
+// scheduleHoldTimerLocked stops any existing timer and schedules a refresh for the next expiration.
+func (g *layerGroup) scheduleHoldTimerLocked(next time.Time, now time.Time) {
 	if g.timer != nil {
 		g.timer.Stop()
 		g.timer = nil
@@ -150,6 +155,19 @@ func (g *layerGroup) refreshWanted() {
 	if !next.IsZero() && !g.superseded.Load() {
 		g.timer = time.AfterFunc(next.Sub(now)+time.Millisecond, g.refreshWanted)
 	}
+}
+
+// refreshWanted tells the publisher which layers to send when that changed.
+// A layer stays wanted for layerHold after the last viewer left it.
+func (g *layerGroup) refreshWanted() {
+	need := g.need()
+	now := layerNow()
+	g.mu.Lock()
+	mask, next := g.computeHoldMaskLocked(now, need)
+	changed := !g.started || mask != g.announced
+	g.started = true
+	g.announced = mask
+	g.scheduleHoldTimerLocked(next, now)
 	g.mu.Unlock()
 	if changed && !g.superseded.Load() {
 		g.notifyWanted(mask)

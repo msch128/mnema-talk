@@ -70,6 +70,56 @@ func (p *Pool) Migrate(ctx context.Context) error {
 	return p.MigrateFS(ctx, embeddedMigrations())
 }
 
+type migrationFile struct {
+	name    string
+	content []byte
+	sum     string
+}
+
+func loadMigrationFiles(fsys fs.FS) ([]migrationFile, error) {
+	files, err := listMigrations(fsys)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]migrationFile, 0, len(files))
+	for _, name := range files {
+		b, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, migrationFile{
+			name:    name,
+			content: b,
+			sum:     Checksum(b),
+		})
+	}
+	return res, nil
+}
+
+func backfillChecksums(ctx context.Context, conn *pgxpool.Conn, applied map[string]string, files []migrationFile) error {
+	sums := make(map[string]string, len(files))
+	for _, f := range files {
+		sums[f.name] = f.sum
+	}
+	backfill, err := verifyChecksums(applied, sums)
+	if err != nil {
+		return err
+	}
+	return recordChecksums(ctx, conn, backfill, sums)
+}
+
+func applyPendingMigrations(ctx context.Context, conn *pgxpool.Conn, applied map[string]string, files []migrationFile) error {
+	for _, f := range files {
+		if _, ok := applied[f.name]; ok {
+			continue
+		}
+		if err := applyMigration(ctx, conn, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // MigrateFS applies the *.sql files at the root of fsys like Migrate does.
 // Migrate uses the embedded migrations; tests pass their own.
 func (p *Pool) MigrateFS(ctx context.Context, fsys fs.FS) error {
@@ -92,36 +142,14 @@ func (p *Pool) MigrateFS(ctx context.Context, fsys fs.FS) error {
 	if err != nil {
 		return err
 	}
-	files, err := listMigrations(fsys)
+	files, err := loadMigrationFiles(fsys)
 	if err != nil {
 		return err
 	}
-	contents := make(map[string][]byte, len(files))
-	sums := make(map[string]string, len(files))
-	for _, name := range files {
-		b, err := fs.ReadFile(fsys, name)
-		if err != nil {
-			return err
-		}
-		contents[name], sums[name] = b, Checksum(b)
-	}
-
-	backfill, err := verifyChecksums(applied, sums)
-	if err != nil {
+	if err := backfillChecksums(ctx, conn, applied, files); err != nil {
 		return err
 	}
-	if err := recordChecksums(ctx, conn, backfill, sums); err != nil {
-		return err
-	}
-	for _, name := range files {
-		if _, ok := applied[name]; ok {
-			continue
-		}
-		if err := applyMigration(ctx, conn, name, contents[name], sums[name]); err != nil {
-			return err
-		}
-	}
-	return nil
+	return applyPendingMigrations(ctx, conn, applied, files)
 }
 
 // lockMigrations takes the advisory lock and returns the function that
@@ -131,7 +159,9 @@ func lockMigrations(ctx context.Context, conn *pgxpool.Conn) (unlock func(), err
 		return nil, fmt.Errorf("acquire migration lock: %w", err)
 	}
 	return func() {
-		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrationLockID)
+		if _, err := conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1)`, migrationLockID); err != nil {
+			slog.Debug("release migration lock", "err", err)
+		}
 	}, nil
 }
 
@@ -177,30 +207,43 @@ func appliedMigrations(ctx context.Context, conn *pgxpool.Conn) (map[string]stri
 // recordChecksums stores the checksums of migrations applied before
 // checksums were recorded.
 func recordChecksums(ctx context.Context, conn *pgxpool.Conn, names []string, sums map[string]string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	batch := &pgx.Batch{}
 	for _, name := range names {
-		if _, err := conn.Exec(ctx, `UPDATE schema_migrations SET checksum = $2 WHERE filename = $1 AND checksum IS NULL`, name, sums[name]); err != nil {
+		batch.Queue(`UPDATE schema_migrations SET checksum = $2 WHERE filename = $1 AND checksum IS NULL`, name, sums[name])
+	}
+	br := conn.SendBatch(ctx, batch)
+	for _, name := range names {
+		if _, err := br.Exec(); err != nil {
+			closeErr := br.Close()
+			if closeErr != nil {
+				slog.Debug("close batch after error", "err", closeErr)
+			}
 			return fmt.Errorf("record checksum of %s: %w", name, err)
 		}
 	}
-	if len(names) > 0 {
-		slog.Info("migration checksums recorded", "count", len(names))
+	if err := br.Close(); err != nil {
+		return fmt.Errorf("record checksums batch close: %w", err)
 	}
+	slog.Info("migration checksums recorded", "count", len(names))
 	return nil
 }
 
 // applyMigration runs one migration file and records it, in one transaction.
-func applyMigration(ctx context.Context, conn *pgxpool.Conn, name string, content []byte, sum string) error {
+func applyMigration(ctx context.Context, conn *pgxpool.Conn, m migrationFile) error {
 	err := pgx.BeginFunc(ctx, conn, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, string(content)); err != nil {
+		if _, err := tx.Exec(ctx, string(m.content)); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2)`, name, sum)
+		_, err := tx.Exec(ctx, `INSERT INTO schema_migrations (filename, checksum) VALUES ($1, $2)`, m.name, m.sum)
 		return err
 	})
 	if err != nil {
-		return fmt.Errorf("apply migration %s: %w", name, err)
+		return fmt.Errorf("apply migration %s: %w", m.name, err)
 	}
-	slog.Info("migration applied", "file", name)
+	slog.Info("migration applied", "file", m.name)
 	return nil
 }
 
@@ -251,7 +294,10 @@ func verifyChecksums(applied, files map[string]string) ([]string, error) {
 // embeddedMigrations is the migrations directory of the embedded files;
 // fs.Sub only fails for an invalid constant path.
 func embeddedMigrations() fs.FS {
-	sub, _ := fs.Sub(migrationFS, "migrations")
+	sub, err := fs.Sub(migrationFS, "migrations")
+	if err != nil {
+		slog.Error("embedded migrations unavailable", "err", err)
+	}
 	return sub
 }
 

@@ -64,15 +64,23 @@ interface Nal {
   end: number
 }
 
+function isStartCode(data: Uint8Array, i: number): boolean {
+  return data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 1
+}
+
+function trimTrailingZeros(data: Uint8Array, start: number, end: number): number {
+  let at = end
+  while (at > start && data[at - 1] === 0) at--
+  return at
+}
+
 function splitNals(data: Uint8Array): Nal[] {
   const nals: Nal[] = []
   let open = -1
   for (let i = 0; i + 2 < data.length; i++) {
-    if (data[i] !== 0 || data[i + 1] !== 0 || data[i + 2] !== 1) continue
+    if (!isStartCode(data, i)) continue
     if (open >= 0) {
-      let end = i
-      while (end > open && data[end - 1] === 0) end--
-      nals.push({ start: open, end })
+      nals.push({ start: open, end: trimTrailingZeros(data, open, i) })
     }
     open = i + 3
     i += 2
@@ -192,6 +200,33 @@ interface Unit {
   readable: number
 }
 
+type ParsedUnit =
+  | { kind: 'unit'; unit: Unit }
+  | { kind: 'drop' }
+  | { kind: 'invalid' }
+
+function parsePictureUnit(gap: Uint8Array, nal: Uint8Array): ParsedUnit {
+  const readable = sliceHeaderBytes(nal)
+  if (readable === null || nal.length <= readable) return { kind: 'invalid' }
+  return { kind: 'unit', unit: { gap, nal, picture: true, readable } }
+}
+
+function parseNonPictureUnit(gap: Uint8Array, nal: Uint8Array, type: number): ParsedUnit {
+  if (NAL_PARAMETER_SETS.has(type) || type === NAL_AUD) {
+    return { kind: 'unit', unit: { gap, nal, picture: false, readable: nal.length } }
+  }
+  return { kind: 'invalid' }
+}
+
+function parseNalUnit(gap: Uint8Array, nal: Uint8Array, dropSei: boolean): ParsedUnit {
+  const header = nal[0]
+  if (header === undefined || (header & 0x80) !== 0) return { kind: 'invalid' }
+  const type = nalType(header)
+  if (type === NAL_SEI && dropSei) return { kind: 'drop' }
+  if (isPictureType(type)) return parsePictureUnit(gap, nal)
+  return parseNonPictureUnit(gap, nal, type)
+}
+
 /**
  * Cuts an Annex B frame into units and checks it. Null when it is not Annex B,
  * has a NAL type that is not allowed, or has no picture NAL. SEI is removed
@@ -202,25 +237,18 @@ function parseFrame(data: Uint8Array, dropSei: boolean): Unit[] | null {
   const units: Unit[] = []
   let at = 0
   let pictures = 0
+
   for (const found of splitNals(data)) {
     const gap = data.subarray(at, found.start)
     at = found.end
     const nal = data.subarray(found.start, found.end)
-    const header = nal[0]
-    if (header === undefined || header & 0x80) return null
-    const type = nalType(header)
-    if (type === NAL_SEI && dropSei) continue
-    if (isPictureType(type)) {
-      const readable = sliceHeaderBytes(nal)
-      if (readable === null || nal.length <= readable) return null
-      pictures++
-      units.push({ gap, nal, picture: true, readable })
-    } else if (NAL_PARAMETER_SETS.has(type) || type === NAL_AUD) {
-      units.push({ gap, nal, picture: false, readable: nal.length })
-    } else {
-      return null
-    }
+    const parsed = parseNalUnit(gap, nal, dropSei)
+    if (parsed.kind === 'invalid') return null
+    if (parsed.kind === 'drop') continue
+    if (parsed.unit.picture) pictures++
+    units.push(parsed.unit)
   }
+
   return pictures > 0 ? units : null
 }
 

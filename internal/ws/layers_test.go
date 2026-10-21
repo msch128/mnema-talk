@@ -69,8 +69,11 @@ func TestScreenLayersAreAnnouncedToTheRoom(t *testing.T) {
 		if err := json.Unmarshal(raw, &ev); err != nil {
 			t.Fatal(err)
 		}
-		if ev.ChannelID != ch.ID || ev.UserID != sharer.User.ID || len(ev.Layers) != 3 || ev.Layers[2] != want[2] {
-			t.Fatalf("%s got %+v", c.User.Username, ev)
+		if ev.ChannelID != ch.ID || ev.UserID != sharer.User.ID {
+			t.Fatalf("%s channel/user mismatch: %+v", c.User.Username, ev)
+		}
+		if len(ev.Layers) != 3 || ev.Layers[2] != want[2] {
+			t.Fatalf("%s layers mismatch: %+v", c.User.Username, ev)
 		}
 	}
 	if _, ok := nextEventOf(outsider, "screen_layers", quietWait); ok {
@@ -85,7 +88,9 @@ func TestScreenLayersAreAnnouncedToTheRoom(t *testing.T) {
 		t.Fatal("a late joiner did not learn the layers")
 	}
 	var ev layersEvent
-	_ = json.Unmarshal(raw, &ev)
+	if err := json.Unmarshal(raw, &ev); err != nil {
+		t.Fatal(err)
+	}
 	if len(ev.Layers) != 3 {
 		t.Fatalf("late joiner got %+v", ev)
 	}
@@ -99,8 +104,10 @@ func TestScreenLayersAreAnnouncedToTheRoom(t *testing.T) {
 	var end struct {
 		Layers []sfu.Layer `json:"layers"`
 	}
-	_ = json.Unmarshal(raw, &end)
-	if end.Layers == nil || len(end.Layers) != 0 {
+	if err := json.Unmarshal(raw, &end); err != nil {
+		t.Fatal(err)
+	}
+	if len(end.Layers) != 0 {
 		t.Fatalf("withdrawn layers must be an empty array, got %s", raw)
 	}
 }
@@ -147,8 +154,11 @@ func TestQualityAndWantedGoToOneMemberOfTheRoom(t *testing.T) {
 	if err := json.Unmarshal(raw, &q); err != nil {
 		t.Fatal(err)
 	}
-	if q.ChannelID != ch.ID || q.UserID != sharer.User.ID || q.Layer != 1 || !q.Auto {
-		t.Fatalf("quality event %+v", q)
+	if q.ChannelID != ch.ID || q.UserID != sharer.User.ID {
+		t.Fatalf("quality event wrong channel or user: %+v", q)
+	}
+	if q.Layer != 1 || !q.Auto {
+		t.Fatalf("quality event layer/auto mismatch: %+v", q)
 	}
 	for _, c := range []*Client{tab, sharer, member} {
 		if _, ok := nextEventOf(c, "screen_quality", quietWait); ok {
@@ -165,9 +175,14 @@ func TestQualityAndWantedGoToOneMemberOfTheRoom(t *testing.T) {
 		ChannelID uuid.UUID `json:"channel_id"`
 		Layers    []int     `json:"layers"`
 	}
-	_ = json.Unmarshal(raw, &w)
-	if w.ChannelID != ch.ID || len(w.Layers) != 2 || w.Layers[1] != 2 {
-		t.Fatalf("wanted event %+v", w)
+	if err := json.Unmarshal(raw, &w); err != nil {
+		t.Fatal(err)
+	}
+	if w.ChannelID != ch.ID {
+		t.Fatalf("wanted event channel mismatch: %+v", w)
+	}
+	if len(w.Layers) != 2 || w.Layers[1] != 2 {
+		t.Fatalf("wanted event layers mismatch: %+v", w)
 	}
 	h.announceLayersWanted(ch.ID, sharer.User.ID, nil)
 	raw, _ = nextEventOf(sharer, "screen_layers_wanted", viewersWait)
@@ -186,7 +201,10 @@ func TestServerInfoAnnouncesScreenLayers(t *testing.T) {
 	h, _ := newSFUHub(t)
 	c := testClient(h, auth.User{ID: uuid.New(), Username: "member"})
 	got := events(t, c, "server_info")
-	if len(got) != 1 || got[0]["screen_layers"] != float64(sfu.MaxLayers) {
+	if len(got) != 1 {
+		t.Fatalf("expected 1 server_info event, got %d", len(got))
+	}
+	if got[0]["screen_layers"] != float64(sfu.MaxLayers) {
 		t.Fatalf("server_info with media: %+v", got)
 	}
 
@@ -219,8 +237,16 @@ func TestParseQuality(t *testing.T) {
 		{`true`, 0, true, false},
 	} {
 		layer, present, ok := parseQuality(json.RawMessage(c.raw))
-		if present != c.present || ok != c.wantOK || (ok && present && layer != c.layer) {
-			t.Errorf("%q: layer=%d present=%v ok=%v", c.raw, layer, present, ok)
+		if ok != c.wantOK {
+			t.Errorf("%q: ok=%v, want %v", c.raw, ok, c.wantOK)
+			continue
+		}
+		if present != c.present {
+			t.Errorf("%q: present=%v, want %v", c.raw, present, c.present)
+			continue
+		}
+		if ok && present && layer != c.layer {
+			t.Errorf("%q: layer=%d, want %d", c.raw, layer, c.layer)
 		}
 	}
 }
@@ -231,14 +257,20 @@ func TestSubscribeWithQuality(t *testing.T) {
 		return parseSubscribe(json.RawMessage(body), viewer)
 	}
 	id := sharer.String()
-	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"quality":1}`); !ok || !req.hasQuality || req.quality != 1 {
-		t.Errorf("screen with layer: %+v ok=%v", req, ok)
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"quality":1}`); !ok {
+		t.Errorf("screen with layer parse failed: %+v", req)
+	} else if !req.hasQuality || req.quality != 1 {
+		t.Errorf("screen with layer mismatch: %+v", req)
 	}
-	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"quality":"auto"}`); !ok || !req.hasQuality || req.quality != -1 {
-		t.Errorf("screen with auto: %+v ok=%v", req, ok)
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true,"quality":"auto"}`); !ok {
+		t.Errorf("screen with auto parse failed: %+v", req)
+	} else if !req.hasQuality || req.quality != -1 {
+		t.Errorf("screen with auto mismatch: %+v", req)
 	}
-	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true}`); !ok || req.hasQuality {
-		t.Errorf("screen without quality: %+v ok=%v", req, ok)
+	if req, ok := parse(`{"kind":"screen","user_id":"` + id + `","on":true}`); !ok {
+		t.Errorf("screen without quality parse failed: %+v", req)
+	} else if req.hasQuality {
+		t.Errorf("screen without quality had quality: %+v", req)
 	}
 	for _, body := range []string{
 		`{"kind":"screen","user_id":"` + id + `","on":true,"quality":7}`,
@@ -285,13 +317,18 @@ func TestUnsendableAnnouncementsAreDropped(t *testing.T) {
 	// A missing list is sent as an empty one.
 	h.announceScreenLayers(ch.ID, uuid.New(), nil)
 	raw, ok := nextEventOf(c, "screen_layers", viewersWait)
-	if !ok || !json.Valid(raw) {
+	if !ok {
 		t.Fatal("no announcement")
+	}
+	if !json.Valid(raw) {
+		t.Fatalf("invalid announcement JSON: %s", raw)
 	}
 	var ev struct {
 		Layers []sfu.Layer `json:"layers"`
 	}
-	_ = json.Unmarshal(raw, &ev)
+	if err := json.Unmarshal(raw, &ev); err != nil {
+		t.Fatal(err)
+	}
 	if ev.Layers == nil {
 		t.Fatalf("layers must be an array: %s", raw)
 	}

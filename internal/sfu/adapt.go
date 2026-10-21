@@ -219,31 +219,57 @@ func (a *adapter) resetPLIs() {
 	a.flooded = false
 }
 
-// observe takes one report: the loss fraction (0..1) and the round trip time
-// (zero when the report did not carry it). It returns the layer to receive
-// and whether that changed.
-func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, bool) {
-	rise := a.recordRTT(rtt)
-	narrow := false
-	if now.Before(a.graceUntil) {
-		a.bw = bwSample{}
-	} else {
-		narrow = a.bandwidthTrouble()
-	}
-	a.narrowed = false
-	recent := a.recentPLIs(now)
-	flooded := a.flooded
-	a.flooded = false
-	if now.Before(a.graceUntil) {
-		return a.layer, false
-	}
-	severe := loss >= adaptLossSevere
+type adaptSignals struct {
+	loss   float64
+	rise   bool
+	narrow bool
+	recent int
+}
+
+func (a *adapter) updateLossStreak(loss float64) (severe bool) {
 	if loss >= adaptLossHigh {
 		a.highStreak++
 	} else {
 		a.highStreak = 0
 	}
-	trouble := severe || a.highStreak >= 2 || rise || flooded || recent >= adaptPLIs || narrow
+	return loss >= adaptLossSevere
+}
+
+func (a *adapter) hasTrouble(s adaptSignals) bool {
+	severe := a.updateLossStreak(s.loss)
+	switch {
+	case severe, a.highStreak >= 2:
+		return true
+	case s.rise, a.flooded:
+		return true
+	case s.recent >= adaptPLIs, s.narrow:
+		return true
+	default:
+		return false
+	}
+}
+
+// observe takes one report: the loss fraction (0..1) and the round trip time
+// (zero when the report did not carry it). It returns the layer to receive
+// and whether that changed.
+func (a *adapter) observe(now time.Time, loss float64, rtt time.Duration) (int, bool) {
+	rise := a.recordRTT(rtt)
+	if now.Before(a.graceUntil) {
+		a.bw = bwSample{}
+		a.narrowed = false
+		a.flooded = false
+		return a.layer, false
+	}
+	narrow := a.bandwidthTrouble()
+	a.narrowed = false
+	sig := adaptSignals{
+		loss:   loss,
+		rise:   rise,
+		narrow: narrow,
+		recent: a.recentPLIs(now),
+	}
+	trouble := a.hasTrouble(sig)
+	a.flooded = false
 	if trouble {
 		return a.layer, a.stepDown(now, narrow)
 	}
@@ -282,6 +308,16 @@ func (a *adapter) stepDown(now time.Time, narrow bool) bool {
 	return true
 }
 
+func (a *adapter) canStepUp(now time.Time) bool {
+	if a.layer <= 0 || now.Before(a.holdUntil) {
+		return false
+	}
+	if now.Sub(a.cleanSince) < adaptCleanFor {
+		return false
+	}
+	return a.bandwidthAllowsUp(now)
+}
+
 // tryStepUp moves the viewer to the next better layer once it has been clean
 // long enough and nothing holds it back. It reports whether the layer changed.
 func (a *adapter) tryStepUp(now time.Time) bool {
@@ -290,7 +326,7 @@ func (a *adapter) tryStepUp(now time.Time) bool {
 		a.backoff = adaptCleanFor
 		a.probeEnd = time.Time{}
 	}
-	if a.layer > 0 && !now.Before(a.holdUntil) && now.Sub(a.cleanSince) >= adaptCleanFor && a.bandwidthAllowsUp(now) {
+	if a.canStepUp(now) {
 		a.layer--
 		a.bwLow, a.bwHigh = 0, 0
 		a.graceUntil = now.Add(adaptGrace)

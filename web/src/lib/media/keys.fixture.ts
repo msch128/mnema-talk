@@ -1,5 +1,5 @@
 import { webcrypto } from 'node:crypto'
-import { ReplayWindow, type EpochKeys } from './frame'
+import { type EpochKeys } from './frame'
 
 const subtle = webcrypto.subtle as unknown as SubtleCrypto
 
@@ -24,8 +24,4 @@ export async function testAesKey(byte: number): Promise<CryptoKey> {
  */
 export function testEpochKeys(key: CryptoKey, self: TestMember, members: Record<string, TestMember>): EpochKeys {
   return { key, signer: self.signer, verifiers: new Map(Object.entries(members).map(([id, member]) => [id, member.verifier])) }
-}
-
-export function freshWindow(): ReplayWindow {
-  return new ReplayWindow()
 }

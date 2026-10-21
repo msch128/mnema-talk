@@ -6,23 +6,22 @@ import {
   type KeyPackage,
   type Proposal,
 } from 'ts-mls'
-import { FRAME_EPOCH_BYTES, MEDIA_EXPORTER_LABEL, PREVIOUS_EPOCH_MS } from './bounds'
+import { FRAME_EPOCH_BYTES, MEDIA_EXPORTER_LABEL } from './bounds'
 import { clock } from './clock'
 import { importEpochKey, importFrameSigner, type EpochKeys } from './frame'
 import { sealHeartbeat } from './heartbeat'
 import { sealCapability } from './capability'
 import { safetyCode } from './verify'
 import { CONFLICT_MS, type MediaStep } from './groupParams'
-import { credentialIdentity, sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers, encodeWire } from './groupTree'
+import { credentialIdentity, sameBytes, wipeConsumed, treeMembers, leafIdentities, frameVerifiers } from './groupTree'
 import { GroupBase } from './groupBase'
+import { commitMessage, dropAbsent, retainedPrevious, type AddProposal, type CommitResult, type SealedCommit } from './groupEpochCommit'
 
-/** The wires a created commit goes out as: the welcome for new members, if any, and the public commit. */
-function commitWires(result: Awaited<ReturnType<typeof createCommit>>) {
-  const welcome = result.welcome
-    ? encodeWire({ version: 'mls10', wireformat: 'mls_welcome', welcome: result.welcome })
-    : null
-  const commit = result.commit.wireformat === 'mls_public_message' ? encodeWire(result.commit) : null
-  return { welcome, commit }
+type EpochMaterial = {
+  aes: CryptoKey
+  code: string
+  signer: CryptoKey
+  verifiers: Map<string, CryptoKey>
 }
 
 export abstract class GroupEpoch extends GroupBase {
@@ -42,36 +41,49 @@ export abstract class GroupEpoch extends GroupBase {
     }
     const raw = await mlsExporter(state.keySchedule.exporterSecret, MEDIA_EXPORTER_LABEL, this.groupId, FRAME_EPOCH_BYTES, this.cs)
     try {
-      const aes = await importEpochKey(raw)
-      const code = await safetyCode(state.keySchedule.epochAuthenticator)
-      // Without Ed25519 in this browser there is no signer, so no keys and no media.
-      const signer = await importFrameSigner(state.signaturePrivateKey)
-      const verifiers = await frameVerifiers(state)
-      // An identity that holds two leaves (or a leaf nobody can read) is never
-      // a group to key media from: refuse the epoch rather than pick a leaf.
-      const leaves = leafIdentities(state)
-      if (!aes || !code || !signer || !verifiers || !verifiers.has(this.userId) || leaves.includes('') || new Set(leaves).size !== leaves.length) {
+      const material = await this.epochMaterial(state, raw)
+      if (!material) {
         this.wipeRejected(state)
         return false
       }
-      this.state = state
-      // A swap has landed (or the group changed): everyone counts again.
-      this.restarting.clear()
-      if (this.offerTimer !== null) clearTimeout(this.offerTimer)
-      this.offerTimer = null
-      const epochNumber = Number(epoch)
-      const key: EpochKeys = { key: aes, signer, verifiers }
-      const before = this.current
-      this.current = { epoch: epochNumber, key, soft: via === 'soft', verification: { epoch: epochNumber, code, members: leafIdentities(state).sort() } }
-      // Only the epoch right before this one, of this group, stays readable, and briefly.
-      this.previousEpoch = via !== 'new' && before && before.epoch < epochNumber
-        ? { epoch: before.epoch, key: before.key, until: clock.now() + PREVIOUS_EPOCH_MS }
-        : null
-      this.startEpoch(state)
+      this.installEpoch(state, via, epoch, material)
       return true
     } finally {
       zeroOutUint8Array(raw)
     }
+  }
+
+  private async epochMaterial(state: ClientState, raw: Uint8Array): Promise<EpochMaterial | null> {
+    const aes = await importEpochKey(raw)
+    const code = await safetyCode(state.keySchedule.epochAuthenticator)
+    // Without Ed25519 in this browser there is no signer, so no keys and no media.
+    const signer = await importFrameSigner(state.signaturePrivateKey)
+    const verifiers = await frameVerifiers(state)
+    // An identity that holds two leaves (or a leaf nobody can read) is never
+    // a group to key media from: refuse the epoch rather than pick a leaf.
+    const leaves = leafIdentities(state)
+    if (!aes) return null
+    if (!code) return null
+    if (!signer) return null
+    if (!verifiers) return null
+    if (!verifiers.has(this.userId)) return null
+    if (leaves.includes('')) return null
+    if (new Set(leaves).size !== leaves.length) return null
+    return { aes, code, signer, verifiers }
+  }
+
+  private installEpoch(state: ClientState, via: 'new' | 'commit' | 'soft', epoch: bigint, material: EpochMaterial): void {
+    this.state = state
+    // A swap has landed (or the group changed): everyone counts again.
+    this.restarting.clear()
+    if (this.offerTimer !== null) clearTimeout(this.offerTimer)
+    this.offerTimer = null
+    const epochNumber = Number(epoch)
+    const before = this.current
+    const key: EpochKeys = { key: material.aes, signer: material.signer, verifiers: material.verifiers }
+    this.current = { epoch: epochNumber, key, soft: via === 'soft', verification: { epoch: epochNumber, code: material.code, members: leafIdentities(state).sort() } }
+    this.previousEpoch = retainedPrevious(via, before, epochNumber)
+    this.startEpoch(state)
   }
 
   /** A new epoch begins: its age starts, and so does the delay before it is rotated. */
@@ -95,8 +107,8 @@ export abstract class GroupEpoch extends GroupBase {
   /** Keeps when each member's leaf key was last seen to change, and when my own leaf is due again. */
   private trackLeaves(state: ClientState, members: Map<string, number>, now: number) {
     const { rotateMs, rotateJitterMs } = this.timing
-    for (const id of [...this.leaves.keys()]) if (!members.has(id)) this.leaves.delete(id)
-    for (const id of [...this.updates.keys()]) if (!members.has(id)) this.updates.delete(id)
+    dropAbsent(this.leaves, members)
+    dropAbsent(this.updates, members)
     for (const [id, index] of members) {
       const key = (state.ratchetTree[index * 2] as { leaf: { hpkePublicKey: Uint8Array } }).leaf.hpkePublicKey
       const known = this.leaves.get(id)
@@ -109,11 +121,11 @@ export abstract class GroupEpoch extends GroupBase {
 
   /** Members that left the group take their signs of life with them. */
   private forgetDeparted(members: Map<string, number>) {
-    for (const id of [...this.alive.keys()]) if (!members.has(id)) this.alive.delete(id)
-    for (const id of [...this.beats.keys()]) if (!members.has(id)) this.beats.delete(id)
-    for (const id of [...this.capable.keys()]) if (!members.has(id)) this.capable.delete(id)
+    dropAbsent(this.alive, members)
+    dropAbsent(this.beats, members)
+    dropAbsent(this.capable, members)
     // A member this one has not advertised to yet is told at the next tick.
-    for (const id of [...this.capHeard]) if (!members.has(id)) this.capHeard.delete(id)
+    dropAbsent(this.capHeard, members)
   }
 
   private markNewMembers(members: Map<string, number>, now: number) {
@@ -171,19 +183,30 @@ export abstract class GroupEpoch extends GroupBase {
   /** This member's capability and heartbeat, when they are due and someone else is here to hear them. */
   private async livenessWires(current: NonNullable<GroupEpoch['current']>, members: Map<string, number>, now: number, slept: boolean): Promise<Uint8Array[]> {
     const wires: Uint8Array[] = []
-    const beatDue = slept || now - this.lastBeat >= this.timing.heartbeatMs
-    if (members.size > 1 && (this.capDue || beatDue)) {
-      this.capDue = false
-      const cap = await sealCapability(current.key.signer, this.groupId, this.userId)
-      if (cap) wires.push(cap)
-    }
-    if (members.size > 1 && beatDue) {
-      this.lastBeat = now
-      this.lastBeatAt = Math.max(now, this.lastBeatAt + 1)
-      const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
-      if (beat) wires.push(beat)
-    }
+    const beatDue = this.heartbeatDue(now, slept)
+    if (members.size <= 1) return wires
+    await this.appendCapability(wires, current, beatDue)
+    await this.appendHeartbeat(wires, current, now, beatDue)
     return wires
+  }
+
+  private heartbeatDue(now: number, slept: boolean): boolean {
+    return slept || now - this.lastBeat >= this.timing.heartbeatMs
+  }
+
+  private async appendCapability(wires: Uint8Array[], current: NonNullable<GroupEpoch['current']>, beatDue: boolean): Promise<void> {
+    if (!this.capDue && !beatDue) return
+    this.capDue = false
+    const cap = await sealCapability(current.key.signer, this.groupId, this.userId)
+    if (cap) wires.push(cap)
+  }
+
+  private async appendHeartbeat(wires: Uint8Array[], current: NonNullable<GroupEpoch['current']>, now: number, beatDue: boolean): Promise<void> {
+    if (!beatDue) return
+    this.lastBeat = now
+    this.lastBeatAt = Math.max(now, this.lastBeatAt + 1)
+    const beat = await sealHeartbeat(current.key.signer, this.groupId, this.userId, current.epoch, this.lastBeatAt)
+    if (beat) wires.push(beat)
   }
 
   /** The commits a tick may make: a leaf renewal, removing absent members, or rotating an old epoch. */
@@ -192,20 +215,41 @@ export abstract class GroupEpoch extends GroupBase {
     // Right after waking up this view is the stalest it will ever be: the
     // messages that arrived meanwhile are still queued behind this tick. The
     // next tick, one maintenance interval later, decides.
-    if (!slept && !this.canCommit(this.room) && members.size > 1 && this.renewalDue(now, members)) {
+    if (!slept) await this.maintainWhileAwake(members, now, wires)
+    return wires
+  }
+
+  private async maintainWhileAwake(members: Map<string, number>, now: number, wires: Uint8Array[]): Promise<void> {
+    if (!this.canCommit(this.room) && members.size > 1 && this.renewalDue(now, members)) {
       wires.push(...await this.commit([], true))
     }
-    if (!slept && this.canCommit(this.room)) {
-      const absent: Proposal[] = []
-      for (const [id, leaf] of members) {
-        if (id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs) {
-          absent.push({ proposalType: 'remove', remove: { removed: leaf } })
-        }
-      }
-      if (absent.length) wires.push(...await this.commit(absent))
-      else if (members.size > 1 && (now - this.epochAt >= this.rotateAfter || this.leafAge(now) >= this.updateAfter)) wires.push(...await this.commit([]))
+    if (this.canCommit(this.room)) wires.push(...await this.committerMaintenance(members, now))
+  }
+
+  private async committerMaintenance(members: Map<string, number>, now: number): Promise<Uint8Array[]> {
+    const wires: Uint8Array[] = []
+    const absent = this.absentProposals(members, now)
+    if (absent.length) {
+      wires.push(...await this.commit(absent))
+      return wires
     }
+    if (members.size > 1 && this.rotationDue(now)) wires.push(...await this.commit([]))
     return wires
+  }
+
+  private absentProposals(members: Map<string, number>, now: number): Proposal[] {
+    const absent: Proposal[] = []
+    for (const [id, leaf] of members) {
+      if (id !== this.userId && now - (this.alive.get(id) ?? now) > this.timing.absentMs) {
+        absent.push({ proposalType: 'remove', remove: { removed: leaf } })
+      }
+    }
+    return absent
+  }
+
+  private rotationDue(now: number): boolean {
+    if (now - this.epochAt >= this.rotateAfter) return true
+    return this.leafAge(now) >= this.updateAfter
   }
 
   protected leafAge(now: number): number {
@@ -225,7 +269,15 @@ export abstract class GroupEpoch extends GroupBase {
     if (age < this.updateAfter) return false
     const settle = Math.max(10, this.timing.maintenanceMs)
     if (age >= this.updateAfter + Math.max(4 * settle, this.timing.rotateMs / 10)) return true
-    if (now - this.lastHandshakeAt < settle || now - this.lastRosterAt < settle) return false
+    if (this.rosterUnsettled(now, settle)) return false
+    return now - this.epochAt >= settle * (1 + this.renewalsAhead(now, members))
+  }
+
+  private rosterUnsettled(now: number, settle: number): boolean {
+    return now - this.lastHandshakeAt < settle || now - this.lastRosterAt < settle
+  }
+
+  private renewalsAhead(now: number, members: Map<string, number>): number {
     const due = Math.max(0, this.timing.rotateMs - this.timing.rotateJitterMs)
     const committer = this.committer(this.room)
     let ahead = 0
@@ -233,13 +285,13 @@ export abstract class GroupEpoch extends GroupBase {
       if (id >= this.userId || id === committer) continue
       if (now - (this.leaves.get(id) as { at: number }).at >= due) ahead++
     }
-    return now - this.epochAt >= settle * (1 + ahead)
+    return ahead
   }
 
   protected async commit(extraProposals: Proposal[], renewal = false): Promise<Uint8Array[]> {
     if (!this.state) return []
     const previous = this.state
-    let result: Awaited<ReturnType<typeof createCommit>>
+    let result: CommitResult
     try {
       result = await createCommit(
         { state: previous, cipherSuite: this.cs },
@@ -249,44 +301,53 @@ export abstract class GroupEpoch extends GroupBase {
       return []
     }
     if (!renewal) wipeConsumed(result.consumed)
-    const adding = extraProposals.some(proposal => proposal.proposalType === 'add')
-    const { welcome, commit } = commitWires(result)
-    if (!commit || (adding && !welcome)) {
+    const wires = commitMessage(result, extraProposals)
+    if (!wires) {
       if (renewal) wipeConsumed(result.consumed)
       this.wipeRejected(result.newState)
       return []
     }
-    const soft = !extraProposals.some(proposal => proposal.proposalType === 'remove')
+    return this.finishCommit(result, wires, previous, renewal)
+  }
+
+  private async finishCommit(result: CommitResult, wires: SealedCommit, previous: ClientState, renewal: boolean): Promise<Uint8Array[]> {
     const current = this.current
     const previousEpoch = this.previousEpoch
     if (renewal) this.dropSelfUpdate()
-    if (!await this.adopt(result.newState, soft ? 'soft' : 'commit')) {
+    const adopted = await this.adopt(result.newState, wires.soft ? 'soft' : 'commit')
+    if (!adopted) {
       if (renewal) wipeConsumed(result.consumed)
       return []
     }
     // A renewal may race another commit for the same epoch: keep the state it left.
     if (renewal) this.selfUpdate = { state: previous, current, previousEpoch, sender: this.userId, until: clock.now() + CONFLICT_MS, held: result.consumed }
-    return welcome ? [welcome, commit] : [commit]
+    return wires.welcome ? [wires.welcome, wires.commit] : [wires.commit]
   }
 
   protected async commitAdds(others: readonly string[]): Promise<Uint8Array[]> {
     if (!this.state) return []
-    const wanted = new Set(others)
-    const members = treeMembers(this.state)
-    const proposals = []
-    for (const [id, keyPackage] of this.pending) {
-      if (!wanted.has(id) || members.has(id)) continue
-      proposals.push({ proposalType: 'add' as const, add: { keyPackage } })
-    }
+    const proposals = this.proposalsFor(others, treeMembers(this.state))
     if (!proposals.length) return []
     const wires = await this.commit(proposals)
-    if (wires.length) {
-      for (const proposal of proposals) {
-        const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
-        if (id) this.pending.delete(id)
-      }
-    }
+    if (wires.length) this.keepAdded(proposals)
     return wires
+  }
+
+  private proposalsFor(others: readonly string[], members: Map<string, number>): AddProposal[] {
+    const wanted = new Set(others)
+    const proposals: AddProposal[] = []
+    for (const [id, keyPackage] of this.pending) {
+      if (!wanted.has(id) || members.has(id)) continue
+      proposals.push({ proposalType: 'add', add: { keyPackage } })
+    }
+    return proposals
+  }
+
+  private keepAdded(proposals: readonly AddProposal[]): void {
+    for (const proposal of proposals) {
+      const id = credentialIdentity(proposal.add.keyPackage.leafNode.credential)
+      if (id) this.pending.delete(id)
+    }
   }
 
   protected async commitRemoves(others: readonly string[]): Promise<Uint8Array[]> {

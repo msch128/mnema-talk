@@ -20,7 +20,8 @@ export const useAuthStore = defineStore('auth', () => {
   // Remove the token kept by earlier versions of the app.
   try {
     localStorage.removeItem('mnema_token')
-  } catch {
+  } catch (error) {
+    void error
     // storage unavailable
   }
 

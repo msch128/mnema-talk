@@ -72,18 +72,43 @@ function channelPlacement<C extends LayoutChannel, K extends LayoutCategory<C>>(
   return { categoryId: at.categoryId, gap: at.index + (before ? 0 : 1), indicator: { key: `channel:${id}`, edge: before ? 'top' : 'bottom' } }
 }
 
-function headerPlacement<C extends LayoutChannel, K extends LayoutCategory<C>>(tree: Tree<C, K>, id: string, ratioHit: number | undefined, ctx: DropContext): Placement | null {
+function isContainerOpen(container: { id: string | null }, ctx: DropContext): boolean {
+  return container.id == null || !ctx.isCollapsed(container.id)
+}
+
+function shouldDropIntoPreviousContainer(prevOpen: boolean, ratio: number, collapsed: boolean): boolean {
+  if (!prevOpen) return false
+  const threshold = collapsed ? HEADER_EDGE : 0.5
+  return ratio < threshold
+}
+
+function placeIntoPreviousContainer<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  tree: Tree<C, K>,
+  prevId: string | null,
+  id: string,
+  ctx: DropContext
+): Placement | null {
+  const end = atEnd(tree, prevId, ctx)
+  return end ? { ...end, indicator: { key: `header:${id}`, edge: 'top' } } : null
+}
+
+function headerPlacement<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  tree: Tree<C, K>,
+  id: string,
+  ratioHit: number | undefined,
+  ctx: DropContext
+): Placement | null {
   const list = containers(tree)
   const k = list.findIndex(c => c.id === id)
-  const prev = k < 1 ? undefined : list[k - 1]
+  if (k < 1) return null
+  const prev = list[k - 1]
   if (!prev) return null
-  // The container above is a place of its own only while its end is visible.
-  const prevOpen = prev.id == null || !ctx.isCollapsed(prev.id)
+
   const ratio = ratioHit ?? 0.5
   const collapsed = ctx.isCollapsed(id)
-  if (prevOpen && ratio < (collapsed ? HEADER_EDGE : 0.5)) {
-    const end = atEnd(tree, prev.id, ctx)
-    return end && { ...end, indicator: { key: `header:${id}`, edge: 'top' } }
+  const prevOpen = isContainerOpen(prev, ctx)
+  if (shouldDropIntoPreviousContainer(prevOpen, ratio, collapsed)) {
+    return placeIntoPreviousContainer(tree, prev.id, id, ctx)
   }
   if (collapsed) return intoCollapsed(tree, id, ctx)
   return { categoryId: id, gap: 0, indicator: { key: `header:${id}`, edge: 'bottom' } }
@@ -128,30 +153,53 @@ export function resolveChannelDrop<C extends LayoutChannel, K extends LayoutCate
   return { categoryId, gap, index, indicator }
 }
 
+function calculateCategoryGap<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  tree: ChannelTree<C, K>,
+  hit: DropHit,
+  catsLength: number
+): number | null {
+  if (hit.zone === 'start' || (hit.zone === 'section' && hit.id == null)) {
+    return 0
+  }
+  if (hit.zone === 'end') {
+    return catsLength
+  }
+  if (hit.zone === 'section') {
+    const at = locateCategory(tree, hit.id)
+    if (!at) return null
+    const before = (hit.ratio ?? 0) < 0.5
+    return at.index + (before ? 0 : 1)
+  }
+  return null
+}
+
+function resolveCategoryIndicator<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  cats: K[],
+  gap: number
+): DropIndicator | null {
+  const last = cats[cats.length - 1]
+  if (!last) return null
+  const at = cats[gap]
+  if (at) {
+    return { key: `header:${at.id}`, edge: 'top' }
+  }
+  return { key: `section:${last.id}`, edge: 'bottom' }
+}
+
 /** Where a dragged category lands (it never goes into another one). */
-export function resolveCategoryDrop<C extends LayoutChannel, K extends LayoutCategory<C>>(tree: ChannelTree<C, K>, categoryId: string, hit: DropHit | null): DropTarget | null {
+export function resolveCategoryDrop<C extends LayoutChannel, K extends LayoutCategory<C>>(
+  tree: ChannelTree<C, K>,
+  categoryId: string,
+  hit: DropHit | null
+): DropTarget | null {
   const from = locateCategory(tree, categoryId)
   if (!from || !hit) return null
   const cats = tree.categories
-  let gap
-  if (hit.zone === 'start' || (hit.zone === 'section' && hit.id == null)) {
-    gap = 0
-  } else if (hit.zone === 'end') {
-    gap = cats.length
-  } else if (hit.zone === 'section') {
-    const at = locateCategory(tree, hit.id)
-    if (!at) return null
-    gap = at.index + ((hit.ratio ?? 0) < 0.5 ? 0 : 1)
-  } else {
-    return null
-  }
+  const gap = calculateCategoryGap(tree, hit, cats.length)
+  if (gap === null) return null
   const index = gapToIndex(from.index, true, gap)
   if (index === from.index) return null
-  const at = cats[gap]
-  const last = cats[cats.length - 1]
-  if (!last) return null
-  const indicator: DropIndicator = at
-    ? { key: `header:${at.id}`, edge: 'top' }
-    : { key: `section:${last.id}`, edge: 'bottom' }
+  const indicator = resolveCategoryIndicator(cats, gap)
+  if (!indicator) return null
   return { categoryId: null, gap, index, indicator }
 }

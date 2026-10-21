@@ -117,23 +117,36 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	out := make([]Member, len(members))
-	var roles map[uuid.UUID][]uuid.UUID
-	var timeouts map[uuid.UUID]time.Time
-	if h.Perms != nil {
-		if roles, err = h.Perms.MemberRoles(r.Context()); err != nil {
-			return err
-		}
-		snap, err := h.Perms.Snapshot(r.Context())
-		if err != nil {
-			return err
-		}
-		timeouts = snap.Timeouts()
+	roles, timeouts, err := h.loadMemberPermissions(r.Context())
+	if err != nil {
+		return err
 	}
 	counts, err := h.visibleMessageCounts(r)
 	if err != nil {
 		return err
 	}
+	out := enrichMembers(members, roles, timeouts, counts)
+	httpx.WriteJSON(w, http.StatusOK, out)
+	return nil
+}
+
+func (h *Handler) loadMemberPermissions(ctx context.Context) (map[uuid.UUID][]uuid.UUID, map[uuid.UUID]time.Time, error) {
+	if h.Perms == nil {
+		return nil, nil, nil
+	}
+	roles, err := h.Perms.MemberRoles(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	snap, err := h.Perms.Snapshot(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	return roles, snap.Timeouts(), nil
+}
+
+func enrichMembers(members []Member, roles map[uuid.UUID][]uuid.UUID, timeouts map[uuid.UUID]time.Time, counts map[uuid.UUID]int64) []Member {
+	out := make([]Member, len(members))
 	for i, m := range members {
 		m.RoleIDs = roles[m.ID]
 		out[i] = m
@@ -145,8 +158,7 @@ func (h *Handler) listMembers(w http.ResponseWriter, r *http.Request) error {
 			out[i].MessageCount = counts[m.ID]
 		}
 	}
-	httpx.WriteJSON(w, http.StatusOK, out)
-	return nil
+	return out
 }
 
 // listChannels handles GET /api/channels.

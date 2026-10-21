@@ -208,13 +208,32 @@ func newReceiveConn(api *webrtc.API, iceServers []webrtc.ICEServer) (*receiveCon
 	// sound. After them come the lines of the screen's lower layers (see
 	// layerGroup): a sender that does not know them answers them inactive.
 	recvOnly := webrtc.RTPTransceiverInit{Direction: webrtc.RTPTransceiverDirectionRecvonly}
-	_, _ = pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
-	screenTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
-	cameraTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
-	screenAudioTr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
+	if _, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly); err != nil {
+		_ = pc.Close()
+		return nil, fmt.Errorf("failed to add mic transceiver: %w", err)
+	}
+	screenTr, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	if err != nil {
+		_ = pc.Close()
+		return nil, fmt.Errorf("failed to add screen transceiver: %w", err)
+	}
+	cameraTr, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+	if err != nil {
+		_ = pc.Close()
+		return nil, fmt.Errorf("failed to add camera transceiver: %w", err)
+	}
+	screenAudioTr, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeAudio, recvOnly)
+	if err != nil {
+		_ = pc.Close()
+		return nil, fmt.Errorf("failed to add screen audio transceiver: %w", err)
+	}
 	lowerTrs := make([]*webrtc.RTPTransceiver, 0, maxLayers-1)
 	for range maxLayers - 1 {
-		tr, _ := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+		tr, err := pc.AddTransceiverFromKind(webrtc.RTPCodecTypeVideo, recvOnly)
+		if err != nil {
+			_ = pc.Close()
+			return nil, fmt.Errorf("failed to add layer transceiver: %w", err)
+		}
 		lowerTrs = append(lowerTrs, tr)
 	}
 	pinCodecOrder(append([]*webrtc.RTPTransceiver{screenTr, cameraTr}, lowerTrs...)...)

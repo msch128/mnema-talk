@@ -29,23 +29,56 @@ function localAppOrigin(): boolean {
   return !port && (protocol === 'mnema:' && hostname === 'localhost' || protocol === 'https:' && hostname === 'mnema.localhost')
 }
 
+function isValidOrigin(): boolean {
+  if (typeof window === 'undefined' || !isTauri()) return false
+  return localAppOrigin()
+}
+
 function field(value: object, name: string): unknown {
   return Reflect.get(value, name)
 }
 
+function parseVersion(val: unknown): string | null {
+  return typeof val === 'string' && VERSION.test(val) ? val : null
+}
+
+function parseSource(val: unknown): TrustedApp['source'] | null {
+  return typeof val === 'string' && SOURCES.includes(val) ? (val as TrustedApp['source']) : null
+}
+
+function parseWebClientApi(val: unknown): number | null {
+  return typeof val === 'number' && Number.isSafeInteger(val) && val >= 1 ? val : null
+}
+
+function parseKeyId(val: unknown): string | null {
+  return typeof val === 'string' && KEY_ID.test(val) ? val : null
+}
+
+function parseRole(val: unknown): TrustedAppRole | null {
+  return typeof val === 'string' && ROLES.includes(val) ? (val as TrustedAppRole) : null
+}
+
+function parseRawIdentity(raw: object): TrustedApp | null {
+  const version = parseVersion(field(raw, 'version'))
+  if (!version) return null
+  const source = parseSource(field(raw, 'source'))
+  if (!source) return null
+  const webClientApi = parseWebClientApi(field(raw, 'webClientApi'))
+  if (webClientApi === null) return null
+  const keyId = parseKeyId(field(raw, 'keyId'))
+  if (!keyId) return null
+  const role = parseRole(field(raw, 'role'))
+  if (!role) return null
+
+  return Object.freeze({ version, source, webClientApi, keyId, role })
+}
+
 /** The verified bundle this page runs from, or null (browser, wrong origin, malformed). */
 export function trustedApp(): TrustedApp | null {
-  if (typeof window === 'undefined' || !isTauri() || !localAppOrigin()) return null
+  if (!isValidOrigin()) return null
   const raw: unknown = Reflect.get(window, '__MNEMA_TRUSTED_APP__')
   if (typeof raw !== 'object' || raw === null) return null
-  const version = field(raw, 'version'); const source = field(raw, 'source'); const webClientApi = field(raw, 'webClientApi')
-  const keyId = field(raw, 'keyId'); const role = field(raw, 'role')
-  if (typeof version !== 'string' || !VERSION.test(version)) return null
-  if (typeof source !== 'string' || !SOURCES.includes(source)) return null
-  if (typeof webClientApi !== 'number' || !Number.isSafeInteger(webClientApi) || webClientApi < 1) return null
-  if (typeof keyId !== 'string' || !KEY_ID.test(keyId)) return null
-  if (typeof role !== 'string' || !ROLES.includes(role)) return null
-  return Object.freeze({ version, source: source as TrustedApp['source'], webClientApi, keyId, role: role as TrustedAppRole })
+  return parseRawIdentity(raw)
 }
 
 /** True inside the trusted desktop client. Requests still use the browser transport. */

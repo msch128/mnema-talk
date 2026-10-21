@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -28,7 +29,8 @@ func (h *Handler) require(r *http.Request, ch uuid.UUID, need perm.Set) error {
 // channel) into the message's own 404, so it looks like any missing message,
 // and passes real failures (an unreadable permission state) through.
 func notFoundUnlessFailure(err error) error {
-	if _, refused := httpx.AsAPIError(err); refused {
+	var apiErr *httpx.APIError
+	if errors.As(err, &apiErr) {
 		return errMessageNotFound
 	}
 	return err
@@ -89,8 +91,11 @@ func (h *Handler) viewableChannels(r *http.Request) ([]uuid.UUID, error) {
 // may view; nil when they may view all of them (the stored totals apply).
 func (h *Handler) visibleMessageCounts(r *http.Request) (map[uuid.UUID]int64, error) {
 	visible, err := h.viewableChannels(r)
-	if err != nil || visible == nil {
+	if err != nil {
 		return nil, err
+	}
+	if visible == nil {
+		return nil, nil
 	}
 	rows, err := h.DB.Query(r.Context(), `SELECT user_id, COUNT(*) FROM messages WHERE channel_id = ANY($1::uuid[]) GROUP BY user_id`, visible)
 	if err != nil {
@@ -180,8 +185,11 @@ func (v *hierarchyView) viewable(in []Channel) ([]Channel, error) {
 // visibleReadStates keeps the read states of viewable channels.
 func (h *Handler) visibleReadStates(r *http.Request, states []ReadState) ([]ReadState, error) {
 	visible, err := h.viewableChannels(r)
-	if err != nil || visible == nil {
+	if err != nil {
 		return states, err
+	}
+	if visible == nil {
+		return states, nil
 	}
 	ok := make(map[uuid.UUID]bool, len(visible))
 	for _, id := range visible {
@@ -248,25 +256,43 @@ func checkLayout(snap *perm.Snapshot, sub perm.Subject, req LayoutRequest) error
 	return nil
 }
 
+func targetCategoryVisible(snap *perm.Snapshot, sub perm.Subject, target *uuid.UUID) (uuid.UUID, error) {
+	if target == nil {
+		return uuid.Nil, nil
+	}
+	to := *target
+	if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
+		return uuid.Nil, errCategoryNotFound
+	}
+	return to, nil
+}
+
+func categoryOverwritesAffected(snap *perm.Snapshot, from, to uuid.UUID) bool {
+	if from == to {
+		return false
+	}
+	return snap.HasCategoryOverwrites(from) || snap.HasCategoryOverwrites(to)
+}
+
 // checkChannelMove checks one placement of a layout change: the caller sees
 // the channel and its target category, and may move it between categories.
 func checkChannelMove(snap *perm.Snapshot, sub perm.Subject, c ChannelPlacement) error {
 	if !snap.Channel(sub, c.ID).Has(perm.ViewChannel) {
 		return perm.ErrChannelHidden
 	}
-	to := uuid.Nil
-	if c.CategoryID != nil {
-		to = *c.CategoryID
-		if snap.KnowsCategory(to) && !snap.CategoryVisible(sub, to) {
-			return errCategoryNotFound
-		}
+	to, err := targetCategoryVisible(snap, sub, c.CategoryID)
+	if err != nil {
+		return err
 	}
 	// Moving a channel takes on the permissions of its new category and
 	// drops those of the old one, which could undo a restriction the
 	// caller may not lift: with overwrites on either side, only an
 	// Administrator (or the Owner) moves it.
-	from, _ := snap.CategoryOf(c.ID)
-	if from != to && (snap.HasCategoryOverwrites(from) || snap.HasCategoryOverwrites(to)) && !snap.Global(sub).Has(perm.Administrator) {
+	from, inCategory := snap.CategoryOf(c.ID)
+	if !inCategory {
+		from = uuid.Nil
+	}
+	if categoryOverwritesAffected(snap, from, to) && !snap.Global(sub).Has(perm.Administrator) {
 		return httpx.ErrForbidden("moving a channel between categories with permissions needs the Administrator permission")
 	}
 	return nil

@@ -78,13 +78,19 @@ func GenerateRootKey() (ed25519.PublicKey, ed25519.PrivateKey, error) {
 
 // MarshalPrivateKeyPEM encodes a key as PKCS#8 PEM.
 func MarshalPrivateKeyPEM(k ed25519.PrivateKey) []byte {
-	der, _ := x509.MarshalPKCS8PrivateKey(k) // cannot fail for an Ed25519 key
+	der, err := x509.MarshalPKCS8PrivateKey(k)
+	if err != nil {
+		return nil
+	}
 	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
 }
 
 // MarshalPublicKeyPEM encodes a public key as PKIX PEM.
 func MarshalPublicKeyPEM(k ed25519.PublicKey) []byte {
-	der, _ := x509.MarshalPKIXPublicKey(k) // cannot fail for an Ed25519 key
+	der, err := x509.MarshalPKIXPublicKey(k)
+	if err != nil {
+		return nil
+	}
 	return pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
 }
 
@@ -128,14 +134,7 @@ func validID(s string) bool {
 	return err == nil && len(b) == 8 && s == strings.ToLower(s)
 }
 
-// Validate checks that a statement is well formed and consistent.
-func (t *Trust) Validate() error {
-	if t.Schema != TrustSchema {
-		return fmt.Errorf("unsupported trust schema %d", t.Schema)
-	}
-	if t.Serial < 1 {
-		return errors.New("serial must be at least 1")
-	}
+func (t *Trust) validateValidity() error {
 	issued, err := parseUTC(t.IssuedAt)
 	if err != nil {
 		return fmt.Errorf("issued_at: %w", err)
@@ -146,6 +145,24 @@ func (t *Trust) Validate() error {
 	}
 	if !expires.After(issued) || expires.Sub(issued) > MaxTrustValidity {
 		return errors.New("expires_at must be after issued_at, within 400 days")
+	}
+	return nil
+}
+
+func (t *Trust) validateHeader() error {
+	if t.Schema != TrustSchema {
+		return fmt.Errorf("unsupported trust schema %d", t.Schema)
+	}
+	if t.Serial < 1 {
+		return errors.New("serial must be at least 1")
+	}
+	return t.validateValidity()
+}
+
+// Validate checks that a statement is well formed and consistent.
+func (t *Trust) Validate() error {
+	if err := t.validateHeader(); err != nil {
+		return err
 	}
 	if err := t.validateBundleKeys(); err != nil {
 		return err
@@ -227,7 +244,10 @@ func SignTrust(t Trust, root ed25519.PrivateKey) (doc, sig []byte, err error) {
 	if err := t.Validate(); err != nil {
 		return nil, nil, err
 	}
-	doc, _ = json.MarshalIndent(t, "", "  ") // plain strings and numbers
+	doc, err = json.MarshalIndent(t, "", "  ") // plain strings and numbers
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshal trust: %w", err)
+	}
 	doc = append(doc, '\n')
 	sig = []byte(base64.StdEncoding.EncodeToString(ed25519.Sign(root, doc)) + "\n")
 	return doc, sig, nil

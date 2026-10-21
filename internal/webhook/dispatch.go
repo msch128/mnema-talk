@@ -161,24 +161,7 @@ func (d *Dispatcher) Reload(ctx context.Context) error {
 	return nil
 }
 
-// Run reloads the webhook list regularly, moves buffered events into the
-// database and works the queue until ctx ends. On shutdown it stops claiming,
-// writes what is still buffered, lets attempts in flight finish (for at most
-// shutdownGrace) and leaves everything else in the database for the next
-// start.
-func (d *Dispatcher) Run(ctx context.Context) {
-	d.started.Store(true)
-	defer close(d.done)
-	if d.DB == nil { // router built without a database (tests): nothing to deliver
-		<-ctx.Done()
-		return
-	}
-	if err := d.Reload(ctx); err != nil {
-		slog.Warn("outgoing webhooks: load", "err", err)
-	}
-	d.prune(ctx)
-	tick := time.NewTicker(time.Second / ratePerSecond)
-	defer tick.Stop()
+func (d *Dispatcher) startWorkers(ctx context.Context, rateTicker <-chan time.Time) {
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -188,9 +171,18 @@ func (d *Dispatcher) Run(ctx context.Context) {
 		d.wg.Add(1)
 		go func() {
 			defer d.wg.Done()
-			d.work(ctx, tick.C)
+			d.work(ctx, rateTicker)
 		}()
 	}
+}
+
+func (d *Dispatcher) reloadWithLog(ctx context.Context) {
+	if err := d.Reload(ctx); err != nil {
+		slog.Warn("outgoing webhooks: reload", "err", err)
+	}
+}
+
+func (d *Dispatcher) runTickers(ctx context.Context) {
 	reload := time.NewTicker(d.ReloadEvery)
 	defer reload.Stop()
 	poll := time.NewTicker(d.PollEvery)
@@ -203,15 +195,33 @@ func (d *Dispatcher) Run(ctx context.Context) {
 			d.wg.Wait()
 			return
 		case <-reload.C:
-			if err := d.Reload(ctx); err != nil {
-				slog.Warn("outgoing webhooks: reload", "err", err)
-			}
+			d.reloadWithLog(ctx)
 		case <-poll.C:
 			d.signal()
 		case <-pruneT.C:
 			d.prune(ctx)
 		}
 	}
+}
+
+// Run reloads the webhook list regularly, moves buffered events into the
+// database and works the queue until ctx ends. On shutdown it stops claiming,
+// writes what is still buffered, lets attempts in flight finish (for at most
+// shutdownGrace) and leaves everything else in the database for the next
+// start.
+func (d *Dispatcher) Run(ctx context.Context) {
+	d.started.Store(true)
+	defer close(d.done)
+	if d.DB == nil { // router built without a database (tests): nothing to deliver
+		<-ctx.Done()
+		return
+	}
+	d.reloadWithLog(ctx)
+	d.prune(ctx)
+	tick := time.NewTicker(time.Second / ratePerSecond)
+	defer tick.Stop()
+	d.startWorkers(ctx, tick.C)
+	d.runTickers(ctx)
 }
 
 // Wait blocks until Run has finished (at most max); it returns at once when
@@ -234,6 +244,16 @@ func (d *Dispatcher) signal() {
 	}
 }
 
+func matchingWebhookTargets(routes []route, channel uuid.UUID, name string) []uuid.UUID {
+	var targets []uuid.UUID
+	for _, r := range routes {
+		if r.channel == channel && slices.Contains(r.events, name) {
+			targets = append(targets, r.id)
+		}
+	}
+	return targets
+}
+
 // Observe is the hook for the event hub: it receives every event the hub
 // publishes (channel is uuid.Nil for events to everybody) and queues the
 // events of a channel for the webhooks of that channel that subscribed to
@@ -243,20 +263,14 @@ func (d *Dispatcher) Observe(channel uuid.UUID, eventType string, payload any) {
 	if !ok || channel == uuid.Nil {
 		return
 	}
-	var targets []uuid.UUID
-	for _, r := range *d.routes.Load() {
-		if !slices.Contains(r.events, name) {
-			continue
-		}
-		if r.channel != channel {
-			continue
-		}
-		targets = append(targets, r.id)
-	}
+	targets := matchingWebhookTargets(*d.routes.Load(), channel, name)
 	if len(targets) == 0 {
 		return
 	}
-	raw, _ := json.Marshal(data) // hub payloads are plain data: cannot fail
+	raw, err := json.Marshal(data) // hub payloads are plain data: cannot fail
+	if err != nil {
+		return
+	}
 	ev := Event{ID: uuid.New(), Type: name, Channel: channel, Time: time.Now().UTC(), Data: raw}
 	for _, id := range targets {
 		d.enqueue(job{webhook: id, event: ev, attempt: 1})

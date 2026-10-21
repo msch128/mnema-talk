@@ -21,11 +21,8 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	if err := c.normalizeAppEnv(); err != nil {
 		return err
 	}
-	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
-		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
-	}
-	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
-		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
+	if err := c.validateOptionalSecrets(); err != nil {
+		return err
 	}
 	if err := c.validateUpdater(); err != nil {
 		return err
@@ -44,6 +41,18 @@ func (c *Config) validate(portMin, portMax uint16) error {
 	return nil
 }
 
+// validateOptionalSecrets checks secrets that are optional until the feature
+// they unlock is turned on.
+func (c *Config) validateOptionalSecrets() error {
+	if len(c.WebRTCTURNURLs) > 0 && len(c.WebRTCTURNSecret) < 16 {
+		return fmt.Errorf("WEBRTC_TURN_SECRET must be at least 16 characters when WEBRTC_TURN_URLS is set")
+	}
+	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
+		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
+	}
+	return nil
+}
+
 // validateBasics checks the settings every environment needs, stores the
 // WebRTC UDP port range and then checks the limits.
 func (c *Config) validateBasics(portMin, portMax uint16) error {
@@ -56,8 +65,7 @@ func (c *Config) validateBasics(portMin, portMax uint16) error {
 	if isPlaceholder(c.AdminInitialPassword) {
 		return fmt.Errorf("ADMIN_INITIAL_PASSWORD still uses the public example value; set your own or leave it empty to generate one")
 	}
-	u, err := url.Parse(c.PublicURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+	if _, ok := parseAbsoluteHTTP(c.PublicURL); !ok {
 		return fmt.Errorf("PUBLIC_URL must be an absolute http(s) URL, got %q", c.PublicURL)
 	}
 	if portMin < 1 || portMin > portMax {
@@ -68,6 +76,18 @@ func (c *Config) validateBasics(portMin, portMax uint16) error {
 		return fmt.Errorf("PORT must be a port number (1-65535), got 0")
 	}
 	return c.validateLimits()
+}
+
+// parseAbsoluteHTTP parses raw as an absolute http or https URL.
+func parseAbsoluteHTTP(raw string) (*url.URL, bool) {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return nil, false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return nil, false
+	}
+	return u, true
 }
 
 // validateLimits checks the numeric and list settings.
@@ -87,12 +107,24 @@ func (c *Config) validateLimits() error {
 	if c.MaxUploadMB < 1 || c.MaxUploadMB > 2048 {
 		return fmt.Errorf("MAX_UPLOAD_SIZE_MB must be between 1 and 2048")
 	}
-	for _, p := range c.TrustedProxies {
-		if _, _, err := net.ParseCIDR(p); err != nil && net.ParseIP(p) == nil {
+	return validateTrustedProxies(c.TrustedProxies)
+}
+
+func validateTrustedProxies(proxies []string) error {
+	for _, p := range proxies {
+		if !validProxyEntry(p) {
 			return fmt.Errorf("TRUSTED_PROXY_CIDRS contains an invalid entry %q", p)
 		}
 	}
 	return nil
+}
+
+// validProxyEntry reports whether p is a CIDR range or a single IP address.
+func validProxyEntry(p string) bool {
+	if _, _, err := net.ParseCIDR(p); err == nil {
+		return true
+	}
+	return net.ParseIP(p) != nil
 }
 
 // normalizeAppEnv expands the short APP_ENV names and rejects unknown ones.
@@ -115,19 +147,39 @@ func (c *Config) validateProductionSecrets() error {
 	if len(c.JWTSecret) < 32 || isPlaceholder(c.JWTSecret) {
 		return fmt.Errorf("JWT_SECRET must be set to a random string of at least 32 characters in production")
 	}
+	if err := c.validateProductionS3(); err != nil {
+		return err
+	}
+	if err := c.validateProductionDatabase(); err != nil {
+		return err
+	}
+	if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
+		return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
+	}
+	return nil
+}
+
+func (c *Config) validateProductionS3() error {
 	if c.S3AccessKey == "" || c.S3SecretKey == "" {
 		return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY are required in production")
 	}
 	if isPlaceholder(c.S3AccessKey) || isPlaceholder(c.S3SecretKey) {
 		return fmt.Errorf("S3_ACCESS_KEY and S3_SECRET_KEY still use the public example values; set your own")
 	}
-	if u, err := url.Parse(c.DatabaseURL); err == nil && u.User != nil {
-		if pw, ok := u.User.Password(); ok && isPlaceholder(pw) {
-			return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
-		}
+	return nil
+}
+
+// validateProductionDatabase rejects the public example password when the
+// URL names one. An unparsable URL or a URL without a user is left for the
+// database driver.
+func (c *Config) validateProductionDatabase() error {
+	u, err := url.Parse(c.DatabaseURL)
+	if err != nil || u.User == nil {
+		return nil
 	}
-	if isPlaceholder(c.MetricsToken) || isPlaceholder(c.WebRTCTURNSecret) {
-		return fmt.Errorf("METRICS_TOKEN or WEBRTC_TURN_SECRET still uses a public example value")
+	pw, ok := u.User.Password()
+	if ok && isPlaceholder(pw) {
+		return fmt.Errorf("DATABASE_URL still uses the public example password; set POSTGRES_PASSWORD to your own")
 	}
 	return nil
 }
@@ -157,9 +209,24 @@ func (c *Config) validateUpdater() error {
 	if c.UpdaterURL == "" {
 		c.UpdaterURL = DefaultUpdaterURL
 	}
-	u, err := url.Parse(c.UpdaterURL)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+	if !validUpdaterURL(c.UpdaterURL) {
 		return fmt.Errorf("UPDATER_URL must be an http(s) URL without credentials, query or fragment, got %q", c.UpdaterURL)
 	}
 	return nil
+}
+
+// validUpdaterURL reports whether raw is an http(s) URL with a host and no
+// credentials, query or fragment.
+func validUpdaterURL(raw string) bool {
+	u, ok := parseAbsoluteHTTP(raw)
+	if !ok {
+		return false
+	}
+	if u.User != nil {
+		return false
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return false
+	}
+	return true
 }

@@ -3,6 +3,7 @@ package linkpreview
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -90,7 +91,10 @@ func (h *Handler) image(w http.ResponseWriter, r *http.Request) error {
 	hdr.Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	hdr.Set("Cache-Control", "private, max-age=86400")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(body)
+	// The headers are out: a failed write (client gone) cannot become an error response.
+	if _, err := w.Write(body); err != nil {
+		slog.Debug("link preview image write", "err", err)
+	}
 	return nil
 }
 

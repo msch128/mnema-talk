@@ -28,7 +28,6 @@ export const STREAM_PRESETS = {
   gaming: { resolution: 1440, fps: 60 },
   screen: { resolution: 'source', fps: 15 }
 } satisfies Record<Exclude<StreamMode, 'custom'>, StreamQuality>
-export const STREAM_MODES = ['gaming', 'screen', 'custom'] as const
 export const DEFAULT_STREAM_QUALITY = Object.freeze<StreamQuality>({ resolution: 1080, fps: 30 })
 export const SCREEN_QUALITY_STORAGE_KEY = 'mnema_screen_quality'
 
@@ -41,14 +40,23 @@ export const STREAM_MAX_BITRATE = 12_000_000
 // cost less than proportionally more bits.
 const BITS_PER_PIXEL = 2.5
 
+function isStreamResolution(value: unknown): value is StreamResolution {
+  if (value === 'source' || value === 720) return true
+  return value === 1080 || value === 1440
+}
+
+function isStreamFrameRate(value: unknown): value is StreamFrameRate {
+  if (value === 15 || value === 30) return true
+  return value === 60
+}
+
 /** A valid choice: unknown values fall back to the default ones. */
 export function normalizeQuality(q: unknown): StreamQuality {
   const input = typeof q === 'object' && q !== null ? q : {}
   const chosenResolution = 'resolution' in input ? input.resolution : undefined
   const chosenFps = 'fps' in input ? input.fps : undefined
-  const resolution = chosenResolution === 'source' || chosenResolution === 720 || chosenResolution === 1080 || chosenResolution === 1440
-    ? chosenResolution : DEFAULT_STREAM_QUALITY.resolution
-  const fps = chosenFps === 15 || chosenFps === 30 || chosenFps === 60 ? chosenFps : DEFAULT_STREAM_QUALITY.fps
+  const resolution = isStreamResolution(chosenResolution) ? chosenResolution : DEFAULT_STREAM_QUALITY.resolution
+  const fps = isStreamFrameRate(chosenFps) ? chosenFps : DEFAULT_STREAM_QUALITY.fps
   return { resolution, fps }
 }
 
@@ -56,8 +64,13 @@ export function normalizeQuality(q: unknown): StreamQuality {
  * 'gaming' or 'screen' when the choice is that preset, else 'custom'. Custom
  * picked on purpose (q.custom) stays custom even on a preset's values.
  */
+function markedCustom(q: unknown): boolean {
+  if (typeof q !== 'object' || q === null) return false
+  return 'custom' in q && q.custom === true
+}
+
 export function streamModeOf(q: unknown): StreamMode {
-  if (typeof q === 'object' && q !== null && 'custom' in q && q.custom === true) return 'custom'
+  if (markedCustom(q)) return 'custom'
   const { resolution, fps } = normalizeQuality(q)
   for (const mode of ['gaming', 'screen'] as const) {
     const preset = STREAM_PRESETS[mode]
@@ -139,23 +152,44 @@ function activeVideoSender(list: MediaStat[]) {
     .sort((a, b) => (b.bytesSent || 0) - (a.bytesSent || 0))[0]
 }
 
+function reportedFps(out: MediaStat): number | null {
+  return isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
+}
+
+/** Frames encoded since the previous sample, or null when the two cannot be compared. */
+function frameDelta(previous: SendStatsSample, ts: number, frames: number | undefined): number | null {
+  if (ts <= previous.ts || !isFiniteNumber(frames)) return null
+  if (!isFiniteNumber(previous.frames)) return null
+  return frames - previous.frames
+}
+
+function fpsSince(count: number, reported: number | null, ts: number, previousTs: number): number | null {
+  if (count < 0 || reported !== null) return reported
+  return Math.round(count * 1000 / (ts - previousTs))
+}
+
+function encodeMsSince(count: number, encodeTime: number | undefined, previousEncode: number | undefined): number | null {
+  if (count <= 0 || !isFiniteNumber(encodeTime)) return null
+  if (!isFiniteNumber(previousEncode) || encodeTime < previousEncode) return null
+  return (encodeTime - previousEncode) * 1000 / count
+}
+
+function lifetimeEncodeMs(frames: number | undefined, encodeTime: number | undefined): number | null {
+  if (!isFiniteNumber(frames) || frames <= 0) return null
+  if (!isFiniteNumber(encodeTime)) return null
+  return encodeTime * 1000 / frames
+}
+
 /** Encoded frame rate (the browser's own, else counted since the previous sample) and the encode time per frame. */
 function encodeFrameStats(out: MediaStat, previous: SendStatsSample | null, sameStream: boolean) {
   const ts = out.timestamp || 0
   const frames = out.framesEncoded
-  const encodeTime = out.totalEncodeTime
-  let fps = isFiniteNumber(out.framesPerSecond) ? Math.round(out.framesPerSecond) : null
-  let encodeMs: number | null = null
-  if (previous && sameStream && ts > previous.ts && isFiniteNumber(frames) && isFiniteNumber(previous.frames)) {
-    const count = frames - previous.frames
-    if (count >= 0 && fps === null) fps = Math.round(count * 1000 / (ts - previous.ts))
-    if (count > 0 && isFiniteNumber(encodeTime) && isFiniteNumber(previous.encodeTime) && encodeTime >= previous.encodeTime) {
-      encodeMs = (encodeTime - previous.encodeTime) * 1000 / count
-    }
-  } else if (isFiniteNumber(frames) && frames > 0 && isFiniteNumber(encodeTime)) {
-    encodeMs = encodeTime * 1000 / frames
+  const reported = reportedFps(out)
+  const count = previous && sameStream ? frameDelta(previous, ts, frames) : null
+  if (count !== null && previous) {
+    return { fps: fpsSince(count, reported, ts, previous.ts), encodeMs: encodeMsSince(count, out.totalEncodeTime, previous.encodeTime) }
   }
-  return { fps, encodeMs }
+  return { fps: reported, encodeMs: lifetimeEncodeMs(frames, out.totalEncodeTime) }
 }
 
 /**
@@ -164,38 +198,112 @@ function encodeFrameStats(out: MediaStat, previous: SendStatsSample | null, same
  * Returns { codec, width, height, fps, kbps, sample }; pass `sample` back in
  * as `previous` next time.
  */
-export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined, previous: SendStatsSample | null = null): SendStatsSummary | null {
-  const list = [...(stats || [])]
+function codecNames(list: MediaStat[]): Map<string, string | undefined> {
   const codecs = new Map<string, string | undefined>()
-  for (const s of list) if (s.type === 'codec') codecs.set(s.id, s.mimeType)
-  const out = activeVideoSender(list)
-  if (!out) return null
-  const source = list.find(s => s.type === 'media-source' && s.id === out.mediaSourceId)
-  const codec = list.find(s => s.type === 'codec' && s.id === out.codecId)
-  const mime = codecs.get(out.codecId || '') || ''
-  const bytes = out.bytesSent || 0
-  const ts = out.timestamp || 0
-  const sameStream = !!previous && (previous.id === undefined || previous.id === out.id)
+  for (const stat of list) if (stat.type === 'codec') codecs.set(stat.id, stat.mimeType)
+  return codecs
+}
+
+function statById(list: MediaStat[], type: string, id: string | undefined): MediaStat | undefined {
+  if (!id) return undefined
+  return list.find(stat => stat.type === type && stat.id === id)
+}
+
+function sameSendStream(previous: SendStatsSample | null, id: string | undefined): boolean {
+  if (!previous) return false
+  return previous.id === undefined || previous.id === id
+}
+
+function bitrateSince(previous: SendStatsSample | null, sameStream: boolean, ts: number, bytes: number): number | null {
+  if (!previous || !sameStream) return null
+  if (ts <= previous.ts || bytes < previous.bytes) return null
+  return Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
+}
+
+function captureFpsOf(source: MediaStat | undefined): number | null {
+  const fps = source?.framesPerSecond
+  return isFiniteNumber(fps) ? Math.round(fps) : null
+}
+
+function efficientOf(out: MediaStat): boolean | null {
+  return typeof out.powerEfficientEncoder === 'boolean' ? out.powerEfficientEncoder : null
+}
+
+function knownLimitation(reason: string): boolean {
+  if (reason === 'none' || reason === 'cpu') return true
+  return reason === 'bandwidth' || reason === 'other'
+}
+
+function limitationOf(reason: string | undefined): string | null {
+  if (!reason || !knownLimitation(reason)) return null
+  return reason
+}
+
+function textOrEmpty(value: string | undefined): string {
+  if (!value) return ''
+  return value
+}
+
+function numberOrZero(value: number | undefined): number {
+  if (!value) return 0
+  return value
+}
+
+function statList(stats: Iterable<MediaStat> | null | undefined): MediaStat[] {
+  if (!stats) return []
+  return [...stats]
+}
+
+function codecLabel(list: MediaStat[], codecId: string | undefined): string {
+  const mime = codecNames(list).get(textOrEmpty(codecId))
+  return textOrEmpty(mime).replace(/^video\//i, '').toUpperCase()
+}
+
+function codecLine(codec: MediaStat | undefined): string {
+  if (!codec) return ''
+  return textOrEmpty(codec.sdpFmtpLine)
+}
+
+function sampleOf(out: MediaStat, bytes: number, ts: number): SendStatsSample {
   const frames = out.framesEncoded
   const encodeTime = out.totalEncodeTime
-  const kbps = previous && sameStream && ts > previous.ts && bytes >= previous.bytes
-    ? Math.round(((bytes - previous.bytes) * 8) / (ts - previous.ts))
-    : null
-  const { fps, encodeMs } = encodeFrameStats(out, previous, sameStream)
   return {
-    codec: mime.replace(/^video\//i, '').toUpperCase(),
-    width: out.frameWidth || 0,
-    height: out.frameHeight || 0,
-    fps,
-    kbps,
-    captureFps: isFiniteNumber(source?.framesPerSecond) ? Math.round(source.framesPerSecond) : null,
-    encoder: out.encoderImplementation || '',
-    efficientEncoder: typeof out.powerEfficientEncoder === 'boolean' ? out.powerEfficientEncoder : null,
-    limitation: ['none', 'cpu', 'bandwidth', 'other'].includes(out.qualityLimitationReason || '') ? out.qualityLimitationReason ?? null : null,
-    encodeMs,
-    codecParameters: codec?.sdpFmtpLine || '',
-    sample: { id: out.id, bytes, ts, ...(frames === undefined ? {} : { frames }), ...(encodeTime === undefined ? {} : { encodeTime }) }
+    id: out.id,
+    bytes,
+    ts,
+    ...(frames === undefined ? {} : { frames }),
+    ...(encodeTime === undefined ? {} : { encodeTime }),
   }
+}
+
+function buildSendSummary(list: MediaStat[], out: MediaStat, previous: SendStatsSample | null): SendStatsSummary {
+  const source = statById(list, 'media-source', out.mediaSourceId)
+  const codec = statById(list, 'codec', out.codecId)
+  const bytes = numberOrZero(out.bytesSent)
+  const ts = numberOrZero(out.timestamp)
+  const sameStream = sameSendStream(previous, out.id)
+  const rates = encodeFrameStats(out, previous, sameStream)
+  return {
+    codec: codecLabel(list, out.codecId),
+    width: numberOrZero(out.frameWidth),
+    height: numberOrZero(out.frameHeight),
+    fps: rates.fps,
+    kbps: bitrateSince(previous, sameStream, ts, bytes),
+    captureFps: captureFpsOf(source),
+    encoder: textOrEmpty(out.encoderImplementation),
+    efficientEncoder: efficientOf(out),
+    limitation: limitationOf(out.qualityLimitationReason),
+    encodeMs: rates.encodeMs,
+    codecParameters: codecLine(codec),
+    sample: sampleOf(out, bytes, ts),
+  }
+}
+
+export function summarizeSendStats(stats: Iterable<MediaStat> | null | undefined, previous: SendStatsSample | null = null): SendStatsSummary | null {
+  const list = statList(stats)
+  const out = activeVideoSender(list)
+  if (!out) return null
+  return buildSendSummary(list, out, previous)
 }
 
 /** Values used by the advanced diagnosis, distinct from the selected target. */
@@ -211,19 +319,34 @@ export function formatStreamDiagnostics(summary: SendStatsSummary | null | undef
   }
 }
 
+function formatBitrate(kbps: number | null | undefined, lang: string): string {
+  const dash = '–'
+  if (kbps === null || kbps === undefined) return dash
+  const digits = kbps >= 1000 ? 1 : 0
+  const num = new Intl.NumberFormat(lang, { maximumFractionDigits: digits, minimumFractionDigits: digits })
+  if (kbps >= 1000) return `${num.format(kbps / 1000)} Mbit/s`
+  return `${num.format(kbps)} kbit/s`
+}
+
+function formatResolution(width: number, height: number): string | null {
+  if (!width || !height) return null
+  return `${width}×${height}`
+}
+
+function formatFps(fps: number | null | undefined, lang: string): string | null {
+  if (fps === null || fps === undefined) return null
+  const num = new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }).format(fps)
+  return `${num} fps`
+}
+
 /** Display strings for summarizeSendStats; '–' where nothing is known yet. */
 export function formatSendStats(summary: SendStatsSummary | null | undefined, lang: string = locale.value) {
   const dash = '–'
   if (!summary) return { codec: dash, resolution: dash, fps: dash, bitrate: dash }
-  const num = (n: number, digits = 0) => new Intl.NumberFormat(lang, { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(n)
-  let bitrate = dash
-  if (summary.kbps !== null && summary.kbps !== undefined) {
-    bitrate = summary.kbps >= 1000 ? `${num(summary.kbps / 1000, 1)} Mbit/s` : `${num(summary.kbps)} kbit/s`
-  }
   return {
     codec: summary.codec || dash,
-    resolution: summary.width && summary.height ? `${summary.width}×${summary.height}` : dash,
-    fps: summary.fps !== null && summary.fps !== undefined ? `${num(summary.fps)} fps` : dash,
-    bitrate
+    resolution: formatResolution(summary.width, summary.height) ?? dash,
+    fps: formatFps(summary.fps, lang) ?? dash,
+    bitrate: formatBitrate(summary.kbps, lang),
   }
 }

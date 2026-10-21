@@ -63,6 +63,20 @@ func (h *Hub) KickFromVoice(userID uuid.UUID) bool {
 // was deleted): every member is disconnected from it and told so, lingering
 // presence ends and the SFU room is closed.
 func (h *Hub) CloseVoiceChannel(chID uuid.UUID) {
+	h.kickAllFromChannel(chID)
+	graces, rest := h.drainChannelPresence(chID)
+	for _, k := range graces {
+		h.removePresence(k.user, chID)
+	}
+	for _, id := range rest {
+		h.removePresence(id, chID)
+	}
+	if h.SFU != nil {
+		h.SFU.CloseRoom(chID)
+	}
+}
+
+func (h *Hub) kickAllFromChannel(chID uuid.UUID) {
 	h.mu.RLock()
 	all := make([]*Client, 0, len(h.clients))
 	for c := range h.clients {
@@ -72,8 +86,11 @@ func (h *Hub) CloseVoiceChannel(chID uuid.UUID) {
 	for _, c := range all {
 		h.kickClient(c, &chID)
 	}
+}
 
+func (h *Hub) drainChannelPresence(chID uuid.UUID) ([]voiceKey, []uuid.UUID) {
 	h.mu.Lock()
+	defer h.mu.Unlock()
 	var graces []voiceKey
 	for k, g := range h.grace {
 		if k.ch == chID {
@@ -86,16 +103,7 @@ func (h *Hub) CloseVoiceChannel(chID uuid.UUID) {
 	for id := range h.voice[chID] {
 		rest = append(rest, id)
 	}
-	h.mu.Unlock()
-	for _, k := range graces {
-		h.removePresence(k.user, chID)
-	}
-	for _, id := range rest {
-		h.removePresence(id, chID)
-	}
-	if h.SFU != nil {
-		h.SFU.CloseRoom(chID)
-	}
+	return graces, rest
 }
 
 // DisconnectUser closes every live connection of userID.
