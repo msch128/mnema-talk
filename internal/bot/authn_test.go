@@ -53,6 +53,11 @@ func TestShouldTouch(t *testing.T) {
 		t.Errorf("expected touch after window to succeed")
 	}
 
+	// The touch just granted restarts the window.
+	if a.shouldTouch(id, nil, now.Add(touchEvery+2*time.Second)) {
+		t.Errorf("expected the call right after a granted touch to be throttled")
+	}
+
 	// Unseen id with recent db last timestamp should be throttled
 	otherID := uuid.New()
 	last := now.Add(-10 * time.Second)

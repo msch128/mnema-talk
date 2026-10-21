@@ -110,7 +110,11 @@ func (a *Authenticator) shouldTouch(id uuid.UUID, last *time.Time, now time.Time
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if prev, seen := a.touched[id]; seen {
-		return now.Sub(prev) >= touchEvery
+		if now.Sub(prev) < touchEvery {
+			return false
+		}
+		a.touched[id] = now
+		return true
 	}
 	if last != nil && now.Sub(*last) < touchEvery {
 		return false
