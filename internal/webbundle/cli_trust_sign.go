@@ -114,10 +114,9 @@ func runTrustSign(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	if err := writeTrust(o.out, doc, sig); err != nil {
 		return err
 	}
-	if _, err := fmt.Fprintf(stdout, "signed trust statement serial %d: %d bundle key(s), %d revoked, %d updater key(s), %d revoked\n",
-		t.Serial, len(t.BundleKeys), len(t.RevokedBundleKeys), len(t.UpdaterKeys), len(t.RevokedUpdaterKeys)); err != nil {
-		return err
-	}
+	// The trust file is written; a failed status line must not turn that into a failure.
+	_, _ = fmt.Fprintf(stdout, "signed trust statement serial %d: %d bundle key(s), %d revoked, %d updater key(s), %d revoked\n",
+		t.Serial, len(t.BundleKeys), len(t.RevokedBundleKeys), len(t.UpdaterKeys), len(t.RevokedUpdaterKeys))
 	return nil
 }
 
