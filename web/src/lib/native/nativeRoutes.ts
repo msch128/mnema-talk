@@ -178,9 +178,11 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 
 // The first route that matches the request answers it. Anything not listed is
 // unavailable here, including /api/onboarding (rules acceptance, welcome flow)
-// and the public invite preview: the native account preview is read-only until
-// a typed onboarding bridge exists, and the server answers RULES_NOT_ACCEPTED
-// for writes while rules are pending.
+// and the public invite preview. This transport belongs to the experimental
+// Windows DEV client only (isDesktopRuntime); the shipped desktop clients
+// (v0.2.x) run the signed web bundle through the trusted proxy, which passes
+// every /api path, so rules acceptance works there. Add typed onboarding
+// operations here before the native DEV client is ever shipped.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,
 ]
