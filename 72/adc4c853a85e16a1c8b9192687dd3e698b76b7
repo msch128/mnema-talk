@@ -1,0 +1,38 @@
+internal/auth/native_handler_integration_test.go
+  h_0ff4f4713441f4 26-27,46-49,54-57,65-75,98-105,110,113-115,127-134,143-147
+internal/auth/validation_paths_test.go
+  h_0ff4f4713441f4 18-30,44,46-50
+internal/chat/embeds_integration_test.go
+  h_0ff4f4713441f4 23-33,40-42
+internal/db/starter_roles_integration_test.go
+  h_0ff4f4713441f4 48-50,61-63,100-160,170,173,211-218
+internal/nativepreview/native_preview_integration_test.go
+  h_0ff4f4713441f4 136-138,140-147,239-249,339-346,382-389
+internal/perm/store_integration_test.go
+  h_0ff4f4713441f4 77-92,131-135
+internal/s3/failures_test.go
+  h_0ff4f4713441f4 61-71,84-121,127
+internal/server/bot_own_role_integration_test.go
+  h_0ff4f4713441f4 36-46,64-65,88-89,97-98
+internal/server/system_integration_test.go
+  h_0ff4f4713441f4 31-80,114-117
+internal/server/system_update_integration_test.go
+  h_0ff4f4713441f4 22-24,30-58,69-70,72-73,75-76,78-79,89-90,107,111-113
+internal/server/webhooks_regenerate_integration_test.go
+  h_0ff4f4713441f4 35-42
+internal/sfu/rtpkey_test.go
+  h_0ff4f4713441f4 30-33,35-110,115-118,121-128,139-142,144-147,154-157
+internal/webhook/dispatch_test.go
+  h_0ff4f4713441f4 10,62-69,150-168,183,187,195,205-209,212-214,217-220,226-232,238-243,247-251,256-258
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "72adc4c853a85e16a1c8b9192687dd3e698b76b7",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
