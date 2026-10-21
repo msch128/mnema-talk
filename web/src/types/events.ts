@@ -24,6 +24,7 @@ export type VoiceStateUpdate =
 export type ReadStateUpdate =
   | Pick<ReadState, 'channel_id' | 'last_read_at' | 'unread_count' | 'mention_count'>
   | { channel_id: string; last_read_at: string; refresh: true }
+  | { refresh: true }
   | Pick<ReadState, 'channel_id' | 'notify_level'>
 
 /** A bot's reply to a slash command that only the member who ran it sees (never stored). */
@@ -204,6 +205,7 @@ function isStandardReadState(payload: Record<string, unknown>): boolean {
 }
 
 function isReadStateUpdate(payload: Record<string, unknown>): boolean {
+  if (!hasOwn(payload, 'channel_id')) return payload['refresh'] === true && onlyFields(payload, ['refresh'])
   if (!isIdentifier(payload['channel_id'])) return false
   if (hasOwn(payload, 'refresh')) return isRefreshReadState(payload)
   if (hasOwn(payload, 'notify_level')) return isNotifyLevelReadState(payload)

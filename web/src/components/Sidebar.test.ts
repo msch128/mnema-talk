@@ -627,7 +627,7 @@ it('shows the legal action to ordinary members and stops queued focus after unmo
   await mountSidebar({ role: 'user' })
   const button = wrapper.find<HTMLButtonElement>('[aria-controls="server-menu"]')
   await button.trigger('click'); await flush()
-  expect(wrapper.findAll('#server-menu [role="menuitem"]').map(row => row.text())).toEqual(['Rechtliches & Datenschutz'])
+  expect(wrapper.findAll('#server-menu [role="menuitem"]').map(row => row.text())).toEqual(['Alle als gelesen markieren', 'Rechtliches & Datenschutz'])
   await button.trigger('click')
   button.element.click()
   wrapper.unmount()

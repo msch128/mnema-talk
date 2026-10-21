@@ -13,19 +13,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// NotifyLevel says which new messages of a channel may notify a user.
-type NotifyLevel string
-
-const (
-	NotifyAll      NotifyLevel = "all"
-	NotifyMentions NotifyLevel = "mentions"
-	NotifyMute     NotifyLevel = "mute"
-)
-
-func (l NotifyLevel) valid() bool {
-	return l == NotifyAll || l == NotifyMentions || l == NotifyMute
-}
-
 // ReadState is one channel's unread summary for one user.
 type ReadState struct {
 	ChannelID    uuid.UUID   `json:"channel_id" format:"uuid"`
@@ -40,6 +27,8 @@ type ReadState struct {
 // Unread counts top-level messages by others since the last read; mentions
 // count any message (also thread replies) that mentions the user (@username,
 // @all, @here; see message_mentions) or replies to one of their messages. Before the first read, "last read" is the sign-up.
+// NotifyLevel is the effective level: the channel's own setting, else its
+// category's, else "all"; an expired mute counts as none (see ResolveNotify).
 func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadState, error) {
 	rows, err := p.Query(ctx, `
 		SELECT c.id,
@@ -47,21 +36,28 @@ func GetReadStates(ctx context.Context, p *db.Pool, user *auth.User) ([]ReadStat
 		       count(m.id) FILTER (WHERE orig.user_id = $1 OR EXISTS (
 		           SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1)),
 		       cr.last_read_at,
-		       COALESCE(cr.notify_level, 'all')
+		       COALESCE(cr.notify_level, 'inherit'), cr.muted_until,
+		       COALESCE(cn.notify_level, 'inherit'), cn.muted_until,
+		       NOW()
 		FROM channels c
 		JOIN users me ON me.id = $1
 		LEFT JOIN channel_reads cr ON cr.channel_id = c.id AND cr.user_id = $1
+		LEFT JOIN category_notify cn ON cn.category_id = c.category_id AND cn.user_id = $1
 		LEFT JOIN messages m ON m.channel_id = c.id AND m.user_id <> $1
 		     AND m.created_at > COALESCE(cr.last_read_at, me.created_at)
 		LEFT JOIN messages orig ON orig.id = m.reply_to_id
-		GROUP BY c.id, cr.last_read_at, cr.notify_level
+		GROUP BY c.id, cr.last_read_at, cr.notify_level, cr.muted_until, cn.notify_level, cn.muted_until
 		ORDER BY c.id`, user.ID)
 	if err != nil {
 		return nil, fmt.Errorf("read states: %w", err)
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReadState, error) {
 		var s ReadState
-		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &s.LastReadAt, &s.NotifyLevel)
+		var ch, cat NotifySetting
+		var now time.Time
+		err := row.Scan(&s.ChannelID, &s.UnreadCount, &s.MentionCount, &s.LastReadAt,
+			&ch.Level, &ch.MutedUntil, &cat.Level, &cat.MutedUntil, &now)
+		s.NotifyLevel = ResolveNotify(now, ch, cat)
 		return s, err
 	})
 }
@@ -92,7 +88,7 @@ func MarkRead(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, mess
 	}
 	var marked time.Time
 	err := p.QueryRow(ctx, `
-		INSERT INTO channel_reads (user_id, channel_id, last_read_at) VALUES ($1, $2, COALESCE($3, NOW()))
+		INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level) VALUES ($1, $2, COALESCE($3, NOW()), 'inherit')
 		ON CONFLICT (user_id, channel_id) DO UPDATE
 		SET last_read_at = GREATEST(COALESCE(channel_reads.last_read_at, EXCLUDED.last_read_at), EXCLUDED.last_read_at)
 		RETURNING last_read_at`, userID, channelID, at).Scan(&marked)
@@ -108,20 +104,8 @@ func MarkUnread(ctx context.Context, p *db.Pool, userID, channelID, messageID uu
 	}
 	at := t.Add(-time.Microsecond)
 	_, err = p.Exec(ctx, `
-		INSERT INTO channel_reads (user_id, channel_id, last_read_at) VALUES ($1, $2, $3)
+		INSERT INTO channel_reads (user_id, channel_id, last_read_at, notify_level) VALUES ($1, $2, $3, 'inherit')
 		ON CONFLICT (user_id, channel_id) DO UPDATE SET last_read_at = EXCLUDED.last_read_at`,
 		userID, channelID, at)
 	return at, err
-}
-
-// SetNotifyLevel stores how loudly channelID may notify the user.
-func SetNotifyLevel(ctx context.Context, p *db.Pool, userID, channelID uuid.UUID, level NotifyLevel) error {
-	if !level.valid() {
-		return httpx.ErrInvalidInput("level must be all, mentions or mute")
-	}
-	_, err := p.Exec(ctx, `
-		INSERT INTO channel_reads (user_id, channel_id, notify_level) VALUES ($1, $2, $3)
-		ON CONFLICT (user_id, channel_id) DO UPDATE SET notify_level = EXCLUDED.notify_level`,
-		userID, channelID, level)
-	return err
 }

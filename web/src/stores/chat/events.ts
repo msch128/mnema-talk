@@ -11,6 +11,7 @@ import { applyActivity, countMessageOf, fetchMembers, refreshMemberStats, update
 import { applyToMessage, bumpReplyCount, countReply, insertMessage, onOriginalDeleted, onOriginalEdited, removeFromWindow } from './messageWindow'
 import { messageMentionsMe, triggerBrowserNotification } from './notifications'
 import { fetchReadState, isReadingActiveChannel } from './readState'
+import { refreshNotifications } from './notifySettings'
 import { closeThread } from './threads'
 import { clearTypingForUser, handleTypingEvent } from './typing'
 
@@ -42,7 +43,12 @@ function onPresenceUpdate(cx: Cx, p: Payload<'presence_update'>) {
 
 function onReadState(cx: Cx, p: Payload<'read_state'>) {
   const { cs } = cx
-  if (!p?.channel_id) return
+  if (!p) return
+  // Settings changed or everything was marked read (in this or another session).
+  if (!('channel_id' in p) || !p.channel_id) {
+    if ('refresh' in p && p.refresh) void refreshNotifications(cx)
+    return
+  }
   if ('refresh' in p && p.refresh) {
     fetchReadState(cx)
     return
