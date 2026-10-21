@@ -2,11 +2,30 @@
 // finishing does. The first run shows every step; later only the rules, and
 // only while they are pending. Rules cannot be skipped or closed.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onRulesRequired } from '../lib/api'
 import { navigate } from '../lib/router'
 import { welcomeSteps, isFirstRun, type WelcomeStep } from '../lib/welcomeSteps'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useOnboardingStore } from '../stores/onboarding'
+
+// A burst of refused writes opens the rules once, not once per write.
+const RULES_RECOVERY_COOLDOWN_MS = 5000
+
+/** A write refused for the rules: load the current ones and open the step. */
+function useRulesRecovery(open: { value: boolean }, evaluate: () => Promise<void>) {
+  const onboarding = useOnboardingStore()
+  let lastRecovery = 0
+  let stop: (() => boolean) | null = null
+  function recover() {
+    const now = Date.now()
+    if (open.value || now - lastRecovery < RULES_RECOVERY_COOLDOWN_MS) return
+    lastRecovery = now
+    void onboarding.reload().then(evaluate)
+  }
+  onMounted(() => { stop = onRulesRequired(recover) })
+  onBeforeUnmount(() => { stop?.() })
+}
 
 function useOnReturn(callback: () => void) {
   const onVisible = () => { if (document.visibilityState === 'visible') callback() }
@@ -53,7 +72,7 @@ export function useWelcomeFlow() {
     firstRun.value = false
     onboarding.welcomeOpen = false
     if (!wasFirstRun) return
-    void onboarding.save({ welcome_done: true }).catch(() => undefined)
+    void onboarding.markWelcomeDone()
     openStartChannel()
   }
 
@@ -81,6 +100,7 @@ export function useWelcomeFlow() {
   }
 
   onMounted(() => { void evaluate() })
+  useRulesRecovery(open, evaluate)
   // A rules version raised while the app was in the background shows up on return.
   useOnReturn(() => { if (!open.value) void onboarding.reload().then(evaluate) })
   onBeforeUnmount(() => { onboarding.welcomeOpen = false })

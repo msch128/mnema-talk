@@ -96,6 +96,21 @@ describe('notification settings', () => {
     expect(await chat.setCategoryNotificationLevel(category.id, 'mute')).toBe(false)
   })
 
+  it('takes the shown level back when the write fails', async () => {
+    const chat = setup()
+    chat.readStates[one.id] = readStateFixture({ channel_id: one.id, notify_level: 'mentions' })
+    http.handle = () => Promise.reject(new Error('forbidden'))
+    expect(await chat.setNotificationLevel(one.id, 'mute')).toBe(false)
+    expect(chat.notificationLevel(one.id)).toBe('mentions')
+  })
+
+  it('drops the state it created for an unknown channel when the write fails', async () => {
+    const chat = setup()
+    http.handle = () => Promise.reject(new Error('offline'))
+    expect(await chat.setNotificationLevel('c-new', 'mute')).toBe(false)
+    expect(chat.readStates['c-new']).toBeUndefined()
+  })
+
   it('reloads read states and settings when the next timed mute has run out', async () => {
     const chat = setup()
     const end = new Date(NOW.getTime() + 60_000).toISOString()
