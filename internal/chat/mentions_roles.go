@@ -32,8 +32,9 @@ type MentionSet struct {
 // under the mention policy of ctx. The author is never mentioned.
 func resolveMentionSet(ctx context.Context, q db.Querier, content string, authorID uuid.UUID, online []uuid.UUID) (MentionSet, error) {
 	policy := mentionPolicyFrom(ctx)
-	names := ParseMentions(content)
-	roles := matchRoles(content, policy.Roles)
+	hits := roleHits(content, policy.Roles)
+	names := ParseMentions(maskPhraseRoles(content, hits))
+	roles := hitRoles(hits)
 	if len(names) == 0 && len(roles) == 0 {
 		return MentionSet{}, nil
 	}
@@ -133,6 +134,12 @@ type roleHit struct {
 // also "@Dev"). Role names may contain spaces, so this scans for the known
 // names instead of tokenising.
 func matchRoles(content string, roles []MentionRole) []MentionRole {
+	return hitRoles(roleHits(content, roles))
+}
+
+// roleHits are the surviving "@Role Name" matches of content, longest first
+// per position.
+func roleHits(content string, roles []MentionRole) []roleHit {
 	if len(roles) == 0 || !strings.Contains(content, "@") {
 		return nil
 	}
@@ -148,7 +155,23 @@ func matchRoles(content string, roles []MentionRole) []MentionRole {
 			}
 		}
 	}
-	return longestHits(hits)
+	return keptHits(hits)
+}
+
+// maskPhraseRoles blanks the spans of matched multi-word roles so the user
+// tokenizer does not also read the first word of "@Dev Team" as @dev. A role
+// whose name is a single token is left alone: there a user of that name wins
+// (see takenByUsers).
+func maskPhraseRoles(content string, hits []roleHit) string {
+	b := []byte(content)
+	for _, h := range hits {
+		if strings.ContainsFunc(h.role.Name, func(r rune) bool { return r < 128 && !isNameChar(byte(r)) }) {
+			for i := h.start; i < h.end; i++ {
+				b[i] = ' '
+			}
+		}
+	}
+	return string(b)
 }
 
 // mentionBounded reports whether content[start:end] ("@name") starts the
@@ -171,15 +194,25 @@ func isNameChar(c byte) bool {
 	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_' || c == '.' || c == '-'
 }
 
-func longestHits(hits []roleHit) []MentionRole {
+// keptHits drops the hits another, longer role shadows from the same "@".
+func keptHits(hits []roleHit) []roleHit {
+	var out []roleHit
+	for _, h := range hits {
+		if !shadowed(h, hits) {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+func hitRoles(hits []roleHit) []MentionRole {
 	var out []MentionRole
 	seen := map[uuid.UUID]bool{}
 	for _, h := range hits {
-		if seen[h.role.ID] || shadowed(h, hits) {
-			continue
+		if !seen[h.role.ID] {
+			seen[h.role.ID] = true
+			out = append(out, h.role)
 		}
-		seen[h.role.ID] = true
-		out = append(out, h.role)
 	}
 	return out
 }

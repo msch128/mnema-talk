@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -176,11 +177,17 @@ func (h *Handler) messageInChannel(r *http.Request) (uuid.UUID, *messageRef, err
 // @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
 // @Router /api/channels/{channelID}/messages/{messageID} [put]
 func (h *Handler) editMessage(w http.ResponseWriter, r *http.Request) error {
+	return h.editMessageWith(w, r, h.sendContext)
+}
+
+// editMessageWith is editMessage with the mention context of the caller's kind
+// (member or bot) supplied by ctxFor.
+func (h *Handler) editMessageWith(w http.ResponseWriter, r *http.Request, ctxFor func(*http.Request, uuid.UUID, perm.Set) (context.Context, error)) error {
 	msgID, ref, err := h.messageInChannel(r)
 	if err != nil {
 		return err
 	}
-	ctx, err := h.sendContext(r, ref.ChannelID, perm.SendMessages)
+	ctx, err := ctxFor(r, ref.ChannelID, perm.SendMessages)
 	if err != nil {
 		return err
 	}
