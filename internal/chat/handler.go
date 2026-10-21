@@ -82,6 +82,9 @@ func (h *Handler) Mount(r chi.Router) {
 	r.Post("/channels/{channelID}/read", httpx.Handle(h.markRead))
 	r.Post("/channels/{channelID}/unread", httpx.Handle(h.markUnread))
 	r.Put("/channels/{channelID}/notifications", httpx.Handle(h.setNotifyLevel))
+	r.Put("/categories/{id}/notifications", httpx.Handle(h.setCategoryNotify))
+	r.Get("/notification-settings", httpx.Handle(h.notificationSettings))
+	r.Post("/read-state/read-all", httpx.Handle(h.markAllRead))
 }
 
 // MountAdmin registers channel and category management (the Manage channels

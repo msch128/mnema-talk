@@ -176,6 +176,10 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
   return viaNative(metadataCommand(resource), { resource }, request)
 }
 
+// Not offered over the native bridge (they answer unavailable()): channel and
+// category notification levels, GET /api/notification-settings, and
+// POST /api/read-state/read-all. The trusted desktop client has no typed
+// command for them; the web app keeps its menus and falls back to local state.
 // The first route that matches the request answers it.
 const ROUTES: readonly Route[] = [
   routeRegister, routePassword, routeAdmin, routeLogin, routeMe, routeLogout, routePersonal, routeTypedChat, routeMetadata,

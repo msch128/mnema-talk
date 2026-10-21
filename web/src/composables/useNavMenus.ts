@@ -25,8 +25,7 @@ import { menuPointFromEvent } from '../lib/contextMenuPoint'
 import type { MenuTrigger } from '../lib/contextMenuPoint'
 import { moderationOffer, openTimeout, openBan, liftTimeout } from '../lib/moderationActions'
 import { t } from '../i18n'
-
-export const NOTIFY_LEVELS = ['all', 'mentions', 'mute'] as const
+import { notifyMenuItems } from './useMuteMenu'
 
 /** Open/close state plus the items for one ContextMenu instance. */
 export function useMenuState() {
@@ -96,22 +95,6 @@ function basicChannelItems(channel: Channel): ContextMenuItem[] {
   ]
 }
 
-function notificationLevelItems(channelId: string): ContextMenuItem[] {
-  const chatStore = useChatStore()
-  const current = notifyLevelOf(chatStore, channelId)
-  return [
-    { type: 'separator' },
-    { type: 'label', label: t('notifications.title') },
-    ...NOTIFY_LEVELS.map((level): ContextMenuItem => ({
-      id: `notify-${level}`,
-      type: 'radio',
-      label: t(`notifications.${level}`),
-      checked: current === level,
-      action: () => chatStore.setNotificationLevel?.(channelId, level)
-    }))
-  ]
-}
-
 function channelManagementItems(channel: Channel, handlers: ChannelHandlers): ContextMenuItem[] {
   const permissions = usePermissionsStore()
   const canAdmin = permissions.can('administrator')
@@ -140,7 +123,8 @@ function channelManagementItems(channel: Channel, handlers: ChannelHandlers): Co
 export function buildChannelItems(channel: Channel, handlers: ChannelHandlers = {}): ContextMenuItem[] {
   return [
     ...basicChannelItems(channel),
-    ...notificationLevelItems(channel.id),
+    { type: 'separator' },
+    ...notifyMenuItems({ kind: 'channel', id: channel.id }),
     ...channelManagementItems(channel, handlers)
   ]
 }
@@ -170,10 +154,12 @@ export function buildCategoryItems(category: Category, handlers: CategoryHandler
     icon: CheckCheck,
     disabled: !hasUnread,
     action: async () => {
-      await Promise.all(channels.map(c => chatStore.markChannelRead?.(c.id)))
+      await chatStore.markAllRead?.(category.id)
       toasts.success(t('sidebar.allMarkedRead'))
     }
   }]
+  items.push({ type: 'separator' })
+  items.push(...notifyMenuItems({ kind: 'category', id: category.id }))
   items.push({ type: 'separator' })
   items.push({
     id: 'collapse-all',

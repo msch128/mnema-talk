@@ -20,6 +20,8 @@ import SidebarServerMenu from './SidebarServerMenu.vue'
 import { confirm } from '../lib/confirm'
 import { t } from '../i18n'
 import { loadCollapsed, saveCollapsed } from '../lib/channelTree'
+import { aggregateActivity } from '../lib/channelActivity'
+import { useToastStore } from '../stores/toast'
 import { locateCategory, moveCategory } from '../lib/channelLayout'
 import { currentRoute, navigate } from '../lib/router'
 import {
@@ -152,6 +154,15 @@ function visibleChannels(category: SidebarSection) {
   )
 }
 
+// What a category's channels have waiting (its header shows it while collapsed).
+function activityOf(category: SidebarSection) {
+  return aggregateActivity(category.channels || [], chatStore.readStates)
+}
+
+async function markEverythingRead() {
+  if (await chatStore.markAllRead()) useToastStore().success(t('sidebar.allMarkedRead'))
+}
+
 // Guess the type for the category's "+" from what the category already holds.
 function defaultTypeFor(category: Category) {
   const chs = category.channels || []
@@ -234,6 +245,7 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
       @open-legal="emit('open-legal')"
       @create-channel="openCreateChannel('text')"
       @create-category="openCreateCategory()"
+      @mark-all-read="markEverythingRead"
     />
 
     <!-- Navigation Scroll Area -->
@@ -262,6 +274,8 @@ function channelIndicator(id: string): '' | 'top' | 'bottom' {
             :indicator="indicatorFor(`header:${category.id}`)"
             :flash="flashKey === `category:${category.id}`"
             :hint-id="hintId"
+            :unread-channels="activityOf(category).unreadChannels"
+            :mentions="activityOf(category).mentions"
             @toggle="toggleCategory(category.id)"
             @menu="openCategoryMenu($event, category)"
             @create-channel="openCreateChannel(defaultTypeFor(category), category.id)"

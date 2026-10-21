@@ -475,17 +475,18 @@ describe('ChatArea notification settings and presentation', () => {
 
   it('persists channel notification choices through the menu and closes it on Escape', async () => {
     const chat = setup()
-    const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(undefined)
-    for (const level of ['all', 'mentions', 'mute'] as const) {
-      chat.readStates.ch1 = readStateFixture({ channel_id: 'ch1', notify_level: level })
+    const set = vi.spyOn(chat, 'setNotificationLevel').mockResolvedValue(true)
+    for (const level of ['inherit', 'all', 'mentions'] as const) {
+      chat.notifySettings = { channels: level === 'inherit' ? [] : [{ channel_id: 'ch1', level, muted_until: null }], categories: [] }
       await nextTick()
       await w.find('[aria-haspopup=menu]').trigger('click')
       await nextTick()
       const menu = w.findComponent(ContextMenu)
-      const item = requireValue(requireValue(menu.props('items')).find(item => item.label === t(`notifications.${level}`)))
-      expect(item?.shortcut).toBe('✓')
+      const label = level === 'inherit' ? t('notifications.inheritChannel') : t(`notifications.${level}`)
+      const item = requireValue(requireValue(menu.props('items')).find(item => item.label === label))
+      expect(item).toMatchObject({ type: 'radio', checked: true })
       item.action?.()
-      expect(set).toHaveBeenCalledWith('ch1', level)
+      expect(set).toHaveBeenCalledWith('ch1', level, null)
       menu.vm.$emit('close')
       await nextTick()
     }
