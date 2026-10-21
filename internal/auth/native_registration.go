@@ -52,6 +52,6 @@ func (h *NativeHandler) registerNative(w http.ResponseWriter, request *http.Requ
 	if h.accounts.Events != nil {
 		h.accounts.Events.Broadcast("member_joined", user.Public())
 	}
-	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: *user})
+	httpx.WriteJSON(w, http.StatusCreated, UserEnvelope{User: h.accounts.withRulesPending(request.Context(), user)})
 	return nil
 }
