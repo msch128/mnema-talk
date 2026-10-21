@@ -9,9 +9,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// PasswordChangeHandler returns an unmounted native-only credential transition.
-// It shares the browser account's wrong-password lockout. A success is a fresh
-// initial native family, never a cookie, refresh successor or E2EE grant.
 func nativeAccountsReady(h *NativeHandler) bool {
 	if h == nil || h.accounts == nil {
 		return false
@@ -29,6 +26,9 @@ func invalidPasswordHandler(h *NativeHandler) bool {
 	return h.sessions.pool != h.accounts.Sessions.DB
 }
 
+// PasswordChangeHandler returns an unmounted native-only credential transition.
+// It shares the browser account's wrong-password lockout. A success is a fresh
+// initial native family, never a cookie, refresh successor or E2EE grant.
 func (h *NativeHandler) PasswordChangeHandler() (http.Handler, error) {
 	if invalidPasswordHandler(h) {
 		return nil, errors.New("invalid native password dependencies")

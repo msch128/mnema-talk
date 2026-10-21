@@ -8,9 +8,6 @@ import (
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
-// RegistrationHandler is an explicit native-only account creation preview.
-// It shares invite consumption and the browser registration IP budget. It
-// creates neither a cookie nor a native session; a separate login is required.
 func invalidRegistrationHandler(h *NativeHandler) bool {
 	if !nativeAccountsReady(h) {
 		return true
@@ -32,6 +29,9 @@ func rejectNativeRegistration(next http.Handler) http.Handler {
 	return rejectForcedNativeTarget(requireAnonymousNative(next), "invalid native registration target")
 }
 
+// RegistrationHandler is an explicit native-only account creation preview.
+// It shares invite consumption and the browser registration IP budget. It
+// creates neither a cookie nor a native session; a separate login is required.
 func (h *NativeHandler) RegistrationHandler() (http.Handler, error) {
 	if invalidRegistrationHandler(h) {
 		return nil, errors.New("invalid native registration dependencies")

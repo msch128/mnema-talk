@@ -124,11 +124,6 @@ func scanNativeCiphertext(row pgx.Row) (NativeCiphertextRecord, error) {
 	return NativeCiphertextRecord{value: &v}, nil
 }
 
-// Publish commits identical stored bytes on an idempotent retry; it never
-// reencrypts or silently replaces an existing event. The boolean means created.
-// Writers serialize on the channel before allocating sequence numbers, so a
-// concurrent reader cannot advance past an uncommitted lower-number event.
-// No events are broadcast by this persistence-only foundation.
 func ciphertextInputRejected(request OpaqueCiphertextRequest) bool {
 	if request.ChannelID == uuid.Nil || request.ClientEventID == uuid.Nil {
 		return true
@@ -149,6 +144,11 @@ func (s *NativeCiphertextStore) publishInChannel(ctx context.Context, tx pgx.Tx,
 	return insertOrReplay(ctx, tx, user.ID, request)
 }
 
+// Publish commits identical stored bytes on an idempotent retry; it never
+// reencrypts or silently replaces an existing event. The boolean means created.
+// Writers serialize on the channel before allocating sequence numbers, so a
+// concurrent reader cannot advance past an uncommitted lower-number event.
+// No events are broadcast by this persistence-only foundation.
 func (s *NativeCiphertextStore) Publish(ctx context.Context, principal auth.NativePrincipal, request OpaqueCiphertextRequest) (NativeCiphertextRecord, bool, error) {
 	if ciphertextInputRejected(request) {
 		return NativeCiphertextRecord{}, false, ErrNativeContentInput

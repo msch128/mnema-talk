@@ -59,8 +59,6 @@ var ErrInvalidLayers = errors.New("invalid layers")
 // change what it receives.
 var ErrNotInRoom = errors.New("not a member of the room")
 
-// validLayers accepts one to maxLayers layers whose pictures get smaller from
-// one to the next.
 func layerDimensionRejected(size int) bool {
 	if size < 1 {
 		return true
@@ -82,6 +80,8 @@ func layerShapeRejected(l Layer) bool {
 	return layerRateRejected(l.FPS)
 }
 
+// validLayers accepts one to maxLayers layers whose pictures get smaller from
+// one to the next.
 func validLayers(layers []Layer) bool {
 	if len(layers) == 0 || len(layers) > maxLayers {
 		return false

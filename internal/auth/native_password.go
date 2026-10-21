@@ -16,12 +16,6 @@ type NativeCredentialControl interface {
 	DisconnectNativeCredentials(uuid.UUID)
 }
 
-// changePasswordAndReissue is an irreversible native credential transition.
-// It returns a NEW initial family for the same account/instance, not a refresh
-// successor. Password policy and bcrypt are the browser account policy; the
-// transaction additionally compares the captured hash/version under user-first
-// locks. No browser cookie is issued. The caller must retire its native Core
-// before dispatch; this grant cannot restore cryptographic group/device trust.
 func reissueCallerMissing(expected NativePrincipal, control NativeCredentialControl) bool {
 	if expected.user.ID == uuid.Nil || expected.familyID == uuid.Nil {
 		return true
@@ -29,6 +23,12 @@ func reissueCallerMissing(expected NativePrincipal, control NativeCredentialCont
 	return expected.instanceID == uuid.Nil || control == nil
 }
 
+// changePasswordAndReissue is an irreversible native credential transition.
+// It returns a NEW initial family for the same account/instance, not a refresh
+// successor. Password policy and bcrypt are the browser account policy; the
+// transaction additionally compares the captured hash/version under user-first
+// locks. No browser cookie is issued. The caller must retire its native Core
+// before dispatch; this grant cannot restore cryptographic group/device trust.
 func (s *NativeSessions) changePasswordAndReissue(ctx context.Context, expected NativePrincipal, current, next string, control NativeCredentialControl) (IssuedNative, error) {
 	if reissueCallerMissing(expected, control) {
 		return IssuedNative{}, ErrNativeUnauthorized

@@ -41,26 +41,6 @@ type Ban struct {
 	BannedBy string `json:"banned_by"`
 }
 
-// banUser handles POST /api/admin/users/{id}/ban.
-//
-// @Summary Ban a member
-// @Description Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.
-// @ID banUser
-// @Tags Admin
-// @Accept json
-// @Produce json
-// @Security cookieAuth
-// @Param id path string true "User ID." Format(uuid)
-// @Param request body BanRequest true "Request body."
-// @Success 204 "Success, no content."
-// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
-// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
-// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
-// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
-// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
-// @Header 429 {integer} Retry-After "Seconds until the client may retry."
-// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
-// @Router /api/admin/users/{id}/ban [post]
 func parseBanDuration(durationSeconds *int) (*time.Time, error) {
 	if durationSeconds == nil {
 		return nil, nil
@@ -87,6 +67,26 @@ func (h *Handler) postBanCleanup(id uuid.UUID, until *time.Time, reason string) 
 	h.Events.Broadcast("user_update", map[string]any{"id": id, "disabled": true})
 }
 
+// banUser handles POST /api/admin/users/{id}/ban.
+//
+// @Summary Ban a member
+// @Description Ends the member's sessions and connections and blocks signing in, with an optional reason and an optional duration (otherwise for good). The account and its messages stay. By default the invite the account registered with is revoked, so that code cannot create the account again. Needs Ban members and a higher role than the member; the Owner cannot be banned. Kicking someone without a record is Disable.
+// @ID banUser
+// @Tags Admin
+// @Accept json
+// @Produce json
+// @Security cookieAuth
+// @Param id path string true "User ID." Format(uuid)
+// @Param request body BanRequest true "Request body."
+// @Success 204 "Success, no content."
+// @Failure 400 {object} httpx.ErrorResponse "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+// @Failure 401 {object} httpx.ErrorResponse "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+// @Failure 403 {object} httpx.ErrorResponse "FORBIDDEN: not allowed (admin required, not the author, wrong current password) or cross-origin request rejected by the CSRF check."
+// @Failure 404 {object} httpx.ErrorResponse "NOT_FOUND: the resource, or the route, does not exist."
+// @Failure 429 {object} httpx.ErrorResponse "RATE_LIMITED: too many requests."
+// @Header 429 {integer} Retry-After "Seconds until the client may retry."
+// @Failure 500 {object} httpx.ErrorResponse "INTERNAL_ERROR: sanitized server failure."
+// @Router /api/admin/users/{id}/ban [post]
 func (h *Handler) banUser(w http.ResponseWriter, r *http.Request) error {
 	id, err := httpx.PathUUID(r, "id")
 	if err != nil {
