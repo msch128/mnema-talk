@@ -150,13 +150,15 @@ func peekRequest(r *http.Request, noBody bool) (req map[string]any, mark string)
 		return nil, ""
 	}
 	head, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBody+1))
-	if err != nil {
-		return nil, "request_unparsed"
-	}
+	// Whatever was read goes back in front of the rest, even after a read
+	// error, so the handler sees the same bytes (and the same error) as without us.
 	r.Body = struct {
 		io.Reader
 		io.Closer
 	}{io.MultiReader(bytes.NewReader(head), r.Body), r.Body}
+	if err != nil {
+		return nil, "request_unparsed"
+	}
 	switch {
 	case len(head) > maxRequestBody:
 		mark = "request_truncated"
