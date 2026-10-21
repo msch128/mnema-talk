@@ -1,0 +1,150 @@
+e2e/tests/onboarding.spec.ts
+  s_06fcde5dbef956::t_cd0aae28fc651e 1-52,54-90
+  s_06fcde5dbef956::t_a791ad067897e5 53
+internal/onboarding/onboarding_test.go
+  s_06fcde5dbef956::t_437042e74a23f1 1-99
+internal/onboarding/member.go
+  s_06fcde5dbef956::t_05b807d1bacf01 105
+  s_06fcde5dbef956::t_5cde036959df22 1-104,106-145,148,150,152,158,162-261
+  s_06fcde5dbef956::t_58a5b4a82e4b35 146-147,149,151,153-157,159-161
+internal/perm/fixture.go
+  s_06fcde5dbef956::t_905caa46dd4a37 86-88
+  s_06fcde5dbef956::t_e54520c522ed13 77-85
+internal/audit/snapshot.go
+  s_06fcde5dbef956::t_c1b0e691506bd4 38-40
+  s_06fcde5dbef956::t_cc13c7a428348b 69
+internal/perm/snapshot.go
+  s_06fcde5dbef956::t_f22bf553e23dc4 4
+  s_06fcde5dbef956::t_5a14d9bea03af4 9
+  s_06fcde5dbef956::t_e54520c522ed13 86-93,184
+  s_06fcde5dbef956::t_53e4bf3818ebff 174,180-183,185-199
+  s_06fcde5dbef956::t_7049ac54bf73b3 200
+internal/testutil/db.go
+  s_06fcde5dbef956::t_6856d3b914f38a 104-111
+web/src/components/AdminPermissionsUi.test.ts
+  s_06fcde5dbef956::t_8c0c954406d58c 130-133
+  s_06fcde5dbef956::t_388ad6268fc106 117
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_340c96ef5a1dfe 42
+web/src/components/InviteLanding.test.ts
+  s_06fcde5dbef956::t_7cc50b8acba91f 1-74
+internal/audit/routes.go
+  s_06fcde5dbef956::t_9c0b8742f230c6 27
+  s_06fcde5dbef956::t_f87e55bb4c16ce 110-111
+internal/db/migrations/0037_onboarding.sql
+  s_06fcde5dbef956::t_e3c5246b3bc6a0 1-18
+internal/ws/lifecycle.go
+  s_06fcde5dbef956::t_e24680cff206f5 63
+internal/onboarding/invite.go
+  s_06fcde5dbef956::t_fda51e0ac56c13 1-8,10-42,44-66
+  s_06fcde5dbef956::t_4c6af42299ca4a 9,43
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_6440f352436bcb 151-155,769-770,1028-1045
+  s_06fcde5dbef956::t_cc0ffc40c42f39 86
+web/src/lib/api.ts
+  s_06fcde5dbef956::t_cc0ffc40c42f39 10
+web/src/lib/inviteLink.ts
+  s_06fcde5dbef956::t_d0e975ef634ee0 21-31
+  s_06fcde5dbef956::t_500be3d632b65a 1-20
+internal/httpx/response.go
+  s_06fcde5dbef956::t_87b624a756932e 36
+  s_06fcde5dbef956::t_79c0937177aea8 48
+internal/auth/handler.go
+  s_06fcde5dbef956::t_340c96ef5a1dfe 134
+web/src/components/LoginModal.vue
+  s_06fcde5dbef956::t_d0e975ef634ee0 3,9-11,34-42,44-48,111,113,115,119-120
+  s_06fcde5dbef956::t_3be501e84a6f20 121-122
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_c8b6b18069139e 212-236,274-276
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_cc0ffc40c42f39 86
+  s_06fcde5dbef956::t_6440f352436bcb 151-155,769-770,1028-1045
+internal/onboarding/settings.go
+  s_06fcde5dbef956::t_a34d8be33e9607 1-182
+internal/perm/snapshot_load.go
+  s_06fcde5dbef956::t_e54520c522ed13 31,92-96,114-115,130-134
+  s_06fcde5dbef956::t_59a29d01bca330 135
+  s_06fcde5dbef956::t_4a3c7ebf0e31ce 30
+internal/ws/voice_join.go
+  s_06fcde5dbef956::t_6a08e73701f186 48,182,234-241
+  s_06fcde5dbef956::t_967f54a3c0dc37 242
+internal/ws/perms.go
+  s_06fcde5dbef956::t_e24680cff206f5 214-218
+internal/server/router_routes.go
+  s_06fcde5dbef956::t_9512f8ba86e6f4 65,104,131
+web/src/lib/api.test.ts
+  s_06fcde5dbef956::t_cc0ffc40c42f39 111
+web/src/lib/router.ts
+  s_06fcde5dbef956::t_d0e975ef634ee0 4,108
+web/src/App.vue
+  s_06fcde5dbef956::t_d0e975ef634ee0 18,188
+web/src/components/AdminOnboardingTab.vue
+  s_06fcde5dbef956::t_fb18c50de1581b 1-29,31-125
+  s_06fcde5dbef956::t_5a79ac3f3c78f5 30
+web/src/App.test.ts
+  s_06fcde5dbef956::t_388ad6268fc106 297,333,338,342
+SECURITY.md
+  s_06fcde5dbef956::t_df348caa3bd91c 40-63
+internal/chat/handler_lookup.go
+  s_06fcde5dbef956::t_6a08e73701f186 63
+web/src/components/AdminOnboardingTab.test.ts
+  s_06fcde5dbef956::t_17147793c627e9 1-114
+internal/roles/handler_permissions.go
+  s_06fcde5dbef956::t_f3e16a3fab6da9 37
+  s_06fcde5dbef956::t_340c96ef5a1dfe 34-36,89
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_224cbf1be404a2 1-59
+internal/auth/handler_profile.go
+  s_06fcde5dbef956::t_340c96ef5a1dfe 58,62-74
+  s_06fcde5dbef956::t_7819149467eed7 4
+  s_06fcde5dbef956::t_c14877d3ad330e 75-76
+internal/auth/service.go
+  s_06fcde5dbef956::t_340c96ef5a1dfe 77-80
+internal/perm/rules_test.go
+  s_06fcde5dbef956::t_9e1a2ec83b3693 1-76
+api/openapi.json
+  s_06fcde5dbef956::t_49ef45b9e3c2a9 156-159,566-569,1904-1907,2339,2543-2723,3005-3008,8914-8917,8919,8923,8927,8937,8947,8983,8985,8988-8990,8995,8999,9007,9011,9021,9031,9041,9077,9079,9083-9086,9100-9101,9131,9177,9181-9184,9197-9207,9213,9217,9293,9299-9519,16540-16601,17415-17654,18891
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_ad3dc49772d8e9 1810,1824
+  s_06fcde5dbef956::t_de4bc4a9091029 62,85,317,334,1132,1153,1406,1412,1550-1653
+internal/chat/permissions.go
+  s_06fcde5dbef956::t_6a08e73701f186 61-63,73-84
+  s_06fcde5dbef956::t_9ea63f551325f7 85-86
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_cc0ffc40c42f39 179-183
+web/src/lib/inviteLink.test.ts
+  s_06fcde5dbef956::t_7fbc3a33a068c3 1-23
+internal/server/onboarding_integration_test.go
+  s_06fcde5dbef956::t_b410e54aede848 308
+  s_06fcde5dbef956::t_92c9b82c3fe1f7 77,196-197
+  s_06fcde5dbef956::t_37b8ecedd2de47 1-76,78-195,198-307,309-314
+web/src/components/AdminDashboard.vue
+  s_06fcde5dbef956::t_6440f352436bcb 5,19,32-33,40,54,99
+internal/server/router_build.go
+  s_06fcde5dbef956::t_9512f8ba86e6f4 47,102
+  s_06fcde5dbef956::t_d0e3ec6d865bbe 20
+web/src/lib/router.test.ts
+  s_06fcde5dbef956::t_b1b4135d87afa3 86-91
+web/src/components/InviteLanding.vue
+  s_06fcde5dbef956::t_5a79ac3f3c78f5 34-35
+  s_06fcde5dbef956::t_adc1d62b5afb47 1-7,9,11-33,36
+  s_06fcde5dbef956::t_d0e975ef634ee0 8,10
+internal/perm/service.go
+  s_06fcde5dbef956::t_4c8d9f631325c4 256-259,263,279-282,286,288-290
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d4dd8111a13984e7c536792e5f2794db0aef5c77",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
