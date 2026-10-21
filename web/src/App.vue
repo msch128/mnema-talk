@@ -25,6 +25,7 @@ import LegalModal from './components/LegalModal.vue'
 import ResizeHandle from './components/ResizeHandle.vue'
 import ToastHost from './components/ToastHost.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import WelcomeFlow from './components/WelcomeFlow.vue'
 import ConnectionBanner from './components/ConnectionBanner.vue'
 import TimeoutBanner from './components/TimeoutBanner.vue'
 import ModerationDialog from './components/ModerationDialog.vue'
@@ -279,6 +280,9 @@ onMounted(async () => {
         @close="chatStore.closeUserProfile()"
         @mention="(uname) => chatStore.insertMention(uname)"
       />
+
+      <!-- First run and re-acceptance of changed rules -->
+      <WelcomeFlow />
 
       <!-- Legal & privacy dialog -->
       <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />

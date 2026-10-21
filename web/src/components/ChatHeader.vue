@@ -7,6 +7,7 @@ import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
 import MentionsInbox from './MentionsInbox.vue'
+import TipBar from './TipBar.vue'
 import { openSearch } from '../lib/globalSearch'
 import { quoteValue } from '../lib/searchQuery'
 
@@ -145,4 +146,7 @@ function openNotificationMenu(e: MouseEvent) {
       <X class="w-4 h-4" />
     </button>
   </div>
+
+  <!-- One feature tip at a time, never next to the notification hint -->
+  <TipBar v-if="!panel && !showNotifHint" />
 </template>

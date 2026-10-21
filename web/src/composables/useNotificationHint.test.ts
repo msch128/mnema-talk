@@ -1,12 +1,30 @@
 import { required } from '../store-test-support.fixture'
 import type { EffectScope } from 'vue'
+import type { OnboardingState } from '../types/rest'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { effectScope } from 'vue'
 import { setActivePinia, createPinia } from 'pinia'
 import { useNotificationHint } from './useNotificationHint'
 import { useChatStore } from '../stores/chat'
 import { useToastStore } from '../stores/toast'
+import { useOnboardingStore } from '../stores/onboarding'
 import { setLocale } from '../i18n'
+
+vi.mock('../lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/api')>()),
+  api: (_path: string, options?: { json?: unknown }) => {
+    if (options?.json) puts.push(options.json)
+    return Promise.resolve(record({ dismissed_tips: puts.flatMap(p => (p as { dismissed_tips: string[] }).dismissed_tips) }))
+  }
+}))
+
+const puts: unknown[] = []
+function record(overrides: Partial<OnboardingState> = {}): OnboardingState {
+  return {
+    community_name: '', welcome_text: '', rules_text: '', rules_version: 0, rules_accepted_version: 0,
+    rules_pending: false, start_channel_id: null, dismissed_tips: [], welcome_done: true, ...overrides
+  }
+}
 
 let scope: EffectScope | undefined
 let chat: ReturnType<typeof useChatStore>
@@ -22,6 +40,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   chat = useChatStore()
   chat.notificationPermission = 'default'
+  puts.length = 0
+  useOnboardingStore().state = record()
 })
 
 afterEach(() => {
@@ -39,22 +59,23 @@ describe('useNotificationHint', () => {
     expect(setup().showNotifHint.value).toBe(false)
   })
 
-  it('remembers a dismissal', () => {
+  it('stays hidden until the account record is known, and while the welcome flow is open', () => {
+    const onboarding = useOnboardingStore()
+    onboarding.state = null
     const h = setup()
-    h.dismissNotifHint()
     expect(h.showNotifHint.value).toBe(false)
-    expect(localStorage.getItem('mnema_notif_hint_dismissed')).toBe('1')
-    scope?.stop()
-    expect(setup().showNotifHint.value).toBe(false)
+    onboarding.state = record()
+    expect(h.showNotifHint.value).toBe(true)
+    onboarding.welcomeOpen = true
+    expect(h.showNotifHint.value).toBe(false)
   })
 
-  it('survives unavailable storage', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked') })
+  it('remembers a dismissal on the account, not in the browser', async () => {
     const h = setup()
-    expect(h.showNotifHint.value).toBe(true)
-    h.dismissNotifHint()
+    await h.dismissNotifHint()
     expect(h.showNotifHint.value).toBe(false)
+    expect(puts).toEqual([{ dismissed_tips: ['notif-hint'] }])
+    expect(localStorage.getItem('mnema_notif_hint_dismissed')).toBeNull()
   })
 
   it('toasts and dismisses after a granted or denied answer, but not a dismissed prompt', async () => {

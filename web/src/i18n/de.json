@@ -230,6 +230,35 @@
     "mutedIndefinitely": "Stumm",
     "unmute": "Stummschaltung aufheben"
   },
+  "welcome": {
+    "progress": "Schritt {current} von {total}",
+    "close": "Einführung überspringen",
+    "continue": "Weiter",
+    "skip": "Überspringen",
+    "welcome": {
+      "title": "Willkommen bei {name}",
+      "fallback": "Schön, dass du da bist. Ein paar kurze Schritte, dann kann es losgehen."
+    },
+    "rules": {
+      "title": "Die Regeln",
+      "intro": "Bitte lies die Regeln dieser Community. Mitlesen geht sofort, Schreiben, Reagieren, Hochladen und Talks beitreten erst, wenn du sie akzeptierst.",
+      "accept": "Ich akzeptiere die Regeln"
+    },
+    "profile": {
+      "title": "Dein Profil"
+    },
+    "notifications": {
+      "title": "Immer auf dem Laufenden",
+      "body": "Erhalte eine Desktop-Benachrichtigung bei neuen Nachrichten, während Mnema Talk im Hintergrund läuft. Du kannst das jederzeit pro Kanal ändern."
+    }
+  },
+  "tips": {
+    "label": "Tipp",
+    "gotIt": "Verstanden",
+    "search": "Mit Strg oder Cmd + K durchsuchst du alle Kanäle, die du sehen kannst.",
+    "mention": "Mit @ erwähnst du jemanden, mit / startest du Slash-Befehle.",
+    "talk": "Ein Klick auf einen Talk tritt sofort bei. Niemand wird angerufen, es ist ein Treffpunkt."
+  },
   "channel": {
     "create": "Kanal erstellen",
     "createTitle": "Neuen Kanal erstellen",

@@ -230,6 +230,35 @@
     "mutedIndefinitely": "Muted",
     "unmute": "Unmute"
   },
+  "welcome": {
+    "progress": "Step {current} of {total}",
+    "close": "Skip the introduction",
+    "continue": "Continue",
+    "skip": "Skip",
+    "welcome": {
+      "title": "Welcome to {name}",
+      "fallback": "Glad you are here. A few quick steps and you are set."
+    },
+    "rules": {
+      "title": "The rules",
+      "intro": "Please read the rules of this community. You can read along, but posting, reacting, uploading and joining a Talk wait until you accept them.",
+      "accept": "I accept the rules"
+    },
+    "profile": {
+      "title": "Your profile"
+    },
+    "notifications": {
+      "title": "Stay in the loop",
+      "body": "Get a desktop notification for new messages while Mnema Talk runs in the background. You can change this per channel at any time."
+    }
+  },
+  "tips": {
+    "label": "Tip",
+    "gotIt": "Got it",
+    "search": "Press Ctrl or Cmd + K to search every channel you can see.",
+    "mention": "Type @ to mention someone and / for slash commands.",
+    "talk": "Click a Talk to join it right away. Nobody gets a call, it is a hangout spot."
+  },
   "channel": {
     "create": "Create channel",
     "createTitle": "Create a new channel",
