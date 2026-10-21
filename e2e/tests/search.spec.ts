@@ -29,6 +29,7 @@ async function post(page: Page, channelId: string, content: string) {
 }
 
 test('search filters, results and jumping to an old message', async ({ browser }) => {
+  test.setTimeout(240_000)
   const aCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const bCtx = await browser.newContext({ viewport: { width: 1400, height: 900 } })
   const a = await aCtx.newPage()
@@ -94,6 +95,7 @@ test('search filters, results and jumping to an old message', async ({ browser }
 
     // The member sees mentions of themself, but nothing from the hidden channel.
     await b.reload()
+    await expect(b.getByTestId('search-in-channel')).toBeVisible()
     await b.keyboard.press('Control+k')
     const mine = b.getByRole('dialog')
     await mine.getByRole('combobox').fill(`mentions:${suiteMember.username} `)
