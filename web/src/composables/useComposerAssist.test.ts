@@ -6,6 +6,8 @@ import { defineComponent, ref, h, nextTick } from 'vue'
 import { useComposerAssist } from './useComposerAssist'
 import { useChatStore } from '../stores/chat'
 import { useAuthStore } from '../stores/auth'
+import { usePermissionsStore } from '../stores/permissions'
+import { channelFixture } from '../test-fixtures.fixture'
 
 const Harness = defineComponent({
   setup() {
@@ -137,6 +139,31 @@ describe('useComposerAssist', () => {
     w.find('textarea').element.setSelectionRange(5, 5)
     await w.vm.assist.insertText(' 👋')
     expect(w.vm.text).toBe('hallo 👋 welt')
+    w.unmount()
+  })
+})
+
+describe('role suggestions in the composer', () => {
+  const role = (id: string, name: string, extra: Record<string, unknown> = {}) => ({
+    id, name, color: 0, position: 1, permissions: 0, hoist: false, mentionable: false, is_everyone: false, max_upload_mb: null, ...extra
+  })
+
+  it('offers mentionable roles, and every role to someone who may mention everyone', async () => {
+    const permissions = usePermissionsStore()
+    permissions.roles = [
+      role('r1', 'Mods', { mentionable: true }), role('r2', 'Staff'),
+      role('r3', 'Bots', { mentionable: true, managed: true }), role('r4', '@everyone', { is_everyone: true, mentionable: true })
+    ]
+    const channel = channelFixture({ id: 'c1' })
+    useChatStore().categories = [{ id: 'cat', name: 'x', sort_order: 0, created_at: '2026-01-01T00:00:00Z', channels: [channel] }]
+    useChatStore().activeChannel = channel
+    permissions.info = { owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [{ channel_id: 'c1', permissions: 2 }] }
+    const w = mount(Harness, { attachTo: document.body })
+    await type(w, '@')
+    expect(w.vm.assist.suggestions.value.filter(s => s.role).map(s => s.username)).toEqual(['Mods'])
+    permissions.info = { owner: false, permissions: 0, max_upload_mb: 50, role_ids: [], top_position: 0, catalog: [], channels: [{ channel_id: 'c1', permissions: 2 | 64 }] }
+    await type(w, '@')
+    expect(w.vm.assist.suggestions.value.filter(s => s.role).map(s => s.username)).toEqual(['Mods', 'Staff'])
     w.unmount()
   })
 })

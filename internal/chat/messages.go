@@ -72,7 +72,7 @@ func scanMessages(rows pgx.Rows) ([]Message, error) {
 	defer rows.Close()
 	msgs := make([]Message, 0)
 	for rows.Next() {
-		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0), Mentions: make([]uuid.UUID, 0)}
+		m := Message{Attachments: make([]MediaAttachment, 0), Reactions: make([]ReactionSummary, 0), Mentions: make([]uuid.UUID, 0), MentionRoles: make([]uuid.UUID, 0)}
 		var avatar *string
 		var r rawReplyFields
 		var embeds []byte
@@ -113,7 +113,7 @@ func enrich(ctx context.Context, p *db.Pool, msgs []Message) error {
 		ids[i] = m.ID
 	}
 	for _, load := range []func(context.Context, *db.Pool, []Message, map[uuid.UUID]int, []uuid.UUID) error{
-		loadAttachments, loadReactions, loadMentions,
+		loadAttachments, loadReactions, loadMentions, loadMentionRoles,
 	} {
 		if err := load(ctx, p, msgs, idx, ids); err != nil {
 			return err

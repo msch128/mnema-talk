@@ -49,3 +49,23 @@ describe('applyMention', () => {
 it('ignores a caret outside the current draft', () => {
   expect(findMentionQuery('@draft', 100)).toBeNull()
 })
+
+describe('role suggestions', () => {
+  const role = (name: string) => ({
+    id: name, name, color: 0, position: 1, permissions: 0, hoist: false, mentionable: true, is_everyone: false, max_upload_mb: null
+  })
+  it('offers matching roles after the members and before the groups', () => {
+    const got = suggestMentions('m', members, { selfId: '1', roles: [role('Mods'), role('Crew'), role('Admins')] })
+    expect(got.map(i => i.username)).toEqual(['max', 'moritz', 'Mods', 'Admins'])
+    expect(got[2]?.role?.id).toBe('Mods')
+    expect(suggestMentions('', members, { roles: [role('Mods')] }).map(i => i.username).slice(-3)).toEqual(['Mods', 'here', 'all'])
+  })
+  it('skips a role named like a member, since the member wins', () => {
+    expect(suggestMentions('max', members, { roles: [role('Max')] }).filter(i => i.role)).toEqual([])
+  })
+  it('caps the roles and applies the name when picked', () => {
+    const many = ['Aa', 'Ab', 'Ac', 'Ad', 'Ae'].map(role)
+    expect(suggestMentions('a', [], { roles: many }).filter(i => i.role)).toHaveLength(3)
+    expect(applyMention('hi @Dev', 3, 7, 'Dev Team')).toEqual({ text: 'hi @Dev Team ', caret: 13 })
+  })
+})

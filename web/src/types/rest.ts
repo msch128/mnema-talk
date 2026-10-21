@@ -1153,6 +1153,19 @@ export function isChatMember(value: unknown): value is ChatMember {
 
 export const decodeChatMember = decoder("chat.Member", isChatMember)
 
+export type ChatMentionsPage = {
+  has_more: boolean
+  messages: Array<ChatMessage>
+}
+
+export function isChatMentionsPage(value: unknown): value is ChatMentionsPage {
+  return isRecord(value)
+    && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
+    && (hasOwn(value, "messages") && isArrayOf(value["messages"], item => isChatMessage(item)))
+}
+
+export const decodeChatMentionsPage = decoder("chat.MentionsPage", isChatMentionsPage)
+
 export type ChatMessage = {
   attachments: Array<ChatMediaAttachment>
   avatar_url?: string
@@ -1166,6 +1179,7 @@ export type ChatMessage = {
   is_edited: boolean
   is_pinned: boolean
   is_webhook?: boolean
+  mention_roles?: Array<string>
   mentions: Array<string>
   number: number
   parent_id?: string
@@ -1192,6 +1206,7 @@ export function isChatMessage(value: unknown): value is ChatMessage {
     && (hasOwn(value, "is_edited") && typeof value["is_edited"] === 'boolean')
     && (hasOwn(value, "is_pinned") && typeof value["is_pinned"] === 'boolean')
     && (!hasOwn(value, "is_webhook") || typeof value["is_webhook"] === 'boolean')
+    && (!hasOwn(value, "mention_roles") || isArrayOf(value["mention_roles"], item => isIdentifier(item)))
     && (hasOwn(value, "mentions") && isArrayOf(value["mentions"], item => isIdentifier(item)))
     && (hasOwn(value, "number") && isInteger(value["number"]))
     && (!hasOwn(value, "parent_id") || isIdentifier(value["parent_id"]))

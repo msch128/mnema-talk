@@ -102,3 +102,26 @@ describe('mentions with known members', () => {
     expect(d.textContent).toBe('@max, @nobody, @all and @herzog.')
   })
 })
+
+describe('role mentions', () => {
+  const roles = [{ name: 'Dev' }, { name: 'Dev Team', me: true }, { name: 'R&D' }]
+  const pills = (text: string) => [...dom(renderMarkdown(text, { roles })).querySelectorAll<HTMLElement>('.md-mention-role')]
+
+  it('draws the recorded roles as pills, longest name first, case-insensitively', () => {
+    expect(pills('hi @dev, and @DEV team!').map(e => e.textContent)).toEqual(['@dev', '@DEV team'])
+    expect(pills('@Dev Team standup')[0]?.classList.contains('md-mention-me')).toBe(true)
+    expect(pills('@dev')[0]?.classList.contains('md-mention-me')).toBe(false)
+  })
+
+  it('needs a word boundary and escapes the name', () => {
+    expect(pills('mail@dev.example and @developer and @dev-ops')).toHaveLength(0)
+    expect(pills('ping @r&d now').map(e => e.textContent)).toEqual(['@r&d'])
+    expect(renderMarkdown('@dev', { roles: [] })).not.toContain('md-mention-role')
+  })
+
+  it('leaves role pills non-interactive and keeps user mentions working', () => {
+    const d = dom(renderMarkdown('@dev and @max', { roles, known: new Set(['max']) }))
+    expect(d.querySelector('.md-mention-role')?.hasAttribute('data-mention')).toBe(false)
+    expect(d.querySelector('[data-mention="max"]')).not.toBeNull()
+  })
+})

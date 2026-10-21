@@ -1089,7 +1089,13 @@
     "title": "Erwähnen",
     "listLabel": "Vorschläge für Erwähnungen",
     "allHint": "Alle Mitglieder",
-    "hereHint": "Alle, die gerade online sind"
+    "hereHint": "Alle, die gerade online sind",
+    "roleHint": "Rolle: alle, die sie tragen, werden benachrichtigt"
+  },
+  "mentions": {
+    "inbox": "Erwähnungen",
+    "empty": "Dich erwähnt noch niemand.",
+    "failed": "Erwähnungen konnten nicht geladen werden."
   },
   "emoji": {
     "open": "Emoji einfügen",
