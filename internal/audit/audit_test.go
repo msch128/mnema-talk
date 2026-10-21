@@ -24,8 +24,10 @@ func TestSanitizeRedactsSecretsAndBoundsSizes(t *testing.T) {
 		"nested":     map[string]any{"token_hash": "h", "ok": "fine", "deep": map[string]any{"a": map[string]any{"b": map[string]any{"c": map[string]any{"d": map[string]any{"e": 1}}}}}},
 		"list":       make([]any, 80),
 	})
-	if out["password"] != redacted || out["api_token"] != redacted || out["Secret"] != redacted || out["code"] != redacted || out["session_id"] != redacted {
-		t.Errorf("not redacted: %v", out)
+	for _, key := range []string{"password", "api_token", "Secret", "code", "session_id"} {
+		if out[key] != redacted {
+			t.Errorf("key %q not redacted: %v", key, out[key])
+		}
 	}
 	if u, _ := out["url"].(string); !strings.HasPrefix(u, "https://example.com [sha256:") || strings.Contains(u, "hook") || strings.Contains(u, "pw") {
 		t.Errorf("url = %v", out["url"])
@@ -72,8 +74,13 @@ func TestMatchFindsRoutesAndParams(t *testing.T) {
 			t.Errorf("%s %s matched", c.m, c.p)
 		}
 	}
-	if !mutating("POST") || mutating("GET") || mutating("HEAD") || mutating("OPTIONS") {
-		t.Error("mutating")
+	if !mutating("POST") {
+		t.Error("POST should be mutating")
+	}
+	for _, m := range []string{"GET", "HEAD", "OPTIONS"} {
+		if mutating(m) {
+			t.Errorf("%s should not be mutating", m)
+		}
 	}
 }
 
@@ -85,8 +92,14 @@ func TestDiffAndTime(t *testing.T) {
 	if _, err := parseTime("2026-01-02T03:04:05Z", false); err != nil {
 		t.Fatal(err)
 	}
-	a, _ := parseTime("2026-01-02", false)
-	b, _ := parseTime("2026-01-02", true)
+	a, err := parseTime("2026-01-02", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := parseTime("2026-01-02", true)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if b.Sub(a) != 24*time.Hour {
 		t.Fatal("end of day")
 	}
@@ -114,18 +127,18 @@ func TestNilLogAndSnapshotEdges(t *testing.T) {
 	if m, n := Snapshot(ctx, nil, ResRole, "not-a-uuid"); m != nil || n != "" {
 		t.Fatal("bad id")
 	}
-	if m, _ := Snapshot(ctx, nil, ResNone, "00000000-0000-0000-0000-000000000000"); m != nil {
+	if m, name := Snapshot(ctx, nil, ResNone, "00000000-0000-0000-0000-000000000000"); m != nil || name != "" {
 		t.Fatal("no resource")
 	}
 	if clip("äöü", 2) != "äö" || clip("a", 2) != "a" {
 		t.Fatal("clip")
 	}
 	c := &capped{max: 4}
-	if n, _ := c.Write([]byte("abcdef")); n != 6 || c.buf.String() != "abcd" {
-		t.Fatal("capped")
+	n, err := c.Write([]byte("abcdef"))
+	if err != nil || n != 6 || c.buf.String() != "abcd" {
+		t.Fatalf("capped: n=%d err=%v buf=%s", n, err, c.buf.String())
 	}
-	c.Write([]byte("zz"))
-	if c.buf.String() != "abcd" {
+	if _, err := c.Write([]byte("zz")); err != nil || c.buf.String() != "abcd" {
 		t.Fatal("capped overflow")
 	}
 }
