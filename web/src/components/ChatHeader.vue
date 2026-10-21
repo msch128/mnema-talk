@@ -6,6 +6,7 @@ import { Hash, Users, Bell, BellOff, AtSign, X, Volume2 } from '@lucide/vue'
 import { useChatStore } from '../stores/chat'
 import { useNotificationHint } from '../composables/useNotificationHint'
 import { durationLabel } from '../lib/moderation'
+import MentionsInbox from './MentionsInbox.vue'
 
 // The channel header (48px, aligned with the side columns; 40px in the Talk's
 // chat) and the desktop notification opt-in under it, shown until answered or dismissed.
@@ -56,6 +57,7 @@ function openNotificationMenu(e: MouseEvent) {
 
     <!-- Right: Badges & member list toggle -->
     <div class="flex items-center gap-2 flex-shrink-0">
+      <MentionsInbox v-if="!panel" />
       <button
         v-if="chatStore.activeChannel"
         @click="openNotificationMenu"

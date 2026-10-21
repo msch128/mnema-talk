@@ -1923,6 +1923,24 @@
         ],
         "type": "object"
       },
+      "chat.MentionsPage": {
+        "properties": {
+          "has_more": {
+            "type": "boolean"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/chat.Message"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "has_more",
+          "messages"
+        ],
+        "type": "object"
+      },
       "chat.Message": {
         "properties": {
           "attachments": {
@@ -1973,6 +1991,14 @@
           "is_webhook": {
             "description": "IsWebhook narrows IsBot: the author is an incoming webhook (shown with\na Webhook label), not a bot account (shown with a BOT label).",
             "type": "boolean"
+          },
+          "mention_roles": {
+            "description": "MentionRoles are the roles this message mentions (@Role); the client\ndraws them as role pills. A role that was deleted since drops out. The\nserver always sends it; it is optional for clients that build messages\nthemselves (the desktop app's native chat path).",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "type": "array"
           },
           "mentions": {
             "description": "Mentions are the users this message mentions (@username, @all, @here).",
@@ -16574,6 +16600,103 @@
         "summary": "List members",
         "tags": [
           "Users"
+        ]
+      }
+    },
+    "/api/mentions": {
+      "get": {
+        "description": "Messages that mention the caller (by name, @all, @here or through a role) or reply to one of their messages, newest first. Only channels the caller may view are included; the caller's own messages never are.",
+        "operationId": "listMentions",
+        "parameters": [
+          {
+            "description": "Page back: only messages older than this message.",
+            "in": "query",
+            "name": "before",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Page size. Values below 1 or non-numeric fall back to the default; larger values are clamped to 50.",
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 25,
+              "maximum": 50,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/chat.MentionsPage"
+                }
+              }
+            },
+            "description": "One page of mentions."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "Invalid input (INVALID_INPUT): malformed JSON, unknown JSON fields, bad IDs or failed validation."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "No valid session (UNAUTHORIZED): missing, expired or revoked cookie, or the account was disabled."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "RATE_LIMITED: too many requests.",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds until the client may retry.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/httpx.ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR: sanitized server failure."
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Mentions inbox",
+        "tags": [
+          "Messages"
         ]
       }
     },

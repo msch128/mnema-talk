@@ -1093,7 +1093,13 @@
     "title": "Mention",
     "listLabel": "Mention suggestions",
     "allHint": "Every member",
-    "hereHint": "Everyone online right now"
+    "hereHint": "Everyone online right now",
+    "roleHint": "Role: everyone who holds it is notified"
+  },
+  "mentions": {
+    "inbox": "Mentions",
+    "empty": "Nothing mentions you yet.",
+    "failed": "Mentions could not be loaded."
   },
   "emoji": {
     "open": "Insert emoji",
