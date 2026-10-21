@@ -1,0 +1,16 @@
+web/src/stores/chat/members.test.ts
+  h_0ff4f4713441f4 1-118
+web/src/stores/chat/messageWindow.test.ts
+  h_0ff4f4713441f4 1-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7e54a55b1d4da12f544e8f1e60602a8768f6e211",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
