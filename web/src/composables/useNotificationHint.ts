@@ -16,6 +16,9 @@ export function useNotificationHint(isPanel: () => boolean) {
   const chatStore = useChatStore()
   const toasts = useToastStore()
 
+  // The desktop client's system may not have been asked yet (macOS asks on the first toast or on the click below).
+  void chatStore.refreshNotificationPermission()
+
   const notifHintDismissed = ref(readHintDismissed())
   const showNotifHint = computed(() =>
     !isPanel() && chatStore.notificationPermission === 'default' && !notifHintDismissed.value

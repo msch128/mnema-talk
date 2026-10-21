@@ -460,6 +460,14 @@ describe('browser notifications', () => {
     expect(await chat.requestNotificationPermission()).toBe('denied')
     expect(chat.notificationPermission).toBe('denied')
   })
+  it('re-reads what the platform allows, and leaves the state alone where notifications are unsupported', async () => {
+    const chat = setup()
+    expect(await chat.refreshNotificationPermission()).toBe('unsupported')
+    vi.stubGlobal('Notification', BrowserNotification)
+    BrowserNotification.permission = 'denied'
+    expect(await chat.refreshNotificationPermission()).toBe('denied')
+    expect(chat.notificationPermission).toBe('denied')
+  })
   it('notifies off-channel mentions, focuses/routes on click, and silences focus/DND', () => {
     const chat = setup()
     vi.stubGlobal('Notification', BrowserNotification)

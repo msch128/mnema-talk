@@ -52,6 +52,13 @@ export function triggerBrowserNotification(cx: Cx, msg: Message, isMention: bool
   })
 }
 
+/** What the platform allows now: the desktop client's operating system can answer differently than at start. */
+export async function refreshNotificationPermission(cx: Cx) {
+  const result = await platform.refreshNotificationPermission()
+  if (result !== 'unsupported') cx.cs.notificationPermission.value = result
+  return result
+}
+
 export async function requestNotificationPermission(cx: Cx) {
   const { cs } = cx
   const result = await platform.requestNotificationPermission()
