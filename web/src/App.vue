@@ -34,6 +34,7 @@ import PipHost from './components/PipHost.vue'
 import { useResizable } from './composables/useResizable'
 import { useWebRTC } from './composables/useWebRTC'
 import { useAppRouting } from './composables/useAppRouting'
+import { useAppBadge } from './composables/useAppBadge'
 import { useTitleBadge } from './composables/useTitleBadge'
 import { VOICE_CHAT_HEIGHT, STAGE_MIN_HEIGHT } from './lib/voiceChatPanel'
 
@@ -66,6 +67,7 @@ const panels = useResizable([
 const voiceChatHeight = useResizable([VOICE_CHAT_HEIGHT], { axis: 'y', centerMin: STAGE_MIN_HEIGHT + 48 }).voiceChat
 const showLegalModal = ref(false)
 const routing = useAppRouting(() => alive)
+useAppBadge()
 const { showAdminModal, adminTab, voiceShowChat, voiceChannelId, applyRoute, syncCurrentStateToRoute, openAdmin, closeAdmin, onVoiceJoin } = routing
 
 // Avoids flashing the login dialog while the session cookie is being checked.

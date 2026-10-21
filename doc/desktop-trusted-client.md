@@ -439,6 +439,25 @@ host:
   or inline-safe media, never a document of the app origin. The attachment child window
   and the gaming surfaces use the same protocol and the same bundle.
 
+* **OS notifications and the app badge** (host capability `notify`). The
+  identity of the instance window carries `capabilities: ["notify"]`; the
+  selector, gaming surfaces and the attachment window announce none, and a
+  client from before this feature announces no list at all, in which case the
+  app falls back to the browser's Notification and Badging APIs. The commands
+  are `desktop_notify_open` (a channel that reports which toast was used, as
+  `{channel_id, message_id}`), `desktop_notify` (`title`, `body`, `channelId`,
+  `messageId`) and `desktop_set_badge` (`count`). They are allowed only in the
+  instance window, never on the selector or a gaming surface. The host treats
+  everything as untrusted text: control characters are flattened, title and
+  body are truncated, ids must be plain identifiers, and toasts are rate
+  limited, so a hostile server cannot show markup or spam the desktop. The OS
+  owns the permission (the app reports `granted` and the per-channel levels
+  still apply). Windows shows a dot as the taskbar overlay, macOS and Linux the
+  count on the dock or launcher icon. Where the platform cannot tell the host
+  which toast was clicked (Windows, macOS), bringing the window to the front
+  within 15 seconds of a toast counts as using it. This needs no
+  `web_client_api` bump: the web app detects the capability.
+
 ### Why this keeps the browser model intact
 
 * CSRF: unchanged. The Origin the server sees is the instance's own, set by

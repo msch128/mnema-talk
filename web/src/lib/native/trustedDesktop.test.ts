@@ -17,7 +17,7 @@ it('is absent in an ordinary browser, even if a page defines the identity itself
 
 it.each(['mnema://localhost/', 'https://mnema.localhost/c/1'])('reads the verified bundle announced on %s', origin => {
   host(origin)
-  expect(trustedApp()).toEqual({ version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance' })
+  expect(trustedApp()).toEqual({ version: '0.8.0', source: 'builtin', webClientApi: 1, keyId: '1069c76ff2e11272', role: 'instance', capabilities: [] })
   expect(isTrustedDesktop()).toBe(true)
   expect(Object.isFrozen(trustedApp())).toBe(true)
 })
@@ -60,4 +60,12 @@ it.each([
 it('is safe without browser globals', () => {
   vi.stubGlobal('window', undefined)
   expect(trustedApp()).toBeNull()
+})
+
+it('reads the capabilities the host announces and drops malformed ones', () => {
+  host('mnema://localhost/', { ...valid, capabilities: ['notify', 'Bad Name', 7, 'x'.repeat(40)] })
+  expect(trustedApp()?.capabilities).toEqual(['notify'])
+  expect(Object.isFrozen(trustedApp()?.capabilities)).toBe(true)
+  host('mnema://localhost/', { ...valid, capabilities: 'notify' })
+  expect(trustedApp()?.capabilities).toEqual([])
 })
