@@ -1,0 +1,24 @@
+web/src/composables/useComposerKeys.ts
+  h_0ff4f4713441f4 37-47,51,53-54
+web/src/composables/useStageFullscreen.ts
+  h_0ff4f4713441f4 17-37,102-104
+web/src/lib/api.ts
+  h_0ff4f4713441f4 160-185,191,193,199
+web/src/lib/media/group.ts
+  h_0ff4f4713441f4 269
+web/src/lib/media/groupVet.ts
+  h_0ff4f4713441f4 81-90,129-139,167,169
+web/src/lib/media/guard.ts
+  h_0ff4f4713441f4 126-133,154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf2546271a75c64fa5bd880035ba471179a9e170",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
