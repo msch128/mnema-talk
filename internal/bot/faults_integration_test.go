@@ -211,6 +211,31 @@ func adminRoutes(e *env) []route {
 	}
 }
 
+func testRouteStatementFailures(t *testing.T, e *env, rt route, guarded bool) {
+	t.Helper()
+	for n := 0; ; n++ {
+		if n > 60 {
+			t.Fatal("more than 60 statements")
+		}
+		f := e.newBot()
+		tr := &pgfault.Tracer{Skip: n}
+		pool := e.faultPool(tr)
+		h := e.handler(pool)
+		body, hdr := rt.body()
+		w := e.serveWith(h, guarded, rt.method, rt.path(f), body, hdr)
+		pool.Close()
+		if !tr.Hit() {
+			if w.Code != rt.ok {
+				t.Fatalf("no statement failed, yet status %d, want %d: %s", w.Code, rt.ok, w.Body)
+			}
+			break
+		}
+		if w.Code != http.StatusInternalServerError {
+			t.Fatalf("guarded=%v statement %d failed: status %d, want 500: %s", guarded, n+1, w.Code, w.Body)
+		}
+	}
+}
+
 // Every database statement of the management API can fail; the answer is a
 // sanitized 500, never a half answer. (A statement is failed by number: the
 // first, the second, ... until the call needs no more.)
@@ -224,45 +249,14 @@ func TestManagementDatabaseFailures(t *testing.T) {
 				t.Fatalf("undisturbed: %d, want %d: %s", w.Code, rt.ok, w.Body)
 			}
 			for _, guarded := range []bool{true, false} {
-				for n := 0; ; n++ {
-					if n > 60 {
-						t.Fatal("more than 60 statements")
-					}
-					f := e.newBot()
-					tr := &pgfault.Tracer{Skip: n}
-					pool := e.faultPool(tr)
-					h := e.handler(pool)
-					body, hdr := rt.body()
-					w := e.serveWith(h, guarded, rt.method, rt.path(f), body, hdr)
-					pool.Close()
-					if !tr.Hit() {
-						if w.Code != rt.ok {
-							t.Fatalf("no statement failed, yet status %d, want %d: %s", w.Code, rt.ok, w.Body)
-						}
-						break
-					}
-					if w.Code != http.StatusInternalServerError {
-						t.Fatalf("guarded=%v statement %d failed: status %d, want 500: %s", guarded, n+1, w.Code, w.Body)
-					}
-				}
+				testRouteStatementFailures(t, e, rt, guarded)
 			}
 		})
 	}
 }
 
-func TestBotStoreEdges(t *testing.T) {
-	e := newEnv(t)
-	ctx := context.Background()
-	if _, err := Get(ctx, e.p, uuid.New()); err == nil {
-		t.Fatal("unknown bot")
-	}
-	WithRoles([]Bot{{UserID: uuid.New()}}, map[uuid.UUID][]uuid.UUID{})
-	f := e.newBot()
-	bots, _ := List(ctx, e.p)
-	WithRoles(bots, map[uuid.UUID][]uuid.UUID{f.bot.UserID: {e.role}})
-	if len(bots[0].RoleIDs) != 1 {
-		t.Fatal("roles not filled")
-	}
+func assertTokenStatesAndExpiry(t *testing.T, ctx context.Context, e *env, f fixtureBot) {
+	t.Helper()
 	if _, err := e.p.Exec(ctx, `INSERT INTO bot_tokens (bot_id, token_hash, hint, expires_at) VALUES ($1, $2, 'oldx', NOW() - INTERVAL '1 hour')`, f.bot.ID, HashToken("expired")); err != nil {
 		t.Fatal(err)
 	}
@@ -278,25 +272,19 @@ func TestBotStoreEdges(t *testing.T) {
 		t.Fatalf("token states: %v", states)
 	}
 	now := time.Now()
-	if CheckExpiry(now.Add(-time.Second), now) == nil || CheckExpiry(now.Add(MaxTokenLifetime+time.Hour), now) == nil || CheckExpiry(now.Add(time.Hour), now) != nil {
-		t.Fatal("CheckExpiry")
+	if CheckExpiry(now.Add(-time.Second), now) == nil {
+		t.Fatal("CheckExpiry accepted past expiry")
 	}
-	if err := Update(ctx, e.p, uuid.New(), nil, nil, nil); err == nil {
-		t.Fatal("update of an unknown bot")
+	if CheckExpiry(now.Add(MaxTokenLifetime+time.Hour), now) == nil {
+		t.Fatal("CheckExpiry accepted excessive expiry")
 	}
-	if _, err := UpsertCommand(ctx, e.p, uuid.New(), CommandInput{Name: "x", Description: "x"}); err == nil {
-		t.Fatal("command for an unknown bot")
+	if CheckExpiry(now.Add(time.Hour), now) != nil {
+		t.Fatal("CheckExpiry rejected valid 1-hour expiry")
 	}
-	if err := Delete(ctx, e.p, uuid.New()); err == nil {
-		t.Fatal("delete of an unknown bot")
-	}
-	if _, _, err := IssueToken(ctx, e.p, uuid.New(), "x", nil); err == nil {
-		t.Fatal("token for an unknown bot")
-	}
-	if err := RevokeToken(ctx, e.p, f.bot.ID, uuid.New()); err == nil {
-		t.Fatal("unknown token")
-	}
-	// A cancelled context fails every statement.
+}
+
+func assertCancelledContextFailsStatements(t *testing.T, ctx context.Context, e *env, f fixtureBot) {
+	t.Helper()
 	dead, cancel := context.WithCancel(ctx)
 	cancel()
 	if _, err := Create(dead, e.p, "x", 0, e.owner.ID); err == nil {
@@ -313,7 +301,38 @@ func TestBotStoreEdges(t *testing.T) {
 	}
 }
 
-// Requests that are refused say so, and a Media-less handler cannot take avatars.
+func TestBotStoreEdges(t *testing.T) {
+	e := newEnv(t)
+	ctx := context.Background()
+	if _, err := Get(ctx, e.p, uuid.New()); err == nil {
+		t.Fatal("unknown bot")
+	}
+	WithRoles([]Bot{{UserID: uuid.New()}}, map[uuid.UUID][]uuid.UUID{})
+	f := e.newBot()
+	bots, _ := List(ctx, e.p)
+	WithRoles(bots, map[uuid.UUID][]uuid.UUID{f.bot.UserID: {e.role}})
+	if len(bots[0].RoleIDs) != 1 {
+		t.Fatal("roles not filled")
+	}
+	assertTokenStatesAndExpiry(t, ctx, e, f)
+	if err := Update(ctx, e.p, uuid.New(), nil, nil, nil); err == nil {
+		t.Fatal("update of an unknown bot")
+	}
+	if _, err := UpsertCommand(ctx, e.p, uuid.New(), CommandInput{Name: "x", Description: "x"}); err == nil {
+		t.Fatal("command for an unknown bot")
+	}
+	if err := Delete(ctx, e.p, uuid.New()); err == nil {
+		t.Fatal("delete of an unknown bot")
+	}
+	if _, _, err := IssueToken(ctx, e.p, uuid.New(), "x", nil); err == nil {
+		t.Fatal("token for an unknown bot")
+	}
+	if err := RevokeToken(ctx, e.p, f.bot.ID, uuid.New()); err == nil {
+		t.Fatal("unknown token")
+	}
+	assertCancelledContextFailsStatements(t, ctx, e, f)
+}
+
 func TestManagementRefusals(t *testing.T) {
 	e := newEnv(t)
 	f := e.newBot()

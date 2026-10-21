@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/msch128/mnema-talk/internal/chat"
 	"github.com/msch128/mnema-talk/internal/httpx"
 )
 
@@ -75,6 +76,34 @@ func embeds(t *testing.T, raw string) []inEmbed {
 	return in
 }
 
+func assertSanitizedEmbedFields(t *testing.T, e chat.Embed) {
+	t.Helper()
+	if e.Title != "T" {
+		t.Errorf("title = %q, want T", e.Title)
+	}
+	if e.Timestamp != "2026-01-02T01:04:05Z" {
+		t.Errorf("timestamp = %q, want UTC formatted", e.Timestamp)
+	}
+	if e.Footer.Text != "f" {
+		t.Errorf("footer text = %q, want f", e.Footer.Text)
+	}
+	if e.Image.URL == "" {
+		t.Error("missing image URL")
+	}
+	if e.Thumbnail.URL == "" {
+		t.Error("missing thumbnail URL")
+	}
+	if e.Author.Name != "a" {
+		t.Errorf("author name = %q, want a", e.Author.Name)
+	}
+	if !e.Fields[0].Inline {
+		t.Error("expected inline field")
+	}
+	if e.Color == nil || *e.Color != 255 {
+		t.Errorf("color = %v, want 255", e.Color)
+	}
+}
+
 func TestSanitizeEmbeds(t *testing.T) {
 	got, err := sanitizeEmbeds(embeds(t, `[
 		{"title":" T ","description":"d","url":"https://a.example/x","color":255,"timestamp":"2026-01-02T03:04:05+02:00",
@@ -82,14 +111,13 @@ func TestSanitizeEmbeds(t *testing.T) {
 		 "thumbnail":{"url":"https://a.example/t.png"},"author":{"name":"a","url":"https://a.example"},
 		 "fields":[{"name":"n","value":"v","inline":true}],"type":"rich"},
 		{}]`))
-	if err != nil || len(got) != 1 {
-		t.Fatalf("%+v %v", got, err)
+	if err != nil {
+		t.Fatalf("sanitizeEmbeds error: %v", err)
 	}
-	e := got[0]
-	if e.Title != "T" || e.Timestamp != "2026-01-02T01:04:05Z" || e.Footer.Text != "f" || e.Image.URL == "" ||
-		e.Thumbnail.URL == "" || e.Author.Name != "a" || !e.Fields[0].Inline || *e.Color != 255 {
-		t.Fatalf("embed %+v", e)
+	if len(got) != 1 {
+		t.Fatalf("len(got) = %d, want 1", len(got))
 	}
+	assertSanitizedEmbedFields(t, got[0])
 
 	big := func(n int) string { return strings.Repeat("x", n) }
 	bad := map[string]string{
@@ -158,8 +186,11 @@ func TestWriteFailure(t *testing.T) {
 	for _, tc := range cases {
 		w := httptest.NewRecorder()
 		writeFailure(w, tc.err)
-		if w.Code != tc.status || !strings.Contains(w.Body.String(), `"code":`+strconv.Itoa(tc.code)) {
-			t.Errorf("%v: %d %s", tc.err, w.Code, w.Body)
+		if w.Code != tc.status {
+			t.Errorf("%v status = %d, want %d", tc.err, w.Code, tc.status)
+		}
+		if !strings.Contains(w.Body.String(), `"code":`+strconv.Itoa(tc.code)) {
+			t.Errorf("%v missing code %d: %s", tc.err, tc.code, w.Body)
 		}
 		if strings.Contains(w.Body.String(), "exploded") {
 			t.Error("internal error leaked")
