@@ -39,7 +39,13 @@ func (c *Client) activeVoiceRoom() *sfu.Room {
 	if cur == nil {
 		return nil
 	}
-	return c.hub.SFU.Room(*cur)
+	room := c.hub.SFU.Room(*cur)
+	// The native lease may lapse while the room is looked up: check again
+	// before anything is subscribed.
+	if room == nil || !c.commandsAllowed() {
+		return nil
+	}
+	return room
 }
 
 func (c *Client) applySubscriptionQuality(room *sfu.Room, req subscribeRequest) {
