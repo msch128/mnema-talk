@@ -1,0 +1,18 @@
+web/src/components/MessagePresentation.test.ts
+  h_0ff4f4713441f4 15,23
+web/src/lib/media/keys.fixture.ts
+  h_0ff4f4713441f4 2
+web/src/lib/native/nativeChatView.test.ts
+  h_0ff4f4713441f4 2,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4b4de94212838049b330071f5b2f37e5cd1d9c17",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
