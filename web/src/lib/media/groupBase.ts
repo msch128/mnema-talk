@@ -126,19 +126,16 @@ export abstract class GroupBase {
   /** Called when keys changed in a way the member did not ask for. */
   onNotice(listener: (notice: MediaNotice) => void) {
     this.notice = listener
-    this.alive.set(this.userId, clock.now())
   }
 
   /** Called with what a timer produced: a retry, a new offer, a takeover. */
   onStep(listener: (step: MediaStep) => void) {
     this.stepListener = listener
-    this.alive.set(this.userId, clock.now())
   }
 
   /** Frames of the current epoch open again: the wait before the next reset starts over. */
   opened() {
     this.resets.reset()
-    this.alive.set(this.userId, clock.now())
   }
 
   /**
@@ -258,21 +255,13 @@ export abstract class GroupBase {
     this.leaves.clear()
     this.updates.clear()
     this.dropSelfUpdate()
-    this.tail = Promise.resolve()
     this.clearDiscardTimers()
-    this.pruneRelayed()
     if (state) this.wipeRejected(state)
   }
 
   private clearDiscardTimers() {
     if (this.tickTimer !== null) clearTimeout(this.tickTimer)
     this.tickTimer = null
-  }
-
-  private pruneRelayed() {
-    for (const id of [...this.relayed.keys()]) {
-      if (!this.room.includes(id)) this.relayed.delete(id)
-    }
   }
 
   /** Forgets the state before a self-update once the time for a conflict has passed (or at once with `now`). */
