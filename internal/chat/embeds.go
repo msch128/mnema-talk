@@ -50,8 +50,6 @@ type FormError string
 
 func (e FormError) Error() string { return string(e) }
 
-// text validates one embed text: valid UTF-8, no control characters except
-// line breaks and tabs, at most max characters. Surrounding space is trimmed.
 func embedControl(r rune) bool {
 	if r == 0x7f {
 		return true
@@ -62,6 +60,8 @@ func embedControl(r rune) bool {
 	return r != '\n' && r != '\t' && r != '\r'
 }
 
+// embedText validates one embed text: valid UTF-8, no control characters except
+// line breaks and tabs, at most max characters. Surrounding space is trimmed.
 func embedText(field, s string, max int) (string, error) {
 	s = strings.TrimSpace(s)
 	if !utf8.ValidString(s) {
