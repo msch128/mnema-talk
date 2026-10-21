@@ -1,0 +1,26 @@
+cmd/webbundle/main_process_test.go
+  h_0ff4f4713441f4 1-31
+internal/audit/audit_test.go
+  h_0ff4f4713441f4 27-30,77-83,95-102,130,137-139,141
+internal/server/ws_admission_integration_test.go
+  h_0ff4f4713441f4 34-111,115-117
+web/src/components/Sidebar.keyboard.test.ts
+  h_0ff4f4713441f4 3,5,18,21-25,31
+web/src/components/Sidebar.menus.test.ts
+  h_0ff4f4713441f4 3,5,19,23-27,33
+web/src/components/Sidebar.test.ts
+  h_0ff4f4713441f4 3,5,20,24-28,34
+web/src/test-fixtures.fixture.ts
+  h_0ff4f4713441f4 75-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78481198c0f89a673e4947b6a5102f85463e36fd",
+  "prompts": {},
+  "humans": {
+    "h_0ff4f4713441f4": {
+      "author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
