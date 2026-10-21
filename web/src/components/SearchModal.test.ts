@@ -7,7 +7,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
 import SearchModal from './SearchModal.vue'
 import GlobalSearch from './GlobalSearch.vue'
-import { searchOpen } from '../lib/globalSearch'
+import { searchOpen, searchText } from '../lib/globalSearch'
 import { useChatStore } from '../stores/chat'
 import { channelFixture, messageFixture, userFixture, fixtureId, requireValue } from '../test-fixtures.fixture'
 import { i18nPlugin, setLocale } from '../i18n'
@@ -39,6 +39,7 @@ const scrim = () => dialog()!.parentElement!
 
 beforeEach(() => {
   mockApi.mockReset()
+  searchText.value = ''
   setActivePinia(createPinia())
 })
 
@@ -110,33 +111,33 @@ function deferred<T>() {
 }
 
 describe('SearchModal queries', () => {
-  it('builds filter criteria, toggles attachment filters and clears an empty query', async () => {
+  it('sends free text, turns filter tokens into chips and parameters, and clears an empty query', async () => {
     setLocale('en')
     const chat = useChatStore()
     chat.uncategorized = [channelFixture(), channelFixture({ id: fixtureId(30), name: 'Lounge', type: 'voice' })]
-    chat.members = [userFixture(), userFixture({ id: fixtureId(31), display_name: 'Displayed member' })]
-    mockApi.mockResolvedValue({ messages: [], has_more: false })
+    chat.members = [userFixture(), userFixture({ id: fixtureId(31), username: 'ada', display_name: 'Displayed member' })]
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
     await open()
     key('ArrowDown')
     await query('  hello ')
     expect(mockApi).toHaveBeenLastCalledWith('/api/search?limit=25&q=hello', expect.any(Object))
     expect(dialog()!.textContent).toContain('No messages found')
-    const selects = [...document.querySelectorAll<HTMLSelectElement>('select')]
-    requireValue(selects[0]).value = fixtureId(30)
-    requireValue(selects[0]).dispatchEvent(new Event('change'))
-    await flushPromises()
-    requireValue(selects[1]).value = fixtureId(31)
-    requireValue(selects[1]).dispatchEvent(new Event('change'))
-    await flushPromises()
-    click('button[aria-pressed]')
-    await flushPromises()
-    expect(mockApi.mock.calls.at(-1)?.[0]).toContain('channel_id=' + fixtureId(30))
-    expect(mockApi.mock.calls.at(-1)?.[0]).toContain('author_id=' + fixtureId(31))
-    expect(mockApi.mock.calls.at(-1)?.[0]).toContain('has=file')
-    click('button[aria-pressed]')
-    await flushPromises()
-    expect(mockApi.mock.calls.at(-1)?.[0]).not.toContain('has=')
-    for (const select of selects) { select.value = ''; select.dispatchEvent(new Event('change')) }
+    await query('hello in:Lounge from:ada has:video mentions:ada after:2026-01-02 before:2026-01-03 ')
+    const params = new URL(requireValue(mockApi.mock.calls.at(-1))[0], 'http://localhost').searchParams
+    expect(params.get('q')).toBe('hello')
+    expect(params.get('channel_id')).toBe(fixtureId(30))
+    expect(params.get('author_id')).toBe(fixtureId(31))
+    expect(params.get('mentions')).toBe(fixtureId(31))
+    expect(params.get('has')).toBe('video')
+    expect(new Date(requireValue(params.get('before_date'))).getTime()).toBeGreaterThan(new Date(requireValue(params.get('after'))).getTime())
+    expect(document.querySelectorAll('[data-search-chip]')).toHaveLength(6)
+    expect(input().value).toBe('hello ')
+    click('[data-search-chip] button')
+    await new Promise(resolve => setTimeout(resolve, 280)); await flushPromises()
+    expect(document.querySelectorAll('[data-search-chip]')).toHaveLength(5)
+    expect(requireValue(mockApi.mock.calls.at(-1))[0]).not.toContain('author_id')
+    await query('')
+    for (const chip of [...document.querySelectorAll<HTMLButtonElement>('[data-search-chip] button')]) chip.click()
     await query('')
     expect(document.querySelector('[role="option"]')).toBeNull()
     expect(input().hasAttribute('aria-activedescendant')).toBe(false)
@@ -144,7 +145,34 @@ describe('SearchModal queries', () => {
     expect(wrapper.emitted('update:modelValue')).toEqual([[false]])
   })
 
-  it('navigates results, wraps selection, ignores select navigation and chooses by Enter or click', async () => {
+  it('does not search for a filter that matches nothing and flags its chip', async () => {
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open()
+    await query('from:nobody ')
+    expect(mockApi).not.toHaveBeenCalled()
+    expect(document.querySelector('[data-search-chip]')!.className).toContain('danger')
+  })
+
+  it('shows the root snippet of a reply and highlights matches without HTML', async () => {
+    const rootId = fixtureId(60)
+    const reply = messageFixture({ parent_id: rootId, content: 'a <b>bold</b> Needle' })
+    mockApi.mockResolvedValue({ messages: [reply], has_more: false, roots: { [rootId]: { id: rootId, channel_id: reply.channel_id, username: 'ada', display_name: 'Ada', snippet: 'the needle thread' }, junk: 5 } })
+    await open(); await query('needle')
+    const root = requireValue(document.querySelector('[data-search-root]'))
+    expect(root.textContent).toContain('the needle thread')
+    const item = requireValue(document.querySelector('#search-result-0'))
+    expect(item.querySelector('b')).toBeNull()
+    expect([...item.querySelectorAll('mark')].map(m => m.textContent)).toEqual(['needle', 'Needle'])
+  })
+
+  it('keeps the last query for the session', async () => {
+    mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
+    await open(); await query('remember me')
+    await wrapper.setProps({ modelValue: false }); await wrapper.setProps({ modelValue: true }); await nextTick()
+    expect(input().value).toBe('remember me')
+  })
+
+  it('navigates results, wraps selection, chooses by Enter or click', async () => {
     const chat = useChatStore()
     chat.uncategorized = [channelFixture(), channelFixture({ id: fixtureId(30), name: 'Lounge', type: 'voice' })]
     chat.goToMessage = vi.fn()
@@ -156,8 +184,6 @@ describe('SearchModal queries', () => {
     key('ArrowUp'); await nextTick()
     expect(input().getAttribute('aria-activedescendant')).toBe('search-result-1')
     key('ArrowDown'); await nextTick()
-    expect(input().getAttribute('aria-activedescendant')).toBe('search-result-0')
-    key('ArrowDown', requireValue(document.querySelector<HTMLSelectElement>('select'))); await nextTick()
     expect(input().getAttribute('aria-activedescendant')).toBe('search-result-0')
     key('x'); key('Enter', requireValue(document.querySelector<HTMLButtonElement>('[role="option"]')))
     expect(chat.goToMessage).not.toHaveBeenCalled()
@@ -240,12 +266,9 @@ it('does not paginate an empty result page even if the server advertises more', 
 it('searches by channel alone without sending an empty text query', async () => {
   const ch = channelFixture()
   useChatStore().uncategorized = [ch]
-  mockApi.mockResolvedValue({ messages: [], has_more: false })
+  mockApi.mockResolvedValue({ messages: [], has_more: false, roots: {} })
   await open()
-  const channel = requireValue(document.querySelector<HTMLSelectElement>('[role="dialog"] select'))
-  channel.value = ch.id
-  channel.dispatchEvent(new Event('change', { bubbles: true }))
-  await flushPromises()
+  await query(`in:${ch.name} `)
   const request = requireValue(mockApi.mock.calls.at(-1))
   const params = new URL(request[0], 'http://localhost').searchParams
   expect(params.get('channel_id')).toBe(ch.id)

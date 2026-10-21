@@ -1345,15 +1345,36 @@ export const decodeChatReplyPreview = decoder("chat.ReplyPreview", isChatReplyPr
 export type ChatSearchResult = {
   has_more: boolean
   messages: Array<ChatMessage>
+  roots: Record<string, unknown>
 }
 
 export function isChatSearchResult(value: unknown): value is ChatSearchResult {
   return isRecord(value)
     && (hasOwn(value, "has_more") && typeof value["has_more"] === 'boolean')
     && (hasOwn(value, "messages") && isArrayOf(value["messages"], item => isChatMessage(item)))
+    && (hasOwn(value, "roots") && isRecord(value["roots"]))
 }
 
 export const decodeChatSearchResult = decoder("chat.SearchResult", isChatSearchResult)
+
+export type ChatSearchRoot = {
+  channel_id: string
+  display_name: string
+  id: string
+  snippet: string
+  username: string
+}
+
+export function isChatSearchRoot(value: unknown): value is ChatSearchRoot {
+  return isRecord(value)
+    && (hasOwn(value, "channel_id") && isIdentifier(value["channel_id"]))
+    && (hasOwn(value, "display_name") && isString(value["display_name"]))
+    && (hasOwn(value, "id") && isIdentifier(value["id"]))
+    && (hasOwn(value, "snippet") && isString(value["snippet"]))
+    && (hasOwn(value, "username") && isString(value["username"]))
+}
+
+export const decodeChatSearchRoot = decoder("chat.SearchRoot", isChatSearchRoot)
 
 export type ChatSetNotifyLevelRequest = {
   level: ChatNotifyLevel
