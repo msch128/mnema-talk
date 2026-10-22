@@ -1,0 +1,56 @@
+internal/chat/readstate.go
+  s_06fcde5dbef956::t_71b8fdf5563bef 77-83,98-115,119-135
+  s_06fcde5dbef956::t_5966d0cc47d00e 136-137
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 1290-1300
+web/src/composables/useFirstUnreadJump.test.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 1-128
+internal/chat/handler.go
+  s_06fcde5dbef956::t_71b8fdf5563bef 92
+web/src/composables/useUnreadDivider.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 44
+internal/server/unread_scale_integration_test.go
+  s_06fcde5dbef956::t_71b8fdf5563bef 1-275
+internal/server/first_unread_integration_test.go
+  s_06fcde5dbef956::t_71b8fdf5563bef 1-108
+doc/upgrade.md
+  s_06fcde5dbef956::t_71b8fdf5563bef 169-173
+api/openapi.json
+  s_06fcde5dbef956::t_71b8fdf5563bef 2050-2065,16446-16549
+  s_06fcde5dbef956::t_de6b3aa08158cb 16550-16552
+web/src/components/ChatArea.vue
+  s_06fcde5dbef956::t_71b8fdf5563bef 5,18,70-71,261,297-307
+  s_06fcde5dbef956::t_6ea98f634f4692 308
+e2e/tests/unread-jump.spec.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 1-81
+web/src/composables/useFirstUnreadJump.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 1-85
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_71b8fdf5563bef 184-187
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_71b8fdf5563bef 337
+internal/chat/handler_readstate.go
+  s_06fcde5dbef956::t_71b8fdf5563bef 5,141-178,180
+  s_06fcde5dbef956::t_9cb2d6c0779a49 179,181
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_71b8fdf5563bef 337
+doc/architecture.md
+  s_06fcde5dbef956::t_71b8fdf5563bef 66-81,325-350
+  s_06fcde5dbef956::t_4607ec5c707980 351
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b2c7d3808c29b34bf00ad28d9f0ff640fb110444",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
