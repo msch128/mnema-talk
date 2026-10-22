@@ -1,0 +1,49 @@
+internal/auth/register_weak_integration_test.go
+  s_06fcde5dbef956::t_4fa17cb79d3a55 1-29
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 23-28
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_e314007e6ac6a5 1046-1047
+doc/upgrade.md
+  s_06fcde5dbef956::t_b3c63c5538b857 138-146
+internal/onboarding/invite_budget_integration_test.go
+  s_06fcde5dbef956::t_2fcba64164200f 80-132
+internal/auth/invite_strength.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 13-15
+SECURITY.md
+  s_06fcde5dbef956::t_e314007e6ac6a5 59-61
+internal/httpx/clientaggregate_test.go
+  s_06fcde5dbef956::t_70c8c177498dc2 1-22
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_e314007e6ac6a5 1046-1047
+api/openapi.json
+  s_06fcde5dbef956::t_150e46ea6c6065 336,16853
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 28-30,40-41,47
+web/src/components/AdminInvitesTab.test.ts
+  s_06fcde5dbef956::t_e314007e6ac6a5 54
+internal/onboarding/invite.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 11,32,57-61
+internal/auth/invites.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 29-30
+internal/httpx/middleware_clientip.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 138-152
+internal/auth/handler.go
+  s_06fcde5dbef956::t_e314007e6ac6a5 39-40,69-71,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1007aa67ce7965bc91e04782eb5fcf30c46a65de",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
