@@ -232,10 +232,11 @@ func (h *Handler) execute(w http.ResponseWriter, r *http.Request) {
 // post validates and stores the message. It returns the stored message.
 func (h *Handler) post(w http.ResponseWriter, r *http.Request, rec *record) (*chat.Message, error) {
 	ctx := r.Context()
-	req, err := h.readRequest(w, r)
+	req, err := h.readRequest(w, r, rec.botUserID)
 	if err != nil {
 		return nil, err
 	}
+	defer req.release()
 	discard := func() {
 		for _, f := range req.files {
 			h.Media.DiscardFile(ctx, f)

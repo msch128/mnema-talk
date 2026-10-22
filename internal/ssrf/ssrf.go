@@ -31,17 +31,19 @@ var (
 // maxURLLen bounds a target URL.
 const maxURLLen = 2048
 
-// never are addresses no allowlist can open. Prefixes refused only here stay
-// in this list; link preview's choice is named on the line.
+// never are addresses no allowlist can open and link preview refuses too (see
+// PublicUnicast): the metadata endpoints, IPv4-compatible, IPv4-translated
+// and discard-only IPv6, multicast and class E.
 var never = []netip.Prefix{
-	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata; link preview refuses all link-local
-	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata; link preview refuses unique-local
-	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata; link preview refuses all of 100.64.0.0/10
-	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata; link preview uses shared 192.0.0.0/24
-	netip.MustParsePrefix("::/96"),              // IPv4-compatible; link preview does not refuse this
-	netip.MustParsePrefix("224.0.0.0/3"),        // multicast and class E; link preview keeps 240.0.0.0/4
-	netip.MustParsePrefix("ff00::/8"),           // multicast; link preview uses Refused, not this prefix
-	netip.MustParsePrefix("100::/64"),           // discard-only; link preview does not refuse this
+	netip.MustParsePrefix("169.254.169.254/32"), // cloud metadata
+	netip.MustParsePrefix("fd00:ec2::254/128"),  // AWS IPv6 metadata
+	netip.MustParsePrefix("100.100.100.200/32"), // Alibaba metadata
+	netip.MustParsePrefix("192.0.0.192/32"),     // Oracle metadata
+	netip.MustParsePrefix("::/96"),              // IPv4-compatible
+	netip.MustParsePrefix("::ffff:0:0:0/96"),    // IPv4-translated (SIIT)
+	netip.MustParsePrefix("224.0.0.0/3"),        // multicast and class E
+	netip.MustParsePrefix("ff00::/8"),           // multicast
+	netip.MustParsePrefix("100::/64"),           // discard-only
 }
 
 // shared is the intersection: special-purpose prefixes both webhooks and
@@ -90,6 +92,14 @@ func Refused(addr netip.Addr) bool {
 	addr = addr.WithZone("").Unmap()
 	return addr.IsUnspecified() || addr.IsLoopback() || addr.IsMulticast() ||
 		addr.IsLinkLocalUnicast() || addr.IsPrivate() || contains(shared, addr)
+}
+
+// PublicUnicast reports whether addr is a globally routable unicast address:
+// not Refused and not in the never list. Link preview connects only to such
+// addresses, so it and the webhook guard share one list.
+func PublicUnicast(addr netip.Addr) bool {
+	addr = addr.WithZone("").Unmap()
+	return !Refused(addr) && !contains(never, addr)
 }
 
 // Policy decides which addresses may be contacted.

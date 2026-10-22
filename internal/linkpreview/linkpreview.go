@@ -24,7 +24,6 @@ const (
 	maxPageBytes  = 512 << 10
 	maxImageBytes = 4 << 20
 	maxRedirects  = 3
-	fetchTimeout  = 6 * time.Second
 	cacheTTL      = 6 * time.Hour
 	cacheMax      = 2000
 	maxTitleRunes = 200
@@ -40,6 +39,10 @@ const (
 	maxConcurrentFetches   = 8
 	maxFetchesPerRequester = 2
 )
+
+// fetchTimeout is the total time one fetch may take, connect to last byte; a
+// host that drips its answer is cut off here. Tests shorten it.
+var fetchTimeout = 6 * time.Second
 
 // Preview is what a link card shows.
 type Preview struct {
@@ -82,6 +85,7 @@ type Fetcher struct {
 
 	slots     chan struct{} // one per outbound fetch in flight
 	requester requesterSlots
+	slow      slowHosts
 
 	previews flightGroup[*Preview]
 	images   flightGroup[cachedImage]
@@ -115,7 +119,7 @@ func New() *Fetcher {
 		Proxy:                 nil,
 		DialContext:           dialer.DialContext,
 		TLSHandshakeTimeout:   fetchTimeout,
-		ResponseHeaderTimeout: fetchTimeout,
+		ResponseHeaderTimeout: fetchTimeout / 2,
 		MaxIdleConns:          16,
 		IdleConnTimeout:       30 * time.Second,
 	}
@@ -126,7 +130,14 @@ func New() *Fetcher {
 			if len(via) >= maxRedirects {
 				return errors.New("too many redirects")
 			}
-			return f.checkURL(req.URL)
+			if err := f.checkURL(req.URL); err != nil {
+				return err
+			}
+			// The slow table applies on every hop, not only to the posted link.
+			if f.slow.is(strings.ToLower(req.URL.Hostname())) {
+				return errSlowHost
+			}
+			return nil
 		},
 	}
 	return f
@@ -146,6 +157,10 @@ func (f *Fetcher) parse(raw string) (*url.URL, error) {
 
 // get fetches u and returns at most limit bytes of the body.
 func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int64) ([]byte, string, *url.URL, error) {
+	host := strings.ToLower(u.Hostname())
+	if f.slow.is(host) {
+		return nil, "", nil, errSlowHost
+	}
 	release, err := f.acquire(ctx)
 	if err != nil {
 		return nil, "", nil, err
@@ -164,6 +179,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 		if errors.Is(err, ErrBlocked) {
 			return nil, "", nil, ErrBlocked
 		}
+		f.slow.noteTimeout(failedHost(err, host), err)
 		return nil, "", nil, fmt.Errorf("fetch: %w", err)
 	}
 	defer res.Body.Close()
@@ -172,6 +188,7 @@ func (f *Fetcher) get(ctx context.Context, u *url.URL, accept string, limit int6
 	}
 	body, err := io.ReadAll(io.LimitReader(res.Body, limit))
 	if err != nil {
+		f.slow.noteTimeout(strings.ToLower(res.Request.URL.Hostname()), err)
 		return nil, "", nil, fmt.Errorf("read: %w", err)
 	}
 	return body, res.Header.Get("Content-Type"), res.Request.URL, nil

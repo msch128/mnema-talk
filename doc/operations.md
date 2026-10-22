@@ -72,6 +72,9 @@ General rules:
 | Variable | Default | Meaning and validation |
 |---|---|---|
 | `MAX_UPLOAD_SIZE_MB` | `50` | The hard ceiling for a single upload, 1–2048, and the initial limit. The Owner can lower it in the System tab and per role (see [roles](roles-and-permissions.md#upload-size)), never raise it above this value. Your reverse proxy must allow at least this body size. |
+| `UPLOAD_QUOTA_MB_PER_DAY` | `2048` | What one account (member, bot or webhook) may upload in any rolling 24 hours; further uploads answer 429. Deleted files still count. `0` turns the budget off. |
+| `MEDIA_MAX_TOTAL_MB` | `0` | Pauses all uploads (503) once the stored media reaches this size. `0` = no cap. |
+| `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `LINK_PREVIEWS_ENABLED` | `true` | The server fetches public pages for link cards (never private addresses); linked sites see the server's IP. |
 | `API_DOCS_ENABLED` | `false` | Swagger UI at `/api/docs` and `/api/openapi.json` for signed-in members. |
@@ -315,6 +318,47 @@ digest; it says nothing about the code in it beyond that. Pinning the digest in
 `MNEMA_IMAGE` (`ghcr.io/msch128/mnema-talk@sha256:...`) keeps a verified image
 from changing under a tag. Images released before signing was added carry no
 signature.
+
+**"Update now" does not run this check.** The updater sidecar only asks the
+Docker daemon to pull the tag again; neither the signature nor the BuildKit
+provenance is verified before the app is recreated, and there is no hook in
+the sidecar for it (see [SECURITY.md](../SECURITY.md#self-update-sidecar)).
+If you want every image verified before it runs, do not enable the `autoupdate`
+profile: for each release run `cosign verify` against the new tag, copy the
+digest it reports into `MNEMA_IMAGE` and run `docker compose pull app && docker
+compose up -d app` (the steps in [upgrade.md](upgrade.md)). A digest-pinned
+install is never touched by "Update now".
+
+## Renewing the desktop trust statement
+
+`desktop-trust/trust.json` is signed by the offline root key and valid for 180
+days. After `expires_at` the desktop clients keep running their current bundle
+but install no new bundle and no app update (security fixes included) until a
+fresh statement exists. Nothing renews it automatically and the key never
+leaves the owner's machine, so a scheduled workflow watches it:
+
+- `.github/workflows/trust-expiry.yml` runs every Monday and fails while fewer
+  than 60 days remain (`webbundle trust verify -min-valid-days 60`). A failed
+  run is the alert: treat it as a task due within the next few weeks, not as a
+  flaky check. Re-run it by hand with *Run workflow*.
+- Check the same thing locally with
+  `go run ./cmd/webbundle trust verify -min-valid-days 60`.
+
+Runbook when it fails:
+
+1. On the machine that holds the offline root key, from an up-to-date `main`:
+   `go run ./cmd/webbundle trust sign -key-file <root key> -out desktop-trust
+   -prev desktop-trust/trust.json -renew` (details and the confirmation prompt:
+   [desktop-trusted-client.md](desktop-trusted-client.md#renewing-the-statement-every-3-months)).
+   Read the printed list of allowed and revoked keys before confirming.
+2. Open a pull request with only `desktop-trust/` and merge it.
+3. Re-run the workflow; it must pass. Clients pick the new statement up at
+   their next start or six-hourly check.
+4. Add the next renewal date to your release checklist: the 60-day warning is a
+   backstop, not a schedule.
+
+Never put the root key in CI or in a GitHub secret; the workflow only reads the
+committed statement and public key.
 
 ## Health and metrics
 

@@ -179,6 +179,13 @@ func (h *Handler) upload(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// The body is capped at the route's limit, so the reservation is an upper
+	// bound of what is stored.
+	release, err := h.ReserveUpload(req.Context(), user.ID, AnnouncedSize(req, bodyLimit(h.limit(req.Context()))))
+	if err != nil {
+		return err
+	}
+	defer release()
 	in, target, err := h.readUpload(req, chID)
 	if err != nil {
 		return err
