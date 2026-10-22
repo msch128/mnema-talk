@@ -44,8 +44,8 @@ func TestVetAnswerCandidatesDropsWhatTrickleWouldRefuse(t *testing.T) {
 	if !strings.Contains(got, "192.0.2.7") || !strings.Contains(got, "a=end-of-candidates") || !strings.Contains(got, "m=audio") {
 		t.Fatalf("answer lost lines it should keep: %q", got)
 	}
-	if p.cands.accepted != 1 {
-		t.Fatalf("budget used = %d, want 1", p.cands.accepted)
+	if len(p.cands.seen) != 1 {
+		t.Fatalf("budget used = %d, want 1", len(p.cands.seen))
 	}
 }
 
@@ -67,7 +67,7 @@ func TestVetAnswerCandidatesSharesTheBudgetWithTrickle(t *testing.T) {
 		t.Fatalf("%d candidates passed, want the budget of %d", n, maxRemoteCandidates)
 	}
 	p.candMu.Lock()
-	err := p.takeCandidateBudget()
+	err := p.takeCandidateBudget("new")
 	p.candMu.Unlock()
 	if err == nil {
 		t.Fatal("trickle still had budget after the answer used it all")
