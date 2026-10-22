@@ -1,0 +1,25 @@
+e2e/playwright.config.ts
+  s_06fcde5dbef956::t_96072586603e59 33-36
+e2e/tests/mobile.spec.ts
+  s_06fcde5dbef956::t_6aeb109c669841 1-2,19-32,34-35,38-39,44-45
+e2e/tests/voice-chat.spec.ts
+  s_06fcde5dbef956::t_c636a2e0790c07 142-144
+web/src/components/NavDrawerButton.test.ts
+  s_06fcde5dbef956::t_12dcadc8228c80 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6f8185c31fde8ea00bf9ffec0cbdf7eadb12f4d3",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
