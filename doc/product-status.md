@@ -10,6 +10,35 @@ entire communication path.
 | Experimental | Available to execute or test; outstanding acceptance prevents a production qualification. |
 | Planned | Requirements exist, but no qualified usable product path is available. |
 
+## Status at 1.0
+
+Mnema Talk 1.0 is the first release under the
+[API stability contract](api-stability.md): its public surfaces change
+incompatibly only in a major release. What the 1.0 label does and does not say:
+
+| Area | Category at 1.0 |
+| --- | --- |
+| Server (Docker, linux/amd64 and arm64), browser app, text chat, roles and permissions, webhooks and bots, notifications, search and onboarding, voice, cameras and screen share in Chromium-based browsers | Supported |
+| Operations: Prometheus metrics and [alert rules](../deploy/monitoring/mnema-alerts.yml), backup and restore, upgrade from the supported releases (0.8.16 and 0.9.x), cosign-signed images | Supported |
+| Desktop client on Windows | Experimental (unsigned, no Authenticode) |
+| Desktop client on macOS and Linux | Experimental (DEV builds, not qualified on real hardware; not notarised) |
+| Mobile clients, text end-to-end encryption | Not offered. Text stays readable by the server, by design. |
+
+**Internal security review, 2026-10-22.** Before 1.0 the code was reviewed in
+six lanes (authentication and sessions, permissions, content and media,
+integrations, realtime and voice, supply chain and updates). It found no
+Critical and no High issue; every Medium finding is fixed, and a short list is
+deliberately deferred (see the
+[summary in SECURITY.md](../SECURITY.md#10-internal-security-review)). This was
+done by the project itself with automated help. It is **not an independent or
+external audit**, and none has been commissioned.
+
+What 1.0 does not claim: real 4K/60 capture, system audio from physical
+hardware, an external security audit, the 250-endpoint capacity target, load
+results on dedicated hardware, Authenticode or notarised desktop signing, and
+sealed media qualified in WebView2 on real hardware. These stay outstanding
+under "Remaining acceptance" below.
+
 ## Supported browser and server path
 
 The Vue browser app and Docker server for Linux amd64/arm64 are the normal
@@ -43,10 +72,22 @@ Other 0.8 capabilities on this path, each with automated tests:
 
 Not covered by these tests: real 4K/60 capture, system audio from physical
 hardware, an external security audit and capacity beyond the recorded runs.
-An internal five-area security review preceded 0.8 and its medium and low
-findings are fixed; it is not an independent audit.
+An internal five-area security review preceded 0.8 and a six-lane one
+preceded 1.0 (see "Status at 1.0"); neither is an independent audit.
 
-## Experimental Windows desktop path
+## Experimental desktop path
+
+The desktop client is Experimental on every platform. The Windows path is the
+furthest along and is described first; macOS and Linux builds are published by
+the desktop repository as DEV builds (a macOS disk image, Linux AppImage and
+.deb packages, each with an updater signature) and run the same signed web
+bundle. That repository's CI builds the packages and has a Linux workflow, but
+they are not qualified on real hardware, are not
+notarised or otherwise platform-signed, and desktop-specific features such as
+the gaming integration are Windows only. Everything below about the signed
+bundle, the security floor and updates applies to all three.
+
+### Windows
 
 The Windows desktop app lives in the separate
 [mnema-talk-desktop](https://github.com/msch128/mnema-talk-desktop) repository
@@ -123,7 +164,7 @@ The remaining fixes and acceptance work follow:
    surfaces refuse one. The check uses a synthetic capture device and does
    not click the prompt. A human prompt, a physical microphone or camera,
    display capture, sealed media on real hardware and a signed installer
-   remain outstanding. macOS and Linux clients are not started.
+   remain outstanding. The macOS and Linux builds have no hardware qualification either.
 2. Chat messages and attachments stay readable by the server and are not deleted by age. Sealed media is verified in Chromium browsers, including calls between 0.7.25 and 0.8 tabs; it is not yet qualified in WebView2 on real Windows hardware, and no external audit has reviewed it.
 3. Capacity: [`make load-test`](../loadtest/README.md) is reproducible (smoke, the 100-member `full` profile, join and reload stall checks, packet loss and jitter on the lightweight viewers, a two-hour `long` profile). On a loaded single test machine the `full` profile misses its gap and heap thresholds for 0.8 and 0.7.25 alike while all 84 viewers stay connected, so what remains is recording results on dedicated hardware with more real decrypting viewers ([capacity notes](architecture.md#capacity)). A viewer's bad reports move only that viewer to a lower screen layer (`TestOneViewersTroubleLeavesTheOtherOnTheHighLayer`); voice forwarding does not follow screen layers. The additional 250-endpoint target is deferred.
 4. Independent operation. `main` is protected by a ruleset (pull request required, CI and CodeQL checks must pass, squash merge only). Review approvals are not required. Dependency advisories remain part of release checks; a green build does not mean zero risk.

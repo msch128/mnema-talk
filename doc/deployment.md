@@ -30,6 +30,47 @@ network:
 - Users behind strict firewalls that block UDP can only join voice through
   TURN (`WEBRTC_TURN_URLS`, see `.env.example`).
 
+## Fresh install
+
+A new host needs Docker with Compose and nothing else: the compose file and
+`.env.example` of the release are the whole deployment (no clone, no build).
+Replace `1.0.0` with the version to install.
+
+```sh
+mkdir mnema-talk && cd mnema-talk
+VERSION=1.0.0
+base=https://raw.githubusercontent.com/msch128/mnema-talk/v$VERSION
+curl -fsSLO "$base/docker-compose.yml"
+curl -fsSL "$base/.env.example" -o .env
+chmod 600 .env
+```
+
+Edit `.env`: the values below are required in production, and the server
+refuses the public placeholders from `.env.example`.
+
+| Variable | Set it to |
+|---|---|
+| `MNEMA_IMAGE` | `ghcr.io/msch128/mnema-talk:1.0.0` (or `:1.0`, see [Updates](#updates)) |
+| `PUBLIC_URL` | The `https://` address members open. An `http://` address starts, with a warning (see [operations.md](operations.md#public_url-and-secure-cookies)). |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | `openssl rand -hex 16` (compose builds `DATABASE_URL` from it) |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY` | Any letters and digits (secret: at least 8 characters) |
+| `ADMIN_INITIAL_PASSWORD` | The Owner's password, at least 14 characters; remove it after the first start |
+
+Then start and check it:
+
+```sh
+docker compose config -q
+docker compose up -d --wait        # pulls the images, returns once everything is healthy
+curl -fsS http://127.0.0.1:8080/api/health
+```
+
+Sign in as the Owner (`ADMIN_USERNAME`, default `Herzog`) and create invite
+codes. Put a reverse proxy with TLS in front, forward the voice UDP range
+(see [Ports](#ports)) and set up [backups](operations.md#backups-and-restore)
+before inviting anyone. CI runs exactly these steps against the image it just
+built (`scripts/fresh-install-check.sh`).
+
 ## Running a released image
 
 Instead of building on the server, use a published image: set `MNEMA_IMAGE`

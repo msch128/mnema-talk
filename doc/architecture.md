@@ -31,7 +31,8 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/httpx`](../internal/httpx/middleware.go) | Middleware: request IDs, security headers (CSP, HSTS in production), CORS, CSRF origin check, body limits, rate limits ([`ratelimit.go`](../internal/httpx/ratelimit.go)), client IP from trusted proxies ([`request.go`](../internal/httpx/request.go)), JSON errors. |
 | [`internal/auth`](../internal/auth/service.go) | Password hashing, signed session cookies with a per-user `token_version` (revocation), login lockout, invite codes, admin seeding, user administration, password re-authentication for sensitive actions ([`reauth.go`](../internal/auth/reauth.go)). |
 | [`internal/perm`](../internal/perm/perm.go), [`internal/roles`](../internal/roles/handler.go) | Roles and permissions: the permission bits, the in-memory `Snapshot` that resolves base, role and overwrite permissions (and the hierarchy rules), the cache with live invalidation, and the HTTP API for roles, member roles and channel overwrites. See [roles-and-permissions.md](roles-and-permissions.md). |
-| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions, read state, notification settings, search, members. |
+| [`internal/chat`](../internal/chat/handler.go) | Categories, channels (text and voice), layout, messages, replies, threads, reactions, mentions (by name, `@all`/`@here` and `@Role`, with a fan-out cap) and the mentions inbox, read state, notification levels ([`notify.go`](../internal/chat/notify.go)), search ([`search.go`](../internal/chat/search.go)), members. |
+| [`internal/onboarding`](../internal/onboarding/handler.go) | The first-run side of the community: name, welcome text and rules, who accepted which rules version, dismissed tips and the public invite preview. |
 | [`internal/media`](../internal/media/handler.go) | Uploads with content sniffing and an allow-list ([`policy.go`](../internal/media/policy.go)), authenticated media serving through the app, admin storage stats and pruning, and the retention worker (off unless `MEDIA_RETENTION_DAYS > 0`). |
 | [`internal/s3`](../internal/s3/s3.go) | S3 client (AWS SDK v2); creates the bucket only when missing. |
 | [`internal/db`](../internal/db/db.go) | pgx pool and the embedded, numbered migrations in [`internal/db/migrations/`](../internal/db/migrations/). Each applied file's checksum is recorded in `schema_migrations`; an edited migration stops startup. |
@@ -39,6 +40,7 @@ in PostgreSQL; uploads and avatars live in S3-compatible object storage
 | [`internal/ws`](../internal/ws/hub.go) | WebSocket hub: one connection per browser session; chat events, presence and idle state, typing, voice rooms ([`voice.go`](../internal/ws/voice.go)), mute/deafen state, speaking indicators and WebRTC signaling for the SFU. |
 | [`internal/sfu`](../internal/sfu/sfu.go) | Pion WebRTC SFU: one room per voice channel, forwards RTP without transcoding; per-viewer subscriptions ([`subscriptions.go`](../internal/sfu/subscriptions.go)); announced addresses from `WEBRTC_NAT_1TO1_IP`, re-resolved every 5 minutes ([`announce.go`](../internal/sfu/announce.go)). |
 | [`internal/webhook`](../internal/webhook/), [`internal/ssrf`](../internal/ssrf/) | Webhooks: incoming URLs per channel in Discord's execute format (messages authored by a hidden bot account per webhook), outgoing signed events with a durable retry queue and delivery log, and the guard for outbound requests to member-chosen addresses (resolves names itself, refuses non-public addresses, connects to the vetted address). See [webhooks.md](webhooks.md). |
+| [`internal/audit`](../internal/audit/), [`internal/bot`](../internal/bot/), [`internal/gateway`](../internal/gateway/) | The audit log with per-entry visibility classes, bot accounts, tokens (bound to the member who issued them) and slash commands, and the Discord-style bot gateway. See [bots.md](bots.md) and [moderation.md](moderation.md). |
 | [`internal/metrics`](../internal/metrics/) | Process-wide counters (HTTP, realtime, SFU, storage, rate limits) rendered in the Prometheus text format without a client library; every labelled family has a series cap. Feeds `/api/metrics` and the live operator view in the admin System tab. See [operations.md](operations.md#monitoring-and-alerts). |
 | [`internal/webbundle`](../internal/webbundle/), [`cmd/webbundle`](../cmd/webbundle/) | Builds, signs (Ed25519) and verifies the web app bundle that the [trusted desktop client](desktop-trusted-client.md) runs instead of server-served JavaScript. |
 | [`internal/linkpreview`](../internal/linkpreview/linkpreview.go) | Link cards: fetches title, description and image of public pages with an SSRF guard (http(s) on 80/443 only, every resolved address checked, also on redirects) and a cache. |
@@ -213,6 +215,72 @@ keys out of band. The server validates who may commit but never sees keys.
 The code is [`web/src/lib/media/`](../web/src/lib/media/). Details and limits:
 [SECURITY.md](../SECURITY.md#security-model-summary).
 [`doc/crypto-state.md`](crypto-state.md) is an unused persistence foundation.
+
+## Notifications, search and onboarding (0.9)
+
+Three features that cut across the chat path. All of them are enforced on the
+server; the client only renders the result.
+
+**Notification levels.** A member sets `all`, `mentions` or `mute` per channel
+and per category, a mute optionally with an end time. The stored value
+`inherit` (the default) follows the category, then `all`; the level a client
+receives is always the effective one. Settings are rows in `channel_reads` and a
+category counterpart (migration 0035) and are changed through
+`PUT /api/channels/{id}/notifications` and `PUT /api/categories/{id}/notifications`.
+Levels only decide who is *notified*: unread state and the mentions inbox
+(`GET /api/mentions`) are independent, so a muted channel still shows what was
+addressed to the member.
+
+**Mentions.** A message stores one `message_mentions` row per notified member,
+with a `kind` (by name, `@all`/`@here`, through a role) and the mentioned roles
+in `message_role_mentions` (migration 0036), so a pill survives a role rename.
+Webhooks and bots mention roles too, subject to `allowed_mentions`. An author
+without the right to mention everyone notifies at most 50 members per message
+([`mentions_cap.go`](../internal/chat/mentions_cap.go)).
+
+**Search.** `GET /api/search` runs trigram-indexed substring matching on
+message text (`pg_trgm`, one index since migration 0038) with filters (channel,
+author, mentions, attachment kind, date window). Results are limited to the
+channels the caller can read, using the same permission snapshot as message
+listing; a query has a length and term cap, a database statement timeout and
+at most two searches in flight per member.
+
+**Onboarding and rules.** The Owner (or Administrators) writes a welcome text,
+rules and a start channel through `/api/admin/onboarding` (migration 0037).
+Publishing rules creates a rules version; a member who has not accepted the
+current one is pending. Enforcement is part of the permission resolver
+([`internal/perm`](../internal/perm/snapshot.go)): a pending member loses what
+a timeout takes (posting, reacting, uploading, joining a Talk) and receives
+`RULES_NOT_ACCEPTED`, in REST, the hub and the SFU alike. Empty rules enforce
+nothing, which is why an upgrade never locks anyone out; the Owner and bots are
+exempt. `GET /api/invites/{code}` (the one public read) serves the community
+name for the sign-up page; it is rate limited and refuses weak legacy codes.
+
+## The 1.0 contract
+
+From 1.0.0 the public surfaces are versioned with semantic versioning
+([api-stability.md](api-stability.md)): the REST API as `api/openapi.json`, the
+WebSocket event registry in [`internal/events`](../internal/events/types.go),
+bot and webhook payloads, the desktop bridge, environment variables and metric
+names. The contract is enforced mechanically, not by convention:
+
+- `make openapi-check` fails when `api/openapi.json` is stale and `make
+  openapi-diff` fails on an incompatible change against the latest release
+  tag, unless a commit carries a `BREAKING CHANGE:` footer.
+- Event names are constants in `internal/events`; a golden file
+  (`internal/events/testdata/events.golden.json`) and a comparison with
+  `web/src/types/events.ts` fail the build when the registry and the client
+  types drift.
+- The alert rules in [`deploy/monitoring/mnema-alerts.yml`](../deploy/monitoring/mnema-alerts.yml)
+  are checked with `promtool`, and an integration test fails when a rule names
+  a metric `/api/metrics` does not export.
+- Upgrade and restore drills install each supported release from GHCR, seed
+  data through its own API, move to the build under test and check the data;
+  a fresh-install check follows [deployment.md](deployment.md) on an empty
+  directory.
+
+The database schema, `internal/...` packages and the operator-only admin
+endpoints are not part of the contract.
 
 ## Capacity
 
