@@ -2,6 +2,7 @@ package sfu
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/netip"
 	"strings"
@@ -31,8 +32,8 @@ const (
 	// peer gathers a handful per interface; more than this is not a client
 	// worth keeping them for.
 	maxHeldCandidates = 64
-	// maxRemoteCandidates bounds the candidates one peer may have applied
-	// over its lifetime. Every one costs pairs and STUN probes toward an
+	// maxRemoteCandidates bounds the distinct candidates one peer may have
+	// applied over its lifetime. Every one costs pairs and STUN probes toward an
 	// address the member chose, so a flood is a way to point the server at
 	// others. A browser gathers a handful per interface and per STUN server.
 	maxRemoteCandidates = 64
@@ -60,9 +61,11 @@ type candidateState struct {
 	out []webrtc.ICECandidateInit
 	// early are the client's candidates received before its answer was applied.
 	early []webrtc.ICECandidateInit
-	// accepted counts the client's candidates taken so far (see
-	// maxRemoteCandidates).
-	accepted int
+	// seen holds the distinct client candidates taken so far, by
+	// candidateKey. Its size is what maxRemoteCandidates bounds; a candidate
+	// listed again (every renegotiation answer re-lists the ones the browser
+	// gathered before) costs nothing.
+	seen map[string]struct{}
 
 	warnWindow     time.Time
 	warnCount      int
@@ -111,7 +114,8 @@ func (p *Peer) offerDelivered() {
 // reason (rate-limited, without the address) and returned.
 func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
 	p.candMu.Lock()
-	if err := vetRemoteCandidate(c.Candidate, p.allowLoopbackCands); err != nil {
+	key, err := vetCandidateKey(c.Candidate, p.allowLoopbackCands)
+	if err != nil {
 		p.candidateDropped(err)
 		p.candMu.Unlock()
 		return err
@@ -122,18 +126,18 @@ func (p *Peer) AddRemoteCandidate(c webrtc.ICECandidateInit) error {
 			p.candidateDropped(errTooManyCandidates)
 			return errTooManyCandidates
 		}
-		// The held ones are counted and the bound above is not above the
-		// budget, so there is always room.
-		p.cands.accepted++
+		if err := p.takeCandidateBudget(key); err != nil {
+			return err
+		}
 		p.cands.early = append(p.cands.early, c)
 		return nil
 	}
-	if err := p.takeCandidateBudget(); err != nil {
+	if err := p.takeCandidateBudget(key); err != nil {
 		p.candMu.Unlock()
 		return err
 	}
 	p.candMu.Unlock()
-	err := p.PC.AddICECandidate(c)
+	err = p.PC.AddICECandidate(c)
 	if err != nil {
 		p.candMu.Lock()
 		p.candidateDropped(err)
@@ -229,19 +233,37 @@ func vetCandidateAddresses(parsed ice.Candidate, allowLoopback bool) error {
 // loopback addresses. Private ranges stay: LAN deployments need them. An
 // empty candidate (end of candidates) passes.
 func vetRemoteCandidate(candidate string, allowLoopback bool) error {
+	_, err := vetCandidateKey(candidate, allowLoopback)
+	return err
+}
+
+// vetCandidateKey is vetRemoteCandidate that also returns the candidate's
+// identity (see candidateKey); an empty candidate has none.
+func vetCandidateKey(candidate string, allowLoopback bool) (string, error) {
 	if candidate == "" {
-		return nil
+		return "", nil
 	}
 	if len(candidate) > maxCandidateLen || !isPrintableASCII(candidate) {
-		return errCandidateInvalid
+		return "", errCandidateInvalid
 	}
 	// Pion's own parser, on the same text Pion will be given, so what is
 	// vetted is exactly what is applied.
 	parsed, err := ice.UnmarshalCandidate(strings.TrimPrefix(candidate, "candidate:"))
 	if err != nil {
-		return errCandidateInvalid
+		return "", errCandidateInvalid
 	}
-	return vetCandidateAddresses(parsed, allowLoopback)
+	if err := vetCandidateAddresses(parsed, allowLoopback); err != nil {
+		return "", err
+	}
+	return candidateKey(parsed), nil
+}
+
+// candidateKey names a candidate by foundation, component, transport,
+// address and port, so the same candidate re-listed with another priority
+// or related address is the same candidate.
+func candidateKey(c ice.Candidate) string {
+	return fmt.Sprintf("%s/%d/%s/%s/%d", c.Foundation(), c.Component(),
+		c.NetworkType().NetworkShort(), strings.ToLower(c.Address()), c.Port())
 }
 
 func isDisallowedAddr(addr netip.Addr) bool {
@@ -270,12 +292,29 @@ func routableCandidateAddress(host string, allowLoopback bool) bool {
 	return allowLoopback || !addr.IsLoopback()
 }
 
-// takeCandidateBudget counts one accepted candidate. The caller holds candMu.
-func (p *Peer) takeCandidateBudget() error {
-	if p.cands.accepted >= maxRemoteCandidates {
+// takeCandidateBudget counts one distinct accepted candidate; one already
+// counted (or the empty end-of-candidates marker) is free. The caller holds
+// candMu.
+//
+// The set is never reset, not even when the remote ufrag changes. The server
+// is the only offerer and never restarts ICE, so a peer's remote ufrag cannot
+// change legitimately: a client that wants a fresh connection joins again and
+// gets a fresh Peer. A reset on a client-asserted ufrag would let a hostile
+// client renew the budget at will and defeat the cap.
+func (p *Peer) takeCandidateBudget(key string) error {
+	if key == "" {
+		return nil
+	}
+	if _, ok := p.cands.seen[key]; ok {
+		return nil
+	}
+	if len(p.cands.seen) >= maxRemoteCandidates {
 		p.candidateDropped(errCandidateBudget)
 		return errCandidateBudget
 	}
-	p.cands.accepted++
+	if p.cands.seen == nil {
+		p.cands.seen = make(map[string]struct{})
+	}
+	p.cands.seen[key] = struct{}{}
 	return nil
 }
