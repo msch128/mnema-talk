@@ -54,6 +54,7 @@ const exportReadme = `Your data from Mnema Talk (GDPR Art. 20).
 profile.json    your account: names, bio, status, language, role, e-mail address, settings
 settings.json   notification levels per channel and category
 messages.json   the messages you wrote (channel_name is empty for channels you cannot see any more)
+edits.json      the earlier versions of the messages you edited (newest first)
 reactions.json  the reactions you gave
 uploads.json    the files you uploaded, with links while they still exist
 audit.json      administrative log entries about your account (no other person's name)
@@ -131,6 +132,7 @@ func (h *Handler) writeArchive(ctx context.Context, user uuid.UUID, out io.Write
 	}{
 		{"profile.json", func() (any, error) { return exportProfile(ctx, q, user) }},
 		{"settings.json", func() (any, error) { return exportSettings(ctx, q, user, viewable) }},
+		{"edits.json", func() (any, error) { return exportEdits(ctx, q, user) }},
 		{"reactions.json", func() (any, error) { return exportReactions(ctx, q, user) }},
 		{"uploads.json", func() (any, error) { return exportUploads(ctx, q, user) }},
 		{"audit.json", func() (any, error) { return exportAudit(ctx, q, user) }},

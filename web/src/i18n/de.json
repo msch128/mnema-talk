@@ -1715,6 +1715,16 @@
     "slowModeHint": "Mitglieder warten so lange zwischen zwei Nachrichten. Moderatoren sind ausgenommen.",
     "slowModeChip": "Langsammodus {time}"
   },
+  "editHistory": {
+    "menu": "Bearbeitungsverlauf",
+    "title": "Bearbeitungsverlauf",
+    "body": "Frühere Fassungen dieser Nachricht, die neueste zuerst. Nur wer Nachrichten verwalten darf, sieht sie.",
+    "current": "Aktuell",
+    "loading": "Lädt …",
+    "none": "Von dieser Nachricht ist keine frühere Fassung gespeichert.",
+    "empty": "(kein Text)",
+    "failed": "Der Bearbeitungsverlauf konnte nicht geladen werden."
+  },
   "bots": {
     "title": "Bots",
     "intro": "Bots sind Konten für Programme: Sie schreiben Nachrichten, beantworten Slash-Befehle und reagieren über die Bot-API auf Ereignisse (siehe doc/bots.md). Ein neuer Bot kann nichts, bis du ihm eine Rolle gibst, seine Intents erlaubst und ein Token ausstellst. Jede Änderung landet im Audit-Log.",

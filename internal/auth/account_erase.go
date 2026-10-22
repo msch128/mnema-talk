@@ -23,7 +23,8 @@ const deletedUsernamePrefix = "deleted-"
 //
 // What happens to what the person wrote:
 //   - their messages stay, authored by "Deleted user", with the text, link
-//     cards and pins removed (other members' replies and quotes remain);
+//     cards and pins removed, as are the kept earlier versions of their
+//     edits (other members' replies and quotes remain);
 //   - their uploads and avatar are deleted from storage and the database;
 //   - their reactions and mentions of them disappear;
 //   - undelivered outgoing webhook events that carry their message text (or
@@ -34,6 +35,7 @@ const deletedUsernamePrefix = "deleted-"
 var eraseSteps = []string{
 	`DELETE FROM message_reactions WHERE user_id = $1`,
 	`DELETE FROM message_mentions WHERE user_id = $1`,
+	`DELETE FROM message_edits WHERE editor_id = $1 OR message_id IN (SELECT id FROM messages WHERE user_id = $1)`,
 	`UPDATE messages SET content = '', embeds = '[]'::jsonb, author_name = NULL, is_pinned = FALSE, is_edited = FALSE WHERE user_id = $1`,
 	`DELETE FROM outgoing_queue WHERE convert_from(data, 'UTF8')::jsonb->>'user_id' = $1::text
 		OR convert_from(data, 'UTF8')::jsonb->'reply_to'->>'user_id' = $1::text`,

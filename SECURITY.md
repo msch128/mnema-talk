@@ -232,7 +232,8 @@ details and the limits.
   the member uploaded (database rows and objects), pending and finished exports,
   and the second factor. What stays: the account row as an anonymised tombstone
   (`deleted-<id>`, "Deleted user", disabled, unusable password hash) and the
-  member's messages, emptied of text, link cards and pins, so threads and other
+  member's messages, emptied of text, link cards and pins (and of the earlier
+  versions kept for moderators' edit history), so threads and other
   members' replies stay readable; other members' texts that merely quote or
   @mention the old name are not rewritten. Audit entries about the account keep
   action, time and ids; their names and details are blanked by the one update
@@ -696,6 +697,15 @@ details and the limits.
   operators must name it in their privacy notice. Only the Owner and holders
   of *View audit log* can read it; the database refuses updates, and nothing
   is deleted unless `AUDIT_RETENTION_DAYS` is set (default `0`: keep forever).
+- **Edit history.** Each edit keeps the text it replaced (at most 50 versions
+  per message, `message_edits`). Only holders of *Manage messages* in the
+  channel and the Owner can read it (`GET .../messages/{id}/edits`, checked
+  against the live permission snapshot, rate limited per member); it is not in
+  message lists, events, search, push or webhook payloads. The author's own
+  data export includes their earlier versions and nobody else's. It goes with
+  the message and with the author's account, and `EDIT_HISTORY_RETENTION_DAYS`
+  can expire it. The audit log's `message.edit` entry is a separate record
+  (see above). doc/moderation.md#edit-history.
 - **Link previews.** Previews use the same address list as outgoing webhooks
   (`internal/ssrf`: metadata, IPv4-compatible, IPv4-translated, discard-only,
   multicast, private, NAT64 and similar ranges are refused after DNS
