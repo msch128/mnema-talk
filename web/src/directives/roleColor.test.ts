@@ -9,7 +9,7 @@ function host(html: string) {
   { props: { html: { type: String, required: true } } })
   return mount(component, { props: { html } })
 }
-const pill = (w: ReturnType<typeof host>) => w.element.querySelector<HTMLElement>('.pill')
+const pill = (w: ReturnType<typeof host>) => (w.element as HTMLElement).querySelector<HTMLElement>('.pill')
 
 describe('v-role-colors', () => {
   it('sets --role-color through the CSSOM for a valid colour', () => {
