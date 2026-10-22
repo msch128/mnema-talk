@@ -1,0 +1,26 @@
+doc/release-notes-1.0.md
+  s_06fcde5dbef956::t_042d4905a6b6f5 39
+doc/desktop-app.md
+  s_06fcde5dbef956::t_042d4905a6b6f5 3,24-48,148
+README.md
+  s_06fcde5dbef956::t_042d4905a6b6f5 198,202-206
+doc/product-status.md
+  s_06fcde5dbef956::t_042d4905a6b6f5 24-25,79,81
+  s_06fcde5dbef956::t_497eb0872fb6c9 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a1724860c11d85dbed52d84aa9be0e6451e2f74",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
