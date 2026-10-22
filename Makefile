@@ -82,12 +82,13 @@ typecheck-web: $(WEB_DEPS) $(E2E_DEPS) ## Strict TypeScript checks for app, test
 	cd e2e && npm run typecheck
 
 test-scripts: ## Backup/restore syntax and fault-injected lifecycle tests (Python 3; no Docker)
-	bash -n scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh
+	bash -n scripts/security-floor.sh scripts/backup.sh scripts/restore.sh scripts/backup-common.sh scripts/drill-common.sh scripts/upgrade-drill.sh scripts/upgrade-drill-data.sh scripts/backup-drill.sh scripts/backup-drill-downgrade.sh
 	python3 scripts/tests/test_backup_restore.py
 	python3 scripts/tests/test_upgrade_mount_guard.py
 	python3 scripts/tests/test_drill_versions.py
 	python3 scripts/tests/test_coverage_summary.py
 	python3 scripts/tests/test_openapi_diff.py
+	python3 scripts/tests/test_security_floor.py
 
 # Minimum total Go coverage (%, decimals allowed, compared on the exact
 # statement counts) and the floor for every single Go file; the frontend

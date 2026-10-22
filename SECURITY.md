@@ -509,3 +509,14 @@ profile `autoupdate`, `UPDATER_TOKEN`). How it is built and why:
   the token and a foothold on the `mnema-updater` network, could have
   containers in scope recreated; anyone who compromises the updater container
   has root on the host. Leave the profile off if you update by hand anyway.
+- **No signature check on the pulled image (known limit).** The sidecar asks
+  the Docker daemon to pull the tag again; nothing on the host checks the
+  cosign signature or the provenance that `release.yml` attaches to every
+  release image before the app is recreated. Watchtower has no hook for such
+  a check, and a verifying wrapper around the pull would be new infrastructure
+  on the one container that holds the Docker socket, so this is documented
+  rather than built. The trust is the same as for installing the image at all
+  (GHCR plus this repository's release workflow). Operators who want the
+  check update by hand: verify the digest with `cosign verify` and pin it in
+  `MNEMA_IMAGE` ([doc/operations.md](doc/operations.md#verifying-a-release-image));
+  a digest-pinned install is excluded from "Update now" by design.
