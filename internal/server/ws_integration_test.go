@@ -54,6 +54,22 @@ func (c *client) dialWS(origin string) (*wsConn, *http.Response, error) {
 	return w, res, nil
 }
 
+// dialLiveWS dials the socket and waits until the hub has registered it. The
+// upgrade answers before the hub re-reads the session and registers the
+// connection, so events published in between never reach it. The
+// presence_snapshot is the hub's greeting to a registered connection.
+func (c *client) dialLiveWS(origin string) *wsConn {
+	c.a.t.Helper()
+	w, _, err := c.dialWS(origin)
+	if err != nil {
+		c.a.t.Fatal(err)
+	}
+	if _, ok := w.expect("presence_snapshot", soon); !ok {
+		c.a.t.Fatal("the hub did not register the websocket")
+	}
+	return w
+}
+
 func (w *wsConn) send(eventType string, payload any) {
 	w.t.Helper()
 	if err := w.conn.WriteJSON(map[string]any{"type": eventType, "payload": payload}); err != nil {
