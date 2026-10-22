@@ -185,6 +185,39 @@ func TestDeletingAnAccountRemovesThePersonButKeepsThreadsReadable(t *testing.T) 
 	}
 }
 
+func TestDeletionDropsQueuedOutgoingWebhookEventsWithTheMembersWords(t *testing.T) {
+	a, _ := mailApp(t)
+	admin := a.seedAdmin()
+	alice := a.register(admin, "alice")
+	bob := a.register(admin, "bob")
+	ch := a.createChannel(admin, "general", "text")
+	ctx := context.Background()
+	var hook uuid.UUID
+	if err := a.db.QueryRow(ctx, `INSERT INTO outgoing_webhooks (channel_id, name, url, secret, events)
+		VALUES ($1, 'hook', 'https://hook.example.org/x', 's', ARRAY['message.create']) RETURNING id`, ch).Scan(&hook); err != nil {
+		t.Fatal(err)
+	}
+	queue := func(data string) {
+		if _, err := a.db.Exec(ctx, `INSERT INTO outgoing_queue (webhook_id, channel_id, event_id, event_type, event_time, data)
+			VALUES ($1, $2, gen_random_uuid(), 'message.create', NOW(), convert_to($3, 'UTF8'))`, hook, ch, data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	queue(`{"user_id":"` + alice.user.ID.String() + `","content":"alice private words"}`)
+	queue(`{"user_id":"` + bob.user.ID.String() + `","content":"bob reply","reply_to":{"user_id":"` + alice.user.ID.String() + `","content":"alice private words"}}`)
+	queue(`{"user_id":"` + bob.user.ID.String() + `","content":"bob own words"}`)
+
+	if res := a.deleteAccount(alice, memberPassword, ""); res.status != http.StatusNoContent {
+		t.Fatalf("delete: %d %s", res.status, res.body)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE convert_from(data, 'UTF8') LIKE '%alice private words%'`); n != 0 {
+		t.Fatalf("%d queued events still hold her words", n)
+	}
+	if n := a.countRows(`SELECT COUNT(*) FROM outgoing_queue WHERE convert_from(data, 'UTF8') LIKE '%bob own words%'`); n != 1 {
+		t.Fatalf("other members' queued events must stay, found %d", n)
+	}
+}
+
 // registerAs makes a fresh invite and registers name; it returns the status.
 func (a *app) registerAs(admin *client, name string) int {
 	a.t.Helper()
