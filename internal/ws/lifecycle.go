@@ -43,6 +43,7 @@ const (
 // @Description - `channels_changed`: no payload; refetch GET /api/channels (sent after any category/channel/layout admin change).
 // @Description - `permissions_changed`: no payload; refetch GET /api/permissions and GET /api/channels. Sent to the users whose roles or permissions may have changed (everybody after a channel, category, overwrite or @everyone change).
 // @Description - `roles_changed`: no payload; refetch GET /api/roles and GET /api/members (a role was created, edited, deleted, reordered or assigned).
+// @Description - `emoji_changed`: no payload; refetch GET /api/emoji (a custom emoji was added, renamed or deleted).
 // @Description - `member_joined`: public User of a newly registered member.
 // @Description - `user_update`: public User after a profile, status or avatar change, or `{id, disabled}` when an admin disables or enables an account.
 // @Description - `user_stats`: `{user_id, voice_seconds}` after a voice stay ends.

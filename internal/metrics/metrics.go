@@ -85,6 +85,14 @@ func (v *Vec) With(values ...string) *Counter {
 	return c
 }
 
+// Reset forgets every series. Tests that read the exposition use it so the
+// series other tests created (bounded by maxSeries) cannot crowd theirs out.
+func (v *Vec) Reset() {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	clear(v.series)
+}
+
 // Total sums every series.
 func (v *Vec) Total() uint64 {
 	v.mu.RLock()

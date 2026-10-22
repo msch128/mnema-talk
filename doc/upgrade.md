@@ -271,6 +271,16 @@ operator is below. Update with the procedure above; take the backup first.
   needs outbound HTTPS to the browser vendors' push services (Google, Mozilla,
   Apple, Microsoft) when a member uses push; it connects only to public
   addresses. Rolling back needs the pre-upgrade backup like every migration.
+- **Custom emoji (migration 0044).** Members holding the new permission *Manage
+  emoji* (the Owner always does; nobody else gets it from an upgrade) add PNG,
+  GIF or WebP pictures under Admin > Emoji; everyone uses them as `:name:` in
+  messages and reactions. 0044 creates the table `custom_emoji` and widens
+  `message_reactions.emoji` from 32 to 80 characters (a custom emoji reaction is
+  the token `<:name:id>`); no row is rewritten. `EMOJI_MAX` (default `200`, `0`
+  forbids new ones) caps the count. Uploads are decoded and redrawn on the
+  server (at most 128 x 128, metadata and trailing bytes dropped, 256 KiB,
+  SVG/JPEG/animated WebP refused) and stored under `emoji/` in object storage.
+  Older web bundles show the token text `<:name:id>` instead of the picture.
 - **Installable app.** The web app now has a manifest, icons and a service
   worker (`/sw.js`) that keeps its shell available offline; browsers offer
   "Install", and Account menu > App explains it (on iPhone and iPad: Share >

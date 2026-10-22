@@ -1,4 +1,11 @@
 /* Rendered chat Markdown (lib/markdown). Global on purpose: the markup comes from v-html. */
+.markdown-body .md-emoji {
+  display: inline-block;
+  height: 1.375em;
+  width: auto;
+  vertical-align: -0.3em;
+  object-fit: contain;
+}
 .markdown-body strong { font-weight: 600; }
 .markdown-body em { font-style: italic; }
 .markdown-body .md-underline { text-decoration: underline; text-underline-offset: 2px; }

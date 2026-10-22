@@ -75,6 +75,7 @@ General rules:
 | `UPLOAD_QUOTA_MB_PER_DAY` | `2048` | What one account (member, bot or webhook) may upload in any rolling 24 hours; further uploads answer 429. Deleted files still count. `0` turns the budget off. |
 | `MEDIA_MAX_TOTAL_MB` | `0` | Pauses all uploads (503) once the stored media reaches this size. `0` = no cap. |
 | `MEDIA_MIN_FREE_MB` / `MEDIA_DISK_PATH` | `1024` / empty | Pauses uploads (503) while the filesystem at `MEDIA_DISK_PATH` has less than this much free. The app can only see disks it has mounted: with the bundled SeaweedFS container, mount its data volume read-only into the app and point `MEDIA_DISK_PATH` at it, or watch the volume from outside. Empty path = off. |
+| `EMOJI_MAX` | `200` | How many custom emoji the community may hold, 0-2000. `0` allows no new ones; existing ones keep working. Each is at most 256 KiB in object storage (`emoji/`). |
 | `MEDIA_RETENTION_DAYS` | `0` | `0` = never delete media automatically. A positive number deletes media older than that many days. Negative values are rejected. |
 | `EDIT_HISTORY_RETENTION_DAYS` | `0` | `0` = keep the earlier versions of edited messages (at most 50 per message; members with Manage messages can read them). A positive number deletes versions replaced longer ago than that many days. Negative values are rejected. |
 | `AUDIT_RETENTION_DAYS` | `0` | `0` = keep the audit log forever. A positive number deletes entries older than that many days (checked every six hours); see [moderation](moderation.md#immutability-and-retention). Negative values are rejected. |

@@ -3,15 +3,29 @@ import type { PropType } from 'vue'
 import type PickerElement from 'emoji-picker-element/picker.js'
 // Searchable emoji picker (emoji-picker-element). It is loaded on first use
 // and reads its emoji data from our own server, never from a CDN.
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { locale } from '../i18n'
 import { useDismissable } from '../composables/useDismissable'
+import { emojiImage, emojiToken } from '../lib/customEmoji'
+import { prefersReducedMotion, useEmojiStore } from '../stores/emoji'
 
 const emit = defineEmits<{ pick: [emoji: string]; close: [] }>()
 const props = defineProps({
   // Element that opened the picker; clicks on it do not count as "outside".
-  trigger: { type: Object as PropType<HTMLElement | null>, default: null }
+  trigger: { type: Object as PropType<HTMLElement | null>, default: null },
+  // A custom emoji is picked as its :name: (composers turn it into the token
+  // when the message is sent) or, by default, as the token itself.
+  shortcode: { type: Boolean, default: false }
 })
+const store = useEmojiStore()
+
+// The picker lists the instance's custom emoji in a section of their own.
+function syncCustomEmoji() {
+  if (!picker) return
+  const still = prefersReducedMotion()
+  picker.customEmoji = store.items.map(e => ({ name: e.name, shortcodes: [e.name], url: emojiImage(e, still).src }))
+}
+watch(() => store.items, syncCustomEmoji)
 
 const host = ref<HTMLElement | null>(null)
 const loading = ref(true)
@@ -33,8 +47,14 @@ async function create() {
   picker.classList.add('dark', 'mnema-emoji-picker')
   picker.addEventListener('emoji-click', e => {
     const unicode = e.detail?.unicode
-    if (unicode) emit('pick', unicode)
+    if (unicode) {
+      emit('pick', unicode)
+      return
+    }
+    const custom = store.byName.get(e.detail?.name ?? '')
+    if (custom) emit('pick', props.shortcode ? `:${custom.name}:` : emojiToken(custom))
   })
+  syncCustomEmoji()
   host.value.appendChild(picker)
   loading.value = false
   // Search field first, like any other picker.

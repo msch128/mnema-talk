@@ -100,6 +100,7 @@ func (c *components) mountAuthenticated(authed chi.Router) {
 		c.chatH.Mount(j)
 		c.cmds.MountMember(j)
 		c.mediaH.Mount(j)
+		c.emojiH.Mount(j)
 		c.rolesH.Mount(j)
 		c.onboardH.Mount(j)
 		c.pushH.Mount(j)
@@ -133,5 +134,6 @@ func (c *components) mountAdmin(adm chi.Router) {
 	c.webhookH.MountAdmin(adm)
 	c.botH.MountAdmin(adm)
 	c.mediaH.MountAdmin(adm)
+	c.emojiH.MountAdmin(adm)
 	c.systemH.mountAdmin(adm)
 }

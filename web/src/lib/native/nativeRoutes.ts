@@ -193,6 +193,9 @@ function routeMetadata(path: string, request: ApiRequest): Promise<ApiReply> | n
 // and the shipped clients' proxy passes the paths although the web bundle never
 // registers a service worker there (the desktop shows its own OS notifications). Add typed onboarding
 // operations here before the native DEV client is ever shipped.
+// The same holds for custom emoji (/api/emoji, /api/emoji/{id}/image and /still,
+// /api/admin/emoji): the shipped clients' proxy passes them, the native DEV client
+// answers "unavailable".
 // The same holds for the account recovery endpoints (/api/auth/options,
 // /api/auth/password-reset/*, /api/auth/email/verify, /api/users/me/account,
 // /api/users/me/email*, /api/users/me/2fa/*, /api/users/me/export*, /api/users/me/delete, /api/auth/login/2fa) and the Owner's /api/admin/system/mail/test: the

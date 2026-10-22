@@ -29,6 +29,8 @@ require (
 
 require github.com/SherClockHolmes/webpush-go v1.4.0
 
+require golang.org/x/image v0.47.0
+
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
