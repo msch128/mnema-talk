@@ -459,9 +459,9 @@ jobs:
 
       # System libraries for the browsers, in a bounded step of their own. A slow
       # Ubuntu mirror used to stall `playwright install --with-deps` inside
-      # e2e/run.sh until the job timed out. Now apt retries and gives up on a
-      # stalled connection, and the downloaded .debs are cached per Playwright
-      # version and browser.
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
       - name: Playwright system dependencies cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -469,20 +469,8 @@ jobs:
           key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
 
       - name: Install browser system dependencies
-        timeout-minutes: 8
-        working-directory: e2e
-        run: |
-          set -euo pipefail
-          mkdir -p ~/apt-archives/partial
-          sudo tee /etc/apt/apt.conf.d/99ci-fast-fail >/dev/null <<EOF
-          Acquire::Retries "5";
-          Acquire::http::Timeout "20";
-          Acquire::https::Timeout "20";
-          Dir::Cache::Archives "$HOME/apt-archives";
-          EOF
-          npm ci --no-audit --no-fund
-          npx playwright install-deps chromium webkit
-          sudo chmod -R a+rX ~/apt-archives
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh chromium webkit
 
       - name: Run browser smoke test
         env:
@@ -568,9 +556,9 @@ jobs:
 
       # System libraries for the browsers, in a bounded step of their own. A slow
       # Ubuntu mirror used to stall `playwright install --with-deps` inside
-      # e2e/run.sh until the job timed out. Now apt retries and gives up on a
-      # stalled connection, and the downloaded .debs are cached per Playwright
-      # version and browser.
+      # e2e/run.sh until the job timed out. e2e/ci-install-deps.sh bounds each
+      # attempt, retries on another mirror, and the downloaded .debs are cached
+      # per Playwright version and browser.
       - name: Playwright system dependencies cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -578,20 +566,8 @@ jobs:
           key: apt-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.browser }}
 
       - name: Install browser system dependencies
-        timeout-minutes: 8
-        working-directory: e2e
-        run: |
-          set -euo pipefail
-          mkdir -p ~/apt-archives/partial
-          sudo tee /etc/apt/apt.conf.d/99ci-fast-fail >/dev/null <<EOF
-          Acquire::Retries "5";
-          Acquire::http::Timeout "20";
-          Acquire::https::Timeout "20";
-          Dir::Cache::Archives "$HOME/apt-archives";
-          EOF
-          npm ci --no-audit --no-fund
-          npx playwright install-deps ${{ matrix.browser }}
-          sudo chmod -R a+rX ~/apt-archives
+        timeout-minutes: 10
+        run: e2e/ci-install-deps.sh ${{ matrix.browser }}
 
       - name: Run browser smoke test
         env:
