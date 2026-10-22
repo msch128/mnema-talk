@@ -52,7 +52,7 @@ func TestDeletingAnAccountRemovesItsVotesAndThePollsItPosted(t *testing.T) {
 	wantStatus(t, "delete alice", f.a.deleteAccount(f.alice, memberPassword, ""), http.StatusNoContent)
 
 	var msgs []chat.Message
-	f.bob.get(f.base() + "/messages").decode(t, &msgs)
+	f.bob.get(f.base()+"/messages").decode(t, &msgs)
 	byID := map[string]chat.Message{}
 	for _, m := range msgs {
 		byID[m.ID.String()] = m

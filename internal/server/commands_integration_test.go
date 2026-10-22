@@ -176,12 +176,16 @@ func assertSingleChannelPingCommand(t *testing.T, got []bot.ChannelCommand) {
 	}
 }
 
+// channelCommands lists the bots' commands of a channel; the server's built-in
+// ones (poll_integration_test.go) come first in the same answer and are left out.
 func channelCommands(t *testing.T, c *client, ch uuid.UUID) []bot.ChannelCommand {
 	t.Helper()
-	res := c.get("/api/channels/" + ch.String() + "/commands")
-	wantStatus(t, "channel commands", res, http.StatusOK)
 	var out []bot.ChannelCommand
-	res.decode(t, &out)
+	for _, cmd := range pollCommands(t, c, ch) {
+		if !cmd.Builtin {
+			out = append(out, cmd)
+		}
+	}
 	return out
 }
 

@@ -46,19 +46,19 @@ test('a poll from the slash menu is voted on live by another member and ends whe
     await expect(owner.getByTestId('slash-suggestions')).toContainText('/poll')
     await composer.press('Enter')
     const dialog = owner.getByTestId('poll-dialog')
-    await dialog.getByLabel('Frage').fill('Pizza oder Pasta?')
+    await dialog.getByLabel('Frage', { exact: true }).fill('Pizza oder Pasta?')
     await dialog.getByTestId('poll-answer').nth(0).fill('Pizza')
     await dialog.getByTestId('poll-answer').nth(1).fill('Pasta')
     await dialog.getByTestId('poll-post').click()
     await expect(dialog).toBeHidden()
 
     const mine = owner.getByTestId('poll')
-    await expect(mine).toContainText('Pizza oder Pasta?')
+    await expect(owner.getByRole('article').filter({ has: mine })).toContainText('Pizza oder Pasta?')
     await expect(mine.getByTestId('poll-total')).toHaveText('0 Stimmen')
 
     // The other member sees the poll arrive, votes, and the author sees it without reloading.
     const theirs = member.getByTestId('poll')
-    await expect(theirs).toContainText('Pizza oder Pasta?')
+    await expect(member.getByRole('article').filter({ has: theirs })).toContainText('Pizza oder Pasta?')
     await theirs.locator('button', { hasText: 'Pasta' }).click()
     await expect(theirs.locator('button', { hasText: 'Pasta' })).toHaveAttribute('aria-pressed', 'true')
     await expect(mine.getByTestId('poll-total')).toHaveText('1 Stimme')
