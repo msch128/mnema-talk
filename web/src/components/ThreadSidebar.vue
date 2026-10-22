@@ -17,6 +17,8 @@ import ThreadReply from './ThreadReply.vue'
 import ThreadComposer from './ThreadComposer.vue'
 import { useMessageActions } from '../composables/useMessageActions'
 import { handleMessageKeydown } from '../composables/useMessageKeyboard'
+import { useDraftSlot } from '../composables/useDraftSlot'
+import { threadDraftKey, type DraftReply } from '../lib/drafts'
 import { useToastStore } from '../stores/toast'
 import { t, locale } from '../i18n'
 
@@ -52,13 +54,14 @@ watch(() => chatStore.threadReplies.length, () => {
 
 // ---- Replies inside the thread ----
 
-const replyingTo = ref<ThreadRoot | null>(null)
+const replyingTo = ref<DraftReply | null>(null)
+// Each thread keeps its own reply text and target.
+useDraftSlot(() => (chatStore.activeThread ? threadDraftKey(chatStore.activeThread.id) : null), replyInput, replyingTo)
 const composer = ref<InstanceType<typeof ThreadComposer> | null>(null)
 const highlightedId = ref<string | null>(null)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
 watch(() => chatStore.activeThread?.id, () => {
-  replyingTo.value = null
   actions.cancelEdit()
 })
 

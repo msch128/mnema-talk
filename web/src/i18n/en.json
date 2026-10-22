@@ -169,6 +169,7 @@
     "channels": "Channels",
     "openChannels": "Open channel list",
     "noChannels": "No channels",
+    "draft": "Draft",
     "deleteCategory": "Delete category",
     "deleteChannel": "Delete channel",
     "deleteVoiceChannel": "Delete voice channel",

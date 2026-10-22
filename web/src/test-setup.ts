@@ -1,5 +1,7 @@
 // Global plugins every component test needs: $t and v-tooltip.
 import { config } from '@vue/test-utils'
+import { beforeEach } from 'vitest'
+import { clearAllDrafts } from './lib/drafts'
 import { i18nPlugin, setLocale } from './i18n'
 import { tooltip } from './directives/tooltip'
 import { installMediaCall } from './lib/media/api'
@@ -27,3 +29,6 @@ installMediaCall({
 config.global.plugins = [i18nPlugin]
 config.global.directives = { tooltip }
 setLocale('de')
+
+// Unsent drafts live in the page's storage: no test inherits another's.
+beforeEach(() => clearAllDrafts())
