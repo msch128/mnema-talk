@@ -33,6 +33,12 @@ type Handler struct {
 	// nil records nothing.
 	Audit       *audit.Log
 	failureSeen *sync.Map
+	// Mail delivers account e-mails (address confirmation, password reset);
+	// nil when SMTP is not configured, which switches those flows off.
+	Mail MailSender
+	// PublicURL is the address the links in those mails point to.
+	PublicURL string
+	rec       *recovery
 
 	loginPerIP    *httpx.RateLimiter
 	registerPerIP *httpx.RateLimiter
@@ -65,6 +71,7 @@ func NewHandler(s *Sessions, pub events.Publisher) *Handler {
 		Sessions:    s,
 		Events:      pub,
 		failureSeen: &sync.Map{},
+		rec:         newRecovery(),
 		// Generous per address: a household or office shares one public IP.
 		loginPerIP:      httpx.NewRateLimiter(60, 15*time.Minute),
 		registerPerIP:   httpx.NewRateLimiter(10, time.Hour),
@@ -93,6 +100,7 @@ func (h *Handler) MountPublic(r chi.Router) {
 	r.With(h.loginPerIP.PerIP).Post("/auth/login", httpx.Handle(h.login))
 	r.With(h.registerPerSite.By(httpx.ClientAggregateKey), h.registerPerIP.PerIP).Post("/auth/register", httpx.Handle(h.register))
 	r.Post("/auth/logout", httpx.Handle(h.logout))
+	h.mountRecovery(r)
 }
 
 // MountAuthenticated registers routes that need a session.
@@ -105,6 +113,7 @@ func (h *Handler) MountAuthenticated(r chi.Router) {
 	r.Put("/users/me/locale", httpx.Handle(h.setLocale))
 	r.Put("/users/me/presence", httpx.Handle(h.setPresence))
 	r.Put("/users/me/status", httpx.Handle(h.setStatus))
+	h.mountAccount(r)
 }
 
 // login handles POST /api/auth/login.

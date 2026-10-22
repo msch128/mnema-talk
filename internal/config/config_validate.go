@@ -51,7 +51,7 @@ func (c *Config) validateOptionalSecrets() error {
 	if c.MetricsToken != "" && len(c.MetricsToken) < 24 {
 		return fmt.Errorf("METRICS_TOKEN must be at least 24 characters when set")
 	}
-	return nil
+	return c.validateSMTP()
 }
 
 // validateBasics checks the settings every environment needs, stores the

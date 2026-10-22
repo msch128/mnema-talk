@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { caughtErrorMessage } from '../lib/api'
+import { api, caughtErrorMessage } from '../lib/api'
+import { decodeAuthAuthOptions } from '../types/rest'
 import { computed, ref, onMounted, useId } from 'vue'
 import { LogIn, UserPlus } from '@lucide/vue'
 import { useAuthStore } from '../stores/auth'
 import LegalModal from './LegalModal.vue'
+import ForgotPasswordDialog from './ForgotPasswordDialog.vue'
 import { useDialog } from '../composables/useDialog'
 import { t, locale, chooseLocale, SUPPORTED } from '../i18n'
 import type { InviteContext } from '../lib/inviteLink'
@@ -20,6 +22,9 @@ useDialog(panel, { initialFocus: 'input' })
 
 const isRegister = ref(false)
 const showLegalModal = ref(false)
+// Offered only when the server can send mail (GET /api/auth/options).
+const canResetPassword = ref(false)
+const showForgot = ref(false)
 const username = ref('')
 const displayName = ref('')
 const password = ref('')
@@ -41,6 +46,7 @@ const expiry = computed(() => {
 })
 
 onMounted(() => {
+  void loadOptions()
   if (props.invite) {
     inviteCode.value = props.invite.code
     isRegister.value = props.invite.valid !== false
@@ -55,6 +61,14 @@ onMounted(() => {
     isRegister.value = true
   }
 })
+
+async function loadOptions() {
+  try {
+    canResetPassword.value = (await api('/api/auth/options', { decode: decodeAuthAuthOptions })).password_reset
+  } catch {
+    // Offline or limited: the form works without the link.
+  }
+}
 
 async function handleSubmit() {
   // Autofill and native accessibility may update input.value without an input
@@ -165,6 +179,13 @@ async function handleSubmit() {
             placeholder="••••••••"
             class="w-full bg-mnema-surface border border-mnema-border-field rounded-md px-3 py-2 text-sm text-mnema-text placeholder-mnema-tertiary outline-none focus:border-mnema-accent transition"
           />
+          <button
+            v-if="!isRegister && canResetPassword"
+            type="button"
+            data-testid="forgot-password-link"
+            class="mt-1.5 text-xs text-mnema-tertiary hover:text-mnema-accent transition cursor-pointer"
+            @click="showForgot = true"
+          >{{ $t('recovery.forgotLink') }}</button>
         </div>
 
         <div v-if="isRegister">
@@ -237,5 +258,6 @@ async function handleSubmit() {
 
     <!-- Legal & privacy dialog -->
     <LegalModal v-if="showLegalModal" @close="showLegalModal = false" />
+    <ForgotPasswordDialog v-if="showForgot" @close="showForgot = false" />
   </div>
 </template>

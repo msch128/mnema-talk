@@ -44,6 +44,21 @@ export function isAuditPage(value: unknown): value is AuditPage {
 
 export const decodeAuditPage = decoder("audit.Page", isAuditPage)
 
+export type AuthAccountInfo = {
+  email?: string
+  email_verified: boolean
+  mail_available: boolean
+}
+
+export function isAuthAccountInfo(value: unknown): value is AuthAccountInfo {
+  return isRecord(value)
+    && (!hasOwn(value, "email") || isString(value["email"]))
+    && (hasOwn(value, "email_verified") && typeof value["email_verified"] === 'boolean')
+    && (hasOwn(value, "mail_available") && typeof value["mail_available"] === 'boolean')
+}
+
+export const decodeAuthAccountInfo = decoder("auth.AccountInfo", isAuthAccountInfo)
+
 export type AuthAdminUser = {
   avatar_url?: string
   banned: boolean
@@ -90,6 +105,17 @@ export function isAuthAdminUser(value: unknown): value is AuthAdminUser {
 }
 
 export const decodeAuthAdminUser = decoder("auth.AdminUser", isAuthAdminUser)
+
+export type AuthAuthOptions = {
+  password_reset: boolean
+}
+
+export function isAuthAuthOptions(value: unknown): value is AuthAuthOptions {
+  return isRecord(value)
+    && (hasOwn(value, "password_reset") && typeof value["password_reset"] === 'boolean')
+}
+
+export const decodeAuthAuthOptions = decoder("auth.AuthOptions", isAuthAuthOptions)
 
 export type AuthBan = {
   banned_at: string
@@ -193,6 +219,41 @@ export function isAuthLoginRequest(value: unknown): value is AuthLoginRequest {
 
 export const decodeAuthLoginRequest = decoder("auth.LoginRequest", isAuthLoginRequest)
 
+export type AuthPasswordConfirmRequest = {
+  current_password: string
+}
+
+export function isAuthPasswordConfirmRequest(value: unknown): value is AuthPasswordConfirmRequest {
+  return isRecord(value)
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+}
+
+export const decodeAuthPasswordConfirmRequest = decoder("auth.PasswordConfirmRequest", isAuthPasswordConfirmRequest)
+
+export type AuthPasswordResetConfirmation = {
+  new_password: string
+  token: string
+}
+
+export function isAuthPasswordResetConfirmation(value: unknown): value is AuthPasswordResetConfirmation {
+  return isRecord(value)
+    && (hasOwn(value, "new_password") && isString(value["new_password"]))
+    && (hasOwn(value, "token") && isString(value["token"], 43))
+}
+
+export const decodeAuthPasswordResetConfirmation = decoder("auth.PasswordResetConfirmation", isAuthPasswordResetConfirmation)
+
+export type AuthPasswordResetRequest = {
+  email: string
+}
+
+export function isAuthPasswordResetRequest(value: unknown): value is AuthPasswordResetRequest {
+  return isRecord(value)
+    && (hasOwn(value, "email") && isString(value["email"], 254))
+}
+
+export const decodeAuthPasswordResetRequest = decoder("auth.PasswordResetRequest", isAuthPasswordResetRequest)
+
 export type AuthRegisterRequest = {
   display_name?: string
   invite_code: string
@@ -209,6 +270,19 @@ export function isAuthRegisterRequest(value: unknown): value is AuthRegisterRequ
 }
 
 export const decodeAuthRegisterRequest = decoder("auth.RegisterRequest", isAuthRegisterRequest)
+
+export type AuthSetEmailRequest = {
+  current_password: string
+  email: string
+}
+
+export function isAuthSetEmailRequest(value: unknown): value is AuthSetEmailRequest {
+  return isRecord(value)
+    && (hasOwn(value, "current_password") && isString(value["current_password"]))
+    && (hasOwn(value, "email") && isString(value["email"], 254))
+}
+
+export const decodeAuthSetEmailRequest = decoder("auth.SetEmailRequest", isAuthSetEmailRequest)
 
 export type AuthSetLocaleRequest = {
   locale: "de" | "en"
@@ -351,6 +425,17 @@ export function isAuthUserEnvelope(value: unknown): value is AuthUserEnvelope {
 }
 
 export const decodeAuthUserEnvelope = decoder("auth.UserEnvelope", isAuthUserEnvelope)
+
+export type AuthVerifyEmailRequest = {
+  token: string
+}
+
+export function isAuthVerifyEmailRequest(value: unknown): value is AuthVerifyEmailRequest {
+  return isRecord(value)
+    && (hasOwn(value, "token") && isString(value["token"], 43))
+}
+
+export const decodeAuthVerifyEmailRequest = decoder("auth.VerifyEmailRequest", isAuthVerifyEmailRequest)
 
 export type BotAccess = {
   channels: Array<BotChannelAccess>
@@ -2122,6 +2207,21 @@ export function isServerLegal(value: unknown): value is ServerLegal {
 
 export const decodeServerLegal = decoder("server.Legal", isServerLegal)
 
+export type ServerMailStatus = {
+  configured: boolean
+  from: string
+  tls: string
+}
+
+export function isServerMailStatus(value: unknown): value is ServerMailStatus {
+  return isRecord(value)
+    && (hasOwn(value, "configured") && typeof value["configured"] === 'boolean')
+    && (hasOwn(value, "from") && isString(value["from"]))
+    && (hasOwn(value, "tls") && isString(value["tls"]))
+}
+
+export const decodeServerMailStatus = decoder("server.MailStatus", isServerMailStatus)
+
 export type ServerOpsPool = {
   acquired: number
   idle: number
@@ -2375,6 +2475,7 @@ export const decodeServerSystemHealth = decoder("server.SystemHealth", isServerS
 
 export type ServerSystemStatus = {
   health: ServerSystemHealth
+  mail: ServerMailStatus
   self_update: ServerSelfUpdateStatus
   update: ServerUpdateStatus
   version: ServerSystemVersion
@@ -2384,6 +2485,7 @@ export type ServerSystemStatus = {
 export function isServerSystemStatus(value: unknown): value is ServerSystemStatus {
   return isRecord(value)
     && (hasOwn(value, "health") && isServerSystemHealth(value["health"]))
+    && (hasOwn(value, "mail") && isServerMailStatus(value["mail"]))
     && (hasOwn(value, "self_update") && isServerSelfUpdateStatus(value["self_update"]))
     && (hasOwn(value, "update") && isServerUpdateStatus(value["update"]))
     && (hasOwn(value, "version") && isServerSystemVersion(value["version"]))
@@ -2406,6 +2508,17 @@ export function isServerSystemVersion(value: unknown): value is ServerSystemVers
 }
 
 export const decodeServerSystemVersion = decoder("server.SystemVersion", isServerSystemVersion)
+
+export type ServerTestMailRequest = {
+  to?: string
+}
+
+export function isServerTestMailRequest(value: unknown): value is ServerTestMailRequest {
+  return isRecord(value)
+    && (!hasOwn(value, "to") || isString(value["to"], 254))
+}
+
+export const decodeServerTestMailRequest = decoder("server.TestMailRequest", isServerTestMailRequest)
 
 export type ServerUpdateStatus = {
   check_enabled: boolean

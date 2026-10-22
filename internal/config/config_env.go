@@ -13,6 +13,7 @@ func FromEnv(lookup func(string) (string, bool)) (*Config, error) {
 	r := &envReader{lookup: lookup}
 	cfg := r.textSettings()
 	portMin, portMax := r.numericSettings(cfg)
+	cfg.SMTP = r.smtpSettings()
 	if r.err != nil {
 		return nil, r.err
 	}

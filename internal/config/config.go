@@ -95,6 +95,8 @@ type Config struct {
 	LegalOperatorEmail   string
 	LegalOperatorCountry string
 	LegalProjectNotice   string
+	// SMTP is the optional outgoing mail setup (SMTP_* variables).
+	SMTP SMTPConfig
 }
 
 func Load() (*Config, error) {

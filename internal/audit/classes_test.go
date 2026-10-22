@@ -12,6 +12,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"voice.join":             VisChannel, "voice.leave": VisChannel,
 		"auth.login": VisPrivileged, "auth.login_failed": VisPrivileged, "auth.login_locked": VisPrivileged,
 		"auth.register": VisPrivileged, "auth.password_change": VisPrivileged, "auth.logout_all": VisPrivileged,
+		"auth.email_set": VisPrivileged, "auth.email_remove": VisPrivileged, "auth.email_verified": VisPrivileged, "auth.password_reset_mail": VisPrivileged,
 		// Admin routes.
 		"invite.create": VisAuditors, "invite.revoke": VisAuditors,
 		"user.disable": VisAuditors, "user.enable": VisAuditors, "user.sessions_revoke": VisAuditors,
@@ -29,7 +30,7 @@ func TestClassesPinTheVisibilityOfEveryAction(t *testing.T) {
 		"outgoing_webhook.create": VisPrivileged, "outgoing_webhook.update": VisPrivileged,
 		"outgoing_webhook.rotate_secret": VisPrivileged, "outgoing_webhook.delete": VisPrivileged,
 		"media.prune": VisPrivileged, "media.orphans_cleanup": VisPrivileged, "media.delete": VisPrivileged,
-		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "system.update": VisPrivileged,
+		"settings.upload_limit": VisPrivileged, "settings.onboarding": VisPrivileged, "system.update": VisPrivileged, "system.mail_test": VisPrivileged,
 		"moderation.timeout": VisAuditors, "moderation.timeout_remove": VisAuditors, "moderation.ban": VisAuditors,
 		"moderation.unban": VisAuditors, "moderation.ban_expired": VisAuditors,
 		"admin.post": VisPrivileged,

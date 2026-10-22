@@ -16,6 +16,7 @@ import (
 	"github.com/msch128/mnema-talk/internal/gateway"
 	"github.com/msch128/mnema-talk/internal/httpx"
 	"github.com/msch128/mnema-talk/internal/linkpreview"
+	"github.com/msch128/mnema-talk/internal/mailer"
 	"github.com/msch128/mnema-talk/internal/media"
 	"github.com/msch128/mnema-talk/internal/onboarding"
 	"github.com/msch128/mnema-talk/internal/opwarn"
@@ -62,6 +63,7 @@ type components struct {
 	cmds     *bot.Commands
 	gw       *gateway.Gateway
 
+	mail    *mailer.Mailer // nil: SMTP not configured
 	systemH *systemHandler
 	opsSrc  *opsSource
 
@@ -126,6 +128,21 @@ func (c *components) newCore() {
 			DiskPath:     cfg.MediaDiskPath,
 		},
 	}
+}
+
+// newMail builds the SMTP client when configured and hands it to the account
+// flows that need it. Without SMTP_HOST both stay nil and those flows are off.
+func (c *components) newMail() error {
+	m, err := mailer.New(c.cfg.SMTP)
+	if err != nil {
+		return err
+	}
+	c.authH.PublicURL = c.cfg.PublicURL
+	if m != nil {
+		c.mail = m
+		c.authH.Mail = m
+	}
+	return nil
 }
 
 // newWebhooks builds the incoming webhook handler and the outgoing
@@ -223,6 +240,9 @@ func (c *components) newSystem() error {
 		version:  d.Version,
 		started:  time.Now(),
 		updates:  d.Updates,
+		mail:     c.mail,
+
+		testMailLimit: httpx.NewRateLimiter(5, 10*time.Minute).Named("test_mail"),
 	}
 	if h.version == "" {
 		h.version = "dev"

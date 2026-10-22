@@ -150,6 +150,35 @@ details and the limits.
   session id and the token's own expiry, and ends at the expiry; if the
   database cannot answer three checks in a row, the socket is closed rather
   than kept on trust.
+- **E-mail address, confirmation and password reset.** An e-mail address is
+  optional and belongs to its account alone: no API response about other
+  members, the member list or the admin user list carries it, and the audit
+  log never stores it. Setting or removing it needs the current password (the
+  same lockout as changing the password). A new address starts unconfirmed;
+  two accounts may hold the same unconfirmed address, so adding one reveals
+  nothing, and only a confirmed address is unique. Mail needs `SMTP_HOST`
+  (credentials from the environment or a file, never in the database; TLS is
+  required and certificates are verified, `SMTP_TLS=none` is refused in
+  production; recipients and subjects are checked against header injection).
+  Without it no mail is sent and a saved address is never used. Confirmation
+  and reset links carry a 256-bit random token in the URL fragment (never in a
+  request line, access log or Referer); only its SHA-256 is stored; a token is
+  single use (one atomic UPDATE), expires (24 hours for confirmation, 30
+  minutes for reset), is bound to its purpose and, for confirmation, to the
+  address it was sent to (a reset token also to the account's session version, so a password change, an Owner password action, "log out everywhere" or a session revocation kills every open reset link), and a newer link retires the older one. Reset: the
+  request answers `202` with an empty body for every well-formed address, known
+  or not, confirmed or not, disabled account or not, and does its work after
+  responding, so neither content nor timing tells accounts apart; it is limited
+  per client address (10 per hour, IPv6 per /64, 40 per /48) and, silently, per
+  address (5 per hour) and per account (5 mails per hour, counted in the
+  database so it survives restarts and attacker-chosen keys). Only an active
+  account with a confirmed address gets a link. Confirming a reset spends the
+  token and sets the password in one transaction, applies the usual password
+  policy (the Owner needs 14 characters), revokes every session (token version)
+  and known-device cookie, closes open WebSockets and clears the account's
+  login lockouts; it signs nobody in. Mail delivery failures never reach the
+  client. The Owner's "send test mail" is Owner-only, limited to five per ten
+  minutes and audited without recipient.
 - **WebSocket flood limits.** Every client event has a payload cap (1 KiB for
   ping, typing, speaking and the like; larger only for an SDP answer, an ICE
   candidate, a diagnostic and a media handshake), and a frame too big for its

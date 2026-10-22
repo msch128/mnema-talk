@@ -87,6 +87,15 @@ services:
       - WEBRTC_TURN_URLS=${WEBRTC_TURN_URLS:-}
       - WEBRTC_TURN_SECRET=${WEBRTC_TURN_SECRET:-}
       - METRICS_TOKEN=${METRICS_TOKEN:-}
+      # Outgoing e-mail (confirm an address, reset a password). Empty SMTP_HOST =
+      # the server sends no e-mail. SMTP_PASSWORD_FILE needs the file mounted.
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_TLS=${SMTP_TLS:-starttls}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_PASSWORD_FILE=${SMTP_PASSWORD_FILE:-}
+      - SMTP_FROM=${SMTP_FROM:-}
       - LEGAL_OPERATOR_NAME=${LEGAL_OPERATOR_NAME:-Community Operator}
       - LEGAL_OPERATOR_EMAIL=${LEGAL_OPERATOR_EMAIL:-admin@example.com}
       - LEGAL_OPERATOR_COUNTRY=${LEGAL_OPERATOR_COUNTRY:-Deutschland}

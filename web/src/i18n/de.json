@@ -100,7 +100,10 @@
       "fieldMax": "{field}: höchstens {count} Zeichen",
       "fileTooBig": "Die Datei ist größer als {size} MB",
       "missingPermission": "Dafür fehlt dir die Berechtigung.",
-      "slowMode": "Langsammodus: bitte warte noch {seconds} s"
+      "slowMode": "Langsammodus: bitte warte noch {seconds} s",
+      "linkInvalid": "Dieser Link ist ungültig oder abgelaufen.",
+      "emailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
+      "emailInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt."
     },
     "field": {
       "content": "Nachricht",
@@ -1089,6 +1092,16 @@
       "tooLong": "Einer der Texte ist zu lang.",
       "save": "Speichern",
       "saved": "Willkommen und Regeln gespeichert."
+    },
+    "mail": {
+      "title": "E-Mail (SMTP)",
+      "off": "Nicht eingerichtet. Ohne SMTP_HOST sendet der Server keine E-Mails: Passwörter lassen sich nicht per Mail zurücksetzen und Adressen bleiben unbestätigt. Alles andere funktioniert wie bisher.",
+      "on": "Sendet als {from} ({tls}). Die Einstellungen kommen aus der Server-Umgebung, in der Datenbank wird nichts gespeichert.",
+      "recipient": "Empfänger der Testmail",
+      "recipientPlaceholder": "Leer: deine eigene Adresse",
+      "test": "Testmail senden",
+      "sent": "Testmail gesendet.",
+      "tooOften": "Zu viele Testmails. Versuche es in ein paar Minuten erneut."
     }
   },
   "profile": {
@@ -1811,5 +1824,46 @@
     "testSent": "Testbenachrichtigung gesendet.",
     "testFailed": "Die Testbenachrichtigung konnte nicht zugestellt werden.",
     "previewFailed": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "recovery": {
+    "forgotLink": "Passwort vergessen?",
+    "forgotTitle": "Passwort zurücksetzen",
+    "forgotIntro": "Gib die E-Mail-Adresse ein, die du in den Kontoeinstellungen bestätigt hast. Gehört sie zu einem Konto, schicken wir einen Link, der 30 Minuten lang einmal funktioniert.",
+    "forgotSubmit": "Link senden",
+    "forgotSent": "Wenn ein Konto diese bestätigte Adresse hat, ist ein Link unterwegs. Er funktioniert einmal und 30 Minuten lang. Nichts angekommen? Schau im Spam-Ordner nach oder bitte den Owner um ein temporäres Passwort.",
+    "verifyTitle": "E-Mail-Adresse bestätigen",
+    "resetTitle": "Neues Passwort wählen",
+    "verifying": "Adresse wird bestätigt …",
+    "verified": "Deine E-Mail-Adresse ist bestätigt.",
+    "addressInUse": "Ein anderes Konto hat diese Adresse bereits bestätigt, sie kann hier nicht verwendet werden.",
+    "linkInvalid": "Dieser Link ist ungültig oder abgelaufen. Fordere auf der Anmeldeseite oder in deinen Kontoeinstellungen einen neuen an.",
+    "resetIntro": "Wähle ein neues Passwort. Beim Speichern werden alle Geräte abgemeldet.",
+    "resetSubmit": "Neues Passwort speichern",
+    "resetDone": "Dein Passwort ist geändert. Melde dich mit dem neuen an.",
+    "continue": "Weiter zur Anmeldung"
+  },
+  "security": {
+    "menu": "Konto & Sicherheit",
+    "title": "Konto & Sicherheit",
+    "subtitle": "Das siehst nur du",
+    "email": {
+      "title": "E-Mail-Adresse",
+      "intro": "Freiwillig. Wird nur zum Bestätigen und zum Zurücksetzen deines Passworts verwendet. Niemand sonst sieht sie, auch der Owner nicht.",
+      "introNoMail": "Freiwillig. Dieser Server kann keine E-Mails senden, eine gespeicherte Adresse bleibt daher unbestätigt und ungenutzt. Niemand sonst sieht sie.",
+      "none": "Keine E-Mail-Adresse gespeichert.",
+      "address": "E-Mail-Adresse",
+      "add": "Adresse hinzufügen",
+      "change": "Ändern",
+      "remove": "Entfernen",
+      "resend": "Bestätigung erneut senden",
+      "resent": "Bestätigungs-E-Mail gesendet.",
+      "confirmed": "Bestätigt",
+      "unconfirmed": "Noch nicht bestätigt",
+      "unused": "Nicht verwendet",
+      "saved": "Adresse gespeichert.",
+      "savedConfirm": "Adresse gespeichert. Bestätige sie über den Link in deinem Postfach.",
+      "removed": "Adresse entfernt."
+    },
+    "loading": "Lädt …"
   }
 }
