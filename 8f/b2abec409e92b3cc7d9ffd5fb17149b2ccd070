@@ -1,0 +1,32 @@
+SECURITY.md
+  s_06fcde5dbef956::t_1b9baa743f261d 526-536
+doc/product-status.md
+  s_06fcde5dbef956::t_a8d36a9724bade 65-66
+doc/operations.md
+  s_06fcde5dbef956::t_1b9baa743f261d 329-369
+doc/desktop-trusted-client.md
+  s_06fcde5dbef956::t_a8d36a9724bade 107-126,132-144,254-259
+doc/upgrade.md
+  s_06fcde5dbef956::t_a8d36a9724bade 246
+internal/webbundle/cli_trust.go
+  s_06fcde5dbef956::t_a8d36a9724bade 25-26,107,130-132,137-150
+  s_06fcde5dbef956::t_2503a8b32563fe 151-153
+internal/webbundle/cli_trust_expiry_test.go
+  s_06fcde5dbef956::t_a8d36a9724bade 1-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8fb2abec409e92b3cc7d9ffd5fb17149b2ccd070",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
