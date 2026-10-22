@@ -1,5 +1,6 @@
 import { mediaUserId } from './bounds'
 import { createMediaGuard, type MediaGuard } from './guard'
+import { mediaSealingSupported } from './support'
 import { WirePacer } from './pacer'
 import type { MediaCall } from './api'
 import { work, newCallState, rosterIds, track, flush, startCall, stopCall, handleStats } from './callEngine'
@@ -35,6 +36,7 @@ export function browserMediaCall(guard: MediaGuard = createMediaGuard()): MediaC
       if (!s.channelId || !s.userId) return false
       return guard.armSender(sender, s.channelId, s.userId, source, layer)
     },
+    canSeal: mediaSealingSupported,
     prepareIncoming(receiver) {
       if (!receiver || !s.channelId) return false
       return guard.armReceiver(receiver, s.channelId, null)

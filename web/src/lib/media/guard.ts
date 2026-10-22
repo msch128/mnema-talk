@@ -72,7 +72,7 @@ function readStats(data: unknown): Record<string, FrameStats> | null {
   return out
 }
 
-function canArm(): boolean {
+export function canArm(): boolean {
   return typeof Worker === 'function' && typeof RTCRtpScriptTransform === 'function' && typeof MessageChannel === 'function'
 }
 

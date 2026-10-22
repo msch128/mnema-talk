@@ -1,5 +1,6 @@
 import { mediaCall } from '../../lib/media/api'
 import { SOURCE_CAMERA, SOURCE_MIC, SOURCE_SCREEN, SOURCE_SCREEN_AUDIO } from '../../lib/media/frame'
+import { canSendH264 } from './h264Support'
 import { publishMids, restrictVideoCodecs, tuneScreenLines } from './sdp'
 import { iceServers } from './iceServers'
 import { attachRemoteAudio, releaseRemoteAudio } from './remoteAudio'
@@ -153,18 +154,6 @@ export function setupPeerConnection(cx: Cx) {
   // The outgoing lines (microphone, screen, camera) are the SFU's own receive
   // lines from its offer; see bindPublishSenders.
   return st.pc
-}
-
-// Whether this browser can send H.264 at all (not whether in hardware; the
-// stream diagnostics report that).
-function canSendH264() {
-  try {
-    const caps = globalThis.RTCRtpSender?.getCapabilities?.('video')
-    return !!caps?.codecs?.some(c => /^video\/h264$/i.test(c.mimeType))
-  } catch (err) {
-    void err
-    return false
-  }
 }
 
 // Queue only within the connection that received the offer. An old task

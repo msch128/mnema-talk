@@ -18,7 +18,7 @@ const PASSWORD = `pw-${suffix}-${randomBytes(8).toString('hex')}`
 // every layer has something to encode. The sharer's peer connections are
 // kept in window.__pcs to look at what it sends.
 const fakeScreen = () => {
-  navigator.mediaDevices.getDisplayMedia = async () => {
+  MediaDevices.prototype.getDisplayMedia = async () => {
     const canvas = document.createElement('canvas')
     canvas.width = 1280
     canvas.height = 720
@@ -96,6 +96,13 @@ async function frames(page: Page) {
 
 const videoSize = (page: Page) => page.getByTestId('stage').locator('video').evaluate(
   v => (v instanceof HTMLVideoElement ? `${v.videoWidth}x${v.videoHeight}` : ''))
+
+// Engines round a scaled-down width differently (852 or 853 of 1280 / 1.5).
+function sameSize(actual: string, expected: string): boolean {
+  const [w, h] = actual.split('x').map(Number)
+  const [ew, eh] = expected.split('x').map(Number)
+  return w !== undefined && h !== undefined && ew !== undefined && eh !== undefined && Math.abs(w - ew) <= 1 && Math.abs(h - eh) <= 1
+}
 
 async function chooseLayer(page: Page, id: 'auto' | 0 | 1 | 2) {
   await page.getByTestId('screen-layer-button').click()
@@ -191,7 +198,7 @@ test('viewers pick their own layer of a shared screen and switch mid-stream', as
   const sizes: Array<['auto' | 0 | 1 | 2, string]> = [[1, '852x480'], [0, '1280x720'], [2, '640x360'], ['auto', '640x360'], [1, '852x480']]
   for (const [layer, size] of sizes) {
     await chooseLayer(a, layer)
-    await expect.poll(() => videoSize(a), { timeout: 30_000 }).toBe(size)
+    await expect.poll(async () => sameSize(await videoSize(a), size), { timeout: 30_000 }).toBe(true)
     await a.waitForTimeout(1500)
     if (layer === 'auto') await expect(a.getByTestId('screen-layer-label')).toHaveText('Automatisch')
   }
