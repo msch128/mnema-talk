@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0](https://github.com/msch128/mnema-talk/compare/v0.8.16...v0.9.0) (2026-10-22)
+
+
+### Features
+
+* 0.9.0 notifications, search and onboarding ([#304](https://github.com/msch128/mnema-talk/issues/304)) ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **chat:** [@role](https://github.com/role) mentions and a mentions inbox ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **chat:** notification levels per channel and category, timed mutes, mark all read and category unread badges ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **onboarding:** community rules with acceptance, welcome text, start channel and a public invite landing page ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **search:** date, mention and video filters, thread roots in results and a filter-token search input ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **web:** first-run welcome flow and dismissible tips ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **web:** OS notifications and app badge through the platform adapter ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+
+
+### Bug Fixes
+
+* **auth:** native registration reports rules_pending ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **chat:** bot edits follow the mention policy of bot sends; a multi-word role mention no longer also mentions a user named after its first word ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **chat:** the mentions inbox query uses its indexes ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **web:** the desktop host's real notification permission is reported to the page ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+* **web:** the welcome flow does not reopen after a failed save, a refused write opens the rules step, a failed mute is rolled back ([7a70c3d](https://github.com/msch128/mnema-talk/commit/7a70c3d18a21e3b001c0085376ca2a9c337eb09f))
+
 ## [0.8.16](https://github.com/msch128/mnema-talk/compare/v0.8.15...v0.8.16) (2026-10-21)
 
 
