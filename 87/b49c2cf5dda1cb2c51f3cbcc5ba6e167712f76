@@ -1,0 +1,120 @@
+internal/onboarding/invite.go
+  s_06fcde5dbef956::t_1c161f2d5615ed 5,29-30,34,51-54,64-66
+internal/auth/handler_account.go
+  s_06fcde5dbef956::t_dfb20af5372d97 4
+  s_06fcde5dbef956::t_c1c8a7e5a1f958 29-30
+  s_06fcde5dbef956::t_5ad06c944b2a3d 37-40,43-45
+  s_06fcde5dbef956::t_5c30872f7c47b5 46
+internal/auth/lockout.go
+  s_06fcde5dbef956::t_0cc361e5f83c64 33-34,48
+internal/server/invites_integration_test.go
+  s_06fcde5dbef956::t_b055f24e6fe82d 26-27,64,70,106,110,113
+internal/httpx/middleware.go
+  s_06fcde5dbef956::t_0cc361e5f83c64 151-164
+internal/auth/reauth.go
+  s_06fcde5dbef956::t_e86baa9e4ed964 22-24
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_0e6c8bd28f2773 938-941,1046-1047
+web/src/components/AdminInvitesTab.test.ts
+  s_06fcde5dbef956::t_d6314ab3783ef1 24,54-55
+internal/auth/lockout_test.go
+  s_06fcde5dbef956::t_74bc928f63a45c 22-24,41-49
+internal/onboarding/handler.go
+  s_06fcde5dbef956::t_1c161f2d5615ed 28-30,33-36,45
+internal/auth/service.go
+  s_06fcde5dbef956::t_e86baa9e4ed964 231-233,239-243
+internal/config/config.go
+  s_06fcde5dbef956::t_0cc361e5f83c64 105-116
+doc/operations.md
+  s_06fcde5dbef956::t_eede21b9bbfd3f 199-200,202-210,585-587,600
+internal/httpx/loginfailure.go
+  s_06fcde5dbef956::t_36a445c512e0a5 1-233
+internal/httpx/ratelimit_test.go
+  s_06fcde5dbef956::t_74bc928f63a45c 238-285
+internal/auth/register_budget_test.go
+  s_06fcde5dbef956::t_15e5a12a88526c 1-31
+cmd/server/main.go
+  s_06fcde5dbef956::t_0cc361e5f83c64 51,113-119
+  s_06fcde5dbef956::t_e8b82a6b56dcfd 120-121
+web/src/components/AdminLockoutAndWarnings.test.ts
+  s_06fcde5dbef956::t_0e6c8bd28f2773 98
+web/src/components/AdminInvitesTab.vue
+  s_06fcde5dbef956::t_0e6c8bd28f2773 130
+internal/auth/login_test.go
+  s_06fcde5dbef956::t_fadeaa6ceb0132 113-114,118-119
+internal/auth/moderation_bans.go
+  s_06fcde5dbef956::t_e0364be5d021fa 17
+  s_06fcde5dbef956::t_01eb2109c3caf9 75,110-119
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_0654283c7288b2 167,178
+internal/auth/login_newdevice_test.go
+  s_06fcde5dbef956::t_641540033bfafc 1-61
+internal/httpx/ratelimit.go
+  s_06fcde5dbef956::t_1c161f2d5615ed 78-90,95-96,98,100,103,107,110,112-113
+  s_06fcde5dbef956::t_a3fb63151762ae 91-94,97,99,101-102,104-106,108-109,111,114
+internal/auth/bcrypt_slots_test.go
+  s_06fcde5dbef956::t_9051cb3d3e67e0 1-101
+internal/auth/invite_strength_test.go
+  s_06fcde5dbef956::t_b055f24e6fe82d 6,11
+  s_06fcde5dbef956::t_b64418c07f1980 18-22
+  s_06fcde5dbef956::t_afa91fe5d3c446 1-5,7-10,12-17,23-31
+internal/config/config_test.go
+  s_06fcde5dbef956::t_703f3d530a92b4 423
+  s_06fcde5dbef956::t_24a5ab4c63cea4 422,426
+  s_06fcde5dbef956::t_74bc928f63a45c 399-421,424-425,427-432
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_0e6c8bd28f2773 938-941,1046-1047
+internal/auth/service_accounts.go
+  s_06fcde5dbef956::t_e86baa9e4ed964 33-36
+api/openapi.json
+  s_06fcde5dbef956::t_c1c8a7e5a1f958 334-337,346-347,10992,12755,12844-12861,13243-13260,16853
+internal/auth/invite_strength.go
+  s_06fcde5dbef956::t_e99aae661535d1 1-17,20-21,25,28-29,33-48,50-52,54-69
+  s_06fcde5dbef956::t_b055f24e6fe82d 22-24,26-27,30-32,53
+  s_06fcde5dbef956::t_f41c4dcd9c54e9 18-19,49
+internal/opwarn/opwarn.go
+  s_06fcde5dbef956::t_0cc361e5f83c64 22
+internal/onboarding/invite_budget_integration_test.go
+  s_06fcde5dbef956::t_74bc928f63a45c 9,54-55
+  s_06fcde5dbef956::t_9cc9b57783a06b 1-8,10-13,16-19,35-49,51-53,56-74,76-83
+  s_06fcde5dbef956::t_a986a790883eaf 14-15,20-34,50,75
+doc/roles-and-permissions.md
+  s_06fcde5dbef956::t_eede21b9bbfd3f 125
+doc/moderation.md
+  s_06fcde5dbef956::t_eede21b9bbfd3f 61-64
+web/src/components/AdminSystemTab.vue
+  s_06fcde5dbef956::t_0e6c8bd28f2773 140-141
+internal/auth/invites.go
+  s_06fcde5dbef956::t_1c161f2d5615ed 28-30,75,88-90,145
+  s_06fcde5dbef956::t_b64418c07f1980 40-49
+internal/server/moderation_integration_test.go
+  s_06fcde5dbef956::t_ad494349e7276e 306,308-309,469-482,485,488-507
+  s_06fcde5dbef956::t_c7ccb615dcbe01 483-484,486-487
+  s_06fcde5dbef956::t_28a32f99e2d88c 508
+internal/auth/bcrypt_slots.go
+  s_06fcde5dbef956::t_471b0beb341ab7 1-108
+SECURITY.md
+  s_06fcde5dbef956::t_cd54d82a2d6e87 172-178
+  s_06fcde5dbef956::t_eede21b9bbfd3f 50-56,89-92,192-199,203-206
+internal/auth/handler.go
+  s_06fcde5dbef956::t_e86baa9e4ed964 142,153-156,168-174,203,249-254
+  s_06fcde5dbef956::t_5ad06c944b2a3d 39-41,48-53,72
+  s_06fcde5dbef956::t_c1c8a7e5a1f958 128-129
+  s_06fcde5dbef956::t_c58c9aa1b28e57 5,79-82,114,255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87b49c2cf5dda1cb2c51f3cbcc5ba6e167712f76",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
