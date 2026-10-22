@@ -1149,13 +1149,14 @@
       "chat.BotAllowedMentions": {
         "properties": {
           "parse": {
-            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here, which also need the Mention everyone permission).\n\"roles\" is accepted and ignored.",
+            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here, which also need the Mention everyone permission).\n\"roles\" lets @Role notify the role's members (the role must be\nmentionable, or the bot must hold Mention everyone).",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "roles": {
+            "description": "Roles are role IDs (UUIDs) notified although \"roles\" is not in Parse.",
             "items": {
               "type": "string"
             },
@@ -3949,13 +3950,14 @@
       "webhook.AllowedMentions": {
         "properties": {
           "parse": {
-            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here). \"roles\" is accepted and ignored.",
+            "description": "Parse lists the kinds of mentions that notify: \"users\" and \"everyone\"\n(@all and @here) and \"roles\" (@Role).",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "roles": {
+            "description": "Roles are role IDs (UUIDs) that are notified although \"roles\" is not\nin Parse.",
             "items": {
               "type": "string"
             },
