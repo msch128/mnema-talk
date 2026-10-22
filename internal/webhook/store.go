@@ -177,7 +177,7 @@ func (r *record) tokenMatches(token string) bool {
 
 // cleanName trims and validates a webhook name or username override.
 func cleanName(field, s string) (string, error) {
-	s, err := httpx.CleanText(field, s, MaxNameLen, true)
+	s, err := httpx.CleanName(field, s, MaxNameLen, true)
 	if err != nil {
 		return "", err
 	}

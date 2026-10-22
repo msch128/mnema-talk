@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/go-chi/chi/v5"
@@ -77,6 +78,28 @@ func CleanText(field, s string, maxRunes int, required bool) (string, error) {
 	return s, nil
 }
 
+// CleanName is CleanText for display names that others read as an identity
+// (webhook, bot and username overrides): invisible and bidirectional format
+// characters (Unicode Cf, such as U+202E and U+200B), private-use characters
+// and C1 controls are removed first, so a name cannot be spoofed with text
+// that renders differently from what it spells.
+func CleanName(field, s string, maxRunes int, required bool) (string, error) {
+	if utf8.ValidString(s) {
+		s = strings.Map(func(r rune) rune {
+			if isInvisibleRune(r) {
+				return -1
+			}
+			return r
+		}, s)
+	}
+	return CleanText(field, s, maxRunes, required)
+}
+
+// isInvisibleRune reports format, private-use and C1 control characters.
+func isInvisibleRune(r rune) bool {
+	return unicode.In(r, unicode.Cf, unicode.Co) || (r >= 0x80 && r <= 0x9f) || r == 0x2028 || r == 0x2029
+}
+
 // SanitizeFilename strips path components, control characters and leading
 // dots so the name is safe as a Content-Disposition base name. It returns ""
 // when nothing usable remains. Adopted from mnema.xyz.
@@ -99,7 +122,7 @@ func stripPathComponents(name string) string {
 }
 
 func isForbiddenFilenameRune(r rune) bool {
-	return r < 0x20 || r == 0x7f || r == '"'
+	return r < 0x20 || r == 0x7f || r == '"' || isInvisibleRune(r)
 }
 
 func filterFilenameRunes(name string) string {

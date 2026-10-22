@@ -107,6 +107,9 @@ func (c *Config) validateLimits() error {
 	if c.MaxUploadMB < 1 || c.MaxUploadMB > 2048 {
 		return fmt.Errorf("MAX_UPLOAD_SIZE_MB must be between 1 and 2048")
 	}
+	if c.UploadQuotaMBPerDay < 0 || c.MediaMaxTotalMB < 0 || c.MediaMinFreeMB < 0 {
+		return fmt.Errorf("UPLOAD_QUOTA_MB_PER_DAY, MEDIA_MAX_TOTAL_MB and MEDIA_MIN_FREE_MB must be 0 (off) or positive")
+	}
 	return validateTrustedProxies(c.TrustedProxies)
 }
 

@@ -522,10 +522,13 @@ func TestMalformedNumericSettingsNameTheirField(t *testing.T) {
 
 func TestUploadRelayAndMetricsValidation(t *testing.T) {
 	for name, changes := range map[string]map[string]string{
-		"upload zero":        {"MAX_UPLOAD_SIZE_MB": "0"},
-		"upload oversized":   {"MAX_UPLOAD_SIZE_MB": "2049"},
-		"TURN weak secret":   {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
-		"metrics weak token": {"METRICS_TOKEN": "short"},
+		"upload zero":         {"MAX_UPLOAD_SIZE_MB": "0"},
+		"upload oversized":    {"MAX_UPLOAD_SIZE_MB": "2049"},
+		"negative quota":      {"UPLOAD_QUOTA_MB_PER_DAY": "-1"},
+		"negative total cap":  {"MEDIA_MAX_TOTAL_MB": "-1"},
+		"negative free floor": {"MEDIA_MIN_FREE_MB": "-1"},
+		"TURN weak secret":    {"WEBRTC_TURN_URLS": "turn:relay.example.com:3478", "WEBRTC_TURN_SECRET": "short"},
+		"metrics weak token":  {"METRICS_TOKEN": "short"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			env := base()
@@ -556,5 +559,18 @@ func TestRandomHexReturnsRequestedCryptographicByteLength(t *testing.T) {
 		if err != nil || len(decoded) != n {
 			t.Fatalf("RandomHex(%d) length/encoding: %d %v", n, len(decoded), err)
 		}
+	}
+}
+
+func TestStorageBudgetDefaults(t *testing.T) {
+	cfg, err := FromEnv(lookup(base()))
+	if err != nil || cfg.UploadQuotaMBPerDay != 2048 || cfg.MediaMaxTotalMB != 0 || cfg.MediaMinFreeMB != 1024 || cfg.MediaDiskPath != "" {
+		t.Fatalf("defaults: %+v %v", cfg, err)
+	}
+	env := base()
+	env["UPLOAD_QUOTA_MB_PER_DAY"] = "0"
+	env["MEDIA_DISK_PATH"] = "/data"
+	if cfg, err := FromEnv(lookup(env)); err != nil || cfg.UploadQuotaMBPerDay != 0 || cfg.MediaDiskPath != "/data" {
+		t.Fatalf("explicit: %+v %v", cfg, err)
 	}
 }

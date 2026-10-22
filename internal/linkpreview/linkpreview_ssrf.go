@@ -26,11 +26,6 @@ func (f *Fetcher) checkResolvedAddress(address string) error {
 	return nil
 }
 
-// nonPublic stays here: webhooks refuse 240.0.0.0/4 inside 224.0.0.0/3, not as its own prefix.
-var nonPublic = []netip.Prefix{
-	netip.MustParsePrefix("240.0.0.0/4"),
-}
-
 // publicIP reports whether ip is a globally routable unicast address.
 func publicIP(ip net.IP) bool {
 	if ip == nil {
@@ -43,15 +38,7 @@ func publicIP(ip net.IP) bool {
 	if !ok {
 		return false
 	}
-	if ssrf.Refused(addr) {
-		return false
-	}
-	for _, p := range nonPublic {
-		if p.Contains(addr) {
-			return false
-		}
-	}
-	return true
+	return ssrf.PublicUnicast(addr)
 }
 
 // Deny refuses the addresses of these hosts or IPs; each call replaces the
