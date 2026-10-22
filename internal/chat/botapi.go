@@ -303,7 +303,21 @@ func botMentionPolicy(snap *perm.Snapshot, ch uuid.UUID, p perm.Set, am *BotAllo
 // @Failure 500 {object} httpx.DiscordError "Server failure."
 // @Router /api/bot/v1/channels/{channelID}/messages/{messageID} [patch]
 func (h *Handler) botEditMessage(w http.ResponseWriter, r *http.Request) error {
-	return h.editMessage(w, r)
+	return h.editMessageWith(w, r, h.botEditContext)
+}
+
+// botEditContext is the mention context of a bot's edit: the policy of its
+// sends (botMentionPolicy), so an edit never reaches more than a send does.
+func (h *Handler) botEditContext(r *http.Request, ch uuid.UUID, need perm.Set) (context.Context, error) {
+	snap, err := h.Perms.ForChannel(r.Context(), ch)
+	if err != nil {
+		return nil, err
+	}
+	p := snap.Channel(auth.UserFrom(r.Context()).Subject(), ch)
+	if err := snap.Deny(auth.UserFrom(r.Context()).Subject(), p, need); err != nil {
+		return nil, err
+	}
+	return WithMentionPolicy(r.Context(), botMentionPolicy(snap, ch, p, nil)), nil
 }
 
 // botDeleteMessage handles DELETE /api/bot/v1/channels/{channelID}/messages/{messageID}.

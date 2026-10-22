@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -36,20 +35,7 @@ type InboxQuery struct {
 // Mentions returns one page of the caller's mentions inbox and whether older
 // entries exist. Messages by the user themselves never appear.
 func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]Message, bool, error) {
-	args := []any{q.User, q.Limit + 1}
-	sql := messageSelect + `
-		WHERE m.user_id <> $1
-		  AND (rm.user_id = $1 OR EXISTS (SELECT 1 FROM message_mentions mm WHERE mm.message_id = m.id AND mm.user_id = $1))`
-	if q.Visible != nil {
-		args = append(args, q.Visible)
-		sql += fmt.Sprintf(" AND m.channel_id = ANY($%d::uuid[])", len(args))
-	}
-	if q.Before != nil {
-		args = append(args, *q.Before)
-		sql += fmt.Sprintf(" AND (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $%d)", len(args))
-	}
-	sql += " ORDER BY m.created_at DESC, m.id DESC LIMIT $2"
-	msgs, err := queryMessages(ctx, p, sql, args...)
+	msgs, err := queryMessages(ctx, p, inboxSQL(), inboxArgs(q)...)
 	if err != nil {
 		return nil, false, err
 	}
@@ -58,6 +44,34 @@ func Mentions(ctx context.Context, p *db.Pool, q InboxQuery) ([]Message, bool, e
 		msgs = msgs[:q.Limit]
 	}
 	return msgs, more, nil
+}
+
+func inboxArgs(q InboxQuery) []any {
+	args := []any{q.User, q.Limit + 1, q.Visible, nil}
+	if q.Before != nil {
+		args[3] = *q.Before
+	}
+	return args
+}
+
+// inboxSQL finds the page as the union of its two sources, each walking its
+// own index (message_mentions by user, messages by reply_to_id) newest first
+// and stopping at the page size, instead of one OR over all messages. The
+// union drops a message that is both a mention and a reply. $3 limits the
+// channels (NULL: all of them), $4 is the page cursor (NULL: the newest).
+func inboxSQL() string {
+	visible := "($3::uuid[] IS NULL OR m.channel_id = ANY($3::uuid[]))"
+	cursor := "($4::uuid IS NULL OR (m.created_at, m.id) < (SELECT created_at, id FROM messages WHERE id = $4))"
+	tail := " AND m.user_id <> $1 AND " + visible + " AND " + cursor + " ORDER BY m.created_at DESC, m.id DESC LIMIT $2)"
+	return `WITH hits AS (
+		(SELECT m.id, m.created_at FROM message_mentions mm JOIN messages m ON m.id = mm.message_id
+		  WHERE mm.user_id = $1` + tail + `
+		UNION
+		(SELECT m.id, m.created_at FROM messages rm JOIN messages m ON m.reply_to_id = rm.id
+		  WHERE rm.user_id = $1` + tail + `
+	)` + messageSelect + `
+		WHERE m.id IN (SELECT id FROM hits)
+		ORDER BY m.created_at DESC, m.id DESC LIMIT $2`
 }
 
 // mentionsInbox handles GET /api/mentions.

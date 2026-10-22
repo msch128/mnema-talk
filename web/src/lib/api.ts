@@ -155,6 +155,8 @@ function serverFailure(status: number, body: unknown) {
 export interface ApiClient {
   readonly api: ApiCall
   readonly onUnauthorized: (handler: UnauthorizedHandler) => () => boolean
+  /** Fires when a write is refused because the community rules are not accepted. */
+  readonly onRulesRequired: (handler: () => void) => () => boolean
 }
 
 function buildApiRequest(options: ApiOptions): ApiRequest {
@@ -187,6 +189,7 @@ function handleUnauthorizedNotification(
  * client owns its listeners; choosing a profile never replaces global fetch. */
 export function createApiClient(transport: ApiTransport): ApiClient {
   const unauthorizedHandlers = new Set<{ readonly handler: UnauthorizedHandler }>()
+  const rulesHandlers = new Set<{ readonly handler: () => void }>()
   async function request<T>(path: string, options: ApiOptions & { decode?: Decoder<T> } = {}): Promise<unknown> {
     const { decode, shouldNotifyUnauthorized } = options
     const requestUnauthorizedHandlers = [...unauthorizedHandlers]
@@ -197,6 +200,7 @@ export function createApiClient(transport: ApiTransport): ApiClient {
     if (response.status < 200 || response.status >= 300) {
       const error = serverFailure(response.status, body)
       handleUnauthorizedNotification(path, response.status, error, shouldNotifyUnauthorized, unauthorizedHandlers, requestUnauthorizedHandlers)
+      if (error.code === 'RULES_NOT_ACCEPTED') for (const { handler } of [...rulesHandlers]) handler()
       throw error
     }
     return decode ? decode(body) : body
@@ -207,6 +211,11 @@ export function createApiClient(transport: ApiTransport): ApiClient {
       const subscription = { handler }
       unauthorizedHandlers.add(subscription)
       return () => unauthorizedHandlers.delete(subscription)
+    },
+    onRulesRequired: (handler: () => void) => {
+      const subscription = { handler }
+      rulesHandlers.add(subscription)
+      return () => rulesHandlers.delete(subscription)
     }
   })
 }
@@ -235,3 +244,4 @@ const browserClient = createApiClient(async (path, request) => {
 })
 export const api: ApiCall = browserClient.api
 export const onUnauthorized = browserClient.onUnauthorized
+export const onRulesRequired = browserClient.onRulesRequired
