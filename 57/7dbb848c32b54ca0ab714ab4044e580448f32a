@@ -1,0 +1,102 @@
+web/src/composables/useMessageMenu.ts
+  s_06fcde5dbef956::t_0214ab6e6dba13 129
+  s_06fcde5dbef956::t_72ea52c1b12bf5 90-98
+  s_06fcde5dbef956::t_ef3a2d50b391a7 9,11
+web/src/App.vue
+  s_06fcde5dbef956::t_51a734f58cfc4e 354
+  s_06fcde5dbef956::t_01a5f81094997e 39
+internal/auth/account_export_build.go
+  s_06fcde5dbef956::t_97ba02a00c77a2 57
+  s_06fcde5dbef956::t_547c92bee4886d 135
+internal/config/config_validate.go
+  s_06fcde5dbef956::t_1ce4bbd97ed808 105-107
+internal/chat/edit_history.go
+  s_06fcde5dbef956::t_37cfa98aac053f 1-157
+doc/operations.md
+  s_06fcde5dbef956::t_869a18373b291c 79
+web/src/types/rest.ts
+  s_06fcde5dbef956::t_20730c3bd20dff 1518-1547
+web/src/i18n/en.json
+  s_06fcde5dbef956::t_86c5a78e682db9 1689-1698
+SECURITY.md
+  s_06fcde5dbef956::t_4d81869f0972cf 231-232
+  s_06fcde5dbef956::t_399528ea99bfe3 682-690
+internal/config/config_env.go
+  s_06fcde5dbef956::t_0ebe3b25a83c0b 119
+internal/db/migrations/0047_message_edit_history.sql
+  s_06fcde5dbef956::t_bc981d22f8c024 1-19
+internal/auth/account_export_edits.go
+  s_06fcde5dbef956::t_6fdd8ee8f228b0 1-37
+web/src/composables/useMessageModerationMenu.test.ts
+  s_06fcde5dbef956::t_1e1e00b3e658b5 13
+  s_06fcde5dbef956::t_77da4b923ee1a2 110-135
+web/src/lib/native/nativeRoutes.ts
+  s_06fcde5dbef956::t_288bffcb838ec1 198-199
+internal/server/router_build.go
+  s_06fcde5dbef956::t_c6283ecd44dbb8 113-117
+internal/chat/handler.go
+  s_06fcde5dbef956::t_bdc44a9f20678a 36-37
+  s_06fcde5dbef956::t_585d62928bf112 79-83
+internal/config/config.go
+  s_06fcde5dbef956::t_bdff3b4bd04fab 41
+  s_06fcde5dbef956::t_634736fb0b67f5 38-40
+web/src/components/EditHistoryDialog.vue
+  s_06fcde5dbef956::t_191d47b2f2e864 58
+  s_06fcde5dbef956::t_cbeeb1092a9f9b 1-57,59-72
+web/src/i18n/de.json
+  s_06fcde5dbef956::t_0f769ec7788565 1689-1698
+internal/server/account_delete_integration_test.go
+  s_06fcde5dbef956::t_79c62a79bcd105 166-168
+  s_06fcde5dbef956::t_aaa51e0fcd4476 72-75
+.env.example
+  s_06fcde5dbef956::t_63cc74143e2c7e 147-149
+internal/chat/message_mutations.go
+  s_06fcde5dbef956::t_95d19ed1597765 38-40
+internal/auth/account_erase.go
+  s_06fcde5dbef956::t_9790cda6f20e01 36
+  s_06fcde5dbef956::t_602331783db9ea 26-27
+web/src/lib/editHistory.ts
+  s_06fcde5dbef956::t_b153598c8cba63 1-22
+internal/server/edit_history_integration_test.go
+  s_06fcde5dbef956::t_03883d84f3cd48 107-108
+  s_06fcde5dbef956::t_79be0439609407 1-8,10-106,109-166,196-216
+  s_06fcde5dbef956::t_c3176fd710495f 167-195
+  s_06fcde5dbef956::t_1be5c63520b9a6 9
+doc/moderation.md
+  s_06fcde5dbef956::t_8031bf1ef225ad 103-132
+web/src/components/EditHistoryDialog.test.ts
+  s_06fcde5dbef956::t_27fd9cfa10323e 19
+  s_06fcde5dbef956::t_978cc187b8f781 1
+  s_06fcde5dbef956::t_5270b6d3746e39 2-9,11-18,20-65,70-89
+  s_06fcde5dbef956::t_ab195be12bb7fe 10
+  s_06fcde5dbef956::t_58655b0f4d489c 66-69
+docker-compose.yml
+  s_06fcde5dbef956::t_b9d3cfa5c3e991 79-80
+api/openapi.json
+  s_06fcde5dbef956::t_3b4cf76667c940 2478-2525,17176-17287
+  s_06fcde5dbef956::t_cbcde0bc6a2462 17288-17292
+internal/server/account_export_integration_test.go
+  s_06fcde5dbef956::t_56a54b8efc5d1a 81,86,142
+  s_06fcde5dbef956::t_9dd06c7cc34645 135,140-141
+  s_06fcde5dbef956::t_9d6ab90dd8d9df 78,80,82-85
+internal/config/config_test.go
+  s_06fcde5dbef956::t_dcccc03f36da6f 153
+doc/upgrade.md
+  s_06fcde5dbef956::t_02f834f5a49916 161-167
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "577dbb848c32b54ca0ab714ab4044e580448f32a",
+  "prompts": {},
+  "sessions": {
+    "s_06fcde5dbef956": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94b73314-95fe-4e96-8c43-d20b0f28358d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marius Schröder <git@schroeder.systems>"
+    }
+  }
+}
