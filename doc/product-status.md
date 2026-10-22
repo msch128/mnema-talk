@@ -122,6 +122,10 @@ layer not up in time, a voice-chat leave); each passes when run alone. They are
 retried once in CI, and the WebKit and Firefox jobs stay out of the required
 checks until they have gone green for a while.
 
+The AI noise filter's worker pipeline was seen processing audio on macOS
+Firefox but not on CI's Linux Firefox, so its spec (`late-join`) is not in the
+Firefox CI subset.
+
 Known limits: Firefox's fake microphone is a steady tone, which the AI noise
 filter removes, so the specs measure decoded samples rather than loudness.
 Real-device behaviour of iOS audio sessions, background tabs and installed web
